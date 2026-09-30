@@ -1,5 +1,5 @@
 import { ApplicationConfig, provideZoneChangeDetection, provideBrowserGlobalErrorListeners, isDevMode, provideAppInitializer, ErrorHandler, inject } from '@angular/core';
-import { provideRouter, RouteReuseStrategy } from '@angular/router';
+import { ActivatedRouteSnapshot, provideRouter, RouteReuseStrategy, withViewTransitions } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideServiceWorker } from '@angular/service-worker';
 import { firstValueFrom, of, catchError, timeout } from 'rxjs';
@@ -13,11 +13,32 @@ import { CustomRouteReuseStrategy } from './core/strategies/custom-route-reuse-s
 import { OfflineSyncService } from './core/services/offline-sync.service';
 import { ConfigApiService } from './core/api/config-api.service';
 
+/** مسیر اصلی (بدون query و fragment) از ریشهٔ snapshot تا عمیق‌ترین فرزند. */
+function primaryPath(snapshot: ActivatedRouteSnapshot | null): string {
+  const segments: string[] = [];
+  for (let route = snapshot; route; route = route.firstChild) {
+    segments.push(...route.url.map((segment) => segment.path));
+  }
+  return segments.join('/');
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    provideRouter(
+      routes,
+      // گذار نرم بین صفحه‌ها (View Transitions API)؛ مرورگرهای بدون پشتیبانی بی‌اثر می‌مانند.
+      // بارگذاری اول و تغییرِ فقط query یا fragment (فیلتر، صفحه‌بندی) بدون انیمیشن است.
+      withViewTransitions({
+        skipInitialTransition: true,
+        onViewTransitionCreated: ({ transition, from, to }) => {
+          if (primaryPath(from) === primaryPath(to)) {
+            transition.skipTransition();
+          }
+        },
+      }),
+    ),
     provideHttpClient(
       withInterceptors([authInterceptor, errorInterceptor, offlineInterceptor])
     ),

@@ -13,11 +13,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="انبار">
   <link rel="apple-touch-icon" href="icons/icon-192x192.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+  <!-- فونت Vazirmatn محلی است (styles.css)؛ دو زیرمجموعه‌ای که تقریباً هر صفحه لازم دارد پیش‌بارگذاری می‌شوند. -->
+  <link rel="preload" href="/fonts/vazirmatn/vazirmatn-arabic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/vazirmatn/vazirmatn-latin.woff2" as="font" type="font/woff2" crossorigin>
 </head>
-<body class="bg-slate-100 antialiased min-h-screen">
+<body class="bg-surface-canvas antialiased min-h-screen">
   <app-root></app-root>
 </body>
 </html>

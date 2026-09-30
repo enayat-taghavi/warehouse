@@ -1,0 +1,30 @@
+import { Directive, computed, inject, input } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
+import { ICONS, IconName } from './icon-registry';
+
+/**
+ * آیکن مشترک برنامه، روی خود عنصر <svg>:
+ *
+ *   <svg appIcon="trash-2" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+ *
+ * همهٔ ویژگی‌های بیرونی svg (اندازه، رنگ، viewBox، stroke) در قالب می‌ماند و فقط
+ * محتوای درونی (path و ...) از رجیستری (icon-registry.ts) می‌آید. نام ناشناخته
+ * یا خالی یعنی svg خالی. محتوای رجیستری ثابت و از کد خود برنامه است، پس عبور از
+ * sanitizer امن است (sanitizer عادی Angular عناصر svg را حذف می‌کند).
+ */
+@Directive({
+  selector: 'svg[appIcon]',
+  host: { '[innerHTML]': 'markup()' },
+})
+export class SvgIconDirective {
+  private readonly sanitizer = inject(DomSanitizer);
+
+  /** نام آیکن در رجیستری؛ نام‌های ثابت در قالب‌ها با نگهبان ۵۲ بررسی می‌شوند. */
+  readonly appIcon = input<IconName | string | null | undefined>();
+
+  protected readonly markup = computed(() => {
+    const name = this.appIcon();
+    const inner = name ? ((ICONS as Record<string, string>)[name] ?? '') : '';
+    return this.sanitizer.bypassSecurityTrustHtml(inner);
+  });
+}
