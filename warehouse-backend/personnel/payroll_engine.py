@@ -126,6 +126,7 @@ class PayrollCalculationEngine:
             attendances = DailyAttendance.objects.filter(
                 personnel=p,
                 date_shamsi__startswith=period.year_month,
+                approval_status='APPROVED',
                 is_deleted=False
             )
         else:

@@ -17,6 +17,17 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# تنظیمات محرمانهٔ محیط عملیاتی (DJANGO_SECRET_KEY، DJANGO_DEBUG و...) از
+# `warehouse-backend/.env` خوانده می‌شوند که بیرون از git است. متغیری که در
+# محیط سیستم تنظیم شده باشد بر مقدار فایل مقدم است.
+_ENV_FILE = BASE_DIR / '.env'
+if _ENV_FILE.exists():
+    for _line in _ENV_FILE.read_text(encoding='utf-8').splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith('#') and '=' in _line:
+            _key, _value = _line.split('=', 1)
+            os.environ.setdefault(_key.strip(), _value.strip())
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/

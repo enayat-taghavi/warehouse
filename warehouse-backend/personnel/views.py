@@ -2670,9 +2670,16 @@ class DailyAttendanceViewSet(viewsets.ModelViewSet):
         personnel_id = self.request.query_params.get('personnel_id')
         if personnel_id:
             qs = qs.filter(personnel_id=personnel_id)
+        approval_status = self.request.query_params.get('approval_status')
+        if approval_status:
+            qs = qs.filter(approval_status=approval_status)
+        year_month = self.request.query_params.get('year_month')
+        if year_month:
+            norm_ym = year_month.replace('-', '/')
+            qs = qs.filter(date_shamsi__startswith=norm_ym)
         cid = validate_user_company_access(self.request.user, get_request_company_id(self.request))
         if cid:
-            qs = qs.filter(Q(company_id=cid) | Q(section__project__company_id=cid) | Q(personnel__company_id=cid) | Q(personnel__section__project__company_id=cid))
+            qs = qs.filter(Q(section__project__company_id=cid) | Q(personnel__company_id=cid) | Q(personnel__section__project__company_id=cid))
         return qs
 
     @action(detail=False, methods=['get'], url_path='matrix')
@@ -2846,6 +2853,11 @@ class DailyAttendanceViewSet(viewsets.ModelViewSet):
             return Response({'error': str(err_msg)}, status=status.HTTP_400_BAD_REQUEST)
 
         year_month = date_shamsi[:7]
+        locked_period_statuses = [
+            'LOCKED', 'SUBMITTED', 'FINALIZED', 'SUBMITTED_SUPERVISOR',
+            'PENDING_ACCOUNTANT', 'SUBMITTED_ACCOUNTANT', 'PENDING_MANAGER',
+            'READY_TO_PAY', 'PAID'
+        ]
         period = None
         if warehouse_id:
             period, _ = MonthlyWorkPeriod.objects.get_or_create(
@@ -2853,8 +2865,8 @@ class DailyAttendanceViewSet(viewsets.ModelViewSet):
                 year_month=year_month,
                 defaults={'status': 'OPEN'}
             )
-            if period.status == 'LOCKED' and not is_admin_override:
-                return Response({'error': f'دوره کارکرد {year_month} قفل شده است و امکان ثبت یا ویرایش وجود ندارد.'}, status=status.HTTP_400_BAD_REQUEST)
+            if period.status in locked_period_statuses and not is_admin_override:
+                return Response({'error': f'دوره کارکرد {year_month} در وضعیت «{period.get_status_display()}» بوده و امکان ثبت یا ویرایش وجود ندارد.'}, status=status.HTTP_400_BAD_REQUEST)
 
         saved_count = 0
         updated_count = 0
@@ -2879,7 +2891,7 @@ class DailyAttendanceViewSet(viewsets.ModelViewSet):
                         warehouse_id=check_wh,
                         year_month=year_month
                     ).first()
-                if target_period and target_period.status == 'LOCKED' and not is_admin_override:
+                if target_period and target_period.status in locked_period_statuses and not is_admin_override:
                     return Response({'error': f'دوره کارکرد {year_month} برای انبار پرسنل ({p_obj.full_name}) قفل شده است.'}, status=status.HTTP_400_BAD_REQUEST)
 
                 target_wh = item_wh if item_wh is not None else (warehouse_id if warehouse_id else p_obj.assigned_warehouse_id)
@@ -3010,6 +3022,13 @@ class DailyAttendanceViewSet(viewsets.ModelViewSet):
                         att_obj.section_id = target_section_id
                     if target_project_id:
                         att_obj.project_id = target_project_id
+                    # در صورت ویرایش رکوردی که قبلا تایید شده بود، تاییدیه باطل شده و به وضعیت در انتظار سرپرست بازمی‌گردد
+                    if changes and att_obj.approval_status == 'APPROVED':
+                        att_obj.approval_status = 'PENDING_SUPERVISOR'
+                        att_obj.supervisor_approved_by = None
+                        att_obj.supervisor_approved_at = None
+                        changes.append(('approval_status', 'APPROVED', 'PENDING_SUPERVISOR'))
+
                     att_obj.modified_by = request.user
                     if target_period:
                         att_obj.period = target_period
@@ -4014,7 +4033,12 @@ class DailyAttendanceViewSet(viewsets.ModelViewSet):
                         year_month=year_month,
                         defaults={'status': 'OPEN'}
                     )
-                    if target_period and target_period.status in ['LOCKED', 'SUBMITTED', 'FINALIZED'] and not is_admin_override:
+                    locked_period_statuses = [
+                        'LOCKED', 'SUBMITTED', 'FINALIZED', 'SUBMITTED_SUPERVISOR',
+                        'PENDING_ACCOUNTANT', 'SUBMITTED_ACCOUNTANT', 'PENDING_MANAGER',
+                        'READY_TO_PAY', 'PAID'
+                    ]
+                    if target_period and target_period.status in locked_period_statuses and not is_admin_override:
                         return Response({
                             'error': f'امکان بارگذاری اکسل وجود ندارد؛ دوره کارکرد {year_month} برای انبار پرسنل ({p_obj.full_name}) در وضعیت «{target_period.get_status_display()}» است.'
                         }, status=status.HTTP_400_BAD_REQUEST)
@@ -4129,6 +4153,13 @@ class DailyAttendanceViewSet(viewsets.ModelViewSet):
                                 att_obj.project_id = project_id
                             if target_period:
                                 att_obj.period = target_period
+                            # در صورت ویرایش رکوردی که قبلا تایید شده بود، تاییدیه باطل شده و به وضعیت در انتظار بازمی‌گردد
+                            if changes and att_obj.approval_status == 'APPROVED':
+                                att_obj.approval_status = 'PENDING_SUPERVISOR'
+                                att_obj.supervisor_approved_by = None
+                                att_obj.supervisor_approved_at = None
+                                changes.append(('approval_status', 'APPROVED', 'PENDING_SUPERVISOR'))
+
                             att_obj.modified_by = request.user
                             att_obj.save()
 
@@ -4197,37 +4228,71 @@ class DailyAttendanceViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='monthly-summary')
     def get_monthly_summary(self, request):
         """
-        گزارش تجمیعی ماهانه کارکرد پرسنل
+        گزارش تجمیعی ماهانه کارکرد پرسنل با پشتیبانی از فیلتر بخش/پروژه و تفکیک وضعیت‌های تایید
         """
         raw_wh = request.query_params.get('warehouse_id')
         warehouse_id = int(raw_wh) if (raw_wh and str(raw_wh).upper() not in ['ALL', '0', 'NONE', '', 'UNDEFINED', 'NULL']) else None
+        raw_sec = request.query_params.get('section_id')
+        section_id = int(raw_sec) if (raw_sec and str(raw_sec).upper() not in ['ALL', '0', 'NONE', '', 'UNDEFINED', 'NULL']) else None
+        raw_proj = request.query_params.get('project_id')
+        project_id = int(raw_proj) if (raw_proj and str(raw_proj).upper() not in ['ALL', '0', 'NONE', '', 'UNDEFINED', 'NULL']) else None
+
         year_month = request.query_params.get('year_month')
         if not year_month:
             latest_period = MonthlyWorkPeriod.objects.order_by('-year_month').first()
             year_month = latest_period.year_month if latest_period else '1405/06'
 
-        if warehouse_id:
-            personnel_list = PersonnelProfile.objects.filter(
-                Q(assigned_warehouse_id=warehouse_id) | Q(assigned_warehouse_id__isnull=True),
-                is_active=True
-            ).order_by('last_name', 'first_name')
+        norm_ym = year_month.replace('-', '/')
 
-            attendances = DailyAttendance.objects.filter(
-                warehouse_id=warehouse_id,
-                date_shamsi__startswith=year_month,
-                is_deleted=False
+        # فیلتر پرسنل
+        personnel_list = PersonnelProfile.objects.filter(is_active=True)
+        if section_id:
+            personnel_list = personnel_list.filter(
+                Q(section_id=section_id) |
+                Q(section_assignments__section_id=section_id, section_assignments__is_active=True)
+            ).distinct()
+        elif project_id:
+            personnel_list = personnel_list.filter(
+                Q(section__project_id=project_id) |
+                Q(section_assignments__section__project_id=project_id, section_assignments__is_active=True)
+            ).distinct()
+        elif warehouse_id:
+            personnel_list = personnel_list.filter(
+                Q(assigned_warehouse_id=warehouse_id) | Q(assigned_warehouse_id__isnull=True)
             )
+
+        cid = validate_user_company_access(request.user, get_request_company_id(request))
+        if cid:
+            personnel_list = personnel_list.filter(
+                Q(company_id=cid) | Q(section__project__company_id=cid)
+            )
+
+        personnel_list = personnel_list.order_by('last_name', 'first_name')
+
+        # فیلتر کارکردها
+        att_filter = Q(date_shamsi__startswith=norm_ym, is_deleted=False)
+        if section_id:
+            att_filter &= (Q(section_id=section_id) | (Q(section_id__isnull=True) & Q(personnel__section_id=section_id)))
+        elif project_id:
+            att_filter &= (Q(project_id=project_id) | (Q(project_id__isnull=True) & Q(personnel__project_id=project_id)))
+        elif warehouse_id:
+            att_filter &= Q(warehouse_id=warehouse_id)
+
+        attendances = DailyAttendance.objects.filter(att_filter)
+
+        # جستجوی دوره متناظر
+        period = None
+        if section_id:
+            period = MonthlyWorkPeriod.objects.filter(section_id=section_id, year_month=year_month).first()
+        elif project_id:
+            period = MonthlyWorkPeriod.objects.filter(project_id=project_id, year_month=year_month).first()
+        elif warehouse_id:
             period = MonthlyWorkPeriod.objects.filter(warehouse_id=warehouse_id, year_month=year_month).first()
-        else:
-            personnel_list = PersonnelProfile.objects.filter(
-                is_active=True
-            ).order_by('last_name', 'first_name')
-
-            attendances = DailyAttendance.objects.filter(
-                date_shamsi__startswith=year_month,
-                is_deleted=False
-            )
+        if not period:
             period = MonthlyWorkPeriod.objects.filter(year_month=year_month).first()
+
+        # محاسبه کارکردهای تاییدنشده
+        pending_approvals_count = attendances.exclude(approval_status='APPROVED').count()
 
         summary_rows = []
         for p in personnel_list:
@@ -4272,11 +4337,22 @@ class DailyAttendanceViewSet(viewsets.ModelViewSet):
                 'estimated_total_pay': gross_base_pay + overtime_pay - total_advances
             })
 
+        locked_statuses = [
+            'LOCKED', 'SUBMITTED', 'FINALIZED', 'SUBMITTED_SUPERVISOR',
+            'PENDING_ACCOUNTANT', 'SUBMITTED_ACCOUNTANT', 'PENDING_MANAGER',
+            'READY_TO_PAY', 'PAID'
+        ]
+        is_locked = period.status in locked_statuses if period else False
+
         return Response({
             'warehouse_id': warehouse_id,
+            'section_id': section_id,
+            'project_id': project_id,
             'year_month': year_month,
+            'period_id': period.id if period else None,
             'period_status': period.status if period else 'OPEN',
-            'is_locked': period.status == 'LOCKED' if period else False,
+            'is_locked': is_locked,
+            'pending_approvals_count': pending_approvals_count,
             'summary': summary_rows
         })
 

@@ -678,13 +678,28 @@ class DailyAttendanceSerializer(serializers.ModelSerializer):
     personnel_national_code = serializers.CharField(source='personnel.national_code', read_only=True)
     personnel_job_title = serializers.CharField(source='personnel.job_title', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    approval_status_display = serializers.CharField(source='get_approval_status_display', read_only=True)
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
+    section_name = serializers.CharField(source='section.name', read_only=True)
+    project_name = serializers.CharField(source='project.title', read_only=True)
+    supervisor_approved_by_name = serializers.SerializerMethodField()
+    revision_requested_by_name = serializers.SerializerMethodField()
     audit_logs = AttendanceAuditLogSerializer(many=True, read_only=True)
 
     class Meta:
         model = DailyAttendance
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at', 'created_by', 'modified_by']
+
+    def get_supervisor_approved_by_name(self, obj):
+        if obj.supervisor_approved_by:
+            return f"{obj.supervisor_approved_by.first_name} {obj.supervisor_approved_by.last_name}".strip() or obj.supervisor_approved_by.username
+        return None
+
+    def get_revision_requested_by_name(self, obj):
+        if obj.revision_requested_by:
+            return f"{obj.revision_requested_by.first_name} {obj.revision_requested_by.last_name}".strip() or obj.revision_requested_by.username
+        return None
 
 
 class AttendanceItemInputSerializer(serializers.Serializer):
@@ -799,9 +814,12 @@ class BulkVehicleMonthlyGridSerializer(serializers.Serializer):
 
 class MonthlyWorkPeriodSerializer(serializers.ModelSerializer):
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
+    project_title = serializers.CharField(source='project.title', read_only=True)
+    section_name = serializers.CharField(source='section.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     locked_by_name = serializers.SerializerMethodField()
     submitted_by_name = serializers.SerializerMethodField()
+    pending_approvals_count = serializers.SerializerMethodField()
 
     class Meta:
         model = MonthlyWorkPeriod
@@ -817,6 +835,20 @@ class MonthlyWorkPeriodSerializer(serializers.ModelSerializer):
         if obj.submitted_by:
             return f"{obj.submitted_by.first_name} {obj.submitted_by.last_name}".strip() or obj.submitted_by.username
         return None
+
+    def get_pending_approvals_count(self, obj):
+        # شمارش کارکردهای تاییدنشده دوره
+        qs = DailyAttendance.objects.filter(
+            date_shamsi__startswith=obj.year_month,
+            is_deleted=False
+        ).exclude(approval_status='APPROVED')
+        if obj.section_id:
+            qs = qs.filter(section_id=obj.section_id)
+        elif obj.project_id:
+            qs = qs.filter(project_id=obj.project_id)
+        elif obj.warehouse_id:
+            qs = qs.filter(warehouse_id=obj.warehouse_id)
+        return qs.count()
 
 
 # ==============================================================================

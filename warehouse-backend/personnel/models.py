@@ -1875,6 +1875,22 @@ class MonthlyWorkPeriod(_WarehouseCompatMixin, models.Model):
         db_column='warehouse_id',
         verbose_name="انبار مربوطه"
     )
+    project = models.ForeignKey(
+        FinancialProject,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='monthly_work_periods',
+        verbose_name="پروژه مالی مربوطه"
+    )
+    section = models.ForeignKey(
+        ProjectSection,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='monthly_work_periods',
+        verbose_name="بخش/دپارتمان مربوطه"
+    )
     year_month = models.CharField(max_length=7, db_index=True, verbose_name="سال و ماه (مثال ۱۴۰۴/۰۵)")
     status = models.CharField(max_length=25, choices=PERIOD_STATUS_CHOICES, default='OPEN', verbose_name="وضعیت دوره")
     
@@ -2042,6 +2058,12 @@ class DailyAttendance(_WarehouseCompatMixin, models.Model):
         ('FRIDAY_WORK', 'جمعه‌کاری'),
         ('CUSTOM', 'ساعت سفارشی'),
     )
+    APPROVAL_STATUS_CHOICES = (
+        ('DRAFT', 'پیش‌نویس اولیه'),
+        ('PENDING_SUPERVISOR', 'در انتظار بررسی و تایید سرپرست'),
+        ('APPROVED', 'تایید نهایی سرپرست کارگاه'),
+        ('REVISION_REQUIRED', 'عودت داده‌شده جهت اصلاح و بازنگری'),
+    )
 
     personnel = models.ForeignKey(
         PersonnelProfile,
@@ -2074,6 +2096,32 @@ class DailyAttendance(_WarehouseCompatMixin, models.Model):
     )
     date_shamsi = models.CharField(max_length=10, db_index=True, verbose_name="تاریخ شمسی (مثال ۱۴۰۴/۰۵/۱۲)")
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='PRESENT_10H', verbose_name="وضعیت حضور")
+    approval_status = models.CharField(
+        max_length=25,
+        choices=APPROVAL_STATUS_CHOICES,
+        default='PENDING_SUPERVISOR',
+        db_index=True,
+        verbose_name="وضعیت چرخه تایید"
+    )
+    supervisor_approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_daily_attendances',
+        verbose_name="سرپرست تاییدکننده"
+    )
+    supervisor_approved_at = models.DateTimeField(null=True, blank=True, verbose_name="زمان تایید سرپرست")
+    revision_reason = models.TextField(blank=True, null=True, verbose_name="علت عودت و بازنگری سرپرست")
+    revision_requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='revised_daily_attendances',
+        verbose_name="درخواست‌دهنده بازنگری"
+    )
+    revision_requested_at = models.DateTimeField(null=True, blank=True, verbose_name="زمان عودت و بازنگری")
     
     effective_hours = models.DecimalField(max_digits=5, decimal_places=2, default=10.00, verbose_name="ساعات کارکرد موثر")
     overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, verbose_name="ساعات اضافه‌کار")

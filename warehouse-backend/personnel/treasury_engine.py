@@ -12,6 +12,7 @@ import csv
 import logging
 from typing import List, Dict, Any, Optional
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from django.core.exceptions import PermissionDenied, ValidationError
 
@@ -53,9 +54,10 @@ class TreasuryDisbursementService:
             raise PermissionDenied("کاربر جاری فاقد مجوز خزانه‌داری و صدور دستور پرداخت است.")
 
     @classmethod
-    def get_pending_treasury_batches(cls) -> Dict[str, Any]:
+    def get_pending_treasury_batches(cls, company_ids: Optional[List[int]] = None) -> Dict[str, Any]:
         """
         دریافت کلیه اسناد مالی آماده پرداخت (Ready to Pay) به تفکیک حقوق و ناوگان
+        با پشتیبانی از فیلتر چندشرکتی (Multi-tenant Company Scoping)
         """
         # دوره‌های حقوق تایید شده توسط مدیر
         ready_periods = MonthlyWorkPeriod.objects.filter(
@@ -72,6 +74,22 @@ class TreasuryDisbursementService:
             is_settled=False,
             vehicle__approval_status__in=[WorkflowStatuses.APPROVED, 'approved']
         ).select_related('vehicle')
+
+        if company_ids is not None:
+            if len(company_ids) == 0:
+                ready_periods = ready_periods.none()
+                ready_payrolls = ready_payrolls.none()
+                ready_trips = ready_trips.none()
+            else:
+                ready_periods = ready_periods.filter(company_id__in=company_ids)
+                ready_payrolls = ready_payrolls.filter(
+                    Q(period__company_id__in=company_ids) | Q(personnel__company_id__in=company_ids)
+                )
+                ready_trips = ready_trips.filter(
+                    Q(vehicle__company_id__in=company_ids) |
+                    Q(project__company_id__in=company_ids) |
+                    Q(section__project__company_id__in=company_ids)
+                )
 
         total_payroll_payable = sum(r.payable_amount or 0 for r in ready_payrolls)
         total_fleet_payable = sum(t.total_amount or 0 for t in ready_trips)

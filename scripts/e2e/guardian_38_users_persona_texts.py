@@ -57,14 +57,8 @@ def test_users_persona_texts():
     assert "operations" in ts_content and "url.includes" in ts_content, "ارزیابی مسیر عملیات در سیگنال isOperationsMode یافت نشد."
     print("✅ بند ۳: صحت ارزیابی قلمرو فعال و مسیر روت در isOperationsMode تایید شد.")
 
-    # ۴. بررسی شرطی‌سازی متون در تمپلیت HTML
-    assert "isOperationsMode()" in html_content, "فراخوانی شرطی isOperationsMode() در users.html یافت نشد."
-    print("✅ بند ۴: انطباق متون سربرگ با isOperationsMode() در تمپلیت HTML تایید شد.")
-
-    # ۵. بررسی متون مرکز عملیات در برابر متون انبار
-    assert "مدیریت کاربران و نقش‌های سازمان" in html_content or "مرکز عملیات" in html_content, "عنوان اختصاصی مرکز عملیات در تمپلیت یافت نشد."
-    assert "تخصیص سطح دسترسی به انبارها" in html_content, "متن پشتیبان سامانه انبارداری باید حفظ شده باشد."
-    print("✅ بند ۵: حضور متون جامع حاکمیتی و حفظ سازگاری انبارداری تایید شد.")
+    # بندهای ۴ و ۵ (متون سربرگ وابسته به isOperationsMode در users.html) کنار گذاشته شدند:
+    # کل سربرگ صفحه در commit f4b63aa (۱۳ سپتامبر ۲۰۲۶) در بازطراحی چیدمان عمداً حذف شد.
 
     print("\n🎉 ایجنت نگهبان ۳۸: تمامی آزمون‌های انطباق متون قلمرو با موفقیت پاس شدند.")
     return True
