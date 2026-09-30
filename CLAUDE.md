@@ -41,6 +41,13 @@
 
 - سرویس‌های حیاتی در `src/app/core/services/`: `offline-db.ts`, `offline-sync.service.ts`, `server-reachability.ts`, `sync-pull.service.ts`, `network-status.service.ts`, `photo-upload-queue.service.ts`, `session-tab.service.ts`, `system-health.service.ts`, `import.service.ts`, `communication.service.ts`.
 - آفلاین/PWA: Service Worker انگولار با وصلهٔ پس از build در `tools/patch-ngsw-530.js` که در `npm run build` اجرا می‌شود (build مستقیم `ng build` وصله را جا می‌اندازد — همیشه `npm run build`).
+- **زبان طراحی UI:** اسکیل `design-system` مرجع است. پایه‌های آن:
+  - **توکن‌های رنگ معنایی:** `surface`، `fg` و `line` در `tailwind.config.js` و `:root` فایل `styles.css`.
+  - **آیکن مشترک:** `<svg appIcon="نام">` با `shared/icons/` (رجیستری ۱۹۵ آیکن). svg درون‌خطی تازه ممنوع است و نگهبان ۵۲ آن را می‌گیرد.
+  - **فونت Vazirmatn محلی:** در `public/fonts/vazirmatn/` و گروه prefetch سرویس‌ورکر.
+  - **`darkMode: 'selector'`:** حالت تیره دیگر خودکار با سیستم‌عامل روشن نمی‌شود.
+  - **`NgOptimizedImage`:** فقط برای تصویر سرور در جعبهٔ ثابت؛ نه `data:`/`blob:` و نه قالب چاپی.
+  - **`@defer` برای `chart.js`، `withViewTransitions` برای گذار صفحه‌ها، و کاهش حرکت سراسری.**
 
 ## قواعد سخت و تصمیم‌های پذیرفته‌شده
 
@@ -53,6 +60,7 @@
   - فقط پیش از کاری که مستقیم روی محیط عملیاتی اثر دارد (بند بعد) یا مسیر از دست رفتن داده باز می‌کند، یک سؤال کوتاه بله/خیر بپرس.
   - پاسخ‌ها کوتاه و فارسی بمانند.
 - **همین ماشین محیط عملیاتی است.** `cloudflared`، بک‌اند daphne (پورت 8000) و فرانت express (پورت 4200، سروِ `warehouse-front/dist/`) همین‌جا اجرا می‌شوند. دیتابیس محلی هم همان دیتابیس عملیاتی است. پس بیلد فرانت، ری‌استارت بک‌اند و `migrate` مستقیماً روی کاربران واقعی اثر دارند.
+  - همراه استک یک `ng serve` روی `localhost:4300` هم اجرا می‌شود که کد درخت کاری را زنده سرو می‌کند. برای بازبینی دیداری بی‌خطر همان را ببین (پیکربندی `attach-frontend-dev-4300` در `.claude/launch.json`). 4200 همان نسخهٔ عملیاتی است.
 
 ## جداسازی ماژول‌ها (modular split)
 
@@ -69,6 +77,10 @@
 - نگهبان‌ها: `python scripts/e2e/guardian_all.py` همه را اجرا می‌کند: فاز ۱ تا ۵، نگهبان ۲۹ (`guardian_modularization.py`) و هر `guardian_NN_*.py`، که خودکار پیدا می‌شوند. نگهبان ۳۲ در commit `2f9855b` حذف شد. نگهبان‌های فاز ۱ تا ۵ دادهٔ E2E (مثل `E2E-ITEM-01`) لازم دارند و روی دیتابیس عملیاتی رد می‌شوند؛ برای پاس شدنشان هرگز دادهٔ آزمایشی در دیتابیس عملیاتی نساز.
 - تست: `./venv/Scripts/python.exe manage.py test ...`. دیتابیس تست postgres در دسترس نیست؛ اگر تستی اجرا نشد، صریح گزارش بده.
 - چک: `./venv/Scripts/python.exe manage.py check`.
+- **تست فرانت (`ng test`):** وضعیت ۳۰ سپتامبر ۲۰۲۶، یکسان روی HEAD و پیش از تغییرات UI:
+  - ۱۸ فایل spec خطای TypeScript دارند (نبودِ تایپ‌های Node برای `fs`/`path`/`__dirname`، و فیلدهای کهنهٔ مدل). چون builder همهٔ specها را type-check می‌کند، کل مجموعه کامپایل نمی‌شود.
+  - برای اجرای بقیه: یک tsconfig موقت که `tsconfig.spec.json` را extend می‌کند و آن ۱۸ فایل را exclude می‌کند، با `--ts-config` و همان `--exclude`ها. نتیجه: ۳۵۷ تست پاس، ۱۹ رد (رد شدن‌ها هم از قبل بوده است).
+  - برای سنجش اثر یک تغییر، همین را روی نسخهٔ HEAD (`git archive` در `scratch/` با junction به `node_modules`) هم اجرا و مقایسه کن. junction را فقط با `cmd /c rmdir` پاک کن، نه `rm -rf`.
 - تنظیمات محرمانهٔ بک‌اند (`DJANGO_SECRET_KEY`، `DJANGO_DEBUG`) در `warehouse-backend/.env` است. این فایل بیرون از git است و `settings.py` آن را می‌خواند؛ متغیر محیط سیستم بر آن مقدم است. آن را نخوان.
 - خطاهای سطح ERROR به بالای بک‌اند (Django و اپ‌های پروژه) در `warehouse-backend/logs/django-errors.log` ذخیره می‌شوند. این پوشه بیرون از git است و فایل با اولین خطا ساخته می‌شود.
 - **انتشار روی همین ماشین** (پیش از آن یک بله/خیر از کاربر بگیر):
@@ -78,6 +90,10 @@
      `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "E:\warehouse project\warehouse-backend" --title "Backend Daphne" cmd /k ".\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application"`
   4. بررسی کن: `https://app.farsalish.ir/` و `https://app.farsalish.ir/api/public/config/` باید 200 بدهند.
 - اتوماسیون Claude Code:
-  - هوک‌ها در `.claude/settings.json` با اسکریپت `.claude/hooks/guard.py`
-  - ساب‌ایجنت‌های `data-loss-reviewer` و `tenant-scope-reviewer` در `.claude/agents/`
-  - اسکیل‌های `safe-migration`، `systematic-debugging` و `verification-before-completion` در `.claude/skills/`
+  - **هوک‌ها** در `.claude/settings.json` با اسکریپت `.claude/hooks/guard.py`. همین اسکریپت را Antigravity هم از `.agents/hooks.json` صدا می‌زند.
+    - قالب خروجی دو ابزار جداست: برای Claude Code فقط `hookSpecificOutput`، و در هر اجرا حداکثر یک JSON.
+    - آزمون: `python scripts/test_guard_hooks.py`.
+  - **ساب‌ایجنت‌ها** در `.claude/agents/`: `data-loss-reviewer`، `tenant-scope-reviewer` و `ui-reviewer`
+  - **اسکیل‌ها** در `.claude/skills/`: `safe-migration`، `systematic-debugging`، `verification-before-completion` و `design-system`
+  - **افزونه‌ها** (دامنهٔ project): `modern-web-guidance` (Google Chrome) و `frontend-design` (Anthropic)
+  - **MCP**: `context7` و `angular-cli` (با `--read-only`)

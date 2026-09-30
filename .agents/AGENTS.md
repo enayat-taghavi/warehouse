@@ -78,9 +78,15 @@
 - **Environment & Secrets Protection:**
   - Sensitive server variables (`DJANGO_SECRET_KEY`, `DJANGO_DEBUG`) are isolated in `warehouse-backend/.env` (excluded from git). NEVER read, dump, print, or commit this file.
 - **Guardian Test Suite Invariants:**
-  - `guardian_all.py` runs all 27 guardians (Phases 1-5, Guardian 29, and Guardians 30-51).
+  - `guardian_all.py` runs all 28 guardians (Phases 1-5, Guardian 29, and Guardians 30-52).
   - Guardian 32 was deprecated/deleted in commit `2f9855b` and must never be referenced.
   - Guardians for Phases 1 to 5 require mock E2E data and are expected to fail on production; NEVER seed fake test data into the live production database to force them to pass.
 - **Conscious Architectural Decisions (Never Report as Defects):**
   - Chat contacts list (`ChatContactsListView` in `communications/views.py`) deliberately returns all active users across warehouses.
   - Authenticated users deliberately have no global rate limit (only `AnonRateThrottle` and `ScopedRateThrottle` are active) to avoid tunnel lockouts.
+
+### 9. Front-End Design System, Shared Icons & UI Standards
+- **Shared Icons Directive Invariant:** Direct inline `<svg>` markup with hardcoded paths in HTML templates is strictly prohibited (enforced by Guardian 52). All icons must use `<svg appIcon="name" class="..." ...></svg>` paired with `SvgIconDirective` (`shared/icons/svg-icon.directive.ts`) and registered in `icon-registry.ts`. Icon names follow kebab-case Feather/Lucide conventions.
+- **Local Typography & Zero-External-CDN Invariant:** Typography relies exclusively on local Vazirmatn font hosted in `public/fonts/vazirmatn/` and prefetched via Service Worker (`ngsw-config.json`). External font CDNs (Google Fonts, unpkg, etc.) are strictly forbidden to guarantee 100% offline continuity.
+- **Predictable Dark Mode Policy:** Tailwind `darkMode` is set strictly to `'class'`. Operating system level dark mode (`media` query) must NEVER auto-trigger dark styles on partial layouts. Dark styling must strictly use semantic surface tokens (`bg-surface`, `text-fg`, `border-line`).
+- **Image Optimization & Accessibility:** Dynamic server images in fixed-dimension containers must use Angular `NgOptimizedImage` (`[ngSrc]`) with explicit `width` and `height`. Print templates (ID cards) and blob/data previews must remain plain `src`. Every `<img>` must feature a descriptive Persian `alt` or `alt=""` for decorative images.
