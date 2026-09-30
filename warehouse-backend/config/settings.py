@@ -40,6 +40,37 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',') if h.strip()]
 
+# ثبت ماندگار خطاها: خطاهای سطح ERROR به بالای Django و اپ‌های پروژه، علاوه بر
+# کنسول daphne (مثل قبل)، در `warehouse-backend/logs/django-errors.log` هم ذخیره
+# می‌شوند (بیرون از git). سطح لاگرها و انتشار به لاگر ریشه دست نمی‌خورد، پس خروجی
+# کنسول عیناً مثل قبل می‌ماند.
+_LOG_DIR = BASE_DIR / 'logs'
+_LOG_DIR.mkdir(exist_ok=True)
+_PROJECT_LOGGERS = (
+    'accounts', 'common', 'communications', 'config', 'inventory', 'notifications',
+    'personnel', 'platform_core', 'reports', 'settings_core', 'warehouses',
+)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {'format': '{asctime} {levelname} {name} pid={process:d} {message}', 'style': '{'},
+    },
+    'handlers': {
+        'error_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(_LOG_DIR / 'django-errors.log'),
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 5,
+            'encoding': 'utf-8',
+            'delay': True,
+            'level': 'ERROR',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {name: {'handlers': ['error_file']} for name in ('django', *_PROJECT_LOGGERS)},
+}
+
 
 # Application definition
 
