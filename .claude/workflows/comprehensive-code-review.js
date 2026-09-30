@@ -51,7 +51,12 @@ const results = await pipeline(
 
     Use 'Read' and 'Bash' to explore files in warehouse-backend/${app}. Focus deeply.
     Return a list of strictly critical/high/medium severity findings. Be precise about 'file' (repo-relative path) and 'line'.
-    Ignore minor stylistic or formatting issues.`,
+    Ignore minor stylistic or formatting issues.
+
+    Intentional project decisions — do NOT report these:
+    - ChatContactsListView in communications/views.py returns all active users on purpose (not limited by warehouse).
+    - Authenticated users have no global rate limit on purpose (only AnonRateThrottle and ScopedRateThrottle), so users behind the Cloudflare tunnel are not locked out.
+    Hard project rule: any path that can lose user data (deleting records, destructive migrations, cascades) is at least high severity.`,
     { label: `review:${app}`, phase: 'Review', schema: FINDINGS_SCHEMA, effort: 'high' }
   ),
   (review) => {
@@ -69,7 +74,8 @@ const results = await pipeline(
           You are a skeptical reviewer. Your goal is to REFUTE this finding.
           Use Read tool on ${f.file} to inspect the context around line ${f.line}.
           Are there checks elsewhere? Is this actually safe? Is it a race condition in practice?
-          Return isReal=false if you can refute it. Only return isReal=true if the bug is genuinely real and unresolved.`,
+          Return isReal=false if you can refute it. Only return isReal=true if the bug is genuinely real and unresolved.
+          Also return isReal=false if the finding is one of the intentional project decisions: the chat contacts list is not limited by warehouse, and authenticated users have no global rate limit.`,
           { label: `verify:${f.file?.split('/').pop()}`, phase: 'Verify', schema: VERDICT_SCHEMA, effort: 'high' }
         ).then(v => ({ ...f, verdict: v, file_clean: f.file, line: f.line }))
       )

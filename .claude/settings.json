@@ -1,12 +1,36 @@
-﻿{
-    "model":  "claude-sonnet-5",
-    "permissions":  {
-                        "deny":  [
-                                     "Read(./.env)",
-                                     "Read(./.env.*)"
-                                 ],
-                        "allow":  [
-
-                                  ]
+{
+    "model": "claude-sonnet-5",
+    "permissions": {
+        "deny": [
+            "Read(./.env)",
+            "Read(./.env.*)"
+        ],
+        "allow": []
+    },
+    "hooks": {
+        "PreToolUse": [
+            {
+                "matcher": "Bash|Write",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.py\" 2>/dev/null || true",
+                        "timeout": 10
                     }
+                ]
+            }
+        ],
+        "PostToolUse": [
+            {
+                "matcher": "Edit|Write",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.py\" 2>/dev/null || true",
+                        "timeout": 10
+                    }
+                ]
+            }
+        ]
+    }
 }

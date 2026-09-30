@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "angular-cli": {
+      "command": "node",
+      "args": [
+        "E:/warehouse project/warehouse-front/node_modules/@angular/cli/bin/ng.js",
+        "mcp",
+        "--read-only"
+      ],
+      "env": {}
+    },
+    "context7": {
+      "serverUrl": "https://mcp.context7.com/mcp"
+    }
+  }
+}

@@ -67,5 +67,20 @@
      - Live validation feedback banners must indicate validity (`✓ شماره شبا معتبر و تایید شد (الگوریتم ISO 7064 Mod 97)`) or specific error warnings (`⚠`).
   3) **Searchable Bank Combobox:**
      - Bank selection must feature an upward/downward searchable combobox leveraging `IRANIAN_BANKS` with bank logos/emojis, Persian titles, 3-digit bank codes, and click-outside dismissal.
-
-
+### 8. Production Machine, Deployment & Guardian Integrity Standards
+- **Local Machine is Production:** This machine directly hosts and serves production traffic through Cloudflare tunnel (`cloudflared`). Backend Daphne listens on 0.0.0.0:8000 (`config.asgi:application`), Frontend Express serves `warehouse-front/dist/` on port 4200, and PostgreSQL on 5432 is the active live production database. Any front-end build, backend restart, or database migration directly impacts live active users.
+- **Safe Production Deployment Protocol:**
+  1) **Database Backup:** Before migrations or deploys, execute `create_database_backup` from `accounts.backup_service` (DO NOT run `run_auto_backup`, as it deletes all except the last 7 backups).
+  2) **Zero-Downtime Front-End Build:** In `warehouse-front`, run `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js` so currently served bundles remain online during the build.
+  3) **Daphne Backend Restart:** Terminate existing Daphne process on port 8000 and spawn in a detached Windows Terminal tab:
+     `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "E:\warehouse project\warehouse-backend" --title "Backend Daphne" cmd /k ".\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application"`
+  4) **Health Checks:** Confirm HTTP 200 on `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/`.
+- **Environment & Secrets Protection:**
+  - Sensitive server variables (`DJANGO_SECRET_KEY`, `DJANGO_DEBUG`) are isolated in `warehouse-backend/.env` (excluded from git). NEVER read, dump, print, or commit this file.
+- **Guardian Test Suite Invariants:**
+  - `guardian_all.py` runs all 27 guardians (Phases 1-5, Guardian 29, and Guardians 30-51).
+  - Guardian 32 was deprecated/deleted in commit `2f9855b` and must never be referenced.
+  - Guardians for Phases 1 to 5 require mock E2E data and are expected to fail on production; NEVER seed fake test data into the live production database to force them to pass.
+- **Conscious Architectural Decisions (Never Report as Defects):**
+  - Chat contacts list (`ChatContactsListView` in `communications/views.py`) deliberately returns all active users across warehouses.
+  - Authenticated users deliberately have no global rate limit (only `AnonRateThrottle` and `ScopedRateThrottle` are active) to avoid tunnel lockouts.
