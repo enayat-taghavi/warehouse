@@ -97,5 +97,78 @@
     - [x] راستی‌آزمایی عدم وجود هرگونه خطای کامپایل تایپ‌اسکریپت و اجرای موفقیت‌آمیز `npm run build` <!-- id: 70 -->
     - [x] ثبت گزارش مستندات در `walkthrough_profiles_dualtab.md` طبق پروتکل DUAL-SAVE <!-- id: 71 -->
 
-</div>
+---
 
+# 🛡️ تفکیک چندشرکتی و ایزولاسیون کارتابل‌های ۵ سطحی (Cartable Multi-Tenant Security)
+
+- [x] **فاز ۱: ایمن‌سازی موتور خزانه‌داری (`treasury_engine.py`)** <!-- id: 0 -->
+    - [x] افزودن پارامتر `company_ids` به `TreasuryDisbursementService.get_pending_treasury_batches` <!-- id: 1 -->
+    - [x] اعمال فیلتر شرکت بر روی دوره‌های آماده، سوابق حقوق و سرویس‌های ناوگان معلق <!-- id: 2 -->
+    - [x] به‌روزرسانی محاسبه مجموع مبالغ صف خزانه‌داری متناسب با شرکت فیلترشده <!-- id: 3 -->
+
+- [x] **فاز ۲: ایمن‌سازی لایه کارتابل‌های پرسنلی (`cartable_views.py`)** <!-- id: 4 -->
+    - [x] پیاده‌سازی متد کمکی `_get_effective_company_ids(request, user)` <!-- id: 5 -->
+    - [x] پیاده‌سازی متد کمکی فیلتر چندشرکتی `_filter_by_company(queryset, model_name, company_ids)` <!-- id: 6 -->
+    - [x] اعمال فیلتر شرکت بر اندپوینت `GET` کارتابل سرپرست (`SupervisorCartableAPIView`) <!-- id: 7 -->
+    - [x] اعمال کنترل BOLA و بررسی مالکیت شرکت در اندپوینت `POST` کارتابل سرپرست <!-- id: 8 -->
+    - [x] اعمال فیلتر شرکت بر اندپوینت `GET` کارتابل حسابدار (`AccountantCartableAPIView`) <!-- id: 9 -->
+    - [x] اعمال کنترل BOLA و بررسی مالکیت شرکت در اندپوینت `POST` کارتابل حسابدار <!-- id: 10 -->
+    - [x] اعمال فیلتر شرکت بر اندپوینت `GET` کارتابل مدیر (`ManagerCartableAPIView`) <!-- id: 11 -->
+    - [x] اعمال کنترل BOLA و بررسی مالکیت شرکت در اندپوینت `POST` کارتابل مدیر <!-- id: 12 -->
+    - [x] اعمال فیلتر شرکت بر اندپوینت `GET` کارتابل خزانه‌داری (`TreasuryCartableAPIView`) <!-- id: 13 -->
+    - [x] اعمال کنترل امنیتی چندشرکتی بر عملیات تسویه در اندپوینت `POST` خزانه‌داری <!-- id: 14 -->
+    - [x] اعتبارسنجی دسترسی شرکت در دانلود دیسکت‌های بانکی پایا/ساتنا (`TreasuryDisketteExportAPIView`) <!-- id: 15 -->
+
+- [x] **فاز ۳: نگارش و اجرای آزمون‌های اختصاصی چندشرکتی (`test_cartable_multitenant.py`)** <!-- id: 16 -->
+    - [x] راه‌اندازی سناریوی آزمایشی دو شرکتی (FA و PTS) با کاربران و رکوردهای معلق تفکیک‌شده <!-- id: 17 -->
+    - [x] تست ایزولاسیون کامل نمایش در کارتابل‌های سرپرست، حسابدار، مدیر و خزانه‌دار <!-- id: 18 -->
+    - [x] تست دفاع در برابر اقدام بین‌شرکتی (BOLA Protection) با کد ۴۰۳ <!-- id: 19 -->
+    - [x] تست دانلود غیرمجاز دیسکت بانکی با کد ۴۰۳ <!-- id: 20 -->
+    - [x] تست دسترسی سوپریوزر با و بدون هدر شرکت <!-- id: 21 -->
+
+- [x] **فاز ۴: تست رگرسیون و راستی‌آزمایی نهایی (Regression & Build Verification)** <!-- id: 22 -->
+    - [x] اجرای تست‌های `test_company_multitenant.py` بدون خطا <!-- id: 23 -->
+    - [x] اجرای تست‌های `test_role_based_cartables.py` بدون خطا <!-- id: 24 -->
+    - [x] راستی‌آزمایی هدر `X-Company-ID` در فرانت‌اند <!-- id: 25 -->
+
+---
+
+# چک‌لیست وظایف پیاده‌سازی ممیزی چرخه گردش‌کار کارکرد و واقعی‌سازی قفل دوره (v2.0)
+
+- [x] **فاز ۱: ارتقای مدل‌ها، مایگریشن و لایه سریالایزرها (Backend Model & Migration)** <!-- id: 0 -->
+    - [x] افزودن فیلد `approval_status` (`DRAFT`, `PENDING_SUPERVISOR`, `APPROVED`, `REVISION_REQUIRED`) به مدل `DailyAttendance` <!-- id: 1 -->
+    - [x] افزودن فیلدهای ره‌گیری سرپرست (`supervisor_approved_by`, `supervisor_approved_at`, `revision_reason`, `revision_requested_by`, `revision_requested_at`) به `DailyAttendance` <!-- id: 2 -->
+    - [x] افزودن فیلدهای اختیاری `project` و `section` به مدل `MonthlyWorkPeriod` <!-- id: 3 -->
+    - [x] ایجاد مایگریشن‌های جنگو و اعمال آن‌ها در دیتابیس با مقداردهی ایمن داده‌های گذشته <!-- id: 4 -->
+    - [x] به‌روزرسانی `DailyAttendanceSerializer` با فیلدهای جدید وضعیت تایید و عناوین فارسی <!-- id: 5 -->
+    - [x] به‌روزرسانی سریالایزرهای ماتریسی کارکرد (`BulkAttendanceMatrixSerializer` و `MonthlyGridItemInputSerializer`) <!-- id: 6 -->
+
+- [x] **فاز ۲: ارتقای کارتابل، موتور حقوق و محاسبات خلاصه ماهانه (Backend Business Logic)** <!-- id: 7 -->
+    - [x] اعمال فیلتر `approval_status='APPROVED'` در [payroll_engine.py](file:///e:/warehouse%20project/warehouse-backend/personnel/payroll_engine.py) جهت ممانعت از محاسبه حقوق کارکردهای تاییدنشده <!-- id: 8 -->
+    - [x] پشتیبانی از `section_id` و `project_id` در اندپوینت `monthly-summary` و محاسبه دقیق `pending_approvals_count` <!-- id: 9 -->
+    - [x] مسدودسازی ویرایش کارکرد در دوره‌های بسته/قفل‌شده (`SUBMITTED_SUPERVISOR`, `LOCKED` و...) در `bulk_save_matrix` و `bulk_save_monthly_grid` <!-- id: 10 -->
+    - [x] ابطال خودکار وضعیت تاییدیه (`PENDING_SUPERVISOR`) در صورت ویرایش کارکرد قبلاً تاییدشده به همراه لاگ ممیزی <!-- id: 11 -->
+    - [x] پشتیبانی از تایید و عودت رکورد کارکرد در اکشن‌های کارتابل (`SupervisorCartableAPIView.post`) همراه با اعتبارسنجی دسترسی بخش (BOLA) <!-- id: 12 -->
+    - [x] ثبت تغییرات وضعیت تایید در `AttendanceAuditLog` بدون دستکاری و تخریب فیلد `notes` <!-- id: 13 -->
+    - [x] پیاده‌سازی سد امنیتی سروری در قفل دوره: ممانعت از قفل دوره در صورت وجود کارکرد تاییدنشده با خطای ۴۰۰ <!-- id: 14 -->
+    - [x] اصلاح بازیابی دوره کارکرد ماهانه بر مبنای `section_id` و `project_id` به جای انتساب اشتباه پروژه به `warehouse_id` <!-- id: 15 -->
+
+- [x] **فاز ۳: ارتقای کامپوننت کارتابل کارکرد سرپرست در فرانت‌اند (`supervisor-attendance`)** <!-- id: 16 -->
+    - [x] تفکیک نمایش وضعیت حضور (حاضر، غایب و...) از وضعیت تایید سرپرست در جدول کارکرد <!-- id: 17 -->
+    - [x] اصلاح فیلتر تب‌های «⏳ نیازمند بررسی»، «✅ تایید شده»، «⚠️ نیازمند بازنگری» و شمارنده‌ها بر مبنای `approval_status` <!-- id: 18 -->
+    - [x] اتصال دکمه‌های تایید تکی و تایید دسته‌ای به اکشن رسمی کارتابل پرسنلی <!-- id: 19 -->
+    - [x] پیاده‌سازی مودال مدرن و ارگونومیک ثبت علت عودت (جایگزینی کامل با `window.prompt`) و حفظ کامل یادداشت‌های پیشین <!-- id: 20 -->
+
+- [x] **فاز ۴: ارتقای کامپوننت قفل دوره کارکرد ماهانه در فرانت‌اند (`supervisor-period-lock`)** <!-- id: 21 -->
+    - [x] ارتقای متد `getAttendanceMonthlySummary` در `personnel-api.service.ts` با پشتیبانی از `sectionId` و `projectId` <!-- id: 22 -->
+    - [x] اتصال مقدار `pending_approvals` به فیلد واقعی `summaryRes?.pending_approvals_count` <!-- id: 23 -->
+    - [x] غیرفعال‌سازی دکمه قفل دوره در صورت وجود کارکرد معلق همراه با بنر هشدار راهنما <!-- id: 24 -->
+    - [x] اصلاح پارامتر ارسالی قفل دوره: ارسال صریح `section_id` و `project_id` به جای ارسال مقدار در قالب `warehouse_id` <!-- id: 25 -->
+
+- [x] **فاز ۵: تست‌های جامع، رگرسیون و بیلد نهایی (Quality Assurance)** <!-- id: 26 -->
+    - [x] نگارش و اجرای آزمون‌های بک‌اند در `test_attendance_approval_workflow.py` (تایید، عودت، ممیزی، سد قفل، حقوق و BOLA) <!-- id: 27 -->
+    - [x] نگارش و اجرای تست‌های DOM فرانت‌اند با Vitest <!-- id: 28 -->
+    - [x] اجرای تست‌های رگرسیون ماژول پرسنل و کارتابل‌ها (`test_company_multitenant`, `test_role_based_cartables`) <!-- id: 29 -->
+    - [x] اجرای موفقیت‌آمیز `npm run build` فرانت‌اند با Exit code 0 <!-- id: 30 -->
+
+</div>
