@@ -70,6 +70,7 @@
 - تست: `./venv/Scripts/python.exe manage.py test ...`. دیتابیس تست postgres در دسترس نیست؛ اگر تستی اجرا نشد، صریح گزارش بده.
 - چک: `./venv/Scripts/python.exe manage.py check`.
 - تنظیمات محرمانهٔ بک‌اند (`DJANGO_SECRET_KEY`، `DJANGO_DEBUG`) در `warehouse-backend/.env` است. این فایل بیرون از git است و `settings.py` آن را می‌خواند؛ متغیر محیط سیستم بر آن مقدم است. آن را نخوان.
+- خطاهای سطح ERROR به بالای بک‌اند (Django و اپ‌های پروژه) در `warehouse-backend/logs/django-errors.log` ذخیره می‌شوند. این پوشه بیرون از git است و فایل با اولین خطا ساخته می‌شود.
 - **انتشار روی همین ماشین** (پیش از آن یک بله/خیر از کاربر بگیر):
   1. پشتیبان بگیر با `create_database_backup` از `accounts/backup_service.py`. `run_auto_backup` را اجرا نکن، چون پشتیبان‌های قدیمی را پاک می‌کند.
   2. بیلد فرانت در `warehouse-front`: `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js`. این فلگ نمی‌گذارد فایل‌هایی که همین حالا سرو می‌شوند وسط بیلد پاک شوند.
@@ -79,4 +80,4 @@
 - اتوماسیون Claude Code:
   - هوک‌ها در `.claude/settings.json` با اسکریپت `.claude/hooks/guard.py`
   - ساب‌ایجنت‌های `data-loss-reviewer` و `tenant-scope-reviewer` در `.claude/agents/`
-  - اسکیل `safe-migration` در `.claude/skills/`
+  - اسکیل‌های `safe-migration`، `systematic-debugging` و `verification-before-completion` در `.claude/skills/`
