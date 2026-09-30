@@ -429,13 +429,13 @@ class AttendanceAndFleetAuditTests(TestCase):
         # ایجاد خودرو جدید
         payload = {
             'driver_name': 'رضا راننده آزمایشی',
-            'driver_national_code': '1234567890',
+            'driver_national_code': '0010376488',
             'driver_phone': '09123456789',
             'plate_number': '99ط111-22',
             'vehicle_type': 'khavar',
             'ownership_type': 'contract',
             'default_service_rate': 2500000,
-            'sheba_number': 'IR050170000000123456789012',
+            'sheba_number': 'IR780170000000101111111001',
             'is_active': True
         }
         res = self.client.post('/api/personnel/vehicles/', payload, format='json')
