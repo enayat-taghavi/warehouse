@@ -47,6 +47,18 @@
 
           <button
             type="button"
+            (click)="switchSubTab('revision')"
+            [ngClass]="activeSubTab === 'revision' ? 'bg-white text-rose-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+            <span>⚠️ عودت داده‌شده</span>
+            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
+                  [ngClass]="activeSubTab === 'revision' ? 'bg-rose-50 text-rose-700' : 'bg-slate-200/70 text-slate-600'">
+              {{ statusCounters.revision }}
+            </span>
+          </button>
+
+          <button
+            type="button"
             (click)="switchSubTab('all')"
             [ngClass]="activeSubTab === 'all' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
             class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
@@ -75,7 +87,7 @@
           (click)="approveBatch()"
           class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
           <span>✓</span>
-          <span>تایید دسته‌ای کارکردها</span>
+          <span>تایید دسته‌ای کارکردهای در انتظار</span>
         </button>
 
         <!-- خروجی اکسل ۲ ردیفه -->
@@ -126,13 +138,14 @@
 
   <!-- ── ۲. جدول و کارت داده‌ها (Data Card Container) ── -->
   <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-    <!-- نوار بالای جدول: جستجو و فیلتر -->
+    <!-- نوار بالای جدول: جستجو و موقعیت پروژه -->
     <div class="p-3 md:p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
       <div class="relative flex-1 min-w-[240px] max-w-md">
         <input
           type="text"
           [(ngModel)]="searchQuery"
-          (keyup.enter)="syncUrlParams()"
+          (keyup.enter)="applyFilter()"
+          (input)="applyFilter()"
           placeholder="جستجو بر اساس نام پرسنل، کد ملی یا عنوان شغل..."
           class="w-full pr-9 pl-8 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all font-sans" />
         <span class="absolute right-3 top-2.5 text-slate-400 text-xs">🔍</span>
@@ -163,7 +176,7 @@
       </div>
       <h3 class="text-sm font-black text-slate-800">هیچ کارکردی در این وضعیت یافت نشد</h3>
       <p class="text-xs text-slate-500 max-w-md mx-auto">
-        تمام کارکردهای ثبت‌شده توسط کارمندان بخش به تایید سرپرست رسیده است یا هنوز داده‌ای ثبت نشده است.
+        اطلاعاتی در تب انتخابی وجود ندارد یا تمام موارد بررسی شده‌اند.
       </p>
     </div>
 
@@ -174,10 +187,12 @@
             <th class="p-3">ردیف</th>
             <th class="p-3">پرسنل</th>
             <th class="p-3">کد ملی</th>
+            <th class="p-3">تاریخ</th>
             <th class="p-3">بخش</th>
             <th class="p-3">ساعت کار</th>
             <th class="p-3">اضافه‌کار</th>
-            <th class="p-3">وضعیت</th>
+            <th class="p-3">وضعیت حضور</th>
+            <th class="p-3">وضعیت تایید</th>
             <th class="p-3 text-center">عملیات سرپرست</th>
           </tr>
         </thead>
@@ -186,34 +201,59 @@
             <td class="p-3 font-mono text-slate-400">{{ idx + 1 }}</td>
             <td class="p-3 font-bold text-slate-800">{{ item.personnel_name }}</td>
             <td class="p-3 font-mono text-slate-600">{{ item.national_code }}</td>
-            <td class="p-3">{{ item.section_name }}</td>
+            <td class="p-3 font-mono text-slate-600">{{ item.date_shamsi }}</td>
+            <td class="p-3">{{ item.section_name || 'عمومی' }}</td>
             <td class="p-3 font-mono font-bold">{{ item.work_hours }}</td>
             <td class="p-3 font-mono font-bold text-indigo-600">{{ item.overtime_hours }}</td>
+            
+            <!-- وضعیت حضور فیزیکی -->
             <td class="p-3">
               <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border"
                 [ngClass]="{
-                  'bg-amber-50 text-amber-800 border-amber-200': item.status === 'pending_supervisor',
-                  'bg-emerald-50 text-emerald-800 border-emerald-200': item.status === 'approved' || item.status === 'manager_approved',
-                  'bg-rose-50 text-rose-800 border-rose-200': item.status === 'rejected',
-                  'bg-slate-100 text-slate-700 border-slate-200': item.status === 'draft'
+                  'bg-emerald-50 text-emerald-800 border-emerald-200': item.attendance_status === 'PRESENT_10H',
+                  'bg-sky-50 text-sky-800 border-sky-200': item.attendance_status === 'HALF_5H',
+                  'bg-rose-50 text-rose-800 border-rose-200': item.attendance_status === 'ABSENT',
+                  'bg-purple-50 text-purple-800 border-purple-200': item.attendance_status === 'LEAVE',
+                  'bg-amber-50 text-amber-800 border-amber-200': item.attendance_status === 'FRIDAY_WORK' || item.attendance_status === 'MISSION',
+                  'bg-slate-100 text-slate-700 border-slate-200': item.attendance_status === 'CUSTOM'
                 }">
-                {{ item.status === 'pending_supervisor' ? '⏳ در انتظار سرپرست' : (item.status === 'approved' ? '✅ تایید شده' : item.status) }}
+                {{ item.attendance_status_display }}
               </span>
             </td>
+
+            <!-- وضعیت چرخه تایید -->
+            <td class="p-3">
+              <div class="flex flex-col gap-0.5">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border inline-block w-fit"
+                  [ngClass]="{
+                    'bg-amber-50 text-amber-800 border-amber-200': item.approval_status === 'PENDING_SUPERVISOR' || item.approval_status === 'DRAFT',
+                    'bg-emerald-50 text-emerald-800 border-emerald-200': item.approval_status === 'APPROVED',
+                    'bg-rose-50 text-rose-800 border-rose-200': item.approval_status === 'REVISION_REQUIRED'
+                  }">
+                  {{ item.approval_status_display }}
+                </span>
+                <span *ngIf="item.approval_status === 'REVISION_REQUIRED' && item.revision_reason" class="text-[10px] text-rose-600 font-normal truncate max-w-[180px]" [title]="item.revision_reason">
+                  علت: {{ item.revision_reason }}
+                </span>
+              </div>
+            </td>
+
+            <!-- دکمه‌های عملیات سرپرست -->
             <td class="p-3 text-center">
               <div class="flex items-center justify-center gap-1.5">
                 <button
+                  *ngIf="item.approval_status !== 'APPROVED'"
                   type="button"
                   (click)="approveSingle(item)"
-                  class="px-2 py-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
-                  title="تایید کارکرد">
+                  class="px-2 py-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-2xs"
+                  title="تایید کارکرد روزانه">
                   ✓ تایید
                 </button>
                 <button
                   type="button"
-                  (click)="rejectSingle(item)"
-                  class="px-2 py-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
-                  title="عودت جهت اصلاح">
+                  (click)="openRevisionModal(item)"
+                  class="px-2 py-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-2xs"
+                  title="عودت جهت اصلاح به کارشناس">
                   ✕ عودت
                 </button>
               </div>
@@ -221,6 +261,48 @@
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- ── ۳. مودال ارگونومیک و مدرن عودت کارکرد (In-App Revision Modal) ── -->
+  <div *ngIf="showRevisionModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-fade-in" dir="rtl">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden space-y-4 p-5 animate-scale-up">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-sm font-bold">⚠️</span>
+          <div>
+            <h3 class="text-sm font-black text-slate-800">عودت کارکرد جهت بازنگری</h3>
+            <p class="text-[11px] text-slate-500 font-mono">{{ revisionTargetItem?.personnel_name }} | {{ revisionTargetItem?.date_shamsi }}</p>
+          </div>
+        </div>
+        <button (click)="closeRevisionModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer">✕</button>
+      </div>
+
+      <div class="space-y-2">
+        <label class="block text-xs font-bold text-slate-700">شرح علت عودت و اصلاحات موردنیاز <span class="text-rose-500">*</span></label>
+        <textarea
+          [(ngModel)]="revisionReasonText"
+          rows="3"
+          placeholder="مثال: ساعت اضافه‌کاری مغایر با مجوز سرپرستی است یا وضعیت به اشتباه ثبت شده..."
+          class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all font-sans"></textarea>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button
+          type="button"
+          (click)="closeRevisionModal()"
+          class="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold cursor-pointer">
+          انصراف
+        </button>
+        <button
+          type="button"
+          (click)="confirmRevision()"
+          [disabled]="isSubmittingRevision || !revisionReasonText.trim()"
+          class="px-4 py-1.5 rounded-xl bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50 text-xs font-black shadow-xs cursor-pointer active:scale-95 flex items-center gap-1.5">
+          <span *ngIf="isSubmittingRevision" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+          <span>ثبت عودت و ارجاع</span>
+        </button>
+      </div>
     </div>
   </div>
 

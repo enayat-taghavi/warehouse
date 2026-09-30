@@ -34,9 +34,31 @@ export class SupervisorPeriodLockHubComponent implements OnInit, OnDestroy {
     total_work_hours: 0,
     total_overtime_hours: 0,
     pending_approvals: 0,
-    is_locked: false
+    is_locked: false,
+    period_status: 'OPEN'
   };
 
+  monthMap: Record<string, string> = {
+    'فروردین': '01',
+    'اردیبهشت': '02',
+    'خرداد': '03',
+    'تیر': '04',
+    'مرداد': '05',
+    'شهریور': '06',
+    'مهر': '07',
+    'آبان': '08',
+    'آذر': '09',
+    'دی': '10',
+    'بهمن': '11',
+    'اسفند': '12'
+  };
+
+  monthsList: string[] = [
+    'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+    'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+  ];
+
+  currentPeriodId: number | null = null;
   lockedPeriods: any[] = [];
   anomalies: any[] = [];
 
@@ -59,6 +81,12 @@ export class SupervisorPeriodLockHubComponent implements OnInit, OnDestroy {
       }
       if (params['section_id']) {
         this.selectedSectionId = Number(params['section_id']);
+      }
+      if (params['year']) {
+        this.fiscalYear = params['year'];
+      }
+      if (params['month'] && this.monthMap[params['month']]) {
+        this.selectedMonth = params['month'];
       }
     });
 
@@ -113,6 +141,11 @@ export class SupervisorPeriodLockHubComponent implements OnInit, OnDestroy {
     this.fetchPeriodData();
   }
 
+  onMonthChanged(): void {
+    this.syncUrlParams();
+    this.fetchPeriodData();
+  }
+
   switchSubTab(tab: 'active_period' | 'locked_periods' | 'anomalies'): void {
     this.activeSubTab = tab;
     this.syncUrlParams();
@@ -124,64 +157,42 @@ export class SupervisorPeriodLockHubComponent implements OnInit, OnDestroy {
       relativeTo: this.route,
       queryParams: {
         tab: this.activeSubTab,
-        section_id: this.selectedSectionId || null
+        section_id: this.selectedSectionId || null,
+        year: this.fiscalYear,
+        month: this.selectedMonth
       },
       queryParamsHandling: 'merge'
     });
   }
-
-  monthMap: Record<string, string> = {
-    'فروردین': '01',
-    'اردیبهشت': '02',
-    'خرداد': '03',
-    'تیر': '04',
-    'مرداد': '05',
-    'شهریور': '06',
-    'مهر': '07',
-    'آبان': '08',
-    'آذر': '09',
-    'دی': '10',
-    'بهمن': '11',
-    'اسفند': '12'
-  };
-
-  currentPeriodId: number | null = null;
 
   fetchPeriodData(): void {
     this.isLoading = true;
     const m = this.monthMap[this.selectedMonth] || '04';
     const yearMonth = `${this.fiscalYear}/${m}`;
 
-    this.personnelApi.getSupervisorCartable().subscribe({
-      next: (cartable: any) => {
-        const periods = cartable?.periods || [];
-        const match = periods.find((p: any) => p.year_month === yearMonth);
-        if (match) {
-          this.currentPeriodId = match.id;
-          this.currentPeriodSummary.is_locked = match.status === 'LOCKED' || match.status === 'SUBMITTED_SUPERVISOR' || match.status === 'SUBMITTED_ACCOUNTANT';
-        }
+    const options: { section_id?: number; project_id?: number } = {};
+    if (this.selectedSectionId) options.section_id = this.selectedSectionId;
+    const projId = this.selectedSection?.project_id ?? ((this.selectedSection as any)?.project || null);
+    if (projId) options.project_id = projId;
 
-        this.personnelApi.getAttendanceMonthlySummary(null, yearMonth).subscribe({
-          next: (summaryRes: any) => {
-            this.isLoading = false;
-            const rows = summaryRes?.summary || [];
-            this.currentPeriodSummary = {
-              total_personnel: rows.length,
-              total_work_hours: rows.reduce((sum: number, r: any) => sum + (Number(r.total_work_hours) || 0), 0),
-              total_overtime_hours: rows.reduce((sum: number, r: any) => sum + (Number(r.total_overtime_hours) || 0), 0),
-              pending_approvals: summaryRes?.is_locked ? 0 : 0,
-              is_locked: summaryRes?.is_locked || this.currentPeriodSummary.is_locked
-            };
-            this.cdr.detectChanges();
-          },
-          error: () => {
-            this.isLoading = false;
-            this.cdr.detectChanges();
-          }
-        });
-      },
-      error: () => {
+    this.personnelApi.getAttendanceMonthlySummary(null, yearMonth, options).subscribe({
+      next: (summaryRes: any) => {
         this.isLoading = false;
+        const rows = summaryRes?.summary || [];
+        this.currentPeriodId = summaryRes?.period_id || null;
+        this.currentPeriodSummary = {
+          total_personnel: rows.length,
+          total_work_hours: rows.reduce((sum: number, r: any) => sum + (Number(r.total_hours) || 0), 0),
+          total_overtime_hours: rows.reduce((sum: number, r: any) => sum + (Number(r.total_overtime_hours) || 0), 0),
+          pending_approvals: summaryRes?.pending_approvals_count ?? 0,
+          is_locked: summaryRes?.is_locked ?? false,
+          period_status: summaryRes?.period_status || 'OPEN'
+        };
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        this.isLoading = false;
+        this.toast.error('خطا در دریافت خلاصه ماهانه دوره: ' + (err?.error?.error || err?.message || 'نامشخص'));
         this.cdr.detectChanges();
       }
     });
@@ -189,7 +200,7 @@ export class SupervisorPeriodLockHubComponent implements OnInit, OnDestroy {
 
   lockAndSubmitPeriod(): void {
     if (this.currentPeriodSummary.pending_approvals > 0) {
-      this.toast.error('ابتدا کلیه کارکردهای در انتظار تایید را نهایی کنید.');
+      this.toast.error(`امکان قفل دوره وجود ندارد. هنوز تعداد ${this.currentPeriodSummary.pending_approvals} کارکرد تاییدنشده وجود دارد. ابتدا به تب کارکرد رفته و تمام موارد را تایید نمایید.`);
       return;
     }
 
@@ -202,7 +213,8 @@ export class SupervisorPeriodLockHubComponent implements OnInit, OnDestroy {
       model: 'period',
       id: this.currentPeriodId || 0,
       year_month: yearMonth,
-      warehouse_id: this.selectedSection?.project_id || this.selectedSection?.project || null
+      section_id: this.selectedSectionId,
+      project_id: this.selectedSection?.project_id ?? ((this.selectedSection as any)?.project || null)
     }).subscribe({
       next: () => {
         this.isLocking = false;
@@ -212,8 +224,17 @@ export class SupervisorPeriodLockHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isLocking = false;
-        this.toast.error('خطا در قفل دوره: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.error('خطا در قفل دوره: ' + (err.error?.error || err.error?.detail || err.message || 'نامشخص'));
         this.cdr.detectChanges();
+      }
+    });
+  }
+
+  goToAttendance(): void {
+    this.router.navigate(['/app/finance/supervisor/attendance'], {
+      queryParams: {
+        tab: 'pending',
+        section_id: this.selectedSectionId || null
       }
     });
   }

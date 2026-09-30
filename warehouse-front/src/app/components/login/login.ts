@@ -8,6 +8,7 @@ import { ChangeDetectorRef, OnInit, OnDestroy } from '@angular/core';
 import { ConfigApiService } from '../../core/api/config-api.service';
 import { OfflineSyncService } from '../../core/services/offline-sync.service';
 import { NetworkStatusService, ConnectionState } from '../../core/services/network-status.service';
+import { isServerUnreachable } from '../../core/services/server-reachability';
 import { Subscription } from 'rxjs';
 import { detectClientDeviceModel } from '../../core/utils/device-detector';
 @Component({
@@ -203,7 +204,7 @@ export class Login implements OnInit, OnDestroy {
         const status = err?.status ?? 0;
         const detail = err?.error?.detail || err?.detail;
 
-        if (status === 0 || status === 530 || (status >= 502 && status <= 504)) {
+        if (isServerUnreachable(status)) {
           this.loginErrorMessage = 'خطا در ارتباط با سرور. لطفاً اتصال اینترنت یا وضعیت سرور را بررسی نمایید.';
         } else if (status === 429) {
           this.loginErrorMessage = detail || 'تعداد تلاش‌های ناموفق شما بیش از حد مجاز است. لطفاً بعداً تلاش کنید.';

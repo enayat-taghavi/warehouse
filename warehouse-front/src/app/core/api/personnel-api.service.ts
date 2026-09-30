@@ -291,22 +291,40 @@ export class PersonnelApiService {
     );
   }
 
-  getAttendanceMonthlySummary(warehouseId: number | null | undefined, yearMonth: string): Observable<{
+  getAttendanceMonthlySummary(
+    warehouseId: number | null | undefined,
+    yearMonth: string,
+    options?: { section_id?: number; project_id?: number }
+  ): Observable<{
     warehouse_id?: number | null;
+    section_id?: number | null;
+    project_id?: number | null;
     year_month: string;
+    period_id?: number | null;
     period_status: string;
     is_locked: boolean;
+    pending_approvals_count?: number;
     summary: AttendanceSummaryRow[];
   }> {
     const params: any = { year_month: yearMonth };
     if (warehouseId) {
       params.warehouse_id = warehouseId;
     }
+    if (options?.section_id) {
+      params.section_id = options.section_id;
+    }
+    if (options?.project_id) {
+      params.project_id = options.project_id;
+    }
     return this.api.get<{
       warehouse_id?: number | null;
+      section_id?: number | null;
+      project_id?: number | null;
       year_month: string;
+      period_id?: number | null;
       period_status: string;
       is_locked: boolean;
+      pending_approvals_count?: number;
       summary: AttendanceSummaryRow[];
     }>(`${this.baseUrl}/attendance/monthly-summary`, params);
   }
@@ -705,7 +723,17 @@ export class PersonnelApiService {
 
   postCartableAction(
     cartableType: 'supervisor' | 'accountant' | 'manager',
-    data: { action: 'approve' | 'revision' | 'reject'; model: string; id?: number; reason?: string; year_month?: string; warehouse_id?: number | null }
+    data: {
+      action: 'approve' | 'revision' | 'reject';
+      model: string;
+      id?: number;
+      ids?: number[];
+      reason?: string;
+      year_month?: string;
+      warehouse_id?: number | null;
+      section_id?: number | null;
+      project_id?: number | null;
+    }
   ): Observable<any> {
     return this.api.post<any>(`${this.baseUrl}/cartable/${cartableType}/`, data);
   }

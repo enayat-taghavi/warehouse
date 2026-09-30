@@ -18,7 +18,7 @@ import { ProjectSection } from '../../../../core/models/personnel.model';
 })
 export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
   // Subtabs navigation
-  activeSubTab: 'pending' | 'approved' | 'all' | 'daily_summary' = 'pending';
+  activeSubTab: 'pending' | 'approved' | 'revision' | 'all' | 'daily_summary' = 'pending';
 
   // Section Management (Guardian G1: Section Isolation)
   mySections: ProjectSection[] = [];
@@ -35,14 +35,22 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
   isLoading = false;
   isSaving = false;
   items: any[] = [];
+  rawItems: any[] = [];
 
   // Counters
   statusCounters = {
     pending: 0,
     approved: 0,
+    revision: 0,
     all: 0,
     daily_summary: 0
   };
+
+  // Revision Modal State
+  showRevisionModal = false;
+  revisionTargetItem: any = null;
+  revisionReasonText = '';
+  isSubmittingRevision = false;
 
   private routeSub?: Subscription;
 
@@ -58,7 +66,7 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.routeSub = this.route.queryParams.subscribe(params => {
-      if (params['tab'] && ['pending', 'approved', 'all', 'daily_summary'].includes(params['tab'])) {
+      if (params['tab'] && ['pending', 'approved', 'revision', 'all', 'daily_summary'].includes(params['tab'])) {
         this.activeSubTab = params['tab'];
       }
       if (params['section_id']) {
@@ -123,10 +131,10 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
     this.fetchAttendanceData();
   }
 
-  switchSubTab(tab: 'pending' | 'approved' | 'all' | 'daily_summary'): void {
+  switchSubTab(tab: 'pending' | 'approved' | 'revision' | 'all' | 'daily_summary'): void {
     this.activeSubTab = tab;
     this.syncUrlParams();
-    this.fetchAttendanceData();
+    this.applyFilter();
   }
 
   syncUrlParams(): void {
@@ -151,34 +159,17 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
     this.personnelApi.getDailyAttendance(params).subscribe({
       next: (data: any[]) => {
         this.isLoading = false;
-        let rows = (data || []).map(row => ({
+        this.rawItems = (data || []).map(row => ({
           ...row,
           national_code: row.personnel_national_code || row.national_code || '---',
           work_hours: row.effective_hours ?? row.work_hours ?? 0,
           overtime_hours: row.overtime_hours ?? 0,
-          status: row.status || 'pending_supervisor'
+          attendance_status: row.status || 'PRESENT_10H',
+          attendance_status_display: row.status_display || this.getAttendanceStatusLabel(row.status),
+          approval_status: row.approval_status || 'PENDING_SUPERVISOR',
+          approval_status_display: row.approval_status_display || this.getApprovalStatusLabel(row.approval_status)
         }));
-        if (this.searchQuery?.trim()) {
-          const q = this.searchQuery.trim().toLowerCase();
-          rows = rows.filter(x =>
-            (x.personnel_name && x.personnel_name.toLowerCase().includes(q)) ||
-            (x.national_code && x.national_code.includes(q))
-          );
-        }
-        this.statusCounters = {
-          pending: rows.filter(x => x.status === 'pending_supervisor' || !x.status).length,
-          approved: rows.filter(x => x.status === 'approved' || x.status === 'PRESENT').length,
-          all: rows.length,
-          daily_summary: rows.length
-        };
-        if (this.activeSubTab === 'pending') {
-          this.items = rows.filter(x => x.status === 'pending_supervisor' || !x.status);
-        } else if (this.activeSubTab === 'approved') {
-          this.items = rows.filter(x => x.status === 'approved' || x.status === 'PRESENT');
-        } else {
-          this.items = rows;
-        }
-        this.cdr.detectChanges();
+        this.applyFilter();
       },
       error: (err: any) => {
         this.isLoading = false;
@@ -188,82 +179,149 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  applyFilter(): void {
+    let rows = [...this.rawItems];
+    if (this.searchQuery?.trim()) {
+      const q = this.searchQuery.trim().toLowerCase();
+      rows = rows.filter(x =>
+        (x.personnel_name && x.personnel_name.toLowerCase().includes(q)) ||
+        (x.national_code && x.national_code.includes(q))
+      );
+    }
+
+    this.statusCounters = {
+      pending: rows.filter(x => x.approval_status === 'PENDING_SUPERVISOR' || x.approval_status === 'DRAFT').length,
+      approved: rows.filter(x => x.approval_status === 'APPROVED').length,
+      revision: rows.filter(x => x.approval_status === 'REVISION_REQUIRED').length,
+      all: rows.length,
+      daily_summary: rows.length
+    };
+
+    if (this.activeSubTab === 'pending') {
+      this.items = rows.filter(x => x.approval_status === 'PENDING_SUPERVISOR' || x.approval_status === 'DRAFT');
+    } else if (this.activeSubTab === 'approved') {
+      this.items = rows.filter(x => x.approval_status === 'APPROVED');
+    } else if (this.activeSubTab === 'revision') {
+      this.items = rows.filter(x => x.approval_status === 'REVISION_REQUIRED');
+    } else {
+      this.items = rows;
+    }
+    this.cdr.detectChanges();
+  }
+
+  getAttendanceStatusLabel(status: string): string {
+    const map: Record<string, string> = {
+      'PRESENT_10H': 'حاضر کامل (۱۰ ساعت)',
+      'HALF_5H': 'نیمه‌وقت (۵ ساعت)',
+      'ABSENT': 'غایب (۰ ساعت)',
+      'LEAVE': 'مرخصی',
+      'MISSION': 'مأموریت',
+      'FRIDAY_WORK': 'جمعه‌کاری',
+      'CUSTOM': 'ساعت سفارشی'
+    };
+    return map[status] || status || 'نامشخص';
+  }
+
+  getApprovalStatusLabel(status: string): string {
+    const map: Record<string, string> = {
+      'DRAFT': 'پیش‌نویس اولیه',
+      'PENDING_SUPERVISOR': 'در انتظار بررسی سرپرست',
+      'APPROVED': 'تایید شده سرپرست',
+      'REVISION_REQUIRED': 'عودت داده‌شده جهت اصلاح'
+    };
+    return map[status] || status || 'در انتظار بررسی';
+  }
+
   approveSingle(item: any): void {
     if (!item.id) return;
-    const previousStatus = item.status;
-    item.status = 'approved';
-    this.statusCounters.approved = this.items.filter(x => x.status === 'approved' || x.status === 'PRESENT').length;
-    this.statusCounters.pending = this.items.filter(x => x.status === 'pending_supervisor').length;
+    const oldStatus = item.approval_status;
+    item.approval_status = 'APPROVED';
+    this.applyFilter();
 
-    this.personnelApi.patchDailyAttendance(item.id, { notes: item.notes ? `${item.notes} | تایید سرپرست` : 'تایید سرپرست' }).subscribe({
+    this.personnelApi.postCartableAction('supervisor', {
+      action: 'approve',
+      model: 'attendance',
+      id: item.id
+    }).subscribe({
       next: () => {
         this.toast.success(`کارکرد ${item.personnel_name || 'پرسنل'} با موفقیت به تایید سرپرست رسید.`);
-        this.cdr.detectChanges();
+        this.fetchAttendanceData();
       },
       error: (err: any) => {
-        item.status = previousStatus;
-        this.statusCounters.approved = this.items.filter(x => x.status === 'approved' || x.status === 'PRESENT').length;
-        this.statusCounters.pending = this.items.filter(x => x.status === 'pending_supervisor').length;
-        this.toast.error('خطا در تایید کارکرد پرسنل: ' + (err?.error?.error || err?.message || 'نامشخص'));
-        this.cdr.detectChanges();
+        item.approval_status = oldStatus;
+        this.applyFilter();
+        this.toast.error('خطا در تایید کارکرد پرسنل: ' + (err?.error?.error || err?.error?.detail || err?.message || 'نامشخص'));
       }
     });
   }
 
-  rejectSingle(item: any): void {
-    if (!item.id) return;
-    const reason = window.prompt(`علت عودت کارکرد ${item.personnel_name || ''} را وارد کنید:`);
-    if (reason === null) return;
-    const previousStatus = item.status;
-    item.status = 'rejected';
-    this.statusCounters.pending = this.items.filter(x => x.status === 'pending_supervisor').length;
+  openRevisionModal(item: any): void {
+    this.revisionTargetItem = item;
+    this.revisionReasonText = item.revision_reason || '';
+    this.showRevisionModal = true;
+    this.cdr.detectChanges();
+  }
 
-    this.personnelApi.patchDailyAttendance(item.id, { notes: `عودت سرپرست: ${reason}` }).subscribe({
+  closeRevisionModal(): void {
+    this.showRevisionModal = false;
+    this.revisionTargetItem = null;
+    this.revisionReasonText = '';
+  }
+
+  confirmRevision(): void {
+    if (!this.revisionTargetItem) return;
+    const reason = this.revisionReasonText.trim();
+    if (!reason) {
+      this.toast.error('ثبت علت عودت و بازنگری کارکرد الزامی است.');
+      return;
+    }
+
+    this.isSubmittingRevision = true;
+    this.personnelApi.postCartableAction('supervisor', {
+      action: 'revision',
+      model: 'attendance',
+      id: this.revisionTargetItem.id,
+      reason: reason
+    }).subscribe({
       next: () => {
-        this.toast.warning(`کارکرد ${item.personnel_name || 'پرسنل'} جهت اصلاح عودت داده شد.`);
-        this.cdr.detectChanges();
+        this.isSubmittingRevision = false;
+        this.toast.warning(`کارکرد ${this.revisionTargetItem.personnel_name || 'پرسنل'} جهت اصلاح عودت داده شد.`);
+        this.closeRevisionModal();
+        this.fetchAttendanceData();
       },
       error: (err: any) => {
-        item.status = previousStatus;
-        this.statusCounters.pending = this.items.filter(x => x.status === 'pending_supervisor').length;
-        this.toast.error('خطا در ثبت عودت کارکرد: ' + (err?.error?.error || err?.message || 'نامشخص'));
+        this.isSubmittingRevision = false;
+        this.toast.error('خطا در ثبت عودت کارکرد: ' + (err?.error?.error || err?.error?.detail || err?.message || 'نامشخص'));
         this.cdr.detectChanges();
       }
     });
   }
 
   approveBatch(): void {
-    const pendingItems = this.items.filter(it => it.status === 'pending_supervisor');
-    if (pendingItems.length === 0) return;
+    const pendingItems = this.rawItems.filter(it => it.approval_status === 'PENDING_SUPERVISOR' || it.approval_status === 'DRAFT');
+    if (pendingItems.length === 0) {
+      this.toast.info('هیچ کارکرد در انتظاری برای تایید وجود ندارد.');
+      return;
+    }
 
-    pendingItems.forEach(it => { it.status = 'approved'; });
-    this.statusCounters.approved = this.items.filter(x => x.status === 'approved' || x.status === 'PRESENT').length;
-    this.statusCounters.pending = 0;
-
-    let completed = 0;
-    pendingItems.forEach(it => {
-      this.personnelApi.patchDailyAttendance(it.id, { notes: it.notes ? `${it.notes} | تایید سرپرست` : 'تایید سرپرست' }).subscribe({
-        next: () => {
-          completed++;
-          if (completed === pendingItems.length) {
-            this.toast.success('کلیه کارکردهای در انتظار با موفقیت به تایید سرپرست رسید.');
-            this.cdr.detectChanges();
-          }
-        },
-        error: () => {
-          completed++;
-          if (completed === pendingItems.length) {
-            this.toast.success('عملیات تایید دسته‌ای انجام شد.');
-            this.cdr.detectChanges();
-          }
-        }
-      });
+    const ids = pendingItems.map(it => it.id);
+    this.personnelApi.postCartableAction('supervisor', {
+      action: 'approve',
+      model: 'attendance',
+      ids: ids
+    }).subscribe({
+      next: () => {
+        this.toast.success(`تعداد ${ids.length} کارکرد در انتظار با موفقیت توسط سرپرست تایید شدند.`);
+        this.fetchAttendanceData();
+      },
+      error: (err: any) => {
+        this.toast.error('خطا در تایید دسته‌ای کارکردها: ' + (err?.error?.error || err?.error?.detail || err?.message || 'نامشخص'));
+      }
     });
-    this.cdr.detectChanges();
   }
 
   exportExcel(): void {
-    this.toast.info('در حال تولید فایل اکسل تاییدات کارکرد...');
+    this.toast.info('در حال صدور فایل اکسل کارکرد...');
   }
 
   importExcel(): void {
@@ -273,6 +331,6 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
   clearSearch(): void {
     this.searchQuery = '';
     this.syncUrlParams();
-    this.fetchAttendanceData();
+    this.applyFilter();
   }
 }

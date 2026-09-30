@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { ReportApiService } from '../../core/api/report-api.service';
 import { NetworkStatusService } from '../../core/services/network-status.service';
+import { isServerUnreachable } from '../../core/services/server-reachability';
 import {
   EntityFieldsResponse,
   FilterGroup,
@@ -428,7 +429,7 @@ export class ReportStore {
   /** پیام خطای قابل نمایش — status 0 یعنی آفلاین/سرور در دسترس نیست */
   msg(e: unknown): string {
     if (e instanceof HttpErrorResponse) {
-      if (e.status === 0 || e.status >= 520) {
+      if (isServerUnreachable(e.status)) {
         return 'گزارش‌گیری فقط در حالت آنلاین در دسترس است — اتصال به سرور برقرار نیست.';
       }
       if (e.error) {

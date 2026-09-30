@@ -166,7 +166,6 @@ export const routes: Routes = [
   { path: 'employee-petty-cash', redirectTo: 'app/finance/employee-petty-cash', pathMatch: 'full' },
   { path: 'employee-new-vehicle', redirectTo: 'app/finance/employee-new-vehicle', pathMatch: 'full' },
   { path: 'employee-new-personnel', redirectTo: 'app/finance/employee-new-personnel', pathMatch: 'full' },
-  { path: 'supervisor', redirectTo: 'app/finance/supervisor-attendance', pathMatch: 'full' },
   { path: 'supervisor-personnel', redirectTo: 'app/finance/supervisor-personnel', pathMatch: 'full' },
   { path: 'supervisor-attendance', redirectTo: 'app/finance/supervisor-attendance', pathMatch: 'full' },
   { path: 'supervisor-fleet', redirectTo: 'app/finance/supervisor-fleet', pathMatch: 'full' },
