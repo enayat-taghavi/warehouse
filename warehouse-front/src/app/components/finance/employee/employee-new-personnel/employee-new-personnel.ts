@@ -24,13 +24,14 @@ import {
   IRANIAN_BANKS,
   IranianBankInfo
 } from '../../../../core/utils/sheba-utils';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 export type PersonnelStatusFilter = 'all' | 'draft' | 'pending' | 'pending_supervisor' | 'manager_approved' | 'approved' | 'revision_required' | 'rejected';
 
 @Component({
   selector: 'app-employee-new-personnel-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ExcelImportModal],
+  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective],
   templateUrl: './employee-new-personnel.html',
   styleUrl: './employee-new-personnel.css'
 })

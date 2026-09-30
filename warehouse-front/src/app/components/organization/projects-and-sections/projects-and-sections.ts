@@ -17,6 +17,7 @@ import {
   ProjectSection,
   UserSectionAssignment
 } from '../../../core/models/personnel.model';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 export interface RoleDefinition {
   key: 'manager' | 'accountant' | 'supervisor' | 'treasury' | 'employee';
@@ -42,7 +43,7 @@ export interface SectionGroupedAssignments {
 @Component({
   selector: 'app-projects-and-sections',
   standalone: true,
-  imports: [CommonModule, FormsModule, ExcelImportModal],
+  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective],
   templateUrl: './projects-and-sections.html',
   styleUrl: './projects-and-sections.css'
 })

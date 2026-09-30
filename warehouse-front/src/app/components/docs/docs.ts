@@ -12,11 +12,12 @@ import { ImportService } from '../../core/services/import.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { environment } from '../../../environments/environment';
 import { isServerUnreachable } from '../../core/services/server-reachability';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-docs',
   standalone: true,
-  imports: [CommonModule, FormsModule, FileUploadComponent, ModalComponent, HasPermissionDirective],
+  imports: [CommonModule, FormsModule, FileUploadComponent, ModalComponent, HasPermissionDirective, SvgIconDirective],
   templateUrl: './docs.html',
   styleUrl: './docs.css'
 })

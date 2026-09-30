@@ -8,11 +8,12 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../services/toast.service';
 import { PersonnelApiService } from '../../../core/api/personnel-api.service';
 import { PayrollYearlySettings, FinancialProject } from '../../../core/models/personnel.model';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-base-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './base-settings.html',
   styleUrl: './base-settings.css'
 })

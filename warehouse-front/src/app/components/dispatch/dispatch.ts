@@ -20,10 +20,11 @@ import { WebSocketService } from '../../core/http/websocket.service';
 import { ItemPhotoGalleryComponent } from '../../shared/components/item-photo-gallery/item-photo-gallery.component';
 import { ItemPhotoThumbComponent } from '../../shared/components/item-photo-gallery/item-photo-thumb.component';
 import { PhotoGalleryHost } from '../../shared/components/item-photo-gallery/photo-gallery-host';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-dispatch',
-  imports: [CommonModule, FormsModule, DataTableComponent, TableColumnDirective, PersianDatePipe, DraggableDirective, LabelDesigner, SmartDeleteModalComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent],
+  imports: [CommonModule, FormsModule, DataTableComponent, TableColumnDirective, PersianDatePipe, DraggableDirective, LabelDesigner, SmartDeleteModalComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, SvgIconDirective],
   templateUrl: './dispatch.html',
   styleUrl: './dispatch.css'
 })

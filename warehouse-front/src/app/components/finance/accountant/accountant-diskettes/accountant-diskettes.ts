@@ -7,11 +7,12 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-accountant-diskettes-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './accountant-diskettes.html',
   styleUrl: './accountant-diskettes.css'
 })

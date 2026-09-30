@@ -14,11 +14,12 @@ import { NetworkStatusService, ConnectionState } from '../../core/services/netwo
 import { AppPersonaService } from '../../core/services/app-persona.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { Router, NavigationEnd } from '@angular/router';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-health-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   template: `
     <div class="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 text-right" dir="rtl">
       
@@ -26,9 +27,7 @@ import { Router, NavigationEnd } from '@angular/router';
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
         <div class="flex items-start sm:items-center gap-3.5">
           <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
-            </svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" appIcon="activity-path"></svg>
           </div>
           <div>
             <h1 class="text-base sm:text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -54,11 +53,7 @@ import { Router, NavigationEnd } from '@angular/router';
             [disabled]="isDiagnosing"
             class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold transition-all flex items-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isDiagnosing">
-              <polyline points="23 4 23 10 17 10"></polyline>
-              <polyline points="1 20 1 14 7 14"></polyline>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-            </svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isDiagnosing" appIcon="refresh-cw"></svg>
             <span>{{ isDiagnosing ? 'در حال عیب‌یابی...' : 'عیب‌یابی و تست خودکار' }}</span>
           </button>
         </div>
@@ -98,7 +93,7 @@ import { Router, NavigationEnd } from '@angular/router';
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-slate-500 dark:text-slate-400">کیفیت و تاخیر شبکه (Ping)</span>
             <div class="w-7 h-7 rounded-xl flex items-center justify-center text-xs" [ngClass]="pingStatusClass">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="wifi"></svg>
             </div>
           </div>
           <div class="my-2">
@@ -120,7 +115,7 @@ import { Router, NavigationEnd } from '@angular/router';
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-slate-500 dark:text-slate-400">سهمیه حافظه محلی مرورگر</span>
             <div class="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center text-xs">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="server"></svg>
             </div>
           </div>
           <div class="my-2">
@@ -138,7 +133,7 @@ import { Router, NavigationEnd } from '@angular/router';
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-slate-500 dark:text-slate-400">کش آفلاین PWA Worker</span>
             <div class="w-7 h-7 rounded-xl bg-teal-50 dark:bg-teal-950 text-teal-600 flex items-center justify-center text-xs">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="dollar-sign-path"></svg>
             </div>
           </div>
           <div class="my-2">
@@ -167,7 +162,7 @@ import { Router, NavigationEnd } from '@angular/router';
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-2.5">
                   <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" [ngClass]="getStatusBadgeBg(server?.components?.database?.status)">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="database"></svg>
                   </div>
                   <div>
                     <h3 class="text-xs font-black text-slate-800 dark:text-slate-100">پایگاه‌داده PostgreSQL</h3>
@@ -196,7 +191,7 @@ import { Router, NavigationEnd } from '@angular/router';
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-2.5">
                   <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" [ngClass]="getStatusBadgeBg(server?.components?.redis?.status)">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap-path"></svg>
                   </div>
                   <div>
                     <h3 class="text-xs font-black text-slate-800 dark:text-slate-100">حافظه موقت Redis</h3>
@@ -225,7 +220,7 @@ import { Router, NavigationEnd } from '@angular/router';
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-2.5">
                   <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" [ngClass]="getStatusBadgeBg(server?.components?.websocket?.status)">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="activity"></svg>
                   </div>
                   <div>
                     <h3 class="text-xs font-black text-slate-800 dark:text-slate-100">لایه بلادرنگ WebSocket</h3>
@@ -254,7 +249,7 @@ import { Router, NavigationEnd } from '@angular/router';
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-2.5">
                   <div class="w-9 h-9 rounded-xl bg-sky-50 dark:bg-sky-950 text-sky-600 flex items-center justify-center shrink-0">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="book"></svg>
                   </div>
                   <div>
                     <h3 class="text-xs font-black text-slate-800 dark:text-slate-100">دیتابیس‌های محلی تفکیک‌شده</h3>
@@ -283,7 +278,7 @@ import { Router, NavigationEnd } from '@angular/router';
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-2.5">
                   <div class="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-600 flex items-center justify-center shrink-0">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="layout"></svg>
                   </div>
                   <div>
                     <h3 class="text-xs font-black text-slate-800 dark:text-slate-100">سپر سشن چندتبی (Multi-Tab)</h3>
@@ -312,7 +307,7 @@ import { Router, NavigationEnd } from '@angular/router';
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-2.5">
                   <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600 flex items-center justify-center shrink-0">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="6" r="3"></circle><path d="M13 6h3a2 2 0 0 1 2 2v7"></path><line x1="6" y1="9" x2="6" y2="21"></line></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="git-pull-request"></svg>
                   </div>
                   <div>
                     <h3 class="text-xs font-black text-slate-800 dark:text-slate-100">موتور حل تداخل هم‌زمانی</h3>
@@ -341,7 +336,7 @@ import { Router, NavigationEnd } from '@angular/router';
       <div *ngIf="canRunStressTest" class="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-200 dark:border-emerald-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 8v4l3 3"></path><circle cx="12" cy="12" r="9"></circle></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" appIcon="clock-lucide"></svg>
           </div>
           <div>
             <div class="flex items-center gap-2">
@@ -363,7 +358,7 @@ import { Router, NavigationEnd } from '@angular/router';
             class="px-4 py-2 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-slate-700 active:scale-95 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
           >
             <span>مدیریت اسنپ‌شات‌ها و بازگشت</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
           </button>
         </div>
       </div>
@@ -373,7 +368,7 @@ import { Router, NavigationEnd } from '@angular/router';
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" appIcon="zap"></svg>
             </div>
             <div>
               <div class="flex items-center gap-2">
@@ -425,9 +420,7 @@ import { Router, NavigationEnd } from '@angular/router';
               [disabled]="isStressTesting"
               class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 active:scale-98 text-white text-xs font-black transition-all flex items-center justify-center gap-2 shadow-md shadow-indigo-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isStressTesting">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-              </svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isStressTesting" appIcon="zap"></svg>
               <span>{{ isStressTesting ? 'در حال شبیه‌سازی همروندی...' : 'شروع آزمون همروندی و پایش بن‌بست' }}</span>
             </button>
           </div>

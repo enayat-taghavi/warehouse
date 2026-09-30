@@ -31,11 +31,12 @@ import { IRANIAN_BANKS, IranianBankInfo, validateSheba, ShebaValidationResult, f
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { AppPersonaService } from '../../../core/services/app-persona.service';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-warehouse-attendance',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective],
   templateUrl: './warehouse-attendance.html',
   styleUrl: './warehouse-attendance.css'
 })

@@ -12,7 +12,7 @@
       <div class="bg-gradient-to-l from-violet-50 to-white border-b border-slate-200 p-3 flex items-center gap-2 flex-wrap">
         <!-- Icon -->
         <div class="w-7 h-7 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="briefcase-2"></svg>
         </div>
         <span class="font-black text-slate-800 text-[11px] shrink-0">تمپلیت فعال:</span>
 
@@ -57,7 +57,7 @@
           <!-- دکمه جدید (همیشه فعال) -->
           <button (click)="startCreateNew()" title="تمپلیت جدید"
             class="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-[10px] font-bold hover:bg-emerald-100 transition-colors">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="plus"></svg>
             جدید
           </button>
 
@@ -65,7 +65,7 @@
           <ng-container *ngIf="warehouseId && isCurrentTemplateReadOnly">
             <button (click)="copyToThisWarehouse(template)" title="کپی این لیبل Global برای این انبار"
               class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-colors shadow-sm ml-1">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="copy-2"></svg>
               کپی به این انبار
             </button>
           </ng-container>
@@ -75,20 +75,20 @@
             <!-- Rename -->
             <button (click)="startRename()" [disabled]="!template.id" title="تغییر نام"
               class="flex items-center gap-1 px-2.5 py-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-[10px] font-bold hover:bg-amber-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="edit"></svg>
               نام
             </button>
             <!-- Clone -->
             <button *ngIf="template.id && !isCopying" (click)="startCopy()" title="کپی گرفتن از این تمپلیت"
               class="flex items-center gap-1 px-2.5 py-1.5 bg-sky-50 border border-sky-200 text-sky-700 rounded-lg text-[10px] font-bold hover:bg-sky-100 transition-colors">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="copy-2"></svg>
               کپی
             </button>
             <!-- Delete -->
             <button *ngIf="template.id && deleteConfirmId !== template.id"
               (click)="askDeleteConfirm(template.id!)" title="حذف تمپلیت"
               class="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-[10px] font-bold hover:bg-rose-100 transition-colors">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="trash-lucide"></svg>
               حذف
             </button>
             <!-- Delete confirm inline -->
@@ -102,7 +102,7 @@
             <button *ngIf="template.id" (click)="saveTemplate()" [disabled]="isSaving" title="ذخیره تمپلیت"
               class="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed mr-2">
               <span *ngIf="isSaving" class="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span>
-              <svg *ngIf="!isSaving" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg *ngIf="!isSaving" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
               ذخیره
             </button>
           </ng-container>
@@ -110,7 +110,7 @@
       </div>
 
       <div *ngIf="isCreatingNew" class="p-3 border-t border-slate-200 bg-emerald-50/50 flex items-center gap-2">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" appIcon="briefcase-2"></svg>
         <input type="text" [(ngModel)]="newTemplateName"
           (keydown.enter)="confirmCreate()"
           (keydown.escape)="cancelCreate()"
@@ -136,7 +136,7 @@
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="bg-gradient-to-l from-indigo-50 to-white border-b border-slate-200 p-3.5 flex items-center gap-2">
           <div class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><circle cx="17.5" cy="17.5" r="3.5"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="qr-grid"></svg>
           </div>
           <div>
             <h4 class="font-black text-slate-800 text-[12px]">فیلد QR Code</h4>
@@ -149,7 +149,7 @@
           </select>
           <button (click)="addQrElement()" class="w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
             [ngClass]="hasQrElement ? 'bg-slate-50 text-slate-500 border border-slate-200' : 'bg-indigo-600 text-white shadow-md hover:bg-indigo-700'">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><circle cx="17.5" cy="17.5" r="3.5"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="qr-grid"></svg>
             {{ hasQrElement ? 'بازنشانی QR روی بوم' : 'افزودن QR به بوم' }}
           </button>
         </div>
@@ -159,7 +159,7 @@
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="bg-gradient-to-l from-slate-50 to-white border-b border-slate-200 p-3.5 flex items-center gap-2">
           <div class="w-8 h-8 rounded-xl bg-slate-200 text-slate-600 flex items-center justify-center shrink-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="layout"></svg>
           </div>
           <h4 class="font-black text-slate-800 text-[12px]">ابعاد لیبل</h4>
         </div>
@@ -179,7 +179,7 @@
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="bg-gradient-to-l from-blue-50 to-white border-b border-slate-200 p-3.5 flex items-center gap-2">
           <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="printer"></svg>
           </div>
           <h4 class="font-black text-slate-800 text-[12px]">تنظیمات چاپ</h4>
         </div>
@@ -205,7 +205,7 @@
             <input type="number" [(ngModel)]="template.grid_cols" (ngModelChange)="onManualGridChange()" min="1" max="10" class="w-full text-center px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none focus:border-indigo-400">
           </div>
           <div *ngIf="gridWarning" class="col-span-2 mt-1 px-3 py-2 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-[10.5px] font-bold flex items-start gap-2 fade-in">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0 mt-0.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0 mt-0.5" appIcon="alert-triangle"></svg>
             <span class="leading-relaxed">{{gridWarning}}</span>
           </div>
           <!-- توضیحات ویژه برای طراحی -->
@@ -220,7 +220,7 @@
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="bg-gradient-to-l from-emerald-50 to-white border-b border-slate-200 p-3.5 flex items-center gap-2">
           <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="list"></svg>
           </div>
           <h4 class="font-black text-slate-800 text-[12px]">فیلدهای موجود</h4>
         </div>
@@ -240,8 +240,8 @@
                 ? 'bg-emerald-50 text-emerald-600 cursor-not-allowed opacity-60'
                 : 'bg-white text-slate-800 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200'">
               <span class="truncate">{{f.label}}</span>
-              <svg *ngIf="!isFieldOnCanvas(f.key)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0 opacity-40"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              <svg *ngIf="isFieldOnCanvas(f.key)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg *ngIf="!isFieldOnCanvas(f.key)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0 opacity-40" appIcon="plus"></svg>
+              <svg *ngIf="isFieldOnCanvas(f.key)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0" appIcon="check"></svg>
             </button>
           </div>
         </div>
@@ -252,7 +252,7 @@
         class="w-full py-3.5 rounded-xl text-sm font-black text-white shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
         style="background: linear-gradient(135deg, #4f46e5, #7c3aed)">
         <span *ngIf="isSaving" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-        <svg *ngIf="!isSaving" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <svg *ngIf="!isSaving" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
         ذخیره ساختار لیبل
       </button>
 
@@ -264,7 +264,7 @@
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div class="bg-gradient-to-l from-indigo-50 to-white border-b border-slate-200 p-3 flex items-center gap-2">
             <div class="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="printer"></svg>
             </div>
             <h4 class="font-black text-slate-800 text-[11px]">تنظیمات چاپ</h4>
           </div>
@@ -333,7 +333,7 @@
               <input type="text" [(ngModel)]="customRemark" (ngModelChange)="onPrintSettingChange()" placeholder="مثال: بخش فنی" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] outline-none focus:border-indigo-400 placeholder:text-slate-400">
               <!-- هشدار عدم وجود فیلد روی بوم -->
               <div *ngIf="customRemark && !hasCustomRemarkField" class="px-2 py-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-[9px] font-bold flex items-start gap-1.5">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0 mt-0.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0 mt-0.5" appIcon="alert-triangle"></svg>
                 <span>فیلد «توضیحات لحظه‌ای» روی بوم این تمپلیت قرار نگرفته. این متن در خروجی نمایش داده نخواهد شد.</span>
               </div>
             </div>
@@ -343,7 +343,7 @@
               <button (click)="directPrint()" [disabled]="isPrinting"
                 class="w-full py-2.5 rounded-xl text-xs font-black text-white shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700">
                 <span *ngIf="isPrinting" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-                <svg *ngIf="!isPrinting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                <svg *ngIf="!isPrinting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="printer"></svg>
                 <span>چاپ لیبل ({{itemsConfig.length}} آیتم)</span>
               </button>
             </div>
@@ -364,7 +364,7 @@
           <div class="flex items-center gap-3">
             <div class="flex items-center gap-1.5 border-l border-slate-200 pl-4">
               <div class="w-6 h-6 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="edit"></svg>
               </div>
               <span class="font-black text-slate-800 text-xs whitespace-nowrap">{{selectedElement.label}}</span>
             </div>
@@ -402,7 +402,7 @@
           
           <!-- Delete Action -->
           <button (click)="removeElement(selectedElement)" class="p-1.5 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 border border-rose-100 transition-colors" title="حذف المان">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-lucide"></svg>
           </button>
         </div>
 
@@ -453,7 +453,7 @@
         <!-- Canvas Header -->
         <div class="flex items-center justify-between mb-5 z-10">
           <h3 class="font-black text-slate-800 text-[13px] flex items-center gap-2">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" appIcon="layout"></svg>
             بوم طراحی لیبل
           </h3>
           <div class="flex items-center gap-2">
@@ -518,12 +518,7 @@
               <!-- QR Element -->
               <div *ngIf="el.type === 'qrcode'" class="w-full h-full flex flex-col items-center justify-between bg-white pt-1">
                 <div class="flex-1 flex items-center justify-center w-full min-h-0">
-                  <svg class="h-full max-h-[85%] w-auto" viewBox="0 0 24 24" fill="none" stroke="#1e1e1e" stroke-width="1.5">
-                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                    <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-                    <rect x="5" y="5" width="3" height="3" fill="#1e1e1e"/><rect x="16" y="5" width="3" height="3" fill="#1e1e1e"/>
-                    <rect x="5" y="16" width="3" height="3" fill="#1e1e1e"/>
-                  </svg>
+                  <svg class="h-full max-h-[85%] w-auto" viewBox="0 0 24 24" fill="none" stroke="#1e1e1e" stroke-width="1.5" appIcon="qr-code"></svg>
                 </div>
                 <span class="text-slate-800 font-bold truncate px-1 w-full text-center leading-none pb-1" 
                       [style.fontSize.px]="(el.width < el.height ? el.width : el.height) * scaleFactor * 0.15 * 0.8">
@@ -547,9 +542,7 @@
             <!-- Empty state -->
             <div *ngIf="template.elements.length === 0" class="absolute inset-0 flex items-center justify-center">
               <div class="text-center">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" class="mx-auto mb-2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
-                </svg>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" class="mx-auto mb-2" appIcon="plus-square"></svg>
                 <p class="text-sm font-bold text-slate-400">فیلدها را از پنل سمت راست به بوم اضافه کنید</p>
                 <p class="text-[10px] text-slate-400 mt-1">یا روی هر فیلد کلیک کنید</p>
               </div>

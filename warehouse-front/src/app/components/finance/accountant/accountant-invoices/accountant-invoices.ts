@@ -8,11 +8,12 @@ import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection, ExpenseInvoice } from '../../../../core/models/personnel.model';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-accountant-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './accountant-invoices.html',
   styleUrl: './accountant-invoices.css'
 })

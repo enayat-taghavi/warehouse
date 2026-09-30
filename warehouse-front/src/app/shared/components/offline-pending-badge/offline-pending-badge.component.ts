@@ -8,6 +8,7 @@ import { SystemHealthService, ServerHealthResponse, ClientStorageHealth } from '
 import { StateService } from '../../../services/state.service';
 import { Subscription } from 'rxjs';
 import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/conflict-resolution-modal.component';
+import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 /**
  * مرکز یکپارچه وضعیت اتصال، صف انتظار و صندوق خطاهای همگام‌سازی
@@ -20,7 +21,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
 @Component({
   selector: 'app-offline-pending-badge',
   standalone: true,
-  imports: [CommonModule, ConflictResolutionModalComponent],
+  imports: [CommonModule, ConflictResolutionModalComponent, SvgIconDirective],
   template: `
     <!-- Inline Mode (مخصوص سطرهای جدول) -->
     <ng-container *ngIf="mode === 'inline'">
@@ -28,11 +29,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
         class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-sky-200 bg-sky-50 text-sky-700 text-[9px] font-bold whitespace-nowrap align-middle"
         title="این مورد هنوز به سرور ارسال نشده است. به‌محض برقراری اتصال، خودکار همگام‌سازی می‌شود."
       >
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <line x1="1" y1="1" x2="23" y2="23"></line>
-          <path d="M18.5 19H9a7 7 0 0 1-1.87-13.75"></path>
-          <path d="M10.71 5.05A6 6 0 0 1 20 10h.5a4.5 4.5 0 0 1 2.62 8.16"></path>
-        </svg>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="cloud-off"></svg>
         در انتظار ارسال
       </span>
     </ng-container>
@@ -58,20 +55,14 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
 
         <!-- 2. Syncing in progress -->
         <ng-container *ngIf="isSyncing">
-          <svg class="animate-spin text-sky-600" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
-          </svg>
+          <svg class="animate-spin text-sky-600" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="loader-arc"></svg>
           <span class="text-sky-800 font-extrabold hidden sm:inline">در حال ارسال ({{ pendingCount }})</span>
           <span class="text-sky-800 text-[10px] sm:hidden font-mono font-black">({{ pendingCount }})</span>
         </ng-container>
 
         <!-- 3. Offline or Pending in queue -->
         <ng-container *ngIf="!isSyncing && (networkState !== 'online' || pendingCount > 0)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [ngClass]="networkState === 'online' ? 'text-amber-600' : 'text-rose-600'">
-            <line x1="1" y1="1" x2="23" y2="23"></line>
-            <path d="M18.5 19H9a7 7 0 0 1-1.87-13.75"></path>
-            <path d="M10.71 5.05A6 6 0 0 1 20 10h.5a4.5 4.5 0 0 1 2.62 8.16"></path>
-          </svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [ngClass]="networkState === 'online' ? 'text-amber-600' : 'text-rose-600'" appIcon="cloud-off"></svg>
           <span *ngIf="networkState !== 'online' && pendingCount === 0" class="text-rose-800 font-extrabold hidden sm:inline">آفلاین</span>
           <span *ngIf="pendingCount > 0" class="text-amber-800 font-extrabold hidden sm:inline">صف ارسال ({{ pendingCount }})</span>
           <span *ngIf="pendingCount > 0" class="text-amber-800 text-[10px] sm:hidden font-mono font-black">({{ pendingCount }})</span>
@@ -83,10 +74,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
           class="inline-flex items-center gap-1 mr-0.5 px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[9px] font-black shadow-xs animate-pulse"
           title="{{ errorCount }} خطای ارسال نیازمند بررسی"
         >
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-          </svg>
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" appIcon="bell"></svg>
           <span>{{ errorCount }}</span>
         </span>
       </button>
@@ -112,7 +100,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
             class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200/50 transition-all cursor-pointer"
             title="بستن"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
           </button>
         </div>
 
@@ -187,7 +175,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
             <!-- Network Ping & Latency -->
             <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[11px]">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="wifi"></svg>
                 <span>تاخیر شبکه (Ping):</span>
               </div>
               <span dir="ltr" class="font-bold font-mono text-[11px]" [ngClass]="networkPingMs && networkPingMs <= 300 ? 'text-emerald-600 dark:text-emerald-400' : networkPingMs && networkPingMs <= 700 ? 'text-amber-600' : 'text-rose-600'">
@@ -253,7 +241,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
                 [disabled]="isDiagnosing"
                 class="py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isDiagnosing"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isDiagnosing" appIcon="refresh-cw"></svg>
                 <span>{{ isDiagnosing ? 'در حال تست...' : 'تست عیب‌یابی' }}</span>
               </button>
 
@@ -264,7 +252,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
                 class="py-1.5 px-2 rounded-xl text-[10px] font-bold text-white transition-all flex items-center justify-center gap-1 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 [ngClass]="networkState === 'online' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-400'"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isSyncing"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isSyncing" appIcon="refresh-cw"></svg>
                 <span>{{ isSyncing ? 'در حال ارسال...' : 'ارسال دستی' }}</span>
               </button>
             </div>
@@ -277,7 +265,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
                 class="w-full py-1.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer"
               >
                 <span>مشاهده داشبورد کامل مانیتورینگ</span>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
               </button>
             </div>
           </div>
@@ -301,7 +289,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
             <!-- Empty Queue State -->
             <div *ngIf="queueEntries.length === 0" class="py-8 text-center">
               <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mx-auto mb-2">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
               </div>
               <p class="text-xs font-bold text-slate-700 dark:text-slate-300">صف انتظار خالی است</p>
               <p class="text-[10px] text-slate-400 mt-1">کلیه تغییرات شما با سرور همگام شده‌اند.</p>
@@ -341,7 +329,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
                   class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-[11px] font-bold transition-all active:scale-95 shrink-0 cursor-pointer shadow-2xs flex items-center gap-1"
                   title="لغو این عملیات و جلوگیری از ارسال آن به سرور"
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
                   <span>لغو</span>
                 </button>
               </div>
@@ -367,7 +355,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
             <!-- Empty Errors State -->
             <div *ngIf="syncErrors.length === 0" class="py-8 text-center">
               <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mx-auto mb-2">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
               </div>
               <p class="text-xs font-bold text-slate-700 dark:text-slate-300">هیچ خطایی وجود ندارد</p>
               <p class="text-[10px] text-slate-400 mt-1">تمام درخواست‌های ارسالی با موفقیت پردازش شده‌اند.</p>
@@ -396,7 +384,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
                   class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-100 transition-colors shrink-0 cursor-pointer"
                   title="حذف خطا"
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
                 </button>
               </div>
 
@@ -410,12 +398,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
                   class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 animate-pulse"
                   title="مقایسه بصری نسخه‌ها و حل تداخل خوش‌بینانه"
                 >
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <circle cx="18" cy="18" r="3"></circle>
-                    <circle cx="6" cy="6" r="3"></circle>
-                    <path d="M13 6h3a2 2 0 0 1 2 2v7"></path>
-                    <line x1="6" y1="9" x2="6" y2="21"></line>
-                  </svg>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="git-pull-request"></svg>
                   <span>حل تداخل (۳-Way Merge)</span>
                 </button>
 
@@ -424,7 +407,7 @@ import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/c
                   (click)="onRetryError(err.id!)"
                   class="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
                 >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-cw"></svg>
                   تلاش مجدد
                 </button>
                 <button

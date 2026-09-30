@@ -8,6 +8,7 @@ import { WarehouseHttpService, Warehouse } from '../../core/http/warehouse-http.
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { QRCodeWriter, BarcodeFormat, EncodeHintType } from '@zxing/library';
 import { ModuleRegistryService } from '../../core/modules/module-registry.service';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 export interface CardCustomTexts {
   companyName: string;
@@ -63,7 +64,7 @@ export interface IdCardSettings {
 
 @Component({
   selector: 'app-id-cards',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './id-cards.html',
   styleUrl: './id-cards.css'
 })

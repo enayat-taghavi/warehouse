@@ -7,6 +7,7 @@ import { AppPersonaService } from '../../../core/services/app-persona.service';
 import { ToastService } from '../../../services/toast.service';
 import { AccountsHttpService } from '../../../core/http/accounts-http.service';
 import { finalize } from 'rxjs/operators';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 export interface SensitivePermissionItem {
   code: string;
@@ -31,7 +32,7 @@ export interface GovernanceUserItem {
 @Component({
   selector: 'app-operations-rbac-governance',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './operations-rbac-governance.html',
   styleUrl: './operations-rbac-governance.css'
 })

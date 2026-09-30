@@ -4,6 +4,7 @@ import { Subscription, interval } from 'rxjs';
 import { ReportApiService } from '../../core/api/report-api.service';
 import { ReportExportJob } from '../../core/models/report.model';
 import { ToastService } from '../../shared/components/toast/toast.component';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 /**
  * نوار پیشرفت خروجی Excel بزرگ — poll هر ۲ ثانیه از /exports/<id>/
@@ -12,7 +13,7 @@ import { ToastService } from '../../shared/components/toast/toast.component';
 @Component({
   selector: 'app-export-progress',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SvgIconDirective],
   template: `
     <div class="bg-white rounded-xl border border-slate-200 p-3 space-y-2 shadow-sm">
       <div class="flex items-center justify-between gap-2">
@@ -30,7 +31,7 @@ import { ToastService } from '../../shared/components/toast/toast.component';
           <button type="button" (click)="download()" [disabled]="downloading"
                   class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
             @if (downloading) {
-              <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+              <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24" appIcon="spinner-wedge"></svg>
             }
             دانلود فایل
           </button>

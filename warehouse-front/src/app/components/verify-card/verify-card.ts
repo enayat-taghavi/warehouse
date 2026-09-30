@@ -1,5 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../../core/error/error.interceptor';
@@ -27,7 +27,7 @@ export interface VerifiedPersonnel {
 @Component({
   selector: 'app-verify-card',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, NgOptimizedImage, RouterModule],
   templateUrl: './verify-card.html',
   styleUrl: './verify-card.css'
 })

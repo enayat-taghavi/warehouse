@@ -42,9 +42,7 @@
       <!-- Personnel Dedicated Header -->
       <div *ngIf="mainSectionTab === 'personnel'" class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-sm shrink-0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-          </svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="check-square"></svg>
         </div>
         <div>
           <div class="flex items-center gap-2">
@@ -60,9 +58,7 @@
       <!-- Fleet Dedicated Header -->
       <div *ngIf="mainSectionTab === 'fleet'" class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shrink-0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle>
-          </svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="truck"></svg>
         </div>
         <div>
           <div class="flex items-center gap-2">
@@ -77,7 +73,7 @@
 
       <!-- Left Side: Lock Badge -->
       <div *ngIf="isPeriodLocked" class="bg-amber-50 text-amber-800 border border-amber-300 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock"></svg>
         <span>دوره قفل شده</span>
       </div>
     </div>
@@ -91,11 +87,11 @@
         <!-- Sub-modes: ثبت روزانه | تقویم ماهانه ۳۱ روزه -->
         <div class="bg-slate-100 p-1 rounded-xl border border-slate-200/80 flex items-center shadow-inner">
           <button (click)="setMode('daily')" [class.active-mode-tab]="activeMode === 'daily'" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 flex items-center gap-1 cursor-pointer">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square"></svg>
             <span>ثبت روزانه</span>
           </button>
           <button (click)="setMode('monthly_grid')" [class.active-mode-tab]="activeMode === 'monthly_grid'" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 flex items-center gap-1 cursor-pointer">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
             <span>تقویم ماهانه ۳۱ روزه</span>
           </button>
         </div>
@@ -105,7 +101,7 @@
           <button type="button" (click)="toggleWarehouseMenu($event)" class="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs">
             <span>🏢</span>
             <span>{{ getSelectedWarehouseName() }}</span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-down"></svg>
           </button>
           
           <!-- Warehouse Popover Menu -->
@@ -125,7 +121,7 @@
         <div *ngIf="activeMode === 'daily' || activeMode === 'fleet'" class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1 relative">
           <!-- راست: روز قبل -->
           <button (click)="goToPrevDay()" title="روز قبل" class="p-1.5 hover:bg-slate-200 text-slate-600 rounded-lg transition-all cursor-pointer">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-right"></svg>
           </button>
           
           <!-- Persian Datepicker & Input Wrapper -->
@@ -149,18 +145,13 @@
               (click)="toggleAttendanceDatePicker($event)"
               title="باز کردن تقویم شمسی"
               class="p-1 hover:bg-slate-100 text-slate-500 hover:text-emerald-700 rounded-md transition-colors cursor-pointer mr-0.5 shrink-0">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
             </button>
           </div>
 
           <!-- چپ: روز بعد -->
           <button (click)="goToNextDay()" title="روز بعد" class="p-1.5 hover:bg-slate-200 text-slate-600 rounded-lg transition-all cursor-pointer">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
           </button>
           <button (click)="goToToday()" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-md transition-all cursor-pointer">امروز</button>
           <button (click)="goToYesterday()" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-md transition-all cursor-pointer">دیروز</button>
@@ -204,7 +195,7 @@
           <!-- Month Name Clickable Badge -->
           <button type="button" (click)="toggleMonthPicker($event)" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer" title="کلیک برای انتخاب سریع ماه">
             <span>{{ monthName || 'انتخاب ماه' }}</span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-down"></svg>
           </button>
 
           <!-- 12-Month Popover Grid -->
@@ -227,7 +218,7 @@
       <div class="flex items-center gap-2">
         <!-- Primary Smart Save/Update Button for Daily Attendance -->
         <button *ngIf="mainSectionTab === 'personnel' && activeMode === 'daily'" (click)="saveAttendanceMatrix()" [disabled]="!hasUnsavedChanges || isSavingAttendance || isPeriodLocked" [ngClass]="!hasUnsavedChanges ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60' : (hasExistingAttendance ? 'bg-blue-600 hover:bg-blue-700 text-white ring-2 ring-blue-400/50 shadow-md shadow-blue-500/20' : 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-400/50 shadow-md shadow-emerald-500/20')" class="px-5 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer">
-          <svg *ngIf="!isSavingAttendance" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          <svg *ngIf="!isSavingAttendance" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
           <span *ngIf="!isSavingAttendance">{{ hasExistingAttendance ? 'به‌روزرسانی کارکرد' : 'ثبت کارکرد روزانه' }}</span>
           <span *ngIf="isSavingAttendance">{{ hasExistingAttendance ? 'در حال به‌روزرسانی...' : 'در حال ثبت...' }}</span>
           <span *ngIf="hasUnsavedChanges" class="w-2 h-2 rounded-full bg-amber-300 animate-ping"></span>
@@ -235,7 +226,7 @@
 
         <!-- Primary Save Button for Fleet Mode -->
         <button *ngIf="mainSectionTab === 'fleet' && activeMode === 'daily'" (click)="saveVehicleMatrix()" [disabled]="isSavingVehicles" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
-          <svg *ngIf="!isSavingVehicles" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          <svg *ngIf="!isSavingVehicles" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
           <span *ngIf="!isSavingVehicles">ذخیره ناوگان</span>
           <span *ngIf="isSavingVehicles">در حال ذخیره...</span>
         </button>
@@ -253,13 +244,13 @@
     <div class="bg-white rounded-2xl p-2.5 border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-2">
       <div class="flex flex-wrap items-center gap-1">
         <span class="text-xs font-black text-slate-700 ml-1 flex items-center gap-1">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="zap-path"></svg>
           <span>گروهی:</span>
         </span>
 
         <!-- ۱. حاضر -->
         <button type="button" (click)="setBulkAttendanceStatus('PRESENT_10H')" [disabled]="isPeriodLocked" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50" title="حاضر ۱۰ ساعت (برای انتخاب‌شده‌ها یا همه)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
           <span>حاضر (۱۰س)</span>
         </button>
 
@@ -286,13 +277,13 @@
 
         <!-- ۵. کپی دیروز -->
         <button type="button" (click)="copyFromYesterday()" [disabled]="isPeriodLocked || isAttendanceLoading" class="px-2 py-1 bg-slate-100 hover:bg-indigo-50 text-indigo-700 border border-slate-200 hover:border-indigo-300 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50" title="کپی کارکرد روز قبل">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
           <span>کپی دیروز</span>
         </button>
 
         <!-- ۶. ساعت/اضافه -->
         <button type="button" (click)="openBulkHoursModal()" [disabled]="isPeriodLocked" class="px-2 py-1 bg-slate-100 hover:bg-amber-50 text-amber-800 border border-slate-200 hover:border-amber-300 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50" title="تنظیم ساعات کارکرد و اضافه‌کار">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
           <span>ساعت/اضافه</span>
         </button>
 
@@ -303,13 +294,13 @@
 
         <!-- ۸. پیست اکسل -->
         <button type="button" (click)="openExcelPasteModal()" [disabled]="isPeriodLocked" class="px-2 py-1 bg-slate-100 hover:bg-teal-50 text-teal-800 border border-slate-200 hover:border-teal-300 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50" title="پیست متنی از اکسل">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard"></svg>
           <span>پیست اکسل</span>
         </button>
 
         <!-- ۹. بارگذاری اکسل (Direct Excel Upload) -->
         <button type="button" (click)="triggerExcelImport()" [disabled]="isPeriodLocked || isImportingExcel" class="px-2 py-1 bg-slate-100 hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50" title="بارگذاری مستقیم فایل اکسل کارکرد">
-          <svg *ngIf="!isImportingExcel" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <svg *ngIf="!isImportingExcel" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
           <span *ngIf="!isImportingExcel">📥 بارگذاری اکسل</span>
           <span *ngIf="isImportingExcel">در حال پردازش...</span>
         </button>
@@ -568,7 +559,7 @@
         </div>
       </div>
       <button (click)="saveAttendanceMatrix()" [disabled]="!hasUnsavedChanges || isSavingAttendance || isPeriodLocked" [ngClass]="!hasUnsavedChanges ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60' : (hasExistingAttendance ? 'bg-blue-600 hover:bg-blue-700 text-white ring-2 ring-blue-400/50 shadow-md shadow-blue-500/20' : 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-400/50 shadow-md shadow-emerald-500/20')" class="px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0">
-        <svg *ngIf="!isSavingAttendance" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        <svg *ngIf="!isSavingAttendance" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
         <span>{{ isSavingAttendance ? 'در حال ثبت...' : (hasExistingAttendance ? 'به‌روزرسانی' : 'ثبت کارکرد') }}</span>
       </button>
     </div>
@@ -610,7 +601,7 @@
 
       <!-- Bottom Smart Save/Update Action Button -->
       <button (click)="saveAttendanceMatrix()" [disabled]="!hasUnsavedChanges || isSavingAttendance || isPeriodLocked" [ngClass]="!hasUnsavedChanges ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60' : (hasExistingAttendance ? 'bg-blue-600 hover:bg-blue-700 text-white ring-2 ring-blue-400/50 shadow-md shadow-blue-500/20' : 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-400/50 shadow-md shadow-emerald-500/20')" class="px-5 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-2 cursor-pointer">
-        <svg *ngIf="!isSavingAttendance" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        <svg *ngIf="!isSavingAttendance" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
         <span *ngIf="!isSavingAttendance">{{ hasExistingAttendance ? 'به‌روزرسانی کارکرد' : 'ثبت کارکرد روزانه' }}</span>
         <span *ngIf="isSavingAttendance">{{ hasExistingAttendance ? 'در حال به‌روزرسانی...' : 'در حال ثبت...' }}</span>
       </button>
@@ -636,7 +627,7 @@
           <span>ارسال‌شده جهت بررسی مالی</span>
         </span>
         <span *ngIf="periodStatus === 'LOCKED'" class="px-3 py-1 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200 text-xs font-bold flex items-center gap-1.5">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="lock"></svg>
           <span>تایید نهایی و قفل مالی</span>
         </span>
       </div>
@@ -645,33 +636,33 @@
       <div class="flex items-center gap-2 flex-wrap">
         <!-- دکمه اعمال کارکرد در بازه زمانی مشخص -->
         <button (click)="openRangeModal()" [disabled]="isPeriodLocked" class="px-3.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50" title="اعمال کارکرد دلخواه روی بازه مشخصی از روزهای ماه">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="zap"></svg>
           <span>⚡ اعمال کارکرد در بازه زمانی</span>
         </button>
 
         <button (click)="openExcelImportModal()" [disabled]="isPeriodLocked || isImportingMonthlyExcel" class="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50" title="بارگذاری اکسل کارکرد پرسنل">
-          <svg *ngIf="!isImportingMonthlyExcel" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <svg *ngIf="!isImportingMonthlyExcel" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
           <span *ngIf="!isImportingMonthlyExcel">📥 بارگذاری اکسل</span>
           <span *ngIf="isImportingMonthlyExcel">در حال بارگذاری...</span>
         </button>
 
         <button (click)="exportMonthlyExcel()" [disabled]="isExportingMonthlyExcel" class="px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer" title="دانلود فایل اکسل تقویم کارکرد">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
           <span>📤 دانلود اکسل تقویم</span>
         </button>
 
         <button (click)="openPrintTimesheetModal()" class="px-3.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer" title="پیش‌نمایش چاپ رسمی شیت ماهانه همراه با کادر اثر انگشت و امضا">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="printer"></svg>
           <span>🖨️ چاپ شیت رسمی</span>
         </button>
 
         <button *ngIf="periodStatus === 'OPEN'" (click)="openSubmitModal()" [disabled]="isPeriodLocked" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="send"></svg>
           <span>ارسال کارکرد ماهانه جهت بررسی مالی</span>
         </button>
 
         <button (click)="saveMonthlyGrid()" [disabled]="!hasUnsavedMonthlyGrid || isSavingMonthlyGrid || isPeriodLocked" [ngClass]="!hasUnsavedMonthlyGrid ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60' : 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-400/50 shadow-md shadow-emerald-500/20'" class="px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer">
-          <svg *ngIf="!isSavingMonthlyGrid" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          <svg *ngIf="!isSavingMonthlyGrid" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
           <span *ngIf="!isSavingMonthlyGrid">ذخیره تغییرات ماهانه</span>
           <span *ngIf="isSavingMonthlyGrid">در حال ذخیره‌سازی...</span>
           <span *ngIf="hasUnsavedMonthlyGrid" class="w-2 h-2 rounded-full bg-amber-300 animate-ping"></span>
@@ -771,7 +762,7 @@
       <div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3 flex-wrap">
           <span class="text-xs font-black text-slate-800 flex items-center gap-1.5">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck"></svg>
             <span>سرویس‌های ناوگان:</span>
           </span>
 
@@ -806,7 +797,7 @@
             <span>📋 چسباندن از اکسل</span>
           </button>
           <button (click)="loadVehicleMatrix()" [disabled]="isVehicleLoading" class="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
             <span>بروزرسانی</span>
           </button>
           <button (click)="saveVehicleMatrix()" [disabled]="isSavingVehicles" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
@@ -922,26 +913,26 @@
 
           <!-- خروجی اکسل استاندارد -->
           <button (click)="downloadFleetMonthlyExcel()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
             <span>خروجی اکسل</span>
           </button>
 
           <!-- ورودی اکسل -->
           <label class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
             <span>بارگذاری اکسل</span>
             <input type="file" (change)="onFleetExcelFileSelected($event)" accept=".xlsx,.xls" class="hidden" />
           </label>
 
           <!-- چاپ شیت رسمی -->
           <button (click)="openFleetPrintModal()" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="printer"></svg>
             <span>نسخه چاپی A4</span>
           </button>
 
           <!-- بروزرسانی -->
           <button (click)="loadFleetMonthlyGrid()" [disabled]="isFleetMonthlyGridLoading" class="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
             <span>بروزرسانی</span>
           </button>
 
@@ -1394,7 +1385,7 @@
         <div class="flex items-center gap-2">
           <button (click)="closeFleetPrintModal()" class="px-4 py-2 text-slate-600 text-xs font-bold hover:bg-slate-100 rounded-xl cursor-pointer">بستن (Esc)</button>
           <button (click)="printFleetSheet()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-500/20 cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="printer"></svg>
             <span>چاپ برگه (Print)</span>
           </button>
         </div>
@@ -1781,7 +1772,7 @@
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div class="flex items-center gap-2.5">
           <div class="w-9 h-9 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
           </div>
           <div>
             <h2 class="text-sm font-black text-slate-800">بارگذاری شیت ماهانه از فایل اکسل</h2>
@@ -1807,7 +1798,7 @@
           <input type="file" accept=".xlsx,.xls" (change)="onExcelImportFileSelected($event)" id="monthly-excel-input-hub" class="hidden" />
           <label for="monthly-excel-input-hub" class="cursor-pointer flex flex-col items-center gap-2">
             <div class="w-12 h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-plus"></svg>
             </div>
             <span class="font-bold text-slate-700">کلیک کنید یا فایل اکسل را اینجا بکشید</span>
             <span class="text-[11px] text-slate-400">فرمت‌های مجاز: XLSX, XLS</span>
@@ -1839,7 +1830,7 @@
       <div class="no-print flex items-center justify-between border-b border-slate-200 pb-3">
         <div class="flex items-center gap-2.5">
           <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="printer"></svg>
           </div>
           <div>
             <h2 class="text-sm font-black text-slate-800">پیش‌نمایش چاپ رسمی شیت ماهانه (جهت اخذ امضا و اثر انگشت پرسنل)</h2>
@@ -1848,7 +1839,7 @@
         </div>
         <div class="flex items-center gap-2">
           <button (click)="triggerPrint()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md shadow-indigo-500/20 cursor-pointer flex items-center gap-1.5">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="printer"></svg>
             <span>ارسال به چاپگر (Print)</span>
           </button>
           <button (click)="closePrintTimesheetModal()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer">بستن</button>

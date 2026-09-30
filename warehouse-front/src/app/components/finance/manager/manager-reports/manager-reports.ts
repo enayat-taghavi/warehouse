@@ -8,6 +8,7 @@ import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection } from '../../../../core/models/personnel.model';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 export interface LaborCostReportRow {
   section_name: string;
@@ -33,7 +34,7 @@ export interface FleetReportRow {
 @Component({
   selector: 'app-manager-reports-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './manager-reports.html',
   styleUrl: './manager-reports.css'
 })

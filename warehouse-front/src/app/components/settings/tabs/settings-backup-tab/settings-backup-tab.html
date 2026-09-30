@@ -3,7 +3,7 @@
         <!-- بنر عدم دسترسی -->
         <div *ngIf="!canManageBackup() && !canRestoreDatabase()" class="bg-amber-50 border border-amber-200 rounded-3xl p-6 flex items-start gap-4">
           <div class="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0 text-amber-700">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="shield"></svg>
           </div>
           <div>
             <h4 class="font-black text-amber-900 text-sm">محدودیت دسترسی امنیتی</h4>
@@ -18,10 +18,7 @@
           <div class="bg-gradient-to-r from-emerald-50 via-teal-50 to-slate-50 border-b border-emerald-100/80 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm text-white" style="background: linear-gradient(135deg, #059669, #0d9488)">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
-                  <path d="M12 8v4l3 3"></path>
-                  <circle cx="12" cy="12" r="9"></circle>
-                </svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" appIcon="clock-lucide"></svg>
               </div>
               <div>
                 <div class="flex items-center gap-2">
@@ -45,7 +42,7 @@
                 class="px-3.5 py-2 rounded-xl text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200 hover:bg-teal-100 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                 title="دانلود نسخه پشتیبان از پایگاه‌داده محلی مرورگر/تبلت"
               >
-                <svg *ngIf="!isExportingLocalDb" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <svg *ngIf="!isExportingLocalDb" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="download"></svg>
                 <span *ngIf="isExportingLocalDb" class="animate-spin w-3.5 h-3.5 border-2 border-teal-700 border-t-transparent rounded-full"></span>
                 <span>{{ isExportingLocalDb ? 'در حال خروجی...' : 'پشتیبان تبلت (IndexedDB)' }}</span>
               </button>
@@ -58,7 +55,7 @@
                 style="background: linear-gradient(135deg, #059669, #047857)"
               >
                 <span *ngIf="isCreatingSnapshot" class="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span>
-                <svg *ngIf="!isCreatingSnapshot" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                <svg *ngIf="!isCreatingSnapshot" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="zap"></svg>
                 <span>{{ isCreatingSnapshot ? 'در حال ساخت اسنپ‌شات...' : '+ اسنپ‌شات دستی فوری' }}</span>
               </button>
             </div>
@@ -152,7 +149,7 @@
         <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden" [class.opacity-60]="!canManageBackup()" [class.pointer-events-none]="!canManageBackup()">
           <div class="bg-slate-50 border-b border-slate-100 p-5 flex items-center gap-3">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: linear-gradient(135deg,#ede9fe,#c7d2fe)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" appIcon="upload"></svg>
             </div>
             <div>
               <h4 class="font-black text-slate-800 text-[13px]">دریافت نسخه پشتیبان (Backup)</h4>
@@ -163,7 +160,7 @@
 
             <!-- هشدار رمز -->
             <div class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
-              <svg class="shrink-0 mt-0.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <svg class="shrink-0 mt-0.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" appIcon="alert-triangle"></svg>
               <p class="text-[11px] text-amber-700 leading-relaxed font-semibold">
                 رمز عبور را یادداشت کنید. این رمز در هیچ‌جا ذخیره نمی‌شود و در صورت فراموشی،
                 فایل پشتیبان <strong>غیرقابل بازیابی</strong> خواهد بود.
@@ -184,8 +181,8 @@
                 />
                 <button type="button" (click)="backupShowPassword = !backupShowPassword"
                   class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
-                  <svg *ngIf="!backupShowPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  <svg *ngIf="backupShowPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  <svg *ngIf="!backupShowPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+                  <svg *ngIf="backupShowPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye-off"></svg>
                 </button>
               </div>
             </div>
@@ -198,7 +195,7 @@
               class="w-full py-3.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2.5 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               style="background: linear-gradient(135deg, #4f46e5, #7c3aed)">
               <span *ngIf="isBackupLoading" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-              <svg *ngIf="!isBackupLoading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <svg *ngIf="!isBackupLoading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="download"></svg>
               {{ isBackupLoading ? 'در حال آماده‌سازی فایل پشتیبان...' : 'دانلود نسخه پشتیبان' }}
             </button>
 
@@ -209,7 +206,7 @@
         <div class="bg-white rounded-3xl border border-red-100 shadow-sm overflow-hidden" [class.opacity-60]="!canRestoreDatabase()" [class.pointer-events-none]="!canRestoreDatabase()">
           <div class="bg-red-50 border-b border-red-100 p-5 flex items-center gap-3">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-red-100">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" appIcon="rotate-ccw-alt"></svg>
             </div>
             <div>
               <h4 class="font-black text-red-800 text-[13px]">بازیابی اطلاعات (Restore)</h4>
@@ -220,7 +217,7 @@
 
             <!-- هشدار قرمز -->
             <div class="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl p-4">
-              <svg class="shrink-0 mt-0.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <svg class="shrink-0 mt-0.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" appIcon="alert-triangle"></svg>
               <p class="text-[11px] text-red-700 leading-relaxed font-semibold">
                 <strong>هشدار جدی:</strong> این عملیات تمام داده‌های فعلی سیستم را حذف و با داده‌های فایل پشتیبان جایگزین می‌کند.
                 قبل از ادامه، سیستم به صورت خودکار یک نسخه اضطراری تهیه می‌کند.
@@ -242,7 +239,7 @@
                 <div
                   (click)="fileInput.click()"
                   class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[13px] text-slate-500 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-all flex items-center gap-3">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5" appIcon="file"></svg>
                   <span [class.text-slate-700]="restoreFileName" [class.font-semibold]="restoreFileName">
                     {{ restoreFileName || 'کلیک کنید تا فایل .wbak را انتخاب کنید...' }}
                   </span>
@@ -264,8 +261,8 @@
                 />
                 <button type="button" (click)="restoreShowPassword = !restoreShowPassword"
                   class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
-                  <svg *ngIf="!restoreShowPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  <svg *ngIf="restoreShowPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  <svg *ngIf="!restoreShowPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+                  <svg *ngIf="restoreShowPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye-off"></svg>
                 </button>
               </div>
             </div>
@@ -278,7 +275,7 @@
               class="w-full py-3.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2.5 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               style="background: linear-gradient(135deg, #dc2626, #b91c1c)">
               <span *ngIf="isRestoreLoading" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-              <svg *ngIf="!isRestoreLoading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+              <svg *ngIf="!isRestoreLoading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-ccw-alt"></svg>
               {{ isRestoreLoading ? 'در حال بازیابی اطلاعات...' : 'بازیابی اطلاعات' }}
             </button>
 
@@ -303,11 +300,7 @@
     <!-- آیکون خطر -->
     <div class="flex items-center justify-center mb-5">
       <div class="w-16 h-16 rounded-2xl flex items-center justify-center" style="background: linear-gradient(135deg, #fee2e2, #fecaca)">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5">
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" appIcon="alert-triangle"></svg>
       </div>
     </div>
 
@@ -366,7 +359,7 @@
   <div class="bg-white rounded-3xl border border-rose-200 shadow-2xl max-w-md w-full p-6 space-y-5">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="star"></svg>
       </div>
       <div>
         <h4 class="font-black text-rose-900 text-sm">تایید بازگشت اضطراری به اسنپ‌شات</h4>

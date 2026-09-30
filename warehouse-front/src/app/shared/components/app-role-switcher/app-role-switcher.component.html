@@ -26,10 +26,8 @@
         stroke="currentColor"
         stroke-width="2.5"
         class="transition-transform duration-200 shrink-0"
-        [class.rotate-180]="isDropdownOpen()"
-      >
-        <polyline points="6 9 12 15 18 9"></polyline>
-      </svg>
+        [class.rotate-180]="isDropdownOpen()" appIcon="chevron-down"
+      ></svg>
     </button>
 
     <!-- منوی بازشونده نقش‌ها (Role Dropdown List) -->
@@ -91,9 +89,7 @@
     >
       <span class="text-sm">{{ persona.activeApp() === 'warehouse' ? '📦' : (persona.activeApp() === 'operations' ? '🛡️' : '💳') }}</span>
       <span class="hidden sm:inline font-black text-[11px]">{{ persona.activeApp() === 'warehouse' ? 'انبارگردانی' : (persona.activeApp() === 'operations' ? 'مرکز عملیات' : 'مالی و کارکرد') }}</span>
-      <svg *ngIf="persona.canSwitchApps()" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="opacity-60 hidden sm:inline shrink-0 transition-transform duration-200" [class.rotate-180]="isAppDropdownOpen()">
-        <polyline points="6 9 12 15 18 9"></polyline>
-      </svg>
+      <svg *ngIf="persona.canSwitchApps()" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="opacity-60 hidden sm:inline shrink-0 transition-transform duration-200" [class.rotate-180]="isAppDropdownOpen()" appIcon="chevron-down"></svg>
     </button>
 
     <!-- منوی بازشونده ماژول‌ها و سامانه‌ها (App Dropdown Menu) -->

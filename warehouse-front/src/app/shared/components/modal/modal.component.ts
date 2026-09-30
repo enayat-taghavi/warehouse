@@ -7,6 +7,7 @@ import {
   ElementRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 /**
  * مودال عمومی — overlay + animation + close on escape/backdrop
@@ -19,7 +20,7 @@ import { CommonModule } from '@angular/common';
 @Component({
   selector: 'app-modal',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SvgIconDirective],
   template: `
     @if (isOpen) {
       <div
@@ -48,10 +49,7 @@ import { CommonModule } from '@angular/common';
                 class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
                 aria-label="بستن"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
               </button>
             </div>
           }

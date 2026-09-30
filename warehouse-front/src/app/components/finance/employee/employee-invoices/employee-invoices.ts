@@ -8,13 +8,14 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { gregorianToJalali } from '../../../../core/utils/date-utils';
 import { validateSheba, ShebaValidationResult } from '../../../../core/utils/sheba-utils';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 export type InvoiceStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'pending_accountant' | 'ready_to_pay' | 'paid' | 'rejected';
 
 @Component({
   selector: 'app-employee-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './employee-invoices.html',
   styleUrl: './employee-invoices.css'
 })

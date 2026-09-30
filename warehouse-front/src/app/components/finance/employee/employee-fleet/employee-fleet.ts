@@ -30,6 +30,7 @@ import {
   validateAccountNumber
 } from '../../../../core/utils/sheba-utils';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 export interface FleetMatrixRow extends VehicleMatrixRow {
   _isDirty?: boolean;
@@ -38,7 +39,7 @@ export interface FleetMatrixRow extends VehicleMatrixRow {
 @Component({
   selector: 'app-employee-fleet-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective],
   templateUrl: './employee-fleet.html',
   styleUrl: './employee-fleet.css'
 })

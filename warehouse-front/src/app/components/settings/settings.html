@@ -3,24 +3,20 @@
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm sticky top-0 z-20">
       <div>
         <h3 class="font-black text-slate-800 text-sm flex items-center gap-2">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" appIcon="settings-alt"></svg>
           پیکربندی کلان سیستم
         </h3>
         <p class="text-[11px] text-slate-500 mt-1.5">مدیریت تنظیمات سراسری سیستم شامل فرآیندهای انبارگردانی و تغذیه داده‌ها</p>
       </div>
       <div class="flex items-center gap-2">
         <button type="button" [disabled]="isLoading" (click)="loadSettings()" class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors shadow-sm disabled:opacity-50 cursor-pointer" title="بروزرسانی">
-          <svg *ngIf="!isLoading" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <polyline points="1 20 1 14 7 14"></polyline>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-          </svg>
+          <svg *ngIf="!isLoading" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="refresh-cw"></svg>
           <span *ngIf="isLoading" class="animate-spin block w-[18px] h-[18px] border-2 border-indigo-600 border-t-transparent rounded-full"></span>
         </button>
 
         <button *ngIf="activeTab === 'operations' || activeTab === 'counter_fields' || activeTab === 'doc_fields'" [disabled]="isLoading || dynamicFieldsLoadFailed || !canEditSettings()" (click)="saveGlobalSettings()" class="px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 hover:shadow-indigo-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)">
           <span *ngIf="isLoading" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-          <svg *ngIf="!isLoading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg *ngIf="!isLoading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
           ذخیره و اعمال تنظیمات
         </button>
       </div>
@@ -28,7 +24,7 @@
 
     <!-- Error Banner for Dynamic Fields -->
     <div *ngIf="dynamicFieldsLoadFailed" class="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm relative z-10">
-      <svg class="text-red-500 shrink-0 mt-0.5" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <svg class="text-red-500 shrink-0 mt-0.5" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-circle"></svg>
       <div>
         <h4 class="text-red-800 text-[13px] font-bold">خطا در دریافت فیلدهای داینامیک از سرور</h4>
         <p class="text-red-600 text-[11px] mt-1 leading-relaxed">به دلیل مشکل در ارتباط با سرور یا خطای اینترنت، ساختار فیلدهای پویا بارگذاری نشد. جهت حفظ یکپارچگی داده‌ها، دکمه «ذخیره تنظیمات» مسدود شده است.</p>
@@ -37,7 +33,7 @@
 
     <!-- Read-Only Banner for non-admins -->
     <div *ngIf="!canEditSettings()" class="mb-6 bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm relative z-10">
-      <svg class="text-slate-500 shrink-0 mt-0.5" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <svg class="text-slate-500 shrink-0 mt-0.5" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="shield"></svg>
       <div>
         <h4 class="text-slate-800 text-[13px] font-bold">حالت فقط‌خواندنی</h4>
         <p class="text-slate-600 text-[11px] mt-1 leading-relaxed">شما مجوز لازم برای تغییر تنظیمات کلان سیستم را ندارید. امکان مشاهده تنظیمات فعلی برای شما فراهم است، اما دکمه ذخیره غیرفعال است.</p>
@@ -55,7 +51,7 @@
         [class.text-slate-500]="activeTab !== 'operations'"
         [class.hover:bg-slate-50]="activeTab !== 'operations'"
         class="flex-1 min-w-[150px] px-3.5 py-3.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 whitespace-nowrap outline-none">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" [attr.stroke]="activeTab === 'operations' ? '#4f46e5' : 'currentColor'" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" [attr.stroke]="activeTab === 'operations' ? '#4f46e5' : 'currentColor'" stroke-width="2.5" appIcon="shield"></svg>
         قوانین عملیاتی
       </button>
 
@@ -68,7 +64,7 @@
         [class.text-slate-500]="activeTab !== 'counter_fields'"
         [class.hover:bg-slate-50]="activeTab !== 'counter_fields'"
         class="flex-1 min-w-[160px] px-3.5 py-3.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 whitespace-nowrap outline-none">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" [attr.stroke]="activeTab === 'counter_fields' ? '#4f46e5' : 'currentColor'" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" [attr.stroke]="activeTab === 'counter_fields' ? '#4f46e5' : 'currentColor'" stroke-width="2.5" appIcon="check-square-2"></svg>
         فیلدهای انبارگردان
       </button>
 
@@ -81,7 +77,7 @@
         [class.text-slate-500]="activeTab !== 'doc_fields'"
         [class.hover:bg-slate-50]="activeTab !== 'doc_fields'"
         class="flex-1 min-w-[160px] px-3.5 py-3.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 whitespace-nowrap outline-none">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" [attr.stroke]="activeTab === 'doc_fields' ? '#4f46e5' : 'currentColor'" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" [attr.stroke]="activeTab === 'doc_fields' ? '#4f46e5' : 'currentColor'" stroke-width="2.5" appIcon="file-text"></svg>
         فیلدهای کارتابل مالی
       </button>
       
@@ -94,7 +90,7 @@
         [class.text-slate-500]="activeTab !== 'label'"
         [class.hover:bg-slate-50]="activeTab !== 'label'"
         class="flex-1 min-w-[150px] px-3.5 py-3.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 whitespace-nowrap outline-none">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" [attr.stroke]="activeTab === 'label' ? '#4f46e5' : 'currentColor'" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" [attr.stroke]="activeTab === 'label' ? '#4f46e5' : 'currentColor'" stroke-width="2.5" appIcon="printer"></svg>
         طراح لیبل (Global)
       </button>
 
@@ -108,7 +104,7 @@
         [class.text-slate-500]="activeTab !== 'backup'"
         [class.hover:bg-slate-50]="activeTab !== 'backup'"
         class="flex-1 min-w-[170px] px-4 py-3.5 rounded-xl text-xs transition-all flex items-center justify-center gap-2 whitespace-nowrap outline-none">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" [attr.stroke]="activeTab === 'backup' ? '#4f46e5' : 'currentColor'" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" [attr.stroke]="activeTab === 'backup' ? '#4f46e5' : 'currentColor'" stroke-width="2.5" appIcon="upload"></svg>
         پشتیبان‌گیری و بازیابی
       </button>
     </div>

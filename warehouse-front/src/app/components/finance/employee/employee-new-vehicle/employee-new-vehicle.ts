@@ -24,13 +24,14 @@ import {
   IRANIAN_BANKS,
   IranianBankInfo
 } from '../../../../core/utils/sheba-utils';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 export type VehicleStatusFilter = 'all' | 'draft' | 'pending_supervisor' | 'revision_required' | 'approved' | 'rejected';
 
 @Component({
   selector: 'app-employee-new-vehicle-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ExcelImportModal],
+  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective],
   templateUrl: './employee-new-vehicle.html',
   styleUrl: './employee-new-vehicle.css'
 })

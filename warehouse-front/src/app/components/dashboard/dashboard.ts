@@ -4,10 +4,11 @@ import { RouterLink } from '@angular/router';
 import { ItemApiService } from '../../core/api/item-api.service';
 import { StateService } from '../../services/state.service';
 import { AuthStore } from '../../core/stores/auth.store';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, SvgIconDirective],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css'
 })

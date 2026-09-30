@@ -34,6 +34,7 @@ import { FilterGroupComponent } from './filter-group.component';
 import { SavedReportsComponent } from './saved-reports.component';
 import { ExportProgressComponent } from './export-progress.component';
 import { ReportChartComponent } from './report-chart.component';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 /**
  * صفحه گزارش‌ساز پویا — پوسته اصلی
@@ -45,7 +46,8 @@ import { ReportChartComponent } from './report-chart.component';
   imports: [
     CommonModule, FormsModule, DataTableComponent, TableColumnDirective,
     FilterGroupComponent, SavedReportsComponent, ExportProgressComponent,
-    ReportChartComponent
+    ReportChartComponent,
+    SvgIconDirective
   ],
   providers: [ReportStore],
   templateUrl: './reports.html',

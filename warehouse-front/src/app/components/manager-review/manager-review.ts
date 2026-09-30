@@ -25,11 +25,12 @@ import { ItemPhotoGalleryComponent } from '../../shared/components/item-photo-ga
 import { ItemPhotoThumbComponent } from '../../shared/components/item-photo-gallery/item-photo-thumb.component';
 import { PhotoGalleryHost } from '../../shared/components/item-photo-gallery/photo-gallery-host';
 import { ContextualCommentsComponent } from '../communications/contextual-comments/contextual-comments.component';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-manager-review',
   standalone: true,
-  imports: [CommonModule, FormsModule, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, PersianDatePipe, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, ContextualCommentsComponent],
+  imports: [CommonModule, FormsModule, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, PersianDatePipe, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, ContextualCommentsComponent, SvgIconDirective],
   templateUrl: './manager-review.html',
   styleUrl: './manager-review.css'
 })

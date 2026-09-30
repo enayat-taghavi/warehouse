@@ -6,10 +6,11 @@ import { FormsModule } from '@angular/forms';
 import { LabelApiService, LabelTemplate, LabelElement, AvailableField } from '../../core/api/label-api.service';
 import { ToastService } from '../../services/toast.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-label-designer',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './label-designer.html',
   styleUrl: './label-designer.css'
 })

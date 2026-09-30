@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { ReportFieldMeta, ReportOperator } from '../../core/models/report.model';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 /**
  * کنترل مقدار فیلتر بر اساس نوع فیلد + اپراتور
@@ -11,7 +12,7 @@ import { ReportFieldMeta, ReportOperator } from '../../core/models/report.model'
 @Component({
   selector: 'app-filter-value',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective],
   template: `
     @if (operator === 'isnull') {
       <select [ngModel]="value" (ngModelChange)="setValue($event)" class="ctl custom-select">
@@ -25,7 +26,7 @@ import { ReportFieldMeta, ReportOperator } from '../../core/models/report.model'
             <ng-persian-datepicker [dateInitValue]="false" (dateOnSelect)="setPair(0, $event.gregorian)">
               <input type="text" [formControl]="datePair0Control" class="ctl pr-7 pl-2 w-32 cursor-pointer bg-slate-50/50 hover:bg-white" placeholder="از تاریخ…" readonly>
             </ng-persian-datepicker>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2 text-slate-400 pointer-events-none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2 text-slate-400 pointer-events-none" appIcon="calendar"></svg>
             @if (pair()[0]) {
               <button type="button" (click)="setPair(0, null)" class="absolute left-1 text-slate-400 hover:text-rose-600 text-xs font-bold" title="پاک‌کردن">✕</button>
             }
@@ -35,7 +36,7 @@ import { ReportFieldMeta, ReportOperator } from '../../core/models/report.model'
             <ng-persian-datepicker [dateInitValue]="false" (dateOnSelect)="setPair(1, $event.gregorian)">
               <input type="text" [formControl]="datePair1Control" class="ctl pr-7 pl-2 w-32 cursor-pointer bg-slate-50/50 hover:bg-white" placeholder="تا تاریخ…" readonly>
             </ng-persian-datepicker>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2 text-slate-400 pointer-events-none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2 text-slate-400 pointer-events-none" appIcon="calendar"></svg>
             @if (pair()[1]) {
               <button type="button" (click)="setPair(1, null)" class="absolute left-1 text-slate-400 hover:text-rose-600 text-xs font-bold" title="پاک‌کردن">✕</button>
             }
@@ -83,7 +84,7 @@ import { ReportFieldMeta, ReportOperator } from '../../core/models/report.model'
         <ng-persian-datepicker [dateInitValue]="false" (dateOnSelect)="setValue($event.gregorian)">
           <input type="text" [formControl]="singleDateControl" class="ctl pr-7 pl-2 w-36 cursor-pointer bg-slate-50/50 hover:bg-white" placeholder="انتخاب تاریخ…" readonly>
         </ng-persian-datepicker>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2 text-slate-400 pointer-events-none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2 text-slate-400 pointer-events-none" appIcon="calendar"></svg>
         @if (value) {
           <button type="button" (click)="setValue(null)" class="absolute left-1 text-slate-400 hover:text-rose-600 text-xs font-bold" title="پاک‌کردن">✕</button>
         }

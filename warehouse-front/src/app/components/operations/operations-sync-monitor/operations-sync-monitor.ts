@@ -17,6 +17,7 @@ import { ToastService } from '../../../services/toast.service';
 import { ConfirmDialogService } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ConflictResolutionModalComponent } from '../../../shared/components/conflict-resolution-modal/conflict-resolution-modal.component';
 import { Subscription } from 'rxjs';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 export interface TabletDeviceTelemetry {
   tabId: string;
@@ -50,7 +51,7 @@ export interface ConflictItem {
 @Component({
   selector: 'app-operations-sync-monitor',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConflictResolutionModalComponent],
+  imports: [CommonModule, FormsModule, ConflictResolutionModalComponent, SvgIconDirective],
   templateUrl: './operations-sync-monitor.html',
   styleUrl: './operations-sync-monitor.css'
 })

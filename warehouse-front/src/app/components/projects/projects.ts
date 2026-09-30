@@ -11,10 +11,11 @@ import { AccountsHttpService, ImportResult } from '../../core/http/accounts-http
 import { ExcelImportModal } from '../../shared/components/excel-import-modal/excel-import-modal';
 import { Observable, Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-projects',
-  imports: [CommonModule, FormsModule, ModalComponent, HasPermissionDirective, ExcelImportModal, SmartDeleteModalComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, HasPermissionDirective, ExcelImportModal, SmartDeleteModalComponent, SvgIconDirective],
   templateUrl: './projects.html',
   styleUrl: './projects.css'
 })

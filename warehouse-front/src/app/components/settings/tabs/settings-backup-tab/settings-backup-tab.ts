@@ -6,11 +6,12 @@ import { ToastService } from '../../../../services/toast.service';
 import { finalize } from 'rxjs/operators';
 import { offlineDb, downloadLocalDatabaseSnapshotFile } from '../../../../core/services/offline-db';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-settings-backup-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './settings-backup-tab.html'
 })
 export class SettingsBackupTabComponent implements OnInit {

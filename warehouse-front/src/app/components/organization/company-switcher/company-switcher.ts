@@ -2,11 +2,12 @@ import { Component, inject, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
 import { Company } from '../../../core/models/company.model';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-company-switcher',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SvgIconDirective],
   templateUrl: './company-switcher.html',
   styleUrls: ['./company-switcher.css']
 })

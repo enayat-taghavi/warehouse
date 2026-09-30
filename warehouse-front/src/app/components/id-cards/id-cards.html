@@ -22,7 +22,7 @@
       <div class="p-3 border-b border-slate-100 space-y-2 bg-white shrink-0">
         <div class="relative">
           <input type="text" [(ngModel)]="searchQuery" placeholder="جستجوی نام، کد ملی..." class="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:bg-white focus:border-indigo-400 transition-all">
-          <svg class="absolute right-2.5 top-2.5 text-slate-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <svg class="absolute right-2.5 top-2.5 text-slate-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="search"></svg>
         </div>
 
         <div class="grid grid-cols-2 gap-1.5">
@@ -96,7 +96,7 @@
 
         <!-- دکمه چرخش سه‌بعدی -->
         <button (click)="toggleFlip()" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-200 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer">
-          <svg class="transition-transform duration-500" [class.rotate-180]="isCardFlipped" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+          <svg class="transition-transform duration-500" [class.rotate-180]="isCardFlipped" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="refresh-cw-legacy"></svg>
           <span>چرخش ۳ بعدی</span>
         </button>
       </div>
@@ -357,7 +357,7 @@
         <!-- راهنمای تعاملی زیر بوم -->
         <div class="w-full text-center z-20 shrink-0 pt-2">
           <p class="text-[10px] font-bold text-slate-500 flex items-center justify-center gap-1.5">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="info"></svg>
             <span>برای مشاهده پشت و روی کارت، روی کارت یا دکمه چرخش کلیک کنید</span>
           </p>
         </div>
@@ -367,7 +367,7 @@
       <!-- فوتر ستون وسط: دکمه بزرگ پرینت -->
       <div class="p-3 bg-white border-t border-slate-200 shrink-0">
         <button (click)="executeCardPrint()" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-2xl text-xs font-black shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer border-0">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="printer"></svg>
           <span>ارسال به پرینتر (شیت استاندارد A4)</span>
         </button>
       </div>
@@ -406,7 +406,7 @@
           <!-- ۱. چیدمان‌های آماده پیش‌فرض (Presets) -->
           <div class="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-3 space-y-2">
             <div class="flex items-center gap-2 mb-1">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" appIcon="grid"></svg>
               <h3 class="font-black text-slate-800 text-xs">۱. چیدمان‌های پیش‌فرض آماده</h3>
             </div>
 
@@ -436,7 +436,7 @@
           <!-- ۲. تنظیمات بارکد امنیتی -->
           <div class="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-3 space-y-2.5">
             <div class="flex items-center gap-2">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" appIcon="edit-3"></svg>
               <h3 class="font-black text-slate-800 text-xs">۲. نوع بارکد و جانمایی المان‌ها</h3>
             </div>
 
@@ -526,7 +526,7 @@
           <!-- متون ثابت سازمان -->
           <div class="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-3 space-y-2.5">
             <div class="flex items-center gap-2">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" appIcon="edit"></svg>
               <h3 class="font-black text-slate-800 text-xs">۱. متون ثابت و عناوین سازمان</h3>
             </div>
 
@@ -556,7 +556,7 @@
             </div>
 
             <button (click)="resetToDefaultTexts()" class="w-full py-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-ccw-lucide"></svg>
               <span>بازنشانی متن‌ها به حالت پیش‌فرض</span>
             </button>
           </div>
@@ -564,7 +564,7 @@
           <!-- فیلد پروژه سراسری و اعتبار -->
           <div class="bg-slate-50/70 rounded-2xl border border-slate-200/80 p-3 space-y-2.5">
             <div class="flex items-center gap-2">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" appIcon="globe-alt"></svg>
               <h3 class="font-black text-slate-800 text-xs">۲. فیلد سراسری پروژه و اعتبار</h3>
             </div>
 
@@ -665,7 +665,7 @@
       <!-- فوتر ستون تنظیمات -->
       <div class="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500 font-bold shrink-0">
         <span class="flex items-center gap-1.5 text-emerald-600">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
           <span>ذخیره خودکار تغییرات در لحظه</span>
         </span>
         <span class="font-mono text-slate-400 uppercase">{{effectiveCardColor}}</span>
@@ -688,7 +688,7 @@
     <div class="p-5 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
         </div>
         <div>
           <h2 class="text-base font-bold text-slate-800">خروجی و دانلود تصویر دیجیتال (PNG)</h2>
@@ -696,7 +696,7 @@
         </div>
       </div>
       <button (click)="closeExportModal()" class="text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-xl hover:bg-slate-200">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
       </button>
     </div>
 
@@ -751,7 +751,7 @@
     <div class="p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 rounded-b-3xl">
       <button (click)="closeExportModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition-colors">انصراف</button>
       <button (click)="exportDigitalCard(exportSide, exportScale)" [disabled]="isExportingImage" class="px-6 py-2.5 rounded-xl text-xs font-black text-white shadow-md active:scale-95 transition-all flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 disabled:opacity-50">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="download-arrow"></svg>
         <span>{{isExportingImage ? 'در حال رندر و دانلود...' : 'تولید و دانلود فوری فایل تصویر'}}</span>
       </button>
     </div>
@@ -769,7 +769,7 @@
     <div class="p-4 bg-white border-b border-slate-200 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="eye"></svg>
         </div>
         <div>
           <h3 class="font-black text-slate-800 text-sm md:text-base">پیش‌نمایش زنده شیت چاپ A4 (شبیه‌ساز دقیق پرینتر)</h3>
@@ -789,7 +789,7 @@
         </div>
 
         <button (click)="closeSheetPreviewModal()" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
         </button>
       </div>
     </div>
@@ -1234,7 +1234,7 @@
       <div class="flex items-center gap-3">
         <button (click)="closeSheetPreviewModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors">بستن</button>
         <button (click)="executeCardPrint(); closeSheetPreviewModal()" class="px-5 py-2 rounded-xl text-xs font-black text-white shadow-md bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 flex items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="printer"></svg>
           <span>تایید و ارسال به پرینتر</span>
         </button>
       </div>

@@ -119,11 +119,7 @@
           title="دانلود خروجی اکسل طرف‌حساب‌ها"
           aria-label="خروجی اکسل"
         >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
         </button>
 
         <!-- ۲. ورودی و آپلود اکسل (نیلی / آبی) -->
@@ -134,11 +130,7 @@
           title="ورود دسته‌جمعی طرف‌حساب‌ها از اکسل"
           aria-label="ورودی اکسل"
         >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
-          </svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="upload"></svg>
         </button>
 
         <!-- ۳. بروزرسانی زنده اطلاعات (اسلیت / خنثی) -->
@@ -159,12 +151,8 @@
             stroke="currentColor"
             stroke-width="2"
             stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <polyline points="1 20 1 14 7 14"></polyline>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-          </svg>
+            stroke-linejoin="round" appIcon="refresh-cw"
+          ></svg>
         </button>
       </div>
     </div>
@@ -275,10 +263,7 @@
             class="absolute left-8 text-slate-400 hover:text-indigo-600 p-0.5 text-xs cursor-pointer transition-colors"
             title="کپی شماره شبا (بدون IR)"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="copy"></svg>
           </button>
         </div>
       </div>
@@ -293,9 +278,7 @@
           <span [class.text-slate-400]="!newCounterparty.bank_name" class="truncate">
             {{ newCounterparty.bank_name || 'انتخاب بانک عامل...' }}
           </span>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 shrink-0" appIcon="chevron-down"></svg>
         </div>
 
         <!-- منوی بازشونده بانک‌ها -->
@@ -341,10 +324,7 @@
             class="absolute left-2 text-slate-400 hover:text-indigo-600 p-0.5 text-xs cursor-pointer transition-colors"
             title="کپی شماره حساب"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="copy"></svg>
           </button>
         </div>
       </div>
@@ -408,11 +388,7 @@
             type="submit"
             class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs py-2 px-5 rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-              <polyline points="17 21 17 13 7 13 7 21"></polyline>
-              <polyline points="7 3 7 8 15 8"></polyline>
-            </svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="save"></svg>
             <span>{{ editingCounterparty ? 'بروزرسانی طرف‌حساب' : 'ثبت طرف‌حساب' }}</span>
           </button>
         </div>
@@ -536,10 +512,7 @@
                   class="text-slate-400 hover:text-indigo-600 text-[11px] cursor-pointer"
                   title="کپی شماره شبا (بدون IR)"
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                  </svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="copy"></svg>
                 </button>
               </div>
               <span *ngIf="!cp.sheba_number" class="text-slate-400">-</span>
@@ -650,10 +623,7 @@
             class="text-indigo-600 hover:text-indigo-800 text-[10px] font-sans font-bold cursor-pointer flex items-center gap-1"
             title="کپی شماره شبا (بدون IR)"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="copy"></svg>
             <span>کپی شبا</span>
           </button>
         </div>

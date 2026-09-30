@@ -8,11 +8,12 @@ import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection, ExpenseInvoice } from '../../../../core/models/personnel.model';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-supervisor-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './supervisor-invoices.html',
   styleUrl: './supervisor-invoices.css'
 })

@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, computed, ViewChild, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StateService } from '../../services/state.service';
 import { ToastService } from '../../services/toast.service';
@@ -22,10 +22,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CompanyApiService } from '../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../core/services/active-company.service';
 import { Company } from '../../core/models/company.model';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-users',
-  imports: [CommonModule, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective],
   templateUrl: './users.html',
   styleUrl: './users.css'
 })

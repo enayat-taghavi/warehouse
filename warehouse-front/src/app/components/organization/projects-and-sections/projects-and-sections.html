@@ -49,11 +49,7 @@
           [title]="getExportTooltip()" 
           aria-label="خروجی اکسل"
         >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
         </button>
 
         <!-- ۲. ورودی و آپلود اکسل (آبی) -->
@@ -64,11 +60,7 @@
           [title]="getImportTooltip()" 
           aria-label="ورودی اکسل"
         >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
-          </svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="upload"></svg>
         </button>
 
         <!-- ۳. بروزرسانی اطلاعات (بنفش/ایندیگو) -->
@@ -80,11 +72,7 @@
           title="بروزرسانی اطلاعات" 
           aria-label="بروزرسانی"
         >
-          <svg *ngIf="!isLoading" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <polyline points="1 20 1 14 7 14"></polyline>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-          </svg>
+          <svg *ngIf="!isLoading" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="refresh-cw"></svg>
           <span *ngIf="isLoading" class="animate-spin block w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full"></span>
         </button>
       </div>
@@ -742,9 +730,7 @@
                 class="w-5 h-5 rounded-lg border flex items-center justify-center transition-all shrink-0"
                 [ngClass]="isUserSelected(u.id) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white'"
               >
-                <svg *ngIf="isUserSelected(u.id)" class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                </svg>
+                <svg *ngIf="isUserSelected(u.id)" class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" appIcon="hero-check-solid"></svg>
               </div>
 
               <!-- آواتار و نام کاربر -->

@@ -33,6 +33,7 @@ import { offlineDb } from '../../core/services/offline-db';
 import { OfflineSyncService } from '../../core/services/offline-sync.service';
 import { ParsedScanRow, ParsedScanRowStatus, ParsedScanFieldChange, ScanBatchSummary } from './customs-scanner.types';
 import { CustomsScannerParser } from './customs-scanner-parser';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 const DOC_TASK_DIRECT_KEYS = new Set([
   'added_rti_no',
@@ -55,7 +56,7 @@ const DOC_TASK_DIRECT_KEYS = new Set([
 @Component({
   selector: 'app-customs',
   standalone: true,
-  imports: [CommonModule, FormsModule, PersianDatePipe, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent],
+  imports: [CommonModule, FormsModule, PersianDatePipe, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, SvgIconDirective],
   templateUrl: './customs.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

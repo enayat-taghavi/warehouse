@@ -31,11 +31,12 @@ import {
 } from '../../../core/utils/sheba-utils';
 import { AppPersonaService } from '../../../core/services/app-persona.service';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-personnel-profiles',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './personnel-profiles.html',
   styleUrl: './personnel-profiles.css'
 })

@@ -21,6 +21,7 @@ import { SettingsDocFieldsTabComponent } from './tabs/settings-doc-fields-tab/se
 import { SettingsLabelTabComponent } from './tabs/settings-label-tab/settings-label-tab';
 import { SettingsBackupTabComponent } from './tabs/settings-backup-tab/settings-backup-tab';
 import { ConfirmDialogService } from '../../shared';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-settings',
@@ -31,7 +32,8 @@ import { ConfirmDialogService } from '../../shared';
     SettingsCounterFieldsTabComponent, 
     SettingsDocFieldsTabComponent, 
     SettingsLabelTabComponent, 
-    SettingsBackupTabComponent
+    SettingsBackupTabComponent,
+    SvgIconDirective
   ],
   templateUrl: './settings.html'
 })

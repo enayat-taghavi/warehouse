@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../modal/modal.component';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
 import { SyncErrorEntry } from '../../../core/services/offline-db';
+import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 export interface ConflictingField {
   key: string;
@@ -65,7 +66,7 @@ const IGNORED_COMPARE_KEYS = new Set([
 @Component({
   selector: 'app-conflict-resolution-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, ModalComponent, SvgIconDirective],
   template: `
     <app-modal [isOpen]="isOpen" (closed)="close()" title="مرکز حل تداخل همگام‌سازی (۳-Way Merge)" sizeClass="max-w-2xl">
       <div class="px-5 py-4 flex flex-col gap-4 text-right" dir="rtl">
@@ -73,11 +74,7 @@ const IGNORED_COMPARE_KEYS = new Set([
         <!-- Header Banner & Explanations -->
         <div class="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-start gap-3">
           <div class="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 mt-0.5">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="alert-circle"></svg>
           </div>
           <div class="flex-1 min-w-0">
             <h3 class="text-xs font-black text-amber-900 dark:text-amber-200">
@@ -92,9 +89,7 @@ const IGNORED_COMPARE_KEYS = new Set([
         <!-- SoD Warning Banner if Restricted -->
         <div *ngIf="isSodRestricted" class="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex items-start gap-3">
           <div class="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 flex items-center justify-center shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-            </svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="shield"></svg>
           </div>
           <div class="flex-1 min-w-0">
             <h4 class="text-xs font-black text-rose-900 dark:text-rose-200">
@@ -218,9 +213,7 @@ const IGNORED_COMPARE_KEYS = new Set([
             class="w-full flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer"
           >
             <div class="flex items-center gap-1.5">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-emerald-600">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-emerald-600" appIcon="check"></svg>
               <span>{{ autoMergedCount }} فیلد بدون مغایرت به شکل خودکار تلفیق گردیدند</span>
             </div>
             <span class="text-[10px] text-indigo-600 dark:text-indigo-400">{{ showAutoMerged ? 'بستن' : 'مشاهده' }}</span>
@@ -236,7 +229,7 @@ const IGNORED_COMPARE_KEYS = new Set([
 
         <!-- Feedback Messages -->
         <div *ngIf="saveErrorMsg" class="p-2.5 rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 text-xs font-bold flex items-center gap-2">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-circle"></svg>
           <span>{{ saveErrorMsg }}</span>
         </div>
 
@@ -261,12 +254,8 @@ const IGNORED_COMPARE_KEYS = new Set([
             ? 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed opacity-60' 
             : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'"
         >
-          <svg *ngIf="isSaving" class="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
-          </svg>
-          <svg *ngIf="!isSaving" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
+          <svg *ngIf="isSaving" class="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="loader-arc"></svg>
+          <svg *ngIf="!isSaving" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
           <span>{{ isSaving ? 'در حال اعمال ادغام...' : 'تایید و نهایی‌سازی ادغام' }}</span>
         </button>
       </div>

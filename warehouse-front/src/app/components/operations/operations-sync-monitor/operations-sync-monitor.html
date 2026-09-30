@@ -45,10 +45,7 @@
         class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
         title="ارسال دستی کلیه تراکنش‌های معلق صف آفلاین به سرور"
       >
-        <svg *ngIf="isFlushingQueue()" class="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-        </svg>
+        <svg *ngIf="isFlushingQueue()" class="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" appIcon="spinner-quarter"></svg>
         <span *ngIf="!isFlushingQueue()">🚀 تخلیه صف آفلاین</span>
         <span *ngIf="isFlushingQueue()">در حال ارسال...</span>
       </button>
@@ -59,11 +56,7 @@
         [disabled]="isRefreshing()"
         class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isRefreshing()">
-          <polyline points="23 4 23 10 17 10"></polyline>
-          <polyline points="1 20 1 14 7 14"></polyline>
-          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-        </svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isRefreshing()" appIcon="refresh-cw"></svg>
         <span>بروزرسانی تله‌متری</span>
       </button>
     </div>

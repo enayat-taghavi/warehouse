@@ -12,6 +12,7 @@ import { ChatDrawerComponent } from '../../communications/chat-drawer/chat-drawe
 import { UserMenuComponent } from '../../../shared/components/user-menu/user-menu.component';
 import { FirstBootWizardComponent } from '../first-boot-wizard/first-boot-wizard';
 import { filter, Subscription } from 'rxjs';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 interface NavItem {
   id: string;
@@ -33,7 +34,8 @@ interface NavItem {
     OfflinePendingBadgeComponent,
     ChatDrawerComponent,
     UserMenuComponent,
-    FirstBootWizardComponent
+    FirstBootWizardComponent,
+    SvgIconDirective
   ],
   templateUrl: './operations-layout.html',
   styleUrl: './operations-layout.css'

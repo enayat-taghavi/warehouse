@@ -6,11 +6,12 @@ import { CommunicationService, Conversation, ChatMessage, UserShort } from '../.
 import { StateService } from '../../../services/state.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../services/toast.service';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-chat-drawer',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './chat-drawer.component.html',
   styleUrls: ['./chat-drawer.component.css']
 })

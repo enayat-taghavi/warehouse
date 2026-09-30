@@ -21,11 +21,12 @@ import {
 } from '../../../../core/models/personnel.model';
 import { jalaliToGregorian, gregorianToJalali } from '../../../../core/utils/date-utils';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-employee-attendance-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective],
   templateUrl: './employee-attendance.html',
   styleUrl: './employee-attendance.css'
 })

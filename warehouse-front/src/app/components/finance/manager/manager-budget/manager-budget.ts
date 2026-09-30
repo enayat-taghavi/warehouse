@@ -8,6 +8,7 @@ import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection } from '../../../../core/models/personnel.model';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 export interface SectionBudgetItem {
   id: number;
@@ -26,7 +27,7 @@ export interface SectionBudgetItem {
 @Component({
   selector: 'app-manager-budget-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './manager-budget.html',
   styleUrl: './manager-budget.css'
 })

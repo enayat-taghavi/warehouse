@@ -13,6 +13,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../toast/toast.component';
+import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 export type ScannerCameraPreset = 'adaptive' | 'ultra' | 'high' | 'balanced' | 'lite' | 'custom';
 
@@ -68,7 +69,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
 @Component({
   selector: 'app-barcode-scanner',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   template: `
     <div *ngIf="!headless" class="flex items-center gap-2">
       <!-- ورودی اسکن -->
@@ -88,9 +89,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
           class="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 text-sm font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all shadow-sm disabled:bg-slate-50 disabled:cursor-not-allowed"
         />
         <!-- آیکون بارکد -->
-        <svg class="absolute left-3 top-3 text-slate-400 pointer-events-none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <path d="M3 5v14"/><path d="M8 5v14"/><path d="M12 5v14"/><path d="M17 5v14"/><path d="M21 5v14"/>
-        </svg>
+        <svg class="absolute left-3 top-3 text-slate-400 pointer-events-none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" appIcon="barcode"></svg>
       </div>
 
       <!-- دکمه کیبورد دستی (موبایل) -->
@@ -102,9 +101,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
         [ngClass]="manualKeyboard ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
         title="ورود دستی کد (باز شدن کیبورد)"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M9 14h6"/>
-        </svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="keyboard-2"></svg>
       </button>
 
       <!-- دکمه دوربین -->
@@ -115,9 +112,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
         class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors shadow-sm shrink-0"
         title="اسکن با دوربین"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
-        </svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="camera"></svg>
       </button>
     </div>
 
@@ -143,9 +138,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
             [ngClass]="torchActive ? 'bg-amber-400 text-slate-900 shadow-amber-400/30' : 'bg-white/20 text-white hover:bg-white/30'"
             title="روشن/خاموش کردن چراغ‌قوه"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-            </svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="zap"></svg>
           </button>
 
           <!-- دکمه‌های زوم سریع -->
@@ -178,9 +171,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
               title="تنظیم کیفیت اسکنر"
             >
               <span>{{ activePresetBadge }}</span>
-              <svg class="w-3 h-3 transition-transform" [ngClass]="showQualityMenu ? 'rotate-180' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M6 9l6 6 6-6"/>
-              </svg>
+              <svg class="w-3 h-3 transition-transform" [ngClass]="showQualityMenu ? 'rotate-180' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-down-path"></svg>
             </button>
 
             <!-- منوی کشویی انتخاب کیفیت دوربین -->
@@ -210,7 +201,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                     </span>
                     <span class="text-[10px] opacity-80">شروع از 2K با تنظیم خودکار در صورت لگ</span>
                   </div>
-                  <svg *ngIf="activePreset === 'adaptive'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg *ngIf="activePreset === 'adaptive'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                 </button>
 
                 <!-- گزینه ۲: فوق‌العاده Ultra 2K -->
@@ -226,7 +217,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                     </span>
                     <span class="text-[10px] opacity-80">1440p/2K + کدهای فوق‌العاده ریز و متراکم</span>
                   </div>
-                  <svg *ngIf="activePreset === 'ultra'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg *ngIf="activePreset === 'ultra'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                 </button>
 
                 <!-- گزینه ۳: کیفیت بالا High 1080p -->
@@ -240,7 +231,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                     <span class="text-xs font-bold">💎 کیفیت بالا (High 1080p)</span>
                     <span class="text-[10px] opacity-80">رزولوشن 1080p برای گوشی‌های مدرن</span>
                   </div>
-                  <svg *ngIf="activePreset === 'high'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg *ngIf="activePreset === 'high'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                 </button>
 
                 <!-- گزینه ۴: متعادل Balanced 720p -->
@@ -254,7 +245,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                     <span class="text-xs font-bold">⚖️ متعادل و روان (Balanced 720p)</span>
                     <span class="text-[10px] opacity-80">رزولوشن 720p سریع و سبک</span>
                   </div>
-                  <svg *ngIf="activePreset === 'balanced'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg *ngIf="activePreset === 'balanced'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                 </button>
 
                 <!-- گزینه ۵: اقتصادی Lite 480p -->
@@ -268,7 +259,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                     <span class="text-xs font-bold">🔋 سبک و اقتصادی (Lite 480p)</span>
                     <span class="text-[10px] opacity-80">مصرف حداقلی باتری برای گوشی‌های ضعیف</span>
                   </div>
-                  <svg *ngIf="activePreset === 'lite'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg *ngIf="activePreset === 'lite'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                 </button>
               </div>
 
@@ -279,7 +270,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                   (click)="resetToSystemDefault()"
                   class="w-full py-1.5 px-2 bg-white/10 hover:bg-white/20 text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-ccw-lucide"></svg>
                   <span>بازگشت به پیش‌فرض انبار/سیستم</span>
                 </button>
               </div>
@@ -305,9 +296,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
           class="p-2 sm:p-2.5 bg-white/20 text-white hover:bg-white/30 rounded-full transition-all backdrop-blur-md shadow-md shrink-0 mr-2"
           title="بستن"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="x"></svg>
         </button>
       </div>
 
@@ -367,10 +356,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
             (click)="copyDiagnosticReport()"
             class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg text-xs font-bold shadow transition-all active:scale-95 flex items-center gap-1"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
             <span>کپی گزارش</span>
           </button>
         </div>

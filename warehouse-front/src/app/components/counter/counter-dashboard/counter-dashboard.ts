@@ -31,11 +31,12 @@ import {
   FieldPermissionConfig, 
   mergeFieldPermissions 
 } from '../../../core/models/field-config.model';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-counter-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, PersianDatePipe, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent],
+  imports: [CommonModule, FormsModule, PersianDatePipe, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, SvgIconDirective],
   templateUrl: './counter-dashboard.html',
   styleUrl: './counter-dashboard.css',
   changeDetection: ChangeDetectionStrategy.OnPush

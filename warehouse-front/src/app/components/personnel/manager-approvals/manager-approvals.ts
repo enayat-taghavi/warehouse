@@ -16,11 +16,12 @@ import {
   VehicleChangeRequest,
   PayrollYearlySettings
 } from '../../../core/models/personnel.model';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-manager-approvals',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './manager-approvals.html',
   styleUrl: './manager-approvals.css'
 })

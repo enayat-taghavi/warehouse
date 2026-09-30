@@ -8,12 +8,7 @@
         <button type="button" (click)="switchTab('users')"
           [ngClass]="activeTab === 'users' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
           class="flex-1 md:flex-none px-4 md:px-5 py-2 text-xs rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-          </svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="users"></svg>
           <span>کاربران</span>
           <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
             [ngClass]="activeTab === 'users' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'">
@@ -24,9 +19,7 @@
         <button type="button" (click)="switchTab('roles')"
           [ngClass]="activeTab === 'roles' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
           class="flex-1 md:flex-none px-4 md:px-5 py-2 text-xs rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-          </svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="shield"></svg>
           <span>نقش‌ها</span>
           <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
             [ngClass]="activeTab === 'roles' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'">
@@ -37,13 +30,7 @@
         <button type="button" (click)="switchTab('id-cards')"
           [ngClass]="activeTab === 'id-cards' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
           class="flex-1 md:flex-none px-4 md:px-5 py-2 text-xs rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-            <circle cx="9" cy="10" r="2"></circle>
-            <line x1="15" y1="8" x2="17" y2="8"></line>
-            <line x1="15" y1="12" x2="17" y2="12"></line>
-            <line x1="7" y1="16" x2="17" y2="16"></line>
-          </svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="id-card"></svg>
           <span>کارت پرسنلی / گیت‌پاس</span>
         </button>
       </div>
@@ -53,65 +40,38 @@
         <!-- اکشن‌های تب کاربران -->
         <ng-container *ngIf="activeTab === 'users'">
           <button (click)="exportUsersExcel()" class="btn-icon-square btn-icon-emerald" title="دانلود خروجی اکسل کاربران" aria-label="دانلود اکسل">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
           </button>
 
           <button (click)="openUsersImportModal()" class="btn-icon-square btn-icon-blue" title="ورودی / آپلود دسته‌جمعی اکسل کاربران" aria-label="آپلود اکسل">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="upload"></svg>
           </button>
         </ng-container>
 
         <!-- اکشن‌های تب نقش‌ها -->
         <ng-container *ngIf="activeTab === 'roles'">
           <button (click)="exportRolesExcel()" class="btn-icon-square btn-icon-emerald" title="دانلود خروجی اکسل نقش‌ها" aria-label="دانلود اکسل">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
           </button>
 
           <button (click)="openRolesImportModal()" class="btn-icon-square btn-icon-blue" title="ورودی / آپلود اکسل نقش‌ها" aria-label="آپلود اکسل">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="upload"></svg>
           </button>
         </ng-container>
 
         <!-- اکشن‌های تب کارت پرسنلی / گیت‌پاس -->
         <ng-container *ngIf="activeTab === 'id-cards'">
           <button type="button" (click)="openIdCardsExportModal()" [disabled]="isIdCardsExporting" class="btn-icon-square bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200" title="دانلود تصویر دیجیتال کارت (PNG)" aria-label="دانلود PNG">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
           </button>
 
           <button type="button" (click)="openIdCardsSheetPreview()" class="btn-icon-square btn-icon-indigo" title="پیش‌نمایش شیت چاپی A4" aria-label="پیش‌نمایش شیت">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="eye"></svg>
           </button>
 
           <!-- دکمه چاپ کاملاً آیکونی با نشانگر شمارنده پرسنل -->
           <button type="button" (click)="printIdCards()" class="btn-icon-square text-white shadow-md shadow-indigo-200 relative border-0" style="background:linear-gradient(135deg,#4f46e5,#6366f1)" [title]="'ارسال به پرینتر (' + idCardsPrintableCount + ' پرسنل آماده چاپ)'" aria-label="چاپ شیت A4">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 6 2 18 2 18 9"></polyline>
-              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-              <rect x="6" y="14" width="12" height="8"></rect>
-            </svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" appIcon="printer"></svg>
             <span *ngIf="idCardsPrintableCount > 0" class="absolute -top-1.5 -left-1.5 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-mono font-black flex items-center justify-center border-2 border-white shadow-xs">
               {{ idCardsPrintableCount }}
             </span>
@@ -120,30 +80,17 @@
 
         <!-- بروزرسانی سراسری -->
         <button type="button" [disabled]="isLoading" (click)="loadData()" class="btn-icon-square btn-icon-indigo" title="بروزرسانی داده‌ها" aria-label="بروزرسانی">
-          <svg *ngIf="!isLoading" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <polyline points="1 20 1 14 7 14"></polyline>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-          </svg>
+          <svg *ngIf="!isLoading" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="refresh-cw"></svg>
           <span *ngIf="isLoading" class="animate-spin block w-[18px] h-[18px] border-2 border-indigo-600 border-t-transparent rounded-full"></span>
         </button>
 
         <!-- دکمه‌های اصلی ایجاد (کاربر / نقش) -->
         <button *ngIf="activeTab === 'users'" (click)="openUserModal()" class="btn-icon-square text-white shadow-md shadow-indigo-200 active:scale-95 transition-all flex items-center justify-center cursor-pointer hover:shadow-lg hover:brightness-110 border-0" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)" title="ثبت و ایجاد پرسنل جدید" aria-label="ثبت پرسنل جدید">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="8.5" cy="7" r="4"></circle>
-            <line x1="20" y1="8" x2="20" y2="14"></line>
-            <line x1="23" y1="11" x2="17" y2="11"></line>
-          </svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" appIcon="user-plus"></svg>
         </button>
 
         <button *ngIf="activeTab === 'roles'" (click)="openRoleModal()" class="btn-icon-square text-white shadow-md shadow-indigo-200 active:scale-95 transition-all flex items-center justify-center cursor-pointer hover:shadow-lg hover:brightness-110 border-0" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)" title="تعریف نقش سازمانی جدید" aria-label="تعریف نقش جدید">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-            <line x1="12" y1="8" x2="12" y2="14"></line>
-            <line x1="9" y1="11" x2="15" y2="11"></line>
-          </svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="shield-plus"></svg>
         </button>
       </div>
     </div>
@@ -156,10 +103,10 @@
         <div class="relative w-full sm:w-64">
           <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange($event)" name="searchQuery" placeholder="جستجو (نام، کدملی، تلفن، نقش)..." class="w-full pr-9 pl-8 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-slate-800 placeholder:text-slate-400 shadow-2xs">
           <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg>
           </div>
           <button *ngIf="searchQuery" type="button" (click)="searchQuery=''; onSearchChange('')" class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400 hover:text-slate-600 cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
           </button>
         </div>
 
@@ -171,10 +118,10 @@
             <option *ngFor="let p of state.appState.projects" [value]="p.id">{{ p.name }}</option>
           </select>
           <div class="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-slate-400">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="box-outline"></svg>
           </div>
           <div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-400">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down"></svg>
           </div>
         </div>
 
@@ -186,10 +133,10 @@
             <option *ngFor="let r of allRoles" [value]="r.id">{{ r.title || r.name }}</option>
           </select>
           <div class="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-slate-400">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="shield"></svg>
           </div>
           <div class="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-slate-400">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down"></svg>
           </div>
         </div>
 
@@ -239,26 +186,14 @@
             [ngClass]="userViewMode === 'grid' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'"
             class="p-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
             title="نمایش کارتی شبکه‌ای (Grid View)">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7"></rect>
-              <rect x="14" y="3" width="7" height="7"></rect>
-              <rect x="14" y="14" width="7" height="7"></rect>
-              <rect x="3" y="14" width="7" height="7"></rect>
-            </svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="grid"></svg>
             <span class="hidden sm:inline">کارت</span>
           </button>
           <button type="button" (click)="setViewMode('table')"
             [ngClass]="userViewMode === 'table' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'"
             class="p-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
             title="نمایش جدولی متراکم سازمانی (Table View)">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="8" y1="6" x2="21" y2="6"></line>
-              <line x1="8" y1="12" x2="21" y2="12"></line>
-              <line x1="8" y1="18" x2="21" y2="18"></line>
-              <line x1="3" y1="6" x2="3.01" y2="6"></line>
-              <line x1="3" y1="12" x2="3.01" y2="12"></line>
-              <line x1="3" y1="18" x2="3.01" y2="18"></line>
-            </svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="list"></svg>
             <span class="hidden sm:inline">جدول</span>
           </button>
         </div>
@@ -271,10 +206,10 @@
         <div class="relative w-full sm:w-72">
           <input type="text" [(ngModel)]="roleSearchQuery" (ngModelChange)="onRoleSearchChange($event)" name="roleSearchQuery" placeholder="جستجوی نقش (عنوان، کد انگلیسی)..." class="w-full pr-9 pl-8 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-slate-800 placeholder:text-slate-400 shadow-2xs">
           <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg>
           </div>
           <button *ngIf="roleSearchQuery" type="button" (click)="roleSearchQuery=''; onRoleSearchChange('')" class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400 hover:text-slate-600 cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
           </button>
         </div>
         <span class="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/80">
@@ -287,26 +222,14 @@
           [ngClass]="roleViewMode === 'tree' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'"
           class="p-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
           title="نمایش درختی سلسله‌مراتب سازمانی (Tree View)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="7" height="7"></rect>
-            <rect x="14" y="3" width="7" height="7"></rect>
-            <rect x="14" y="14" width="7" height="7"></rect>
-            <rect x="3" y="14" width="7" height="7"></rect>
-          </svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="grid"></svg>
           <span class="hidden sm:inline">درخت</span>
         </button>
         <button type="button" (click)="setRoleViewMode('table')"
           [ngClass]="roleViewMode === 'table' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'"
           class="p-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-[11px] font-bold"
           title="نمایش جدولی ماتریسی جامع نقش‌ها (Table View)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="8" y1="6" x2="21" y2="6"></line>
-            <line x1="8" y1="12" x2="21" y2="12"></line>
-            <line x1="8" y1="18" x2="21" y2="18"></line>
-            <line x1="3" y1="6" x2="3.01" y2="6"></line>
-            <line x1="3" y1="12" x2="3.01" y2="12"></line>
-            <line x1="3" y1="18" x2="3.01" y2="18"></line>
-          </svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="list"></svg>
           <span class="hidden sm:inline">جدول</span>
         </button>
       </div>
@@ -317,7 +240,7 @@
         <!-- Users Tab -->
         <ng-container *ngIf="activeTab === 'users'">
             <div *ngIf="isLoading" class="text-center py-10 flex flex-col items-center justify-center">
-                <svg class="animate-spin mb-3 text-indigo-500" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                <svg class="animate-spin mb-3 text-indigo-500" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="loader"></svg>
                 <p class="text-xs font-bold text-slate-400">در حال دریافت لیست پرسنل...</p>
             </div>
             <div *ngIf="!isLoading && filteredUsers.length === 0" class="text-center py-10 text-slate-400 text-xs font-bold">کاربری با این مشخصات یافت نشد.</div>
@@ -345,7 +268,7 @@
 
                         <div class="relative shrink-0">
                           <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm text-white shadow-2xs overflow-hidden" [style.background]="getPrimaryRole(u).color">
-                            <img *ngIf="u.avatar" [src]="u.avatar" loading="lazy" class="w-full h-full object-cover" alt="{{u.first_name}}" />
+                            <img *ngIf="u.avatar" [ngSrc]="u.avatar" width="40" height="40" loading="lazy" class="w-full h-full object-cover" alt="{{u.first_name}}" />
                             <span *ngIf="!u.avatar" [style.color]="getContrastTextColor(getPrimaryRole(u).color)">{{getUserAvatarLetter(u)}}</span>
                           </div>
                           <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white"
@@ -371,15 +294,12 @@
                       <!-- اکشن‌های سریع هدر: دکمه ویرایش + منوی سه‌نقطه -->
                       <div class="flex items-center gap-0.5 shrink-0">
                         <button type="button" (click)="openUserModal(u.id)" class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="ویرایش پرونده">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                          </svg>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="edit"></svg>
                         </button>
 
                         <div class="relative action-dropdown" appClickOutside (clickedOutside)="openMenuId === 'usr-' + u.id ? closeMenus() : null">
                           <button (click)="toggleMenu($event, 'usr-' + u.id)" class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors relative z-[100] cursor-pointer" title="عملیات بیشتر">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="more-vertical"></svg>
                           </button>
                           
                           <div *ngIf="openMenuId === 'usr-' + u.id" class="absolute left-0 top-full mt-1 w-48 bg-white rounded-2xl shadow-xl border border-slate-200 z-[100] py-1.5 text-right fade-in">
@@ -528,7 +448,7 @@
                         <div class="flex items-center gap-3" [ngClass]="!u.is_active ? 'opacity-60 grayscale-[30%]' : ''">
                           <div class="relative shrink-0">
                             <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm text-white shadow-xs overflow-hidden" [style.background]="getPrimaryRole(u).color">
-                              <img *ngIf="u.avatar" [src]="u.avatar" loading="lazy" class="w-full h-full object-cover" alt="{{u.first_name}}" />
+                              <img *ngIf="u.avatar" [ngSrc]="u.avatar" width="40" height="40" loading="lazy" class="w-full h-full object-cover" alt="{{u.first_name}}" />
                               <span *ngIf="!u.avatar" [style.color]="getContrastTextColor(getPrimaryRole(u).color)">{{getUserAvatarLetter(u)}}</span>
                             </div>
                             <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white"
@@ -637,33 +557,21 @@
                         <div class="flex items-center justify-center gap-1">
                           <!-- Unlock Button (Axes) -->
                           <button *ngIf="isUserLocked(u.username)" type="button" (click)="unlockUser(u, $event)" class="p-1.5 text-amber-600 hover:text-amber-800 hover:bg-amber-100 rounded-lg transition-colors cursor-pointer" title="رفع مسدودیت ضدنفوذ (آنلاک)">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                              <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
-                            </svg>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="unlock"></svg>
                           </button>
                           <!-- Edit Button -->
                           <button type="button" (click)="openUserModal(u.id)" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="ویرایش پرونده">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="edit"></svg>
                           </button>
 
                           <!-- Avatar Button -->
                           <button type="button" (click)="openAvatarModalForUser(u)" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="تغییر تصویر">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                              <circle cx="12" cy="13" r="4"></circle>
-                            </svg>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="camera"></svg>
                           </button>
 
                           <!-- Password Reset Button -->
                           <button type="button" (click)="resetPassword(u.id)" class="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer" title="ریست کلمه عبور">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                            </svg>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="lock"></svg>
                           </button>
 
                           <!-- Toggle Status (Suspend / Activate) -->
@@ -671,21 +579,13 @@
                                   [ngClass]="u.is_active ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'"
                                   class="p-1.5 rounded-lg transition-colors cursor-pointer"
                                   [title]="u.is_active ? 'تعلیق / مسدودسازی حساب' : 'خروج از تعلیق (فعال‌سازی)'">
-                            <svg *ngIf="u.is_active" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <circle cx="12" cy="12" r="10"></circle>
-                              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
-                            </svg>
-                            <svg *ngIf="!u.is_active" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
+                            <svg *ngIf="u.is_active" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="slash"></svg>
+                            <svg *ngIf="!u.is_active" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="check"></svg>
                           </button>
 
                           <!-- Delete Button -->
                           <button type="button" (click)="deleteUser(u.id)" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="حذف کاربر">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="trash"></svg>
                           </button>
                         </div>
                       </td>
@@ -728,7 +628,7 @@
                   (click)="goToPage(currentPage - 1)"
                   class="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
                   title="صفحه قبلی">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-right"></svg>
                 </button>
 
                 <!-- شماره صفحات -->
@@ -748,7 +648,7 @@
                   (click)="goToPage(currentPage + 1)"
                   class="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
                   title="صفحه بعدی">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
                 </button>
               </div>
             </div>
@@ -768,21 +668,21 @@
                 <button type="button" (click)="bulkToggleStatus(true)"
                   class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                   title="فعال‌سازی حساب کاربران انتخاب‌شده">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   <span>فعال‌سازی</span>
                 </button>
 
                 <button type="button" (click)="bulkToggleStatus(false)"
                   class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                   title="تعلیق حساب کاربران انتخاب‌شده">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="slash"></svg>
                   <span>تعلیق حساب</span>
                 </button>
 
                 <button type="button" (click)="bulkExportSelectedUsers()"
                   class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all border border-slate-600 flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                   title="دانلود فایل اکسل از کاربران انتخاب‌شده">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
                   <span>خروجی اکسل</span>
                 </button>
               </div>
@@ -791,7 +691,7 @@
               <button type="button" (click)="clearUserSelection()"
                 class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer mr-1"
                 title="لغو انتخاب">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
               </button>
             </div>
         </ng-container>
@@ -811,13 +711,9 @@
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-2xs shrink-0" [style.background]="role.color || '#4f46e5'">
                                         <!-- Root Role Crown SVG Icon -->
-                                        <svg *ngIf="depth === 0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                          <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14v1H5z"/>
-                                        </svg>
+                                        <svg *ngIf="depth === 0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="crown"></svg>
                                         <!-- Child Role Shield SVG Icon -->
-                                        <svg *ngIf="depth > 0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                                        </svg>
+                                        <svg *ngIf="depth > 0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="shield"></svg>
                                     </div>
                                     <div>
                                         <div class="flex items-center gap-2">
@@ -864,7 +760,7 @@
                                       <div *ngFor="let u of getUsersInRole(role.id).slice(0, 3)"
                                         class="inline-block h-7 w-7 rounded-full ring-2 ring-white overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 text-[10px] text-white font-bold flex items-center justify-center shrink-0 shadow-2xs"
                                         [title]="(u.first_name + ' ' + u.last_name) + ' (@' + u.username + ')'">
-                                        <img *ngIf="u.avatar" [src]="u.avatar" class="h-full w-full object-cover" alt="avatar" />
+                                        <img *ngIf="u.avatar" [ngSrc]="u.avatar" width="28" height="28" class="h-full w-full object-cover" alt="avatar" />
                                         <span *ngIf="!u.avatar">{{getUserAvatarLetter(u)}}</span>
                                       </div>
                                       <div *ngIf="getUsersInRole(role.id).length > 3"
@@ -881,11 +777,7 @@
                                           <button type="button" (click)="toggleRolePopover(role.id, $event)"
                                             class="p-1.5 bg-slate-50 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer"
                                             title="پیش‌نمایش سریع دسترسی‌ها">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                              <circle cx="12" cy="12" r="10"></circle>
-                                              <line x1="12" y1="16" x2="12" y2="12"></line>
-                                              <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                            </svg>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="info"></svg>
                                           </button>
 
                                           <!-- پاپ‌اور سریع دسترسی‌ها -->
@@ -916,22 +808,13 @@
                                         </div>
 
                                         <button type="button" (click)="cloneRole(role)" class="p-1.5 bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer" title="تکثیر نقش و دسترسی‌ها (Clone Role)">
-                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                          </svg>
+                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="copy"></svg>
                                         </button>
                                         <button type="button" (click)="openRoleModal(role.id)" class="p-1.5 bg-slate-50 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer" title="ویرایش نقش">
-                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                          </svg>
+                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="edit"></svg>
                                         </button>
                                         <button type="button" (click)="deleteRole(role.id)" class="p-1.5 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer" title="حذف نقش">
-                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <polyline points="3 6 5 6 21 6"></polyline>
-                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                          </svg>
+                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="trash"></svg>
                                         </button>
                                     </div>
                                 </div>
@@ -998,7 +881,7 @@
                               <div *ngFor="let u of getUsersInRole(role.id).slice(0, 3)"
                                 class="inline-block h-6 w-6 rounded-full ring-2 ring-white overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 text-[9px] text-white font-bold flex items-center justify-center shrink-0 shadow-2xs"
                                 [title]="(u.first_name + ' ' + u.last_name) + ' (@' + u.username + ')'">
-                                <img *ngIf="u.avatar" [src]="u.avatar" class="h-full w-full object-cover" alt="avatar" />
+                                <img *ngIf="u.avatar" [ngSrc]="u.avatar" width="24" height="24" class="h-full w-full object-cover" alt="avatar" />
                                 <span *ngIf="!u.avatar">{{getUserAvatarLetter(u)}}</span>
                               </div>
                               <div *ngIf="getUsersInRole(role.id).length > 3"
@@ -1035,11 +918,7 @@
                               <button type="button" (click)="toggleRolePopover(role.id, $event)"
                                 class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
                                 title="پیش‌نمایش سریع دسترسی‌ها">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                  <circle cx="12" cy="12" r="10"></circle>
-                                  <line x1="12" y1="16" x2="12" y2="12"></line>
-                                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                </svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="info"></svg>
                               </button>
 
                               <!-- پاپ‌اور سریع دسترسی‌ها -->
@@ -1069,22 +948,13 @@
                               </div>
                             </div>
                             <button type="button" (click)="cloneRole(role)" class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer" title="تکثیر نقش و دسترسی‌ها (Clone)">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                              </svg>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="copy"></svg>
                             </button>
                             <button type="button" (click)="openRoleModal(role.id)" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="ویرایش نقش">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                              </svg>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="edit"></svg>
                             </button>
                             <button type="button" (click)="deleteRole(role.id)" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="حذف نقش">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                              </svg>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="trash"></svg>
                             </button>
                           </div>
                         </td>
@@ -1120,7 +990,7 @@
     <div class="px-5 py-3 border-b border-slate-200 bg-slate-50/90 backdrop-blur-md flex justify-between items-center shrink-0">
       <div class="flex items-center gap-2.5">
         <div class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-black shadow-xs shrink-0">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="shield"></svg>
         </div>
         <div>
           <div class="flex items-center gap-2">
@@ -1132,7 +1002,7 @@
         </div>
       </div>
       <button (click)="isRoleModalOpen = false" class="text-slate-400 hover:text-slate-600 transition-colors p-1.5 rounded-lg hover:bg-slate-200/60 cursor-pointer" title="بستن پنجره">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
       </button>
     </div>
     
@@ -1295,7 +1165,7 @@
               <div class="relative flex-1">
                 <input type="text" [(ngModel)]="roleMemberSearchQuery" name="roleMemberSearchQuery" placeholder="جستجوی پرسنل بر اساس نام، نام کاربری یا کدملی..." class="w-full pr-8 pl-3 py-1.5 rounded-lg text-xs bg-white border border-slate-200 focus:border-emerald-500 outline-none transition-all text-slate-800 shadow-2xs">
                 <div class="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" appIcon="search"></svg>
                 </div>
               </div>
 
@@ -1329,7 +1199,7 @@
                 [ngClass]="isRoleMemberSelected(u.id) ? 'bg-emerald-50/90 border-emerald-500 ring-2 ring-emerald-400/80 shadow-xs' : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-emerald-300'">
                 <div class="flex items-center gap-2 min-w-0 flex-1">
                   <div class="w-6 h-6 rounded-lg flex items-center justify-center font-black text-[10px] text-white shadow-2xs shrink-0 overflow-hidden" [style.background]="getPrimaryRole(u).color">
-                    <img *ngIf="u.avatar" [src]="u.avatar" class="w-full h-full object-cover" alt="" />
+                    <img *ngIf="u.avatar" [ngSrc]="u.avatar" width="24" height="24" class="w-full h-full object-cover" alt="" />
                     <span *ngIf="!u.avatar">{{ getUserAvatarLetter(u) }}</span>
                   </div>
                   <div class="min-w-0 flex-1">
@@ -1343,7 +1213,7 @@
                 <!-- تیک انتخاب -->
                 <div class="w-4 h-4 rounded-md flex items-center justify-center text-[10px] transition-all shrink-0"
                   [ngClass]="isRoleMemberSelected(u.id) ? 'bg-emerald-600 text-white' : 'border border-slate-300 bg-white text-transparent group-hover:border-emerald-400'">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                 </div>
               </div>
 
@@ -1363,7 +1233,7 @@
             <div class="relative flex-1">
               <input type="text" [(ngModel)]="permSearchQuery" (ngModelChange)="onPermSearchChange($event)" name="permSearchQuery" placeholder="جستجوی عنوان دسترسی یا کد فنی سیستمی..." class="w-full pr-8 pl-3 py-1.5 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white outline-none transition-all text-slate-800 shadow-2xs">
               <div class="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" appIcon="search"></svg>
               </div>
             </div>
 
@@ -1373,7 +1243,7 @@
                 مجوزها: <span class="text-indigo-600 font-mono font-bold">{{ roleForm.permissions.length }}</span>
               </span>
               <button type="button" (click)="toggleAllPermissions()" class="text-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-2.5 py-1.5 rounded-xl font-bold transition-all active:scale-95 flex items-center gap-1 cursor-pointer shadow-2xs">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check-square-2"></svg>
                 <span>انتخاب/لغو همه</span>
               </button>
             </div>
@@ -1405,18 +1275,18 @@
                         انتخاب / لغو این بخش
                       </button>
                       <span *ngIf="group.is_sensitive_group && isSuperuser()" class="text-[9.5px] text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 flex items-center gap-1">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="shield"></svg>
                         تخصیص با تاییدیه امنیتی
                       </span>
                       <span *ngIf="group.is_sensitive_group && !isSuperuser()" class="text-[9.5px] text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200 flex items-center gap-1">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="lock"></svg>
                         منحصراً مدیر ارشد (Superuser)
                       </span>
                   </div>
 
                   <!-- هشدار دسترسی‌های حساس -->
                   <div *ngIf="group.is_sensitive_group && !isSuperuser()" class="p-2 bg-amber-50 border border-amber-200 rounded-lg text-[10.5px] text-amber-800 flex items-center gap-2">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" appIcon="alert-circle"></svg>
                     <span>این دسترسی‌ها قفل هستند و صرفاً مدیر ارشد سیستم می‌تواند آنها را به نقش‌ها تخصیص دهد.</span>
                   </div>
 
@@ -1434,7 +1304,7 @@
                         <div class="flex items-center gap-2 min-w-0 flex-1 pl-1">
                           <div class="w-4 h-4 rounded-md flex items-center justify-center text-[10px] transition-all shrink-0"
                             [ngClass]="roleForm.permissions.includes(perm.id) ? (perm.is_sensitive ? 'bg-rose-600 text-white' : 'bg-indigo-600 text-white') : 'border border-slate-300 bg-white text-transparent group-hover:border-indigo-400'">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                           </div>
                           <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1 flex-wrap">
@@ -1467,7 +1337,7 @@
       <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
         <button (click)="isRoleModalOpen = false" class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95">انصراف</button>
         <button (click)="saveRole()" class="px-5 py-2 rounded-xl text-xs font-black text-white shadow-md shadow-indigo-200 active:scale-95 transition-all flex items-center gap-2 cursor-pointer hover:brightness-110" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
             <span>{{editingRole ? 'بروزرسانی نقش' : 'ایجاد نقش با دسترسی‌ها'}}</span>
         </button>
       </div>
@@ -1496,7 +1366,7 @@
     <div class="px-6 py-4 border-b border-slate-200/80 bg-slate-50/90 backdrop-blur-md flex justify-between items-center shrink-0">
       <div class="flex items-center gap-3.5">
         <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white flex items-center justify-center font-black shadow-md shadow-indigo-200 shrink-0">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="info"></svg>
         </div>
         <div>
           <div class="flex items-center gap-2">
@@ -1512,7 +1382,7 @@
         </div>
       </div>
       <button (click)="isUserModalOpen = false" class="text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-all p-2 rounded-xl cursor-pointer" title="بستن پنجره">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
       </button>
     </div>
     
@@ -1602,12 +1472,12 @@
                     <span *ngIf="!userForm.avatar">{{getUserAvatarLetter(userForm)}}</span>
                   </div>
                   <button type="button" (click)="openAvatarModalForUser(editingUser || userForm)" class="absolute inset-0 bg-slate-900/40 backdrop-blur-xs rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold cursor-pointer gap-1">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="camera"></svg>
                     تغییر
                   </button>
                 </div>
                 <button type="button" (click)="openAvatarModalForUser(editingUser || userForm)" class="w-full py-1.5 px-2 text-[10px] font-bold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-xl transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="camera"></svg>
                   <span>مدیریت تصویر</span>
                 </button>
                 <span class="text-[9px] text-slate-400">فرمت PNG یا JPG</span>
@@ -1623,17 +1493,17 @@
                       <span class="text-rose-500 text-xs font-black">*</span>
                     </label>
                     <span *ngIf="isFieldValid('first_name')" class="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                       معتبر
                     </span>
                   </div>
                   <div class="relative">
                     <input type="text" [(ngModel)]="userForm.first_name" (input)="clearUserFormError('first_name')" name="first_name" placeholder="مثال: حبیب" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('first_name')">
                     <div *ngIf="isFieldValid('first_name')" class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                     </div>
                     <div *ngIf="userFormErrors['first_name']" class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-rose-500 flex items-center">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
                 </div>
@@ -1646,17 +1516,17 @@
                       <span class="text-rose-500 text-xs font-black">*</span>
                     </label>
                     <span *ngIf="isFieldValid('last_name')" class="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                       معتبر
                     </span>
                   </div>
                   <div class="relative">
                     <input type="text" [(ngModel)]="userForm.last_name" (input)="clearUserFormError('last_name')" name="last_name" placeholder="مثال: عالیشوندی" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('last_name')">
                     <div *ngIf="isFieldValid('last_name')" class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                     </div>
                     <div *ngIf="userFormErrors['last_name']" class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-rose-500 flex items-center">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
                 </div>
@@ -1666,17 +1536,17 @@
                   <div class="flex items-center justify-between mb-1.5">
                     <label class="block text-[11px] font-bold text-slate-600">کد ملی (National ID)</label>
                     <span *ngIf="isFieldValid('national_code')" class="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                       تایید الگوریتم ۱۰ رقمی
                     </span>
                   </div>
                   <div class="relative">
                     <input type="text" [(ngModel)]="userForm.national_code" (input)="clearUserFormError('national_code')" name="national_code" placeholder="۱۰ رقم (مانند 2280000000)" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('national_code')">
                     <div *ngIf="isFieldValid('national_code')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                     </div>
                     <div *ngIf="userFormErrors['national_code']" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-rose-500 flex items-center">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
                 </div>
@@ -1687,7 +1557,7 @@
                   <div class="relative">
                     <input type="text" [(ngModel)]="userForm.operational_zone" name="operational_zone" placeholder="مثال: منطقه ۱ - اهواز" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('operational_zone')">
                     <div *ngIf="isFieldValid('operational_zone')" class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                     </div>
                   </div>
                 </div>
@@ -1725,17 +1595,17 @@
                     <span class="text-rose-500 text-xs font-black">*</span>
                   </label>
                   <span *ngIf="isFieldValid('phone_number')" class="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                     معتبر
                   </span>
                 </div>
                 <div class="relative">
                   <input type="tel" [(ngModel)]="userForm.phone_number" (input)="clearUserFormError('phone_number')" name="phone_number" placeholder="09123456789" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('phone_number')">
                   <div *ngIf="isFieldValid('phone_number')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   </div>
                   <div *ngIf="userFormErrors['phone_number']" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-rose-500 flex items-center">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                   </div>
                 </div>
               </div>
@@ -1746,7 +1616,7 @@
                 <div class="relative">
                   <input type="tel" [(ngModel)]="userForm.emergency_contact" name="emergency_contact" placeholder="09... / 021..." class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('emergency_contact')">
                   <div *ngIf="isFieldValid('emergency_contact')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   </div>
                 </div>
               </div>
@@ -1776,7 +1646,7 @@
                 <div class="relative">
                   <input type="email" [(ngModel)]="userForm.email" name="email" placeholder="user@company.com" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono transition-all" dir="ltr" [class]="getFieldClass('email')">
                   <div *ngIf="isFieldValid('email')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   </div>
                 </div>
               </div>
@@ -1787,7 +1657,7 @@
                 <div class="relative">
                   <textarea [(ngModel)]="userForm.address" name="address" rows="2" placeholder="آدرس دقیق و شماره پلاک محل خدمت یا سکونت پرسنل..." class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none transition-all" [class]="getFieldClass('address')"></textarea>
                   <div *ngIf="isFieldValid('address')" class="absolute left-3 bottom-3 pointer-events-none text-emerald-600 flex items-center">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                   </div>
                 </div>
               </div>
@@ -1829,7 +1699,7 @@
                       <span class="text-rose-500 text-xs font-black">*</span>
                     </label>
                     <span *ngIf="isFieldValid('username')" class="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                       شناسه معتبر
                     </span>
                     <span *ngIf="editingUser" class="text-[9px] text-slate-400 font-medium">غیرقابل تغییر در ویرایش</span>
@@ -1837,10 +1707,10 @@
                   <div class="relative">
                     <input type="text" [(ngModel)]="userForm.username" (input)="clearUserFormError('username')" name="personnel_username" autocomplete="new-password" placeholder="مثال: h.alishavandi یا 10054" class="w-full px-3.5 py-2.5 rounded-xl text-xs outline-none text-left font-mono font-bold text-indigo-800 transition-all" dir="ltr" [readonly]="editingUser != null" [class]="getFieldClass('username')">
                     <div *ngIf="isFieldValid('username')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                     </div>
                     <div *ngIf="userFormErrors['username']" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-rose-500 flex items-center">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
                   <p class="text-[10px] text-slate-400 mt-1 leading-normal">
@@ -1861,14 +1731,14 @@
                   <div class="relative">
                     <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="userForm.password" (input)="clearUserFormError('password')" name="personnel_password" autocomplete="new-password" [placeholder]="editingUser ? 'در صورت عدم تغییر خالی بگذارید' : 'پیش‌فرض: 123456'" class="w-full pr-10 pl-10 py-2 rounded-xl bg-white border border-indigo-200 text-xs font-mono outline-none text-left transition-all" dir="ltr" [class]="getFieldClass('password')">
                     <button type="button" (click)="toggleShowPassword()" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 p-1 rounded-md transition-colors cursor-pointer" [title]="showPassword ? 'مخفی‌سازی رمز' : 'نمایش رمز'">
-                      <svg *ngIf="!showPassword" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1-12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                      <svg *ngIf="showPassword" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      <svg *ngIf="!showPassword" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye-alt"></svg>
+                      <svg *ngIf="showPassword" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye-off"></svg>
                     </button>
                     <div *ngIf="isFieldValid('password')" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 flex items-center">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                     </div>
                     <div *ngIf="userFormErrors['password']" class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-rose-500 flex items-center">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="alert-circle"></svg>
                     </div>
                   </div>
                   <p class="text-[9.5px] text-indigo-700/80 font-medium leading-normal">
@@ -2225,7 +2095,7 @@
         </button>
         <button (click)="saveUser()" [disabled]="isSavingUser" class="px-6 py-2.5 rounded-xl text-xs font-black text-white shadow-md shadow-indigo-200 active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:pointer-events-none" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)">
           <span *ngIf="isSavingUser" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-          <svg *ngIf="!isSavingUser" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <svg *ngIf="!isSavingUser" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
           <span>{{ isSavingUser ? 'در حال ثبت...' : (editingUser ? 'ذخیره و بروزرسانی پرونده' : 'ایجاد حساب کاربری') }}</span>
         </button>
       </div>
@@ -2262,7 +2132,7 @@
     <!-- Header with Shield Icon -->
     <div class="p-6 bg-gradient-to-r from-rose-500 to-rose-700 text-white flex items-center gap-4">
       <div class="p-3 bg-white/20 rounded-2xl backdrop-blur-md text-white shadow-inner flex items-center justify-center">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="shield-alert"></svg>
       </div>
       <div>
         <h4 class="font-black text-base">هشدار امنیتی: اعطای دسترسی حساس و بحرانی</h4>
@@ -2296,7 +2166,7 @@
       </div>
 
       <div class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3 font-bold flex items-center gap-2">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-circle"></svg>
         <span>آیا از اعطای این دسترسی حساس به این نقش سازمانی اطمینان کامل دارید؟</span>
       </div>
     </div>
@@ -2307,7 +2177,7 @@
         انصراف و لغو
       </button>
       <button (click)="confirmSensitivePermission()" type="button" class="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center gap-2 cursor-pointer">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
         بله، دسترسی حساس اعطا شود
       </button>
     </div>

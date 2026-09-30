@@ -21,11 +21,12 @@ import { ItemPhotoGalleryComponent } from '../../shared/components/item-photo-ga
 import { ItemPhotoThumbComponent } from '../../shared/components/item-photo-gallery/item-photo-thumb.component';
 import { PhotoGalleryHost } from '../../shared/components/item-photo-gallery/photo-gallery-host';
 import { ContextualCommentsComponent } from '../communications/contextual-comments/contextual-comments.component';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-count-tracking',
   standalone: true,
-  imports: [CommonModule, FormsModule, DataTableComponent, TableColumnDirective, PersianDatePipe, WarehouseSelectorComponent, BarcodeScannerComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, ContextualCommentsComponent],
+  imports: [CommonModule, FormsModule, DataTableComponent, TableColumnDirective, PersianDatePipe, WarehouseSelectorComponent, BarcodeScannerComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, ContextualCommentsComponent, SvgIconDirective],
   templateUrl: './count-tracking.html',
   styleUrl: './count-tracking.css'
 })

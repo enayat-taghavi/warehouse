@@ -11,9 +11,10 @@ import { NetworkStatusService, ConnectionState } from '../../core/services/netwo
 import { isServerUnreachable } from '../../core/services/server-reachability';
 import { Subscription } from 'rxjs';
 import { detectClientDeviceModel } from '../../core/utils/device-detector';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 @Component({
   selector: 'app-login',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './login.html',
   styleUrl: './login.css'
 })

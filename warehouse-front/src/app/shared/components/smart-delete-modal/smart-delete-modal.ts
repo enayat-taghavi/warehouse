@@ -2,11 +2,12 @@ import { Component, EventEmitter, Input, Output, OnInit, OnDestroy, ChangeDetect
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 @Component({
   selector: 'app-smart-delete-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './smart-delete-modal.html',
   styleUrl: './smart-delete-modal.css'
 })

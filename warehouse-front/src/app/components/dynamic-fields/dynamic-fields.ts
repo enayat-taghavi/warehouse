@@ -7,10 +7,11 @@ import { ConfirmDialogService } from '../../shared';
 import { DynamicFieldApiService } from '../../core/api';
 import { DynamicFieldDefinition } from '../../core/models';
 import { AuthStore } from '../../core/stores/auth.store';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-dynamic-fields',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './dynamic-fields.html'
 })
 export class DynamicFields implements OnInit {

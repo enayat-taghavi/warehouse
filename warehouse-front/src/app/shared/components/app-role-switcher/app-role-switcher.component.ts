@@ -2,11 +2,12 @@ import { Component, inject, signal, HostListener, ElementRef } from '@angular/co
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AppPersonaService, AppModuleType, RolePersona } from '../../../core/services/app-persona.service';
+import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 @Component({
   selector: 'app-role-switcher',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SvgIconDirective],
   templateUrl: './app-role-switcher.component.html',
   styleUrl: './app-role-switcher.component.css'
 })

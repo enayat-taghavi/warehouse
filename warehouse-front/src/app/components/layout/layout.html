@@ -4,17 +4,14 @@
   <aside id="sidebar" [class.translate-x-0]="isSidebarOpen" [class.translate-x-full]="!isSidebarOpen" [ngClass]="{'md:w-0 md:opacity-0 md:overflow-hidden md:invisible': isDesktopSidebarCollapsed, 'md:w-72': !isDesktopSidebarCollapsed}" class="fixed md:static inset-y-0 right-0 w-72 bg-slate-900 flex flex-col z-[55] transition-all duration-300 md:translate-x-0 whitespace-nowrap" style="height:100vh">
     <div class="p-5 border-b border-slate-800 flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)">
-        <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
-          <path d="M4 10L16 4L28 10V22L16 28L4 22V10Z" stroke="white" stroke-width="1.5" fill="none"></path>
-          <circle cx="16" cy="16" r="2.5" fill="white"></circle>
-        </svg>
+        <svg width="20" height="20" viewBox="0 0 32 32" fill="none" appIcon="logo-mark"></svg>
       </div>
       <div class="flex-1 min-w-0">
         <h2 class="font-black text-white text-sm">{{ appTitle }}</h2>
         <span class="text-[10px] text-slate-500">نسخه ۱.۰ · شیراز</span>
       </div>
       <button (click)="closeSidebar()" class="md:hidden p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer" title="بستن منو" aria-label="بستن منو">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
       </button>
     </div>
 
@@ -28,7 +25,7 @@
       
       <div *ngIf="store.isWarehouseContext()" class="mb-4 pb-4 border-b border-slate-800/60 shrink-0">
         <button (click)="exitWarehouseMode()" class="w-full py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 shadow-sm border border-slate-700 cursor-pointer" title="بازگشت به سطح کلان سیستم">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="arrow-left"></svg>
           <span>بازگشت به سطح کلان سیستم</span>
         </button>
       </div>
@@ -36,7 +33,7 @@
       <!-- Primary System / Warehouse Navigation Links -->
       <div class="space-y-0.5 shrink-0">
         <button *ngFor="let item of primaryNavItems()" (click)="switchTab(item.id)" [class.active]="currentTab === item.id" [ngClass]="item.isPending ? 'text-slate-600 hover:text-slate-400 hover:bg-slate-800/40 opacity-50' : 'text-slate-400 hover:text-white hover:bg-slate-800/80'" class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group cursor-pointer" [title]="item.label">
-          <span class="shrink-0" [innerHTML]="icons[item.icon]"></span>
+          <span class="shrink-0">@if (menuIcon(item.icon); as icon) {<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="icon"></svg>}</span>
           <span>{{item.label}} <span *ngIf="item.isPending" class='text-[9px] bg-slate-800 text-slate-400 px-1 py-0.5 rounded mr-1' style='font-size:8px;'>بزودی</span></span>
         </button>
       </div>
@@ -50,7 +47,7 @@
           [ngClass]="{'bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-xs': currentTab === 'company-documents' || currentTab === 'documents'}"
           title="بایگانی اسناد و مدارک رسمی شرکت‌ها">
           <div class="flex items-center gap-3">
-            <span class="shrink-0 text-indigo-400" [innerHTML]="icons['file-text']"></span>
+            <span class="shrink-0 text-indigo-400"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg></span>
             <span>بایگانی اسناد شرکت‌ها</span>
           </div>
           <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
@@ -65,7 +62,7 @@
         <button type="button" (click)="toggleAccountingMenu($event)" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer group select-none" title="کلیک برای باز/بسته کردن منوی کارکرد و حسابداری">
           <div class="flex items-center gap-2.5">
             <span class="text-indigo-400 text-xs flex items-center justify-center w-6 h-6 rounded-lg bg-indigo-950/70 border border-indigo-800/60 shadow-xs shrink-0 group-hover:border-indigo-600 transition-colors">
-              <span [innerHTML]="icons['briefcase']"></span>
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="briefcase"></svg></span>
             </span>
             <span class="text-[11px] font-black tracking-tight text-slate-200 group-hover:text-white">کارکرد و حسابداری</span>
           </div>
@@ -73,16 +70,14 @@
             <span class="text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md bg-slate-800/90 text-slate-400 group-hover:text-indigo-300 border border-slate-700/80">
               {{ accountingNavItems().length }}
             </span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isAccountingMenuOpen">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isAccountingMenuOpen" appIcon="chevron-down"></svg>
           </div>
         </button>
 
         <!-- Accordion Body: The 4 Accounting Portals -->
         <div *ngIf="isAccountingMenuOpen" class="mt-1 space-y-0.5 pr-2.5 border-r-2 border-indigo-500/40 mr-3 transition-all">
           <button *ngFor="let item of accountingNavItems()" (click)="switchTab(item.id)" [class.active]="currentTab === item.id" class="sidebar-link w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all group cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/80" [title]="item.label">
-            <span class="shrink-0 scale-90" [innerHTML]="icons[item.icon]"></span>
+            <span class="shrink-0 scale-90">@if (menuIcon(item.icon); as icon) {<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="icon"></svg>}</span>
             <span class="truncate">{{item.label}}</span>
           </button>
         </div>
@@ -94,7 +89,7 @@
         <button type="button" (click)="toggleEmployeeMenu($event)" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer group select-none" title="کلیک برای باز/بسته کردن پنل کارمند">
           <div class="flex items-center gap-2.5">
             <span class="text-amber-400 text-xs flex items-center justify-center w-6 h-6 rounded-lg bg-amber-950/70 border border-amber-800/60 shadow-xs shrink-0 group-hover:border-amber-600 transition-colors">
-              <span [innerHTML]="icons['badge']"></span>
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="badge"></svg></span>
             </span>
             <span class="text-[11px] font-black tracking-tight text-slate-200 group-hover:text-white">منوی ثبت کارمند</span>
           </div>
@@ -102,16 +97,14 @@
             <span class="text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md bg-slate-800/90 text-slate-400 group-hover:text-amber-300 border border-slate-700/80">
               {{ employeeNavItems().length }}
             </span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isEmployeeMenuOpen">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isEmployeeMenuOpen" appIcon="chevron-down"></svg>
           </div>
         </button>
 
         <!-- Accordion Body: The 5 Employee Sub-Items -->
         <div *ngIf="isEmployeeMenuOpen" class="mt-1 space-y-0.5 pr-2.5 border-r-2 border-amber-500/40 mr-3 transition-all">
           <button *ngFor="let item of employeeNavItems()" (click)="switchTab(item.id)" [class.active]="currentTab === item.id" class="sidebar-link w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all group cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/80" [title]="item.label">
-            <span class="shrink-0 scale-90" [innerHTML]="icons[item.icon] || icons['folder']"></span>
+            <span class="shrink-0 scale-90"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="menuIcon(item.icon, 'folder')"></svg></span>
             <span class="truncate">{{item.label}}</span>
           </button>
         </div>
@@ -123,7 +116,7 @@
         <button type="button" (click)="toggleSupervisorMenu($event)" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer group select-none" title="کلیک برای باز/بسته کردن منوی سرپرست کارگاه">
           <div class="flex items-center gap-2.5">
             <span class="text-emerald-400 text-xs flex items-center justify-center w-6 h-6 rounded-lg bg-emerald-950/70 border border-emerald-800/60 shadow-xs shrink-0 group-hover:border-emerald-600 transition-colors">
-              <span [innerHTML]="icons['check-circle']"></span>
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg></span>
             </span>
             <span class="text-[11px] font-black tracking-tight text-slate-200 group-hover:text-white">منوی سرپرست کارگاه</span>
           </div>
@@ -131,16 +124,14 @@
             <span class="text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md bg-slate-800/90 text-slate-400 group-hover:text-emerald-300 border border-slate-700/80">
               {{ supervisorNavItems().length }}
             </span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isSupervisorMenuOpen">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isSupervisorMenuOpen" appIcon="chevron-down"></svg>
           </div>
         </button>
 
         <!-- Accordion Body: The Supervisor Sub-Items -->
         <div *ngIf="isSupervisorMenuOpen" class="mt-1 space-y-0.5 pr-2.5 border-r-2 border-emerald-500/40 mr-3 transition-all">
           <button *ngFor="let item of supervisorNavItems()" (click)="switchTab(item.id)" [class.active]="currentTab === item.id" class="sidebar-link w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all group cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/80" [title]="item.label">
-            <span class="shrink-0 scale-90" [innerHTML]="icons[item.icon] || icons['folder']"></span>
+            <span class="shrink-0 scale-90"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="menuIcon(item.icon, 'folder')"></svg></span>
             <span class="truncate">{{item.label}}</span>
           </button>
         </div>
@@ -152,7 +143,7 @@
         <button type="button" (click)="toggleAccountantMenu($event)" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer group select-none" title="کلیک برای باز/بسته کردن منوی حسابدار">
           <div class="flex items-center gap-2.5">
             <span class="text-blue-400 text-xs flex items-center justify-center w-6 h-6 rounded-lg bg-blue-950/70 border border-blue-800/60 shadow-xs shrink-0 group-hover:border-blue-600 transition-colors">
-              <span [innerHTML]="icons['dollar-sign']"></span>
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="dollar-sign"></svg></span>
             </span>
             <span class="text-[11px] font-black tracking-tight text-slate-200 group-hover:text-white">منوی حسابدار</span>
           </div>
@@ -160,16 +151,14 @@
             <span class="text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md bg-slate-800/90 text-slate-400 group-hover:text-blue-300 border border-slate-700/80">
               {{ accountantNavItems().length }}
             </span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isAccountantMenuOpen">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isAccountantMenuOpen" appIcon="chevron-down"></svg>
           </div>
         </button>
 
         <!-- Accordion Body: The Accountant Sub-Items -->
         <div *ngIf="isAccountantMenuOpen" class="mt-1 space-y-0.5 pr-2.5 border-r-2 border-blue-500/40 mr-3 transition-all">
           <button *ngFor="let item of accountantNavItems()" (click)="switchTab(item.id)" [class.active]="currentTab === item.id" class="sidebar-link w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all group cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/80" [title]="item.label">
-            <span class="shrink-0 scale-90" [innerHTML]="icons[item.icon] || icons['folder']"></span>
+            <span class="shrink-0 scale-90"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="menuIcon(item.icon, 'folder')"></svg></span>
             <span class="truncate">{{item.label}}</span>
           </button>
         </div>
@@ -181,7 +170,7 @@
         <button type="button" (click)="toggleManagerMenu($event)" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer group select-none" title="کلیک برای باز/بسته کردن منوی مدیر">
           <div class="flex items-center gap-2.5">
             <span class="text-purple-400 text-xs flex items-center justify-center w-6 h-6 rounded-lg bg-purple-950/70 border border-purple-800/60 shadow-xs shrink-0 group-hover:border-purple-600 transition-colors">
-              <span [innerHTML]="icons['activity'] || icons['check-circle']"></span>
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="activity"></svg></span>
             </span>
             <span class="text-[11px] font-black tracking-tight text-slate-200 group-hover:text-white">منوی مدیر</span>
           </div>
@@ -189,16 +178,14 @@
             <span class="text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md bg-slate-800/90 text-slate-400 group-hover:text-purple-300 border border-slate-700/80">
               {{ managerNavItems().length }}
             </span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isManagerMenuOpen">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isManagerMenuOpen" appIcon="chevron-down"></svg>
           </div>
         </button>
 
         <!-- Accordion Body: The Manager Sub-Items -->
         <div *ngIf="isManagerMenuOpen" class="mt-1 space-y-0.5 pr-2.5 border-r-2 border-purple-500/40 mr-3 transition-all">
           <button *ngFor="let item of managerNavItems()" (click)="switchTab(item.id)" [class.active]="currentTab === item.id" class="sidebar-link w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all group cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/80" [title]="item.label">
-            <span class="shrink-0 scale-90" [innerHTML]="icons[item.icon] || icons['folder']"></span>
+            <span class="shrink-0 scale-90"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="menuIcon(item.icon, 'folder')"></svg></span>
             <span class="truncate">{{item.label}}</span>
           </button>
         </div>
@@ -210,7 +197,7 @@
         <button type="button" (click)="toggleTreasurerMenu($event)" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer group select-none" title="کلیک برای باز/بسته کردن منوی خزانه‌دار">
           <div class="flex items-center gap-2.5">
             <span class="text-teal-400 text-xs flex items-center justify-center w-6 h-6 rounded-lg bg-teal-950/70 border border-teal-800/60 shadow-xs shrink-0 group-hover:border-teal-600 transition-colors">
-              <span [innerHTML]="icons['credit-card'] || icons['dollar-sign']"></span>
+              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg></span>
             </span>
             <span class="text-[11px] font-black tracking-tight text-slate-200 group-hover:text-white">منوی خزانه‌دار</span>
           </div>
@@ -218,16 +205,14 @@
             <span class="text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md bg-slate-800/90 text-slate-400 group-hover:text-teal-300 border border-slate-700/80">
               {{ treasurerNavItems().length }}
             </span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isTreasurerMenuOpen">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isTreasurerMenuOpen" appIcon="chevron-down"></svg>
           </div>
         </button>
 
         <!-- Accordion Body: The Treasurer Sub-Items -->
         <div *ngIf="isTreasurerMenuOpen" class="mt-1 space-y-0.5 pr-2.5 border-r-2 border-teal-500/40 mr-3 transition-all">
           <button *ngFor="let item of treasurerNavItems()" (click)="switchTab(item.id)" [class.active]="currentTab === item.id" class="sidebar-link w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all group cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/80" [title]="item.label">
-            <span class="shrink-0 scale-90" [innerHTML]="icons[item.icon] || icons['folder']"></span>
+            <span class="shrink-0 scale-90"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="menuIcon(item.icon, 'folder')"></svg></span>
             <span class="truncate">{{item.label}}</span>
           </button>
         </div>
@@ -241,7 +226,7 @@
           <!-- Hover Overlay Icon -->
           <div class="absolute inset-0 z-20 bg-slate-900/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
              <div class="flex flex-col items-center gap-2">
-               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" appIcon="edit-2"></svg>
                <span class="text-white text-xs font-bold">تغییر انبار</span>
              </div>
           </div>
@@ -251,7 +236,7 @@
           </div>
           <div class="font-black text-slate-100 text-[13px] w-full truncate px-1 relative z-10">{{currentWarehouse?.name}}</div>
           <div class="text-[10px] font-bold mt-1.5 w-full truncate px-1 relative z-10 flex items-center justify-center gap-1" [style.color]="currentWarehouse?.color || '#a5b4fc'">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="map-pin"></svg>
             {{currentWarehouse?.location || 'بدون لوکیشن'}}
           </div>
         </button>
@@ -268,10 +253,10 @@
       <!-- Right Side (RTL Start): Mobile Toggle, User, Notifications, Progress -->
       <div class="flex items-center gap-1.5 sm:gap-3 flex-1 justify-start min-w-0 shrink-0">
         <button (click)="openSidebar()" class="md:hidden p-2 rounded-lg hover:bg-slate-50 text-slate-600 shrink-0 cursor-pointer" title="نمایش منو" aria-label="نمایش منو">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="menu"></svg>
         </button>
         <button (click)="toggleDesktopSidebar()" class="hidden md:block p-2 rounded-lg hover:bg-slate-50 text-slate-600 shrink-0 transition-colors cursor-pointer" title="نمایش/مخفی کردن منو" aria-label="نمایش/مخفی کردن منو">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="menu"></svg>
         </button>
         
         <!-- User Menu Dropdown (Unified Shared Component) -->
@@ -287,9 +272,7 @@
           class="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all active:scale-95 cursor-pointer shrink-0" 
           title="پیام‌رسان سازمانی" 
           aria-label="پیام‌رسان سازمانی">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          </svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="message-square"></svg>
           <span *ngIf="commService.totalUnreadCount() > 0" 
                 class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 border-2 border-white dark:border-slate-900 shadow-sm transition-all"
                 [ngClass]="commService.hasNewIncomingPulse() ? 'animate-bounce bg-rose-600 ring-2 ring-rose-300' : 'animate-pulse bg-blue-600'">
@@ -309,7 +292,7 @@
       <!-- Left Side (RTL End): Warehouse Badge + App & Role Switcher + Nav History (انتهای سمت چپ) -->
       <div class="flex items-center gap-1.5 sm:gap-2 flex-initial min-w-0 justify-end shrink-0">
         <div *ngIf="store.isWarehouseContext()" class="hidden xl:flex items-center gap-2 px-4 py-2 rounded-xl shadow-md transition-all shrink-0" [style.background]="currentWarehouse?.color || '#4f46e5'">
-           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" appIcon="home"></svg>
            <span class="text-[12px] font-black text-white shrink-0">{{currentWarehouse?.name}}</span>
         </div>
 
@@ -326,9 +309,7 @@
             class="p-1.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed disabled:active:scale-100 transition-all flex items-center justify-center cursor-pointer shadow-xs disabled:shadow-none"
             title="صفحه قبل (Alt + راست)"
             aria-label="صفحه قبل">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="chevron-right"></svg>
           </button>
           
           <!-- Subtle Divider -->
@@ -342,9 +323,7 @@
             class="p-1.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed disabled:active:scale-100 transition-all flex items-center justify-center cursor-pointer shadow-xs disabled:shadow-none"
             title="صفحه بعد (Alt + چپ)"
             aria-label="صفحه بعد">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="chevron-left"></svg>
           </button>
         </div>
       </div>
@@ -352,7 +331,7 @@
 
     <!-- ─── Offline Banner ─── -->
     <div *ngIf="isOffline" class="bg-amber-500 text-white px-4 py-2.5 flex items-center justify-center gap-3 text-xs font-bold shadow-sm z-10 relative">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.56 9"></path><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="wifi-off"></svg>
       <span *ngIf="connectionState === 'offline'">حالت آفلاین — اینترنت شما وصل نیست. تغییرات شما ذخیره شده و به محض اتصال مجدد، خودکار همگام‌سازی می‌شوند.</span>
       <span *ngIf="connectionState === 'server-unreachable'">سرور در دسترس نیست — تغییرات شما ذخیره شده و به محض بازگشت سرور، خودکار همگام‌سازی می‌شوند.</span>
       <span *ngIf="pendingCount > 0" class="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">{{pendingCount}} مورد در صف</span>
@@ -361,7 +340,7 @@
     <!-- ─── Syncing Banner ─── -->
     <div *ngIf="(isSyncing || isPulling) && !isOffline" class="bg-indigo-500 text-white px-4 py-2 flex flex-col items-center justify-center gap-2 text-xs font-bold shadow-sm z-10 relative">
       <div class="flex items-center gap-3 w-full justify-center">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin shrink-0"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin shrink-0" appIcon="refresh-cw"></svg>
         <span *ngIf="isSyncing && !isPulling">در حال ارسال تغییرات به سرور...</span>
         <span *ngIf="isPulling">
           <ng-container *ngIf="deepUpdateState">
@@ -399,12 +378,12 @@
 
     <!-- ─── Sync Success Banner ─── -->
     <div *ngIf="syncSuccessMessage" class="bg-emerald-500 text-white px-4 py-2 flex items-center justify-center gap-3 text-xs font-bold shadow-sm z-10 relative">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check-circle"></svg>
       <span>{{syncSuccessMessage}}</span>
     </div>
 
     <div *ngIf="store.isWarehouseContext()" class="p-3 block sm:hidden flex items-center justify-center gap-2 shadow-inner border-b" [style.background]="currentWarehouse?.color || '#4f46e5'" [style.borderColor]="'rgba(0,0,0,0.1)'">
-       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" appIcon="home"></svg>
        <span class="text-[12px] font-black text-white shrink-0">{{currentWarehouse?.name}}</span>
     </div>
 
@@ -413,9 +392,9 @@
       <!-- Breadcrumbs -->
       <div *ngIf="store.isWarehouseContext()" class="mb-5 flex items-center gap-1.5 text-[11px] font-bold text-slate-400 select-none">
         <span class="hover:text-slate-600 cursor-pointer transition-colors" (click)="exitWarehouseMode()">انبارها</span>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
         <span [style.color]="currentWarehouse?.color || '#4f46e5'">{{currentWarehouse?.name}}</span>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
         <span class="text-slate-600">{{currentTitle}}</span>
       </div>
 

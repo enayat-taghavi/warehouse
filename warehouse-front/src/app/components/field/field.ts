@@ -12,10 +12,11 @@ import {
   DEFAULT_ITEM_FIELD_PERMISSIONS, 
   mergeFieldPermissions 
 } from '../../core/models/field-config.model';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-field',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './field.html',
   styleUrl: './field.css'
 })

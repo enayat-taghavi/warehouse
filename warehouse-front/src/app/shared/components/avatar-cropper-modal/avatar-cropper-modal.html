@@ -7,7 +7,7 @@
   <div class="modal-header">
     <div class="header-title-group">
       <div class="header-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user-circle"></svg>
       </div>
       <div>
         <h2>{{ title }}</h2>
@@ -23,13 +23,13 @@
     <div class="toolbar-section">
       <div class="source-buttons">
         <button type="button" class="tool-btn primary" (click)="fileInput.click()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="upload"></svg>
           <span>انتخاب فایل عکس</span>
         </button>
         <input #fileInput type="file" accept="image/png,image/jpeg,image/webp,image/gif" (change)="onFileSelected($event)" style="display: none" />
 
         <button *ngIf="cameraAvailable" type="button" class="tool-btn camera" (click)="startCamera()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="camera"></svg>
           <span>ثبت با دوربین / وب‌کم</span>
         </button>
       </div>
@@ -89,7 +89,7 @@
             (touchstart)="$event.stopPropagation()"
             title="چرخش ۹۰ درجه تصویر"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-cw"></svg>
           </button>
 
           <canvas
@@ -114,7 +114,7 @@
   <div class="modal-footer">
     <div class="footer-left">
       <button *ngIf="currentAvatarUrl" type="button" class="btn btn-danger-outline" (click)="removeAvatar()" [disabled]="isSaving">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash"></svg>
         <span>حذف عکس فعلی</span>
       </button>
     </div>

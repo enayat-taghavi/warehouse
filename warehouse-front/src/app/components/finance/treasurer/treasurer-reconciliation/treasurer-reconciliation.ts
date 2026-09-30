@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 export interface ReconciliationItem {
   id: number;
@@ -30,7 +31,7 @@ export interface CashFlowDay {
 @Component({
   selector: 'app-treasurer-reconciliation-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './treasurer-reconciliation.html',
   styleUrl: './treasurer-reconciliation.css'
 })

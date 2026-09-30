@@ -19,11 +19,12 @@ export interface AppLauncherCard {
 }
 
 import { FirstBootWizardComponent } from '../operations/first-boot-wizard/first-boot-wizard';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-launcher',
   standalone: true,
-  imports: [CommonModule, FirstBootWizardComponent],
+  imports: [CommonModule, FirstBootWizardComponent, SvgIconDirective],
   templateUrl: './app-launcher.html'
 })
 export class AppLauncherComponent implements OnInit {

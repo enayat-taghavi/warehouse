@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { StateService } from '../../services/state.service';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 /**
  * کامپوننت مدیریت و تغذیه اطلاعات (MT26 / MT49)
@@ -10,7 +11,7 @@ import { StateService } from '../../services/state.service';
 @Component({
   selector: 'app-feeding',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, SvgIconDirective],
   templateUrl: './feeding.html',
   styleUrl: './feeding.css'
 })

@@ -1,10 +1,11 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 @Component({
   selector: 'app-cartable-card-base',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SvgIconDirective],
   template: `
     <div 
       class="bg-white rounded-3xl border transition-all duration-200 overflow-hidden shadow-sm relative"
@@ -35,9 +36,7 @@ import { CommonModule } from '@angular/common';
               class="w-5 h-5 rounded-lg border flex items-center justify-center transition-all shrink-0"
               [ngClass]="isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-slate-50 hover:border-slate-400'"
             >
-              <svg *ngIf="isSelected" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
+              <svg *ngIf="isSelected" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
             </button>
 
             <!-- Main Code / Identifier -->
@@ -86,18 +85,13 @@ import { CommonModule } from '@angular/common';
           <div class="flex flex-wrap items-center gap-2 text-xs text-slate-600 mt-1">
             <!-- Location Pill -->
             <div *ngIf="location" class="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-xl font-bold text-slate-700">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-500">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-500" appIcon="map-pin"></svg>
               <span class="truncate max-w-[150px]">{{ location }}</span>
             </div>
 
             <!-- Barcode Pill -->
             <div *ngIf="barcode" class="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-xl font-mono text-[11px] text-slate-600">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400">
-                <path d="M3 5v14M8 5v14M12 5v14M17 5v14M21 5v14"></path>
-              </svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400" appIcon="barcode-path"></svg>
               <span>{{ barcode }}</span>
             </div>
 
@@ -124,10 +118,7 @@ import { CommonModule } from '@angular/common';
               class="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors flex items-center gap-1 text-xs font-bold"
               title="تاریخچه گردش کار"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
               <span class="hidden sm:inline">تاریخچه</span>
             </button>
 

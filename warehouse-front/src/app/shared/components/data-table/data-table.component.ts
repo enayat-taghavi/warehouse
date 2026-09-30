@@ -24,6 +24,7 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { TableViewApiService, TableViewState } from '../../../core/api/table-view-api.service';
 import { OfflinePendingBadgeComponent } from '../offline-pending-badge/offline-pending-badge.component';
+import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 // ══════════════════════════════════════════════════
 //  Column Definition Directive
@@ -66,7 +67,7 @@ export interface PageEvent {
 @Component({
   selector: 'app-data-table',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, OfflinePendingBadgeComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, OfflinePendingBadgeComponent, SvgIconDirective],
   template: `
     <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
       <!-- Header Actions -->
@@ -75,13 +76,10 @@ export interface PageEvent {
           <div class="flex items-center gap-4">
             <!-- Global Search -->
             <div class="relative flex items-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2.5 text-slate-400"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2.5 text-slate-400" appIcon="search"></svg>
               <input type="text" [value]="globalSearch" (input)="onGlobalSearch($event)" placeholder="جستجو (کد، شرح، PO، PL، PK، تگ)..." title="جستجو در فیلدهای: کد یکتا، کد ترکیبی، شرح کالا، سفارش خرید (PO)، پکینگ لیست (PL)، پکیج (PK) و تگ" class="w-72 text-xs py-1.5 pl-2 pr-8 rounded-lg border border-slate-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none placeholder:text-slate-400 transition-shadow">
               @if (isLoading) {
-                <svg class="animate-spin absolute left-2.5 w-3.5 h-3.5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                <svg class="animate-spin absolute left-2.5 w-3.5 h-3.5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" appIcon="spinner"></svg>
               }
             </div>
 
@@ -107,20 +105,20 @@ export interface PageEvent {
             <!-- Zoom Controls -->
             <div class="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
               <button (click)="zoomOut()" title="کوچک‌نمایی (Zoom Out)" class="px-2 py-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zoom-out"></svg>
               </button>
               <button (click)="resetZoom()" title="اندازه اصلی (100%)" class="px-2 py-1.5 text-[10px] font-bold text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors border-x border-slate-100 min-w-[36px] text-center">
                 {{ (zoomScale * 100) | number:'1.0-0' }}%
               </button>
               <button (click)="zoomIn()" title="بزرگ‌نمایی (Zoom In)" class="px-2 py-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zoom-in"></svg>
               </button>
             </div>
 
             @if (showColumnToggle) {
               <div class="relative">
                 <button (click)="isColumnToggleOpen = !isColumnToggleOpen" class="text-[10px] font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1 transition-colors bg-white border border-slate-200 px-2 py-1.5 rounded-lg shadow-sm">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="list"></svg>
                   انتخاب ستون‌ها
                 </button>
                 @if (isColumnToggleOpen) {
@@ -148,7 +146,7 @@ export interface PageEvent {
               @if (tableName) {
                 <div class="relative ml-1">
                   <button (click)="isViewManagerOpen = !isViewManagerOpen" class="text-[10px] font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1 transition-colors bg-white border border-slate-200 px-2 py-1.5 rounded-lg shadow-sm">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
                     مدیریت نماها
                   </button>
                   @if (isViewManagerOpen) {
@@ -181,7 +179,7 @@ export interface PageEvent {
                             } @else {
                               <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button (click)="viewToDelete = v.id!; $event.stopPropagation()" class="text-rose-500 hover:text-rose-700 p-0.5 rounded hover:bg-rose-50" title="حذف نما">
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"></path></svg>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="trash-compact"></svg>
                                 </button>
                               </div>
                             }
@@ -201,10 +199,7 @@ export interface PageEvent {
                 (click)="clearAllFilters()"
                 class="text-[10px] font-bold text-rose-500 hover:text-rose-600 flex items-center gap-1 transition-colors bg-rose-50 px-2 py-1.5 rounded-lg"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
                 پاک کردن فیلترها
               </button>
             }
@@ -213,18 +208,18 @@ export interface PageEvent {
             @if (editHistory.length > 0) {
               <div class="relative flex items-center gap-1 bg-indigo-50 border border-indigo-100 rounded-lg overflow-hidden ml-2 transition-all p-1">
                 <button (click)="undo()" [disabled]="historyIndex < 0" title="بازگشت تغییرات (Ctrl+Z)" class="flex items-center justify-center p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-indigo-100 text-indigo-700 transition-colors">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="undo"></svg>
                 </button>
                 <button (click)="redo()" [disabled]="historyIndex >= editHistory.length - 1" title="اعمال مجدد (Ctrl+Y)" class="flex items-center justify-center p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-indigo-100 text-indigo-700 transition-colors">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"></path><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"></path></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="redo"></svg>
                 </button>
                 <div class="w-px h-5 bg-indigo-200 mx-0.5"></div>
                 <button (click)="showConfirm()" [disabled]="pendingChanges.size === 0" class="flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold text-indigo-700 bg-white rounded-md shadow-sm border border-indigo-100 hover:bg-indigo-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="save"></svg>
                   ذخیره تغییرات ({{pendingChanges.size}})
                 </button>
                 <button (click)="showRevertConfirm()" title="لغو تغییرات" class="flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold text-rose-700 bg-white rounded-md shadow-sm border border-rose-100 hover:bg-rose-50 transition-colors">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9h13a5 5 0 0 1 0 10H7"/><polyline points="7 5 3 9 7 13"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="undo-2"></svg>
                   لغو تغییرات
                 </button>
               </div>
@@ -250,8 +245,8 @@ export interface PageEvent {
                       'bg-emerald-600 border-emerald-600 text-white ring-2 ring-emerald-400 ring-offset-1': selectionMode === 'all'
                     }"
                     [title]="selectionMode === 'none' ? 'کلیک ۱: انتخاب این صفحه' : selectionMode === 'page' ? 'کلیک ۲: انتخاب تمام رکوردهای فیلترشده (کل دیتابیس)' : 'کلیک ۳: لغو کامل انتخاب'">
-                    <svg *ngIf="selectionMode === 'page' || (selectionMode === 'none' && isAllSelected)" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    <svg *ngIf="selectionMode === 'all'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="18 6 7 17 2 12"></polyline><polyline points="22 10 14.5 17.5 13 16"></polyline></svg>
+                    <svg *ngIf="selectionMode === 'page' || (selectionMode === 'none' && isAllSelected)" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" appIcon="check"></svg>
+                    <svg *ngIf="selectionMode === 'all'" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" appIcon="check-check"></svg>
                   </button>
                 </th>
               }
@@ -280,7 +275,7 @@ export interface PageEvent {
                         class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-slate-400 hover:text-rose-500 hover:bg-rose-50 mr-auto pointer-events-auto"
                         title="مخفی کردن ستون"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
                       </button>
                     }
                     @if (col.sortable) {
@@ -317,7 +312,7 @@ export interface PageEvent {
                       @if (col.filterType === 'checkbox' || col.filterType === 'checkbox_text') {
                         <div class="relative text-right" [class.w-full]="col.filterType === 'checkbox'" [class.flex-1]="col.filterType === 'checkbox_text'">
                           <button (click)="toggleFilterDropdown(col.key)" class="text-[10px] px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 focus:border-indigo-400 flex items-center justify-center text-slate-500 w-full">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
                           </button>
                           @if (activeFilterDropdown === col.key) {
                             <div class="absolute top-full right-0 mt-1 w-48 bg-white border border-slate-200 shadow-xl rounded-xl z-[60] p-2 text-right flex flex-col gap-1 max-h-48 overflow-y-auto">
@@ -337,7 +332,7 @@ export interface PageEvent {
                         <div class="relative text-right w-full min-w-[120px]">
                           <button (click)="toggleFilterDropdown(col.key)" class="w-full text-[10px] px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 focus:border-indigo-400 flex items-center justify-between text-slate-500 whitespace-nowrap">
                             <span class="truncate">{{ filters[col.key] || 'همه زمان‌ها' }}</span>
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mr-1"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mr-1" appIcon="calendar"></svg>
                           </button>
                           @if (activeFilterDropdown === col.key) {
                             <div class="absolute top-full right-0 mt-1 w-64 bg-white border border-slate-200 shadow-2xl rounded-2xl z-[70] p-3 text-right flex flex-col gap-1.5 overflow-visible">
@@ -374,7 +369,7 @@ export interface PageEvent {
                         <div class="relative text-right w-full min-w-[120px]">
                           <button (click)="toggleFilterDropdown(col.key)" class="w-full text-[10px] px-2 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 focus:border-indigo-400 flex items-center justify-between text-slate-500 whitespace-nowrap">
                             <span class="truncate">{{ filters[col.key] || 'همه مقادیر' }}</span>
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mr-1"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0 mr-1" appIcon="calendar"></svg>
                           </button>
                           @if (activeFilterDropdown === col.key) {
                             <div class="absolute top-full right-0 mt-1 w-48 bg-white border border-slate-200 shadow-xl rounded-xl z-[60] p-2 text-right flex flex-col gap-1">
@@ -479,14 +474,12 @@ export interface PageEvent {
                 <td [attr.colspan]="totalColumns" class="px-6 py-12 text-center">
                   @if (isLoading) {
                     <div class="text-slate-400 flex flex-col items-center justify-center">
-                      <svg class="animate-spin mb-3 text-indigo-500" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                      <svg class="animate-spin mb-3 text-indigo-500" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="loader"></svg>
                       <p class="text-xs font-bold">در حال بارگذاری...</p>
                     </div>
                   } @else {
                     <div class="text-slate-400">
-                      <svg class="mx-auto mb-3" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                      </svg>
+                      <svg class="mx-auto mb-3" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="hero-search-plain"></svg>
                       <p class="text-xs font-bold">{{ emptyMessage }}</p>
                     </div>
                   }
@@ -509,9 +502,7 @@ export interface PageEvent {
               [disabled]="currentPage === 1"
               class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
             </button>
             @for (p of visiblePages; track p) {
               <button
@@ -527,9 +518,7 @@ export interface PageEvent {
               [disabled]="currentPage === totalPages"
               class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="15 18 9 12 15 6"/>
-              </svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
             </button>
           </div>
         </div>
@@ -545,7 +534,7 @@ export interface PageEvent {
           <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-[90%] max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div class="p-5 text-center">
               <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-4">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
               </div>
               <h3 class="text-base font-black text-slate-800 mb-2">ذخیره تغییرات؟</h3>
               <p class="text-xs text-slate-500 leading-relaxed font-medium">شما تغییراتی در {{pendingChanges.size}} رکورد ایجاد کرده‌اید. آیا مایل به ذخیره این تغییرات در سیستم هستید؟</p>
@@ -553,7 +542,7 @@ export interface PageEvent {
             
             <div class="p-3 bg-slate-50 border-t border-slate-100 flex gap-2">
               <button (click)="confirmUpdate()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors flex justify-center items-center gap-2">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                 تایید
               </button>
               <button (click)="cancelUpdate()" class="flex-1 py-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors">
@@ -572,7 +561,7 @@ export interface PageEvent {
           <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-[90%] max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div class="p-5 text-center">
               <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="trash-lucide"></svg>
               </div>
               <h3 class="text-base font-black text-slate-800 mb-2">لغو تغییرات؟</h3>
               <p class="text-xs text-slate-500 leading-relaxed font-medium">آیا از لغو تمام تغییرات خود مطمئن هستید؟ این کار غیرقابل بازگشت است.</p>

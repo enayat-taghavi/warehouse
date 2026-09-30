@@ -10,11 +10,12 @@ import { PersonnelApiService } from '../../../../core/api/personnel-api.service'
 import { ProjectSection, PersonnelChangeRequest, VehicleChangeRequest } from '../../../../core/models/personnel.model';
 
 import { WebSocketService } from '../../../../core/http/websocket.service';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-supervisor-new-profiles-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './supervisor-new-profiles.html',
   styleUrl: './supervisor-new-profiles.css'
 })

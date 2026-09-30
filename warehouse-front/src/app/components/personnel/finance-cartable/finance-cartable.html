@@ -6,10 +6,7 @@
   <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
     <div class="flex items-center gap-3.5">
       <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0" style="background: linear-gradient(135deg, #059669, #10b981)">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="2" y="5" width="20" height="14" rx="2"></rect>
-          <line x1="2" y1="10" x2="22" y2="10"></line>
-        </svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card-2"></svg>
       </div>
       <div>
         <div class="flex items-center gap-2">
@@ -31,11 +28,7 @@
       </div>
       <!-- Refresh Button -->
       <button (click)="refreshCurrentTabData()" [disabled]="isLoading" class="btn-icon-square btn-icon-emerald" title="بروزرسانی کارتابل مالی" aria-label="بروزرسانی">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.animate-spin]="isLoading">
-          <polyline points="23 4 23 10 17 10"></polyline>
-          <polyline points="1 20 1 14 7 14"></polyline>
-          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-        </svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.animate-spin]="isLoading" appIcon="refresh-cw"></svg>
       </button>
     </div>
   </div>
@@ -280,7 +273,7 @@
 
         <!-- Lock/Unlock Status -->
         <button *ngIf="currentPeriodId" (click)="toggleLockPeriod()" [ngClass]="isPeriodLocked ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-emerald-50 text-emerald-700 border-emerald-200'" class="px-3.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock"></svg>
           <span>{{ isPeriodLocked ? 'دوره قفل شده (کلیک برای بازگشایی)' : 'دوره باز (کلیک برای قفل نهایی)' }}</span>
         </button>
       </div>
@@ -288,12 +281,12 @@
       <!-- Actions -->
       <div class="flex items-center gap-2">
         <button (click)="openTaxModal()" class="px-4 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-teal-500/20 flex items-center gap-2 cursor-pointer">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
           <span>درون‌ریزی اکسل مالیات دارایی</span>
         </button>
 
         <button (click)="calculateMonthlyPayroll()" [disabled]="isCalculatingPayroll || isPeriodLocked" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-emerald-500/20 flex items-center gap-2 cursor-pointer disabled:opacity-50">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
           <span *ngIf="!isCalculatingPayroll">محاسبه و تجمیع خودکار حقوق (۵۸ ستون)</span>
           <span *ngIf="isCalculatingPayroll">در حال پردازش ۵۸ ستون...</span>
         </button>
@@ -340,7 +333,7 @@
 
         <div class="flex items-center gap-2">
           <button (click)="downloadMonthlyExcel()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
             <span>دانلود شیت ۵۸ ستونی اکسل</span>
           </button>
         </div>
@@ -396,7 +389,7 @@
               <td class="p-3 text-center font-mono text-[11px] text-slate-600">{{ r.bank_account_number || '—' }}</td>
               <td class="p-3 text-center">
                 <button (click)="openPayslipModal(r)" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg transition-colors cursor-pointer text-[11px] flex items-center gap-1 mx-auto" title="مشاهده و چاپ فیش حقوقی تکی">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-lines"></svg>
                   <span>فیش</span>
                 </button>
               </td>
@@ -438,12 +431,12 @@
       <!-- Actions -->
       <div class="flex items-center gap-2 flex-wrap">
         <button (click)="downloadFleetBankExcel()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-emerald-500/20 flex items-center gap-2 cursor-pointer">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
           <span>🏦 دانلود فایل پرداخت گروهی بانک ملی</span>
         </button>
 
         <button (click)="loadFleetSettlement()" [disabled]="isFleetSettlementLoading" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-indigo-500/20 flex items-center gap-2 cursor-pointer disabled:opacity-50">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
           <span *ngIf="!isFleetSettlementLoading">محاسبه و تجمیع تسویه ناوگان</span>
           <span *ngIf="isFleetSettlementLoading">در حال محاسبه...</span>
         </button>
@@ -585,7 +578,7 @@
       <div class="bg-gradient-to-br from-blue-900 to-indigo-900 text-white rounded-3xl p-6 shadow-lg flex flex-col justify-between">
         <div>
           <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="box-outline"></svg>
           </div>
           <h3 class="text-base font-black">دیسکت بیمه تأمین اجتماعی</h3>
           <p class="text-xs text-blue-200 mt-2 leading-relaxed">فایل‌های DSKWOR00 و DSKKAR00 با فرمت باینری DBF و انکودینگ ایران‌سیستم منطبق بر قوانین تأمین اجتماعی</p>
@@ -599,7 +592,7 @@
       <div class="bg-gradient-to-br from-emerald-900 to-teal-900 text-white rounded-3xl p-6 shadow-lg flex flex-col justify-between">
         <div>
           <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file"></svg>
           </div>
           <h3 class="text-base font-black">فایل WH مالیات حقوق</h3>
           <p class="text-xs text-emerald-200 mt-2 leading-relaxed">فایل ۳۹ فیلدی خلاصه حقوق ماهانه سامانه سازمان امور مالیاتی کشور با انکودینگ UTF-8</p>
@@ -613,7 +606,7 @@
       <div class="bg-gradient-to-br from-cyan-900 to-slate-900 text-white rounded-3xl p-6 shadow-lg flex flex-col justify-between">
         <div>
           <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user-plus"></svg>
           </div>
           <h3 class="text-base font-black">فایل WP پرسنل مالیاتی</h3>
           <p class="text-xs text-cyan-200 mt-2 leading-relaxed">مشخصات هویتی، استخدامی و شغلی پرسنل مالیاتی با انکودینگ استاندارد UTF-8 BOM</p>
@@ -627,7 +620,7 @@
       <div class="bg-gradient-to-br from-amber-900 to-yellow-950 text-white rounded-3xl p-6 shadow-lg flex flex-col justify-between">
         <div>
           <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card-2"></svg>
           </div>
           <h3 class="text-base font-black">واریز گروهی بانک ملی (پرسنل)</h3>
           <p class="text-xs text-amber-200 mt-2 leading-relaxed">فرمت استاندارد اکسل پرداخت دستمزد بانک ملی با شماره شبا، نام گیرنده و شرح واریز</p>
@@ -641,7 +634,7 @@
       <div class="bg-gradient-to-br from-teal-900 to-emerald-950 text-white rounded-3xl p-6 shadow-lg flex flex-col justify-between">
         <div>
           <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="dollar-sign-path"></svg>
           </div>
           <h3 class="text-base font-black">فایل پرداخت پایا / تسویه ناوگان</h3>
           <p class="text-xs text-teal-200 mt-2 leading-relaxed">فایل استاندارد واریز پایا بین‌بانکی کرایه رانندگان و پیمانکاران ناوگان</p>
@@ -655,7 +648,7 @@
       <div class="bg-gradient-to-br from-purple-900 to-slate-900 text-white rounded-3xl p-6 shadow-lg flex flex-col justify-between">
         <div>
           <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-lines"></svg>
           </div>
           <h3 class="text-base font-black">فیش‌های حقوقی پرسنل</h3>
           <p class="text-xs text-purple-200 mt-2 leading-relaxed">پکیج فیش‌های تفکیک‌شده حقوقی ماهانه پرسنل با تمام جزئیات کسورات و ناخالص</p>
@@ -704,7 +697,7 @@
         </div>
 
         <button (click)="loadReports()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95" [disabled]="isReportLoading">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isReportLoading"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isReportLoading" appIcon="rotate-cw-legacy"></svg>
           <span>بروزرسانی گزارش</span>
         </button>
       </div>
@@ -874,12 +867,7 @@
       <div class="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
         <div class="flex items-center gap-2.5">
           <div class="w-10 h-10 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center font-black">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="12" y1="18" x2="12" y2="12"></line>
-              <line x1="9" y1="15" x2="15" y2="15"></line>
-            </svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-plus"></svg>
           </div>
           <div>
             <h3 class="text-sm font-black text-slate-800">درون‌ریزی فایل مالیات دارایی (سامانه مالیات حقوق)</h3>
@@ -892,11 +880,11 @@
       <!-- Mode Switcher Tabs (فایل اکسل / چسباندن متن) -->
       <div class="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl shrink-0">
         <button type="button" (click)="setTaxModalMode('file')" [ngClass]="taxModalMode === 'file' ? 'bg-white text-teal-800 font-black shadow-xs' : 'text-slate-600 font-bold hover:text-slate-900'" class="flex-1 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
           <span>📁 بارگذاری فایل اکسل (.xlsx)</span>
         </button>
         <button type="button" (click)="setTaxModalMode('paste')" [ngClass]="taxModalMode === 'paste' ? 'bg-white text-teal-800 font-black shadow-xs' : 'text-slate-600 font-bold hover:text-slate-900'" class="flex-1 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard"></svg>
           <span>📋 چسباندن متن (Smart Paste)</span>
         </button>
       </div>
@@ -910,7 +898,7 @@
             <input type="file" #taxFileInput (change)="onTaxFileSelected($event)" accept=".xlsx,.xls" class="hidden" id="tax-file-input" />
             <label for="tax-file-input" class="cursor-pointer flex flex-col items-center gap-2.5">
               <div class="w-12 h-12 rounded-2xl bg-teal-100/80 text-teal-700 flex items-center justify-center shadow-xs">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-plus"></svg>
               </div>
               <span class="font-black text-slate-700">کلیک کنید یا فایل اکسل خروجی دارایی را اینجا رها کنید</span>
               <span class="text-[11px] text-slate-400">فرمت‌های مجاز: XLSX, XLS (فایل سامانه امور مالیاتی)</span>
@@ -997,7 +985,7 @@
       <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 shrink-0">
         <button (click)="closeTaxModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer transition-colors">انصراف (Esc)</button>
         <button (click)="submitTaxImport()" [disabled]="isImportingTax || (taxModalMode === 'file' && !selectedTaxFile) || (taxModalMode === 'paste' && taxParsedRows.length === 0)" class="px-5 py-2.5 bg-teal-700 hover:bg-teal-800 text-white text-xs font-black rounded-xl shadow-md shadow-teal-500/20 cursor-pointer flex items-center gap-2 disabled:opacity-50 transition-all">
-          <svg *ngIf="!isImportingTax" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg>
+          <svg *ngIf="!isImportingTax" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-path"></svg>
           <span *ngIf="!isImportingTax">اعمال مالیات به دوره حقوق</span>
           <span *ngIf="isImportingTax">در حال پردازش و اعمال...</span>
         </button>
@@ -1014,7 +1002,7 @@
       <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-shrink-0">
         <div class="flex items-center gap-2.5">
           <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-lines"></svg>
           </div>
           <div>
             <h3 class="text-sm font-black text-slate-800">پیش‌نمایش و صدور فیش حقوقی</h3>
@@ -1104,7 +1092,7 @@
       <div class="flex items-center justify-between border-t border-slate-100 pt-3 flex-shrink-0">
         <button (click)="closePayslipModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer">بستن</button>
         <button (click)="printCurrentPayslip()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md shadow-indigo-500/20 flex items-center gap-1.5 cursor-pointer">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="printer"></svg>
           <span>چاپ فیش حقوقی (Print)</span>
         </button>
       </div>

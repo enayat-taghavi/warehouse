@@ -8,7 +8,7 @@
       <div class="flex flex-wrap items-center gap-2.5">
         <div class="relative">
           <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" appIcon="search"></svg>
           </div>
           <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange($event)" placeholder="جستجوی انبار، کد، لوکیشن، مسئول..." class="w-full sm:w-64 pr-9 pl-4 py-2 rounded-xl text-xs bg-white border border-slate-200 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/20 transition-all text-slate-800">
         </div>
@@ -21,34 +21,22 @@
 
         <!-- Export Excel Button -->
         <button (click)="exportWarehousesExcel()" class="btn-icon-square btn-icon-emerald" title="دانلود/خروجی اکسل انبارها">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
         </button>
 
         <!-- Import Excel Button -->
         <button *appHasPermission="'perm_wh_create'" (click)="openWarehouseImportModal()" class="btn-icon-square btn-icon-indigo" title="ورودی/آپلود اکسل انبارها">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
-          </svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="upload"></svg>
         </button>
 
         <!-- Refresh Button -->
         <button type="button" [disabled]="isRefreshing" (click)="loadWarehouses()" class="btn-icon-square btn-icon-indigo" title="بروزرسانی">
-          <svg *ngIf="!isRefreshing" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <polyline points="1 20 1 14 7 14"></polyline>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-          </svg>
+          <svg *ngIf="!isRefreshing" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="refresh-cw"></svg>
           <span *ngIf="isRefreshing" class="animate-spin block w-[18px] h-[18px] border-2 border-indigo-600 border-t-transparent rounded-full"></span>
         </button>
 
         <button *appHasPermission="'perm_wh_create'" (click)="openAddModal()" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black text-white transition-all shadow-md shadow-indigo-200 hover:shadow-lg active:scale-95 cursor-pointer" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)" title="ثبت و ایجاد محیط انبار جدید">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><line x1="9" y1="9" x2="9" y2="9.01"/><line x1="9" y1="12" x2="9" y2="12.01"/><line x1="9" y1="15" x2="9" y2="15.01"/><line x1="9" y1="18" x2="9" y2="18.01"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="building"></svg>
           <span>انبار جدید</span>
         </button>
       </div>
@@ -57,7 +45,7 @@
     <!-- Empty State -->
     <div *ngIf="!isRefreshing && filteredProjects.length === 0" class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
       <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-3">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="package"></svg>
       </div>
       <h4 class="font-bold text-slate-700 text-sm">هیچ انباری یافت نشد</h4>
       <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">با عبارت جستجوی فعلی یا فیلتر انتخابی، موردی در سامانه ثبت نشده است.</p>
@@ -128,13 +116,13 @@
           <ng-container *ngIf="p.is_active">
             <button (click)="$event.stopPropagation(); goToWarehouseWorkspace(p.id)" class="flex-1 py-2 text-[11px] font-bold rounded-xl text-white shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]" [style.background]="'linear-gradient(135deg, ' + (p.color || '#6366f1') + ', #4f46e5)'">
               ورود به محیط انبار
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="arrow-right-path"></svg>
             </button>
           </ng-container>
           
           <div class="relative">
             <button (click)="toggleDropdown($event, p.id)" class="p-2 text-slate-500 bg-slate-50 hover:bg-slate-200 hover:text-slate-800 rounded-xl transition-colors shrink-0 flex items-center justify-center z-20 relative" title="عملیات انبار">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="settings"></svg>
             </button>
             
             <div *ngIf="openDropdownId == p.id" class="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 z-[99] py-1 text-right">
@@ -180,7 +168,7 @@
         <label class="block text-[11px] font-bold text-slate-700 mb-2">رنگ تم و شناسه بصری انبار (Theme Color)</label>
         <div class="flex flex-wrap items-center gap-2">
           <button *ngFor="let c of colorPalette" type="button" (click)="editingProject.color = c" class="w-6 h-6 rounded-full border-2 transition-all hover:scale-110 flex items-center justify-center shrink-0 shadow-sm" [style.background]="c" [ngClass]="editingProject.color === c ? 'border-slate-800 scale-110 ring-2 ring-slate-400' : 'border-transparent'">
-            <svg *ngIf="editingProject.color === c" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <svg *ngIf="editingProject.color === c" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" appIcon="check"></svg>
           </button>
           <div class="flex items-center gap-2 mr-auto">
             <input type="color" [(ngModel)]="editingProject.color" name="customColorEdit" class="w-7 h-7 p-0 border-0 rounded-lg cursor-pointer bg-transparent">
@@ -266,7 +254,7 @@
         <label class="block text-[11px] font-bold text-slate-700 mb-2">رنگ تم و شناسه بصری انبار (Theme Color)</label>
         <div class="flex flex-wrap items-center gap-2">
           <button *ngFor="let c of colorPalette" type="button" (click)="newWh.color = c" class="w-6 h-6 rounded-full border-2 transition-all hover:scale-110 flex items-center justify-center shrink-0 shadow-sm" [style.background]="c" [ngClass]="newWh.color === c ? 'border-slate-800 scale-110 ring-2 ring-slate-400' : 'border-transparent'">
-            <svg *ngIf="newWh.color === c" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <svg *ngIf="newWh.color === c" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" appIcon="check"></svg>
           </button>
           <div class="flex items-center gap-2 mr-auto">
             <input type="color" [(ngModel)]="newWh.color" name="customColorAdd" class="w-7 h-7 p-0 border-0 rounded-lg cursor-pointer bg-transparent">

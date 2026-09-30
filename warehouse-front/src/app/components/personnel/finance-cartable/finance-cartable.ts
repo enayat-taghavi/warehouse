@@ -19,11 +19,12 @@ import {
   VehicleSummaryRow,
   FinancialProject
 } from '../../../core/models/personnel.model';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-finance-cartable',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './finance-cartable.html',
   styleUrl: './finance-cartable.css'
 })

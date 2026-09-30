@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef, HostListener, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
@@ -21,15 +21,18 @@ import { AppPersonaService } from '../../../core/services/app-persona.service';
 import { PersonnelApiService } from '../../../core/api/personnel-api.service';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
 import { Company } from '../../../core/models/company.model';
+import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 @Component({
   selector: 'app-user-menu',
   standalone: true,
   imports: [
     CommonModule,
+    NgOptimizedImage,
     FormsModule,
     AvatarCropperModal,
-    DeepSyncModalComponent
+    DeepSyncModalComponent,
+    SvgIconDirective
   ],
   templateUrl: './user-menu.component.html',
   styleUrl: './user-menu.component.css'

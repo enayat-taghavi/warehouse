@@ -20,6 +20,7 @@ import {
   generateShebaFromAccount,
   validateAccountNumber
 } from '../../../core/utils/sheba-utils';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 export interface CounterpartyTypeOption {
   key: 'driver' | 'repair_shop' | 'fuel_station' | 'contractor' | 'other';
@@ -32,7 +33,7 @@ export interface CounterpartyTypeOption {
 @Component({
   selector: 'app-counterparties',
   standalone: true,
-  imports: [CommonModule, FormsModule, ExcelImportModal],
+  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective],
   templateUrl: './counterparties.html',
   styleUrl: './counterparties.css'
 })

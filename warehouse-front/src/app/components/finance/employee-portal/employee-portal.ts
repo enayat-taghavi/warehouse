@@ -17,13 +17,14 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../services/toast.service';
 import { cleanShebaInput, validateSheba } from '../../../core/utils/sheba-utils';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 export type PortalTab = 'attendance' | 'fleet' | 'invoices' | 'petty_cash' | 'new_vehicle' | 'new_personnel';
 
 @Component({
   selector: 'app-employee-portal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './employee-portal.html',
   styleUrls: ['./employee-portal.css']
 })
