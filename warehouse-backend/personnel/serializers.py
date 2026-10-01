@@ -221,6 +221,8 @@ class PayrollYearlySettingsSerializer(serializers.ModelSerializer):
 class MonthlyPayrollRecordSerializer(serializers.ModelSerializer):
     personnel_name = serializers.CharField(source='personnel.full_name', read_only=True)
     period_year_month = serializers.CharField(source='period.year_month', read_only=True)
+    # وضعیت دوره (OPEN/LOCKED/...) تا هاب حقوق حسابدار وضعیت قفل را همان هنگام بارگذاری بداند
+    period_status = serializers.CharField(source='period.status', read_only=True)
     paid_by_name = serializers.SerializerMethodField()
 
     class Meta:

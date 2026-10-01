@@ -1295,15 +1295,28 @@ class ApprovalPhaseGuardian:
         all_passed = True
 
         try:
-            # Check 1: Attendance Component SoD Protection
-            att_ts_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'personnel', 'warehouse-attendance', 'warehouse-attendance.ts')
-            with open(att_ts_path, 'r', encoding='utf-8') as f:
-                att_content = f.read()
+            # Check 1: Attendance SoD Protection
+            # صفحهٔ مشترک کارکرد (warehouse-attendance) بازنشسته شد. تفکیک وظایف کارکرد اکنون با ایزولاسیون مسیر نقش‌ها
+            # در canAccessRoute اعمال می‌شود: هاب کارمند فقط «ارسال» دوره دارد و حسابدار به هاب‌های ثبت کارمند راه ندارد.
+            persona_ts_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'services', 'app-persona.service.ts')
+            emp_att_ts_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'finance', 'employee', 'employee-attendance', 'employee-attendance.ts')
+            with open(persona_ts_path, 'r', encoding='utf-8') as f:
+                persona_src = f.read()
+            with open(emp_att_ts_path, 'r', encoding='utf-8') as f:
+                emp_att_src = f.read()
 
-            if "canPerform('/attendance', 'approve_attendance_period')" in att_content and "canDirectEditAttendance" in att_content:
-                checks.append(("محافظت هوشمند صفحه کارکرد (/attendance)", True, "دسترسی تایید دوره و ثبت مستقیم کارکرد با متدهای SoD ایمن‌سازی شده‌اند."))
+            import re as _re
+            op_block = _re.search(r"role === 'operator'\)\s*\{(.*?)\}\s*else if", persona_src, _re.S)
+            acc_block = _re.search(r"role === 'accountant'\)\s*\{(.*?)\}\s*else if", persona_src, _re.S)
+            operator_isolated = bool(op_block) and "'/supervisor-'" in op_block.group(1) and "'/manager-'" in op_block.group(1)
+            accountant_isolated = bool(acc_block) and "'/employee-'" in acc_block.group(1)
+            employee_submit_only = "action: 'submit'" in emp_att_src and not any(
+                f"action: '{a}'" in emp_att_src for a in ('approve', 'lock', 'unlock', 'reject')
+            )
+            if operator_isolated and accountant_isolated and employee_submit_only:
+                checks.append(("محافظت هوشمند کارکرد پس از بازنشستگی صفحهٔ مشترک (/attendance)", True, "کارمند فقط دوره را ارسال می‌کند و به هاب‌های تایید راه ندارد؛ حسابدار به هاب‌های ثبت کارکرد راه ندارد."))
             else:
-                checks.append(("محافظت هوشمند صفحه کارکرد (/attendance)", False, "محافظت SoD در فایل تایپ‌اسکریپت کارکرد اعمال نشده است."))
+                checks.append(("محافظت هوشمند کارکرد پس از بازنشستگی صفحهٔ مشترک (/attendance)", False, f"ایزولاسیون کارمند: {operator_isolated}، ایزولاسیون حسابدار: {accountant_isolated}، فقط ارسال در هاب کارمند: {employee_submit_only}"))
                 all_passed = False
 
             # Check 2: Profiles Hub SoD Approval Protection
@@ -2040,12 +2053,21 @@ class ApprovalPhaseGuardian:
             with open(front_layout_path, 'r', encoding='utf-8') as f:
                 layout_code = f.read()
 
-            routes_has_finance_audit = "path: 'app/finance'" in routes_code and "path: 'audit', component: Audit, data: { appScope: 'finance'" in routes_code
-            layout_has_finance_audit = "id:'finance-audit'" in layout_code and "'finance-audit'" in layout_code
+            # مسیر ممیزی مالی پس از بارگذاری تنبل در accounting.routes.ts است. آیتم منوی «ممیزی مالی» طبق طرح
+            # منوی نقش‌ها و راهبر تشکیلات عمداً حذف شد (ممیزی کامل در مرکز عملیات است)؛ مسیر و ریدایرکت قدیمی می‌مانند.
+            acct_routes_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'modules', 'accounting', 'accounting.routes.ts')
+            with open(acct_routes_path, 'r', encoding='utf-8') as f:
+                acct_routes_code = f.read()
+            routes_has_finance_audit = (
+                "path: 'app/finance'" in routes_code and
+                "path: 'audit', component: Audit, data: { appScope: 'finance'" in acct_routes_code and
+                "{ path: 'finance-audit', redirectTo: 'audit'" in acct_routes_code
+            )
+            layout_has_finance_audit = "id: 'finance-audit'" not in layout_code and "id:'finance-audit'" not in layout_code
             audit_has_auto_detection = "isFinanceScope" in ts_code and "isWarehouseScope" in ts_code and "selectedAppScope = 'finance'" in ts_code
 
             if routes_has_finance_audit and layout_has_finance_audit and audit_has_auto_detection:
-                checks.append(("مسیر و منوی اختصاصی ممیزی مالی و تشخیص هوشمند قلمرو (Dedicated Finance Audit Route & Auto-Scope Detection)", True, "مسیر /app/finance/audit، منوی ناوبری مالی و تشخیص خودکار قلمرو در کامپوننت ممیزی بدون نیاز به فیلتر دستی با موفقیت مستقر شد."))
+                checks.append(("مسیر و منوی اختصاصی ممیزی مالی و تشخیص هوشمند قلمرو (Dedicated Finance Audit Route & Auto-Scope Detection)", True, "مسیر /app/finance/audit و ریدایرکت finance-audit حفظ شده‌اند، آیتم منوی آن طبق طرح منوی نقش‌ها حذف شده و تشخیص خودکار قلمرو در کامپوننت ممیزی برقرار است."))
             else:
                 checks.append(("مسیر و منوی اختصاصی ممیزی مالی و تشخیص هوشمند قلمرو (Dedicated Finance Audit Route & Auto-Scope Detection)", False, f"نقص در ساختار ممیزی مالی: routes={routes_has_finance_audit}, layout={layout_has_finance_audit}, auto_detect={audit_has_auto_detection}"))
                 all_passed = False
@@ -2499,14 +2521,24 @@ class ApprovalPhaseGuardian:
                 all_passed = False
 
             # ۴. مسیریابی در هر دو قلمرو انبارداری و مالی
-            has_wh_route = "path: 'health', component: HealthDashboardComponent" in routes_code
-            has_fin_health = "'finance-health'" in layout_code
-            has_wh_health = "{id:'health', label:'پایش سلامت سامانه'" in layout_code
+            # پس از تفکیک ماژول‌ها مسیرها در routes هر ماژول و منوی انبار در nav-items همان ماژول است.
+            # آیتم منوی «پایش سلامت» مالی طبق طرح منوی نقش‌ها و راهبر تشکیلات عمداً حذف شد؛ مسیر /app/finance/health برای نشان همگام‌سازی می‌ماند.
+            front_app_dir = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app')
+            with open(os.path.join(front_app_dir, 'modules', 'warehouse', 'warehouse.routes.ts'), 'r', encoding='utf-8') as f:
+                wh_routes_code = f.read()
+            with open(os.path.join(front_app_dir, 'modules', 'accounting', 'accounting.routes.ts'), 'r', encoding='utf-8') as f:
+                acct_routes_code = f.read()
+            with open(os.path.join(front_app_dir, 'modules', 'warehouse', 'nav-items.ts'), 'r', encoding='utf-8') as f:
+                wh_nav_code = f.read()
+            has_wh_route = "path: 'health', component: HealthDashboardComponent, data: { appScope: 'warehouse'" in wh_routes_code
+            has_fin_health = "path: 'health', component: HealthDashboardComponent, data: { appScope: 'finance'" in acct_routes_code
+            has_wh_health = "{ id: 'health', label: 'پایش سلامت سامانه'" in wh_nav_code
+            has_ops_route = "path: 'health', component: HealthDashboardComponent" in routes_code
 
-            if has_wh_route and has_fin_health and has_wh_health:
-                checks.append(("مسیریابی و سایدبار در هر دو قلمرو انبارداری و مالی (Dual-Domain Navigation)", True, "مسیرهای /app/warehouse/health و /app/finance/health و لینک‌های سایدبار انبارداری و حسابداری تایید شدند."))
+            if has_wh_route and has_fin_health and has_wh_health and has_ops_route:
+                checks.append(("مسیریابی و سایدبار در هر دو قلمرو انبارداری و مالی (Dual-Domain Navigation)", True, "مسیرهای /app/warehouse/health، /app/finance/health و /app/operations/health و لینک سایدبار انبار تایید شدند."))
             else:
-                checks.append(("مسیریابی و سایدبار در هر دو قلمرو انبارداری و مالی (Dual-Domain Navigation)", False, f"نقص در مسیرها یا سایدبار: route={has_wh_route}, fin={has_fin_health}, wh={has_wh_health}"))
+                checks.append(("مسیریابی و سایدبار در هر دو قلمرو انبارداری و مالی (Dual-Domain Navigation)", False, f"نقص در مسیرها یا سایدبار: wh_route={has_wh_route}, fin_route={has_fin_health}, wh_nav={has_wh_health}, ops_route={has_ops_route}"))
                 all_passed = False
 
             # ۵. ارتقای پاپ‌اور هدر با نشانگر نمره سلامت

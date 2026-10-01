@@ -81,7 +81,7 @@ ACCOUNTING_SPEC = ModuleSpec(
         'accounts.perm_manage_projects_sections',
         'accounts.perm_lock_work_period',
     ),
-    roles=('operator', 'supervisor', 'accountant', 'manager', 'treasury', 'superuser'),
+    roles=('operator', 'supervisor', 'accountant', 'manager', 'treasury', 'org_admin', 'superuser'),
     url_includes=(
         ('api/personnel/', 'personnel.urls'),
     ),

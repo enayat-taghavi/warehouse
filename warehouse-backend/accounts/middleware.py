@@ -127,6 +127,8 @@ def get_user_valid_roles_for_app(user, app_module: str = 'personnel') -> list[st
 
     roles = []
     if module_code == 'accounting':
+        # راهبر تشکیلات: نشانگر آن مجوز مدیریت پروژه‌ها و بخش‌هاست
+        is_org_admin = user.has_perm('accounts.perm_manage_projects_sections')
         # اپراتور/کارمند: فقط اگر صراحتاً نقش کارمند داشته باشد
         if user.has_perm('accounts.can_act_as_operator'):
             roles.append('operator')
@@ -138,8 +140,11 @@ def get_user_valid_roles_for_app(user, app_module: str = 'personnel') -> list[st
             roles.append('manager')
         if user.has_perm('accounts.perm_treasury_disburse_action') or user.has_perm('accounts.view_sys_treasury'):
             roles.append('treasury')
-        if not roles and (user.has_perm('accounts.view_sys_personnel_attendance') or user.has_perm('accounts.view_sys_personnel')):
+        if not roles and not is_org_admin and (user.has_perm('accounts.view_sys_personnel_attendance') or user.has_perm('accounts.view_sys_personnel')):
             roles.append('operator')
+        # در ابتدای فهرست تا «آخرین نقش معتبر» (پیش‌فرض resolve_effective_role) برای کاربر چندنقشه عوض نشود
+        if is_org_admin:
+            roles.insert(0, 'org_admin')
     elif module_code == 'warehouse':
         # Warehouse & Inventory App
         if user.has_perm('accounts.can_act_as_counter') or user.has_perm('accounts.view_sys_counter') or user.has_perm('accounts.view_wh_dispatch'):

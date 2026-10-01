@@ -98,15 +98,17 @@ class CustomRoleSerializer(serializers.ModelSerializer):
             instance.user_set.set(users)
         return instance
 
-def _sync_user_company_access(user, company_ids=None, default_company_id=None, company_accesses_data=None):
+def _sync_user_company_access(user, company_ids=None, default_company_id=None, company_accesses_data=None, actor=None):
     """
-    ثبت و همگام‌سازی تراکنشی رکوردهای دسترسی کاربر به شرکت‌ها (UserCompanyAccess)
+    ثبت و همگام‌سازی تراکنشی رکوردهای دسترسی کاربر به شرکت‌ها (UserCompanyAccess).
+    actor غیرسوپریوزر فقط دسترسی شرکت‌های مجاز خودش را می‌دهد، تغییر می‌دهد یا حذف می‌کند؛
+    دسترسی‌های موجود کاربر در شرکت‌های دیگر دست‌نخورده می‌مانند.
     """
     from django.apps import apps
     if not apps.is_installed('personnel'):
         return
 
-    from personnel.models import UserCompanyAccess, Company
+    from personnel.models import UserCompanyAccess, Company, UserSectionAssignment
 
     target_accesses = {}
     if company_accesses_data is not None and isinstance(company_accesses_data, list):
@@ -143,6 +145,24 @@ def _sync_user_company_access(user, company_ids=None, default_company_id=None, c
                 user.save(update_fields=['company'])
         return
 
+    # محدودهٔ نویسندهٔ غیرسوپریوزر: همان شرکت‌های مجاز خودش (دسترسی صریح workspace_full یا انتساب فعال)
+    scope_ids = None
+    if actor is not None and getattr(actor, 'is_authenticated', False) and not actor.is_superuser:
+        scope_ids = set(UserCompanyAccess.objects.filter(
+            user=actor, access_level='workspace_full', company__is_active=True
+        ).values_list('company_id', flat=True))
+        scope_ids |= set(UserSectionAssignment.objects.filter(
+            user=actor, is_active=True, section__project__company__is_active=True
+        ).values_list('section__project__company_id', flat=True))
+        existing_ids = set(UserCompanyAccess.objects.filter(user=user).values_list('company_id', flat=True))
+        outside = [cid for cid in target_accesses if cid not in scope_ids and cid not in existing_ids]
+        if outside:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('دسترسی فقط برای شرکت‌های مجاز شما قابل اعطاست.')
+        # دسترسی موجودِ بیرون از قلمرو نویسنده تغییر نمی‌کند
+        for cid in [cid for cid in target_accesses if cid not in scope_ids]:
+            target_accesses.pop(cid)
+
     if target_accesses:
         has_default = any(info['is_default'] for info in target_accesses.values())
         if not has_default:
@@ -152,8 +172,11 @@ def _sync_user_company_access(user, company_ids=None, default_company_id=None, c
                 first_cid = next(iter(target_accesses))
                 target_accesses[first_cid]['is_default'] = True
 
-    # حذف شرکت‌هایی که در لیست جدید نیستند
-    UserCompanyAccess.objects.filter(user=user).exclude(company_id__in=target_accesses.keys()).delete()
+    # حذف شرکت‌هایی که در لیست جدید نیستند (نویسندهٔ غیرسوپریوزر فقط در قلمرو خودش حذف می‌کند)
+    stale = UserCompanyAccess.objects.filter(user=user).exclude(company_id__in=target_accesses.keys())
+    if scope_ids is not None:
+        stale = stale.filter(company_id__in=scope_ids)
+    stale.delete()
 
     # ایجاد یا به‌روزرسانی رکوردهای مجاز
     valid_companies = {c.id: c for c in Company.objects.filter(id__in=target_accesses.keys())}
@@ -175,6 +198,14 @@ def _sync_user_company_access(user, company_ids=None, default_company_id=None, c
     if default_comp_name and user.company != default_comp_name:
         user.company = default_comp_name
         user.save(update_fields=['company'])
+
+
+class UserDirectorySerializer(serializers.ModelSerializer):
+    """فهرست کمینهٔ کاربران برای کشوی انتساب به بخش (راهبر تشکیلات): بدون اطلاعات شخصی و مجوزها"""
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'first_name', 'last_name', 'is_active']
+        read_only_fields = fields
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -508,7 +539,10 @@ class UserSerializer(serializers.ModelSerializer):
             if assigned_warehouses:
                 user.assigned_warehouses.set(assigned_warehouses)
 
-            _sync_user_company_access(user, company_ids, default_company_id, company_accesses_data)
+            _sync_user_company_access(
+                user, company_ids, default_company_id, company_accesses_data,
+                actor=request.user if request is not None else None
+            )
 
             return user
 
@@ -575,7 +609,10 @@ class UserSerializer(serializers.ModelSerializer):
             user = super().update(instance, validated_data)
 
             if company_ids is not None or company_accesses_data is not None or default_company_id is not None:
-                _sync_user_company_access(user, company_ids, default_company_id, company_accesses_data)
+                _sync_user_company_access(
+                    user, company_ids, default_company_id, company_accesses_data,
+                    actor=request.user if request is not None else None
+                )
 
             return user
 

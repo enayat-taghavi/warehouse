@@ -96,7 +96,14 @@ from .serializers import (
     MonthlyPayrollRecordSerializer,
     WorkflowAuditLogSerializer
 )
-from .permissions import IsOrgStructureManagerOrReadOnly, IsPayrollSettingsManagerOrReadOnly
+from .permissions import (
+    IsOrgStructureManagerOrReadOnly,
+    IsProjectStructureManagerOrReadOnly,
+    IsCounterpartyManagerOrReadOnly,
+    IsPayrollSettingsManagerOrReadOnly,
+    requires_company_scope,
+    has_structure_write_permission,
+)
 from .payroll_engine import calculate_monthly_payroll_for_period, get_effective_payroll_settings
 from .dbf_generator import generate_dskkar_bytes, generate_dskwor_bytes
 from .tax_bank_exporter import generate_wh_tax_content, generate_wp_tax_content, generate_bank_meli_excel
@@ -172,6 +179,90 @@ def validate_user_company_access(user, company_id, required_level='workspace_ful
     if cid not in allowed_ids:
         raise PermissionDenied("شما به اطلاعات و پروژه‌های این شرکت دسترسی ندارید.")
     return cid
+
+
+# ─── نوشتن محدود به شرکت برای همهٔ کاربران غیرسوپریوزر (requires_company_scope) ───
+def ensure_scoped_write(user, company_id, message):
+    """
+    رکورد باید به یکی از شرکت‌های مجاز کاربر تعلق داشته باشد. رکورد سراسری (بدون شرکت) هم رد می‌شود،
+    چون بین همهٔ شرکت‌ها مشترک است و فقط سوپریوزر آن را تغییر می‌دهد. در صورت نقض، PermissionDenied پرتاب می‌شود.
+    """
+    allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
+    if company_id is None or company_id not in allowed_ids:
+        raise PermissionDenied(message)
+
+
+def user_belongs_to_company(user_id, company_id):
+    """
+    آیا کاربر عضو شرکت است یا بوده است؟ (دسترسی صریح workspace_full، یا هر انتساب فعال یا غیرفعال در بخش‌های همان شرکت)
+    انتساب بخش هرگز نباید برای کاربر دسترسی شرکت تازه بسازد، چون عضویت بخش خودش دسترسی شرکت می‌دهد.
+    انتساب غیرفعالِ قبلی حساب می‌شود تا فعال‌سازی دوباره یا جابه‌جایی درون همان شرکت رد نشود.
+    """
+    if not user_id or not company_id:
+        return False
+    return (
+        UserCompanyAccess.objects.filter(user_id=user_id, company_id=company_id, access_level='workspace_full').exists()
+        or UserSectionAssignment.objects.filter(user_id=user_id, section__project__company_id=company_id).exists()
+    )
+
+
+def ensure_scoped_assignment(actor, target_user_id, section, final_active=True):
+    """
+    انتساب بخش: بخش باید در شرکت‌های مجاز نویسنده باشد و کاربر هدف عضو همان شرکت.
+    راهبر تشکیلاتی که مجوز قدیمی نوشتن ساختار ندارد، نمی‌تواند خودش را منتسب کند (خط قرمز نقش راهبر).
+    غیرفعال‌سازی انتساب این دو شرط عضویت را لازم ندارد.
+    """
+    company_id = section.project.company_id if section is not None and section.project_id else None
+    ensure_scoped_write(actor, company_id, "انتساب فقط در بخش‌های شرکت‌های مجاز شما ممکن است (بخش پروژهٔ سراسری مجاز نیست).")
+    if not final_active:
+        return
+    if target_user_id == actor.id and not has_structure_write_permission(actor):
+        raise PermissionDenied("انتساب خودتان به بخش را مدیر ارشد یا مدیر انجام می‌دهد، نه راهبر تشکیلات.")
+    if not user_belongs_to_company(target_user_id, company_id):
+        raise PermissionDenied("این کاربر عضو شرکتِ این بخش نیست. دسترسی شرکت را مدیر ارشد می‌دهد، نه انتساب بخش.")
+
+
+def resolve_write_company(request):
+    """
+    شرکت مقصد درون‌ریزی اکسل برای کاربر غیرسوپریوزر: شرکت فعال درخواست (پارامتر company_id یا هدر X-Company-ID)
+    که باید جزو شرکت‌های مجاز او باشد. اگر شرکتی مشخص نشده و کاربر فقط یک شرکت مجاز دارد، همان برگردانده می‌شود.
+    """
+    allowed_ids = set(get_user_allowed_companies(request.user).values_list('id', flat=True))
+    raw = request.data.get('company_id') if hasattr(request.data, 'get') else None
+    raw = raw or get_request_company_id(request)
+    if raw:
+        try:
+            cid = int(raw)
+        except (ValueError, TypeError):
+            raise serializers.ValidationError({'error': 'شناسهٔ شرکت نامعتبر است.'})
+        if cid not in allowed_ids:
+            raise PermissionDenied("شما به این شرکت دسترسی ندارید.")
+        return cid
+    if len(allowed_ids) == 1:
+        return next(iter(allowed_ids))
+    raise serializers.ValidationError({'error': 'شرکت فعال مشخص نیست؛ ابتدا شرکت را در سربرگ انتخاب کنید.'})
+
+
+def resolve_import_company(request):
+    """
+    شرکت مقصد درون‌ریزی اکسل: برای غیرسوپریوزر resolve_write_company (اجباری و مجاز).
+    برای سوپریوزر شرکت فعال درخواست اگر آمده باشد، وگرنه تهی (رفتار قبلی: تطبیق روی کل جدول).
+    """
+    if requires_company_scope(request.user):
+        return resolve_write_company(request)
+    raw = request.data.get('company_id') if hasattr(request.data, 'get') else None
+    raw = raw or get_request_company_id(request)
+    try:
+        return int(raw) if raw else None
+    except (ValueError, TypeError):
+        return None
+
+
+def readable_company_ids(user):
+    """شرکت‌هایی که خروجی اکسل کاربر غیرسوپریوزر به آن‌ها محدود می‌شود (به‌علاوهٔ رکوردهای سراسری). تهی یعنی همه."""
+    if user.is_superuser:
+        return None
+    return set(get_user_allowed_companies(user).values_list('id', flat=True))
 
 
 def broadcast_personnel_update(personnel, action_type='updated', message=None, sender_id=None, client_tab_id=None):
@@ -7154,6 +7245,11 @@ class UserCompanyAccessViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        user = self.request.user
+        if requires_company_scope(user):
+            # کاربر غیرسوپریوزر فقط دسترسی‌های شرکت‌های مجاز خودش و ردیف‌های خودش را می‌بیند
+            allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
+            qs = qs.filter(Q(company_id__in=allowed_ids) | Q(user=user))
         user_id = self.request.query_params.get('user_id')
         company_id = self.request.query_params.get('company_id')
         if user_id:
@@ -7163,16 +7259,26 @@ class UserCompanyAccessViewSet(viewsets.ModelViewSet):
         return qs.order_by('-created_at')
 
     def perform_create(self, serializer):
+        if requires_company_scope(self.request.user):
+            company = serializer.validated_data.get('company')
+            ensure_scoped_write(self.request.user, company.id if company else None, "دسترسی فقط برای شرکت‌های مجاز شما قابل اعطاست.")
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_access', 'create', instance.id, str(instance.user), instance.company_id, tab_id, self.request.user.id)
 
     def perform_update(self, serializer):
+        if requires_company_scope(self.request.user):
+            ensure_scoped_write(self.request.user, serializer.instance.company_id, "فقط دسترسی‌های شرکت‌های مجاز خود را می‌توانید تغییر دهید.")
+            if 'company' in serializer.validated_data:
+                company = serializer.validated_data.get('company')
+                ensure_scoped_write(self.request.user, company.id if company else None, "انتقال دسترسی به شرکتی که مجاز نیستید ممکن نیست.")
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_access', 'update', instance.id, str(instance.user), instance.company_id, tab_id, self.request.user.id)
 
     def perform_destroy(self, instance):
+        if requires_company_scope(self.request.user):
+            ensure_scoped_write(self.request.user, instance.company_id, "فقط دسترسی‌های شرکت‌های مجاز خود را می‌توانید حذف کنید.")
         instance_id = instance.id
         user_title = str(instance.user)
         comp_id = instance.company_id
@@ -7283,7 +7389,7 @@ class FinancialProjectViewSet(viewsets.ModelViewSet):
     """
     queryset = FinancialProject.objects.all().annotate(sections_count=Count('sections'))
     serializer_class = FinancialProjectSerializer
-    permission_classes = [permissions.IsAuthenticated, IsOrgStructureManagerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsProjectStructureManagerOrReadOnly]
     pagination_class = OptionalPageNumberPagination
 
     def get_queryset(self):
@@ -7325,6 +7431,8 @@ class FinancialProjectViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         company = serializer.validated_data.get('company')
+        if requires_company_scope(user):
+            ensure_scoped_write(user, company.id if company else None, "پروژه فقط برای شرکت‌های مجاز شما ساخته می‌شود (پروژهٔ سراسری را فقط مدیر ارشد می‌سازد).")
         if company and not user.is_superuser:
             allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
             if company.id not in allowed_ids:
@@ -7335,6 +7443,13 @@ class FinancialProjectViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         user = self.request.user
+        if requires_company_scope(user):
+            ensure_scoped_write(user, serializer.instance.company_id, "فقط پروژه‌های شرکت‌های مجاز خود را می‌توانید ویرایش کنید (پروژهٔ سراسری را فقط مدیر ارشد تغییر می‌دهد).")
+            if 'company' in serializer.validated_data:
+                new_company = serializer.validated_data.get('company')
+                # جابه‌جایی پروژه بین شرکت‌ها اعضای بخش‌هایش را عضو شرکت تازه می‌کند؛ فقط سوپریوزر
+                if (new_company.id if new_company else None) != serializer.instance.company_id:
+                    raise PermissionDenied("انتقال پروژه به شرکت دیگر یا تبدیل آن به پروژهٔ سراسری را فقط مدیر ارشد انجام می‌دهد.")
         company = serializer.validated_data.get('company') or serializer.instance.company
         if company and not user.is_superuser:
             allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
@@ -7346,6 +7461,8 @@ class FinancialProjectViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         user = self.request.user
+        if requires_company_scope(user):
+            ensure_scoped_write(user, instance.company_id, "فقط پروژه‌های شرکت‌های مجاز خود را می‌توانید حذف کنید (پروژهٔ سراسری را فقط مدیر ارشد تغییر می‌دهد).")
         if instance.company and not user.is_superuser:
             allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
             if instance.company_id not in allowed_ids:
@@ -7375,7 +7492,7 @@ class FinancialProjectViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='export-excel')
     def export_excel(self, request):
         from .org_excel_engine import export_projects_excel
-        return export_projects_excel()
+        return export_projects_excel(company_ids=readable_company_ids(request.user))
 
     @action(detail=False, methods=['get'], url_path='download-template')
     def download_template(self, request):
@@ -7385,11 +7502,13 @@ class FinancialProjectViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='import-excel')
     def import_excel(self, request):
         from .org_excel_engine import import_projects_from_excel
+        # غیرسوپریوزر فقط درون شرکت فعالِ مجاز خودش درون‌ریزی می‌کند
+        company_id = resolve_import_company(request)
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({'error': 'فایل اکسل بارگذاری نشده است.'}, status=status.HTTP_400_BAD_REQUEST)
         dry_run = request.data.get('dry_run') in ['true', 'True', True]
-        result = import_projects_from_excel(file_obj, dry_run=dry_run)
+        result = import_projects_from_excel(file_obj, dry_run=dry_run, company_id=company_id)
         if not dry_run:
             tab_id = request.headers.get('X-Client-Tab-Id')
             broadcast_org_structure_updated('project', 'import', None, 'اکسل پروژه‌ها', None, tab_id, request.user.id)
@@ -7402,7 +7521,7 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
     """
     queryset = ProjectSection.objects.all().select_related('project')
     serializer_class = ProjectSectionSerializer
-    permission_classes = [permissions.IsAuthenticated, IsOrgStructureManagerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsProjectStructureManagerOrReadOnly]
     pagination_class = OptionalPageNumberPagination
 
     def get_queryset(self):
@@ -7433,6 +7552,8 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         project = serializer.validated_data.get('project')
+        if requires_company_scope(user):
+            ensure_scoped_write(user, project.company_id if project else None, "بخش فقط در پروژه‌های شرکت‌های مجاز شما ساخته می‌شود (پروژهٔ سراسری را فقط مدیر ارشد تغییر می‌دهد).")
         if project and project.company and not user.is_superuser:
             allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
             if project.company_id not in allowed_ids:
@@ -7443,6 +7564,15 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         user = self.request.user
+        if requires_company_scope(user):
+            current_project = serializer.instance.project
+            ensure_scoped_write(user, current_project.company_id if current_project else None, "فقط بخش‌های شرکت‌های مجاز خود را می‌توانید ویرایش کنید (بخش پروژهٔ سراسری را فقط مدیر ارشد تغییر می‌دهد).")
+            if 'project' in serializer.validated_data:
+                new_project = serializer.validated_data.get('project')
+                ensure_scoped_write(user, new_project.company_id if new_project else None, "انتقال بخش به پروژهٔ شرکت دیگر یا پروژهٔ سراسری مجاز نیست.")
+                # جابه‌جایی بخش بین شرکت‌ها اعضایش را عضو شرکت تازه می‌کند؛ فقط سوپریوزر
+                if new_project.company_id != (current_project.company_id if current_project else None):
+                    raise PermissionDenied("انتقال بخش به پروژهٔ شرکت دیگر را فقط مدیر ارشد انجام می‌دهد.")
         project = serializer.validated_data.get('project') or self.get_object().project
         if project and project.company and not user.is_superuser:
             allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
@@ -7454,6 +7584,8 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         user = self.request.user
+        if requires_company_scope(user):
+            ensure_scoped_write(user, instance.project.company_id if instance.project else None, "فقط بخش‌های شرکت‌های مجاز خود را می‌توانید حذف کنید (بخش پروژهٔ سراسری را فقط مدیر ارشد تغییر می‌دهد).")
         if instance.project and instance.project.company and not user.is_superuser:
             allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
             if instance.project.company_id not in allowed_ids:
@@ -7483,7 +7615,7 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
     def export_excel(self, request):
         from .org_excel_engine import export_sections_excel
         project_id = request.query_params.get('project_id')
-        return export_sections_excel(project_id)
+        return export_sections_excel(project_id, company_ids=readable_company_ids(request.user))
 
     @action(detail=False, methods=['get'], url_path='download-template')
     def download_template(self, request):
@@ -7493,11 +7625,13 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='import-excel')
     def import_excel(self, request):
         from .org_excel_engine import import_sections_from_excel
+        # غیرسوپریوزر فقط در پروژه‌های شرکت فعالِ مجاز خودش درون‌ریزی می‌کند
+        company_id = resolve_import_company(request)
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({'error': 'فایل اکسل بارگذاری نشده است.'}, status=status.HTTP_400_BAD_REQUEST)
         dry_run = request.data.get('dry_run') in ['true', 'True', True]
-        result = import_sections_from_excel(file_obj, dry_run=dry_run)
+        result = import_sections_from_excel(file_obj, dry_run=dry_run, company_id=company_id)
         if not dry_run:
             tab_id = request.headers.get('X-Client-Tab-Id')
             broadcast_org_structure_updated('section', 'import', None, 'اکسل بخش‌ها', None, tab_id, request.user.id)
@@ -7524,9 +7658,21 @@ class ProjectSectionViewSet(viewsets.ModelViewSet):
         if not source_section:
             return Response({'error': 'بخش مبدأ یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
+        if requires_company_scope(request.user):
+            # مبدأ و مقصد هر دو در شرکت‌های مجاز راهبر و در یک شرکت، تا کپی برای کسی دسترسی شرکت تازه نسازد
+            target_company_id = target_section.project.company_id if target_section.project_id else None
+            source_company_id = source_section.project.company_id if source_section.project_id else None
+            ensure_scoped_write(request.user, target_company_id, "کپی انتساب فقط در بخش‌های شرکت‌های مجاز شما ممکن است.")
+            if source_company_id != target_company_id:
+                raise PermissionDenied("کپی انتساب فقط بین بخش‌های یک شرکت مجاز است.")
+
         source_assignments = UserSectionAssignment.objects.filter(section=source_section, is_active=True)
         if not source_assignments.exists():
             return Response({'error': 'هیچ انتساب فعالی در بخش مبدأ جهت کپی وجود ندارد.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # راهبر تشکیلات (بدون مجوز قدیمی نوشتن ساختار) با کپی هم نقش تازه برای خودش نمی‌سازد
+        if requires_company_scope(request.user) and not has_structure_write_permission(request.user):
+            source_assignments = source_assignments.exclude(user=request.user)
 
         copied_count = 0
         skipped_count = 0
@@ -7579,11 +7725,20 @@ class UserSectionAssignmentViewSet(viewsets.ModelViewSet):
     """
     queryset = UserSectionAssignment.objects.all().select_related('user', 'section', 'section__project')
     serializer_class = UserSectionAssignmentSerializer
-    permission_classes = [permissions.IsAuthenticated, IsOrgStructureManagerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsProjectStructureManagerOrReadOnly]
     pagination_class = OptionalPageNumberPagination
 
     def get_queryset(self):
         qs = super().get_queryset()
+        user = self.request.user
+        if requires_company_scope(user):
+            # فهرست اعضای بخش‌های شرکت‌های دیگر نباید دیده شود (بخش‌های سراسری و انتساب‌های خود کاربر می‌مانند)
+            allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
+            qs = qs.filter(
+                Q(section__project__company_id__in=allowed_ids)
+                | Q(section__project__company__isnull=True)
+                | Q(user=user)
+            )
         section_id = self.request.query_params.get('section_id')
         if section_id:
             try:
@@ -7666,6 +7821,12 @@ class UserSectionAssignmentViewSet(viewsets.ModelViewSet):
         except (ValueError, TypeError):
             user_id_int, sec_id_int = None, None
 
+        if user_id_int and sec_id_int and requires_company_scope(request.user):
+            # پیش از مسیر فعال‌سازی دوباره هم باید محدودهٔ شرکت راهبر بررسی شود
+            section = ProjectSection.objects.select_related('project').filter(id=sec_id_int).first()
+            if section is not None:
+                ensure_scoped_assignment(request.user, user_id_int, section)
+
         if user_id_int and sec_id_int:
             existing = UserSectionAssignment.objects.filter(
                 user_id=user_id_int,
@@ -7685,18 +7846,37 @@ class UserSectionAssignmentViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
+        if requires_company_scope(self.request.user):
+            target_user = serializer.validated_data.get('user')
+            ensure_scoped_assignment(
+                self.request.user, target_user.id if target_user else None, serializer.validated_data.get('section'),
+                final_active=serializer.validated_data.get('is_active', True)
+            )
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
         proj_id = instance.section.project_id if instance.section else None
         broadcast_org_structure_updated('assignment', 'create', instance.id, str(instance.user), proj_id, tab_id, self.request.user.id)
 
     def perform_update(self, serializer):
+        if requires_company_scope(self.request.user):
+            current = serializer.instance
+            current_company_id = current.section.project.company_id if current.section and current.section.project_id else None
+            ensure_scoped_write(self.request.user, current_company_id, "فقط انتساب‌های بخش‌های شرکت‌های مجاز خود را می‌توانید ویرایش کنید.")
+            final_user = serializer.validated_data.get('user', current.user)
+            final_section = serializer.validated_data.get('section', current.section)
+            ensure_scoped_assignment(
+                self.request.user, final_user.id if final_user else None, final_section,
+                final_active=serializer.validated_data.get('is_active', current.is_active)
+            )
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
         proj_id = instance.section.project_id if instance.section else None
         broadcast_org_structure_updated('assignment', 'update', instance.id, str(instance.user), proj_id, tab_id, self.request.user.id)
 
     def perform_destroy(self, instance):
+        if requires_company_scope(self.request.user):
+            company_id = instance.section.project.company_id if instance.section and instance.section.project_id else None
+            ensure_scoped_write(self.request.user, company_id, "فقط انتساب‌های بخش‌های شرکت‌های مجاز خود را می‌توانید حذف کنید.")
         instance_id = instance.id
         proj_id = instance.section.project_id if instance.section else None
         # غیرفعال‌سازی نرم جهت حفظ ردپای حسابرسی و انتساب‌های تاریخی
@@ -7710,7 +7890,7 @@ class UserSectionAssignmentViewSet(viewsets.ModelViewSet):
         from .org_excel_engine import export_assignments_excel
         project_id = request.query_params.get('project_id')
         role = request.query_params.get('role')
-        return export_assignments_excel(project_id, role)
+        return export_assignments_excel(project_id, role, company_ids=readable_company_ids(request.user))
 
     @action(detail=False, methods=['get'], url_path='download-template')
     def download_template(self, request):
@@ -7720,11 +7900,18 @@ class UserSectionAssignmentViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='import-excel')
     def import_excel(self, request):
         from .org_excel_engine import import_assignments_from_excel
+        # غیرسوپریوزر فقط بخش‌های شرکت فعالِ مجاز خودش را و فقط برای اعضای همان شرکت انتساب می‌دهد
+        company_id = resolve_import_company(request)
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({'error': 'فایل اکسل بارگذاری نشده است.'}, status=status.HTTP_400_BAD_REQUEST)
         dry_run = request.data.get('dry_run') in ['true', 'True', True]
-        result = import_assignments_from_excel(file_obj, dry_run=dry_run)
+        forbidden_self = request.user.id if company_id is not None and not has_structure_write_permission(request.user) else None
+        result = import_assignments_from_excel(
+            file_obj, dry_run=dry_run, company_id=company_id,
+            member_check=user_belongs_to_company if requires_company_scope(request.user) else None,
+            forbidden_user_id=forbidden_self
+        )
         if not dry_run:
             tab_id = request.headers.get('X-Client-Tab-Id')
             broadcast_org_structure_updated('assignment', 'import', None, 'اکسل انتساب‌ها', None, tab_id, request.user.id)
@@ -7769,6 +7956,31 @@ class UserSectionAssignmentViewSet(viewsets.ModelViewSet):
 
         # اعتبارسنجی وجود کاربران در دیتابیس
         existing_users = set(User.objects.filter(id__in=valid_user_ids).values_list('id', flat=True))
+
+        if requires_company_scope(request.user):
+            # همه یا هیچ: بخش باید در شرکت‌های مجاز باشد و هر کاربر عضو شرکتِ این بخش.
+            # کاربر ناموجود هم مثل غیرعضو گزارش می‌شود تا وجود نام‌های کاربری بیرون از شرکت لو نرود.
+            company_id = section.project.company_id if section.project_id else None
+            ensure_scoped_write(request.user, company_id, "انتساب فقط در بخش‌های شرکت‌های مجاز شما ممکن است (بخش پروژهٔ سراسری مجاز نیست).")
+            rejected = []
+            for uid in valid_user_ids:
+                if uid not in existing_users:
+                    rejected.append(uid)
+                    continue
+                try:
+                    ensure_scoped_assignment(request.user, uid, section)
+                except PermissionDenied:
+                    rejected.append(uid)
+            if rejected:
+                # نام کاربری فقط برای کاربرانی که در شرکت‌های مجاز نویسنده دیده می‌شوند (بقیه با شناسه)
+                allowed_ids = set(get_user_allowed_companies(request.user).values_list('id', flat=True))
+                names = dict(User.objects.filter(id__in=rejected).filter(
+                    Q(company_accesses__company_id__in=allowed_ids, company_accesses__access_level='workspace_full')
+                    | Q(section_assignments__section__project__company_id__in=allowed_ids)
+                ).distinct().values_list('id', 'username'))
+                labels = '، '.join(names.get(uid, f'#{uid}') for uid in rejected)
+                raise PermissionDenied(f"این کاربران را نمی‌توان در این بخش منتسب کرد (عضو شرکت این بخش نیستند یا انتساب خود است): {labels}. آن‌ها را از انتخاب بردارید.")
+
         if not existing_users:
             return Response({'error': 'هیچ یک از کاربران ارسالی در سیستم یافت نشدند.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -7804,13 +8016,13 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
     """
     queryset = Counterparty.objects.all()
     serializer_class = CounterpartySerializer
-    permission_classes = [permissions.IsAuthenticated, IsOrgStructureManagerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsCounterpartyManagerOrReadOnly]
     pagination_class = OptionalPageNumberPagination
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'create']:
             return [permissions.IsAuthenticated()]
-        return [permissions.IsAuthenticated(), IsOrgStructureManagerOrReadOnly()]
+        return [permissions.IsAuthenticated(), IsCounterpartyManagerOrReadOnly()]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -7852,18 +8064,29 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        # انتساب خودکار شرکت فعال به طرف‌حساب در صورت خالی بودن
-        if 'company' not in serializer.validated_data or not serializer.validated_data.get('company'):
+        if requires_company_scope(user):
+            # شرکت به ترتیب: بدنه (اگر مجاز) ← هدر شرکت فعال (اگر مجاز) ← تنها شرکت مجاز کاربر.
+            # شرکت غیرمجاز نادیده گرفته می‌شود و رد نمی‌شود، چون پاسخ 4xx رکورد صف آفلاین را حذف می‌کند؛
+            # پس تزریق به شرکت دیگر ممکن نیست و ثبت مشروعِ صف‌شده هم از دست نمی‌رود.
+            allowed_cids = set(get_user_allowed_companies(user).values_list('id', flat=True))
+            explicit_company = serializer.validated_data.pop('company', None)
+            candidates = [explicit_company.id if explicit_company else None]
+            try:
+                req_cid = get_request_company_id(self.request)
+                candidates.append(int(req_cid) if req_cid else None)
+            except (ValueError, TypeError):
+                pass
+            if len(allowed_cids) == 1:
+                candidates.append(next(iter(allowed_cids)))
+            company_id = next((c for c in candidates if c is not None and c in allowed_cids), None)
+            if company_id is not None:
+                serializer.validated_data['company_id'] = company_id
+        elif not serializer.validated_data.get('company'):
+            # سوپریوزر: شرکت فعال درخواست، اگر در بدنه نیامده باشد
             req_cid = get_request_company_id(self.request)
             if req_cid:
                 try:
-                    cid = int(req_cid)
-                    if not user.is_superuser:
-                        allowed_cids = set(get_user_allowed_companies(user).values_list('id', flat=True))
-                        if cid in allowed_cids:
-                            serializer.validated_data['company_id'] = cid
-                    else:
-                        serializer.validated_data['company_id'] = cid
+                    serializer.validated_data['company_id'] = int(req_cid)
                 except (ValueError, TypeError):
                     pass
         instance = serializer.save()
@@ -7871,11 +8094,19 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
         broadcast_org_structure_updated('counterparty', 'create', instance.id, instance.name, None, tab_id, self.request.user.id)
 
     def perform_update(self, serializer):
+        user = self.request.user
+        if requires_company_scope(user):
+            ensure_scoped_write(user, serializer.instance.company_id, "فقط طرف‌حساب‌های شرکت‌های مجاز خود را می‌توانید ویرایش کنید (طرف‌حساب سراسری را فقط مدیر ارشد تغییر می‌دهد).")
+            if 'company' in serializer.validated_data:
+                new_company = serializer.validated_data.get('company')
+                ensure_scoped_write(user, new_company.id if new_company else None, "تبدیل طرف‌حساب به طرف‌حساب سراسری یا انتقال آن به شرکت دیگر مجاز نیست.")
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
         broadcast_org_structure_updated('counterparty', 'update', instance.id, instance.name, None, tab_id, self.request.user.id)
 
     def perform_destroy(self, instance):
+        if requires_company_scope(self.request.user):
+            ensure_scoped_write(self.request.user, instance.company_id, "فقط طرف‌حساب‌های شرکت‌های مجاز خود را می‌توانید حذف کنید (طرف‌حساب سراسری را فقط مدیر ارشد تغییر می‌دهد).")
         instance_id = instance.id
         instance_name = instance.name
 
@@ -7895,7 +8126,7 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
     def export_excel(self, request):
         from .org_excel_engine import export_counterparties_excel
         section_id = request.query_params.get('section_id')
-        return export_counterparties_excel(section_id)
+        return export_counterparties_excel(section_id, company_ids=readable_company_ids(request.user))
 
     @action(detail=False, methods=['get'], url_path='download-template')
     def download_template(self, request):
@@ -7905,11 +8136,13 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='import-excel')
     def import_excel(self, request):
         from .org_excel_engine import import_counterparties_from_excel
+        # غیرسوپریوزر فقط طرف‌حساب‌های شرکت فعالِ مجاز خودش را می‌سازد یا به‌روز می‌کند
+        company_id = resolve_import_company(request)
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({'error': 'فایلی ارسال نشده است'}, status=status.HTTP_400_BAD_REQUEST)
         dry_run = request.data.get('dry_run') in ['true', 'True', True]
-        res = import_counterparties_from_excel(file_obj, dry_run=dry_run)
+        res = import_counterparties_from_excel(file_obj, dry_run=dry_run, company_id=company_id)
         if not dry_run:
             tab_id = request.headers.get('X-Client-Tab-Id')
             broadcast_org_structure_updated('counterparty', 'import', None, 'Bulk Import', None, tab_id, request.user.id)
@@ -8164,6 +8397,7 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
             is_manager = UserSectionAssignment.objects.filter(
                 user=user,
                 section_id=section_id,
+                is_active=True,
                 role__in=['supervisor', 'accountant', 'manager', 'treasury']
             ).exists() if section_id else False
             if not is_manager:
@@ -8225,6 +8459,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
             is_manager = UserSectionAssignment.objects.filter(
                 user=user,
                 section_id=section_id,
+                is_active=True,
                 role__in=['supervisor', 'accountant', 'manager', 'treasury']
             ).exists() if section_id else False
             if not is_manager:
@@ -8317,7 +8552,7 @@ class PettyCashTransactionViewSet(viewsets.ModelViewSet):
 
         target_user_id = request.query_params.get('custodian_id')
         if target_user_id and (request.user.is_superuser or UserSectionAssignment.objects.filter(
-            user=request.user, section_id=section_id, role__in=['supervisor', 'accountant', 'manager', 'treasury']
+            user=request.user, section_id=section_id, is_active=True, role__in=['supervisor', 'accountant', 'manager', 'treasury']
         ).exists()):
             custodian = get_user_model().objects.filter(id=target_user_id).first() or request.user
         else:

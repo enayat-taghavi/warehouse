@@ -133,7 +133,8 @@ PROJECT_COLUMNS = [
     {'title': 'تاریخ ایجاد', 'key': 'created_at', 'width': 22},
 ]
 
-def export_projects_excel():
+def export_projects_excel(company_ids=None):
+    """company_ids تهی یعنی همهٔ پروژه‌ها (سوپریوزر)؛ وگرنه پروژه‌های همان شرکت‌ها به‌علاوهٔ پروژه‌های سراسری"""
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = 'پروژه‌های مالی'
@@ -144,7 +145,10 @@ def export_projects_excel():
     align_text = Alignment(horizontal='right', vertical='center')
 
     # بهینه‌سازی N+1 کوئری با Count('sections')
-    for row_idx, p in enumerate(FinancialProject.objects.annotate(sections_count=Count('sections')).order_by('code'), 3):
+    projects = FinancialProject.objects.annotate(sections_count=Count('sections'))
+    if company_ids is not None:
+        projects = projects.filter(Q(company_id__in=company_ids) | Q(company__isnull=True))
+    for row_idx, p in enumerate(projects.order_by('code'), 3):
         ws.cell(row=row_idx, column=1, value=p.code).alignment = align_data
         ws.cell(row=row_idx, column=2, value=p.name).alignment = align_text
         ws.cell(row=row_idx, column=3, value=p.description or '-').alignment = align_text
@@ -175,13 +179,15 @@ SECTION_COLUMNS = [
     {'title': 'تاریخ ایجاد', 'key': 'created_at', 'width': 22},
 ]
 
-def export_sections_excel(project_id=None):
+def export_sections_excel(project_id=None, company_ids=None):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = 'بخش‌های پروژه'
     _apply_2row_header(ws, SECTION_COLUMNS, header_bg='0D9488')  # سبز کله‌غازی
 
     qs = ProjectSection.objects.select_related('project').all()
+    if company_ids is not None:
+        qs = qs.filter(Q(project__company_id__in=company_ids) | Q(project__company__isnull=True))
     if project_id:
         try:
             qs = qs.filter(project_id=int(project_id))
@@ -228,13 +234,16 @@ COUNTERPARTY_COLUMNS = [
     {'title': 'تاریخ ثبت', 'key': 'created_at', 'width': 22},
 ]
 
-def export_counterparties_excel(section_id=None):
+def export_counterparties_excel(section_id=None, company_ids=None):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = 'طرف‌حساب‌های مالی'
     _apply_2row_header(ws, COUNTERPARTY_COLUMNS, header_bg='059669')  # سبز زمردی
 
-    qs = Counterparty.objects.all().order_by('name')
+    qs = Counterparty.objects.all()
+    if company_ids is not None:
+        qs = qs.filter(Q(company_id__in=company_ids) | Q(company__isnull=True))
+    qs = qs.order_by('name')
 
     font_data = Font(name='B Nazanin', size=11)
     align_data = Alignment(horizontal='center', vertical='center')
@@ -280,13 +289,15 @@ ASSIGNMENT_COLUMNS = [
     {'title': 'تاریخ انتساب', 'key': 'created_at', 'width': 22},
 ]
 
-def export_assignments_excel(project_id=None, role=None):
+def export_assignments_excel(project_id=None, role=None, company_ids=None):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = 'ماتریس انتساب‌های سازمانی'
     _apply_2row_header(ws, ASSIGNMENT_COLUMNS, header_bg='6366F1')
 
     qs = UserSectionAssignment.objects.select_related('user', 'section', 'section__project').all()
+    if company_ids is not None:
+        qs = qs.filter(Q(section__project__company_id__in=company_ids) | Q(section__project__company__isnull=True))
     if project_id:
         try:
             qs = qs.filter(section__project_id=int(project_id))
@@ -483,9 +494,11 @@ def download_org_template(entity_type='counterparties'):
 # -------------------------------------------------------------
 # پارس و ورود دسته‌جمعی داده‌ها از فایل اکسل (Bulk Import با پشتیبانی از dry_run)
 # -------------------------------------------------------------
-def import_counterparties_from_excel(file_obj, dry_run=False):
+def import_counterparties_from_excel(file_obj, dry_run=False, company_id=None):
     """
-    خواندن و ثبت دسته‌جمعی طرف‌های حساب از اکسل با پشتیبانی از dry_run
+    خواندن و ثبت دسته‌جمعی طرف‌های حساب از اکسل با پشتیبانی از dry_run.
+    company_id تهی (سوپریوزر): رفتار قبلی، تطبیق نام روی کل جدول.
+    company_id داده‌شده: تطبیق و ساخت فقط در همان شرکت؛ طرف‌حساب سراسری یا شرکت دیگر دست نمی‌خورد.
     """
     try:
         wb = openpyxl.load_workbook(file_obj, data_only=True)
@@ -535,8 +548,11 @@ def import_counterparties_from_excel(file_obj, dry_run=False):
         active_val = str(ws.cell(row=row_idx, column=9).value or 'بله').strip().lower()
         is_active = active_val not in ['خیر', 'false', '0', 'no']
 
+        lookup = {'name': name}
+        if company_id is not None:
+            lookup['company_id'] = company_id
         try:
-            exists = Counterparty.objects.filter(name=name).exists()
+            exists = Counterparty.objects.filter(**lookup).exists()
             if dry_run:
                 if exists:
                     updated += 1
@@ -555,7 +571,7 @@ def import_counterparties_from_excel(file_obj, dry_run=False):
                         'is_active': is_active
                     }
                     cp, is_new = Counterparty.objects.update_or_create(
-                        name=name,
+                        **lookup,
                         defaults=defaults
                     )
                     if is_new:
@@ -580,9 +596,11 @@ def import_counterparties_from_excel(file_obj, dry_run=False):
     }
 
 
-def import_projects_from_excel(file_obj, dry_run=False):
+def import_projects_from_excel(file_obj, dry_run=False, company_id=None):
     """
-    خواندن و ثبت دسته‌جمعی پروژه‌های مالی از اکسل با پشتیبانی از dry_run
+    خواندن و ثبت دسته‌جمعی پروژه‌های مالی از اکسل با پشتیبانی از dry_run.
+    company_id تهی (سوپریوزر): رفتار قبلی، تطبیق کد روی کل جدول.
+    company_id داده‌شده: تطبیق و ساخت فقط در همان شرکت (کد پروژه در هر شرکت یکتاست).
     """
     try:
         wb = openpyxl.load_workbook(file_obj, data_only=True)
@@ -612,8 +630,11 @@ def import_projects_from_excel(file_obj, dry_run=False):
         active_val = str(ws.cell(row=row_idx, column=4).value or 'بله').strip().lower()
         is_active = active_val not in ['خیر', 'false', '0', 'no']
 
+        lookup = {'code': code}
+        if company_id is not None:
+            lookup['company_id'] = company_id
         try:
-            exists = FinancialProject.objects.filter(code=code).exists()
+            exists = FinancialProject.objects.filter(**lookup).exists()
             if dry_run:
                 if exists:
                     updated += 1
@@ -622,7 +643,7 @@ def import_projects_from_excel(file_obj, dry_run=False):
             else:
                 with transaction.atomic():
                     p, is_new = FinancialProject.objects.update_or_create(
-                        code=code,
+                        **lookup,
                         defaults={'name': name, 'description': desc or None, 'is_active': is_active}
                     )
                     if is_new:
@@ -647,9 +668,10 @@ def import_projects_from_excel(file_obj, dry_run=False):
     }
 
 
-def import_sections_from_excel(file_obj, dry_run=False):
+def import_sections_from_excel(file_obj, dry_run=False, company_id=None):
     """
-    خواندن و ثبت دسته‌جمعی بخش‌های پروژه از اکسل با پشتیبانی از dry_run
+    خواندن و ثبت دسته‌جمعی بخش‌های پروژه از اکسل با پشتیبانی از dry_run.
+    company_id داده‌شده: پروژهٔ مادر فقط از پروژه‌های همان شرکت پیدا می‌شود.
     """
     try:
         wb = openpyxl.load_workbook(file_obj, data_only=True)
@@ -671,9 +693,13 @@ def import_sections_from_excel(file_obj, dry_run=False):
         if not proj_code or str(proj_code).strip() == '':
             continue
         proj_code = normalize_digits(str(proj_code)).strip().upper()
-        proj = FinancialProject.objects.filter(code=proj_code).first()
+        proj_qs = FinancialProject.objects.filter(code=proj_code)
+        if company_id is not None:
+            proj_qs = proj_qs.filter(company_id=company_id)
+        proj = proj_qs.first()
         if not proj:
-            errors.append(f"ردیف {row_idx}: پروژه با کد «{proj_code}» یافت نشد.")
+            scope_hint = "در شرکت فعال " if company_id is not None else ""
+            errors.append(f"ردیف {row_idx}: پروژه با کد «{proj_code}» {scope_hint}یافت نشد.")
             continue
 
         code = ws.cell(row=row_idx, column=3).value
@@ -724,9 +750,12 @@ def import_sections_from_excel(file_obj, dry_run=False):
     }
 
 
-def import_assignments_from_excel(file_obj, dry_run=False):
+def import_assignments_from_excel(file_obj, dry_run=False, company_id=None, member_check=None, forbidden_user_id=None):
     """
-    خواندن و ثبت دسته‌جمعی انتساب کاربران به بخش‌ها از اکسل با پشتیبانی از dry_run
+    خواندن و ثبت دسته‌جمعی انتساب کاربران به بخش‌ها از اکسل با پشتیبانی از dry_run.
+    company_id داده‌شده: بخش فقط از پروژه‌های همان شرکت پیدا می‌شود و کاربر باید از قبل عضو همان شرکت باشد
+    (member_check)، چون عضویت بخش خودش دسترسی شرکت می‌دهد.
+    forbidden_user_id: کاربری که نباید خودش را منتسب کند (راهبر تشکیلات).
     """
     try:
         wb = openpyxl.load_workbook(file_obj, data_only=True)
@@ -759,7 +788,14 @@ def import_assignments_from_excel(file_obj, dry_run=False):
         username = str(raw_username).strip()
         user = User.objects.filter(username=username).first()
         if not user:
-            errors.append(f"ردیف {row_idx}: کاربر با نام کاربری «{username}» یافت نشد.")
+            if company_id is not None:
+                # همان پیام غیرعضو، تا وجود نام‌های کاربری بیرون از شرکت لو نرود
+                errors.append(f"ردیف {row_idx}: کاربر «{username}» عضو شرکت فعال نیست یا یافت نشد.")
+            else:
+                errors.append(f"ردیف {row_idx}: کاربر با نام کاربری «{username}» یافت نشد.")
+            continue
+        if forbidden_user_id is not None and user.id == forbidden_user_id:
+            errors.append(f"ردیف {row_idx}: انتساب خودتان را مدیر ارشد یا مدیر انجام می‌دهد، نه راهبر تشکیلات.")
             continue
 
         proj_code = normalize_digits(str(ws.cell(row=row_idx, column=3).value or '')).strip().upper()
@@ -769,6 +805,8 @@ def import_assignments_from_excel(file_obj, dry_run=False):
             continue
 
         sec_qs = ProjectSection.objects.filter(code=sec_code)
+        if company_id is not None:
+            sec_qs = sec_qs.filter(project__company_id=company_id)
         if proj_code:
             sec_qs = sec_qs.filter(project__code=proj_code)
         elif sec_qs.count() > 1:
@@ -777,7 +815,12 @@ def import_assignments_from_excel(file_obj, dry_run=False):
 
         sec = sec_qs.first()
         if not sec:
-            errors.append(f"ردیف {row_idx}: بخش با کد «{sec_code}» یافت نشد.")
+            scope_hint = "در شرکت فعال " if company_id is not None else ""
+            errors.append(f"ردیف {row_idx}: بخش با کد «{sec_code}» {scope_hint}یافت نشد.")
+            continue
+
+        if company_id is not None and member_check is not None and not member_check(user.id, company_id):
+            errors.append(f"ردیف {row_idx}: کاربر «{username}» عضو شرکت فعال نیست یا یافت نشد.")
             continue
 
         raw_role = str(ws.cell(row=row_idx, column=5).value or 'employee').strip().lower()

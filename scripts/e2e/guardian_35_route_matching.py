@@ -54,20 +54,22 @@ EXPECTED_LEGACY_REDIRECTS = {
     "approvals": "app/warehouse/approvals",
     "doc_approvals": "app/warehouse/doc_approvals",
     "feed_approvals": "app/warehouse/feed_approvals",
-    "finance-cartable": "app/finance/finance-cartable",
-    "attendance": "app/finance/attendance",
-    "fleet": "app/finance/fleet",
-    "fleet-attendance": "app/finance/fleet-attendance",
+    # صفحه‌های بازنشسته (طرح منوی نقش‌ها و راهبر تشکیلات) مستقیم به هاب جانشین می‌روند
+    "finance-cartable": "app/finance/accountant-payroll",
+    "attendance": "app/finance/employee-attendance",
+    "fleet": "app/finance/employee-fleet",
+    "fleet-attendance": "app/finance/employee-fleet",
+    "employee-portal": "app/finance/employee-attendance",
     "manager-approvals": "app/finance/manager-approvals",
-    "treasury-cartable": "app/finance/treasury-cartable",
-    "treasury": "app/finance/treasury",
+    "treasury-cartable": "app/finance/treasurer-disbursements",
+    "treasury": "app/finance/treasurer-disbursements",
     "profiles": "app/finance/profiles",
     "personnel-profiles": "app/finance/personnel-profiles",
     "base-settings": "app/finance/base-settings",
     "projects-and-sections": "app/finance/projects-and-sections",
-    "personnel": "app/finance/finance-cartable",
-    "payroll": "app/finance/finance-cartable",
-    "fleet-settlement": "app/finance/treasury-cartable",
+    "personnel": "app/finance/accountant-payroll",
+    "payroll": "app/finance/accountant-payroll",
+    "fleet-settlement": "app/finance/treasurer-disbursements",
     "finance-audit": "app/finance/audit",
     "operations": "app/operations/cockpit",
     "cockpit": "app/operations/cockpit",
@@ -100,7 +102,7 @@ def test_route_matching():
     # ۲. راستی‌آزمایی حذف ایمپورت‌های مشتاق (Eager) کامپوننت‌های زیرمجموعه
     eager_components = [
         "CounterDashboard", "SupervisorDashboard", "ManagerReview",
-        "FinanceCartable", "WarehouseAttendance", "ManagerApprovals",
+        "AccountantPayrollHubComponent", "EmployeeAttendanceHubComponent", "ManagerApprovals",
         "WhSettings", "Feeding", "Customs", "CountTracking"
     ]
     found_eagers = [comp for comp in eager_components if f"import {{ {comp} }}" in content or f"import {{{comp}}}" in content]

@@ -8,7 +8,7 @@ from django.contrib.auth.models import Group, Permission
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from .models import CustomUser, CustomRole
-from .serializers import UserSerializer, CustomTokenObtainPairSerializer, CustomRoleSerializer, PermissionSerializer
+from .serializers import UserSerializer, UserDirectorySerializer, CustomTokenObtainPairSerializer, CustomRoleSerializer, PermissionSerializer
 
 from common.mixins import DeleteImpactMixin
 from common.excel_utils import sanitize_excel_row
@@ -53,7 +53,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     serializer_class = UserSerializer
     pagination_class = OptionalPageNumberPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['username', 'first_name', 'last_name', 'national_code', 'phone_number', 'company', 'operational_zone']
+    FULL_SEARCH_FIELDS = ['username', 'first_name', 'last_name', 'national_code', 'phone_number', 'company', 'operational_zone']
+    DIRECTORY_SEARCH_FIELDS = ['username', 'first_name', 'last_name']
     ordering_fields = ['id', 'username', 'first_name', 'last_name', 'date_joined', 'last_login']
     ordering = ['-id']
     filterset_fields = ['is_active', 'company', 'operational_zone']
@@ -71,19 +72,31 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         qs = qs.prefetch_related(*prefetch_items)
 
         user = self.request.user
+        get_user_allowed_companies = None
+        if apps.is_installed('personnel'):
+            from personnel.views import get_user_allowed_companies
 
         # تفکیک چندشرکتی اختیاری بر مبنای کوئری‌پارامتر یا فیلتر دسترسی سازمانی
         company_id_param = self.request.query_params.get('company_id')
-        if company_id_param and company_id_param.isdigit():
+        if self._is_org_admin_directory():
+            qs = self._org_admin_directory_queryset(qs, user, get_user_allowed_companies)
+        elif company_id_param and company_id_param.isdigit():
             cid = int(company_id_param)
+            if user and user.is_authenticated and not user.is_superuser and get_user_allowed_companies is not None:
+                # شرکت درخواستی باید از شرکت‌های مجاز کاربر باشد
+                if cid not in set(get_user_allowed_companies(user).values_list('id', flat=True)):
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied('شما به کاربران این شرکت دسترسی ندارید.')
             qs = qs.filter(Q(company_accesses__company_id=cid) | Q(is_superuser=True)).distinct()
         elif user and user.is_authenticated and not user.is_superuser:
             # کاربر عادی بدون فیلتر صریح: فقط کاربران شرکت‌های مشترک مجاز را مشاهده می‌کند
-            if apps.is_installed('personnel'):
-                from personnel.views import get_user_allowed_companies
+            if get_user_allowed_companies is not None:
                 allowed_cids = get_user_allowed_companies(user).values_list('id', flat=True)
                 if allowed_cids.exists():
                     qs = qs.filter(Q(company_accesses__company_id__in=allowed_cids) | Q(id=user.id)).distinct()
+                else:
+                    # کاربر بدون هیچ شرکت مجاز، کاربران شرکت‌ها را نمی‌بیند
+                    qs = qs.filter(id=user.id)
 
         has_perm = self.request.query_params.get('has_perm')
         if has_perm:
@@ -98,6 +111,50 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 qs = qs.exclude(is_superuser=True)
         return qs
 
+    @property
+    def search_fields(self):
+        # فهرست کمینهٔ راهبر تشکیلات نباید با جستجو کد ملی یا تلفن اعضا را حرف‌به‌حرف لو بدهد
+        if getattr(self, 'request', None) is not None and self._is_org_admin_directory():
+            return self.DIRECTORY_SEARCH_FIELDS
+        return self.FULL_SEARCH_FIELDS
+
+    def _is_org_admin_directory(self):
+        """
+        فهرست کاربران برای راهبر تشکیلاتی که view_sys_users ندارد (کشوی انتساب به بخش):
+        فقط کاربران شرکت‌های مجاز خودش و فقط فیلدهای کمینه.
+        """
+        user = self.request.user
+        # action فقط در چرخهٔ درخواست DRF ست می‌شود (نگهبان ۴۹ ویوست را دستی می‌سازد)
+        return bool(
+            getattr(self, 'action', None) == 'list' and user and user.is_authenticated and not user.is_superuser
+            and not user.has_perm('accounts.view_sys_users')
+            and user.has_perm('accounts.perm_manage_projects_sections')
+        )
+
+    def _org_admin_directory_queryset(self, qs, user, get_user_allowed_companies):
+        from django.db.models import Q
+        from rest_framework.exceptions import PermissionDenied
+
+        if get_user_allowed_companies is None:
+            return qs.filter(id=user.id)
+        allowed_cids = set(get_user_allowed_companies(user).values_list('id', flat=True))
+        company_id_param = self.request.query_params.get('company_id')
+        if company_id_param:
+            if not company_id_param.isdigit() or int(company_id_param) not in allowed_cids:
+                raise PermissionDenied('شما به کاربران این شرکت دسترسی ندارید.')
+            allowed_cids = {int(company_id_param)}
+        # عضو شرکت = دسترسی صریح workspace_full یا انتساب فعال در بخش‌های پروژه‌های همان شرکت
+        return qs.filter(
+            Q(company_accesses__company_id__in=allowed_cids, company_accesses__access_level='workspace_full')
+            | Q(section_assignments__is_active=True, section_assignments__section__project__company_id__in=allowed_cids)
+            | Q(id=user.id)
+        ).distinct()
+
+    def get_serializer_class(self):
+        if self._is_org_admin_directory():
+            return UserDirectorySerializer
+        return super().get_serializer_class()
+
     def get_permissions(self):
         from rest_framework.permissions import IsAuthenticated, AllowAny
         from .permissions import HasMenuAccess
@@ -106,7 +163,10 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             permission_classes = [AllowAny()]
         elif self.action in ['change_password', 'update_preferences', 'my_avatar']:
             permission_classes = [IsAuthenticated()]
-        elif self.action in ['list', 'retrieve', 'export_excel', 'download_template']:
+        elif self.action == 'list':
+            # راهبر تشکیلات برای انتساب کاربران به بخش‌ها فقط فهرست را می‌بیند (بدون ویرایش)
+            permission_classes = [HasMenuAccess('view_sys_users') | HasMenuAccess('perm_manage_projects_sections')]
+        elif self.action in ['retrieve', 'export_excel', 'download_template']:
             permission_classes = [HasMenuAccess('view_sys_users')]
         elif self.action in ['create', 'import_excel']:
             permission_classes = [HasMenuAccess('view_sys_users') | HasMenuAccess('perm_usr_add')]

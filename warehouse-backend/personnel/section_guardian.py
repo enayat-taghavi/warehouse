@@ -407,66 +407,74 @@ class SectionGuardian:
 
     def audit_phase_5_employee_portal(self) -> bool:
         """
-        ارزیابی سخت‌گیرانه فاز ۳: استقرار پنل کارمند (Employee Portal) با ۵ تب بدون بازنویسی
-        ۱. بررسی وجود فایل‌های کامپوننت employee-portal (ts, html, css)
-        ۲. ثبت مسیر در accounting.routes.ts
-        ۳. ثبت آیتم منو در nav-items.ts
-        ۴. ثبت ریدایرکت لگسی در app.routes.ts
-        ۵. فیلترهای section_id و project_id در ویوست‌های بک‌اند
+        ارزیابی فاز ۳ پس از بازنشستگی پنل تجمیعی کارمند (طرح منوی نقش‌ها و راهبر تشکیلات):
+        پنل تجمیعی employee-portal حذف شد و ۶ هاب کارمند جانشین آن هستند.
+        ۱. کد پنل تجمیعی حذف شده است
+        ۲. هر ۶ هاب کارمند مستقرند و انتخابگر بخش منتسب به کاربر را دارند
+        ۳. مسیر قدیمی در accounting.routes.ts مستقیم به هاب کارکرد ریدایرکت می‌شود
+        ۴. منوی کارمند (EMPLOYEE_NAV_ITEMS) همان ۶ هاب است و آیتم پنل تجمیعی ندارد
+        ۵. ریدایرکت لگسی app.routes.ts مستقیم به هاب کارکرد می‌رود
+        ۶. فیلترهای section_id در ویوست‌های بک‌اند
         """
         all_passed = True
         checks = []
 
         try:
-            # ۱. فایل‌های کامپوننت فرانت‌اند
-            portal_dir = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'components', 'finance', 'employee-portal')
-            ts_path = os.path.join(portal_dir, 'employee-portal.ts')
-            html_path = os.path.join(portal_dir, 'employee-portal.html')
-            css_path = os.path.join(portal_dir, 'employee-portal.css')
+            front_app = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app')
+            employee_hubs = ['employee-attendance', 'employee-fleet', 'employee-invoices',
+                             'employee-petty-cash', 'employee-new-vehicle', 'employee-new-personnel']
 
-            comp_files_exist = os.path.exists(ts_path) and os.path.exists(html_path) and os.path.exists(css_path)
-            checks.append(("فایل‌های سه‌گانه EmployeePortalComponent", comp_files_exist, "کامپوننت در src/app/components/finance/employee-portal مستقر است"))
-            if not comp_files_exist:
+            # ۱. حذف کد پنل تجمیعی
+            portal_dir = os.path.join(front_app, 'components', 'finance', 'employee-portal')
+            portal_retired = not os.path.exists(portal_dir)
+            checks.append(("بازنشستگی کد EmployeePortalComponent", portal_retired, "پوشهٔ components/finance/employee-portal حذف شده است"))
+            if not portal_retired:
                 all_passed = False
 
-            # ۲. بررسی ۵ تب در کامپوننت
-            with open(html_path, 'r', encoding='utf-8') as f:
-                html_code = f.read()
-            has_tabs = all(t in html_code for t in ['attendance', 'fleet', 'invoices', 'new_vehicle', 'new_personnel'])
-            checks.append(("پشتیبانی از ۵ تب عملیاتی کارمند", has_tabs, "تب‌های حضورغیاب، ناوگان، فاکتور، تعریف خودرو و پرسنل پیاده‌سازی شدند"))
-            if not has_tabs:
+            # ۲. استقرار ۶ هاب کارمند با انتخابگر بخش
+            missing_hubs = []
+            hubs_without_switcher = []
+            for hub in employee_hubs:
+                hub_dir = os.path.join(front_app, 'components', 'finance', 'employee', hub)
+                ts_path = os.path.join(hub_dir, f'{hub}.ts')
+                html_path = os.path.join(hub_dir, f'{hub}.html')
+                if not (os.path.exists(ts_path) and os.path.exists(html_path)):
+                    missing_hubs.append(hub)
+                    continue
+                with open(html_path, 'r', encoding='utf-8') as f:
+                    hub_html = f.read()
+                if not ('selectedSectionId' in hub_html and 'mySections' in hub_html):
+                    hubs_without_switcher.append(hub)
+            checks.append(("استقرار ۶ هاب جانشین پنل کارمند", not missing_hubs, f"هاب‌های غایب: {missing_hubs or 'ندارد'}"))
+            checks.append(("سلکتور بخش‌های منتسب به کاربر در هر ۶ هاب", not hubs_without_switcher, f"هاب‌های بدون سلکتور: {hubs_without_switcher or 'ندارد'}"))
+            if missing_hubs or hubs_without_switcher:
                 all_passed = False
 
-            # ۳. بررسی سوییچر بخش و پروژه
-            has_switcher = 'selectedSectionId' in html_code and 'mySections' in html_code
-            checks.append(("سلکتور دراپ‌داون بخش‌های منتسب به کاربر", has_switcher, "امکان تغییر بخش فعال با ذخیره در کوئری‌پارامترها مهیا است"))
-            if not has_switcher:
-                all_passed = False
-
-            # ۴. روتینگ در accounting.routes.ts
-            acct_routes_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'modules', 'accounting', 'accounting.routes.ts')
+            # ۳. ریدایرکت مسیر قدیمی در accounting.routes.ts
+            acct_routes_path = os.path.join(front_app, 'modules', 'accounting', 'accounting.routes.ts')
             with open(acct_routes_path, 'r', encoding='utf-8') as f:
                 acct_routes = f.read()
-            has_acct_route = 'employee-portal' in acct_routes and 'EmployeePortalComponent' in acct_routes
-            checks.append(("ثبت مسیر در accounting.routes.ts", has_acct_route, "مسیر employee-portal ثبت شده است"))
-            if not has_acct_route:
+            has_acct_redirect = ("{ path: 'employee-portal', redirectTo: 'employee-attendance'" in acct_routes
+                                 and 'EmployeePortalComponent' not in acct_routes)
+            checks.append(("ریدایرکت employee-portal در accounting.routes.ts", has_acct_redirect, "مسیر قدیمی مستقیم به employee-attendance می‌رود و کامپوننت قدیمی import نمی‌شود"))
+            if not has_acct_redirect:
                 all_passed = False
 
-            # ۵. ثبت در منوی سایدبار nav-items.ts
-            nav_items_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'modules', 'accounting', 'nav-items.ts')
+            # ۴. منوی کارمند
+            nav_items_path = os.path.join(front_app, 'modules', 'accounting', 'nav-items.ts')
             with open(nav_items_path, 'r', encoding='utf-8') as f:
                 nav_items = f.read()
-            has_nav = 'employee-portal' in nav_items and 'پنل ثبت کارمند' in nav_items
-            checks.append(("ثبت در سایدبار حسابداری (nav-items.ts)", has_nav, "گزینه پنل کارمند در سایدبار فعال است"))
+            has_nav = all(f"id: '{hub}'" in nav_items for hub in employee_hubs) and "id: 'employee-portal'" not in nav_items
+            checks.append(("منوی کارمند در nav-items.ts", has_nav, "۶ هاب در EMPLOYEE_NAV_ITEMS ثبت‌اند و آیتم پنل تجمیعی حذف شده است"))
             if not has_nav:
                 all_passed = False
 
-            # ۶. ریدایرکت لگسی در app.routes.ts
-            app_routes_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'app.routes.ts')
+            # ۵. ریدایرکت لگسی در app.routes.ts
+            app_routes_path = os.path.join(front_app, 'app.routes.ts')
             with open(app_routes_path, 'r', encoding='utf-8') as f:
                 app_routes = f.read()
-            has_legacy_redirect = "'employee-portal'" in app_routes and "redirectTo: 'app/finance/employee-portal'" in app_routes
-            checks.append(("ثبت ریدایرکت لگسی در app.routes.ts", has_legacy_redirect, "مسیر /employee-portal مستقیماً به ماژول حسابداری هدایت می‌شود"))
+            has_legacy_redirect = "{ path: 'employee-portal', redirectTo: 'app/finance/employee-attendance'" in app_routes
+            checks.append(("ریدایرکت لگسی در app.routes.ts", has_legacy_redirect, "مسیر /employee-portal مستقیم به هاب کارکرد کارمند هدایت می‌شود"))
             if not has_legacy_redirect:
                 all_passed = False
 
@@ -486,7 +494,7 @@ class SectionGuardian:
             checks.append(("اجرای ارزیابی فاز ۳ (پنل کارمند)", False, f"خطا: {str(e)}"))
             all_passed = False
 
-        return self.report_status("فاز ۳: طراحی و استقرار پنل کارمند (۵ تب عملیاتی)", all_passed, checks)
+        return self.report_status("فاز ۳: جانشینی پنل تجمیعی کارمند با ۶ هاب نقش کارمند", all_passed, checks)
 
     def audit_phase_6_strict_guardian_suite(self) -> bool:
         """
@@ -637,7 +645,7 @@ class SectionGuardian:
         ۱. بررسی وجود هر ۵ زیرماژول اختصاصی (ts, html, spec.ts) در src/app/components/finance/employee/
         ۲. ثبت مسیرهای پنج‌گانه در accounting.routes.ts
         ۳. ثبت آیتم‌های پنج‌گانه منو در nav-items.ts (EMPLOYEE_NAV_ITEMS)
-        ۴. نگهبان G3: عدم رگرسیون و سلامت کامل کدهای مبدا (warehouse-attendance.ts)
+        ۴. نگهبان G3: بازنشستگی کامل کد مبدا (warehouse-attendance) پس از انتقال، بدون ارجاع باقی‌مانده و با ریدایرکت مسیرهای قدیمی
         """
         all_passed = True
         checks = []
@@ -689,11 +697,25 @@ class SectionGuardian:
                 if not has_nav_item:
                     all_passed = False
 
-            # ۴. نگهبان G3: عدم رگرسیون در warehouse-attendance
-            legacy_att_path = os.path.join(front_base, 'components', 'personnel', 'warehouse-attendance', 'warehouse-attendance.ts')
-            legacy_exists = os.path.exists(legacy_att_path) and os.path.getsize(legacy_att_path) > 30000
-            checks.append(("نگهبان G3: مصونیت کامل و عدم تغییر هسته مبدا (warehouse-attendance.ts)", legacy_exists, f"فایل مبدا با حجم {os.path.getsize(legacy_att_path) if os.path.exists(legacy_att_path) else 0} بایت بدون دستکاری پابرجا است"))
-            if not legacy_exists:
+            # ۴. نگهبان G3: بازنشستگی کامل کارکرد مشترک (WarehouseAttendance) پس از انتقال به هاب‌های کارمند
+            legacy_att_dir = os.path.join(front_base, 'components', 'personnel', 'warehouse-attendance')
+            legacy_imports = []
+            for root, _dirs, files in os.walk(front_base):
+                for name in files:
+                    if not name.endswith('.ts'):
+                        continue
+                    with open(os.path.join(root, name), 'r', encoding='utf-8') as f:
+                        if 'warehouse-attendance/warehouse-attendance' in f.read():
+                            legacy_imports.append(name)
+            has_redirects = all(r in acct_routes for r in [
+                "{ path: 'attendance', redirectTo: 'employee-attendance'",
+                "{ path: 'fleet', redirectTo: 'employee-fleet'",
+                "{ path: 'fleet-attendance', redirectTo: 'employee-fleet'",
+            ])
+            legacy_retired = not os.path.exists(legacy_att_dir) and not legacy_imports and has_redirects
+            checks.append(("نگهبان G3: بازنشستگی کامل کارکرد مشترک (warehouse-attendance)", legacy_retired,
+                           f"پوشه حذف شده، ارجاع باقی‌مانده: {legacy_imports or 'ندارد'}، ریدایرکت attendance/fleet به هاب‌های کارمند: {has_redirects}"))
+            if not legacy_retired:
                 all_passed = False
 
         except Exception as e:
