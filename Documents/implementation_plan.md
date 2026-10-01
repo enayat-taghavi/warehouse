@@ -505,4 +505,13 @@ flowchart TD
 | **۱۰** | [supervisor-period-lock.html](file:///e:/warehouse%20project/warehouse-front/src/app/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.html) | قالب فرانت‌اند | دکمه غیرفعال قفل در صورت وجود کارکرد معلق و بنر راهنمای بصری ارگونومیک |
 | **۱۱** | `warehouse-backend/personnel/test_attendance_approval_workflow.py` | آزمون بک‌اند | سوئیت تست اختصاصی جامع برای کلیه سناریوهای تایید، عودت، ممیزی، سد قفل و حقوق |
 
+
+
+---
+
+## طرح جامع بازمهندسی چرخه ثبت پرسنل تا تصویب نهایی مدیر
+- **مسیر مستندات تفصیلی:** [Personnel_Registration_To_Approval_Workflow/implementation_plan_personnel_lifecycle.md](file:///e:/warehouse%20project/Documents/Personnel_Registration_To_Approval_Workflow/implementation_plan_personnel_lifecycle.md)
+- **شرح:** بازمهندسی فرآیند ثبت پرسنل از کارمند تا مدیر بر اساس اکسل مرجع TirSalary.xlsm شامل مدل PersonnelBankAccount، تفکیک نرخ ساعتی واقعی از مبنای بیمه، فیلد تاریخ اعتبار با اعتبارسنجی بر مبنای ماه محاسباتی، تب‌های ۵گانه کارمند، Purge در رد پیش‌نویس، تایید گروهی و استعلام ۴گانه عدم سابقه برای حذف مدیر.
+- **تعداد فازها:** ۱۰ فاز عملیاتی با تفکیک ۴۰ تسک اجرایی.
+
 </div>
