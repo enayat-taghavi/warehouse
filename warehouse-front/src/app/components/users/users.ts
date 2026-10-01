@@ -351,6 +351,18 @@ export class Users implements OnInit, OnDestroy {
         'view_sys_treasury', 'perm_treasury_disburse_action'
       ]
     },
+    {
+      id: 'org_admin',
+      title: 'راهبر تشکیلات و سیستم',
+      category: 'accounting',
+      categoryTitle: 'حسابداری و کارگاه',
+      color: '#0284c7',
+      icon: '🏢',
+      description: 'تعریف پروژه‌ها و بخش‌ها و انتساب کاربران به بخش‌ها؛ بدون تایید کارکرد، مجوز پرداخت یا ابزار زیرساخت',
+      permissionCodenames: [
+        'perm_manage_projects_sections'
+      ]
+    },
 
     // ─── دسته ۳: مدیریت و کلان سیستم (Infrastructure & SOC) ───
     {

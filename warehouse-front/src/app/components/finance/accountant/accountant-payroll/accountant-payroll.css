@@ -1,1 +1,24 @@
 /* Styles for accountant payroll hub */
+
+/* چاپ فیش حقوقی: فقط کارت فیش چاپ شود (بقیهٔ صفحه با no-print پنهان است) */
+@media print {
+  .payslip-print-shell {
+    position: static !important;
+    inset: auto !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  .payslip-print-panel {
+    max-height: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .payslip-printable {
+    overflow: visible !important;
+    max-height: none !important;
+    border: none !important;
+  }
+}

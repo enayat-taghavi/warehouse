@@ -112,24 +112,15 @@ export class ChangePassword implements OnInit {
               'view_sys_personnel', 'view_sys_personnel_attendance', 'view_sys_fleet_attendance',
               'view_sys_payroll', 'view_sys_fleet_settlement', 'view_sys_treasury',
               'perm_approve_personnel_finance', 'perm_treasury_disburse_action',
-              'perm_approve_personnel_manager'
+              'perm_approve_personnel_manager', 'perm_manage_projects_sections'
             ].some(p => perms.includes(p));
 
             if (hasWarehouse && hasFinance) {
               targetRoute = '/app/launcher';
             } else if (hasFinance && !hasWarehouse) {
               localStorage.setItem('active_app_module', 'personnel');
-              if (perms.includes('perm_approve_personnel_finance') || perms.includes('view_sys_payroll')) {
-                targetRoute = '/app/finance/finance-cartable';
-              } else if (perms.includes('view_sys_treasury') || perms.includes('perm_treasury_disburse_action')) {
-                targetRoute = '/app/finance/treasury-cartable';
-              } else if (perms.includes('perm_approve_personnel_manager')) {
-                targetRoute = '/app/finance/manager-approvals';
-              } else if (perms.includes('view_sys_personnel_attendance') || perms.includes('view_sys_fleet_attendance')) {
-                targetRoute = '/app/finance/attendance';
-              } else {
-                targetRoute = '/app/finance/profiles';
-              }
+              // صفحهٔ آغاز را ریشهٔ سامانه مالی بر اساس پرسونای نقش تعیین می‌کند (accounting.routes)
+              targetRoute = '/app/finance';
             } else if (hasWarehouse && !hasFinance) {
               localStorage.setItem('active_app_module', 'warehouse');
               if (perms.includes('view_sys_dashboard') || perms.includes('view_wh_dashboard')) {
@@ -173,7 +164,7 @@ export class ChangePassword implements OnInit {
     if (hasWarehouse) {
       this.router.navigate(['/app/warehouse/dashboard']);
     } else {
-      this.router.navigate(['/app/finance/attendance']);
+      this.router.navigate(['/app/finance']);
     }
   }
 }

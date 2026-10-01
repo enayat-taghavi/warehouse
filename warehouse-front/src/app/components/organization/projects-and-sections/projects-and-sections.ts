@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { StateService } from '../../../services/state.service';
 import { AuthService } from '../../../core/auth/auth.service';
+import { hasStructureWritePermission } from '../../../core/auth/auth.guard';
 import { ToastService } from '../../../services/toast.service';
 import { PersonnelApiService } from '../../../core/api/personnel-api.service';
 import { AccountsHttpService, User, ImportResult } from '../../../core/http/accounts-http.service';
@@ -745,6 +746,14 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
       case 'assignments': return 'خروجی اکسل ماتریس انتساب کاربران و نقش‌ها';
       default: return 'خروجی فایل اکسل';
     }
+  }
+
+  /** درون‌ریزی اکسل برای نویسندگان ساختار (از جمله راهبر تشکیلات)؛ بک‌اند آن را به شرکت فعالِ مجاز محدود می‌کند. */
+  get canImportExcel(): boolean {
+    const user = this.auth.user();
+    const perms = this.auth.userPermissions() || [];
+    return hasStructureWritePermission(perms, !!user?.is_superuser || !!user?.roles?.includes('admin'))
+      || perms.includes('perm_manage_projects_sections');
   }
 
   getImportTooltip(): string {

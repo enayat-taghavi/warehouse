@@ -53,15 +53,17 @@
         </button>
 
         <!-- ۲. ورودی و آپلود اکسل (آبی) -->
-        <button 
-          type="button" 
-          (click)="openImportModal()" 
-          class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95" 
-          [title]="getImportTooltip()" 
+        @if (canImportExcel) {
+        <button
+          type="button"
+          (click)="openImportModal()"
+          class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
+          [title]="getImportTooltip()"
           aria-label="ورودی اکسل"
         >
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="upload"></svg>
         </button>
+        }
 
         <!-- ۳. بروزرسانی اطلاعات (بنفش/ایندیگو) -->
         <button 

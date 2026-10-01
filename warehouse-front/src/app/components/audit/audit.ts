@@ -146,6 +146,11 @@ export class Audit implements OnInit, OnDestroy {
            this.router.url.includes('/app/finance');
   }
 
+  /** قلمرو را خود مسیر روی مالی قفل کرده است (نه انتخاب کاربر در انتخابگر قلمرو) */
+  get isFinanceRouteLocked(): boolean {
+    return this.route.snapshot.data['appScope'] === 'finance' || this.router.url.includes('/app/finance');
+  }
+
   get isWarehouseScope(): boolean {
     return this.selectedAppScope === 'warehouse' ||
            this.route.snapshot.data['appScope'] === 'warehouse' ||
@@ -493,6 +498,9 @@ export class Audit implements OnInit, OnDestroy {
       this.selectedAppScope = 'finance';
     } else if (routeScope === 'warehouse' || this.router.url.includes('/app/warehouse')) {
       this.selectedAppScope = 'warehouse';
+    } else if (routeScope === 'security' || this.router.url.includes('/app/operations')) {
+      // ممیزی مرکز عملیات جانشین ممیزی منوی مالی است؛ پیش‌فرض همهٔ قلمروها
+      this.selectedAppScope = 'all';
     } else if (this.personaService?.activeApp) {
       this.selectedAppScope = this.personaService.activeApp() === 'personnel' ? 'finance' : 'warehouse';
     }

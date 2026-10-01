@@ -196,7 +196,7 @@
       <div class="p-4 border-b border-slate-100 flex items-center justify-between">
         <div>
           <h2 class="text-sm font-black text-slate-800">گزارش کارکرد و تسویه‌حساب ماهانه ناوگان (ماه {{ selectedMonth }} {{ fiscalYear }})</h2>
-          <p class="text-xs text-slate-400 mt-0.5">بررسی صورت‌وضعیت مالی ناوگان، ساعت کار، کسورات و خالص پرداختی جهت تایید مدیریتی</p>
+          <p class="text-xs text-slate-500 mt-0.5">بررسی صورت‌وضعیت مالی ناوگان: تعداد سرویس، نرخ پایه، مبلغ ناخالص و خالص پرداختی جهت تایید مدیریتی</p>
         </div>
         <span class="text-xs bg-indigo-50 text-indigo-700 font-bold px-2.5 py-1 rounded-xl border border-indigo-200">
           {{ settlementItems.length }} ردیف صورت‌حساب
@@ -214,9 +214,9 @@
             <tr>
               <th class="p-3">شماره پلاک</th>
               <th class="p-3">راننده / پیمانکار</th>
-              <th class="p-3">کارکرد موثر (روز / سرویس)</th>
+              <th class="p-3">تعداد سرویس</th>
+              <th class="p-3">نرخ پایه سرویس</th>
               <th class="p-3">مبلغ ناخالص</th>
-              <th class="p-3">کسورات / مساعده</th>
               <th class="p-3">خالص پرداختی</th>
               <th class="p-3">وضعیت مالی</th>
             </tr>
@@ -225,14 +225,14 @@
             <tr *ngFor="let s of settlementItems" class="hover:bg-slate-50/70 transition-colors">
               <td class="p-3 font-mono font-black text-slate-900">{{ s.plate_number }}</td>
               <td class="p-3 font-bold text-slate-800">{{ s.driver_name || '—' }}</td>
-              <td class="p-3 font-mono text-slate-700">{{ s.work_days || s.total_services || 0 }} روز</td>
+              <td class="p-3 tabular-nums text-slate-700">{{ (s.trip_count || 0).toLocaleString('fa-IR') }} سرویس</td>
+              <td class="p-3 font-mono text-slate-700">{{ formatPrice(s.default_service_rate) }}</td>
               <td class="p-3 font-mono text-slate-800">{{ formatPrice(s.gross_amount) }}</td>
-              <td class="p-3 font-mono text-rose-600">{{ formatPrice(s.deductions) }}</td>
-              <td class="p-3 font-mono font-black text-emerald-700">{{ formatPrice(s.net_payable) }}</td>
+              <td class="p-3 font-mono font-black text-emerald-700">{{ formatPrice(s.payable_amount) }}</td>
               <td class="p-3">
                 <span class="px-2 py-0.5 rounded-md text-[10px] font-bold"
-                      [ngClass]="s.status === 'settled' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'">
-                  {{ s.status === 'settled' ? 'تسویه شده' : 'در انتظار تایید پرداخت' }}
+                      [ngClass]="s.is_payable ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'">
+                  {{ s.is_payable ? 'در انتظار تایید پرداخت' : 'بدون مبلغ (خودرو شرکتی)' }}
                 </span>
               </td>
             </tr>

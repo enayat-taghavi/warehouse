@@ -76,6 +76,15 @@ export const ALL_APP_ROLES: RolePersona[] = [
     icon: '🏦',
     tierLevel: 5
   },
+  {
+    code: 'org_admin',
+    title: 'راهبر تشکیلات و سیستم',
+    app: 'personnel',
+    badgeColor: '#0284c7',
+    bgClass: 'bg-sky-600',
+    icon: '🏢',
+    tierLevel: 4
+  },
   // --- Warehouse / Inventory Roles ---
   {
     code: 'counter',
@@ -265,7 +274,8 @@ export class AppPersonaService {
         perms.includes('can_act_as_accountant') ||
         perms.includes('can_act_as_company_manager') ||
         perms.includes('perm_treasury_disburse_action') ||
-        perms.includes('perm_approve_personnel_supervisor');
+        perms.includes('perm_approve_personnel_supervisor') ||
+        perms.includes('perm_manage_projects_sections');
       if (hasOperatorRole || (hasOperatorPerm && !isOtherExplicitRole)) {
         const op = ALL_APP_ROLES.find(r => r.code === 'operator');
         if (op) roles.push(op);
@@ -293,6 +303,12 @@ export class AppPersonaService {
       if (userRoles.includes('treasury') || userRoles.includes('treasurer') || perms.includes('perm_treasury_disburse_action') || perms.includes('view_sys_treasury')) {
         const tr = ALL_APP_ROLES.find(r => r.code === 'treasury');
         if (tr) roles.push(tr);
+      }
+
+      // راهبر تشکیلات: آخر فهرست تا نقش عملیاتی کاربر چندنقشه پیش‌فرض بماند
+      if (perms.includes('perm_manage_projects_sections')) {
+        const oa = ALL_APP_ROLES.find(r => r.code === 'org_admin');
+        if (oa) roles.push(oa);
       }
     } else if (app === 'warehouse') {
       // Warehouse App
@@ -452,6 +468,8 @@ export class AppPersonaService {
       case 'treasury':
       case 'treasurer':
         return '/app/finance/treasurer-disbursements';
+      case 'org_admin':
+        return '/app/finance/projects-and-sections';
       case 'counter':
         return '/app/warehouse/counter';
       case 'warehouse_supervisor':
@@ -552,6 +570,14 @@ export class AppPersonaService {
       }
       if (cleanRoute.includes('finance-cartable') || cleanRoute.includes('manager-approvals')) {
         return false;
+      }
+    } else if (role === 'org_admin') {
+      // راهبر تشکیلات فقط ساختار سازمانی را اداره می‌کند؛ هیچ کارتابل تایید، پرداخت یا ثبت کارکردی ندارد
+      if (cleanRoute.startsWith('/app/finance')) {
+        const allowed = ['/app/finance/projects-and-sections', '/app/finance/company-documents', '/app/finance/documents', '/app/finance/health'];
+        if (!allowed.some(a => cleanRoute === a || cleanRoute.startsWith(a + '/'))) {
+          return false;
+        }
       }
     }
 

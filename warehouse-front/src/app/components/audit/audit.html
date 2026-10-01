@@ -345,7 +345,7 @@
     <!-- ردیف فیلدهای فیلتر (یک خطی متوازن در دسکتاپ) -->
     <div class="flex flex-wrap lg:flex-nowrap items-center gap-2">
       <!-- انتخاب قلمرو سامانه (همه / انبارداری / مالی) -->
-      <div class="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold shrink-0" *ngIf="activeTab === 'audit' && !isFinanceScope && isWarehouseInstalled">
+      <div class="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold shrink-0" *ngIf="activeTab === 'audit' && !isFinanceRouteLocked && isWarehouseInstalled">
         <button (click)="setAppScope('all')" type="button" [class.bg-white]="selectedAppScope === 'all'" [class.text-indigo-600]="selectedAppScope === 'all'" [class.shadow-xs]="selectedAppScope === 'all'" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold">همه</button>
         <button (click)="setAppScope('warehouse')" type="button" [class.bg-white]="selectedAppScope === 'warehouse'" [class.text-indigo-600]="selectedAppScope === 'warehouse'" [class.shadow-xs]="selectedAppScope === 'warehouse'" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold">انبارداری</button>
         <button (click)="setAppScope('finance')" type="button" [class.bg-white]="selectedAppScope === 'finance'" [class.text-indigo-600]="selectedAppScope === 'finance'" [class.shadow-xs]="selectedAppScope === 'finance'" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold">مالی و اداری</button>

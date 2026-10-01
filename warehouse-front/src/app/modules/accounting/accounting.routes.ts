@@ -1,15 +1,13 @@
 import { Routes } from '@angular/router';
 import { inject } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
-import { FinanceCartable } from '../../components/personnel/finance-cartable/finance-cartable';
-import { WarehouseAttendance } from '../../components/personnel/warehouse-attendance/warehouse-attendance';
+import { AppPersonaService } from '../../core/services/app-persona.service';
+import { ActiveCompanyService } from '../../core/services/active-company.service';
 import { ManagerApprovals } from '../../components/personnel/manager-approvals/manager-approvals';
-import { TreasuryCartable } from '../../components/personnel/treasury-cartable/treasury-cartable';
 import { PersonnelProfilesHub } from '../../components/personnel/personnel-profiles/personnel-profiles';
 import { BaseSettings } from '../../components/personnel/base-settings/base-settings';
 import { ProjectsAndSectionsComponent } from '../../components/organization/projects-and-sections/projects-and-sections';
 import { CounterpartiesComponent } from '../../components/finance/counterparties/counterparties';
-import { EmployeePortalComponent } from '../../components/finance/employee-portal/employee-portal';
 import { EmployeeAttendanceHubComponent } from '../../components/finance/employee/employee-attendance/employee-attendance';
 import { EmployeeFleetHubComponent } from '../../components/finance/employee/employee-fleet/employee-fleet';
 import { EmployeeInvoicesHubComponent } from '../../components/finance/employee/employee-invoices/employee-invoices';
@@ -29,7 +27,6 @@ import { AccountantPersonnelHubComponent } from '../../components/finance/accoun
 import { AccountantInvoicesHubComponent } from '../../components/finance/accountant/accountant-invoices/accountant-invoices';
 import { AccountantPettyCashHubComponent } from '../../components/finance/accountant/accountant-petty-cash/accountant-petty-cash';
 import { AccountantDiskettesHubComponent } from '../../components/finance/accountant/accountant-diskettes/accountant-diskettes';
-import { AccountantCounterpartiesHubComponent } from '../../components/finance/accountant/accountant-counterparties/accountant-counterparties';
 import { AccountantNewProfilesHubComponent } from '../../components/finance/accountant/accountant-new-profiles/accountant-new-profiles';
 import { ManagerDashboardComponent } from '../../components/finance/manager/manager-dashboard/manager-dashboard';
 import { ManagerPersonnelHubComponent } from '../../components/finance/manager/manager-personnel/manager-personnel';
@@ -49,7 +46,8 @@ import { CompanyDocumentsArchiveComponent } from '../../components/finance/compa
 export { IS_ACCOUNTING_INSTALLED } from './accounting-flags';
 
 export const ACCOUNTING_ROUTES: Routes = [
-  { path: 'employee-portal', component: EmployeePortalComponent, data: { reuse: true } },
+  // مسیرهای بازنشسته (پنل تجمیعی کارمند، کارکرد مشترک، کارتابل مالی و خزانه) مستقیم به هاب جانشین می‌روند
+  { path: 'employee-portal', redirectTo: 'employee-attendance', pathMatch: 'full' },
   { path: 'employee-attendance', component: EmployeeAttendanceHubComponent, data: { reuse: true } },
   { path: 'employee-fleet', component: EmployeeFleetHubComponent, data: { reuse: true } },
   { path: 'employee-invoices', component: EmployeeInvoicesHubComponent, data: { reuse: true } },
@@ -84,7 +82,7 @@ export const ACCOUNTING_ROUTES: Routes = [
   { path: 'accountant-invoices', component: AccountantInvoicesHubComponent, data: { reuse: true } },
   { path: 'accountant-petty-cash', component: AccountantPettyCashHubComponent, data: { reuse: true } },
   { path: 'accountant-diskettes', component: AccountantDiskettesHubComponent, data: { reuse: true } },
-  { path: 'accountant-counterparties', component: AccountantCounterpartiesHubComponent, data: { reuse: true } },
+  { path: 'accountant-counterparties', component: CounterpartiesComponent, data: { reuse: true } },
   { path: 'accountant-new-profiles', component: AccountantNewProfilesHubComponent, data: { reuse: true } },
   { path: 'accountant/personnel', redirectTo: 'accountant-personnel', pathMatch: 'full' },
   { path: 'accountant/payroll', redirectTo: 'accountant-payroll', pathMatch: 'full' },
@@ -119,47 +117,52 @@ export const ACCOUNTING_ROUTES: Routes = [
   { path: 'treasurer/cheques', redirectTo: 'treasurer-cheques', pathMatch: 'full' },
   { path: 'treasurer-reconciliation', component: TreasurerReconciliationComponent, data: { reuse: true } },
   { path: 'treasurer/reconciliation', redirectTo: 'treasurer-reconciliation', pathMatch: 'full' },
-  { path: 'finance-cartable', component: FinanceCartable, data: { reuse: true } },
-  { path: 'attendance', component: WarehouseAttendance, data: { defaultTab: 'personnel' } },
-  { path: 'timesheet', redirectTo: 'attendance', pathMatch: 'full' },
-  { path: 'fleet', component: WarehouseAttendance, data: { defaultTab: 'fleet' } },
-  { path: 'fleet-attendance', component: WarehouseAttendance, data: { defaultTab: 'fleet' } },
+  { path: 'finance-cartable', redirectTo: 'accountant-payroll', pathMatch: 'full' },
+  { path: 'attendance', redirectTo: 'employee-attendance', pathMatch: 'full' },
+  { path: 'timesheet', redirectTo: 'employee-attendance', pathMatch: 'full' },
+  { path: 'fleet', redirectTo: 'employee-fleet', pathMatch: 'full' },
+  { path: 'fleet-attendance', redirectTo: 'employee-fleet', pathMatch: 'full' },
   { path: 'manager-approvals', component: ManagerApprovals, data: { reuse: true } },
-  { path: 'treasury-cartable', component: TreasuryCartable, data: { reuse: true } },
-  { path: 'treasury', component: TreasuryCartable, data: { reuse: true } },
+  { path: 'treasury-cartable', redirectTo: 'treasurer-disbursements', pathMatch: 'full' },
+  { path: 'treasury', redirectTo: 'treasurer-disbursements', pathMatch: 'full' },
   { path: 'profiles', component: PersonnelProfilesHub, data: { reuse: true } },
   { path: 'personnel-profiles', component: PersonnelProfilesHub, data: { reuse: true } },
   { path: 'companies', redirectTo: '/app/operations/companies', pathMatch: 'full' },
   { path: 'base-settings', component: BaseSettings, data: { reuse: true } },
   { path: 'projects-and-sections', component: ProjectsAndSectionsComponent, data: { reuse: true } },
-  { path: 'counterparties', component: CounterpartiesComponent, data: { reuse: true } },
+  { path: 'counterparties', redirectTo: 'accountant-counterparties', pathMatch: 'full' },
   { path: 'company-documents', component: CompanyDocumentsArchiveComponent, data: { reuse: true } },
   { path: 'company-documents-archive', redirectTo: 'company-documents', pathMatch: 'full' },
   { path: 'documents', redirectTo: 'company-documents', pathMatch: 'full' },
   { path: 'audit', component: Audit, data: { appScope: 'finance', reuse: true } },
   { path: 'health', component: HealthDashboardComponent, data: { appScope: 'finance', reuse: false } },
   { path: 'finance-audit', redirectTo: 'audit', pathMatch: 'full' },
-  { path: 'personnel', redirectTo: 'finance-cartable', pathMatch: 'full' },
-  { path: 'payroll', redirectTo: 'finance-cartable', pathMatch: 'full' },
-  { path: 'fleet-settlement', redirectTo: 'treasury-cartable', pathMatch: 'full' },
+  { path: 'personnel', redirectTo: 'accountant-payroll', pathMatch: 'full' },
+  { path: 'payroll', redirectTo: 'accountant-payroll', pathMatch: 'full' },
+  { path: 'fleet-settlement', redirectTo: 'treasurer-disbursements', pathMatch: 'full' },
   {
     path: '',
     redirectTo: () => {
-      const auth = inject(AuthService);
-      const perms = auth.userPermissions() || [];
-      const userRoles = (auth.user()?.roles || []).map(r => String(r).toLowerCase());
-
-      if (userRoles.includes('accountant') || perms.includes('can_act_as_accountant') || perms.includes('perm_approve_personnel_finance') || perms.includes('view_sys_payroll')) {
+      // صفحهٔ آغاز سامانه مالی همان خانهٔ پرسونای نقش فعال است تا با منو و گارد یکی باشد
+      const persona = inject(AppPersonaService);
+      persona.syncScopeFromUrl('/app/finance');
+      persona.sanitizeActiveRole();
+      if (persona.isSuperuser()) {
+        // جانشین کارتابل مالی قدیمی برای مدیر ارشد
         return 'accountant-payroll';
       }
-      if (userRoles.includes('treasury') || userRoles.includes('treasurer') || perms.includes('view_sys_treasury') || perms.includes('perm_treasury_disburse_action')) {
-        return 'treasurer-disbursements';
+      if (persona.availableRoles().length > 0) {
+        return persona.getDefaultRouteForRole();
       }
-      if (userRoles.includes('manager') || perms.includes('can_act_as_company_manager') || perms.includes('perm_manager_payment_authorize') || perms.includes('perm_approve_personnel_manager')) {
-        return 'manager-dashboard';
+
+      // کاربر مالی بدون پرسونای نقش
+      const auth = inject(AuthService);
+      const perms = auth.userPermissions() || [];
+      if (perms.includes('perm_manage_projects_sections')) {
+        return 'projects-and-sections';
       }
-      if (userRoles.includes('supervisor') || perms.includes('can_act_as_workshop_supervisor') || perms.includes('perm_approve_personnel_supervisor') || perms.includes('perm_approve_fleet_supervisor')) {
-        return 'supervisor-attendance';
+      if (inject(ActiveCompanyService).hasCompanyDocumentsAccess()) {
+        return 'company-documents';
       }
       return 'employee-attendance';
     },

@@ -56,32 +56,38 @@
         </button>
       </div>
 
-      <!-- Dedicated Collapsible Accounting & Timesheet Section (بخش مجزای کارکرد و حسابداری) -->
-      <div *ngIf="!store.isWarehouseContext() && accountingNavItems().length > 0" class="mt-4 pt-3 border-t border-slate-800/70 shrink-0">
-        <!-- Accordion Header -->
-        <button type="button" (click)="toggleAccountingMenu($event)" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer group select-none" title="کلیک برای باز/بسته کردن منوی کارکرد و حسابداری">
-          <div class="flex items-center gap-2.5">
-            <span class="text-indigo-400 text-xs flex items-center justify-center w-6 h-6 rounded-lg bg-indigo-950/70 border border-indigo-800/60 shadow-xs shrink-0 group-hover:border-indigo-600 transition-colors">
-              <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="briefcase"></svg></span>
-            </span>
-            <span class="text-[11px] font-black tracking-tight text-slate-200 group-hover:text-white">کارکرد و حسابداری</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md bg-slate-800/90 text-slate-400 group-hover:text-indigo-300 border border-slate-700/80">
-              {{ accountingNavItems().length }}
-            </span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isAccountingMenuOpen" appIcon="chevron-down"></svg>
-          </div>
-        </button>
-
-        <!-- Accordion Body: The 4 Accounting Portals -->
-        <div *ngIf="isAccountingMenuOpen" class="mt-1 space-y-0.5 pr-2.5 border-r-2 border-indigo-500/40 mr-3 transition-all">
-          <button *ngFor="let item of accountingNavItems()" (click)="switchTab(item.id)" [class.active]="currentTab === item.id" class="sidebar-link w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all group cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/80" [title]="item.label">
-            <span class="shrink-0 scale-90">@if (menuIcon(item.icon); as icon) {<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="icon"></svg>}</span>
-            <span class="truncate">{{item.label}}</span>
+      <!-- Dedicated Collapsible Org Admin Section (منوی راهبر تشکیلات - ساختار سازمانی) -->
+      @if (!store.isWarehouseContext() && orgAdminNavItems().length > 0) {
+        <div class="mt-3 pt-3 border-t border-slate-800/60 shrink-0">
+          <!-- Accordion Header -->
+          <button type="button" (click)="toggleOrgAdminMenu($event)" [attr.aria-expanded]="isOrgAdminMenuOpen" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all cursor-pointer group select-none" title="کلیک برای باز/بسته کردن منوی راهبر تشکیلات">
+            <div class="flex items-center gap-2.5">
+              <span class="text-sky-400 text-xs flex items-center justify-center w-6 h-6 rounded-lg bg-sky-950/70 border border-sky-800/60 shadow-xs shrink-0 group-hover:border-sky-600 transition-colors">
+                <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="folder"></svg></span>
+              </span>
+              <span class="text-[11px] font-black tracking-tight text-slate-200 group-hover:text-white">منوی راهبر تشکیلات</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-mono font-black px-1.5 py-0.5 rounded-md bg-slate-800/90 text-slate-400 group-hover:text-sky-300 border border-slate-700/80">
+                {{ orgAdminNavItems().length }}
+              </span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 text-slate-500 group-hover:text-slate-300" [class.rotate-180]="isOrgAdminMenuOpen" appIcon="chevron-down"></svg>
+            </div>
           </button>
+
+          <!-- Accordion Body: The Org Admin Sub-Items -->
+          @if (isOrgAdminMenuOpen) {
+            <div class="mt-1 space-y-0.5 ps-2.5 border-s-2 border-sky-500/40 ms-3 transition-all">
+              @for (item of orgAdminNavItems(); track item.id) {
+                <button type="button" (click)="switchTab(item.id)" [class.active]="currentTab === item.id" [attr.aria-current]="currentTab === item.id ? 'page' : null" class="sidebar-link w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all group cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/80" [title]="item.label">
+                  <span class="shrink-0 scale-90"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="menuIcon(item.icon, 'folder')"></svg></span>
+                  <span class="truncate">{{item.label}}</span>
+                </button>
+              }
+            </div>
+          }
         </div>
-      </div>
+      }
 
       <!-- Dedicated Collapsible Employee Portal Section (پنل کارمند - زیرمنوها) -->
       <div *ngIf="!store.isWarehouseContext() && employeeNavItems().length > 0" class="mt-3 pt-3 border-t border-slate-800/60 shrink-0">

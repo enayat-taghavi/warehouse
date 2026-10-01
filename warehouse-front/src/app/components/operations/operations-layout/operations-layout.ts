@@ -168,7 +168,7 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
   }
 
   public goToFinance(): void {
-    this.router.navigate(['/app/finance/finance-cartable']);
+    this.router.navigate(['/app/finance']);
   }
 
   public goToLauncher(): void {

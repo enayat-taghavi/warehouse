@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -7,7 +7,16 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
+import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
+import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import {
+  PAYROLL_MONTHS,
+  defaultPayrollPeriod,
+  isPayrollMonthName,
+  mergeFiscalYears,
+  payrollMonthCode
+} from '../payroll-period';
 
 @Component({
   selector: 'app-accountant-diskettes-hub',
@@ -19,12 +28,22 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
   activeSubTab: 'social_security' | 'tax_portal' | 'bank_payroll' = 'social_security';
 
-  fiscalYear = '1405';
-  selectedMonth = 'تیر';
+  // دوره و دامنهٔ خروجی‌ها (منتقل‌شده از کارتابل مالی قدیمی)
+  readonly monthNames = PAYROLL_MONTHS.map(m => m.name);
+  availableYears: string[] = [];
+  fiscalYear = defaultPayrollPeriod().year;
+  selectedMonth = defaultPayrollPeriod().month;
+  /** دامنه: تهی = کل شرکت (سراسری)، یا یک انبار */
+  selectedWarehouseId: number | null = null;
+  warehouses: { id: number; name: string }[] = [];
   workshopCode = '0012345678';
 
   isLoading = false;
+  /** دریافت رکوردهای دوره ناموفق بود؛ نباید «حقوقی محاسبه نشده» نشان داده شود */
+  periodLoadError = false;
   isGenerating = false;
+  /** پرچم جدا تا خروجی ناوگان دکمهٔ دیسکت حقوق را درگیر نکند */
+  isGeneratingFleet = false;
 
   private routeSub?: Subscription;
 
@@ -35,43 +54,61 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
     private personnelApi: PersonnelApiService,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Optional() private whService?: WarehouseHttpService,
+    @Optional() private moduleRegistry?: ModuleRegistryService
   ) {}
-
-  monthMap: Record<string, string> = {
-    'فروردین': '01',
-    'اردیبهشت': '02',
-    'خرداد': '03',
-    'تیر': '04',
-    'مرداد': '05',
-    'شهریور': '06',
-    'مهر': '07',
-    'آبان': '08',
-    'آذر': '09',
-    'دی': '10',
-    'بهمن': '11',
-    'اسفند': '12'
-  };
 
   projects: any[] = [];
   selectedProjectId: number | null = null;
   currentPeriodId: number | null = null;
+
+  get yearMonth(): string {
+    return `${this.fiscalYear}/${payrollMonthCode(this.selectedMonth)}`;
+  }
+
+  get showWarehouseScope(): boolean {
+    return !!this.moduleRegistry?.isModuleInstalled('warehouse') && this.warehouses.length > 0;
+  }
 
   ngOnInit(): void {
     this.routeSub = this.route.queryParams.subscribe(params => {
       if (params['tab'] && ['social_security', 'tax_portal', 'bank_payroll'].includes(params['tab'])) {
         this.activeSubTab = params['tab'];
       }
-      if (params['year']) {
+      if (params['year'] && /^\d{4}$/.test(params['year'])) {
         this.fiscalYear = params['year'];
       }
-      if (params['month']) {
+      if (params['month'] && isPayrollMonthName(params['month'])) {
         this.selectedMonth = params['month'];
       }
       if (params['project_id']) {
         this.selectedProjectId = Number(params['project_id']);
       }
+      if (params['wh']) {
+        const wh = Number(params['wh']);
+        this.selectedWarehouseId = Number.isFinite(wh) && wh > 0 ? wh : null;
+      }
     });
+
+    this.availableYears = mergeFiscalYears([], this.fiscalYear);
+    this.personnelApi.getAvailableFiscalYears().subscribe({
+      next: (res) => {
+        this.availableYears = mergeFiscalYears(res?.years, this.fiscalYear);
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+
+    if (this.whService && this.moduleRegistry?.isModuleInstalled('warehouse')) {
+      this.whService.getAll().subscribe({
+        next: (data: any) => {
+          this.warehouses = (Array.isArray(data) ? data : []).map((w: any) => ({ id: w.id, name: w.name }));
+          this.cdr.detectChanges();
+        },
+        error: () => {}
+      });
+    }
 
     this.loadData();
   }
@@ -83,22 +120,43 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
         if (this.projects.length > 0 && !this.selectedProjectId) {
           this.selectedProjectId = this.projects[0].id;
         }
+        this.cdr.detectChanges();
       }
     });
+    this.loadPeriod();
+  }
 
-    const m = this.monthMap[this.selectedMonth] || '04';
-    const ym = `${this.fiscalYear}/${m}`;
-    this.personnelApi.getMonthlyPayrollRecords({ year_month: ym }).subscribe({
+  /** شناسهٔ دورهٔ محاسبه‌شدهٔ همین ماه و دامنه از روی رکوردهای حقوق */
+  loadPeriod(): void {
+    this.isLoading = true;
+    this.periodLoadError = false;
+    this.currentPeriodId = null;
+    const params: any = { year_month: this.yearMonth };
+    if (this.selectedWarehouseId) {
+      params.warehouse_id = this.selectedWarehouseId;
+    }
+    this.personnelApi.getMonthlyPayrollRecords(params).subscribe({
       next: (recs: any[]) => {
-        if (recs && recs.length > 0 && recs[0].period) {
-          this.currentPeriodId = typeof recs[0].period === 'object' ? recs[0].period.id : recs[0].period;
-        }
+        const first = Array.isArray(recs) ? recs[0] : null;
+        this.currentPeriodId = first?.period ? (typeof first.period === 'object' ? first.period.id : first.period) : null;
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isLoading = false;
+        this.periodLoadError = true;
+        this.cdr.detectChanges();
       }
     });
   }
 
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
+  }
+
+  onPeriodChanged(): void {
+    this.syncUrlParams();
+    this.loadPeriod();
   }
 
   switchSubTab(tab: 'social_security' | 'tax_portal' | 'bank_payroll'): void {
@@ -113,10 +171,20 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
         tab: this.activeSubTab,
         year: this.fiscalYear,
         month: this.selectedMonth,
-        project_id: this.selectedProjectId
+        project_id: this.selectedProjectId,
+        wh: this.selectedWarehouseId || null
       },
       queryParamsHandling: 'merge'
     });
+  }
+
+  private saveBlob(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
   }
 
   generateSocialSecurityDiskette(): void {
@@ -128,13 +196,7 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
     this.personnelApi.exportBimehDisketteZip(this.currentPeriodId, this.selectedProjectId).subscribe({
       next: (blob: Blob) => {
         this.isGenerating = false;
-        const m = this.monthMap[this.selectedMonth] || '04';
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Bimeh_${this.fiscalYear}_${m}.zip`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        this.saveBlob(blob, `Bimeh_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.zip`);
         this.toast.success(`دیسکت‌های DSKWOR00.DBF و DSKKAR00.DBF با موفقیت تولید و دانلود شد.`);
         this.cdr.detectChanges();
       },
@@ -153,26 +215,16 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
       return;
     }
     this.isGenerating = true;
+    const m = payrollMonthCode(this.selectedMonth);
     this.personnelApi.exportTaxWh(this.currentPeriodId, this.selectedProjectId).subscribe({
       next: (blobWh: Blob) => {
-        const m = this.monthMap[this.selectedMonth] || '04';
-        const urlWh = window.URL.createObjectURL(blobWh);
-        const aWh = document.createElement('a');
-        aWh.href = urlWh;
-        aWh.download = `WH_${this.fiscalYear}${m}.txt`;
-        aWh.click();
-        window.URL.revokeObjectURL(urlWh);
+        this.saveBlob(blobWh, `WH_${this.fiscalYear}${m}.txt`);
 
         // Then download WP
         this.personnelApi.exportTaxWp(this.currentPeriodId!, this.selectedProjectId!).subscribe({
           next: (blobWp: Blob) => {
             this.isGenerating = false;
-            const urlWp = window.URL.createObjectURL(blobWp);
-            const aWp = document.createElement('a');
-            aWp.href = urlWp;
-            aWp.download = `WP_${this.fiscalYear}${m}.txt`;
-            aWp.click();
-            window.URL.revokeObjectURL(urlWp);
+            this.saveBlob(blobWp, `WP_${this.fiscalYear}${m}.txt`);
             this.toast.success(`فایل‌های الکترونیکی مالیات بر درآمد حقوق (WH/WP) با موفقیت استخراج و دانلود گردید.`);
             this.cdr.detectChanges();
           },
@@ -201,13 +253,7 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
     this.personnelApi.exportBankPaymentExcel(this.currentPeriodId, this.selectedProjectId).subscribe({
       next: (blob: Blob) => {
         this.isGenerating = false;
-        const m = this.monthMap[this.selectedMonth] || '04';
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Bank_Payment_${this.fiscalYear}_${m}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        this.saveBlob(blob, `Bank_Payment_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`);
         this.toast.success(`فایل پرداخت گروهی بانک ملی با موفقیت صادر گردید.`);
         this.cdr.detectChanges();
       },
@@ -220,6 +266,24 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** فایل پرداخت بانکی کرایهٔ رانندگان و پیمانکاران ناوگان (منتقل‌شده از کارتابل مالی قدیمی) */
+  generateFleetBankExcel(): void {
+    this.isGeneratingFleet = true;
+    this.personnelApi.exportFleetBankExcel(this.selectedWarehouseId, this.yearMonth).subscribe({
+      next: (blob: Blob) => {
+        this.isGeneratingFleet = false;
+        this.saveBlob(blob, `Fleet_Bank_Payment_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`);
+        this.toast.success('فایل پرداخت بانکی تسویه ناوگان با موفقیت صادر گردید.');
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isGeneratingFleet = false;
+        this.toast.error('خطا در صدور فایل پرداخت بانکی ناوگان.');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   exportExcel(): void {
     if (!this.currentPeriodId) {
       this.toast.warning('دوره محاسباتی فعال یافت نشد.');
@@ -227,12 +291,7 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
     }
     this.personnelApi.exportMonthlyPayrollExcel(this.currentPeriodId).subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Payroll_Report_${this.fiscalYear}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        this.saveBlob(blob, `Payroll_Report_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`);
         this.toast.success('گزارش اکسل تطبیق با موفقیت دانلود شد.');
       },
       error: () => {

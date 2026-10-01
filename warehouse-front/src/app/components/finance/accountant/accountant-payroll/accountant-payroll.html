@@ -1,10 +1,10 @@
-<div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
+<div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl" [class.no-print]="isPayslipModalOpen">
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
   <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-      
-      <!-- سمت راست: دراپ‌داون بخش، سال و ماه مالی و تب‌های فرعی -->
+    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+
+      <!-- سمت راست: دراپ‌داون بخش، دوره، دامنه و تب‌های فرعی -->
       <div class="flex flex-wrap items-center gap-2 md:gap-3">
         <!-- انتخابگر بخش فعال -->
         <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
@@ -12,18 +12,54 @@
           <select
             [(ngModel)]="selectedSectionId"
             (change)="onSectionChanged()"
-            class="bg-transparent text-xs font-black text-blue-700 focus:outline-none cursor-pointer">
+            aria-label="بخش فعال"
+            class="bg-transparent text-xs font-black text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer">
             <option *ngFor="let sec of mySections" [value]="sec.id">
               {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
             </option>
           </select>
         </div>
 
-        <!-- انتخابگر ماه -->
-        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">دوره:</span>
-          <span class="text-xs font-black text-slate-800 font-mono">{{ selectedMonth }} {{ fiscalYear }}</span>
+        <!-- انتخابگر دوره (سال و ماه) -->
+        <div class="flex items-center gap-1.5 bg-surface-muted border border-line px-2.5 py-1 rounded-xl">
+          <label for="acc-payroll-year" class="text-[11px] font-bold text-fg-muted">دوره:</label>
+          <select
+            id="acc-payroll-year"
+            [(ngModel)]="fiscalYear"
+            (change)="onPeriodChanged()"
+            aria-label="سال مالی دوره حقوق"
+            class="bg-transparent text-xs font-black text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer tabular-nums">
+            @for (y of availableYears; track y) {
+              <option [value]="y">{{ y }}</option>
+            }
+          </select>
+          <select
+            [(ngModel)]="selectedMonth"
+            (change)="onPeriodChanged()"
+            aria-label="ماه دوره حقوق"
+            class="bg-transparent text-xs font-black text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer">
+            @for (m of monthNames; track m) {
+              <option [value]="m">{{ m }}</option>
+            }
+          </select>
         </div>
+
+        <!-- دامنهٔ محاسبه: کل شرکت یا یک انبار -->
+        @if (showWarehouseScope) {
+          <div class="flex items-center gap-1.5 bg-surface-muted border border-line px-2.5 py-1 rounded-xl">
+            <label for="acc-payroll-scope" class="text-[11px] font-bold text-fg-muted">دامنه:</label>
+            <select
+              id="acc-payroll-scope"
+              [(ngModel)]="selectedWarehouseId"
+              (change)="onPeriodChanged()"
+              class="bg-transparent text-xs font-black text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer">
+              <option [ngValue]="null">کل شرکت (سراسری)</option>
+              @for (wh of warehouses; track wh.id) {
+                <option [ngValue]="wh.id">{{ wh.name }}</option>
+              }
+            </select>
+          </div>
+        }
 
         <!-- تب‌های فرعی در کپسول محصور (Subtabs Navigation) -->
         <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
@@ -74,44 +110,73 @@
               {{ statusCounters.all }}
             </span>
           </button>
+
+          <button
+            type="button"
+            (click)="switchSubTab('work_summary')"
+            [class]="activeSubTab === 'work_summary' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+            <span>🗓️ خلاصه کارکرد ماهانه</span>
+          </button>
         </div>
       </div>
 
-      <!-- سمت چپ: دکمه‌های اکشن ۳گانه استاندارد و محاسبه دسته‌ای -->
-      <div class="flex items-center gap-2 justify-end">
+      <!-- سمت چپ: قفل دوره، محاسبه دسته‌ای و دکمه‌های اکشن -->
+      <div class="flex flex-wrap items-center gap-2 justify-end">
+        @if (periodStatus) {
+          <span
+            class="px-2 py-1 rounded-lg text-[11px] font-bold border"
+            [class]="isPeriodLocked ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'">
+            {{ isPeriodLocked ? 'دوره قفل شده' : 'دوره باز' }}
+          </span>
+        }
+        @if (currentPeriodId && periodStatus && (isPeriodLocked ? canUnlockPeriod : canLockPeriod)) {
+          <button
+            type="button"
+            (click)="toggleLockPeriod()"
+            [disabled]="isTogglingLock"
+            class="px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+            [class]="isPeriodLocked ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' : 'bg-surface text-fg-muted border-line hover:bg-surface-muted'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="isPeriodLocked ? 'unlock' : 'lock'"></svg>
+            <span>{{ isPeriodLocked ? 'بازگشایی دوره' : 'قفل نهایی دوره' }}</span>
+          </button>
+        }
+
         <button
           type="button"
           (click)="calculateBatch()"
-          [disabled]="isCalculating"
-          class="px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50">
+          [disabled]="isCalculating || isPeriodLocked"
+          [title]="isPeriodLocked ? 'دوره قفل شده است و محاسبهٔ دوباره نمی‌پذیرد' : 'محاسبهٔ ۵۸ ستون حقوق برای دوره و دامنهٔ انتخاب‌شده'"
+          class="px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
           <span>⚡</span>
           <span>{{ isCalculating ? 'در حال محاسبه حقوق...' : 'محاسبه مکانیزه حقوق' }}</span>
         </button>
 
-        <!-- خروجی اکسل ۲ ردیفه -->
+        <!-- ورود مالیات دارایی (فایل اکسل یا چسباندن متن) -->
+        <button
+          type="button"
+          (click)="openTaxModal()"
+          [disabled]="isPeriodLocked"
+          class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          [title]="isPeriodLocked ? 'دوره قفل شده است و مالیات تازه نمی‌پذیرد' : 'درون‌ریزی مالیات دارایی (فایل اکسل یا چسباندن متن)'"
+          aria-label="درون‌ریزی مالیات دارایی">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="upload"></svg>
+        </button>
+
+        <!-- خروجی اکسل ۵۸ ستونی -->
         <button
           type="button"
           (click)="exportExcel()"
           class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="خروجی فایل اکسل مطابق شیت مرجع تیرماه"
+          title="خروجی فایل اکسل ۵۸ ستونی حقوق دوره"
           aria-label="خروجی اکسل">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
-        </button>
-
-        <!-- آپلود یا قالب اکسل -->
-        <button
-          type="button"
-          (click)="importExcel()"
-          class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="قالب اکسل محاسبات"
-          aria-label="ایمپورت اکسل">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="upload"></svg>
         </button>
 
         <!-- رفرش زنده داده‌ها -->
         <button
           type="button"
-          (click)="fetchPayrollData()"
+          (click)="refreshCurrentTab()"
           class="w-9 h-9 rounded-xl bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
           title="تازه‌سازی کارتابل حقوق"
           aria-label="رفرش">
@@ -122,52 +187,158 @@
     </div>
   </div>
 
-  <!-- ── ۲. جدول و کارت داده‌ها (Data Card Container) ── -->
+  <!-- ── ۲. شاخص‌های خلاصه حقوق دوره ── -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-2 min-w-0">
+      <span class="text-[11px] font-bold text-fg-muted">تعداد پرسنل لیست</span>
+      <span class="text-base xl:text-lg font-black text-fg tabular-nums [overflow-wrap:anywhere]">{{ loadError ? '—' : (payrollSummary.totalPersonnel | number) + ' نفر' }}</span>
+    </div>
+    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-2 min-w-0">
+      <span class="text-[11px] font-bold text-fg-muted">جمع ناخالص حقوق (ریال)</span>
+      <span class="text-base xl:text-lg font-black text-indigo-700 tabular-nums [overflow-wrap:anywhere]">{{ loadError ? '—' : (payrollSummary.totalGross | number) }}</span>
+    </div>
+    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-2 min-w-0">
+      <span class="text-[11px] font-bold text-fg-muted">خالص قابل پرداخت (ریال)</span>
+      <span class="text-base xl:text-lg font-black text-emerald-700 tabular-nums [overflow-wrap:anywhere]">{{ loadError ? '—' : (payrollSummary.totalPayable | number) }}</span>
+    </div>
+    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-2 min-w-0">
+      <span class="text-[11px] font-bold text-fg-muted">جمع بیمه تأمین اجتماعی (ریال)</span>
+      <span class="text-base xl:text-lg font-black text-blue-700 tabular-nums [overflow-wrap:anywhere]">{{ loadError ? '—' : (payrollSummary.totalInsurance | number) }}</span>
+    </div>
+    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-2 min-w-0">
+      <span class="text-[11px] font-bold text-fg-muted">جمع مالیات حقوق (ریال)</span>
+      <span class="text-base xl:text-lg font-black text-rose-700 tabular-nums [overflow-wrap:anywhere]">{{ loadError ? '—' : (payrollSummary.totalTax | number) }}</span>
+    </div>
+  </div>
+
+  @if (activeSubTab === 'work_summary') {
+    <!-- ── ۳. خلاصه کارکرد ماهانه پرسنل (منتقل‌شده از گزارشات کارتابل مالی) ── -->
+    <div class="bg-surface rounded-3xl border border-line shadow-sm overflow-hidden">
+      <div class="p-3 md:p-4 border-b border-line-subtle bg-surface-muted flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-sm font-black text-fg">خلاصه کارکرد ماهانه پرسنل — {{ selectedMonth }} {{ fiscalYear }}</h2>
+        <span class="text-[11px] text-fg-muted">مبنای محاسبه حقوق همین دوره</span>
+      </div>
+
+      @if (isWorkSummaryLoading) {
+        <div class="p-4" aria-busy="true">
+          <app-loading-skeleton type="table" [rows]="5" />
+          <p class="sr-only">در حال بارگذاری خلاصه کارکرد...</p>
+        </div>
+      } @else if (workSummaryError) {
+        <div class="p-10 text-center space-y-3">
+          <p class="text-xs font-bold text-rose-700">دریافت خلاصه کارکرد ممکن نشد.</p>
+          <button type="button" (click)="loadWorkSummary()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer">تلاش دوباره</button>
+        </div>
+      } @else if (workSummaryRows.length === 0) {
+        <div class="p-10 text-center">
+          <p class="text-xs text-fg-muted font-bold">برای این دوره کارکردی ثبت نشده است.</p>
+        </div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full text-start text-xs">
+            <thead class="bg-surface-muted text-fg-muted border-b border-line font-bold">
+              <tr>
+                <th class="p-3 text-center">#</th>
+                <th class="p-3">نام پرسنل</th>
+                <th class="p-3 text-center">کد ملی</th>
+                <th class="p-3 text-center">روزهای حضور</th>
+                <th class="p-3 text-center">ساعات موثر</th>
+                <th class="p-3 text-center">اضافه‌کار</th>
+                <th class="p-3 text-center">مرخصی</th>
+                <th class="p-3 text-center">غیبت</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (rep of workSummaryRows; track rep.personnel_id; let idx = $index) {
+                <tr class="hover:bg-slate-50/60">
+                  <td class="p-3 text-center text-fg-subtle font-mono">{{ idx + 1 }}</td>
+                  <td class="p-3 font-bold text-fg">{{ rep.full_name }}</td>
+                  <td class="p-3 text-center font-mono text-fg-muted">{{ rep.national_code }}</td>
+                  <td class="p-3 text-center font-mono font-bold text-emerald-700">{{ rep.present_days }}</td>
+                  <td class="p-3 text-center font-mono font-black text-indigo-700">{{ rep.total_hours | number }}</td>
+                  <td class="p-3 text-center font-mono text-amber-700">{{ rep.total_overtime_hours | number }}</td>
+                  <td class="p-3 text-center font-mono text-blue-700">{{ rep.leave_days }}</td>
+                  <td class="p-3 text-center font-mono text-rose-700">{{ rep.absent_days }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  } @else {
+  <!-- ── ۳. جدول و کارت داده‌ها (Data Card Container) ── -->
   <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-    <!-- نوار بالای جدول: جستجو -->
+    <!-- نوار بالای جدول: جستجو، گروه و نمای جزئیات -->
     <div class="p-3 md:p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
       <div class="relative flex-1 min-w-[240px] max-w-md">
         <input
           type="text"
           [(ngModel)]="searchQuery"
+          (input)="applyFilters()"
           (keyup.enter)="syncUrlParams()"
-          placeholder="جستجو بر اساس نام پرسنل، کد ملی، عنوان شغلی..."
+          aria-label="جستجو در رکوردهای حقوق"
+          placeholder="جستجو بر اساس نام پرسنل، کد ملی یا گروه شغلی..."
           class="w-full pr-9 pl-8 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-sans" />
         <span class="absolute right-3 top-2.5 text-slate-400 text-xs">🔍</span>
         <button
           *ngIf="searchQuery"
+          type="button"
           (click)="clearSearch()"
           class="absolute left-2.5 top-2 text-slate-400 hover:text-slate-600 text-sm cursor-pointer"
-          title="پاک‌سازی جستجو">
+          title="پاک‌سازی جستجو"
+          aria-label="پاک‌سازی جستجو">
           ✕
         </button>
       </div>
 
-      <div class="flex items-center gap-3 text-xs">
-        <span class="text-slate-500">مبنای قانونی کارکرد:</span>
+      <div class="flex flex-wrap items-center gap-3 text-xs">
+        <div class="flex items-center gap-1.5">
+          <label for="acc-payroll-category" class="text-fg-muted font-bold">گروه:</label>
+          <select
+            id="acc-payroll-category"
+            [(ngModel)]="statusCategoryFilter"
+            (change)="applyFilters()"
+            class="bg-surface border border-line text-fg text-xs font-bold rounded-xl px-2.5 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
+            <option value="ALL">همه گروه‌ها</option>
+            <option value="نفرات شرکتی">نفرات شرکتی</option>
+            <option value="سرپرستی">سرپرستی</option>
+          </select>
+        </div>
+
+        <label class="flex items-center gap-1.5 cursor-pointer font-bold text-fg-muted">
+          <input type="checkbox" [(ngModel)]="showDetailedColumns" class="rounded border-line accent-indigo-600 focus-visible:ring-2 focus-visible:ring-indigo-500" />
+          <span>نمای جزئیات (مزایا و کارکرد)</span>
+        </label>
+
         <span class="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-800 font-bold border border-blue-200">
-          ۱۰ ساعت کار روزانه پایه
+          مبنای قانونی: ۱۰ ساعت کار روزانه
         </span>
       </div>
     </div>
 
-    <!-- بدنه جدول / وضعیت لودینگ و خالی -->
-    <div *ngIf="isLoading" class="p-12 text-center space-y-3">
-      <div class="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-      <p class="text-xs text-slate-500 font-bold">در حال بارگذاری احکام و محاسبات حقوق...</p>
+    <!-- بدنه جدول / وضعیت لودینگ، خطا و خالی -->
+    <div *ngIf="isLoading" class="p-4" aria-busy="true">
+      <app-loading-skeleton type="table" [rows]="6" />
+      <p class="sr-only">در حال بارگذاری احکام و محاسبات حقوق...</p>
     </div>
 
-    <div *ngIf="!isLoading && items.length === 0" class="p-12 text-center space-y-3">
+    <div *ngIf="!isLoading && loadError" class="p-10 text-center space-y-3" role="alert">
+      <p class="text-xs font-bold text-rose-700">دریافت رکوردهای حقوق این دوره ممکن نشد.</p>
+      <button type="button" (click)="refreshCurrentTab()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">تلاش دوباره</button>
+    </div>
+
+    <div *ngIf="!isLoading && !loadError && items.length === 0" class="p-12 text-center space-y-3">
       <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto text-2xl shadow-inner">
         💳
       </div>
       <h3 class="text-sm font-black text-slate-800">هیچ سندی در این وضعیت برای محاسبه یا نمایش وجود ندارد</h3>
       <p class="text-xs text-slate-500 max-w-md mx-auto">
-        دوره‌های کارکرد قفل‌شده سرپرست به صورت خودکار در این قسمت جهت صدور فیش و اجرای فرمول‌های مالی لیست می‌شوند.
+        برای دوره {{ selectedMonth }} {{ fiscalYear }} رکوردی یافت نشد. دوره یا دامنه را تغییر دهید یا «محاسبه مکانیزه حقوق» را اجرا کنید.
       </p>
     </div>
 
-    <div *ngIf="!isLoading && items.length > 0" class="overflow-x-auto">
+    <div *ngIf="!isLoading && !loadError && items.length > 0" class="overflow-x-auto">
       <table class="w-full text-right text-xs">
         <thead class="bg-slate-50 border-b border-slate-100 text-slate-500 font-black">
           <tr>
@@ -175,8 +346,22 @@
             <th class="p-3">پرسنل</th>
             <th class="p-3">کد ملی</th>
             <th class="p-3">کارکرد موثر</th>
+            @if (showDetailedColumns) {
+              <th class="p-3 text-center">گروه</th>
+              <th class="p-3 text-center">ساعات کارکرد</th>
+              <th class="p-3 text-center">اضافه‌کار</th>
+              <th class="p-3 text-center">جمعه‌کاری</th>
+              <th class="p-3 text-center">مأموریت</th>
+              <th class="p-3 text-center">مزد مبنا</th>
+              <th class="p-3 text-center">حق مسکن</th>
+              <th class="p-3 text-center">بن خواربار</th>
+              <th class="p-3 text-center">حق تأهل</th>
+              <th class="p-3 text-center">حق اولاد</th>
+              <th class="p-3 text-center">ایاب و ذهاب</th>
+              <th class="p-3 text-center">شماره حساب</th>
+            }
             <th class="p-3">حقوق ناخالص (ریال)</th>
-            <th class="p-3">بیمه سهم کارمند (۷٪)</th>
+            <th class="p-3">بیمه سهم کارگر (۷٪)</th>
             <th class="p-3">مالیات بر حقوق</th>
             <th class="p-3">خالص پرداختی (ریال)</th>
             <th class="p-3 text-center">عملیات مالی</th>
@@ -188,22 +373,290 @@
             <td class="p-3 font-bold text-slate-800">{{ item.personnel_name || item.full_name }}</td>
             <td class="p-3 font-mono text-slate-600">{{ item.national_code }}</td>
             <td class="p-3 font-mono">{{ item.effective_days || item.insurance_days || 0 }} روز</td>
+            @if (showDetailedColumns) {
+              <td class="p-3 text-center font-bold text-indigo-700">{{ item.job_grade ? ('گروه ' + item.job_grade) : '—' }}</td>
+              <td class="p-3 text-center font-mono">{{ (item.worked_hours || 0) | number }}</td>
+              <td class="p-3 text-center font-mono">{{ (item.overtime_hours || 0) | number }}</td>
+              <td class="p-3 text-center font-mono">{{ (item.friday_work_days || 0) | number }}</td>
+              <td class="p-3 text-center font-mono">{{ (item.mission_days || 0) | number }}</td>
+              <td class="p-3 text-center font-mono">{{ (item.base_daily_rate || 0) | number }}</td>
+              <td class="p-3 text-center font-mono">{{ (item.housing_allowance || 0) | number }}</td>
+              <td class="p-3 text-center font-mono">{{ (item.food_allowance || 0) | number }}</td>
+              <td class="p-3 text-center font-mono">{{ (item.marital_allowance || 0) | number }}</td>
+              <td class="p-3 text-center font-mono">{{ (item.child_allowance || 0) | number }}</td>
+              <td class="p-3 text-center font-mono">{{ (item.transport_allowance || 0) | number }}</td>
+              <td class="p-3 text-center font-mono text-[11px]" dir="ltr">{{ item.bank_account_number || '—' }}</td>
+            }
             <td class="p-3 font-mono font-bold">{{ item.gross_salary | number }}</td>
             <td class="p-3 font-mono text-rose-600">{{ (item.insurance_employee || item.worker_insurance || 0) | number }}</td>
             <td class="p-3 font-mono text-rose-600">{{ (item.tax_amount || item.income_tax || 0) | number }}</td>
-            <td class="p-3 font-mono font-bold text-emerald-600">{{ (item.net_salary || item.payable_amount || 0) | number }}</td>
+            <td class="p-3 font-mono font-bold text-emerald-700">{{ (item.payable_amount || item.net_salary || 0) | number }}</td>
             <td class="p-3 text-center">
-              <button
-                type="button"
-                (click)="approveSingle(item)"
-                class="px-2 py-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer">
-                ✓ تایید نهایی مالی
-              </button>
+              <div class="flex items-center justify-center gap-1">
+                <button
+                  type="button"
+                  (click)="openPayslipModal(item)"
+                  class="px-2 py-1 text-indigo-700 hover:bg-indigo-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
+                  title="مشاهده و چاپ فیش حقوقی"
+                  [attr.aria-label]="'فیش حقوقی ' + (item.personnel_name || item.full_name || '')">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-lines"></svg>
+                  <span>فیش</span>
+                </button>
+                <button
+                  type="button"
+                  (click)="approveSingle(item)"
+                  class="px-2 py-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer">
+                  ✓ تایید نهایی مالی
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
   </div>
+  }
 
 </div>
+
+<!-- ── مودال درون‌ریزی مالیات دارایی (فایل اکسل یا چسباندن متن) ── -->
+@if (isTaxModalOpen) {
+  <div class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 no-print" role="dialog" aria-modal="true" aria-labelledby="acc-tax-modal-title">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" (click)="closeTaxModal()"></div>
+    <div id="payroll-tax-dialog" class="relative bg-surface rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col modal-enter p-5 gap-4">
+      <div class="flex items-center justify-between border-b border-line-subtle pb-3 shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-800 flex items-center justify-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-plus"></svg>
+          </div>
+          <div>
+            <h3 id="acc-tax-modal-title" class="text-sm font-black text-fg">درون‌ریزی مالیات دارایی (سامانه مالیات حقوق)</h3>
+            <p class="text-[11px] text-fg-muted">دوره: <span class="font-mono font-bold text-indigo-700">{{ yearMonth }}</span></p>
+          </div>
+        </div>
+        <button type="button" (click)="closeTaxModal()" class="btn-icon-sm btn-icon-slate" title="بستن" aria-label="بستن">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+        </button>
+      </div>
+
+      <!-- انتخاب روش: فایل اکسل یا چسباندن متن -->
+      <div class="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl shrink-0" role="group" aria-label="روش ورود مالیات">
+        <button type="button" [attr.aria-pressed]="taxModalMode === 'file'" (click)="setTaxModalMode('file')"
+          [class]="taxModalMode === 'file' ? 'bg-surface text-indigo-800 font-black shadow-xs' : 'text-fg-muted font-bold hover:text-fg'"
+          class="flex-1 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
+          <span>بارگذاری فایل اکسل</span>
+        </button>
+        <button type="button" [attr.aria-pressed]="taxModalMode === 'paste'" (click)="setTaxModalMode('paste')"
+          [class]="taxModalMode === 'paste' ? 'bg-surface text-indigo-800 font-black shadow-xs' : 'text-fg-muted font-bold hover:text-fg'"
+          class="flex-1 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard"></svg>
+          <span>چسباندن متن</span>
+        </button>
+      </div>
+
+      <div class="space-y-4 overflow-y-auto flex-1 text-xs">
+        @if (taxModalMode === 'file') {
+          <div class="space-y-3">
+            <div class="border-2 border-dashed border-indigo-200 hover:border-indigo-500 focus-within:border-indigo-500 rounded-2xl p-6 text-center transition-colors bg-indigo-50/20">
+              <input type="file" (change)="onTaxFileSelected($event)" accept=".xlsx,.xls" class="sr-only" id="acc-tax-file-input" />
+              <label for="acc-tax-file-input" class="cursor-pointer flex flex-col items-center gap-2.5">
+                <span class="w-12 h-12 rounded-2xl bg-indigo-100/80 text-indigo-700 flex items-center justify-center shadow-xs">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-plus"></svg>
+                </span>
+                <span class="font-black text-fg">انتخاب فایل اکسل خروجی سامانه دارایی</span>
+                <span class="text-[11px] text-fg-muted">فرمت‌های مجاز: XLSX و XLS</span>
+              </label>
+              @if (selectedTaxFile) {
+                <div class="mt-4 p-3 bg-emerald-50 text-emerald-900 rounded-2xl border border-emerald-200 flex items-center justify-between gap-2">
+                  <span class="font-bold truncate">{{ selectedTaxFile.name }}</span>
+                  <span class="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-lg shrink-0">آماده اعمال</span>
+                </div>
+              }
+            </div>
+            <p class="bg-surface-muted border border-line rounded-2xl p-3 text-[11px] text-fg-muted leading-relaxed">
+              فایل باید ستون <span class="font-bold text-indigo-800">کد ملی</span> و ستون <span class="font-bold text-indigo-800">مالیات محاسبه‌شده</span> را داشته باشد؛ سامانه ستون‌ها را خودکار شناسایی و مبلغ مالیات را روی رکوردهای حقوق دوره اعمال می‌کند.
+            </p>
+          </div>
+        } @else {
+          <div class="space-y-3">
+            <label for="acc-tax-paste" class="block text-fg-muted leading-relaxed text-[11px]">
+              سطرهای کپی‌شده از اکسل (شامل <span class="font-bold text-fg">کد ملی</span> و <span class="font-bold text-fg">مبلغ مالیات</span>) را اینجا بچسبانید:
+            </label>
+            <textarea id="acc-tax-paste" [(ngModel)]="taxExcelText" (input)="onTaxTextChange()" rows="5" dir="ltr"
+              class="w-full bg-surface-muted border border-line rounded-2xl p-3 text-xs font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              placeholder="1234567890	4500000"></textarea>
+
+            @if (taxParsedRows.length > 0) {
+              <div class="border border-line rounded-2xl overflow-hidden">
+                <div class="p-2.5 bg-surface-muted border-b border-line flex items-center justify-between text-[11px]">
+                  <span class="font-bold text-fg">پیش‌نمایش داده‌های استخراج‌شده</span>
+                  <span class="font-bold text-indigo-800">{{ taxParsedRows.length }} سطر شناسایی شد</span>
+                </div>
+                <div class="max-h-40 overflow-y-auto">
+                  <table class="w-full text-start text-[11px]">
+                    <thead class="bg-surface-muted text-fg-muted font-bold sticky top-0 border-b border-line">
+                      <tr>
+                        <th class="p-2">#</th>
+                        <th class="p-2">کد ملی</th>
+                        <th class="p-2">نام پرسنل در سامانه</th>
+                        <th class="p-2 text-center">مبلغ مالیات (ریال)</th>
+                        <th class="p-2 text-center">تطبیق</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      @for (pr of taxParsedRows; track $index) {
+                        <tr>
+                          <td class="p-2 text-fg-muted font-mono">{{ $index + 1 }}</td>
+                          <td class="p-2 font-mono font-bold text-fg">{{ pr.national_code }}</td>
+                          <td class="p-2 font-bold" [class]="pr.matched ? 'text-fg' : 'text-fg-muted'">{{ pr.full_name }}</td>
+                          <td class="p-2 text-center font-mono font-bold text-indigo-900">{{ pr.tax_amount | number }}</td>
+                          <td class="p-2 text-center">
+                            @if (pr.matched) {
+                              <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-bold">تطبیق‌یافته</span>
+                            } @else {
+                              <span class="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full text-[10px] font-bold">پرسنل ناشناس</span>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (taxImportResult) {
+          <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 space-y-1" role="status">
+            <div class="font-black text-xs">{{ taxImportResult.message }}</div>
+            <div class="text-[11px] text-emerald-800 flex flex-wrap items-center gap-4 pt-1">
+              <span>تعداد تطبیق‌یافته: <strong class="font-mono">{{ taxImportResult.matched_count }}</strong> نفر</span>
+              <span>جمع کل مالیات: <strong class="font-mono">{{ taxImportResult.total_imported_tax | number }}</strong> ریال</span>
+            </div>
+          </div>
+          @if (taxImportResult.unmatched_count > 0) {
+            <div class="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 space-y-1" role="alert">
+              <div class="font-black text-xs">{{ taxImportResult.unmatched_count }} ردیف با پرسنل این دوره تطبیق نیافت و مالیاتش اعمال نشد.</div>
+              @if (taxImportResult.unmatched_rows?.length) {
+                <ul class="text-[11px] text-amber-800 list-disc ps-5 max-h-24 overflow-y-auto">
+                  @for (row of taxImportResult.unmatched_rows; track $index) {
+                    <li><bdi class="font-mono">{{ row?.national_code || row?.code || row }}</bdi></li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+        }
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-line-subtle shrink-0">
+        <button type="button" (click)="closeTaxModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-fg text-xs font-bold rounded-xl cursor-pointer transition-colors">انصراف</button>
+        <button type="button" (click)="submitTaxImport()"
+          [disabled]="isImportingTax || (taxModalMode === 'file' && !selectedTaxFile) || (taxModalMode === 'paste' && taxParsedRows.length === 0)"
+          class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md shadow-indigo-500/20 cursor-pointer flex items-center gap-2 disabled:opacity-50 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <span>{{ isImportingTax ? 'در حال پردازش و اعمال...' : 'اعمال مالیات به دوره حقوق' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── مودال نمایش و چاپ فیش حقوقی تکی ── -->
+@if (isPayslipModalOpen && selectedPayslipRecord) {
+  <div class="payslip-print-shell fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5" role="dialog" aria-modal="true" aria-labelledby="acc-payslip-title">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm no-print" (click)="closePayslipModal()"></div>
+    <div id="payroll-payslip-dialog" class="payslip-print-panel relative bg-surface rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col modal-enter p-5 gap-4">
+      <div class="flex items-center justify-between border-b border-line-subtle pb-3 shrink-0 no-print">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-lines"></svg>
+          </div>
+          <div>
+            <h3 id="acc-payslip-title" class="text-sm font-black text-fg">پیش‌نمایش و صدور فیش حقوقی</h3>
+            <p class="text-[11px] text-fg-muted">{{ selectedPayslipRecord.full_name || selectedPayslipRecord.personnel_name }} — دوره: {{ yearMonth }}</p>
+          </div>
+        </div>
+        <button type="button" (click)="closePayslipModal()" class="btn-icon-sm btn-icon-slate" title="بستن" aria-label="بستن">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+        </button>
+      </div>
+
+      <div class="payslip-printable flex-1 overflow-y-auto p-4 bg-surface-muted rounded-2xl border border-line text-xs space-y-4">
+        <div class="text-center border-b border-line pb-3">
+          <h2 class="text-base font-black text-fg">فیش حقوق و دستمزد ماهانه</h2>
+          <p class="text-[11px] text-fg-muted font-bold mt-0.5">دوره محاسباتی: {{ yearMonth }}</p>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-surface p-3 rounded-xl border border-line">
+          <div><span class="text-fg-muted block">نام و نام خانوادگی:</span><span class="font-bold text-fg">{{ selectedPayslipRecord.full_name || selectedPayslipRecord.personnel_name }}</span></div>
+          <div><span class="text-fg-muted block">کد ملی:</span><span class="font-mono font-bold text-fg">{{ selectedPayslipRecord.national_code }}</span></div>
+          <div><span class="text-fg-muted block">رده شغلی:</span><span class="font-bold text-fg">{{ selectedPayslipRecord.status_category || 'نفرات شرکتی' }}</span></div>
+          <div><span class="text-fg-muted block">گروه شغلی:</span><span class="font-bold text-indigo-700">{{ selectedPayslipRecord.job_grade ? ('گروه ' + selectedPayslipRecord.job_grade) : '—' }}</span></div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-surface p-3 rounded-xl border border-line">
+          <div><span class="text-fg-muted block">روزهای کارکرد (بیمه):</span><span class="font-mono font-bold text-fg">{{ selectedPayslipRecord.insurance_days || 0 }} روز</span></div>
+          <div><span class="text-fg-muted block">ساعات موثر:</span><span class="font-mono font-bold text-fg">{{ selectedPayslipRecord.worked_hours || 0 }} ساعت</span></div>
+          <div><span class="text-fg-muted block">اضافه‌کار:</span><span class="font-mono font-bold text-fg">{{ selectedPayslipRecord.overtime_hours || 0 }} ساعت</span></div>
+          <div><span class="text-fg-muted block">جمعه‌کاری:</span><span class="font-mono font-bold text-fg">{{ selectedPayslipRecord.friday_work_days || 0 }} روز</span></div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-surface p-3 rounded-xl border border-emerald-200 space-y-1.5">
+            <h4 class="font-black text-emerald-800 border-b border-emerald-100 pb-1 flex items-center justify-between">
+              <span>مزایا و ناخالص حقوق</span>
+              <span class="text-[10px] text-emerald-700 font-normal">ریال</span>
+            </h4>
+            <div class="flex justify-between py-0.5"><span class="text-fg-muted">مزد مبنا:</span><span class="font-mono font-bold">{{ (selectedPayslipRecord.base_daily_rate || 0) | number }}</span></div>
+            <div class="flex justify-between py-0.5"><span class="text-fg-muted">حق مسکن:</span><span class="font-mono font-bold">{{ (selectedPayslipRecord.housing_allowance || 0) | number }}</span></div>
+            <div class="flex justify-between py-0.5"><span class="text-fg-muted">بن خواربار:</span><span class="font-mono font-bold">{{ (selectedPayslipRecord.food_allowance || 0) | number }}</span></div>
+            <div class="flex justify-between py-0.5"><span class="text-fg-muted">حق تأهل:</span><span class="font-mono font-bold">{{ (selectedPayslipRecord.marital_allowance || 0) | number }}</span></div>
+            <div class="flex justify-between py-0.5"><span class="text-fg-muted">حق اولاد:</span><span class="font-mono font-bold">{{ (selectedPayslipRecord.child_allowance || 0) | number }}</span></div>
+            <div class="flex justify-between py-0.5"><span class="text-fg-muted">ایاب و ذهاب:</span><span class="font-mono font-bold">{{ (selectedPayslipRecord.transport_allowance || 0) | number }}</span></div>
+            <div class="flex justify-between py-1 border-t border-emerald-100 font-black text-emerald-900 bg-emerald-50/50 px-1 rounded">
+              <span>جمع ناخالص حقوق:</span>
+              <span class="font-mono">{{ (selectedPayslipRecord.gross_salary || 0) | number }}</span>
+            </div>
+          </div>
+
+          <div class="bg-surface p-3 rounded-xl border border-rose-200 space-y-1.5">
+            <h4 class="font-black text-rose-800 border-b border-rose-100 pb-1 flex items-center justify-between">
+              <span>کسورات قانونی و مالی</span>
+              <span class="text-[10px] text-rose-700 font-normal">ریال</span>
+            </h4>
+            <div class="flex justify-between py-0.5"><span class="text-fg-muted">بیمه سهم کارگر (۷٪):</span><span class="font-mono font-bold text-blue-700">{{ (selectedPayslipRecord.worker_insurance || 0) | number }}</span></div>
+            <div class="flex justify-between py-0.5"><span class="text-fg-muted">مالیات بر درآمد حقوق:</span><span class="font-mono font-bold text-rose-700">{{ (selectedPayslipRecord.income_tax || 0) | number }}</span></div>
+            <div class="flex justify-between py-0.5"><span class="text-fg-muted">کسر مساعده:</span><span class="font-mono font-bold">{{ (selectedPayslipRecord.advance_payment_deduction || 0) | number }}</span></div>
+            <div class="flex justify-between py-1 border-t border-rose-100 font-black text-rose-900 bg-rose-50/50 px-1 rounded">
+              <span>جمع کل کسورات:</span>
+              <span class="font-mono">{{ (selectedPayslipRecord.total_deductions || 0) | number }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-emerald-700 text-white rounded-xl p-3 flex items-center justify-between shadow-sm">
+          <span class="font-black text-sm">مبلغ خالص قابل پرداخت (واریز به حساب):</span>
+          <span class="font-mono font-black text-base">{{ (selectedPayslipRecord.payable_amount || selectedPayslipRecord.net_salary || 0) | number }} ریال</span>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3 text-[11px] text-fg-muted pt-2 border-t border-line">
+          <div><span>شماره حساب / شبا: </span><span class="font-mono text-fg" dir="ltr">{{ selectedPayslipRecord.bank_account_number || '—' }}</span></div>
+          <div class="flex gap-8">
+            <span class="border-t border-slate-400 pt-1 px-4 text-center">امضاء کارشناس حسابداری</span>
+            <span class="border-t border-slate-400 pt-1 px-4 text-center">امضاء و اثر انگشت کارمند</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between border-t border-line-subtle pt-3 shrink-0 no-print">
+        <button type="button" (click)="closePayslipModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-fg text-xs font-bold rounded-xl cursor-pointer">بستن</button>
+        <button type="button" (click)="printCurrentPayslip()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md shadow-indigo-500/20 flex items-center gap-1.5 cursor-pointer">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="printer"></svg>
+          <span>چاپ فیش حقوقی</span>
+        </button>
+      </div>
+    </div>
+  </div>
+}

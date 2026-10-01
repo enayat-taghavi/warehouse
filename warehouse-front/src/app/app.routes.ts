@@ -98,20 +98,8 @@ export const routes: Routes = [
         return 'app/warehouse/dashboard';
       }
       if (!hasWh && hasFin) {
-        const userRoles = (auth.user()?.roles || []).map(r => String(r).toLowerCase());
-        if (userRoles.includes('accountant') || perms.includes('can_act_as_accountant') || perms.includes('perm_approve_personnel_finance') || perms.includes('view_sys_payroll')) {
-          return 'app/finance/accountant-payroll';
-        }
-        if (userRoles.includes('treasury') || userRoles.includes('treasurer') || perms.includes('view_sys_treasury') || perms.includes('perm_treasury_disburse_action')) {
-          return 'app/finance/treasurer-disbursements';
-        }
-        if (userRoles.includes('manager') || perms.includes('perm_manager_payment_authorize') || perms.includes('can_act_as_manager') || perms.includes('perm_approve_personnel_manager')) {
-          return 'app/finance/manager-dashboard';
-        }
-        if (userRoles.includes('supervisor') || perms.includes('can_act_as_supervisor') || perms.includes('perm_approve_personnel_supervisor') || perms.includes('perm_approve_fleet_supervisor')) {
-          return 'app/finance/supervisor-attendance';
-        }
-        return 'app/finance/employee-attendance';
+        // خانهٔ نقش را ریشهٔ سامانه مالی بر اساس پرسونای فعال تعیین می‌کند (accounting.routes)
+        return 'app/finance';
       }
       if (!hasWh && !hasFin) {
         const activeCompanyService = inject(ActiveCompanyService);
@@ -146,20 +134,21 @@ export const routes: Routes = [
   { path: 'doc_approvals', redirectTo: 'app/warehouse/doc_approvals', pathMatch: 'full' },
   { path: 'feed_approvals', redirectTo: 'app/warehouse/feed_approvals', pathMatch: 'full' },
 
-  { path: 'finance-cartable', redirectTo: 'app/finance/finance-cartable', pathMatch: 'full' },
-  { path: 'attendance', redirectTo: 'app/finance/attendance', pathMatch: 'full' },
-  { path: 'fleet', redirectTo: 'app/finance/fleet', pathMatch: 'full' },
-  { path: 'fleet-attendance', redirectTo: 'app/finance/fleet-attendance', pathMatch: 'full' },
+  // صفحه‌های بازنشسته مستقیم به هاب جانشین می‌روند تا ریدایرکت زنجیره‌ای نسازند
+  { path: 'finance-cartable', redirectTo: 'app/finance/accountant-payroll', pathMatch: 'full' },
+  { path: 'attendance', redirectTo: 'app/finance/employee-attendance', pathMatch: 'full' },
+  { path: 'fleet', redirectTo: 'app/finance/employee-fleet', pathMatch: 'full' },
+  { path: 'fleet-attendance', redirectTo: 'app/finance/employee-fleet', pathMatch: 'full' },
   { path: 'manager-approvals', redirectTo: 'app/finance/manager-approvals', pathMatch: 'full' },
-  { path: 'treasury-cartable', redirectTo: 'app/finance/treasury-cartable', pathMatch: 'full' },
-  { path: 'treasury', redirectTo: 'app/finance/treasury', pathMatch: 'full' },
+  { path: 'treasury-cartable', redirectTo: 'app/finance/treasurer-disbursements', pathMatch: 'full' },
+  { path: 'treasury', redirectTo: 'app/finance/treasurer-disbursements', pathMatch: 'full' },
   { path: 'profiles', redirectTo: 'app/finance/profiles', pathMatch: 'full' },
   { path: 'personnel-profiles', redirectTo: 'app/finance/personnel-profiles', pathMatch: 'full' },
   { path: 'base-settings', redirectTo: 'app/finance/base-settings', pathMatch: 'full' },
   { path: 'projects-and-sections', redirectTo: 'app/finance/projects-and-sections', pathMatch: 'full' },
   { path: 'company-documents', redirectTo: 'app/finance/company-documents', pathMatch: 'full' },
   { path: 'documents', redirectTo: 'app/finance/company-documents', pathMatch: 'full' },
-  { path: 'employee-portal', redirectTo: 'app/finance/employee-portal', pathMatch: 'full' },
+  { path: 'employee-portal', redirectTo: 'app/finance/employee-attendance', pathMatch: 'full' },
   { path: 'employee-attendance', redirectTo: 'app/finance/employee-attendance', pathMatch: 'full' },
   { path: 'employee-fleet', redirectTo: 'app/finance/employee-fleet', pathMatch: 'full' },
   { path: 'employee-invoices', redirectTo: 'app/finance/employee-invoices', pathMatch: 'full' },
@@ -195,9 +184,9 @@ export const routes: Routes = [
   { path: 'treasurer-bank-accounts', redirectTo: 'app/finance/treasurer-bank-accounts', pathMatch: 'full' },
   { path: 'treasurer-cheques', redirectTo: 'app/finance/treasurer-cheques', pathMatch: 'full' },
   { path: 'treasurer-reconciliation', redirectTo: 'app/finance/treasurer-reconciliation', pathMatch: 'full' },
-  { path: 'personnel', redirectTo: 'app/finance/finance-cartable', pathMatch: 'full' },
-  { path: 'payroll', redirectTo: 'app/finance/finance-cartable', pathMatch: 'full' },
-  { path: 'fleet-settlement', redirectTo: 'app/finance/treasury-cartable', pathMatch: 'full' },
+  { path: 'personnel', redirectTo: 'app/finance/accountant-payroll', pathMatch: 'full' },
+  { path: 'payroll', redirectTo: 'app/finance/accountant-payroll', pathMatch: 'full' },
+  { path: 'fleet-settlement', redirectTo: 'app/finance/treasurer-disbursements', pathMatch: 'full' },
   { path: 'finance-audit', redirectTo: 'app/finance/audit', pathMatch: 'full' },
   { path: 'operations', redirectTo: 'app/operations/cockpit', pathMatch: 'full' },
   { path: 'cockpit', redirectTo: 'app/operations/cockpit', pathMatch: 'full' },
@@ -229,10 +218,7 @@ export const routes: Routes = [
         return 'app/warehouse/dashboard';
       }
       if (!hasWh && hasFin) {
-        if (perms.includes('perm_approve_personnel_finance') || perms.includes('view_sys_payroll')) {
-          return 'app/finance/finance-cartable';
-        }
-        return 'app/finance/attendance';
+        return 'app/finance';
       }
       if (!hasWh && !hasFin) {
         const activeCompanyService = inject(ActiveCompanyService);

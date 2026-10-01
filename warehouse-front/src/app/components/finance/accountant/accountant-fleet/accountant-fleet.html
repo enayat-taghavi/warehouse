@@ -2,7 +2,7 @@
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
   <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-3">
       
       <!-- سمت راست: دراپ‌داون انتخاب بخش و کپسول زیرتب‌های ناوگان -->
       <div class="flex flex-wrap items-center gap-2 md:gap-3">
@@ -18,6 +18,46 @@
             </option>
           </select>
         </div>
+
+        <!-- دوره و دامنهٔ تسویه ناوگان -->
+        <div class="flex items-center gap-1.5 bg-surface-muted border border-line px-2.5 py-1 rounded-xl">
+          <label for="acc-fleet-year" class="text-[11px] font-bold text-fg-muted">دوره تسویه:</label>
+          <select
+            id="acc-fleet-year"
+            [(ngModel)]="fiscalYear"
+            (change)="onPeriodChanged()"
+            aria-label="سال دوره تسویه"
+            class="bg-transparent text-xs font-black text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer tabular-nums">
+            @for (y of availableYears; track y) {
+              <option [value]="y">{{ y }}</option>
+            }
+          </select>
+          <select
+            [(ngModel)]="selectedMonth"
+            (change)="onPeriodChanged()"
+            aria-label="ماه دوره تسویه"
+            class="bg-transparent text-xs font-black text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer">
+            @for (m of monthNames; track m) {
+              <option [value]="m">{{ m }}</option>
+            }
+          </select>
+        </div>
+
+        @if (showWarehouseScope) {
+          <div class="flex items-center gap-1.5 bg-surface-muted border border-line px-2.5 py-1 rounded-xl">
+            <label for="acc-fleet-scope" class="text-[11px] font-bold text-fg-muted">دامنه:</label>
+            <select
+              id="acc-fleet-scope"
+              [(ngModel)]="selectedWarehouseId"
+              (change)="onPeriodChanged()"
+              class="bg-transparent text-xs font-black text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer">
+              <option [ngValue]="null">کل شرکت (سراسری)</option>
+              @for (wh of warehouses; track wh.id) {
+                <option [ngValue]="wh.id">{{ wh.name }}</option>
+              }
+            </select>
+          </div>
+        }
 
         <!-- ناوبری زیرتب‌ها در کپسول محصور (Subtabs Pill Container) -->
         <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
@@ -149,8 +189,8 @@
                   </button>
                   <button
                     type="button"
-                    (click)="approveVehicleFinance(item)"
-                    class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-black shadow-xs cursor-pointer">
+                    (click)="openApprovalModal(item.id, item.plate_number || '', 'vehicle')"
+                    class="px-2.5 py-1 rounded-lg bg-emerald-700 text-white hover:bg-emerald-800 text-xs font-black shadow-xs cursor-pointer">
                     💳 تایید مالی (مدیر)
                   </button>
                   <button
@@ -171,7 +211,50 @@
 
   <!-- زیرتب ۲: تسویه‌حساب و کارکرد ناوگان -->
   <div *ngIf="activeSubTab === 'settlement'" class="space-y-3">
-    <div *ngIf="settlementItems.length === 0 && !isLoading" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">
+    <!-- شاخص‌های تسویه و فایل پرداخت بانکی -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+      <div class="bg-surface rounded-2xl border border-line shadow-xs p-3 flex flex-col gap-1 min-w-0">
+        <span class="text-[11px] font-bold text-fg-muted">کل خودروها</span>
+        <span class="text-base font-black text-fg tabular-nums [overflow-wrap:anywhere]">{{ settlementSummary ? ((settlementSummary.total_vehicles_count || 0) | number) : '—' }}</span>
+      </div>
+      <div class="bg-surface rounded-2xl border border-line shadow-xs p-3 flex flex-col gap-1 min-w-0">
+        <span class="text-[11px] font-bold text-fg-muted">رانندگان مشمول تسویه</span>
+        <span class="text-base font-black text-blue-700 tabular-nums [overflow-wrap:anywhere]">{{ settlementSummary ? ((settlementSummary.active_contractor_count || 0) | number) : '—' }}</span>
+      </div>
+      <div class="bg-surface rounded-2xl border border-line shadow-xs p-3 flex flex-col gap-1 min-w-0">
+        <span class="text-[11px] font-bold text-fg-muted">کل سرویس‌ها</span>
+        <span class="text-base font-black text-indigo-700 tabular-nums [overflow-wrap:anywhere]">{{ settlementSummary ? ((settlementSummary.total_fleet_trips || 0) | number) : '—' }}</span>
+      </div>
+      <div class="bg-surface rounded-2xl border border-line shadow-xs p-3 flex flex-col gap-1 min-w-0">
+        <span class="text-[11px] font-bold text-fg-muted">جمع قابل پرداخت (ریال)</span>
+        <span class="text-base font-black text-emerald-700 tabular-nums [overflow-wrap:anywhere]">{{ settlementSummary ? ((settlementSummary.total_payable_settlement || 0) | number) : '—' }}</span>
+      </div>
+    </div>
+    <div class="flex justify-end">
+      <button
+        type="button"
+        (click)="exportFleetBankExcel()"
+        [disabled]="isExportingFleetBank || isSettlementLoading || settlementError || settlementItems.length === 0"
+        [title]="settlementItems.length === 0 ? 'برای این دوره ردیف تسویه‌ای وجود ندارد' : 'فایل پرداخت بانکی کرایهٔ رانندگان این دوره و دامنه'"
+        class="px-4 py-2 rounded-xl bg-emerald-700 text-white hover:bg-emerald-800 text-xs font-black shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
+        <span>{{ isExportingFleetBank ? 'در حال صدور...' : 'فایل پرداخت بانکی تسویه ناوگان' }}</span>
+      </button>
+    </div>
+
+    @if (isSettlementLoading) {
+      <div class="bg-white rounded-2xl border border-slate-200 p-4" aria-busy="true">
+        <app-loading-skeleton type="table" [rows]="4" />
+        <p class="sr-only">در حال محاسبهٔ تسویهٔ ناوگان...</p>
+      </div>
+    }
+
+    <div *ngIf="settlementError" class="bg-white rounded-2xl border border-rose-200 p-6 text-center space-y-3">
+      <p class="font-bold text-sm text-rose-700">محاسبه تسویه ناوگان برای این دوره ممکن نشد.</p>
+      <button type="button" (click)="loadSettlement()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer">تلاش دوباره</button>
+    </div>
+
+    <div *ngIf="settlementItems.length === 0 && !isSettlementLoading && !settlementError" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">
       <span class="text-3xl block mb-2">🚚</span>
       <p class="font-bold text-sm">هیچ صورت‌وضعیت تسویه‌حسابی برای ناوگان در این دوره ثبت نشده است.</p>
     </div>
@@ -183,9 +266,12 @@
             <tr>
               <th class="p-3">پلاک خودرو</th>
               <th class="p-3">راننده</th>
+              <th class="p-3">نوع و مالکیت</th>
               <th class="p-3">کل سرویس‌ها</th>
+              <th class="p-3">نرخ پایه سرویس</th>
               <th class="p-3">مبلغ ناخالص</th>
               <th class="p-3">خالص قابل پرداخت</th>
+              <th class="p-3">حساب مقصد</th>
               <th class="p-3">وضعیت تسویه</th>
             </tr>
           </thead>
@@ -193,13 +279,16 @@
             <tr *ngFor="let s of settlementItems" class="hover:bg-slate-50/50">
               <td class="p-3 font-mono font-bold text-slate-800">{{ s.plate_number }}</td>
               <td class="p-3 font-bold text-slate-700">{{ s.driver_name }}</td>
-              <td class="p-3 font-mono">{{ s.total_trips || s.trips_count || 0 }} سرویس</td>
+              <td class="p-3 text-slate-600">{{ s.vehicle_type_display || s.vehicle_type || '—' }} ({{ s.ownership_type_display || s.ownership_type || '—' }})</td>
+              <td class="p-3 font-mono">{{ s.trip_count || 0 }} سرویس</td>
+              <td class="p-3 font-mono">{{ (s.default_service_rate || 0) | number }} ریال</td>
               <td class="p-3 font-mono">{{ (s.gross_amount || 0) | number }} ریال</td>
-              <td class="p-3 font-mono font-black text-emerald-700">{{ (s.net_amount || s.payable_amount || 0) | number }} ریال</td>
+              <td class="p-3 font-mono font-black text-emerald-700">{{ (s.payable_amount || 0) | number }} ریال</td>
+              <td class="p-3 font-mono text-[11px]" dir="ltr">{{ s.sheba_number ? ('IR' + s.sheba_number) : (s.account_number || '—') }}</td>
               <td class="p-3">
                 <span class="px-2 py-0.5 rounded text-[11px] font-bold"
-                      [ngClass]="s.status === 'settled' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'">
-                  {{ s.status === 'settled' ? 'تسویه شده' : 'معلق تایید مالی' }}
+                      [ngClass]="s.is_payable ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'">
+                  {{ s.is_payable ? 'قابل پرداخت' : 'بدون مبلغ (خودرو شرکتی)' }}
                 </span>
               </td>
             </tr>
@@ -248,12 +337,20 @@
                 </span>
               </td>
               <td class="p-3 text-center">
-                <button
-                  type="button"
-                  (click)="openRejectModal(cr.id, cr.plate_number || '', 'vehicle_cr', 'reject')"
-                  class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold cursor-pointer">
-                  ✕ رد
-                </button>
+                <div class="flex items-center justify-center gap-1.5">
+                  <button
+                    type="button"
+                    (click)="openApprovalModal(cr.id, cr.plate_number || ('درخواست #' + cr.id), 'vehicle_cr')"
+                    class="px-2.5 py-1 rounded-lg bg-emerald-700 text-white hover:bg-emerald-800 text-xs font-black shadow-xs cursor-pointer">
+                    💳 تایید مالی (مدیر)
+                  </button>
+                  <button
+                    type="button"
+                    (click)="openRejectModal(cr.id, cr.plate_number || '', 'vehicle_cr', 'reject')"
+                    class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold cursor-pointer">
+                    ✕ رد
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -445,14 +542,55 @@
           </tbody>
         </table>
       </div>
-      <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end">
+      <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
         <button
+          type="button"
           (click)="closeDiffModal()"
           class="px-4 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold cursor-pointer">
           بستن پنجره
         </button>
+        @if (selectedDiffCR?.id) {
+          <button
+            type="button"
+            (click)="openApprovalModal(selectedDiffCR?.id, selectedDiffCR?.plate_number || '', 'vehicle_cr')"
+            class="px-4 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black shadow-xs cursor-pointer">
+            💳 تایید مالی (ارسال به مدیر)
+          </button>
+        }
       </div>
     </div>
   </div>
+
+  <!-- ── مودال تایید مالی با یادداشت اختیاری ── -->
+  @if (isApprovalModalOpen && approvalTarget) {
+    <div class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5" role="dialog" aria-modal="true" aria-labelledby="acc-fleet-approve-title">
+      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" (click)="closeApprovalModal()"></div>
+      <div id="acc-fleet-approve-dialog" class="relative bg-surface rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col modal-enter p-5 gap-4">
+        <div class="flex items-center justify-between border-b border-line-subtle pb-3">
+          <h3 id="acc-fleet-approve-title" class="text-sm font-black text-fg">
+            تایید مالی {{ approvalTarget.type === 'vehicle' ? 'خودرو' : 'درخواست تغییرات ناوگان' }}: {{ approvalTarget.title }}
+          </h3>
+          <button type="button" (click)="closeApprovalModal()" class="btn-icon-sm btn-icon-slate" title="بستن" aria-label="بستن">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+          </button>
+        </div>
+        <label for="acc-fleet-approve-note" class="text-xs text-fg-muted leading-relaxed">
+          پس از تایید مالی، پرونده برای تصویب نهایی به کارتابل مدیر می‌رود. در صورت نیاز توضیح مالی خود را بنویسید (اختیاری):
+        </label>
+        <textarea
+          id="acc-fleet-approve-note"
+          [(ngModel)]="approvalNote"
+          rows="3"
+          class="w-full bg-surface-muted border border-line rounded-xl p-3 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          placeholder="یادداشت نرخ کرایه، حساب مقصد یا تسویه..."></textarea>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" (click)="closeApprovalModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-fg text-xs font-bold rounded-xl cursor-pointer">انصراف</button>
+          <button type="button" (click)="confirmApproval()" [disabled]="isApproving" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-black rounded-xl shadow-xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+            {{ isApproving ? 'در حال ثبت...' : '✓ تایید مالی و ارسال به مدیر' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 
 </div>

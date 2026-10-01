@@ -527,6 +527,13 @@ export class PersonnelApiService {
   }
 
   // --- دوره‌های ماهانه و قفل ---
+  getWorkPeriods(params: { year_month?: string; warehouse_id?: number | null }): Observable<any[]> {
+    const query: Record<string, unknown> = {};
+    if (params.year_month) query['year_month'] = params.year_month;
+    if (params.warehouse_id) query['warehouse_id'] = params.warehouse_id;
+    return this.api.get<any[]>(`${this.baseUrl}/periods/`, query);
+  }
+
   lockPeriod(periodId: number): Observable<{ message: string }> {
     return this.api.post<{ message: string }>(`${this.baseUrl}/periods/${periodId}/lock/`, {});
   }
@@ -702,6 +709,12 @@ export class PersonnelApiService {
   getFleetBankExcelDownloadUrl(warehouseId: number | null | undefined, yearMonth: string): string {
     const whParam = warehouseId ? `&warehouse_id=${warehouseId}` : '';
     return `/api/personnel/fleet-settlement/export-bank-excel/?year_month=${yearMonth}${whParam}`;
+  }
+
+  exportFleetBankExcel(warehouseId: number | null | undefined, yearMonth: string): Observable<Blob> {
+    const params: Record<string, unknown> = { year_month: yearMonth };
+    if (warehouseId) params['warehouse_id'] = warehouseId;
+    return this.api.download(`${this.baseUrl}/fleet-settlement/export-bank-excel/`, params);
   }
 
   // --- کارتابل‌های ۵ سطحی سازمانی و خزانه‌داری ---

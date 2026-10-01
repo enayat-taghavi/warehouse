@@ -197,12 +197,10 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
     const yearMonth = `${this.fiscalYear}/${m}`;
     this.personnelApi.calculateFleetSettlement(null, yearMonth).subscribe({
       next: (res: any) => {
-        const rows = (res?.items || res?.settlements || []).map((s: any) => ({
-          ...s,
-          status: s.is_settled ? 'settled' : 'pending_settlement'
-        }));
+        // پاسخ بک‌اند `{ summary, records }` است؛ خودروی شرکتی مبلغ تسویه ندارد (is_payable=false)
+        const rows = Array.isArray(res?.records) ? res.records : [];
         this.settlementItems = rows;
-        this.statusCounters.settlementPending = rows.filter((x: any) => x.status === 'pending_settlement').length;
+        this.statusCounters.settlementPending = rows.filter((x: any) => x.is_payable && Number(x.payable_amount || 0) > 0).length;
         this.cdr.detectChanges();
       },
       error: () => {

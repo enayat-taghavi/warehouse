@@ -58,6 +58,6 @@ export const WAREHOUSE_ROUTES: Routes = [
   { path: 'approvals', component: Placeholders },
   { path: 'doc_approvals', component: Placeholders },
   { path: 'feed_approvals', component: Placeholders },
-  { path: 'attendance', redirectTo: '/app/finance/attendance', pathMatch: 'full' },
+  { path: 'attendance', redirectTo: '/app/finance/employee-attendance', pathMatch: 'full' },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
 ];

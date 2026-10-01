@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -7,6 +7,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
+import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
+import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
 import { ProjectSection, VehicleDriverProfile, VehicleChangeRequest } from '../../../../core/models/personnel.model';
 import {
   IRANIAN_BANKS,
@@ -17,15 +19,26 @@ import {
   generateShebaFromAccount,
   getBankByName
 } from '../../../../core/utils/sheba-utils';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { LoadingSkeletonComponent } from '../../../../shared/components/loading-skeleton/loading-skeleton.component';
+import { ModalFocus } from '../../../../core/utils/modal-focus';
+import {
+  PAYROLL_MONTHS,
+  defaultPayrollPeriod,
+  isPayrollMonthName,
+  mergeFiscalYears,
+  payrollMonthCode
+} from '../payroll-period';
 
 export type AccountantFleetSubTab = 'new' | 'settlement' | 'changes' | 'all';
 
 @Component({
   selector: 'app-accountant-fleet-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, LoadingSkeletonComponent],
   templateUrl: './accountant-fleet.html',
-  styleUrl: './accountant-fleet.css'
+  styleUrl: './accountant-fleet.css',
+  host: { '(document:keydown.escape)': 'onApprovalEscape()', '(document:keydown)': 'onDocumentKeydown($event)' }
 })
 export class AccountantFleetHubComponent implements OnInit, OnDestroy {
   activeSubTab: AccountantFleetSubTab = 'new';
@@ -36,13 +49,30 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
   isLoadingSections = false;
 
   searchQuery = '';
-  fiscalYear = '1405';
-  selectedMonth = 'تیر';
   isLoading = false;
+
+  // دوره و دامنهٔ تسویه ناوگان (منتقل‌شده از کارتابل مالی قدیمی)
+  readonly monthNames = PAYROLL_MONTHS.map(m => m.name);
+  availableYears: string[] = [];
+  fiscalYear = defaultPayrollPeriod().year;
+  selectedMonth = defaultPayrollPeriod().month;
+  /** دامنه: تهی = کل شرکت (سراسری)، یا یک انبار */
+  selectedWarehouseId: number | null = null;
+  warehouses: { id: number; name: string }[] = [];
+  isExportingFleetBank = false;
 
   // لیست‌های داده
   newVehiclesList: VehicleDriverProfile[] = [];
   settlementItems: any[] = [];
+  settlementSummary: {
+    total_vehicles_count?: number;
+    active_contractor_count?: number;
+    total_fleet_trips?: number;
+    total_payable_settlement?: number;
+    period_status?: string;
+  } | null = null;
+  settlementError = false;
+  isSettlementLoading = false;
   changeRequests: VehicleChangeRequest[] = [];
   allVehiclesList: VehicleDriverProfile[] = [];
 
@@ -60,6 +90,12 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
   iranianBanks: IranianBankInfo[] = IRANIAN_BANKS;
   shebaValidationResult: ShebaValidationResult | null = null;
   shebaDigitsDisplay = '';
+
+  // مودال تایید مالی با یادداشت اختیاری
+  isApprovalModalOpen = false;
+  approvalTarget: { id: number; title: string; type: 'vehicle' | 'vehicle_cr' } | null = null;
+  approvalNote = '';
+  isApproving = false;
 
   // مودال ثبت علت رد یا عودت
   isRejectModalOpen = false;
@@ -80,21 +116,6 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
 
   copiedId: number | null = null;
 
-  monthMap: Record<string, string> = {
-    'فروردین': '01',
-    'اردیبهشت': '02',
-    'خرداد': '03',
-    'تیر': '04',
-    'مرداد': '05',
-    'شهریور': '06',
-    'مهر': '07',
-    'آبان': '08',
-    'آذر': '09',
-    'دی': '10',
-    'بهمن': '11',
-    'اسفند': '12'
-  };
-
   private routeSub?: Subscription;
 
   constructor(
@@ -104,8 +125,18 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     private personnelApi: PersonnelApiService,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    @Optional() private whService?: WarehouseHttpService,
+    @Optional() private moduleRegistry?: ModuleRegistryService
   ) {}
+
+  get yearMonth(): string {
+    return `${this.fiscalYear}/${payrollMonthCode(this.selectedMonth)}`;
+  }
+
+  get showWarehouseScope(): boolean {
+    return !!this.moduleRegistry?.isModuleInstalled('warehouse') && this.warehouses.length > 0;
+  }
 
   ngOnInit(): void {
     this.routeSub = this.route.queryParams.subscribe(params => {
@@ -118,9 +149,43 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
       if (params['q']) {
         this.searchQuery = params['q'];
       }
+      if (params['year'] && /^\d{4}$/.test(params['year'])) {
+        this.fiscalYear = params['year'];
+      }
+      if (params['month'] && isPayrollMonthName(params['month'])) {
+        this.selectedMonth = params['month'];
+      }
+      if (params['wh']) {
+        const wh = Number(params['wh']);
+        this.selectedWarehouseId = Number.isFinite(wh) && wh > 0 ? wh : null;
+      }
     });
 
+    this.availableYears = mergeFiscalYears([], this.fiscalYear);
+    this.personnelApi.getAvailableFiscalYears().subscribe({
+      next: (res) => {
+        this.availableYears = mergeFiscalYears(res?.years, this.fiscalYear);
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+
+    if (this.whService && this.moduleRegistry?.isModuleInstalled('warehouse')) {
+      this.whService.getAll().subscribe({
+        next: (data: any) => {
+          this.warehouses = (Array.isArray(data) ? data : []).map((w: any) => ({ id: w.id, name: w.name }));
+          this.cdr.detectChanges();
+        },
+        error: () => {}
+      });
+    }
+
     this.loadSections();
+  }
+
+  onPeriodChanged(): void {
+    this.syncUrlParams();
+    this.loadSettlement();
   }
 
   ngOnDestroy(): void {
@@ -183,7 +248,10 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
       queryParams: {
         tab: this.activeSubTab,
         section_id: this.selectedSectionId || null,
-        q: this.searchQuery ? this.searchQuery : null
+        q: this.searchQuery ? this.searchQuery : null,
+        year: this.fiscalYear,
+        month: this.selectedMonth,
+        wh: this.selectedWarehouseId || null
       },
       queryParamsHandling: 'merge'
     });
@@ -213,22 +281,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     });
 
     // ۲. تسویه‌حساب و کارکرد ناوگان
-    const m = this.monthMap[this.selectedMonth] || '04';
-    const yearMonth = `${this.fiscalYear}/${m}`;
-    this.personnelApi.calculateFleetSettlement(null, yearMonth).subscribe({
-      next: (res: any) => {
-        const rows = (res?.items || res?.settlements || []).map((s: any) => ({
-          ...s,
-          status: s.is_settled ? 'settled' : 'pending_settlement'
-        }));
-        this.settlementItems = rows;
-        this.statusCounters.settlementPending = rows.filter((x: any) => x.status === 'pending_settlement').length;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.settlementItems = [];
-      }
-    });
+    this.loadSettlement();
 
     // ۳. درخواست‌های تغییرات ناوگان
     this.personnelApi.getVehicleChangeRequests(baseParams).subscribe({
@@ -243,16 +296,140 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * تسویه ماهانه ناوگان؛ پاسخ بک‌اند `{ summary, records }` است
+   * (خودروی شرکتی مبلغ تسویه ندارد و is_payable آن false است).
+   */
+  loadSettlement(): void {
+    this.settlementError = false;
+    this.isSettlementLoading = true;
+    // دادهٔ دورهٔ قبلی نباید زیر عنوان دورهٔ تازه بماند
+    this.settlementItems = [];
+    this.settlementSummary = null;
+    this.personnelApi.calculateFleetSettlement(this.selectedWarehouseId, this.yearMonth).subscribe({
+      next: (res: any) => {
+        const rows = Array.isArray(res?.records) ? res.records : [];
+        this.isSettlementLoading = false;
+        this.settlementItems = rows;
+        this.settlementSummary = res?.summary || null;
+        this.statusCounters.settlementPending = rows.filter((x: any) => x.is_payable && Number(x.payable_amount || 0) > 0).length;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isSettlementLoading = false;
+        this.settlementItems = [];
+        this.settlementSummary = null;
+        this.settlementError = true;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /** فایل پرداخت بانکی تسویه ناوگان (منتقل‌شده از کارتابل مالی قدیمی) */
+  exportFleetBankExcel(): void {
+    this.isExportingFleetBank = true;
+    this.personnelApi.exportFleetBankExcel(this.selectedWarehouseId, this.yearMonth).subscribe({
+      next: (blob: Blob) => {
+        this.isExportingFleetBank = false;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Fleet_Bank_Payment_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.toast.showSuccess('فایل پرداخت بانکی تسویه ناوگان با موفقیت صادر گردید.');
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isExportingFleetBank = false;
+        this.toast.showError('خطا در صدور فایل پرداخت بانکی ناوگان.');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   // ─── اکشن‌های مالی خودرو ───
-  approveVehicleFinance(v: VehicleDriverProfile): void {
+  approveVehicleFinance(v: VehicleDriverProfile, note?: string): void {
     if (!v.id) return;
-    this.personnelApi.approveVehicleFinance(v.id).subscribe({
+    const req$ = note ? this.personnelApi.approveVehicleFinance(v.id, note) : this.personnelApi.approveVehicleFinance(v.id);
+    req$.subscribe({
       next: (res) => {
-        this.toast.showSuccess(res.message || `تایید مالی خودرو «${v.plate_number}» صادر و پرونده جهت تصویب نهایی به مدیر ارسال شد.`);
+        this.toast.showSuccess(res.message || `تایید مالی خودرو «${v.plate_number || ''}» صادر و پرونده جهت تصویب نهایی به مدیر ارسال شد.`);
         this.fetchFleetData();
       },
       error: (err) => {
         this.toast.showError(err?.error?.error || 'خطا در تایید مالی خودرو');
+      }
+    });
+  }
+
+  /** تایید مالی درخواست تغییرات ناوگان و ارسال به مدیر (منتقل‌شده از کارتابل مالی قدیمی) */
+  approveChangeRequestFinance(cr: VehicleChangeRequest, note?: string): void {
+    if (!cr.id) return;
+    const req$ = note
+      ? this.personnelApi.approveVehicleChangeRequestFinance(cr.id, note)
+      : this.personnelApi.approveVehicleChangeRequestFinance(cr.id);
+    req$.subscribe({
+      next: (res: any) => {
+        this.toast.showSuccess(res?.message || 'تایید مالی ثبت و درخواست تغییرات ناوگان جهت تصویب نهایی به کارتابل مدیر ارسال گردید.');
+        this.closeDiffModal();
+        this.fetchFleetData();
+      },
+      error: (err: any) => {
+        this.toast.showError(err?.error?.error || 'خطا در تایید مالی درخواست تغییرات ناوگان');
+      }
+    });
+  }
+
+  // ─── مودال تایید مالی با یادداشت اختیاری ───
+  private readonly approvalFocus = new ModalFocus();
+
+  openApprovalModal(id: number | undefined, title: string, type: 'vehicle' | 'vehicle_cr'): void {
+    if (!id) return;
+    this.approvalTarget = { id, title, type };
+    this.approvalNote = '';
+    this.isApprovalModalOpen = true;
+    this.cdr.detectChanges();
+    this.approvalFocus.open('acc-fleet-approve-dialog');
+  }
+
+  closeApprovalModal(): void {
+    const wasOpen = this.isApprovalModalOpen;
+    this.isApprovalModalOpen = false;
+    this.approvalTarget = null;
+    this.approvalNote = '';
+    this.cdr.detectChanges();
+    if (wasOpen) this.approvalFocus.close();
+  }
+
+  onApprovalEscape(): void {
+    if (this.isApprovalModalOpen && !this.isApproving) this.closeApprovalModal();
+  }
+
+  onDocumentKeydown(event: KeyboardEvent): void {
+    if (this.isApprovalModalOpen) this.approvalFocus.trapTab(event, 'acc-fleet-approve-dialog');
+  }
+
+  confirmApproval(): void {
+    if (!this.approvalTarget || this.isApproving) return;
+    const { id, type } = this.approvalTarget;
+    const note = this.approvalNote.trim() || undefined;
+    this.isApproving = true;
+    const req$ = type === 'vehicle'
+      ? (note ? this.personnelApi.approveVehicleFinance(id, note) : this.personnelApi.approveVehicleFinance(id))
+      : (note ? this.personnelApi.approveVehicleChangeRequestFinance(id, note) : this.personnelApi.approveVehicleChangeRequestFinance(id));
+    req$.subscribe({
+      next: (res: any) => {
+        this.isApproving = false;
+        this.toast.showSuccess(res?.message || 'تایید مالی ثبت و پرونده جهت تصویب نهایی به کارتابل مدیر ارسال گردید.');
+        this.closeApprovalModal();
+        this.closeDiffModal();
+        this.fetchFleetData();
+      },
+      error: (err: any) => {
+        this.isApproving = false;
+        this.toast.showError(err?.error?.error || 'خطا در ثبت تایید مالی');
+        this.cdr.detectChanges();
       }
     });
   }

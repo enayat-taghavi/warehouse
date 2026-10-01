@@ -1,14 +1,16 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { StateService } from '../../../services/state.service';
 import { AuthService } from '../../../core/auth/auth.service';
+import { hasStructureWritePermission } from '../../../core/auth/auth.guard';
 import { ToastService } from '../../../services/toast.service';
 import { PersonnelApiService } from '../../../core/api/personnel-api.service';
 import { WebSocketService } from '../../../core/http/websocket.service';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
+import { ActiveCompanyService } from '../../../core/services/active-company.service';
 import { ExcelImportModal } from '../../../shared/components/excel-import-modal/excel-import-modal';
 import { Counterparty } from '../../../core/models/personnel.model';
 import {
@@ -107,7 +109,8 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
     private toast: ToastService,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    @Optional() private activeCompanyService?: ActiveCompanyService
   ) {}
 
   ngOnInit(): void {
@@ -321,7 +324,10 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
         }
       });
     } else {
-      this.api.createCounterparty(payload).subscribe({
+      // شرکت فعال در بدنه می‌ماند تا بازپخش صف آفلاین (که هدر شرکت ندارد) طرف‌حساب را سراسری نسازد
+      const companyId = this.activeCompanyService?.activeCompanyId;
+      const createPayload = companyId ? { ...payload, company: companyId } : payload;
+      this.api.createCounterparty(createPayload).subscribe({
         next: (created) => {
           this.toast.show('success', `طرف‌حساب «${created.name}» با موفقیت ایجاد شد.`);
           this.resetForm();
@@ -563,6 +569,15 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
       },
       error: () => this.toast.show('error', 'خطا در دریافت قالب اکسل')
     });
+  }
+
+  /** درون‌ریزی اکسل برای نویسندگان طرف‌حساب (از جمله حسابدار)؛ بک‌اند آن را به شرکت فعالِ مجاز محدود می‌کند. */
+  get canImportExcel(): boolean {
+    const user = this.auth.user();
+    const perms = this.auth.userPermissions() || [];
+    return hasStructureWritePermission(perms, !!user?.is_superuser || !!user?.roles?.includes('admin'))
+      || perms.includes('can_act_as_accountant')
+      || perms.includes('perm_approve_personnel_finance');
   }
 
   openImportModal(): void {

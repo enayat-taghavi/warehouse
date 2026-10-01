@@ -27,6 +27,8 @@ import {
   getBankByName,
   validateAccountNumber
 } from '../../../../core/utils/sheba-utils';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ModalFocus } from '../../../../core/utils/modal-focus';
 
 export type AccountantPersonnelSubTab = 'new' | 'payroll' | 'changes' | 'all';
 export type AccountantPersonnelStatusFilter = 'ALL' | 'pending_accountant' | 'pending_manager' | 'approved' | 'revision_required' | 'rejected';
@@ -34,9 +36,10 @@ export type AccountantPersonnelStatusFilter = 'ALL' | 'pending_accountant' | 'pe
 @Component({
   selector: 'app-accountant-personnel-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './accountant-personnel.html',
-  styleUrl: './accountant-personnel.css'
+  styleUrl: './accountant-personnel.css',
+  host: { '(document:keydown.escape)': 'onApprovalEscape()', '(document:keydown)': 'onDocumentKeydown($event)' }
 })
 export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   activeSubTab: AccountantPersonnelSubTab = 'new';
@@ -73,6 +76,12 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   bankSearchQuery = '';
   shebaValidationResult: ShebaValidationResult | null = null;
   shebaDigitsDisplay = '';
+
+  // مودال تایید مالی با یادداشت اختیاری
+  isApprovalModalOpen = false;
+  approvalTarget: { id: number; title: string; type: 'personnel' | 'personnel_cr' } | null = null;
+  approvalNote = '';
+  isApproving = false;
 
   // مودال علت عودت به بازنگری یا رد
   isRejectModalOpen = false;
@@ -285,15 +294,87 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   }
 
   // ─── اکشن‌های تایید مالی ۳ مرحله‌ای ───
-  approvePersonnelFinance(p: PersonnelProfile): void {
+  approvePersonnelFinance(p: PersonnelProfile, note?: string): void {
     if (!p.id) return;
-    this.personnelApi.approvePersonnelFinance(p.id).subscribe({
+    const req$ = note ? this.personnelApi.approvePersonnelFinance(p.id, note) : this.personnelApi.approvePersonnelFinance(p.id);
+    req$.subscribe({
       next: (res) => {
-        this.toast.showSuccess(res.message || `تایید مالی پرسنل «${p.first_name} ${p.last_name}» صادر و پرونده جهت تصویب نهایی به مدیر ارسال شد.`);
+        this.toast.showSuccess(res.message || `تایید مالی پرسنل «${p.first_name || ''} ${p.last_name || ''}» صادر و پرونده جهت تصویب نهایی به مدیر ارسال شد.`);
         this.fetchData();
       },
       error: (err) => {
         this.toast.showError(err?.error?.error || 'خطا در تایید مالی پرسنل');
+      }
+    });
+  }
+
+  /** تایید مالی درخواست تغییرات پرسنل و ارسال به مدیر (منتقل‌شده از کارتابل مالی قدیمی) */
+  approveChangeRequestFinance(cr: PersonnelChangeRequest, note?: string): void {
+    if (!cr.id) return;
+    const req$ = note
+      ? this.personnelApi.approvePersonnelChangeRequestFinance(cr.id, note)
+      : this.personnelApi.approvePersonnelChangeRequestFinance(cr.id);
+    req$.subscribe({
+      next: (res) => {
+        this.toast.showSuccess(res?.message || 'تایید مالی ثبت و درخواست تغییرات جهت تصویب نهایی به کارتابل مدیر ارسال گردید.');
+        this.closeDiffModal();
+        this.fetchData();
+      },
+      error: (err) => {
+        this.toast.showError(err?.error?.error || 'خطا در تایید مالی درخواست تغییرات');
+      }
+    });
+  }
+
+  // ─── مودال تایید مالی با یادداشت اختیاری ───
+  private readonly approvalFocus = new ModalFocus();
+
+  openApprovalModal(id: number | undefined, title: string, type: 'personnel' | 'personnel_cr'): void {
+    if (!id) return;
+    this.approvalTarget = { id, title, type };
+    this.approvalNote = '';
+    this.isApprovalModalOpen = true;
+    this.cdr.detectChanges();
+    this.approvalFocus.open('acc-personnel-approve-dialog');
+  }
+
+  closeApprovalModal(): void {
+    const wasOpen = this.isApprovalModalOpen;
+    this.isApprovalModalOpen = false;
+    this.approvalTarget = null;
+    this.approvalNote = '';
+    this.cdr.detectChanges();
+    if (wasOpen) this.approvalFocus.close();
+  }
+
+  onApprovalEscape(): void {
+    if (this.isApprovalModalOpen && !this.isApproving) this.closeApprovalModal();
+  }
+
+  onDocumentKeydown(event: KeyboardEvent): void {
+    if (this.isApprovalModalOpen) this.approvalFocus.trapTab(event, 'acc-personnel-approve-dialog');
+  }
+
+  confirmApproval(): void {
+    if (!this.approvalTarget || this.isApproving) return;
+    const { id, type } = this.approvalTarget;
+    const note = this.approvalNote.trim() || undefined;
+    this.isApproving = true;
+    const req$ = type === 'personnel'
+      ? (note ? this.personnelApi.approvePersonnelFinance(id, note) : this.personnelApi.approvePersonnelFinance(id))
+      : (note ? this.personnelApi.approvePersonnelChangeRequestFinance(id, note) : this.personnelApi.approvePersonnelChangeRequestFinance(id));
+    req$.subscribe({
+      next: (res: any) => {
+        this.isApproving = false;
+        this.toast.showSuccess(res?.message || 'تایید مالی ثبت و پرونده جهت تصویب نهایی به کارتابل مدیر ارسال گردید.');
+        this.closeApprovalModal();
+        this.closeDiffModal();
+        this.fetchData();
+      },
+      error: (err: any) => {
+        this.isApproving = false;
+        this.toast.showError(err?.error?.error || 'خطا در ثبت تایید مالی');
+        this.cdr.detectChanges();
       }
     });
   }

@@ -49,7 +49,7 @@ export const KNOWN_MODULE_CATALOG: FrontendModuleSpec[] = [
     descriptionFa: 'ثبت و کنترل کارکرد روزانه، کارتابل تاییدات ۵ سطحی، محاسبات فیش حقوقی، دیسکت‌های بیمه تامین اجتماعی و مالیات، خزانه‌داری و پرداخت پایا.',
     icon: '💳',
     routePrefix: '/app/finance',
-    defaultRoute: '/app/finance/finance-cartable',
+    defaultRoute: '/app/finance',
     scopeKind: 'finance',
     permissionMarkers: [
       'view_sys_personnel', 'view_sys_personnel_attendance', 'view_sys_fleet_attendance',
@@ -57,9 +57,9 @@ export const KNOWN_MODULE_CATALOG: FrontendModuleSpec[] = [
       'perm_lock_work_period', 'perm_approve_personnel_supervisor', 'perm_approve_personnel_manager',
       'perm_approve_personnel_finance', 'perm_approve_fleet_supervisor', 'perm_approve_fleet_manager',
       'perm_approve_fleet_finance', 'perm_manager_payment_authorize', 'perm_treasury_disburse_action',
-      'can_act_as_accountant', 'can_act_as_operator', 'view_sys_projects'
+      'can_act_as_accountant', 'can_act_as_operator', 'view_sys_projects', 'perm_manage_projects_sections'
     ],
-    roles: ['operator', 'supervisor', 'accountant', 'manager', 'treasury']
+    roles: ['operator', 'supervisor', 'accountant', 'manager', 'treasury', 'org_admin']
   },
   {
     code: 'operations',

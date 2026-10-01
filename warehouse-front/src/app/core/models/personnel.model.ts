@@ -700,6 +700,8 @@ export interface UserSectionAssignment {
 
 export interface Counterparty {
   id?: number;
+  /** شرکت مالک؛ تهی یعنی طرف‌حساب سراسری */
+  company?: number | null;
   name: string;
   counterparty_type: 'driver' | 'repair_shop' | 'fuel_station' | 'contractor' | 'other';
   counterparty_type_display?: string;

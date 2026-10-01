@@ -7,18 +7,11 @@ export interface NavItem {
   isAccounting?: boolean;
 }
 
-export const ACCOUNTING_NAV_ITEMS: NavItem[] = [
-  { id: 'projects-and-sections', label: '📂 پروژه‌ها و بخش‌ها', icon: 'folder', permission: 'view_sys_projects', module: 'accounting', isAccounting: true },
-  { id: 'employee-portal', label: '👤 پنل ثبت کارمند (بخش‌ها)', icon: 'clipboard', permission: 'view_sys_personnel_attendance', module: 'accounting', isAccounting: true },
-  { id: 'attendance', label: '📋 ثبت کارکرد پرسنل و ناوگان', icon: 'check-square', permission: 'view_sys_personnel_attendance', module: 'accounting', isAccounting: true },
-  { id: 'manager-approvals', label: '👑 کارتابل تاییدات مدیر', icon: 'check-circle', permission: 'view_sys_personnel', module: 'accounting', isAccounting: true },
-  { id: 'finance-cartable', label: '💳 کارتابل مالی و حقوق', icon: 'dollar-sign', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
-  { id: 'treasury-cartable', label: '🏦 کارتابل خزانه‌داری و پرداخت', icon: 'dollar-sign', permission: 'view_sys_treasury', module: 'accounting', isAccounting: true },
-  { id: 'counterparties', label: '🤝 مدیریت طرف‌حساب‌های مالی', icon: 'briefcase', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
-  { id: 'profiles', label: '👥 بانک پرونده‌های پرسنل و ناوگان', icon: 'users', permission: 'view_sys_personnel', module: 'accounting', isAccounting: true },
-  { id: 'base-settings', label: '⚙️ تنظیمات پایه حقوق و سیستم', icon: 'settings', permission: 'view_sys_personnel', module: 'accounting', isAccounting: true },
-  { id: 'finance-audit', label: '🔍 رهگیری و ممیزی مالی', icon: 'file-text', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
-  { id: 'finance-health', label: '🩺 سلامت و تاب‌آوری سامانه', icon: 'activity', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
+// منوی عمومی «کارکرد و حسابداری» برچیده شد؛ هر آیتم به منوی نقش خودش منتقل یا بازنشسته شد.
+// مرجع: Documents/Organization_Admin_And_Menu_Architecture/implementation_plan_org_admin_menu.md
+
+export const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
+  { id: 'projects-and-sections', label: '📂 پروژه‌ها و بخش‌ها', icon: 'folder', permission: 'perm_manage_projects_sections', module: 'accounting', isAccounting: true },
 ];
 
 export const EMPLOYEE_NAV_ITEMS: NavItem[] = [
@@ -40,19 +33,24 @@ export const SUPERVISOR_NAV_ITEMS: NavItem[] = [
 
 export const ACCOUNTANT_NAV_ITEMS: NavItem[] = [
   { id: 'accountant-personnel', label: '👥 پرسنل', icon: 'users', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
+  { id: 'accountant-payroll', label: '💳 حقوق و دستمزد ماهانه', icon: 'dollar-sign', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
   { id: 'accountant-fleet', label: '🚚 ناوگان', icon: 'truck', permission: 'view_sys_fleet_settlement', module: 'accounting', isAccounting: true },
   { id: 'accountant-invoices', label: '🧾 ممیزی فاکتورهای هزینه', icon: 'file-text', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
   { id: 'accountant-petty-cash', label: '💰 کنترل تن‌خواه‌گردان', icon: 'credit-card', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
   { id: 'accountant-diskettes', label: '📑 دیسکت‌های بیمه و مالیات', icon: 'briefcase', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
-  { id: 'accountant-counterparties', label: '🤝 معین طرف‌حساب‌های مالی', icon: 'users', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
+  { id: 'accountant-counterparties', label: '🤝 مدیریت طرف‌حساب‌های مالی', icon: 'briefcase', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
+  { id: 'profiles', label: '📇 بانک پرونده‌های پرسنل و ناوگان', icon: 'users', permission: 'view_sys_personnel', module: 'accounting', isAccounting: true },
+  { id: 'base-settings', label: '⚙️ تنظیمات پایه حقوق', icon: 'settings', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
 ];
 
 export const MANAGER_NAV_ITEMS: NavItem[] = [
   { id: 'manager-dashboard', label: '📊 داشبورد هوش مدیریتی', icon: 'bar-chart-2', permission: 'can_act_as_company_manager', module: 'accounting', isAccounting: true },
-  { id: 'manager-personnel', label: '👥 پرسنل', icon: 'users', permission: 'can_act_as_company_manager', module: 'accounting', isAccounting: true },
-  { id: 'manager-fleet', label: '🚚 ناوگان', icon: 'truck', permission: 'can_act_as_company_manager', module: 'accounting', isAccounting: true },
+  { id: 'manager-personnel', label: '👥 پرسنل', icon: 'users', permission: 'perm_approve_personnel_manager', module: 'accounting', isAccounting: true },
+  { id: 'manager-fleet', label: '🚚 ناوگان', icon: 'truck', permission: 'perm_approve_fleet_manager', module: 'accounting', isAccounting: true },
+  { id: 'manager-approvals', label: '👑 کارتابل تاییدات (فاکتور، تنخواه، دوره)', icon: 'check-circle', permission: 'perm_approve_personnel_manager', module: 'accounting', isAccounting: true },
   { id: 'manager-budget', label: '📉 کنترل بودجه و هزینه‌ها', icon: 'activity', permission: 'can_act_as_company_manager', module: 'accounting', isAccounting: true },
   { id: 'manager-reports', label: '📑 گزارشات جامع مدیریتی', icon: 'briefcase', permission: 'can_act_as_company_manager', module: 'accounting', isAccounting: true },
+  { id: 'base-settings', label: '⚙️ تنظیمات پایه حقوق', icon: 'settings', permission: 'can_act_as_company_manager', module: 'accounting', isAccounting: true },
 ];
 
 export const TREASURER_NAV_ITEMS: NavItem[] = [
@@ -62,6 +60,30 @@ export const TREASURER_NAV_ITEMS: NavItem[] = [
   { id: 'treasurer-cheques', label: '📜 مدیریت چک و اسناد', icon: 'clipboard', permission: 'view_sys_treasury', module: 'accounting', isAccounting: true },
   { id: 'treasurer-reconciliation', label: '⚖️ مغایرت‌گیری و نقدینگی', icon: 'activity', permission: 'view_sys_treasury', module: 'accounting', isAccounting: true },
 ];
+
+/** نشانگرهای هر نقش؛ همان مجوزهایی که پرسونای نقش را برای کاربر فعال می‌کنند (app-persona.service). */
+export const EMPLOYEE_ROLE_MARKERS = ['can_act_as_operator'];
+export const SUPERVISOR_ROLE_MARKERS = ['can_act_as_workshop_supervisor', 'perm_approve_personnel_supervisor'];
+export const ACCOUNTANT_ROLE_MARKERS = ['can_act_as_accountant', 'view_sys_payroll', 'perm_approve_personnel_finance'];
+export const MANAGER_ROLE_MARKERS = ['can_act_as_company_manager', 'perm_manager_payment_authorize', 'perm_approve_personnel_manager', 'perm_approve_fleet_manager'];
+export const TREASURER_ROLE_MARKERS = ['view_sys_treasury', 'perm_treasury_disburse_action'];
+export const ORG_ADMIN_ROLE_MARKERS = ['perm_manage_projects_sections'];
+
+/**
+ * آیتم‌های قابل نمایش یک منوی نقش: کاربر باید نشانگر نقش (یا مجوز خود آیتم) را داشته باشد
+ * و گارد مسیر (`routeAllowed`، همان ROUTE_PERMISSIONS) هم او را رد نکند؛
+ * تا لینکی که کلیکش برگشت می‌خورد نمایش داده نشود.
+ */
+export function filterRoleNavItems(
+  items: NavItem[],
+  opts: { isAdmin: boolean; userPerms: string[]; roleMarkers: string[]; routeAllowed: (id: string) => boolean }
+): NavItem[] {
+  if (opts.isAdmin) return items;
+  const hasRoleMarker = opts.roleMarkers.some(m => opts.userPerms.includes(m));
+  return items.filter(item =>
+    (hasRoleMarker || opts.userPerms.includes(item.permission)) && opts.routeAllowed(item.id)
+  );
+}
 
 
 

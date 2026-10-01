@@ -82,8 +82,13 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   'treasury': ['view_sys_treasury', 'perm_treasury_disburse_action', 'admin_all'],
   'profiles': ['view_sys_personnel', 'admin_all'],
   'personnel-profiles': ['view_sys_personnel', 'admin_all'],
-  'base-settings': ['view_sys_settings', 'admin_all'],
-  'projects-and-sections': ['view_sys_projects', 'admin_all'],
+  // مشاهده برای حسابدار و مدیر؛ ویرایش همچنان فقط perm_sys_settings یا سوپریوزر (BaseSettings.canManageSettings و بک‌اند)
+  'base-settings': [
+    'view_sys_settings', 'perm_sys_settings', 'admin_all',
+    'can_act_as_accountant', 'view_sys_payroll', 'perm_approve_personnel_finance',
+    'can_act_as_company_manager', 'perm_manager_payment_authorize', 'perm_approve_personnel_manager'
+  ],
+  'projects-and-sections': ['view_sys_projects', 'perm_manage_projects_sections', 'admin_all'],
   'counterparties': ['view_sys_payroll', 'view_sys_projects', 'admin_all'],
   
   // منوی اختصاصی کارمند (Operator Portal)
@@ -109,10 +114,11 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   'accountant-invoices': ['view_sys_payroll', 'can_act_as_accountant', 'admin_all'],
   'accountant-petty-cash': ['view_sys_payroll', 'can_act_as_accountant', 'admin_all'],
   'accountant-diskettes': ['view_sys_payroll', 'can_act_as_accountant', 'admin_all'],
-  'accountant-counterparties': ['view_sys_payroll', 'can_act_as_accountant', 'admin_all'],
+  'accountant-counterparties': ['view_sys_payroll', 'can_act_as_accountant', 'perm_approve_personnel_finance', 'admin_all'],
 
   // منوی اختصاصی مدیر (Manager Portal)
-  'manager-dashboard': ['perm_manager_payment_authorize', 'can_act_as_company_manager', 'admin_all'],
+  // تاییدکنندگان مدیریتی همان سطح ۴ بک‌اند (determine_user_tier) هستند و مقصد پیش‌فرض نقش مدیر همین صفحه است
+  'manager-dashboard': ['perm_manager_payment_authorize', 'can_act_as_company_manager', 'perm_approve_personnel_manager', 'perm_approve_fleet_manager', 'admin_all'],
   'manager-budget': ['perm_manager_payment_authorize', 'can_act_as_company_manager', 'admin_all'],
   'manager-contracts': ['perm_manager_payment_authorize', 'can_act_as_company_manager', 'admin_all'],
   'manager-reports': ['perm_manager_payment_authorize', 'can_act_as_company_manager', 'admin_all'],
@@ -124,6 +130,22 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   'treasurer-cheques': ['view_sys_treasury', 'perm_treasury_disburse_action', 'admin_all'],
   'treasurer-reconciliation': ['view_sys_treasury', 'admin_all']
 };
+
+/** آیا کاربر از گارد مجوز صفحه (ROUTE_PERMISSIONS) رد می‌شود؟ مسیر بدون قاعده آزاد است. */
+export function hasRoutePermission(path: string, userPerms: string[]): boolean {
+  const required = ROUTE_PERMISSIONS[path];
+  return !required || required.some(p => userPerms.includes(p));
+}
+
+/**
+ * مجوز نوشتن ساختار سازمانی (همان has_structure_write_permission در personnel/permissions.py).
+ * محدودهٔ شرکت را بک‌اند تعیین می‌کند: هر کاربر غیرسوپریوزر فقط درون شرکت‌های مجاز خودش می‌نویسد و درون‌ریزی می‌کند.
+ */
+export const STRUCTURE_WRITE_PERMS = ['admin_all', 'view_sys_projects', 'perm_sys_settings', 'perm_approve_personnel_manager', 'can_act_as_manager'];
+
+export function hasStructureWritePermission(userPerms: string[], isAdmin: boolean): boolean {
+  return isAdmin || STRUCTURE_WRITE_PERMS.some(p => userPerms.includes(p));
+}
 
 const WAREHOUSE_PERMISSIONS = [
   'view_sys_dashboard', 'view_wh_dashboard', 'view_sys_counter',
@@ -214,11 +236,11 @@ export const AuthGuard: CanActivateFn = (route, state) => {
     const isWarehouseScope = state.url.includes('/app/warehouse') || route.routeConfig?.path === 'warehouse';
     if (isWarehouseScope) {
       if (!moduleRegistry.isModuleInstalled('warehouse')) {
-        return router.parseUrl(moduleRegistry.isModuleInstalled('accounting') ? '/app/finance/finance-cartable' : '/app/launcher');
+        return router.parseUrl(moduleRegistry.isModuleInstalled('accounting') ? '/app/finance' : '/app/launcher');
       }
       if (!hasWarehouseAccess) {
         if (hasPersonnelAccess && moduleRegistry.isModuleInstalled('accounting')) {
-          return router.parseUrl('/app/finance/finance-cartable');
+          return router.parseUrl('/app/finance');
         }
         return router.parseUrl('/login');
       }
@@ -249,9 +271,14 @@ export const AuthGuard: CanActivateFn = (route, state) => {
 
     // بررسی دسترسی دقیق بر اساس نقش فعال SoD (Segregation of Duties)
     const personaService = inject(AppPersonaService);
-    if (!isAdmin && !personaService.canAccessRoute(state.url)) {
+    // مقصد جایگزین نقش؛ اگر همان مسیرِ ردشده باشد (حلقهٔ ریدایرکت) به لانچر برو
+    const roleHome = () => {
       const fallback = personaService.getDefaultRouteForRole();
-      return router.parseUrl(fallback);
+      const current = (state.url || '').split('?')[0];
+      return router.parseUrl(fallback === current ? '/app/launcher' : fallback);
+    };
+    if (!isAdmin && !personaService.canAccessRoute(state.url)) {
+      return roleHome();
     }
 
     // Check RBAC permissions on individual page
@@ -261,7 +288,7 @@ export const AuthGuard: CanActivateFn = (route, state) => {
       if (!isAdmin) {
         if (!hasWarehouseAccess && WAREHOUSE_ROUTE_KEYS.has(path)) {
           if (hasPersonnelAccess) {
-            return router.parseUrl(personaService.getDefaultRouteForRole());
+            return roleHome();
           }
           return router.parseUrl('/login');
         }
@@ -275,8 +302,7 @@ export const AuthGuard: CanActivateFn = (route, state) => {
 
         const hasAccess = requiredPerms.some(p => userPerms.includes(p));
         if (!hasAccess) {
-          const fallback = personaService.getDefaultRouteForRole();
-          return router.parseUrl(fallback);
+          return roleHome();
         }
       }
     }

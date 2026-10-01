@@ -1,4 +1,5 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, Optional } from '@angular/core';
+import { ActiveCompanyService } from '../../../../core/services/active-company.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -90,7 +91,8 @@ export class EmployeeInvoicesHubComponent implements OnInit {
     private toast: ToastService,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    @Optional() private activeCompanyService?: ActiveCompanyService
   ) {}
 
   ngOnInit(): void {
@@ -442,7 +444,9 @@ export class EmployeeInvoicesHubComponent implements OnInit {
       is_active: true
     };
 
-    this.personnelApi.createCounterparty(payload).subscribe({
+    // شرکت فعال در بدنه می‌ماند تا بازپخش صف آفلاین (که هدر شرکت ندارد) طرف‌حساب را سراسری نسازد
+    const companyId = this.activeCompanyService?.activeCompanyId;
+    this.personnelApi.createCounterparty(companyId ? { ...payload, company: companyId } : payload).subscribe({
       next: (created: Counterparty) => {
         this.isSaving = false;
         this.toast.show('success', `طرف‌حساب «${created.name}» با موفقیت افزوده شد.`);

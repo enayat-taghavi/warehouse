@@ -29,7 +29,12 @@ import { FirstBootWizardComponent } from '../operations/first-boot-wizard/first-
 import { environment } from '../../../environments/environment';
 
 import { WAREHOUSE_SYSTEM_NAV_ITEMS, WAREHOUSE_CONTEXT_NAV_ITEMS } from '../../modules/warehouse/nav-items';
-import { ACCOUNTING_NAV_ITEMS, EMPLOYEE_NAV_ITEMS, SUPERVISOR_NAV_ITEMS, ACCOUNTANT_NAV_ITEMS, MANAGER_NAV_ITEMS, TREASURER_NAV_ITEMS } from '../../modules/accounting/nav-items';
+import {
+  NavItem, filterRoleNavItems,
+  ORG_ADMIN_NAV_ITEMS, EMPLOYEE_NAV_ITEMS, SUPERVISOR_NAV_ITEMS, ACCOUNTANT_NAV_ITEMS, MANAGER_NAV_ITEMS, TREASURER_NAV_ITEMS,
+  ORG_ADMIN_ROLE_MARKERS, EMPLOYEE_ROLE_MARKERS, SUPERVISOR_ROLE_MARKERS, ACCOUNTANT_ROLE_MARKERS, MANAGER_ROLE_MARKERS, TREASURER_ROLE_MARKERS
+} from '../../modules/accounting/nav-items';
+import { hasRoutePermission } from '../../core/auth/auth.guard';
 import { ModuleRegistryService } from '../../core/modules/module-registry.service';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 import { IconName } from '../../shared/icons/icon-registry';
@@ -455,12 +460,12 @@ export class Layout implements OnInit, OnDestroy {
     return name && Layout.MENU_ICON_NAMES.has(name) ? (name as IconName) : fallback;
   }
 
-  isAccountingMenuOpen = localStorage.getItem('isAccountingMenuOpen') !== 'false';
+  isOrgAdminMenuOpen = localStorage.getItem('isOrgAdminMenuOpen') !== 'false';
 
-  toggleAccountingMenu(event?: Event) {
+  toggleOrgAdminMenu(event?: Event) {
     if (event) event.stopPropagation();
-    this.isAccountingMenuOpen = !this.isAccountingMenuOpen;
-    localStorage.setItem('isAccountingMenuOpen', String(this.isAccountingMenuOpen));
+    this.isOrgAdminMenuOpen = !this.isOrgAdminMenuOpen;
+    localStorage.setItem('isOrgAdminMenuOpen', String(this.isOrgAdminMenuOpen));
     this.cdr.detectChanges();
   }
 
@@ -510,9 +515,27 @@ export class Layout implements OnInit, OnDestroy {
   }
 
   private SYSTEM_NAV_ITEMS: any[] = [
-    ...WAREHOUSE_SYSTEM_NAV_ITEMS,
-    ...ACCOUNTING_NAV_ITEMS
+    ...WAREHOUSE_SYSTEM_NAV_ITEMS
   ];
+
+  /**
+   * آکاردئون هر منوی نقش و شناسه صفحه‌هایی که با ورود به آن‌ها باید باز شود
+   * (آیتم‌های منو به‌علاوه صفحه‌های همان نقش که در منو نیستند).
+   */
+  private readonly ROLE_MENU_TABS: { tabs: string[]; open: () => void }[] = [
+    { tabs: ORG_ADMIN_NAV_ITEMS.map(i => i.id), open: () => (this.isOrgAdminMenuOpen = true) },
+    { tabs: EMPLOYEE_NAV_ITEMS.map(i => i.id), open: () => (this.isEmployeeMenuOpen = true) },
+    { tabs: [...SUPERVISOR_NAV_ITEMS.map(i => i.id), 'supervisor-attendance', 'supervisor-new-profiles'], open: () => (this.isSupervisorMenuOpen = true) },
+    { tabs: [...ACCOUNTANT_NAV_ITEMS.map(i => i.id), 'accountant-new-profiles'], open: () => (this.isAccountantMenuOpen = true) },
+    { tabs: [...MANAGER_NAV_ITEMS.map(i => i.id), 'manager-contracts'], open: () => (this.isManagerMenuOpen = true) },
+    { tabs: TREASURER_NAV_ITEMS.map(i => i.id), open: () => (this.isTreasurerMenuOpen = true) },
+  ];
+
+  private openRoleMenusForTab(tab: string): void {
+    for (const menu of this.ROLE_MENU_TABS) {
+      if (menu.tabs.includes(tab)) menu.open();
+    }
+  }
 
   private WAREHOUSE_NAV_ITEMS: any[] = [
     ...WAREHOUSE_CONTEXT_NAV_ITEMS
@@ -535,12 +558,6 @@ export class Layout implements OnInit, OnDestroy {
     const parseTabFromUrl = (url: string): string => {
       const clean = (url || '').split('?')[0];
       const segments = clean.split('/').filter(Boolean);
-      if (segments[0] === 'app' && segments[1] === 'finance' && (segments[2] === 'audit' || segments[2] === 'finance-audit')) {
-        return 'finance-audit';
-      }
-      if (segments[0] === 'app' && segments[1] === 'finance' && (segments[2] === 'health' || segments[2] === 'finance-health')) {
-        return 'finance-health';
-      }
       if (segments[0] === 'app' && segments[2]) {
         return segments[2];
       }
@@ -552,31 +569,7 @@ export class Layout implements OnInit, OnDestroy {
 
     const initialTab = parseTabFromUrl(this.router.url);
     this.store.setCurrentTab(initialTab);
-    const employeeTabs = ['employee-portal', 'employee-attendance', 'employee-fleet', 'employee-invoices', 'employee-petty-cash', 'employee-new-vehicle', 'employee-new-personnel'];
-    const supervisorTabs = ['supervisor-attendance', 'supervisor-fleet', 'supervisor-invoices', 'supervisor-petty-cash', 'supervisor-new-profiles', 'supervisor-period-lock'];
-    const accountantTabs = ['accountant-payroll', 'accountant-fleet', 'accountant-invoices', 'accountant-petty-cash', 'accountant-diskettes', 'accountant-counterparties'];
-    const managerTabs = ['manager-dashboard', 'manager-approvals', 'manager-budget', 'manager-contracts', 'manager-reports'];
-    const treasurerTabs = ['treasurer-disbursements', 'treasurer-invoices', 'treasurer-bank-accounts', 'treasurer-cheques', 'treasurer-reconciliation'];
-    const allAccountingTabs = ['companies', 'employee-portal', 'projects-and-sections', 'attendance', 'fleet', 'fleet-attendance', 'personnel', 'payroll', 'fleet-settlement', 'manager-approvals', 'finance-cartable', 'treasury-cartable', 'treasury', 'profiles', 'personnel-profiles', 'base-settings', 'counterparties', 'finance-audit', ...employeeTabs, ...supervisorTabs, ...accountantTabs, ...managerTabs, ...treasurerTabs];
-
-    if (allAccountingTabs.includes(initialTab)) {
-      this.isAccountingMenuOpen = true;
-      if (employeeTabs.includes(initialTab)) {
-        this.isEmployeeMenuOpen = true;
-      }
-      if (supervisorTabs.includes(initialTab)) {
-        this.isSupervisorMenuOpen = true;
-      }
-      if (accountantTabs.includes(initialTab)) {
-        this.isAccountantMenuOpen = true;
-      }
-      if (managerTabs.includes(initialTab)) {
-        this.isManagerMenuOpen = true;
-      }
-      if (treasurerTabs.includes(initialTab)) {
-        this.isTreasurerMenuOpen = true;
-      }
-    }
+    this.openRoleMenusForTab(initialTab);
 
     this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd)
@@ -584,24 +577,7 @@ export class Layout implements OnInit, OnDestroy {
       const tab = parseTabFromUrl(e.urlAfterRedirects || e.url);
       this.store.setCurrentTab(tab);
       this.updateTitle(tab);
-      if (allAccountingTabs.includes(tab)) {
-        this.isAccountingMenuOpen = true;
-        if (employeeTabs.includes(tab)) {
-          this.isEmployeeMenuOpen = true;
-        }
-        if (supervisorTabs.includes(tab)) {
-          this.isSupervisorMenuOpen = true;
-        }
-        if (accountantTabs.includes(tab)) {
-          this.isAccountantMenuOpen = true;
-        }
-        if (managerTabs.includes(tab)) {
-          this.isManagerMenuOpen = true;
-        }
-        if (treasurerTabs.includes(tab)) {
-          this.isTreasurerMenuOpen = true;
-        }
-      }
+      this.openRoleMenusForTab(tab);
     });
   }
 
@@ -1004,121 +980,35 @@ export class Layout implements OnInit, OnDestroy {
     });
   });
 
-  readonly accountingNavItems = computed(() => {
-    // اگر ماژول مالی نصب نیست یا کاربر در سامانه انبارداری است، منوهای مالی مخفی می‌شوند
-    if (!this.moduleRegistry.isModuleInstalled('accounting') || this.personaService.activeApp() === 'warehouse' || this.store.isWarehouseContext()) {
-      return [];
-    }
-
-    const userPerms = this.auth.userPermissions();
-    const isAdmin = userPerms.includes('admin_all');
-    const activeRole = this.personaService.activeRole();
-
-    // اگر کاربر در یکی از ۵ نقش تخصصی است، منوی عمومی قدیمی پنهان شود تا سایدبار تمیز و ایزوله باشد
-    if (!isAdmin && ['operator', 'supervisor', 'accountant', 'manager', 'treasury'].includes(activeRole)) {
-      return [];
-    }
-    
-    return this.SYSTEM_NAV_ITEMS.filter(item => {
-      if (!item.isAccounting && item.module !== 'accounting') return false;
-      if (isAdmin) return true;
-
-      // فیلتر هوشمند بر اساس نقش فعال SoD
-      if (item.id === 'finance-cartable' && activeRole === 'operator') {
-        return false;
-      }
-      if (item.id === 'treasury-cartable' && !['treasury', 'manager', 'superuser'].includes(activeRole)) {
-        return false;
-      }
-      if (item.id === 'manager-approvals' && !['manager', 'superuser'].includes(activeRole)) {
-        return false;
-      }
-
-      return userPerms.includes(item.permission);
-    });
-  });
-
-  readonly employeeNavItems = computed(() => {
+  /**
+   * منوی یک نقش مالی: فقط در سامانه مالی و فقط برای پرسونای فعال همان نقش (سوپریوزر همه را می‌بیند)؛
+   * آیتمی که گارد مسیر (ROUTE_PERMISSIONS) رد می‌کند نمایش داده نمی‌شود.
+   */
+  private roleNavItems(role: string, items: NavItem[], roleMarkers: string[]): NavItem[] {
     if (!this.moduleRegistry.isModuleInstalled('accounting') || this.personaService.activeApp() === 'warehouse' || this.store.isWarehouseContext()) {
       return [];
     }
     const userPerms = this.auth.userPermissions();
     const isAdmin = userPerms.includes('admin_all');
-    const activeRole = this.personaService.activeRole();
-    if (!isAdmin && activeRole !== 'operator') {
+    if (!isAdmin && this.personaService.activeRole() !== role) {
       return [];
     }
-    return EMPLOYEE_NAV_ITEMS.filter(item => {
-      if (isAdmin) return true;
-      return userPerms.includes(item.permission) || userPerms.includes('can_act_as_operator');
+    return filterRoleNavItems(items, {
+      isAdmin,
+      userPerms,
+      roleMarkers,
+      routeAllowed: (id) => hasRoutePermission(id, userPerms)
     });
-  });
+  }
 
-  readonly supervisorNavItems = computed(() => {
-    if (!this.moduleRegistry.isModuleInstalled('accounting') || this.personaService.activeApp() === 'warehouse' || this.store.isWarehouseContext()) {
-      return [];
-    }
-    const userPerms = this.auth.userPermissions();
-    const isAdmin = userPerms.includes('admin_all');
-    const activeRole = this.personaService.activeRole();
-    if (!isAdmin && activeRole !== 'supervisor') {
-      return [];
-    }
-    return SUPERVISOR_NAV_ITEMS.filter(item => {
-      if (isAdmin) return true;
-      return userPerms.includes(item.permission) || userPerms.includes('can_act_as_workshop_supervisor') || userPerms.includes('perm_approve_personnel_supervisor');
-    });
-  });
+  readonly orgAdminNavItems = computed(() => this.roleNavItems('org_admin', ORG_ADMIN_NAV_ITEMS, ORG_ADMIN_ROLE_MARKERS));
+  readonly employeeNavItems = computed(() => this.roleNavItems('operator', EMPLOYEE_NAV_ITEMS, EMPLOYEE_ROLE_MARKERS));
+  readonly supervisorNavItems = computed(() => this.roleNavItems('supervisor', SUPERVISOR_NAV_ITEMS, SUPERVISOR_ROLE_MARKERS));
+  readonly accountantNavItems = computed(() => this.roleNavItems('accountant', ACCOUNTANT_NAV_ITEMS, ACCOUNTANT_ROLE_MARKERS));
+  readonly managerNavItems = computed(() => this.roleNavItems('manager', MANAGER_NAV_ITEMS, MANAGER_ROLE_MARKERS));
+  readonly treasurerNavItems = computed(() => this.roleNavItems('treasury', TREASURER_NAV_ITEMS, TREASURER_ROLE_MARKERS));
 
-  readonly accountantNavItems = computed(() => {
-    if (!this.moduleRegistry.isModuleInstalled('accounting') || this.personaService.activeApp() === 'warehouse' || this.store.isWarehouseContext()) {
-      return [];
-    }
-    const userPerms = this.auth.userPermissions();
-    const isAdmin = userPerms.includes('admin_all');
-    const activeRole = this.personaService.activeRole();
-    if (!isAdmin && activeRole !== 'accountant') {
-      return [];
-    }
-    return ACCOUNTANT_NAV_ITEMS.filter(item => {
-      if (isAdmin) return true;
-      return userPerms.includes(item.permission) || userPerms.includes('can_act_as_accountant') || userPerms.includes('view_sys_payroll') || userPerms.includes('perm_approve_personnel_finance');
-    });
-  });
-
-  readonly managerNavItems = computed(() => {
-    if (!this.moduleRegistry.isModuleInstalled('accounting') || this.personaService.activeApp() === 'warehouse' || this.store.isWarehouseContext()) {
-      return [];
-    }
-    const userPerms = this.auth.userPermissions();
-    const isAdmin = userPerms.includes('admin_all');
-    const activeRole = this.personaService.activeRole();
-    if (!isAdmin && activeRole !== 'manager') {
-      return [];
-    }
-    return MANAGER_NAV_ITEMS.filter(item => {
-      if (isAdmin) return true;
-      return userPerms.includes(item.permission) || userPerms.includes('can_act_as_company_manager') || userPerms.includes('perm_manager_payment_authorize');
-    });
-  });
-
-  readonly treasurerNavItems = computed(() => {
-    if (!this.moduleRegistry.isModuleInstalled('accounting') || this.personaService.activeApp() === 'warehouse' || this.store.isWarehouseContext()) {
-      return [];
-    }
-    const userPerms = this.auth.userPermissions();
-    const isAdmin = userPerms.includes('admin_all');
-    const activeRole = this.personaService.activeRole();
-    if (!isAdmin && activeRole !== 'treasury') {
-      return [];
-    }
-    return TREASURER_NAV_ITEMS.filter(item => {
-      if (isAdmin) return true;
-      return userPerms.includes(item.permission) || userPerms.includes('view_sys_treasury') || userPerms.includes('perm_treasury_disburse_action');
-    });
-  });
-
-  readonly navItems = computed(() => [...this.primaryNavItems(), ...this.accountingNavItems(), ...this.employeeNavItems(), ...this.supervisorNavItems(), ...this.accountantNavItems(), ...this.managerNavItems(), ...this.treasurerNavItems()]);
+  readonly navItems = computed(() => [...this.primaryNavItems(), ...this.orgAdminNavItems(), ...this.employeeNavItems(), ...this.supervisorNavItems(), ...this.accountantNavItems(), ...this.managerNavItems(), ...this.treasurerNavItems()]);
   
   get isSidebarOpen() { return this.store.isSidebarOpen(); }
   get currentTab() { return this.store.currentTab(); }
@@ -1136,26 +1026,9 @@ export class Layout implements OnInit, OnDestroy {
 
   switchTab(tabId: string) {
     this.closeSidebar();
-    if (tabId === 'finance-audit') {
-      this.router.navigate(['/app/finance/audit']);
-      return;
-    }
-    if (tabId === 'finance-health') {
-      this.router.navigate(['/app/finance/health']);
-      return;
-    }
-    const accountingTabs = [
-      'companies', 'company-documents', 'documents', 'employee-portal', 'projects-and-sections', 'attendance', 'fleet', 'fleet-attendance',
-      'manager-approvals', 'finance-cartable', 'treasury-cartable', 'treasury',
-      'profiles', 'personnel-profiles', 'base-settings', 'payroll', 'personnel', 'fleet-settlement',
-      'counterparties',
-      'employee-attendance', 'employee-fleet', 'employee-invoices', 'employee-petty-cash', 'employee-new-vehicle', 'employee-new-personnel',
-      'supervisor-attendance', 'supervisor-fleet', 'supervisor-personnel', 'supervisor-invoices', 'supervisor-petty-cash', 'supervisor-new-profiles', 'supervisor-period-lock',
-      'accountant-payroll', 'accountant-fleet', 'accountant-personnel', 'accountant-invoices', 'accountant-petty-cash', 'accountant-new-profiles', 'accountant-diskettes', 'accountant-counterparties',
-      'manager-dashboard', 'manager-personnel', 'manager-fleet', 'manager-budget', 'manager-contracts', 'manager-reports',
-      'treasurer-disbursements', 'treasurer-invoices', 'treasurer-bank-accounts', 'treasurer-cheques', 'treasurer-reconciliation'
-    ];
-    const isAccountingItem = accountingTabs.includes(tabId) || this.accountingNavItems().some(i => i.id === tabId) || this.employeeNavItems().some(i => i.id === tabId) || this.supervisorNavItems().some(i => i.id === tabId) || this.accountantNavItems().some(i => i.id === tabId) || this.managerNavItems().some(i => i.id === tabId) || this.treasurerNavItems().some(i => i.id === tabId);
+    // همهٔ صفحه‌های منوهای نقش در سامانه مالی‌اند؛ به‌علاوه چند صفحهٔ مالی بیرون از منوهای نقش
+    const isAccountingItem = ['companies', 'company-documents', 'documents'].includes(tabId) ||
+      this.ROLE_MENU_TABS.some(menu => menu.tabs.includes(tabId));
     if (isAccountingItem) {
       this.router.navigate(['/app/finance/' + tabId]);
     } else {
@@ -1187,7 +1060,7 @@ export class Layout implements OnInit, OnDestroy {
     if (this.moduleRegistry.isModuleInstalled('warehouse')) {
       this.router.navigate(['/app/warehouse/projects']);
     } else if (this.moduleRegistry.isModuleInstalled('accounting')) {
-      this.router.navigate(['/app/finance/finance-cartable']);
+      this.router.navigate(['/app/finance']);
     } else {
       this.router.navigate(['/app/launcher']);
     }
@@ -1287,39 +1160,34 @@ export class Layout implements OnInit, OnDestroy {
       'wh-settings': 'تنظیمات انبار',
       'count-tracking': 'پیگیری وضعیت شمارش',
       reports: 'گزارش‌ساز پویا',
-      personnel: 'حقوق و دستمزد پرسنل (دیسکت‌ها)',
-      payroll: 'حقوق و دستمزد پرسنل (دیسکت‌ها)',
-      'fleet-settlement': 'تسویه و محاسبات مالی ناوگان',
-      attendance: 'ثبت و بازبینی کارکرد پرسنل و ناوگان',
-      fleet: 'مدیریت و ثبت تردد ناوگان و ماشین‌آلات',
-      'fleet-attendance': 'مدیریت و ثبت تردد ناوگان و ماشین‌آلات',
       'manager-approvals': 'کارتابل تاییدات و بررسی مدیر',
-      'finance-cartable': 'کارتابل مالی، حقوق و تسویه حسابداری',
-      'treasury-cartable': 'کارتابل خزانه‌داری، پرداخت و دیسکت‌های بانکی',
-      'treasury': 'کارتابل خزانه‌داری، پرداخت و دیسکت‌های بانکی',
       'profiles': 'بانک پرونده‌های پرسنل و ناوگان',
       'personnel-profiles': 'بانک پرونده‌های پرسنل و ناوگان',
       'base-settings': 'تنظیمات پایه و فرمول‌های محاسباتی',
-      'employee-portal': 'پنل ثبت کارمند (بخش‌ها و پروژه‌ها)',
       'employee-attendance': 'ثبت کارکرد پرسنل (پنل کارمند)',
       'employee-fleet': 'کارکرد ماشین‌آلات و تردد (پنل کارمند)',
       'employee-invoices': 'ثبت فاکتور هزینه و طرف‌حساب (پنل کارمند)',
       'employee-petty-cash': 'مدیریت و ثبت اسناد تن‌خواه (پنل کارمند)',
       'employee-new-vehicle': 'تعریف خودرو و ناوگان جدید (پنل کارمند)',
       'employee-new-personnel': 'تعریف پرسنل و همکار جدید (پنل کارمند)',
+      'supervisor-personnel': 'پرسنل، کارکرد و درخواست‌های تغییر (پنل سرپرست کارگاه)',
       'supervisor-attendance': 'تایید کارکرد پرسنل (پنل سرپرست کارگاه)',
       'supervisor-fleet': 'تایید کارکرد ماشین‌آلات (پنل سرپرست کارگاه)',
       'supervisor-invoices': 'تایید فاکتورهای هزینه (پنل سرپرست کارگاه)',
       'supervisor-petty-cash': 'تایید اسناد تن‌خواه (پنل سرپرست کارگاه)',
       'supervisor-new-profiles': 'تایید پرسنل و ناوگان جدید (پنل سرپرست کارگاه)',
       'supervisor-period-lock': 'بستن دوره کارکرد ماهانه (پنل سرپرست کارگاه)',
+      'accountant-personnel': 'پرسنل، احکام مالی و درخواست‌های تغییر (پنل حسابدار)',
+      'accountant-new-profiles': 'تایید مالی پرونده‌های تازه و تغییرات (پنل حسابدار)',
       'accountant-payroll': 'حقوق و دستمزد ماهانه (پنل حسابدار)',
       'accountant-fleet': 'تسویه و کارکرد ناوگان (پنل حسابدار)',
       'accountant-invoices': 'ممیزی فاکتورهای هزینه (پنل حسابدار)',
       'accountant-petty-cash': 'ممیزی اسناد تن‌خواه (پنل حسابدار)',
       'accountant-diskettes': 'دیسکت‌های بیمه، مالیات و بانک (پنل حسابدار)',
-      'accountant-counterparties': 'پرونده طرف‌حساب‌های مالی (پنل حسابدار)',
+      'accountant-counterparties': 'مدیریت طرف‌حساب‌های مالی (پنل حسابدار)',
       'manager-dashboard': 'داشبورد هوش مدیریتی و شاخص‌ها (پنل مدیر)',
+      'manager-personnel': 'تصویب پرسنل و درخواست‌های تغییر (پنل مدیر)',
+      'manager-fleet': 'تصویب ناوگان و تسویه (پنل مدیر)',
       'manager-budget': 'پایش و کنترل سقف بودجه بخش‌ها (پنل مدیر)',
       'manager-contracts': 'تصویب احکام کارگزینی و قراردادها (پنل مدیر)',
       'manager-reports': 'گزارشات جامع و تحلیلی مدیریت (پنل مدیر)',
@@ -1332,10 +1200,7 @@ export class Layout implements OnInit, OnDestroy {
       'projects-and-sections': 'مدیریت ساختار سازمانی، پروژه‌ها و بخش‌ها',
       'company-documents': 'بایگانی اسناد و مدارک رسمی شرکت‌ها',
       documents: 'بایگانی اسناد و مدارک رسمی شرکت‌ها',
-      'counterparties': 'مدیریت طرف‌حساب‌های مالی و تجاری',
-      'finance-audit': 'رهگیری و ممیزی مالی و اداری',
-      health: 'مرکز جامع پایش سلامت و تاب‌آوری سامانه',
-      'finance-health': 'مرکز جامع پایش سلامت و تاب‌آوری سامانه'
+      health: 'مرکز جامع پایش سلامت و تاب‌آوری سامانه'
     };
     this.currentTitle = titles[tab] || tab;
     this.baseTitle = `${this.appTitle} — ${this.currentTitle}`;

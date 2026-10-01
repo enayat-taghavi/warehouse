@@ -6,10 +6,45 @@
       
       <!-- سمت راست: سال مالی، ماه و تب‌های فرعی -->
       <div class="flex flex-wrap items-center gap-2 md:gap-3">
-        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">دوره مالی:</span>
-          <span class="text-xs font-black text-blue-700 font-mono">{{ selectedMonth }} {{ fiscalYear }}</span>
+        <div class="flex items-center gap-1.5 bg-surface-muted border border-line px-2.5 py-1 rounded-xl">
+          <label for="acc-dsk-year" class="text-[11px] font-bold text-fg-muted">دوره مالی:</label>
+          <select
+            id="acc-dsk-year"
+            [(ngModel)]="fiscalYear"
+            (change)="onPeriodChanged()"
+            aria-label="سال مالی دوره"
+            class="bg-transparent text-xs font-black text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer tabular-nums">
+            @for (y of availableYears; track y) {
+              <option [value]="y">{{ y }}</option>
+            }
+          </select>
+          <select
+            [(ngModel)]="selectedMonth"
+            (change)="onPeriodChanged()"
+            aria-label="ماه دوره"
+            class="bg-transparent text-xs font-black text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer">
+            @for (m of monthNames; track m) {
+              <option [value]="m">{{ m }}</option>
+            }
+          </select>
         </div>
+
+        <!-- دامنهٔ دوره: کل شرکت یا یک انبار -->
+        @if (showWarehouseScope) {
+          <div class="flex items-center gap-1.5 bg-surface-muted border border-line px-2.5 py-1 rounded-xl">
+            <label for="acc-dsk-scope" class="text-[11px] font-bold text-fg-muted">دامنه:</label>
+            <select
+              id="acc-dsk-scope"
+              [(ngModel)]="selectedWarehouseId"
+              (change)="onPeriodChanged()"
+              class="bg-transparent text-xs font-black text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer">
+              <option [ngValue]="null">کل شرکت (سراسری)</option>
+              @for (wh of warehouses; track wh.id) {
+                <option [ngValue]="wh.id">{{ wh.name }}</option>
+              }
+            </select>
+          </div>
+        }
 
         <!-- انتخابگر پروژه -->
         <div *ngIf="projects.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
@@ -76,6 +111,19 @@
     </div>
   </div>
 
+  <!-- وضعیت دوره: خروجی‌ها فقط برای دورهٔ محاسبه‌شده صادر می‌شوند -->
+  @if (!isLoading && periodLoadError) {
+    <div class="bg-rose-50 border border-rose-200 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs text-rose-800" role="alert">
+      <span class="font-bold">وضعیت دوره {{ selectedMonth }} {{ fiscalYear }} دریافت نشد؛ خروجی‌ها تا بارگذاری دوباره در دسترس نیستند.</span>
+      <button type="button" (click)="loadPeriod()" class="shrink-0 px-3 py-1.5 rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-bold cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">تلاش دوباره</button>
+    </div>
+  } @else if (!isLoading && !currentPeriodId) {
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-center gap-2 text-xs text-amber-900" role="status">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle"></svg>
+      <span>برای دوره {{ selectedMonth }} {{ fiscalYear }} در این دامنه هنوز حقوقی محاسبه نشده است؛ ابتدا از «حقوق و دستمزد ماهانه» محاسبه را اجرا کنید.</span>
+    </div>
+  }
+
   <!-- ── ۲. محتوای تخصصی تب‌ها ── -->
   <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-6">
     <!-- تب ۱: دیسکت تامین اجتماعی -->
@@ -127,6 +175,22 @@
           <span>{{ isGenerating ? 'در حال تولید...' : 'تولید فایل‌های مالیاتی WH و WP' }}</span>
         </button>
       </div>
+
+      <!-- گردش‌کار استاندارد مالیات حقوق در سامانه امور مالیاتی -->
+      <ol class="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px]" aria-label="گام‌های مالیات حقوق">
+        <li class="p-3 rounded-2xl bg-surface-muted border border-line space-y-1">
+          <span class="font-black text-blue-800 block">گام ۱: دریافت فایل‌های پروژه</span>
+          <span class="text-fg-muted">پروژه را انتخاب کنید و دو فایل متنی WH (خلاصه) و WP (پرسنل) را دانلود کنید.</span>
+        </li>
+        <li class="p-3 rounded-2xl bg-surface-muted border border-line space-y-1">
+          <span class="font-black text-blue-800 block">گام ۲: بارگذاری در سامانه دارایی</span>
+          <span class="text-fg-muted">فایل‌ها را در سامانه مالیات حقوق بارگذاری کنید تا مالیات قطعی و معافیت‌ها را خود سامانه محاسبه کند.</span>
+        </li>
+        <li class="p-3 rounded-2xl bg-surface-muted border border-line space-y-1">
+          <span class="font-black text-blue-800 block">گام ۳: درون‌ریزی نتیجه</span>
+          <span class="text-fg-muted">اکسل نتیجه را در «حقوق و دستمزد ماهانه» با دکمهٔ درون‌ریزی مالیات دارایی بارگذاری کنید.</span>
+        </li>
+      </ol>
     </div>
 
     <!-- تب ۳: دیسکت واریز بانکی -->
@@ -143,6 +207,22 @@
           class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-black shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50">
           <span>🏦</span>
           <span>{{ isGenerating ? 'در حال استخراج...' : 'تولید دیسکت بانکی حقوق' }}</span>
+        </button>
+      </div>
+
+      <!-- فایل پرداخت بانکی تسویه ناوگان -->
+      <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-surface-muted border border-line">
+        <div class="space-y-0.5">
+          <h3 class="text-xs font-black text-fg">فایل پرداخت بانکی تسویه ناوگان</h3>
+          <p class="text-[11px] text-fg-muted">فایل استاندارد واریز کرایه رانندگان و پیمانکاران ناوگان برای همین دوره و دامنه</p>
+        </div>
+        <button
+          type="button"
+          (click)="generateFleetBankExcel()"
+          [disabled]="isGeneratingFleet"
+          class="px-4 py-2 rounded-xl bg-emerald-700 text-white hover:bg-emerald-800 text-xs font-black shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck"></svg>
+          <span>{{ isGeneratingFleet ? 'در حال استخراج...' : 'دانلود اکسل تسویه ناوگان' }}</span>
         </button>
       </div>
     </div>

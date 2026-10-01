@@ -40,8 +40,8 @@
             [ngClass]="activeSubTab === 'pending_queue' ? 'bg-white text-teal-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
             class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
             <span>💳 صف دستور پرداخت‌های مصوب</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-teal-100 text-teal-800">
-              {{ pendingTotalAmount > 0 ? ((pendingTotalAmount / 1000000) | number:'1.0-0') + ' م.ت' : '۰' }}
+            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-teal-100 text-teal-800" title="جمع صف پرداخت به میلیون ریال">
+              {{ pendingTotalAmount > 0 ? ((pendingTotalAmount / 1000000) | number:'1.0-0') + ' م.ر' : '۰' }}
             </span>
           </button>
 
@@ -89,6 +89,96 @@
     </div>
   </div>
 
+  <!-- ── شاخص‌های صف خزانه‌داری (منتقل‌شده از کارتابل خزانه‌داری قدیمی) ── -->
+  @if (loadError) {
+    <div class="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs" role="alert">
+      <span class="font-bold">بارگذاری کارتابل خزانه‌داری ناموفق بود؛ شاخص‌ها و دوره‌های زیر به‌روز نیستند.</span>
+      <button type="button" (click)="refreshData()" [disabled]="isLoading" class="shrink-0 px-3 py-1.5 rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-bold disabled:opacity-50 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">
+        تلاش دوباره
+      </button>
+    </div>
+  }
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-1.5 min-w-0">
+      <span class="text-[11px] font-bold text-fg-muted">دوره‌های آماده پرداخت</span>
+      <span class="text-base xl:text-lg font-black text-blue-700 tabular-nums [overflow-wrap:anywhere]">{{ loadError ? '—' : (treasurySummary.ready_periods_count | number) + ' دوره' }}</span>
+    </div>
+    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-1.5 min-w-0">
+      <span class="text-[11px] font-bold text-fg-muted">حقوق آماده واریز (ریال)</span>
+      <span class="text-base xl:text-lg font-black text-emerald-700 tabular-nums [overflow-wrap:anywhere]">{{ loadError ? '—' : (treasurySummary.total_payroll_amount | number) }}</span>
+    </div>
+    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-1.5 min-w-0">
+      <span class="text-[11px] font-bold text-fg-muted">مطالبات ناوگان (ریال)</span>
+      <span class="text-base xl:text-lg font-black text-purple-700 tabular-nums [overflow-wrap:anywhere]">{{ loadError ? '—' : (treasurySummary.total_fleet_amount | number) }}</span>
+    </div>
+    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-1.5 min-w-0">
+      <span class="text-[11px] font-bold text-fg-muted">کل صف واریز (ریال)</span>
+      <span class="text-base xl:text-lg font-black text-amber-700 tabular-nums [overflow-wrap:anywhere]">{{ loadError ? '—' : (treasurySummary.total_disbursement_queue | number) }}</span>
+    </div>
+  </div>
+
+  <!-- ── دوره‌های حقوق مصوب مدیر: دیسکت پایا/ساتنا و پرداخت یکجا ── -->
+  @if (activeSubTab === 'pending_queue') {
+    <div class="bg-surface rounded-3xl border border-line shadow-sm overflow-hidden">
+      <div class="p-4 border-b border-line-subtle bg-surface-muted flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+        <h2 class="text-sm font-black text-fg">دوره‌های حقوق ماهانه آماده پرداخت</h2>
+      </div>
+      @if (isLoading && readyPeriods.length === 0) {
+        <div class="p-4"><app-loading-skeleton type="table" [rows]="2" /></div>
+      } @else if (loadError && readyPeriods.length === 0) {
+        <p class="p-6 text-center text-xs text-rose-700 font-bold">فهرست دوره‌ها دریافت نشد؛ از «تلاش دوباره» در بالای صفحه استفاده کنید.</p>
+      } @else if (readyPeriods.length === 0) {
+        <p class="p-6 text-center text-xs text-fg-muted">هیچ دوره حقوقی مصوب مدیر در انتظار واریز خزانه‌داری نیست.</p>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full text-start text-xs">
+            <thead class="bg-surface-muted border-b border-line text-fg-muted font-black">
+              <tr>
+                <th class="py-3 px-3">دوره ماهانه</th>
+                <th class="py-3 px-3">زمان تایید مدیریت</th>
+                <th class="py-3 px-3">مبلغ حقوق در صف (ریال)</th>
+                <th class="py-3 px-3 text-center">دیسکت‌های بانکی</th>
+                <th class="py-3 px-3 text-center">عملیات خزانه‌دار</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @for (p of readyPeriods; track p.id) {
+                <tr class="hover:bg-slate-50/70">
+                  <td class="py-3 px-3 font-black text-fg font-mono">{{ p.year_month }}</td>
+                  <td class="py-3 px-3 text-fg-muted">{{ p.manager_approved_at ? (p.manager_approved_at | persianDate:'short-time') : '—' }}</td>
+                  @let periodAmount = periodPayableAmount(p);
+                  <td class="py-3 px-3 font-mono font-bold text-emerald-700">
+                    @if (periodAmount !== null) {
+                      {{ periodAmount | number }}
+                    } @else {
+                      <span class="text-fg-muted font-sans" title="رکوردهای این دوره در صف این صفحه نیستند؛ مبلغ را سرور هنگام ثبت پرداخت حساب می‌کند.">—</span>
+                    }
+                  </td>
+                  <td class="py-3 px-3">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <button type="button" (click)="downloadPeriodDiskette(p, 'paya')" [disabled]="downloadingDisketteKey !== null" class="px-2.5 py-1 rounded-lg bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200 text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-wait">
+                        {{ downloadingDisketteKey === p.id + '-paya' ? 'در حال دریافت…' : 'دیسکت پایا' }}
+                      </button>
+                      <button type="button" (click)="downloadPeriodDiskette(p, 'satna')" [disabled]="downloadingDisketteKey !== null" class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200 text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-wait">
+                        {{ downloadingDisketteKey === p.id + '-satna' ? 'در حال دریافت…' : 'دیسکت ساتنا' }}
+                      </button>
+                    </div>
+                  </td>
+                  <td class="py-3 px-3 text-center">
+                    <button type="button" (click)="openPeriodBatchModal(p)" class="px-3 py-1 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-[11px] font-bold shadow-2xs cursor-pointer">
+                      پرداخت یکجای دوره
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
   <!-- ── ۲. جدول کارتابل پرداخت حقوق و کارکرد ناوگان ── -->
   <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
     <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/60">
@@ -98,6 +188,13 @@
           {{ activeSubTab === 'pending_queue' ? 'دستور پرداخت‌های مصوب مدیر (آماده واریز)' : 'سوابق اسناد واریز شده و کدهای پیگیری بانک' }}
         </h2>
       </div>
+
+      @if (activeSubTab === 'pending_queue' && pendingFleetItems.length > 0) {
+        <button type="button" (click)="openFleetBatchModal()" class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck"></svg>
+          <span>تسویه گروهی ناوگان ({{ pendingFleetItems.length }} سفر)</span>
+        </button>
+      }
 
       <!-- جستجوی درون‌خطی جدول -->
       <div class="relative w-full md:w-64">
@@ -121,7 +218,7 @@
             <th class="py-3 px-3">دریافت‌کننده</th>
             <th class="py-3 px-3 font-mono">شماره شبا مقصد</th>
             <th class="py-3 px-3">بانک</th>
-            <th class="py-3 px-3 font-mono">مبلغ خالص (تومان)</th>
+            <th class="py-3 px-3 font-mono">مبلغ خالص (ریال)</th>
             <th class="py-3 px-3 text-center">وضعیت تایید مدیر</th>
             <th class="py-3 px-3 text-center" *ngIf="activeSubTab === 'disbursed_archive'">کد رهگیری پایا</th>
             <th class="py-3 px-3 text-center">عملیات خزانه‌دار</th>
@@ -140,6 +237,11 @@
             <td class="py-3 px-3 font-mono font-black text-teal-700 text-sm">{{ item.amount | number }}</td>
             <td class="py-3 px-3 text-center">
               <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">مصوب مدیر</span>
+              @if (item.sheba_failed) {
+                <div class="mt-1 mx-auto max-w-[12rem] px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 truncate" [title]="item.failure_reason || 'خطای شبا'">
+                  خطای شبا{{ item.failure_reason ? ': ' + item.failure_reason : '' }}
+                </div>
+              }
             </td>
             <td class="py-3 px-3 text-center font-mono font-bold text-slate-700" *ngIf="activeSubTab === 'disbursed_archive'">
               {{ item.tracking_code }}
@@ -180,7 +282,7 @@
         <div>
           <label class="block font-bold text-slate-700 mb-1">مبلغ واریزی:</label>
           <div class="font-mono text-base font-black text-teal-700 bg-teal-50/50 p-2 rounded-xl border border-teal-100">
-            {{ payingItem?.amount | number }} تومان
+            {{ payingItem?.amount | number }} ریال
           </div>
         </div>
 
@@ -208,6 +310,17 @@
             placeholder="مثال: TRK-1234567"
             class="w-full bg-white border border-slate-200 font-mono text-xs font-bold text-slate-900 rounded-xl p-2 focus:outline-none focus:border-teal-500">
         </div>
+
+        <div>
+          <label for="treasury-single-batch-id" class="block font-bold text-slate-700 mb-1">شناسه دسته واریز (اختیاری):</label>
+          <input
+            id="treasury-single-batch-id"
+            type="text"
+            [(ngModel)]="batchIdInput"
+            dir="ltr"
+            placeholder="BATCH-140506-01"
+            class="w-full bg-white border border-slate-200 font-mono text-xs font-bold text-slate-900 rounded-xl p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500">
+        </div>
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
@@ -216,5 +329,62 @@
       </div>
     </div>
   </div>
+
+  <!-- ── مودال پرداخت یکجا: کل حقوق دوره یا همهٔ سفرهای ناوگان ── -->
+  @if (batchModal) {
+    <div class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5" role="dialog" aria-modal="true" aria-labelledby="treasury-batch-title">
+      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" (click)="closeBatchModal()"></div>
+      <div id="treasury-batch-dialog" class="relative bg-surface rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto flex flex-col modal-enter p-5 gap-4 text-xs">
+        <div class="flex items-center justify-between border-b border-line-subtle pb-3">
+          <h3 id="treasury-batch-title" class="text-sm font-black text-fg">ثبت دستور پرداخت و واریز خزانه‌داری</h3>
+          <button type="button" (click)="closeBatchModal()" class="btn-icon-sm btn-icon-slate" title="بستن" aria-label="بستن">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+          </button>
+        </div>
+
+        <div class="bg-surface-muted border border-line rounded-2xl p-3 space-y-1">
+          <p><span class="font-bold text-fg-muted">عنوان سند:</span> <span class="font-black text-fg">{{ batchModal.title }}</span></p>
+          <p>
+            <span class="font-bold text-fg-muted">مبلغ واریز:</span>
+            @if (batchModal.amount !== null) {
+              <span class="font-mono font-black text-teal-700">{{ batchModal.amount | number }} ریال</span>
+            } @else {
+              <span class="font-bold text-fg">رکوردهای این دوره در صف این صفحه نیستند؛ مبلغ را سرور هنگام ثبت حساب می‌کند.</span>
+            }
+          </p>
+        </div>
+
+        <div class="space-y-1">
+          <label for="treasury-batch-method" class="block font-bold text-fg">روش پرداخت:</label>
+          <select id="treasury-batch-method" [(ngModel)]="batchPaymentMethod" class="w-full bg-surface border border-line text-xs font-bold rounded-xl p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500">
+            <option value="PAYA">پایا (انتقال بین‌بانکی دسته‌ای)</option>
+            <option value="SATNA">ساتنا (فوری مبالغ بالا)</option>
+            <option value="INTERNAL">حواله داخلی درون‌بانکی</option>
+            <option value="CHEQUE">چک صیادی</option>
+          </select>
+        </div>
+
+        <div class="space-y-1">
+          <label for="treasury-batch-tracking" class="block font-bold text-fg">کد رهگیری / شماره پیگیری بانکی (الزامی):</label>
+          <input id="treasury-batch-tracking" type="text" [(ngModel)]="batchTrackingCode" dir="ltr" required
+            class="w-full bg-surface border border-line font-mono text-xs font-bold text-fg rounded-xl p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+            placeholder="PAYA-140506-987654">
+        </div>
+
+        <div class="space-y-1">
+          <label for="treasury-batch-id" class="block font-bold text-fg">شناسه دسته واریز (Batch ID):</label>
+          <input id="treasury-batch-id" type="text" [(ngModel)]="batchIdValue" dir="ltr"
+            class="w-full bg-surface border border-line font-mono text-xs font-bold text-fg rounded-xl p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500">
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-line-subtle">
+          <button type="button" (click)="closeBatchModal()" [disabled]="isSubmittingBatch" class="px-3 py-1.5 rounded-xl border border-line text-fg-muted text-xs font-bold hover:bg-surface-muted disabled:opacity-50">انصراف</button>
+          <button type="button" (click)="submitBatchDisbursement()" [disabled]="isSubmittingBatch || !batchTrackingCode.trim()" class="px-4 py-1.5 rounded-xl bg-teal-700 text-white text-xs font-black hover:bg-teal-800 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed">
+            {{ isSubmittingBatch ? 'در حال ثبت...' : 'تایید و ثبت قطعی پرداخت' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 
 </div>
