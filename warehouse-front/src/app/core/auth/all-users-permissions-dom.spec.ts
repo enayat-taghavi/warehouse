@@ -2,25 +2,49 @@
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { signal, Injector } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AppPersonaService } from '../services/app-persona.service';
 import { AuthService } from './auth.service';
+import { hasRoutePermission } from './auth.guard';
 import { ModuleRegistryService } from '../modules/module-registry.service';
 import { WebSocketService } from '../http/websocket.service';
 import { SessionTabService } from '../services/session-tab.service';
 import {
+  NavItem,
+  ORG_ADMIN_NAV_ITEMS,
   EMPLOYEE_NAV_ITEMS,
   SUPERVISOR_NAV_ITEMS,
   ACCOUNTANT_NAV_ITEMS,
   MANAGER_NAV_ITEMS,
-  TREASURER_NAV_ITEMS
+  TREASURER_NAV_ITEMS,
+  ORG_ADMIN_ROLE_MARKERS,
+  EMPLOYEE_ROLE_MARKERS,
+  SUPERVISOR_ROLE_MARKERS,
+  ACCOUNTANT_ROLE_MARKERS,
+  MANAGER_ROLE_MARKERS,
+  TREASURER_ROLE_MARKERS,
+  filterRoleNavItems
 } from '../../modules/accounting/nav-items';
+
+// switchRole نقش فعال را در localStorage می‌نویسد؛ محیط آزمون آن را ندارد
+function createStorageMock() {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, val: string) => { store[key] = String(val); },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+    get length() { return Object.keys(store).length; },
+    key: (i: number) => Object.keys(store)[i] || null,
+  };
+}
+
+(globalThis as any).localStorage = createStorageMock();
 
 export interface UserTestCase {
   username: string;
   fullName: string;
-  expectedRole: 'operator' | 'supervisor' | 'accountant' | 'manager' | 'treasury' | 'superuser';
+  expectedRole: 'operator' | 'supervisor' | 'accountant' | 'manager' | 'treasury' | 'org_admin' | 'superuser';
   allowedApps: string[];
   permissions: string[];
   roles: string[];
@@ -267,65 +291,106 @@ export const ALL_12_SYSTEM_USERS: UserTestCase[] = [
   }
 ];
 
-describe('Segregation of Duties (SoD) & DOM Verification for All 12 Database Users', () => {
-  let mockAuth: any;
-  let mockModuleRegistry: any;
+/**
+ * کاربر نمونهٔ «راهبر تشکیلات و سیستم». در دیتابیس عملیاتی کسی این مجوز را ندارد؛ preset آن در users.ts است.
+ */
+export const ORG_ADMIN_SAMPLE_USER: UserTestCase = {
+  username: 'org.admin.sample',
+  fullName: 'راهبر تشکیلات (نمونهٔ آزمون)',
+  expectedRole: 'org_admin',
+  allowedApps: ['finance'],
+  permissions: ['perm_manage_projects_sections'],
+  roles: ['org_admin'],
+  isSuperuser: false,
+  assignedProjects: [],
+  assignedSections: [],
+  canAccessWarehouse: false
+};
 
-  beforeEach(() => {
-    mockModuleRegistry = new ModuleRegistryService();
-    mockAuth = {
-      user: signal<any>(null),
-      userPermissions: signal<string[]>([]),
-      isSuperuser: signal<boolean>(false),
-      hasRole: vi.fn(),
-      hasPermission: vi.fn()
-    };
+/** گروه‌های منوی نقش در سایدبار، به همان ترتیب و با همان نشانگرهای layout.ts */
+const ROLE_MENU_GROUPS: Array<{ role: string; cls: string; title: string; items: NavItem[]; markers: string[] }> = [
+  { role: 'org_admin', cls: 'org-admin', title: 'منوی راهبر تشکیلات', items: ORG_ADMIN_NAV_ITEMS, markers: ORG_ADMIN_ROLE_MARKERS },
+  { role: 'operator', cls: 'employee', title: 'منوی ثبت کارمند', items: EMPLOYEE_NAV_ITEMS, markers: EMPLOYEE_ROLE_MARKERS },
+  { role: 'supervisor', cls: 'supervisor', title: 'منوی سرپرست کارگاه', items: SUPERVISOR_NAV_ITEMS, markers: SUPERVISOR_ROLE_MARKERS },
+  { role: 'accountant', cls: 'accountant', title: 'منوی حسابدار', items: ACCOUNTANT_NAV_ITEMS, markers: ACCOUNTANT_ROLE_MARKERS },
+  { role: 'manager', cls: 'manager', title: 'منوی مدیر کلان', items: MANAGER_NAV_ITEMS, markers: MANAGER_ROLE_MARKERS },
+  { role: 'treasury', cls: 'treasurer', title: 'منوی خزانه‌دار', items: TREASURER_NAV_ITEMS, markers: TREASURER_ROLE_MARKERS }
+];
+
+/** مسیرهای بازنشسته یا آیتم‌های منوی عمومی برچیده که هیچ منوی نقشی نباید به آن‌ها لینک بدهد */
+const RETIRED_MENU_IDS = [
+  'finance-cartable', 'treasury-cartable', 'treasury', 'employee-portal', 'attendance', 'fleet',
+  'fleet-attendance', 'counterparties', 'finance-audit', 'finance-health', 'audit', 'health'
+];
+
+/** همان قاعدهٔ layout.roleNavItems: منوی هر نقش فقط برای نقش فعال (یا مدیر ارشد) و از فیلتر مشترک */
+function resolveRoleNav(role: string, activeRole: string, userPerms: string[], items: NavItem[], markers: string[]): NavItem[] {
+  const isAdmin = userPerms.includes('admin_all');
+  if (!isAdmin && activeRole !== role) return [];
+  return filterRoleNavItems(items, {
+    isAdmin,
+    userPerms,
+    roleMarkers: markers,
+    routeAllowed: (id) => hasRoutePermission(id, userPerms)
+  });
+}
+
+function createPersona(user: UserTestCase, sessionRole: string): AppPersonaService {
+  const mockAuth = {
+    user: signal<any>({
+      username: user.username,
+      is_superuser: user.isSuperuser,
+      roles: user.roles,
+      allowed_apps: user.allowedApps,
+      active_app: user.allowedApps.includes('finance') ? 'finance' : 'warehouse'
+    }),
+    userPermissions: signal<string[]>(user.permissions),
+    isSuperuser: signal<boolean>(user.isSuperuser),
+    hasRole: vi.fn(),
+    hasPermission: vi.fn()
+  };
+
+  const injector = Injector.create({
+    providers: [
+      {
+        provide: Router,
+        useValue: {
+          events: { pipe: () => ({ subscribe: () => ({ unsubscribe: () => {} }) }) },
+          navigate: vi.fn(),
+          url: '/'
+        }
+      },
+      { provide: AppPersonaService, useClass: AppPersonaService },
+      { provide: AuthService, useValue: mockAuth },
+      { provide: ModuleRegistryService, useValue: new ModuleRegistryService() },
+      { provide: WebSocketService, useValue: { sendMessage: vi.fn(), switchAppChannel: vi.fn() } },
+      {
+        provide: SessionTabService,
+        useValue: {
+          getTabId: vi.fn().mockReturnValue('test-tab-456'),
+          getActiveApp: vi.fn().mockReturnValue(user.allowedApps.includes('finance') ? 'personnel' : 'warehouse'),
+          getActiveRole: vi.fn().mockReturnValue(sessionRole),
+          setActiveApp: vi.fn(),
+          setActiveRole: vi.fn()
+        }
+      }
+    ]
   });
 
-  for (const user of ALL_12_SYSTEM_USERS) {
-    it(`[DOM & SoD Verify] User ${user.username} (${user.fullName}) - Role: ${user.expectedRole}`, async () => {
-      // 1. Set Auth state matching DB
-      mockAuth.user.set({
-        username: user.username,
-        is_superuser: user.isSuperuser,
-        roles: user.roles,
-        allowed_apps: user.allowedApps,
-        active_app: user.allowedApps.includes('finance') ? 'finance' : 'warehouse'
-      });
-      mockAuth.userPermissions.set(user.permissions);
-      mockAuth.isSuperuser.set(user.isSuperuser);
+  return injector.get(AppPersonaService);
+}
 
-      // 2. Configure Angular DI
-      const injector = Injector.create({
-        providers: [
-          {
-            provide: Router,
-            useValue: {
-              events: { pipe: () => ({ subscribe: () => ({ unsubscribe: () => {} }) }) },
-              navigate: vi.fn(),
-              url: '/'
-            }
-          },
-          { provide: AppPersonaService, useClass: AppPersonaService },
-          { provide: AuthService, useValue: mockAuth },
-          { provide: ModuleRegistryService, useValue: mockModuleRegistry },
-          { provide: WebSocketService, useValue: { sendMessage: vi.fn(), switchAppChannel: vi.fn() } },
-          {
-            provide: SessionTabService,
-            useValue: {
-              getTabId: vi.fn().mockReturnValue('test-tab-456'),
-              getActiveApp: vi.fn().mockReturnValue(user.allowedApps.includes('finance') ? 'personnel' : 'warehouse'),
-              getActiveRole: vi.fn().mockReturnValue(user.expectedRole),
-              setActiveApp: vi.fn(),
-              setActiveRole: vi.fn()
-            }
-          }
-        ]
-      });
+describe('Segregation of Duties (SoD) & DOM Verification for All 12 Database Users + Org Admin', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
 
-      const personaService = injector.get(AppPersonaService);
+  for (const user of [...ALL_12_SYSTEM_USERS, ORG_ADMIN_SAMPLE_USER]) {
+    it(`[DOM & SoD Verify] User ${user.username} (${user.fullName}) - Role: ${user.expectedRole}`, () => {
+      // 1. پرسونا با وضعیت همان کاربر دیتابیس
+      const personaService = createPersona(user, user.expectedRole);
 
-      // 3. Verify App Scope & Isolation
+      // 2. ایزولاسیون سامانه‌ها
       const apps = personaService.accessibleApps();
       if (user.isSuperuser) {
         expect(apps).toContain('personnel');
@@ -338,168 +403,159 @@ describe('Segregation of Duties (SoD) & DOM Verification for All 12 Database Use
       }
       expect(personaService.hasWarehouseAccess()).toBe(user.canAccessWarehouse);
 
-      // 4. Verify Single Role Invariant (Strict SoD)
-      const availableRoles = personaService.availableRoles();
-      const roleCodes = availableRoles.map((r: any) => r.code);
-
+      // 3. تک‌نقشی بودن (SoD سخت‌گیرانه)
+      const roleCodes = personaService.availableRoles().map((r: any) => r.code);
       if (user.isSuperuser) {
         expect(roleCodes).toContain('superuser');
       } else {
-        expect(roleCodes).toContain(user.expectedRole);
-        const forbiddenRoles = ['operator', 'supervisor', 'accountant', 'manager', 'treasury'].filter(
-          r => r !== user.expectedRole
-        );
-        for (const forbidden of forbiddenRoles) {
-          expect(roleCodes).not.toContain(forbidden);
-        }
+        expect(roleCodes).toEqual([user.expectedRole]);
+        expect(personaService.activeRole()).toBe(user.expectedRole);
       }
 
-      // 5. Mount Real DOM Elements to test rendering and presence/absence in DOM
+      // 4. سایدبار با همان فیلتر مشترک layout
+      const userPerms = user.permissions;
+      const activeRole = personaService.activeRole();
       const domContainer = document.createElement('div');
       domContainer.id = 'test-sidebar-dom';
       document.body.appendChild(domContainer);
 
-      const userPerms = mockAuth.userPermissions();
-      const activeRole = user.expectedRole;
-      const isAdmin = user.isSuperuser;
-
-      // Compute nav items exactly as layout.ts does
-      const resolvedEmployeeNav = (activeRole === 'operator' || isAdmin)
-        ? EMPLOYEE_NAV_ITEMS.filter(item => isAdmin || userPerms.includes(item.permission) || userPerms.includes('can_act_as_operator'))
-        : [];
-
-      const resolvedSupervisorNav = (activeRole === 'supervisor' || isAdmin)
-        ? SUPERVISOR_NAV_ITEMS.filter(item => isAdmin || userPerms.includes(item.permission) || userPerms.includes('can_act_as_workshop_supervisor'))
-        : [];
-
-      const resolvedAccountantNav = (activeRole === 'accountant' || isAdmin)
-        ? ACCOUNTANT_NAV_ITEMS.filter(item => isAdmin || userPerms.includes(item.permission) || userPerms.includes('can_act_as_accountant'))
-        : [];
-
-      const resolvedManagerNav = (activeRole === 'manager' || isAdmin)
-        ? MANAGER_NAV_ITEMS.filter(item => isAdmin || userPerms.includes(item.permission) || userPerms.includes('can_act_as_company_manager'))
-        : [];
-
-      const resolvedTreasurerNav = (activeRole === 'treasury' || isAdmin)
-        ? TREASURER_NAV_ITEMS.filter(item => isAdmin || userPerms.includes(item.permission) || userPerms.includes('perm_treasury_disburse_action'))
-        : [];
-
-      // Render into DOM
       let domHtml = '<nav id="sidebar-nav">';
-
-      if (resolvedEmployeeNav.length > 0) {
-        domHtml += `<div class="accordion-employee"><span class="accordion-title">منوی ثبت کارمند</span>`;
-        for (const item of resolvedEmployeeNav) {
-          domHtml += `<a class="sidebar-link employee-link" data-tab-id="${item.id}">${item.label}</a>`;
+      for (const group of ROLE_MENU_GROUPS) {
+        const resolved = resolveRoleNav(group.role, activeRole, userPerms, group.items, group.markers);
+        if (resolved.length > 0) {
+          domHtml += `<div class="accordion-${group.cls}"><span class="accordion-title">${group.title}</span>`;
+          for (const item of resolved) {
+            domHtml += `<a class="sidebar-link ${group.cls}-link" data-tab-id="${item.id}">${item.label}</a>`;
+          }
+          domHtml += `</div>`;
         }
-        domHtml += `</div>`;
       }
-
-      if (resolvedSupervisorNav.length > 0) {
-        domHtml += `<div class="accordion-supervisor"><span class="accordion-title">منوی سرپرست کارگاه</span>`;
-        for (const item of resolvedSupervisorNav) {
-          domHtml += `<a class="sidebar-link supervisor-link" data-tab-id="${item.id}">${item.label}</a>`;
-        }
-        domHtml += `</div>`;
-      }
-
-      if (resolvedAccountantNav.length > 0) {
-        domHtml += `<div class="accordion-accountant"><span class="accordion-title">منوی حسابدار</span>`;
-        for (const item of resolvedAccountantNav) {
-          domHtml += `<a class="sidebar-link accountant-link" data-tab-id="${item.id}">${item.label}</a>`;
-        }
-        domHtml += `</div>`;
-      }
-
-      if (resolvedManagerNav.length > 0) {
-        domHtml += `<div class="accordion-manager"><span class="accordion-title">منوی مدیر کلان</span>`;
-        for (const item of resolvedManagerNav) {
-          domHtml += `<a class="sidebar-link manager-link" data-tab-id="${item.id}">${item.label}</a>`;
-        }
-        domHtml += `</div>`;
-      }
-
-      if (resolvedTreasurerNav.length > 0) {
-        domHtml += `<div class="accordion-treasurer"><span class="accordion-title">منوی خزانه‌دار</span>`;
-        for (const item of resolvedTreasurerNav) {
-          domHtml += `<a class="sidebar-link treasurer-link" data-tab-id="${item.id}">${item.label}</a>`;
-        }
-        domHtml += `</div>`;
-      }
-
       if (user.canAccessWarehouse) {
         domHtml += `<div class="warehouse-switcher-card"><button class="change-wh-btn">تغییر انبار</button></div>`;
       }
-
       domHtml += '</nav>';
       domContainer.innerHTML = domHtml;
 
-      // 6. Assert DOM elements directly via querySelector
-      const employeeLinks = domContainer.querySelectorAll('.employee-link');
-      const supervisorLinks = domContainer.querySelectorAll('.supervisor-link');
-      const accountantLinks = domContainer.querySelectorAll('.accountant-link');
-      const managerLinks = domContainer.querySelectorAll('.manager-link');
-      const treasurerLinks = domContainer.querySelectorAll('.treasurer-link');
+      // 5. شمارش لینک‌ها در DOM
+      const count = (cls: string) => domContainer.querySelectorAll(`.${cls}-link`).length;
+      const linkIds = Array.from(domContainer.querySelectorAll('.sidebar-link')).map(a => a.getAttribute('data-tab-id')!);
       const warehouseCard = domContainer.querySelector('.warehouse-switcher-card');
 
-      switch (user.expectedRole) {
-        case 'operator':
-          expect(employeeLinks.length).toBe(6);
-          expect(supervisorLinks.length).toBe(0);
-          expect(accountantLinks.length).toBe(0);
-          expect(managerLinks.length).toBe(0);
-          expect(treasurerLinks.length).toBe(0);
-          expect(warehouseCard).toBeNull();
-          break;
+      // ترتیب: راهبر تشکیلات، کارمند، سرپرست، حسابدار، مدیر، خزانه‌دار
+      const expected: Record<string, number[]> = {
+        operator: [0, 6, 0, 0, 0, 0],
+        supervisor: [0, 0, 5, 0, 0, 0],
+        accountant: [0, 0, 0, 9, 0, 0],
+        manager: [0, 0, 0, 0, 7, 0],
+        treasury: [0, 0, 0, 0, 0, 5],
+        org_admin: [1, 0, 0, 0, 0, 0]
+      };
 
-        case 'supervisor':
-          expect(employeeLinks.length).toBe(0);
-          expect(supervisorLinks.length).toBe(5);
-          expect(accountantLinks.length).toBe(0);
-          expect(managerLinks.length).toBe(0);
-          expect(treasurerLinks.length).toBe(0);
-          expect(warehouseCard).toBeNull();
-          break;
-
-        case 'accountant':
-          expect(employeeLinks.length).toBe(0);
-          expect(supervisorLinks.length).toBe(0);
-          expect(accountantLinks.length).toBe(6);
-          expect(managerLinks.length).toBe(0);
-          expect(treasurerLinks.length).toBe(0);
-          expect(warehouseCard).toBeNull();
-          break;
-
-        case 'manager':
-          expect(employeeLinks.length).toBe(0);
-          expect(supervisorLinks.length).toBe(0);
-          expect(accountantLinks.length).toBe(0);
-          expect(managerLinks.length).toBe(5);
-          expect(treasurerLinks.length).toBe(0);
-          expect(warehouseCard).toBeNull();
-          break;
-
-        case 'treasury':
-          expect(employeeLinks.length).toBe(0);
-          expect(supervisorLinks.length).toBe(0);
-          expect(accountantLinks.length).toBe(0);
-          expect(managerLinks.length).toBe(0);
-          expect(treasurerLinks.length).toBe(5);
-          expect(warehouseCard).toBeNull();
-          break;
-
-        case 'superuser':
-          expect(employeeLinks.length).toBeGreaterThan(0);
-          expect(supervisorLinks.length).toBeGreaterThan(0);
-          expect(accountantLinks.length).toBeGreaterThan(0);
-          expect(managerLinks.length).toBeGreaterThan(0);
-          expect(treasurerLinks.length).toBeGreaterThan(0);
-          expect(warehouseCard).not.toBeNull();
-          break;
+      if (user.expectedRole === 'superuser') {
+        for (const group of ROLE_MENU_GROUPS) {
+          expect(count(group.cls)).toBe(group.items.length);
+        }
+        expect(warehouseCard).not.toBeNull();
+      } else {
+        expect(ROLE_MENU_GROUPS.map(g => count(g.cls))).toEqual(expected[user.expectedRole]);
+        expect(warehouseCard).toBeNull();
       }
 
-      // Cleanup DOM
+      // 6. لینک مرده نداریم: هر لینک نمایش‌داده‌شده از گارد مسیر (ROUTE_PERMISSIONS) رد می‌شود
+      for (const id of linkIds) {
+        expect(hasRoutePermission(id, userPerms), `link ${id} for ${user.username}`).toBe(true);
+      }
+
+      // 7. هیچ منوی نقشی به صفحهٔ بازنشسته یا آیتم منوی عمومی برچیده لینک نمی‌دهد
+      for (const retired of RETIRED_MENU_IDS) {
+        expect(linkIds).not.toContain(retired);
+      }
+
+      // 8. آیتم‌های منتقل‌شده در منوی نقش مقصد
+      if (user.expectedRole === 'accountant') {
+        expect(linkIds).toEqual(expect.arrayContaining(['accountant-payroll', 'accountant-counterparties', 'profiles', 'base-settings']));
+      }
+      if (user.expectedRole === 'manager') {
+        expect(linkIds).toEqual(expect.arrayContaining(['manager-approvals', 'base-settings']));
+      }
+      if (user.expectedRole === 'org_admin') {
+        expect(linkIds).toEqual(['projects-and-sections']);
+      }
+
       document.body.removeChild(domContainer);
     });
   }
+});
+
+describe('Org Admin persona (راهبر تشکیلات و سیستم)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('org-admin-only user gets only the org_admin role, its home route and an allowlist inside finance', () => {
+    // نقش ذخیره‌شدهٔ نامعتبر با نقش معتبر جایگزین می‌شود و فال‌بک کارمند ندارد
+    const persona = createPersona(ORG_ADMIN_SAMPLE_USER, 'operator');
+
+    expect(persona.availableRoles().map(r => r.code)).toEqual(['org_admin']);
+    expect(persona.activeRole()).toBe('org_admin');
+    expect(persona.getDefaultRouteForRole()).toBe('/app/finance/projects-and-sections');
+
+    expect(persona.canAccessRoute('/app/finance/projects-and-sections')).toBe(true);
+    expect(persona.canAccessRoute('/app/finance/health')).toBe(true);
+    for (const blocked of [
+      '/app/finance/accountant-payroll',
+      '/app/finance/manager-approvals',
+      '/app/finance/employee-attendance',
+      '/app/finance/treasurer-disbursements',
+      '/app/finance/base-settings',
+      '/app/finance/profiles'
+    ]) {
+      expect(persona.canAccessRoute(blocked), blocked).toBe(false);
+    }
+    expect(persona.canAccessRoute('/app/operations/cockpit')).toBe(false);
+  });
+
+  it('accountant who is also org admin keeps accountant as the default role (org_admin comes last)', () => {
+    const accountant = ALL_12_SYSTEM_USERS.find(u => u.expectedRole === 'accountant')!;
+    const mixed: UserTestCase = {
+      ...accountant,
+      username: 'accountant.org.admin',
+      permissions: [...accountant.permissions, 'perm_manage_projects_sections']
+    };
+    const persona = createPersona(mixed, '');
+
+    expect(persona.availableRoles().map(r => r.code)).toEqual(['accountant', 'org_admin']);
+    expect(persona.activeRole()).toBe('accountant');
+    expect(persona.getDefaultRouteForRole()).toBe('/app/finance/accountant-payroll');
+
+    // منوی راهبر فقط با انتخاب صریح پرسونای راهبر دیده می‌شود
+    expect(resolveRoleNav('org_admin', persona.activeRole(), mixed.permissions, ORG_ADMIN_NAV_ITEMS, ORG_ADMIN_ROLE_MARKERS)).toEqual([]);
+    persona.switchRole('org_admin', false);
+    expect(resolveRoleNav('org_admin', persona.activeRole(), mixed.permissions, ORG_ADMIN_NAV_ITEMS, ORG_ADMIN_ROLE_MARKERS).map(i => i.id))
+      .toEqual(['projects-and-sections']);
+  });
+
+  it('hides a role-menu link that the route guard would bounce', () => {
+    // کاربر فرضی بدون نشانگر حسابدار که فقط view_sys_personnel دارد: فقط لینک پرونده‌ها دیده می‌شود
+    const perms = ['view_sys_personnel'];
+    const items = filterRoleNavItems(ACCOUNTANT_NAV_ITEMS, {
+      isAdmin: false,
+      userPerms: perms,
+      roleMarkers: ACCOUNTANT_ROLE_MARKERS,
+      routeAllowed: (id) => hasRoutePermission(id, perms)
+    });
+    expect(items.map(i => i.id)).toEqual(['profiles']);
+
+    // کاربری که نشانگر نقش دارد ولی گارد مسیر او را رد می‌کند، آن لینک را نمی‌بیند
+    const markerOnly = ['view_sys_payroll'];
+    const markerItems = filterRoleNavItems(ACCOUNTANT_NAV_ITEMS, {
+      isAdmin: false,
+      userPerms: markerOnly,
+      roleMarkers: ACCOUNTANT_ROLE_MARKERS,
+      routeAllowed: (id) => hasRoutePermission(id, markerOnly)
+    }).map(i => i.id);
+    expect(markerItems).not.toContain('accountant-fleet');
+    expect(markerItems).not.toContain('profiles');
+    expect(markerItems).toContain('accountant-payroll');
+  });
 });

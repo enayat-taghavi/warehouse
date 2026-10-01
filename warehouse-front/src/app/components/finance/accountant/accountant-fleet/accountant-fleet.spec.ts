@@ -18,7 +18,7 @@ describe('AccountantFleetHubComponent Unit Tests', () => {
 
   const validSheba = generateShebaFromAccount('017', '102222222002');
 
-  const mockVehicle: VehicleDriverProfile = {
+  const mockVehicle = {
     id: 55,
     plate_number: '12-345-67',
     vehicle_type: 'truck',
@@ -32,7 +32,7 @@ describe('AccountantFleetHubComponent Unit Tests', () => {
     sheba_number: validSheba,
     bank_name: 'بانک ملی ایران',
     account_number: '102222222002'
-  };
+  } as unknown as VehicleDriverProfile;
 
   beforeEach(() => {
     mockAuth = {
@@ -54,11 +54,19 @@ describe('AccountantFleetHubComponent Unit Tests', () => {
       getMySections: vi.fn().mockReturnValue(of([{ id: 3, name: 'دالان کارگاه' }])),
       getProjectSections: vi.fn().mockReturnValue(of([])),
       getVehicleProfiles: vi.fn().mockReturnValue(of([mockVehicle])),
+      getAvailableFiscalYears: vi.fn().mockReturnValue(of({ years: ['1405', '1404'] })),
+      // شکل واقعی پاسخ بک‌اند (fleet_settlement_engine): { summary, records }
       calculateFleetSettlement: vi.fn().mockReturnValue(of({
-        items: [{ plate_number: '12-345-67', driver_name: 'اکبر کریمی', total_trips: 20, gross_amount: 300000000, payable_amount: 280000000, is_settled: false }]
+        summary: { total_vehicles_count: 2, active_contractor_count: 1, total_fleet_trips: 20, total_payable_settlement: 280000000 },
+        records: [
+          { plate_number: '12-345-67', driver_name: 'اکبر کریمی', trip_count: 20, gross_amount: 280000000, payable_amount: 280000000, is_payable: true },
+          { plate_number: '98-765-43', driver_name: 'خودرو شرکتی', trip_count: 5, gross_amount: 0, payable_amount: 0, is_payable: false }
+        ]
       })),
+      exportFleetBankExcel: vi.fn().mockReturnValue(of(new Blob(['x']))),
       getVehicleChangeRequests: vi.fn().mockReturnValue(of([])),
       approveVehicleFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی ناوگان صادر شد.' })),
+      approveVehicleChangeRequestFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی تغییرات ثبت شد.' })),
       updateVehicleProfile: vi.fn().mockReturnValue(of({ ...mockVehicle })),
       rejectVehicle: vi.fn().mockReturnValue(of({ message: 'رد شد' }))
     };
@@ -123,5 +131,51 @@ describe('AccountantFleetHubComponent Unit Tests', () => {
     expect(mockPersonnelApi.rejectVehicle).toHaveBeenCalledWith(55, 'پلاک ناخواناست');
     expect(mockToast.showSuccess).toHaveBeenCalled();
     expect(component.isRejectModalOpen).toBe(false);
+  });
+
+  // ─── قابلیت‌های منتقل‌شده از کارتابل مالی قدیمی ───
+  it('6. should map real settlement response (summary/records) and count payable rows only', () => {
+    component.fiscalYear = '1405';
+    component.selectedMonth = 'شهریور';
+    component.loadSettlement();
+    expect(mockPersonnelApi.calculateFleetSettlement).toHaveBeenCalledWith(null, '1405/06');
+    expect(component.settlementItems.length).toBe(2);
+    expect(component.settlementSummary?.total_payable_settlement).toBe(280000000);
+    expect(component.statusCounters.settlementPending).toBe(1);
+  });
+
+  it('7. should send settlement scope (warehouse) and period to the API', () => {
+    component.fiscalYear = '1405';
+    component.selectedMonth = 'تیر';
+    component.selectedWarehouseId = 26;
+    component.loadSettlement();
+    expect(mockPersonnelApi.calculateFleetSettlement).toHaveBeenCalledWith(26, '1405/04');
+  });
+
+  it('8. should approve vehicle change request (finance stage) with optional note', () => {
+    component.openApprovalModal(71, '12-345-67', 'vehicle_cr');
+    expect(component.isApprovalModalOpen).toBe(true);
+    component.approvalNote = 'نرخ کرایه بررسی شد';
+    component.confirmApproval();
+    expect(mockPersonnelApi.approveVehicleChangeRequestFinance).toHaveBeenCalledWith(71, 'نرخ کرایه بررسی شد');
+    expect(component.isApprovalModalOpen).toBe(false);
+  });
+
+  it('9. should approve a new vehicle through the approval modal without a note', () => {
+    component.openApprovalModal(55, '12-345-67', 'vehicle');
+    component.confirmApproval();
+    expect(mockPersonnelApi.approveVehicleFinance).toHaveBeenCalledWith(55);
+  });
+
+  it('10. should export fleet bank payment file for the selected period and scope', () => {
+    const createUrl = vi.fn().mockReturnValue('blob:x');
+    const revokeUrl = vi.fn();
+    (window.URL as any).createObjectURL = createUrl;
+    (window.URL as any).revokeObjectURL = revokeUrl;
+    component.fiscalYear = '1405';
+    component.selectedMonth = 'مرداد';
+    component.exportFleetBankExcel();
+    expect(mockPersonnelApi.exportFleetBankExcel).toHaveBeenCalledWith(null, '1405/05');
+    expect(mockToast.showSuccess).toHaveBeenCalled();
   });
 });

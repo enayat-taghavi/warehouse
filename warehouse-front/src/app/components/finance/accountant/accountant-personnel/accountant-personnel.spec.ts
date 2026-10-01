@@ -20,7 +20,7 @@ describe('AccountantPersonnelHubComponent Unit Tests', () => {
 
   const validSheba = generateShebaFromAccount('017', '101111111001');
 
-  const mockPersonnel: PersonnelProfile = {
+  const mockPersonnel = {
     id: 938,
     first_name: 'مرتضی',
     last_name: 'منصوریان',
@@ -38,7 +38,7 @@ describe('AccountantPersonnelHubComponent Unit Tests', () => {
     bank_name: 'بانک ملی ایران',
     account_number: '101111111001',
     insurance_number: '1234567890'
-  };
+  } as unknown as PersonnelProfile;
 
   beforeEach(() => {
     wsSubject = new Subject<any>();
@@ -68,6 +68,7 @@ describe('AccountantPersonnelHubComponent Unit Tests', () => {
       ])),
       getPersonnelChangeRequests: vi.fn().mockReturnValue(of([])),
       approvePersonnelFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی صادر شد.' })),
+      approvePersonnelChangeRequestFinance: vi.fn().mockReturnValue(of({ message: 'تایید مالی تغییرات ثبت شد.' })),
       updatePersonnelProfile: vi.fn().mockReturnValue(of({ ...mockPersonnel })),
       rejectPersonnel: vi.fn().mockReturnValue(of({ message: 'رد شد' })),
       requestPersonnelRevision: vi.fn().mockReturnValue(of({ message: 'عودت داده شد' })),
@@ -151,5 +152,28 @@ describe('AccountantPersonnelHubComponent Unit Tests', () => {
     component.approvePersonnelFinance(mockPersonnel);
     expect(mockPersonnelApi.approvePersonnelFinance).toHaveBeenCalledWith(938);
     expect(mockToast.showSuccess).toHaveBeenCalled();
+  });
+
+  // ─── قابلیت‌های منتقل‌شده از کارتابل مالی قدیمی ───
+  it('7. should approve personnel change request (finance stage) with optional note via modal', () => {
+    component.openApprovalModal(412, 'مرتضی منصوریان', 'personnel_cr');
+    expect(component.isApprovalModalOpen).toBe(true);
+    component.approvalNote = 'شبا و مزد بررسی شد';
+    component.confirmApproval();
+    expect(mockPersonnelApi.approvePersonnelChangeRequestFinance).toHaveBeenCalledWith(412, 'شبا و مزد بررسی شد');
+    expect(mockToast.showSuccess).toHaveBeenCalled();
+    expect(component.isApprovalModalOpen).toBe(false);
+  });
+
+  it('8. should approve new personnel through the modal without a note', () => {
+    component.openApprovalModal(938, 'مرتضی منصوریان', 'personnel');
+    component.confirmApproval();
+    expect(mockPersonnelApi.approvePersonnelFinance).toHaveBeenCalledWith(938);
+  });
+
+  it('9. should approve a change request directly and refresh the lists', () => {
+    component.approveChangeRequestFinance({ id: 413 } as any);
+    expect(mockPersonnelApi.approvePersonnelChangeRequestFinance).toHaveBeenCalledWith(413);
+    expect(mockPersonnelApi.getPersonnelProfiles).toHaveBeenCalled();
   });
 });

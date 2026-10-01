@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { of } from 'rxjs';
 import { SupervisorNewProfilesHubComponent } from './supervisor/supervisor-new-profiles/supervisor-new-profiles';
-import { FinanceCartable } from '../personnel/finance-cartable/finance-cartable';
+import { AccountantPersonnelHubComponent } from './accountant/accountant-personnel/accountant-personnel';
 import { ManagerApprovals } from '../personnel/manager-approvals/manager-approvals';
 import { PersonnelChangeRequest } from '../../core/models/personnel.model';
 
@@ -57,7 +57,10 @@ describe('Complete Personnel 3-Tier Lifecycle DOM & State Integration (Employee 
       error: vi.fn(),
       warning: vi.fn(),
       info: vi.fn(),
-      show: vi.fn()
+      show: vi.fn(),
+      showSuccess: vi.fn(),
+      showError: vi.fn(),
+      showWarning: vi.fn()
     };
 
     mockPersonnelApi = {
@@ -95,7 +98,7 @@ describe('Complete Personnel 3-Tier Lifecycle DOM & State Integration (Employee 
       }),
       getAttendanceMonthlySummary: vi.fn().mockReturnValue(of({ year_month: '1405/04', period_status: 'OPEN' })),
       getYearlySettings: vi.fn().mockReturnValue(of({ fiscal_year: '1405', job_grades: [] })),
-      getMonthlyPayrollRecords: vi.fn().mockReturnValue(of({ count: 0, results: [] }))
+      getMonthlyPayrollRecords: vi.fn().mockReturnValue(of([]))
     };
 
     mockWs = {
@@ -141,35 +144,34 @@ describe('Complete Personnel 3-Tier Lifecycle DOM & State Integration (Employee 
     expect(mockPersonnelApi.approvePersonnelChangeRequestSupervisor).toHaveBeenCalledWith(111);
     expect(activeCR.status).toBe('pending_accountant');
 
-    // ──── مرحله ۲: حسابدار مالی ────
-    const financeComp = new FinanceCartable(
+    // ──── مرحله ۲: حسابدار مالی (هاب پرسنل حسابدار، جانشین کارتابل مالی قدیمی) ────
+    const accountantComp = new AccountantPersonnelHubComponent(
       mockAuth,
       mockState,
-      mockPersonnelApi,
-      { getAll: vi.fn().mockReturnValue(of([])) } as any,
       mockToast,
-      { show: vi.fn() } as any,
-      mockCdr,
+      mockPersonnelApi,
+      mockWs,
+      mockRouter,
       mockRoute,
-      mockRouter
+      mockCdr
     );
-    financeComp.loadFinalApprovalsData();
+    accountantComp.fetchData();
 
-    // حسابدار رکورد را در کارتابل تغییرات مالی مشاهده می‌کند
-    expect(financeComp.pendingPersonnelCR.length).toBe(1);
-    expect(financeComp.pendingPersonnelCR[0].status).toBe('pending_accountant');
+    // حسابدار رکورد را در زیرتب درخواست‌های تغییر مشاهده می‌کند
+    expect(accountantComp.changeRequests.length).toBe(1);
+    expect(accountantComp.changeRequests[0].status).toBe('pending_accountant');
 
     // حسابدار مدال Diff را باز و مقایسه می‌کند
-    financeComp.openDiffModal(financeComp.pendingPersonnelCR[0], 'personnel');
-    expect(financeComp.diffFieldRows.length).toBeGreaterThan(0);
-    const wageRow = financeComp.diffFieldRows.find(r => r.field_name === 'daily_base_wage');
+    accountantComp.openDiffModal(accountantComp.changeRequests[0]);
+    expect(accountantComp.diffFieldRows.length).toBeGreaterThan(0);
+    const wageRow = accountantComp.diffFieldRows.find(r => r.field_name === 'daily_base_wage');
     expect(wageRow).toBeDefined();
     expect(wageRow?.old_value).toBe(3500000);
     expect(wageRow?.new_value).toBe(4500000);
     expect(wageRow?.is_changed).toBe(true);
 
     // حسابدار تایید مالی را می‌زند
-    financeComp.approveChangeRequestFinance(financeComp.pendingPersonnelCR[0], 'personnel');
+    accountantComp.approveChangeRequestFinance(accountantComp.changeRequests[0]);
 
     expect(mockPersonnelApi.approvePersonnelChangeRequestFinance).toHaveBeenCalledWith(111);
     expect(activeCR.status).toBe('pending_manager');

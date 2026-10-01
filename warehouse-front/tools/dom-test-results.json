@@ -81,14 +81,14 @@
       "warnings": []
     },
     {
-      "file": "src/app/components/personnel/warehouse-attendance/warehouse-attendance.html",
+      "file": "src/app/components/finance/employee/employee-attendance/employee-attendance.html",
       "status": "VALID",
       "elements": {
-        "buttons": 100,
+        "buttons": 65,
         "btnIconSquare": 0,
-        "svgs": 38,
-        "tables": 7,
-        "inputs": 62,
+        "svgs": 23,
+        "tables": 3,
+        "inputs": 38,
         "rtlContainers": 1
       },
       "warnings": []
@@ -110,24 +110,24 @@
       "file": "src/app/components/personnel/base-settings/base-settings.html",
       "status": "VALID",
       "elements": {
-        "buttons": 13,
+        "buttons": 24,
         "btnIconSquare": 0,
         "svgs": 3,
         "tables": 1,
-        "inputs": 34,
-        "rtlContainers": 1
+        "inputs": 49,
+        "rtlContainers": 3
       },
       "warnings": []
     },
     {
-      "file": "src/app/components/personnel/treasury-cartable/treasury-cartable.html",
+      "file": "src/app/components/finance/treasurer/treasurer-disbursements/treasurer-disbursements.html",
       "status": "VALID",
       "elements": {
-        "buttons": 12,
-        "btnIconSquare": 1,
-        "svgs": 1,
-        "tables": 3,
-        "inputs": 3,
+        "buttons": 18,
+        "btnIconSquare": 0,
+        "svgs": 4,
+        "tables": 2,
+        "inputs": 9,
         "rtlContainers": 1
       },
       "warnings": []
@@ -136,24 +136,24 @@
       "file": "src/app/components/personnel/manager-approvals/manager-approvals.html",
       "status": "VALID",
       "elements": {
-        "buttons": 38,
-        "btnIconSquare": 1,
-        "svgs": 4,
-        "tables": 4,
-        "inputs": 5,
+        "buttons": 51,
+        "btnIconSquare": 3,
+        "svgs": 6,
+        "tables": 6,
+        "inputs": 7,
         "rtlContainers": 1
       },
       "warnings": []
     },
     {
-      "file": "src/app/components/personnel/finance-cartable/finance-cartable.html",
+      "file": "src/app/components/finance/accountant/accountant-payroll/accountant-payroll.html",
       "status": "VALID",
       "elements": {
-        "buttons": 48,
-        "btnIconSquare": 1,
-        "svgs": 23,
-        "tables": 7,
-        "inputs": 12,
+        "buttons": 23,
+        "btnIconSquare": 0,
+        "svgs": 13,
+        "tables": 3,
+        "inputs": 9,
         "rtlContainers": 1
       },
       "warnings": []

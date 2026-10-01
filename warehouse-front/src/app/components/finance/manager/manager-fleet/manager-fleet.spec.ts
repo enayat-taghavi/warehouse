@@ -30,7 +30,7 @@ describe('ManagerFleetHubComponent Unit Tests', () => {
     is_active: true
   };
 
-  const mockVehicleCR: VehicleChangeRequest = {
+  const mockVehicleCR = {
     id: 401,
     vehicle: 101,
     vehicle_plate: '12ع345-Iran68',
@@ -41,7 +41,7 @@ describe('ManagerFleetHubComponent Unit Tests', () => {
     requested_by_name: 'حسابدار انبار',
     created_at: '2026-09-22T10:00:00Z',
     updated_at: '2026-09-22T10:00:00Z'
-  };
+  } as unknown as VehicleChangeRequest;
 
   beforeEach(() => {
     wsSubject = new Subject<any>();
@@ -66,9 +66,11 @@ describe('ManagerFleetHubComponent Unit Tests', () => {
         { id: 10, name: 'کارگاه خط لوله', project_name: 'پروژه جنوب' }
       ])),
       getVehicleProfiles: vi.fn().mockReturnValue(of([mockVehicle])),
+      // شکل واقعی پاسخ بک‌اند (fleet_settlement_engine): { summary, records }
       calculateFleetSettlement: vi.fn().mockReturnValue(of({
-        settlements: [
-          { plate_number: '12ع345-Iran68', driver_name: 'مرتضی احمدی', gross_amount: 15000000, deductions: 0, net_payable: 15000000, is_settled: false }
+        summary: { total_vehicles_count: 1, active_contractor_count: 1, total_fleet_trips: 10, total_payable_settlement: 15000000 },
+        records: [
+          { plate_number: '12ع345-Iran68', driver_name: 'مرتضی احمدی', trip_count: 10, default_service_rate: 1500000, gross_amount: 15000000, payable_amount: 15000000, is_payable: true }
         ]
       })),
       getVehicleChangeRequests: vi.fn().mockReturnValue(of([mockVehicleCR])),
