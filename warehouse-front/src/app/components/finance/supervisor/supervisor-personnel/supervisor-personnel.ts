@@ -9,13 +9,14 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection, PersonnelProfile, PersonnelChangeRequest } from '../../../../core/models/personnel.model';
 import { WebSocketService } from '../../../../core/http/websocket.service';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 export type SupervisorPersonnelSubTab = 'new' | 'attendance' | 'changes' | 'all';
 
 @Component({
   selector: 'app-supervisor-personnel-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './supervisor-personnel.html',
   styleUrl: './supervisor-personnel.css'
 })
@@ -68,8 +69,26 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
     new_value: any;
     is_changed: boolean;
   }> = [];
+  diffAuditLogs: any[] = [];
+  isLoadingDiffLogs = false;
+
+  // پنجره مشاهده کامل پرونده (Profile Viewer Modal)
+  isViewProfileModalOpen = false;
+  selectedViewProfile: PersonnelProfile | null = null;
+
+  // وضعیت و پیام حذف دائم (Purge) در مودال رد
+  isLoadingImpact = false;
+  isPurgeCandidate = false;
+  deleteImpactResult: any = null;
+
+  // تایید گروهی پرونده‌ها (Batch Approval)
+  selectedPersonnelIds = new Set<number>();
+  isBatchApproveModalOpen = false;
+  batchApprovalNote = '';
+  isBatchApproving = false;
 
   copiedId: number | null = null;
+  copiedKey: string | null = null;
 
   private routeSub?: Subscription;
   private wsSub?: Subscription;
@@ -187,13 +206,20 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
     }
 
     // ۱. پرونده‌های جدید پرسنل در انتظار تایید سرپرست
-    this.personnelApi.getPersonnelProfiles({ ...baseParams, approval_status: 'pending_supervisor,draft' }).subscribe({
+    this.personnelApi.getPersonnelProfiles({ ...baseParams, approval_status: 'pending_supervisor' }).subscribe({
       next: (pList: any[]) => {
         this.newPersonnelList = pList || [];
         this.statusCounters.newCount = this.newPersonnelList.length;
+        const currentIds = new Set(this.newPersonnelList.map(p => p.id));
+        for (const id of Array.from(this.selectedPersonnelIds)) {
+          if (!currentIds.has(id)) {
+            this.selectedPersonnelIds.delete(id);
+          }
+        }
       },
       error: () => {
         this.newPersonnelList = [];
+        this.selectedPersonnelIds.clear();
       }
     });
 
@@ -310,13 +336,39 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
     const title = `${actionTitle}: ${item.first_name || item.personnel_name || ''} ${item.last_name || ''}`;
     this.rejectTarget = { type, item, action, title };
     this.rejectReason = '';
+    this.isPurgeCandidate = false;
+    this.deleteImpactResult = null;
+    this.isLoadingImpact = false;
     this.isRejectModalOpen = true;
+
+    // استعلام اثرات حذف و بررسی شرط Purge دائم برای پرونده‌های پرسنل
+    if (action === 'reject' && type === 'new' && item.id && typeof this.personnelApi.getPersonnelDeleteImpact === 'function') {
+      this.isLoadingImpact = true;
+      this.personnelApi.getPersonnelDeleteImpact(item.id).subscribe({
+        next: (res) => {
+          this.isLoadingImpact = false;
+          this.deleteImpactResult = res;
+          // اگر طبق استعلام سرور سابقه کارکرد/مالی نداشته باشد و بتواند حذف شود، هشدار Purge نمایش می‌یابد
+          if (res?.can_delete || !res?.has_history) {
+            this.isPurgeCandidate = true;
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isLoadingImpact = false;
+          this.cdr.markForCheck();
+        }
+      });
+    }
   }
 
   closeRejectModal(): void {
     this.isRejectModalOpen = false;
     this.rejectTarget = null;
     this.rejectReason = '';
+    this.isPurgeCandidate = false;
+    this.deleteImpactResult = null;
+    this.isLoadingImpact = false;
   }
 
   submitReject(): void {
@@ -337,20 +389,24 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
         },
         error: (err: any) => {
           this.isRejecting = false;
-          this.toast.showError(err?.error?.detail || 'خطا در عودت پرونده');
+          this.toast.showError(err?.error?.detail || err?.error?.error || 'خطا در عودت پرونده');
         }
       });
     } else {
       this.personnelApi.rejectPersonnel(item.id, this.rejectReason.trim()).subscribe({
         next: () => {
-          this.toast.showSuccess('پرونده با موفقیت رد شد.');
+          if (this.isPurgeCandidate) {
+            this.toast.showSuccess('پرونده با توجه به عدم سابقه، به صورت دائم از سیستم پاک‌سازی (Purge) شد.');
+          } else {
+            this.toast.showSuccess('پرونده با موفقیت رد و در سوابق بایگانی شد.');
+          }
           this.isRejecting = false;
           this.closeRejectModal();
           this.fetchData();
         },
         error: (err: any) => {
           this.isRejecting = false;
-          this.toast.showError(err?.error?.detail || 'خطا در رد پرونده');
+          this.toast.showError(err?.error?.detail || err?.error?.error || 'خطا در رد پرونده');
         }
       });
     }
@@ -360,6 +416,7 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
   openDiffModal(cr: PersonnelChangeRequest): void {
     this.selectedDiffCR = cr;
     this.diffFieldRows = [];
+    this.diffAuditLogs = [];
     const proposed = (cr.proposed_changes || {}) as Record<string, any>;
     const current = (cr.previous_values || {}) as Record<string, any>;
 
@@ -377,6 +434,22 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
         is_changed: isChanged
       });
     }
+
+    if (cr.id && typeof this.personnelApi.getWorkflowAuditLogs === 'function') {
+      this.isLoadingDiffLogs = true;
+      this.personnelApi.getWorkflowAuditLogs({ content_type: 'personnelchangerequest', object_id: cr.id }).subscribe({
+        next: (logs: any) => {
+          this.diffAuditLogs = Array.isArray(logs) ? logs : (logs?.results || []);
+          this.isLoadingDiffLogs = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isLoadingDiffLogs = false;
+          this.cdr.markForCheck();
+        }
+      });
+    }
+
     this.isDiffModalOpen = true;
   }
 
@@ -384,6 +457,116 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
     this.isDiffModalOpen = false;
     this.selectedDiffCR = null;
     this.diffFieldRows = [];
+    this.diffAuditLogs = [];
+    this.isLoadingDiffLogs = false;
+  }
+
+  // ─── پنجره مشاهده کامل پرونده (Profile Viewer Modal) ───
+  openViewProfileModal(p: PersonnelProfile): void {
+    this.selectedViewProfile = p;
+    this.isViewProfileModalOpen = true;
+  }
+
+  closeViewProfileModal(): void {
+    this.isViewProfileModalOpen = false;
+    this.selectedViewProfile = null;
+  }
+
+  // ─── تایید گروهی (Batch Approval) ───
+  toggleSelectAllPersonnel(event: any): void {
+    const isChecked = event?.target?.checked;
+    if (isChecked) {
+      this.newPersonnelList.forEach(p => {
+        if (p.id) this.selectedPersonnelIds.add(p.id);
+      });
+    } else {
+      this.selectedPersonnelIds.clear();
+    }
+  }
+
+  togglePersonnelSelection(id: number | undefined): void {
+    if (id === undefined) return;
+    if (this.selectedPersonnelIds.has(id)) {
+      this.selectedPersonnelIds.delete(id);
+    } else {
+      this.selectedPersonnelIds.add(id);
+    }
+  }
+
+  isPersonnelSelected(id: number | undefined): boolean {
+    return id !== undefined && this.selectedPersonnelIds.has(id);
+  }
+
+  isAllPersonnelSelected(): boolean {
+    return this.newPersonnelList.length > 0 && this.newPersonnelList.every(p => p.id && this.selectedPersonnelIds.has(p.id));
+  }
+
+  getSelectedCount(): number {
+    return this.selectedPersonnelIds.size;
+  }
+
+  openBatchApproveModal(): void {
+    if (this.selectedPersonnelIds.size === 0) {
+      this.toast.showWarning('هیچ پرونده‌ای برای تایید گروهی انتخاب نشده است.');
+      return;
+    }
+    this.batchApprovalNote = '';
+    this.isBatchApproveModalOpen = true;
+  }
+
+  closeBatchApproveModal(): void {
+    this.isBatchApproveModalOpen = false;
+    this.batchApprovalNote = '';
+  }
+
+  submitBatchApproval(): void {
+    const ids = Array.from(this.selectedPersonnelIds);
+    if (ids.length === 0) return;
+
+    this.isBatchApproving = true;
+    this.personnelApi.batchApprovePersonnel(ids, 'supervisor', this.batchApprovalNote).subscribe({
+      next: (res) => {
+        this.isBatchApproving = false;
+        this.closeBatchApproveModal();
+        const results = res?.results || [];
+        const successCount = results.filter(r => r.success).length;
+        const failedCount = results.filter(r => !r.success).length;
+
+        if (failedCount === 0) {
+          this.toast.showSuccess(`تمام ${successCount} پرونده با موفقیت تایید و به مرحله حسابداری ارسال شدند.`);
+        } else if (successCount > 0) {
+          this.toast.showWarning(`${successCount} پرونده تایید شد، اما ${failedCount} مورد با خطا مواجه شد.`);
+        } else {
+          this.toast.showError('عملیات تایید گروهی با خطا مواجه شد.');
+        }
+
+        this.selectedPersonnelIds.clear();
+        this.fetchData();
+      },
+      error: (err) => {
+        this.isBatchApproving = false;
+        this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در اجرای تایید گروهی پرسنل');
+      }
+    });
+  }
+
+  // ─── ابزارهای کپی سریع ───
+  copyField(val: string | undefined | null, key: string): void {
+    if (!val) return;
+    navigator.clipboard.writeText(String(val)).then(() => {
+      this.copiedKey = key;
+      this.toast.showSuccess(`کپی شد: ${val}`);
+      setTimeout(() => {
+        if (this.copiedKey === key) {
+          this.copiedKey = null;
+          this.cdr.markForCheck();
+        }
+      }, 2000);
+    });
+  }
+
+  isFieldCopied(key: string): boolean {
+    return this.copiedKey === key;
   }
 
   getFieldLabel(field: string): string {

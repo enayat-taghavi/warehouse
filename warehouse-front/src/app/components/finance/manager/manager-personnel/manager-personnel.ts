@@ -7,15 +7,16 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
-import { ProjectSection, PersonnelProfile, PersonnelChangeRequest } from '../../../../core/models/personnel.model';
+import { ProjectSection, PersonnelProfile, PersonnelChangeRequest, PayrollYearlySettings, PersonnelCostEstimate } from '../../../../core/models/personnel.model';
 import { WebSocketService } from '../../../../core/http/websocket.service';
+import { SmartDeleteModalComponent } from '../../../../shared/components/smart-delete-modal/smart-delete-modal';
 
 export type ManagerPersonnelSubTab = 'new' | 'contracts' | 'changes' | 'all';
 
 @Component({
   selector: 'app-manager-personnel-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SmartDeleteModalComponent],
   templateUrl: './manager-personnel.html',
   styleUrl: './manager-personnel.css'
 })
@@ -30,6 +31,7 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
   searchQuery = '';
   fiscalYear = '1405';
   isLoading = false;
+  yearlySettings: PayrollYearlySettings | null = null;
 
   // لیست‌های داده
   pendingManagerList: PersonnelProfile[] = [];
@@ -50,11 +52,20 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
   approvalNote = '';
   isApproving = false;
 
-  // مودال رد پرونده توسط مدیر
+  // مودال عودت / رد پرونده توسط مدیر (تسک ۱۰.۲)
   isRejectModalOpen = false;
   rejectTarget: { id: number; title: string; type: 'personnel' | 'changes' } | null = null;
+  rejectActionType: 'return_to_accountant' | 'reject_final' = 'return_to_accountant';
   rejectReason = '';
   isRejecting = false;
+
+  // مودال حذف پرسنل بدون سابقه (تسک ۱۰.۳)
+  isDeleteModalOpen = false;
+  deleteTargetPersonnel: PersonnelProfile | null = null;
+  deleteImpactUrl = '';
+  deleteImpactLoading = false;
+  deleteImpactHistory: any = null;
+  isDeletingPersonnel = false;
 
   // مودال مقایسه تفاوت‌ها (Diff Viewer)
   isDiffModalOpen = false;
@@ -103,6 +114,32 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
     });
 
     this.loadSections();
+    this.loadYearlySettings();
+  }
+
+  loadYearlySettings(): void {
+    this.personnelApi.getYearlySettings(this.fiscalYear).subscribe({
+      next: (res: any) => {
+        this.yearlySettings = res;
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+  }
+
+  /** سرور فقط مجوز اختصاصی حذف پرسنل فاقد سابقه را می‌پذیرد (تصمیم ۶.۸، DEF-27) */
+  get canDeletePersonnel(): boolean {
+    const u = this.auth.user();
+    if (u?.is_superuser) return true;
+    return this.auth.userPermissions().includes('perm_delete_personnel_nomovement');
+  }
+
+  /** قطع همکاری با مجوز مدیر (DEF-18) */
+  get canEndCollaboration(): boolean {
+    const u = this.auth.user();
+    if (u?.is_superuser) return true;
+    const perms = this.auth.userPermissions();
+    return ['perm_approve_personnel_manager', 'can_act_as_manager', 'can_act_as_company_manager'].some(c => perms.includes(c));
   }
 
   ngOnDestroy(): void {
@@ -224,6 +261,81 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
     this.approvalTarget = { type, item, title };
     this.approvalNote = '';
     this.isApprovalModalOpen = true;
+    if (type === 'new' && item?.id) {
+      this.loadCostAnalysis(item.id);
+    }
+  }
+
+  // ─── ویجت تحلیل بار مالی با برآورد سروری همان موتور حقوق (تسک ۱۰.۱، DEF-04 و DEF-05) ───
+  approvalCostEstimate: PersonnelCostEstimate | null = null;
+  companyCostSummary: { personnel_count: number; average_employer_monthly_cost: number } | null = null;
+  isLoadingCostAnalysis = false;
+
+  private loadCostAnalysis(personnelId: number): void {
+    this.approvalCostEstimate = null;
+    this.isLoadingCostAnalysis = true;
+    this.personnelApi.getPersonnelCostEstimate(personnelId).subscribe({
+      next: (est) => {
+        this.approvalCostEstimate = est;
+        this.isLoadingCostAnalysis = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isLoadingCostAnalysis = false;
+        this.cdr.detectChanges();
+      }
+    });
+    // میانگین شرکت فقط از پرونده‌های مصوب و فعال، مستقل از فیلتر بخش و جستجوی صفحه
+    this.personnelApi.getCompanyPersonnelCostSummary().subscribe({
+      next: (summary) => {
+        this.companyCostSummary = summary;
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+  }
+
+  // ─── قطع همکاری پرسنل دارای سابقه (DEF-18) ───
+  isEndCollaborationModalOpen = false;
+  endCollaborationTarget: PersonnelProfile | null = null;
+  endCollaborationDate = '';
+  endCollaborationReason = '';
+  isEndingCollaboration = false;
+
+  openEndCollaborationModal(p: PersonnelProfile): void {
+    this.endCollaborationTarget = p;
+    this.endCollaborationDate = '';
+    this.endCollaborationReason = '';
+    this.isEndCollaborationModalOpen = true;
+  }
+
+  closeEndCollaborationModal(): void {
+    this.isEndCollaborationModalOpen = false;
+    this.endCollaborationTarget = null;
+    this.isEndingCollaboration = false;
+  }
+
+  submitEndCollaboration(): void {
+    const target = this.endCollaborationTarget;
+    if (!target?.id || this.isEndingCollaboration) return;
+    if (!this.endCollaborationDate.trim() || !this.endCollaborationReason.trim()) {
+      this.toast.showWarning('تاریخ پایان همکاری (شمسی) و دلیل آن الزامی است.');
+      return;
+    }
+    this.isEndingCollaboration = true;
+    this.personnelApi.endPersonnelCollaboration(target.id, this.endCollaborationDate.trim(), this.endCollaborationReason.trim()).subscribe({
+      next: (res: any) => {
+        this.isEndingCollaboration = false;
+        this.toast.showSuccess(res?.message || `همکاری «${target.first_name} ${target.last_name}» پایان یافت.`);
+        this.closeEndCollaborationModal();
+        this.fetchData();
+      },
+      error: (err: any) => {
+        this.isEndingCollaboration = false;
+        this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در ثبت قطع همکاری');
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   closeApproveModal(): void {
@@ -291,18 +403,33 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
     const { id, type } = this.rejectTarget;
 
     if (type === 'personnel') {
-      this.personnelApi.rejectPersonnel(id, this.rejectReason.trim()).subscribe({
-        next: () => {
-          this.toast.showSuccess('پرونده پرسنل رد شد.');
-          this.isRejecting = false;
-          this.closeRejectModal();
-          this.fetchData();
-        },
-        error: (err: any) => {
-          this.isRejecting = false;
-          this.toast.showError(err?.error?.detail || 'خطا در رد پرونده');
-        }
-      });
+      if (this.rejectActionType === 'return_to_accountant') {
+        this.personnelApi.requestPersonnelRevision(id, this.rejectReason.trim(), 'pending_accountant').subscribe({
+          next: () => {
+            this.toast.showSuccess('پرونده جهت بازنگری احکام و مدارک مالی به کارتابل حسابدار عودت داده شد.');
+            this.isRejecting = false;
+            this.closeRejectModal();
+            this.fetchData();
+          },
+          error: (err: any) => {
+            this.isRejecting = false;
+            this.toast.showError(err?.error?.detail || err?.error?.error || 'خطا در عودت پرونده به حسابدار');
+          }
+        });
+      } else {
+        this.personnelApi.rejectPersonnel(id, this.rejectReason.trim()).subscribe({
+          next: () => {
+            this.toast.showSuccess('پرونده پرسنل رد قطعی شد.');
+            this.isRejecting = false;
+            this.closeRejectModal();
+            this.fetchData();
+          },
+          error: (err: any) => {
+            this.isRejecting = false;
+            this.toast.showError(err?.error?.detail || err?.error?.error || 'خطا در رد پرونده');
+          }
+        });
+      }
     } else {
       this.personnelApi.rejectPersonnelChangeRequest(id, this.rejectReason.trim()).subscribe({
         next: () => {
@@ -376,6 +503,102 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
         if (this.copiedId === id) this.copiedId = null;
         this.cdr.detectChanges();
       }, 2000);
+    });
+  }
+
+  // ─── ویجت تحلیل بار مالی پرسنل (تسک ۱۰.۱) ───
+  // همهٔ اعداد از برآورد سروری PayrollCalculationEngine می‌آیند تا با کارتابل حسابدار و حقوق یکی باشند (DEF-05)
+  private estimateFor(p: any): PersonnelCostEstimate | null {
+    const est = this.approvalCostEstimate;
+    return est && p?.id && this.approvalTarget?.item?.id === p.id ? est : null;
+  }
+
+  getPersonnelGrossMonthly(p: any): number | null {
+    return this.estimateFor(p)?.gross_salary ?? null;
+  }
+
+  getEmployerInsuranceShare(p: any): { employerRate: number; unempRate: number; totalRate: number; cost: number | null } {
+    const est = this.estimateFor(p);
+    const employerRate = (est?.employer_insurance_rate ?? 20) / 100;
+    const unempRate = (est?.unemployment_insurance_rate ?? 3) / 100;
+    return {
+      employerRate,
+      unempRate,
+      totalRate: employerRate + unempRate,
+      cost: est ? est.employer_insurance + est.unemployment_insurance : null
+    };
+  }
+
+  getTotalEmployerMonthlyCost(p: any): number | null {
+    return this.estimateFor(p)?.employer_monthly_cost ?? null;
+  }
+
+  getTotalEmployerYearlyCost(p: any): number | null {
+    const monthly = this.getTotalEmployerMonthlyCost(p);
+    return monthly === null ? null : monthly * 12;
+  }
+
+  /** میانگین هزینهٔ ماهانهٔ پرسنل مصوب و فعال شرکت، از اندپوینت تجمیعی سرور (DEF-04) */
+  getCompanyAverageMonthlyCost(): number {
+    return this.companyCostSummary?.average_employer_monthly_cost || 0;
+  }
+
+  getCostDeviationPercentage(p: any): number | null {
+    const avg = this.getCompanyAverageMonthlyCost();
+    const cost = this.getTotalEmployerMonthlyCost(p);
+    if (!avg || cost === null) return null;
+    return Math.round(((cost - avg) / avg) * 100);
+  }
+
+  // ─── ابزار حذف پرسنل بدون سابقه (تسک ۱۰.۳) ───
+  openDeleteModal(p: PersonnelProfile): void {
+    if (!p?.id) return;
+    this.deleteTargetPersonnel = p;
+    this.deleteImpactUrl = `/api/personnel/profiles/${p.id}/delete_impact/`;
+    this.deleteImpactLoading = true;
+    this.deleteImpactHistory = null;
+    this.isDeleteModalOpen = true;
+
+    this.personnelApi.getPersonnelDeleteImpact(p.id).subscribe({
+      next: (res) => {
+        this.deleteImpactHistory = res;
+        this.deleteImpactLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.deleteImpactHistory = { can_delete: false, reasons: ['خطا در استعلام سوابق از سرور'] };
+        this.deleteImpactLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  closeDeleteModal(): void {
+    this.isDeleteModalOpen = false;
+    this.deleteTargetPersonnel = null;
+    this.deleteImpactHistory = null;
+    this.isDeletingPersonnel = false;
+    this.cdr.detectChanges();
+  }
+
+  confirmDeletePersonnel(): void {
+    if (!this.deleteTargetPersonnel?.id || !this.deleteImpactHistory?.can_delete || this.isDeletingPersonnel) return;
+    this.isDeletingPersonnel = true;
+    const id = this.deleteTargetPersonnel.id;
+    const fullName = `${this.deleteTargetPersonnel.first_name} ${this.deleteTargetPersonnel.last_name}`;
+
+    this.personnelApi.deletePersonnelProfile(id).subscribe({
+      next: () => {
+        this.toast.showSuccess(`پرونده پرسنل «${fullName}» به علت عدم سابقه با موفقیت حذف گردید.`);
+        this.isDeletingPersonnel = false;
+        this.closeDeleteModal();
+        this.fetchData();
+      },
+      error: (err) => {
+        this.isDeletingPersonnel = false;
+        this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در حذف پرونده پرسنل');
+        this.cdr.detectChanges();
+      }
     });
   }
 }

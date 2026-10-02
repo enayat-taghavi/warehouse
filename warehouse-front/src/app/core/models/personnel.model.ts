@@ -83,7 +83,12 @@ export interface PersonnelProfile {
   postal_code?: string;
   address?: string;
   notes?: string;
+  valid_until_date?: string;
+  recommender?: string;
   attachment?: string | null;
+  bank_accounts?: PersonnelBankAccount[];
+  documents?: PersonnelDocument[];
+  missing_fields?: Array<{ field: string; label: string } | string>;
 
   assigned_warehouse?: number | null;
   assigned_warehouse_name?: string;
@@ -119,6 +124,58 @@ export interface PersonnelProfile {
 
   created_at?: string;
   updated_at?: string;
+}
+
+export interface PersonnelBankAccount {
+  id?: number;
+  personnel?: number;
+  bank_name: string;
+  account_number: string;
+  sheba_number: string;
+  card_number?: string;
+  is_primary: boolean;
+  is_active?: boolean;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** برآورد سروری هزینهٔ ماهانهٔ پرسنل با همان موتور حقوق (DEF-05) */
+export interface PersonnelCostEstimate {
+  year_month: string;
+  settings_id: number | null;
+  job_grade: string;
+  base_daily_rate: number;
+  insurance_base_hourly_rate: number | null;
+  real_hourly_rate: number | null;
+  insurance_days: number;
+  gross_salary: number;
+  base_salary: number;
+  marital_allowance: number;
+  child_allowance: number;
+  housing_allowance: number;
+  food_allowance: number;
+  total_insurable_salary_allowances: number;
+  worker_insurance: number;
+  employer_insurance: number;
+  unemployment_insurance: number;
+  net_salary: number;
+  employer_monthly_cost: number;
+  employer_insurance_rate: number;
+  unemployment_insurance_rate: number;
+  worker_insurance_rate: number;
+}
+
+export interface PersonnelDocument {
+  id?: number;
+  personnel?: number;
+  doc_type: 'national_card' | 'birth_certificate' | 'contract' | 'other';
+  doc_type_display?: string;
+  file?: string;
+  file_name?: string;
+  uploaded_by?: number;
+  uploaded_by_name?: string;
+  created_at?: string;
 }
 
 export interface VehicleDriverProfile {
@@ -177,6 +234,25 @@ export interface VehicleDriverProfile {
 
   created_at?: string;
   updated_at?: string;
+}
+
+export interface WorkflowAuditLog {
+  id?: number;
+  content_type: string;
+  object_id: number;
+  action: string;
+  action_display?: string;
+  from_status?: string;
+  to_status?: string;
+  reason?: string;
+  note?: string;
+  actor?: number | null;
+  actor_name?: string;
+  metadata?: Record<string, any>;
+  snapshot?: Record<string, any>;
+  created_at: string;
+  created_at_shamsi?: string;
+  jalali_date?: string;
 }
 
 export interface PersonnelChangeRequest {
@@ -795,21 +871,6 @@ export interface PettyCashTransaction {
   created_by_name?: string;
   created_at?: string;
   updated_at?: string;
-}
-
-export interface WorkflowAuditLog {
-  id?: number;
-  content_type: string;
-  object_id: number;
-  actor?: number | null;
-  actor_name?: string;
-  from_status: string;
-  to_status: string;
-  action: string;
-  action_display?: string;
-  reason?: string;
-  metadata?: Record<string, any>;
-  created_at: string;
 }
 
 export interface PettyCashBalanceSummary {

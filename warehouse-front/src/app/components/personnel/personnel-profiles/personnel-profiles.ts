@@ -71,6 +71,8 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
   isPersonnelModalOpen = false;
   personnelModalTab: 'identity' | 'contract' | 'insurance' | 'allowances' | 'contact' = 'identity';
   editingPersonnel: Partial<PersonnelProfile> | null = null;
+  // وضعیت فرم ویرایش در لحظهٔ بازشدن؛ ذخیره فقط تغییرات نسبت به این را می‌فرستد
+  private originalPersonnelSnapshot: Record<string, any> | null = null;
 
   // 2. Vehicle Modal & Sheba Engine
   isVehicleModalOpen = false;
@@ -770,7 +772,24 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
       tax_vehicle_benefit_type: p.tax_vehicle_benefit_type || this.yearlySettings?.tax_settings?.vehicle_benefit_type || '1',
     };
     this.recalculatePersonnelRates();
+    this.originalPersonnelSnapshot = { ...this.editingPersonnel };
     this.isPersonnelModalOpen = true;
+  }
+
+  /** فیلدهای تغییرکرده نسبت به لحظهٔ بازشدن فرم؛ عدد و رشتهٔ عددی سرور (مثل «3500000.00») یکسان سنجیده می‌شوند */
+  private changedPersonnelFields(current: Record<string, any>): Record<string, any> {
+    const orig = this.originalPersonnelSnapshot || {};
+    const norm = (v: any): string => {
+      if (v === null || v === undefined || v === '') return '';
+      if (typeof v === 'object') return JSON.stringify(v);
+      const str = String(v).trim();
+      return /^-?\d+(\.\d+)?$/.test(str) ? String(Number(str)) : str;
+    };
+    const changes: Record<string, any> = {};
+    for (const [key, value] of Object.entries(current)) {
+      if (norm(value) !== norm(orig[key])) changes[key] = value;
+    }
+    return changes;
   }
 
   closePersonnelModal(): void {
@@ -790,24 +809,48 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
     }
 
     this.isSavingPersonnel = true;
+    // فایل پیوست (رشتهٔ نشانی)، مدارک و حساب‌های تودرتو از این فرم نوشتنی نیستند؛ حساب‌ها از اکشن bank-accounts تغییر می‌کنند
+    const { attachment, documents, bank_accounts, ...payload } = this.editingPersonnel as any;
     if (this.editingPersonnel.id) {
-      this.api.updatePersonnelProfile(this.editingPersonnel.id, this.editingPersonnel).subscribe({
-        next: () => {
+      const changes = this.changedPersonnelFields(payload);
+      delete changes['is_active'];
+      if (!Object.keys(changes).length) {
+        this.isSavingPersonnel = false;
+        this.toast.show('info', 'تغییری نسبت به اطلاعات فعلی پرونده ثبت نشد.');
+        this.closePersonnelModal();
+        return;
+      }
+      this.api.updatePersonnelProfile(this.editingPersonnel.id, changes).subscribe({
+        next: (res: any) => {
           this.isSavingPersonnel = false;
-          this.toast.show('success', 'اطلاعات پرسنل با موفقیت به‌روزرسانی شد.');
+          if (res?.change_request_id) {
+            // پروندهٔ مصوب برای همه جز مدیر سیستم فقط از مسیر درخواست تغییرات ویرایش می‌شود (DEF-17)
+            this.toast.show('info', 'درخواست تغییرات ثبت شد و پس از بررسی سرپرست، حسابدار و تصویب مدیر روی پرونده اعمال می‌شود.');
+          } else {
+            this.toast.show('success', 'اطلاعات پرسنل با موفقیت به‌روزرسانی شد.');
+          }
           this.closePersonnelModal();
           this.loadProfiles();
         },
         error: (err) => {
           this.isSavingPersonnel = false;
-          this.toast.show('error', err?.error?.error || 'خطا در ویرایش پرسنل');
+          this.toast.show('error', err?.error?.error || err?.error?.detail || 'خطا در ویرایش پرسنل');
         }
       });
     } else {
-      this.api.createPersonnelProfile(this.editingPersonnel).subscribe({
-        next: () => {
+      this.api.createPersonnelProfile(payload).subscribe({
+        next: (created: any) => {
           this.isSavingPersonnel = false;
-          this.toast.show('success', 'پرسنل جدید با موفقیت ثبت شد.');
+          // پرونده پیش‌نویس ساخته می‌شود و عبور هوشمند نقش‌های بالاتر با گیت سرور انجام می‌شود (DEF-02 و DEF-14)
+          const status = created?.approval_status;
+          const missing = Array.isArray(created?.missing_fields) ? created.missing_fields.length : 0;
+          if (status === 'approved') {
+            this.toast.show('success', 'پرسنل جدید ثبت و با عبور هوشمند تصویب شد.');
+          } else if (created?._offlinePending) {
+            this.toast.show('warning', 'پرونده در صف آفلاین ذخیره شد و پس از اتصال ثبت می‌شود.');
+          } else {
+            this.toast.show('warning', `پرسنل جدید ثبت شد ولی به‌دلیل ${missing ? missing + ' مورد نقص' : 'نقص اطلاعات'} در وضعیت «${status === 'draft' ? 'پیش‌نویس' : status}» ماند.`);
+          }
           this.closePersonnelModal();
           this.loadProfiles();
         },
@@ -819,43 +862,122 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
     }
   }
 
-  async deletePersonnel(p: Partial<PersonnelProfile> | PersonnelProfile): Promise<void> {
+  /**
+   * حذف هماهنگ با ماتریس سرور (تسک ۲.۴ و ۱۰.۳، DEF-27): ابتدا delete_impact سابقه و مجوز را می‌سنجد؛
+   * پروندهٔ دارای سابقه حذف نمی‌شود و «قطع همکاری» پیشنهاد می‌شود. حذف مجاز با تایپ «حذف» تأیید می‌شود.
+   */
+  deletePersonnel(p: Partial<PersonnelProfile> | PersonnelProfile): void {
     if (!p.id) return;
-    const confirmed = await this.confirmDialog.open({
-      title: 'حذف پرونده پرسنلی',
-      message: `آیا از حذف پرونده پرسنل «${p.full_name || ((p.first_name || '') + ' ' + (p.last_name || ''))}» اطمینان دارید؟`,
-      confirmText: 'بله، حذف کن',
-      cancelText: 'انصراف',
-      type: 'danger'
-    });
-
-    if (!confirmed) return;
-
-    this.api.deletePersonnelProfile(p.id).subscribe({
-      next: () => {
-        this.toast.show('success', `پرونده پرسنل «${p.full_name || p.first_name}» با موفقیت حذف گردید.`);
-        if (this.isPersonnelModalOpen) {
-          this.closePersonnelModal();
+    const fullName = p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim();
+    this.api.getPersonnelDeleteImpact(p.id).subscribe({
+      next: async (impact) => {
+        if (!impact?.can_delete) {
+          const reasons = impact?.reasons?.length ? impact.reasons.join('، ') : 'مجوز حذف این پرونده را ندارید.';
+          const canEnd = !!impact?.has_history && this.canEndCollaboration && p.approval_status === 'approved' && p.is_active !== false;
+          const choice = await this.confirmDialog.open({
+            title: 'حذف فیزیکی این پرونده مجاز نیست',
+            message: `پروندهٔ «${fullName}» قابل حذف نیست: ${reasons}`,
+            type: 'warning',
+            confirmText: canEnd ? 'ثبت قطع همکاری' : 'متوجه شدم',
+            showCancel: canEnd,
+            cancelText: 'بستن'
+          });
+          if (choice === true && canEnd) {
+            this.openEndCollaborationModal(p as PersonnelProfile);
+          }
+          return;
         }
-        this.loadProfiles();
+        const total = impact.total_affected || 0;
+        const confirmed = await this.confirmDialog.open({
+          title: 'حذف پرونده پرسنلی فاقد سابقه',
+          message: `پروندهٔ «${fullName}»${total ? ` همراه ${total} رکورد وابسته (حساب‌های بانکی و مدارک)` : ''} برای همیشه حذف می‌شود؛ عکس کامل آن در لاگ ممیزی می‌ماند.`,
+          confirmText: 'بله، حذف کن',
+          cancelText: 'انصراف',
+          type: 'danger',
+          requireText: 'حذف',
+          requireTextLabel: 'برای تأیید، کلمهٔ «حذف» را بنویسید'
+        });
+        if (confirmed !== true) return;
+        this.api.deletePersonnelProfile(p.id!).subscribe({
+          next: () => {
+            this.toast.show('success', `پرونده پرسنل «${fullName}» با موفقیت حذف گردید.`);
+            if (this.isPersonnelModalOpen) {
+              this.closePersonnelModal();
+            }
+            this.loadProfiles();
+          },
+          error: (err) => {
+            this.toast.show('error', err?.error?.error || err?.error?.detail || 'امکان حذف این پرسنل وجود ندارد.');
+          }
+        });
       },
       error: (err) => {
-        this.toast.show('error', err?.error?.error || 'امکان حذف این پرسنل وجود ندارد (دارای سابقه کارکرد یا حقوق است).');
+        this.toast.show('error', err?.error?.error || err?.error?.detail || 'استعلام سابقهٔ پرونده پیش از حذف ممکن نشد.');
       }
     });
   }
 
+  /** قطع همکاری با مجوز مدیر؛ فعال/غیرفعال کردن مستقیم is_active در سرور فقط‌خواندنی است (DEF-18) */
+  get canEndCollaboration(): boolean {
+    if (this.auth.user()?.is_superuser) return true;
+    const perms = this.auth.userPermissions();
+    return ['perm_approve_personnel_manager', 'can_act_as_manager', 'can_act_as_company_manager'].some(c => perms.includes(c));
+  }
+
+  isEndCollaborationModalOpen = false;
+  endCollaborationTarget: PersonnelProfile | null = null;
+  endCollaborationDate = '';
+  endCollaborationReason = '';
+  isEndingCollaboration = false;
+
   togglePersonnelActive(p: PersonnelProfile): void {
     if (!p.id) return;
-    const newStatus = !p.is_active;
-    this.api.updatePersonnelProfile(p.id, { is_active: newStatus }).subscribe({
-      next: () => {
-        p.is_active = newStatus;
-        this.toast.show('success', `وضعیت پرسنل به «${newStatus ? 'فعال' : 'غیرفعال'}» تغییر یافت.`);
-        this.cdr.detectChanges();
+    if (!p.is_active) {
+      this.toast.show('info', `همکاری «${p.first_name} ${p.last_name}» پیش‌تر پایان یافته است${p.end_date ? ` (تاریخ پایان: ${p.end_date})` : ''}.`);
+      return;
+    }
+    if (!this.canEndCollaboration) {
+      this.toast.show('warning', 'ثبت قطع همکاری فقط با دسترسی مدیر ممکن است.');
+      return;
+    }
+    this.openEndCollaborationModal(p);
+  }
+
+  openEndCollaborationModal(p: PersonnelProfile): void {
+    this.endCollaborationTarget = p;
+    this.endCollaborationDate = '';
+    this.endCollaborationReason = '';
+    this.isEndCollaborationModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeEndCollaborationModal(): void {
+    this.isEndCollaborationModalOpen = false;
+    this.endCollaborationTarget = null;
+    this.isEndingCollaboration = false;
+    this.cdr.detectChanges();
+  }
+
+  submitEndCollaboration(): void {
+    const target = this.endCollaborationTarget;
+    if (!target?.id || this.isEndingCollaboration) return;
+    if (!this.endCollaborationDate.trim() || !this.endCollaborationReason.trim()) {
+      this.toast.show('warning', 'تاریخ پایان همکاری (شمسی) و دلیل آن الزامی است.');
+      return;
+    }
+    this.isEndingCollaboration = true;
+    this.api.endPersonnelCollaboration(target.id, this.endCollaborationDate.trim(), this.endCollaborationReason.trim()).subscribe({
+      next: (res: any) => {
+        target.is_active = false;
+        target.end_date = res?.data?.end_date || this.endCollaborationDate.trim();
+        this.toast.show('success', res?.message || `همکاری «${target.first_name} ${target.last_name}» پایان یافت.`);
+        this.closeEndCollaborationModal();
+        this.loadProfiles();
       },
-      error: () => {
-        this.toast.show('error', 'خطا در تغییر وضعیت پرسنل');
+      error: (err: any) => {
+        this.isEndingCollaboration = false;
+        this.toast.show('error', err?.error?.error || err?.error?.detail || 'خطا در ثبت قطع همکاری');
+        this.cdr.detectChanges();
       }
     });
   }

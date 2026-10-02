@@ -120,8 +120,8 @@
               <span class="px-2 py-0.5 rounded-full text-[10px] font-black border" [ngClass]="getApprovalBadgeClass(p.approval_status)">
                 {{ getApprovalStatusTitle(p.approval_status) }}
               </span>
-              <span class="px-2 py-0.5 rounded-full text-[9px] font-bold" [ngClass]="p.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'">
-                {{ p.is_active ? 'فعال' : 'غیرفعال' }}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" [ngClass]="p.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'">
+                {{ p.is_active ? 'فعال' : 'پایان همکاری' }}
               </span>
             </div>
           </div>
@@ -184,9 +184,12 @@
 
           <!-- Edit & Delete Row -->
           <div class="flex items-center justify-between gap-2 pt-1">
-            <button (click)="togglePersonnelActive(p)" [title]="p.is_active ? 'غیرفعال‌سازی' : 'فعال‌سازی'" class="px-2.5 py-1 text-xs font-bold rounded-xl transition-colors cursor-pointer" [ngClass]="p.is_active ? 'bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-600' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'">
-              {{ p.is_active ? 'غیرفعال‌سازی' : 'فعال‌سازی' }}
+            <button *ngIf="p.is_active && p.approval_status === 'approved' && canEndCollaboration" (click)="togglePersonnelActive(p)" title="ثبت تاریخ پایان کار و غیرفعال‌سازی پرونده" class="px-2.5 py-1 text-xs font-bold rounded-xl transition-colors cursor-pointer bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-600">
+              قطع همکاری
             </button>
+            <span *ngIf="!p.is_active" class="px-2.5 py-1 text-xs font-bold rounded-xl bg-slate-100 text-slate-700">
+              پایان همکاری{{ p.end_date ? ' (' + p.end_date + ')' : '' }}
+            </span>
             <div class="flex items-center gap-1.5">
               <button (click)="deletePersonnel(p)" title="حذف پرونده" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash"></svg>
@@ -686,11 +689,13 @@
             </div>
 
             <div>
-              <label class="block font-bold text-slate-700 mb-1">وضعیت پرونده:</label>
-              <select [(ngModel)]="editingPersonnel.is_active" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
-                <option [ngValue]="true">فعال (مشغول به کار)</option>
-                <option [ngValue]="false">غیرفعال (خاتمه همکاری)</option>
-              </select>
+              <span class="block font-bold text-slate-700 mb-1">وضعیت پرونده:</span>
+              <p class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700">
+                {{ editingPersonnel.is_active === false ? 'پایان همکاری' : 'فعال (مشغول به کار)' }}
+              </p>
+              <p *ngIf="editingPersonnel.id && editingPersonnel.is_active !== false" class="text-[10px] text-slate-600 mt-1">
+                برای پایان همکاری از دکمهٔ «قطع همکاری» روی کارت پرسنل استفاده کنید.
+              </p>
             </div>
 
             <div class="sm:col-span-2 md:col-span-3">
@@ -1024,6 +1029,39 @@
         <button (click)="submitProfileRejectModal()" [disabled]="isSubmittingProfileReject || !profileRejectReason.trim()" class="px-5 py-2 text-white text-xs font-black rounded-xl shadow-md cursor-pointer flex items-center gap-1.5 disabled:opacity-50" [ngClass]="profileRejectTarget.action === 'reject' ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/20' : 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/20'">
           <span *ngIf="!isSubmittingProfileReject">{{ profileRejectTarget.action === 'reject' ? 'ثبت رد پرونده' : 'ثبت ارجاع به بازنگری' }}</span>
           <span *ngIf="isSubmittingProfileReject">در حال ثبت...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- مودال قطع همکاری پرسنل دارای سابقه (DEF-18) -->
+  <div *ngIf="isEndCollaborationModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4"
+       role="dialog" aria-modal="true" aria-labelledby="profiles-end-collab-title">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 id="profiles-end-collab-title" class="text-sm font-black text-slate-800">
+          قطع همکاری: {{ endCollaborationTarget?.first_name }} {{ endCollaborationTarget?.last_name }}
+        </h2>
+        <button type="button" (click)="closeEndCollaborationModal()" class="min-w-[32px] min-h-[32px] text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer" aria-label="بستن">&times;</button>
+      </div>
+      <p class="text-[11px] text-slate-600 leading-relaxed">پرونده و همهٔ سوابق کارکرد و حقوق حفظ می‌شود؛ فقط تاریخ پایان کار ثبت و پرونده غیرفعال می‌شود.</p>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label for="profiles-end-collab-date" class="block font-bold text-slate-700 mb-1.5">تاریخ پایان همکاری (شمسی، الزامی):</label>
+          <input id="profiles-end-collab-date" type="text" inputmode="numeric" dir="ltr" [(ngModel)]="endCollaborationDate" placeholder="1405/07/01"
+                 class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none" />
+        </div>
+        <div>
+          <label for="profiles-end-collab-reason" class="block font-bold text-slate-700 mb-1.5">دلیل قطع همکاری (الزامی):</label>
+          <textarea id="profiles-end-collab-reason" [(ngModel)]="endCollaborationReason" rows="3" placeholder="پایان قرارداد، استعفا، ..."
+                    class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+        <button type="button" (click)="closeEndCollaborationModal()" class="min-h-[40px] px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer">انصراف</button>
+        <button type="button" (click)="submitEndCollaboration()" [disabled]="isEndingCollaboration || !endCollaborationDate.trim() || !endCollaborationReason.trim()"
+                class="min-h-[40px] px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-xl cursor-pointer disabled:opacity-50">
+          {{ isEndingCollaboration ? 'در حال ثبت…' : 'ثبت قطع همکاری' }}
         </button>
       </div>
     </div>

@@ -187,13 +187,53 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
     window.URL.revokeObjectURL(url);
   }
 
+  /**
+   * هشدار مسدودکننده پیش از دانلود دیسکت: پرسنلی که تاریخ اعتبارشان گذشته از دیسکت بیمه، مالیات و بانک
+   * کنار گذاشته می‌شوند (تصمیم مصوب ۶.۶). این کنار گذاشتن دیگر بی‌صدا نیست (DEF-20).
+   */
+  private confirmExpiredExclusion(onConfirmed: () => void): void {
+    if (!this.currentPeriodId || !this.selectedProjectId) return;
+    this.isGenerating = true;
+    this.personnelApi.getDisketteExpiredPersonnel(this.currentPeriodId, this.selectedProjectId).subscribe({
+      next: (res) => {
+        this.isGenerating = false;
+        if (!res?.count) {
+          onConfirmed();
+          return;
+        }
+        const names = res.personnel.slice(0, 15).map(p => `• ${p.full_name} (اعتبار تا ${p.valid_until_date || '—'})`).join('\n');
+        const more = res.count > 15 ? `\n… و ${res.count - 15} نفر دیگر` : '';
+        const ok = confirm(
+          `${res.count} نفر به‌دلیل پایان تاریخ اعتبار پرونده از این دیسکت کنار گذاشته می‌شوند و پرداخت و بیمهٔ آن‌ها در فایل نمی‌آید:\n\n${names}${more}\n\nادامه می‌دهید؟`
+        );
+        if (ok) {
+          onConfirmed();
+        } else {
+          this.toast.info('صدور دیسکت لغو شد. پیش از صدور، تاریخ اعتبار این پرسنل را بررسی کنید.');
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isGenerating = false;
+        if (confirm('بررسی پرسنل منقضی پیش از صدور دیسکت ممکن نشد؛ ممکن است کسانی بی‌صدا کنار گذاشته شوند. ادامه می‌دهید؟')) {
+          onConfirmed();
+        }
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   generateSocialSecurityDiskette(): void {
     if (!this.currentPeriodId || !this.selectedProjectId) {
       this.toast.warning('دوره محاسباتی یا پروژه فعال یافت نشد. لطفاً ابتدا حقوق دوره را محاسبه فرمایید.');
       return;
     }
+    this.confirmExpiredExclusion(() => this.doGenerateSocialSecurityDiskette());
+  }
+
+  private doGenerateSocialSecurityDiskette(): void {
     this.isGenerating = true;
-    this.personnelApi.exportBimehDisketteZip(this.currentPeriodId, this.selectedProjectId).subscribe({
+    this.personnelApi.exportBimehDisketteZip(this.currentPeriodId!, this.selectedProjectId!).subscribe({
       next: (blob: Blob) => {
         this.isGenerating = false;
         this.saveBlob(blob, `Bimeh_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.zip`);
@@ -214,9 +254,13 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
       this.toast.warning('دوره محاسباتی یا پروژه فعال یافت نشد.');
       return;
     }
+    this.confirmExpiredExclusion(() => this.doGenerateTaxDiskette());
+  }
+
+  private doGenerateTaxDiskette(): void {
     this.isGenerating = true;
     const m = payrollMonthCode(this.selectedMonth);
-    this.personnelApi.exportTaxWh(this.currentPeriodId, this.selectedProjectId).subscribe({
+    this.personnelApi.exportTaxWh(this.currentPeriodId!, this.selectedProjectId!).subscribe({
       next: (blobWh: Blob) => {
         this.saveBlob(blobWh, `WH_${this.fiscalYear}${m}.txt`);
 
@@ -249,8 +293,12 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
       this.toast.warning('دوره محاسباتی یا پروژه فعال یافت نشد.');
       return;
     }
+    this.confirmExpiredExclusion(() => this.doGenerateBankDiskette());
+  }
+
+  private doGenerateBankDiskette(): void {
     this.isGenerating = true;
-    this.personnelApi.exportBankPaymentExcel(this.currentPeriodId, this.selectedProjectId).subscribe({
+    this.personnelApi.exportBankPaymentExcel(this.currentPeriodId!, this.selectedProjectId!).subscribe({
       next: (blob: Blob) => {
         this.isGenerating = false;
         this.saveBlob(blob, `Bank_Payment_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`);

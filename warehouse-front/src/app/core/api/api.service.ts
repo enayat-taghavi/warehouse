@@ -40,8 +40,12 @@ export class ApiService {
     return this.http.put<T>(this.url(endpoint), body);
   }
 
-  delete<T>(endpoint: string): Observable<T> {
-    return this.http.delete<T>(this.url(endpoint));
+  /** پارامتر کوئری را در params بدهید، نه در endpoint؛ url() پس از endpoint اسلش می‌گذارد و مقدار کوئری را خراب می‌کند. */
+  delete<T>(endpoint: string, options?: { context?: HttpContext; params?: Record<string, unknown> }): Observable<T> {
+    return this.http.delete<T>(this.url(endpoint), {
+      params: this.buildParams(options?.params),
+      context: options?.context,
+    });
   }
 
   /**

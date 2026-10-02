@@ -83,11 +83,11 @@
     </div>
   </div>
 
-  <!-- ── ۲. مودال تشکیل پرونده پرسنل جدید (Guardian G2: Draft Invariant & Mobile Bottom-Sheet) ── -->
+  <!-- ── ۲. مودال تشکیل پرونده پرسنل جدید (Guardian G2: Draft Invariant & 5-Step Tabbed Workflow) ── -->
   <div *ngIf="isNewPersonnelModalOpen"
        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-hidden"
        (click)="closeNewPersonnelModal()">
-    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-3xl w-full border border-slate-200 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[90vh]"
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl max-w-3xl w-full border border-slate-200 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[94vh] sm:max-h-[90vh]"
          (click)="$event.stopPropagation()">
       
       <!-- هدر مودال -->
@@ -107,7 +107,7 @@
               </span>
             </div>
             <p class="text-[11px] text-purple-100 mt-0.5">
-              مشخصات پرسنل را با دقت وارد نمایید؛ بخش فعال:
+              مشخصات پرسنل را در ۵ گام با دقت تکمیل فرمایید؛ بخش فعال:
               <span class="font-bold underline text-white">«{{ selectedSection?.name }}»</span>
             </p>
           </div>
@@ -122,7 +122,7 @@
       </div>
 
       <!-- هشدار دلیل عودت در صورت وجود در مودال -->
-      <div *ngIf="rejectionReasonToDisplay" class="mx-4 sm:mx-5 mt-3 sm:mt-4 p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-amber-900 animate-in fade-in duration-200 shrink-0">
+      <div *ngIf="rejectionReasonToDisplay" class="mx-4 sm:mx-5 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-amber-900 animate-in fade-in duration-200 shrink-0">
         <span class="text-base text-amber-600 shrink-0">⚠️</span>
         <div class="text-xs space-y-1">
           <div class="font-black flex items-center gap-2">
@@ -135,565 +135,1089 @@
             {{ rejectionReasonToDisplay }}
           </p>
           <p class="text-[10px] text-amber-700">
-            لطفاً پس از اصلاح موارد خواسته‌شده، پرونده را از طریق دکمه «ارسال مجدد به سرپرست» تایید فرمایید.
+            {{ editingPersonnelStatus === 'rejected'
+              ? 'برای اصلاح و ارسال دوباره، ابتدا پرونده را با دکمهٔ «بازگشایی و اصلاح پرونده» به پیش‌نویس برگردانید.'
+              : 'لطفاً پس از اصلاح موارد خواسته‌شده در تب‌های مربوطه، پرونده را از طریق دکمه «ارسال مجدد به سرپرست» تایید فرمایید.' }}
           </p>
         </div>
       </div>
 
       <!-- بنر اطلاع‌رسانی ویرایش پرونده مصوب (ثبت تغییرات پیشنهادی) -->
-      <div *ngIf="isApprovedRecord" class="mx-4 sm:mx-5 mt-3 sm:mt-4 p-3 bg-indigo-50/90 border border-indigo-200 rounded-2xl flex items-start gap-2.5 text-indigo-950 animate-in fade-in duration-200 shrink-0">
-        <span class="text-base text-indigo-600 shrink-0">ℹ️</span>
-        <div class="text-xs space-y-1">
-          <div class="font-black flex items-center gap-2">
-            <span>ثبت درخواست تغییرات مشخصات پرسنل مصوب</span>
-            <span *ngIf="editingPersonnelHasPendingChanges" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200/90 text-amber-900 border border-amber-300">
-              یک درخواست تغییرات قبلی در انتظار تایید مدیر است
-            </span>
+      <div *ngIf="isApprovedRecord" class="mx-4 sm:mx-5 mt-3 p-3 bg-indigo-50/90 border border-indigo-200 rounded-2xl flex items-start justify-between gap-2.5 text-indigo-950 animate-in fade-in duration-200 shrink-0">
+        <div class="flex items-start gap-2.5">
+          <span class="text-base text-indigo-600 shrink-0">ℹ️</span>
+          <div class="text-xs space-y-1">
+            <div class="font-black flex items-center gap-2">
+              <span>ثبت درخواست تغییرات مشخصات پرسنل مصوب</span>
+              <span *ngIf="editingPersonnelHasPendingChanges" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200/90 text-amber-900 border border-amber-300">
+                یک درخواست تغییرات قبلی در انتظار تایید است
+              </span>
+            </div>
+            <p class="text-[11px] text-indigo-800 leading-relaxed font-medium">
+              این پرونده قبلاً به تصویب نهایی رسیده است. تغییرات شما به عنوان «درخواست تغییرات» ثبت شده و پس از بررسی و تایید سرپرست و حسابداری، با تصویب نهایی مدیر روی پرونده اعمال خواهد شد.
+            </p>
           </div>
-          <p class="text-[11px] text-indigo-800 leading-relaxed font-medium">
-            این پرونده قبلاً به تصویب نهایی رسیده است. تغییرات شما به عنوان «درخواست تغییرات» ثبت شده و پس از بررسی و تایید سرپرست و حسابداری، با تصویب نهایی مدیر روی پرونده اعمال خواهد شد. تا زمان تایید، اطلاعات قبلی در سیستم معتبر باقی می‌مانند.
-          </p>
+        </div>
+        <button
+          *ngIf="editingPersonnelHasPendingChanges && editingPersonnel"
+          type="button"
+          (click)="openPendingDiffModal(editingPersonnel)"
+          class="px-2.5 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-[11px] font-bold shrink-0 transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center gap-1">
+          <span>⚡</span>
+          <span>مشاهده/ابطال تغییرات</span>
+        </button>
+      </div>
+
+      <!-- ── نوار ساب‌تب‌های ۵گانه ارگونومیک (تسک ۶.۱) ── -->
+      <div class="px-4 sm:px-5 pt-3 pb-2 shrink-0 bg-white border-b border-slate-100">
+        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full gap-1">
+          <!-- تب ۱: اطلاعات هویتی -->
+          <button
+            type="button"
+            (click)="setActiveTab('identity')"
+            [ngClass]="activeModalTab === 'identity' ? 'bg-white text-purple-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer flex-1 justify-center">
+            <span>👤</span>
+            <span>هویتی</span>
+            <span *ngIf="isTabComplete('identity')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800" title="تکمیل شده">✓</span>
+            <span *ngIf="!isTabComplete('identity')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-rose-100 text-rose-700" title="دارای فیلد الزامی">!</span>
+          </button>
+
+          <!-- تب ۲: مشخصات شغلی -->
+          <button
+            type="button"
+            (click)="setActiveTab('job')"
+            [ngClass]="activeModalTab === 'job' ? 'bg-white text-purple-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer flex-1 justify-center">
+            <span>💼</span>
+            <span>شغلی</span>
+            <span *ngIf="isTabComplete('job')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800" title="تکمیل شده">✓</span>
+            <span *ngIf="!isTabComplete('job')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-rose-100 text-rose-700" title="دارای فیلد الزامی">!</span>
+          </button>
+
+          <!-- تب ۳: حساب‌های بانکی -->
+          <button
+            type="button"
+            (click)="setActiveTab('banking')"
+            [ngClass]="activeModalTab === 'banking' ? 'bg-white text-purple-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer flex-1 justify-center">
+            <span>💳</span>
+            <span>بانکی</span>
+            <span *ngIf="isTabComplete('banking')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800" title="تکمیل شده">✓</span>
+            <span *ngIf="!isTabComplete('banking')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-rose-100 text-rose-700" title="دارای فیلد الزامی">!</span>
+            <span *ngIf="bankAccounts.length > 0" class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-purple-50 text-purple-700">
+              {{ bankAccounts.length }}
+            </span>
+          </button>
+
+          <!-- تب ۴: نشانی و تماس -->
+          <button
+            type="button"
+            (click)="setActiveTab('address')"
+            [ngClass]="activeModalTab === 'address' ? 'bg-white text-purple-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer flex-1 justify-center">
+            <span>📍</span>
+            <span>نشانی و تماس</span>
+            <span *ngIf="isTabComplete('address')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800" title="تکمیل شده">✓</span>
+            <span *ngIf="!isTabComplete('address')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-rose-100 text-rose-700" title="دارای فیلد الزامی">!</span>
+          </button>
+
+          <!-- تب ۵: مدارک و یادداشت -->
+          <button
+            type="button"
+            (click)="setActiveTab('documents')"
+            [ngClass]="activeModalTab === 'documents' ? 'bg-white text-purple-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer flex-1 justify-center">
+            <span>📎</span>
+            <span>مدارک</span>
+            <span *ngIf="existingDocuments.length > 0 || pendingUploadDocuments.length > 0" class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-purple-50 text-purple-700">
+              {{ existingDocuments.length + pendingUploadDocuments.length }}
+            </span>
+          </button>
         </div>
       </div>
 
-      <!-- بدنه اسکرول‌پذیر مودال حاوی کلیه فیلدها -->
+      <!-- ── بدنه اسکرول‌پذیر تب‌ها ── -->
       <div class="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
 
-        <!-- بنر هوشمند استعلام کد ملی و پیشنهاد لود اطلاعات پرونده قبلی -->
-        <div *ngIf="foundExistingPersonnel" class="p-3 bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-purple-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
-          <div class="flex items-center gap-2">
-            <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-black shrink-0">
-              💡
-            </span>
-            <div>
-              <div class="text-xs font-bold text-purple-900">
-                این شخص با نام «{{ foundExistingPersonnel.first_name }} {{ foundExistingPersonnel.last_name }}» قبلاً در سامانه ثبت شده است
-                <span *ngIf="foundExistingPersonnel.current_section_name" class="text-[11px] text-purple-700 font-normal">
-                  (بخش فعال: {{ foundExistingPersonnel.current_section_name }})
-                </span>
-              </div>
-              <div class="text-[10px] text-purple-600 mt-0.5">
-                برای جلوگیری از تایپ مجدد، می‌توانید مشخصات شناسنامه‌ای و شماره شبا را مستقیماً لود کنید.
-              </div>
-            </div>
+        <!-- پیش‌نویس محلی ذخیره‌شده هنگام قطعی سرور (DEF-24) -->
+        <div *ngIf="localDraftAvailable"
+             role="status"
+             class="p-3 rounded-2xl border border-sky-200 bg-sky-50 text-sky-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div class="text-xs font-bold">
+            {{ editingId ? 'یک پیش‌نویس محلی از ویرایش همین پرونده که به‌خاطر قطعی سرور ذخیره نشده بود، پیدا شد' : 'یک پیش‌نویس محلی از این بخش که به‌خاطر قطعی سرور ذخیره نشده بود، پیدا شد' }}
+            <span class="block text-[10px] font-normal text-sky-800 mt-0.5">زمان ذخیرهٔ محلی: {{ localDraftAvailable.savedAt | persianDate:'medium' }}</span>
+            <span *ngIf="otherLocalDraftCount > 0" class="block text-[10px] font-normal text-sky-800 mt-0.5">{{ otherLocalDraftCount }} پیش‌نویس محلی دیگر هم هست؛ پس از ذخیره یا حذف این یکی نمایش داده می‌شود.</span>
           </div>
           <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
-            <button
-              type="button"
-              (click)="applyFoundPersonnelData()"
-              class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95">
-              <span>📋</span>
-              <span>بازخوانی و پر کردن فرم</span>
+            <button type="button" (click)="restoreLocalDraft()"
+                    class="min-h-[40px] px-3 py-1.5 bg-sky-700 hover:bg-sky-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95">
+              بازیابی پیش‌نویس
             </button>
-            <button
-              type="button"
-              (click)="dismissFoundPersonnelBanner()"
-              class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg text-xs cursor-pointer"
-              title="بستن">
-              ✕
+            <button type="button" (click)="discardLocalDraft()"
+                    class="min-h-[40px] px-3 py-1.5 bg-white border border-sky-200 text-sky-800 hover:bg-sky-100 rounded-xl text-xs font-bold transition-all cursor-pointer">
+              حذف پیش‌نویس محلی
             </button>
           </div>
         </div>
 
-        <!-- فیلدهای فرم در شبکه چندستونه متقارن -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <!-- تب ۱: مشخصات هویتی و شناسنامه‌ای (تسک ۶.۲ و ۶.۳)                      -->
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <div *ngIf="activeModalTab === 'identity'" class="space-y-4 animate-in fade-in duration-150">
 
-          <!-- ردیف ۱، ستون ۱ (راست): کد ملی (۱۰ رقمی با اعتبارسنجی الگوریتم Mod 11) -->
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
-              <span>کد ملی (۱۰ رقم) *</span>
-              <span *ngIf="isLookingUpNationalCode" class="text-[10px] text-purple-600 font-bold animate-pulse">
-                در حال استعلام...
+          <!-- بنر استعلام هوشمند کد ملی و پرونده پیشین یا ردشده (تسک ۶.۳) -->
+          <div *ngIf="foundExistingPersonnel"
+               class="p-3 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs transition-all"
+               [ngClass]="isFoundPersonnelRejected ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border-purple-200'">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black shrink-0"
+                    [ngClass]="isFoundPersonnelRejected ? 'bg-amber-200 text-amber-900' : 'bg-purple-100 text-purple-700'">
+                {{ isFoundPersonnelRejected ? '⚠️' : '💡' }}
               </span>
-            </label>
-            <input
-              type="text"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              maxlength="10"
-              [(ngModel)]="newPersonnel.national_code"
-              (input)="onNationalCodeChange()"
-              [disabled]="isReadOnlyMode || isApprovedRecord"
-              placeholder="۰۱۲۳۴۵۶۷۸۹"
-              class="w-full px-3 py-2 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
-            <p *ngIf="nationalCodeError" class="text-[10px] text-rose-600 font-bold mt-1">
-              ⚠️ {{ nationalCodeError }}
-            </p>
-            <p *ngIf="isApprovedRecord" class="text-[10px] text-slate-500 font-bold mt-1">
-              🔒 کد ملی در پرونده‌های مصوب غیرقابل تغییر است.
-            </p>
-          </div>
-
-          <!-- ردیف ۱، ستون ۲ (وسط): نام -->
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">نام *</label>
-            <input
-              type="text"
-              [(ngModel)]="newPersonnel.first_name"
-              [disabled]="isReadOnlyMode"
-              placeholder="مثال: علی"
-              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none font-bold disabled:bg-slate-100 disabled:text-slate-600" />
-          </div>
-
-          <!-- ردیف ۱، ستون ۳ (چپ): نام خانوادگی -->
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">نام خانوادگی *</label>
-            <input
-              type="text"
-              [(ngModel)]="newPersonnel.last_name"
-              [disabled]="isReadOnlyMode"
-              placeholder="مثال: محمدی"
-              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none font-bold disabled:bg-slate-100 disabled:text-slate-600" />
-          </div>
-
-          <!-- ردیف ۲، ستون ۱: نام پدر -->
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">نام پدر</label>
-            <input
-              type="text"
-              [(ngModel)]="newPersonnel.father_name"
-              [disabled]="isReadOnlyMode"
-              placeholder="مثال: حسین"
-              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
-          </div>
-
-          <!-- ردیف ۲، ستون ۲: شماره شناسنامه -->
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره شناسنامه</label>
-            <input
-              type="text"
-              inputmode="numeric"
-              [(ngModel)]="newPersonnel.id_number"
-              [disabled]="isReadOnlyMode"
-              placeholder="مثال: ۱۲۳۴"
-              class="w-full px-3 py-2 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
-          </div>
-
-          <!-- ردیف ۲، ستون ۳: سری و سریال شناسنامه -->
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">سری شناسنامه</label>
-              <input
-                type="text"
-                [(ngModel)]="newPersonnel.id_series"
-                [disabled]="isReadOnlyMode"
-                placeholder="مثال: ۱۲ الف"
-                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">سریال شناسنامه</label>
-              <input
-                type="text"
-                inputmode="numeric"
-                [(ngModel)]="newPersonnel.id_serial"
-                [disabled]="isReadOnlyMode"
-                placeholder="مثال: ۶۵۴۳۲۱"
-                class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
-            </div>
-          </div>
-
-          <!-- ردیف ۳، ستون ۱: جنسیت -->
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">جنسیت</label>
-            <select
-              [(ngModel)]="newPersonnel.gender"
-              [disabled]="isReadOnlyMode"
-              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none cursor-pointer disabled:bg-slate-100 disabled:text-slate-600 font-bold">
-              <option value="مرد">مرد</option>
-              <option value="زن">زن</option>
-            </select>
-          </div>
-
-          <!-- ردیف ۳، ستون ۲: وضعیت تاهل -->
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">وضعیت تاهل</label>
-            <select
-              [(ngModel)]="newPersonnel.marital_status"
-              [disabled]="isReadOnlyMode"
-              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none cursor-pointer disabled:bg-slate-100 disabled:text-slate-600">
-              <option value="single">مجرد</option>
-              <option value="married">متاهل</option>
-            </select>
-          </div>
-
-          <!-- ردیف ۳، ستون ۳: تعداد فرزندان (همواره فعال برای همه وضعیت‌ها) -->
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">تعداد فرزندان</label>
-            <input
-              type="number"
-              inputmode="numeric"
-              min="0"
-              [(ngModel)]="newPersonnel.children_count"
-              [disabled]="isReadOnlyMode"
-              placeholder="۰"
-              class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
-          </div>
-
-          <!-- ردیف ۴، ستون ۱: تاریخ تولد شمسی -->
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
-              <span>تاریخ تولد (شمسی)</span>
-              <span class="text-[10px] text-slate-400 font-mono">YYYY/MM/DD</span>
-            </label>
-            <input
-              type="text"
-              dir="ltr"
-              inputmode="numeric"
-              maxlength="10"
-              [value]="newPersonnel.birth_date || ''"
-              (input)="onBirthDateInput($event)"
-              [disabled]="isReadOnlyMode"
-              placeholder="۱۳۷۰/۰۵/۱۴"
-              class="w-full px-3 py-2 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none text-left disabled:bg-slate-100 disabled:text-slate-600" />
-          </div>
-
-          <!-- ردیف ۴، ستون ۲: محل تولد -->
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">محل تولد</label>
-            <input
-              type="text"
-              [(ngModel)]="newPersonnel.birth_place"
-              [disabled]="isReadOnlyMode"
-              placeholder="مثال: تهران"
-              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
-          </div>
-
-          <!-- ردیف ۴، ستون ۳: محل صدور شناسنامه -->
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">محل صدور شناسنامه</label>
-            <input
-              type="text"
-              [(ngModel)]="newPersonnel.issue_place"
-              [disabled]="isReadOnlyMode"
-              placeholder="مثال: شیراز"
-              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
-          </div>
-
-          <!-- ردیف ۵، ستون ۱: شماره تلفن همراه (با دکمه کپی ۱-کلیک) -->
-          <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره همراه</label>
-            <div dir="ltr" class="relative flex items-center rounded-xl overflow-hidden border border-slate-200 bg-slate-50 focus-within:ring-2 focus-within:ring-purple-500 focus-within:bg-white transition-all" [ngClass]="{'opacity-80 bg-slate-100': isReadOnlyMode}">
-              <input
-                type="tel"
-                inputmode="tel"
-                dir="ltr"
-                [(ngModel)]="newPersonnel.phone_number"
-                [disabled]="isReadOnlyMode"
-                placeholder="۰۹۱۲..."
-                class="w-full bg-transparent border-0 text-left font-mono text-xs px-3 py-2 pr-9 focus:outline-none text-slate-800 placeholder:text-slate-400 disabled:text-slate-600" />
-              <div class="absolute right-1.5 top-1/2 -translate-y-1/2">
-                <button
-                  *ngIf="newPersonnel.phone_number"
-                  type="button"
-                  (click)="copyPhoneToClipboard()"
-                  class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs"
-                  [ngClass]="isPhoneCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-2xs'"
-                  title="کپی شماره همراه">
-                  <span>{{ isPhoneCopied ? '✓' : '📋' }}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- ردیف ۵، ستون ۲ و ۳: عنوان و سمت شغلی (۲ ستونه جهت خوانایی کامل عناوین) -->
-          <div class="md:col-span-2">
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">عنوان و سمت شغلی *</label>
-            <div class="relative">
-              <input
-                type="text"
-                [(ngModel)]="newPersonnel.job_title"
-                list="jobTitlesList"
-                [disabled]="isReadOnlyMode"
-                placeholder="انتخاب یا تایپ سمت شغلی..."
-                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600 font-bold" />
-              <datalist id="jobTitlesList">
-                <option *ngFor="let j of jobTitles" [value]="j">{{ j }}</option>
-              </datalist>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- اطلاعات حساب و شماره شبا جهت واریز حقوق -->
-        <div class="space-y-3 pt-1">
-          <!-- شماره شبا (۲۴ رقم بدون IR با پیشوند ثابت IR، کپی سریع و اعتبارسنجی زنده) -->
-          <div class="space-y-1">
-            <div class="flex items-center justify-between">
-              <label class="block text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                <span>شماره شبا (۲۴ رقم بدون IR)</span>
-                <span class="text-amber-500 text-xs">⭐</span>
-              </label>
-              <span
-                *ngIf="shebaValidationResult"
-                [ngClass]="shebaValidationResult.isValid ? 'text-emerald-600' : 'text-rose-500'"
-                class="text-[10px] font-bold flex items-center gap-0.5">
-                <span>{{ shebaValidationResult.isValid ? '✓ معتبر' : '✕ نامعتبر' }}</span>
-              </span>
-            </div>
-
-            <!-- جعبه هوشمند شبا LTR -->
-            <div dir="ltr" class="flex items-center rounded-xl overflow-hidden border transition-all"
-              [ngClass]="{
-                'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20': shebaValidationResult?.isValid,
-                'border-rose-400 ring-2 ring-rose-400/20 bg-rose-50/20': shebaDigitsDisplay && !shebaValidationResult?.isValid,
-                'border-slate-200 bg-slate-50 focus-within:ring-2 focus-within:ring-purple-500 focus-within:bg-white': !shebaDigitsDisplay,
-                'opacity-80 bg-slate-100': isReadOnlyMode
-              }">
-              
-              <!-- پیشوند ثابت IR در سمت چپ -->
-              <div class="px-3 py-2 bg-slate-200/80 border-r border-slate-300 text-slate-700 font-mono font-black text-xs select-none flex items-center shrink-0">
-                <span>IR</span>
-              </div>
-
-              <!-- اینپوت ۲۴ رقمی شبا -->
-              <div class="relative flex-1">
-                <input 
-                  type="text" 
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  [value]="shebaDigitsDisplay" 
-                  (input)="onShebaInput($event)"
-                  (paste)="onShebaPaste($event)"
-                  (copy)="onShebaCopy($event)"
-                  [disabled]="isReadOnlyMode"
-                  maxlength="35"
-                  dir="ltr"
-                  placeholder="-- ---- ---- ---- ---- ----" 
-                  class="w-full bg-transparent border-0 text-left font-mono tracking-widest text-xs px-3 py-2 pr-16 focus:outline-none text-slate-800 font-bold disabled:text-slate-600"
-                />
-
-                <!-- آیکون وضعیت و دکمه کپی درون اینپوت -->
-                <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                  <button *ngIf="newPersonnel.sheba_number" type="button" (click)="copyShebaToClipboard()" class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isShebaCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-2xs'" title="کپی شماره شبا (۲۴ رقم)">
-                    <span>{{ isShebaCopied ? '✓' : '📋' }}</span>
-                  </button>
-                  <span *ngIf="shebaValidationResult?.isValid" class="text-emerald-600 font-black text-sm" title="شماره شبا معتبر است">✓</span>
-                  <span *ngIf="shebaDigitsDisplay && !shebaValidationResult?.isValid" class="text-rose-500 font-black text-sm" title="شماره شبا نامعتبر است">✕</span>
+              <div>
+                <div class="text-xs font-bold" [ngClass]="isFoundPersonnelRejected ? 'text-amber-950' : 'text-purple-900'">
+                  این شخص با نام «{{ foundExistingPersonnel.first_name }} {{ foundExistingPersonnel.last_name }}» قبلاً در سامانه ثبت شده است
+                  <span *ngIf="foundExistingPersonnel.current_section_name" class="text-[11px] font-normal opacity-85">
+                    (بخش: {{ foundExistingPersonnel.current_section_name }})
+                  </span>
+                  <span *ngIf="isFoundPersonnelRejected" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-200 text-rose-900 mr-1">
+                    وضعیت پرونده: رد شده
+                  </span>
+                </div>
+                <div class="text-[10px] mt-0.5" [ngClass]="isFoundPersonnelRejected ? 'text-amber-800' : 'text-purple-600'">
+                  {{ isFoundPersonnelRejected ? 'می‌توانید پرونده ردشده را بازگشایی و با رفع نواقص مجدداً ارسال فرمایید.' : 'برای جلوگیری از تایپ مجدد، مشخصات هویتی و بانکی را بازخوانی نمایید.' }}
                 </div>
               </div>
             </div>
-
-            <!-- پیام بازخورد اعتبارسنجی شبا -->
-            <div *ngIf="shebaDigitsDisplay" class="pt-0.5">
-              <div *ngIf="shebaValidationResult?.isValid" class="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
-                <span>{{ shebaValidationResult.bank?.icon || '🏦' }}</span>
-                <span>شماره شبا معتبر و تایید شد (الگوریتم ISO 7064 Mod 97) - بانک: {{ shebaValidationResult.bank?.name }}</span>
-              </div>
-              <div *ngIf="!shebaValidationResult?.isValid && shebaValidationResult?.errorMessage" class="text-[10px] text-rose-600 font-bold flex items-center gap-1">
-                <span>⚠️ {{ shebaValidationResult?.errorMessage }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- نام بانک و شماره حساب در دو ستون متقارن (پشتیبانی از تبدیل دوطرفه و ⚡) -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- نام بانک (کومبوباکس هوشمند و جستجوپذیر رو به بالا) -->
-            <div class="relative">
-              <div class="flex items-center justify-between mb-1">
-                <label class="block text-[11px] font-bold text-slate-700">انتخاب بانک عامل:</label>
-              </div>
-              <div class="relative">
-                <input 
-                  type="text" 
-                  [disabled]="isReadOnlyMode"
-                  [value]="isBankDropdownOpen ? bankSearchQuery : (newPersonnel.bank_name || '')" 
-                  (focus)="openBankDropdown()" 
-                  (input)="bankSearchQuery = $any($event.target).value; isBankDropdownOpen = true" 
-                  placeholder="-- انتخاب بانک عامل --" 
-                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 focus:bg-white focus:outline-none cursor-pointer placeholder:text-slate-400 disabled:bg-slate-100 disabled:text-slate-600" 
-                />
-                <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[9px]">▲</span>
-
-                <!-- پوشش کلیک بیرونی جهت بستن کومبوباکس -->
-                <div *ngIf="isBankDropdownOpen" (click)="isBankDropdownOpen = false" class="fixed inset-0 z-40 bg-transparent"></div>
-
-                <!-- لیست آبشاری رو به بالا بانک‌ها -->
-                <div *ngIf="isBankDropdownOpen" class="absolute bottom-full mb-1.5 left-0 right-0 max-h-52 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-2xl z-50 py-1 divide-y divide-slate-50">
-                  <div *ngFor="let b of filteredBanks" (click)="selectBankFromDropdown(b, $event)" class="px-3 py-2 hover:bg-purple-50 cursor-pointer flex items-center justify-between transition-colors" [ngClass]="{'bg-purple-50 font-black text-purple-700': newPersonnel.bank_name === b.name}">
-                    <span class="text-xs flex items-center gap-1.5">
-                      <span>{{ b.icon }}</span>
-                      <span>{{ b.name }}</span>
-                    </span>
-                    <span class="text-[10px] font-mono text-slate-400 font-normal">کد {{ b.code }}</span>
-                  </div>
-                  <div *ngIf="filteredBanks.length === 0" class="px-3 py-3 text-center text-xs text-slate-400">
-                    بانکی با این مشخصات یافت نشد
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- شماره حساب با دکمه‌های کپی و تبدیل دوطرفه به شبا (⚡) -->
-            <div class="space-y-1">
-              <div class="flex items-center justify-between mb-1">
-                <label class="block text-[11px] font-bold text-slate-700">شماره حساب بانکی:</label>
-              </div>
-              <div dir="ltr" class="relative flex items-center rounded-xl overflow-hidden border border-slate-200 bg-slate-50 focus-within:ring-2 focus-within:ring-purple-500 focus-within:bg-white transition-all" [ngClass]="{'opacity-80 bg-slate-100': isReadOnlyMode}">
-                <input 
-                  type="text" 
-                  inputmode="numeric"
-                  [disabled]="isReadOnlyMode"
-                  [value]="newPersonnel.account_number || ''" 
-                  (input)="onAccountNumberInput($event)"
-                  (paste)="onAccountNumberPaste($event)"
-                  (copy)="onAccountNumberCopy($event)"
-                  placeholder="مثلاً: 0101111111001" 
-                  dir="ltr"
-                  class="w-full bg-transparent border-0 text-left font-mono text-xs px-3 py-2 pr-16 focus:outline-none text-slate-800 placeholder:text-slate-400 disabled:text-slate-600" 
-                />
-                <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                  <button *ngIf="newPersonnel.account_number" type="button" (click)="copyAccountNumberToClipboard()" class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isAccountCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-2xs'" title="کپی شماره حساب">
-                    <span>{{ isAccountCopied ? '✓' : '📋' }}</span>
-                  </button>
-                  <button *ngIf="!isReadOnlyMode && newPersonnel.account_number && newPersonnel.bank_name" type="button" (click)="convertAccountToShebaNow()" class="w-6 h-6 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-all flex items-center justify-center cursor-pointer shadow-2xs text-xs font-bold" title="تولید مجدد شماره شبا بر اساس شماره حساب و بانک عامل">
-                    <span>⚡</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- پیوست مدارک هویتی پرسنل (کارت ملی، شناسنامه، قرارداد) -->
-        <div class="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-2">
-          <div class="flex items-center justify-between">
-            <label class="block text-xs font-black text-slate-700 flex items-center gap-1.5">
-              <span>📎 تصویر یا فایل مدارک شناسنامه‌ای و هویتی (اختیاری)</span>
-              <span class="text-[10px] font-normal text-slate-400">کارت ملی، صفحات شناسنامه یا مدارک استخدامی</span>
-            </label>
-            <span class="text-[10px] text-slate-400 font-mono">حداکثر ۱۰ مگابایت (PDF / تصاویر)</span>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <input
-              *ngIf="!isReadOnlyMode"
-              type="file"
-              (change)="onDocumentFileSelected($event)"
-              accept="image/*,.pdf"
-              class="text-xs text-slate-500 file:mr-0 file:ml-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer" />
-            
-            <div *ngIf="attachmentFileName" class="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-purple-200 rounded-xl text-xs text-purple-800 font-bold shadow-2xs">
-              <span>📄 {{ attachmentFileName }}</span>
+            <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
               <button
-                *ngIf="!isReadOnlyMode"
+                *ngIf="isFoundPersonnelRejected"
                 type="button"
-                (click)="removeSelectedAttachment()"
-                class="text-rose-500 hover:text-rose-700 text-xs mr-1 cursor-pointer"
-                title="حذف فایل پیوست">
+                (click)="reopenRejectedPersonnel()"
+                [disabled]="isReopening"
+                [attr.aria-busy]="isReopening"
+                class="min-h-[40px] px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-60 disabled:cursor-wait">
+                <span>🔄</span>
+                <span>{{ isReopening ? 'در حال بازگشایی…' : 'بازگشایی و اصلاح پرونده' }}</span>
+              </button>
+              <button
+                *ngIf="!isFoundPersonnelRejected"
+                type="button"
+                (click)="applyFoundPersonnelData()"
+                class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95">
+                <span>📋</span>
+                <span>بازخوانی و پر کردن فرم</span>
+              </button>
+              <button
+                type="button"
+                (click)="dismissFoundPersonnelBanner()"
+                class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg text-xs cursor-pointer"
+                title="بستن">
                 ✕
               </button>
             </div>
+          </div>
 
-            <a *ngIf="existingAttachmentUrl"
-               [href]="existingAttachmentUrl"
-               target="_blank"
-               class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200 transition-all shadow-2xs">
-              <span>📎 مشاهده فایل پیوست‌شده</span>
-            </a>
+          <!-- فیلدهای شناسنامه‌ای در شبکه ۳ ستونه -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- کد ملی -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                <span>کد ملی (۱۰ رقم) *</span>
+                <span *ngIf="isLookingUpNationalCode" class="text-[10px] text-purple-600 font-bold animate-pulse">
+                  در حال استعلام...
+                </span>
+              </label>
+              <input
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                maxlength="10"
+                [(ngModel)]="newPersonnel.national_code"
+                (input)="onNationalCodeChange()"
+                [disabled]="isReadOnlyMode || isApprovedRecord"
+                placeholder="۰۱۲۳۴۵۶۷۸۹"
+                class="w-full px-3 py-2 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600"
+                [ngClass]="{'border-rose-400 bg-rose-50/20': nationalCodeError || isFieldMissing('national_code')}" />
+              <p *ngIf="nationalCodeError" class="text-[10px] text-rose-600 font-bold mt-1">
+                ⚠️ {{ nationalCodeError }}
+              </p>
+              <p *ngIf="isApprovedRecord" class="text-[10px] text-slate-500 font-bold mt-1">
+                🔒 کد ملی در پرونده‌های مصوب غیرقابل تغییر است.
+              </p>
+            </div>
+
+            <!-- نام -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">نام *</label>
+              <input
+                type="text"
+                [(ngModel)]="newPersonnel.first_name"
+                [disabled]="isReadOnlyMode"
+                placeholder="مثال: علی"
+                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none font-bold disabled:bg-slate-100 disabled:text-slate-600"
+                [ngClass]="{'border-rose-400 bg-rose-50/20': isFieldMissing('first_name')}" />
+            </div>
+
+            <!-- نام خانوادگی -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">نام خانوادگی *</label>
+              <input
+                type="text"
+                [(ngModel)]="newPersonnel.last_name"
+                [disabled]="isReadOnlyMode"
+                placeholder="مثال: محمدی"
+                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none font-bold disabled:bg-slate-100 disabled:text-slate-600"
+                [ngClass]="{'border-rose-400 bg-rose-50/20': isFieldMissing('last_name')}" />
+            </div>
+
+            <!-- نام پدر -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">نام پدر *</label>
+              <input
+                type="text"
+                [(ngModel)]="newPersonnel.father_name"
+                [disabled]="isReadOnlyMode"
+                placeholder="مثال: حسین"
+                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600"
+                [ngClass]="{'border-rose-400 bg-rose-50/20': isFieldMissing('father_name')}" />
+            </div>
+
+            <!-- شماره شناسنامه -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره شناسنامه *</label>
+              <input
+                type="text"
+                inputmode="numeric"
+                [value]="newPersonnel.id_number || ''"
+                (input)="onIdNumberInput($event)"
+                [disabled]="isReadOnlyMode"
+                placeholder="مثال: ۱۲۳۴"
+                class="w-full px-3 py-2 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600"
+                [ngClass]="{'border-rose-400 bg-rose-50/20': isFieldMissing('id_number')}" />
+            </div>
+
+            <!-- سری و سریال شناسنامه -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">سری شناسنامه</label>
+                <input
+                  type="text"
+                  [(ngModel)]="newPersonnel.id_series"
+                  [disabled]="isReadOnlyMode"
+                  placeholder="مثال: ۱۲ الف"
+                  class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">سریال شناسنامه</label>
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  [value]="newPersonnel.id_serial || ''"
+                  (input)="onIdSerialInput($event)"
+                  [disabled]="isReadOnlyMode"
+                  placeholder="مثال: ۶۵۴۳۲۱"
+                  class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
+              </div>
+            </div>
+
+            <!-- جنسیت -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">جنسیت *</label>
+              <select
+                [(ngModel)]="newPersonnel.gender"
+                [disabled]="isReadOnlyMode"
+                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none cursor-pointer disabled:bg-slate-100 disabled:text-slate-600 font-bold">
+                <option value="مرد">مرد</option>
+                <option value="زن">زن</option>
+              </select>
+            </div>
+
+            <!-- وضعیت تاهل -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">وضعیت تاهل</label>
+              <select
+                [(ngModel)]="newPersonnel.marital_status"
+                [disabled]="isReadOnlyMode"
+                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none cursor-pointer disabled:bg-slate-100 disabled:text-slate-600">
+                <option value="single">مجرد</option>
+                <option value="married">متاهل</option>
+              </select>
+            </div>
+
+            <!-- تعداد فرزندان -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">تعداد فرزندان</label>
+              <input
+                type="number"
+                inputmode="numeric"
+                min="0"
+                [value]="newPersonnel.children_count || 0"
+                (input)="onChildrenCountInput($event)"
+                [disabled]="isReadOnlyMode"
+                placeholder="۰"
+                class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
+            </div>
+
+            <!-- تاریخ تولد شمسی -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                <span>تاریخ تولد (شمسی) *</span>
+                <span class="text-[10px] text-slate-400 font-mono">YYYY/MM/DD</span>
+              </label>
+              <input
+                type="text"
+                dir="ltr"
+                inputmode="numeric"
+                maxlength="10"
+                [value]="newPersonnel.birth_date || ''"
+                (input)="onBirthDateInput($event)"
+                [disabled]="isReadOnlyMode"
+                placeholder="۱۳۷۰/۰۵/۱۴"
+                class="w-full px-3 py-2 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none text-left disabled:bg-slate-100 disabled:text-slate-600"
+                [ngClass]="{'border-rose-400 bg-rose-50/20': isFieldMissing('birth_date')}" />
+            </div>
+
+            <!-- محل تولد -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">محل تولد</label>
+              <input
+                type="text"
+                [(ngModel)]="newPersonnel.birth_place"
+                [disabled]="isReadOnlyMode"
+                placeholder="مثال: تهران"
+                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
+            </div>
+
+            <!-- محل صدور شناسنامه -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">محل صدور شناسنامه</label>
+              <input
+                type="text"
+                [(ngModel)]="newPersonnel.issue_place"
+                [disabled]="isReadOnlyMode"
+                placeholder="مثال: شیراز"
+                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
+            </div>
+          </div>
+
+          <!-- دکمه رفتن به گام بعدی -->
+          <div class="pt-2 flex justify-end">
+            <button
+              type="button"
+              (click)="setActiveTab('job')"
+              class="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              <span>گام بعدی: مشخصات شغلی</span>
+              <span>◀</span>
+            </button>
           </div>
         </div>
 
-        <!-- توضیحات و یادداشت تکمیلی پرونده پرسنل -->
-        <div class="space-y-1">
-          <label class="block text-[11px] font-bold text-slate-700 flex items-center justify-between">
-            <span>توضیحات و یادداشت تکمیلی (اختیاری):</span>
-            <span class="text-[10px] text-slate-400 font-normal">پیام یا یادداشت برای سرپرست و حسابدار (شامل توافقات دستمزد/حقوق در صورت وجود)</span>
-          </label>
-          <textarea
-            rows="2"
-            [(ngModel)]="newPersonnel.notes"
-            [disabled]="isReadOnlyMode"
-            placeholder="هرگونه توضیحات در مورد مدارک هویتی، شرایط استخدامی، توافقات حقوق/دستمزد یا یادداشت برای سرپرست و حسابدار را اینجا بنویسید..."
-            class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600"></textarea>
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <!-- تب ۲: مشخصات شغلی و بیمه‌ای (تسک ۶.۵ - حذف SoD فیلدهای دستمزد)      -->
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <div *ngIf="activeModalTab === 'job'" class="space-y-4 animate-in fade-in duration-150">
+
+          <!-- بنر تفکیک وظایف SoD -->
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-2.5 text-slate-700 text-xs">
+            <span class="text-base">🛡️</span>
+            <div>
+              <strong class="font-bold">تفکیک وظایف (SoD):</strong>
+              تعیین دستمزد، حقوق پایه و ردیف‌های بیمه‌ای منحصراً توسط حسابداری در مرحله بررسی مالی انجام می‌پذیرد.
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- عنوان و سمت شغلی -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">عنوان و سمت شغلی *</label>
+              <div class="relative">
+                <input
+                  type="text"
+                  [(ngModel)]="newPersonnel.job_title"
+                  (input)="onJobTitleInput($event)"
+                  list="jobTitlesList"
+                  [disabled]="isReadOnlyMode || isApprovedRecord"
+                  placeholder="انتخاب یا تایپ سمت شغلی..."
+                  class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600 font-bold"
+                  [ngClass]="{'border-rose-400 bg-rose-50/20': isFieldMissing('job_title')}" />
+                <datalist id="jobTitlesList">
+                  <option *ngFor="let item of jobItems" [value]="item.title">{{ item.title }}</option>
+                  <option *ngFor="let j of jobTitles" [value]="j">{{ j }}</option>
+                </datalist>
+              </div>
+              <p *ngIf="isApprovedRecord" class="text-[10px] text-amber-700 font-bold mt-1">
+                🔒 سمت شغلی پروندهٔ مصوب فقط از مسیر درخواست تغییرات حسابداری عوض می‌شود.
+              </p>
+
+              <!-- انتخاب کدهای ۶ رقمی بیمه در صورت وجود چندین کد -->
+              <div *ngIf="availableJobCodes.length > 0" class="mt-2 space-y-1">
+                <span class="text-[10px] text-slate-500 font-bold block">کدهای بیمه متناظر با این شغل:</span>
+                <div class="flex flex-wrap gap-1.5">
+                  <button
+                    *ngFor="let code of availableJobCodes"
+                    type="button"
+                    (click)="selectJobCode(code)"
+                    [disabled]="isReadOnlyMode || isApprovedRecord"
+                    [ngClass]="newPersonnel.job_code === code ? 'bg-purple-600 text-white font-black shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                    class="px-2 py-1 rounded-lg text-[11px] font-mono transition-all cursor-pointer">
+                    کد: {{ code }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- کد ۶ رقمی شغل تامین اجتماعی -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                <span>کد شغل تامین اجتماعی (۶ رقم)</span>
+                <span class="text-[10px] text-slate-400 font-mono">اختیاری / دیسکت بیمه</span>
+              </label>
+              <input
+                type="text"
+                inputmode="numeric"
+                maxlength="6"
+                [value]="newPersonnel.job_code || ''"
+                (input)="onJobCodeInput($event)"
+                [disabled]="isReadOnlyMode || isApprovedRecord"
+                placeholder="مثال: ۱۲۳۴۵۶"
+                class="w-full px-3 py-2 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600" />
+              <p *ngIf="!isApprovedRecord" class="text-[10px] text-slate-400 mt-1">
+                در صورت خالی ماندن، در مرحله تصویب حسابداری با عنوان شغل همگام خواهد شد.
+              </p>
+              <p *ngIf="isApprovedRecord" class="text-[10px] text-amber-700 font-bold mt-1">
+                🔒 کد شغل بیمه در پرونده‌های مصوب قفل بوده و صرفاً توسط حسابداری تعیین می‌گردد.
+              </p>
+            </div>
+
+            <!-- نوع قرارداد -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع قرارداد</label>
+              <select
+                [(ngModel)]="newPersonnel.contract_type"
+                [disabled]="isReadOnlyMode || isApprovedRecord"
+                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none cursor-pointer disabled:bg-slate-100 disabled:text-slate-600 font-bold">
+                <option value="daily">روزمزد (قرارداد روزانه)</option>
+                <option value="hourly">ساعتی</option>
+                <option value="monthly">ماهانه</option>
+              </select>
+              <p *ngIf="isApprovedRecord" class="text-[10px] text-amber-700 font-bold mt-1">
+                🔒 نوع قرارداد پروندهٔ مصوب را فقط حسابداری تعیین می‌کند.
+              </p>
+            </div>
+          </div>
+
+          <!-- دکمه‌های ناوبری تب شغلی -->
+          <div class="pt-2 flex items-center justify-between">
+            <button
+              type="button"
+              (click)="setActiveTab('identity')"
+              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              <span>▶</span>
+              <span>گام قبلی: اطلاعات هویتی</span>
+            </button>
+            <button
+              type="button"
+              (click)="setActiveTab('banking')"
+              class="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              <span>گام بعدی: حساب‌های بانکی</span>
+              <span>◀</span>
+            </button>
+          </div>
         </div>
+
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <!-- تب ۳: حساب‌های بانکی چندگانه (تسک ۶.۴ و استاندارد بانکی AGENTS.md)    -->
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <div *ngIf="activeModalTab === 'banking'" class="space-y-4 animate-in fade-in duration-150">
+
+          <!-- بخش اول: لیست حساب‌های بانکی ثبت‌شده پرسنل -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-black text-slate-800 flex items-center gap-1.5">
+                <span>💳 حساب‌های بانکی ثبت‌شده پرسنل</span>
+                <span class="text-[10px] font-normal text-slate-500">(یک حساب باید به عنوان حساب اصلی واریز حقوق انتخاب شود)</span>
+              </label>
+              <span *ngIf="bankAccounts.length > 0" class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                تعداد حساب‌ها: {{ bankAccounts.length }}
+              </span>
+            </div>
+
+            <!-- حالت خالی بودن لیست حساب‌ها -->
+            <div *ngIf="bankAccounts.length === 0" class="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-center space-y-1">
+              <span class="text-xl">🏦</span>
+              <p class="text-xs font-bold text-slate-600">هنوز حساب بانکی برای این پرسنل ثبت نشده است.</p>
+              <p class="text-[11px] text-slate-400">اطلاعات حساب را در فرم زیر وارد کرده و دکمه «افزودن به لیست حساب‌ها» را بزنید.</p>
+            </div>
+
+            <!-- کارت‌های حساب‌های بانکی موجود -->
+            <div *ngIf="bankAccounts.length > 0" class="space-y-2">
+              <div *ngFor="let acc of bankAccounts; let i = index"
+                   class="p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
+                   [ngClass]="acc.is_primary ? 'bg-emerald-50/60 border-emerald-300 ring-1 ring-emerald-300/40' : 'bg-slate-50 border-slate-200'">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-lg shadow-2xs shrink-0">
+                    🏦
+                  </div>
+                  <div class="space-y-0.5">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-black text-slate-800">{{ acc.bank_name || 'بانک نامشخص' }}</span>
+                      <span *ngIf="acc.is_primary" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-600 text-white shadow-2xs">
+                        ⭐ حساب اصلی واریز
+                      </span>
+                    </div>
+                    <div class="text-[11px] font-mono font-bold text-slate-600 flex items-center gap-2">
+                      <span>شماره حساب: {{ acc.account_number || '-' }}</span>
+                      <span class="text-slate-300">|</span>
+                      <span dir="ltr" class="text-slate-700">IR {{ acc.sheba_number }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+                  <button
+                    *ngIf="!acc.is_primary && !isReadOnlyMode"
+                    type="button"
+                    (click)="setPrimaryAccount(i)"
+                    class="px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+                    title="انتخاب به عنوان حساب اصلی جهت واریز حقوق">
+                    ⭐ تعیین به عنوان اصلی
+                  </button>
+                  <button
+                    *ngIf="!isReadOnlyMode"
+                    type="button"
+                    (click)="removeBankAccount(i)"
+                    class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl text-xs transition-colors cursor-pointer"
+                    title="حذف حساب">
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- بخش دوم: فرم هوشمند ثبت/افزودن حساب بانکی جدید -->
+          <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-3">
+            <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <span>➕ افزودن مشخصات حساب بانکی جدید:</span>
+            </div>
+
+            <!-- فیلد شبا (همگام‌سازی دوطرفه، پیشوند IR، اعتبارسنجی زنده ISO 7064 Mod 97) -->
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <label class="block text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                  <span>شماره شبا (۲۴ رقم بدون IR) *</span>
+                </label>
+                <span
+                  *ngIf="shebaValidationResult"
+                  [ngClass]="shebaValidationResult.isValid ? 'text-emerald-600' : 'text-rose-500'"
+                  class="text-[10px] font-bold flex items-center gap-0.5">
+                  <span>{{ shebaValidationResult.isValid ? '✓ معتبر' : '✕ نامعتبر' }}</span>
+                </span>
+              </div>
+
+              <!-- جعبه هوشمند شبا LTR -->
+              <div dir="ltr" class="flex items-center rounded-xl overflow-hidden border transition-all"
+                [ngClass]="{
+                  'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20': shebaValidationResult?.isValid,
+                  'border-rose-400 ring-2 ring-rose-400/20 bg-rose-50/20': shebaDigitsDisplay && !shebaValidationResult?.isValid,
+                  'border-slate-200 bg-white focus-within:ring-2 focus-within:ring-purple-500': !shebaDigitsDisplay,
+                  'opacity-80 bg-slate-100': isReadOnlyMode
+                }">
+                <!-- پیشوند ثابت IR -->
+                <div class="px-3 py-2 bg-slate-200/80 border-r border-slate-300 text-slate-700 font-mono font-black text-xs select-none flex items-center shrink-0">
+                  <span>IR</span>
+                </div>
+
+                <!-- اینپوت ۲۴ رقمی -->
+                <div class="relative flex-1">
+                  <input 
+                    type="text" 
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    [value]="shebaDigitsDisplay" 
+                    (input)="onShebaInput($event)"
+                    (paste)="onShebaPaste($event)"
+                    (copy)="onShebaCopy($event)"
+                    [disabled]="isReadOnlyMode"
+                    maxlength="35"
+                    dir="ltr"
+                    placeholder="-- ---- ---- ---- ---- ----" 
+                    class="w-full bg-transparent border-0 text-left font-mono tracking-widest text-xs px-3 py-2 pr-16 focus:outline-none text-slate-800 font-bold disabled:text-slate-600"
+                  />
+
+                  <!-- دکمه کپی و تیک وضعیت -->
+                  <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <button *ngIf="newPersonnel.sheba_number" type="button" (click)="copyShebaToClipboard()" class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isShebaCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-2xs'" title="کپی شماره شبا">
+                      <span>{{ isShebaCopied ? '✓' : '📋' }}</span>
+                    </button>
+                    <span *ngIf="shebaValidationResult?.isValid" class="text-emerald-600 font-black text-sm" title="شماره شبا معتبر است">✓</span>
+                    <span *ngIf="shebaDigitsDisplay && !shebaValidationResult?.isValid" class="text-rose-500 font-black text-sm" title="شماره شبا نامعتبر است">✕</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- بازخورد اعتبارسنجی شبا -->
+              <div *ngIf="shebaDigitsDisplay" class="pt-0.5">
+                <div *ngIf="shebaValidationResult?.isValid" class="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
+                  <span>{{ shebaValidationResult.bank?.icon || '🏦' }}</span>
+                  <span>شماره شبا تایید شد (الگوریتم ISO 7064 Mod 97) - بانک: {{ shebaValidationResult.bank?.name }}</span>
+                </div>
+                <div *ngIf="!shebaValidationResult?.isValid && shebaValidationResult?.errorMessage" class="text-[10px] text-rose-600 font-bold flex items-center gap-1">
+                  <span>⚠️ {{ shebaValidationResult?.errorMessage }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- بانک عامل و شماره حساب -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- کومبوباکس بانک عامل -->
+              <div class="relative">
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">انتخاب بانک عامل *</label>
+                <div class="relative">
+                  <input 
+                    type="text" 
+                    [disabled]="isReadOnlyMode"
+                    [value]="isBankDropdownOpen ? bankSearchQuery : (newPersonnel.bank_name || '')" 
+                    (focus)="openBankDropdown()" 
+                    (input)="bankSearchQuery = $any($event.target).value; isBankDropdownOpen = true" 
+                    placeholder="-- انتخاب بانک عامل --" 
+                    class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 focus:outline-none cursor-pointer placeholder:text-slate-400 disabled:bg-slate-100 disabled:text-slate-600" 
+                  />
+                  <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[9px]">▲</span>
+
+                  <div *ngIf="isBankDropdownOpen" (click)="isBankDropdownOpen = false" class="fixed inset-0 z-40 bg-transparent"></div>
+
+                  <div *ngIf="isBankDropdownOpen" class="absolute bottom-full mb-1.5 left-0 right-0 max-h-52 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-2xl z-50 py-1 divide-y divide-slate-50">
+                    <div *ngFor="let b of filteredBanks" (click)="selectBankFromDropdown(b, $event)" class="px-3 py-2 hover:bg-purple-50 cursor-pointer flex items-center justify-between transition-colors" [ngClass]="{'bg-purple-50 font-black text-purple-700': newPersonnel.bank_name === b.name}">
+                      <span class="text-xs flex items-center gap-1.5">
+                        <span>{{ b.icon }}</span>
+                        <span>{{ b.name }}</span>
+                      </span>
+                      <span class="text-[10px] font-mono text-slate-400 font-normal">کد {{ b.code }}</span>
+                    </div>
+                    <div *ngIf="filteredBanks.length === 0" class="px-3 py-3 text-center text-xs text-slate-400">
+                      بانکی با این مشخصات یافت نشد
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- شماره حساب بانکی با دکمه‌های کپی و ⚡ -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره حساب بانکی:</label>
+                <div dir="ltr" class="relative flex items-center rounded-xl overflow-hidden border border-slate-200 bg-white focus-within:ring-2 focus-within:ring-purple-500 transition-all" [ngClass]="{'opacity-80 bg-slate-100': isReadOnlyMode}">
+                  <input 
+                    type="text" 
+                    inputmode="numeric"
+                    [disabled]="isReadOnlyMode"
+                    [value]="newPersonnel.account_number || ''" 
+                    (input)="onAccountNumberInput($event)"
+                    (paste)="onAccountNumberPaste($event)"
+                    (copy)="onAccountNumberCopy($event)"
+                    placeholder="مثال: 0101111111001" 
+                    dir="ltr"
+                    class="w-full bg-transparent border-0 text-left font-mono text-xs px-3 py-2 pr-16 focus:outline-none text-slate-800 placeholder:text-slate-400 disabled:text-slate-600" 
+                  />
+                  <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <button *ngIf="newPersonnel.account_number" type="button" (click)="copyAccountNumberToClipboard()" class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isAccountCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-2xs'" title="کپی شماره حساب">
+                      <span>{{ isAccountCopied ? '✓' : '📋' }}</span>
+                    </button>
+                    <button *ngIf="!isReadOnlyMode && newPersonnel.account_number && newPersonnel.bank_name" type="button" (click)="convertAccountToShebaNow()" class="w-6 h-6 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-all flex items-center justify-center cursor-pointer shadow-2xs text-xs font-bold" title="تولید مجدد شماره شبا بر اساس شماره حساب و بانک عامل">
+                      <span>⚡</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- دکمه افزودن به لیست حساب‌ها -->
+            <div class="pt-1">
+              <button
+                type="button"
+                (click)="addCurrentAsNewAccount()"
+                [disabled]="isReadOnlyMode"
+                class="w-full sm:w-auto px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50">
+                <span>➕</span>
+                <span>افزودن این حساب به لیست حساب‌های پرسنل</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- دکمه‌های ناوبری تب بانکی -->
+          <div class="pt-2 flex items-center justify-between">
+            <button
+              type="button"
+              (click)="setActiveTab('job')"
+              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              <span>▶</span>
+              <span>گام قبلی: مشخصات شغلی</span>
+            </button>
+            <button
+              type="button"
+              (click)="setActiveTab('address')"
+              class="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              <span>گام بعدی: نشانی و تماس</span>
+              <span>◀</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <!-- تب ۴: نشانی و اطلاعات تماس (تسک ۶.۲)                                -->
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <div *ngIf="activeModalTab === 'address'" class="space-y-4 animate-in fade-in duration-150">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- شماره تلفن همراه -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                <span>شماره همراه (۱۱ رقم با ۰۹) *</span>
+                <span class="text-[10px] text-slate-400 font-mono">09xxxxxxxxx</span>
+              </label>
+              <div dir="ltr" class="relative flex items-center rounded-xl overflow-hidden border border-slate-200 bg-slate-50 focus-within:ring-2 focus-within:ring-purple-500 focus-within:bg-white transition-all"
+                   [ngClass]="{'border-rose-400 bg-rose-50/20': phoneError || isFieldMissing('phone_number'), 'opacity-80 bg-slate-100': isReadOnlyMode}">
+                <input
+                  type="tel"
+                  inputmode="tel"
+                  dir="ltr"
+                  maxlength="11"
+                  [value]="newPersonnel.phone_number || ''"
+                  (input)="onPhoneInput($event)"
+                  [disabled]="isReadOnlyMode"
+                  placeholder="۰۹۱۲..."
+                  class="w-full bg-transparent border-0 text-left font-mono text-xs px-3 py-2 pr-9 focus:outline-none text-slate-800 placeholder:text-slate-400 disabled:text-slate-600 font-bold" />
+                <div class="absolute right-1.5 top-1/2 -translate-y-1/2">
+                  <button
+                    *ngIf="newPersonnel.phone_number"
+                    type="button"
+                    (click)="copyPhoneToClipboard()"
+                    class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs"
+                    [ngClass]="isPhoneCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-2xs'"
+                    title="کپی شماره همراه">
+                    <span>{{ isPhoneCopied ? '✓' : '📋' }}</span>
+                  </button>
+                </div>
+              </div>
+              <p *ngIf="phoneError" class="text-[10px] text-rose-600 font-bold mt-1">
+                ⚠️ {{ phoneError }}
+              </p>
+            </div>
+
+            <!-- کد پستی ۱۰ رقمی -->
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                <span>کد پستی ۱۰ رقمی *</span>
+                <span class="text-[10px] text-slate-400 font-mono">بدون خط تیره</span>
+              </label>
+              <input
+                type="text"
+                dir="ltr"
+                inputmode="numeric"
+                maxlength="10"
+                [value]="newPersonnel.postal_code || ''"
+                (input)="onPostalCodeInput($event)"
+                [disabled]="isReadOnlyMode"
+                placeholder="مثال: ۱۲۳۴۵۶۷۸۹۰"
+                class="w-full px-3 py-2 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600 text-left"
+                [ngClass]="{'border-rose-400 bg-rose-50/20': postalCodeError || isFieldMissing('postal_code')}" />
+              <p *ngIf="postalCodeError" class="text-[10px] text-rose-600 font-bold mt-1">
+                ⚠️ {{ postalCodeError }}
+              </p>
+            </div>
+          </div>
+
+          <!-- نشانی دقیق محل سکونت -->
+          <div>
+            <label class="block text-[11px] font-bold text-slate-700 mb-1">نشانی دقیق محل سکونت *</label>
+            <textarea
+              rows="3"
+              [(ngModel)]="newPersonnel.address"
+              [disabled]="isReadOnlyMode"
+              placeholder="استان، شهر، خیابان، کوچه، پلاک، واحد..."
+              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600 font-medium"
+              [ngClass]="{'border-rose-400 bg-rose-50/20': isFieldMissing('address')}"></textarea>
+          </div>
+
+          <!-- دکمه‌های ناوبری تب نشانی -->
+          <div class="pt-2 flex items-center justify-between">
+            <button
+              type="button"
+              (click)="setActiveTab('banking')"
+              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              <span>▶</span>
+              <span>گام قبلی: حساب‌های بانکی</span>
+            </button>
+            <button
+              type="button"
+              (click)="setActiveTab('documents')"
+              class="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              <span>گام بعدی: مدارک و یادداشت</span>
+              <span>◀</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <!-- تب ۵: مدارک پیوست و یادداشت تکمیلی (تسک ۶.۶ و لایت‌باکس)             -->
+        <!-- ════════════════════════════════════════════════════════════════════ -->
+        <div *ngIf="activeModalTab === 'documents'" class="space-y-4 animate-in fade-in duration-150">
+
+          <!-- هشدار آفلاین بودن -->
+          <div *ngIf="isOffline" class="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2 text-amber-900 text-xs">
+            <span>⚠️</span>
+            <span>سامانه در وضعیت آفلاین است؛ امکان آپلود مدارک وجود ندارد. مشخصات متنی پرونده را ثبت فرمایید.</span>
+          </div>
+
+          <!-- باکس آپلود مدرک جدید -->
+          <div class="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-black text-slate-800 flex items-center gap-1.5">
+                <span>📎 پیوست مدارک هویتی و پرسنلی (چندگانه)</span>
+              </label>
+              <span class="text-[10px] text-slate-400 font-mono">حداکثر ۱۰ مگابایت برای هر فایل (تصویر / PDF)</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
+              <div>
+                <select
+                  [(ngModel)]="selectedDocTypeForUpload"
+                  [disabled]="isReadOnlyMode || isOffline"
+                  class="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-bold cursor-pointer">
+                  <option value="national_card">کارت ملی</option>
+                  <option value="id_booklet">صفحات شناسنامه</option>
+                  <option value="contract">قرارداد / فرم استخدام</option>
+                  <option value="military_card">کارت پایان خدمت / معافیت</option>
+                  <option value="other">سایر مدارک</option>
+                </select>
+              </div>
+
+              <div class="sm:col-span-2">
+                <input
+                  *ngIf="!isReadOnlyMode"
+                  type="file"
+                  multiple
+                  (change)="onMultipleFilesSelected($event)"
+                  [disabled]="isOffline"
+                  accept="image/*,.pdf"
+                  class="w-full text-xs text-slate-500 file:mr-0 file:ml-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer" />
+              </div>
+            </div>
+
+            <!-- صف مدارک جدید در انتظار ذخیره -->
+            <div *ngIf="pendingUploadDocuments.length > 0" class="space-y-1.5 pt-2">
+              <span class="text-[11px] font-bold text-purple-700">مدارک جدید آماده بارگذاری ({{ pendingUploadDocuments.length }} مورد):</span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div *ngFor="let doc of pendingUploadDocuments; let i = index"
+                     class="p-2 bg-white border border-purple-200 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <img *ngIf="doc.previewUrl"
+                         [src]="doc.previewUrl"
+                         (click)="openLightbox(doc.previewUrl, doc.name)"
+                         class="w-8 h-8 rounded-lg object-cover cursor-pointer hover:opacity-80 shrink-0 border"
+                         alt="پیش‌نمایش" />
+                    <span *ngIf="!doc.previewUrl" class="w-8 h-8 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center text-xs shrink-0">📄</span>
+                    <div class="min-w-0">
+                      <p class="text-xs font-bold text-slate-800 truncate">{{ doc.name }}</p>
+                      <p class="text-[10px] text-slate-400 font-mono">{{ (doc.size / 1024).toFixed(0) }} KB</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="removePendingDocument(i)"
+                    class="text-rose-500 hover:text-rose-700 p-1 text-xs cursor-pointer"
+                    title="حذف از صف">
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- مدارک قبلی ذخیره‌شده روی سرور -->
+            <div *ngIf="existingDocuments.length > 0" class="space-y-1.5 pt-2 border-t border-slate-200/80">
+              <span class="text-[11px] font-bold text-slate-700">مدارک ثبت‌شده در پرونده:</span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div *ngFor="let doc of existingDocuments"
+                     class="p-2 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-xs shrink-0">📄</span>
+                    <div class="min-w-0">
+                      <p class="text-xs font-bold text-slate-800 truncate">{{ doc.doc_type_display || doc.doc_type }}</p>
+                      <p *ngIf="doc.file_name" class="text-[10px] text-slate-500 truncate text-end" dir="ltr">{{ doc.file_name }}</p>
+                      <a *ngIf="doc.file" [href]="doc.file" target="_blank" class="text-[10px] text-purple-600 hover:underline">
+                        مشاهده فایل
+                      </a>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button
+                      *ngIf="doc.file"
+                      type="button"
+                      (click)="openLightbox(doc.file, doc.doc_type_display || 'مدرک')"
+                      class="p-1 text-slate-500 hover:text-purple-700 text-xs cursor-pointer"
+                      title="پیش‌نمایش">
+                      👁️
+                    </button>
+                    <button
+                      *ngIf="!isReadOnlyMode"
+                      type="button"
+                      (click)="deleteExistingDocument(doc)"
+                      class="p-1 text-rose-500 hover:text-rose-700 text-xs cursor-pointer"
+                      title="حذف مدرک">
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- پیوست سنتی تک‌فایلی قبلی -->
+            <div *ngIf="existingAttachmentUrl" class="pt-1">
+              <a [href]="existingAttachmentUrl" target="_blank" class="inline-flex items-center gap-1 text-xs text-purple-700 hover:underline font-bold">
+                <span>📎 مشاهده فایل پیوست تکمیلی قبلی</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- توضیحات و یادداشت تکمیلی پرونده -->
+          <div class="space-y-1">
+            <label class="block text-[11px] font-bold text-slate-700 flex items-center justify-between">
+              <span>توضیحات و یادداشت تکمیلی (اختیاری):</span>
+              <span class="text-[10px] text-slate-400 font-normal">پیام یا یادداشت برای سرپرست و حسابدار</span>
+            </label>
+            <textarea
+              rows="3"
+              [(ngModel)]="newPersonnel.notes"
+              [disabled]="isReadOnlyMode"
+              placeholder="هرگونه توضیحات در مورد مدارک، شرایط استخدامی، توافقات یا یادداشت برای سرپرست و حسابدار را اینجا بنویسید..."
+              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-600 font-medium"></textarea>
+          </div>
+
+          <!-- دکمه ناوبری تب مدارک -->
+          <div class="pt-2 flex justify-start">
+            <button
+              type="button"
+              (click)="setActiveTab('address')"
+              class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer">
+              <span>▶</span>
+              <span>گام قبلی: نشانی و تماس</span>
+            </button>
+          </div>
+        </div>
+
       </div>
 
-      <!-- فوتر مودال (Sticky Bottom Actions برای دسترسی آسان انگشت شست در موبایل) -->
-      <div class="px-4 sm:px-5 py-3 bg-slate-50/95 backdrop-blur-md border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 sticky bottom-0 z-20 shadow-lg">
-        <!-- در حالت فقط خواندنی (در انتظار تایید سرپرست، رد شده) -->
-        <ng-container *ngIf="isReadOnlyMode">
-          <div class="text-[11px] text-slate-500 font-medium flex items-center gap-1.5">
-            <span>🔒</span>
-            <span>این پرونده در وضعیت «{{ getStatusLabel(editingPersonnelStatus || '') }}» قرار دارد و اطلاعات آن غیرقابل ویرایش است.</span>
+      <!-- ── فوتر مودال و گیت هوشمند ارسال به سرپرست (تسک ۶.۷) ── -->
+      <div class="px-4 sm:px-5 py-3 bg-slate-50/95 backdrop-blur-md border-t border-slate-200 flex flex-col gap-2.5 shrink-0 sticky bottom-0 z-20 shadow-lg">
+
+        <!-- بنر نمایش اقلام ناقص جهت ارسال به سرپرست -->
+        <div *ngIf="!isReadOnlyMode && !isApprovedRecord && missingFieldsList.length > 0"
+             class="p-2 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 flex items-start gap-2">
+          <span class="text-amber-600 font-bold shrink-0">⚠️</span>
+          <div class="leading-relaxed">
+            <span class="font-bold">موارد ناقص جهت ارسال به سرپرست: </span>
+            <span class="text-amber-950 font-bold">{{ missingFieldsList.join('، ') }}</span>
           </div>
-          <button
-            type="button"
-            (click)="closeNewPersonnelModal()"
-            class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5">
-            <span>بستن فرم</span>
-          </button>
-        </ng-container>
+        </div>
 
-        <!-- در حالت ویرایش پرسنل مصوب (ثبت پیشنهاد تغییرات برای مدیر) -->
-        <ng-container *ngIf="!isReadOnlyMode && isApprovedRecord">
-          <div class="text-[11px] text-indigo-700 font-medium flex items-center gap-1.5">
-            <span>🛡️</span>
-            <span>تغییرات شما جهت بررسی به کارتابل سرپرست و طی چرخه تایید مالی و مدیر ارسال می‌شود.</span>
-          </div>
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+          <!-- در حالت فقط خواندنی -->
+          <ng-container *ngIf="isReadOnlyMode">
+            <div class="text-[11px] text-slate-500 font-medium flex items-center gap-1.5">
+              <span>🔒</span>
+              <span>این پرونده در وضعیت «{{ getStatusLabel(editingPersonnelStatus || '') }}» قرار دارد و اطلاعات آن غیرقابل ویرایش است.</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <!-- بازگشایی پروندهٔ ردشده به پیش‌نویس برای اصلاح و ارسال دوباره (DEF-15) -->
+              <button
+                *ngIf="editingPersonnelStatus === 'rejected'"
+                type="button"
+                (click)="reopenEditingRejectedPersonnel()"
+                [disabled]="isReopening"
+                [attr.aria-busy]="isReopening"
+                class="min-h-[40px] px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-60 disabled:cursor-wait">
+                {{ isReopening ? 'در حال بازگشایی…' : 'بازگشایی و اصلاح پرونده' }}
+              </button>
+              <button
+                type="button"
+                (click)="closeNewPersonnelModal()"
+                class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5">
+                <span>بستن فرم</span>
+              </button>
+            </div>
+          </ng-container>
 
-          <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <!-- در حالت ویرایش پرسنل مصوب (ثبت پیشنهاد تغییرات برای مدیر) -->
+          <ng-container *ngIf="!isReadOnlyMode && isApprovedRecord">
+            <div class="text-[11px] text-indigo-700 font-medium flex items-center gap-1.5">
+              <span>🛡️</span>
+              <span>تغییرات شما جهت بررسی به کارتابل سرپرست و طی چرخه تایید مالی و مدیر ارسال می‌شود.</span>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                (click)="closeNewPersonnelModal()"
+                class="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors cursor-pointer">
+                انصراف
+              </button>
+
+              <button
+                type="button"
+                (click)="savePersonnel('pending_supervisor')"
+                [disabled]="isSaving"
+                class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs active:scale-95 cursor-pointer transition-all flex items-center gap-2 disabled:opacity-50"
+                title="ثبت تغییرات پیشنهادی و ارسال به کارتابل سرپرست">
+                <span *ngIf="isSaving" class="animate-spin">⏳</span>
+                <span *ngIf="!isSaving">📝</span>
+                <span>ثبت درخواست تغییرات (ارسال به سرپرست)</span>
+              </button>
+            </div>
+          </ng-container>
+
+          <!-- در حالت قابل ویرایش معمولی (ثبت جدید، پیش‌نویس، نیازمند اصلاح) -->
+          <ng-container *ngIf="!isReadOnlyMode && !isApprovedRecord">
             <button
               type="button"
-              (click)="closeNewPersonnelModal()"
-              class="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors cursor-pointer">
-              انصراف
+              (click)="resetForm()"
+              class="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 cursor-pointer transition-colors w-full sm:w-auto">
+              پاکسازی فرم
             </button>
 
-            <!-- دکمه ثبت تغییرات و ارسال به سرپرست -->
-            <button
-              type="button"
-              (click)="savePersonnel('pending_supervisor')"
-              [disabled]="isSaving"
-              class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs active:scale-95 cursor-pointer transition-all flex items-center gap-2 disabled:opacity-50"
-              title="ثبت تغییرات پیشنهادی و ارسال به کارتابل سرپرست جهت بررسی مرحله اول">
-              <span *ngIf="isSaving" class="animate-spin">⏳</span>
-              <span *ngIf="!isSaving">📝</span>
-              <span>ثبت درخواست تغییرات (ارسال به سرپرست)</span>
-            </button>
-          </div>
-        </ng-container>
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                (click)="closeNewPersonnelModal()"
+                class="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors cursor-pointer">
+                انصراف
+              </button>
+              
+              <!-- دکمه ذخیره پیش‌نویس موقت (همواره فعال حتی با نواقص) -->
+              <button
+                type="button"
+                (click)="savePersonnel('draft')"
+                [disabled]="isSaving"
+                class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 shadow-2xs active:scale-95 cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50"
+                title="ذخیره موقت پیش‌نویس بدون ارسال به کارتابل سرپرست">
+                <span>💾</span>
+                <span>ذخیره پیش‌نویس</span>
+              </button>
 
-        <!-- در حالت قابل ویرایش معمولی (ثبت جدید، پیش‌نویس، نیازمند اصلاح) -->
-        <ng-container *ngIf="!isReadOnlyMode && !isApprovedRecord">
-          <button
-            type="button"
-            (click)="resetForm()"
-            class="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 cursor-pointer transition-colors w-full sm:w-auto">
-            پاکسازی
-          </button>
+              <!-- دکمه ثبت و ارسال به سرپرست (قفل در صورت وجود نواقص - تسک ۶.۷) -->
+              <button
+                type="button"
+                (click)="submitDraftPersonnel()"
+                [disabled]="isSubmitDisabled || isSaving"
+                class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black shadow-xs active:scale-95 cursor-pointer transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                [title]="isSubmitDisabled ? 'جهت ارسال به سرپرست تمامی فیلدهای الزامی باید تکمیل شوند' : (editingPersonnelStatus === 'revision_required' ? 'اصلاح پرونده و ارسال مجدد به کارتابل سرپرست' : 'ثبت پرونده و ارسال به کارتابل سرپرست')">
+                <span *ngIf="isSaving" class="animate-spin">⏳</span>
+                <span *ngIf="!isSaving">🚀</span>
+                <span>{{ editingPersonnelStatus === 'revision_required' ? 'ارسال مجدد به سرپرست' : 'ارسال به سرپرست' }}</span>
+              </button>
+            </div>
+          </ng-container>
+        </div>
 
-          <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <button
-              type="button"
-              (click)="closeNewPersonnelModal()"
-              class="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors cursor-pointer">
-              انصراف
-            </button>
-            
-            <!-- دکمه ذخیره پیش‌نویس موقت -->
-            <button
-              type="button"
-              (click)="savePersonnel('draft')"
-              [disabled]="isSaving"
-              class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 shadow-2xs active:scale-95 cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50"
-              title="ذخیره موقت پیش‌نویس بدون ارسال به کارتابل سرپرست">
-              <span>💾</span>
-              <span>پیش‌نویس</span>
-            </button>
-
-            <!-- دکمه ثبت و ارسال به سرپرست -->
-            <button
-              type="button"
-              (click)="savePersonnel('pending_supervisor')"
-              [disabled]="isSaving"
-              class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black shadow-xs active:scale-95 cursor-pointer transition-all flex items-center gap-2 disabled:opacity-50"
-              [title]="editingPersonnelStatus === 'revision_required' ? 'اصلاح پرونده و ارسال مجدد به کارتابل سرپرست' : 'ثبت پرونده و ارسال به کارتابل سرپرست'">
-              <span *ngIf="isSaving" class="animate-spin">⏳</span>
-              <span *ngIf="!isSaving">🚀</span>
-              <span>{{ editingPersonnelStatus === 'revision_required' ? 'ارسال مجدد به سرپرست' : 'ارسال به سرپرست' }}</span>
-            </button>
-          </div>
-        </ng-container>
       </div>
 
     </div>
@@ -842,7 +1366,6 @@
             <th class="py-3 px-3">سمت شغلی</th>
             <th class="py-3 px-3">نوع قرارداد</th>
             <th class="py-3 px-3">شماره همراه</th>
-            <th class="py-3 px-3 text-left">مزد پایه روزانه</th>
             <th class="py-3 px-3">مشخصات بانکی</th>
             <th class="py-3 px-3 text-center">وضعیت تایید</th>
             <th class="py-3 px-3 text-center w-24">عملیات</th>
@@ -907,40 +1430,50 @@
               </span>
             </td>
 
-            <!-- شماره همراه -->
-            <td class="py-2.5 px-3 font-mono text-slate-600 text-[11px] whitespace-nowrap">
-              {{ p.phone_number || '-' }}
-            </td>
-
-            <!-- مزد پایه روزانه -->
-            <td class="py-2.5 px-3 text-left whitespace-nowrap font-mono">
-              <ng-container *ngIf="p.daily_base_wage && p.daily_base_wage > 0; else noWage">
-                <div class="font-black text-slate-900 text-xs">
-                  {{ formatNumber(p.daily_base_wage) }} ریال
-                </div>
-                <div class="text-[10px] text-slate-400">
-                  {{ formatNumber(Math.floor((p.daily_base_wage || 0) / 10)) }} تومان
-                </div>
-              </ng-container>
-              <ng-template #noWage>
-                <span class="text-slate-400 font-sans text-xs font-normal">—</span>
+            <!-- شماره همراه با کپی سریع -->
+            <td class="py-2.5 px-3 whitespace-nowrap">
+              <div *ngIf="p.phone_number; else noPhone" class="flex items-center gap-1.5 font-mono text-slate-700 text-[11px]">
+                <a [href]="getCleanTelUrl(p.phone_number)" class="hover:text-indigo-600 transition-colors" title="تماس مستقیم">{{ p.phone_number }}</a>
+                <button
+                  type="button"
+                  (click)="copyValue(p.phone_number, 'phone_' + p.id, 'شماره همراه')"
+                  class="cursor-pointer text-[10px] transition-colors"
+                  [ngClass]="isKeyCopied('phone_' + p.id) ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-indigo-600'"
+                  [title]="isKeyCopied('phone_' + p.id) ? 'کپی شد!' : 'کپی شماره همراه'">
+                  <span>{{ isKeyCopied('phone_' + p.id) ? '✓' : '📋' }}</span>
+                </button>
+              </div>
+              <ng-template #noPhone>
+                <span class="text-slate-300 font-mono">-</span>
               </ng-template>
             </td>
 
-            <!-- مشخصات بانکی -->
+            <!-- مشخصات بانکی با کپی سریع -->
             <td class="py-2.5 px-3 text-slate-600 text-[11px] whitespace-nowrap">
               <div *ngIf="p.bank_name" class="font-bold text-slate-800">{{ p.bank_name }}</div>
               <div *ngIf="p.sheba_number" class="flex items-center gap-1.5 mt-0.5">
                 <span class="font-mono text-[10px] text-slate-500 uppercase tracking-wider dir-ltr select-all">{{ formatShebaDisplay(p.sheba_number) }}</span>
                 <button
                   type="button"
-                  (click)="copyToClipboard(p.sheba_number, 'شماره شبا')"
-                  class="text-slate-400 hover:text-indigo-600 cursor-pointer text-[10px] transition-colors"
-                  title="کپی شماره شبا">
-                  📋
+                  (click)="copyValue(p.sheba_number, 'sheba_' + p.id, 'شماره شبا')"
+                  class="cursor-pointer text-[10px] transition-colors"
+                  [ngClass]="isKeyCopied('sheba_' + p.id) ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-indigo-600'"
+                  [title]="isKeyCopied('sheba_' + p.id) ? 'کپی شد!' : 'کپی شماره شبا'">
+                  <span>{{ isKeyCopied('sheba_' + p.id) ? '✓' : '📋' }}</span>
                 </button>
               </div>
-              <div *ngIf="!p.bank_name && !p.sheba_number" class="text-slate-300">—</div>
+              <div *ngIf="p.account_number" class="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-500">
+                <span class="font-mono dir-ltr select-all">حساب: {{ p.account_number }}</span>
+                <button
+                  type="button"
+                  (click)="copyValue(p.account_number, 'acc_' + p.id, 'شماره حساب')"
+                  class="cursor-pointer text-[10px] transition-colors"
+                  [ngClass]="isKeyCopied('acc_' + p.id) ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-indigo-600'"
+                  [title]="isKeyCopied('acc_' + p.id) ? 'کپی شد!' : 'کپی شماره حساب'">
+                  <span>{{ isKeyCopied('acc_' + p.id) ? '✓' : '📋' }}</span>
+                </button>
+              </div>
+              <div *ngIf="!p.bank_name && !p.sheba_number && !p.account_number" class="text-slate-300">—</div>
             </td>
 
             <!-- وضعیت تایید -->
@@ -964,6 +1497,14 @@
             <!-- عملیات هوشمند صرفاً به صورت آیکونی استاندارد و بدون متن تکراری -->
             <td class="py-2.5 px-3 text-center whitespace-nowrap">
               <div class="flex items-center justify-center gap-1.5">
+                <!-- دکمه تایملاین گردش کار (فاز ۷ - تسک ۷.۱) -->
+                <button
+                  type="button"
+                  (click)="openTimelineModal(p)"
+                  class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-purple-700 border border-slate-200/80 flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs transition-all"
+                  title="مشاهده تایملاین و تاریخچه گردش کار">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
+                </button>
                 <!-- ۱. وضعیت پیش‌نویس (draft): آیکون ویرایش + آیکون ارسال به سرپرست + آیکون حذف -->
                 <ng-container *ngIf="p.approval_status === 'draft'">
                   <button
@@ -994,7 +1535,7 @@
                   <button
                     type="button"
                     (click)="openEditModal(p)"
-                    class="w-7 h-7 rounded-lg bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs transition-all"
+                    class="w-7 h-7 rounded-lg bg-amber-700 hover:bg-amber-800 text-white flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs transition-all"
                     title="اصلاح پرونده و ارسال مجدد به سرپرست">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="edit"></svg>
                   </button>
@@ -1054,7 +1595,7 @@
 
           <!-- ردیف خالی -->
           <tr *ngIf="filteredPersonnel.length === 0 && !isLoadingPersonnel">
-            <td colspan="10" class="py-12 text-center text-slate-400">
+            <td colspan="9" class="py-12 text-center text-slate-400">
               <div class="w-14 h-14 mx-auto rounded-2xl bg-purple-50 text-purple-600 border border-purple-100/80 flex items-center justify-center text-2xl mb-3 shadow-2xs">
                 👥
               </div>
@@ -1082,7 +1623,7 @@
 
           <!-- ردیف در حال بارگذاری -->
           <tr *ngIf="isLoadingPersonnel">
-            <td colspan="10" class="py-12 text-center text-slate-500">
+            <td colspan="9" class="py-12 text-center text-slate-500">
               <div class="w-7 h-7 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
               <p class="text-xs font-bold text-slate-600">در حال دریافت پرسنل بخش...</p>
             </td>
@@ -1136,42 +1677,66 @@
             <span class="font-bold text-slate-800">{{ p.job_title }}</span>
           </div>
           <div>
-            <span class="text-slate-400">مزد پایه: </span>
-            <span *ngIf="p.daily_base_wage && p.daily_base_wage > 0; else noWageMob" class="font-mono font-bold text-slate-900">{{ formatNumber(p.daily_base_wage) }} ر</span>
-            <ng-template #noWageMob>
-              <span class="text-slate-400 font-sans">—</span>
-            </ng-template>
-          </div>
-          <div>
             <span class="text-slate-400">همراه: </span>
-            <a *ngIf="p.phone_number; else noPhoneMob"
-               [href]="getCleanTelUrl(p.phone_number)"
-               class="font-mono font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 active:scale-95 transition-transform"
-               title="تماس مستقیم با پرسنل">
-              <span>📞</span>
-              <span>{{ p.phone_number }}</span>
-            </a>
+            <div *ngIf="p.phone_number; else noPhoneMob" class="inline-flex items-center gap-1.5 font-mono">
+              <a [href]="getCleanTelUrl(p.phone_number)"
+                 class="font-bold text-indigo-600 hover:text-indigo-800 active:scale-95 transition-transform"
+                 title="تماس مستقیم با پرسنل">
+                <span>📞</span>
+                <span>{{ p.phone_number }}</span>
+              </a>
+              <button
+                type="button"
+                (click)="copyValue(p.phone_number, 'phone_mob_' + p.id, 'شماره همراه')"
+                class="cursor-pointer text-[10px] transition-colors"
+                [ngClass]="isKeyCopied('phone_mob_' + p.id) ? 'text-emerald-600 font-bold' : 'text-slate-400 hover:text-indigo-600'"
+                [title]="isKeyCopied('phone_mob_' + p.id) ? 'کپی شد!' : 'کپی شماره همراه'">
+                <span>{{ isKeyCopied('phone_mob_' + p.id) ? '✓' : '📋' }}</span>
+              </button>
+            </div>
             <ng-template #noPhoneMob>
               <span class="font-mono text-slate-400">-</span>
             </ng-template>
           </div>
-          <div *ngIf="p.bank_name || p.sheba_number" class="col-span-2 flex items-center justify-between gap-1.5 bg-white/80 p-2 rounded-xl border border-slate-200/70">
-            <div class="flex items-center gap-1.5 min-w-0">
+          <div *ngIf="p.bank_name || p.sheba_number || p.account_number" class="col-span-2 space-y-1 bg-white/80 p-2.5 rounded-xl border border-slate-200/70">
+            <div *ngIf="p.bank_name" class="flex items-center gap-1.5">
               <span class="text-slate-400 shrink-0">بانک: </span>
-              <span class="text-slate-800 font-bold shrink-0">{{ p.bank_name || 'نامشخص' }}</span>
-              <span *ngIf="p.sheba_number" class="text-[10px] font-mono text-slate-500 uppercase tracking-wide truncate dir-ltr">
-                {{ formatShebaDisplay(p.sheba_number) }}
-              </span>
+              <span class="text-slate-800 font-bold">{{ p.bank_name }}</span>
             </div>
-            <button
-              *ngIf="p.sheba_number"
-              type="button"
-              (click)="copyToClipboard(p.sheba_number, 'شماره شبا')"
-              class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 text-[10px] font-bold border border-slate-200 shrink-0 flex items-center gap-1 active:scale-90 transition-all cursor-pointer"
-              title="کپی شماره شبا">
-              <span>📋</span>
-              <span>کپی</span>
-            </button>
+            <div *ngIf="p.sheba_number" class="flex items-center justify-between gap-1.5">
+              <div class="flex items-center gap-1 min-w-0">
+                <span class="text-slate-400 shrink-0">شبا:</span>
+                <span class="text-[10px] font-mono text-slate-600 uppercase tracking-wide truncate dir-ltr select-all">
+                  {{ formatShebaDisplay(p.sheba_number) }}
+                </span>
+              </div>
+              <button
+                type="button"
+                (click)="copyValue(p.sheba_number, 'sheba_mob_' + p.id, 'شماره شبا')"
+                class="px-2 py-0.5 rounded-lg text-[10px] font-bold border shrink-0 flex items-center gap-1 active:scale-90 transition-all cursor-pointer"
+                [ngClass]="isKeyCopied('sheba_mob_' + p.id) ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 border-slate-200'"
+                [title]="isKeyCopied('sheba_mob_' + p.id) ? 'کپی شد!' : 'کپی شماره شبا'">
+                <span>{{ isKeyCopied('sheba_mob_' + p.id) ? '✓' : '📋' }}</span>
+                <span>{{ isKeyCopied('sheba_mob_' + p.id) ? 'کپی شد' : 'کپی' }}</span>
+              </button>
+            </div>
+            <div *ngIf="p.account_number" class="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-100">
+              <div class="flex items-center gap-1 min-w-0">
+                <span class="text-slate-400 shrink-0">حساب:</span>
+                <span class="text-[10px] font-mono text-slate-600 truncate dir-ltr select-all">
+                  {{ p.account_number }}
+                </span>
+              </div>
+              <button
+                type="button"
+                (click)="copyValue(p.account_number, 'acc_mob_' + p.id, 'شماره حساب')"
+                class="px-2 py-0.5 rounded-lg text-[10px] font-bold border shrink-0 flex items-center gap-1 active:scale-90 transition-all cursor-pointer"
+                [ngClass]="isKeyCopied('acc_mob_' + p.id) ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 border-slate-200'"
+                [title]="isKeyCopied('acc_mob_' + p.id) ? 'کپی شد!' : 'کپی شماره حساب'">
+                <span>{{ isKeyCopied('acc_mob_' + p.id) ? '✓' : '📋' }}</span>
+                <span>{{ isKeyCopied('acc_mob_' + p.id) ? 'کپی شد' : 'کپی' }}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1184,40 +1749,49 @@
           <p class="leading-relaxed font-medium">{{ p.rejection_reason }}</p>
         </div>
 
-        <!-- دکمه‌های عملیات کارت موبایل (تاچ‌تارگت ارگونومیک با اندازه استاندارد ۳۶px) -->
-        <div class="flex items-center justify-end gap-2.5 pt-1.5 border-t border-slate-100">
+        <!-- دکمه‌های عملیات کارت موبایل (تاچ‌تارگت ارگونومیک با اندازه استاندارد ۳۶ تا ۴۴ پیکسل) -->
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 flex-wrap">
+          <!-- دکمه تایملاین گردش کار در موبایل -->
+          <button
+            type="button"
+            (click)="openTimelineModal(p)"
+            class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-purple-700 border border-slate-200 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer"
+            title="تایملاین گردش کار">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
+          </button>
+
           <ng-container *ngIf="p.approval_status === 'draft'">
-            <button type="button" (click)="openEditModal(p)" class="w-9 h-9 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="ویرایش">
+            <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="ویرایش">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="edit"></svg>
             </button>
-            <button type="button" (click)="submitDraftToSupervisor(p)" class="w-9 h-9 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/70 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="ارسال به سرپرست">
+            <button type="button" (click)="submitDraftToSupervisor(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/70 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="ارسال به سرپرست">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="send"></svg>
             </button>
-            <button type="button" (click)="deleteDraftPersonnel(p)" class="w-9 h-9 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="حذف">
+            <button type="button" (click)="deleteDraftPersonnel(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="حذف">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="trash"></svg>
             </button>
           </ng-container>
 
           <ng-container *ngIf="p.approval_status === 'revision_required'">
-            <button type="button" (click)="openEditModal(p)" class="w-9 h-9 rounded-xl bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-2xs active:scale-90 transition-all cursor-pointer" title="اصلاح و ارسال مجدد">
+            <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-amber-700 hover:bg-amber-800 text-white flex items-center justify-center shadow-2xs active:scale-90 transition-all cursor-pointer" title="اصلاح و ارسال مجدد">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="edit"></svg>
             </button>
-            <button type="button" (click)="deleteDraftPersonnel(p)" class="w-9 h-9 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="حذف">
+            <button type="button" (click)="deleteDraftPersonnel(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="حذف">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="trash"></svg>
             </button>
           </ng-container>
 
           <ng-container *ngIf="p.approval_status === 'approved' || p.approval_status === 'manager_approved'">
-            <button type="button" (click)="openEditModal(p)" class="w-9 h-9 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="ویرایش مشخصات و پیشنهاد تغییرات">
+            <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="ویرایش مشخصات و پیشنهاد تغییرات">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="edit"></svg>
             </button>
-            <button *ngIf="p.has_pending_changes" type="button" (click)="openPendingDiffModal(p)" class="w-9 h-9 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/80 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="مشاهده تغییرات معلق">
+            <button *ngIf="p.has_pending_changes" type="button" (click)="openPendingDiffModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/80 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="مشاهده تغییرات معلق">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg>
             </button>
           </ng-container>
 
           <ng-container *ngIf="p.approval_status === 'pending_supervisor' || p.approval_status === 'pending_accountant' || p.approval_status === 'pending_manager' || p.approval_status === 'rejected'">
-            <button type="button" (click)="openEditModal(p)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="مشاهده مشخصات">
+            <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="مشاهده مشخصات">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
             </button>
           </ng-container>
@@ -1306,7 +1880,18 @@
       </div>
 
       <!-- فوتر -->
-      <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
+      <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          (click)="cancelPendingChangeRequest(pendingDiffPersonnel)"
+          [disabled]="isCancellingChangeRequest"
+          class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+          title="ابطال این درخواست تغییرات و بازگرداندن پرونده به حالت قبلی">
+          <span *ngIf="isCancellingChangeRequest" class="w-3.5 h-3.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin"></span>
+          <span *ngIf="!isCancellingChangeRequest">✕</span>
+          <span>ابطال درخواست تغییرات</span>
+        </button>
+
         <button
           type="button"
           (click)="closePendingDiffModal()"
@@ -1327,5 +1912,147 @@
     (closed)="closeExcelModal()"
     (imported)="onExcelImported($event)"
   ></app-excel-import-modal>
+
+  <!-- مودال پیش‌نمایش تصویر مدرک (Lightbox) -->
+  <div *ngIf="isLightboxOpen"
+       class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200"
+       (click)="closeLightbox()">
+    <div class="relative max-w-4xl max-h-[90vh] bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+         (click)="$event.stopPropagation()">
+      <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between">
+        <span class="text-xs font-bold">{{ lightboxTitle }}</span>
+        <button
+          type="button"
+          (click)="closeLightbox()"
+          class="text-slate-400 hover:text-white text-base cursor-pointer p-1 rounded-lg"
+          title="بستن">
+          ✕
+        </button>
+      </div>
+      <div class="p-2 overflow-auto flex items-center justify-center bg-slate-100 min-h-[250px]">
+        <img [src]="lightboxImageUrl" [alt]="lightboxTitle" class="max-h-[80vh] max-w-full rounded-xl object-contain shadow-sm" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ۵. مودال تایملاین گردش کار پرونده (Workflow Timeline Modal - تسک ۷.۱) ── -->
+  <div *ngIf="isTimelineModalOpen && timelinePersonnel"
+       class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+       (click)="closeTimelineModal()">
+    <div class="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]"
+         (click)="$event.stopPropagation()">
+      
+      <!-- هدر مودال تایملاین -->
+      <div class="px-5 py-4 bg-gradient-to-r from-purple-800 via-indigo-800 to-slate-900 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-base shadow-2xs">
+            ⏱️
+          </div>
+          <div>
+            <h3 class="font-black text-sm">
+              تاریخچه و تایملاین گردش کار پرونده
+            </h3>
+            <p class="text-[11px] text-purple-200">
+              {{ timelinePersonnel.first_name }} {{ timelinePersonnel.last_name }} (کد ملی: {{ timelinePersonnel.national_code }})
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          (click)="closeTimelineModal()"
+          class="text-white/80 hover:text-white text-lg p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+          title="بستن (Esc)">
+          ✕
+        </button>
+      </div>
+
+      <!-- وضعیت جاری پرونده -->
+      <div class="px-5 py-3 bg-purple-50/70 border-b border-purple-100 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-slate-500 font-bold">وضعیت فعلی پرونده:</span>
+          <span [ngClass]="getStatusBadgeClass(timelinePersonnel.approval_status)"
+                class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 shadow-2xs">
+            <span>{{ getStatusIcon(timelinePersonnel.approval_status) }}</span>
+            <span>{{ getStatusLabel(timelinePersonnel.approval_status) }}</span>
+          </span>
+        </div>
+        <div *ngIf="timelinePersonnel.has_pending_changes" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+          ⚡ دارای تغییرات معلق
+        </div>
+      </div>
+
+      <!-- محتوای تایملاین -->
+      <div class="p-5 overflow-y-auto space-y-4 flex-1">
+        <!-- در حال بارگذاری -->
+        <div *ngIf="isLoadingTimeline" class="py-12 text-center text-slate-500">
+          <div class="w-7 h-7 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+          <p class="text-xs font-bold text-slate-600">در حال دریافت تاریخچه گردش کار پرونده...</p>
+        </div>
+
+        <!-- بدون سابقه -->
+        <div *ngIf="!isLoadingTimeline && timelineLogs.length === 0" class="py-10 text-center text-slate-400">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center text-xl mb-2">
+            📜
+          </div>
+          <p class="font-bold text-slate-700 text-xs">هیچ رخداد گردش کاری برای این پرونده ثبت نشده است.</p>
+          <p class="text-[11px] text-slate-400 mt-1">با ثبت، ارسال یا تایید پرونده، سوابق اقدامات در این بخش ذخیره می‌گردد.</p>
+        </div>
+
+        <!-- لیست رویدادهای تایملاین -->
+        <div *ngIf="!isLoadingTimeline && timelineLogs.length > 0" class="relative pl-2 pr-6 space-y-5 before:absolute before:right-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+          <div *ngFor="let log of timelineLogs; let lIdx = index" class="relative group">
+            <!-- نشانگر رویداد روی خط عمودی -->
+            <div class="absolute -right-6 top-1 w-5 h-5 rounded-full border-2 border-white shadow-xs flex items-center justify-center text-[10px]"
+                 [ngClass]="getWorkflowActionBadgeClass(log.action)">
+              <span>{{ getWorkflowActionIcon(log.action) }}</span>
+            </div>
+
+            <!-- کارت جزئیات لاگ -->
+            <div class="bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-2xl p-3.5 space-y-2 transition-colors">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="px-2 py-0.5 rounded-lg text-[10px] font-black border"
+                        [ngClass]="getWorkflowActionBadgeClass(log.action)">
+                    {{ getWorkflowActionLabel(log.action) }}
+                  </span>
+                  <span class="text-xs font-bold text-slate-800">
+                    توسط {{ log.actor_name || 'کاربر سیستم' }}
+                  </span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500 dir-ltr">
+                  {{ log.created_at_shamsi || log.jalali_date || log.created_at }}
+                </span>
+              </div>
+
+              <!-- تغییر وضعیت از مبدا به مقصد -->
+              <div *ngIf="log.from_status || log.to_status" class="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white/80 px-2.5 py-1 rounded-xl border border-slate-200/60 w-fit">
+                <span class="text-slate-400">تغییر وضعیت:</span>
+                <span *ngIf="log.from_status" class="font-bold text-slate-700">{{ getStatusLabel(log.from_status) }}</span>
+                <span *ngIf="log.from_status" class="text-slate-400">◀</span>
+                <span class="font-black text-indigo-700">{{ getStatusLabel(log.to_status) }}</span>
+              </div>
+
+              <!-- یادداشت یا دلیل -->
+              <div *ngIf="log.reason || log.note" class="text-xs p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/70 text-amber-900 leading-relaxed font-medium">
+                <span class="font-bold text-amber-800">توضیحات: </span>
+                <span>{{ log.reason || log.note }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- فوتر مودال تایملاین -->
+      <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end shrink-0">
+        <button
+          type="button"
+          (click)="closeTimelineModal()"
+          class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95">
+          بستن
+        </button>
+      </div>
+
+    </div>
+  </div>
 
 </div>

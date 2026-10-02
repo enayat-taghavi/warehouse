@@ -23,6 +23,8 @@ export { ItemPhotoThumbComponent } from './components/item-photo-gallery/item-ph
 export type { PhotoThumbSize, PhotoThumbAccent } from './components/item-photo-gallery/item-photo-thumb.component';
 export { PhotoGalleryHost, summarizePhotos, rowItemId } from './components/item-photo-gallery/photo-gallery-host';
 export type { PhotoSummary } from './components/item-photo-gallery/photo-gallery-host';
+export { NotificationCenterComponent } from './components/notification-center/notification-center.component';
+export type { NotificationItem } from './components/notification-center/notification-center.component';
 
 // Pipes
 export { PersianDatePipe } from './pipes/persian-date.pipe';

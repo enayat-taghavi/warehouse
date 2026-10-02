@@ -2,7 +2,8 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional } from '@angu
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subscription, of } from 'rxjs';
+import { Observable, Subject, Subscription, of } from 'rxjs';
+import { catchError, debounceTime, switchMap } from 'rxjs/operators';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
@@ -13,7 +14,8 @@ import {
   ProjectSection,
   PersonnelProfile,
   PersonnelChangeRequest,
-  PayrollYearlySettings
+  PayrollYearlySettings,
+  PersonnelCostEstimate
 } from '../../../../core/models/personnel.model';
 import {
   IRANIAN_BANKS,
@@ -66,10 +68,22 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     allTotal: 0
   };
 
+  // انتخاب و تایید گروهی حسابدار (تسک ۹.۷)
+  selectedPersonnelIds: Set<number> = new Set();
+  isBatchApprovalModalOpen = false;
+  batchApprovalNote = '';
+  isBatchApproving = false;
+
+  // عناوین و کدهای شغلی استاندارد تامین اجتماعی (تسک ۹.۴)
+  jobTitles: string[] = [];
+  jobItems: Array<{ title: string; job_codes: string[] }> = [];
+  availableJobCodes: string[] = [];
+
   // مودال جامع احکام مالی و شبا
   isPersonnelModalOpen = false;
   personnelModalTab: 'identity' | 'contract' | 'insurance' | 'contact' = 'contract';
   editingPersonnel: Partial<PersonnelProfile> | null = null;
+  accountantNote = '';
   isSavingPersonnel = false;
   iranianBanks: IranianBankInfo[] = IRANIAN_BANKS;
   isBankDropdownOpen = false;
@@ -83,7 +97,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   approvalNote = '';
   isApproving = false;
 
-  // مودال علت عودت به بازنگری یا رد
+  // مودال علت عودت یا رد (تسک ۹.۶: انتخاب مقصد عودت)
   isRejectModalOpen = false;
   rejectTarget: {
     id: number;
@@ -92,6 +106,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     action: 'reject' | 'revision';
   } | null = null;
   rejectReason = '';
+  revisionDestination: 'revision_required' | 'pending_supervisor' = 'pending_supervisor';
   isSubmittingReject = false;
 
   // مودال مقایسه تفاوت‌ها (Diff Viewer)
@@ -106,6 +121,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   }> = [];
 
   copiedId: number | null = null;
+  copiedFieldKey: string | null = null;
 
   private routeSub?: Subscription;
   private wsSub?: Subscription;
@@ -153,12 +169,14 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
 
     this.loadYearlySettings();
     this.loadSections();
+    this.loadJobTitles();
   }
 
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
     this.wsSub?.unsubscribe();
     this.companySub?.unsubscribe();
+    this.estimateSub?.unsubscribe();
   }
 
   loadYearlySettings(): void {
@@ -379,10 +397,11 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── ارجاع به بازنگری یا رد پرونده ───
+  // ─── ارجاع به بازنگری یا رد پرونده (تسک ۹.۶) ───
   openRejectModal(id: number, title: string, type: 'personnel' | 'personnel_cr', action: 'reject' | 'revision'): void {
     this.rejectTarget = { id, title, type, action };
     this.rejectReason = '';
+    this.revisionDestination = 'pending_supervisor';
     this.isRejectModalOpen = true;
   }
 
@@ -390,6 +409,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     this.isRejectModalOpen = false;
     this.rejectTarget = null;
     this.rejectReason = '';
+    this.revisionDestination = 'pending_supervisor';
   }
 
   submitRejectModal(): void {
@@ -404,7 +424,9 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
 
     let obs: Observable<any>;
     if (type === 'personnel') {
-      obs = action === 'reject' ? this.personnelApi.rejectPersonnel(id, reason) : this.personnelApi.requestPersonnelRevision(id, reason);
+      obs = action === 'reject'
+        ? this.personnelApi.rejectPersonnel(id, reason)
+        : this.personnelApi.requestPersonnelRevision(id, reason, this.revisionDestination);
     } else {
       obs = this.personnelApi.rejectPersonnelChangeRequest(id, reason);
     }
@@ -423,13 +445,235 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─── مودال جامع ویرایش و تکمیل مدارک مالی پرسنل ───
+  // ─── استعلام عناوین شغلی و کدهای ۶ رقمی بیمه (تسک ۹.۴) ───
+  loadJobTitles(): void {
+    if (!this.personnelApi?.getJobTitles) return;
+    this.personnelApi.getJobTitles().subscribe({
+      next: (res) => {
+        if (res?.job_titles && Array.isArray(res.job_titles)) {
+          this.jobTitles = res.job_titles;
+        }
+        if (res?.items && Array.isArray(res.items)) {
+          this.jobItems = res.items;
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {}
+    });
+  }
+
+  onJobTitleSelect(title: string): void {
+    if (!this.editingPersonnel) return;
+    this.editingPersonnel.job_title = title;
+    const match = this.jobItems.find(j => j.title === title.trim());
+    if (match && match.job_codes?.length) {
+      this.availableJobCodes = match.job_codes;
+      if (!this.editingPersonnel.job_code || !match.job_codes.includes(this.editingPersonnel.job_code)) {
+        this.editingPersonnel.job_code = match.job_codes[0];
+      }
+    } else {
+      this.availableJobCodes = [];
+    }
+    this.cdr.detectChanges();
+  }
+
+  onJobTitleInput(event: any): void {
+    if (!this.editingPersonnel) return;
+    const title = typeof event === 'string' ? event : (event?.target?.value || '');
+    this.editingPersonnel.job_title = title;
+    const match = this.jobItems.find(j => j.title === title.trim());
+    if (match && match.job_codes?.length) {
+      this.availableJobCodes = match.job_codes;
+      if (!this.editingPersonnel.job_code || !match.job_codes.includes(this.editingPersonnel.job_code)) {
+        this.editingPersonnel.job_code = match.job_codes[0];
+      }
+    } else {
+      this.availableJobCodes = [];
+    }
+    this.cdr.detectChanges();
+  }
+
+  selectJobCode(code: string): void {
+    if (!this.editingPersonnel) return;
+    this.editingPersonnel.job_code = code;
+    this.cdr.detectChanges();
+  }
+
+  // ─── گیت سروری و امکان ارسال به مدیر (تسک ۹.۵) ───
+  canSendToManager(p: PersonnelProfile): boolean {
+    if (!p) return false;
+    const hasSheba = !!(p.sheba_number && p.sheba_number.length >= 24);
+    const jcode = p.job_code ? String(p.job_code).trim() : '';
+    const hasJobCode = jcode.length === 6 && /^\d{6}$/.test(jcode);
+    const hasInsurance = !!(p.insurance_number || p.insurance_name);
+    const dwage = Number(p.daily_base_wage || 0);
+    const msalary = Number(p.contract_base_salary || 0);
+    const hasWage = dwage > 0 || msalary > 0;
+
+    if (p.missing_fields && Array.isArray(p.missing_fields) && p.missing_fields.length > 0) {
+      const accountantCritical = ['job_code', 'wage_or_salary', 'primary_bank_account', 'insurance_name'];
+      const hasCritMissing = p.missing_fields.some((m: any) => {
+        const field = typeof m === 'string' ? m : m.field;
+        return accountantCritical.includes(field);
+      });
+      if (hasCritMissing) return false;
+    }
+
+    return hasSheba && hasJobCode && hasInsurance && hasWage;
+  }
+
+  getMissingFieldsSummary(p: PersonnelProfile): string[] {
+    const missing: string[] = [];
+    if (!p.sheba_number || p.sheba_number.length < 24) missing.push('شماره شبا (۲۴ رقم)');
+    const jcode = p.job_code ? String(p.job_code).trim() : '';
+    if (!jcode || jcode.length !== 6 || !/^\d{6}$/.test(jcode)) missing.push('کد ۶ رقمی شغل تامین اجتماعی');
+    if (!p.insurance_number && !p.insurance_name) missing.push('شماره یا عنوان بیمه');
+    const dwage = Number(p.daily_base_wage || 0);
+    const msalary = Number(p.contract_base_salary || 0);
+    if (dwage <= 0 && msalary <= 0) missing.push('مزد روزانه یا حقوق ماهانه');
+    return missing;
+  }
+
+  // ─── تایید گروهی حسابدار (تسک ۹.۷) ───
+  toggleSelectAll(): void {
+    const eligibleItems = this.personnelItems.filter(p => this.canSendToManager(p) && p.id);
+    if (this.selectedPersonnelIds.size === eligibleItems.length && eligibleItems.length > 0) {
+      this.selectedPersonnelIds.clear();
+    } else {
+      this.selectedPersonnelIds.clear();
+      eligibleItems.forEach(p => {
+        if (p.id) this.selectedPersonnelIds.add(p.id);
+      });
+    }
+    this.cdr.detectChanges();
+  }
+
+  toggleSelection(id: number | undefined): void {
+    if (!id) return;
+    if (this.selectedPersonnelIds.has(id)) {
+      this.selectedPersonnelIds.delete(id);
+    } else {
+      this.selectedPersonnelIds.add(id);
+    }
+    this.cdr.detectChanges();
+  }
+
+  isSelected(id: number | undefined): boolean {
+    return id ? this.selectedPersonnelIds.has(id) : false;
+  }
+
+  isAllSelected(): boolean {
+    const eligibleItems = this.personnelItems.filter(p => this.canSendToManager(p) && p.id);
+    return eligibleItems.length > 0 && this.selectedPersonnelIds.size === eligibleItems.length;
+  }
+
+  selectedCount(): number {
+    return this.selectedPersonnelIds.size;
+  }
+
+  openBatchApprovalModal(): void {
+    if (this.selectedPersonnelIds.size === 0) {
+      this.toast.showWarning('هیچ رکوردی برای تایید گروهی انتخاب نشده است.');
+      return;
+    }
+    this.batchApprovalNote = '';
+    this.isBatchApprovalModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeBatchApprovalModal(): void {
+    this.isBatchApprovalModalOpen = false;
+    this.batchApprovalNote = '';
+    this.cdr.detectChanges();
+  }
+
+  confirmBatchApproval(): void {
+    const ids = Array.from(this.selectedPersonnelIds);
+    if (ids.length === 0 || this.isBatchApproving) return;
+
+    this.isBatchApproving = true;
+    const note = this.batchApprovalNote.trim() || undefined;
+
+    this.personnelApi.batchApprovePersonnel(ids, 'finance', note).subscribe({
+      next: (res) => {
+        this.isBatchApproving = false;
+        const successes = res?.results?.filter(r => r.success)?.length || 0;
+        const failures = res?.results?.filter(r => !r.success)?.length || 0;
+
+        if (failures === 0) {
+          this.toast.showSuccess(`تایید مالی هر ${successes} پرونده انتخاب‌شده با موفقیت ثبت و به مدیر ارسال شد.`);
+        } else {
+          this.toast.showWarning(`تایید مالی ${successes} پرونده ثبت شد؛ ${failures} پرونده با خطا مواجه شد.`);
+        }
+
+        this.selectedPersonnelIds.clear();
+        this.closeBatchApprovalModal();
+        this.fetchData();
+      },
+      error: (err) => {
+        this.isBatchApproving = false;
+        this.toast.showError(err?.error?.error || 'خطا در پردازش تایید گروهی حسابداری');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  // ─── مودال جامع ویرایش و تکمیل مدارک مالی پرسنل (تسک‌های ۹.۲، ۹.۳، ۹.۴) ───
+  // فیلدهای قابل‌ویرایش حسابدار؛ ذخیره فقط تغییرات همین‌ها را نسبت به پروندهٔ سرور می‌فرستد (DEF-08)
+  private static readonly ACCOUNTANT_EDITABLE_FIELDS = [
+    'first_name', 'last_name', 'national_code', 'father_name', 'birth_date', 'id_number', 'phone_number',
+    'job_title', 'job_code', 'job_grade', 'contract_type', 'contract_hours', 'contract_base_salary',
+    'base_years_experience', 'daily_base_wage', 'daily_seniority_bonus', 'insurance_type', 'insurance_name',
+    'insurance_number', 'status_category', 'employment_type', 'housing_allowance', 'food_allowance',
+    'spouse_allowance', 'children_count', 'bank_name', 'account_number', 'sheba_number', 'card_number'
+  ];
+  private static readonly ACCOUNTANT_NUMERIC_FIELDS = new Set([
+    'contract_hours', 'contract_base_salary', 'base_years_experience', 'daily_base_wage', 'daily_seniority_bonus',
+    'housing_allowance', 'food_allowance', 'spouse_allowance', 'children_count'
+  ]);
+  private originalEditingPersonnel: PersonnelProfile | null = null;
+
+  // ─── ماشین‌حساب زنده با برآورد سروری همان موتور حقوق (DEF-05) ───
+  costEstimate: PersonnelCostEstimate | null = null;
+  isEstimatingCost = false;
+  private estimateTrigger$ = new Subject<void>();
+  private estimateSub = this.estimateTrigger$.pipe(
+    debounceTime(400),
+    switchMap(() => {
+      const p = this.editingPersonnel;
+      if (!p?.id) return of(null);
+      this.isEstimatingCost = true;
+      return this.personnelApi.getPersonnelCostEstimate(p.id, {
+        job_grade: p.job_grade,
+        daily_base_wage: p.daily_base_wage,
+        daily_seniority_bonus: p.daily_seniority_bonus,
+        base_years_experience: p.base_years_experience,
+        contract_hours: p.contract_hours,
+        contract_base_salary: p.contract_base_salary,
+        marital_status: p.marital_status,
+        children_count: p.children_count,
+        include_in_insurance: p.include_in_insurance
+      }).pipe(catchError(() => of(null)));
+    })
+  ).subscribe(res => {
+    this.costEstimate = res;
+    this.isEstimatingCost = false;
+    this.cdr.detectChanges();
+  });
+
   openEditPersonnelModal(p: PersonnelProfile): void {
     this.personnelModalTab = 'contract'; // باز شدن مستقیم روی تب احکام مزد و قرارداد
+    this.accountantNote = '';
+    this.originalEditingPersonnel = { ...p };
+    this.costEstimate = null;
     this.editingPersonnel = {
       ...p,
       contract_type: p.contract_type || 'daily',
       job_grade: p.job_grade || '19',
+      job_title: p.job_title || '',
+      job_code: p.job_code || '',
+      contract_hours: p.contract_hours || 220,
+      contract_base_salary: p.contract_base_salary || 0,
       base_years_experience: p.base_years_experience || 0,
       daily_base_wage: Number(p.daily_base_wage) || 6572696,
       daily_seniority_bonus: Number(p.daily_seniority_bonus) || 171867,
@@ -441,7 +685,8 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
       employment_type: p.employment_type || '2',
       housing_allowance: Number(p.housing_allowance) || Number(this.yearlySettings?.monthly_housing_allowance) || 30000000,
       food_allowance: Number(p.food_allowance) || Number(this.yearlySettings?.monthly_food_allowance) || 22000000,
-      spouse_allowance: Number(p.spouse_allowance) || Number(this.yearlySettings?.monthly_spouse_allowance) || 5000000,
+      // حق تأهل فقط برای متأهل (DEF-05)
+      spouse_allowance: Number(p.spouse_allowance) || (p.marital_status === 'married' ? (Number(this.yearlySettings?.monthly_spouse_allowance) || 5000000) : 0),
       children_count: p.children_count || 0
     };
 
@@ -454,6 +699,13 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
       this.shebaDigitsDisplay = '';
     }
 
+    if (this.editingPersonnel.job_title) {
+      const match = this.jobItems.find(j => j.title === this.editingPersonnel?.job_title?.trim());
+      this.availableJobCodes = match?.job_codes || [];
+    } else {
+      this.availableJobCodes = [];
+    }
+
     this.recalculatePersonnelRates();
     this.isPersonnelModalOpen = true;
     this.cdr.detectChanges();
@@ -462,6 +714,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   closePersonnelModal(): void {
     this.isPersonnelModalOpen = false;
     this.editingPersonnel = null;
+    this.accountantNote = '';
     this.cdr.detectChanges();
   }
 
@@ -478,7 +731,23 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     const baseDaily = daily + (years * seniority);
     this.editingPersonnel.base_daily_rate = baseDaily;
     this.editingPersonnel.hourly_rate = Math.round(baseDaily / 10);
+    this.estimateTrigger$.next();
     this.cdr.detectChanges();
+  }
+
+  /** نرخ ساعتی واقعی = حقوق قرارداد ÷ ساعت قرارداد؛ بی‌حقوق قرارداد تهی است و به «مبنا ÷ ۱۰» برنمی‌گردد (DEF-05) */
+  get realHourlyRate(): number | null {
+    return this.costEstimate?.real_hourly_rate ?? null;
+  }
+
+  /** برآورد ناخالص یک ماه کامل از موتور حقوق سرور */
+  get estimatedGrossSalary(): number | null {
+    return this.costEstimate ? this.costEstimate.gross_salary : null;
+  }
+
+  /** پایهٔ بیمه شامل همهٔ مزایای مشمول (از جمله حق تأهل) با سقف قانونی، از موتور حقوق سرور */
+  get estimatedInsuranceBase(): number | null {
+    return this.costEstimate ? this.costEstimate.total_insurable_salary_allowances : null;
   }
 
   onJobGradeChange(grade: string): void {
@@ -491,6 +760,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
           const years = Number(this.editingPersonnel.base_years_experience || 0);
           this.editingPersonnel.base_daily_rate = res.daily_base_wage + (years * res.daily_seniority_bonus);
           this.editingPersonnel.hourly_rate = res.hourly_rate;
+          this.estimateTrigger$.next();
           this.cdr.detectChanges();
         }
       },
@@ -539,20 +809,65 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     }
   }
 
+  private normalizeAccountantValue(field: string, value: any): string {
+    if (value === null || value === undefined || value === '') return '';
+    if (field === 'sheba_number') return cleanShebaInput(String(value));
+    if (AccountantPersonnelHubComponent.ACCOUNTANT_NUMERIC_FIELDS.has(field)) {
+      const n = Number(value);
+      return Number.isFinite(n) ? String(n) : String(value).trim();
+    }
+    return String(value).trim();
+  }
+
+  /**
+   * فقط فیلدهای حسابدار که با مقدار پروندهٔ سرور فرق دارند (DEF-08). پیش‌فرض‌هایی که حسابدار در فرم می‌بیند
+   * و تأیید می‌کند هم تغییر حساب می‌شوند؛ ولی attachment، حساب‌های تودرتو و فیلدهای فقط‌خواندنی هرگز فرستاده نمی‌شوند.
+   */
+  private buildAccountantChanges(): Record<string, any> {
+    const edited: any = this.editingPersonnel || {};
+    const original: any = this.originalEditingPersonnel || {};
+    const changes: Record<string, any> = {};
+    for (const field of AccountantPersonnelHubComponent.ACCOUNTANT_EDITABLE_FIELDS) {
+      if (!(field in edited)) continue;
+      if (this.normalizeAccountantValue(field, edited[field]) !== this.normalizeAccountantValue(field, original[field])) {
+        changes[field] = field === 'sheba_number' && edited[field] ? cleanShebaInput(String(edited[field])) : edited[field];
+      }
+    }
+    return changes;
+  }
+
   savePersonnelFinancialChanges(): void {
     if (!this.editingPersonnel?.id) return;
+    const changes = this.buildAccountantChanges();
+    if (!Object.keys(changes).length) {
+      this.toast.showInfo('تغییری نسبت به پروندهٔ فعلی برای ذخیره وجود ندارد.');
+      return;
+    }
     this.isSavingPersonnel = true;
 
-    this.personnelApi.updatePersonnelProfile(this.editingPersonnel.id, this.editingPersonnel).subscribe({
-      next: () => {
+    const payload: Record<string, any> = {
+      ...changes,
+      note: this.accountantNote.trim() || undefined
+    };
+
+    this.personnelApi.updatePersonnelProfile(this.editingPersonnel.id, payload).subscribe({
+      next: (res: any) => {
         this.isSavingPersonnel = false;
-        this.toast.showSuccess(`احکام مالی و مدارک «${this.editingPersonnel?.first_name} ${this.editingPersonnel?.last_name}» ذخیره شد.`);
+        if (res?._offlinePending) {
+          this.toast.showWarning(`تغییرات «${this.editingPersonnel?.first_name} ${this.editingPersonnel?.last_name}» در صف آفلاین ثبت شد و پس از اتصال ذخیره می‌شود.`);
+        } else {
+          this.toast.showSuccess(`احکام مالی و مدارک «${this.editingPersonnel?.first_name} ${this.editingPersonnel?.last_name}» ذخیره شد.`);
+        }
         this.closePersonnelModal();
         this.fetchData();
       },
       error: (err) => {
         this.isSavingPersonnel = false;
-        this.toast.showError(err?.error?.error || 'خطا در ذخیره احکام مالی پرسنل');
+        const e = err?.error;
+        const fieldMsg = e && typeof e === 'object' && !e.error && !e.detail
+          ? Object.entries(e).map(([k, v]) => `${this.getFieldLabel(k)}: ${Array.isArray(v) ? v[0] : v}`)[0]
+          : null;
+        this.toast.showError(e?.error || e?.detail || fieldMsg || 'خطا در ذخیره احکام مالی پرسنل');
       }
     });
   }
@@ -593,16 +908,37 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
       last_name: 'نام خانوادگی',
       national_code: 'کد ملی',
       mobile: 'شماره موبایل',
+      phone_number: 'شماره همراه',
       sheba_number: 'شماره شبا',
       bank_name: 'نام بانک',
       account_number: 'شماره حساب',
       contract_type: 'نوع قرارداد',
       job_title: 'عنوان شغلی',
+      job_code: 'کد ۶ رقمی شغل بیمه',
       insurance_number: 'شماره بیمه',
       daily_base_wage: 'مزد مبنای روزانه',
       job_grade: 'گروه شغلی'
     };
     return dict[field] || field;
+  }
+
+  copyField(value: string | undefined | null, key: string, label: string = 'مقدار'): void {
+    if (!value) return;
+    this.copiedFieldKey = key;
+    this.toast.showSuccess(`${label} در حافظه کپی شد: ${value}`);
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(value).catch(() => {});
+    }
+    setTimeout(() => {
+      if (this.copiedFieldKey === key) {
+        this.copiedFieldKey = null;
+        this.cdr.markForCheck();
+      }
+    }, 2000);
+  }
+
+  isFieldCopied(key: string): boolean {
+    return this.copiedFieldKey === key;
   }
 
   copyToClipboard(text: string, id: number): void {

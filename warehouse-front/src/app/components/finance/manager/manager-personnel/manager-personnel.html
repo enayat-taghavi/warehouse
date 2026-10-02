@@ -266,6 +266,7 @@
               <th class="p-3">مزد روزانه</th>
               <th class="p-3">شماره شبا</th>
               <th class="p-3">وضعیت استخدام</th>
+              <th class="p-3 text-center">عملیات</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -274,11 +275,34 @@
               <td class="p-3 font-mono font-bold">{{ p.national_code }}</td>
               <td class="p-3">{{ p.job_title || '—' }}</td>
               <td class="p-3 font-mono">{{ p.daily_base_wage ? (p.daily_base_wage | number) + ' ریال' : '—' }}</td>
-              <td class="p-3 font-mono text-[11px] text-slate-500">{{ p.sheba_number ? ('IR' + p.sheba_number) : '—' }}</td>
+              <td class="p-3 font-mono text-[11px] text-slate-500" dir="ltr">{{ p.sheba_number || '—' }}</td>
               <td class="p-3">
-                <span class="px-2 py-0.5 rounded-md text-[11px] font-black bg-emerald-100 text-emerald-800">
+                <span *ngIf="p.is_active !== false; else inactiveBadge" class="px-2 py-0.5 rounded-md text-[11px] font-black bg-emerald-100 text-emerald-800">
                   {{ p.approval_status === 'approved' ? 'فعال و مصوب' : p.approval_status }}
                 </span>
+                <ng-template #inactiveBadge>
+                  <span class="px-2 py-0.5 rounded-md text-[11px] font-black bg-slate-100 text-slate-700">
+                    پایان همکاری{{ p.end_date ? ' (' + p.end_date + ')' : '' }}
+                  </span>
+                </ng-template>
+              </td>
+              <td class="p-3 text-center whitespace-nowrap">
+                <button
+                  *ngIf="canEndCollaboration && p.approval_status === 'approved' && p.is_active !== false"
+                  type="button"
+                  (click)="openEndCollaborationModal(p)"
+                  title="ثبت تاریخ پایان کار و غیرفعال‌سازی پرونده دارای سابقه"
+                  class="min-h-[32px] px-2.5 py-1 text-slate-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg text-xs font-bold transition-all cursor-pointer">
+                  ⏹ قطع همکاری
+                </button>
+                <button
+                  *ngIf="canDeletePersonnel"
+                  type="button"
+                  (click)="openDeleteModal(p)"
+                  title="حذف پرونده بدون سابقه (با استعلام اثرات حذف)"
+                  class="px-2.5 py-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer">
+                  🗑️ حذف
+                </button>
               </td>
             </tr>
           </tbody>
@@ -287,21 +311,81 @@
     </div>
   </div>
 
-  <!-- ── مودال تصویب و یادداشت مدیر ── -->
+  <!-- ── مودال تصویب و یادداشت مدیر (تسک ۱۰.۱ و ۱۰.۲) ── -->
   <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+    <div class="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
-        <h3 class="text-sm font-black text-emerald-950">{{ approvalTarget?.title }}</h3>
+        <h3 class="text-sm font-black text-emerald-950 flex items-center gap-1.5">
+          <span>👑</span> {{ approvalTarget?.title }}
+        </h3>
         <button (click)="closeApproveModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
       </div>
-      <div class="p-4 space-y-3">
-        <label class="text-xs font-bold text-slate-600 block">یادداشت یا شروط تصویب مدیر (اختیاری):</label>
-        <textarea
-          [(ngModel)]="approvalNote"
-          rows="3"
-          placeholder="شروط ابلاغ، دستورات خاص یا یادداشت مدیریتی..."
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
+
+      <div class="p-4 space-y-3.5 max-h-[80vh] overflow-y-auto">
+        <!-- ویجت تحلیل بار مالی پرسنل (تسک ۱۰.۱) -->
+        <div *ngIf="approvalTarget?.type === 'new' && approvalTarget?.item" class="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/90 space-y-2.5" aria-live="polite" [attr.aria-busy]="isLoadingCostAnalysis">
+          <div class="flex flex-wrap items-center justify-between gap-1.5">
+            <span class="text-xs font-black text-slate-800 flex items-center gap-1.5">
+              <span>📊</span> تحلیل بار مالی و تعهدات کارفرما
+            </span>
+            <span
+              *ngIf="getCostDeviationPercentage(approvalTarget?.item) !== null"
+              class="text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-2xs"
+              [ngClass]="getCostDeviationPercentage(approvalTarget?.item)! <= 0
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : (getCostDeviationPercentage(approvalTarget?.item)! <= 15
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-rose-50 text-rose-700 border-rose-200')">
+              {{ getCostDeviationPercentage(approvalTarget?.item)! <= 0
+                ? 'مقرون‌به‌صرفه (کمتر از میانگین سازمان)'
+                : (getCostDeviationPercentage(approvalTarget?.item) + '٪ بالاتر از میانگین سازمان') }}
+            </span>
+          </div>
+
+          <!-- کارت‌های ریز محاسبات مالی -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+            <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-2xs">
+              <div class="text-slate-500 text-[10px]">ناخالص برآوردی پرسنل</div>
+              <div class="font-mono font-black text-slate-800 mt-0.5">
+                {{ isLoadingCostAnalysis ? 'در حال محاسبه…' : (getPersonnelGrossMonthly(approvalTarget?.item) !== null ? (getPersonnelGrossMonthly(approvalTarget?.item) | number) : '—') }}
+                <span class="text-[9px] text-slate-400 font-normal">ریال</span>
+              </div>
+            </div>
+            <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-2xs">
+              <div class="text-slate-500 text-[10px]">سهم بیمه کارفرما و بیکاری</div>
+              <div class="font-mono font-black text-amber-700 mt-0.5">
+                {{ isLoadingCostAnalysis ? 'در حال محاسبه…' : (getEmployerInsuranceShare(approvalTarget?.item).cost !== null ? (getEmployerInsuranceShare(approvalTarget?.item).cost | number) : '—') }}
+                <span class="text-[9px] text-slate-400 font-normal">ریال</span>
+              </div>
+            </div>
+            <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-2xs">
+              <div class="text-slate-500 text-[10px]">کل هزینه ماهانه کارفرما</div>
+              <div class="font-mono font-black text-indigo-700 mt-0.5">
+                {{ isLoadingCostAnalysis ? 'در حال محاسبه…' : (getTotalEmployerMonthlyCost(approvalTarget?.item) !== null ? (getTotalEmployerMonthlyCost(approvalTarget?.item) | number) : '—') }}
+                <span class="text-[9px] text-slate-400 font-normal">ریال</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- سطر هزینه کل سالانه -->
+          <div class="flex items-center justify-between text-[11px] bg-white px-3 py-2 rounded-xl border border-slate-200/80 shadow-2xs">
+            <span class="text-slate-600 font-bold">برآورد بار مالی سالانه (۱۲ ماه):</span>
+            <span class="font-mono font-black text-slate-900">
+              {{ getTotalEmployerYearlyCost(approvalTarget?.item) !== null ? (getTotalEmployerYearlyCost(approvalTarget?.item) | number) + ' ریال' : '—' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-600 block">یادداشت یا شروط تصویب مدیر (اختیاری):</label>
+          <textarea
+            [(ngModel)]="approvalNote"
+            rows="3"
+            placeholder="شروط ابلاغ، دستورات خاص یا یادداشت مدیریتی..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
+        </div>
       </div>
+
       <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
         <button
           (click)="closeApproveModal()"
@@ -318,21 +402,44 @@
     </div>
   </div>
 
-  <!-- ── مودال رد پرونده ── -->
+  <!-- ── مودال عودت یا رد پرونده توسط مدیر (تسک ۱۰.۲) ── -->
   <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
     <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
-        <h3 class="text-sm font-black text-rose-950">عدم تصویب: {{ rejectTarget?.title }}</h3>
+        <h3 class="text-sm font-black text-rose-950 flex items-center gap-1.5">
+          <span>⚠️</span> تصمیم‌گیری عدم تصویب: {{ rejectTarget?.title }}
+        </h3>
         <button (click)="closeRejectModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
       </div>
+
       <div class="p-4 space-y-3">
-        <label class="text-xs font-bold text-slate-600 block">دلیل عدم تصویب (الزامی):</label>
-        <textarea
-          [(ngModel)]="rejectReason"
-          rows="3"
-          placeholder="علت رد استخدام یا عدم انطباق با بودجه..."
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500"></textarea>
+        <!-- رادیوباتن انتخاب مقصد عودت به حسابدار در برابر رد قطعی -->
+        <div *ngIf="rejectTarget?.type === 'personnel'" class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-600 block">اقدام مورد نظر مدیر ارشد:</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
+              [ngClass]="rejectActionType === 'return_to_accountant' ? 'bg-amber-50 border-amber-300 text-amber-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'">
+              <input type="radio" [(ngModel)]="rejectActionType" value="return_to_accountant" class="text-amber-600" />
+              <span>🔄 عودت به حسابدار</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
+              [ngClass]="rejectActionType === 'reject_final' ? 'bg-rose-50 border-rose-300 text-rose-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'">
+              <input type="radio" [(ngModel)]="rejectActionType" value="reject_final" class="text-rose-600" />
+              <span>⛔ رد قطعی پرونده</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-600 block">دلیل مستند (الزامی):</label>
+          <textarea
+            [(ngModel)]="rejectReason"
+            rows="3"
+            placeholder="علت عودت جهت اصلاح احکام و مدارک مالی، یا دلیل رد قطعی..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500"></textarea>
+        </div>
       </div>
+
       <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
         <button
           (click)="closeRejectModal()"
@@ -341,9 +448,10 @@
         </button>
         <button
           (click)="submitReject()"
-          [disabled]="isRejecting"
-          class="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-xs cursor-pointer">
-          {{ isRejecting ? 'در حال ثبت...' : 'ثبت رد' }}
+          [disabled]="isRejecting || !rejectReason.trim()"
+          class="px-4 py-1.5 rounded-xl text-white text-xs font-black shadow-xs cursor-pointer transition-all"
+          [ngClass]="rejectActionType === 'return_to_accountant' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-rose-600 hover:bg-rose-700'">
+          {{ isRejecting ? 'در حال ثبت...' : (rejectActionType === 'return_to_accountant' ? '🔄 ثبت عودت به حسابدار' : '⛔ ثبت رد قطعی') }}
         </button>
       </div>
     </div>
@@ -386,6 +494,120 @@
           (click)="closeDiffModal()"
           class="px-4 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold cursor-pointer">
           بستن پنجره
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── مودال قطع همکاری پرسنل دارای سابقه (DEF-18) ── -->
+  <div *ngIf="isEndCollaborationModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4"
+       role="dialog" aria-modal="true" aria-labelledby="end-collab-title">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+      <div class="p-4 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
+        <h3 id="end-collab-title" class="text-sm font-black text-amber-950">
+          قطع همکاری: {{ endCollaborationTarget?.first_name }} {{ endCollaborationTarget?.last_name }}
+        </h3>
+        <button type="button" (click)="closeEndCollaborationModal()" class="min-w-[32px] min-h-[32px] text-slate-400 hover:text-slate-600 cursor-pointer" aria-label="بستن">✕</button>
+      </div>
+      <div class="p-4 space-y-3">
+        <p class="text-[11px] text-slate-600 leading-relaxed">
+          پرونده و همهٔ سوابق کارکرد و حقوق حفظ می‌شود؛ فقط تاریخ پایان کار ثبت و پرونده غیرفعال می‌شود.
+        </p>
+        <div class="space-y-1.5">
+          <label for="end-collab-date" class="text-xs font-bold text-slate-600 block">تاریخ پایان همکاری (شمسی) <span class="text-rose-600">*</span></label>
+          <input id="end-collab-date" type="text" inputmode="numeric" dir="ltr" [(ngModel)]="endCollaborationDate" placeholder="1405/07/01"
+                 class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-mono focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500" />
+        </div>
+        <div class="space-y-1.5">
+          <label for="end-collab-reason" class="text-xs font-bold text-slate-600 block">دلیل قطع همکاری <span class="text-rose-600">*</span></label>
+          <textarea id="end-collab-reason" [(ngModel)]="endCollaborationReason" rows="3" placeholder="پایان قرارداد، استعفا، ..."
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"></textarea>
+        </div>
+      </div>
+      <div class="p-4 border-t border-slate-100 flex items-center justify-end gap-2">
+        <button type="button" (click)="closeEndCollaborationModal()" class="min-h-[40px] px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">انصراف</button>
+        <button type="button" (click)="submitEndCollaboration()" [disabled]="isEndingCollaboration"
+                class="min-h-[40px] px-4 py-2 text-xs font-black text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-60 rounded-xl cursor-pointer">
+          {{ isEndingCollaboration ? 'در حال ثبت…' : 'ثبت قطع همکاری' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── حذف پرسنل بدون سابقه با مودال مشترک smart-delete-modal و قرارداد delete_impact (تسک ۱۰.۳، DEF-27) ── -->
+  <app-smart-delete-modal
+    *ngIf="isDeleteModalOpen && !deleteImpactLoading && deleteImpactHistory?.can_delete"
+    [title]="'حذف پرونده پرسنل فاقد سابقه'"
+    [entityName]="(deleteTargetPersonnel?.first_name || '') + ' ' + (deleteTargetPersonnel?.last_name || '')"
+    [deleteImpactUrl]="deleteImpactUrl"
+    [isSubmitting]="isDeletingPersonnel"
+    (hardDelete)="confirmDeletePersonnel()"
+    (cancel)="closeDeleteModal()">
+  </app-smart-delete-modal>
+
+  <!-- ── استعلام سابقه و مسدودسازی حذف پروندهٔ دارای سابقه (تسک ۱۰.۳) ── -->
+  <div *ngIf="isDeleteModalOpen && (deleteImpactLoading || !deleteImpactHistory?.can_delete)" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+      <div class="p-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
+        <h3 class="text-sm font-black text-rose-950 flex items-center gap-1.5">
+          <span>🗑️</span> حذف پرونده پرسنل: {{ deleteTargetPersonnel?.first_name }} {{ deleteTargetPersonnel?.last_name }}
+        </h3>
+        <button (click)="closeDeleteModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
+      </div>
+
+      <div class="p-4 space-y-3">
+        <div *ngIf="deleteImpactLoading" class="py-6 text-center text-slate-500 text-xs">
+          <span class="animate-spin inline-block mr-1">🔄</span> در حال استعلام اثرات حذف و سوابق کارکرد پرسنل از پایگاه داده...
+        </div>
+
+        <div *ngIf="!deleteImpactLoading && deleteImpactHistory">
+          <!-- در صورت داشتن سابقه (حذف غیرمجاز) -->
+          <div *ngIf="!deleteImpactHistory.can_delete" class="p-3 bg-rose-50 rounded-xl border border-rose-200 text-xs space-y-2">
+            <div class="font-black text-rose-900 flex items-center gap-1.5">
+              <span>🚫</span> حذف فیزیکی این پرونده مجاز نمی‌باشد!
+            </div>
+            <p class="text-rose-800 leading-relaxed">
+              این پرسنل دارای سوابق در سامانه می‌باشد:
+              <strong>{{ deleteImpactHistory.reasons?.join('، ') }}</strong>.
+            </p>
+            <p class="text-slate-600 text-[11px]">
+              💡 راهکار قانونی: جهت جلوگیری از تخصیص مجدد، وضعیت پرسنل را به «قطع همکاری» تغییر دهید.
+            </p>
+            <button
+              *ngIf="deleteImpactHistory.has_history && canEndCollaboration && deleteTargetPersonnel?.approval_status === 'approved' && deleteTargetPersonnel?.is_active !== false"
+              type="button"
+              (click)="openEndCollaborationModal(deleteTargetPersonnel!); closeDeleteModal()"
+              class="min-h-[40px] px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black cursor-pointer">
+              ثبت قطع همکاری
+            </button>
+          </div>
+
+          <!-- در صورت عدم وجود هرگونه سابقه (حذف مجاز) -->
+          <div *ngIf="deleteImpactHistory.can_delete" class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs space-y-2">
+            <div class="font-black text-emerald-900 flex items-center gap-1.5">
+              <span>✓</span> حذف ایمن بلامانع است
+            </div>
+            <p class="text-emerald-800 leading-relaxed">
+              این پرونده فاقد هرگونه کارکرد ثبت‌شده، فیش حقوقی یا تراکنش مالی است و حذف فیزیکی آن بلامانع می‌باشد.
+            </p>
+            <p class="text-rose-700 font-bold text-[11px]">
+              ⚠️ با انجام این عملیات، رکورد پرسنل به همراه عکس کامل در لاگ ممیزی، برای همیشه از پایگاه داده حذف می‌گردد.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+        <button
+          (click)="closeDeleteModal()"
+          class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">
+          انصراف
+        </button>
+        <button
+          (click)="confirmDeletePersonnel()"
+          [disabled]="deleteImpactLoading || !deleteImpactHistory?.can_delete || isDeletingPersonnel"
+          class="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-black shadow-xs cursor-pointer">
+          {{ isDeletingPersonnel ? 'در حال حذف...' : 'حذف دائم پرونده' }}
         </button>
       </div>
     </div>

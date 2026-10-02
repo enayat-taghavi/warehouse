@@ -408,6 +408,82 @@ export const offlineDb: OfflineDatabase = new Proxy({} as OfflineDatabase, {
   }
 });
 
+// ─── پیش‌نویس محلی فرم پرسنل (DEF-24) ───
+// در یک پایگاه‌دادهٔ جدای کوچک نگه داشته می‌شود تا ارتقای نسخهٔ دیتابیس‌های صف و کش لازم نشود؛
+// ارتقای نسخه اتصال تب‌های باز قدیمی را می‌بندد و صف آفلاین آن‌ها را در خطر می‌اندازد.
+// این داده کاربر است: فقط با ذخیرهٔ موفق روی سرور یا انتخاب صریح کاربر پاک می‌شود.
+export interface PersonnelLocalDraft {
+  key: string;
+  userId: number | null;
+  sectionId: number;
+  /** شناسهٔ سروری پرونده برای پیش‌نویس ویرایش؛ تهی برای پرسنل جدید */
+  personnelId?: number | null;
+  savedAt: string;
+  form: Record<string, unknown>;
+  bankAccounts: Array<Record<string, unknown>>;
+}
+
+class PersonnelDraftDatabase extends Dexie {
+  drafts!: Table<PersonnelLocalDraft, string>;
+
+  constructor() {
+    super('FinancePersonnelDraftsDB');
+    this.version(1).stores({ drafts: 'key, userId, sectionId, savedAt' });
+  }
+}
+
+let personnelDraftDb: PersonnelDraftDatabase | null = null;
+
+function getPersonnelDraftDb(): PersonnelDraftDatabase | null {
+  if (typeof indexedDB === 'undefined') return null;
+  if (!personnelDraftDb) personnelDraftDb = new PersonnelDraftDatabase();
+  return personnelDraftDb;
+}
+
+/**
+ * کلید یکتای هر پیش‌نویس: ویرایش هر پرونده اسلات خودش را دارد و هر فرم پرسنل جدید اسلات تازه‌ای می‌گیرد؛
+ * پس ذخیرهٔ یک فرم پیش‌نویس فرم دیگری را بازنویسی یا پاک نمی‌کند.
+ */
+export function personnelLocalDraftKey(userId: number | null | undefined, sectionId: number, draftId: string): string {
+  return `${userId ?? 'anon'}_${sectionId}_${draftId}`;
+}
+
+export function newPersonnelLocalDraftId(): string {
+  const rand = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `new-${rand}`;
+}
+
+/** همهٔ پیش‌نویس‌های محلی یک کاربر در یک بخش، تازه‌ترین اول */
+export async function listPersonnelLocalDrafts(userId: number | null | undefined, sectionId: number): Promise<PersonnelLocalDraft[]> {
+  const db = getPersonnelDraftDb();
+  if (!db) return [];
+  const rows = await db.drafts.where('sectionId').equals(sectionId).toArray();
+  return rows
+    .filter(d => (d.userId ?? null) === (userId ?? null))
+    .sort((a, b) => (b.savedAt || '').localeCompare(a.savedAt || ''));
+}
+
+export async function savePersonnelLocalDraft(draft: PersonnelLocalDraft): Promise<boolean> {
+  const db = getPersonnelDraftDb();
+  if (!db) return false;
+  await db.drafts.put(draft);
+  return true;
+}
+
+export async function getPersonnelLocalDraft(key: string): Promise<PersonnelLocalDraft | null> {
+  const db = getPersonnelDraftDb();
+  if (!db) return null;
+  return (await db.drafts.get(key)) ?? null;
+}
+
+export async function deletePersonnelLocalDraft(key: string): Promise<void> {
+  const db = getPersonnelDraftDb();
+  if (!db) return;
+  await db.drafts.delete(key);
+}
+
 /**
  * پاکسازی کش‌های مشتق‌شده از سرور در تمامی دیتابیس‌های تفکیک‌شده
  */
@@ -468,6 +544,8 @@ export async function exportLocalDatabaseSnapshot(): Promise<{
   exportedAtUnix: number;
   warehouse: { [tableName: string]: any[] };
   finance: { [tableName: string]: any[] };
+  /** پیش‌نویس‌های محلی فرم پرسنل (پایگاه‌دادهٔ جدای FinancePersonnelDraftsDB) */
+  personnelDrafts: { [tableName: string]: any[] };
   metrics: {
     totalRecords: number;
     warehouseRecords: number;
@@ -487,9 +565,11 @@ export async function exportLocalDatabaseSnapshot(): Promise<{
     return result;
   };
 
-  const [whData, finData] = await Promise.all([
+  const draftDb = getPersonnelDraftDb();
+  const [whData, finData, draftData] = await Promise.all([
     exportTable(warehouseOfflineDb),
-    exportTable(financeOfflineDb)
+    exportTable(financeOfflineDb),
+    draftDb ? exportTable(draftDb) : Promise.resolve({} as { [tableName: string]: any[] })
   ]);
 
   const countRecords = (data: { [k: string]: any[] }) =>
@@ -497,6 +577,7 @@ export async function exportLocalDatabaseSnapshot(): Promise<{
 
   const whCount = countRecords(whData);
   const finCount = countRecords(finData);
+  const draftCount = countRecords(draftData);
   const pendingSync = (whData['syncQueue']?.length || 0) + (finData['syncQueue']?.length || 0);
 
   const now = new Date();
@@ -520,8 +601,9 @@ export async function exportLocalDatabaseSnapshot(): Promise<{
     exportedAtUnix: Date.now(),
     warehouse: whData,
     finance: finData,
+    personnelDrafts: draftData,
     metrics: {
-      totalRecords: whCount + finCount,
+      totalRecords: whCount + finCount + draftCount,
       warehouseRecords: whCount,
       financeRecords: finCount,
       pendingSyncCount: pendingSync,

@@ -25,7 +25,10 @@ import {
   PettyCashAccount,
   PettyCashTransaction,
   PettyCashBalanceSummary,
-  WorkflowAuditLog
+  WorkflowAuditLog,
+  PersonnelBankAccount,
+  PersonnelDocument,
+  PersonnelCostEstimate
 } from '../models/personnel.model';
 
 @Injectable({ providedIn: 'root' })
@@ -51,8 +54,43 @@ export class PersonnelApiService {
     return this.api.patch<any>(`${this.baseUrl}/profiles/${id}/`, data);
   }
 
-  getJobTitles(): Observable<{ job_titles: string[] }> {
-    return this.api.get<{ job_titles: string[] }>(`${this.baseUrl}/profiles/job-titles/`);
+  submitPersonnelProfile(id: number, note?: string): Observable<any> {
+    return this.api.post<any>(`${this.baseUrl}/profiles/${id}/submit/`, note ? { note } : {});
+  }
+
+  getPersonnelBankAccounts(id: number): Observable<PersonnelBankAccount[]> {
+    return this.api.get<PersonnelBankAccount[]>(`${this.baseUrl}/profiles/${id}/bank-accounts/`);
+  }
+
+  addPersonnelBankAccount(id: number, data: Partial<PersonnelBankAccount>): Observable<PersonnelBankAccount> {
+    return this.api.post<PersonnelBankAccount>(`${this.baseUrl}/profiles/${id}/bank-accounts/`, data);
+  }
+
+  updatePersonnelBankAccount(id: number, data: Partial<PersonnelBankAccount>): Observable<PersonnelBankAccount> {
+    return this.api.put<PersonnelBankAccount>(`${this.baseUrl}/profiles/${id}/bank-accounts/`, data);
+  }
+
+  deletePersonnelBankAccount(id: number, accountId: number): Observable<any> {
+    return this.api.delete<any>(`${this.baseUrl}/profiles/${id}/bank-accounts`, { params: { id: accountId } });
+  }
+
+  getPersonnelDocuments(id: number): Observable<PersonnelDocument[]> {
+    return this.api.get<PersonnelDocument[]>(`${this.baseUrl}/profiles/${id}/documents/`);
+  }
+
+  uploadPersonnelDocument(id: number, file: File, docType: string = 'other'): Observable<PersonnelDocument> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('doc_type', docType);
+    return this.api.upload<PersonnelDocument>(`${this.baseUrl}/profiles/${id}/documents/`, formData);
+  }
+
+  deletePersonnelDocument(id: number, docId: number): Observable<any> {
+    return this.api.delete<any>(`${this.baseUrl}/profiles/${id}/documents`, { params: { doc_id: docId } });
+  }
+
+  getJobTitles(params?: { search?: string; q?: string }): Observable<{ job_titles: string[]; items?: { title: string; job_codes: string[] }[] }> {
+    return this.api.get<{ job_titles: string[]; items?: { title: string; job_codes: string[] }[] }>(`${this.baseUrl}/profiles/job-titles/`, params as Record<string, unknown>);
   }
 
   lookupPersonnelByNationalCode(nationalCode: string): Observable<{ found: boolean; personnel?: any }> {
@@ -63,8 +101,9 @@ export class PersonnelApiService {
     return this.api.post<any>(`${this.baseUrl}/profiles/${id}/assign-section/`, data);
   }
 
+  /** حذف، بازگشایی، قطع همکاری و تأیید گروهی در صف آفلاین نمی‌روند: پاسخ خوش‌بینانهٔ ۲۰۰ موفقیت کاذب نشان می‌داد */
   deletePersonnelProfile(id: number): Observable<void> {
-    return this.api.delete<void>(`${this.baseUrl}/profiles/${id}`);
+    return this.api.delete<void>(`${this.baseUrl}/profiles/${id}`, { context: new HttpContext().set(SKIP_OFFLINE, true) });
   }
 
   importPersonnelExcel(formData: FormData): Observable<any> {
@@ -105,8 +144,57 @@ export class PersonnelApiService {
     return this.api.post<any>(`${this.baseUrl}/profiles/${id}/reject/`, { reason });
   }
 
-  requestPersonnelRevision(id: number, reason: string): Observable<any> {
-    return this.api.post<any>(`${this.baseUrl}/profiles/${id}/request-revision/`, { reason });
+  requestPersonnelRevision(id: number, reason: string, targetStatus?: 'revision_required' | 'pending_supervisor' | 'pending_accountant'): Observable<any> {
+    const payload: any = { reason };
+    if (targetStatus) payload.target_status = targetStatus;
+    return this.api.post<any>(`${this.baseUrl}/profiles/${id}/request-revision/`, payload);
+  }
+
+  getPersonnelDeleteImpact(id: number): Observable<{
+    impact: Array<{ model_name: string; count: number }>;
+    total_affected: number;
+    history: { has_history: boolean; can_delete: boolean; reasons: string[] };
+    can_delete: boolean;
+    has_history: boolean;
+    reasons: string[];
+  }> {
+    return this.api.get<any>(`${this.baseUrl}/profiles/${id}/delete_impact/`, undefined, { context: new HttpContext().set(SKIP_OFFLINE, true) });
+  }
+
+  batchApprovePersonnel(ids: number[], stage: 'supervisor' | 'finance' | 'manager', note?: string): Observable<{
+    results: Array<{ id: number; full_name?: string; success: boolean; error?: string }>;
+  }> {
+    return this.api.post<any>(`${this.baseUrl}/profiles/batch-approve/`, { ids, stage, note: note || '' }, { context: new HttpContext().set(SKIP_OFFLINE, true) });
+  }
+
+  /** بازگشایی پروندهٔ ردشده به پیش‌نویس (DEF-15) */
+  reopenPersonnelProfile(id: number, note?: string): Observable<{ message: string; data: PersonnelProfile }> {
+    return this.api.post<any>(`${this.baseUrl}/profiles/${id}/reopen/`, note ? { note } : {}, { context: new HttpContext().set(SKIP_OFFLINE, true) });
+  }
+
+  /** قطع همکاری پرسنل دارای سابقه: تاریخ پایان شمسی و دلیل الزامی (DEF-18) */
+  endPersonnelCollaboration(id: number, endDate: string, reason: string): Observable<{ message: string; data: PersonnelProfile }> {
+    return this.api.post<any>(`${this.baseUrl}/profiles/${id}/end-collaboration/`, { end_date: endDate, reason }, { context: new HttpContext().set(SKIP_OFFLINE, true) });
+  }
+
+  /** برآورد سروری هزینهٔ ماهانه با همان موتور حقوق؛ overrides مقادیر فرم ذخیره‌نشده است (DEF-05) */
+  getPersonnelCostEstimate(personnelId: number, overrides?: Record<string, unknown>, yearMonth?: string): Observable<PersonnelCostEstimate> {
+    return this.api.post<PersonnelCostEstimate>(
+      `${this.baseUrl}/profiles/cost-estimate/`,
+      { personnel_id: personnelId, overrides: overrides || {}, ...(yearMonth ? { year_month: yearMonth } : {}) },
+      { context: new HttpContext().set(SKIP_OFFLINE, true) }
+    );
+  }
+
+  /** میانگین هزینهٔ ماهانهٔ پرسنل مصوب و فعال شرکت فعال (DEF-04) */
+  getCompanyPersonnelCostSummary(yearMonth?: string): Observable<{
+    year_month: string;
+    personnel_count: number;
+    total_employer_monthly_cost: number;
+    average_employer_monthly_cost: number;
+    average_gross_salary: number;
+  }> {
+    return this.api.get<any>(`${this.baseUrl}/profiles/company-cost-summary/`, yearMonth ? { year_month: yearMonth } : undefined);
   }
 
   // --- ناوگان و رانندگان ---
@@ -968,7 +1056,10 @@ export class PersonnelApiService {
 
   // --- تاریخچه و لاگ‌های گردش کار (Workflow Audit Logs) ---
   getWorkflowAuditLogs(params?: { content_type?: string; object_id?: number }): Observable<WorkflowAuditLog[]> {
-    return this.api.get<WorkflowAuditLog[]>(`${this.baseUrl}/workflow-audit-logs`, params as Record<string, unknown>);
+    const query: Record<string, unknown> = {};
+    if (params?.content_type) query['content_type'] = params.content_type;
+    if (params?.object_id) query['object_id'] = params.object_id;
+    return this.api.get<WorkflowAuditLog[]>(`${this.baseUrl}/workflow-audit-logs/`, query);
   }
 
   // --- ورودی و خروجی اکسل ساختار سازمانی و طرف‌های حساب ---
@@ -1072,6 +1163,20 @@ export class PersonnelApiService {
 
   exportBankPaymentExcel(periodId: number, projectId: number): Observable<Blob> {
     return this.api.download(`${this.baseUrl}/monthly-payroll/export-bank-excel/`, { period_id: periodId, project_id: projectId });
+  }
+
+  /** مسیر ثبت‌شدهٔ بک‌اند personnel-change-requests است (DEF-16) */
+  cancelPersonnelChangeRequest(changeRequestId: number, reason?: string): Observable<any> {
+    return this.api.post<any>(`${this.baseUrl}/personnel-change-requests/${changeRequestId}/cancel/`, { reason });
+  }
+
+  /** فهرست پرسنل منقضی که از دیسکت این دوره و پروژه کنار گذاشته می‌شوند (DEF-20) */
+  getDisketteExpiredPersonnel(periodId: number, projectId: number): Observable<{
+    count: number;
+    year_month: string;
+    personnel: Array<{ personnel_id: number; full_name: string; national_code: string; valid_until_date: string | null }>;
+  }> {
+    return this.api.get<any>(`${this.baseUrl}/monthly-payroll/expired-personnel/`, { period_id: periodId, project_id: projectId });
   }
 }
 

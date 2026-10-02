@@ -38,6 +38,7 @@ import { hasRoutePermission } from '../../core/auth/auth.guard';
 import { ModuleRegistryService } from '../../core/modules/module-registry.service';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 import { IconName } from '../../shared/icons/icon-registry';
+import { NotificationCenterComponent } from '../../shared/components/notification-center/notification-center.component';
 
 @Component({
   selector: 'app-layout',
@@ -47,6 +48,7 @@ import { IconName } from '../../shared/icons/icon-registry';
     RouterOutlet,
     UserMenuComponent,
     OfflinePendingBadgeComponent,
+    NotificationCenterComponent,
     ChatDrawerComponent,
     AppRoleSwitcherComponent,
     CompanySwitcherComponent,
