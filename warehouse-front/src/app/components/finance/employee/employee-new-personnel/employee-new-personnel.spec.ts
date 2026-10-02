@@ -92,6 +92,14 @@ describe('EmployeeNewPersonnelHubComponent Vitest Suite (Phase 5)', () => {
       createPersonnelProfile: vi.fn().mockImplementation((data: any) => of({ id: 204, ...data })),
       updatePersonnelProfile: vi.fn().mockImplementation((id: number, data: any) => of({ id, ...data })),
       deletePersonnelProfile: vi.fn().mockReturnValue(of({ success: true })),
+      submitPersonnelProfile: vi.fn().mockImplementation((id: number) => of({ id, approval_status: 'pending_supervisor' })),
+      getPersonnelDocuments: vi.fn().mockReturnValue(of([])),
+      uploadPersonnelDocument: vi.fn().mockImplementation((id: number, file: any, doc_type: string) => of({ id: 1, file: 'url', doc_type })),
+      deletePersonnelDocument: vi.fn().mockReturnValue(of({ success: true })),
+      getPersonnelBankAccounts: vi.fn().mockReturnValue(of([])),
+      addPersonnelBankAccount: vi.fn().mockImplementation((id: number, data: any) => of({ id: 1, ...data })),
+      updatePersonnelBankAccount: vi.fn().mockImplementation((id: number, accId: number, data: any) => of({ id: accId, ...data })),
+      deletePersonnelBankAccount: vi.fn().mockReturnValue(of({ success: true })),
       exportPersonnelExcel: vi.fn().mockReturnValue(of(new Blob(['fake excel content']))),
       importPersonnelExcel: vi.fn().mockReturnValue(of({ message: 'درون‌ریزی پرسنل با موفقیت انجام شد', created_count: 5, updated_count: 2 })),
       downloadPersonnelTemplate: vi.fn().mockReturnValue(of(new Blob(['fake template content']))),
@@ -374,10 +382,13 @@ describe('EmployeeNewPersonnelHubComponent Vitest Suite (Phase 5)', () => {
           national_code: '0010376488',
           children_count: 2,
           section: 101,
-          approval_status: 'draft',
-          is_active: true
+          approval_status: 'draft'
         })
       );
+      // دستمزد از فرم کارمند فرستاده نمی‌شود (SoD مصوب ۶.۹، DEF-21) و وضعیت/فعال‌بودن فقط‌خواندنی سرور است
+      const createPayload = mockPersonnelApi.createPersonnelProfile.mock.calls[0][0];
+      expect(createPayload).not.toHaveProperty('daily_base_wage');
+      expect(createPayload).not.toHaveProperty('is_active');
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('پیش‌نویس ثبت شد'));
     });
 
@@ -793,24 +804,17 @@ describe('EmployeeNewPersonnelHubComponent Vitest Suite (Phase 5)', () => {
       expect(component.modalHeaderBadge.class).toContain('emerald');
     });
 
-    it('ویرایش مشخصات پرسنل تصویب‌شده و ثبت تغییرات باید updatePersonnelProfile را با وضعیت pending_supervisor فراخوانی کند', () => {
+    it('ویرایش پرسنل تصویب‌شده فقط فیلد تغییرکرده را برای درخواست تغییرات می‌فرستد (DEF-08 و DEF-16)', () => {
       component.selectedSectionId = 101;
       const approvedPerson = samplePersonnel.find(p => p.approval_status === 'approved')!;
+      mockPersonnelApi.updatePersonnelProfile.mockReturnValueOnce(of({ change_request_id: 77, message: 'ok', data: approvedPerson }));
       component.openEditModal(approvedPerson);
 
-      component.newPersonnel.job_title = 'مسئول فنی انبار';
-      component.newPersonnel.daily_base_wage = 9500000;
+      component.newPersonnel.phone_number = '09129990000';
 
       component.savePersonnel('pending_supervisor');
 
-      expect(mockPersonnelApi.updatePersonnelProfile).toHaveBeenCalledWith(
-        approvedPerson.id,
-        expect.objectContaining({
-          job_title: 'مسئول فنی انبار',
-          daily_base_wage: 9500000,
-          approval_status: 'pending_supervisor'
-        })
-      );
+      expect(mockPersonnelApi.updatePersonnelProfile).toHaveBeenCalledWith(approvedPerson.id, { phone_number: '09129990000' });
       expect(mockToast.show).toHaveBeenCalledWith(
         'success',
         expect.stringContaining('درخواست تغییرات پرونده «احمد کریمی» ثبت و جهت بررسی به کارتابل سرپرست و مدیر ارسال گردید.')
@@ -836,7 +840,9 @@ describe('EmployeeNewPersonnelHubComponent Vitest Suite (Phase 5)', () => {
       const draftPerson = samplePersonnel.find(p => p.approval_status === 'draft')!;
       component.submitDraftToSupervisor(draftPerson);
 
-      expect(mockPersonnelApi.updatePersonnelProfile).toHaveBeenCalledWith(draftPerson.id, { approval_status: 'pending_supervisor' });
+      // اکشن submit با گیت سرور؛ PATCH وضعیت را سرور نادیده می‌گیرد (DEF-02)
+      expect(mockPersonnelApi.submitPersonnelProfile).toHaveBeenCalledWith(draftPerson.id);
+      expect(mockPersonnelApi.updatePersonnelProfile).not.toHaveBeenCalled();
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('به کارتابل سرپرست بخش ارسال گردید'));
       expect(mockPersonnelApi.getPersonnelProfiles).toHaveBeenCalled();
     });
@@ -864,7 +870,7 @@ describe('EmployeeNewPersonnelHubComponent Vitest Suite (Phase 5)', () => {
   });
 
   describe('۱۷. آزمون‌های جامع ممیزی عمیق و گردش کار (Comprehensive Audit Suite)', () => {
-    it('باید پیام‌های وب‌سوکت personnel_updated بخش جاری را دریافت و لیست پرسنل را بازخوانی کند', () => {
+    it('باید پیام‌های وب‌سوکت personnel_updated بخش جاری را دریافت و سطر پرسنل را درجا به‌روزرسانی کند (تسک ۷.۴)', () => {
       component.selectedSectionId = 101;
       component.ngOnInit();
       const loadSpy = vi.spyOn(component, 'loadRecentPersonnel');
@@ -872,10 +878,16 @@ describe('EmployeeNewPersonnelHubComponent Vitest Suite (Phase 5)', () => {
       mockWs.notifications$.next({
         type: 'personnel_updated',
         section_id: 101,
-        profile_id: 201
+        personnel_id: 201,
+        approval_status: 'pending_supervisor',
+        has_pending_changes: true
       });
 
-      expect(loadSpy).toHaveBeenCalled();
+      // طبق الزام تسک ۷.۴: به‌روزرسانی درجا بدون بارگذاری دوباره کل فهرست انجام می‌شود
+      const updated = component.recentPersonnel.find(p => p.id === 201);
+      expect(updated?.approval_status).toBe('pending_supervisor');
+      expect(updated?.has_pending_changes).toBe(true);
+      expect(loadSpy).not.toHaveBeenCalled();
     });
 
     it('پیام‌های وب‌سوکت مربوط به بخش‌های دیگر نباید جدول را بازخوانی کنند', () => {
