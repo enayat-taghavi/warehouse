@@ -1,44 +1,44 @@
 ---
 name: verification-before-completion
-description: تأیید پیش از اعلام اتمام. پیش از گفتن «انجام شد»، «درست شد»، «پاس شد» یا «کار می‌کند»، پیش از commit یا انتشار، و پیش از گزارش کار یک ساب‌ایجنت این را به کار ببر.
+description: Verification before declaring completion. Use this before saying "done", "fixed", "passed" or "it works", before a commit or deploy, and before reporting a subagent's work. Invoke at most once per session; re-invoke only if it is no longer in context.
 ---
 
-# تأیید پیش از اعلام اتمام
+# Verification before declaring completion
 
-**قانون اصلی: هیچ ادعای اتمامی بدون شاهد تازه.** شاهد یعنی خروجی دستوری که در همین نوبت اجرا کرده‌ای؛ نه اجرای قبلی و نه حدس.
+**Core rule: no completion claim without fresh evidence.** Evidence means the output of a command you ran in this same turn; not a previous run and not a guess.
 
-## دروازه
-1. **شناسایی:** کدام دستور این ادعا را ثابت می‌کند؟
-2. **اجرا:** همان دستور را کامل و تازه اجرا کن.
-3. **خواندن:** خروجی کامل و کد خروج را بخوان و شکست‌ها را بشمار.
-4. **تطبیق:** آیا خروجی واقعاً ادعا را تأیید می‌کند؟
-5. **فقط آن‌وقت** ادعا کن. اگر تأیید نکرد، وضعیت واقعی را همراه با شاهدش بگو.
+## The gate
+1. **Identify:** which command proves this claim?
+2. **Run:** run that command, fully and fresh.
+3. **Read:** read the full output and the exit code, and count the failures.
+4. **Match:** does the output actually confirm the claim?
+5. **Only then** make the claim. If it did not confirm it, state the actual status along with its evidence.
 
-## ادعا ← شاهد لازم در این پروژه
-- **TypeScript درست است** ← `npx tsc --noEmit -p tsconfig.app.json` در `warehouse-front` با کد خروج 0. «ویرایش ساده بود» کافی نیست.
-- **بک‌اند سالم است** ← `./venv/Scripts/python.exe manage.py check` بدون ERROR. هشدار `communications.W001` (نبودِ Redis) در حالت DEBUG خاموش عادی است.
-- **مهاجرت امن است** ← اسکیل `safe-migration`. خواندن سرسری فایل مهاجرت کافی نیست.
-- **نگهبان‌ها پاس‌اند** ← `python scripts/e2e/guardian_all.py`، با گزارش شمار پاس و رد. اجرای یک نگهبان به‌جای همه کافی نیست.
-- **تست‌ها پاس‌اند** ← خروجی واقعی تست با صفر شکست. «باید پاس شود» کافی نیست.
-- **باگ درست شد** ← علامت اصلی را بازتولید کردی و حالا دیگر دیده نمی‌شود. «کد را عوض کردم» کافی نیست.
-- **منتشر شد** ← هر چهار شاهد با هم:
-  - بیلد با کد 0
-  - پیام موفقیت وصلهٔ ngsw
-  - پورت 8000 با PID تازه
-  - پاسخ 200 از `https://app.farsalish.ir/` و `https://app.farsalish.ir/api/public/config/`
-- **ساب‌ایجنت انجامش داد** ← `git diff` را خودت ببین. گزارش «موفق» ساب‌ایجنت کافی نیست.
-- **هوک یا تنظیم کار می‌کند** ← آزمون زنده: pipe-test و یک اجرای واقعی. معتبر بودن JSON کافی نیست.
+## Claim → required evidence in this project
+- **TypeScript is correct** → `npx tsc --noEmit -p tsconfig.app.json` in `warehouse-front` with exit code 0. "The edit was simple" is not enough.
+- **Backend is healthy** → `./venv/Scripts/python.exe manage.py check` with no ERROR. The `communications.W001` warning (missing Redis) is normal with DEBUG off.
+- **Migration is safe** → the `safe-migration` skill. Skimming the migration file is not enough.
+- **Guardians pass** → `python scripts/e2e/guardian_all.py`, reporting the pass and fail counts. Running one guardian instead of all is not enough.
+- **Tests pass** → actual test output with zero failures. "It should pass" is not enough.
+- **Bug is fixed** → you reproduced the original symptom and now it no longer appears. "I changed the code" is not enough.
+- **Deployed** → all four pieces of evidence together:
+  - Build with exit code 0
+  - ngsw patch success message
+  - Port 8000 with a new PID
+  - 200 response from `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/`
+- **A subagent did it** → look at `git diff` yourself. A subagent's "success" report is not enough.
+- **A hook or setting works** → a live test: a pipe-test and one real run. Valid JSON is not enough.
 
-## آنچه نمی‌توانم تأیید کنم؛ صریح بگو
-- **صفحه‌های پشت ورود** (داشبورد، انبارها، شمارش): با گذرواژه وارد نمی‌شوم. تا جای ممکن سمت سرور یا روی صفحهٔ ورود تأیید کن. بعد بگو چه چیزی «تأییدنشده» ماند و کاربر چطور آن را ببیند.
-- **تست‌های Django:** دیتابیس تست در دسترس نیست. اگر تستی اجرا نشد، بگو «اجرا نشد»، نه «پاس شد».
-- **نگهبان‌های فاز ۱ تا ۵:** روی دیتابیس عملیاتی همیشه رد می‌شوند، چون دادهٔ E2E ندارند. آن‌ها را جدا گزارش کن و پنهان نکن.
+## What I cannot verify; say so explicitly
+- **Pages behind login** (dashboard, warehouses, counting): I do not log in with a password. Verify server-side or on the login page as far as possible. Then say what remained "unverified" and how the user can see it.
+- **Django tests:** the test database is not available. If a test did not run, say "did not run", not "passed".
+- **Phase 1 to 5 guardians:** always fail on the production database, because they have no E2E data. Report them separately and do not hide them.
 
-## نشانه‌های خطر
-- «باید کار کند»، «احتمالاً» یا «به نظر درست است»، پیش از اجرای دستور.
-- ابراز رضایت («عالی!»، «انجام شد») پیش از دیدن خروجی.
-- اعتماد به گزارش ساب‌ایجنت یا به یک اجرای قبلی.
-- تأیید جزئی به‌جای کامل: یک فایل به‌جای همه، یا یک نگهبان به‌جای همه.
+## Red flags
+- "Should work", "probably" or "looks right", before running the command.
+- Expressing satisfaction ("Great!", "Done") before seeing the output.
+- Trusting a subagent's report or a previous run.
+- Partial verification instead of full: one file instead of all, or one guardian instead of all.
 
 ---
-برگرفته از اصول اسکیل verification-before-completion در [obra/superpowers](https://github.com/obra/superpowers) (مجوز MIT)؛ برای این پروژه از نو نوشته شده است.
+Based on the principles of the verification-before-completion skill in [obra/superpowers](https://github.com/obra/superpowers) (MIT license); rewritten from scratch for this project.

@@ -2,7 +2,8 @@
 نگهبان هوک‌های مشترک (Claude Code و Antigravity) برای این مخزن.
 
 پشتیبانی هم‌زمان از:
-  - Claude Code (.claude/settings.json): رویدادهای Bash، Write، Edit
+  - Claude Code (.claude/settings.json): رویدادهای Bash، Write، Edit؛ و روی هر PostToolUse
+    نگهبان اندازهٔ context (check_context)
   - Antigravity (.agents/hooks.json): رویدادهای run_command، write_to_file، replace_file_content
 
 قالب خروجی هر ابزار جداست:
@@ -37,6 +38,12 @@ OUTLINE_NONE = re.compile(r'(?:^|\s)(?:[\w-]+:)*outline-none(?=\s|$)')
 FOCUS_REPLACEMENT = re.compile(
     r'(?:^|\s)(?:[\w-]+:)*(?:focus|focus-visible|focus-within):(?:ring|outline(?!-none)|border|shadow|bg|underline|text|decoration)'
 )
+
+# نگهبان اندازهٔ context (فقط Claude Code): هشدار برای تحویل کار به جلسهٔ تازه
+CONTEXT_WARN_FIRST = 200_000
+CONTEXT_WARN_STEP = 100_000
+TRANSCRIPT_TAIL_BYTES = 2 * 1024 * 1024
+CONTEXT_STATE_DIR = ROOT / '.claude' / 'tmp' / 'context-watch'
 
 CONTRACT = 'claude'   # 'claude' یا 'antigravity'؛ در main تعیین می‌شود
 WARNINGS = []
@@ -176,6 +183,56 @@ def check_ui_template(file_path, text):
         )
 
 
+def last_context_tokens(transcript_path):
+    """اندازهٔ context آخرین پاسخ assistant جلسهٔ اصلی، از انتهای transcript."""
+    with open(transcript_path, 'rb') as f:
+        f.seek(0, 2)
+        f.seek(max(0, f.tell() - TRANSCRIPT_TAIL_BYTES))
+        tail = f.read()
+    for line in reversed(tail.splitlines()):
+        if b'"usage"' not in line or b'"assistant"' not in line:
+            continue
+        try:
+            entry = json.loads(line)
+        except ValueError:
+            continue  # خط اول ممکن است با seek بریده شده باشد
+        if entry.get('type') != 'assistant' or entry.get('isSidechain'):
+            continue
+        usage = (entry.get('message') or {}).get('usage') or {}
+        total = sum(usage.get(k) or 0 for k in (
+            'input_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens'))
+        if total:  # پیام‌های synthetic مصرف صفر دارند
+            return total
+    return 0
+
+
+def check_context(event):
+    """با گذشتن context از ۲۰۰ هزار و سپس هر ۱۰۰ هزار بیشتر، یک‌بار هشدار تحویل بده."""
+    if event.get('agent_id'):
+        return  # ساب‌ایجنت؛ تحویل فقط کار جلسهٔ اصلی است
+    transcript = event.get('transcript_path')
+    session = re.sub(r'[^\w-]', '', str(event.get('session_id') or ''))
+    if not transcript or not session:
+        return
+    ctx = last_context_tokens(transcript)
+    level = 0 if ctx < CONTEXT_WARN_FIRST else 1 + (ctx - CONTEXT_WARN_FIRST) // CONTEXT_WARN_STEP
+    state = CONTEXT_STATE_DIR / session
+    try:
+        warned = int(state.read_text())
+    except (OSError, ValueError):
+        warned = 0
+    if level == warned:
+        return
+    # افت سطح (پس از compact) فقط حالت را ریست می‌کند
+    state.parent.mkdir(parents=True, exist_ok=True)
+    state.write_text(str(level))
+    if level > warned:
+        warn(
+            f'[context-watch] Context ~{ctx // 1000}K tokens. Finish the current sub-task, '
+            'then hand off (CLAUDE.md -> Token economy). Subagents: ignore.'
+        )
+
+
 def main():
     global CONTRACT
     raw_input = sys.stdin.buffer.read().decode('utf-8').strip()
@@ -220,7 +277,11 @@ def main():
             text = tool_input.get('new_string') or tool_input.get('content') or ''
             check_status_checks(file_path, text)
             check_ui_template(file_path, text)
-            flush_warnings()
+        try:
+            check_context(event)
+        except Exception:
+            pass  # خطای نگهبان context نباید هشدارهای دیگر را از بین ببرد
+        flush_warnings()
     elif tool == 'Write':
         check_new_root_file(tool_input.get('file_path') or '')
     elif tool == 'Bash':

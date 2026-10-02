@@ -4,8 +4,11 @@
 """
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
+import uuid
 
 S = chr(92)
 ROOT = 'E:' + S + 'warehouse project'
@@ -47,9 +50,9 @@ ag('plain replace -> allow', {'toolCall': {'name': 'replace_file_content', 'args
 
 
 # 2) Claude Code: خروجی خالی یا دقیقاً یک JSON معتبر، بدون فیلد decision
-def claude(name, ev, tool, inp, expect):
+def claude(name, ev, tool, inp, expect, extra=None):
     global bad
-    code, out = run({'hook_event_name': ev, 'tool_name': tool, 'tool_input': inp})
+    code, out = run({'hook_event_name': ev, 'tool_name': tool, 'tool_input': inp, **(extra or {})})
     out = out.strip()
     if not out:
         got = 'pass'
@@ -96,6 +99,43 @@ claude('Post .ts status + img no alt = one JSON', 'PostToolUse', 'Edit', {'file_
 claude('Post .spec.ts ignored', 'PostToolUse', 'Write', {'file_path': FRONT + 'x.spec.ts', 'content': '<img src=a> status === 0'}, 'pass')
 claude('Post icon-registry.ts ignored', 'PostToolUse', 'Write', {'file_path': FRONT + 'shared' + S + 'icons' + S + 'icon-registry.ts', 'content': '<img src=a>'}, 'pass')
 claude('Post backend .py ignored', 'PostToolUse', 'Edit', {'file_path': ROOT + S + 'warehouse-backend' + S + 'x.py', 'new_string': 'status >= 500 <img src=a>'}, 'pass')
+
+
+# 3) نگهبان اندازهٔ context: transcript موقت و session یکتا
+TMP = tempfile.mkdtemp()
+SID = 'test-' + uuid.uuid4().hex
+STATE = ROOT + S + '.claude' + S + 'tmp' + S + 'context-watch' + S + SID
+
+
+def transcript(ctx, sidechain_ctx=None):
+    path = os.path.join(TMP, 't.jsonl')
+    rows = [{'type': 'user', 'message': {'content': 'x'}},
+            {'type': 'assistant', 'message': {'usage': {
+                'input_tokens': 1, 'cache_read_input_tokens': ctx - 1, 'cache_creation_input_tokens': 0}}}]
+    if sidechain_ctx:
+        rows.append({'type': 'assistant', 'isSidechain': True, 'message': {'usage': {'input_tokens': sidechain_ctx}}})
+    rows.append({'type': 'assistant', 'message': {'model': '<synthetic>', 'usage': {'input_tokens': 0}}})
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(json.dumps(r) for r in rows) + '\n')
+    return {'transcript_path': path, 'session_id': SID}
+
+
+READ = {'file_path': ROOT + S + 'CLAUDE.md'}
+claude('ctx 150K -> silent', 'PostToolUse', 'Read', READ, 'pass', transcript(150_000))
+claude('ctx 210K -> warn', 'PostToolUse', 'Read', READ, 'warn1', transcript(210_000))
+claude('ctx 210K again -> no repeat', 'PostToolUse', 'Read', READ, 'pass', transcript(210_000))
+claude('ctx 320K -> warn', 'PostToolUse', 'Read', READ, 'warn1', transcript(320_000))
+claude('ctx 50K (compact) -> silent reset', 'PostToolUse', 'Read', READ, 'pass', transcript(50_000))
+claude('ctx 210K after reset -> warn', 'PostToolUse', 'Read', READ, 'warn1', transcript(210_000))
+claude('sidechain 900K ignored', 'PostToolUse', 'Read', READ, 'pass', transcript(210_000, 900_000))
+claude('subagent (agent_id) silent', 'PostToolUse', 'Read', READ, 'pass', {**transcript(900_000), 'agent_id': 'a1'})
+claude('Edit UI warn + ctx warn = one JSON', 'PostToolUse', 'Edit', {'file_path': TS, 'new_string': 'status === 0'}, 'warn2', transcript(420_000))
+claude('missing transcript -> silent', 'PostToolUse', 'Read', READ, 'pass', {'transcript_path': os.path.join(TMP, 'none.jsonl'), 'session_id': SID})
+claude('Bash post 520K -> warn', 'PostToolUse', 'Bash', {'command': 'ls'}, 'warn1', transcript(520_000))
+claude('PreToolUse never checks ctx', 'PreToolUse', 'Bash', {'command': 'ls'}, 'pass', transcript(990_000))
+shutil.rmtree(TMP, ignore_errors=True)
+if os.path.exists(STATE):
+    os.remove(STATE)
 code, out = run_raw(b'not json')
 ok = out.strip() == '' and code == 0
 bad += not ok

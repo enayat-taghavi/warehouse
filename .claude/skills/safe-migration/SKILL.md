@@ -1,30 +1,30 @@
 ---
 name: safe-migration
-description: بررسی ایمنی مهاجرت‌های Django پیش از اجرای migrate روی دیتابیس عملیاتی همین ماشین. هر وقت می‌خواهی makemigrations یا migrate اجرا کنی، یا فایل تازه‌ای در */migrations/ ساخته یا بازبینی می‌شود، اول این اسکیل را اجرا کن.
+description: Safety check for Django migrations before running migrate on this machine's production database. Whenever you want to run makemigrations or migrate, or a new file in */migrations/ is created or reviewed, run this skill first. Invoke at most once per session; re-invoke only if it is no longer in context.
 ---
 
-# مهاجرت امن
+# Safe migration
 
-دیتابیس محلی (`warehouse_db` روی 127.0.0.1:5432) همان دیتابیس عملیاتی است. قانون سخت پروژه: **هیچ داده‌ای نباید از بین برود.**
+The local database (`warehouse_db` on 127.0.0.1:5432) is the production database. Hard project rule: **no data may be lost.**
 
-همهٔ دستورها در پوشهٔ `warehouse-backend` اجرا می‌شوند.
+All commands run in the `warehouse-backend` folder.
 
-## ۱. هم‌خوانی مدل‌ها و مهاجرت‌ها
+## 1. Models and migrations in sync
 ```bash
 PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py makemigrations --check --dry-run
 ```
-«No changes detected» یعنی مهاجرتی جا نمانده است.
+"No changes detected" means no migration has been left out.
 
-## ۲. مهاجرت‌های اعمال‌نشده
+## 2. Unapplied migrations
 ```bash
 PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py showmigrations --plan | grep -F "[ ]"
 ```
-خروجی خالی یعنی چیزی برای migrate نیست و کار همین‌جا تمام است.
+Empty output means there is nothing to migrate and the work ends here.
 
-**هشدار:** خروجی خالی گاهی دروغ است. جدول `django_migrations` از پیش از squash رکوردهای قدیمی دارد (مثلاً `accounts` از `0006` تا `0034`). مهاجرت تازه‌ای که نامش با یکی از آن‌ها یکی باشد «اعمال‌شده» فرض می‌شود و هرگز اجرا نمی‌شود.
+**Warning:** empty output sometimes lies. The `django_migrations` table has old records from before the squash (e.g. `accounts` from `0006` to `0034`). A new migration whose name matches one of them is assumed "applied" and never runs.
 
-## ۲-ب. برخورد نام مهاجرت تازه با `django_migrations`
-پیش از migrate، هر مهاجرت روی دیسک را با رکوردهای جدول بسنج. نشانهٔ قطعی برخورد این است که رکورد هم‌نام **پیش از وابستگی‌های هم‌اپ همان مهاجرت** ثبت شده باشد؛ مهاجرت واقعی هرگز زودتر از وابستگی‌اش اعمال نمی‌شود (وابستگی بین‌اپی به‌خاطر رکوردهای قدیمی fake سنجیده نمی‌شود):
+## 2-b. New migration name colliding with `django_migrations`
+Before migrate, check every migration on disk against the table's records. The definitive sign of a collision is that the same-named record was recorded **before that migration's same-app dependencies**; a real migration is never applied earlier than its dependency (cross-app dependencies are not checked because of the old fake records):
 ```bash
 PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py shell -c "
 from django.db import connection
@@ -39,37 +39,37 @@ for key, mig in sorted(loader.disk_migrations.items()):
         print('COLLISION', key, 'applied', applied[key].date(), 'before its dependency', max(deps, key=applied.get))
 "
 ```
-هر سطر `COLLISION` یعنی آن مهاجرت هرگز اجرا نشده است. نامش را یکتا کن (مثلاً `0006_<توضیح>`) و دوباره بند ۲ را اجرا کن.
+Each `COLLISION` line means that migration has never run. Make its name unique (e.g. `0006_<description>`) and run step 2 again.
 
-## ۳. بررسی عملیات مخرب
-هر مهاجرت اعمال‌نشده را بخوان و این عملیات را بجو:
-- `RemoveField` و `DeleteModel`
-- `AlterField`: تغییر نوع، کوتاه شدن `max_length`، یا `null=False` بدون `default`
-- `RenameField` و `RenameModel`
-- `RunSQL` و `RunPython`: نبود `reverse_code`، یا حذف و بازنویسی داده
-- `AlterUniqueTogether` و `AddConstraint`: ممکن است روی دادهٔ فعلی شکست بخورند
-- `SeparateDatabaseAndState`: بخش `database_operations` را جدا بررسی کن
+## 3. Check for destructive operations
+Read every unapplied migration and look for these operations:
+- `RemoveField` and `DeleteModel`
+- `AlterField`: type change, shortened `max_length`, or `null=False` without `default`
+- `RenameField` and `RenameModel`
+- `RunSQL` and `RunPython`: missing `reverse_code`, or deleting and rewriting data
+- `AlterUniqueTogether` and `AddConstraint`: may fail on existing data
+- `SeparateDatabaseAndState`: check the `database_operations` part separately
 
-SQL واقعی را هم ببین:
+Also look at the actual SQL:
 ```bash
 PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py sqlmigrate <app> <migration_name>
 ```
-به `DROP COLUMN`، `DROP TABLE`، `ALTER COLUMN ... TYPE`، `DELETE` و `TRUNCATE` دقت کن. برای بازبینی عمیق‌تر، ساب‌ایجنت `data-loss-reviewer` را به کار بگیر.
+Watch for `DROP COLUMN`, `DROP TABLE`, `ALTER COLUMN ... TYPE`, `DELETE` and `TRUNCATE`. For a deeper review, use the `data-loss-reviewer` subagent.
 
-## ۴. تصمیم
-- **بدون عملیات مخرب:** پشتیبان بگیر (بند ۵). بعد با یک سؤال کوتاه بله/خیر از کاربر اجازهٔ migrate روی دیتابیس عملیاتی بگیر.
-- **با عملیات مخرب:** اجرا نکن. به کاربر بگو دقیقاً کدام ستون، جدول یا داده از بین می‌رود. راه بی‌خطر (expand-contract) را پیشنهاد بده: اول ستون تازه و کپی داده، و حذف در یک مهاجرت بعدی.
+## 4. Decision
+- **No destructive operations:** take a backup (step 5). Then get the user's permission to migrate the production database with one short yes/no question.
+- **With destructive operations:** do not run it. Tell the user exactly which column, table or data will be lost. Propose the safe path (expand-contract): first the new column and a data copy, and the removal in a later migration.
 
-## ۵. پشتیبان پیش از migrate
-`run_auto_backup` را اجرا نکن، چون همهٔ پشتیبان‌ها جز ۷ نسخهٔ آخر را پاک می‌کند. به‌جایش فقط یک پشتیبان بساز:
+## 5. Backup before migrate
+Do not run `run_auto_backup`, because it deletes all backups except the last 7. Instead, create just one backup:
 ```bash
 PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-migrate'); print(m['filename'], m['size'])"
 ```
-فایل در `warehouse-backend/backups/db/` ساخته می‌شود.
+The file is created in `warehouse-backend/backups/db/`.
 
-## ۶. پس از migrate
+## 6. After migrate
 ```bash
 PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py check
 PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py showmigrations --plan | grep -F "[ ]"
 ```
-نتیجه را کوتاه گزارش کن.
+Report the result briefly.

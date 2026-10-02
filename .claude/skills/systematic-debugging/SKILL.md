@@ -1,61 +1,61 @@
 ---
 name: systematic-debugging
-description: اشکال‌یابی نظام‌مند. هر وقت با خطا، باگ، رفتار غیرمنتظره، شکست تست یا نگهبان، یا گزارش خرابی از کاربر روبه‌رو شدی، پیش از پیشنهاد یا اعمال هر اصلاحی این را به کار ببر.
+description: Systematic debugging. Whenever you encounter an error, bug, unexpected behavior, a test or guardian failure, or a breakage report from the user, use this before proposing or applying any fix. Invoke at most once per session; re-invoke only if it is no longer in context.
 ---
 
-# اشکال‌یابی نظام‌مند
+# Systematic debugging
 
-**قانون اصلی: بدون پیدا کردن علت ریشه‌ای، هیچ اصلاحی نکن.**
-- اصلاحِ نشانه به‌جای علت، شکست است.
-- این قانون حتی وقتی عجله است یا مشکل ساده به نظر می‌رسد هم برقرار است.
+**Core rule: make no fix without finding the root cause.**
+- Fixing the symptom instead of the cause is a failure.
+- This rule holds even when there is a rush or the problem seems simple.
 
-## گام صفر: خطا از کدام لایه است؟
-مسیر هر درخواست: مرورگر (Service Worker و صف آفلاین) ← Cloudflare Tunnel ← express روی پورت 4200 ← daphne روی پورت 8000 ← Postgres. همهٔ این‌ها روی همین ماشین، یعنی محیط عملیاتی، اجرا می‌شوند.
-- **520 تا 530، و 502 تا 504:** origin در دسترس نیست و باگ Django نیست. این‌ها را بررسی کن:
+## Step zero: which layer is the error from?
+Every request's path: browser (Service Worker and offline queue) → Cloudflare Tunnel → express on port 4200 → daphne on port 8000 → Postgres. All of these run on this same machine, i.e. the production environment.
+- **520 to 530, and 502 to 504:** the origin is unreachable and it is not a Django bug. Check these:
   - `netstat -ano | grep -E ":(8000|4200) .*LISTENING"`
   - `tasklist //FI "IMAGENAME eq cloudflared.exe"`
   - `curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/api/public/config/`
-- **500 از Django:** DEBUG خاموش است و صفحهٔ خطا جزئیاتی نشان نمی‌دهد. traceback در `warehouse-backend/logs/django-errors.log` ذخیره می‌شود؛ با ابزار Read بخوانش. اگر آن‌جا نبود، با «بازتولید امن» (پایین) به دست بیاور.
-- **4xx:** بدنهٔ پاسخ را کامل بخوان؛ علت معمولاً اعتبارسنجی، دسترسی یا محدودهٔ شرکت و انبار است.
-- **فقط در مرورگر یا در حالت آفلاین:** صف Dexie، Service Worker (`ngsw`) و منطق `isServerUnreachable()` را بررسی کن.
+- **500 from Django:** DEBUG is off and the error page shows no details. The traceback is saved in `warehouse-backend/logs/django-errors.log`; read it with the Read tool. If it is not there, obtain it via "Safe reproduction" (below).
+- **4xx:** read the full response body; the cause is usually validation, permissions, or company and warehouse scope.
+- **Only in the browser or in offline mode:** check the Dexie queue, the Service Worker (`ngsw`) and the `isServerUnreachable()` logic.
 
-## فاز ۱: بررسی علت
-1. پیام خطا و stack trace را **کامل** بخوان و مسیر فایل و شمارهٔ خط را یادداشت کن.
-2. خطا را به‌طور پایدار بازتولید کن. اگر پایدار نیست، شاهد جمع کن؛ حدس نزن.
-3. تغییرات اخیر را ببین (`git log`، `git diff`)، و **کدی را که واقعاً در حال اجراست**:
-   - زمان شروع پروسهٔ daphne را با زمان تغییر فایل‌ها مقایسه کن؛ کد روی دیسک با کد در حافظه یکی نیست.
-   - زمان بیلد `warehouse-front/dist/` را با تغییرات فرانت مقایسه کن. کلاینت هم ممکن است نسخهٔ کش‌شدهٔ Service Worker را اجرا کند.
-4. در سیستم چندلایه، در مرز هر لایه شاهد جمع کن تا معلوم شود دقیقاً کجا می‌شکند.
-5. دادهٔ نادرست را به عقب دنبال کن تا به منشأش برسی. اصلاح را همان‌جا بکن، نه جایی که خطا ظاهر شد.
+## Phase 1: Investigate the cause
+1. Read the error message and stack trace **in full** and note the file path and line number.
+2. Reproduce the error consistently. If it is not consistent, gather evidence; do not guess.
+3. Look at recent changes (`git log`, `git diff`), and at **the code that is actually running**:
+   - Compare the daphne process start time with the file modification times; the code on disk is not the same as the code in memory.
+   - Compare the build time of `warehouse-front/dist/` with the frontend changes. The client may also be running a cached Service Worker version.
+4. In a multi-layer system, gather evidence at each layer boundary to find exactly where it breaks.
+5. Trace the bad data backward to its origin. Fix it there, not where the error appeared.
 
-## فاز ۲: الگو
-- نمونهٔ مشابهِ سالمی در همین کد پیدا کن (سرویس یا view هم‌خانواده) و تفاوت‌ها را فهرست کن.
-- مرجع یا الگو را کامل بخوان، نه سرسری.
+## Phase 2: Pattern
+- Find a similar working example in this same codebase (a sibling service or view) and list the differences.
+- Read the reference or pattern in full, without skimming.
 
-## فاز ۳: فرضیه
-- یک فرضیهٔ مشخص بنویس: «X علت است، چون Y».
-- کوچک‌ترین آزمون ممکن را بکن و هر بار فقط یک متغیر را عوض کن.
-- اگر فرضیه رد شد، فرضیهٔ تازه بساز و اصلاح‌ها را روی هم انباشته نکن. اگر نمی‌دانی، صریح بگو.
+## Phase 3: Hypothesis
+- Write one specific hypothesis: "X is the cause, because Y".
+- Run the smallest possible test and change only one variable at a time.
+- If the hypothesis is rejected, form a new hypothesis and do not stack fixes on top of each other. If you do not know, say so explicitly.
 
-## فاز ۴: اصلاح
-1. اول آزمونی بساز که خطا را نشان دهد: تست واحد، نگهبان در `scripts/e2e/`، یا اسکریپت بازتولید.
-2. فقط **یک** اصلاح برای علت ریشه‌ای؛ نه چند تغییر هم‌زمان، نه «بهبود» جانبی.
-3. با اسکیل `verification-before-completion` تأیید کن که علامت اصلی رفع شده است.
-4. اگر سه اصلاح پشت‌سرهم شکست خورد، توقف کن. احتمالاً مشکل در معماری است؛ آن را با کاربر مطرح کن.
+## Phase 4: Fix
+1. First build a test that shows the error: a unit test, a guardian in `scripts/e2e/`, or a reproduction script.
+2. Only **one** fix for the root cause; no multiple simultaneous changes, no side "improvements".
+3. Confirm with the `verification-before-completion` skill that the original symptom is gone.
+4. If three fixes in a row fail, stop. The problem is probably in the architecture; raise it with the user.
 
-## بازتولید امن
-دیتابیس محلی همان دیتابیس عملیاتی است.
-- هر بازتولیدی که در دیتابیس می‌نویسد، باید داخل `transaction.atomic()` با `transaction.set_rollback(True)` اجرا شود (مثل نگهبان ۴۳). هیچ دادهٔ آزمایشی ماندگار نساز.
-- برای گرفتن traceback یک endpoint، آن را در `manage.py shell` با `rest_framework.test.APIClient` و `force_authenticate(user=...)` صدا بزن. خطاها در همان shell بالا می‌آیند. درخواست نوشتنی را داخل تراکنش rollback بفرست.
-- اصلاحی که مسیر حذف یا از دست رفتن داده باز کند، باید پیش از اعمال با کاربر مطرح شود.
-- متن فارسی را با ابزار Grep بجو و `.env` را نخوان.
+## Safe reproduction
+The local database is the production database.
+- Any reproduction that writes to the database must run inside `transaction.atomic()` with `transaction.set_rollback(True)` (like guardian 43). Do not create any persistent test data.
+- To get an endpoint's traceback, call it in `manage.py shell` with `rest_framework.test.APIClient` and `force_authenticate(user=...)`. Errors surface in that same shell. Send write requests inside a rollback transaction.
+- A fix that opens a path to data deletion or loss must be raised with the user before it is applied.
+- Search Persian text with the Grep tool, and do not read `.env`.
 
-## نشانه‌های خطر: توقف کن و به فاز ۱ برگرد
-- «فعلاً یک اصلاح سریع می‌کنم، بعد بررسی می‌کنم.»
-- «X را عوض کنم ببینم درست می‌شود یا نه.»
-- چند تغییر هم‌زمان، یا اصلاح بدون بازتولید خطا.
-- «احتمالاً از … است»، بدون هیچ شاهدی.
-- هر اصلاح، مشکل تازه‌ای در جای دیگر می‌سازد.
+## Red flags: stop and return to Phase 1
+- "I'll make a quick fix for now and investigate later."
+- "Let me change X and see if it gets fixed."
+- Several simultaneous changes, or a fix without reproducing the error.
+- "It's probably due to …", without any evidence.
+- Each fix creates a new problem somewhere else.
 
 ---
-برگرفته از اصول اسکیل systematic-debugging در [obra/superpowers](https://github.com/obra/superpowers) (مجوز MIT)؛ برای این پروژه از نو نوشته شده است.
+Based on the principles of the systematic-debugging skill in [obra/superpowers](https://github.com/obra/superpowers) (MIT license); rewritten from scratch for this project.

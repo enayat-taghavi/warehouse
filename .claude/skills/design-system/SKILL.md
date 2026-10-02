@@ -1,106 +1,106 @@
 ---
 name: design-system
-description: زبان طراحی و قواعد ظاهری فرانت انبار و حسابداری (Angular + Tailwind، فارسی و راست‌به‌چپ). هنگام ساختن یا تغییر هر قالب، استایل، کامپوننت یا صفحهٔ UI در warehouse-front این را به کار ببر تا ظاهر یکدست، دسترس‌پذیر و آفلاین‌محور بماند.
+description: Design language and visual rules for the warehouse and accounting frontend (Angular + Tailwind, Persian and right-to-left). Use this when building or changing any template, style, component or UI page in warehouse-front, so the look stays consistent, accessible and offline-first. Invoke at most once per session; re-invoke only if it is no longer in context.
 user-invocable: false
 ---
 
-# زبان طراحی فرانت
+# Frontend design language
 
-قاعدهٔ اول: **اول الگوی موجود را پیدا کن و همان را تکرار کن.** قالب‌ها را عامل‌های مختلف نوشته‌اند و یکدستی از هر سلیقهٔ تازه‌ای مهم‌تر است. بعد از هر تغییر ظاهری، ساب‌ایجنت `ui-reviewer` و اسکیل `verification-before-completion` را به کار ببر.
+First rule: **find the existing pattern first and repeat it.** Templates were written by different agents, and consistency matters more than any new stylistic preference. After every visual change, use the `ui-reviewer` subagent and the `verification-before-completion` skill.
 
-## پایه‌ها
-- Tailwind 3.4 (`tailwind.config.js`) و استایل‌های سراسری در `src/styles.css`.
+## Foundations
+- Tailwind 3.4 (`tailwind.config.js`) and global styles in `src/styles.css`.
 - `<html lang="fa" dir="rtl">`.
-- فونت Vazirmatn **محلی** است (`public/fonts/vazirmatn/`، کش‌شده در Service Worker). هیچ فونت یا CDN خارجی اضافه نکن.
+- The Vazirmatn font is **local** (`public/fonts/vazirmatn/`, cached in the Service Worker). Do not add any external font or CDN.
 
-## رنگ
-توکن‌های معنایی (کد تازه همین‌ها را به کار ببرد):
+## Color
+Semantic tokens (new code should use these):
 
-| کاربرد | کلاس | برابر با |
+| Use | Class | Equals |
 |---|---|---|
-| کارت و مودال | `bg-surface` | white |
-| پنل ملایم، سرستون | `bg-surface-muted` | slate-50 |
-| زمینهٔ صفحه | `bg-surface-canvas` | slate-100 |
-| متن اصلی | `text-fg` | slate-800 |
-| متن ثانویه | `text-fg-muted` | slate-600 |
-| راهنما، placeholder | `text-fg-subtle` | slate-400 |
-| حاشیه | `border-line` | slate-200 |
-| جداکنندهٔ کم‌رنگ | `border-line-subtle` | slate-100 |
+| Card and modal | `bg-surface` | white |
+| Soft panel, column header | `bg-surface-muted` | slate-50 |
+| Page background | `bg-surface-canvas` | slate-100 |
+| Main text | `text-fg` | slate-800 |
+| Secondary text | `text-fg-muted` | slate-600 |
+| Hint, placeholder | `text-fg-subtle` | slate-400 |
+| Border | `border-line` | slate-200 |
+| Faint divider | `border-line-subtle` | slate-100 |
 
-- مقدارها در `:root` فایل `styles.css` تعریف شده‌اند. کلاس‌های قدیمی (`bg-white`، `text-slate-800` و…) عیناً همین رنگ‌اند؛ برای «یکدست‌سازی» آن‌ها را عوض نکن.
-- **عمل اصلی:** `bg-indigo-600 hover:bg-indigo-700 text-white` (پالت `brand-*` همان indigo است).
-- **رنگ وضعیت** (مثل کلاس‌های `btn-icon-*`): emerald برای موفق، rose برای خطر و حذف، amber برای هشدار، blue برای اطلاع، slate برای خنثی.
-- رنگ ثابت (`#...`، `rgb()`) داخل `style` ممنوع است؛ هوک هشدار می‌دهد.
+- The values are defined in `:root` of `styles.css`. The old classes (`bg-white`, `text-slate-800`, etc.) are exactly these colors; do not change them for "standardization".
+- **Primary action:** `bg-indigo-600 hover:bg-indigo-700 text-white` (the `brand-*` palette is the same indigo).
+- **Status colors** (like the `btn-icon-*` classes): emerald for success, rose for danger and delete, amber for warning, blue for info, slate for neutral.
+- Hard-coded colors (`#...`, `rgb()`) inside `style` are forbidden; the hook warns.
 
-## تایپوگرافی و فاصله
-- متن اصلی `text-xs`، متن معمول `text-sm`، فرادادهٔ ریز `text-[11px]` یا `text-[10px]`.
-- **متن تازه کوچک‌تر از ۱۰ پیکسل ننویس** (`text-[9px]` و `text-[8px]` خوانا نیستند).
-- وزن: عنوان و برچسب `font-bold` یا `font-black`؛ متن توضیحی بدون وزن اضافه.
-- فاصله: `gap-1` تا `gap-3` رایج است؛ برای بخش‌های بزرگ‌تر `gap-4`.
-- ستون‌های عددی جدول خودکار `tabular-nums` دارند. برای عدد بیرون از جدول (KPI، شمارنده) کلاس `tabular-nums` بگذار.
+## Typography and spacing
+- Main text `text-xs`, regular text `text-sm`, tiny metadata `text-[11px]` or `text-[10px]`.
+- **Do not write new text smaller than 10px** (`text-[9px]` and `text-[8px]` are not legible).
+- Weight: titles and labels `font-bold` or `font-black`; descriptive text with no extra weight.
+- Spacing: `gap-1` to `gap-3` is common; `gap-4` for larger sections.
+- Numeric table columns get `tabular-nums` automatically. For numbers outside tables (KPI, counter), add the `tabular-nums` class.
 
-## الگوهای موجود (همین‌ها را تکرار کن)
-- **کارت:** `bg-surface rounded-2xl border border-line shadow-xs p-4`
-- **دکمه و ورودی:** `rounded-xl`؛ دکمهٔ فقط‌آیکن با `btn-icon-square` یا `btn-icon-sm` به‌اضافهٔ یکی از `btn-icon-indigo|emerald|rose|blue|purple|amber|slate` (در `styles.css`)
-- **مودال:**
-  - ظرف: `fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5`
-  - پس‌زمینه: `absolute inset-0 bg-slate-900/60 backdrop-blur-sm`
-  - پنل: `bg-surface rounded-3xl shadow-2xl w-full max-w-* max-h-[90vh] flex flex-col modal-enter`
-  - یا کامپوننت `shared/components/modal`
-- **سربرگ صفحه:** یک نوار `bg-surface rounded-2xl border border-line shadow-sm`؛ تب‌ها در راست و دکمه‌های عمل در چپ
-- **کامپوننت‌های مشترک** (پیش از ساختن تازه، این‌ها را به کار ببر) در `src/app/shared/components/`:
-  - `data-table`، `modal`، `confirm-dialog` (سرویس `ConfirmDialogService`)، `toast` (سرویس `ToastService`)
-  - `status-badge`، `loading-skeleton`، `offline-pending-badge`، `toggle-switch`، `file-upload`
-  - `smart-delete-modal`، `barcode-scanner`، `cartable-header`، `cartable-card-base`، `warehouse-selector`
-- **پایپ‌ها:** `PersianDatePipe` و `StatusLabelPipe` در `src/app/shared/pipes/`؛ ابزار تاریخ در `core/utils/date-utils.ts`
+## Existing patterns (repeat these)
+- **Card:** `bg-surface rounded-2xl border border-line shadow-xs p-4`
+- **Button and input:** `rounded-xl`; icon-only button with `btn-icon-square` or `btn-icon-sm` plus one of `btn-icon-indigo|emerald|rose|blue|purple|amber|slate` (in `styles.css`)
+- **Modal:**
+  - Container: `fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5`
+  - Backdrop: `absolute inset-0 bg-slate-900/60 backdrop-blur-sm`
+  - Panel: `bg-surface rounded-3xl shadow-2xl w-full max-w-* max-h-[90vh] flex flex-col modal-enter`
+  - Or the `shared/components/modal` component
+- **Page header:** a `bg-surface rounded-2xl border border-line shadow-sm` bar; tabs on the right and action buttons on the left
+- **Shared components** (use these before building new ones) in `src/app/shared/components/`:
+  - `data-table`, `modal`, `confirm-dialog` (service `ConfirmDialogService`), `toast` (service `ToastService`)
+  - `status-badge`, `loading-skeleton`, `offline-pending-badge`, `toggle-switch`, `file-upload`
+  - `smart-delete-modal`, `barcode-scanner`, `cartable-header`, `cartable-card-base`, `warehouse-selector`
+- **Pipes:** `PersianDatePipe` and `StatusLabelPipe` in `src/app/shared/pipes/`; date utilities in `core/utils/date-utils.ts`
 
-## آیکن‌ها
-- فقط از رجیستری مشترک: `<svg appIcon="trash-2" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>`
-- دایرکتیو: `shared/icons/svg-icon.directive.ts` (در `imports` کامپوننت، `SvgIconDirective`). رجیستری: `shared/icons/icon-registry.ts`.
-- ویژگی‌های بیرونی (اندازه، رنگ، stroke) در قالب می‌ماند. رنگ آیکن از `currentColor` می‌آید، پس با کلاس `text-*` والد تعیین می‌شود.
-- نام‌ها به سبک Feather و Lucide‌اند (`x`، `check`، `trash-2`، `search`، `chevron-down`)؛ گونه‌های Heroicons پیشوند `hero-` دارند.
-- **آیکن تازه:** اول رجیستری را بگرد. اگر نبود، فقط محتوای درونی را با نام kebab-case اضافه کن.
-- svg درون‌خطی تازه در قالب ممنوع است؛ نگهبان ۵۲ (`scripts/e2e/guardian_52_icon_registry.py`) آن را و نام‌های ناشناخته را می‌گیرد.
-- دکمهٔ فقط‌آیکن حتماً `aria-label` یا `title` فارسی داشته باشد.
+## Icons
+- Only from the shared registry: `<svg appIcon="trash-2" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>`
+- Directive: `shared/icons/svg-icon.directive.ts` (`SvgIconDirective` in the component's `imports`). Registry: `shared/icons/icon-registry.ts`.
+- Outer attributes (size, color, stroke) stay in the template. Icon color comes from `currentColor`, so it is set by the parent's `text-*` class.
+- Names follow the Feather and Lucide style (`x`, `check`, `trash-2`, `search`, `chevron-down`); Heroicons variants have the `hero-` prefix.
+- **New icon:** search the registry first. If it is not there, add only the inner content under a kebab-case name.
+- New inline svg in templates is forbidden; guardian 52 (`scripts/e2e/guardian_52_icon_registry.py`) catches it and unknown names.
+- An icon-only button must have a Persian `aria-label` or `title`.
 
-## راست‌به‌چپ و فارسی
-- کد تازه کلاس‌های منطقی را به کار ببرد: `ms-`، `me-`، `ps-`، `pe-`، `start-`، `end-`، `text-start`، `text-end` (کد قدیمی کلاس فیزیکی دارد؛ دست نزن).
-- فلش «بعدی» در RTL به چپ است (`chevron-left`) و «قبلی» به راست.
-- عدد فارسی با `Intl.NumberFormat('fa-IR')` و تاریخ شمسی با `PersianDatePipe`.
-- کد، شناسه، ایمیل یا متن لاتین درون متن فارسی را در `<bdi>` یا `dir="ltr"` بگذار.
-- نیم‌فاصله (ZWNJ) درست بنویس: «می‌شود»، «داده‌ها».
+## RTL and Persian
+- New code should use logical classes: `ms-`, `me-`, `ps-`, `pe-`, `start-`, `end-`, `text-start`, `text-end` (old code has physical classes; do not touch it).
+- The "next" arrow points left in RTL (`chevron-left`) and "previous" points right.
+- Persian numbers with `Intl.NumberFormat('fa-IR')` and Jalali dates with `PersianDatePipe`.
+- Wrap code, IDs, emails or Latin text inside Persian text in `<bdi>` or `dir="ltr"`.
+- Write the half-space (ZWNJ) correctly: «می‌شود», «داده‌ها».
 
-## دسترس‌پذیری (WCAG 2.2 AA)
-- کنتراست متن دست‌کم ۴.۵:۱ (متن درشت و اجزای رابط ۳:۱).
-- نشانگر فوکوس دیدنی: اگر `outline-none` می‌گذاری، `focus-visible:ring-2 focus-visible:ring-indigo-500` هم بگذار (هوک هشدار می‌دهد).
-- عمل کلیک‌پذیر را با `<button type="button">` بساز، نه `div`.
-- هر فیلد فرم `label` داشته باشد.
-- تصویر معنادار `alt` توصیفی فارسی دارد و تصویر تزئینی `alt=""` (هوک هشدار می‌دهد).
-- هدف لمسی دست‌کم ۲۴×۲۴ پیکسل؛ در صفحه‌های موبایلِ انبار ترجیحاً ۴۴.
-- کاهش حرکت سراسری است (`prefers-reduced-motion` در `styles.css`). انیمیشن تازه ۱۵۰ تا ۳۰۰ میلی‌ثانیه باشد.
+## Accessibility (WCAG 2.2 AA)
+- Text contrast at least 4.5:1 (large text and UI components 3:1).
+- Visible focus indicator: if you add `outline-none`, also add `focus-visible:ring-2 focus-visible:ring-indigo-500` (the hook warns).
+- Build clickable actions with `<button type="button">`, not `div`.
+- Every form field should have a `label`.
+- A meaningful image has a descriptive Persian `alt`, and a decorative image `alt=""` (the hook warns).
+- Touch targets at least 24×24 px; preferably 44 on warehouse mobile pages.
+- Reduced motion is global (`prefers-reduced-motion` in `styles.css`). New animations should be 150 to 300 ms.
 
-## حالت‌ها (برنامه آفلاین‌محور است)
-هر فهرست یا صفحهٔ داده‌محور این چهار حالت را دارد:
-1. **بارگذاری:** `loading-skeleton`
-2. **خالی:** متن راهنما و در صورت امکان عمل بعدی
-3. **خطا:** پیام روشن و راه تلاش دوباره
-4. **آفلاین یا کهنه:** نشان `isStale` یا `offline-pending-badge`
+## States (the app is offline-first)
+Every data-driven list or page has these four states:
+1. **Loading:** `loading-skeleton`
+2. **Empty:** guidance text and, if possible, the next action
+3. **Error:** a clear message and a way to retry
+4. **Offline or stale:** an `isStale` indicator or `offline-pending-badge`
 
-قطعی سرور را فقط با `isServerUnreachable()` تشخیص بده.
+Detect server outages only with `isServerUnreachable()`.
 
-## تصویرها
-- تصویر سرور در جعبهٔ اندازه‌ثابت: `NgOptimizedImage` با `[ngSrc]` و `width`/`height` برابر همان جعبه (کلاس‌های CSS اندازهٔ واقعی را تعیین می‌کنند).
-- برای پیش‌نمایش `data:` یا `blob:` (FileReader، cropper) از `src` معمولی استفاده کن؛ `NgOptimizedImage` آن‌ها را نمی‌پذیرد.
-- قالب‌های **چاپی** (کارت شناسایی و…) `src` معمولی بمانند، چون بارگذاری تنبل ممکن است عکس را در چاپ خالی بگذارد.
+## Images
+- Server image in a fixed-size box: `NgOptimizedImage` with `[ngSrc]` and `width`/`height` equal to that box (CSS classes set the actual size).
+- For `data:` or `blob:` previews (FileReader, cropper), use plain `src`; `NgOptimizedImage` does not accept them.
+- **Print** templates (ID card, etc.) keep plain `src`, because lazy loading may leave the photo blank in print.
 
-## حالت تیره
-`darkMode: 'selector'` است و هیچ‌جا کلاس `dark` فعال نمی‌شود. کلاس `dark:` تازه ننویس، مگر در پروژهٔ «تم تیرهٔ کامل» که فقط با بازتعریف متغیرهای توکن زیر `.dark` انجام می‌شود.
+## Dark mode
+`darkMode: 'selector'` is set and the `dark` class is never activated anywhere. Do not write new `dark:` classes, except in the "full dark theme" project, which is done only by redefining the token variables under `.dark`.
 
-## کارایی
-- بخش سنگین (نمودار `chart.js`، نمایشگر PDF، ویرایشگر) را با `@defer` یا `import()` پویا تنبل کن.
-- گذار بین صفحه‌ها سراسری است (`withViewTransitions` در `app.config.ts`)؛ کد تازه لازم ندارد.
+## Performance
+- Lazy-load heavy parts (`chart.js` charts, PDF viewer, editor) with `@defer` or dynamic `import()`.
+- Page transitions are global (`withViewTransitions` in `app.config.ts`); no new code is needed.
 
-## پیش از اعلام اتمام
-- `npx tsc --noEmit -p tsconfig.app.json` در `warehouse-front`
+## Before declaring completion
+- `npx tsc --noEmit -p tsconfig.app.json` in `warehouse-front`
 - `python scripts/e2e/guardian_52_icon_registry.py`
-- ساب‌ایجنت `ui-reviewer` برای بازبینی ظاهر و دسترس‌پذیری
+- The `ui-reviewer` subagent to review appearance and accessibility
