@@ -187,7 +187,8 @@
       "Bash(WH_MODULES=accounting \"E:/warehouse project/warehouse-backend/venv/Scripts/python.exe\" manage.py check)",
       "Bash(./venv/Scripts/python.exe manage.py showmigrations)",
       "Bash(echo \"EXIT_CODE=$?\")",
-      "WebFetch(domain:graphify-labs-inc.mintlify.app)"
+      "WebFetch(domain:graphify-labs-inc.mintlify.app)",
+      "WebSearch"
     ],
     "defaultMode": "bypassPermissions"
   }

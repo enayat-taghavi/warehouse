@@ -21,6 +21,26 @@ PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py showmigrations --plan | grep -F
 ```
 خروجی خالی یعنی چیزی برای migrate نیست و کار همین‌جا تمام است.
 
+**هشدار:** خروجی خالی گاهی دروغ است. جدول `django_migrations` از پیش از squash رکوردهای قدیمی دارد (مثلاً `accounts` از `0006` تا `0034`). مهاجرت تازه‌ای که نامش با یکی از آن‌ها یکی باشد «اعمال‌شده» فرض می‌شود و هرگز اجرا نمی‌شود.
+
+## ۲-ب. برخورد نام مهاجرت تازه با `django_migrations`
+پیش از migrate، هر مهاجرت روی دیسک را با رکوردهای جدول بسنج. نشانهٔ قطعی برخورد این است که رکورد هم‌نام **پیش از وابستگی‌های هم‌اپ همان مهاجرت** ثبت شده باشد؛ مهاجرت واقعی هرگز زودتر از وابستگی‌اش اعمال نمی‌شود (وابستگی بین‌اپی به‌خاطر رکوردهای قدیمی fake سنجیده نمی‌شود):
+```bash
+PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py shell -c "
+from django.db import connection
+from django.db.migrations.loader import MigrationLoader
+loader = MigrationLoader(connection)
+with connection.cursor() as c:
+    c.execute('select app, name, applied from django_migrations')
+    applied = {(a, n): t for a, n, t in c.fetchall()}
+for key, mig in sorted(loader.disk_migrations.items()):
+    deps = [d for d in mig.dependencies if d in applied and d[0] == key[0]]
+    if key in applied and deps and applied[key] < max(applied[d] for d in deps):
+        print('COLLISION', key, 'applied', applied[key].date(), 'before its dependency', max(deps, key=applied.get))
+"
+```
+هر سطر `COLLISION` یعنی آن مهاجرت هرگز اجرا نشده است. نامش را یکتا کن (مثلاً `0006_<توضیح>`) و دوباره بند ۲ را اجرا کن.
+
 ## ۳. بررسی عملیات مخرب
 هر مهاجرت اعمال‌نشده را بخوان و این عملیات را بجو:
 - `RemoveField` و `DeleteModel`

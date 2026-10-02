@@ -93,7 +93,7 @@
   - **هوک‌ها** در `.claude/settings.json` با اسکریپت `.claude/hooks/guard.py`. همین اسکریپت را Antigravity هم از `.agents/hooks.json` صدا می‌زند.
     - قالب خروجی دو ابزار جداست: برای Claude Code فقط `hookSpecificOutput`، و در هر اجرا حداکثر یک JSON.
     - آزمون: `python scripts/test_guard_hooks.py`.
-  - **ساب‌ایجنت‌ها** در `.claude/agents/`: `data-loss-reviewer`، `tenant-scope-reviewer` و `ui-reviewer`
+  - **ساب‌ایجنت‌ها** در `.claude/agents/`: `data-loss-reviewer`، `tenant-scope-reviewer` و `ui-reviewer` (همه با `model: sonnet` برای صرفه‌جویی توکن)
   - **اسکیل‌ها** در `.claude/skills/`: `safe-migration`، `systematic-debugging`، `verification-before-completion` و `design-system`
-  - **افزونه‌ها** (دامنهٔ project): `modern-web-guidance` (Google Chrome) و `frontend-design` (Anthropic)
+  - **افزونه‌ها** (دامنهٔ project): `frontend-design` (Anthropic). `modern-web-guidance` برای صرفه‌جویی توکن خاموش است (۱ اکتبر ۲۰۲۶).
   - **MCP**: `context7` و `angular-cli` (با `--read-only`)
