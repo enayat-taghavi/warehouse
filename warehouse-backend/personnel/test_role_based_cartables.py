@@ -9,7 +9,10 @@ from personnel.models import (
     VehicleChangeRequest,
     MonthlyWorkPeriod,
     PayrollYearlySettings,
-    JobGradeTier
+    JobGradeTier,
+    Company,
+    FinancialProject,
+    ProjectSection
 )
 
 User = get_user_model()
@@ -23,6 +26,10 @@ class RoleBasedCartablesTestCase(TestCase):
         )
         self.client = APIClient()
         self.client.force_authenticate(user=self.admin)
+
+        self.company = Company.objects.create(name='شرکت تست کارتابل', code='CMP-CR')
+        self.project = FinancialProject.objects.create(company=self.company, name='پروژه تست', code='PRJ-CR')
+        self.section = ProjectSection.objects.create(project=self.project, name='بخش تست', code='SEC-CR')
 
         # Base Yearly Settings & Job Grades
         self.settings = PayrollYearlySettings.objects.create(
@@ -40,12 +47,26 @@ class RoleBasedCartablesTestCase(TestCase):
                 daily_seniority_bonus=Decimal(g * 10000)
             )
 
-        # Draft Personnel Profile
+        # Pending Supervisor Personnel Profile
         self.personnel = PersonnelProfile.objects.create(
             first_name='علی',
             last_name='تقوی',
-            national_code='1122334455',
-            approval_status='draft',
+            national_code='0076543218',
+            father_name='محمد',
+            birth_date='1370/01/01',
+            id_number='12345',
+            gender='مرد',
+            job_title='کارشناس فنی',
+            phone_number='09121112233',
+            address='تهران، خیابان آزادی',
+            postal_code='1998877665',
+            sheba_number='780170000000101111111001',
+            bank_name='بانک ملی ایران',
+            job_code='010203',
+            start_date='1405/01/01',
+            daily_base_wage=Decimal(7000000),
+            section=self.section,
+            approval_status='pending_supervisor',
             is_active=False
         )
 

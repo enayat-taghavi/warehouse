@@ -186,7 +186,9 @@ class PersonnelAppTests(TestCase):
             last_name='مرادی',
             national_code='245230430',  # 9 رقمی با صفر ابتدایی افتاده
             daily_base_wage=5000000,
-            daily_seniority_bonus=200000
+            daily_seniority_bonus=200000,
+            # فرمول مصوب ۶.۳ (تسک ۱.۱۰): مزد مبنا = مزد روزانه + سال کارکرد × پایه سنوات
+            base_years_experience=1
         )
         self.assertEqual(p.national_code, '0245230430')
         self.assertEqual(p.base_daily_rate, 5200000)
@@ -194,9 +196,16 @@ class PersonnelAppTests(TestCase):
 
     def test_excel_import_endpoint(self):
         """تست اندپوینت درون‌ریزی فایل اکسل شرکت"""
-        excel_path = 'E:/warehouse project/Documents/SalaryCalculation/حقوق تیر ماه انبارداری.xlsm'
-        if not os.path.exists(excel_path):
-            excel_path = 'E:/warehouse project/حقوق تیر ماه انبارداری.xlsm'
+        from django.conf import settings
+        candidate_paths = [
+            os.path.join(settings.BASE_DIR.parent, 'Documents', 'SalaryCalculation', 'TirSalary.xlsm'),
+            os.path.join(settings.BASE_DIR.parent, 'Documents', 'SalaryCalculation', 'حقوق تیر ماه انبارداری.xlsm'),
+            os.path.join(settings.BASE_DIR.parent, 'حقوق تیر ماه انبارداری.xlsm'),
+            os.path.join(settings.BASE_DIR.parent, 'TirSalary.xlsm'),
+        ]
+        excel_path = next((p for p in candidate_paths if os.path.exists(p)), None)
+        if not excel_path:
+            self.skipTest("فایل اکسل مرجع حقوق تیر ماه یافت نشد.")
         with open(excel_path, 'rb') as fp:
             res = self.client.post(
                 f'/api/personnel/profiles/import-excel/?warehouse_id={self.warehouse.id}',

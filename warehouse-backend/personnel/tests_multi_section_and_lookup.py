@@ -39,7 +39,7 @@ class MultiSectionAndLookupTests(TestCase):
         self.personnel = PersonnelProfile.objects.create(
             first_name="رضا",
             last_name="پاینده",
-            national_code="0012345678",
+            national_code="0012345679",  # کد ملی با رقم کنترلی معتبر (تسک ۲.۲)
             father_name="علی",
             phone_number="09121234567",
             job_title="کارشناس فنی دالان",
@@ -56,7 +56,7 @@ class MultiSectionAndLookupTests(TestCase):
     def test_lookup_by_national_code(self):
         """تست ۱: استعلام پرونده پرسنل با کد ملی جهت فراخوانی خودکار مشخصات هویتی و بانکی"""
         # کد ملی موجود
-        resp = self.client.get(f"/api/personnel/profiles/lookup-by-national-code/?national_code=0012345678")
+        resp = self.client.get(f"/api/personnel/profiles/lookup-by-national-code/?national_code=0012345679")
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.data["found"])
         p_data = resp.data["personnel"]
@@ -67,10 +67,14 @@ class MultiSectionAndLookupTests(TestCase):
         self.assertEqual(p_data["current_section_id"], self.section1.id)
         self.assertEqual(p_data["current_section_name"], self.section1.name)
 
-        # کد ملی ناموجود
-        resp_nf = self.client.get(f"/api/personnel/profiles/lookup-by-national-code/?national_code=9999999999")
+        # کد ملی معتبر ولی ناموجود
+        resp_nf = self.client.get(f"/api/personnel/profiles/lookup-by-national-code/?national_code=0098765434")
         self.assertEqual(resp_nf.status_code, 200)
         self.assertFalse(resp_nf.data["found"])
+
+        # کد ملی با رقم کنترلی نامعتبر در سرور رد می‌شود (تسک ۲.۲)
+        resp_bad = self.client.get(f"/api/personnel/profiles/lookup-by-national-code/?national_code=9999999999")
+        self.assertEqual(resp_bad.status_code, 400)
 
     def test_assign_personnel_to_second_section(self):
         """تست ۲: انتساب پرسنل موجود به بخش دوم با سمت و دستمزد مجزا و نمایش در هر دو بخش"""

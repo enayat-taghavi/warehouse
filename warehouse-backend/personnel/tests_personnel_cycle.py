@@ -10,12 +10,19 @@ class PersonnelFullCycleTests(TestCase):
     تست یکپارچه چرخه کامل ثبت، گردش تاییدات و کارکرد پرسنل
     پروژه دالان - بخش دالان کارگاه
     """
-
     def setUp(self):
+        from personnel.models import Company, UserCompanyAccess
+        self.company, _ = Company.objects.get_or_create(
+            code="DALAN-CO",
+            defaults={"name": "شرکت دالان", "is_active": True}
+        )
         self.project, _ = FinancialProject.objects.get_or_create(
             code="1",
-            defaults={"name": "دالان", "is_active": True}
+            defaults={"name": "دالان", "company": self.company, "is_active": True}
         )
+        if not self.project.company_id:
+            self.project.company = self.company
+            self.project.save(update_fields=['company'])
         self.section, _ = ProjectSection.objects.get_or_create(
             project=self.project,
             code="11",
@@ -56,10 +63,9 @@ class PersonnelFullCycleTests(TestCase):
                 self.manager.user_permissions.add(p)
 
         from personnel.models import UserSectionAssignment
-        UserSectionAssignment.objects.get_or_create(user=self.operator, section=self.section, defaults={"role": "employee", "is_active": True})
-        UserSectionAssignment.objects.get_or_create(user=self.supervisor, section=self.section, defaults={"role": "supervisor", "is_active": True})
-        UserSectionAssignment.objects.get_or_create(user=self.accountant, section=self.section, defaults={"role": "accountant", "is_active": True})
-        UserSectionAssignment.objects.get_or_create(user=self.manager, section=self.section, defaults={"role": "manager", "is_active": True})
+        for u, r in [(self.operator, "employee"), (self.supervisor, "supervisor"), (self.accountant, "accountant"), (self.manager, "manager")]:
+            UserSectionAssignment.objects.get_or_create(user=u, section=self.section, defaults={"role": r, "is_active": True})
+            UserCompanyAccess.objects.get_or_create(user=u, company=self.company, defaults={"access_level": "workspace_full", "is_default": True})
 
         self.client = APIClient()
 
@@ -74,6 +80,11 @@ class PersonnelFullCycleTests(TestCase):
             "last_name": "مرادی",
             "national_code": nat_code,
             "father_name": "محمد",
+            "birth_date": "1365/03/08",
+            "id_number": "1234",
+            "gender": "مرد",
+            "address": "بوشهر، دالان، کوی کارگران",
+            "postal_code": "7514765432",
             "job_title": "استادکار تعمیرات و نگهداری",
             "contract_type": "daily",
             "daily_base_wage": 3850000,
@@ -98,6 +109,11 @@ class PersonnelFullCycleTests(TestCase):
         created_id = resp1.data["id"]
         self.assertEqual(resp1.data["approval_status"], "draft")
 
+        # گام ۱-ب: ارسال با گیت سروری؛ پرونده همیشه پیش‌نویس ساخته می‌شود (DEF-02)
+        resp_submit = self.client.post(f"/api/personnel/profiles/{created_id}/submit/", {}, format="json")
+        self.assertEqual(resp_submit.status_code, 200, resp_submit.data)
+        self.assertEqual(resp_submit.data["approval_status"], "pending_supervisor")
+
         # گام ۲: تایید مرحله اول توسط سرپرست ⬅️ ارسال به حسابداری
         self.client.force_authenticate(user=self.supervisor)
         resp2 = self.client.post(f"/api/personnel/profiles/{created_id}/approve-supervisor/", {}, format="json")
@@ -105,8 +121,16 @@ class PersonnelFullCycleTests(TestCase):
         self.assertEqual(resp2.data["data"]["approval_status"], "pending_accountant")
         self.assertEqual(resp2.data["data"]["supervisor_approved_by"], self.supervisor.id)
 
-        # گام ۳: تایید مرحله دوم (مالی) توسط حسابدار ⬅️ ارسال به مدیر شرکت
+        # گام ۳: حسابدار دستمزد و کدهای بیمه را تعیین می‌کند (SoD مصوب ۶.۹) و تایید مالی ⬅️ ارسال به مدیر شرکت
         self.client.force_authenticate(user=self.accountant)
+        resp_fin_edit = self.client.patch(f"/api/personnel/profiles/{created_id}/", {
+            "job_code": "000255",
+            "start_date": "1405/01/01",
+            "daily_base_wage": 3850000,
+            "daily_seniority_bonus": 70000,
+            "note": "تعیین احکام مالی",
+        }, format="json")
+        self.assertEqual(resp_fin_edit.status_code, 200, resp_fin_edit.data)
         resp3 = self.client.post(f"/api/personnel/profiles/{created_id}/approve-finance/", {}, format="json")
         self.assertEqual(resp3.status_code, 200)
         self.assertEqual(resp3.data["data"]["approval_status"], "pending_manager")
@@ -164,9 +188,9 @@ class PersonnelFullCycleTests(TestCase):
         profile = PersonnelProfile.objects.create(
             first_name="تستی",
             last_name="عودتی",
-            national_code="2280001112",
+            national_code="0076543218",
             section=self.section,
-            approval_status="draft",
+            approval_status="pending_supervisor",
             is_active=True
         )
 
@@ -180,7 +204,16 @@ class PersonnelFullCycleTests(TestCase):
         # رد پرونده توسط سرپرست
         resp_rej = self.client.post(f"/api/personnel/profiles/{profile.id}/reject/", {"reason": "عدم تطابق با شرایط کارگاه"}, format="json")
         self.assertEqual(resp_rej.status_code, 200)
-        self.assertEqual(resp_rej.data["data"]["approval_status"], "rejected")
+        self.assertTrue(resp_rej.data["purged"])
+        self.assertFalse(PersonnelProfile.objects.filter(id=profile.id).exists())
+
+        # پیش‌نویسِ ارسال‌نشده نزد کارمند است و سرپرست آن را عودت یا رد نمی‌کند (جدول گذار ۳.۱-الف)
+        draft = PersonnelProfile.objects.create(
+            first_name="پیش‌نویس", last_name="کارمند", national_code="0012345679",
+            section=self.section, approval_status="draft", is_active=True
+        )
+        self.assertEqual(self.client.post(f"/api/personnel/profiles/{draft.id}/request-revision/", {"reason": "x"}, format="json").status_code, 400)
+        self.assertEqual(self.client.post(f"/api/personnel/profiles/{draft.id}/reject/", {"reason": "x"}, format="json").status_code, 400)
 
     def test_job_titles_and_draft_revision_cycle(self):
         # تست ۱: دریافت عناوین شغلی
@@ -194,7 +227,7 @@ class PersonnelFullCycleTests(TestCase):
         payload = {
             "first_name": "احمد",
             "last_name": "نادری",
-            "national_code": "2289988776",
+            "national_code": "0061122335",
             "job_title": "اپراتور لیفتراک",
             "contract_type": "daily",
             "daily_base_wage": 3500000,
@@ -202,9 +235,10 @@ class PersonnelFullCycleTests(TestCase):
             "approval_status": "pending_supervisor"
         }
         resp_create = self.client.post("/api/personnel/profiles/", payload, format="json")
-        self.assertEqual(resp_create.status_code, 201)
+        self.assertEqual(resp_create.status_code, 201, resp_create.data)
         created = resp_create.data
-        self.assertEqual(created["approval_status"], "pending_supervisor")
+        # وضعیت درخواستی نادیده گرفته می‌شود و پرونده پیش‌نویس است (DEF-02)
+        self.assertEqual(created["approval_status"], "draft")
         # بررسی انتساب خودکار پروژه
         self.assertEqual(created["project"], self.project.id)
 
@@ -214,27 +248,45 @@ class PersonnelFullCycleTests(TestCase):
         ids = [p["id"] for p in resp_filter.data]
         self.assertIn(created["id"], ids)
 
-        # تست ۴: عودت توسط سرپرست
-        self.client.force_authenticate(user=self.supervisor)
-        self.client.post(f"/api/personnel/profiles/{created['id']}/request-revision/", {"reason": "لطفاً شماره تماس را وارد کنید"}, format="json")
+        # تست ۴: تکمیل فیلدهای گیت؛ بدون شماره همراه، ارسال رد می‌شود
+        resp_fill = self.client.patch(f"/api/personnel/profiles/{created['id']}/", {
+            "father_name": "حسن", "birth_date": "1370/02/02", "id_number": "55", "gender": "مرد",
+            "address": "بوشهر، دالان", "postal_code": "7514700000",
+            "bank_name": "بانک ملی ایران", "sheba_number": generate_sheba_from_account("بانک ملی ایران", "0105678901004"),
+        }, format="json")
+        self.assertEqual(resp_fill.status_code, 200, resp_fill.data)
+        resp_submit = self.client.post(f"/api/personnel/profiles/{created['id']}/submit/", {}, format="json")
+        self.assertEqual(resp_submit.status_code, 400)
+        self.assertIn("phone_number", [m["field"] for m in resp_submit.data["missing_fields"]])
 
-        # تست ۵: ویرایش توسط اپراتور و ارسال مجدد به سرپرست
+        # تست ۵: تکمیل شماره همراه و ارسال؛ سپس عودت سرپرست از pending_supervisor
+        self.client.patch(f"/api/personnel/profiles/{created['id']}/", {"phone_number": "09171112233"}, format="json")
+        self.assertEqual(self.client.post(f"/api/personnel/profiles/{created['id']}/submit/", {}, format="json").status_code, 200)
+        self.client.force_authenticate(user=self.supervisor)
+        resp_rev = self.client.post(f"/api/personnel/profiles/{created['id']}/request-revision/", {"reason": "لطفاً نشانی را اصلاح کنید"}, format="json")
+        self.assertEqual(resp_rev.status_code, 200)
+        self.assertEqual(resp_rev.data["data"]["approval_status"], "revision_required")
+
+        # تست ۶: اصلاح توسط اپراتور؛ وضعیت فقط با submit تغییر می‌کند و دلیل عودت پاک می‌شود
         self.client.force_authenticate(user=self.operator)
         resp_update = self.client.patch(
             f"/api/personnel/profiles/{created['id']}/",
-            {"phone_number": "09171112233", "approval_status": "pending_supervisor"},
+            {"address": "بوشهر، دالان، خیابان اصلی", "approval_status": "pending_supervisor"},
             format="json"
         )
         self.assertEqual(resp_update.status_code, 200)
-        self.assertEqual(resp_update.data["approval_status"], "pending_supervisor")
-        self.assertIsNone(resp_update.data["rejection_reason"])
+        self.assertEqual(resp_update.data["approval_status"], "revision_required")
+        resp_resubmit = self.client.post(f"/api/personnel/profiles/{created['id']}/submit/", {}, format="json")
+        self.assertEqual(resp_resubmit.status_code, 200)
+        self.assertEqual(resp_resubmit.data["approval_status"], "pending_supervisor")
+        self.assertIsNone(resp_resubmit.data["rejection_reason"])
 
     def test_approved_personnel_change_request_lifecycle(self):
         # ایجاد پرسنل مصوب نهایی
         profile = PersonnelProfile.objects.create(
             first_name="محسن",
             last_name="رضایی",
-            national_code="2281234567",
+            national_code="0098765434",
             job_title="کارشناس انبار",
             daily_base_wage=3000000,
             section=self.section,
@@ -243,8 +295,13 @@ class PersonnelFullCycleTests(TestCase):
             is_active=True
         )
 
-        # گام ۱: کارمند تغییراتی روی پرسنل مصوب اعمال می‌کند
+        # گام ۰: کارمند مجاز به پیشنهاد تغییر دستمزد نیست (SoD مصوب ۶.۹)
         self.client.force_authenticate(user=self.operator)
+        resp_denied = self.client.patch(f"/api/personnel/profiles/{profile.id}/", {"daily_base_wage": 4500000}, format="json")
+        self.assertEqual(resp_denied.status_code, 403)
+
+        # گام ۱: حسابدار تغییر دستمزد و سمت پرسنل مصوب را پیشنهاد می‌کند
+        self.client.force_authenticate(user=self.accountant)
         resp_edit = self.client.patch(
             f"/api/personnel/profiles/{profile.id}/",
             {"daily_base_wage": 4500000, "job_title": "سرپرست انبار"},
@@ -302,11 +359,11 @@ class PersonnelFullCycleTests(TestCase):
             is_active=True
         )
 
-        # کارمند درخواست ویرایش ثبت می‌کند
+        # کارمند درخواست ویرایش شماره همراه (فیلد مجاز فهرست سفید) ثبت می‌کند
         self.client.force_authenticate(user=self.operator)
         resp_edit = self.client.patch(
             f"/api/personnel/profiles/{profile.id}/",
-            {"daily_base_wage": 5000000},
+            {"phone_number": "09170000000"},
             format="json"
         )
         self.assertEqual(resp_edit.status_code, 202)
@@ -445,9 +502,8 @@ class PersonnelFullCycleTests(TestCase):
             is_deleted=True  # حتی سابقه سافت‌دیلیت شده نباید فیزیکاً Cascade Delete شود
         )
         res_del_att = self.client.delete(f"/api/personnel/profiles/{p_with_att.id}/")
-        self.assertEqual(res_del_att.status_code, 200)
-        p_with_att.refresh_from_db()
-        self.assertFalse(p_with_att.is_active)  # سافت غیرفعال شده
+        self.assertEqual(res_del_att.status_code, 400)
+        self.assertEqual(res_del_att.data["suggested_action"], "end_collaboration")
         self.assertTrue(PersonnelProfile.objects.filter(id=p_with_att.id).exists())  # فیزیکی حذف نشده
         self.assertTrue(DailyAttendance.objects.filter(personnel=p_with_att).exists())  # سوابق کارکرد حفظ شده
 
