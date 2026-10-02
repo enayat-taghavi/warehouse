@@ -119,6 +119,7 @@ class CustomUser(AbstractUser):
             ("perm_approve_fleet_finance", "تایید مرحله دوم (مالی و بانکی) ناوگان و خودروها"),
             ("perm_manager_payment_authorize", "صدور مجوز پرداخت نهایی مدیر شرکت"),
             ("perm_treasury_disburse_action", "ثبت واریز و تسویه نهایی خزانه‌داری"),
+            ("perm_delete_personnel_nomovement", "حذف پرسنل فاقد سابقه کارکرد و مالی"),
 
             # Sensitive & Critical Permissions (حساس و بحرانی)
             ("perm_rollback_data", "بازگردانی و احیای جامع داده‌ها"),

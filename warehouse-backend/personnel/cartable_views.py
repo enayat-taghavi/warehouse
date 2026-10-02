@@ -229,6 +229,19 @@ def _validate_instance_company_access(instance, model_name: str, user):
             raise PermissionDenied("شما به اطلاعات و کارتابل این شرکت دسترسی ندارید.")
 
 
+def _reject_personnel_profile_action(instance):
+    """
+    تسک ۳.۳: گردش کار پروندهٔ پرسنل فقط از اکشن‌های PersonnelProfileViewSet انجام می‌شود تا گیت تکمیل،
+    جدول گذار، Purge با عکس کامل، لاگ و اعلان دور زده نشوند (موتور عمومی این قواعد را ندارد).
+    پس از بررسی دسترسی شرکت صدا زده می‌شود تا پروندهٔ شرکت دیگر همچنان ۴۰۳ بگیرد.
+    """
+    if isinstance(instance, PersonnelProfile):
+        raise ValidationError(
+            "اقدام روی پروندهٔ پرسنل از کارتابل عمومی پشتیبانی نمی‌شود؛ از اکشن‌های /api/personnel/profiles/{id}/ "
+            "(approve-supervisor، approve-finance، approve-manager، request-revision، reject) استفاده کنید."
+        )
+
+
 def _get_target_instance(model_name: str, instance_id: int, request_data: dict = None):
     """یافتن نمونه مدل بر اساس نام و شناسه (با پشتیبانی هوشمند از بازیابی/ایجاد خودکار دوره ماهانه بر مبنای year_month)"""
     models_map = {
@@ -321,10 +334,10 @@ class SupervisorCartableAPIView(APIView):
 
         company_ids = _get_effective_company_ids(request, user)
 
-        # رکوردهای پرسنل نیازمند بررسی سرپرست
+        # رکوردهای پرسنل نیازمند بررسی سرپرست: فقط ارسال‌شده‌ها؛ پیش‌نویس و عودت‌شده نزد کارمند است (تسک ۳.۳ و ۸.۲)
         personnel_qs = _filter_by_company(
             PersonnelProfile.objects.filter(
-                approval_status__in=[WorkflowStatuses.DRAFT, WorkflowStatuses.PENDING_SUPERVISOR, WorkflowStatuses.REVISION_REQUIRED]
+                approval_status=WorkflowStatuses.PENDING_SUPERVISOR
             ).select_related('user'),
             'personnel', company_ids
         )
@@ -403,7 +416,8 @@ class SupervisorCartableAPIView(APIView):
                     invoices_qs.count() + petty_cash_qs.count()
                 )
             },
-            'personnel': PersonnelProfileSerializer(personnel_qs[:50], many=True).data,
+            # context درخواست لازم است تا دستمزد از نقش غیرمالی پنهان بماند (DEF-21)
+            'personnel': PersonnelProfileSerializer(personnel_qs[:50], many=True, context={'request': request}).data,
             'vehicles': VehicleDriverProfileSerializer(vehicles_qs[:50], many=True).data,
             'personnel_changes': PersonnelChangeRequestSerializer(p_changes[:50], many=True).data,
             'vehicle_changes': VehicleChangeRequestSerializer(v_changes[:50], many=True).data,
@@ -509,6 +523,7 @@ class SupervisorCartableAPIView(APIView):
         # --- ۲. سایر مدل‌ها و دوره کارکرد ماهانه ---
         instance = _get_target_instance(model_name, item_id, request.data)
         _validate_instance_company_access(instance, model_name, user)
+        _reject_personnel_profile_action(instance)
         is_financial = model_name in ['period', 'work_period', 'payroll', 'payroll_record', 'invoice', 'expense_invoice', 'petty_cash', 'petty_cash_transaction']
 
         if action_type == 'approve':
@@ -623,7 +638,8 @@ class AccountantCartableAPIView(APIView):
                 'petty_cash': petty_cash_qs.count(),
                 'total_pending': personnel_qs.count() + vehicles_qs.count() + p_changes.count() + v_changes.count() + periods.count() + invoices_qs.count() + petty_cash_qs.count()
             },
-            'personnel': PersonnelProfileSerializer(personnel_qs[:50], many=True).data,
+            # context درخواست لازم است تا دستمزد از نقش غیرمالی پنهان بماند (DEF-21)
+            'personnel': PersonnelProfileSerializer(personnel_qs[:50], many=True, context={'request': request}).data,
             'vehicles': VehicleDriverProfileSerializer(vehicles_qs[:50], many=True).data,
             'personnel_changes': PersonnelChangeRequestSerializer(p_changes[:50], many=True).data,
             'vehicle_changes': VehicleChangeRequestSerializer(v_changes[:50], many=True).data,
@@ -644,6 +660,7 @@ class AccountantCartableAPIView(APIView):
 
         instance = _get_target_instance(model_name, item_id, request.data)
         _validate_instance_company_access(instance, model_name, user)
+        _reject_personnel_profile_action(instance)
         is_financial = model_name in ['period', 'work_period', 'payroll', 'payroll_record', 'invoice', 'expense_invoice', 'petty_cash', 'petty_cash_transaction']
 
         if action_type == 'approve':
@@ -740,7 +757,8 @@ class ManagerCartableAPIView(APIView):
                 'petty_cash': petty_cash_qs.count(),
                 'total_pending': personnel_qs.count() + vehicles_qs.count() + p_changes.count() + v_changes.count() + periods.count() + invoices_qs.count() + petty_cash_qs.count()
             },
-            'personnel': PersonnelProfileSerializer(personnel_qs[:50], many=True).data,
+            # context درخواست لازم است تا دستمزد از نقش غیرمالی پنهان بماند (DEF-21)
+            'personnel': PersonnelProfileSerializer(personnel_qs[:50], many=True, context={'request': request}).data,
             'vehicles': VehicleDriverProfileSerializer(vehicles_qs[:50], many=True).data,
             'personnel_changes': PersonnelChangeRequestSerializer(p_changes[:50], many=True).data,
             'vehicle_changes': VehicleChangeRequestSerializer(v_changes[:50], many=True).data,
@@ -761,6 +779,7 @@ class ManagerCartableAPIView(APIView):
 
         instance = _get_target_instance(model_name, item_id, request.data)
         _validate_instance_company_access(instance, model_name, user)
+        _reject_personnel_profile_action(instance)
         is_financial = model_name in ['period', 'work_period', 'payroll', 'payroll_record', 'invoice', 'expense_invoice', 'petty_cash', 'petty_cash_transaction']
 
         if action_type == 'approve':

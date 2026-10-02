@@ -498,6 +498,12 @@ class PayrollCalculationEngine:
                     row_idx += 1
                     continue
 
+                from .lifecycle_services import validate_personnel_validity
+                is_valid, _ = validate_personnel_validity(p, period.year_month)
+                has_curr_att = DailyAttendance.objects.filter(personnel=p, date_shamsi__startswith=period.year_month, is_deleted=False).exists()
+                if not is_valid and not has_curr_att:
+                    continue
+
                 emp_settings, emp_job_grades = get_cached_project_settings(p.project_id)
 
                 calc_data = self.calculate_single_employee(

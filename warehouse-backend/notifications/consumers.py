@@ -47,6 +47,12 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                         f'company_{cid}_notifications',
                         self.channel_name
                     )
+                # ۴. عضویت در کانال اختصاصی کاربر (User Private Channel)
+                self.user_group_name = f'user_{user.id}'
+                await self.channel_layer.group_add(
+                    self.user_group_name,
+                    self.channel_name
+                )
 
             await self.accept()
         except Exception as e:
@@ -64,6 +70,14 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                     self.app_group_name,
                     self.channel_name
                 )
+            if getattr(self, 'user_group_name', None):
+                try:
+                    await self.channel_layer.group_discard(
+                        self.user_group_name,
+                        self.channel_name
+                    )
+                except Exception:
+                    pass
             for cid in getattr(self, 'allowed_company_ids', []):
                 try:
                     await self.channel_layer.group_discard(
@@ -156,10 +170,16 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             if getattr(user, 'is_superuser', False):
                 from personnel.models import Company
                 return list(Company.objects.filter(is_active=True).values_list('id', flat=True))
-            from personnel.models import UserCompanyAccess
-            return list(UserCompanyAccess.objects.filter(user=user, is_active=True).values_list('company_id', flat=True))
+            from personnel.models import Company, UserCompanyAccess, UserSectionAssignment
+            # UserCompanyAccess فیلد is_active ندارد؛ فیلتر قبلی FieldError می‌داد و کاربر عادی در هیچ کانال شرکتی عضو نمی‌شد.
+            # همان قاعدهٔ get_user_allowed_companies بک‌اند: دسترسی کامل صریح، یا انتساب فعال به بخشی از پروژه‌های شرکت.
+            direct_ids = set(UserCompanyAccess.objects.filter(user=user, access_level='workspace_full').values_list('company_id', flat=True))
+            derived_ids = set(UserSectionAssignment.objects.filter(
+                user=user, is_active=True, section__project__company__isnull=False
+            ).values_list('section__project__company_id', flat=True))
+            return list(Company.objects.filter(id__in=direct_ids | derived_ids, is_active=True).values_list('id', flat=True))
         except Exception as e:
-            logger.warning(f"[NotificationConsumer] Error getting allowed companies: {e}")
+            logger.error(f"[NotificationConsumer] Error getting allowed companies: {e}")
             return []
 
     @database_sync_to_async
@@ -218,7 +238,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 'login_log', 'stats', 'date_shamsi', 'year_month', 'attendance_data',
                 'sender_id', 'client_tab_id', 'app_module', 'session_id', 'revoked_tab_id',
                 'fleet_data', 'personnel_id', 'vehicle_id', 'action', 'full_name',
-                'driver_name', 'plate_number', 'entity_type', 'approval_status'
+                'driver_name', 'plate_number', 'entity_type', 'approval_status',
+                'notification_id', 'title', 'target_model', 'target_id', 'created_at', 'notification_type'
             ):
                 if k in event:
                     out_data[k] = event[k]

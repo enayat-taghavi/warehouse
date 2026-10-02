@@ -350,25 +350,17 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_national_code(self, value):
         if not value:
             return None
-        from .excel_utils import normalize_digits
         import re
-        raw = normalize_digits(str(value).strip())
-        digits = re.sub(r'\D', '', raw)
-        if not digits:
+        from common.date_utils import normalize_digits
+        # کد ملی کاربر اختیاری است: ورودی بی‌رقم (مثل فاصلهٔ خالی) یعنی «بدون کد ملی»، نه خطا (نگهبان ۴۱).
+        # تابع مشترک برای پرسنل روی ورودی خالی همچنان خطا می‌دهد.
+        if not re.sub(r'\D', '', normalize_digits(str(value).strip())):
             return None
-        if len(digits) < 10:
-            digits = digits.zfill(10)
-        if len(digits) != 10:
-            raise serializers.ValidationError("کد ملی باید ۱۰ رقم باشد.")
-        if len(set(digits)) == 1:
-            raise serializers.ValidationError("کد ملی نامعتبر است (ارقام تکراری).")
-
-        s = sum(int(digits[i]) * (10 - i) for i in range(9))
-        r = s % 11
-        check = int(digits[9])
-        if not ((r < 2 and check == r) or (r >= 2 and check == 11 - r)):
-            raise serializers.ValidationError("کد ملی وارد شده با الگوریتم اعتبارسنجی همخوانی ندارد و نامعتبر است.")
-        return digits
+        from common.validators import validate_iranian_national_code
+        try:
+            return validate_iranian_national_code(value)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
 
     def validate(self, attrs):
         if not self.instance:

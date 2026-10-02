@@ -1,5 +1,5 @@
 from decimal import Decimal
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.utils import timezone
 from django.core.validators import MinValueValidator
@@ -884,6 +884,31 @@ class PettyCashTransaction(models.Model):
         return f"{self.get_transaction_type_display()} - {self.title} ({self.amount:,.0f} ریال)"
 
 
+class InsuranceJobTitle(models.Model):
+    """
+    سمت‌های استاندارد شغلی و کد ۶ رقمی متناظر بیمه تامین اجتماعی (شیت Emp_info اکسل مرجع)
+    """
+    title = models.CharField(max_length=150, db_index=True, verbose_name="عنوان شغل / سمت")
+    job_code = models.CharField(max_length=6, verbose_name="کد ۶ رقمی شغل بیمه")
+    is_active = models.BooleanField(default=True, verbose_name="فعال")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ثبت")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ آخرین ویرایش")
+
+    class Meta:
+        verbose_name = "سمت و کد شغل بیمه"
+        verbose_name_plural = "سمت‌ها و کدهای شغلی بیمه"
+        ordering = ['title', 'job_code']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['title', 'job_code'],
+                name='unique_insurance_job_title_code'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.job_code})"
+
+
 class PersonnelProfile(_WarehouseCompatMixin, models.Model):
     """
     پرونده کارگزینی و اطلاعات استخدامی پرسنل (منطبق بر شیت Emp_info اکسل مرجع شرکت)
@@ -936,7 +961,7 @@ class PersonnelProfile(_WarehouseCompatMixin, models.Model):
     nationality_code = models.CharField(max_length=10, default='1', verbose_name="کد ملیت (۱=ایران)")
     citizenship_country_code = models.CharField(max_length=10, default='103', verbose_name="کشور تابعیت (۱۰۳=ایران)")
     residence_country_code = models.CharField(max_length=10, default='103', verbose_name="کشور محل زندگی (۱۰۳=ایران)")
-    education_level = models.CharField(max_length=50, default='5', verbose_name="مدرک تحصیلی")
+    education_level = models.CharField(max_length=50, default='4', verbose_name="مدرک تحصیلی (۴=فوق دیپلم/کاردانی)")
     marital_status = models.CharField(max_length=20, choices=MARITAL_STATUS_CHOICES, default='single', verbose_name="وضعیت تاهل")
     children_count = models.PositiveIntegerField(default=0, verbose_name="تعداد فرزند")
 
@@ -947,7 +972,7 @@ class PersonnelProfile(_WarehouseCompatMixin, models.Model):
     exemption_type = models.CharField(max_length=20, default='1', verbose_name="نوع معافیت مالیاتی")
     job_category = models.CharField(max_length=20, default='15', verbose_name="رسته شغلی")
     job_code = models.CharField(max_length=20, blank=True, null=True, verbose_name="کد ۶ رقمی شغل بیمه")
-    job_title = models.CharField(max_length=150, verbose_name="سمت شغل / عنوان شغلی")
+    job_title = models.CharField(max_length=150, blank=True, default='', verbose_name="سمت شغل / عنوان شغلی")
     employment_type = models.CharField(max_length=20, default='2', verbose_name="نوع استخدام")
     status_category = models.CharField(max_length=50, default='نفرات شرکتی', verbose_name="وضعیت (شرکتی/پیمانکاری)")
     group_status = models.CharField(max_length=50, default='شاغل', verbose_name="گروه (شاغل/بازنشسته)")
@@ -969,6 +994,8 @@ class PersonnelProfile(_WarehouseCompatMixin, models.Model):
     start_date = models.CharField(max_length=10, blank=True, null=True, verbose_name="تاریخ شروع به کار (شمسی)")
     end_date = models.CharField(max_length=10, blank=True, null=True, verbose_name="تاریخ پایان کار (شمسی)")
     retirement_date = models.CharField(max_length=10, blank=True, null=True, verbose_name="تاریخ بازنشستگی (شمسی)")
+    valid_until_date = models.CharField(max_length=10, blank=True, null=True, verbose_name="تاریخ اعتبار پرونده (شمسی YYYY/MM/DD)")
+    recommender = models.CharField(max_length=150, blank=True, null=True, verbose_name="مشخصات معرف")
     contract_hours = models.DecimalField(max_digits=8, decimal_places=2, default=230, verbose_name="ساعت کار قرارداد شده ماهانه")
     contract_base_salary = models.DecimalField(max_digits=14, decimal_places=0, default=0, verbose_name="حقوق قرارداد شده ماهانه (ریال)")
     job_grade = models.CharField(max_length=20, default='19', verbose_name="گروه شغلی")
@@ -1196,18 +1223,31 @@ class PersonnelProfile(_WarehouseCompatMixin, models.Model):
 
     @property
     def effective_daily_rate(self):
-        """مزد مبنا روزانه (مزد روزانه + پایه سنوات)"""
+        """مزد مبنا روزانه (مزد روزانه + سال کارکرد × پایه سنوات)"""
         if self.base_daily_rate and self.base_daily_rate > 0:
             return float(self.base_daily_rate)
-        return float(self.daily_base_wage + self.daily_seniority_bonus)
+        try:
+            wage = float(self.daily_base_wage or 0)
+            bonus = float(self.daily_seniority_bonus or 0)
+            exp = float(self.base_years_experience or 0)
+            return wage + (exp * bonus)
+        except (ValueError, TypeError):
+            return 0.0
 
     @property
     def hourly_rate(self):
-        """نرخ دستمزد هر ساعت کارکرد بر مبنای ۱۰ ساعت کارکرد روزانه"""
+        """نرخ دستمزد هر ساعت کارکرد مبنای بیمه بر مبنای ۱۰ ساعت کارکرد روزانه"""
         daily = self.effective_daily_rate
         if daily > 0:
             return round(daily / 10.0, 2)
         return 0.0
+
+    @property
+    def real_hourly_rate(self):
+        """نرخ ساعتی واقعی قرارداد: حقوق قرارداد ماهانه تقسیم بر ساعات کار قرارداد شده"""
+        if self.contract_hours and self.contract_hours > 0 and self.contract_base_salary and self.contract_base_salary > 0:
+            return round(float(self.contract_base_salary) / float(self.contract_hours), 2)
+        return None
 
     def save(self, *args, **kwargs):
         # انتساب خودکار شرکت از روی بخش یا پروژه در صورت خالی بودن
@@ -1220,7 +1260,7 @@ class PersonnelProfile(_WarehouseCompatMixin, models.Model):
         # پدینگ خودکار کد ملی به ۱۰ رقم
         if self.national_code:
             self.national_code = self.national_code.strip().zfill(10)
-        # محاسبه خودکار و همگام مزد مبنا از مجموع مزد روزانه و سنوات
+        # محاسبه خودکار و همگام مزد مبنا از مجموع مزد روزانه و سنوات با سال کارکرد
         try:
             wage = int(self.daily_base_wage or 0)
         except (ValueError, TypeError):
@@ -1229,11 +1269,187 @@ class PersonnelProfile(_WarehouseCompatMixin, models.Model):
             bonus = int(self.daily_seniority_bonus or 0)
         except (ValueError, TypeError):
             bonus = 0
-        self.base_daily_rate = wage + bonus
-        super().save(*args, **kwargs)
+        try:
+            years = int(self.base_years_experience or 0)
+        except (ValueError, TypeError):
+            years = 0
+        self.base_daily_rate = wage + (years * bonus)
+
+        update_fields = kwargs.get('update_fields')
+        bank_fields_touched = update_fields is None or bool(
+            {'bank_name', 'account_number', 'sheba_number', 'card_number'} & set(update_fields)
+        )
+        # ذخیرهٔ پرونده و همگام‌سازی حساب اصلی در یک تراکنش. خطای همگام‌سازی بلعیده نمی‌شود،
+        # چون بلعیدن خطای دیتابیس درون بلوک اتمیک تراکنش را مسموم می‌کند (DEF-01).
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+
+            # همگام‌سازی حساب بانکی اصلی از روی فیلدهای آینه، در صورت ارسال اطلاعات بانکی
+            if (self.sheba_number or self.account_number) and bank_fields_touched and not getattr(self, '_skip_bank_sync', False):
+                primary_acc = self.bank_accounts.filter(is_primary=True).first()
+                if primary_acc:
+                    if (primary_acc.bank_name != (self.bank_name or '') or
+                        primary_acc.account_number != (self.account_number or '') or
+                        primary_acc.sheba_number != (self.sheba_number or '') or
+                        primary_acc.card_number != (self.card_number or '')):
+                        primary_acc.bank_name = self.bank_name or primary_acc.bank_name
+                        primary_acc.account_number = self.account_number or primary_acc.account_number
+                        primary_acc.sheba_number = self.sheba_number or primary_acc.sheba_number
+                        primary_acc.card_number = self.card_number or primary_acc.card_number
+                        primary_acc.save()
+                else:
+                    PersonnelBankAccount.objects.create(
+                        personnel=self,
+                        bank_name=self.bank_name or 'نامشخص',
+                        account_number=self.account_number or '',
+                        sheba_number=self.sheba_number or '',
+                        card_number=self.card_number or '',
+                        is_primary=True
+                    )
 
     def __str__(self):
         return f"{self.full_name} ({self.national_code}) - {self.job_title}"
+
+
+class PersonnelBankAccount(models.Model):
+    """
+    حساب‌های بانکی و شماره‌های شبای رسمی پرسنل (پشتیبانی از چند حسابی با الگوی CompanyBankAccount)
+    """
+    personnel = models.ForeignKey(
+        'PersonnelProfile',
+        on_delete=models.CASCADE,
+        related_name='bank_accounts',
+        verbose_name="پرونده پرسنل"
+    )
+    bank_name = models.CharField(max_length=100, verbose_name="نام بانک")
+    account_number = models.CharField(max_length=50, blank=True, null=True, verbose_name="شماره حساب")
+    sheba_number = models.CharField(max_length=34, verbose_name="شماره شبا (IR...)")
+    card_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="شماره کارت")
+    is_primary = models.BooleanField(default=False, verbose_name="حساب اصلی / پیش‌فرض واریز حقوق")
+    is_active = models.BooleanField(default=True, verbose_name="فعال")
+    description = models.CharField(max_length=250, blank=True, null=True, verbose_name="توضیحات / عنوان حساب")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ثبت")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ آخرین ویرایش")
+
+    class Meta:
+        verbose_name = "حساب بانکی پرسنل"
+        verbose_name_plural = "حساب‌های بانکی پرسنل"
+        ordering = ['-is_primary', '-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['personnel'],
+                condition=models.Q(is_primary=True),
+                name='unique_primary_personnel_bank_account'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.personnel.full_name} - {self.bank_name} ({self.sheba_number})"
+
+    def save(self, *args, **kwargs):
+        # پاک‌سازی و نرمال‌سازی شبا
+        if self.sheba_number:
+            raw = self.sheba_number.strip().upper()
+            if not raw.startswith('IR') and raw.isdigit() and len(raw) == 24:
+                raw = f"IR{raw}"
+            self.sheba_number = raw
+
+        with transaction.atomic():
+            # قفل ردیف پرونده تا تغییرهای هم‌زمان حساب‌های یک پرسنل پشت سر هم اجرا شوند
+            list(PersonnelProfile.objects.select_for_update().filter(pk=self.personnel_id).values_list('pk', flat=True))
+
+            # اگر اولین حساب این پرسنل است، خودکار اصلی شود
+            if not self.pk and not PersonnelBankAccount.objects.filter(personnel_id=self.personnel_id).exists():
+                self.is_primary = True
+
+            # قید یکتایی حساب اصلی یک partial unique index غیرقابل‌تعویق است؛
+            # پس حساب اصلی قبلی باید پیش از ذخیرهٔ این حساب خاموش شود (DEF-01).
+            if self.is_primary:
+                other_primaries = PersonnelBankAccount.objects.filter(personnel_id=self.personnel_id, is_primary=True)
+                if self.pk:
+                    other_primaries = other_primaries.exclude(pk=self.pk)
+                other_primaries.update(is_primary=False)
+
+            super().save(*args, **kwargs)
+
+            # آینهٔ حساب اصلی روی پرونده فقط از همین‌جا نوشته می‌شود
+            if self.is_primary:
+                PersonnelProfile.objects.filter(pk=self.personnel_id).update(
+                    bank_name=self.bank_name,
+                    account_number=self.account_number,
+                    sheba_number=self.sheba_number,
+                    card_number=self.card_number
+                )
+
+    def delete(self, *args, **kwargs):
+        pers_id = self.personnel_id
+        with transaction.atomic():
+            # همان قفل save(): دو حذف هم‌زمان پرونده را بی‌حساب اصلی نمی‌گذارند
+            list(PersonnelProfile.objects.select_for_update().filter(pk=pers_id).values_list('pk', flat=True))
+            # وضعیت «اصلی» پس از قفل از دیتابیس خوانده می‌شود، نه از نمونهٔ احتمالاً کهنهٔ حافظه
+            was_primary = PersonnelBankAccount.objects.filter(pk=self.pk, is_primary=True).exists() if self.pk else self.is_primary
+            result = super().delete(*args, **kwargs)
+            if was_primary:
+                # فقط حساب فعال جانشین حساب اصلی می‌شود؛ حقوق به حساب غیرفعال هدایت نمی‌شود
+                remaining = PersonnelBankAccount.objects.filter(
+                    personnel_id=pers_id, is_active=True
+                ).order_by('-created_at', '-id').first()
+                if remaining:
+                    remaining.is_primary = True
+                    remaining.save()
+                else:
+                    PersonnelProfile.objects.filter(pk=pers_id).update(
+                        bank_name=None,
+                        account_number=None,
+                        sheba_number=None,
+                        card_number=None
+                    )
+        return result
+
+
+class PersonnelDocument(models.Model):
+    """
+    مدارک چندگانه پرسنل (کارت ملی، شناسنامه، قرارداد، سایر)
+    """
+    DOC_TYPE_CHOICES = (
+        ('national_card', 'کارت ملی'),
+        ('birth_certificate', 'شناسنامه'),
+        ('contract', 'قرارداد پرسنلی'),
+        ('other', 'سایر مدارک'),
+    )
+    personnel = models.ForeignKey(
+        'PersonnelProfile',
+        on_delete=models.CASCADE,
+        related_name='documents',
+        verbose_name="پرونده پرسنل"
+    )
+    doc_type = models.CharField(
+        max_length=30,
+        choices=DOC_TYPE_CHOICES,
+        default='other',
+        verbose_name="نوع مدرک"
+    )
+    file = models.FileField(
+        upload_to='personnel_docs/',
+        verbose_name="فایل پیوست"
+    )
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='uploaded_personnel_docs',
+        verbose_name="بارگذاری‌کننده"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ بارگذاری")
+
+    class Meta:
+        verbose_name = "مدرک پرسنل"
+        verbose_name_plural = "مدارک پرسنل"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.personnel.full_name} - {self.get_doc_type_display()}"
 
 
 class PersonnelSectionAssignment(models.Model):

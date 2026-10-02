@@ -14,7 +14,10 @@ from .models import (
     MonthlyWorkPeriod,
     DailyAttendance,
     AttendanceAuditLog,
-    VehicleTripLog
+    VehicleTripLog,
+    InsuranceJobTitle,
+    PersonnelBankAccount,
+    PersonnelDocument
 )
 
 
@@ -120,3 +123,25 @@ class VehicleTripLogAdmin(admin.ModelAdmin):
     list_display = ('vehicle', 'date_shamsi', 'warehouse_id', 'trip_count', 'unit_rate', 'total_amount', 'dispatch_reference')
     list_filter = ('warehouse_id', 'date_shamsi')
     search_fields = ('vehicle__driver_name', 'vehicle__plate_number', 'dispatch_reference')
+
+
+@admin.register(InsuranceJobTitle)
+class InsuranceJobTitleAdmin(admin.ModelAdmin):
+    list_display = ('title', 'job_code', 'is_active', 'created_at')
+    list_filter = ('is_active',)
+    search_fields = ('title', 'job_code')
+
+
+@admin.register(PersonnelBankAccount)
+class PersonnelBankAccountAdmin(admin.ModelAdmin):
+    list_display = ('personnel', 'bank_name', 'account_number', 'sheba_number', 'is_primary', 'is_active')
+    list_filter = ('is_primary', 'is_active', 'bank_name')
+    search_fields = ('personnel__first_name', 'personnel__last_name', 'personnel__national_code', 'sheba_number', 'account_number')
+
+
+@admin.register(PersonnelDocument)
+class PersonnelDocumentAdmin(admin.ModelAdmin):
+    list_display = ('personnel', 'doc_type', 'uploaded_by', 'created_at')
+    list_filter = ('doc_type', 'created_at')
+    search_fields = ('personnel__first_name', 'personnel__last_name', 'personnel__national_code')
+

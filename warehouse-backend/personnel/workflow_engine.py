@@ -134,16 +134,30 @@ def _record_audit_log(instance, user, from_status, to_status, action, reason=Non
     try:
         from .models import WorkflowAuditLog
         content_type = instance.__class__.__name__.lower()
+        object_id = instance.pk
+        metadata = dict(metadata or {})
+        # DEF-19: نگاشت یکدست حوزهٔ پرسنل. لاگ پرونده و درخواست تغییراتش هر دو روی تایملاین همان پرونده
+        # (content_type='personnel') ثبت می‌شوند؛ درخواست تغییرات با change_request_id در metadata.
+        if content_type == 'personnelprofile':
+            content_type = 'personnel'
+            metadata.setdefault('company_id', getattr(instance, 'company_id', None))
+        elif content_type == 'personnelchangerequest':
+            personnel = getattr(instance, 'personnel', None)
+            content_type = 'personnel'
+            object_id = getattr(instance, 'personnel_id', None)
+            metadata.setdefault('change_request_id', instance.pk)
+            metadata.setdefault('company_id', getattr(personnel, 'company_id', None))
+            action = f'change_request_{action}'
         actor_user = user if getattr(user, 'is_authenticated', False) else None
         WorkflowAuditLog.objects.create(
             content_type=content_type,
-            object_id=instance.pk,
+            object_id=object_id,
             actor=actor_user,
             from_status=from_status or '',
             to_status=to_status or '',
             action=action,
             reason=reason or '',
-            metadata=metadata or {}
+            metadata=metadata
         )
     except Exception as e:
         logger.warning(f"[WorkflowEngine] Failed to write WorkflowAuditLog for {instance}: {e}")
@@ -387,6 +401,7 @@ def request_workflow_revision(instance, user, reason: str, target_status: str = 
         raise PermissionDenied("شما دسترسی لازم برای ارجاع بازنگری پرونده را ندارید.")
 
     now = timezone.now()
+    current_status = getattr(locked_instance, 'approval_status', getattr(locked_instance, 'status', ''))
     next_status = target_status or WorkflowStatuses.REVISION_REQUIRED
 
     if hasattr(locked_instance, 'approval_status'):
@@ -407,7 +422,7 @@ def request_workflow_revision(instance, user, reason: str, target_status: str = 
     if hasattr(locked_instance, 'vehicle') and locked_instance.vehicle:
         locked_instance.vehicle.has_pending_changes = False
         locked_instance.vehicle.save(update_fields=['has_pending_changes'])
-    _record_audit_log(locked_instance, user, getattr(locked_instance, 'approval_status', getattr(locked_instance, 'status', '')), next_status, 'revision', reason=reason)
+    _record_audit_log(locked_instance, user, current_status, next_status, 'revision', reason=reason)
     logger.info(f"[WorkflowEngine] Instance {model_cls.__name__}#{locked_instance.pk} marked REVISION_REQUIRED by {user.username}. Reason: {reason}")
     return locked_instance
 
@@ -427,6 +442,8 @@ def reject_workflow(instance, user, reason: str):
     if user_tier < WorkflowTiers.TIER_2_SUPERVISOR and not user.is_superuser:
         raise PermissionDenied("شما دسترسی لازم برای رد این پرونده را ندارید.")
 
+    current_status = getattr(locked_instance, 'approval_status', getattr(locked_instance, 'status', ''))
+
     if hasattr(locked_instance, 'approval_status'):
         locked_instance.approval_status = WorkflowStatuses.REJECTED
     elif hasattr(locked_instance, 'status'):
@@ -443,7 +460,7 @@ def reject_workflow(instance, user, reason: str):
         locked_instance.vehicle.has_pending_changes = False
         locked_instance.vehicle.save(update_fields=['has_pending_changes'])
     target_st = getattr(locked_instance, 'approval_status', getattr(locked_instance, 'status', 'rejected'))
-    _record_audit_log(locked_instance, user, getattr(locked_instance, 'approval_status', getattr(locked_instance, 'status', '')), target_st, 'reject', reason=reason)
+    _record_audit_log(locked_instance, user, current_status, target_st, 'reject', reason=reason)
     logger.info(f"[WorkflowEngine] Instance {model_cls.__name__}#{locked_instance.pk} REJECTED by {user.username}. Reason: {reason}")
     return locked_instance
 
@@ -525,14 +542,18 @@ def record_isolated_sheba_failure(payroll_record, user, failure_reason: str):
 
 def _apply_personnel_changes(change_request):
     """
-    اعمال اتمیک فیلدهای ویرایش‌شده در درخواست تغییرات به پرونده پرسنل
+    اعمال اتمیک فیلدهای ویرایش‌شده در درخواست تغییرات به پرونده پرسنل با اعتبارسنجی سریالایزر.
+    DEF-06: منبع واحد lifecycle_services.apply_personnel_change_request است. اگر داده نامعتبر باشد
+    هیچ setattr خامی انجام نمی‌شود؛ خطای 400 برمی‌گردد و تراکنش (و وضعیت درخواست) برمی‌گردد.
     """
-    personnel = change_request.personnel
-    for field_name, new_val in change_request.proposed_changes.items():
-        if hasattr(personnel, field_name) and field_name not in ['id', 'pk', 'national_code', 'approval_status', 'created_at', 'created_by', 'section']:
-            setattr(personnel, field_name, new_val)
-    personnel.has_pending_changes = False
-    personnel.save()
+    from rest_framework.exceptions import ValidationError as DRFValidationError
+    from .lifecycle_services import PersonnelWorkflowError, apply_personnel_change_request, refresh_has_pending_changes
+
+    try:
+        personnel = apply_personnel_change_request(change_request)
+    except PersonnelWorkflowError as e:
+        raise DRFValidationError(e.to_response_data())
+    refresh_has_pending_changes(personnel, exclude_cr_id=change_request.pk)
     logger.info(f"[WorkflowEngine] Applied ChangeRequest #{change_request.pk} to Personnel #{personnel.pk}")
 
 

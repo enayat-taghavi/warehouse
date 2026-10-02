@@ -80,6 +80,7 @@ class Command(BaseCommand):
             {'codename': 'perm_approve_fleet_finance', 'name': 'تایید مرحله دوم (مالی و بانکی) ناوگان و خودروها'},
             {'codename': 'perm_manager_payment_authorize', 'name': 'صدور مجوز پرداخت نهایی مدیر شرکت'},
             {'codename': 'perm_treasury_disburse_action', 'name': 'ثبت واریز و تسویه نهایی خزانه‌داری'},
+            {'codename': 'perm_delete_personnel_nomovement', 'name': 'حذف پرسنل فاقد سابقه کارکرد و مالی'},
 
             # Sensitive & Critical (حساس و بحرانی)
             {'codename': 'perm_rollback_data', 'name': 'بازگردانی و احیای جامع داده‌ها'},
