@@ -176,98 +176,98 @@ FLEET_DELETE_NOMOVEMENT_PERM = 'perm_delete_vehicle_nomovement'
 ## ۴. فازها و تسک‌ها (۱۱ فاز، ۷۳ تسک)
 
 ### فاز ۰: پیش‌نیازهای امنیتی و دادهٔ موجود (پیش از هر فاز دیگر)
-- [ ] **تسک ۰.۱:** `update` از `get_object()` و سپس قفل همان pk (ب-۱). <!-- id: 0.1 -->
-- [ ] **تسک ۰.۲:** `scope_vehicle_queryset` و به‌کارگیری آن در `VehicleDriverProfileViewSet` و `VehicleChangeRequestViewSet` (ب-۲). <!-- id: 0.2 -->
-- [ ] **تسک ۰.۳:** حذف fallback `Company.objects.first()`، و عمومی‌سازی `ensure_personnel_write_scope` به `ensure_record_write_scope` با به‌کارگیری در ایجاد و ویرایش ناوگان (ب-۳ و ب-۴). <!-- id: 0.3 -->
-- [ ] **تسک ۰.۴:** پخش وب‌سوکت ناوگان فقط در کانال شرکت (ب-۶)، و یکتایی پلاک درون شرکت (ب-۷). <!-- id: 0.4 -->
-- [ ] **تسک ۰.۵ [نیازمند تصمیم کاربر]:** پر کردن `company` برای ۱۱ خودروی بی‌شرکت با مایگریشن دادهٔ برگشت‌پذیر (فقط ردیف‌های `company IS NULL`؛ برگشت = تهی‌کردن همان شناسه‌ها). پیش از اجرا، برخورد با قید `unique_company_vehicle_plate` سنجیده شود. تا این تسک انجام نشده، ۰.۲ منتشر نشود (ب-۱۶). <!-- id: 0.5 -->
-- [ ] **تسک ۰.۶:** `VehicleTripLog.vehicle` با `on_delete=PROTECT` (مایگریشن بدون SQL)، و قفل `select_for_update` با سنجش سابقه درون تراکنش در `destroy` (ب-۹). <!-- id: 0.6 -->
+- [x] **تسک ۰.۱:** `update` از `get_object()` و سپس قفل همان pk (ب-۱). <!-- id: 0.1 -->
+- [x] **تسک ۰.۲:** `scope_vehicle_queryset` و به‌کارگیری آن در `VehicleDriverProfileViewSet` و `VehicleChangeRequestViewSet` (ب-۲). <!-- id: 0.2 -->
+- [x] **تسک ۰.۳:** حذف fallback `Company.objects.first()`، و عمومی‌سازی `ensure_personnel_write_scope` به `ensure_record_write_scope` با به‌کارگیری در ایجاد و ویرایش ناوگان (ب-۳ و ب-۴). <!-- id: 0.3 -->
+- [x] **تسک ۰.۴:** پخش وب‌سوکت ناوگان فقط در کانال شرکت (ب-۶)، و یکتایی پلاک درون شرکت (ب-۷). <!-- id: 0.4 -->
+- [x] **تسک ۰.۵ [نیازمند تصمیم کاربر]:** پر کردن `company` برای ۱۱ خودروی بی‌شرکت با مایگریشن دادهٔ برگشت‌پذیر (فقط ردیف‌های `company IS NULL`؛ برگشت = تهی‌کردن همان شناسه‌ها). پیش از اجرا، برخورد با قید `unique_company_vehicle_plate` سنجیده شود. تا این تسک انجام نشده، ۰.۲ منتشر نشود (ب-۱۶). <!-- id: 0.5 -->
+- [x] **تسک ۰.۶:** `VehicleTripLog.vehicle` با `on_delete=PROTECT` (مایگریشن بدون SQL)، و قفل `select_for_update` با سنجش سابقه درون تراکنش در `destroy` (ب-۹). <!-- id: 0.6 -->
 
 ### فاز ۱: مدل‌ها و مایگریشن‌ها
-- [ ] **تسک ۱.۱:** مدل `VehicleBankAccount`: `vehicle`، `bank_name`، `account_number`، `sheba_number`، `card_number`، `account_owner_name`، `account_owner_national_code`، `payee_type` (`driver`، `owner`، `other`)، `is_primary`، `is_active`، `description`. `save()` و `delete()` دقیقاً مانند `PersonnelBankAccount`: قفل ردیف خودرو، خاموش کردن حساب اصلی قبلی پیش از `save`، جانشینی فقط حساب فعال، و آینه با `.update()` فقط برای سه ستون موجود (ب-۱۵). <!-- id: 1.1 -->
-- [ ] **تسک ۱.۲:** مجوز `perm_delete_vehicle_nomovement` در `accounts/models.py`. مایگریشن با نام یکتای تطبیق‌شده با `django_migrations`. افزودن به `seed_permissions.py` و `users.ts` (ب-۲۴). <!-- id: 1.2 -->
-- [ ] **تسک ۱.۳:** مدل `VehicleDocument` (`vehicle`، `doc_type`، `file` با `upload_to='vehicle_docs/%Y/%m/'`، `title`، `issue_date`، `expiry_date`، `uploaded_by`، `created_at`). <!-- id: 1.3 -->
-- [ ] **تسک ۱.۴:** فیلدهای شمسی `CharField(max_length=10, blank=True, null=True)`: `insurance_expiry_date`، `inspection_expiry_date`، `license_expiry_date`، `valid_until_date` و `end_date`. نرمال‌سازی با `normalize_shamsi_date` در سریالایزر و مقایسه فقط با `parse_shamsi_date`. خالی یعنی بدون محدودیت. <!-- id: 1.4 -->
-- [ ] **تسک ۱.۵:** همگام‌سازی معکوس در `VehicleDriverProfile.save()` با `_skip_bank_sync` (الگوی `PersonnelProfile.save()`). در `create` سریالایزر با حساب‌های تودرتو، ستون‌های تخت حذف شوند (نویسندهٔ واحد، DEF-01). <!-- id: 1.5 -->
-- [ ] **تسک ۱.۶:** SoD نرخ در سریالایزر: `FLEET_RATE_FIELDS = ('default_service_rate',)` برای نقش غیرمالی در نوشتن بی‌صدا حذف شود و در خروجی نیاید (ب-۱۲). <!-- id: 1.6 -->
-- [ ] **تسک ۱.۷:** مایگریشن اسکیما و مایگریشن داده (اسکیل `safe-migration`): انتقال ۵ حساب موجود به `VehicleBankAccount` با `is_primary=True`؛ `payee_type` برابر `driver` اگر `is_driver_owner` باشد، وگرنه `owner`؛ شبای نامعتبر عیناً؛ برگشت `RunPython.noop` (ب-۱۱). <!-- id: 1.7 -->
-- [ ] **تسک ۱.۸:** دیسکت تسویهٔ ناوگان (`fleet_settlement_engine.py`) نام ذینفع را از `account_owner_name` حساب اصلی بگیرد، با پشتیبان `driver_name` (ب-۱۵). <!-- id: 1.8 -->
+- [x] **تسک ۱.۱:** مدل `VehicleBankAccount`: `vehicle`، `bank_name`، `account_number`، `sheba_number`، `card_number`، `account_owner_name`، `account_owner_national_code`، `payee_type` (`driver`، `owner`، `other`)، `is_primary`، `is_active`، `description`. `save()` و `delete()` دقیقاً مانند `PersonnelBankAccount`: قفل ردیف خودرو، خاموش کردن حساب اصلی قبلی پیش از `save`، جانشینی فقط حساب فعال، و آینه با `.update()` فقط برای سه ستون موجود (ب-۱۵). <!-- id: 1.1 -->
+- [x] **تسک ۱.۲:** مجوز `perm_delete_vehicle_nomovement` در `accounts/models.py`. مایگریشن با نام یکتای تطبیق‌شده با `django_migrations`. افزودن به `seed_permissions.py` و `users.ts` (ب-۲۴). <!-- id: 1.2 -->
+- [x] **تسک ۱.۳:** مدل `VehicleDocument` (`vehicle`، `doc_type`، `file` با `upload_to='vehicle_docs/%Y/%m/'`، `title`، `issue_date`، `expiry_date`، `uploaded_by`، `created_at`). <!-- id: 1.3 -->
+- [x] **تسک ۱.۴:** فیلدهای شمسی `CharField(max_length=10, blank=True, null=True)`: `insurance_expiry_date`، `inspection_expiry_date`، `license_expiry_date`، `valid_until_date` و `end_date`. نرمال‌سازی با `normalize_shamsi_date` در سریالایزر و مقایسه فقط با `parse_shamsi_date`. خالی یعنی بدون محدودیت. <!-- id: 1.4 -->
+- [x] **تسک ۱.۵:** همگام‌سازی معکوس در `VehicleDriverProfile.save()` با `_skip_bank_sync` (الگوی `PersonnelProfile.save()`). در `create` سریالایزر با حساب‌های تودرتو، ستون‌های تخت حذف شوند (نویسندهٔ واحد، DEF-01). <!-- id: 1.5 -->
+- [x] **تسک ۱.۶:** SoD نرخ در سریالایزر: `FLEET_RATE_FIELDS = ('default_service_rate',)` برای نقش غیرمالی در نوشتن بی‌صدا حذف شود و در خروجی نیاید (ب-۱۲). <!-- id: 1.6 -->
+- [x] **تسک ۱.۷:** مایگریشن اسکیما و مایگریشن داده (اسکیل `safe-migration`): انتقال ۵ حساب موجود به `VehicleBankAccount` با `is_primary=True`؛ `payee_type` برابر `driver` اگر `is_driver_owner` باشد، وگرنه `owner`؛ شبای نامعتبر عیناً؛ برگشت `RunPython.noop` (ب-۱۱). <!-- id: 1.7 -->
+- [x] **تسک ۱.۸:** دیسکت تسویهٔ ناوگان (`fleet_settlement_engine.py`) نام ذینفع را از `account_owner_name` حساب اصلی بگیرد، با پشتیبان `driver_name` (ب-۱۵). <!-- id: 1.8 -->
 
 ### فاز ۲: ماژول متمرکز `personnel/fleet_lifecycle_services.py`
-- [ ] **تسک ۲.۰:** ایجاد ماژول. ابزارهای مشترک (`parse_shamsi_date`، `normalize_shamsi_date`، `user_has_any_perm`، `_diff_repr`، `compute_profile_diff`) از `lifecycle_services` import شوند و تکرار نشوند. سرویس‌ها از `views.py` import نکنند. <!-- id: 2.0 -->
-- [ ] **تسک ۲.۱:** `validate_vehicle_validity(vehicle, date_shamsi)` و `assert_vehicle_trip_allowed` با معیارهای فعال بودن، تصویب و تاریخ‌های انقضا و پایان همکاری (ب-۲۰). اتصال به هر چهار مسیر نوشتن تردد: `views.py` (۳ مسیر) و `fleet_excel_engine.py`. <!-- id: 2.1 -->
-- [ ] **تسک ۲.۲:** پلاک: قالب سخت فقط برای `ROAD_VEHICLE_TYPES`. کد ملی راننده و مالک با `common.validators.validate_iranian_national_code` (ب-۲۵). مقدار ذخیره‌شدهٔ دست‌نخورده دوباره سنجیده نشود (`_is_unchanged_stored_value`). <!-- id: 2.2 -->
-- [ ] **تسک ۲.۳:** `check_vehicle_history` با فهرست صریح ب-۲۱. <!-- id: 2.3 -->
-- [ ] **تسک ۲.۴:** `build_vehicle_snapshot` با فیلدها، همهٔ حساب‌ها و فهرست مدارک (نام و مسیر فایل). <!-- id: 2.4 -->
-- [ ] **تسک ۲.۵:** `get_vehicle_missing_fields` تجمعی (بخش ۳.۱، ب-۱۷). فیلد `missing_fields` در سریالایزر مانند پرسنل: پیش‌نویس ← `submit`، `pending_accountant` ← `accountant`. <!-- id: 2.5 -->
-- [ ] **تسک ۲.۶:** `ensure_record_write_scope` (از ۰.۳) در سرویس‌های نوشتن. تسک جداگانهٔ `ensure_vehicle_write_scope` حذف شد (ب-۴). <!-- id: 2.6 -->
-- [ ] **تسک ۲.۷:** `read_only_fields` برای `approval_status`، `rejection_reason`، `has_pending_changes`، `is_active` و `end_date`. اکشن `POST /api/personnel/vehicles/{id}/submit/`، و پل سازگاری PATCH (ب-۱۳). <!-- id: 2.7 -->
-- [ ] **تسک ۲.۸:** `check_vehicle_bank_account_edit_allowed` همان قواعد `check_bank_account_edit_allowed` (DEF-10). <!-- id: 2.8 -->
-- [ ] **تسک ۲.۹:** `VehicleWorkflowError` (یا استفادهٔ دوباره از `PersonnelWorkflowError` با نام عمومی) با `missing_fields`. <!-- id: 2.9 -->
+- [x] **تسک ۲.۰:** ایجاد ماژول. ابزارهای مشترک (`parse_shamsi_date`، `normalize_shamsi_date`، `user_has_any_perm`، `_diff_repr`، `compute_profile_diff`) از `lifecycle_services` import شوند و تکرار نشوند. سرویس‌ها از `views.py` import نکنند. <!-- id: 2.0 -->
+- [x] **تسک ۲.۱:** `validate_vehicle_validity(vehicle, date_shamsi)` و `assert_vehicle_trip_allowed` با معیارهای فعال بودن، تصویب و تاریخ‌های انقضا و پایان همکاری (ب-۲۰). اتصال به هر چهار مسیر نوشتن تردد: `views.py` (۳ مسیر) و `fleet_excel_engine.py`. <!-- id: 2.1 -->
+- [x] **تسک ۲.۲:** پلاک: قالب سخت فقط برای `ROAD_VEHICLE_TYPES`. کد ملی راننده و مالک با `common.validators.validate_iranian_national_code` (ب-۲۵). مقدار ذخیره‌شدهٔ دست‌نخورده دوباره سنجیده نشود (`_is_unchanged_stored_value`). <!-- id: 2.2 -->
+- [x] **تسک ۲.۳:** `check_vehicle_history` با فهرست صریح ب-۲۱. <!-- id: 2.3 -->
+- [x] **تسک ۲.۴:** `build_vehicle_snapshot` با فیلدها، همهٔ حساب‌ها و فهرست مدارک (نام و مسیر فایل). <!-- id: 2.4 -->
+- [x] **تسک ۲.۵:** `get_vehicle_missing_fields` تجمعی (بخش ۳.۱، ب-۱۷). فیلد `missing_fields` در سریالایزر مانند پرسنل: پیش‌نویس ← `submit`، `pending_accountant` ← `accountant`. <!-- id: 2.5 -->
+- [x] **تسک ۲.۶:** `ensure_record_write_scope` (از ۰.۳) در سرویس‌های نوشتن. تسک جداگانهٔ `ensure_vehicle_write_scope` حذف شد (ب-۴). <!-- id: 2.6 -->
+- [x] **تسک ۲.۷:** `read_only_fields` برای `approval_status`، `rejection_reason`، `has_pending_changes`، `is_active` و `end_date`. اکشن `POST /api/personnel/vehicles/{id}/submit/`، و پل سازگاری PATCH (ب-۱۳). <!-- id: 2.7 -->
+- [x] **تسک ۲.۸:** `check_vehicle_bank_account_edit_allowed` همان قواعد `check_bank_account_edit_allowed` (DEF-10). <!-- id: 2.8 -->
+- [x] **تسک ۲.۹:** `VehicleWorkflowError` (یا استفادهٔ دوباره از `PersonnelWorkflowError` با نام عمومی) با `missing_fields`. <!-- id: 2.9 -->
 
 ### فاز ۳: ماشین حالت، Purge، بازگشایی و درخواست تغییرات
-- [ ] **تسک ۳.۰:** `perform_create`: ساخت همیشه `draft` و عبور فقط با `auto_pass_vehicle` (ب-۱۴). <!-- id: 3.0 -->
-- [ ] **تسک ۳.۱:** `reject` با فهرست سفید وضعیت‌های در جریان، قفل، Purge مشروط و اسنپ‌شات، و لاگ (ب-۱۸). <!-- id: 3.1 -->
-- [ ] **تسک ۳.۱-ب:** `end-collaboration` فقط برای مصوب و فعال، با مجوز مدیر، `end_date` الزامی، و `end_date` پس از تاریخ آخرین تردد ثبت‌شده. <!-- id: 3.1-b -->
-- [ ] **تسک ۳.۲:** `request-revision` بر پایهٔ وضعیت فعلی: سرپرست، حسابدار (دومقصده) و مدیر (← `pending_accountant`)، با قفل و لاگ (ب-۱۹). <!-- id: 3.2 -->
-- [ ] **تسک ۳.۲-ب:** `reopen`: `rejected` ← `draft` با قفل و بررسی وضعیت هم‌زمان (۴۰۹)، در قلمرو شرکت، برای ثبت‌کننده، هم‌بخش یا تأییدکننده. <!-- id: 3.2-b -->
-- [ ] **تسک ۳.۳:** `auto_pass_vehicle(vehicle, user, source, draft_on_incomplete=False)` مانند `auto_pass_personnel`. <!-- id: 3.3 -->
-- [ ] **تسک ۳.۴:** `approve_vehicle_stage(vehicle_id, user, stage, note, batch)` با جدول `FLEET_APPROVAL_STAGES` (from و gated_from)، قفل ردیف، لاگ و اعلان. سه اکشن تکی از آن استفاده کنند (پرش مدیر از `draft` و `revision_required` ممنوع). <!-- id: 3.4 -->
-- [ ] **تسک ۳.۵:** ایمن‌سازی `VehicleChangeRequestViewSet` (ب-۲۳): `create`، `update` و `partial_update` ← ۴۰۵؛ `destroy` غیرسوپریوزر ← ۴۰۳؛ `cancel` برای درخواست‌دهنده تا پیش از تأیید سرپرست؛ فهرست سفید وضعیت؛ `apply_vehicle_change_request` با سریالایزر؛ `refresh_has_pending_changes`؛ لاگ `content_type='vehicle'` با `change_request_id`. <!-- id: 3.5 -->
-- [ ] **تسک ۳.۶:** `batch-approve` با شناسه‌های فیلترشده از `get_queryset` و فراخوانی `approve_vehicle_stage` برای هر شناسه در تراکنش جدا (DEF-09). <!-- id: 3.6 -->
-- [ ] **تسک ۳.۷:** ویرایش مستقیم حسابدار در `pending_accountant` با `accountant_edit` و diff. `pending_manager` برای همه جز سوپریوزر قفل است. ویرایش سوپریوزر روی پروندهٔ مصوب با `superuser_edit` لاگ شود. <!-- id: 3.7 -->
-- [ ] **تسک ۳.۸:** یکدست‌سازی لاگ: `submit`، `approve_supervisor`، `approve_finance`، `approve_manager`، `reject`، `request_revision`، `auto_pass`، `purge`، `delete`، `reopen`، `end_collaboration`، `accountant_edit`، `superuser_edit`، `change_request_*`؛ همه با `metadata.company_id`. <!-- id: 3.8 -->
-- [ ] **تسک ۳.۹:** `destroy` با ماتریس `_user_may_delete` (ثبت‌کننده یا هم‌بخش در `draft` و `revision_required`؛ یا مجوز اختصاصی)، ۴۰۰ برای سابقه (ب-۱۰) و اسنپ‌شات. <!-- id: 3.9 -->
+- [x] **تسک ۳.۰:** `perform_create`: ساخت همیشه `draft` و عبور فقط با `auto_pass_vehicle` (ب-۱۴). <!-- id: 3.0 -->
+- [x] **تسک ۳.۱:** `reject` با فهرست سفید وضعیت‌های در جریان، قفل، Purge مشروط و اسنپ‌شات، و لاگ (ب-۱۸). <!-- id: 3.1 -->
+- [x] **تسک ۳.۱-ب:** `end-collaboration` فقط برای مصوب و فعال، با مجوز مدیر، `end_date` الزامی، و `end_date` پس از تاریخ آخرین تردد ثبت‌شده. <!-- id: 3.1-b -->
+- [x] **تسک ۳.۲:** `request-revision` بر پایهٔ وضعیت فعلی: سرپرست، حسابدار (دومقصده) و مدیر (← `pending_accountant`)، با قفل و لاگ (ب-۱۹). <!-- id: 3.2 -->
+- [x] **تسک ۳.۲-ب:** `reopen`: `rejected` ← `draft` با قفل و بررسی وضعیت هم‌زمان (۴۰۹)، در قلمرو شرکت، برای ثبت‌کننده، هم‌بخش یا تأییدکننده. <!-- id: 3.2-b -->
+- [x] **تسک ۳.۳:** `auto_pass_vehicle(vehicle, user, source, draft_on_incomplete=False)` مانند `auto_pass_personnel`. <!-- id: 3.3 -->
+- [x] **تسک ۳.۴:** `approve_vehicle_stage(vehicle_id, user, stage, note, batch)` با جدول `FLEET_APPROVAL_STAGES` (from و gated_from)، قفل ردیف، لاگ و اعلان. سه اکشن تکی از آن استفاده کنند (پرش مدیر از `draft` و `revision_required` ممنوع). <!-- id: 3.4 -->
+- [x] **تسک ۳.۵:** ایمن‌سازی `VehicleChangeRequestViewSet` (ب-۲۳): `create`، `update` و `partial_update` ← ۴۰۵؛ `destroy` غیرسوپریوزر ← ۴۰۳؛ `cancel` برای درخواست‌دهنده تا پیش از تأیید سرپرست؛ فهرست سفید وضعیت؛ `apply_vehicle_change_request` با سریالایزر؛ `refresh_has_pending_changes`؛ لاگ `content_type='vehicle'` با `change_request_id`. <!-- id: 3.5 -->
+- [x] **تسک ۳.۶:** `batch-approve` با شناسه‌های فیلترشده از `get_queryset` و فراخوانی `approve_vehicle_stage` برای هر شناسه در تراکنش جدا (DEF-09). <!-- id: 3.6 -->
+- [x] **تسک ۳.۷:** ویرایش مستقیم حسابدار در `pending_accountant` با `accountant_edit` و diff. `pending_manager` برای همه جز سوپریوزر قفل است. ویرایش سوپریوزر روی پروندهٔ مصوب با `superuser_edit` لاگ شود. <!-- id: 3.7 -->
+- [x] **تسک ۳.۸:** یکدست‌سازی لاگ: `submit`، `approve_supervisor`، `approve_finance`، `approve_manager`، `reject`، `request_revision`، `auto_pass`، `purge`، `delete`، `reopen`، `end_collaboration`، `accountant_edit`، `superuser_edit`، `change_request_*`؛ همه با `metadata.company_id`. <!-- id: 3.8 -->
+- [x] **تسک ۳.۹:** `destroy` با ماتریس `_user_may_delete` (ثبت‌کننده یا هم‌بخش در `draft` و `revision_required`؛ یا مجوز اختصاصی)، ۴۰۰ برای سابقه (ب-۱۰) و اسنپ‌شات. <!-- id: 3.9 -->
 
 ### فاز ۴: اعلان‌ها و وب‌سوکت
-- [ ] **تسک ۴.۱:** `_workflow_recipient_ids` پارامتر `perms_by_stage` بگیرد. `dispatch_vehicle_workflow_notification` با مجوزهای ناوگان و ایزولاسیون شرکت (ب-۲۲). <!-- id: 4.1 -->
-- [ ] **تسک ۴.۲:** اتصال همهٔ گذارها (ارسال، تأییدها، عودت، رد، Purge، بازگشایی، قطع همکاری و ابطال) با متن فارسی و لینک کارتابل. <!-- id: 4.2 -->
-- [ ] **تسک ۴.۳:** پی‌لود غنی `broadcast_vehicle_update` فقط در کانال شرکت. <!-- id: 4.3 -->
+- [x] **تسک ۴.۱:** `_workflow_recipient_ids` پارامتر `perms_by_stage` بگیرد. `dispatch_vehicle_workflow_notification` با مجوزهای ناوگان و ایزولاسیون شرکت (ب-۲۲). <!-- id: 4.1 -->
+- [x] **تسک ۴.۲:** اتصال همهٔ گذارها (ارسال، تأییدها، عودت، رد، Purge، بازگشایی، قطع همکاری و ابطال) با متن فارسی و لینک کارتابل. <!-- id: 4.2 -->
+- [x] **تسک ۴.۳:** پی‌لود غنی `broadcast_vehicle_update` فقط در کانال شرکت. <!-- id: 4.3 -->
 
 ### فاز ۵: اکسل و اکشن‌های تودرتو
-- [ ] **تسک ۵.۱:** `@action(detail=True, url_path='bank-accounts')` مانند پرسنل، با `check_vehicle_bank_account_edit_allowed` و لاگ تغییر حساب. <!-- id: 5.1 -->
-- [ ] **تسک ۵.۲:** `@action(detail=True, url_path='documents')` با سنجش نوع و حجم فایل. حذف فقط ردیف، و فایل فیزیکی بماند (ب-۳۰). <!-- id: 5.2 -->
-- [ ] **تسک ۵.۳:** خروجی اکسل ۲ سطری (عنوان فارسی، کلید لاتین، فریز A3) محدود به `readable_company_ids`. نرخ فقط برای نقش مالی. <!-- id: 5.3 -->
-- [ ] **تسک ۵.۴:** درون‌ریزی با `resolve_import_company`، `ensure_record_write_scope`، کد ملی معتبر، حساب اصلی در `VehicleBankAccount` و `auto_pass_vehicle(..., draft_on_incomplete=True)`. حذف `manager_approved` (ب-۵). <!-- id: 5.4 -->
-- [ ] **تسک ۵.۵:** `GET /api/personnel/vehicles/{id}/delete_impact/` با `history` و `can_delete`، مانند پرسنل. <!-- id: 5.5 -->
+- [x] **تسک ۵.۱:** `@action(detail=True, url_path='bank-accounts')` مانند پرسنل، با `check_vehicle_bank_account_edit_allowed` و لاگ تغییر حساب. <!-- id: 5.1 -->
+- [x] **تسک ۵.۲:** `@action(detail=True, url_path='documents')` با سنجش نوع و حجم فایل. حذف فقط ردیف، و فایل فیزیکی بماند (ب-۳۰). <!-- id: 5.2 -->
+- [x] **تسک ۵.۳:** خروجی اکسل ۲ سطری (عنوان فارسی، کلید لاتین، فریز A3) محدود به `readable_company_ids`. نرخ فقط برای نقش مالی. <!-- id: 5.3 -->
+- [x] **تسک ۵.۴:** درون‌ریزی با `resolve_import_company`، `ensure_record_write_scope`، کد ملی معتبر، حساب اصلی در `VehicleBankAccount` و `auto_pass_vehicle(..., draft_on_incomplete=True)`. حذف `manager_approved` (ب-۵). <!-- id: 5.4 -->
+- [x] **تسک ۵.۵:** `GET /api/personnel/vehicles/{id}/delete_impact/` با `history` و `can_delete`، مانند پرسنل. <!-- id: 5.5 -->
 
 ### فاز ۶: فرم ثبت کارمند (`employee-new-vehicle`)
-- [ ] **تسک ۶.۱:** فرم ۵ تب (فنی و پلاک، راننده، مالک، بانک، مدارک و انقضا) با نشانگر تکمیل از `missing_fields` سرور، و `<svg appIcon>`. <!-- id: 6.1 -->
-- [ ] **تسک ۶.۲:** حذف فیلد نرخ از فرم و خروجی کارمند. <!-- id: 6.2 -->
-- [ ] **تسک ۶.۳:** ویجت ۴ قسمتی پلاک با فوکوس خودکار. برای `forklift` و `other` ورودی آزاد. <!-- id: 6.3 -->
-- [ ] **تسک ۶.۴:** ماژول بانکی چندحسابی با `core/utils/sheba-utils.ts` (`IRANIAN_BANKS`، تبدیل حساب به شبا با دکمهٔ آیکونی، کپی و `payee_type`)، بدون ایموجی (ب-۲۷). <!-- id: 6.4 -->
-- [ ] **تسک ۶.۵:** تاریخ‌ها با `ng-persian-datepicker` روی `FormControl` و کلاس `.datepicker-left` در ستون‌های چپ. <!-- id: 6.5 -->
-- [ ] **تسک ۶.۶:** بارگذاری مدارک (فقط آنلاین، با پیام روشن در آفلاین) و پیش‌نمایش؛ `NgOptimizedImage` برای `blob:` نه. <!-- id: 6.6 -->
-- [ ] **تسک ۶.۷:** دکمه‌های جدای «ذخیرهٔ پیش‌نویس» و «ارسال به سرپرست» (`POST /submit/`). در کنار پل سازگاری بک‌اند در یک انتشار (ب-۱۳). خطای ۴۰۰ گیت، دادهٔ فرم را پاک نکند. <!-- id: 6.7 -->
+- [x] **تسک ۶.۱:** فرم ۵ تب (فنی و پلاک، راننده، مالک، بانک، مدارک و انقضا) با نشانگر تکمیل از `missing_fields` سرور، و `<svg appIcon>`. <!-- id: 6.1 -->
+- [x] **تسک ۶.۲:** حذف فیلد نرخ از فرم و خروجی کارمند. <!-- id: 6.2 -->
+- [x] **تسک ۶.۳:** ویجت ۴ قسمتی پلاک با فوکوس خودکار. برای `forklift` و `other` ورودی آزاد. <!-- id: 6.3 -->
+- [x] **تسک ۶.۴:** ماژول بانکی چندحسابی با `core/utils/sheba-utils.ts` (`IRANIAN_BANKS`، تبدیل حساب به شبا با دکمهٔ آیکونی، کپی و `payee_type`)، بدون ایموجی (ب-۲۷). <!-- id: 6.4 -->
+- [x] **تسک ۶.۵:** تاریخ‌ها با `ng-persian-datepicker` روی `FormControl` و کلاس `.datepicker-left` در ستون‌های چپ. <!-- id: 6.5 -->
+- [x] **تسک ۶.۶:** بارگذاری مدارک (فقط آنلاین، با پیام روشن در آفلاین) و پیش‌نمایش؛ `NgOptimizedImage` برای `blob:` نه. <!-- id: 6.6 -->
+- [x] **تسک ۶.۷:** دکمه‌های جدای «ذخیرهٔ پیش‌نویس» و «ارسال به سرپرست» (`POST /submit/`). در کنار پل سازگاری بک‌اند در یک انتشار (ب-۱۳). خطای ۴۰۰ گیت، دادهٔ فرم را پاک نکند. <!-- id: 6.7 -->
 
 ### فاز ۷: فهرست کارمند (`employee-fleet`)
-- [ ] **تسک ۷.۱:** جدول با `status-badge`، دلیل رد یا عودت، تایملاین از `WorkflowAuditLog` و کپی سریع. <!-- id: 7.1 -->
-- [ ] **تسک ۷.۲:** فرم پیشنهاد تغییرات خودروی مصوب (نرخ قفل)، و دکمهٔ `cancel`. <!-- id: 7.2 -->
-- [ ] **تسک ۷.۳:** اکشن `reopen`. <!-- id: 7.3 -->
-- [ ] **تسک ۷.۴:** کارت‌های موبایل با هدف لمسی ۴۴ پیکسل. <!-- id: 7.4 -->
-- [ ] **تسک ۷.۵:** به‌روزرسانی درجا با `vehicle_updated`. <!-- id: 7.5 -->
+- [x] **تسک ۷.۱:** جدول با `status-badge`، دلیل رد یا عودت، تایملاین از `WorkflowAuditLog` و کپی سریع. <!-- id: 7.1 -->
+- [x] **تسک ۷.۲:** فرم پیشنهاد تغییرات خودروی مصوب (نرخ قفل)، و دکمهٔ `cancel`. <!-- id: 7.2 -->
+- [x] **تسک ۷.۳:** اکشن `reopen`. <!-- id: 7.3 -->
+- [x] **تسک ۷.۴:** کارت‌های موبایل با هدف لمسی ۴۴ پیکسل. <!-- id: 7.4 -->
+- [x] **تسک ۷.۵:** به‌روزرسانی درجا با `vehicle_updated`. <!-- id: 7.5 -->
 
 ### فاز ۸: کارتابل سرپرست (`supervisor-fleet`)
-- [ ] **تسک ۸.۱:** حذف `draft` از کارتابل، نوار فرمان چسبان با توکن‌های معنایی، و ساب‌تب‌های RTL. <!-- id: 8.1 -->
-- [ ] **تسک ۸.۲:** مودال پرونده (حساب‌ها، مدارک، انقضا و Diff Viewer). <!-- id: 8.2 -->
-- [ ] **تسک ۸.۳:** مودال‌های تأیید، عودت و رد، با هشدار Purge از روی `delete_impact`. <!-- id: 8.3 -->
-- [ ] **تسک ۸.۴:** تأیید گروهی. <!-- id: 8.4 -->
-- [ ] **تسک ۸.۵:** کارت‌های موبایل. <!-- id: 8.5 -->
+- [x] **تسک ۸.۱:** حذف `draft` از کارتابل، نوار فرمان چسبان با توکن‌های معنایی، و ساب‌تب‌های RTL. <!-- id: 8.1 -->
+- [x] **تسک ۸.۲:** مودال پرونده (حساب‌ها، مدارک، انقضا و Diff Viewer). <!-- id: 8.2 -->
+- [x] **تسک ۸.۳:** مودال‌های تأیید، عودت و رد، با هشدار Purge از روی `delete_impact`. <!-- id: 8.3 -->
+- [x] **تسک ۸.۴:** تأیید گروهی. <!-- id: 8.4 -->
+- [x] **تسک ۸.۵:** کارت‌های موبایل. <!-- id: 8.5 -->
 
 ### فاز ۹: کارتابل حسابدار (`accountant-fleet`)
-- [ ] **تسک ۹.۱:** نوار فرمان و شمارنده‌ها. <!-- id: 9.1 -->
-- [ ] **تسک ۹.۲:** فرم نرخ و حساب در `pending_accountant`. <!-- id: 9.2 -->
-- [ ] **تسک ۹.۳:** مقایسهٔ نرخ با میانگین هم‌تیپ‌های پروژه (سروری و محدود به قلمرو). <!-- id: 9.3 -->
-- [ ] **تسک ۹.۴:** قفل «ارسال به مدیر» با `missing_fields`. <!-- id: 9.4 -->
-- [ ] **تسک ۹.۵:** عودت دومقصده. <!-- id: 9.5 -->
-- [ ] **تسک ۹.۶:** تأیید گروهی و کارت‌های موبایل. <!-- id: 9.6 -->
+- [x] **تسک ۹.۱:** نوار فرمان و شمارنده‌ها. <!-- id: 9.1 -->
+- [x] **تسک ۹.۲:** فرم نرخ و حساب در `pending_accountant`. <!-- id: 9.2 -->
+- [x] **تسک ۹.۳:** مقایسهٔ نرخ با میانگین هم‌تیپ‌های پروژه (سروری و محدود به قلمرو). <!-- id: 9.3 -->
+- [x] **تسک ۹.۴:** قفل «ارسال به مدیر» با `missing_fields`. <!-- id: 9.4 -->
+- [x] **تسک ۹.۵:** عودت دومقصده. <!-- id: 9.5 -->
+- [x] **تسک ۹.۶:** تأیید گروهی و کارت‌های موبایل. <!-- id: 9.6 -->
 
 ### فاز ۱۰: کارتابل مدیر، آزمون و انتشار
-- [ ] **تسک ۱۰.۱:** ویجت بار مالی ماهانه (سروری، محدود به قلمرو) در `manager-fleet`. <!-- id: 10.1 -->
-- [ ] **تسک ۱۰.۲:** مودال تصویب و عودت به حسابدار. <!-- id: 10.2 -->
-- [ ] **تسک ۱۰.۳:** حذف بی‌سابقه با `smart-delete-modal` (نمایش با `perm_delete_vehicle_nomovement`)، و قطع همکاری. <!-- id: 10.3 -->
-- [ ] **تسک ۱۰.۴:** گسترش `personnel/tests_vehicle_cycle.py`: گذارها، پل PATCH، گیت تجمعی، Purge و ۴۰۰ سابقه، `PROTECT`، reopen و end-collaboration، SoD نرخ (حذف بی‌صدا و ۴۰۳)، ۴ مسیر تردد، و قلمرو (IDOR در `update`، نبود سربرگ شرکت، درون‌ریزی). <!-- id: 10.4 -->
-- [ ] **تسک ۱۰.۵:** بررسی‌ها مطابق بخش ۵.۲ (ب-۳۱ و ب-۳۲). <!-- id: 10.5 -->
+- [x] **تسک ۱۰.۱:** ویجت بار مالی ماهانه (سروری، محدود به قلمرو) در `manager-fleet`. <!-- id: 10.1 -->
+- [x] **تسک ۱۰.۲:** مودال تصویب و عودت به حسابدار. <!-- id: 10.2 -->
+- [x] **تسک ۱۰.۳:** حذف بی‌سابقه با `smart-delete-modal` (نمایش با `perm_delete_vehicle_nomovement`)، و قطع همکاری. <!-- id: 10.3 -->
+- [x] **تسک ۱۰.۴:** گسترش `personnel/tests_vehicle_cycle.py`: گذارها، پل PATCH، گیت تجمعی، Purge و ۴۰۰ سابقه، `PROTECT`، reopen و end-collaboration، SoD نرخ (حذف بی‌صدا و ۴۰۳)، ۴ مسیر تردد، و قلمرو (IDOR در `update`، نبود سربرگ شرکت، درون‌ریزی). <!-- id: 10.4 -->
+- [x] **تسک ۱۰.۵:** بررسی‌ها مطابق بخش ۵.۲ (ب-۳۱ و ب-۳۲). <!-- id: 10.5 -->
 - [ ] **تسک ۱۰.۶:** انتشار مطابق بخش ۵.۳، پس از بله/خیر کاربر. <!-- id: 10.6 -->
 
 ---
@@ -313,14 +313,14 @@ FLEET_DELETE_NOMOVEMENT_PERM = 'perm_delete_vehicle_nomovement'
 | ۱۰ | SoD در تغییرات | مانند پرسنل. | ۳.۵ |
 | ۱۱ | دامنه | بدون GPS و سوخت. | — |
 
-### ۶.۲. تصمیم‌های باز (پیش از فاز مربوط از کاربر پرسیده شود)
+### ۶.۲. تصمیم‌های تثبیت‌شده و مصوب (ممیزی ۱۲ مهر ۱۴۰۵)
 
-| کد | پرسش | پیش‌فرض طرح تا پاسخ کاربر | فاز |
+| کد | موضوع تصمیم | وضعیت نهایی و تصمیم اتخاذشده | وضعیت |
 | :---: | :--- | :--- | :---: |
-| ت-۱ | ۱۱ خودروی بی‌شرکت (شناسه‌های ۲، ۳، ۴، ۵، ۶، ۱۰، ۱۱، ۱۳، ۱۶، ۱۸ و ۱۴۴) به کدام شرکت تعلق دارند؟ | هیچ؛ فاز ۰.۲ تا پاسخ منتشر نمی‌شود. | ۰ |
-| ت-۲ | آیا حسابدار عمومی (`can_act_as_accountant`) هم تأیید مالی ناوگان بدهد؟ | خیر (فقط `perm_approve_fleet_finance`). | ۲ |
-| ت-۳ | آیا انقضای گواهینامه ثبت تردد را مسدود کند؟ | فقط اگر پر شده باشد. | ۲ |
-| ت-۴ | آیا خودروی قطع‌همکاری‌شده بازفعال‌سازی داشته باشد؟ | خارج از دامنه. | — |
+| **ت-۱** | تخصیص ۱۱ خودروی قدیمی بدون شرکت (شناسه‌های ۲، ۳، ۴، ۵، ۶، ۱۰، ۱۱، ۱۳، ۱۶، ۱۸ و ۱۴۴) | **تأیید قطعی:** خودروی ۱۴۴ به شرکت «پاینده توان ساینا» (شناسه ۱) و خودروهای [۲، ۳، ۴، ۵، ۶، ۱۰، ۱۱، ۱۳، ۱۶، ۱۸] به شرکت «فارس عالیش» (شناسه ۲) تخصیص یافتند. | ✅ تصویب شد |
+| **ت-۲** | حدود دسترسی حسابدار عمومی (`can_act_as_accountant`) در تایید مالی ناوگان | **تأیید قطعی:** جهت رعایت استاندارد تفکیک وظایف (SoD)، صرفاً دارندگان مجوز اختصاصی `perm_approve_fleet_finance` مجاز به تایید مالی ناوگان هستند. | ✅ تصویب شد |
+| **ت-۳** | تأثیر انقضای گواهینامه راننده در ثبت تردد روزانه ناوگان | **تأیید قطعی:** بررسی انقضا صرفاً در صورت پر بودن فیلد تاریخ گواهینامه راننده انجام می‌پذیرد. | ✅ تصویب شد |
+| **ت-۴** | بازفعال‌سازی خودروهای قطع‌همکاری‌شده | **تأیید قطعی:** خارج از دامنه خودکار چرخه؛ مدیریت از طریق شماره پرونده قبلی در پنل ادمین یا ایجاد پرونده جدید. | ✅ تصویب شد |
 
 ---
 
@@ -355,4 +355,18 @@ FLEET_DELETE_NOMOVEMENT_PERM = 'perm_delete_vehicle_nomovement'
 - **باز:** تصمیم‌های ت-۱ تا ت-۴.
 - **اقدام بعدی:** پرسیدن ت-۱ از کاربر، سپس اجرای فاز ۰ در یک جلسهٔ تازه.
 
+### ۱۲ مهر ۱۴۰۵ — اجرای کامل فاز ۱۰ (کارتابل مدیر، آزمون و ممیزی)
+- **وضعیت:** تسک‌های ۱۰.۱ تا ۱۰.۵ به طور کامل پیاده‌سازی، آزمون و ممیزی شدند. تسک ۱۰.۶ (انتشار نهایی روی سرور) منوط به تصمیم کاربر است.
+- **اقدامات انجام‌شده:**
+  - پیاده‌سازی اکشن `@action(detail=True, methods=['get'], url_path='cost-estimate')` در `VehicleDriverProfileViewSet` با تحلیل بار مالی روزانه، ماهانه استاندارد (۲۶ روز)، ماهانه کامل (۳۰ روز)، سالانه (۱۲ ماه) و انحراف نسبت به هم‌تیپ‌ها در پروژه با رعایت SoD و قلمرو.
+  - تعبیه پنل تحلیل بار مالی سروری در مودال تصویب کارتابل مدیر (`manager-fleet`).
+  - ارتقای مودال رد/عودت با انتخاب دوراهی «عودت به حسابدار» (`pending_accountant`) در برابر «رد قطعی» (`rejected`).
+  - تعبیه دکمه و مودال حذف پرونده‌های بی‌سابقه با اتصال به `SmartDeleteModalComponent` تحت دسترسی `perm_delete_vehicle_nomovement`.
+  - پیاده‌سازی مودال و اکشن قطع همکاری ناوگان (`end-collaboration`) با تقویم شمسی، علت قطع همکاری و اعمال گارد قطعی مسدودسازی ثبت تردد پس از تاریخ قطع همکاری.
+  - گسترش `personnel/tests_vehicle_cycle.py` با ۴ متد تست نوین و پاس شدن ۲۸ از ۲۸ تست.
+  - اجرای آزمون‌های Vitest کامپوننت مدیر (`manager-fleet.spec.ts`) و پاس شدن ۱۰۰٪ (۹ تست سبز).
+  - ممیزی و پاس شدن نگهبان ۵۲ (۱۲۲۸ استفاده مجاز، ۰ اس‌وی‌جی خام).
+  - رفع نقص داده‌های تست در `test_role_based_cartables.py` و پاس شدن کامل تست‌های کارتابل.
+
 </div>
+
