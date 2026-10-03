@@ -7,6 +7,7 @@ from personnel.models import (
     VehicleDriverProfile,
     PersonnelChangeRequest,
     VehicleChangeRequest,
+    VehicleBankAccount,
     MonthlyWorkPeriod,
     PayrollYearlySettings,
     JobGradeTier,
@@ -14,6 +15,7 @@ from personnel.models import (
     FinancialProject,
     ProjectSection
 )
+from personnel.sheba_utils import generate_sheba_from_account
 
 User = get_user_model()
 
@@ -71,12 +73,31 @@ class RoleBasedCartablesTestCase(TestCase):
         )
 
         # Draft Vehicle Profile
+        valid_sheba = generate_sheba_from_account("بانک ملی ایران", "0105678901004")
         self.vehicle = VehicleDriverProfile.objects.create(
+            company=self.company,
+            project=self.project,
+            section=self.section,
+            vehicle_type='nissan',
+            ownership_type='contract',
             driver_name='حسن مرادی',
+            driver_national_code='0010376488',
+            driver_phone='09121234567',
             plate_number='33-888-11',
+            insurance_expiry_date='1406/01/01',
+            bank_name='بانک ملی ایران',
+            sheba_number=valid_sheba,
             default_service_rate=Decimal(3500000),
-            approval_status='draft',
+            approval_status='pending_supervisor',
             is_active=False
+        )
+        VehicleBankAccount.objects.create(
+            vehicle=self.vehicle,
+            bank_name='بانک ملی ایران',
+            sheba_number=valid_sheba,
+            account_number='0105678901004',
+            is_primary=True,
+            is_active=True
         )
 
     def test_01_base_settings_endpoint(self):

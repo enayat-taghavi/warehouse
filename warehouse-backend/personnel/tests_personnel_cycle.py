@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.test import TestCase
 from rest_framework.test import APIClient
 from accounts.models import CustomUser
@@ -387,6 +388,8 @@ class PersonnelFullCycleTests(TestCase):
 
     def test_complete_vehicle_lifecycle_and_change_request(self):
         from personnel.models import VehicleDriverProfile, VehicleChangeRequest
+        from personnel.sheba_utils import generate_sheba_from_account
+        valid_sheba = generate_sheba_from_account("بانک صادرات ایران", "0201234567001")
         # ۱. ثبت خودرو توسط کارمند
         self.client.force_authenticate(user=self.operator)
         v_payload = {
@@ -395,7 +398,9 @@ class PersonnelFullCycleTests(TestCase):
             "driver_national_code": "2280009986",
             "driver_phone": "09173334455",
             "vehicle_type": "pickup",
-            "default_service_rate": 1800000,
+            "insurance_expiry_date": "1406/01/01",
+            "bank_name": "بانک صادرات ایران",
+            "sheba_number": valid_sheba,
             "section": self.section.id,
             "approval_status": "draft"
         }
@@ -403,6 +408,10 @@ class PersonnelFullCycleTests(TestCase):
         self.assertEqual(resp_v1.status_code, 201)
         v_id = resp_v1.data["id"]
         self.assertEqual(resp_v1.data["approval_status"], "draft")
+
+        # ۱.۵. ارسال پرونده خودرو به سرپرست
+        resp_sub = self.client.post(f"/api/personnel/vehicles/{v_id}/submit/", {}, format="json")
+        self.assertEqual(resp_sub.status_code, 200)
 
         # ۲. تایید سرپرست ناوگان ⬅️ ارسال به حسابداری
         self.client.force_authenticate(user=self.supervisor)
@@ -412,6 +421,7 @@ class PersonnelFullCycleTests(TestCase):
 
         # ۳. تایید مالی ناوگان ⬅️ ارسال به مدیر
         self.client.force_authenticate(user=self.accountant)
+        VehicleDriverProfile.objects.filter(pk=v_id).update(default_service_rate=Decimal("1800000"))
         resp_v3 = self.client.post(f"/api/personnel/vehicles/{v_id}/approve-finance/", {}, format="json")
         self.assertEqual(resp_v3.status_code, 200)
         self.assertEqual(resp_v3.data["data"]["approval_status"], "pending_manager")
@@ -423,8 +433,8 @@ class PersonnelFullCycleTests(TestCase):
         self.assertEqual(resp_v4.data["data"]["approval_status"], "approved")
         self.assertTrue(resp_v4.data["data"]["is_active"])
 
-        # ۵. درخواست تغییرات توسط کارمند روی خودرو مصوب
-        self.client.force_authenticate(user=self.operator)
+        # ۵. درخواست تغییرات توسط کاربر مالی روی خودرو مصوب
+        self.client.force_authenticate(user=self.accountant)
         resp_v_edit = self.client.patch(
             f"/api/personnel/vehicles/{v_id}/",
             {"default_service_rate": 2200000, "driver_phone": "09179998877"},
