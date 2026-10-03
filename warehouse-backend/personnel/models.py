@@ -1588,6 +1588,12 @@ class VehicleDriverProfile(_WarehouseCompatMixin, models.Model):
     account_number = models.CharField(max_length=50, blank=True, null=True, verbose_name="شماره حساب")
     sheba_number = models.CharField(max_length=30, blank=True, null=True, verbose_name="شماره شبا")
     notes = models.TextField(blank=True, null=True, verbose_name="توضیحات و یادداشت تکمیلی")
+
+    insurance_expiry_date = models.CharField(max_length=10, blank=True, null=True, verbose_name="تاریخ انقضای بیمه‌نامه (شمسی)")
+    inspection_expiry_date = models.CharField(max_length=10, blank=True, null=True, verbose_name="تاریخ انقضای معاینه فنی (شمسی)")
+    license_expiry_date = models.CharField(max_length=10, blank=True, null=True, verbose_name="تاریخ انقضای گواهینامه رانندگی (شمسی)")
+    valid_until_date = models.CharField(max_length=10, blank=True, null=True, verbose_name="تاریخ اعتبار همکاری (شمسی)")
+    end_date = models.CharField(max_length=10, blank=True, null=True, verbose_name="تاریخ قطع همکاری (شمسی)")
     
     assigned_warehouse_id = models.IntegerField(
         null=True,
@@ -1777,10 +1783,202 @@ class VehicleDriverProfile(_WarehouseCompatMixin, models.Model):
                 self.company_id = self.section.project.company_id
             elif self.project and self.project.company_id:
                 self.company_id = self.project.company_id
-        super().save(*args, **kwargs)
+
+        update_fields = kwargs.get('update_fields')
+        bank_fields_touched = update_fields is None or bool(
+            {'bank_name', 'account_number', 'sheba_number'} & set(update_fields)
+        )
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+
+            # همگام‌سازی معکوس حساب بانکی اصلی از روی فیلدهای آینه (الگوی PersonnelProfile.save و DEF-01)
+            if (self.sheba_number or self.account_number) and bank_fields_touched and not getattr(self, '_skip_bank_sync', False):
+                primary_acc = self.bank_accounts.filter(is_primary=True).first()
+                if primary_acc:
+                    if (primary_acc.bank_name != (self.bank_name or '') or
+                        primary_acc.account_number != (self.account_number or '') or
+                        primary_acc.sheba_number != (self.sheba_number or '')):
+                        primary_acc.bank_name = self.bank_name or primary_acc.bank_name
+                        primary_acc.account_number = self.account_number or primary_acc.account_number
+                        primary_acc.sheba_number = self.sheba_number or primary_acc.sheba_number
+                        primary_acc.save()
+                else:
+                    VehicleBankAccount.objects.create(
+                        vehicle=self,
+                        bank_name=self.bank_name or 'نامشخص',
+                        account_number=self.account_number or '',
+                        sheba_number=self.sheba_number or '',
+                        is_primary=True,
+                        payee_type='driver' if self.is_driver_owner else 'owner'
+                    )
 
     def __str__(self):
         return f"{self.driver_name} - {self.get_vehicle_type_display()} ({self.plate_number})"
+
+
+class VehicleBankAccount(models.Model):
+    """
+    حساب‌های بانکی و شماره‌های شبای رسمی ناوگان و رانندگان (پشتیبانی از چند حسابی و SoD)
+    """
+    PAYEE_TYPE_CHOICES = (
+        ('driver', 'راننده'),
+        ('owner', 'مالک خودرو'),
+        ('other', 'سایر / شخص ثالث'),
+    )
+
+    vehicle = models.ForeignKey(
+        'VehicleDriverProfile',
+        on_delete=models.CASCADE,
+        related_name='bank_accounts',
+        verbose_name="پرونده خودرو و راننده"
+    )
+    bank_name = models.CharField(max_length=100, verbose_name="نام بانک")
+    account_number = models.CharField(max_length=50, blank=True, null=True, verbose_name="شماره حساب")
+    sheba_number = models.CharField(max_length=34, verbose_name="شماره شبا (IR...)")
+    card_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="شماره کارت")
+    account_owner_name = models.CharField(max_length=150, blank=True, null=True, verbose_name="نام صاحب حساب")
+    account_owner_national_code = models.CharField(max_length=10, blank=True, null=True, verbose_name="کد ملی صاحب حساب")
+    payee_type = models.CharField(max_length=20, choices=PAYEE_TYPE_CHOICES, default='driver', verbose_name="نوع ذینفع")
+    is_primary = models.BooleanField(default=False, verbose_name="حساب اصلی / پیش‌فرض واریز کرایه")
+    is_active = models.BooleanField(default=True, verbose_name="فعال")
+    description = models.CharField(max_length=250, blank=True, null=True, verbose_name="توضیحات / عنوان حساب")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ثبت")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ آخرین ویرایش")
+
+    class Meta:
+        verbose_name = "حساب بانکی خودرو"
+        verbose_name_plural = "حساب‌های بانکی خودرو"
+        ordering = ['-is_primary', '-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['vehicle'],
+                condition=models.Q(is_primary=True),
+                name='unique_primary_vehicle_bank_account'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.vehicle.plate_number} - {self.bank_name} ({self.sheba_number})"
+
+    def save(self, *args, **kwargs):
+        # پاک‌سازی و نرمال‌سازی شبا
+        if self.sheba_number:
+            raw = self.sheba_number.strip().upper()
+            if not raw.startswith('IR') and raw.isdigit() and len(raw) == 24:
+                raw = f"IR{raw}"
+            self.sheba_number = raw
+
+        with transaction.atomic():
+            # قفل ردیف پرونده تا تغییرهای هم‌زمان حساب‌های یک خودرو پشت سر هم اجرا شوند
+            list(VehicleDriverProfile.objects.select_for_update().filter(pk=self.vehicle_id).values_list('pk', flat=True))
+
+            # اگر اولین حساب این خودرو است، خودکار اصلی شود
+            if not self.pk and not VehicleBankAccount.objects.filter(vehicle_id=self.vehicle_id).exists():
+                self.is_primary = True
+
+            # قید یکتایی حساب اصلی یک partial unique index غیرقابل‌تعویق است؛
+            # پس حساب اصلی قبلی باید پیش از ذخیرهٔ این حساب خاموش شود (DEF-01).
+            if self.is_primary:
+                other_primaries = VehicleBankAccount.objects.filter(vehicle_id=self.vehicle_id, is_primary=True)
+                if self.pk:
+                    other_primaries = other_primaries.exclude(pk=self.pk)
+                other_primaries.update(is_primary=False)
+
+            super().save(*args, **kwargs)
+
+            # آینهٔ حساب اصلی روی پرونده فقط از همین‌جا نوشته می‌شود (فقط ۳ فیلد موجود: ب-۱۵)
+            if self.is_primary:
+                VehicleDriverProfile.objects.filter(pk=self.vehicle_id).update(
+                    bank_name=self.bank_name,
+                    account_number=self.account_number,
+                    sheba_number=self.sheba_number
+                )
+
+    def delete(self, *args, **kwargs):
+        veh_id = self.vehicle_id
+        with transaction.atomic():
+            list(VehicleDriverProfile.objects.select_for_update().filter(pk=veh_id).values_list('pk', flat=True))
+            was_primary = VehicleBankAccount.objects.filter(pk=self.pk, is_primary=True).exists() if self.pk else self.is_primary
+            result = super().delete(*args, **kwargs)
+            if was_primary:
+                remaining = VehicleBankAccount.objects.filter(
+                    vehicle_id=veh_id, is_active=True
+                ).order_by('-created_at', '-id').first()
+                if remaining:
+                    remaining.is_primary = True
+                    remaining.save()
+                else:
+                    VehicleDriverProfile.objects.filter(pk=veh_id).update(
+                        bank_name=None,
+                        account_number=None,
+                        sheba_number=None
+                    )
+        return result
+
+
+class VehicleDocument(models.Model):
+    """
+    مدارک چندگانه ناوگان و خودرو (بیمه‌نامه، معاینه فنی، گواهینامه، کارت خودرو، قرارداد، سایر)
+    """
+    DOC_TYPE_CHOICES = (
+        ('insurance', 'بیمه‌نامه شخص ثالث'),
+        ('inspection', 'معاینه فنی'),
+        ('license', 'گواهینامه رانندگی'),
+        ('car_card', 'کارت خودرو / برگ سبز'),
+        ('contract', 'قرارداد همکاری'),
+        ('other', 'سایر مدارک'),
+    )
+    vehicle = models.ForeignKey(
+        'VehicleDriverProfile',
+        on_delete=models.CASCADE,
+        related_name='documents',
+        verbose_name="پرونده خودرو و راننده"
+    )
+    doc_type = models.CharField(
+        max_length=30,
+        choices=DOC_TYPE_CHOICES,
+        default='other',
+        verbose_name="نوع مدرک"
+    )
+    file = models.FileField(
+        upload_to='vehicle_docs/%Y/%m/',
+        verbose_name="فایل پیوست"
+    )
+    title = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        verbose_name="عنوان مدرک"
+    )
+    issue_date = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        verbose_name="تاریخ صدور (شمسی)"
+    )
+    expiry_date = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        verbose_name="تاریخ انقضا (شمسی)"
+    )
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='uploaded_vehicle_docs',
+        verbose_name="بارگذاری‌کننده"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ بارگذاری")
+
+    class Meta:
+        verbose_name = "مدرک خودرو"
+        verbose_name_plural = "مدارک خودرو"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.vehicle.plate_number} - {self.get_doc_type_display()}"
 
 
 class PersonnelChangeRequest(models.Model):
@@ -2441,7 +2639,7 @@ class VehicleTripLog(_WarehouseCompatMixin, models.Model):
         self._wh_cached = val if (val is None or hasattr(val, 'id')) else None
     vehicle = models.ForeignKey(
         VehicleDriverProfile,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='trip_logs',
         verbose_name="خودرو و راننده"
     )
@@ -2519,6 +2717,16 @@ class VehicleTripLog(_WarehouseCompatMixin, models.Model):
             models.Index(fields=['section', 'date_shamsi']),
         ]
         ordering = ['-date_shamsi', '-created_at']
+
+    def clean(self):
+        super().clean()
+        if self.vehicle_id and self.date_shamsi:
+            from .fleet_lifecycle_services import assert_vehicle_trip_allowed, VehicleWorkflowError
+            from django.core.exceptions import ValidationError
+            try:
+                assert_vehicle_trip_allowed(self.vehicle, self.date_shamsi)
+            except VehicleWorkflowError as e:
+                raise ValidationError({'vehicle': str(e.message or e)})
 
     def save(self, *args, **kwargs):
         if not self.total_amount:

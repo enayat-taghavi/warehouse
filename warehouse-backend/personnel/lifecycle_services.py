@@ -926,7 +926,7 @@ def build_personnel_snapshot(personnel) -> dict:
     }
 
 
-def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id) -> set:
+def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id, perms_by_stage: dict = None) -> set:
     """
     DEF-12: گیرندگان اعلان هر مرحله در یک کوئری.
     UserCompanyAccess فیلد is_active ندارد؛ دسترسی شرکت همان قاعدهٔ get_user_allowed_companies است:
@@ -938,11 +938,17 @@ def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id) -
     if stage in ('revision_required', 'approved', 'rejected', 'deleted', 'purged', 'end_collaboration'):
         return {created_by_id} if created_by_id else set()
 
-    perms_by_stage = {
-        'pending_supervisor': ('perm_approve_personnel_supervisor', 'can_act_as_workshop_supervisor'),
-        'pending_accountant': ('perm_approve_personnel_finance',),
-        'pending_manager': ('perm_approve_personnel_manager', 'can_act_as_manager', 'can_act_as_company_manager'),
-    }
+    if stage == 'reopened':
+        recipients = {created_by_id} if created_by_id else set()
+        sup_ids = _workflow_recipient_ids('pending_supervisor', company_id, section_id, created_by_id, perms_by_stage)
+        return recipients | sup_ids
+
+    if perms_by_stage is None:
+        perms_by_stage = {
+            'pending_supervisor': ('perm_approve_personnel_supervisor', 'can_act_as_workshop_supervisor'),
+            'pending_accountant': ('perm_approve_personnel_finance',),
+            'pending_manager': ('perm_approve_personnel_manager', 'can_act_as_manager', 'can_act_as_company_manager'),
+        }
     perm_codes = perms_by_stage.get(stage)
     if not perm_codes:
         return set()

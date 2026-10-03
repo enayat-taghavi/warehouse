@@ -29,7 +29,7 @@ def calculate_monthly_fleet_settlement(warehouse_id=None, year_month=None):
     is_locked = bool(period and period.status in ('LOCKED', 'FINALIZED'))
 
     # لیست خودروها
-    vehicle_qs = VehicleDriverProfile.objects.all()
+    vehicle_qs = VehicleDriverProfile.objects.all().prefetch_related('bank_accounts')
     if warehouse_id:
         vehicle_qs = vehicle_qs.filter(assigned_warehouse_id=warehouse_id)
 
@@ -66,20 +66,29 @@ def calculate_monthly_fleet_settlement(warehouse_id=None, year_month=None):
             if trip_count > 0:
                 contractor_count += 1
 
+        primary_acc = v.bank_accounts.filter(is_primary=True, is_active=True).first()
+        acc_owner_name = (primary_acc.account_owner_name if primary_acc and primary_acc.account_owner_name else v.driver_name) or ''
+        acc_owner_nat_code = (primary_acc.account_owner_national_code if primary_acc and primary_acc.account_owner_national_code else (v.driver_national_code or '')) or ''
+        bank_name = (primary_acc.bank_name if primary_acc and primary_acc.bank_name else (v.bank_name or 'بانک ملی')) or ''
+        account_number = (primary_acc.account_number if primary_acc and primary_acc.account_number else (v.account_number or '')) or ''
+        sheba_number = (primary_acc.sheba_number if primary_acc and primary_acc.sheba_number else (v.sheba_number or '')) or ''
+
         records.append({
             'vehicle_id': v.id,
             'driver_name': v.driver_name,
             'driver_national_code': v.driver_national_code or '',
             'driver_phone': v.driver_phone or '',
+            'account_owner_name': acc_owner_name,
+            'account_owner_national_code': acc_owner_nat_code,
             'plate_number': v.plate_number,
             'vehicle_type': v.vehicle_type,
             'vehicle_type_display': v.get_vehicle_type_display(),
             'ownership_type': v.ownership_type,
             'ownership_type_display': v.get_ownership_type_display(),
             'default_service_rate': float(v.default_service_rate or 0),
-            'bank_name': v.bank_name or 'بانک ملی',
-            'account_number': v.account_number or '',
-            'sheba_number': v.sheba_number or '',
+            'bank_name': bank_name,
+            'account_number': account_number,
+            'sheba_number': sheba_number,
             'trip_count': trip_count,
             'gross_amount': float(gross_amount),
             'payable_amount': float(payable_amount),
@@ -160,15 +169,15 @@ def generate_fleet_bank_meli_excel(settlement_data: dict, year_month_title: str)
         payable_rial = int(round(payable_toman * 10))
 
         acc_or_sheba = (rec.get('sheba_number') or rec.get('account_number') or '').strip()
-        driver_name = rec.get('driver_name', '')
+        payee_name = (rec.get('account_owner_name') or rec.get('driver_name') or '').strip()
         desc = f"تسویه کرایه حمل ناوگان {year_month_title} - {rec.get('plate_number', '')}"
-        national_code = rec.get('driver_national_code', '')
+        national_code = (rec.get('account_owner_national_code') or rec.get('driver_national_code') or '').strip()
 
         ws.append([
             row_idx,
             payable_rial,
             acc_or_sheba,
-            driver_name,
+            payee_name,
             desc,
             "",
             national_code

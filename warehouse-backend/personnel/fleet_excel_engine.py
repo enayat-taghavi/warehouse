@@ -304,6 +304,12 @@ def import_fleet_monthly_excel(file_obj, warehouse_id=None, year_month=None, use
                 ).first()
 
                 if trip_count > 0:
+                    from .fleet_lifecycle_services import assert_vehicle_trip_allowed, VehicleWorkflowError
+                    try:
+                        assert_vehicle_trip_allowed(v_obj, date_shamsi)
+                    except VehicleWorkflowError as e:
+                        raise ValueError(f"سطر {r_idx} (خودرو {v_obj.plate_number}): {str(e.message or e)}")
+
                     unit_rate = v_obj.default_service_rate
                     total_amount = unit_rate * trip_count
                     if trip_obj:

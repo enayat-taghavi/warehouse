@@ -35,7 +35,9 @@ from .models import (
     WorkflowAuditLog,
     PersonnelBankAccount,
     InsuranceJobTitle,
-    PersonnelDocument
+    PersonnelDocument,
+    VehicleBankAccount,
+    VehicleDocument
 )
 import os
 from datetime import date as dt_date, datetime as dt_datetime
@@ -535,6 +537,101 @@ class PersonnelProfileSerializer(serializers.ModelSerializer):
         return ret
 
 
+class VehicleBankAccountSerializer(serializers.ModelSerializer):
+    payee_type_display = serializers.CharField(source='get_payee_type_display', read_only=True)
+
+    class Meta:
+        model = VehicleBankAccount
+        fields = [
+            'id', 'vehicle', 'bank_name', 'account_number', 'sheba_number',
+            'card_number', 'account_owner_name', 'account_owner_national_code',
+            'payee_type', 'payee_type_display', 'is_primary', 'is_active',
+            'description', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'vehicle', 'created_at', 'updated_at']
+
+    def validate_is_primary(self, value):
+        if self.instance is not None and getattr(self.instance, 'is_primary', False) and value is False:
+            raise serializers.ValidationError("برای تغییر حساب اصلی، حساب دیگری را به‌عنوان حساب اصلی تعیین کنید.")
+        return value
+
+    def validate_sheba_number(self, value):
+        if not value or not str(value).strip():
+            return value
+        cleaned = clean_sheba(value)
+        is_valid, err_msg, _ = validate_sheba(cleaned)
+        if not is_valid:
+            raise serializers.ValidationError(err_msg or "شماره شبا نامعتبر است.")
+        return cleaned
+
+    def validate_account_owner_national_code(self, value):
+        if not value or not str(value).strip():
+            return value
+        from common.validators import validate_iranian_national_code
+        try:
+            return validate_iranian_national_code(value)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
+
+    def validate(self, attrs):
+        sheba = attrs.get('sheba_number')
+        bank_name = attrs.get('bank_name')
+        if sheba and not bank_name:
+            bank_info = get_bank_from_sheba(sheba)
+            if bank_info:
+                attrs['bank_name'] = bank_info['name']
+        return attrs
+
+
+class VehicleDocumentSerializer(serializers.ModelSerializer):
+    doc_type_display = serializers.CharField(source='get_doc_type_display', read_only=True)
+    uploaded_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VehicleDocument
+        fields = [
+            'id', 'vehicle', 'doc_type', 'doc_type_display', 'file', 'title',
+            'issue_date', 'expiry_date', 'uploaded_by', 'uploaded_by_name',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'vehicle', 'created_at', 'uploaded_by']
+
+    def get_uploaded_by_name(self, obj):
+        if obj.uploaded_by:
+            return f"{obj.uploaded_by.first_name} {obj.uploaded_by.last_name}".strip() or obj.uploaded_by.username
+        return None
+
+    def validate_issue_date(self, value):
+        if not value or not str(value).strip():
+            return value
+        from .lifecycle_services import normalize_shamsi_date
+        return normalize_shamsi_date(value)
+
+    def validate_expiry_date(self, value):
+        if not value or not str(value).strip():
+            return value
+        from .lifecycle_services import normalize_shamsi_date
+        return normalize_shamsi_date(value)
+
+
+ROAD_VEHICLE_TYPES = ('pickup', 'nissan', 'khavar', 'sedan', 'truck', 'trailer')
+FLEET_RATE_FIELDS = ('default_service_rate',)
+
+
+def user_can_view_fleet_rates(user) -> bool:
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    return bool(
+        user.has_perm('accounts.perm_approve_fleet_finance')
+        or user.has_perm('accounts.can_act_as_accountant')
+        or user.has_perm('accounts.perm_approve_fleet_manager')
+        or user.has_perm('accounts.can_act_as_manager')
+        or user.has_perm('accounts.can_act_as_company_manager')
+    )
+
+
 class VehicleDriverProfileSerializer(serializers.ModelSerializer):
     vehicle_type_display = serializers.CharField(source='get_vehicle_type_display', read_only=True)
     ownership_type_display = serializers.CharField(source='get_ownership_type_display', read_only=True)
@@ -548,6 +645,17 @@ class VehicleDriverProfileSerializer(serializers.ModelSerializer):
     auto_passed_by_name = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
     pending_change_request = serializers.SerializerMethodField()
+    missing_fields = serializers.SerializerMethodField()
+    bank_accounts = VehicleBankAccountSerializer(many=True, required=False)
+    documents = VehicleDocumentSerializer(many=True, read_only=True)
+
+    BANK_MIRROR_FIELDS = ('bank_name', 'account_number', 'sheba_number')
+
+    def get_fields(self):
+        fields = super().get_fields()
+        if self.instance is not None and 'bank_accounts' in fields:
+            fields['bank_accounts'].read_only = True
+        return fields
 
     class Meta:
         model = VehicleDriverProfile
@@ -560,12 +668,29 @@ class VehicleDriverProfileSerializer(serializers.ModelSerializer):
             'treasury_paid_by', 'treasury_paid_at',
             'is_auto_passed', 'auto_passed_by', 'auto_passed_at',
             'revision_requested_by', 'revision_requested_at',
-            'has_pending_changes'
+            'has_pending_changes',
+            'approval_status', 'rejection_reason', 'is_active', 'end_date'
         ]
         extra_kwargs = {
             'company': {'required': False, 'allow_null': True}
         }
         validators = []
+
+    def get_missing_fields(self, obj):
+        from .fleet_lifecycle_services import get_vehicle_missing_fields
+        stage = 'submit' if obj.approval_status in ('draft', 'revision_required') else ('accountant' if obj.approval_status == 'pending_accountant' else 'draft')
+        return get_vehicle_missing_fields(obj, stage=stage)
+
+    def _is_unchanged_stored_value(self, field: str, value) -> bool:
+        if self.instance is None or isinstance(self.instance, (list, tuple)) or value in (None, ''):
+            return False
+        return str(value).strip() == str(getattr(self.instance, field, '') or '').strip()
+
+    def _request_user_hides_rates(self) -> bool:
+        request = self.context.get('request')
+        if not request:
+            return False
+        return not user_can_view_fleet_rates(getattr(request, 'user', None))
 
     def get_assigned_warehouse_name(self, obj):
         aw = obj.assigned_warehouse
@@ -632,63 +757,83 @@ class VehicleDriverProfileSerializer(serializers.ModelSerializer):
     def validate_plate_number(self, value):
         if not value or not str(value).strip():
             raise serializers.ValidationError("شماره پلاک الزامی است.")
-        normalized = normalize_plate(value)
-        instance_id = self.instance.id if self.instance else None
-        qs = VehicleDriverProfile.objects.filter(plate_number=normalized)
-        if instance_id:
-            qs = qs.exclude(id=instance_id)
-        if qs.exists():
-            raise serializers.ValidationError(f"خودرویی با شماره پلاک «{normalized}» قبلاً در سامانه ثبت شده است.")
-        return normalized
+        if self._is_unchanged_stored_value('plate_number', value):
+            return value
+        v_type = self.initial_data.get('vehicle_type') if hasattr(self, 'initial_data') else None
+        if not v_type and self.instance:
+            v_type = self.instance.vehicle_type
+        if not v_type or v_type in ROAD_VEHICLE_TYPES:
+            return normalize_plate(value)
+        return str(value).strip()
 
     def validate_driver_phone(self, value):
-        if not value or not str(value).strip():
+        if not value or not str(value).strip() or self._is_unchanged_stored_value('driver_phone', value):
             return value
-        cleaned = normalize_iranian_phone(value)
-        if not re.match(r'^09\d{9}$', cleaned):
-            raise serializers.ValidationError("شماره تماس راننده نامعتبر است. شماره موبایل باید ۱۱ رقم بوده و با ۰۹ شروع شود.")
-        return cleaned
+        from common.validators import validate_iranian_mobile
+        try:
+            return validate_iranian_mobile(value)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
 
     def validate_owner_phone(self, value):
-        if not value or not str(value).strip():
+        if not value or not str(value).strip() or self._is_unchanged_stored_value('owner_phone', value):
             return value
-        cleaned = normalize_iranian_phone(value)
-        if not re.match(r'^09\d{9}$', cleaned):
-            raise serializers.ValidationError("شماره تماس مالک نامعتبر است. شماره موبایل باید ۱۱ رقم بوده و با ۰۹ شروع شود.")
-        return cleaned
+        from common.validators import validate_iranian_mobile
+        try:
+            return validate_iranian_mobile(value)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
 
     def validate_driver_national_code(self, value):
-        if not value or not str(value).strip():
+        if not value or not str(value).strip() or self._is_unchanged_stored_value('driver_national_code', value):
             return value
-        clean_code = str(value).strip().zfill(10)
-        if len(clean_code) != 10 or not clean_code.isdigit():
-            raise serializers.ValidationError("کد ملی راننده باید دقیقاً ۱۰ رقم عددی باشد.")
-        if len(set(clean_code)) == 1:
-            raise serializers.ValidationError("کد ملی راننده نامعتبر است (ارقام تکراری).")
-        s = sum(int(clean_code[i]) * (10 - i) for i in range(9))
-        r = s % 11
-        check = int(clean_code[9])
-        if not ((r < 2 and check == r) or (r >= 2 and check == 11 - r)):
-            raise serializers.ValidationError("کد ملی راننده وارد شده با الگوریتم اعتبارسنجی همخوانی ندارد.")
-        return clean_code
+        from common.validators import validate_iranian_national_code
+        try:
+            return validate_iranian_national_code(value)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
 
     def validate_owner_national_code(self, value):
-        if not value or not str(value).strip():
+        if not value or not str(value).strip() or self._is_unchanged_stored_value('owner_national_code', value):
             return value
-        clean_code = str(value).strip().zfill(10)
-        if len(clean_code) != 10 or not clean_code.isdigit():
-            raise serializers.ValidationError("کد ملی مالک باید دقیقاً ۱۰ رقم عددی باشد.")
-        if len(set(clean_code)) == 1:
-            raise serializers.ValidationError("کد ملی مالک نامعتبر است (ارقام تکراری).")
-        s = sum(int(clean_code[i]) * (10 - i) for i in range(9))
-        r = s % 11
-        check = int(clean_code[9])
-        if not ((r < 2 and check == r) or (r >= 2 and check == 11 - r)):
-            raise serializers.ValidationError("کد ملی مالک وارد شده با الگوریتم اعتبارسنجی همخوانی ندارد.")
-        return clean_code
+        from common.validators import validate_iranian_national_code
+        try:
+            return validate_iranian_national_code(value)
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
+
+    def validate_insurance_expiry_date(self, value):
+        if not value or not str(value).strip() or self._is_unchanged_stored_value('insurance_expiry_date', value):
+            return value
+        from .lifecycle_services import normalize_shamsi_date
+        return normalize_shamsi_date(value)
+
+    def validate_inspection_expiry_date(self, value):
+        if not value or not str(value).strip() or self._is_unchanged_stored_value('inspection_expiry_date', value):
+            return value
+        from .lifecycle_services import normalize_shamsi_date
+        return normalize_shamsi_date(value)
+
+    def validate_license_expiry_date(self, value):
+        if not value or not str(value).strip() or self._is_unchanged_stored_value('license_expiry_date', value):
+            return value
+        from .lifecycle_services import normalize_shamsi_date
+        return normalize_shamsi_date(value)
+
+    def validate_valid_until_date(self, value):
+        if not value or not str(value).strip() or self._is_unchanged_stored_value('valid_until_date', value):
+            return value
+        from .lifecycle_services import normalize_shamsi_date
+        return normalize_shamsi_date(value)
+
+    def validate_end_date(self, value):
+        if not value or not str(value).strip() or self._is_unchanged_stored_value('end_date', value):
+            return value
+        from .lifecycle_services import normalize_shamsi_date
+        return normalize_shamsi_date(value)
 
     def validate_sheba_number(self, value):
-        if not value or not str(value).strip():
+        if not value or not str(value).strip() or self._is_unchanged_stored_value('sheba_number', value):
             return value
         cleaned = clean_sheba(value)
         is_valid, err_msg, _ = validate_sheba(cleaned)
@@ -696,14 +841,65 @@ class VehicleDriverProfileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(err_msg or "شماره شبا نامعتبر است.")
         return cleaned
 
-    def validate(self, data):
-        sheba = data.get('sheba_number')
-        bank_name = data.get('bank_name')
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if self._request_user_hides_rates():
+            for rate_field in FLEET_RATE_FIELDS:
+                attrs.pop(rate_field, None)
+
+        company = attrs.get('company')
+        if not company and self.instance:
+            company = self.instance.company
+        if not company:
+            sec = attrs.get('section')
+            if sec and hasattr(sec, 'project') and sec.project and sec.project.company:
+                company = sec.project.company
+                attrs['company'] = company
+
+        plate = attrs.get('plate_number')
+        if plate and not self._is_unchanged_stored_value('plate_number', plate):
+            qs = VehicleDriverProfile.objects.filter(plate_number=plate)
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if company:
+                qs = qs.filter(company=company)
+                if qs.exists():
+                    raise serializers.ValidationError({"plate_number": f"خودرویی با شماره پلاک «{plate}» قبلاً در این شرکت ثبت شده است."})
+            else:
+                qs = qs.filter(company__isnull=True)
+                if qs.exists():
+                    raise serializers.ValidationError({"plate_number": f"خودرویی با شماره پلاک «{plate}» قبلاً در سامانه ثبت شده است."})
+
+        sheba = attrs.get('sheba_number')
+        bank_name = attrs.get('bank_name')
         if sheba and not bank_name:
             bank_info = get_bank_from_sheba(sheba)
             if bank_info:
-                data['bank_name'] = bank_info['name']
-        return data
+                attrs['bank_name'] = bank_info['name']
+        return attrs
+
+    def create(self, validated_data):
+        bank_accounts_data = validated_data.pop('bank_accounts', None)
+        with transaction.atomic():
+            if bank_accounts_data:
+                for field_name in self.BANK_MIRROR_FIELDS:
+                    validated_data.pop(field_name, None)
+            instance = super().create(validated_data)
+            if bank_accounts_data:
+                primary_idx = next((i for i, acc in enumerate(bank_accounts_data) if acc.get('is_primary')), 0)
+                ordered = [bank_accounts_data[primary_idx]] + [acc for i, acc in enumerate(bank_accounts_data) if i != primary_idx]
+                for idx, acc_data in enumerate(ordered):
+                    acc_data['is_primary'] = (idx == 0)
+                    VehicleBankAccount.objects.create(vehicle=instance, **acc_data)
+                instance.refresh_from_db(fields=list(self.BANK_MIRROR_FIELDS))
+        return instance
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if self._request_user_hides_rates():
+            for rate_field in FLEET_RATE_FIELDS:
+                ret.pop(rate_field, None)
+        return ret
 
 
 class PersonnelChangeRequestSerializer(serializers.ModelSerializer):
@@ -1494,7 +1690,10 @@ class WorkflowAuditLogSerializer(serializers.ModelSerializer):
             return format_to_shamsi_str(obj.created_at)
         return ""
 
-    SNAPSHOT_SUMMARY_KEYS = ('id', 'full_name', 'approval_status', 'company_id', 'section_id', 'reason', 'purged_by', 'deleted_by_username')
+    SNAPSHOT_SUMMARY_KEYS = (
+        'id', 'full_name', 'driver_name', 'plate_number', 'vehicle_type',
+        'approval_status', 'company_id', 'section_id', 'reason', 'purged_by', 'deleted_by_username'
+    )
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
@@ -1502,16 +1701,20 @@ class WorkflowAuditLogSerializer(serializers.ModelSerializer):
         if request is None:
             return ret
         from .lifecycle_services import WAGE_FIELDS, user_can_view_wages
-        if user_can_view_wages(getattr(request, 'user', None)):
+        from .fleet_lifecycle_services import FLEET_RATE_FIELDS, FLEET_FINANCE_STAGE_PERMS, FLEET_MANAGER_STAGE_PERMS, user_has_any_perm
+        user = getattr(request, 'user', None)
+        can_view_financials = user_can_view_wages(user) or user_has_any_perm(user, FLEET_FINANCE_STAGE_PERMS + FLEET_MANAGER_STAGE_PERMS)
+        if can_view_financials:
             return ret
-        # DEF-19/DEF-21: نقش غیرمالی عکس کامل حذف (شبا و دستمزد) و تغییرات دستمزد را در تایملاین نمی‌بیند
+        # DEF-19/DEF-21/SoD: نقش غیرمالی عکس کامل حذف (شبا و دستمزد/نرخ خودرو) و تغییرات مالی را در تایملاین نمی‌بیند
+        sensitive_fields = set(WAGE_FIELDS) | set(FLEET_RATE_FIELDS)
         metadata = dict(ret.get('metadata') or {})
         snapshot = metadata.get('snapshot')
         if isinstance(snapshot, dict):
             metadata['snapshot'] = {k: snapshot[k] for k in self.SNAPSHOT_SUMMARY_KEYS if k in snapshot}
         for key in ('diff', 'old_diff'):
             if isinstance(metadata.get(key), dict):
-                metadata[key] = {k: v for k, v in metadata[key].items() if k not in WAGE_FIELDS}
+                metadata[key] = {k: v for k, v in metadata[key].items() if k not in sensitive_fields}
         ret['metadata'] = metadata
         return ret
 
