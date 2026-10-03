@@ -1161,8 +1161,17 @@ export class PersonnelApiService {
     return this.api.download(`${this.baseUrl}/monthly-payroll/export-tax-wp/`, { period_id: periodId, project_id: projectId });
   }
 
-  exportBankPaymentExcel(periodId: number, projectId: number): Observable<Blob> {
-    return this.api.download(`${this.baseUrl}/monthly-payroll/export-bank-excel/`, { period_id: periodId, project_id: projectId });
+  exportBankPaymentExcel(periodId: number, projectId: number, onlyReleased: boolean = false): Observable<Blob> {
+    const params: any = { period_id: periodId, project_id: projectId };
+    if (onlyReleased) {
+      params.only_released = 'true';
+    }
+    return this.api.download(`${this.baseUrl}/monthly-payroll/export-bank-excel/`, params);
+  }
+
+  /** آزادسازی پرداخت معلق فیش حقوقی پرسنل منقضی پس از تمدید اعتبار (DEF-20) */
+  releasePayrollPaymentHold(recordId: number): Observable<any> {
+    return this.api.post<any>(`${this.baseUrl}/monthly-payroll/${recordId}/release-payment-hold/`, {});
   }
 
   /** مسیر ثبت‌شدهٔ بک‌اند personnel-change-requests است (DEF-16) */
@@ -1177,6 +1186,11 @@ export class PersonnelApiService {
     personnel: Array<{ personnel_id: number; full_name: string; national_code: string; valid_until_date: string | null }>;
   }> {
     return this.api.get<any>(`${this.baseUrl}/monthly-payroll/expired-personnel/`, { period_id: periodId, project_id: projectId });
+  }
+
+  /** گزارش اکسل حساب‌های اصلی فاقد شبای معتبر (DEF-23) */
+  downloadMissingPrimaryShebaReport(): Observable<Blob> {
+    return this.api.download(`${this.baseUrl}/profiles/missing-primary-sheba-report/`);
   }
 }
 

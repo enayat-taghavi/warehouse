@@ -85,6 +85,16 @@
 
         <button
           type="button"
+          (click)="downloadMissingPrimaryShebaReport()"
+          [disabled]="isDownloadingShebaReport"
+          title="دانلود گزارش اکسل حساب‌های اصلی فاقد شبای معتبر (DEF-23)"
+          class="h-8 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer shadow-2xs">
+          <span>{{ isDownloadingShebaReport ? '⏳' : '📊' }}</span>
+          <span class="hidden md:inline">گزارش فاقد شبا</span>
+        </button>
+
+        <button
+          type="button"
           (click)="fetchData()"
           [disabled]="isLoading"
           title="همگام‌سازی و بارگذاری مجدد"

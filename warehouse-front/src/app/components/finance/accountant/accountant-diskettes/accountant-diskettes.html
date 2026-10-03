@@ -210,6 +210,22 @@
         </button>
       </div>
 
+      <!-- فایل پرداخت بانکی رکوردهای آزادشده (DEF-20) -->
+      <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-surface-muted border border-line">
+        <div class="space-y-0.5">
+          <h3 class="text-xs font-black text-fg">فایل پرداخت رکوردهای آزادشده (تمدید اعتبار)</h3>
+          <p class="text-[11px] text-fg-muted">فایل مجزای پرداخت بانک فقط برای پرسنلی که پرداختشان معلق بوده و اکنون با تمدید اعتبار آزاد شده است</p>
+        </div>
+        <button
+          type="button"
+          (click)="generateReleasedBankDiskette()"
+          [disabled]="isGeneratingReleased"
+          class="px-4 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-700 text-xs font-black shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50">
+          <span>⚡</span>
+          <span>{{ isGeneratingReleased ? 'در حال استخراج...' : 'دانلود دیسکت پرداخت‌های آزادشده' }}</span>
+        </button>
+      </div>
+
       <!-- فایل پرداخت بانکی تسویه ناوگان -->
       <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-surface-muted border border-line">
         <div class="space-y-0.5">

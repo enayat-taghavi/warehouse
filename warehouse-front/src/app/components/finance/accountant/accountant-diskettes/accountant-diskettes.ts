@@ -44,6 +44,8 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
   isGenerating = false;
   /** پرچم جدا تا خروجی ناوگان دکمهٔ دیسکت حقوق را درگیر نکند */
   isGeneratingFleet = false;
+  /** پرچم خروجی دیسکت پرداخت‌های آزادشده (DEF-20) */
+  isGeneratingReleased = false;
 
   private routeSub?: Subscription;
 
@@ -308,6 +310,29 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
       error: (err: any) => {
         this.isGenerating = false;
         const msg = err?.error?.error || 'خطا در صدور فایل پرداخت بانک.';
+        this.toast.error(msg);
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  /** فایل پرداخت بانکی رکوردهای آزادشده پس از تمدید اعتبار (DEF-20) */
+  generateReleasedBankDiskette(): void {
+    if (!this.currentPeriodId || !this.selectedProjectId) {
+      this.toast.warning('دوره محاسباتی یا پروژه فعال یافت نشد.');
+      return;
+    }
+    this.isGeneratingReleased = true;
+    this.personnelApi.exportBankPaymentExcel(this.currentPeriodId, this.selectedProjectId, true).subscribe({
+      next: (blob: Blob) => {
+        this.isGeneratingReleased = false;
+        this.saveBlob(blob, `Bank_Payment_Released_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`);
+        this.toast.success('فایل پرداخت گروهی رکوردهای آزادشده با موفقیت صادر گردید.');
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        this.isGeneratingReleased = false;
+        const msg = err?.error?.error || 'خطا در صدور فایل پرداخت رکوردهای آزادشده.';
         this.toast.error(msg);
         this.cdr.detectChanges();
       }

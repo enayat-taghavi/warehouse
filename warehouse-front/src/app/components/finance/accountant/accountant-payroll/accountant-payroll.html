@@ -370,7 +370,14 @@
         <tbody class="divide-y divide-slate-100 text-slate-700">
           <tr *ngFor="let item of items; let idx = index" class="hover:bg-slate-50/70 transition-colors">
             <td class="p-3 font-mono text-slate-400">{{ idx + 1 }}</td>
-            <td class="p-3 font-bold text-slate-800">{{ item.personnel_name || item.full_name }}</td>
+            <td class="p-3 font-bold text-slate-800">
+              <div class="flex flex-col gap-0.5">
+                <span>{{ item.personnel_name || item.full_name }}</span>
+                <span *ngIf="item.payment_hold" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200 w-fit" [title]="item.payment_hold_reason || 'تعلیق پرداخت تا تمدید اعتبار پرونده'">
+                  ⚠️ منقضی - پرداخت معلق
+                </span>
+              </div>
+            </td>
             <td class="p-3 font-mono text-slate-600">{{ item.national_code }}</td>
             <td class="p-3 font-mono">{{ item.effective_days || item.insurance_days || 0 }} روز</td>
             @if (showDetailedColumns) {
@@ -403,6 +410,16 @@
                   <span>فیش</span>
                 </button>
                 <button
+                  *ngIf="item.payment_hold"
+                  type="button"
+                  (click)="releasePaymentHold(item)"
+                  [disabled]="isReleasingHold === item.id"
+                  class="px-2 py-1 text-amber-700 hover:text-amber-800 hover:bg-amber-50 border border-amber-200/80 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                  title="آزادسازی پرداخت پس از تمدید اعتبار">
+                  <span>⚡ آزادسازی</span>
+                </button>
+                <button
+                  *ngIf="!item.payment_hold"
                   type="button"
                   (click)="approveSingle(item)"
                   class="px-2 py-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer">
@@ -588,6 +605,16 @@
           <h2 class="text-base font-black text-fg">فیش حقوق و دستمزد ماهانه</h2>
           <p class="text-[11px] text-fg-muted font-bold mt-0.5">دوره محاسباتی: {{ yearMonth }}</p>
         </div>
+
+        @if (selectedPayslipRecord.payment_hold) {
+          <div class="p-3 bg-amber-50 border border-amber-300 rounded-2xl text-amber-900 flex items-start gap-2 text-xs">
+            <span class="text-base shrink-0">⚠️</span>
+            <div>
+              <div class="font-black text-rose-800">وضعیت پرداخت: منقضی - پرداخت معلق تا تمدید</div>
+              <div class="text-[11px] text-amber-800 mt-0.5">{{ selectedPayslipRecord.payment_hold_reason || 'به‌دلیل پایان تاریخ اعتبار پرونده پرسنلی، پرداخت دستمزد این دوره معلق شده است. لطفاً ابتدا تاریخ اعتبار را از طریق درخواست تغییرات تمدید نمایید.' }}</div>
+            </div>
+          </div>
+        }
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-surface p-3 rounded-xl border border-line">
           <div><span class="text-fg-muted block">نام و نام خانوادگی:</span><span class="font-bold text-fg">{{ selectedPayslipRecord.full_name || selectedPayslipRecord.personnel_name }}</span></div>

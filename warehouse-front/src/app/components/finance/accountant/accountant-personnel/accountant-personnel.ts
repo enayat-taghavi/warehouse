@@ -251,6 +251,32 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  isDownloadingShebaReport = false;
+
+  downloadMissingPrimaryShebaReport(): void {
+    if (this.isDownloadingShebaReport) return;
+    this.isDownloadingShebaReport = true;
+    this.toast.info('در حال تولید و دریافت فایل اکسل حساب‌های فاقد شبا...');
+    this.personnelApi.downloadMissingPrimaryShebaReport().subscribe({
+      next: (blob: Blob) => {
+        this.isDownloadingShebaReport = false;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Missing_Primary_Sheba_Report.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.toast.success('گزارش پرونده‌های فاقد شبا با موفقیت دانلود شد.');
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isDownloadingShebaReport = false;
+        this.toast.error('خطا در دریافت گزارش اکسل حساب‌های فاقد شبا.');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   fetchData(): void {
     this.isLoading = true;
     const baseParams: any = {};

@@ -57,6 +57,7 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
   isLoading = false;
   loadError = false;
   isCalculating = false;
+  isReleasingHold: number | null = null;
   allRecords: any[] = [];
   items: any[] = [];
 
@@ -446,6 +447,28 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         const msg = err?.error?.error || 'خطا در تایید مالی فیش حقوقی.';
+        this.toast.error(msg);
+      }
+    });
+  }
+
+  /** آزادسازی پرداخت معلق فیش حقوقی پرسنل منقضی پس از تمدید اعتبار (DEF-20) */
+  releasePaymentHold(item: any): void {
+    if (!item?.id || this.isReleasingHold) return;
+    this.isReleasingHold = item.id;
+    this.personnelApi.releasePayrollPaymentHold(item.id).subscribe({
+      next: (res: any) => {
+        this.isReleasingHold = null;
+        item.payment_hold = false;
+        if (this.selectedPayslipRecord && this.selectedPayslipRecord.id === item.id) {
+          this.selectedPayslipRecord.payment_hold = false;
+        }
+        this.toast.success(res?.message || `پرداخت معلق فیش «${item.personnel_name || item.full_name || ''}» آزاد شد.`);
+        this.fetchPayrollData();
+      },
+      error: (err: any) => {
+        this.isReleasingHold = null;
+        const msg = err?.error?.error || 'خطا در آزادسازی پرداخت معلق.';
         this.toast.error(msg);
       }
     });
