@@ -499,7 +499,7 @@ class PayrollCalculationEngine:
                     continue
 
                 from .lifecycle_services import validate_personnel_validity
-                is_valid, _ = validate_personnel_validity(p, period.year_month)
+                is_valid, val_reason = validate_personnel_validity(p, period.year_month)
                 has_curr_att = DailyAttendance.objects.filter(personnel=p, date_shamsi__startswith=period.year_month, is_deleted=False).exists()
                 if not is_valid and not has_curr_att:
                     continue
@@ -517,6 +517,16 @@ class PayrollCalculationEngine:
 
                 calc_data['row_number'] = row_idx
                 calc_data['is_manually_overridden'] = False
+
+                # DEF-20 (گام ۲ اصلاحیه): تعلیق پرداخت در صورت انقضای اعتبار
+                if not is_valid and has_curr_att:
+                    if not existing or not existing.payment_hold_released_at:
+                        calc_data['payment_hold'] = True
+                        calc_data['payment_hold_reason'] = val_reason or "انقضای اعتبار تا تمدید"
+                else:
+                    if not existing or not existing.payment_hold_released_at:
+                        calc_data['payment_hold'] = False
+                        calc_data['payment_hold_reason'] = None
 
                 record, _ = MonthlyPayrollRecord.objects.update_or_create(
                     period=period,

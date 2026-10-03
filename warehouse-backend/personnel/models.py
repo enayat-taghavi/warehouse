@@ -2950,6 +2950,30 @@ class MonthlyPayrollRecord(models.Model):
     payment_tracking_code = models.CharField(max_length=100, blank=True, null=True, verbose_name="کد رهگیری بانکی واریز")
     payment_batch_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="شناسه دسته واریز پایا")
     payment_failure_reason = models.TextField(blank=True, null=True, verbose_name="علت عدم واریز یا خطای شبا")
+    payment_hold = models.BooleanField(
+        default=False,
+        db_index=True,
+        verbose_name="تعلیق پرداخت (انقضای اعتبار تا تمدید)"
+    )
+    payment_hold_reason = models.CharField(
+        max_length=250,
+        blank=True,
+        null=True,
+        verbose_name="علت تعلیق پرداخت"
+    )
+    payment_hold_released_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="زمان آزادسازی پرداخت معلق"
+    )
+    payment_hold_released_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='released_payroll_holds',
+        verbose_name="کاربر آزادکننده پرداخت معلق"
+    )
 
     # ── ۷. متادیتای ممیزی و فایل مالیات دارایی ───────────────────────
     tax_source_type = models.CharField(

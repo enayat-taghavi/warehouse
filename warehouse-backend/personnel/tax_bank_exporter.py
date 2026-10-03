@@ -174,7 +174,7 @@ def generate_bank_meli_excel(payroll_records, bank_settings, year_month_title="�
     deposit_desc_tpl = bank_settings.deposit_description_template if bank_settings else "انبارداری حقوق {month_name}"
     deposit_id_default = bank_settings.default_deposit_id if bank_settings else ""
 
-    bank_records = [r for r in payroll_records if getattr(r, 'include_in_bank', True)]
+    bank_records = [r for r in payroll_records if getattr(r, 'include_in_bank', True) and not getattr(r, 'payment_hold', False)]
     row_idx = 1
     for rec in bank_records:
         p = rec.personnel

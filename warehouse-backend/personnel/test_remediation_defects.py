@@ -748,3 +748,228 @@ class Step2HighSeverityTests(RemediationTestBase):
         self.assertEqual(draft.approval_status, 'draft')
         listing = self.client.get('/api/personnel/cartable/supervisor/', HTTP_X_COMPANY_ID=str(self.c1.id)).data
         self.assertEqual([row['id'] for row in listing['personnel']], [pending.id])
+
+    # ── DEF-23: گزارش حساب‌های اصلی فاقد شبای معتبر (گام ۱-الف و ۱-ب اصلاحیه) ──
+    def test_def23_missing_primary_sheba_service_and_excel_readonly(self):
+        from personnel.lifecycle_services import (
+            get_personnel_missing_primary_sheba,
+            generate_missing_primary_sheba_excel,
+        )
+        from personnel.models import PersonnelBankAccount
+        import openpyxl
+        import io
+
+        # پرونده ۱: بدون حساب بانکی و بدون شبای آینه (باید در گزارش بیاید)
+        p1 = self.complete_profile('0098765434', sheba_number='', bank_name='', account_number='')
+
+        # پرونده ۲: با حساب اصلی دارای شبای معتبر (نباید در گزارش بیاید)
+        p2 = self.complete_profile('0061122335', sheba_number=SHEBA1, bank_name='بانک ملی')
+
+        # پرونده ۳: با حساب اصلی فاقد شبا (باید در گزارش بیاید)
+        p3 = self.complete_profile('0076543218', sheba_number='', bank_name='', account_number='')
+        PersonnelBankAccount.objects.create(
+            personnel=p3,
+            bank_name='بانک صادرات',
+            account_number='0201111111002',
+            sheba_number='',
+            is_primary=True,
+            is_active=True
+        )
+
+        before_profiles_count = PersonnelProfile.objects.count()
+        before_accounts_count = PersonnelBankAccount.objects.count()
+
+        results = get_personnel_missing_primary_sheba()
+        result_ids = [r['personnel_id'] for r in results]
+
+        self.assertIn(p1.id, result_ids)
+        self.assertNotIn(p2.id, result_ids)
+        self.assertIn(p3.id, result_ids)
+
+        # بررسی ساختار فیلدها و راهنمای تکمیل
+        p3_row = next(r for r in results if r['personnel_id'] == p3.id)
+        self.assertEqual(p3_row['account_number'], '0201111111002')
+        self.assertEqual(p3_row['sheba_number'], '')
+        self.assertIn('درخواست تغییرات', p3_row['completion_guide'])
+
+        # تولید اکسل و اعتبارسنجی معماری ۲ سطری و freeze_panes
+        excel_bytes = generate_missing_primary_sheba_excel()
+        self.assertTrue(len(excel_bytes) > 0)
+        wb = openpyxl.load_workbook(io.BytesIO(excel_bytes))
+        ws = wb.active
+        self.assertEqual(ws.freeze_panes, 'A3')
+        self.assertEqual(ws.cell(row=1, column=1).value, 'ردیف')
+        self.assertEqual(ws.cell(row=2, column=1).value, 'row_number')
+
+        # تضمین اصل عدم تغییر داده (Read-only Invariant)
+        self.assertEqual(PersonnelProfile.objects.count(), before_profiles_count)
+        self.assertEqual(PersonnelBankAccount.objects.count(), before_accounts_count)
+
+    def test_def23_missing_primary_sheba_endpoint_financial_role_and_tenant_scope(self):
+        # ساخت یک پرونده فاقد شبا در شرکت ۱ (تحت دسترسی self.acc)
+        p_c1 = self.complete_profile('0098765434', company=self.c1, sheba_number='', bank_name='', account_number='')
+        # ساخت یک پرونده فاقد شبا در شرکت ۲ (خارج از دسترسی self.acc)
+        p_c2 = self.complete_profile('0076543218', company=self.c2, section=self.s2, sheba_number='', bank_name='', account_number='')
+
+        # ۱. کاربر عادی غیرمالی باید 403 Forbidden دریافت کند
+        self.as_user(self.emp)
+        r_forbidden = self.client.get('/api/personnel/profiles/missing-primary-sheba-report/')
+        self.assertEqual(r_forbidden.status_code, 403)
+
+        # ۲. حسابدار دسترسی دارد و خروجی اکسل ۲ سطری استاندارد دانلود می‌شود
+        self.as_user(self.acc)
+        r_ok = self.client.get('/api/personnel/profiles/missing-primary-sheba-report/', HTTP_X_COMPANY_ID=str(self.c1.id))
+        self.assertEqual(r_ok.status_code, 200)
+        self.assertEqual(r_ok['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        self.assertIn('Missing_Primary_Sheba_Report.xlsx', r_ok['Content-Disposition'])
+
+        # ۳. اعتبارسنجی قلمرو شرکت (Tenant Scope Reviewer): فقط رکوردهای شرکت الف در خروجی باشد
+        import io
+        import openpyxl
+        wb = openpyxl.load_workbook(io.BytesIO(r_ok.content))
+        ws = wb.active
+        national_codes = [ws.cell(row=i, column=5).value for i in range(3, ws.max_row + 1)]
+        self.assertIn('0098765434', national_codes)
+        self.assertNotIn('0076543218', national_codes)
+
+    # ── DEF-20: سیاست تعلیق پرداخت فیش‌های منقضی و دیسکت بانک (گام ۲ اصلاحیه) ──
+    def test_def20_payroll_engine_sets_payment_hold_for_expired_personnel_with_work(self):
+        from personnel.models import MonthlyWorkPeriod, MonthlyPayrollRecord, DailyAttendance
+        from personnel.payroll_engine import calculate_monthly_payroll_for_period
+
+        # پرسنل با پایان تاریخ اعتبار قبل از دوره ۱۴۰۵/۰۷
+        p_expired = self.complete_profile(
+            '0011223344',
+            status='approved',
+            company=self.c1,
+            project=self.p1,
+            valid_until_date='1405/06/31',
+            daily_base_wage=5000000
+        )
+        period = MonthlyWorkPeriod.objects.create(
+            company=self.c1,
+            project=self.p1,
+            year_month='1405/07',
+            status='OPEN'
+        )
+        # ثبت حضور و کارکرد برای پرسنل منقضی
+        DailyAttendance.objects.create(
+            personnel=p_expired,
+            project=self.p1,
+            section=self.s1,
+            date_shamsi='1405/07/05',
+            status='PRESENT_10H',
+            approval_status='APPROVED'
+        )
+
+        # محاسبه مکانیزه دوره حقوق
+        recs = calculate_monthly_payroll_for_period(period, user=self.acc)
+        self.assertGreater(len(recs), 0)
+
+        record = MonthlyPayrollRecord.objects.get(period=period, personnel=p_expired)
+        self.assertGreater(record.gross_salary, 0)
+        self.assertTrue(record.payment_hold, 'فیش حقوقی پرسنل منقضیِ دارای کارکرد باید با payment_hold=True علامت بخورد')
+        self.assertIn('منقضی', record.payment_hold_reason)
+
+    def test_def20_bank_export_excludes_held_and_supports_only_released(self):
+        from personnel.models import MonthlyWorkPeriod, MonthlyPayrollRecord
+        from django.utils import timezone
+
+        p_normal = self.complete_profile('0033445566', status='approved', company=self.c1, project=self.p1, valid_until_date='1406/01/01')
+        p_held = self.complete_profile('0044556677', status='approved', company=self.c1, project=self.p1, valid_until_date='1405/01/01')
+
+        period = MonthlyWorkPeriod.objects.create(
+            company=self.c1,
+            project=self.p1,
+            year_month='1405/07',
+            status='OPEN'
+        )
+        r_normal = MonthlyPayrollRecord.objects.create(
+            period=period,
+            personnel=p_normal,
+            gross_salary=10000000,
+            payable_amount=9000000,
+            payment_hold=False
+        )
+        r_held = MonthlyPayrollRecord.objects.create(
+            period=period,
+            personnel=p_held,
+            gross_salary=8000000,
+            payable_amount=7000000,
+            payment_hold=True,
+            payment_hold_reason='پرسنل منقضی'
+        )
+
+        self.as_user(self.acc)
+
+        # ۱. صدور دیسکت پیش‌فرض: رکوردهای payment_hold مستثنی می‌شوند
+        res_default = self.client.get(f'/api/personnel/monthly-payroll/export-bank-excel/?period_id={period.id}&project_id={self.p1.id}')
+        self.assertEqual(res_default.status_code, 200)
+        self.assertIn('Bank_Payment_', res_default['Content-Disposition'])
+        self.assertNotIn('Released', res_default['Content-Disposition'])
+
+        # ۲. صدور با only_released=true پیش از آزادسازی: باید 404 بدهد زیرا هیچ رکورد آزادشده‌ای نیست
+        res_rel_empty = self.client.get(f'/api/personnel/monthly-payroll/export-bank-excel/?period_id={period.id}&project_id={self.p1.id}&only_released=true')
+        self.assertEqual(res_rel_empty.status_code, 404)
+
+        # آزادسازی رکورد معلق
+        r_held.payment_hold = False
+        r_held.payment_hold_released_at = timezone.now()
+        r_held.payment_hold_released_by = self.acc
+        r_held.save()
+
+        # ۳. صدور با only_released=true پس از آزادسازی: با موفقیت صادر شده و عنوان فایل Released دارد
+        res_rel = self.client.get(f'/api/personnel/monthly-payroll/export-bank-excel/?period_id={period.id}&project_id={self.p1.id}&only_released=true')
+        self.assertEqual(res_rel.status_code, 200)
+        self.assertIn('Bank_Payment_Released_', res_rel['Content-Disposition'])
+
+    def test_def20_release_payment_hold_action_checks_extension_and_audit(self):
+        from personnel.models import MonthlyWorkPeriod, MonthlyPayrollRecord
+        from accounts.models import AuditLog
+
+        p_expired = self.complete_profile('0055667788', status='approved', company=self.c1, project=self.p1, valid_until_date='1405/01/01')
+        period = MonthlyWorkPeriod.objects.create(
+            company=self.c1,
+            project=self.p1,
+            year_month='1405/07',
+            status='OPEN'
+        )
+        rec = MonthlyPayrollRecord.objects.create(
+            period=period,
+            personnel=p_expired,
+            gross_salary=5000000,
+            payable_amount=4500000,
+            payment_hold=True,
+            payment_hold_reason='پرسنل منقضی'
+        )
+
+        # ۱. کاربر عادی غیرمالی ۴۰۳ می‌گیرد
+        self.as_user(self.emp)
+        r_forbidden = self.client.post(f'/api/personnel/monthly-payroll/{rec.id}/release-payment-hold/')
+        self.assertEqual(r_forbidden.status_code, 403)
+
+        # ۲. حسابدار تلاش می‌کند اما پرونده هنوز منقضی است -> خطا ۴۰۰
+        self.as_user(self.acc)
+        r_bad = self.client.post(f'/api/personnel/monthly-payroll/{rec.id}/release-payment-hold/')
+        self.assertEqual(r_bad.status_code, 400)
+        self.assertIn('اعتبار پرونده هنوز تمدید نشده است', r_bad.data['error'])
+
+        # ۳. تمدید اعتبار پرسنل (مثلاً تا پایان سال ۱۴۰۵)
+        p_expired.valid_until_date = '1405/12/29'
+        p_expired.save(update_fields=['valid_until_date'])
+
+        # ۴. حسابدار دوباره فراخوانی می‌کند -> موفقیت ۲۰۰، ثبت زمان و کاربر و لاگ ممیزی
+        r_ok = self.client.post(f'/api/personnel/monthly-payroll/{rec.id}/release-payment-hold/')
+        self.assertEqual(r_ok.status_code, 200)
+        rec.refresh_from_db()
+        self.assertFalse(rec.payment_hold)
+        self.assertIsNotNone(rec.payment_hold_released_at)
+        self.assertEqual(rec.payment_hold_released_by, self.acc)
+
+        # بررسی لاگ ممیزی در AuditLog
+        log = AuditLog.objects.filter(
+            action='RELEASE_PAYMENT_HOLD',
+            target_object_id=str(rec.id)
+        ).first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.user, self.acc)

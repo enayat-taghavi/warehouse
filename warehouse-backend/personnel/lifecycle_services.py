@@ -1076,3 +1076,184 @@ def dispatch_workflow_notification(personnel, stage: str, actor=None, reason=Non
             )
 
     transaction.on_commit(_execute)
+
+
+def get_personnel_missing_primary_sheba(queryset=None) -> list[dict]:
+    """
+    DEF-23: واکشی فقط‌خواندنی پرونده‌های پرسنل که حساب اصلی آن‌ها شبای معتبر (Mod 97) ندارد.
+    ستون‌ها: شرکت، بخش، نام، کد ملی، وضعیت، شماره حساب، شبای فعلی و راهنمای تکمیل.
+    کاملاً فقط‌خواندنی بدون هیچ‌گونه ویرایش یا حذف در دیتابیس.
+    """
+    from personnel.models import PersonnelProfile
+    from personnel.sheba_utils import clean_sheba, validate_sheba
+
+    if queryset is None:
+        qs = PersonnelProfile.objects.all()
+    else:
+        qs = queryset
+
+    qs = qs.select_related('company', 'section', 'section__project', 'section__project__company').prefetch_related('bank_accounts')
+
+    results = []
+    for p in qs:
+        # حساب اصلی فعال در صورت وجود چند حسابی
+        primary = next((a for a in p.bank_accounts.all() if a.is_primary and a.is_active), None)
+        if primary is not None:
+            account_no = primary.account_number or ''
+            sheba_no = primary.sheba_number or ''
+        else:
+            account_no = getattr(p, 'account_number', '') or ''
+            sheba_no = getattr(p, 'sheba_number', '') or ''
+
+        # بررسی اعتبار شبا (ISO 7064 Mod 97)
+        is_valid_sheba = False
+        cleaned = clean_sheba(sheba_no)
+        if cleaned:
+            is_valid_sheba = validate_sheba(cleaned)[0]
+
+        if not is_valid_sheba:
+            comp_name = '-'
+            if p.company:
+                comp_name = p.company.name
+            elif p.section and p.section.project and p.section.project.company:
+                comp_name = p.section.project.company.name
+
+            sec_name = p.section.name if p.section else '-'
+            status_display = p.get_approval_status_display() if hasattr(p, 'get_approval_status_display') else p.approval_status
+
+            results.append({
+                'personnel_id': p.id,
+                'company_name': comp_name,
+                'section_name': sec_name,
+                'full_name': p.full_name or '',
+                'national_code': p.national_code or '',
+                'approval_status': p.approval_status or '',
+                'approval_status_display': status_display or '',
+                'is_active': p.is_active,
+                'is_active_display': 'فعال' if p.is_active else 'غیرفعال',
+                'account_number': account_no,
+                'sheba_number': sheba_no,
+                'completion_guide': 'درخواست تغییرات (سرپرست/حسابدار/مدیر)',
+            })
+
+    return results
+
+
+def generate_missing_primary_sheba_excel(queryset=None) -> bytes:
+    """
+    DEF-23: تولید فایل اکسل گزارش پرونده‌های دارای حساب اصلی بدون شبای معتبر.
+    رعایت معماری ۲ سطری هدر: سطر ۱ عناوین فارسی، سطر ۲ کلیدهای دیتابیس در قلم خاکستری، freeze_panes = 'A3'.
+    """
+    import io
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    data = get_personnel_missing_primary_sheba(queryset=queryset)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "فاقد شبا"
+    ws.views.sheetView[0].rightToLeft = True
+    ws.freeze_panes = 'A3'
+
+    row1_titles = [
+        "ردیف",
+        "شرکت",
+        "بخش / پروژه",
+        "نام و نام خانوادگی",
+        "کد ملی",
+        "وضعیت پرونده",
+        "وضعیت فعالیت",
+        "شماره حساب",
+        "شماره شبا (فعلی)",
+        "مسیر قانونی تکمیل اطلاعات"
+    ]
+
+    row2_keys = [
+        "row_number",
+        "company_name",
+        "section_name",
+        "full_name",
+        "national_code",
+        "approval_status",
+        "is_active",
+        "account_number",
+        "sheba_number",
+        "completion_guide"
+    ]
+
+    header_font_r1 = Font(name="B Nazanin", size=11, bold=True, color="FFFFFF")
+    header_fill_r1 = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
+    header_font_r2 = Font(name="Courier New", size=9, bold=False, color="94A3B8")
+    header_fill_r2 = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid")
+
+    align_center = Alignment(horizontal="center", vertical="center")
+    align_right = Alignment(horizontal="right", vertical="center")
+    border_thin = Border(
+        left=Side(style='thin', color='CBD5E1'),
+        right=Side(style='thin', color='CBD5E1'),
+        top=Side(style='thin', color='CBD5E1'),
+        bottom=Side(style='thin', color='CBD5E1')
+    )
+
+    ws.append(row1_titles)
+    for col_idx in range(1, len(row1_titles) + 1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.font = header_font_r1
+        cell.fill = header_fill_r1
+        cell.alignment = align_center
+        cell.border = border_thin
+
+    ws.append(row2_keys)
+    for col_idx in range(1, len(row2_keys) + 1):
+        cell = ws.cell(row=2, column=col_idx)
+        cell.font = header_font_r2
+        cell.fill = header_fill_r2
+        cell.alignment = align_center
+        cell.border = border_thin
+
+    data_font = Font(name="B Nazanin", size=10)
+    for idx, row in enumerate(data, start=1):
+        r_num = idx + 2
+        values = [
+            idx,
+            row['company_name'],
+            row['section_name'],
+            row['full_name'],
+            row['national_code'],
+            row['approval_status_display'],
+            row['is_active_display'],
+            row['account_number'],
+            row['sheba_number'],
+            row['completion_guide']
+        ]
+        ws.append(values)
+        for col_idx in range(1, len(values) + 1):
+            cell = ws.cell(row=r_num, column=col_idx)
+            cell.font = data_font
+            cell.border = border_thin
+            if col_idx in (1, 5, 6, 7, 8, 9):
+                cell.alignment = align_center
+            else:
+                cell.alignment = align_right
+
+    # تنظیم عرض ستون‌ها
+    col_widths = {
+        'A': 8,
+        'B': 24,
+        'C': 22,
+        'D': 24,
+        'E': 16,
+        'F': 18,
+        'G': 14,
+        'H': 22,
+        'I': 28,
+        'J': 35,
+    }
+    for col_letter, width in col_widths.items():
+        ws.column_dimensions[col_letter].width = width
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+

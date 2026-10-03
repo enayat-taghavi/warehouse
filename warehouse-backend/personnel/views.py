@@ -1231,6 +1231,29 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
             'average_gross_salary': round(total_gross / count) if count else 0,
         }, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=['get'], url_path='missing-primary-sheba-report')
+    def missing_primary_sheba_report(self, request):
+        """
+        DEF-23 (گام ۱-ب اصلاحیه): دانلود فایل اکسل گزارش حساب‌های اصلی فاقد شبای معتبر.
+        محدود به قلمرو مجاز کاربر (_scoped_base_queryset) و نیازمند دسترسی مالی (user_can_view_wages).
+        """
+        from django.http import HttpResponse
+        from .lifecycle_services import user_can_view_wages, generate_missing_primary_sheba_excel
+
+        if not user_can_view_wages(request.user):
+            raise PermissionDenied("مشاهده و دانلود گزارش اطلاعات بانکی و شبا منحصر به نقش مالی و حسابداری است.")
+
+        scoped_qs = self._scoped_base_queryset()
+        excel_bytes = generate_missing_primary_sheba_excel(queryset=scoped_qs)
+
+        filename = "Missing_Primary_Sheba_Report.xlsx"
+        response = HttpResponse(
+            excel_bytes,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
     @action(detail=True, methods=['post'], url_path='reopen')
     def reopen(self, request, pk=None):
         """
@@ -7619,10 +7642,13 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='export-bank-excel')
     def export_bank_excel(self, request):
         """
-        صدور فایل اکسل پرداخت گروهی بانک ملی به تفکیک اجباری پروژه
+        صدور فایل اکسل پرداخت گروهی بانک ملی به تفکیک اجباری پروژه.
+        DEF-20 (گام ۲ اصلاحیه): بر مبنای علامت payment_hold روی فیش؛
+        در صورت ارسال only_released=true، خروجی مجزا فقط شامل پرداخت‌های آزادشده صادر می‌شود.
         """
         period_id = request.query_params.get('period_id')
         project_id = request.query_params.get('project_id')
+        only_released = request.query_params.get('only_released') in ['true', '1']
 
         if not period_id:
             return Response({'error': 'شناسه دوره (period_id) الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -7642,20 +7668,86 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
         if not records:
             return Response({'error': f'رکوردی برای پروژه «{project.name}» در این دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # فیلتر پرسنل معتبر و کنار گذاشتن پرسنل منقضی در فایل بانک
-        from .lifecycle_services import split_expired_payroll_records
-        records, excluded_expired = split_expired_payroll_records(records, period.year_month)
+        if only_released:
+            records = [r for r in records if not r.payment_hold and r.payment_hold_released_at is not None]
+            if not records:
+                return Response({'error': f'هیچ فیش آزادشده‌ای برای پروژه «{project.name}» در این دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
+            excluded_expired = []
+            filename = f"Bank_Payment_Released_{project.code}_{period.year_month.replace('/', '_')}.xlsx"
+        else:
+            excluded_expired = [
+                {
+                    'personnel_id': r.personnel_id,
+                    'full_name': r.personnel.full_name,
+                    'national_code': r.personnel.national_code,
+                    'valid_until_date': getattr(r.personnel, 'valid_until_date', None),
+                }
+                for r in records if r.payment_hold
+            ]
+            records = [r for r in records if not r.payment_hold]
+            filename = f"Bank_Payment_{project.code}_{period.year_month.replace('/', '_')}.xlsx"
 
         settings_obj = get_effective_payroll_settings(period.year_month, project.id)
         bank_settings = getattr(settings_obj, 'bank_export_settings', None)
 
         excel_bytes = generate_bank_meli_excel(records, bank_settings, year_month_title=f"{project.name} {period.year_month}")
-        filename = f"Bank_Payment_{project.code}_{period.year_month.replace('/', '_')}.xlsx"
 
         resp = HttpResponse(excel_bytes, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         resp['Content-Disposition'] = f'attachment; filename="{filename}"'
         self._attach_expired_headers(resp, excluded_expired)
         return resp
+
+    @action(detail=True, methods=['post'], url_path='release-payment-hold')
+    def release_payment_hold(self, request, pk=None):
+        """
+        DEF-20 (گام ۲ اصلاحیه): آزادسازی پرداخت معلق پرسنل منقضی پس از تمدید اعتبار پرونده.
+        اعتبار را می‌سنجد، لاگ ممیزی ثبت می‌کند و تعلیق پرداخت را آزاد می‌سازد.
+        """
+        from .lifecycle_services import user_can_view_wages, validate_personnel_validity
+        from accounts.audit_utils import log_audit_event
+        from django.utils import timezone
+
+        if not user_can_view_wages(request.user):
+            raise PermissionDenied("آزادسازی پرداخت معلق حقوق تنها با دسترسی مالی و حسابداری مجاز است.")
+
+        record = self.get_object()
+        if not record.payment_hold:
+            return Response({'message': 'این فیش حقوقی در وضعیت تعلیق پرداخت قرار ندارد.'}, status=status.HTTP_200_OK)
+
+        # سنجش تمدید اعتبار پرسنل
+        is_valid, reason = validate_personnel_validity(record.personnel, record.period.year_month)
+        if not is_valid:
+            return Response({
+                'error': f'اعتبار پرونده هنوز تمدید نشده است ({reason}). لطفاً ابتدا تاریخ اعتبار را از طریق درخواست تغییرات تمدید نمایید.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        record.payment_hold = False
+        record.payment_hold_released_at = timezone.now()
+        record.payment_hold_released_by = request.user
+        record.save(update_fields=['payment_hold', 'payment_hold_released_at', 'payment_hold_released_by', 'updated_at'])
+
+        log_audit_event(
+            module='personnel',
+            action='RELEASE_PAYMENT_HOLD',
+            severity='info',
+            target_model='MonthlyPayrollRecord',
+            target_object_id=str(record.id),
+            target_repr=f"آزادسازی پرداخت معلق فیش {record.personnel.full_name} برای دوره {record.period.year_month}",
+            user=request.user,
+            details={
+                'record_id': record.id,
+                'personnel_id': record.personnel_id,
+                'period_id': record.period_id,
+                'payable_amount': str(record.payable_amount),
+            }
+        )
+
+        return Response({
+            'message': f'پرداخت معلق فیش «{record.personnel.full_name}» با موفقیت آزاد شد.',
+            'record_id': record.id,
+            'payment_hold': False,
+            'payment_hold_released_at': record.payment_hold_released_at.isoformat()
+        }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], url_path='export-monthly-excel')
     def export_monthly_excel(self, request):

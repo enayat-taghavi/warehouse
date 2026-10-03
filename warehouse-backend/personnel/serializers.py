@@ -231,7 +231,7 @@ class MonthlyPayrollRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = MonthlyPayrollRecord
         fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at', 'paid_by', 'paid_at']
+        read_only_fields = ['created_at', 'updated_at', 'paid_by', 'paid_at', 'payment_hold_released_at', 'payment_hold_released_by']
 
     def get_paid_by_name(self, obj):
         if obj.paid_by:
