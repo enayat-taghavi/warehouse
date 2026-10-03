@@ -1109,3 +1109,48 @@ class Step2HighSeverityTests(RemediationTestBase):
         self.assertFalse(rec.payment_hold)
         self.assertIsNotNone(rec.payment_hold_released_at)
         self.assertEqual(rec.payment_hold_released_by, self.acc)
+
+    def test_def20_cannot_bypass_payment_hold_via_patch_or_put(self):
+        """
+        تست امنیتی جلوگیری از دور زدن تعلیق پرداخت با PATCH یا PUT:
+        هیچ کاربری حتی حسابدار نباید بتواند با ارسال مستقیم فیلد payment_hold در درخواست update،
+        تعلیق را بدون ممیزی و بدون تمدید اعتبار آزاد کند.
+        """
+        from personnel.models import MonthlyWorkPeriod, MonthlyPayrollRecord
+
+        p_expired = self.complete_profile('0099887766', status='approved', company=self.c1, project=self.p1, valid_until_date='1405/01/01')
+        period = MonthlyWorkPeriod.objects.create(
+            company=self.c1,
+            project=self.p1,
+            year_month='1405/07',
+            status='OPEN'
+        )
+        rec = MonthlyPayrollRecord.objects.create(
+            period=period,
+            personnel=p_expired,
+            gross_salary=8000000,
+            payable_amount=7200000,
+            payment_hold=True,
+            payment_hold_reason='انقضای اعتبار تا تمدید'
+        )
+
+        # ۱. کاربر عادی غیرمالی تلاش می‌کند با PATCH فیش را ویرایش کند -> ۴۰۳
+        self.as_user(self.emp)
+        patch_emp = self.client.patch(f'/api/personnel/monthly-payroll/{rec.id}/', {'payment_hold': False}, format='json')
+        self.assertEqual(patch_emp.status_code, 403)
+        rec.refresh_from_db()
+        self.assertTrue(rec.payment_hold)
+
+        # ۲. حسابدار تلاش می‌کند با PATCH تعلیق را دور بزند -> خطای ۴۰۰ صریح
+        self.as_user(self.acc)
+        patch_acc = self.client.patch(f'/api/personnel/monthly-payroll/{rec.id}/', {'payment_hold': False}, format='json')
+        self.assertEqual(patch_acc.status_code, 400)
+        self.assertIn('تغییر مستقیم وضعیت تعلیق پرداخت مجاز نیست', patch_acc.data['error'])
+        rec.refresh_from_db()
+        self.assertTrue(rec.payment_hold, "خطای بحرانی: قفل تعلیق پرداخت با PATCH دور زده شد!")
+
+        # ۳. ارسال PUT کامل نیز مسدود است
+        put_acc = self.client.put(f'/api/personnel/monthly-payroll/{rec.id}/', {'payment_hold': False}, format='json')
+        self.assertEqual(put_acc.status_code, 400)
+        rec.refresh_from_db()
+        self.assertTrue(rec.payment_hold)

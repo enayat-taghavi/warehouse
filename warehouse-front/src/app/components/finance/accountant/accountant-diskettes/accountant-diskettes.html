@@ -66,7 +66,8 @@
             (click)="switchSubTab('social_security')"
             [ngClass]="activeSubTab === 'social_security' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
             class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>🛡️ دیسکت تامین اجتماعی</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="shield"></svg>
+            <span>دیسکت تامین اجتماعی</span>
           </button>
 
           <button
@@ -74,7 +75,8 @@
             (click)="switchSubTab('tax_portal')"
             [ngClass]="activeSubTab === 'tax_portal' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
             class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>🏛️ فایل مالیات حقوق</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
+            <span>فایل مالیات حقوق</span>
           </button>
 
           <button
@@ -82,7 +84,8 @@
             (click)="switchSubTab('bank_payroll')"
             [ngClass]="activeSubTab === 'bank_payroll' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
             class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>🏦 دیسکت واریز بانکی</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building"></svg>
+            <span>دیسکت واریز بانکی</span>
           </button>
         </div>
       </div>
@@ -138,7 +141,7 @@
           (click)="generateSocialSecurityDiskette()"
           [disabled]="isGenerating"
           class="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-black shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50">
-          <span>⚙️</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="settings" [class.animate-spin]="isGenerating"></svg>
           <span>{{ isGenerating ? 'در حال پردازش...' : 'تولید و دانلود فایل‌های DBF' }}</span>
         </button>
       </div>
@@ -171,7 +174,7 @@
           (click)="generateTaxDiskette()"
           [disabled]="isGenerating"
           class="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-black shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50">
-          <span>🏛️</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
           <span>{{ isGenerating ? 'در حال تولید...' : 'تولید فایل‌های مالیاتی WH و WP' }}</span>
         </button>
       </div>
@@ -205,7 +208,7 @@
           (click)="generateBankDiskette()"
           [disabled]="isGenerating"
           class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-black shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50">
-          <span>🏦</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building"></svg>
           <span>{{ isGenerating ? 'در حال استخراج...' : 'تولید دیسکت بانکی حقوق' }}</span>
         </button>
       </div>

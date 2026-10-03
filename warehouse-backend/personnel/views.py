@@ -7341,6 +7341,28 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
 
         return qs.order_by('row_number')
 
+    def update(self, request, *args, **kwargs):
+        from .lifecycle_services import user_can_view_wages
+        if not user_can_view_wages(request.user):
+            raise PermissionDenied("ویرایش فیش حقوقی تنها با دسترسی مالی و حسابداری مجاز است.")
+        if 'payment_hold' in request.data or 'payment_hold_reason' in request.data:
+            return Response(
+                {'error': 'تغییر مستقیم وضعیت تعلیق پرداخت مجاز نیست. آزادسازی پرداخت منحصراً از طریق اکشن آزادسازی پس از تمدید اعتبار امکان‌پذیر است.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        from .lifecycle_services import user_can_view_wages
+        if not user_can_view_wages(request.user):
+            raise PermissionDenied("ویرایش فیش حقوقی تنها با دسترسی مالی و حسابداری مجاز است.")
+        if 'payment_hold' in request.data or 'payment_hold_reason' in request.data:
+            return Response(
+                {'error': 'تغییر مستقیم وضعیت تعلیق پرداخت مجاز نیست. آزادسازی پرداخت منحصراً از طریق اکشن آزادسازی پس از تمدید اعتبار امکان‌پذیر است.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().partial_update(request, *args, **kwargs)
+
     @action(detail=False, methods=['post'], url_path='calculate-period')
     def calculate_period(self, request):
         """
