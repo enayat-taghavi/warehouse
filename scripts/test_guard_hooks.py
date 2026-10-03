@@ -16,10 +16,12 @@ G = ROOT + S + '.claude' + S + 'hooks' + S + 'guard.py'
 FA = ''.join(map(chr, [0x627, 0x646, 0x628, 0x627, 0x631]))
 FRONT = ROOT + S + 'warehouse-front' + S + 'src' + S + 'app' + S
 bad = 0
+test_backup_dir = tempfile.mkdtemp(prefix='guard_test_bkp_')
+os.environ['TEST_GUARD_BACKUP_DIR'] = test_backup_dir
 
 
 def run_raw(data):
-    p = subprocess.run([sys.executable, G], input=data, capture_output=True)
+    p = subprocess.run([sys.executable, G], input=data, capture_output=True, env=os.environ.copy())
     return p.returncode, p.stdout.decode()
 
 
@@ -47,6 +49,15 @@ ag('status check -> warn + allow', {'toolCall': {'name': 'write_to_file', 'args'
    lambda ls: len(ls) == 2 and ls[0]['hookSpecificOutput']['additionalContext'] and ls[1] == {'decision': 'allow'})
 ag('plain replace -> allow', {'toolCall': {'name': 'replace_file_content', 'args': {'TargetFile': 'E:/warehouse project/warehouse-front/src/app/a.ts', 'ReplacementContent': 'x'}}},
    lambda ls: ls == [{'decision': 'allow'}])
+ag('migrate without backup -> deny', {'toolCall': {'name': 'run_command', 'args': {'CommandLine': 'python manage.py migrate'}}},
+   lambda ls: len(ls) == 1 and ls[0]['decision'] == 'deny' and 'safe-migration' in ls[0]['reason'])
+ag('migrate --plan -> allow', {'toolCall': {'name': 'run_command', 'args': {'CommandLine': 'python manage.py migrate --plan'}}},
+   lambda ls: ls == [{'decision': 'allow'}])
+ag('showmigrations -> allow', {'toolCall': {'name': 'run_command', 'args': {'CommandLine': 'python manage.py showmigrations'}}},
+   lambda ls: ls == [{'decision': 'allow'}])
+ag('manage.py test -> allow', {'toolCall': {'name': 'run_command', 'args': {'CommandLine': 'python manage.py test personnel'}}},
+   lambda ls: ls == [{'decision': 'allow'}])
+
 
 
 # 2) Claude Code: خروجی خالی یا دقیقاً یک JSON معتبر، بدون فیلد decision
@@ -82,6 +93,26 @@ claude('Bash grep Persian', 'PreToolUse', 'Bash', {'command': 'grep -rn "' + FA 
 claude('Bash rg Persian in pipe', 'PreToolUse', 'Bash', {'command': 'cat a | rg ' + FA}, 'deny')
 claude('Bash grep ASCII', 'PreToolUse', 'Bash', {'command': 'grep -rn warehouse .'}, 'pass')
 claude('Bash echo Persian', 'PreToolUse', 'Bash', {'command': 'echo ' + FA}, 'pass')
+claude('Bash migrate without backup', 'PreToolUse', 'Bash', {'command': 'python manage.py migrate'}, 'deny')
+claude('Bash migrate --plan', 'PreToolUse', 'Bash', {'command': 'python manage.py migrate --plan'}, 'pass')
+claude('Bash manage.py test', 'PreToolUse', 'Bash', {'command': 'python manage.py test personnel'}, 'pass')
+
+dummy_dump = os.path.join(test_backup_dir, 'test_dummy_fresh.dump')
+dummy_meta = dummy_dump + '.meta.json'
+try:
+    with open(dummy_dump, 'w') as f:
+        f.write('dummy')
+    with open(dummy_meta, 'w') as f:
+        f.write('{}')
+    ag('migrate with fresh backup -> allow', {'toolCall': {'name': 'run_command', 'args': {'CommandLine': 'python manage.py migrate'}}},
+       lambda ls: ls == [{'decision': 'allow'}])
+    claude('Bash migrate with fresh backup', 'PreToolUse', 'Bash', {'command': 'python manage.py migrate'}, 'pass')
+finally:
+    if os.path.exists(dummy_dump):
+        os.remove(dummy_dump)
+    if os.path.exists(dummy_meta):
+        os.remove(dummy_meta)
+
 claude('Post .ts status === 530', 'PostToolUse', 'Edit', {'file_path': TS, 'new_string': 'if (status === 530) {'}, 'warn1')
 claude('Post .ts isServerUnreachable', 'PostToolUse', 'Edit', {'file_path': TS, 'new_string': 'if (isServerUnreachable(s)) {'}, 'pass')
 claude('Post server-reachability.ts', 'PostToolUse', 'Edit', {'file_path': FRONT + 'core' + S + 'services' + S + 'server-reachability.ts', 'new_string': 'status === 0'}, 'pass')
@@ -134,6 +165,7 @@ claude('missing transcript -> silent', 'PostToolUse', 'Read', READ, 'pass', {'tr
 claude('Bash post 520K -> warn', 'PostToolUse', 'Bash', {'command': 'ls'}, 'warn1', transcript(520_000))
 claude('PreToolUse never checks ctx', 'PreToolUse', 'Bash', {'command': 'ls'}, 'pass', transcript(990_000))
 shutil.rmtree(TMP, ignore_errors=True)
+shutil.rmtree(test_backup_dir, ignore_errors=True)
 if os.path.exists(STATE):
     os.remove(STATE)
 code, out = run_raw(b'not json')

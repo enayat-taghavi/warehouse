@@ -13,14 +13,19 @@
   - Antigravity همان قالب قبلی ({"decision": "allow" | "deny", ...}) را می‌گیرد.
 """
 import json
+import os
 import re
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
 PERSIAN = re.compile(r'[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]')
 GREP_COMMAND = re.compile(r'(?:^|[\s;|&(])(?:grep|egrep|fgrep|rg|findstr)(?:\s|$)')
+MIGRATE_COMMAND = re.compile(
+    r'(?:^|[\s;|&(])(?:"?[.\w\\/:-]*manage\.py"?|django-admin(?:\.py)?)\s+(?:--[\w-]+=?[^\s]*\s+)*migrate\b'
+)
 # تفسیر دستی وضعیت HTTP؛ جای آن باید isServerUnreachable() باشد.
 STATUS_CHECK = re.compile(r'status\s*(?:===?|!==?|>=?|<=?)\s*(?:0|5\d\d)\b')
 
@@ -124,6 +129,44 @@ def check_persian_grep(command):
         deny(
             'جستجوی متن فارسی با grep در Bash ممنوع است: Git Bash ویندوز UTF-8 را '
             'مخدوش می‌کند و نتیجهٔ غلط می‌دهد. از ابزار Grep استفاده کن.'
+        )
+
+
+def check_migrate_backup(command):
+    if not command:
+        return
+    if not MIGRATE_COMMAND.search(command):
+        return
+    if '--plan' in command or '--help' in command or '-h' in command:
+        return
+
+    override_dir = os.environ.get('TEST_GUARD_BACKUP_DIR')
+    backup_dir = Path(override_dir) if override_dir else (ROOT / 'warehouse-backend' / 'backups' / 'db')
+    max_age_seconds = 15 * 60  # ۱۵ دقیقه
+    now = time.time()
+    has_fresh_backup = False
+
+    if backup_dir.is_dir():
+        for f in backup_dir.iterdir():
+            if f.is_file() and f.name.endswith('.dump') and f.stat().st_size > 0:
+                meta = backup_dir / f"{f.name}.meta.json"
+                if not meta.is_file():
+                    meta = backup_dir / f"{f.stem}.meta.json"
+                if meta.is_file():
+                    age = now - f.stat().st_mtime
+                    if 0 <= age <= max_age_seconds:
+                        has_fresh_backup = True
+                        break
+
+    if not has_fresh_backup:
+        deny(
+            'اجرای manage.py migrate روی دیتابیس عملیاتی بدون پشتیبان تازه ممنوع است.\n'
+            'طبق اسکیل safe-migration، باید یک فایل .dump غیرخالی با .meta.json در '
+            'warehouse-backend/backups/db/ با عمر کمتر از ۱۵ دقیقه وجود داشته باشد.\n'
+            'دستور ساخت پشتیبان:\n'
+            'PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py shell -c '
+            '"from accounts.backup_service import create_database_backup; '
+            'm = create_database_backup(user=None, description=\'pre-migrate\'); print(m[\'filename\'], m[\'size\'])"'
         )
 
 
@@ -251,6 +294,7 @@ def main():
 
         if tool_name == 'run_command':
             check_persian_grep(args.get('CommandLine', ''))
+            check_migrate_backup(args.get('CommandLine', ''))
         elif tool_name == 'write_to_file':
             check_new_root_file(args.get('TargetFile', ''))
             check_status_checks(args.get('TargetFile', ''), args.get('CodeContent', ''))
@@ -286,6 +330,7 @@ def main():
         check_new_root_file(tool_input.get('file_path') or '')
     elif tool == 'Bash':
         check_persian_grep(tool_input.get('command') or '')
+        check_migrate_backup(tool_input.get('command') or '')
 
     allow()
 

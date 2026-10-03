@@ -40,12 +40,14 @@ PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py sqlmigrate <app> <migration_nam
 - **بدون عملیات مخرب:** پشتیبان بگیر (بند ۵). بعد با یک سؤال کوتاه بله/خیر از کاربر اجازهٔ migrate روی دیتابیس عملیاتی بگیر.
 - **با عملیات مخرب:** اجرا نکن. به کاربر بگو دقیقاً کدام ستون، جدول یا داده از بین می‌رود. راه بی‌خطر (expand-contract) را پیشنهاد بده: اول ستون تازه و کپی داده، و حذف در یک مهاجرت بعدی.
 
-## ۵. پشتیبان پیش از migrate
-`run_auto_backup` را اجرا نکن، چون همهٔ پشتیبان‌ها جز ۷ نسخهٔ آخر را پاک می‌کند. به‌جایش فقط یک پشتیبان بساز:
+## ۵. پشتیبان پیش از migrate (اجباری با هوک محافظ)
+هوک محافظ `.claude/hooks/guard.py` هرگونه اجرای `manage.py migrate` را تا زمانی که یک فایل `.dump` غیرخالی با فایل `.meta.json` متناظر با عمر **کمتر از ۱۵ دقیقه** در `warehouse-backend/backups/db/` وجود نداشته باشد، مسدود می‌کند.
+
+`run_auto_backup` را اجرا نکن، چون همهٔ پشتیبان‌ها جز ۷ نسخهٔ آخر را پاک می‌کند. به‌جایش فقط یک پشتیبان مستقل بساز:
 ```bash
 PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-migrate'); print(m['filename'], m['size'])"
 ```
-فایل در `warehouse-backend/backups/db/` ساخته می‌شود.
+فایل در `warehouse-backend/backups/db/` ساخته می‌شود و مجوز اجرای مهاجرت برای ۱۵ دقیقه باز خواهد شد.
 
 ## ۶. پس از migrate
 ```bash
