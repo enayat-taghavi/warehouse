@@ -78,7 +78,35 @@ describe('ManagerFleetHubComponent Unit Tests', () => {
       rejectVehicle: vi.fn().mockReturnValue(of({ success: true })),
       requestVehicleRevision: vi.fn().mockReturnValue(of({ success: true })),
       approveVehicleChangeRequestManager: vi.fn().mockReturnValue(of({ success: true })),
-      rejectVehicleChangeRequest: vi.fn().mockReturnValue(of({ success: true }))
+      rejectVehicleChangeRequest: vi.fn().mockReturnValue(of({ success: true })),
+      getVehicleCostEstimate: vi.fn().mockReturnValue(of({
+        vehicle_id: 101,
+        plate_number: '12ع345-Iran68',
+        driver_name: 'مرتضی احمدی',
+        vehicle_type: 'khavar',
+        ownership_type: 'contract',
+        is_payable: true,
+        daily_rate: 15000000,
+        standard_days: 26,
+        full_month_days: 30,
+        monthly_cost_standard: 390000000,
+        monthly_cost_full: 450000000,
+        yearly_cost_standard: 4680000000,
+        avg_daily_rate: 14000000,
+        avg_monthly_cost: 364000000,
+        deviation_percentage: 7,
+        benchmark_count: 3
+      })),
+      getVehicleDeleteImpact: vi.fn().mockReturnValue(of({
+        impact: [],
+        total_affected: 0,
+        history: { has_history: false, can_delete: true, reasons: [] },
+        can_delete: true,
+        has_history: false,
+        reasons: []
+      })),
+      deleteVehicleProfile: vi.fn().mockReturnValue(of(void 0)),
+      endVehicleCollaboration: vi.fn().mockReturnValue(of({ message: 'همکاری خودرو پایان یافت.', data: mockVehicle }))
     };
 
     mockWs = {
@@ -130,12 +158,19 @@ describe('ManagerFleetHubComponent Unit Tests', () => {
     expect(mockRouter.navigate).toHaveBeenCalled();
   });
 
-  it('3. should open and submit approval for pending vehicle', () => {
+  it('3. should open approval modal, fetch server cost estimate, and submit approval', () => {
     component.ngOnInit();
     const veh = component.newVehiclesList[0];
     component.openApproveModal('vehicle', veh);
     expect(component.isApprovalModalOpen).toBe(true);
     expect(component.approvalTarget?.type).toBe('vehicle');
+    expect(mockPersonnelApi.getVehicleCostEstimate).toHaveBeenCalledWith(veh.id);
+    expect(component.approvalCostEstimate).toBeTruthy();
+    expect(component.getCostDeviationPercentage()).toBe(7);
+    expect(component.getVehicleDailyRate()).toBe(15000000);
+    expect(component.getVehicleMonthlyStandardCost()).toBe(390000000);
+    expect(component.getVehicleYearlyStandardCost()).toBe(4680000000);
+    expect(component.isVehiclePayable()).toBe(true);
 
     component.approvalNote = 'خودرو تایید نهایی شد';
     component.submitApproval();
@@ -144,17 +179,28 @@ describe('ManagerFleetHubComponent Unit Tests', () => {
     expect(component.isApprovalModalOpen).toBe(false);
   });
 
-  it('4. should open and submit rejection for pending vehicle', () => {
+  it('4. should handle return to accountant vs final rejection in reject modal', () => {
     component.ngOnInit();
     const veh = component.newVehiclesList[0];
-    component.openRejectModal(veh.id!, veh.plate_number, 'vehicle', 'reject');
-    expect(component.isRejectModalOpen).toBe(true);
 
-    component.rejectReason = 'بیمه‌نامه معتبر نیست';
+    // ۱. عودت به حسابدار
+    component.openRejectModal(veh.id!, veh.plate_number, 'vehicle', 'revision');
+    expect(component.isRejectModalOpen).toBe(true);
+    expect(component.rejectActionType).toBe('return_to_accountant');
+
+    component.rejectReason = 'نرخ بالاتر از عرف پروژه است';
     component.submitReject();
-    expect(mockPersonnelApi.rejectVehicle).toHaveBeenCalledWith(veh.id, 'بیمه‌نامه معتبر نیست');
-    expect(mockToast.showSuccess).toHaveBeenCalled();
+    expect(mockPersonnelApi.requestVehicleRevision).toHaveBeenCalledWith(veh.id, 'نرخ بالاتر از عرف پروژه است');
+    expect(mockToast.showSuccess).toHaveBeenCalledWith('پرونده جهت بازنگری نرخ و مدارک به کارتابل حسابدار عودت داده شد.');
     expect(component.isRejectModalOpen).toBe(false);
+
+    // ۲. رد قطعی پرونده
+    component.openRejectModal(veh.id!, veh.plate_number, 'vehicle', 'reject');
+    expect(component.rejectActionType).toBe('reject_final');
+    component.rejectReason = 'عدم انطباق شرایط فنی و ایمنی';
+    component.submitReject();
+    expect(mockPersonnelApi.rejectVehicle).toHaveBeenCalledWith(veh.id, 'عدم انطباق شرایط فنی و ایمنی');
+    expect(mockToast.showSuccess).toHaveBeenCalledWith('پرونده خودرو رد شد.');
   });
 
   it('5. should open diff modal for vehicle change request', () => {
@@ -174,5 +220,46 @@ describe('ManagerFleetHubComponent Unit Tests', () => {
     const fetchSpy = vi.spyOn(component, 'fetchFleetData');
     wsSubject.next({ type_str: 'vehicle_updated', data: { id: 101 } });
     expect(fetchSpy).toHaveBeenCalled();
+  });
+
+  it('7. should handle smart delete modal for vehicle without movement', () => {
+    component.ngOnInit();
+    const veh = mockVehicle;
+    component.openDeleteModal(veh);
+    expect(component.isDeleteModalOpen).toBe(true);
+    expect(component.deleteTargetVehicle).toBe(veh);
+    expect(mockPersonnelApi.getVehicleDeleteImpact).toHaveBeenCalledWith(veh.id);
+
+    component.confirmDeleteVehicle();
+    expect(mockPersonnelApi.deleteVehicleProfile).toHaveBeenCalledWith(veh.id);
+    expect(mockToast.showSuccess).toHaveBeenCalled();
+    expect(component.isDeleteModalOpen).toBe(false);
+  });
+
+  it('8. should handle end collaboration modal and submission', () => {
+    component.ngOnInit();
+    const veh = mockVehicle;
+    component.openEndCollaborationModal(veh);
+    expect(component.isEndCollaborationModalOpen).toBe(true);
+    expect(component.endCollaborationTarget).toBe(veh);
+
+    component.endCollaborationDate = '1405/07/20';
+    component.endCollaborationReason = 'پایان پروژه و تسویه‌حساب نهایی';
+    component.submitEndCollaboration();
+    expect(mockPersonnelApi.endVehicleCollaboration).toHaveBeenCalledWith(
+      veh.id,
+      '1405/07/20',
+      'پایان پروژه و تسویه‌حساب نهایی'
+    );
+    expect(mockToast.showSuccess).toHaveBeenCalled();
+    expect(component.isEndCollaborationModalOpen).toBe(false);
+  });
+
+  it('9. should correctly evaluate user permissions for delete and end collaboration', () => {
+    expect(component.canEndCollaboration).toBe(true);
+    expect(component.canDeleteVehicle).toBe(false);
+
+    mockAuth.userPermissions.mockReturnValue(['perm_delete_vehicle_nomovement']);
+    expect(component.canDeleteVehicle).toBe(true);
   });
 });

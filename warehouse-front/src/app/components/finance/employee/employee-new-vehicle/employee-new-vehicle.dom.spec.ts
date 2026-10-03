@@ -236,7 +236,7 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
   describe('۱. هدر چسبان و دکمه‌های آیکونی متقارن (DOM Header & Sticky Command Center)', () => {
     it('باید دکمه چهارم هدر (ثبت خودرو جدید) به صورت آیکونی متقارن w-9 h-9 با تولتیپ فارسی رندر شود', () => {
       const nativeEl: HTMLElement = fixture.nativeElement;
-      const addBtn = nativeEl.querySelector('button[title="معرفی خودرو جدید (پیش‌نویس)"]') as HTMLButtonElement;
+      const addBtn = nativeEl.querySelector('button[title*="معرفی خودرو جدید"]') as HTMLButtonElement;
 
       expect(addBtn).not.toBeNull();
       expect(addBtn.className).toContain('w-9');
@@ -247,7 +247,7 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
 
     it('کلیک روی دکمه ثبت خودرو در DOM باید مودال تعریف خودرو را در بدنه DOM ظاهر کند', () => {
       const nativeEl: HTMLElement = fixture.nativeElement;
-      const addBtn = nativeEl.querySelector('button[title="معرفی خودرو جدید (پیش‌نویس)"]') as HTMLButtonElement;
+      const addBtn = nativeEl.querySelector('button[title*="معرفی خودرو جدید"]') as HTMLButtonElement;
 
       addBtn.click();
       fixture.detectChanges();
@@ -298,7 +298,7 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
 
       const viewBtn = pendingRow!.querySelector('button[title="مشاهده پرونده خودرو"]');
       expect(viewBtn).not.toBeNull();
-      expect(viewBtn?.textContent).toContain('👁️ مشاهده');
+      expect(viewBtn?.textContent).toContain('مشاهده');
 
       const editBtn = pendingRow!.querySelector('button[title="ویرایش مشخصات خودرو"]');
       expect(editBtn).toBeNull();
@@ -312,7 +312,7 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
 
       const reviseBtn = revisionRow!.querySelector('button[title="اصلاح مشخصات خودرو و ارسال مجدد"]');
       expect(reviseBtn).not.toBeNull();
-      expect(reviseBtn?.textContent).toContain('↩️ اصلاح');
+      expect(reviseBtn?.textContent).toContain('اصلاح');
       expect(reviseBtn?.className).toContain('text-orange-700');
     });
 
@@ -320,7 +320,7 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
       const nativeEl: HTMLElement = fixture.nativeElement;
       const diffBtn = nativeEl.querySelector('button[title="مشاهده تغییرات معلق خودرو"]');
       expect(diffBtn).not.toBeNull();
-      expect(diffBtn?.textContent).toContain('🔍 تغییرات');
+      expect(diffBtn?.textContent).toContain('تغییرات');
     });
   });
 
@@ -361,6 +361,11 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
 
       expect(component.isReadOnlyMode).toBe(true);
 
+      component.setActiveTab('driver');
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
       const nativeEl: HTMLElement = fixture.nativeElement;
       const driverNameInput = nativeEl.querySelector('input[placeholder="مثال: علی حسینی"]') as HTMLInputElement;
       expect(driverNameInput).not.toBeNull();
@@ -376,6 +381,7 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
   describe('۵. تفکیک مالک و راننده و اعتبارسنجی زنده در DOM (Driver vs Owner & Validation)', () => {
     it('چک‌باکس مالک خودرو باید در DOM وجود داشته و با برداشتن تیک، فیلدهای مالک ظاهر شوند', () => {
       component.openNewVehicleModal();
+      component.setActiveTab('owner');
       fixture.detectChanges();
 
       const nativeEl: HTMLElement = fixture.nativeElement;
@@ -394,14 +400,23 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
       expect(ownerNameInput).not.toBeNull();
 
       const ownerCodeInputs = nativeEl.querySelectorAll('input[placeholder="۰۱۲۳۴۵۶۷۸۹"]');
-      expect(ownerCodeInputs.length).toBe(2);
+      expect(ownerCodeInputs.length).toBe(1);
     });
 
     it('ورود کد ملی نامعتبر برای مالک باید پیام هشدار در DOM نمایش دهد', () => {
       component.openNewVehicleModal();
-      component.newVehicle.is_driver_owner = false;
-      component.newVehicle.owner_national_code = '1111111111';
-      component.onOwnerNationalCodeChange();
+      component.setActiveTab('owner');
+      fixture.detectChanges();
+
+      const nativeEl: HTMLElement = fixture.nativeElement;
+      const checkbox = nativeEl.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      checkbox.click();
+      fixture.detectChanges();
+
+      const ownerCodeInput = nativeEl.querySelector('input[placeholder="۰۱۲۳۴۵۶۷۸۹"]') as HTMLInputElement;
+      expect(ownerCodeInput).not.toBeNull();
+      ownerCodeInput.value = '1111111111';
+      ownerCodeInput.dispatchEvent(new Event('input'));
       fixture.detectChanges();
 
       const modal = fixture.nativeElement.querySelector('.fixed.inset-0.z-50') as HTMLElement;
@@ -437,6 +452,7 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
   describe('۷. انطباق خودکار کد ملی راننده با پرسنل شرکت در DOM (Driver National Code Personnel Matching)', () => {
     it('ورود کد ملی معتبر راننده باید پرسنل همخوان را استعلام کرده و بج اطلاع‌رسانی در DOM نمایش دهد', () => {
       component.openNewVehicleModal();
+      component.setActiveTab('driver');
       fixture.detectChanges();
 
       component.newVehicle.driver_national_code = '0078901235';
