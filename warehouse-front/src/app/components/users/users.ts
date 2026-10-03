@@ -337,7 +337,7 @@ export class Users implements OnInit, OnDestroy {
         'can_act_as_company_manager', 'perm_manager_payment_authorize',
         'perm_approve_personnel_manager', 'perm_approve_fleet_manager',
         'perm_lock_work_period', 'view_sys_payroll', 'view_sys_fleet_settlement',
-        'perm_delete_personnel_nomovement'
+        'perm_delete_personnel_nomovement', 'perm_delete_vehicle_nomovement'
       ]
     },
     {
@@ -434,6 +434,7 @@ export class Users implements OnInit, OnDestroy {
     'perm_approve_personnel_manager': 'تایید مدیر پرسنل',
     'perm_approve_personnel_finance': 'تایید مالی پرسنل',
     'perm_delete_personnel_nomovement': 'حذف پرسنل فاقد سابقه',
+    'perm_delete_vehicle_nomovement': 'حذف خودرو فاقد سابقه',
     'perm_approve_fleet_supervisor': 'تایید سرپرست ناوگان',
     'perm_approve_fleet_manager': 'تایید مدیر ناوگان',
     'perm_approve_fleet_finance': 'تایید مالی ناوگان',
@@ -655,7 +656,7 @@ export class Users implements OnInit, OnDestroy {
         'perm_approve_personnel_manager', 'perm_approve_fleet_manager',
         'perm_approve_personnel_finance', 'perm_approve_fleet_finance',
         'perm_lock_work_period', 'perm_manager_payment_authorize', 'perm_treasury_disburse_action',
-        'perm_manage_projects_sections', 'perm_delete_personnel_nomovement'
+        'perm_manage_projects_sections', 'perm_delete_personnel_nomovement', 'perm_delete_vehicle_nomovement'
       ];
 
       // ۳. مدیریت و زیرساخت سیستم

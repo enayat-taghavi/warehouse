@@ -1,14 +1,14 @@
-<div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
+<div class="min-h-screen bg-surface-alt/40 p-3 md:p-6 space-y-4" dir="rtl">
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+  <div class="sticky top-0 z-30 bg-surface/95 backdrop-blur-md pt-1 pb-2">
+    <div class="bg-surface p-2.5 md:p-3 rounded-2xl border border-line shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
       
       <!-- سمت راست: دراپ‌داون انتخاب بخش و تب‌های افقی هاب ناوگان -->
       <div class="flex flex-wrap items-center gap-2 md:gap-3">
         <!-- انتخابگر بخش فعال -->
-        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
+        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-surface-alt border border-line px-2.5 py-1.5 rounded-xl">
+          <span class="text-[11px] font-bold text-muted">بخش فعال:</span>
           <select
             [(ngModel)]="selectedSectionId"
             (change)="onSectionChanged()"
@@ -20,15 +20,16 @@
         </div>
 
         <!-- ناوبری زیرتب‌ها در کپسول محصور (Subtabs Pill Container) -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
+        <div class="flex bg-surface-alt p-1 rounded-xl border border-line/80 overflow-x-auto w-full md:w-auto">
           <button
             type="button"
             (click)="switchSubTab('new')"
-            [ngClass]="activeSubTab === 'new' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>🆕 خودروهای جدید</span>
+            [ngClass]="activeSubTab === 'new' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-muted hover:text-fg font-bold'"
+            class="px-2.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+            <svg appIcon="truck" class="w-4 h-4"></svg>
+            <span>خودروهای جدید</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.newCount > 0 ? 'bg-amber-100 text-amber-800 font-black animate-pulse' : 'bg-slate-200/70 text-slate-600'">
+                  [ngClass]="statusCounters.newCount > 0 ? 'bg-amber-100 text-amber-800 font-black animate-pulse' : 'bg-surface-alt text-muted'">
               {{ statusCounters.newCount }}
             </span>
           </button>
@@ -36,11 +37,12 @@
           <button
             type="button"
             (click)="switchSubTab('work_logs')"
-            [ngClass]="activeSubTab === 'work_logs' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>🚛 کارکرد ماشین‌آلات</span>
+            [ngClass]="activeSubTab === 'work_logs' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-muted hover:text-fg font-bold'"
+            class="px-2.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+            <svg appIcon="clock" class="w-4 h-4"></svg>
+            <span>کارکرد ماشین‌آلات</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.workLogsCount > 0 ? 'bg-indigo-100 text-indigo-800 font-black' : 'bg-slate-200/70 text-slate-600'">
+                  [ngClass]="statusCounters.workLogsCount > 0 ? 'bg-indigo-100 text-indigo-800 font-black' : 'bg-surface-alt text-muted'">
               {{ statusCounters.workLogsCount }}
             </span>
           </button>
@@ -48,30 +50,31 @@
           <button
             type="button"
             (click)="switchSubTab('changes')"
-            [ngClass]="activeSubTab === 'changes' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer relative">
-            <span>🔄 درخواست‌های تغییرات</span>
+            [ngClass]="activeSubTab === 'changes' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-muted hover:text-fg font-bold'"
+            class="px-2.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer relative">
+            <svg appIcon="refresh-cw" class="w-4 h-4"></svg>
+            <span>درخواست‌های تغییرات</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.changesCount > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-slate-200/70 text-slate-600'">
+                  [ngClass]="statusCounters.changesCount > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-surface-alt text-muted'">
               {{ statusCounters.changesCount }}
             </span>
-            <span *ngIf="statusCounters.changesCount > 0" class="w-2 h-2 rounded-full bg-amber-500 inline-block animate-ping"></span>
           </button>
 
           <button
             type="button"
             (click)="switchSubTab('all')"
-            [ngClass]="activeSubTab === 'all' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>📁 همه ناوگان</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-slate-200/70 text-slate-600">
+            [ngClass]="activeSubTab === 'all' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-muted hover:text-fg font-bold'"
+            class="px-2.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+            <svg appIcon="folder" class="w-4 h-4"></svg>
+            <span>همه ناوگان</span>
+            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-surface-alt text-muted">
               {{ statusCounters.allCount }}
             </span>
           </button>
         </div>
       </div>
 
-      <!-- سمت چپ: جستجو و رفرش -->
+      <!-- سمت چپ: جستجو، خروجی اکسل و رفرش -->
       <div class="flex items-center gap-2">
         <div class="relative w-48 md:w-60">
           <input
@@ -79,21 +82,60 @@
             [(ngModel)]="searchQuery"
             (input)="fetchFleetData()"
             placeholder="جستجوی پلاک، مدل، راننده..."
-            class="w-full bg-slate-100/90 text-xs py-1.5 pr-8 pl-6 rounded-xl border border-slate-200/80 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-          <span class="absolute right-2.5 top-1.5 text-slate-400 text-xs">🔍</span>
-          <button *ngIf="searchQuery" (click)="searchQuery = ''; fetchFleetData()" class="absolute left-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs">✕</button>
+            class="w-full bg-surface-alt text-xs py-1.5 pr-8 pl-6 rounded-xl border border-line focus:bg-surface focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+          <span class="absolute right-2.5 top-2 text-muted">
+            <svg appIcon="search" class="w-3.5 h-3.5"></svg>
+          </span>
+          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchFleetData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-2 text-muted hover:text-fg text-xs cursor-pointer">✕</button>
         </div>
 
+        <!-- دکمه خروجی اکسل -->
+        <button
+          type="button"
+          (click)="exportExcel()"
+          [disabled]="isExportingExcel"
+          title="خروجی اکسل ناوگان"
+          aria-label="خروجی اکسل ناوگان"
+          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-all">
+          <svg appIcon="download" class="w-4 h-4"></svg>
+        </button>
+
+        <!-- دکمه همگام‌سازی و رفرش -->
         <button
           type="button"
           (click)="fetchFleetData()"
           [disabled]="isLoading"
           title="همگام‌سازی و بارگذاری مجدد"
-          class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200/80 text-slate-600 flex items-center justify-center transition-all cursor-pointer">
-          <span [class.animate-spin]="isLoading">🔄</span>
+          aria-label="همگام‌سازی و بارگذاری مجدد"
+          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-surface-alt text-muted hover:text-fg hover:bg-surface border border-line transition-all">
+          <svg appIcon="refresh-cw" class="w-4 h-4" [class.animate-spin]="isLoading"></svg>
         </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- نوار عملیات گروهی (Batch Action Floating Bar) -->
+  <div *ngIf="activeSubTab === 'new' && selectedVehicleIds.size > 0"
+       class="sticky top-16 z-20 bg-indigo-50/95 border border-indigo-200 rounded-2xl p-3 shadow-md flex items-center justify-between gap-3 animate-in fade-in duration-150">
+    <div class="flex items-center gap-2 text-indigo-900 font-bold text-xs">
+      <svg appIcon="check-square" class="w-4 h-4 text-indigo-600"></svg>
+      <span>{{ selectedVehicleIds.size }} پرونده خودرو جهت تایید گروهی انتخاب شده است.</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        (click)="openBatchApproveModal()"
+        class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs cursor-pointer">
+        <svg appIcon="check" class="w-4 h-4"></svg>
+        <span>تایید گروهی سرپرست</span>
+      </button>
+      <button
+        type="button"
+        (click)="selectedVehicleIds.clear()"
+        class="px-3 py-1.5 bg-surface text-muted hover:text-fg border border-line rounded-xl text-xs font-bold cursor-pointer">
+        انصراف
+      </button>
     </div>
   </div>
 
@@ -101,16 +143,24 @@
 
   <!-- تب ۱: خودروهای جدید در انتظار تایید سرپرست -->
   <div *ngIf="activeSubTab === 'new'" class="space-y-3">
-    <div *ngIf="newVehiclesList.length === 0 && !isLoading" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">
-      <span class="text-3xl block mb-2">🚚</span>
+    <div *ngIf="newVehiclesList.length === 0 && !isLoading" class="bg-surface rounded-2xl border border-line p-8 text-center text-muted">
+      <svg appIcon="truck" class="w-12 h-12 mx-auto text-muted/50 mb-2"></svg>
       <p class="font-bold text-sm">هیچ پرونده خودروی معلقی برای تایید سرپرست در این بخش وجود ندارد.</p>
     </div>
 
-    <div *ngIf="newVehiclesList.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <!-- جدول دسکتاپ -->
+    <div *ngIf="newVehiclesList.length > 0" class="hidden md:block bg-surface rounded-2xl border border-line shadow-xs overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
-          <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
+          <thead class="bg-surface-alt text-muted border-b border-line">
             <tr>
+              <th class="p-3 w-10 text-center">
+                <input
+                  type="checkbox"
+                  [checked]="isAllVehiclesSelected()"
+                  (change)="toggleSelectAllVehicles($event)"
+                  class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+              </th>
               <th class="p-3">شماره پلاک</th>
               <th class="p-3">نوع و مدل</th>
               <th class="p-3">نام راننده</th>
@@ -120,15 +170,31 @@
               <th class="p-3 text-center">عملیات سرپرست</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr *ngFor="let item of newVehiclesList" class="hover:bg-slate-50/50 transition-all">
-              <td class="p-3 font-mono font-bold text-slate-800">
-                <span class="px-2 py-0.5 rounded border border-slate-300 bg-slate-50">{{ item.plate_number || '—' }}</span>
+          <tbody class="divide-y divide-line/60">
+            <tr *ngFor="let item of newVehiclesList" class="hover:bg-surface-alt/50 transition-all">
+              <td class="p-3 text-center">
+                <input
+                  type="checkbox"
+                  [checked]="isVehicleSelected(item.id)"
+                  (change)="toggleVehicleSelection(item.id)"
+                  class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
               </td>
-              <td class="p-3 font-bold text-slate-700">{{ item.vehicle_type_display || item.vehicle_type || '—' }}</td>
-              <td class="p-3">{{ item.driver_name || '—' }}</td>
-              <td class="p-3 font-mono text-slate-600">{{ item.driver_phone || '—' }}</td>
-              <td class="p-3 text-slate-600">{{ item.owner_name || '—' }}</td>
+              <td class="p-3 font-mono font-bold text-fg">
+                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-line bg-surface-alt">
+                  <span>{{ item.plate_number || '—' }}</span>
+                  <button
+                    type="button"
+                    (click)="copyToClipboard(item.plate_number || '', item.id)"
+                    class="text-muted hover:text-indigo-600 cursor-pointer"
+                    title="کپی پلاک">
+                    <svg appIcon="copy" class="w-3.5 h-3.5"></svg>
+                  </button>
+                </div>
+              </td>
+              <td class="p-3 font-bold text-fg">{{ item.vehicle_type_display || item.vehicle_type || '—' }}</td>
+              <td class="p-3 font-medium">{{ item.driver_name || '—' }}</td>
+              <td class="p-3 font-mono text-muted">{{ item.driver_phone || '—' }}</td>
+              <td class="p-3 text-muted">{{ item.owner_name || '—' }}</td>
               <td class="p-3">
                 <span class="px-2 py-0.5 rounded-md text-[11px] font-black bg-amber-100 text-amber-800">
                   در انتظار تایید سرپرست
@@ -138,15 +204,32 @@
                 <div class="flex items-center justify-center gap-1.5">
                   <button
                     type="button"
+                    (click)="openViewVehicleModal(item)"
+                    class="px-2 py-1 rounded-lg bg-surface-alt text-fg hover:bg-slate-200 border border-line text-xs font-bold cursor-pointer transition-all flex items-center gap-1"
+                    title="مشاهده پرونده کامل">
+                    <svg appIcon="eye" class="w-3.5 h-3.5"></svg>
+                    <span>پرونده</span>
+                  </button>
+                  <button
+                    type="button"
                     (click)="openApproveModal('new', item)"
-                    class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-black cursor-pointer transition-all">
-                    ✓ تایید سرپرست
+                    class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-black cursor-pointer transition-all flex items-center gap-1">
+                    <svg appIcon="check" class="w-3.5 h-3.5"></svg>
+                    <span>تایید</span>
+                  </button>
+                  <button
+                    type="button"
+                    (click)="openRejectModal('new', item, 'revision')"
+                    class="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 text-xs font-bold cursor-pointer transition-all flex items-center gap-1">
+                    <svg appIcon="rotate-ccw" class="w-3.5 h-3.5"></svg>
+                    <span>عودت</span>
                   </button>
                   <button
                     type="button"
                     (click)="openRejectModal('new', item, 'reject')"
-                    class="px-2 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold cursor-pointer transition-all">
-                    ✕ رد
+                    class="px-2 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold cursor-pointer transition-all flex items-center gap-1">
+                    <svg appIcon="x" class="w-3.5 h-3.5"></svg>
+                    <span>رد</span>
                   </button>
                 </div>
               </td>
@@ -155,19 +238,90 @@
         </table>
       </div>
     </div>
+
+    <!-- کارت‌های موبایل (تسک ۸.۵) -->
+    <div *ngIf="newVehiclesList.length > 0" class="md:hidden space-y-3">
+      <div *ngFor="let item of newVehiclesList" class="bg-surface rounded-2xl p-4 border border-line shadow-xs space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <input
+              type="checkbox"
+              [checked]="isVehicleSelected(item.id)"
+              (change)="toggleVehicleSelection(item.id)"
+              class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+            <span class="font-mono font-bold text-fg bg-surface-alt px-2.5 py-1 rounded-lg border border-line text-xs">
+              {{ item.plate_number || '—' }}
+            </span>
+          </div>
+          <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-800">
+            معلق سرپرست
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div>
+            <span class="text-muted block text-[10px]">نوع و مدل:</span>
+            <span class="font-bold text-fg">{{ item.vehicle_type_display || item.vehicle_type }}</span>
+          </div>
+          <div>
+            <span class="text-muted block text-[10px]">نام راننده:</span>
+            <span class="font-bold text-fg">{{ item.driver_name || '—' }}</span>
+          </div>
+          <div>
+            <span class="text-muted block text-[10px]">شماره تماس:</span>
+            <span class="font-mono text-muted">{{ item.driver_phone || '—' }}</span>
+          </div>
+          <div>
+            <span class="text-muted block text-[10px]">مالک:</span>
+            <span class="text-muted">{{ item.owner_name || '—' }}</span>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-line grid grid-cols-4 gap-1.5">
+          <button
+            type="button"
+            (click)="openViewVehicleModal(item)"
+            class="min-h-[44px] rounded-xl bg-surface-alt text-fg border border-line text-xs font-bold flex items-center justify-center gap-1 active:scale-95 cursor-pointer">
+            <svg appIcon="eye" class="w-4 h-4"></svg>
+            <span>پرونده</span>
+          </button>
+          <button
+            type="button"
+            (click)="openApproveModal('new', item)"
+            class="min-h-[44px] rounded-xl bg-emerald-600 text-white text-xs font-black flex items-center justify-center gap-1 active:scale-95 shadow-xs cursor-pointer">
+            <svg appIcon="check" class="w-4 h-4"></svg>
+            <span>تایید</span>
+          </button>
+          <button
+            type="button"
+            (click)="openRejectModal('new', item, 'revision')"
+            class="min-h-[44px] rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold flex items-center justify-center gap-1 active:scale-95 cursor-pointer">
+            <svg appIcon="rotate-ccw" class="w-4 h-4"></svg>
+            <span>عودت</span>
+          </button>
+          <button
+            type="button"
+            (click)="openRejectModal('new', item, 'reject')"
+            class="min-h-[44px] rounded-xl bg-rose-50 text-rose-800 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1 active:scale-95 cursor-pointer">
+            <svg appIcon="x" class="w-4 h-4"></svg>
+            <span>رد</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- تب ۲: کارکرد ماشین‌آلات -->
   <div *ngIf="activeSubTab === 'work_logs'" class="space-y-3">
-    <div *ngIf="workLogsList.length === 0 && !isLoading" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">
-      <span class="text-3xl block mb-2">🚛</span>
+    <div *ngIf="workLogsList.length === 0 && !isLoading" class="bg-surface rounded-2xl border border-line p-8 text-center text-muted">
+      <svg appIcon="clock" class="w-12 h-12 mx-auto text-muted/50 mb-2"></svg>
       <p class="font-bold text-sm">هیچ رکورد کارکرد ماشین‌آلاتی در این تاریخ ثبت نشده است.</p>
     </div>
 
-    <div *ngIf="workLogsList.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div *ngIf="workLogsList.length > 0" class="bg-surface rounded-2xl border border-line shadow-xs overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
-          <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
+          <thead class="bg-surface-alt text-muted border-b border-line">
             <tr>
               <th class="p-3">پلاک خودرو</th>
               <th class="p-3">راننده</th>
@@ -177,10 +331,10 @@
               <th class="p-3 text-center">عملیات</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr *ngFor="let item of workLogsList" class="hover:bg-slate-50/50">
-              <td class="p-3 font-mono font-bold text-slate-800">{{ item.plate_number }}</td>
-              <td class="p-3 font-bold text-slate-700">{{ item.driver_name }}</td>
+          <tbody class="divide-y divide-line/60">
+            <tr *ngFor="let item of workLogsList" class="hover:bg-surface-alt/50">
+              <td class="p-3 font-mono font-bold text-fg">{{ item.plate_number }}</td>
+              <td class="p-3 font-bold text-fg">{{ item.driver_name }}</td>
               <td class="p-3 font-mono">{{ item.trips_count }} سرویس</td>
               <td class="p-3 font-mono font-bold text-indigo-600">{{ item.work_hours }} ساعت</td>
               <td class="p-3">
@@ -194,17 +348,19 @@
                   <button
                     type="button"
                     (click)="openApproveModal('work_logs', item)"
-                    class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-black cursor-pointer">
-                    ✓ تایید کارکرد
+                    class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-black cursor-pointer flex items-center gap-1">
+                    <svg appIcon="check" class="w-3.5 h-3.5"></svg>
+                    <span>تایید کارکرد</span>
                   </button>
                   <button
                     type="button"
                     (click)="openRejectModal('work_logs', item, 'revision')"
-                    class="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 text-xs font-bold cursor-pointer">
-                    عودت
+                    class="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 text-xs font-bold cursor-pointer flex items-center gap-1">
+                    <svg appIcon="rotate-ccw" class="w-3.5 h-3.5"></svg>
+                    <span>عودت</span>
                   </button>
                 </div>
-                <span *ngIf="item.status === 'approved'" class="text-xs text-slate-400 font-bold">تایید شده</span>
+                <span *ngIf="item.status === 'approved'" class="text-xs text-muted font-bold">تایید شده</span>
               </td>
             </tr>
           </tbody>
@@ -215,15 +371,15 @@
 
   <!-- تب ۳: درخواست‌های تغییرات ناوگان -->
   <div *ngIf="activeSubTab === 'changes'" class="space-y-3">
-    <div *ngIf="changeRequestsList.length === 0 && !isLoading" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">
-      <span class="text-3xl block mb-2">🔄</span>
+    <div *ngIf="changeRequestsList.length === 0 && !isLoading" class="bg-surface rounded-2xl border border-line p-8 text-center text-muted">
+      <svg appIcon="refresh-cw" class="w-12 h-12 mx-auto text-muted/50 mb-2"></svg>
       <p class="font-bold text-sm">هیچ درخواست تغییراتی برای ناوگان وجود ندارد.</p>
     </div>
 
-    <div *ngIf="changeRequestsList.length > 0" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div *ngIf="changeRequestsList.length > 0" class="bg-surface rounded-2xl border border-line shadow-xs overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
-          <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
+          <thead class="bg-surface-alt text-muted border-b border-line">
             <tr>
               <th class="p-3">شماره پلاک</th>
               <th class="p-3">راننده / مالک</th>
@@ -233,19 +389,20 @@
               <th class="p-3 text-center">بررسی و عملیات</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr *ngFor="let cr of changeRequestsList" class="hover:bg-slate-50/50">
+          <tbody class="divide-y divide-line/60">
+            <tr *ngFor="let cr of changeRequestsList" class="hover:bg-surface-alt/50">
               <td class="p-3 font-mono font-bold">{{ cr.plate_number }}</td>
-              <td class="p-3 font-bold text-slate-700">{{ cr.driver_name || '—' }}</td>
+              <td class="p-3 font-bold text-fg">{{ cr.driver_name || '—' }}</td>
               <td class="p-3">
                 <button
                   type="button"
                   (click)="openDiffModal(cr)"
-                  class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 cursor-pointer">
-                  🔍 مشاهده مغایرت‌ها (Diff)
+                  class="px-2 py-1 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 cursor-pointer flex items-center gap-1">
+                  <svg appIcon="search" class="w-3.5 h-3.5"></svg>
+                  <span>مشاهده مغایرت‌ها (Diff)</span>
                 </button>
               </td>
-              <td class="p-3 font-mono text-slate-500">{{ cr.created_at | slice:0:10 }}</td>
+              <td class="p-3 font-mono text-muted">{{ cr.created_at | slice:0:10 }}</td>
               <td class="p-3">
                 <span class="px-2 py-0.5 rounded-md text-[11px] font-black"
                       [ngClass]="cr.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'">
@@ -256,8 +413,9 @@
                 <button
                   type="button"
                   (click)="openApproveModal('changes', cr)"
-                  class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-black cursor-pointer">
-                  ✓ تایید تغییرات
+                  class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-black cursor-pointer flex items-center gap-1">
+                  <svg appIcon="check" class="w-3.5 h-3.5"></svg>
+                  <span>تایید تغییرات</span>
                 </button>
               </td>
             </tr>
@@ -269,10 +427,10 @@
 
   <!-- تب ۴: کل ناوگان -->
   <div *ngIf="activeSubTab === 'all'" class="space-y-3">
-    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+    <div class="bg-surface rounded-2xl border border-line shadow-xs overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
-          <thead class="bg-slate-50/80 text-slate-600 border-b border-slate-200/80">
+          <thead class="bg-surface-alt text-muted border-b border-line">
             <tr>
               <th class="p-3">پلاک خودرو</th>
               <th class="p-3">نوع و مدل</th>
@@ -280,12 +438,13 @@
               <th class="p-3">موبایل</th>
               <th class="p-3">وضعیت تاییدات</th>
               <th class="p-3">شماره شبا</th>
+              <th class="p-3 text-center">عملیات</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr *ngFor="let v of allVehiclesList" class="hover:bg-slate-50/50">
-              <td class="p-3 font-mono font-bold text-slate-800">{{ v.plate_number }}</td>
-              <td class="p-3 font-bold text-slate-700">{{ v.vehicle_type_display || v.vehicle_type }}</td>
+          <tbody class="divide-y divide-line/60">
+            <tr *ngFor="let v of allVehiclesList" class="hover:bg-surface-alt/50">
+              <td class="p-3 font-mono font-bold text-fg">{{ v.plate_number }}</td>
+              <td class="p-3 font-bold text-fg">{{ v.vehicle_type_display || v.vehicle_type }}</td>
               <td class="p-3">{{ v.driver_name }}</td>
               <td class="p-3 font-mono">{{ v.driver_phone || '—' }}</td>
               <td class="p-3">
@@ -294,8 +453,17 @@
                   {{ v.approval_status === 'approved' ? 'فعال و مصوب' : 'در انتظار بررسی' }}
                 </span>
               </td>
-              <td class="p-3 font-mono text-[11px] text-slate-500">
+              <td class="p-3 font-mono text-[11px] text-muted">
                 {{ v.sheba_number ? ('IR' + v.sheba_number) : 'فاقد شبا' }}
+              </td>
+              <td class="p-3 text-center">
+                <button
+                  type="button"
+                  (click)="openViewVehicleModal(v)"
+                  class="px-2.5 py-1 rounded-lg bg-surface-alt text-fg hover:bg-slate-200 border border-line text-xs font-bold cursor-pointer flex items-center gap-1">
+                  <svg appIcon="eye" class="w-3.5 h-3.5"></svg>
+                  <span>مشاهده پرونده</span>
+                </button>
               </td>
             </tr>
           </tbody>
@@ -306,80 +474,338 @@
 
   <!-- ── مودال ۱: ثبت یادداشت تایید (Approval Modal) ── -->
   <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-emerald-50/80 border-b border-emerald-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-emerald-900">{{ approvalTarget?.title }}</h3>
-        <button (click)="closeApproveModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+        <button (click)="closeApproveModal()" class="text-muted hover:text-fg">✕</button>
       </div>
       <div class="p-4 space-y-3">
-        <label class="text-xs font-bold text-slate-600 block">یادداشت یا توضیحات تایید (اختیاری):</label>
+        <label class="text-xs font-bold text-fg block">یادداشت یا توضیحات تایید (اختیاری):</label>
         <textarea
           [(ngModel)]="approvalNote"
           rows="3"
           placeholder="توضیحات مربوط به تایید ناوگان یا کارکرد..."
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
+          class="w-full bg-surface-alt border border-line rounded-xl p-2.5 text-xs focus:bg-surface focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
       </div>
-      <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+      <div class="p-3 bg-surface-alt border-t border-line flex justify-end gap-2">
         <button
           (click)="closeApproveModal()"
-          class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">
+          class="px-3 py-1.5 rounded-xl border border-line text-xs font-bold text-muted hover:bg-surface cursor-pointer">
           انصراف
         </button>
         <button
           (click)="submitApproval()"
           [disabled]="isApproving"
-          class="px-4 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 shadow-xs cursor-pointer">
-          {{ isApproving ? 'در حال ثبت...' : '✓ ثبت تایید' }}
+          class="px-4 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 shadow-xs cursor-pointer flex items-center gap-1.5">
+          <svg *ngIf="!isApproving" appIcon="check" class="w-4 h-4"></svg>
+          <svg *ngIf="isApproving" appIcon="refresh-cw" class="w-4 h-4 animate-spin"></svg>
+          <span>{{ isApproving ? 'در حال ثبت...' : 'ثبت تایید سرپرست' }}</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ── مودال ۲: ثبت علت رد یا عودت ── -->
+  <!-- ── مودال ۲: تایید گروهی سرپرست (Batch Approve Modal) ── -->
+  <div *ngIf="isBatchApproveModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
+      <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
+        <h3 class="text-sm font-black text-indigo-950">تایید گروهی {{ selectedVehicleIds.size }} خودرو</h3>
+        <button (click)="closeBatchApproveModal()" class="text-muted hover:text-fg">✕</button>
+      </div>
+      <div class="p-4 space-y-3">
+        <p class="text-xs text-muted leading-relaxed">
+          کلیه خودروهای انتخاب‌شده به تایید سرپرستی رسیده و جهت تعیین نرخ پایه و اطلاعات بانکی به کارتابل حسابدار منتقل خواهند شد.
+        </p>
+        <label class="text-xs font-bold text-fg block">یادداشت گروهی (اختیاری):</label>
+        <textarea
+          [(ngModel)]="batchApprovalNote"
+          rows="3"
+          placeholder="یادداشت سرپرست برای تایید گروهی پرونده‌ها..."
+          class="w-full bg-surface-alt border border-line rounded-xl p-2.5 text-xs focus:bg-surface focus:outline-none focus:ring-1 focus:ring-indigo-500"></textarea>
+      </div>
+      <div class="p-3 bg-surface-alt border-t border-line flex justify-end gap-2">
+        <button
+          (click)="closeBatchApproveModal()"
+          class="px-3 py-1.5 rounded-xl border border-line text-xs font-bold text-muted hover:bg-surface cursor-pointer">
+          انصراف
+        </button>
+        <button
+          (click)="submitBatchApprove()"
+          [disabled]="isBatchApproving"
+          class="px-4 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-black hover:bg-indigo-700 shadow-xs cursor-pointer flex items-center gap-1.5">
+          <svg *ngIf="!isBatchApproving" appIcon="check" class="w-4 h-4"></svg>
+          <svg *ngIf="isBatchApproving" appIcon="refresh-cw" class="w-4 h-4 animate-spin"></svg>
+          <span>{{ isBatchApproving ? 'در حال ثبت...' : 'تایید و ارسال به حسابداری' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── مودال ۳: ثبت علت رد یا عودت (با هشدار Purge مشروط) ── -->
   <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 border-b flex items-center justify-between"
            [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-50/80 border-amber-100 text-amber-900' : 'bg-rose-50/80 border-rose-100 text-rose-900'">
         <h3 class="text-sm font-black">{{ rejectTarget?.title }}</h3>
-        <button (click)="closeRejectModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+        <button (click)="closeRejectModal()" class="text-muted hover:text-fg">✕</button>
       </div>
       <div class="p-4 space-y-3">
-        <label class="text-xs font-bold text-slate-600 block">علت رد یا عودت (الزامی):</label>
+
+        <!-- بنر هشدار پاک‌سازی دائم (Purge) -->
+        <div *ngIf="isPurgeCandidate && rejectTarget?.action === 'reject'"
+             class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
+          <div class="flex items-center gap-1.5 font-bold text-amber-800">
+            <svg appIcon="alert-triangle" class="w-4 h-4 text-amber-600"></svg>
+            <span>هشدار پاک‌سازی دائم (Purge):</span>
+          </div>
+          <p class="text-[11px] leading-relaxed">
+            این خودرو تاکنون به تصویب نرسیده و فاقد هرگونه سابقه کارکرد یا اسناد مالی است. با ثبت رد، پرونده به صورت کامل پاک‌سازی خواهد شد.
+          </p>
+        </div>
+
+        <label class="text-xs font-bold text-fg block">علت رد یا عودت (الزامی):</label>
         <textarea
           [(ngModel)]="rejectReason"
           rows="3"
           placeholder="توضیحات عدم تایید یا نقص اطلاعات را بنویسید..."
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500"></textarea>
+          class="w-full bg-surface-alt border border-line rounded-xl p-2.5 text-xs focus:bg-surface focus:outline-none focus:ring-1 focus:ring-rose-500"></textarea>
       </div>
-      <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+      <div class="p-3 bg-surface-alt border-t border-line flex justify-end gap-2">
         <button
           (click)="closeRejectModal()"
-          class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">
+          class="px-3 py-1.5 rounded-xl border border-line text-xs font-bold text-muted hover:bg-surface cursor-pointer">
           انصراف
         </button>
         <button
           (click)="submitReject()"
           [disabled]="isRejecting"
-          class="px-4 py-1.5 rounded-xl text-white text-xs font-black shadow-xs cursor-pointer"
+          class="px-4 py-1.5 rounded-xl text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5"
           [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-rose-600 hover:bg-rose-700'">
-          {{ isRejecting ? 'در حال ثبت...' : 'ثبت قطعی' }}
+          <svg *ngIf="!isRejecting" [appIcon]="rejectTarget?.action === 'revision' ? 'rotate-ccw' : 'x'" class="w-4 h-4"></svg>
+          <svg *ngIf="isRejecting" appIcon="refresh-cw" class="w-4 h-4 animate-spin"></svg>
+          <span>{{ isRejecting ? 'در حال ثبت...' : 'ثبت قطعی' }}</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ── مودال ۳: مقایسه تفاوت‌ها (Diff Viewer) ── -->
+  <!-- ── مودال ۴: مشاهده کامل پرونده خودرو (Vehicle Profile Viewer) ── -->
+  <div *ngIf="isViewVehicleModalOpen && selectedViewVehicle"
+       class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-3 md:p-6">
+    <div class="bg-surface w-full max-w-3xl rounded-3xl shadow-2xl border border-line overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-150">
+      
+      <!-- هدر مودال پرونده -->
+      <div class="p-4 bg-surface-alt border-b border-line flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <svg appIcon="truck" class="w-5 h-5 text-indigo-600"></svg>
+          <h3 class="text-sm font-black text-fg">
+            شناسنامه و پرونده خودرو: {{ selectedViewVehicle.plate_number }}
+          </h3>
+          <span class="px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-100 text-indigo-800">
+            {{ selectedViewVehicle.vehicle_type_display || selectedViewVehicle.vehicle_type }}
+          </span>
+        </div>
+        <button (click)="closeViewVehicleModal()" class="text-muted hover:text-fg cursor-pointer p-1">✕</button>
+      </div>
+
+      <!-- محتوای اسکرول‌پذیر پرونده -->
+      <div class="p-4 md:p-6 overflow-y-auto space-y-5 text-xs">
+
+        <!-- کارت ۱: مشخصات فنی و هویتی -->
+        <div class="bg-surface-alt/70 p-4 rounded-2xl border border-line space-y-3">
+          <h4 class="font-black text-fg flex items-center gap-1.5 text-xs">
+            <svg appIcon="shield" class="w-4 h-4 text-emerald-600"></svg>
+            <span>مشخصات فنی و مالکیت خودرو</span>
+          </h4>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <span class="text-muted block text-[11px]">شماره پلاک:</span>
+              <span class="font-mono font-bold text-fg">{{ selectedViewVehicle.plate_number }}</span>
+            </div>
+            <div>
+              <span class="text-muted block text-[11px]">نوع خودرو / مدل:</span>
+              <span class="font-bold text-fg">{{ selectedViewVehicle.vehicle_type_display || selectedViewVehicle.vehicle_type || '—' }}</span>
+            </div>
+            <div>
+              <span class="text-muted block text-[11px]">نوع مالکیت:</span>
+              <span class="font-bold text-fg">{{ selectedViewVehicle.ownership_type_display || selectedViewVehicle.ownership_type || '—' }}</span>
+            </div>
+            <div>
+              <span class="text-muted block text-[11px]">وضعیت پرونده:</span>
+              <span class="font-bold text-indigo-700">{{ selectedViewVehicle.approval_status_display || selectedViewVehicle.approval_status }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- کارت ۲: مشخصات راننده و مالک -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="bg-surface-alt/70 p-4 rounded-2xl border border-line space-y-2">
+            <h4 class="font-black text-fg flex items-center gap-1.5 text-xs">
+              <svg appIcon="user" class="w-4 h-4 text-indigo-600"></svg>
+              <span>مشخصات راننده</span>
+            </h4>
+            <div class="space-y-1.5">
+              <div class="flex justify-between">
+                <span class="text-muted">نام و نام خانوادگی:</span>
+                <span class="font-bold text-fg">{{ selectedViewVehicle.driver_name || '—' }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-muted">کد ملی راننده:</span>
+                <span class="font-mono text-fg">{{ selectedViewVehicle.driver_national_code || '—' }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-muted">تلفن همراه:</span>
+                <span class="font-mono text-fg">{{ selectedViewVehicle.driver_phone || '—' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-surface-alt/70 p-4 rounded-2xl border border-line space-y-2">
+            <h4 class="font-black text-fg flex items-center gap-1.5 text-xs">
+              <svg appIcon="user-check" class="w-4 h-4 text-amber-600"></svg>
+              <span>مشخصات مالک خودرو</span>
+            </h4>
+            <div class="space-y-1.5">
+              <div class="flex justify-between">
+                <span class="text-muted">راننده خود مالک است؟</span>
+                <span class="font-bold" [ngClass]="selectedViewVehicle.is_driver_owner ? 'text-emerald-700' : 'text-amber-700'">
+                  {{ selectedViewVehicle.is_driver_owner ? 'بله' : 'خیر' }}
+                </span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-muted">نام مالک:</span>
+                <span class="font-bold text-fg">{{ selectedViewVehicle.owner_name || '—' }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-muted">کد ملی مالک:</span>
+                <span class="font-mono text-fg">{{ selectedViewVehicle.owner_national_code || '—' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- کارت ۳: تاریخ‌های انقضا و مدارک قانونی -->
+        <div class="bg-surface-alt/70 p-4 rounded-2xl border border-line space-y-3">
+          <h4 class="font-black text-fg flex items-center gap-1.5 text-xs">
+            <svg appIcon="calendar" class="w-4 h-4 text-rose-600"></svg>
+            <span>تاریخ‌های انقضا و اعتبار قانونی</span>
+          </h4>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <span class="text-muted block text-[11px]">بیمه شخص ثالث:</span>
+              <span class="font-mono font-bold" [ngClass]="selectedViewVehicle.insurance_expiry_date ? 'text-fg' : 'text-muted'">
+                {{ selectedViewVehicle.insurance_expiry_date || 'نامحدود / ثبت‌نشده' }}
+              </span>
+            </div>
+            <div>
+              <span class="text-muted block text-[11px]">معاینه فنی:</span>
+              <span class="font-mono font-bold" [ngClass]="selectedViewVehicle.inspection_expiry_date ? 'text-fg' : 'text-muted'">
+                {{ selectedViewVehicle.inspection_expiry_date || 'نامحدود / ثبت‌نشده' }}
+              </span>
+            </div>
+            <div>
+              <span class="text-muted block text-[11px]">گواهینامه رانندگی:</span>
+              <span class="font-mono font-bold" [ngClass]="selectedViewVehicle.license_expiry_date ? 'text-fg' : 'text-muted'">
+                {{ selectedViewVehicle.license_expiry_date || 'نامحدود / ثبت‌نشده' }}
+              </span>
+            </div>
+            <div>
+              <span class="text-muted block text-[11px]">پایان قرارداد:</span>
+              <span class="font-mono font-bold" [ngClass]="selectedViewVehicle.valid_until_date ? 'text-fg' : 'text-muted'">
+                {{ selectedViewVehicle.valid_until_date || 'نامحدود / ثبت‌نشده' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- کارت ۴: حساب‌های بانکی متصل -->
+        <div class="bg-surface-alt/70 p-4 rounded-2xl border border-line space-y-3">
+          <h4 class="font-black text-fg flex items-center gap-1.5 text-xs">
+            <svg appIcon="credit-card" class="w-4 h-4 text-emerald-600"></svg>
+            <span>حساب‌های بانکی متصل</span>
+          </h4>
+          <div *ngIf="vehicleBankAccounts.length === 0" class="text-muted text-center py-2">
+            {{ isLoadingVehicleDetails ? 'در حال بارگذاری حساب‌ها...' : 'هیچ حساب بانکی فعالی ثبت نشده است.' }}
+          </div>
+          <div *ngIf="vehicleBankAccounts.length > 0" class="space-y-2">
+            <div *ngFor="let acc of vehicleBankAccounts" class="p-3 bg-surface rounded-xl border border-line flex flex-col md:flex-row md:items-center justify-between gap-2">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-fg">{{ acc.bank_name || 'بانک' }}</span>
+                  <span *ngIf="acc.is_primary" class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold">حساب اصلی</span>
+                  <span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-muted font-bold">ذینفع: {{ acc.payee_type === 'driver' ? 'راننده' : (acc.payee_type === 'owner' ? 'مالک' : 'سایر') }}</span>
+                </div>
+                <div class="font-mono text-muted text-[11px] flex items-center gap-1.5">
+                  <span>IR{{ acc.sheba_number }} {{ acc.account_number ? (' | حساب: ' + acc.account_number) : '' }}</span>
+                  <button
+                    *ngIf="acc.sheba_number && acc.id"
+                    type="button"
+                    (click)="copyToClipboard('IR' + acc.sheba_number, acc.id)"
+                    class="text-muted hover:text-indigo-600 cursor-pointer"
+                    title="کپی شماره شبا"
+                    aria-label="کپی شماره شبا">
+                    <svg appIcon="copy" class="w-3 h-3"></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="text-muted text-[11px]">
+                صاحب حساب: <span class="font-bold text-fg">{{ acc.account_owner_name || '—' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- کارت ۵: مدارک بارگذاری شده -->
+        <div class="bg-surface-alt/70 p-4 rounded-2xl border border-line space-y-3">
+          <h4 class="font-black text-fg flex items-center gap-1.5 text-xs">
+            <svg appIcon="file-text" class="w-4 h-4 text-indigo-600"></svg>
+            <span>مدارک بارگذاری شده</span>
+          </h4>
+          <div *ngIf="vehicleDocuments.length === 0" class="text-muted text-center py-2">
+            {{ isLoadingVehicleDetails ? 'در حال بارگذاری مدارک...' : 'هیچ مدرکی بارگذاری نشده است.' }}
+          </div>
+          <div *ngIf="vehicleDocuments.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div *ngFor="let doc of vehicleDocuments" class="p-3 bg-surface rounded-xl border border-line flex items-center justify-between gap-2">
+              <div class="space-y-0.5">
+                <span class="font-bold text-fg block">{{ doc.title || doc.doc_type }}</span>
+                <span class="text-muted text-[10px]">انقضا: {{ doc.expiry_date || 'نامحدود' }}</span>
+              </div>
+              <a *ngIf="doc.file" [href]="doc.file" target="_blank"
+                 class="px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold flex items-center gap-1">
+                <svg appIcon="download" class="w-3.5 h-3.5"></svg>
+                <span>مشاهده</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- پاورقی مودال پرونده -->
+      <div class="p-3 bg-surface-alt border-t border-line flex justify-end">
+        <button
+          type="button"
+          (click)="closeViewVehicleModal()"
+          class="px-4 py-2 bg-surface text-fg hover:bg-slate-200 border border-line rounded-xl text-xs font-bold cursor-pointer">
+          بستن پنجره پرونده
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── مودال ۵: مقایسه تفاوت‌ها (Diff Viewer) ── -->
   <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+    <div class="bg-surface w-full max-w-2xl rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50/80 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-900">
           مقایسه تفاوت‌های ناوگان (Diff): {{ selectedDiffCR?.plate_number }}
         </h3>
-        <button (click)="closeDiffModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+        <button (click)="closeDiffModal()" class="text-muted hover:text-fg">✕</button>
       </div>
-      <div class="p-4 max-h-96 overflow-y-auto">
+      <div class="p-4 max-h-96 overflow-y-auto space-y-4">
         <table class="w-full text-right text-xs">
-          <thead class="bg-slate-100 text-slate-600">
+          <thead class="bg-surface-alt text-muted">
             <tr>
               <th class="p-2.5">عنوان فیلد</th>
               <th class="p-2.5">مقدار قبلی</th>
@@ -387,23 +813,34 @@
               <th class="p-2.5 text-center">وضعیت</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
+          <tbody class="divide-y divide-line/60">
             <tr *ngFor="let row of diffFieldRows" [ngClass]="row.is_changed ? 'bg-amber-50/50 font-bold' : ''">
-              <td class="p-2.5 text-slate-700">{{ row.field_label }}</td>
-              <td class="p-2.5 text-slate-500 line-through">{{ row.old_value }}</td>
+              <td class="p-2.5 text-fg">{{ row.field_label }}</td>
+              <td class="p-2.5 text-muted line-through">{{ row.old_value }}</td>
               <td class="p-2.5 text-emerald-700 font-bold">{{ row.new_value }}</td>
               <td class="p-2.5 text-center">
                 <span *ngIf="row.is_changed" class="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-800">تغییر یافته</span>
-                <span *ngIf="!row.is_changed" class="text-slate-400 text-[10px]">بدون تغییر</span>
+                <span *ngIf="!row.is_changed" class="text-muted text-[10px]">بدون تغییر</span>
               </td>
             </tr>
           </tbody>
         </table>
+
+        <!-- لاگ‌های گردش کار مربوطه -->
+        <div *ngIf="diffAuditLogs.length > 0" class="pt-2 border-t border-line space-y-2">
+          <h5 class="font-bold text-xs text-fg">تاریخچه گردش کار این درخواست:</h5>
+          <div class="space-y-1 text-[11px]">
+            <div *ngFor="let l of diffAuditLogs" class="p-2 bg-surface-alt rounded-lg flex items-center justify-between text-muted">
+              <span>{{ l.actor_name || 'کاربر' }}: {{ l.action_display || l.action }}</span>
+              <span class="font-mono">{{ l.timestamp_shamsi || (l.created_at | slice:0:10) }}</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end">
+      <div class="p-3 bg-surface-alt border-t border-line flex justify-end">
         <button
           (click)="closeDiffModal()"
-          class="px-4 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold cursor-pointer">
+          class="px-4 py-1.5 rounded-xl bg-surface hover:bg-slate-200 text-fg text-xs font-bold border border-line cursor-pointer">
           بستن پنجره
         </button>
       </div>

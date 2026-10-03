@@ -7,17 +7,19 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
-import { ProjectSection, VehicleDriverProfile, VehicleChangeRequest } from '../../../../core/models/personnel.model';
+import { ProjectSection, VehicleDriverProfile, VehicleChangeRequest, VehicleBankAccount, VehicleDocument } from '../../../../core/models/personnel.model';
 import { WebSocketService } from '../../../../core/http/websocket.service';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 export type SupervisorFleetSubTab = 'new' | 'work_logs' | 'changes' | 'all';
 
 @Component({
   selector: 'app-supervisor-fleet-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
   templateUrl: './supervisor-fleet.html',
-  styleUrl: './supervisor-fleet.css'
+  styleUrl: './supervisor-fleet.css',
+  host: { '(document:keydown.escape)': 'onEscapeKey()' }
 })
 export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
   activeSubTab: SupervisorFleetSubTab = 'new';
@@ -31,6 +33,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
   fiscalYear = '1405';
   selectedDateShamsi = '';
   isLoading = false;
+  isExportingExcel = false;
 
   // لیست‌های داده
   newVehiclesList: VehicleDriverProfile[] = [];
@@ -46,6 +49,12 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
     allCount: 0
   };
 
+  // تایید گروهی (Batch Approval)
+  selectedVehicleIds = new Set<number>();
+  isBatchApproveModalOpen = false;
+  batchApprovalNote = '';
+  isBatchApproving = false;
+
   // پنجره تایید با یادداشت
   isApprovalModalOpen = false;
   approvalTarget: { type: 'new' | 'work_logs' | 'changes'; item: any; title: string } | null = null;
@@ -58,6 +67,18 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
   rejectReason = '';
   isRejecting = false;
 
+  // هشدار Purge مشروط بر اساس delete_impact
+  isPurgeCandidate = false;
+  deleteImpactResult: any = null;
+  isLoadingImpact = false;
+
+  // پنجره مشاهده کامل پرونده (Vehicle Profile Viewer)
+  isViewVehicleModalOpen = false;
+  selectedViewVehicle: VehicleDriverProfile | null = null;
+  vehicleBankAccounts: VehicleBankAccount[] = [];
+  vehicleDocuments: VehicleDocument[] = [];
+  isLoadingVehicleDetails = false;
+
   // پنجره مقایسه تغییرات (Diff Viewer)
   isDiffModalOpen = false;
   selectedDiffCR: VehicleChangeRequest | null = null;
@@ -68,6 +89,10 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
     new_value: any;
     is_changed: boolean;
   }> = [];
+  diffAuditLogs: any[] = [];
+  isLoadingDiffLogs = false;
+
+  copiedId: number | null = null;
 
   private routeSub?: Subscription;
   private wsSub?: Subscription;
@@ -97,7 +122,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
     });
 
     this.wsSub = this.ws.notifications$.subscribe((msg: any) => {
-      if (msg && (msg.type_str === 'fleet_updated' || msg.type === 'fleet_updated')) {
+      if (msg && (msg.type_str === 'fleet_updated' || msg.type === 'fleet_updated' || msg.type_str === 'vehicle_updated')) {
         if (!this.selectedSectionId || msg.section_id === this.selectedSectionId) {
           this.fetchFleetData();
         }
@@ -180,14 +205,21 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
     if (this.selectedSectionId) baseParams.section_id = this.selectedSectionId;
     if (this.searchQuery.trim()) baseParams.search = this.searchQuery.trim();
 
-    // ۱. خودروهای جدید در انتظار تایید سرپرست
-    this.personnelApi.getVehicleProfiles({ ...baseParams, approval_status: 'pending_supervisor,draft' }).subscribe({
+    // ۱. تسک ۸.۱: خودروهای جدید در انتظار تایید سرپرست (حذف draft؛ فقط pending_supervisor)
+    this.personnelApi.getVehicleProfiles({ ...baseParams, approval_status: 'pending_supervisor' }).subscribe({
       next: (vList: any[]) => {
         this.newVehiclesList = vList || [];
         this.statusCounters.newCount = this.newVehiclesList.length;
+        const currentIds = new Set(this.newVehiclesList.map(v => v.id));
+        for (const id of Array.from(this.selectedVehicleIds)) {
+          if (!currentIds.has(id)) {
+            this.selectedVehicleIds.delete(id);
+          }
+        }
       },
       error: () => {
         this.newVehiclesList = [];
+        this.selectedVehicleIds.clear();
       }
     });
 
@@ -235,6 +267,103 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ─── تسک ۸.۴: تایید گروهی سرپرست (Batch Approval) ───
+  toggleSelectAllVehicles(event: any): void {
+    const isChecked = event?.target?.checked;
+    if (isChecked) {
+      this.newVehiclesList.forEach(v => {
+        if (v.id) this.selectedVehicleIds.add(v.id);
+      });
+    } else {
+      this.selectedVehicleIds.clear();
+    }
+  }
+
+  toggleVehicleSelection(id: number | undefined): void {
+    if (id === undefined) return;
+    if (this.selectedVehicleIds.has(id)) {
+      this.selectedVehicleIds.delete(id);
+    } else {
+      this.selectedVehicleIds.add(id);
+    }
+  }
+
+  isVehicleSelected(id: number | undefined): boolean {
+    return id !== undefined && this.selectedVehicleIds.has(id);
+  }
+
+  isAllVehiclesSelected(): boolean {
+    return this.newVehiclesList.length > 0 && this.newVehiclesList.every(v => v.id && this.selectedVehicleIds.has(v.id));
+  }
+
+  openBatchApproveModal(): void {
+    if (this.selectedVehicleIds.size === 0) return;
+    this.batchApprovalNote = '';
+    this.isBatchApproveModalOpen = true;
+  }
+
+  closeBatchApproveModal(): void {
+    this.isBatchApproveModalOpen = false;
+    this.batchApprovalNote = '';
+  }
+
+  submitBatchApprove(): void {
+    if (this.selectedVehicleIds.size === 0) return;
+    this.isBatchApproving = true;
+    const ids = Array.from(this.selectedVehicleIds);
+    this.personnelApi.batchApproveVehicles(ids, 'supervisor', this.batchApprovalNote).subscribe({
+      next: (res: any) => {
+        this.isBatchApproving = false;
+        const succCount = (res?.results || []).filter((r: any) => r.success).length;
+        this.toast.showSuccess(`تایید گروهی سرپرست برای ${succCount} خودرو با موفقیت ثبت شد.`);
+        this.selectedVehicleIds.clear();
+        this.closeBatchApproveModal();
+        this.fetchFleetData();
+      },
+      error: (err: any) => {
+        this.isBatchApproving = false;
+        this.toast.showError(err?.error?.error || 'خطا در ثبت تایید گروهی سرپرست');
+      }
+    });
+  }
+
+  // ─── تسک ۸.۲: مودال پرونده و جزئیات ───
+  openViewVehicleModal(v: VehicleDriverProfile): void {
+    this.selectedViewVehicle = v;
+    this.vehicleBankAccounts = [];
+    this.vehicleDocuments = [];
+    this.isViewVehicleModalOpen = true;
+
+    if (v.id) {
+      this.isLoadingVehicleDetails = true;
+      this.personnelApi.getVehicleBankAccounts(v.id).subscribe({
+        next: (accs) => {
+          this.vehicleBankAccounts = accs || [];
+          this.cdr.markForCheck();
+        },
+        error: () => {}
+      });
+      this.personnelApi.getVehicleDocuments(v.id).subscribe({
+        next: (docs) => {
+          this.vehicleDocuments = docs || [];
+          this.isLoadingVehicleDetails = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isLoadingVehicleDetails = false;
+          this.cdr.markForCheck();
+        }
+      });
+    }
+  }
+
+  closeViewVehicleModal(): void {
+    this.isViewVehicleModalOpen = false;
+    this.selectedViewVehicle = null;
+    this.vehicleBankAccounts = [];
+    this.vehicleDocuments = [];
+  }
+
   // ─── اکشن‌های تایید ───
   openApproveModal(type: 'new' | 'work_logs' | 'changes', item: any): void {
     const title = type === 'new'
@@ -261,21 +390,21 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
     if (type === 'new') {
       this.personnelApi.approveVehicleSupervisor(item.id, this.approvalNote).subscribe({
         next: () => {
-          this.toast.showSuccess(`خودرو ${item.plate_number || ''} تایید و به حسابداری ارسال شد.`);
+          this.toast.showSuccess(`خودرو «${item.plate_number || ''}» تایید و به حسابداری ارسال شد.`);
           this.isApproving = false;
           this.closeApproveModal();
           this.fetchFleetData();
         },
         error: (err) => {
           this.isApproving = false;
-          this.toast.showError(err?.error?.detail || 'خطا در ثبت تایید سرپرست');
+          this.toast.showError(err?.error?.detail || err?.error?.error || 'خطا در ثبت تایید سرپرست');
         }
       });
     } else if (type === 'work_logs') {
       const targetId = item.id || item.trip_id;
       this.personnelApi.patchVehicleTrip(targetId, { notes: this.approvalNote || 'تایید سرپرست' }).subscribe({
         next: () => {
-          this.toast.showSuccess(`کارکرد خودرو ${item.plate_number || ''} با موفقیت تایید شد.`);
+          this.toast.showSuccess(`کارکرد خودرو «${item.plate_number || ''}» با موفقیت تایید شد.`);
           this.isApproving = false;
           this.closeApproveModal();
           this.fetchFleetData();
@@ -301,19 +430,44 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ─── اکشن‌های عودت و رد ───
+  // ─── تسک ۸.۳: اکشن‌های عودت و رد با هشدار Purge بر مبنای delete_impact ───
   openRejectModal(type: 'new' | 'work_logs' | 'changes', item: any, action: 'reject' | 'revision'): void {
     const actionTitle = action === 'revision' ? 'عودت به بازنگری' : 'رد قطعی پرونده خودرو';
     const title = `${actionTitle}: ${item.plate_number || item.model_name || ''}`;
     this.rejectTarget = { type, item, action, title };
     this.rejectReason = '';
+    this.isPurgeCandidate = false;
+    this.deleteImpactResult = null;
+    this.isLoadingImpact = false;
     this.isRejectModalOpen = true;
+
+    // استعلام اثرات حذف و بررسی سابقه برای هشدار Purge
+    if (action === 'reject' && type === 'new' && item.id) {
+      this.isLoadingImpact = true;
+      this.personnelApi.getVehicleDeleteImpact(item.id).subscribe({
+        next: (res) => {
+          this.isLoadingImpact = false;
+          this.deleteImpactResult = res;
+          if (res?.can_delete || !res?.has_history) {
+            this.isPurgeCandidate = true;
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isLoadingImpact = false;
+          this.cdr.markForCheck();
+        }
+      });
+    }
   }
 
   closeRejectModal(): void {
     this.isRejectModalOpen = false;
     this.rejectTarget = null;
     this.rejectReason = '';
+    this.isPurgeCandidate = false;
+    this.deleteImpactResult = null;
+    this.isLoadingImpact = false;
   }
 
   submitReject(): void {
@@ -325,18 +479,37 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
     const { type, item, action } = this.rejectTarget;
 
     if (type === 'new') {
-      this.personnelApi.rejectVehicle(item.id, this.rejectReason.trim()).subscribe({
-        next: () => {
-          this.toast.showSuccess('پرونده خودرو با موفقیت رد شد.');
-          this.isRejecting = false;
-          this.closeRejectModal();
-          this.fetchFleetData();
-        },
-        error: (err) => {
-          this.isRejecting = false;
-          this.toast.showError(err?.error?.detail || 'خطا در رد پرونده خودرو');
-        }
-      });
+      if (action === 'revision') {
+        this.personnelApi.requestVehicleRevision(item.id, this.rejectReason.trim()).subscribe({
+          next: () => {
+            this.toast.showSuccess('پرونده خودرو جهت بازنگری و اصلاح مدارک به کارمند عودت داده شد.');
+            this.isRejecting = false;
+            this.closeRejectModal();
+            this.fetchFleetData();
+          },
+          error: (err: any) => {
+            this.isRejecting = false;
+            this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در عودت پرونده خودرو');
+          }
+        });
+      } else {
+        this.personnelApi.rejectVehicle(item.id, this.rejectReason.trim()).subscribe({
+          next: () => {
+            if (this.isPurgeCandidate) {
+              this.toast.showSuccess('پرونده خودرو با توجه به عدم سابقه، به صورت دائم از سیستم پاک‌سازی (Purge) شد.');
+            } else {
+              this.toast.showSuccess('پرونده خودرو با موفقیت رد و در سوابق بایگانی شد.');
+            }
+            this.isRejecting = false;
+            this.closeRejectModal();
+            this.fetchFleetData();
+          },
+          error: (err: any) => {
+            this.isRejecting = false;
+            this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در رد پرونده خودرو');
+          }
+        });
+      }
     } else if (type === 'work_logs') {
       const targetId = item.id || item.trip_id;
       this.personnelApi.patchVehicleTrip(targetId, { notes: `عودت سرپرست: ${this.rejectReason}` }).subscribe({
@@ -351,6 +524,19 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
           this.toast.showError(err?.error?.detail || 'خطا در ثبت عودت کارکرد');
         }
       });
+    } else if (type === 'changes') {
+      this.personnelApi.cancelVehicleChangeRequest(item.id, this.rejectReason.trim()).subscribe({
+        next: () => {
+          this.toast.showSuccess('درخواست تغییرات با موفقیت رد شد.');
+          this.isRejecting = false;
+          this.closeRejectModal();
+          this.fetchFleetData();
+        },
+        error: (err: any) => {
+          this.isRejecting = false;
+          this.toast.showError(err?.error?.error || 'خطا در رد درخواست تغییرات');
+        }
+      });
     }
   }
 
@@ -358,6 +544,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
   openDiffModal(cr: VehicleChangeRequest): void {
     this.selectedDiffCR = cr;
     this.diffFieldRows = [];
+    this.diffAuditLogs = [];
     const proposed = (cr.proposed_changes || {}) as Record<string, any>;
     const current = (cr.previous_values || {}) as Record<string, any>;
 
@@ -375,6 +562,22 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
         is_changed: isChanged
       });
     }
+
+    if (cr.id && typeof this.personnelApi.getWorkflowAuditLogs === 'function') {
+      this.isLoadingDiffLogs = true;
+      this.personnelApi.getWorkflowAuditLogs({ content_type: 'vehiclechangerequest', object_id: cr.id }).subscribe({
+        next: (logs: any) => {
+          this.diffAuditLogs = Array.isArray(logs) ? logs : (logs?.results || []);
+          this.isLoadingDiffLogs = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isLoadingDiffLogs = false;
+          this.cdr.markForCheck();
+        }
+      });
+    }
+
     this.isDiffModalOpen = true;
   }
 
@@ -382,6 +585,43 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
     this.isDiffModalOpen = false;
     this.selectedDiffCR = null;
     this.diffFieldRows = [];
+    this.diffAuditLogs = [];
+  }
+
+  exportExcel(): void {
+    this.isExportingExcel = true;
+    const params: any = {};
+    if (this.selectedSectionId) params.section_id = this.selectedSectionId;
+    this.personnelApi.exportVehiclesExcel(params).subscribe({
+      next: (blob: Blob) => {
+        this.isExportingExcel = false;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Fleet_Vehicles_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.toast.showSuccess('خروجی اکسل ناوگان با موفقیت صادر گردید.');
+      },
+      error: () => {
+        this.isExportingExcel = false;
+        this.toast.showError('خطا در دریافت خروجی اکسل ناوگان.');
+      }
+    });
+  }
+
+  copyToClipboard(text: string, id?: number): void {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      if (id !== undefined) {
+        this.copiedId = id;
+      }
+      this.toast.showSuccess('در حافظه کپی شد: ' + text);
+      setTimeout(() => {
+        if (id !== undefined && this.copiedId === id) this.copiedId = null;
+        this.cdr.markForCheck();
+      }, 2000);
+    });
   }
 
   getFieldLabel(field: string): string {
@@ -389,13 +629,25 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
       plate_number: 'شماره پلاک',
       model_name: 'مدل / برند',
       driver_name: 'نام راننده',
-      driver_mobile: 'موبایل راننده',
+      driver_phone: 'موبایل راننده',
       owner_name: 'مالک خودرو',
       sheba_number: 'شماره شبا',
       bank_name: 'نام بانک',
       account_number: 'شماره حساب',
-      vehicle_type: 'نوع خودرو'
+      vehicle_type: 'نوع خودرو',
+      insurance_expiry_date: 'انقضای بیمه',
+      inspection_expiry_date: 'انقضای معاینه فنی',
+      license_expiry_date: 'انقضای گواهینامه',
+      valid_until_date: 'پایان قرارداد'
     };
     return dict[field] || field;
+  }
+
+  onEscapeKey(): void {
+    if (this.isApprovalModalOpen && !this.isApproving) this.closeApproveModal();
+    if (this.isBatchApproveModalOpen && !this.isBatchApproving) this.closeBatchApproveModal();
+    if (this.isRejectModalOpen && !this.isRejecting) this.closeRejectModal();
+    if (this.isViewVehicleModalOpen) this.closeViewVehicleModal();
+    if (this.isDiffModalOpen) this.closeDiffModal();
   }
 }

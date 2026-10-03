@@ -15,6 +15,7 @@ export interface NotificationItem {
   notification_type: string;
   target_model: string | null;
   target_id: string | null;
+  url?: string | null;
   is_read: boolean;
   created_at: string;
 }
@@ -219,6 +220,27 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
     this.markAsRead(item);
     this.isOpen.set(false);
 
+    // اگر آدرس مستقیم در پی‌لود اعلان وجود داشته باشد
+    if (item.url) {
+      this.router.navigateByUrl(item.url);
+      return;
+    }
+
+    // ناوبری هوشمند برای پرونده‌های ناوگان و رانندگان (تسک ۴.۱ و ۴.۲)
+    if (item.target_model === 'VehicleDriverProfile') {
+      const targetId = Number(item.target_id);
+      if (!item.target_id || !Number.isInteger(targetId) || targetId <= 0) {
+        this.navigateByRoleForFleet();
+        return;
+      }
+      const headers = new HttpHeaders({ SKIP_GLOBAL_ERROR_TOAST: 'true' });
+      this.http.get<any>(`${environment.apiUrl}/personnel/vehicles/${targetId}/`, { headers }).subscribe({
+        next: (v) => this.navigateToFleet(v),
+        error: () => this.navigateByRoleForFleet()
+      });
+      return;
+    }
+
     // ناوبری هوشمند بر اساس مدل هدف و شناسهٔ آن (تسک ۴.۴، تصمیم ۶.۷ و DEF-12):
     // پرونده خوانده می‌شود و کاربر به کارتابل مرحلهٔ فعلی همان پرونده، فیلترشده روی همان پرونده، می‌رود.
     if (item.target_model !== 'PersonnelProfile') return;
@@ -238,6 +260,54 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
   private userPerms(): { perms: string[]; isSuper: boolean } {
     const user = this.auth.user();
     return { perms: user?.permissions || [], isSuper: !!user?.is_superuser };
+  }
+
+  private navigateToFleet(v: any): void {
+    const { perms, isSuper } = this.userPerms();
+    const has = (...codes: string[]) => isSuper || codes.some(c => perms.includes(c));
+    const q = v?.plate_number || '';
+    switch (v?.approval_status) {
+      case 'pending_manager':
+        if (has('perm_approve_fleet_manager', 'can_act_as_manager', 'can_act_as_company_manager')) {
+          this.router.navigate(['/app/finance/manager-fleet'], { queryParams: { tab: 'new', q } });
+          return;
+        }
+        break;
+      case 'pending_accountant':
+        if (has('perm_approve_fleet_finance', 'can_act_as_accountant', 'view_sys_fleet_settlement')) {
+          this.router.navigate(['/app/finance/accountant-fleet'], { queryParams: { tab: 'new', q } });
+          return;
+        }
+        break;
+      case 'pending_supervisor':
+        if (has('perm_approve_fleet_supervisor', 'can_act_as_workshop_supervisor', 'perm_approve_fleet_manager', 'can_act_as_manager')) {
+          this.router.navigate(['/app/finance/supervisor-fleet'], { queryParams: { tab: 'new', q } });
+          return;
+        }
+        break;
+    }
+    if (v?.approval_status === 'approved' || v?.approval_status === 'end_collaboration') {
+      this.router.navigate(['/app/finance/employee-fleet'], {
+        queryParams: { ...(v?.section ? { section_id: v.section } : {}), search: q || null }
+      });
+      return;
+    }
+    this.router.navigate(['/app/finance/employee-new-vehicle'], {
+      queryParams: { ...(v?.section ? { section_id: v.section } : {}), search: q || null, id: v?.id || null }
+    });
+  }
+
+  private navigateByRoleForFleet(): void {
+    const { perms, isSuper } = this.userPerms();
+    if (isSuper || perms.includes('perm_approve_fleet_manager') || perms.includes('can_act_as_manager')) {
+      this.router.navigate(['/app/finance/manager-fleet']);
+    } else if (perms.includes('perm_approve_fleet_finance') || perms.includes('can_act_as_accountant') || perms.includes('view_sys_fleet_settlement')) {
+      this.router.navigate(['/app/finance/accountant-fleet']);
+    } else if (perms.includes('perm_approve_fleet_supervisor') || perms.includes('can_act_as_workshop_supervisor')) {
+      this.router.navigate(['/app/finance/supervisor-fleet']);
+    } else {
+      this.router.navigate(['/app/finance/employee-new-vehicle']);
+    }
   }
 
   private navigateToPersonnel(p: any): void {
@@ -304,7 +374,7 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
 
   private listenToWebSocket(): void {
     this.sub = this.ws.notifications$.subscribe((msg) => {
-      if (msg?.type_str === 'personnel_workflow' || msg?.notification_id) {
+      if (msg?.type_str === 'personnel_workflow' || msg?.type_str === 'fleet_workflow' || msg?.notification_id) {
         this.unreadCount.update((cnt) => cnt + 1);
         this.hasNewPulse.set(true);
         if (this.isOpen()) {

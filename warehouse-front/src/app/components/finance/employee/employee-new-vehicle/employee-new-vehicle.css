@@ -1,4 +1,4 @@
-/* Employee New Vehicle Styles */
+/* Employee New Vehicle Hub Styles - Phase 6 & Phase 7 */
 
 :host {
   display: block;
@@ -20,4 +20,21 @@
 
 .overflow-x-auto::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* ─── Persian Datepicker Left-Edge Anchoring (CRITICAL INVARIANT) ───
+   Prevents datepicker floating popover from overflowing parent modal/containers
+   with overflow-y: auto / overflow: hidden, ensuring Friday navigation is visible. */
+::ng-deep .datepicker-left .datepicker-outer-container,
+::ng-deep .to-datepicker .datepicker-outer-container {
+  left: 0 !important;
+  right: auto !important;
+}
+
+/* ─── Touch ergonomics for mobile (UI-01 / Rule 7: >= 44px touch targets) ─── */
+@media (max-width: 768px) {
+  .touch-target-min {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }

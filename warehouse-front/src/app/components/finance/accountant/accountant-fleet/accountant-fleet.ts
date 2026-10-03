@@ -9,7 +9,7 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
-import { ProjectSection, VehicleDriverProfile, VehicleChangeRequest } from '../../../../core/models/personnel.model';
+import { ProjectSection, VehicleDriverProfile, VehicleChangeRequest, VehicleBankAccount } from '../../../../core/models/personnel.model';
 import {
   IRANIAN_BANKS,
   IranianBankInfo,
@@ -51,15 +51,15 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
   searchQuery = '';
   isLoading = false;
 
-  // دوره و دامنهٔ تسویه ناوگان (منتقل‌شده از کارتابل مالی قدیمی)
+  // دوره و دامنهٔ تسویه ناوگان
   readonly monthNames = PAYROLL_MONTHS.map(m => m.name);
   availableYears: string[] = [];
   fiscalYear = defaultPayrollPeriod().year;
   selectedMonth = defaultPayrollPeriod().month;
-  /** دامنه: تهی = کل شرکت (سراسری)، یا یک انبار */
   selectedWarehouseId: number | null = null;
   warehouses: { id: number; name: string }[] = [];
   isExportingFleetBank = false;
+  isExportingExcel = false;
 
   // لیست‌های داده
   newVehiclesList: VehicleDriverProfile[] = [];
@@ -76,6 +76,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
   changeRequests: VehicleChangeRequest[] = [];
   allVehiclesList: VehicleDriverProfile[] = [];
 
+  // شمارنده‌های زنده
   statusCounters = {
     newPending: 0,
     settlementPending: 0,
@@ -83,13 +84,35 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     allTotal: 0
   };
 
-  // مودال ویرایش نرخ کرایه و اطلاعات بانکی خودرو
+  // تسک ۹.۶: تایید گروهی حسابدار
+  selectedVehicleIds: Set<number> = new Set();
+  isBatchApprovalModalOpen = false;
+  batchApprovalNote = '';
+  isBatchApproving = false;
+
+  // تسک ۹.۲ و ۹.۳: مودال ویرایش نرخ کرایه و اطلاعات بانکی + مقایسه هم‌تیپ‌ها
   isVehicleModalOpen = false;
   editingVehicle: Partial<VehicleDriverProfile> | null = null;
   isSavingVehicle = false;
   iranianBanks: IranianBankInfo[] = IRANIAN_BANKS;
   shebaValidationResult: ShebaValidationResult | null = null;
   shebaDigitsDisplay = '';
+  vehicleBankAccounts: VehicleBankAccount[] = [];
+  isLoadingBankAccounts = false;
+
+  // تسک ۹.۳: مقایسه نرخ با میانگین هم‌تیپ‌ها
+  rateBenchmark: {
+    vehicle_id: number;
+    vehicle_type: string;
+    vehicle_type_display?: string;
+    project_name?: string;
+    count: number;
+    avg_rate: number;
+    min_rate: number;
+    max_rate: number;
+    current_rate: number;
+  } | null = null;
+  isLoadingBenchmark = false;
 
   // مودال تایید مالی با یادداشت اختیاری
   isApprovalModalOpen = false;
@@ -97,10 +120,11 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
   approvalNote = '';
   isApproving = false;
 
-  // مودال ثبت علت رد یا عودت
+  // تسک ۹.۵: مودال ثبت علت عودت یا رد همراه با عودت دومقصده
   isRejectModalOpen = false;
   rejectTarget: { id: number; title: string; type: 'vehicle' | 'vehicle_cr'; action: 'reject' | 'revision' } | null = null;
   rejectReason = '';
+  revisionDestination: 'supervisor' | 'employee' = 'supervisor';
   isSubmittingReject = false;
 
   // مودال مقایسه تفاوت‌ها (Diff Viewer)
@@ -271,6 +295,15 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
         this.statusCounters.allTotal = allList.length;
         this.newVehiclesList = allList.filter(v => v.approval_status === 'pending_accountant' || v.approval_status === 'supervisor_approved');
         this.statusCounters.newPending = this.newVehiclesList.length;
+
+        // پالایش رکوردهای انتخاب‌شده
+        const validIds = new Set(this.newVehiclesList.map(v => v.id));
+        for (const id of Array.from(this.selectedVehicleIds)) {
+          if (!validIds.has(id)) {
+            this.selectedVehicleIds.delete(id);
+          }
+        }
+
         this.isLoading = false;
         this.cdr.detectChanges();
       },
@@ -298,12 +331,10 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
 
   /**
    * تسویه ماهانه ناوگان؛ پاسخ بک‌اند `{ summary, records }` است
-   * (خودروی شرکتی مبلغ تسویه ندارد و is_payable آن false است).
    */
   loadSettlement(): void {
     this.settlementError = false;
     this.isSettlementLoading = true;
-    // دادهٔ دورهٔ قبلی نباید زیر عنوان دورهٔ تازه بماند
     this.settlementItems = [];
     this.settlementSummary = null;
     this.personnelApi.calculateFleetSettlement(this.selectedWarehouseId, this.yearMonth).subscribe({
@@ -325,7 +356,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** فایل پرداخت بانکی تسویه ناوگان (منتقل‌شده از کارتابل مالی قدیمی) */
+  /** فایل پرداخت بانکی تسویه ناوگان */
   exportFleetBankExcel(): void {
     this.isExportingFleetBank = true;
     this.personnelApi.exportFleetBankExcel(this.selectedWarehouseId, this.yearMonth).subscribe({
@@ -348,9 +379,144 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  exportExcel(): void {
+    this.isExportingExcel = true;
+    const params: any = {};
+    if (this.selectedSectionId) params.section_id = this.selectedSectionId;
+    this.personnelApi.exportVehiclesExcel(params).subscribe({
+      next: (blob: Blob) => {
+        this.isExportingExcel = false;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Fleet_Vehicles_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.toast.showSuccess('خروجی اکسل ناوگان با موفقیت صادر گردید.');
+      },
+      error: () => {
+        this.isExportingExcel = false;
+        this.toast.showError('خطا در دریافت خروجی اکسل ناوگان.');
+      }
+    });
+  }
+
+  // ─── تسک ۹.۴: قفل «ارسال به مدیر» با missing_fields ───
+  canSendToManager(v: VehicleDriverProfile): boolean {
+    if (!v) return false;
+    const isContractOrPersonal = v.ownership_type === 'contract' || v.ownership_type === 'personal';
+    if (isContractOrPersonal) {
+      const rate = Number(v.default_service_rate || 0);
+      if (rate <= 0) return false;
+      const cleanSheba = v.sheba_number ? String(v.sheba_number).replace(/^IR/i, '').trim() : '';
+      if (cleanSheba.length < 24) return false;
+    }
+    if (v.missing_fields && Array.isArray(v.missing_fields) && v.missing_fields.length > 0) {
+      const finMissing = v.missing_fields.some((m: any) => {
+        const f = typeof m === 'string' ? m : (m.field || '');
+        return ['default_service_rate', 'sheba_number', 'bank_name', 'primary_bank_account'].includes(f);
+      });
+      if (finMissing) return false;
+    }
+    return true;
+  }
+
+  getMissingFieldsSummary(v: VehicleDriverProfile): string[] {
+    const missing: string[] = [];
+    const isContractOrPersonal = v.ownership_type === 'contract' || v.ownership_type === 'personal';
+    if (isContractOrPersonal) {
+      if (Number(v.default_service_rate || 0) <= 0) {
+        missing.push('تعیین نرخ پایه سرویس');
+      }
+      const cleanSheba = v.sheba_number ? String(v.sheba_number).replace(/^IR/i, '').trim() : '';
+      if (cleanSheba.length < 24) {
+        missing.push('شماره شبا معتبر ۲۴ رقمی');
+      }
+    }
+    if (v.missing_fields && Array.isArray(v.missing_fields)) {
+      v.missing_fields.forEach((m: any) => {
+        const label = typeof m === 'string' ? m : (m.message || m.field);
+        if (!missing.includes(label)) missing.push(label);
+      });
+    }
+    return missing;
+  }
+
+  // ─── تسک ۹.۶: تایید گروهی حسابدار ───
+  toggleSelectAll(): void {
+    const eligibleItems = this.newVehiclesList.filter(v => v.id && this.canSendToManager(v));
+    if (this.selectedVehicleIds.size === eligibleItems.length && eligibleItems.length > 0) {
+      this.selectedVehicleIds.clear();
+    } else {
+      this.selectedVehicleIds.clear();
+      eligibleItems.forEach(v => {
+        if (v.id) this.selectedVehicleIds.add(v.id);
+      });
+    }
+    this.cdr.detectChanges();
+  }
+
+  toggleSelection(id: number | undefined): void {
+    if (!id) return;
+    if (this.selectedVehicleIds.has(id)) {
+      this.selectedVehicleIds.delete(id);
+    } else {
+      this.selectedVehicleIds.add(id);
+    }
+    this.cdr.detectChanges();
+  }
+
+  isSelected(id: number | undefined): boolean {
+    return id ? this.selectedVehicleIds.has(id) : false;
+  }
+
+  isAllSelected(): boolean {
+    const eligibleItems = this.newVehiclesList.filter(v => v.id && this.canSendToManager(v));
+    return eligibleItems.length > 0 && this.selectedVehicleIds.size === eligibleItems.length;
+  }
+
+  openBatchApprovalModal(): void {
+    if (this.selectedVehicleIds.size === 0) return;
+    this.batchApprovalNote = '';
+    this.isBatchApprovalModalOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  closeBatchApprovalModal(): void {
+    this.isBatchApprovalModalOpen = false;
+    this.batchApprovalNote = '';
+    this.cdr.detectChanges();
+  }
+
+  confirmBatchApproval(): void {
+    if (this.selectedVehicleIds.size === 0 || this.isBatchApproving) return;
+    this.isBatchApproving = true;
+    const ids = Array.from(this.selectedVehicleIds);
+    this.personnelApi.batchApproveVehicles(ids, 'finance', this.batchApprovalNote).subscribe({
+      next: (res: any) => {
+        this.isBatchApproving = false;
+        const count = (res?.results || []).filter((r: any) => r.success).length;
+        this.toast.showSuccess(`تایید مالی گروهی برای ${count} خودرو صادر و پرونده‌ها به کارتابل مدیر ارسال گردید.`);
+        this.selectedVehicleIds.clear();
+        this.closeBatchApprovalModal();
+        this.fetchFleetData();
+      },
+      error: (err: any) => {
+        this.isBatchApproving = false;
+        this.toast.showError(err?.error?.error || 'خطا در ثبت تایید مالی گروهی');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   // ─── اکشن‌های مالی خودرو ───
   approveVehicleFinance(v: VehicleDriverProfile, note?: string): void {
     if (!v.id) return;
+    if (!this.canSendToManager(v)) {
+      const reasons = this.getMissingFieldsSummary(v).join('، ');
+      this.toast.showWarning(`ارسال پرونده به مدیر مقدور نیست؛ موارد ناقص: ${reasons}`);
+      return;
+    }
     const req$ = note ? this.personnelApi.approveVehicleFinance(v.id, note) : this.personnelApi.approveVehicleFinance(v.id);
     req$.subscribe({
       next: (res) => {
@@ -358,12 +524,12 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
         this.fetchFleetData();
       },
       error: (err) => {
-        this.toast.showError(err?.error?.error || 'خطا در تایید مالی خودرو');
+        this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در تایید مالی خودرو');
       }
     });
   }
 
-  /** تایید مالی درخواست تغییرات ناوگان و ارسال به مدیر (منتقل‌شده از کارتابل مالی قدیمی) */
+  /** تایید مالی درخواست تغییرات ناوگان و ارسال به مدیر */
   approveChangeRequestFinance(cr: VehicleChangeRequest, note?: string): void {
     if (!cr.id) return;
     const req$ = note
@@ -404,6 +570,10 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
 
   onApprovalEscape(): void {
     if (this.isApprovalModalOpen && !this.isApproving) this.closeApprovalModal();
+    if (this.isRejectModalOpen && !this.isSubmittingReject) this.closeRejectModal();
+    if (this.isVehicleModalOpen && !this.isSavingVehicle) this.closeVehicleModal();
+    if (this.isBatchApprovalModalOpen && !this.isBatchApproving) this.closeBatchApprovalModal();
+    if (this.isDiffModalOpen) this.closeDiffModal();
   }
 
   onDocumentKeydown(event: KeyboardEvent): void {
@@ -428,14 +598,16 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isApproving = false;
-        this.toast.showError(err?.error?.error || 'خطا در ثبت تایید مالی');
+        this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در ثبت تایید مالی');
         this.cdr.detectChanges();
       }
     });
   }
 
+  // ─── تسک ۹.۲ و ۹.۳: فرم نرخ و حساب در pending_accountant ───
   openEditVehicleModal(v: VehicleDriverProfile): void {
     this.editingVehicle = { ...v };
+    this.vehicleBankAccounts = [];
     if (v.sheba_number) {
       const clean = cleanShebaInput(v.sheba_number);
       this.shebaValidationResult = validateSheba(clean);
@@ -444,12 +616,53 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
       this.shebaValidationResult = null;
       this.shebaDigitsDisplay = '';
     }
+
+    if (v.id) {
+      this.loadRateBenchmark(v.id);
+      this.loadVehicleBankAccounts(v.id);
+    }
+
     this.isVehicleModalOpen = true;
+  }
+
+  loadRateBenchmark(vehicleId: number): void {
+    this.rateBenchmark = null;
+    this.isLoadingBenchmark = true;
+    this.personnelApi.getVehicleRateBenchmark(vehicleId).subscribe({
+      next: (res) => {
+        this.rateBenchmark = res;
+        this.isLoadingBenchmark = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.rateBenchmark = null;
+        this.isLoadingBenchmark = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  loadVehicleBankAccounts(vehicleId: number): void {
+    this.isLoadingBankAccounts = true;
+    this.personnelApi.getVehicleBankAccounts(vehicleId).subscribe({
+      next: (accs) => {
+        this.vehicleBankAccounts = accs || [];
+        this.isLoadingBankAccounts = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.vehicleBankAccounts = [];
+        this.isLoadingBankAccounts = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   closeVehicleModal(): void {
     this.isVehicleModalOpen = false;
     this.editingVehicle = null;
+    this.rateBenchmark = null;
+    this.vehicleBankAccounts = [];
   }
 
   onShebaInput(event: any): void {
@@ -465,6 +678,32 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
       if (this.shebaValidationResult.accountNumber && !this.editingVehicle.account_number) {
         this.editingVehicle.account_number = this.shebaValidationResult.accountNumber;
       }
+    }
+  }
+
+  onAccountNumberInput(event: any): void {
+    const raw = typeof event === 'string' ? event : (event?.target?.value || '');
+    const clean = raw.replace(/[^\d]/g, '');
+    if (this.editingVehicle) {
+      this.editingVehicle.account_number = clean;
+      this.autoGenerateShebaFromAccount();
+    }
+  }
+
+  onBankSelect(): void {
+    this.autoGenerateShebaFromAccount();
+  }
+
+  private autoGenerateShebaFromAccount(): void {
+    if (!this.editingVehicle?.account_number || !this.editingVehicle?.bank_name) return;
+    const bank = getBankByName(this.editingVehicle.bank_name);
+    if (!bank) return;
+    const generated = generateShebaFromAccount(bank.code, this.editingVehicle.account_number);
+    if (generated) {
+      this.editingVehicle.sheba_number = generated;
+      this.shebaValidationResult = validateSheba(generated);
+      this.shebaDigitsDisplay = this.shebaValidationResult.formattedDigits || generated;
+      this.cdr.detectChanges();
     }
   }
 
@@ -500,15 +739,16 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isSavingVehicle = false;
-        this.toast.showError(err?.error?.error || 'خطا در ذخیره اطلاعات مالی خودرو');
+        this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در ذخیره اطلاعات مالی خودرو');
       }
     });
   }
 
-  // ─── اکشن‌های رد و عودت ───
+  // ─── تسک ۹.۵: اکشن‌های رد و عودت دومقصده ───
   openRejectModal(id: number, title: string, type: 'vehicle' | 'vehicle_cr', action: 'reject' | 'revision'): void {
     this.rejectTarget = { id, title, type, action };
     this.rejectReason = '';
+    this.revisionDestination = 'supervisor';
     this.isRejectModalOpen = true;
   }
 
@@ -516,6 +756,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     this.isRejectModalOpen = false;
     this.rejectTarget = null;
     this.rejectReason = '';
+    this.revisionDestination = 'supervisor';
   }
 
   submitRejectModal(): void {
@@ -528,7 +769,9 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     const reason = this.rejectReason.trim();
 
     if (type === 'vehicle') {
-      const obs = action === 'reject' ? this.personnelApi.rejectVehicle(id, reason) : this.personnelApi.requestVehicleRevision(id, reason);
+      const obs = action === 'reject'
+        ? this.personnelApi.rejectVehicle(id, reason)
+        : this.personnelApi.requestVehicleRevision(id, reason, this.revisionDestination);
       obs.subscribe({
         next: (res) => {
           this.isSubmittingReject = false;
@@ -538,7 +781,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.isSubmittingReject = false;
-          this.toast.showError(err?.error?.error || 'خطا در انجام عملیات');
+          this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در انجام عملیات');
         }
       });
     } else {

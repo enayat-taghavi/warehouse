@@ -178,12 +178,46 @@ export interface PersonnelDocument {
   created_at?: string;
 }
 
+export interface VehicleBankAccount {
+  id?: number;
+  vehicle?: number;
+  bank_name: string;
+  account_number: string;
+  sheba_number: string;
+  card_number?: string;
+  account_owner_name?: string;
+  account_owner_national_code?: string;
+  payee_type?: 'driver' | 'owner' | 'other';
+  payee_type_display?: string;
+  is_primary: boolean;
+  is_active?: boolean;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface VehicleDocument {
+  id?: number;
+  vehicle?: number;
+  doc_type: 'car_card' | 'insurance' | 'inspection' | 'driver_license' | 'contract' | 'other' | string;
+  doc_type_display?: string;
+  file?: string;
+  file_url?: string;
+  file_name?: string;
+  title?: string;
+  issue_date?: string;
+  expiry_date?: string;
+  uploaded_by?: number;
+  uploaded_by_name?: string;
+  created_at?: string;
+}
+
 export interface VehicleDriverProfile {
   id?: number;
   user?: number | null;
   user_username?: string;
   plate_number: string;
-  vehicle_type: 'pickup' | 'nissan' | 'khavar' | 'sedan' | 'truck' | 'trailer' | 'other';
+  vehicle_type: 'pickup' | 'nissan' | 'khavar' | 'sedan' | 'truck' | 'trailer' | 'forklift' | 'other';
   vehicle_type_display?: string;
   ownership_type?: 'contract' | 'company' | 'personal';
   ownership_type_display?: string;
@@ -199,6 +233,14 @@ export interface VehicleDriverProfile {
   account_number?: string;
   sheba_number?: string;
   notes?: string;
+  insurance_expiry_date?: string | null;
+  inspection_expiry_date?: string | null;
+  license_expiry_date?: string | null;
+  valid_until_date?: string | null;
+  end_date?: string | null;
+  missing_fields?: string[];
+  bank_accounts?: VehicleBankAccount[];
+  documents?: VehicleDocument[];
   assigned_warehouse?: number | null;
   assigned_warehouse_name?: string;
   company?: number | null;
@@ -248,10 +290,12 @@ export interface WorkflowAuditLog {
   note?: string;
   actor?: number | null;
   actor_name?: string;
+  performed_by_name?: string;
   metadata?: Record<string, any>;
   snapshot?: Record<string, any>;
   created_at: string;
   created_at_shamsi?: string;
+  created_at_jalali?: string;
   jalali_date?: string;
 }
 

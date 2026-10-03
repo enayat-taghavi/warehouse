@@ -336,6 +336,7 @@
               <th class="p-3">شماره تماس</th>
               <th class="p-3">کرایه روزانه</th>
               <th class="p-3">وضعیت پرونده</th>
+              <th class="p-3 text-center">عملیات مدیریت</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -348,9 +349,34 @@
               <td class="p-3 font-mono font-bold text-indigo-700">{{ formatPrice(v.default_service_rate) }}</td>
               <td class="p-3">
                 <span class="px-2 py-0.5 rounded-md text-[10px] font-bold"
-                      [ngClass]="v.approval_status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'">
-                  {{ v.approval_status === 'approved' ? 'مصوب و فعال' : (v.approval_status || 'در گردش کار') }}
+                      [ngClass]="v.approval_status === 'approved' && v.is_active ? 'bg-emerald-100 text-emerald-800' : (v.end_date || !v.is_active ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700')">
+                  {{ v.approval_status === 'approved' && v.is_active ? 'مصوب و فعال' : (v.end_date || !v.is_active ? 'پایان همکاری' : (v.approval_status || 'در گردش کار')) }}
                 </span>
+              </td>
+              <td class="p-3">
+                <div class="flex items-center justify-center gap-1.5">
+                  <!-- دکمه قطع همکاری برای خودروهای مصوب و فعال -->
+                  <button
+                    *ngIf="v.approval_status === 'approved' && v.is_active && canEndCollaboration"
+                    type="button"
+                    (click)="openEndCollaborationModal(v)"
+                    class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                    title="ثبت قطع همکاری و تاریخ پایان تردد">
+                    <svg appIcon="clock" class="w-3.5 h-3.5"></svg>
+                    <span>قطع همکاری</span>
+                  </button>
+
+                  <!-- دکمه حذف بی‌سابقه برای کاربران دارای مجوز اختصاصی -->
+                  <button
+                    *ngIf="canDeleteVehicle"
+                    type="button"
+                    (click)="openDeleteModal(v)"
+                    class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                    title="حذف پرونده خودروی فاقد سابقه">
+                    <svg appIcon="trash-2" class="w-3.5 h-3.5"></svg>
+                    <span>حذف بی‌سابقه</span>
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -359,12 +385,76 @@
     </div>
   </div>
 
-  <!-- ── مودال تایید و تصویب مدیر ── -->
+  <!-- ── مودال تایید و تصویب مدیر (تسک ۱۰.۱ و ۱۰.۲) ── -->
   <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-xl max-w-md w-full p-5 space-y-4">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-xl max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="text-sm font-black text-slate-900">{{ approvalTarget?.title }}</h3>
-        <button (click)="closeApproveModal()" class="text-slate-400 hover:text-slate-600 text-sm">✕</button>
+        <button (click)="closeApproveModal()" class="text-slate-400 hover:text-slate-600 text-sm cursor-pointer">✕</button>
+      </div>
+
+      <!-- ویجت تحلیل بار مالی ماهانه سروری خودرو (تسک ۱۰.۱) -->
+      <div *ngIf="approvalTarget?.type === 'vehicle'" class="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/90 space-y-2.5" aria-live="polite" [attr.aria-busy]="isLoadingCostAnalysis">
+        <div class="flex flex-wrap items-center justify-between gap-1.5">
+          <span class="text-xs font-black text-slate-800 flex items-center gap-1.5">
+            <svg appIcon="bar-chart-2" class="w-4 h-4 text-indigo-600"></svg>
+            تحلیل بار مالی و تعهدات کارفرما
+          </span>
+          <!-- نشانگر وضعیت انحراف هزینه -->
+          <ng-container *ngIf="!isLoadingCostAnalysis && approvalCostEstimate">
+            <span *ngIf="!isVehiclePayable()" class="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-700 border-slate-200">
+              خودروی سازمانی / شرکتی (فاقد بار مالی اجاره/سرویس)
+            </span>
+            <span *ngIf="isVehiclePayable() && getCostDeviationPercentage() !== null"
+                  class="text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-2xs"
+                  [ngClass]="getCostDeviationPercentage()! <= 0
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : (getCostDeviationPercentage()! <= 15
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-rose-50 text-rose-700 border-rose-200')">
+              {{ getCostDeviationPercentage()! <= 0
+                ? 'مقرون‌به‌صرفه (کمتر یا مساوی میانگین پروژه)'
+                : (getCostDeviationPercentage() + '٪ بالاتر از میانگین پروژه') }}
+            </span>
+          </ng-container>
+        </div>
+
+        <div *ngIf="isLoadingCostAnalysis" class="p-3 text-center text-xs text-slate-500 font-bold">
+          در حال استعلام بار مالی از سرور…
+        </div>
+
+        <!-- کارت‌های ریز محاسبات مالی -->
+        <div *ngIf="!isLoadingCostAnalysis && isVehiclePayable()" class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+          <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-2xs">
+            <div class="text-slate-500 text-[10px]">نرخ روزانه / سرویس</div>
+            <div class="font-mono font-black text-slate-800 mt-0.5">
+              {{ getVehicleDailyRate() !== null ? (getVehicleDailyRate() | number) : '—' }}
+              <span class="text-[9px] text-slate-400 font-normal">ریال</span>
+            </div>
+          </div>
+          <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-2xs">
+            <div class="text-slate-500 text-[10px]">بار مالی ماهانه (۲۶ روز)</div>
+            <div class="font-mono font-black text-indigo-700 mt-0.5">
+              {{ getVehicleMonthlyStandardCost() !== null ? (getVehicleMonthlyStandardCost() | number) : '—' }}
+              <span class="text-[9px] text-slate-400 font-normal">ریال</span>
+            </div>
+          </div>
+          <div class="bg-white p-2 rounded-xl border border-slate-200/80 shadow-2xs">
+            <div class="text-slate-500 text-[10px]">میانگین هم‌تیپ‌ها در پروژه</div>
+            <div class="font-mono font-black text-slate-700 mt-0.5">
+              {{ getVehicleAvgDailyRate() !== null ? (getVehicleAvgDailyRate() | number) : '—' }}
+              <span class="text-[9px] text-slate-400 font-normal">ریال</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- سطر برآورد سالانه -->
+        <div *ngIf="!isLoadingCostAnalysis && isVehiclePayable()" class="flex items-center justify-between text-[11px] bg-white px-3 py-2 rounded-xl border border-slate-200/80 shadow-2xs">
+          <span class="text-slate-600 font-bold">برآورد بار مالی سالانه (۱۲ ماه استاندارد):</span>
+          <span class="font-mono font-black text-slate-900">
+            {{ getVehicleYearlyStandardCost() !== null ? (getVehicleYearlyStandardCost() | number) + ' ریال' : '—' }}
+          </span>
+        </div>
       </div>
 
       <div class="space-y-2">
@@ -395,23 +485,42 @@
     </div>
   </div>
 
-  <!-- ── مودال رد پرونده یا عودت ── -->
+  <!-- ── مودال رد پرونده یا عودت (تسک ۱۰.۲) ── -->
   <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
     <div class="bg-white rounded-3xl border border-slate-200 shadow-xl max-w-md w-full p-5 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="text-sm font-black text-rose-700">
-          {{ rejectTarget?.action === 'revision' ? 'عودت جهت اصلاح: ' : 'رد پرونده: ' }} {{ rejectTarget?.title }}
+          تصمیم‌گیری عدم تصویب: {{ rejectTarget?.title }}
         </h3>
-        <button (click)="closeRejectModal()" class="text-slate-400 hover:text-slate-600 text-sm">✕</button>
+        <button (click)="closeRejectModal()" class="text-slate-400 hover:text-slate-600 text-sm cursor-pointer">✕</button>
       </div>
 
-      <div class="space-y-2">
-        <label class="block text-xs font-bold text-slate-700">علت رد یا موارد نیازمند اصلاح <span class="text-rose-500">*</span>:</label>
-        <textarea
-          [(ngModel)]="rejectReason"
-          rows="3"
-          placeholder="علت عدم تایید یا دستور اصلاح را دقیق وارد کنید..."
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500"></textarea>
+      <div class="space-y-3">
+        <!-- رادیوباتن انتخاب عودت به حسابدار در برابر رد قطعی برای پرونده خودرو -->
+        <div *ngIf="rejectTarget?.type === 'vehicle'" class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-600 block">اقدام مورد نظر مدیریت ارشد:</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
+                   [ngClass]="rejectActionType === 'return_to_accountant' ? 'bg-amber-50 border-amber-300 text-amber-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'">
+              <input type="radio" [(ngModel)]="rejectActionType" value="return_to_accountant" class="text-amber-600" />
+              <span>🔄 عودت به حسابدار</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
+                   [ngClass]="rejectActionType === 'reject_final' ? 'bg-rose-50 border-rose-300 text-rose-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'">
+              <input type="radio" [(ngModel)]="rejectActionType" value="reject_final" class="text-rose-600" />
+              <span>⛔ رد قطعی پرونده</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold text-slate-700">علت یا دستور مستند <span class="text-rose-500">*</span>:</label>
+          <textarea
+            [(ngModel)]="rejectReason"
+            rows="3"
+            placeholder="علت عودت جهت بازنگری احکام/نرخ، یا دلیل مستند رد قطعی پرونده..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-rose-500"></textarea>
+        </div>
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
@@ -427,7 +536,7 @@
           [disabled]="isSubmittingReject || !rejectReason.trim()"
           class="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-500/20 transition-all flex items-center gap-1.5 cursor-pointer">
           <span *ngIf="isSubmittingReject" class="animate-spin text-xs">⏳</span>
-          <span>ثبت قطعی</span>
+          <span>ثبت اقدام مدیریت</span>
         </button>
       </div>
     </div>
@@ -468,6 +577,140 @@
           (click)="closeDiffModal()"
           class="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer">
           بستن
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── مودال قطع همکاری ناوگان (تسک ۱۰.۳) ── -->
+  <div *ngIf="isEndCollaborationModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in duration-150">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-sm font-black text-amber-800 flex items-center gap-1.5">
+          <svg appIcon="clock" class="w-4 h-4"></svg>
+          قطع همکاری ناوگان: {{ endCollaborationTarget?.plate_number }}
+        </h3>
+        <button (click)="closeEndCollaborationModal()" class="text-slate-400 hover:text-slate-600 text-sm cursor-pointer">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div class="p-3 bg-amber-50/60 rounded-xl border border-amber-200/80 text-xs text-amber-900 leading-relaxed">
+          پس از ثبت قطع همکاری، وضعیت پرونده غیرفعال خواهد شد و از تاریخ پایان به بعد امکان ثبت هیچ تردد یا سرویسی در سامانه وجود نخواهد داشت.
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold text-slate-700">تاریخ پایان همکاری (شمسی، مانند ۱۴۰۵/۰۷/۱۵) <span class="text-rose-500">*</span>:</label>
+          <input
+            type="text"
+            [(ngModel)]="endCollaborationDate"
+            placeholder="۱۴۰۵/۰۷/۱۵"
+            dir="ltr"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-center font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500" />
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold text-slate-700">دلیل قطع همکاری <span class="text-rose-500">*</span>:</label>
+          <textarea
+            [(ngModel)]="endCollaborationReason"
+            rows="3"
+            placeholder="علت اتمام قرارداد، تسویه، پایان کار پروژه یا درخواست راننده..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button
+          type="button"
+          (click)="closeEndCollaborationModal()"
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer">
+          انصراف
+        </button>
+        <button
+          type="button"
+          (click)="submitEndCollaboration()"
+          [disabled]="isEndingCollaboration || !endCollaborationDate.trim() || !endCollaborationReason.trim()"
+          class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 transition-all flex items-center gap-1.5 cursor-pointer">
+          <span *ngIf="isEndingCollaboration" class="animate-spin text-xs">⏳</span>
+          <span>ثبت قطع همکاری</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── حذف خودرو بدون سابقه با مودال مشترک smart-delete-modal و قرارداد delete_impact (تسک ۱۰.۳، ب-۲۴) ── -->
+  <app-smart-delete-modal
+    *ngIf="isDeleteModalOpen && !deleteImpactLoading && deleteImpactHistory?.can_delete"
+    [title]="'حذف پرونده خودرو فاقد سابقه'"
+    [entityName]="(deleteTargetVehicle?.plate_number || '') + ' (' + (deleteTargetVehicle?.driver_name || 'بدون راننده') + ')'"
+    [deleteImpactUrl]="deleteImpactUrl"
+    [isSubmitting]="isDeletingVehicle"
+    (hardDelete)="confirmDeleteVehicle()"
+    (cancel)="closeDeleteModal()">
+  </app-smart-delete-modal>
+
+  <!-- ── استعلام سابقه و مسدودسازی حذف پروندهٔ خودروی دارای سابقه (تسک ۱۰.۳) ── -->
+  <div *ngIf="isDeleteModalOpen && (deleteImpactLoading || !deleteImpactHistory?.can_delete)" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+    <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
+      <div class="p-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
+        <h3 class="text-sm font-black text-rose-950 flex items-center gap-1.5">
+          <span>🗑️</span> حذف پرونده خودرو: {{ deleteTargetVehicle?.plate_number }} ({{ deleteTargetVehicle?.driver_name || 'بدون راننده' }})
+        </h3>
+        <button (click)="closeDeleteModal()" class="text-muted hover:text-fg cursor-pointer">✕</button>
+      </div>
+
+      <div class="p-4 space-y-3">
+        <div *ngIf="deleteImpactLoading" class="py-6 text-center text-muted text-xs">
+          <span class="animate-spin inline-block mr-1">🔄</span> در حال استعلام اثرات حذف و سوابق تردد خودرو از پایگاه داده...
+        </div>
+
+        <div *ngIf="!deleteImpactLoading && deleteImpactHistory">
+          <!-- در صورت داشتن سابقه (حذف غیرمجاز) -->
+          <div *ngIf="!deleteImpactHistory.can_delete" class="p-3 bg-rose-50 rounded-xl border border-rose-200 text-xs space-y-2">
+            <div class="font-black text-rose-900 flex items-center gap-1.5">
+              <span>🚫</span> حذف فیزیکی این پرونده مجاز نمی‌باشد!
+            </div>
+            <p class="text-rose-800 leading-relaxed">
+              این خودرو دارای سوابق در سامانه می‌باشد:
+              <strong>{{ deleteImpactHistory.reasons?.join('، ') }}</strong>.
+            </p>
+            <p class="text-muted text-[11px]">
+              💡 راهکار قانونی: جهت جلوگیری از تخصیص و تردد مجدد، وضعیت خودرو را به «قطع همکاری» تغییر دهید.
+            </p>
+            <button
+              *ngIf="deleteImpactHistory.has_history && canEndCollaboration && deleteTargetVehicle?.approval_status === 'approved' && deleteTargetVehicle?.is_active !== false"
+              type="button"
+              (click)="openEndCollaborationModal(deleteTargetVehicle!); closeDeleteModal()"
+              class="min-h-[40px] px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black cursor-pointer">
+              ثبت قطع همکاری
+            </button>
+          </div>
+
+          <!-- در صورت عدم وجود هرگونه سابقه (حذف مجاز) -->
+          <div *ngIf="deleteImpactHistory.can_delete" class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs space-y-2">
+            <div class="font-black text-emerald-900 flex items-center gap-1.5">
+              <span>✓</span> حذف ایمن بلامانع است
+            </div>
+            <p class="text-emerald-800 leading-relaxed">
+              این پرونده فاقد هرگونه تردد ثبت‌شده یا تراکنش مالی است و حذف فیزیکی آن بلامانع می‌باشد.
+            </p>
+            <p class="text-rose-700 font-bold text-[11px]">
+              ⚠️ با انجام این عملیات، رکورد خودرو به همراه عکس کامل در لاگ ممیزی، برای همیشه از پایگاه داده حذف می‌گردد.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-3 bg-surface-alt border-t border-line flex justify-end gap-2">
+        <button
+          (click)="closeDeleteModal()"
+          class="px-3 py-1.5 rounded-xl border border-line text-xs font-bold text-muted hover:bg-surface cursor-pointer">
+          انصراف
+        </button>
+        <button
+          (click)="confirmDeleteVehicle()"
+          [disabled]="deleteImpactLoading || !deleteImpactHistory?.can_delete || isDeletingVehicle"
+          class="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-black shadow-xs cursor-pointer">
+          {{ isDeletingVehicle ? 'در حال حذف...' : 'حذف دائم پرونده' }}
         </button>
       </div>
     </div>

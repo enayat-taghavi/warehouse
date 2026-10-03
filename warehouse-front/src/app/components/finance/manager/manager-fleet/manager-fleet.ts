@@ -9,13 +9,15 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection, VehicleDriverProfile, VehicleChangeRequest } from '../../../../core/models/personnel.model';
 import { WebSocketService } from '../../../../core/http/websocket.service';
+import { SmartDeleteModalComponent } from '../../../../shared/components/smart-delete-modal/smart-delete-modal';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 export type ManagerFleetSubTab = 'new' | 'settlement' | 'changes' | 'all';
 
 @Component({
   selector: 'app-manager-fleet-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SmartDeleteModalComponent, SvgIconDirective],
   templateUrl: './manager-fleet.html',
   styleUrl: './manager-fleet.css'
 })
@@ -62,11 +64,46 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
   approvalNote = '';
   isApproving = false;
 
-  // مودال رد پرونده یا درخواست اصلاح
+  // مودال رد پرونده یا درخواست اصلاح (تسک ۱۰.۲)
   isRejectModalOpen = false;
   rejectTarget: { id: number; title: string; type: 'vehicle' | 'vehicle_cr'; action: 'reject' | 'revision' } | null = null;
+  rejectActionType: 'return_to_accountant' | 'reject_final' = 'return_to_accountant';
   rejectReason = '';
   isSubmittingReject = false;
+
+  // ویجت برآورد بار مالی سروری ناوگان (تسک ۱۰.۱)
+  approvalCostEstimate: any | null = null;
+  isLoadingCostAnalysis = false;
+
+  // مودال حذف خودروهای فاقد سابقه (تسک ۱۰.۳)
+  isDeleteModalOpen = false;
+  deleteTargetVehicle: VehicleDriverProfile | null = null;
+  deleteImpactUrl = '';
+  deleteImpactLoading = false;
+  deleteImpactHistory: any = null;
+  isDeletingVehicle = false;
+
+  // مودال قطع همکاری ناوگان (تسک ۱۰.۳)
+  isEndCollaborationModalOpen = false;
+  endCollaborationTarget: VehicleDriverProfile | null = null;
+  endCollaborationDate = '';
+  endCollaborationReason = '';
+  isEndingCollaboration = false;
+
+  /** کاربر دارای مجوز اختصاصی حذف خودروی فاقد تردد (تسک ۱۰.۳، ب-۲۴) */
+  get canDeleteVehicle(): boolean {
+    const u = this.auth.user();
+    if (u?.is_superuser) return true;
+    return this.auth.userPermissions().includes('perm_delete_vehicle_nomovement');
+  }
+
+  /** قطع همکاری خودرو با مجوز مدیر (تسک ۱۰.۳، DEF-18) */
+  get canEndCollaboration(): boolean {
+    const u = this.auth.user();
+    if (u?.is_superuser) return true;
+    const perms = this.auth.userPermissions();
+    return ['perm_approve_fleet_manager', 'can_act_as_manager', 'can_act_as_company_manager'].some(c => perms.includes(c));
+  }
 
   // مودال مقایسه تفاوت‌ها (Diff Viewer)
   isDiffModalOpen = false;
@@ -229,12 +266,33 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
     this.approvalTarget = { type, item, title };
     this.approvalNote = '';
     this.isApprovalModalOpen = true;
+    if (type === 'vehicle' && item?.id) {
+      this.loadCostEstimate(item.id);
+    }
   }
 
   closeApproveModal(): void {
     this.isApprovalModalOpen = false;
     this.approvalTarget = null;
     this.approvalNote = '';
+    this.approvalCostEstimate = null;
+    this.isLoadingCostAnalysis = false;
+  }
+
+  private loadCostEstimate(vehicleId: number): void {
+    this.approvalCostEstimate = null;
+    this.isLoadingCostAnalysis = true;
+    this.personnelApi.getVehicleCostEstimate(vehicleId).subscribe({
+      next: (est) => {
+        this.approvalCostEstimate = est;
+        this.isLoadingCostAnalysis = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.isLoadingCostAnalysis = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   submitApproval(): void {
@@ -271,9 +329,10 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ─── رد یا درخواست اصلاح ───
+  // ─── رد یا درخواست اصلاح (تسک ۱۰.۲) ───
   openRejectModal(id: number, title: string, type: 'vehicle' | 'vehicle_cr', action: 'reject' | 'revision'): void {
     this.rejectTarget = { id, title, type, action };
+    this.rejectActionType = action === 'revision' ? 'return_to_accountant' : 'reject_final';
     this.rejectReason = '';
     this.isRejectModalOpen = true;
   }
@@ -286,33 +345,43 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
 
   submitReject(): void {
     if (!this.rejectTarget || !this.rejectReason.trim()) {
-      this.toast.showWarning('لطفاً دلیل رد یا عودت را وارد نمایید.');
+      this.toast.showWarning('لطفاً دلیل مستند را وارد فرمایید.');
       return;
     }
 
     this.isSubmittingReject = true;
-    const { id, type, action } = this.rejectTarget;
+    const { id, type } = this.rejectTarget;
 
     if (type === 'vehicle') {
-      const call$ = action === 'reject'
-        ? this.personnelApi.rejectVehicle(id, this.rejectReason)
-        : this.personnelApi.requestVehicleRevision(id, this.rejectReason);
-
-      call$.subscribe({
-        next: () => {
-          const msg = action === 'reject' ? 'پرونده خودرو رد شد.' : 'پرونده جهت اصلاح عودت داده شد.';
-          this.toast.showSuccess(msg);
-          this.isSubmittingReject = false;
-          this.closeRejectModal();
-          this.fetchFleetData();
-        },
-        error: (err) => {
-          this.isSubmittingReject = false;
-          this.toast.showError(err?.error?.detail || 'خطا در ثبت وضعیت');
-        }
-      });
+      if (this.rejectActionType === 'return_to_accountant') {
+        this.personnelApi.requestVehicleRevision(id, this.rejectReason.trim()).subscribe({
+          next: () => {
+            this.toast.showSuccess('پرونده جهت بازنگری نرخ و مدارک به کارتابل حسابدار عودت داده شد.');
+            this.isSubmittingReject = false;
+            this.closeRejectModal();
+            this.fetchFleetData();
+          },
+          error: (err) => {
+            this.isSubmittingReject = false;
+            this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در عودت پرونده به حسابدار');
+          }
+        });
+      } else {
+        this.personnelApi.rejectVehicle(id, this.rejectReason.trim()).subscribe({
+          next: () => {
+            this.toast.showSuccess('پرونده خودرو رد شد.');
+            this.isSubmittingReject = false;
+            this.closeRejectModal();
+            this.fetchFleetData();
+          },
+          error: (err) => {
+            this.isSubmittingReject = false;
+            this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در رد پرونده خودرو');
+          }
+        });
+      }
     } else {
-      this.personnelApi.rejectVehicleChangeRequest(id, this.rejectReason).subscribe({
+      this.personnelApi.rejectVehicleChangeRequest(id, this.rejectReason.trim()).subscribe({
         next: () => {
           this.toast.showSuccess('درخواست تغییرات رد گردید.');
           this.isSubmittingReject = false;
@@ -325,6 +394,95 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  // ─── ابزار حذف ناوگان فاقد سابقه با SmartDeleteModal (تسک ۱۰.۳) ───
+  openDeleteModal(v: VehicleDriverProfile): void {
+    if (!v?.id) return;
+    this.deleteTargetVehicle = v;
+    this.deleteImpactUrl = `/api/personnel/vehicles/${v.id}/delete_impact/`;
+    this.deleteImpactLoading = true;
+    this.deleteImpactHistory = null;
+    this.isDeleteModalOpen = true;
+
+    this.personnelApi.getVehicleDeleteImpact(v.id).subscribe({
+      next: (res) => {
+        this.deleteImpactHistory = res;
+        this.deleteImpactLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.deleteImpactHistory = { can_delete: false, reasons: ['خطا در استعلام سوابق تردد خودرو از سرور'] };
+        this.deleteImpactLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  closeDeleteModal(): void {
+    this.isDeleteModalOpen = false;
+    this.deleteTargetVehicle = null;
+    this.deleteImpactHistory = null;
+    this.isDeletingVehicle = false;
+    this.cdr.detectChanges();
+  }
+
+  confirmDeleteVehicle(): void {
+    if (!this.deleteTargetVehicle?.id || !this.deleteImpactHistory?.can_delete || this.isDeletingVehicle) return;
+    this.isDeletingVehicle = true;
+    const id = this.deleteTargetVehicle.id;
+    const plate = this.deleteTargetVehicle.plate_number;
+
+    this.personnelApi.deleteVehicleProfile(id).subscribe({
+      next: () => {
+        this.toast.showSuccess(`پرونده خودرو «${plate}» به علت عدم سابقه با موفقیت حذف گردید.`);
+        this.isDeletingVehicle = false;
+        this.closeDeleteModal();
+        this.fetchFleetData();
+      },
+      error: (err) => {
+        this.isDeletingVehicle = false;
+        this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در حذف پرونده خودرو');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  // ─── قطع همکاری ناوگان دارای سابقه (تسک ۱۰.۳) ───
+  openEndCollaborationModal(v: VehicleDriverProfile): void {
+    this.endCollaborationTarget = v;
+    this.endCollaborationDate = '';
+    this.endCollaborationReason = '';
+    this.isEndCollaborationModalOpen = true;
+  }
+
+  closeEndCollaborationModal(): void {
+    this.isEndCollaborationModalOpen = false;
+    this.endCollaborationTarget = null;
+    this.isEndingCollaboration = false;
+  }
+
+  submitEndCollaboration(): void {
+    const target = this.endCollaborationTarget;
+    if (!target?.id || this.isEndingCollaboration) return;
+    if (!this.endCollaborationDate.trim() || !this.endCollaborationReason.trim()) {
+      this.toast.showWarning('تاریخ پایان همکاری (شمسی) و دلیل آن الزامی است.');
+      return;
+    }
+    this.isEndingCollaboration = true;
+    this.personnelApi.endVehicleCollaboration(target.id, this.endCollaborationDate.trim(), this.endCollaborationReason.trim()).subscribe({
+      next: (res: any) => {
+        this.isEndingCollaboration = false;
+        this.toast.showSuccess(res?.message || `همکاری خودرو «${target.plate_number}» پایان یافت و غیرفعال شد.`);
+        this.closeEndCollaborationModal();
+        this.fetchFleetData();
+      },
+      error: (err: any) => {
+        this.isEndingCollaboration = false;
+        this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در ثبت قطع همکاری ناوگان');
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   // ─── مقایسه تفاوت‌ها (Diff Viewer) ───
@@ -373,5 +531,35 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
   formatPrice(val: number | null | undefined): string {
     if (!val && val !== 0) return '—';
     return Number(val).toLocaleString('fa-IR') + ' ریال';
+  }
+
+  // ─── توابع کمکی ویجت بار مالی ماهانه سروری (تسک ۱۰.۱) ───
+  getCostDeviationPercentage(): number | null {
+    if (!this.approvalCostEstimate || !this.approvalCostEstimate.is_payable) return null;
+    return this.approvalCostEstimate.deviation_percentage;
+  }
+
+  getVehicleDailyRate(): number | null {
+    return this.approvalCostEstimate?.daily_rate ?? null;
+  }
+
+  getVehicleMonthlyStandardCost(): number | null {
+    return this.approvalCostEstimate?.monthly_cost_standard ?? null;
+  }
+
+  getVehicleYearlyStandardCost(): number | null {
+    return this.approvalCostEstimate?.yearly_cost_standard ?? null;
+  }
+
+  getVehicleAvgMonthlyCost(): number | null {
+    return this.approvalCostEstimate?.avg_monthly_cost ?? null;
+  }
+
+  getVehicleAvgDailyRate(): number | null {
+    return this.approvalCostEstimate?.avg_daily_rate ?? null;
+  }
+
+  isVehiclePayable(): boolean {
+    return this.approvalCostEstimate?.is_payable ?? false;
   }
 }
