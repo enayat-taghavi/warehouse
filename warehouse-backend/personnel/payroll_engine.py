@@ -518,13 +518,27 @@ class PayrollCalculationEngine:
                 calc_data['row_number'] = row_idx
                 calc_data['is_manually_overridden'] = False
 
-                # DEF-20 (گام ۲ اصلاحیه): تعلیق پرداخت در صورت انقضای اعتبار
+                # DEF-20 (گام ۲ اصلاحیه): تعلیق پرداخت در صورت انقضای اعتبار و حفظ تمامیت تعلیق
                 if not is_valid and has_curr_att:
                     if not existing or not existing.payment_hold_released_at:
                         calc_data['payment_hold'] = True
                         calc_data['payment_hold_reason'] = val_reason or "انقضای اعتبار تا تمدید"
+                    else:
+                        # رکورد قبلاً توسط حسابدار آزاد شده است؛ حفظ متادیتا و وضعیت آزادسازی
+                        calc_data['payment_hold'] = False
+                        calc_data['payment_hold_released_at'] = existing.payment_hold_released_at
+                        calc_data['payment_hold_released_by'] = existing.payment_hold_released_by
                 else:
-                    if not existing or not existing.payment_hold_released_at:
+                    if existing and existing.payment_hold:
+                        # پرسنلی که فیش آن‌ها معلق شده، با محاسبه مجدد نباید قفل تعلیق به‌صورت بی‌صدا برداشته شود؛
+                        # آزادسازی منحصراً باید از طریق اکشن صریح release-payment-hold همراه با ثبت لاگ ممیزی انجام گیرد.
+                        calc_data['payment_hold'] = True
+                        calc_data['payment_hold_reason'] = existing.payment_hold_reason
+                    elif existing and existing.payment_hold_released_at:
+                        calc_data['payment_hold'] = False
+                        calc_data['payment_hold_released_at'] = existing.payment_hold_released_at
+                        calc_data['payment_hold_released_by'] = existing.payment_hold_released_by
+                    else:
                         calc_data['payment_hold'] = False
                         calc_data['payment_hold_reason'] = None
 

@@ -7684,7 +7684,9 @@ class MonthlyPayrollViewSet(viewsets.ModelViewSet):
                 }
                 for r in records if r.payment_hold
             ]
-            records = [r for r in records if not r.payment_hold]
+            records = [r for r in records if not r.payment_hold and r.payment_hold_released_at is None]
+            if not records:
+                return Response({'error': f'هیچ فیش حقوقی عادی برای صدور دیسکت بانک پروژه «{project.name}» در این دوره یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
             filename = f"Bank_Payment_{project.code}_{period.year_month.replace('/', '_')}.xlsx"
 
         settings_obj = get_effective_payroll_settings(period.year_month, project.id)

@@ -973,3 +973,139 @@ class Step2HighSeverityTests(RemediationTestBase):
         ).first()
         self.assertIsNotNone(log)
         self.assertEqual(log.user, self.acc)
+
+    def test_def20_no_duplicate_payment_between_default_and_released_diskettes(self):
+        """
+        تست تضمین عدم پرداخت دوباره:
+        اشتراک رکوردهای خروجی دیسکت عادی و دیسکت آزادشده همواره باید تهی باشد (set() == set()).
+        صدور مجدد دیسکت عادی پس از آزادسازی هرگز نباید رکورد آزادشده را شامل شود.
+        """
+        import io
+        import openpyxl
+        from personnel.models import MonthlyWorkPeriod, MonthlyPayrollRecord
+
+        p_valid = self.complete_profile('0011223344', status='approved', company=self.c1, project=self.p1, valid_until_date='1405/12/29')
+        p_expired = self.complete_profile('0022334455', status='approved', company=self.c1, project=self.p1, valid_until_date='1405/01/01')
+
+        period = MonthlyWorkPeriod.objects.create(
+            company=self.c1,
+            project=self.p1,
+            year_month='1405/07',
+            status='OPEN'
+        )
+
+        r_valid = MonthlyPayrollRecord.objects.create(
+            period=period,
+            personnel=p_valid,
+            gross_salary=6000000,
+            payable_amount=5500000,
+            bank_account_number='11111111',
+            payment_hold=False
+        )
+
+        r_expired = MonthlyPayrollRecord.objects.create(
+            period=period,
+            personnel=p_expired,
+            gross_salary=7000000,
+            payable_amount=6500000,
+            bank_account_number='22222222',
+            payment_hold=True,
+            payment_hold_reason='انقضای اعتبار تا تمدید'
+        )
+
+        def extract_national_codes(content):
+            wb = openpyxl.load_workbook(io.BytesIO(content))
+            ws = wb.active
+            return {str(row[6]).strip() for row in ws.iter_rows(values_only=True) if row[6] and str(row[6]).strip() != 'کد ملی (اختیاری)'}
+
+        self.as_user(self.acc)
+
+        # مرحله ۱: پیش از آزادسازی - دیسکت عادی فقط رکورد معتبر را دارد
+        res1 = self.client.get(f'/api/personnel/monthly-payroll/export-bank-excel/?period_id={period.id}&project_id={self.p1.id}')
+        self.assertEqual(res1.status_code, 200)
+        nc1 = extract_national_codes(res1.content)
+        self.assertIn('0011223344', nc1)
+        self.assertNotIn('0022334455', nc1)
+
+        # مرحله ۲: تمدید اعتبار و آزادسازی رسمی رکورد معلق
+        p_expired.valid_until_date = '1405/12/29'
+        p_expired.save(update_fields=['valid_until_date'])
+        rel_resp = self.client.post(f'/api/personnel/monthly-payroll/{r_expired.id}/release-payment-hold/')
+        self.assertEqual(rel_resp.status_code, 200)
+
+        # مرحله ۳: صدور مجدد دیسکت عادی پس از آزادسازی - باید کماکان رکورد آزادشده را استثنا کند
+        res_default_after_release = self.client.get(f'/api/personnel/monthly-payroll/export-bank-excel/?period_id={period.id}&project_id={self.p1.id}')
+        self.assertEqual(res_default_after_release.status_code, 200)
+        nc_default = extract_national_codes(res_default_after_release.content)
+
+        # مرحله ۴: صدور دیسکت رکوردهای آزادشده
+        res_released = self.client.get(f'/api/personnel/monthly-payroll/export-bank-excel/?period_id={period.id}&project_id={self.p1.id}&only_released=true')
+        self.assertEqual(res_released.status_code, 200)
+        nc_released = extract_national_codes(res_released.content)
+
+        # بررسی و تضمین ریاضی:
+        self.assertIn('0011223344', nc_default)
+        self.assertNotIn('0022334455', nc_default, "خطای اساسی: رکورد آزادشده در دیسکت عادی تکرار شده است (خطر پرداخت دوباره)!")
+        self.assertIn('0022334455', nc_released)
+        self.assertNotIn('0011223344', nc_released)
+
+        # تقاطع دو مجموعه حتماً باید تهی باشد
+        intersection = nc_default.intersection(nc_released)
+        self.assertEqual(intersection, set(), f"تداخل و خطر پرداخت مضاعف کشف شد: {intersection}")
+
+    def test_def20_recalculate_does_not_bypass_payment_hold(self):
+        """
+        تست جلوگیری از دور زدن تعلیق:
+        اگر پرسنل منقضی بوده و فیش او معلق شده، با تمدید تاریخ اعتبار و اجرای دوباره محاسبه حقوق،
+        قفل تعلیق نباید بی‌صدا برداشته شود؛ تنها راه آزادسازی اکشن صریح حسابدار است.
+        """
+        from personnel.models import MonthlyWorkPeriod, MonthlyPayrollRecord, DailyAttendance
+        from personnel.payroll_engine import calculate_monthly_payroll_for_period
+
+        p = self.complete_profile('0033445566', status='approved', company=self.c1, project=self.p1, valid_until_date='1405/01/01')
+        period = MonthlyWorkPeriod.objects.create(
+            company=self.c1,
+            project=self.p1,
+            year_month='1405/07',
+            status='OPEN'
+        )
+        DailyAttendance.objects.create(
+            personnel=p,
+            project=self.p1,
+            section=self.s1,
+            date_shamsi='1405/07/15',
+            status='PRESENT_10H',
+            approval_status='APPROVED'
+        )
+
+        # محاسبه اول: چون تاریخ اعتبار گذشته است، فیش باید معلق شود
+        calculate_monthly_payroll_for_period(period, user=self.acc)
+        rec = MonthlyPayrollRecord.objects.get(period=period, personnel=p)
+        self.assertTrue(rec.payment_hold)
+        self.assertIn('اعتبار', rec.payment_hold_reason)
+
+        # تمدید تاریخ اعتبار پرسنل در دیتابیس
+        p.valid_until_date = '1405/12/29'
+        p.save(update_fields=['valid_until_date'])
+
+        # محاسبه مجدد توسط موتور حقوق:
+        # قفل تعلیق نباید خودکار باز شود تا فرآیند ممیزی دور زده نشود
+        calculate_monthly_payroll_for_period(period, user=self.acc)
+        rec.refresh_from_db()
+        self.assertTrue(rec.payment_hold, "خطا: محاسبه مجدد قفل تعلیق را بدون ممیزی برداشت!")
+        self.assertIsNone(rec.payment_hold_released_at)
+
+        # حسابدار رسماً دکمه آزادسازی را می‌زند
+        self.as_user(self.acc)
+        rel_resp = self.client.post(f'/api/personnel/monthly-payroll/{rec.id}/release-payment-hold/')
+        self.assertEqual(rel_resp.status_code, 200)
+        rec.refresh_from_db()
+        self.assertFalse(rec.payment_hold)
+        self.assertIsNotNone(rec.payment_hold_released_at)
+
+        # اگر بعد از آزادسازی باز هم محاسبه مجدد اجرا شود، وضعیت آزادسازی و متادیتا پاک نمی‌شود
+        calculate_monthly_payroll_for_period(period, user=self.acc)
+        rec.refresh_from_db()
+        self.assertFalse(rec.payment_hold)
+        self.assertIsNotNone(rec.payment_hold_released_at)
+        self.assertEqual(rec.payment_hold_released_by, self.acc)

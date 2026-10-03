@@ -60,12 +60,14 @@ Watch for `DROP COLUMN`, `DROP TABLE`, `ALTER COLUMN ... TYPE`, `DELETE` and `TR
 - **No destructive operations:** take a backup (step 5). Then get the user's permission to migrate the production database with one short yes/no question.
 - **With destructive operations:** do not run it. Tell the user exactly which column, table or data will be lost. Propose the safe path (expand-contract): first the new column and a data copy, and the removal in a later migration.
 
-## 5. Backup before migrate
-Do not run `run_auto_backup`, because it deletes all backups except the last 7. Instead, create just one backup:
+## 5. Backup before migrate (mandatory by guard hook)
+The guard hook `.claude/hooks/guard.py` blocks any execution of `manage.py migrate` unless a non-empty `.dump` file with a corresponding `.meta.json` with an age of **less than 15 minutes** exists in `warehouse-backend/backups/db/`.
+
+Do not run `run_auto_backup`, because it deletes all backups except the last 7. Instead, create just one standalone backup:
 ```bash
 PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-migrate'); print(m['filename'], m['size'])"
 ```
-The file is created in `warehouse-backend/backups/db/`.
+The file is created in `warehouse-backend/backups/db/` and authorization to run migrate will be open for 15 minutes.
 
 ## 6. After migrate
 ```bash

@@ -80,7 +80,8 @@
             (click)="switchSubTab('calculated')"
             [ngClass]="activeSubTab === 'calculated' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
             class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>📊 پیش‌نمایش محاسبات</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="bar-chart-2"></svg>
+            <span>پیش‌نمایش محاسبات</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
                   [ngClass]="activeSubTab === 'calculated' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'">
               {{ statusCounters.calculated }}
@@ -148,7 +149,7 @@
           [disabled]="isCalculating || isPeriodLocked"
           [title]="isPeriodLocked ? 'دوره قفل شده است و محاسبهٔ دوباره نمی‌پذیرد' : 'محاسبهٔ ۵۸ ستون حقوق برای دوره و دامنهٔ انتخاب‌شده'"
           class="px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-          <span>⚡</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap"></svg>
           <span>{{ isCalculating ? 'در حال محاسبه حقوق...' : 'محاسبه مکانیزه حقوق' }}</span>
         </button>
 
@@ -374,7 +375,8 @@
               <div class="flex flex-col gap-0.5">
                 <span>{{ item.personnel_name || item.full_name }}</span>
                 <span *ngIf="item.payment_hold" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200 w-fit" [title]="item.payment_hold_reason || 'تعلیق پرداخت تا تمدید اعتبار پرونده'">
-                  ⚠️ منقضی - پرداخت معلق
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" class="text-rose-600 shrink-0"></svg>
+                  <span>منقضی - پرداخت معلق</span>
                 </span>
               </div>
             </td>
@@ -416,7 +418,8 @@
                   [disabled]="isReleasingHold === item.id"
                   class="px-2 py-1 text-amber-700 hover:text-amber-800 hover:bg-amber-50 border border-amber-200/80 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 disabled:opacity-50"
                   title="آزادسازی پرداخت پس از تمدید اعتبار">
-                  <span>⚡ آزادسازی</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap"></svg>
+                  <span>آزادسازی</span>
                 </button>
                 <button
                   *ngIf="!item.payment_hold"
@@ -608,7 +611,7 @@
 
         @if (selectedPayslipRecord.payment_hold) {
           <div class="p-3 bg-amber-50 border border-amber-300 rounded-2xl text-amber-900 flex items-start gap-2 text-xs">
-            <span class="text-base shrink-0">⚠️</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" class="text-rose-600 shrink-0 mt-0.5"></svg>
             <div>
               <div class="font-black text-rose-800">وضعیت پرداخت: منقضی - پرداخت معلق تا تمدید</div>
               <div class="text-[11px] text-amber-800 mt-0.5">{{ selectedPayslipRecord.payment_hold_reason || 'به‌دلیل پایان تاریخ اعتبار پرونده پرسنلی، پرداخت دستمزد این دوره معلق شده است. لطفاً ابتدا تاریخ اعتبار را از طریق درخواست تغییرات تمدید نمایید.' }}</div>
