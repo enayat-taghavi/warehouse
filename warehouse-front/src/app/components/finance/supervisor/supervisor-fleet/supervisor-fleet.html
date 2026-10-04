@@ -29,7 +29,7 @@
             <svg appIcon="truck" class="w-4 h-4"></svg>
             <span>خودروهای جدید</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.newCount > 0 ? 'bg-amber-100 text-amber-800 font-black animate-pulse' : 'bg-surface-alt text-muted'">
+                  [ngClass]="statusCounters.newCount > 0 ? 'bg-amber-100 text-amber-800 font-black animate-pulse' : 'bg-line/70 text-muted'">
               {{ statusCounters.newCount }}
             </span>
           </button>
@@ -42,7 +42,7 @@
             <svg appIcon="clock" class="w-4 h-4"></svg>
             <span>کارکرد ماشین‌آلات</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.workLogsCount > 0 ? 'bg-indigo-100 text-indigo-800 font-black' : 'bg-surface-alt text-muted'">
+                  [ngClass]="statusCounters.workLogsCount > 0 ? 'bg-indigo-100 text-indigo-800 font-black' : 'bg-line/70 text-muted'">
               {{ statusCounters.workLogsCount }}
             </span>
           </button>
@@ -55,7 +55,7 @@
             <svg appIcon="refresh-cw" class="w-4 h-4"></svg>
             <span>درخواست‌های تغییرات</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.changesCount > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-surface-alt text-muted'">
+                  [ngClass]="statusCounters.changesCount > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-line/70 text-muted'">
               {{ statusCounters.changesCount }}
             </span>
           </button>
@@ -67,7 +67,7 @@
             class="px-2.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
             <svg appIcon="folder" class="w-4 h-4"></svg>
             <span>همه ناوگان</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-surface-alt text-muted">
+            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-line/70 text-muted">
               {{ statusCounters.allCount }}
             </span>
           </button>

@@ -2502,7 +2502,8 @@ class VehicleLifecycleTests(TestCase):
                 proposed_changes={"driver_phone": "09129998877"}
             )
             res = self.client.post(f"/api/personnel/vehicle-change-requests/{cr.id}/approve-supervisor/")
-            self.assertEqual(res.status_code, 400, st)
+            self.assertEqual(res.status_code, 409, st)
+            self.assertEqual(res.data.get("code"), "conflict")
             cr.refresh_from_db()
             self.assertEqual(cr.status, st)
             self.assertIsNone(cr.supervisor_reviewed_by_id)

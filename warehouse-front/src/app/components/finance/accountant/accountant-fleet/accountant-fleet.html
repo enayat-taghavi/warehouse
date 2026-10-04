@@ -69,7 +69,7 @@
             <svg appIcon="truck" class="w-4 h-4"></svg>
             <span>خودروها و نرخ کرایه</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.newPending > 0 ? 'bg-amber-100 text-amber-900 font-black animate-pulse' : 'bg-surface-alt text-muted'">
+                  [ngClass]="statusCounters.newPending > 0 ? 'bg-amber-100 text-amber-900 font-black animate-pulse' : 'bg-line/70 text-muted'">
               {{ statusCounters.newPending }}
             </span>
           </button>
@@ -82,7 +82,7 @@
             <svg appIcon="clock" class="w-4 h-4"></svg>
             <span>تسویه‌حساب و کارکرد</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.settlementPending > 0 ? 'bg-indigo-100 text-indigo-800 font-black' : 'bg-surface-alt text-muted'">
+                  [ngClass]="statusCounters.settlementPending > 0 ? 'bg-indigo-100 text-indigo-800 font-black' : 'bg-line/70 text-muted'">
               {{ statusCounters.settlementPending }}
             </span>
           </button>
@@ -95,7 +95,7 @@
             <svg appIcon="refresh-cw" class="w-4 h-4"></svg>
             <span>درخواست‌های تغییرات</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.changesPending > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-surface-alt text-muted'">
+                  [ngClass]="statusCounters.changesPending > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-line/70 text-muted'">
               {{ statusCounters.changesPending }}
             </span>
           </button>
@@ -107,7 +107,7 @@
             class="px-2.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
             <svg appIcon="folder" class="w-4 h-4"></svg>
             <span>همه ناوگان</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-surface-alt text-muted">
+            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-line/70 text-muted">
               {{ statusCounters.allTotal }}
             </span>
           </button>
@@ -461,7 +461,7 @@
               <td class="p-3 font-mono text-[11px]" dir="ltr">{{ s.sheba_number ? ('IR' + s.sheba_number) : (s.account_number || '—') }}</td>
               <td class="p-3">
                 <span class="px-2 py-0.5 rounded text-[11px] font-bold"
-                      [ngClass]="s.is_payable ? 'bg-amber-100 text-amber-800' : 'bg-surface-alt text-muted'">
+                      [ngClass]="s.is_payable ? 'bg-amber-100 text-amber-800' : 'bg-surface-muted text-muted'">
                   {{ s.is_payable ? 'قابل پرداخت' : 'بدون مبلغ (خودرو شرکتی)' }}
                 </span>
               </td>
