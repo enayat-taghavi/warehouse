@@ -46,7 +46,7 @@
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
             <span>همه</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-surface-alt text-fg-muted'">
+                  [ngClass]="statusFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-line/70 text-fg-muted'">
               {{ formatNumber(vehicleMetrics.total) }}
             </span>
           </button>
@@ -58,7 +58,7 @@
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
             <span>پیش‌نویس</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'draft' ? 'bg-indigo-50 text-indigo-700' : 'bg-surface-alt text-fg-muted'">
+                  [ngClass]="statusFilter === 'draft' ? 'bg-indigo-50 text-indigo-700' : 'bg-line/70 text-fg-muted'">
               {{ formatNumber(vehicleMetrics.drafts) }}
             </span>
           </button>
@@ -70,7 +70,7 @@
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
             <span>در انتظار سرپرست</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'pending_supervisor' ? 'bg-indigo-50 text-indigo-700' : 'bg-surface-alt text-fg-muted'">
+                  [ngClass]="statusFilter === 'pending_supervisor' ? 'bg-indigo-50 text-indigo-700' : 'bg-line/70 text-fg-muted'">
               {{ formatNumber(vehicleMetrics.pending) }}
             </span>
           </button>
@@ -93,7 +93,7 @@
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
             <span>مصوب</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-surface-alt text-fg-muted'">
+                  [ngClass]="statusFilter === 'approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-line/70 text-fg-muted'">
               {{ formatNumber(vehicleMetrics.approved) }}
             </span>
           </button>
@@ -105,7 +105,7 @@
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
             <span>رد شده</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-surface-alt text-fg-muted'">
+                  [ngClass]="statusFilter === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-line/70 text-fg-muted'">
               {{ formatNumber(vehicleMetrics.rejected) }}
             </span>
           </button>
@@ -1427,7 +1427,7 @@
             [disabled]="isSaving"
             class="px-4 py-2 rounded-xl bg-surface-muted hover:bg-surface text-fg/80 text-xs font-bold shadow-2xs active:scale-95 cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50"
             title="ذخیره اطلاعات بدون ارسال به کارتابل سرپرست">
-            <span *ngIf="isSaving" class="w-3.5 h-3.5 border-2 border-fg-muted border-t-transparent rounded-full animate-spin"></span>
+            <span *ngIf="isSaving" class="w-3.5 h-3.5 border-2 border-fg/80 border-t-transparent rounded-full animate-spin"></span>
             <span>ذخیره در پیش‌نویس</span>
           </button>
 
@@ -1520,7 +1520,7 @@
         <button
           type="button"
           (click)="closePendingDiffModal()"
-          class="px-4 py-2 rounded-xl bg-surface-alt text-fg/80 text-xs font-bold hover:bg-surface-muted cursor-pointer">
+          class="px-4 py-2 rounded-xl border border-line bg-surface text-fg-muted text-xs font-bold hover:bg-line cursor-pointer transition-colors">
           بستن
         </button>
       </div>
@@ -1571,7 +1571,7 @@
         <div *ngIf="!isLoadingTimeline && timelineLogs.length > 0" class="relative border-r-2 border-indigo-100 pr-4 space-y-4 mr-2">
           <div *ngFor="let log of timelineLogs" class="relative">
             <!-- نقطه شاخص تایملاین -->
-            <span class="absolute -right-[23px] top-1.5 w-3 h-3 rounded-full bg-indigo-600 border-2 border-white shadow-2xs"></span>
+            <span class="absolute -right-[23px] top-1.5 w-3 h-3 rounded-full bg-indigo-600 border-2 border-surface shadow-2xs"></span>
             
             <div class="bg-surface-muted p-3 rounded-2xl border border-line space-y-1">
               <div class="flex items-center justify-between gap-2">
@@ -1602,7 +1602,7 @@
         <button
           type="button"
           (click)="closeTimelineModal()"
-          class="px-4 py-2 rounded-xl bg-surface-alt text-fg/80 text-xs font-bold hover:bg-surface-muted cursor-pointer">
+          class="px-4 py-2 rounded-xl border border-line bg-surface text-fg-muted text-xs font-bold hover:bg-line cursor-pointer transition-colors">
           بستن
         </button>
       </div>
