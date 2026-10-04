@@ -28,7 +28,7 @@
             class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
             <svg appIcon="clock" class="w-3.5 h-3.5"></svg><span>ناوگان در انتظار تایید</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.newPending > 0 ? 'bg-amber-100 text-amber-900 font-black animate-pulse' : 'bg-slate-200/70 text-fg-muted'">
+                  [ngClass]="statusCounters.newPending > 0 ? 'bg-amber-100 text-amber-900 font-black animate-pulse' : 'bg-line/70 text-fg-muted'">
               {{ statusCounters.newPending }}
             </span>
           </button>
@@ -40,7 +40,7 @@
             class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
             <svg appIcon="truck" class="w-3.5 h-3.5"></svg><span>تسویه‌حساب و کارکرد</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.settlementPending > 0 ? 'bg-blue-100 text-blue-800 font-black' : 'bg-slate-200/70 text-fg-muted'">
+                  [ngClass]="statusCounters.settlementPending > 0 ? 'bg-blue-100 text-blue-800 font-black' : 'bg-line/70 text-fg-muted'">
               {{ statusCounters.settlementPending }}
             </span>
           </button>
@@ -52,7 +52,7 @@
             class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer relative">
             <svg appIcon="refresh-cw" class="w-3.5 h-3.5"></svg><span>درخواست‌های تغییرات</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.changesPending > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-slate-200/70 text-fg-muted'">
+                  [ngClass]="statusCounters.changesPending > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-line/70 text-fg-muted'">
               {{ statusCounters.changesPending }}
             </span>
           </button>
@@ -63,7 +63,7 @@
             [ngClass]="activeSubTab === 'all' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
             class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
             <svg appIcon="folder" class="w-3.5 h-3.5"></svg><span>همه ناوگان فعال</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-slate-200/70 text-fg-muted">
+            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-line/70 text-fg-muted">
               {{ statusCounters.allTotal }}
             </span>
           </button>
