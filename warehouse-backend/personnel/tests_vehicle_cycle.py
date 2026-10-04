@@ -1839,5 +1839,131 @@ class VehicleLifecycleTests(TestCase):
         v_approved.refresh_from_db()
         self.assertEqual(v_approved.default_service_rate, Decimal('5000000')) # نرخ دست‌نخورده
 
+    def test_excel_import_update_draft_vehicle_audit_log_and_tenant_isolation(self):
+        """
+        تست ن-۸، ن-۱۷ و ن-۵: درون‌ریزی اکسل برای به‌روزرسانی پیش‌نویس، ثبت diff در لاگ ممیزی و تفکیک قلمرو شرکت
+        """
+        import io
+        import openpyxl
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from personnel.models import WorkflowAuditLog, Company
+        from personnel.fleet_lifecycle_services import normalize_plate
+
+        norm_p1 = normalize_plate("55ج666ایران77")
+        norm_p2 = normalize_plate("88س999ایران11")
+
+        # خودروی پیش‌نویس در شرکت فعلی با شماره پلاک نرمال‌شده
+        v = VehicleDriverProfile.objects.create(
+            company=self.company,
+            section=self.section_a,
+            plate_number=norm_p1,
+            vehicle_type="nissan",
+            ownership_type="contract",
+            driver_name="راننده اولیه",
+            driver_national_code="0010376488",
+            driver_phone="09121112233",
+            approval_status="draft"
+        )
+
+        # خودرویی با پلاک دیگر در شرکت مجزا
+        other_co = Company.objects.create(code="CO-OTHER-TEST", name="شرکت دیگر")
+        VehicleDriverProfile.objects.create(
+            company=other_co,
+            plate_number=norm_p2,
+            vehicle_type="nissan",
+            ownership_type="contract",
+            driver_name="راننده شرکت دیگر",
+            driver_national_code="0010376488",
+            approval_status="approved"
+        )
+
+        # ساخت شیت اکسل
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Fleet"
+        ws.append(["ردیف", "شماره پلاک", "نام راننده", "کد ملی", "موبایل", "نوع خودرو", "مالکیت", "نرخ", "شبا", "بانک", "حساب"])
+        ws.append(["row", "plate_number", "driver_name", "driver_national_code", "driver_phone", "vehicle_type", "ownership_type", "default_service_rate", "sheba_number", "bank_name", "account_number"])
+        ws.append([1, "55ج666ایران77", "راننده به‌روز شده", "0010376488", "09129998877", "نیسان", "استیجاری", 4000000, "", "", ""])
+        ws.append([2, "88س999ایران11", "راننده جدید شرکت خودمان", "0010376488", "09123334455", "نیسان", "استیجاری", 5000000, "", "", ""])
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        excel_file = SimpleUploadedFile("vehicles.xlsx", buf.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+        self.client.force_authenticate(user=self.manager)
+        res = self.client.post(
+            "/api/personnel/vehicles/import-excel/",
+            {
+                "file": excel_file,
+                "section_id": self.section_a.id,
+                "company_id": self.company.id,
+                "update_existing": "true",
+            },
+            format="multipart"
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.data.get("success"))
+        self.assertEqual(res.data["summary"]["updated"], 1)
+        self.assertEqual(res.data["summary"]["created"], 1)
+
+        # ۱. بررسی به‌روزرسانی موفق خودروی پیش‌نویس بدون خطای ۵۰۰
+        v.refresh_from_db()
+        self.assertEqual(v.driver_name, "راننده به‌روز شده")
+        self.assertEqual(v.driver_phone, "09129998877")
+
+        # ۲. بررسی ایجاد لاگ ممیزی و وجود diff در metadata
+        log = WorkflowAuditLog.objects.filter(content_type="vehicle", object_id=v.id, action="import_update").last()
+        self.assertIsNotNone(log)
+        self.assertIn("diff", log.metadata)
+        self.assertIn("driver_name", log.metadata["diff"])
+        self.assertEqual(log.metadata["diff"]["driver_name"]["old"], "راننده اولیه")
+        self.assertEqual(log.metadata["diff"]["driver_name"]["new"], "راننده به‌روز شده")
+
+        # ۳. بررسی تفکیک قلمرو شرکت (ثبت موفق پلاک مشابه شرکت دیگر در شرکت خودمان)
+        new_v = VehicleDriverProfile.objects.filter(company=self.company, plate_number=norm_p2).first()
+        self.assertIsNotNone(new_v)
+        self.assertEqual(new_v.driver_name, "راننده جدید شرکت خودمان")
+
+    def test_change_request_workflow_notifications(self):
+        """
+        تست ن-۱۰ و ن-۱۷: ارسال اعلان‌های مراحل میانی درخواست تغییرات به سرپرست، حسابدار و مدیر
+        """
+        from notifications.models import Notification
+        from personnel.fleet_lifecycle_services import dispatch_vehicle_workflow_notification
+
+        v_app = VehicleDriverProfile.objects.create(
+            plate_number="33ب444ایران55",
+            vehicle_type="nissan",
+            driver_name="راننده تست اعلان",
+            company=self.company,
+            section=self.section_a,
+            approval_status="approved",
+            is_active=True
+        )
+
+        # ۱. ثبت درخواست تغییرات -> ارسال اعلان به سرپرست کارگاه
+        Notification.objects.all().delete()
+        with self.captureOnCommitCallbacks(execute=True):
+            dispatch_vehicle_workflow_notification(v_app, stage="change_request_created", actor=self.operator)
+        sup_notifs = Notification.objects.filter(recipient=self.supervisor, notification_type="fleet_change_request")
+        self.assertTrue(sup_notifs.exists())
+        # کاربر ایجادکننده نباید اعلان دریافت کند
+        self.assertFalse(Notification.objects.filter(recipient=self.operator).exists())
+
+        # ۲. تایید سرپرست کارگاه -> ارسال اعلان به حسابدار مالی
+        Notification.objects.all().delete()
+        with self.captureOnCommitCallbacks(execute=True):
+            dispatch_vehicle_workflow_notification(v_app, stage="change_request_supervisor_approved", actor=self.supervisor)
+        acc_notifs = Notification.objects.filter(recipient=self.accountant, notification_type="fleet_change_request")
+        self.assertTrue(acc_notifs.exists())
+
+        # ۳. تایید حسابدار مالی -> ارسال اعلان به مدیر
+        Notification.objects.all().delete()
+        with self.captureOnCommitCallbacks(execute=True):
+            dispatch_vehicle_workflow_notification(v_app, stage="change_request_finance_approved", actor=self.accountant)
+        mgr_notifs = Notification.objects.filter(recipient=self.manager, notification_type="fleet_change_request")
+        self.assertTrue(mgr_notifs.exists())
+
 
 
