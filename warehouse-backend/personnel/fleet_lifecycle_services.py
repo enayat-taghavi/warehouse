@@ -67,6 +67,9 @@ FLEET_WORKFLOW_STAGE_PERMS = {
     'pending_supervisor': ('perm_approve_fleet_supervisor', 'can_act_as_workshop_supervisor'),
     'pending_accountant': ('perm_approve_fleet_finance',),
     'pending_manager': ('perm_approve_fleet_manager', 'can_act_as_manager', 'can_act_as_company_manager'),
+    'change_request_created': ('perm_approve_fleet_supervisor', 'can_act_as_workshop_supervisor'),
+    'change_request_supervisor_approved': ('perm_approve_fleet_finance',),
+    'change_request_finance_approved': ('perm_approve_fleet_manager', 'can_act_as_manager', 'can_act_as_company_manager'),
 }
 
 FLEET_RATE_FIELDS = ('default_service_rate',)

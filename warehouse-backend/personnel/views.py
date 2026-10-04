@@ -4077,13 +4077,13 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                 })
                 continue
 
-            # تسک ۱۱.۸ و ط-۵: سنجش پلاک در کل سیستم در برابر قلمرو مجاز
-            existing_global = VehicleDriverProfile.objects.filter(plate_number=plate).first()
-            if existing_global and not scoped_vehicles_qs.filter(id=existing_global.id).exists():
+            # سنجش پلاک درون شرکت جاری و قلمرو مجاز (یکتایی پلاک به‌ازای شرکت)
+            existing_in_company = VehicleDriverProfile.objects.filter(company_id=import_company_id, plate_number=plate).first() if import_company_id else None
+            if existing_in_company and not scoped_vehicles_qs.filter(id=existing_in_company.id).exists():
                 errors.append({
                     'row': row_idx,
                     'field': 'شماره پلاک',
-                    'message': f'شماره پلاک «{plate}» قبلاً در سیستم برای شرکت یا حوزه‌ای دیگر ثبت شده و شما دسترسی ویرایش آن را ندارید.'
+                    'message': f'شماره پلاک «{plate}» در این شرکت ثبت شده و شما دسترسی ویرایش آن را ندارید.'
                 })
                 continue
 
@@ -4218,7 +4218,12 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                                     )
 
                             new_snap = build_vehicle_snapshot(existing)
-                            diff = compute_profile_diff(old_snap, new_snap)
+                            diff = {}
+                            for k, new_val in new_snap.items():
+                                old_val = old_snap.get(k)
+                                if old_val != new_val:
+                                    diff[k] = {'old': old_val, 'new': new_val}
+
                             WorkflowAuditLog.objects.create(
                                 content_type='vehicle',
                                 object_id=existing.id,
@@ -4227,8 +4232,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                                 to_status=existing.approval_status,
                                 action='import_update',
                                 reason=f'به‌روزرسانی مشخصات خودرو از طریق فایل اکسل (ردیف {item["row_idx"]})',
-                                diff=diff,
-                                metadata={'company_id': existing.company_id, 'row': item['row_idx']}
+                                metadata={'company_id': existing.company_id, 'row': item['row_idx'], 'diff': diff}
                             )
                             updated_count += 1
                         else:

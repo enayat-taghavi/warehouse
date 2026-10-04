@@ -972,7 +972,7 @@ def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id, p
     candidate_ids = set(users.values_list('id', flat=True).distinct())
 
     # سرپرست: اگر کاربر به بخشی منتسب است، فقط سرپرستِ همان بخشِ پرونده اعلان می‌گیرد
-    if stage == 'pending_supervisor' and section_id and candidate_ids:
+    if stage in ('pending_supervisor', 'change_request_created') and section_id and candidate_ids:
         from personnel.models import UserSectionAssignment
         superuser_ids = set(User.objects.filter(id__in=candidate_ids, is_superuser=True).values_list('id', flat=True))
         assigned = UserSectionAssignment.objects.filter(user_id__in=candidate_ids, is_active=True)
