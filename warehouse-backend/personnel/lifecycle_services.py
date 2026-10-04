@@ -51,6 +51,8 @@ def parse_shamsi_date(value):
     raw = normalize_digits(str(value)).strip().replace('-', '/')
     if not raw:
         return None
+    if len(raw) == 8 and raw.isdigit() and '/' not in raw:
+        raw = f"{raw[:4]}/{raw[4:6]}/{raw[6:8]}"
     parts = raw.split('/')
     if len(parts) != 3 or not all(p.isdigit() for p in parts) or len(parts[0]) != 4:
         return None

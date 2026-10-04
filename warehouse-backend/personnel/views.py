@@ -3126,9 +3126,15 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
             from .fleet_lifecycle_services import normalize_shamsi_date
             title = (request.data.get('title') or '').strip() or None
             raw_issue_date = (request.data.get('issue_date') or '').strip()
-            issue_date = normalize_shamsi_date(raw_issue_date) if raw_issue_date else None
+            try:
+                issue_date = normalize_shamsi_date(raw_issue_date) if raw_issue_date else None
+            except ValueError as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
             raw_expiry_date = (request.data.get('expiry_date') or '').strip()
-            expiry_date = normalize_shamsi_date(raw_expiry_date) if raw_expiry_date else None
+            try:
+                expiry_date = normalize_shamsi_date(raw_expiry_date) if raw_expiry_date else None
+            except ValueError as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
             with transaction.atomic():
                 doc = VehicleDocument.objects.create(
@@ -4068,17 +4074,30 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                 })
                 continue
 
+            # سنجش پلاک درون شرکت جاری و قلمرو مجاز (یکتایی پلاک به‌ازای شرکت)
+            existing_in_company = VehicleDriverProfile.objects.filter(company_id=import_company_id, plate_number=plate).first() if import_company_id else None
+            if not existing_in_company and plate_raw:
+                existing_in_company = VehicleDriverProfile.objects.filter(company_id=import_company_id, plate_number=str(plate_raw).strip()).first() if import_company_id else None
+
+            # اگر خودروی موجود در وضعیت قفل (مصوب، در انتظار و ...) باشد، اکسل مجاز به تغییر آن نیست
+            # طبق مصوبه ط-۴: این رکوردها نباید کل ایمپورت را با خطای ۴۰۰ متوقف کنند، بلکه با هشدار کنار گذاشته می‌شوند
+            if existing_in_company and existing_in_company.approval_status not in ['draft', 'revision_required']:
+                skipped_count += 1
+                status_lbl = existing_in_company.get_approval_status_display() if hasattr(existing_in_company, 'get_approval_status_display') else existing_in_company.approval_status
+                warnings.append(
+                    f'ردیف {row_idx}: خودروی پلاک «{plate_raw}» در وضعیت «{status_lbl}» قرار دارد و تغییر آن از طریق اکسل مجاز نیست (نادیده گرفته شد).'
+                )
+                continue
+
             from .fleet_lifecycle_services import is_valid_national_plate, ROAD_VEHICLE_TYPES
             if vehicle_type in ROAD_VEHICLE_TYPES and not is_valid_national_plate(plate):
                 errors.append({
                     'row': row_idx,
                     'field': 'شماره پلاک',
-                    'message': f'شماره پلاک «{plate_raw}» منطبق بر الگوی استاندارد پلاک ملی ایران نیست (مثال: ۱۲ب۳۴۵ایران۶۷).'
+                    'message': f'شماره پلاک «{plate_raw}» منطبق بر الگوی استاندارد پلاک ملی ایران نیست (مثال: ۱۲ب۳۴۵ایران۶۷ یا ۱۲-ب-۳۴۵-۶۷).'
                 })
                 continue
 
-            # سنجش پلاک درون شرکت جاری و قلمرو مجاز (یکتایی پلاک به‌ازای شرکت)
-            existing_in_company = VehicleDriverProfile.objects.filter(company_id=import_company_id, plate_number=plate).first() if import_company_id else None
             if existing_in_company and not scoped_vehicles_qs.filter(id=existing_in_company.id).exists():
                 errors.append({
                     'row': row_idx,
@@ -4749,13 +4768,7 @@ class VehicleChangeRequestViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("شما دسترسی بررسی مرحله اول (سرپرست) درخواست تغییرات ناوگان را ندارید.")
         
         target = self.get_object()
-        # تسک ۱۱.۵ و ن-۵: فقط وضعیت pending_supervisor مورد تایید سرپرست است
-        if target.status != 'pending_supervisor':
-            return Response(
-                {'error': f'درخواست در وضعیت «{target.get_status_display()}» قابل تایید سرپرست نیست و فقط در وضعیت «در انتظار بررسی سرپرست» پذیرفته می‌شود.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
+        # تسک ۱۱.۵ و ن-۵: فقط وضعیت pending_supervisor مورد تایید سرپرست است و تغییر وضعیت ۴۰۹ می‌گیرد
         with transaction.atomic():
             cr = VehicleChangeRequest.objects.select_for_update().get(pk=target.pk)
             if cr.status != 'pending_supervisor':

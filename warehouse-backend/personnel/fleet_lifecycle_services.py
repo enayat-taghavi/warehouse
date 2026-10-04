@@ -24,19 +24,17 @@ logger = logging.getLogger(__name__)
 def is_valid_national_plate(plate_str) -> bool:
     """
     تسک ۱۱.۴ و ن-۴: اعتبارسنجی انطباق ساختار پلاک ملی ایران برای خودروهای جاده‌ای (ROAD_VEHICLE_TYPES).
-    قالب: ۲ رقم، ۱ حرف فارسی، ۳ رقم، ایران، ۲ رقم (کد شهر/منطقه).
-    مثال: 12 ب 345 ایران 67 یا 12-ب-345-67
+    قالب: ۲ رقم، ۱ حرف فارسی (یا الف)، ۳ رقم، ایران، ۲ رقم (کد شهر/منطقه).
+    مثال: 12 ب 345 ایران 67 یا 12-ب-345-67 یا 12الف345ایران67
     """
     if not plate_str:
         return False
     norm = normalize_digits(str(plate_str)).strip()
-    match = re.match(r'^(\d{2})\s*([^\d\s\W_]+|الف)\s*(\d{3})\s*(?:ایران|-)?\s*(\d{2})$', norm)
+    match = re.match(r'^(\d{2})[-_\s]*(الف|[\u0600-\u06FF])[-_\s]*(\d{3})[-_\s]*(?:ایران|-)?[-_\s]*(\d{2})$', norm)
     if not match:
         return False
     p1, letter, p3, p4 = match.groups()
     if p1 == '00' or p3 == '000' or p4 == '00':
-        return False
-    if not re.search(r'[\u0600-\u06FF]', letter):
         return False
     return True
 
@@ -45,10 +43,10 @@ def normalize_plate(plate_str):
     if not plate_str:
         return ''
     norm = normalize_digits(str(plate_str)).strip()
-    match = re.match(r'^(\d{2})\s*([^\d\s\W_]+|الف)\s*(\d{3})\s*(?:ایران|-)?\s*(\d{2})$', norm)
+    match = re.match(r'^(\d{2})[-_\s]*(الف|[\u0600-\u06FF])[-_\s]*(\d{3})[-_\s]*(?:ایران|-)?[-_\s]*(\d{2})$', norm)
     if match:
-        p1, p2, p3, p4 = match.groups()
-        return f"{p1} {p2} {p3} ایران {p4}"
+        p1, letter, p3, p4 = match.groups()
+        return f"{p1} {letter} {p3} ایران {p4}"
     return re.sub(r'\s+', ' ', norm).strip()
 
 ROAD_VEHICLE_TYPES = ('pickup', 'nissan', 'khavar', 'sedan', 'truck', 'trailer')

@@ -64,10 +64,10 @@ def normalize_plate(plate_str):
     if not plate_str:
         return ''
     norm = normalize_digits(str(plate_str)).strip()
-    match = re.match(r'^(\d{2})\s*([^\d\s]+)\s*(\d{3})\s*(?:ایران|-)?\s*(\d{2})$', norm)
+    match = re.match(r'^(\d{2})[-_\s]*(الف|[\u0600-\u06FF])[-_\s]*(\d{3})[-_\s]*(?:ایران|-)?[-_\s]*(\d{2})$', norm)
     if match:
-        p1, p2, p3, p4 = match.groups()
-        return f"{p1} {p2} {p3} ایران {p4}"
+        p1, letter, p3, p4 = match.groups()
+        return f"{p1} {letter} {p3} ایران {p4}"
     return re.sub(r'\s+', ' ', norm).strip()
 
 
