@@ -1965,5 +1965,286 @@ class VehicleLifecycleTests(TestCase):
         mgr_notifs = Notification.objects.filter(recipient=self.manager, notification_type="fleet_change_request")
         self.assertTrue(mgr_notifs.exists())
 
+    def test_n1_rejected_status_locked_against_patch_and_reopen(self):
+        """
+        تست ن-۱ و تسک ۱۱.۱: قفل پرونده rejected در برابر PATCH و بازگشایی انحصاری با reopen
+        """
+        v = VehicleDriverProfile.objects.create(
+            plate_number="11الف111ایران11",
+            vehicle_type="nissan",
+            driver_name="راننده رد شده",
+            company=self.company,
+            section=self.section_a,
+            approval_status="rejected",
+            rejection_reason="عدم انطباق مدارک",
+            is_active=True
+        )
+        self.client.force_authenticate(user=self.operator)
+
+        # ۱. تلاش برای ویرایش مستقیم با PATCH باید با ۴۰۰ و reopen_required مسدود شود
+        res_patch = self.client.patch(
+            f"/api/personnel/vehicles/{v.id}/",
+            {"driver_name": "نام تغییر یافته"},
+            format="json"
+        )
+        self.assertEqual(res_patch.status_code, 400)
+        self.assertEqual(res_patch.data.get("code"), "reopen_required")
+
+        # ۲. تلاش برای ارسال مستقیم به سرپرست نیز باید با ۴۰۰ مسدود شود
+        res_submit = self.client.patch(
+            f"/api/personnel/vehicles/{v.id}/",
+            {"approval_status": "pending_supervisor"},
+            format="json"
+        )
+        self.assertEqual(res_submit.status_code, 400)
+
+        # ۳. بازگشایی پرونده با اکشن اختصاصی reopen
+        res_reopen = self.client.post(f"/api/personnel/vehicles/{v.id}/reopen/", {"reason": "اصلاح مدارک"}, format="json")
+        self.assertEqual(res_reopen.status_code, 200)
+        v.refresh_from_db()
+        self.assertEqual(v.approval_status, "draft")
+
+        # ۴. اکنون ویرایش با PATCH مجاز است
+        res_patch_ok = self.client.patch(
+            f"/api/personnel/vehicles/{v.id}/",
+            {"driver_name": "نام اصلاح شده"},
+            format="json"
+        )
+        self.assertEqual(res_patch_ok.status_code, 200)
+        v.refresh_from_db()
+        self.assertEqual(v.driver_name, "نام اصلاح شده")
+
+    def test_n4_national_plate_validation_and_normalization(self):
+        """
+        تست ن-۴ و تسک ۱۱.۴: اعتبارسنجی رگکس پلاک ملی (پذیرش فرمت با دش و رد کلمات کامل به جای حرف)
+        """
+        from personnel.fleet_lifecycle_services import is_valid_national_plate, normalize_plate
+
+        # ۱. فرمت‌های معتبر با خط فاصله
+        self.assertTrue(is_valid_national_plate("12-ب-345-67"))
+        self.assertTrue(is_valid_national_plate("12-ب-345-ایران-67"))
+        self.assertTrue(is_valid_national_plate("12ب345ایران67"))
+        self.assertTrue(is_valid_national_plate("12 الف 345 - 67"))
+
+        # بررسی نرمال‌سازی
+        self.assertEqual(normalize_plate("12-ب-345-67"), "12 ب 345 ایران 67")
+        self.assertEqual(normalize_plate("12-الف-345-ایران-67"), "12 الف 345 ایران 67")
+
+        # ۲. فرمت‌های نامعتبر: کلمات کامل به جای یک حرف (مانند «ایران» یا «تهران» در بخش حرف)
+        self.assertFalse(is_valid_national_plate("12 ایران 345 67"))
+        self.assertFalse(is_valid_national_plate("12تهران34567"))
+        self.assertFalse(is_valid_national_plate("1234567"))
+
+        # ۳. اعتبارسنجی در سطح API سریالایزر
+        self.client.force_authenticate(user=self.operator)
+        valid_sheba = generate_sheba_from_account("بانک صادرات ایران", "0201234567001")
+        # تلاش با پلاک نامعتبر (کلمه به جای حرف)
+        res_invalid = self.client.post("/api/personnel/vehicles/", {
+            "plate_number": "12 ایران 345 67",
+            "vehicle_type": "nissan",
+            "driver_name": "تست پلاک",
+            "section": self.section_a.id,
+            "bank_name": "بانک صادرات ایران",
+            "sheba_number": valid_sheba,
+        }, format="json")
+        self.assertEqual(res_invalid.status_code, 400)
+        self.assertIn("plate_number", res_invalid.data)
+
+        # ارسال با فرمت دش معتبر
+        res_valid = self.client.post("/api/personnel/vehicles/", {
+            "plate_number": "78-ج-901-23",
+            "vehicle_type": "nissan",
+            "driver_name": "تست پلاک معتبر",
+            "section": self.section_a.id,
+            "bank_name": "بانک صادرات ایران",
+            "sheba_number": valid_sheba,
+        }, format="json")
+        self.assertEqual(res_valid.status_code, 201)
+        self.assertEqual(res_valid.data["plate_number"], "78 ج 901 ایران 23")
+
+    def test_n5_change_request_concurrent_conflict_409_and_supervisor_whitelist(self):
+        """
+        تست ن-۵ و تسک ۱۱.۵: خطای ۴۰۹ در صورت تغییر هم‌زمان وضعیت درخواست تغییرات و کنترل تایید سرپرست
+        """
+        v_app = VehicleDriverProfile.objects.create(
+            plate_number="55ج666ایران77",
+            vehicle_type="nissan",
+            driver_name="راننده مصوب",
+            company=self.company,
+            section=self.section_a,
+            approval_status="approved",
+            is_active=True
+        )
+        cr = VehicleChangeRequest.objects.create(
+            vehicle=v_app,
+            requested_by=self.operator,
+            proposed_changes={"driver_phone": "09121112233"},
+            previous_values={"driver_phone": ""},
+            status="pending_supervisor"
+        )
+
+        self.client.force_authenticate(user=self.supervisor)
+
+        # اگر وضعیت قبل از تایید به دلیل کنش موازی تغییر کند (مثلاً لغو توسط کاربر)
+        cr_concurrent = VehicleChangeRequest.objects.get(pk=cr.pk)
+        cr_concurrent.status = "cancelled"
+        cr_concurrent.save(update_fields=["status"])
+
+        res_conflict = self.client.post(f"/api/personnel/vehicle-change-requests/{cr.id}/approve-supervisor/")
+        self.assertEqual(res_conflict.status_code, 409)
+        self.assertEqual(res_conflict.data.get("code"), "conflict")
+
+        # اکنون با بازگرداندن وضعیت به pending_supervisor، تایید سرپرست با موفقیت انجام می‌شود
+        cr_concurrent.status = "pending_supervisor"
+        cr_concurrent.save(update_fields=["status"])
+        res_ok = self.client.post(f"/api/personnel/vehicle-change-requests/{cr.id}/approve-supervisor/")
+        self.assertEqual(res_ok.status_code, 200)
+        cr.refresh_from_db()
+        self.assertEqual(cr.status, "pending_accountant")
+        self.assertEqual(cr.supervisor_reviewed_by, self.supervisor)
+
+    def test_n6_end_collaboration_invariants(self):
+        """
+        تست ن-۶ و تسک ۱۱.۶: قطع همکاری خودرو، الزامات تاریخ، اعتبارسنجی نسبت به آخرین تردد و ممانعت از تکرار (۴۰۹)
+        """
+        v = VehicleDriverProfile.objects.create(
+            plate_number="88د999ایران00",
+            vehicle_type="nissan",
+            driver_name="راننده فعال",
+            company=self.company,
+            section=self.section_a,
+            approval_status="approved",
+            is_active=True
+        )
+        # ثبت یک تردد در تاریخ 1404/05/15
+        VehicleTripLog.objects.create(
+            vehicle=v,
+            date_shamsi="1404/05/15",
+            trip_count=2,
+            is_deleted=False
+        )
+
+        self.client.force_authenticate(user=self.manager)
+
+        # ۱. بدون تاریخ پایان همکاری -> ۴۰۰
+        res_no_date = self.client.post(f"/api/personnel/vehicles/{v.id}/end-collaboration/", {"reason": "تسویه"}, format="json")
+        self.assertEqual(res_no_date.status_code, 400)
+
+        # ۲. تاریخ پایان قبل از آخرین تردد (1404/05/10 < 1404/05/15) -> ۴۰۰
+        res_before_trip = self.client.post(f"/api/personnel/vehicles/{v.id}/end-collaboration/", {
+            "end_date": "1404/05/10",
+            "reason": "تسویه حساب"
+        }, format="json")
+        self.assertEqual(res_before_trip.status_code, 400)
+        self.assertIn("قبل از تاریخ آخرین تردد", res_before_trip.data.get("error", ""))
+
+        # ۳. تاریخ پایان معتبر (1404/05/20) -> موفقیت ۲۰۰
+        res_success = self.client.post(f"/api/personnel/vehicles/{v.id}/end-collaboration/", {
+            "end_date": "1404/05/20",
+            "reason": "اتمام قرارداد پروژه"
+        }, format="json")
+        self.assertEqual(res_success.status_code, 200)
+        v.refresh_from_db()
+        self.assertFalse(v.is_active)
+        self.assertEqual(v.end_date, "1404/05/20")
+
+        # ۴. تلاش مجدد برای قطع همکاری خودرویی که همکاری‌اش پایان یافته -> ۴۰۹ conflict
+        res_repeat = self.client.post(f"/api/personnel/vehicles/{v.id}/end-collaboration/", {
+            "end_date": "1404/06/01",
+            "reason": "تکرار"
+        }, format="json")
+        self.assertEqual(res_repeat.status_code, 409)
+        self.assertEqual(res_repeat.data.get("code"), "already_ended")
+
+    def test_n7_reject_purge_vs_archived_rejection(self):
+        """
+        تست ن-۷ و تسک ۱۱.۷: رفتار reject و تفکیک purge (حذف سخت بدون سابقه) از بایگانی با وضعیت rejected
+        """
+        self.client.force_authenticate(user=self.supervisor)
+
+        # ۱. پرونده هرگز مصوب نشده و بدون سابقه در وضعیت pending_supervisor -> پاک‌سازی کامل (purge)
+        v_clean = VehicleDriverProfile.objects.create(
+            plate_number="21ط321ایران45",
+            vehicle_type="nissan",
+            driver_name="راننده بدون سابقه",
+            company=self.company,
+            section=self.section_a,
+            approval_status="pending_supervisor",
+            is_active=True
+        )
+        clean_id = v_clean.id
+        res_purge = self.client.post(f"/api/personnel/vehicles/{clean_id}/reject/", {"reason": "عدم نیاز کارگاه"}, format="json")
+        self.assertEqual(res_purge.status_code, 200)
+        self.assertTrue(res_purge.data.get("purged"))
+        self.assertFalse(VehicleDriverProfile.objects.filter(id=clean_id).exists())
+
+        # ۲. پرونده دارای سابقه (تردد) -> حفظ رکورد و تبدیل وضعیت به rejected
+        v_history = VehicleDriverProfile.objects.create(
+            plate_number="22ط322ایران45",
+            vehicle_type="nissan",
+            driver_name="راننده دارای تردد",
+            company=self.company,
+            section=self.section_a,
+            approval_status="pending_supervisor",
+            is_active=True
+        )
+        VehicleTripLog.objects.create(
+            vehicle=v_history,
+            date_shamsi="1404/06/01",
+            trip_count=1,
+            is_deleted=False
+        )
+        hist_id = v_history.id
+        res_reject = self.client.post(f"/api/personnel/vehicles/{hist_id}/reject/", {"reason": "تخلف راننده"}, format="json")
+        self.assertEqual(res_reject.status_code, 200)
+        self.assertFalse(res_reject.data.get("purged"))
+        v_history.refresh_from_db()
+        self.assertEqual(v_history.approval_status, "rejected")
+        self.assertEqual(v_history.rejection_reason, "تخلف راننده")
+
+    def test_n9_document_upload_normalization_and_audit_without_status_guard(self):
+        """
+        تست ن-۹ و تسک ۱۱.۹: بارگذاری مدارک بدون گارد وضعیت، نرمال‌سازی تاریخ‌های نامنفصل و ثبت لاگ ممیزی
+        """
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from personnel.models import WorkflowAuditLog
+
+        v = VehicleDriverProfile.objects.create(
+            plate_number="33ی444ایران55",
+            vehicle_type="nissan",
+            driver_name="راننده تست مدارک",
+            company=self.company,
+            section=self.section_a,
+            approval_status="approved",
+            is_active=True
+        )
+        self.client.force_authenticate(user=self.operator)
+
+        dummy_file = SimpleUploadedFile("insurance.pdf", b"%PDF-1.4 test document content", content_type="application/pdf")
+        # ارسال تاریخ ۸ رقمی بدون خط مورب جهت سنجش نرمال‌سازی
+        res_doc = self.client.post(
+            f"/api/personnel/vehicles/{v.id}/documents/",
+            {
+                "file": dummy_file,
+                "doc_type": "insurance",
+                "title": "بیمه‌نامه شخص ثالث",
+                "issue_date": "14040101",
+                "expiry_date": "14050101",
+                "note": "پیوست بیمه‌نامه جدید"
+            },
+            format="multipart"
+        )
+        self.assertEqual(res_doc.status_code, 201)
+        self.assertEqual(res_doc.data["issue_date"], "1404/01/01")
+        self.assertEqual(res_doc.data["expiry_date"], "1405/01/01")
+
+        # بررسی لاگ ممیزی
+        audit = WorkflowAuditLog.objects.filter(content_type="vehicle", object_id=v.id, action="document_uploaded").last()
+        self.assertIsNotNone(audit)
+        self.assertIn("document", audit.metadata)
+        self.assertEqual(audit.metadata["document"]["doc_type"], "insurance")
+        self.assertEqual(audit.metadata["document"]["expiry_date"], "1405/01/01")
+
+
 
 

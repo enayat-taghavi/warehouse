@@ -83,7 +83,7 @@ class RoleBasedCartablesTestCase(TestCase):
             driver_name='حسن مرادی',
             driver_national_code='0010376488',
             driver_phone='09121234567',
-            plate_number='33-888-11',
+            plate_number='33ب888ایران11',
             insurance_expiry_date='1406/01/01',
             bank_name='بانک ملی ایران',
             sheba_number=valid_sheba,
