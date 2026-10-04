@@ -572,7 +572,7 @@
   </div>
 
   <!-- ── تسک ۹.۲ و ۹.۳: مودال تنظیم نرخ کرایه و شبا ناوگان + شاخص هم‌تیپ‌ها ── -->
-  <div *ngIf="isVehicleModalOpen && editingVehicle" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+  <div *ngIf="isVehicleModalOpen && editingVehicle" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
     <div class="bg-surface w-full max-w-lg rounded-3xl shadow-2xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       
       <div class="p-4 bg-surface-alt border-b border-line flex items-center justify-between">
@@ -651,7 +651,7 @@
                 (click)="copyToClipboard(editingVehicle.account_number || '', editingVehicle.id)"
                 title="کپی شماره حساب"
                 aria-label="کپی شماره حساب"
-                class="px-2.5 py-1.5 bg-surface-alt hover:bg-slate-200 border border-line rounded-xl text-muted hover:text-fg text-xs cursor-pointer flex items-center justify-center">
+                class="px-2.5 py-1.5 bg-surface-alt hover:bg-surface-muted border border-line rounded-xl text-muted hover:text-fg text-xs cursor-pointer flex items-center justify-center">
                 <svg appIcon="copy" class="w-3.5 h-3.5"></svg>
               </button>
               <button
@@ -783,7 +783,7 @@
   </div>
 
   <!-- ── تسک ۹.۵: مودال ثبت علت رد یا عودت با انتخاب مقصد عودت ── -->
-  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
     <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 border-b flex items-center justify-between"
            [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-50 text-amber-900 border-amber-100' : 'bg-rose-50 text-rose-900 border-rose-100'">
@@ -849,7 +849,7 @@
   </div>
 
   <!-- ── تسک ۹.۶: مودال تایید گروهی حسابدار ── -->
-  <div *ngIf="isBatchApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+  <div *ngIf="isBatchApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
     <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-950">تایید مالی گروهی {{ selectedVehicleIds.size }} خودرو</h3>
@@ -887,7 +887,7 @@
   </div>
 
   <!-- ── مودال مقایسه تفاوت‌ها (Diff Viewer) ── -->
-  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
     <div class="bg-surface w-full max-w-2xl rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50/80 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-900">
@@ -924,7 +924,7 @@
         <button
           type="button"
           (click)="closeDiffModal()"
-          class="px-4 py-1.5 rounded-xl bg-surface hover:bg-slate-200 text-fg text-xs font-bold border border-line cursor-pointer">
+          class="px-4 py-1.5 rounded-xl bg-surface hover:bg-surface-muted text-fg text-xs font-bold border border-line cursor-pointer">
           بستن پنجره
         </button>
         @if (selectedDiffCR?.id) {
@@ -943,7 +943,7 @@
   <!-- ── مودال تایید مالی با یادداشت اختیاری ── -->
   @if (isApprovalModalOpen && approvalTarget) {
     <div class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5" role="dialog" aria-modal="true" aria-labelledby="acc-fleet-approve-title">
-      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" (click)="closeApprovalModal()"></div>
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" (click)="closeApprovalModal()"></div>
       <div id="acc-fleet-approve-dialog" class="relative bg-surface rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col modal-enter p-5 gap-4">
         <div class="flex items-center justify-between border-b border-line pb-3">
           <h3 id="acc-fleet-approve-title" class="text-sm font-black text-fg">
@@ -963,7 +963,7 @@
           class="w-full bg-surface-alt border border-line rounded-xl p-3 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 text-fg"
           placeholder="یادداشت نرخ کرایه، حساب مقصد یا تسویه..."></textarea>
         <div class="flex items-center justify-end gap-2">
-          <button type="button" (click)="closeApprovalModal()" class="px-4 py-2 bg-surface hover:bg-slate-200 text-fg text-xs font-bold rounded-xl border border-line cursor-pointer">انصراف</button>
+          <button type="button" (click)="closeApprovalModal()" class="px-4 py-2 bg-surface hover:bg-surface-muted text-fg text-xs font-bold rounded-xl border border-line cursor-pointer">انصراف</button>
           <button type="button" (click)="confirmApproval()" [disabled]="isApproving" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5">
             <svg *ngIf="!isApproving" appIcon="check" class="w-4 h-4"></svg>
             <svg *ngIf="isApproving" appIcon="refresh-cw" class="w-4 h-4 animate-spin"></svg>

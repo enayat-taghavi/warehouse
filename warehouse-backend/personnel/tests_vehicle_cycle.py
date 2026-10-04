@@ -1241,6 +1241,15 @@ class VehicleLifecycleTests(TestCase):
         self.assertEqual(res.data["max_rate"], Decimal("20000000"))
         self.assertEqual(res.data["current_rate"], Decimal("15000000"))
 
+        # نقش غیرمالی (اپراتور یا سرپرست) باید خطای ۴۰۳ دریافت کند
+        self.client.force_authenticate(user=self.operator)
+        res_forbidden_op = self.client.get(f"/api/personnel/vehicles/{target.id}/rate-benchmark/")
+        self.assertEqual(res_forbidden_op.status_code, 403)
+
+        self.client.force_authenticate(user=self.supervisor)
+        res_forbidden_sup = self.client.get(f"/api/personnel/vehicles/{target.id}/rate-benchmark/")
+        self.assertEqual(res_forbidden_sup.status_code, 403)
+
     def test_dual_destination_revision_for_accountant(self):
         """
         تسک ۹.۵: تست عودت دومقصده حسابدار (به سرپرست یا کارمند)
@@ -2085,7 +2094,7 @@ class VehicleLifecycleTests(TestCase):
 
         self.client.force_authenticate(user=self.supervisor)
 
-        # اگر وضعیت قبل از تایید به دلیل کنش موازی تغییر کند (مثلاً لغو توسط کاربر)
+        # ۱. اگر وضعیت قبل از تایید به دلیل کنش موازی تغییر کند (مثلاً لغو توسط کاربر)
         cr_concurrent = VehicleChangeRequest.objects.get(pk=cr.pk)
         cr_concurrent.status = "cancelled"
         cr_concurrent.save(update_fields=["status"])
@@ -2094,7 +2103,21 @@ class VehicleLifecycleTests(TestCase):
         self.assertEqual(res_conflict.status_code, 409)
         self.assertEqual(res_conflict.data.get("code"), "conflict")
 
-        # اکنون با بازگرداندن وضعیت به pending_supervisor، تایید سرپرست با موفقیت انجام می‌شود
+        # ۲. تلاش برای تایید درخواست در وضعیت draft باید با ۴۰۹ مسدود شود
+        cr_concurrent.status = "draft"
+        cr_concurrent.save(update_fields=["status"])
+        res_draft = self.client.post(f"/api/personnel/vehicle-change-requests/{cr.id}/approve-supervisor/")
+        self.assertEqual(res_draft.status_code, 409)
+        self.assertEqual(res_draft.data.get("code"), "conflict")
+
+        # ۳. تلاش برای تایید درخواست در وضعیت revision_required باید با ۴۰۹ مسدود شود
+        cr_concurrent.status = "revision_required"
+        cr_concurrent.save(update_fields=["status"])
+        res_rev = self.client.post(f"/api/personnel/vehicle-change-requests/{cr.id}/approve-supervisor/")
+        self.assertEqual(res_rev.status_code, 409)
+        self.assertEqual(res_rev.data.get("code"), "conflict")
+
+        # ۴. اکنون با بازگرداندن وضعیت به pending_supervisor، تایید سرپرست با موفقیت انجام می‌شود
         cr_concurrent.status = "pending_supervisor"
         cr_concurrent.save(update_fields=["status"])
         res_ok = self.client.post(f"/api/personnel/vehicle-change-requests/{cr.id}/approve-supervisor/")
@@ -2202,6 +2225,25 @@ class VehicleLifecycleTests(TestCase):
         self.assertEqual(v_history.approval_status, "rejected")
         self.assertEqual(v_history.rejection_reason, "تخلف راننده")
 
+        # ۳. پرونده بدون سابقه کارکرد اما در وضعیت supervisor_approved (خارج از purge_statuses)
+        # طبق قانون، پاک‌سازی کامل (purge) فقط در وضعیت‌های در جریان مجاز است و در اینجا باید بایگانی rejected شود
+        v_outside_purge = VehicleDriverProfile.objects.create(
+            plate_number="23ط323ایران45",
+            vehicle_type="nissan",
+            driver_name="راننده تایید سرپرست",
+            company=self.company,
+            section=self.section_a,
+            approval_status="supervisor_approved",
+            is_active=True
+        )
+        self.client.force_authenticate(user=self.manager)
+        res_reject_sup = self.client.post(f"/api/personnel/vehicles/{v_outside_purge.id}/reject/", {"reason": "رد پس از بررسی سرپرست"}, format="json")
+        self.assertEqual(res_reject_sup.status_code, 200)
+        self.assertFalse(res_reject_sup.data.get("purged"))
+        v_outside_purge.refresh_from_db()
+        self.assertEqual(v_outside_purge.approval_status, "rejected")
+        self.assertEqual(v_outside_purge.rejection_reason, "رد پس از بررسی سرپرست")
+
     def test_n9_document_upload_normalization_and_audit_without_status_guard(self):
         """
         تست ن-۹ و تسک ۱۱.۹: بارگذاری مدارک بدون گارد وضعیت، نرمال‌سازی تاریخ‌های نامنفصل و ثبت لاگ ممیزی
@@ -2244,6 +2286,31 @@ class VehicleLifecycleTests(TestCase):
         self.assertIn("document", audit.metadata)
         self.assertEqual(audit.metadata["document"]["doc_type"], "insurance")
         self.assertEqual(audit.metadata["document"]["expiry_date"], "1405/01/01")
+
+    def test_create_vehicle_auto_pass_response_status(self):
+        """
+        تست ن-۱۲: ایجاد خودرو توسط کاربر با نقش بالا (مدیر)، بازگشت وضعیت تصویب‌شده خودکار (approved) در پاسخ HTTP 201
+        """
+        valid_sheba = generate_sheba_from_account("بانک ملی ایران", "0105678901004")
+        self.client.force_authenticate(user=self.manager)
+        payload = {
+            "plate_number": "99ج888ایران77",
+            "vehicle_type": "nissan",
+            "ownership_type": "contract",
+            "driver_name": "احمد مدیر",
+            "driver_national_code": "0010376488",
+            "driver_phone": "09121234567",
+            "default_service_rate": 5000000,
+            "insurance_expiry_date": "1406/01/01",
+            "bank_name": "بانک ملی ایران",
+            "sheba_number": valid_sheba,
+            "section": self.section_a.id,
+        }
+        res = self.client.post("/api/personnel/vehicles/", payload, format="json")
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.data["approval_status"], "approved")
+        self.assertTrue(res.data["is_active"])
+
 
 
 

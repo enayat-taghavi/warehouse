@@ -207,7 +207,7 @@
                   <button
                     type="button"
                     (click)="openViewVehicleModal(item)"
-                    class="px-2 py-1 rounded-lg bg-surface-alt text-fg hover:bg-slate-200 border border-line text-xs font-bold cursor-pointer transition-all flex items-center gap-1"
+                    class="px-2 py-1 rounded-lg bg-surface-alt text-fg hover:bg-surface-muted border border-line text-xs font-bold cursor-pointer transition-all flex items-center gap-1"
                     title="مشاهده پرونده کامل">
                     <svg appIcon="eye" class="w-3.5 h-3.5"></svg>
                     <span>پرونده</span>
@@ -463,7 +463,7 @@
                 <button
                   type="button"
                   (click)="openViewVehicleModal(v)"
-                  class="px-2.5 py-1 rounded-lg bg-surface-alt text-fg hover:bg-slate-200 border border-line text-xs font-bold cursor-pointer flex items-center gap-1">
+                  class="px-2.5 py-1 rounded-lg bg-surface-alt text-fg hover:bg-surface-muted border border-line text-xs font-bold cursor-pointer flex items-center gap-1">
                   <svg appIcon="eye" class="w-3.5 h-3.5"></svg>
                   <span>مشاهده پرونده</span>
                 </button>
@@ -476,7 +476,7 @@
   </div>
 
   <!-- ── مودال ۱: ثبت یادداشت تایید (Approval Modal) ── -->
-  <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+  <div *ngIf="isApprovalModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
     <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-emerald-50/80 border-b border-emerald-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-emerald-900">{{ approvalTarget?.title }}</h3>
@@ -511,7 +511,7 @@
   </div>
 
   <!-- ── مودال ۲: تایید گروهی سرپرست (Batch Approve Modal) ── -->
-  <div *ngIf="isBatchApproveModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+  <div *ngIf="isBatchApproveModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
     <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-950">تایید گروهی {{ selectedVehicleIds.size }} خودرو</h3>
@@ -549,7 +549,7 @@
   </div>
 
   <!-- ── مودال ۳: ثبت علت رد یا عودت (با هشدار Purge مشروط) ── -->
-  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+  <div *ngIf="isRejectModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
     <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 border-b flex items-center justify-between"
            [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-50/80 border-amber-100 text-amber-900' : 'bg-rose-50/80 border-rose-100 text-rose-900'">
@@ -641,7 +641,7 @@
 
   <!-- ── مودال ۴: مشاهده کامل پرونده خودرو (Vehicle Profile Viewer) ── -->
   <div *ngIf="isViewVehicleModalOpen && selectedViewVehicle"
-       class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-3 md:p-6">
+       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-3 md:p-6">
     <div class="bg-surface w-full max-w-3xl rounded-3xl shadow-2xl border border-line overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-150">
       
       <!-- هدر مودال پرونده -->
@@ -838,7 +838,7 @@
         <button
           type="button"
           (click)="closeViewVehicleModal()"
-          class="px-4 py-2 bg-surface text-fg hover:bg-slate-200 border border-line rounded-xl text-xs font-bold cursor-pointer">
+          class="px-4 py-2 bg-surface text-fg hover:bg-surface-muted border border-line rounded-xl text-xs font-bold cursor-pointer">
           بستن پنجره پرونده
         </button>
       </div>
@@ -847,7 +847,7 @@
   </div>
 
   <!-- ── مودال ۵: مقایسه تفاوت‌ها (Diff Viewer) ── -->
-  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+  <div *ngIf="isDiffModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
     <div class="bg-surface w-full max-w-2xl rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50/80 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-900">
@@ -894,7 +894,7 @@
       <div class="p-3 bg-surface-alt border-t border-line flex justify-end">
         <button
           (click)="closeDiffModal()"
-          class="px-4 py-1.5 rounded-xl bg-surface hover:bg-slate-200 text-fg text-xs font-bold border border-line cursor-pointer">
+          class="px-4 py-1.5 rounded-xl bg-surface hover:bg-surface-muted text-fg text-xs font-bold border border-line cursor-pointer">
           بستن پنجره
         </button>
       </div>

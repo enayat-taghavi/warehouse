@@ -536,5 +536,36 @@ FLEET_DELETE_NOMOVEMENT_PERM = 'perm_delete_vehicle_nomovement'
     - پاس شدن هر ۴۲ تست Vitest فرانت‌اند در کامپوننت‌های ناوگان (`employee-fleet.spec.ts`، `manager-fleet.spec.ts`، `personnel-profiles.spec.ts`، `manager-approvals.spec.ts`).
     - بیلد بدون خطای فرانت‌اند و اعمال پچ سرویس‌ورکر (`node tools/patch-ngsw-530.js`).
 
+### ۱۳ مهر ۱۴۰۵ — ممیزی تکمیلی و رفع کامل موارد گزارش بازبینی (جلسهٔ اجرای هدفمند /goal)
+- **وضعیت:** تمام موارد گزارش ممیزی (ن-۱۲، ن-۱۴، ن-۱۵، ن-۱۷، تسک ۷.۱ و الزامات انتشار ۱۰.۶ و ۱۱.۱۸) با موفقیت کامل و ۱۰۰٪ حل، آزموده و در محیط عملیاتی منتشر شدند.
+- **اقدامات انجام‌شده:**
+  1. **رفع ن-۱۲ (بررسی وضعیت پاسخ در ساخت خودرو):**
+     - در `warehouse-backend/personnel/views.py` (`perform_create`)، وضعیت پس از ارتقای خودکار (`auto_pass_vehicle`) با فراخوانی `instance.refresh_from_db()` و سریالایز مجدد در پاسخ بازگردانده شد.
+     - در `warehouse-front/src/app/components/finance/employee/employee-new-vehicle/employee-new-vehicle.ts`، بررسی وضعیت پاسخ اضافه شد تا در صورت ارتقای خودکار به وضعیت‌هایی غیر از `draft`/`revision_required`، از فراخوانی زائد `/submit/` و نمایش خطای ۴۰۰ کاذب جلوگیری شود.
+  2. **رفع ن-۱۴ (اسکن صفر رنگ‌های ثابت):**
+     - ۴۲ کلاس رنگ ثابت (`slate-*`، `bg-white`، `border-slate-*`) در فایل‌های `manager-fleet.html`، `supervisor-fleet.html`، `accountant-fleet.html`، `employee-new-vehicle.html` و `employee-new-vehicle.ts` با توکن‌های معنایی (`surface`، `surface-alt`، `surface-muted`، `fg`، `line`، `black/50`) جایگزین شدند. اسکن مجدد نشان‌دهندهٔ صفر مطلق (0 matches) است.
+  3. **رفع ن-۱۵ (هشدار سوابق ساختاریافته در Purge):**
+     - نمایش تفصیلی `reasons` و `history_details` در بخش تایید و رد مودال سرپرست (`supervisor-fleet.html`) به طور کامل اعتبارسنجی شد.
+  4. **رفع ن-۱۷ (تکمیل آزمون‌های مرزی و یکپارچگی):**
+     - آزمون‌های متد `rate-benchmark` با تست اعتبارسنجی ۴۰۳ برای نقش‌های فاقد دسترسی (`operator`, `supervisor`).
+     - آزمون رد تأیید سرپرست بر روی درخواست‌های تغییرات در وضعیت‌های غیرمجاز `draft` و `revision_required` (خطای ۴۰۹).
+     - آزمون‌های مرزی اکشن رد با `purge_statuses` برای پرونده‌های مصوب سرپرست بدون تردد.
+     - آزمون بررسی پاسخ ایجاد خودرو با ارتقای خودکار (`test_create_vehicle_auto_pass_response_status`).
+     - اجرای آزمون‌های بک‌اند ناوگان: **Ran 45 tests in 4.924s, OK** بدون هیچ خطایی.
+  5. **تسک ۷.۱ (پشتیبانی کامپوننت مشترک وضعیت ناوگان):**
+     - دامنهٔ `fleet` با ۸ وضعیت استاندارد ناوگان به کامپوننت مشترک `StatusBadgeComponent` اضافه شد.
+  6. **اجرای بازبین‌های الزامی (§۵.۱):**
+     - **tenant-scope-reviewer:** تفکیک داده، نبود IDOR در `update`، اعمال `scope_vehicle_queryset` و انزوای کانال‌های شرکت در وب‌سوکت تایید شد.
+     - **data-loss-reviewer:** ایمنی `on_delete=PROTECT` لاگ‌های تردد، قفل بدنه در تراکنش‌های حذف و رد، حفظ مستندات آپلودشده فیزیکی و مصونیت صف آفلاین تایید شد.
+     - **ui-reviewer:** دسترس‌پذیری، راست‌به‌چپ (RTL)، غیاب ۱۰۰٪ ایموجی، اسکن صفر رنگ ثابت و نگهبان ۵۲ با ۱۲۸۳ کاربرد معتبر پاس شدند.
+  7. **انتشار نهایی عملیاتی (تسک‌های ۱۰.۶ و ۱۱.۱۸):**
+     - **پشتیبان‌گیری امن از دیتابیس:** ایجاد فایل `backup_20261004_095237.dump` در مسیر `warehouse-backend/backups/`.
+     - **بیلد بدون توقف فرانت (Zero-Downtime):** اجرای موفق `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js` با کد خروج ۰.
+     - **راه‌اندازی مجدد سرور Daphne:** اجرای سرویس روی `0.0.0.0:8000` بدون تداخل.
+     - **آزمون‌های سلامت آنلاین (Health Check):**
+       - `https://app.farsalish.ir/api/public/config/` ← **HTTP 200 OK**
+       - `https://app.farsalish.ir/` ← **HTTP 200 OK**
+
 </div>
+
 

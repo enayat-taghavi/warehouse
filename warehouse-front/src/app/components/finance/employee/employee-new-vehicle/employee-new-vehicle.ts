@@ -2275,7 +2275,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
         return 'bg-rose-50 text-rose-700 border-rose-200';
       case 'cancel_change_request':
       case 'change_request_cancelled':
-        return 'bg-slate-100 text-slate-700 border-slate-200';
+        return 'bg-surface-muted text-fg-muted border-line';
       case 'auto_pass':
       case 'change_request_applied':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';
@@ -2283,7 +2283,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
       case 'change_request_created':
         return 'bg-purple-50 text-purple-700 border-purple-200';
       default:
-        return 'bg-slate-50 text-slate-700 border-slate-200';
+        return 'bg-surface-alt text-fg-muted border-line';
     }
   }
 
@@ -2456,7 +2456,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   getStatusBadgeClass(status?: string): string {
     switch (status) {
       case 'draft':
-        return 'bg-slate-100 text-slate-700 border-slate-200';
+        return 'bg-surface-muted text-fg-muted border-line';
       case 'pending_supervisor':
         return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'manager_approved':
@@ -2469,7 +2469,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
       case 'rejected':
         return 'bg-rose-50 text-rose-700 border-rose-200';
       default:
-        return 'bg-slate-50 text-slate-600 border-slate-200';
+        return 'bg-surface-alt text-fg-muted border-line';
     }
   }
 

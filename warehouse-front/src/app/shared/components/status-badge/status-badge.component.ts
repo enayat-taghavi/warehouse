@@ -28,7 +28,7 @@ export class StatusBadgeComponent {
   @Input() status = '';
 
   /** دامنه — تعیین‌کننده mapping مناسب */
-  @Input() domain: 'record' | 'field' | 'doc' | 'label' | 'mt' | 'project' | 'user' = 'record';
+  @Input() domain: 'record' | 'field' | 'doc' | 'label' | 'mt' | 'project' | 'user' | 'fleet' = 'record';
 
   /** لیبل سفارشی (اگر ست شود، از mapping استفاده نمی‌شود) */
   @Input() label = '';
@@ -37,6 +37,16 @@ export class StatusBadgeComponent {
   @Input() color: 'green' | 'blue' | 'amber' | 'rose' | 'purple' | 'slate' | 'indigo' | 'cyan' | 'emerald' = 'slate';
 
   private readonly STATUS_MAP: Record<string, Record<string, { label: string; color: string }>> = {
+    fleet: {
+      draft: { label: 'پیش‌نویس', color: 'slate' },
+      pending_supervisor: { label: 'در انتظار سرپرست', color: 'amber' },
+      pending_accountant: { label: 'در انتظار حسابدار', color: 'blue' },
+      pending_manager: { label: 'در انتظار مدیر', color: 'indigo' },
+      manager_approved: { label: 'تصویب‌شده', color: 'emerald' },
+      approved: { label: 'مصوب و فعال', color: 'emerald' },
+      revision_required: { label: 'نیازمند اصلاح', color: 'amber' },
+      rejected: { label: 'رد شده', color: 'rose' },
+    },
     record: {
       defined: { label: 'تعریف شده', color: 'slate' },
       counting: { label: 'در حال شمارش', color: 'blue' },
