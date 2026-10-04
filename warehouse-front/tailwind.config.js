@@ -17,6 +17,7 @@ module.exports = {
           DEFAULT: 'rgb(var(--color-surface) / <alpha-value>)',
           muted: 'rgb(var(--color-surface-muted) / <alpha-value>)',
           canvas: 'rgb(var(--color-surface-canvas) / <alpha-value>)',
+          alt: 'rgb(var(--color-surface-muted) / <alpha-value>)',
         },
         fg: {
           DEFAULT: 'rgb(var(--color-fg) / <alpha-value>)',
@@ -26,6 +27,11 @@ module.exports = {
         line: {
           DEFAULT: 'rgb(var(--color-line) / <alpha-value>)',
           subtle: 'rgb(var(--color-line-subtle) / <alpha-value>)',
+        },
+        muted: {
+          DEFAULT: 'rgb(var(--color-fg-muted) / <alpha-value>)',
+          fg: 'rgb(var(--color-fg-muted) / <alpha-value>)',
+          surface: 'rgb(var(--color-surface-muted) / <alpha-value>)',
         },
       },
       zIndex: {

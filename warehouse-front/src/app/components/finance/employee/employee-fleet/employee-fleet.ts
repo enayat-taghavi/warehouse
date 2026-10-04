@@ -1012,74 +1012,7 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
     this.router.navigate(['/app/finance/employee-new-vehicle'], { queryParams });
   }
 
-  saveVehicleProfileForm(): void {
-    if (!this.selectedVehicleProfile.driver_name?.trim()) {
-      this.toast.show('error', 'نام راننده یا پیمانکار الزامی است.');
-      return;
-    }
-    if (!this.selectedVehicleProfile.plate_number?.trim()) {
-      this.toast.show('error', 'شماره پلاک انتظامی الزامی است.');
-      return;
-    }
 
-    if (this.selectedVehicleProfile.sheba_number?.trim()) {
-      const res = validateSheba(this.selectedVehicleProfile.sheba_number);
-      if (!res.isValid) {
-        this.toast.show('error', res.errorMessage || 'شماره شبا نامعتبر است.');
-        return;
-      }
-      this.selectedVehicleProfile.sheba_number = res.rawSheba;
-      if (res.bank && !this.selectedVehicleProfile.bank_name) {
-        this.selectedVehicleProfile.bank_name = res.bank.name;
-      }
-    }
-
-    if (!this.selectedVehicleProfile.section && this.selectedSectionId) {
-      this.selectedVehicleProfile.section = this.selectedSectionId;
-    }
-    if (!this.selectedVehicleProfile.project && this.selectedSection?.project) {
-      this.selectedVehicleProfile.project = this.selectedSection.project;
-    }
-
-    this.isSavingVehicleProfile = true;
-    if (this.isEditingVehicleProfile && this.selectedVehicleProfile.id) {
-      this.personnelApi.updateVehicleDriverProfile(this.selectedVehicleProfile.id, this.selectedVehicleProfile).subscribe({
-        next: (res: any) => {
-          this.isSavingVehicleProfile = false;
-          this.isVehicleProfileModalOpen = false;
-          this.toast.show('success', res?.message || 'مشخصات خودرو با موفقیت ویرایش شد.');
-          this.loadVehicleMatrix();
-          if (this.activeMode === 'monthly_grid') {
-            this.loadFleetMonthlyGrid();
-          }
-          this.cdr.detectChanges();
-        },
-        error: (err: any) => {
-          this.isSavingVehicleProfile = false;
-          this.toast.show('error', err?.error?.error || err?.error?.detail || 'خطا در ویرایش پرونده خودرو');
-          this.cdr.detectChanges();
-        }
-      });
-    } else {
-      this.personnelApi.createVehicleDriverProfile(this.selectedVehicleProfile).subscribe({
-        next: (res: any) => {
-          this.isSavingVehicleProfile = false;
-          this.isVehicleProfileModalOpen = false;
-          this.toast.show('success', res?.message || 'خودرو ثبت و در کارتابل بررسی قرار گرفت.');
-          this.loadVehicleMatrix();
-          if (this.activeMode === 'monthly_grid') {
-            this.loadFleetMonthlyGrid();
-          }
-          this.cdr.detectChanges();
-        },
-        error: (err: any) => {
-          this.isSavingVehicleProfile = false;
-          this.toast.show('error', err?.error?.error || err?.error?.detail || 'خطا در تعریف خودرو');
-          this.cdr.detectChanges();
-        }
-      });
-    }
-  }
 
   // --- ۷. لاگ‌های ممیزی ناوگان (Fleet Audit Logs Modal) ---
   openFleetAuditLogs(vehicleId?: number): void {
