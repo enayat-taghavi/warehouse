@@ -1638,7 +1638,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
       if (onComplete) onComplete();
       return;
     }
-    const item = this.pendingUploadDocuments.shift();
+    const item = this.pendingUploadDocuments[0];
     if (!item) {
       if (onComplete) onComplete();
       return;
@@ -1646,14 +1646,16 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
 
     this.personnelApi.uploadVehicleDocument(vehicleId, item.file, item.doc_type, item.title, item.expiry_date).subscribe({
       next: (doc) => {
+        this.pendingUploadDocuments.shift();
         this.vehicleDocuments.push(doc);
         this.toast.show('success', `مدرک «${doc.title || item.name}» بارگذاری شد.`);
         this.uploadAllPendingDocuments(vehicleId, onComplete);
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.toast.show('error', `خطا در آپلود ${item.name}: ` + (err.error?.error || err.message || 'نامشخص'));
-        this.uploadAllPendingDocuments(vehicleId, onComplete);
+        this.isSaving = false;
+        this.toast.show('error', `خطا در آپلود مدرک «${item.name}»: ` + (err.error?.error || err.message || 'نامشخص') + ' (ارسال به دلیل نقص آپلود مدرک متوقف شد).');
+        this.loadRecentVehicles();
         this.cdr.detectChanges();
       }
     });
@@ -1966,7 +1968,8 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
           const plate = created.plate_number;
 
           const proceedToSubmitOrClose = () => {
-            if (targetStatus === 'pending_supervisor' && vehicleId) {
+            const currentStatus = created.approval_status || 'draft';
+            if (targetStatus === 'pending_supervisor' && vehicleId && (currentStatus === 'draft' || currentStatus === 'revision_required')) {
               if (typeof this.personnelApi?.submitVehicleProfile === 'function') {
                 this.personnelApi.submitVehicleProfile(vehicleId).subscribe({
                   next: () => {
@@ -2003,7 +2006,13 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
             } else {
               this.isSaving = false;
               this.clearDraftFromStorage();
-              this.toast.show('success', `خودرو «${plate}» با راننده «${created.driver_name}» در وضعیت پیش‌نویس ثبت شد.`);
+              if (currentStatus === 'approved') {
+                this.toast.show('success', `خودرو «${plate}» با موفقیت ثبت و مستقیماً تصویب گردید.`);
+              } else if (currentStatus === 'pending_accountant' || currentStatus === 'pending_manager') {
+                this.toast.show('success', `خودرو «${plate}» ثبت شد و بر اساس نقش شما به مرحله بعد ارسال گردید.`);
+              } else {
+                this.toast.show('success', `خودرو «${plate}» با راننده «${created.driver_name}» در وضعیت پیش‌نویس ثبت شد.`);
+              }
               this.closeNewVehicleModal();
               this.loadRecentVehicles();
             }

@@ -1124,7 +1124,7 @@
                     placeholder="-- انتخاب بانک عامل --" 
                     class="w-full bg-surface border border-line rounded-xl px-3 py-2 text-xs font-bold text-fg focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer placeholder:text-fg-subtle" 
                   />
-                  <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none text-[9px]">▲</span>
+                  <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-up"></svg>
 
                   <!-- پوشش کلیک بیرونی جهت بستن کومبوباکس -->
                   <div *ngIf="isBankDropdownOpen" (click)="isBankDropdownOpen = false" class="fixed inset-0 z-40 bg-transparent"></div>
@@ -1492,7 +1492,7 @@
                    [title]="getPreviousValueDisplay(item.key)">
                 {{ getPreviousValueDisplay(item.key) }}
               </div>
-              <span class="text-fg-subtle text-xs">◀</span>
+              <svg class="w-3.5 h-3.5 text-fg-subtle shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="arrow-left"></svg>
               <!-- مقدار جدید پیشنهادی -->
               <div class="font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-mono text-[11px] max-w-[45%] truncate"
                    [title]="getProposedValueDisplay(item.key, item.value)">
@@ -1583,8 +1583,10 @@
 
               <div class="text-[11px] text-fg/80 flex items-center justify-between">
                 <span>توسط: <strong class="text-fg">{{ log.actor_name || log.performed_by_name || 'کاربر سیستم' }}</strong></span>
-                <span *ngIf="log.from_status && log.to_status" class="text-[10px] font-mono text-fg-muted">
-                  {{ log.from_status }} ◀ {{ log.to_status }}
+                <span *ngIf="log.from_status && log.to_status" class="text-[10px] font-mono text-fg-muted inline-flex items-center gap-1">
+                  <span>{{ log.from_status }}</span>
+                  <svg class="w-2.5 h-2.5 text-fg-subtle shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="arrow-left"></svg>
+                  <span>{{ log.to_status }}</span>
                 </span>
               </div>
 

@@ -588,6 +588,29 @@
               <span>{{ r }}</span>
             </div>
           </div>
+          <!-- جزئیات ساختاریافته سوابق (history_details) -->
+          <div *ngIf="deleteImpactResult?.history_details" class="pt-1.5 flex flex-wrap gap-1.5 text-[10px]">
+            <span *ngIf="deleteImpactResult.history_details.total_trips_count"
+                  class="bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-md font-mono">
+              تردد کل: {{ deleteImpactResult.history_details.total_trips_count }}
+            </span>
+            <span *ngIf="deleteImpactResult.history_details.settled_trips_count"
+                  class="bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-md font-mono">
+              تردد تسویه‌شده: {{ deleteImpactResult.history_details.settled_trips_count }}
+            </span>
+            <span *ngIf="deleteImpactResult.history_details.accounting_events_count"
+                  class="bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-md font-mono">
+              رویدادهای مالی: {{ deleteImpactResult.history_details.accounting_events_count }}
+            </span>
+            <span *ngIf="deleteImpactResult.history_details.change_requests_count"
+                  class="bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-md font-mono">
+              درخواست‌های تغییرات: {{ deleteImpactResult.history_details.change_requests_count }}
+            </span>
+            <span *ngIf="deleteImpactResult.history_details.has_user_account"
+                  class="bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-md">
+              حساب کاربری فعال
+            </span>
+          </div>
         </div>
 
         <label class="text-xs font-bold text-fg block">علت رد یا عودت (الزامی):</label>

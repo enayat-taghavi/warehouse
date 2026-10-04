@@ -1212,53 +1212,6 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
     }
   }
 
-  closeVehicleModal(): void {
-    this.isVehicleModalOpen = false;
-    this.editingVehicle = null;
-    this.shebaValidationResult = null;
-    this.shebaDigitsDisplay = '';
-    this.isBankDropdownOpen = false;
-    this.bankSearchQuery = '';
-  }
-
-  saveVehicle(): void {
-    if (!this.editingVehicle) return;
-    if (!this.editingVehicle.plate_number || !this.editingVehicle.driver_name) {
-      this.toast.show('error', 'نام راننده و شماره پلاک خودرو الزامی است.');
-      return;
-    }
-
-    this.isSavingVehicle = true;
-    if (this.editingVehicle.id) {
-      this.api.updateVehicleProfile(this.editingVehicle.id, this.editingVehicle).subscribe({
-        next: (res) => {
-          this.isSavingVehicle = false;
-          const msg = res?.message || 'اطلاعات خودرو با موفقیت به‌روزرسانی شد.';
-          this.toast.show('success', msg);
-          this.closeVehicleModal();
-          this.loadProfiles();
-        },
-        error: (err) => {
-          this.isSavingVehicle = false;
-          this.toast.show('error', err?.error?.error || 'خطا در ویرایش خودرو');
-        }
-      });
-    } else {
-      this.api.createVehicleProfile(this.editingVehicle).subscribe({
-        next: (res) => {
-          this.isSavingVehicle = false;
-          this.toast.show('success', 'خودروی جدید با موفقیت ثبت شد.');
-          this.closeVehicleModal();
-          this.loadProfiles();
-        },
-        error: (err) => {
-          this.isSavingVehicle = false;
-          this.toast.show('error', err?.error?.error || 'خطا در ثبت خودرو');
-        }
-      });
-    }
-  }
-
   async deleteVehicle(v: VehicleDriverProfile): Promise<void> {
     if (!v.id) return;
     const confirmed = await this.confirmDialog.open({
@@ -1274,9 +1227,6 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
     this.api.deleteVehicleProfile(v.id).subscribe({
       next: () => {
         this.toast.show('success', `پرونده خودروی «${v.driver_name}» با موفقیت حذف گردید.`);
-        if (this.isVehicleModalOpen) {
-          this.closeVehicleModal();
-        }
         this.loadProfiles();
       },
       error: (err) => {
