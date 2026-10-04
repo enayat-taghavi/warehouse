@@ -261,7 +261,7 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
   describe('۲. پایداری زیرتب‌های کارتابل و رفتار تاگل در DOM (DOM Subtabs & Toggle Invariant)', () => {
     it('تب‌های نیازمند اصلاح و رد شده باید همواره در DOM حتی در صورت صفر بودن رندر شوند (فاقد ngIf)', () => {
       const nativeEl: HTMLElement = fixture.nativeElement;
-      const allButtons = Array.from(nativeEl.querySelectorAll('.bg-slate-100\\/90 button'));
+      const allButtons = Array.from(nativeEl.querySelectorAll('.bg-surface-muted button, .bg-slate-100\\/90 button'));
       const buttonTexts = allButtons.map(b => b.textContent?.trim() || '');
 
       const hasRevisionTab = buttonTexts.some(t => t.includes('نیازمند اصلاح'));
@@ -273,7 +273,7 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
 
     it('کلیک مجدد روی تب فعال وضعیت در DOM باید فیلتر را به حالت «همه» تاگل کند', () => {
       const nativeEl: HTMLElement = fixture.nativeElement;
-      const buttons = Array.from(nativeEl.querySelectorAll('.bg-slate-100\\/90 button')) as HTMLButtonElement[];
+      const buttons = Array.from(nativeEl.querySelectorAll('.bg-surface-muted button, .bg-slate-100\\/90 button')) as HTMLButtonElement[];
       const draftBtn = buttons.find(b => b.textContent?.includes('پیش‌نویس'));
       expect(draftBtn).toBeDefined();
 
@@ -334,7 +334,8 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
       expect(modalBackdrop.className).toContain('items-end');
       expect(modalBackdrop.className).toContain('sm:items-center');
 
-      const card = modalBackdrop.querySelector('.bg-white') as HTMLElement;
+      const card = modalBackdrop.querySelector('.bg-surface, .bg-white') as HTMLElement;
+      expect(card).toBeDefined();
       expect(card.className).toContain('rounded-t-3xl');
       expect(card.className).toContain('sm:rounded-3xl');
     });

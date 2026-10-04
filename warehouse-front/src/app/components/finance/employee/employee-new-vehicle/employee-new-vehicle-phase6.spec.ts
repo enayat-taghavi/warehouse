@@ -280,7 +280,6 @@ describe('EmployeeNewVehicleHubComponent - Phase 6 Suite (Employee Registration 
       component.saveVehicle('draft');
 
       expect(mockPersonnelApi.createVehicleProfile).toHaveBeenCalledWith(expect.objectContaining({
-        approval_status: 'draft',
         driver_name: 'بهرام راد'
       }));
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('پیش‌نویس'));

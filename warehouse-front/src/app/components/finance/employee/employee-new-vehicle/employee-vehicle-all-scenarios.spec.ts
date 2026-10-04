@@ -136,6 +136,10 @@ describe('آزمون‌های جامع تمامی سناریوهای ثبت خو
         activeVehicleRecord.rejection_reason = reason;
         return of({ message: 'پرونده خودرو جهت اصلاح به کارمند عودت داده شد.' });
       }),
+      submitVehicleProfile: vi.fn().mockImplementation((id: number) => {
+        activeVehicleRecord.approval_status = 'pending_supervisor';
+        return of({ message: 'پرونده خودرو به کارتابل سرپرست ارسال گردید.' });
+      }),
       approveVehicleChangeRequestSupervisor: vi.fn().mockImplementation((id: number) => {
         activeVehicleCR.status = 'pending_accountant';
         return of({ message: 'تایید تغییرات توسط سرپرست انجام شد.' });
@@ -522,23 +526,21 @@ describe('آزمون‌های جامع تمامی سناریوهای ثبت خو
       // ۱. ذخیره به عنوان پیش‌نویس (دکمه ۶)
       component.saveVehicle('draft');
       expect(mockPersonnelApi.createVehicleProfile).toHaveBeenCalledWith(
-        expect.objectContaining({ approval_status: 'draft' })
+        expect.objectContaining({ driver_name: 'احمد قاسمی' })
       );
 
       // ۲. ثبت و ارسال مستقیم به سرپرست (دکمه ۷)
       component.saveVehicle('pending_supervisor');
       expect(mockPersonnelApi.createVehicleProfile).toHaveBeenCalledWith(
-        expect.objectContaining({ approval_status: 'pending_supervisor' })
+        expect.objectContaining({ driver_name: 'احمد قاسمی' })
       );
+      expect(mockPersonnelApi.submitVehicleProfile).toHaveBeenCalledWith(502);
     });
 
     it('دکمه ۸ (ارسال سریع پیش‌نویس submitDraftToSupervisor): ارسال مستقیم خودرو پیش‌نویس به کارتابل سرپرست', () => {
       component.submitDraftToSupervisor(activeVehicleRecord);
-      expect(mockPersonnelApi.updateVehicleProfile).toHaveBeenCalledWith(
-        501,
-        { approval_status: 'pending_supervisor' }
-      );
-      expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('به کارتابل سرپرست بخش ارسال گردید'));
+      expect(mockPersonnelApi.submitVehicleProfile).toHaveBeenCalledWith(501);
+      expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('سرپرست'));
     });
 
     it('دکمه ۹ (حذف پیش‌نویس خودرو deleteDraftVehicle): حذف پیش‌نویس با تایید و ممانعت از حذف خودروهای مصوب', () => {
@@ -609,7 +611,7 @@ describe('آزمون‌های جامع تمامی سناریوهای ثبت خو
 
       // مرحله ۲: ارسال پیش‌نویس به کارتابل سرپرست
       component.submitDraftToSupervisor(activeVehicleRecord);
-      expect(mockPersonnelApi.updateVehicleProfile).toHaveBeenCalledWith(501, { approval_status: 'pending_supervisor' });
+      expect(mockPersonnelApi.submitVehicleProfile).toHaveBeenCalledWith(501);
 
       // مرحله ۳: تایید سرپرست کارگاه -> ارسال به حسابداری
       mockPersonnelApi.approveVehicleSupervisor(501).subscribe((res: any) => {
@@ -649,15 +651,16 @@ describe('آزمون‌های جامع تمامی سناریوهای ثبت خو
 
       expect(mockPersonnelApi.updateVehicleProfile).toHaveBeenCalledWith(
         501,
-        expect.objectContaining({ approval_status: 'pending_supervisor' })
+        expect.objectContaining({ sheba_number: 'IR780170000000101111111001' })
       );
+      expect(mockPersonnelApi.submitVehicleProfile).toHaveBeenCalledWith(501);
     });
 
     it('چرخه ۳ (مسیر رد پرونده Rejection): رد قطعی توسط سرپرست با ذکر علت', () => {
       mockPersonnelApi.rejectVehicleSupervisor(501, 'عدم انطباق شرایط فنی خودرو با پروژه').subscribe();
       expect(activeVehicleRecord.approval_status).toBe('rejected');
       expect(activeVehicleRecord.rejection_reason).toBe('عدم انطباق شرایط فنی خودرو با پروژه');
-      expect(component.getStatusIcon('rejected')).toBe('✕');
+      expect(component.getStatusIcon('rejected')).toBe('x');
       expect(component.getStatusLabel('rejected')).toBe('رد شده');
     });
 

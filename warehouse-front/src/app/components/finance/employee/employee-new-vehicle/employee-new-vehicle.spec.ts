@@ -97,7 +97,8 @@ describe('EmployeeNewVehicleHubComponent Vitest Suite (Phase 4 & Refactor)', () 
           sheba_number: 'IR110110000000000000000001',
           job_title: 'راننده ترابری سنگین'
         }
-      ]))
+      ])),
+      submitVehicleProfile: vi.fn().mockReturnValue(of({ success: true, approval_status: 'pending_supervisor' }))
     };
 
     mockWs = {
@@ -278,8 +279,7 @@ describe('EmployeeNewVehicleHubComponent Vitest Suite (Phase 4 & Refactor)', () 
 
       expect(mockPersonnelApi.createVehicleProfile).toHaveBeenCalledWith(expect.objectContaining({
         driver_name: 'سهراب سپهری',
-        section: 10,
-        approval_status: 'draft'
+        section: 10
       }));
       expect(component.isNewVehicleModalOpen).toBe(false);
     });
@@ -296,9 +296,9 @@ describe('EmployeeNewVehicleHubComponent Vitest Suite (Phase 4 & Refactor)', () 
 
       expect(mockPersonnelApi.createVehicleProfile).toHaveBeenCalledWith(expect.objectContaining({
         driver_name: 'سهراب سپهری',
-        section: 10,
-        approval_status: 'pending_supervisor'
+        section: 10
       }));
+      expect(mockPersonnelApi.submitVehicleProfile).toHaveBeenCalledWith(504);
     });
 
     it('ویرایش خودرو مصوب باید متد updateVehicleProfile را فراخوانی کرده و پیام درخواست تغییرات دهد', () => {
@@ -319,9 +319,8 @@ describe('EmployeeNewVehicleHubComponent Vitest Suite (Phase 4 & Refactor)', () 
       const draftVehicle = sampleVehicles[0];
       component.submitDraftToSupervisor(draftVehicle);
 
-      expect(mockPersonnelApi.updateVehicleProfile).toHaveBeenCalledWith(
-        draftVehicle.id,
-        { approval_status: 'pending_supervisor' }
+      expect(mockPersonnelApi.submitVehicleProfile).toHaveBeenCalledWith(
+        draftVehicle.id
       );
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('سرپرست'));
     });
