@@ -31,3 +31,8 @@ node_modules/
 # To search them, pass the path explicitly.
 chat_history_data.json
 chat_history_dashboard.html
+
+# Deployment configuration & bundles
+deploy_config.json
+deploy_bundle.zip
+backups/
