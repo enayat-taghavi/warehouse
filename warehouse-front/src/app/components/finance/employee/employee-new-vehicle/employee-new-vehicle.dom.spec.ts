@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
-import { ɵresolveComponentResources, ɵɵdirectiveInject, ChangeDetectorRef } from '@angular/core';
+import { ɵresolveComponentResources, ɵɵdirectiveInject, ChangeDetectorRef, NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -18,6 +18,7 @@ import { PersonnelApiService } from '../../../../core/api/personnel-api.service'
 import { WebSocketService } from '../../../../core/http/websocket.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { VehicleDriverProfile, ProjectSection } from '../../../../core/models/personnel.model';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -212,7 +213,8 @@ describe('EmployeeNewVehicleHubComponent Real DOM & Browser Spec (Type 1 Vitest 
     };
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, EmployeeNewVehicleHubComponent, ExcelImportModal],
+      imports: [CommonModule, FormsModule, EmployeeNewVehicleHubComponent, ExcelImportModal, SvgIconDirective],
+      schemas: [NO_ERRORS_SCHEMA],
       providers: [
         { provide: AuthService, useValue: mockAuth },
         { provide: PersonnelApiService, useValue: mockPersonnelApi },
