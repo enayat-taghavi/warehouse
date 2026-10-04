@@ -2716,6 +2716,13 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             instance = VehicleDriverProfile.objects.select_for_update().get(pk=target.pk)
 
+            # پروندهٔ ردشده بایگانی است و پیش از هر ویرایش باید با اکشن reopen بازگشایی شود (تسک ۱۱.۱، ن-۱، الگوی پرسنل)
+            if instance.approval_status == 'rejected' and not user.is_superuser:
+                return Response(
+                    {'error': 'این پرونده رد شده است. برای ویرایش و ارسال دوباره، ابتدا آن را بازگشایی کنید.', 'code': 'reopen_required'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             # ۱. پرونده در انتظار تصویب مدیر: برای همه جز سوپریوزر قفل است (تسک ۳.۷)
             if instance.approval_status in ['pending_manager', 'accountant_approved']:
                 if not user.is_superuser:
@@ -2784,11 +2791,34 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_400_BAD_REQUEST
                     )
 
+                from decimal import Decimal, InvalidOperation
+                from .fleet_lifecycle_services import vehicle_change_request_fields_allowed_for
+
+                allowed_change_fields = vehicle_change_request_fields_allowed_for(user)
+                # تسک ۱۱.۳ (ن-۳، ط-۲): تلاش صریح نقش غیرمالی برای تغییر نرخ خودروی مصوب رد می‌شود
+                if allowed_change_fields is not None and 'default_service_rate' in request.data:
+                    raw_new_rate = request.data.get('default_service_rate')
+                    if raw_new_rate not in (None, '', 0, '0'):
+                        try:
+                            new_rate_dec = Decimal(str(raw_new_rate))
+                            old_rate_dec = Decimal(str(instance.default_service_rate or 0))
+                            if new_rate_dec > 0 and new_rate_dec != old_rate_dec:
+                                return Response(
+                                    {'error': 'تغییر نرخ پایه سرویس ناوگان مصوب منحصراً در صلاحیت نقش حسابداری ناوگان است.', 'code': 'forbidden_rate_change'},
+                                    status=status.HTTP_403_FORBIDDEN
+                                )
+                        except (InvalidOperation, ValueError):
+                            pass
+
                 serializer = self.get_serializer(instance, data=request.data, partial=partial)
                 serializer.is_valid(raise_exception=True)
                 self._ensure_update_scope(instance, serializer.validated_data)
                 
                 diff, old_diff = compute_profile_diff(instance, serializer.validated_data, excluded=VEHICLE_CHANGE_REQUEST_EXCLUDED_FIELDS)
+                if allowed_change_fields is not None:
+                    diff = {k: v for k, v in diff.items() if k in allowed_change_fields}
+                    old_diff = {k: v for k, v in old_diff.items() if k in diff}
+
                 if diff:
                     cr = VehicleChangeRequest.objects.create(
                         vehicle=instance,
@@ -2800,6 +2830,8 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                     instance.has_pending_changes = True
                     instance.save(update_fields=['has_pending_changes'])
                     log_vehicle_change_request_event(cr, user, 'change_request_created', reason='ثبت درخواست تغییرات پرونده مصوب خودرو')
+                    # تسک ۱۱.۱۰ (ن-۱۰): ارسال اعلان به سرپرست
+                    dispatch_vehicle_workflow_notification(instance, stage='change_request_created', actor=user)
                     return Response({
                         'message': 'درخواست تغییرات خودرو با موفقیت ثبت شد و جهت بررسی در کارتابل سرپرست قرار گرفت. اطلاعات قبلی تا زمان تصویب نهایی معتبر باقی می‌ماند.',
                         'change_request_id': cr.id,
@@ -2818,39 +2850,46 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                 if not serializer.validated_data.get('project') and not instance.project_id:
                     extra_kwargs['project'] = section.project
 
-            # تسک ۲.۷ و ب-۱۳: پل سازگاری PATCH برای وضعیت pending_supervisor
+            # تسک ۲.۷، ب-۱۳ و تسک ۱۱.۱ (ن-۱، ط-۱): پل سازگاری PATCH برای وضعیت pending_supervisor
             is_submit_attempt = request.data.get('approval_status') == 'pending_supervisor'
+            can_bridge_transition = instance.approval_status in ('draft', 'revision_required')
             updated_instance = serializer.save(**extra_kwargs)
 
             submitted = False
             missing = []
             if is_submit_attempt:
-                missing = get_vehicle_missing_fields(updated_instance, stage='submit')
-                if not missing:
-                    old_st = updated_instance.approval_status
-                    updated_instance.approval_status = 'pending_supervisor'
-                    updated_instance.rejection_reason = None
-                    updated_instance.save(update_fields=['approval_status', 'rejection_reason'])
-                    submitted = True
-                    WorkflowAuditLog.objects.create(
-                        content_type='vehicle',
-                        object_id=updated_instance.id,
-                        actor=user,
-                        from_status=old_st,
-                        to_status='pending_supervisor',
-                        action='submit',
-                        reason='ارسال پرونده خودرو به سرپرست جهت بررسی',
-                        metadata={'company_id': updated_instance.company_id}
-                    )
-                    dispatch_vehicle_workflow_notification(updated_instance, stage='pending_supervisor', actor=user)
+                if can_bridge_transition:
+                    missing = get_vehicle_missing_fields(updated_instance, stage='submit')
+                    if not missing:
+                        old_st = updated_instance.approval_status
+                        updated_instance.approval_status = 'pending_supervisor'
+                        updated_instance.rejection_reason = None
+                        updated_instance.save(update_fields=['approval_status', 'rejection_reason'])
+                        submitted = True
+                        WorkflowAuditLog.objects.create(
+                            content_type='vehicle',
+                            object_id=updated_instance.id,
+                            actor=user,
+                            from_status=old_st,
+                            to_status='pending_supervisor',
+                            action='submit',
+                            reason='ارسال پرونده خودرو به سرپرست جهت بررسی',
+                            metadata={'company_id': updated_instance.company_id}
+                        )
+                        dispatch_vehicle_workflow_notification(updated_instance, stage='pending_supervisor', actor=user)
+                else:
+                    submitted = False
 
             broadcast_vehicle_update(updated_instance, action_type='updated', message=f'پرونده خودرو «{updated_instance.plate_number}» به‌روزرسانی شد.', sender_id=user.id if user else None)
             res_data = self.get_serializer(updated_instance).data
             if is_submit_attempt:
                 res_data['submitted'] = submitted
                 if not submitted:
-                    res_data['missing_fields'] = missing
-                    res_data['detail'] = f"تغییرات ذخیره شد، اما به دلیل نقص اطلاعات ارسال به سرپرست انجام نشد: {', '.join(m['label'] for m in missing)}"
+                    if can_bridge_transition:
+                        res_data['missing_fields'] = missing
+                        res_data['detail'] = f"تغییرات ذخیره شد، اما به دلیل نقص اطلاعات ارسال به سرپرست انجام نشد: {', '.join(m['label'] for m in missing)}"
+                    else:
+                        res_data['detail'] = f"تغییرات ذخیره شد، اما گذار وضعیت از «{instance.get_approval_status_display()}» به «در انتظار سرپرست» مجاز نیست."
             return Response(res_data)
 
     @staticmethod
@@ -3084,18 +3123,44 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
             except serializers.ValidationError as e:
                 return Response({'error': ' '.join(str(d) for d in e.detail)}, status=status.HTTP_400_BAD_REQUEST)
 
+            from .fleet_lifecycle_services import normalize_shamsi_date
             title = (request.data.get('title') or '').strip() or None
-            issue_date = (request.data.get('issue_date') or '').strip() or None
-            expiry_date = (request.data.get('expiry_date') or '').strip() or None
-            doc = VehicleDocument.objects.create(
-                vehicle=instance,
-                file=file_obj,
-                doc_type=doc_type,
-                title=title,
-                issue_date=issue_date,
-                expiry_date=expiry_date,
-                uploaded_by=request.user if request.user.is_authenticated else None
-            )
+            raw_issue_date = (request.data.get('issue_date') or '').strip()
+            issue_date = normalize_shamsi_date(raw_issue_date) if raw_issue_date else None
+            raw_expiry_date = (request.data.get('expiry_date') or '').strip()
+            expiry_date = normalize_shamsi_date(raw_expiry_date) if raw_expiry_date else None
+
+            with transaction.atomic():
+                doc = VehicleDocument.objects.create(
+                    vehicle=instance,
+                    file=file_obj,
+                    doc_type=doc_type,
+                    title=title,
+                    issue_date=issue_date,
+                    expiry_date=expiry_date,
+                    uploaded_by=request.user if request.user.is_authenticated else None
+                )
+                WorkflowAuditLog.objects.create(
+                    content_type='vehicle',
+                    object_id=instance.id,
+                    actor=request.user if request.user.is_authenticated else None,
+                    from_status=instance.approval_status,
+                    to_status=instance.approval_status,
+                    action='document_uploaded',
+                    reason=request.data.get('note', '') or 'بارگذاری مدرک پیوست خودرو',
+                    metadata={
+                        'document': {
+                            'id': doc.id,
+                            'doc_type': doc.doc_type,
+                            'title': doc.title,
+                            'file_name': doc.file.name if doc.file else None,
+                            'issue_date': doc.issue_date,
+                            'expiry_date': doc.expiry_date,
+                            'uploaded_by_id': doc.uploaded_by_id,
+                        },
+                        'company_id': instance.company_id
+                    }
+                )
             broadcast_vehicle_update(instance, action_type='updated', message=f'مدرک جدید برای خودرو «{instance.plate_number}» بارگذاری شد.', sender_id=request.user.id)
             return Response(VehicleDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
 
@@ -3339,7 +3404,8 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
 
             history = check_vehicle_history(instance)
             is_never_approved = instance.manager_approved_at is None
-            can_purge = is_never_approved and history['can_delete']
+            purge_statuses = ('revision_required', 'pending_supervisor', 'pending_accountant', 'pending_manager')
+            can_purge = is_never_approved and history['can_delete'] and instance.approval_status in purge_statuses
 
             old_status = instance.approval_status
             cid = instance.company_id
@@ -3465,8 +3531,14 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='rate-benchmark')
     def rate_benchmark(self, request, pk=None):
         """
-        تسک ۹.۳: مقایسهٔ نرخ با میانگین هم‌تیپ‌های پروژه (سروری و محدود به قلمرو).
+        تسک ۹.۳ و ۱۱.۲ (ن-۲): مقایسهٔ نرخ با میانگین هم‌تیپ‌های پروژه (سروری و محدود به قلمرو).
+        گارد نقش: فقط برای کاربران مجاز به مشاهده نرخ‌های ناوگان (مالی و مدیریت).
         """
+        user = request.user
+        from .serializers import user_can_view_fleet_rates
+        if not user_can_view_fleet_rates(user):
+            raise PermissionDenied("مشاهده مقایسه و شاخص نرخ ناوگان فقط برای نقش‌های مدیریت و مالی مجاز است.")
+
         from django.db.models import Avg, Min, Max, Count
         target = self.get_object()
 
@@ -3637,6 +3709,10 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        reason = (request.data.get('reason') or '').strip()
+        if not reason:
+            return Response({'error': 'ثبت علت قطع همکاری الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
+
         raw_end_date = request.data.get('end_date')
         if not raw_end_date or not str(raw_end_date).strip():
             return Response({'error': 'ثبت تاریخ پایان همکاری (end_date) الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -3651,15 +3727,29 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             instance = VehicleDriverProfile.objects.select_for_update().get(pk=target.pk)
 
-            last_trip = VehicleTripLog.objects.filter(vehicle=instance, is_deleted=False).order_by('-date_shamsi').first()
-            if last_trip and last_trip.date_shamsi:
-                last_trip_d = parse_shamsi_date(_clean_shamsi_date_str(last_trip.date_shamsi))
-                if last_trip_d and end_d_obj and end_d_obj < last_trip_d:
-                    return Response({
-                        'error': f'تاریخ پایان همکاری ({end_date}) نمی‌تواند قبل از تاریخ آخرین تردد ثبت‌شده ({last_trip.date_shamsi}) باشد.'
-                    }, status=status.HTTP_400_BAD_REQUEST)
+            # تسک ۱۱.۶ (ن-۶): شرط فعال بودن و عدم وجود تاریخ پایان همکاری درون قفل
+            if not instance.is_active or instance.end_date:
+                return Response(
+                    {'error': f'همکاری با این خودرو قبلاً در تاریخ «{instance.end_date}» پایان یافته است و امکان ثبت مجدد وجود ندارد.', 'code': 'already_ended'},
+                    status=status.HTTP_409_CONFLICT
+                )
 
-            reason = (request.data.get('reason') or '').strip()
+            # تسک ۱۱.۶ (ن-۶): یافتن آخرین تردد بر پایه حداکثر شیء تاریخ شمسی (DEF-20)
+            trip_dates = list(VehicleTripLog.objects.filter(vehicle=instance, is_deleted=False).values_list('date_shamsi', flat=True).distinct())
+            max_trip_d = None
+            max_trip_str = None
+            for ds in trip_dates:
+                if ds:
+                    parsed = parse_shamsi_date(_clean_shamsi_date_str(ds))
+                    if parsed and (max_trip_d is None or parsed > max_trip_d):
+                        max_trip_d = parsed
+                        max_trip_str = ds
+
+            if max_trip_d and end_d_obj and end_d_obj < max_trip_d:
+                return Response({
+                    'error': f'تاریخ پایان همکاری ({end_date}) نمی‌تواند قبل از تاریخ آخرین تردد ثبت‌شده ({max_trip_str}) باشد.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
             instance.is_active = False
             instance.end_date = end_date
             instance.save(update_fields=['is_active', 'end_date'])
@@ -3856,10 +3946,12 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
             'ملکی': 'personal', 'ملکی راننده': 'personal', 'personal': 'personal'
         }
 
+        scoped_vehicles_qs = scope_vehicle_queryset(request, VehicleDriverProfile.objects.all())
         created_count = 0
         updated_count = 0
         skipped_count = 0
         errors = []
+        warnings = []
         parsed_vehicles = []
         seen_file_plates = {}
 
@@ -3957,10 +4049,43 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                 acc_col = col_map.get('account_number', 11)
 
             vtype_raw = str(target_sheet.cell(row=row_idx, column=vtype_col).value or '').strip().lower()
-            vehicle_type = vtype_map.get(vtype_raw, 'nissan')
+            vehicle_type = vtype_map.get(vtype_raw)
+            if not vehicle_type:
+                errors.append({
+                    'row': row_idx,
+                    'field': 'نوع خودرو',
+                    'message': f'نوع خودرو «{vtype_raw}» نامعتبر است. انواع معتبر: نیسان، خاور، تریلی، وانت بار، کامیون، لیفتراک، سواری، سایر.'
+                })
+                continue
 
             own_raw = str(target_sheet.cell(row=row_idx, column=own_col).value or '').strip().lower()
-            ownership_type = own_map.get(own_raw, 'contract')
+            ownership_type = own_map.get(own_raw)
+            if not ownership_type:
+                errors.append({
+                    'row': row_idx,
+                    'field': 'نوع مالکیت',
+                    'message': f'نوع مالکیت «{own_raw}» نامعتبر است. انواع معتبر: استیجاری، شرکتی، ملکی.'
+                })
+                continue
+
+            from .fleet_lifecycle_services import is_valid_national_plate, ROAD_VEHICLE_TYPES
+            if vehicle_type in ROAD_VEHICLE_TYPES and not is_valid_national_plate(plate):
+                errors.append({
+                    'row': row_idx,
+                    'field': 'شماره پلاک',
+                    'message': f'شماره پلاک «{plate_raw}» منطبق بر الگوی استاندارد پلاک ملی ایران نیست (مثال: ۱۲ب۳۴۵ایران۶۷).'
+                })
+                continue
+
+            # تسک ۱۱.۸ و ط-۵: سنجش پلاک در کل سیستم در برابر قلمرو مجاز
+            existing_global = VehicleDriverProfile.objects.filter(plate_number=plate).first()
+            if existing_global and not scoped_vehicles_qs.filter(id=existing_global.id).exists():
+                errors.append({
+                    'row': row_idx,
+                    'field': 'شماره پلاک',
+                    'message': f'شماره پلاک «{plate}» قبلاً در سیستم برای شرکت یا حوزه‌ای دیگر ثبت شده و شما دسترسی ویرایش آن را ندارید.'
+                })
+                continue
 
             if can_view_rate:
                 rate_raw = target_sheet.cell(row=row_idx, column=rate_col).value
@@ -4015,16 +4140,28 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         if not dry_run:
+            from .fleet_lifecycle_services import build_vehicle_snapshot
+            from .lifecycle_services import compute_profile_diff
             with transaction.atomic():
                 for item in parsed_vehicles:
                     plate = item['plate_number']
-                    q_exist = VehicleDriverProfile.objects.filter(plate_number=plate)
+                    q_exist = scoped_vehicles_qs.filter(plate_number=plate)
                     if import_company_id:
                         q_exist = q_exist.filter(company_id=import_company_id)
                     existing = q_exist.first()
 
                     if existing:
                         if update_existing:
+                            # تسک ۱۱.۸ و ط-۳: به‌روزرسانی فقط در draft و revision_required
+                            if existing.approval_status not in ['draft', 'revision_required']:
+                                skipped_count += 1
+                                warnings.append(
+                                    f'ردیف {item["row_idx"]}: خودروی پلاک «{plate}» در وضعیت «{existing.get_approval_status_display() or existing.approval_status}» قرار دارد و تغییر آن از طریق اکسل مجاز نیست (نادیده گرفته شد).'
+                                )
+                                continue
+
+                            old_snap = build_vehicle_snapshot(existing)
+
                             existing.driver_name = item['driver_name']
                             if item['driver_national_code']:
                                 existing.driver_national_code = item['driver_national_code']
@@ -4051,6 +4188,9 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                                 existing.section = target_section
                                 if target_section.project:
                                     existing.project = target_section.project
+                            
+                            # تسک ۱۱.۸ و ط-۵: اعمال _skip_bank_sync=True جهت جلوگیری از تکرار لاجیک مدل
+                            existing._skip_bank_sync = True
                             existing.save()
 
                             # به‌روزرسانی یا ایجاد حساب اصلی در VehicleBankAccount
@@ -4076,11 +4216,25 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                                         is_primary=True,
                                         is_active=True
                                     )
+
+                            new_snap = build_vehicle_snapshot(existing)
+                            diff = compute_profile_diff(old_snap, new_snap)
+                            WorkflowAuditLog.objects.create(
+                                content_type='vehicle',
+                                object_id=existing.id,
+                                actor=user if user and user.is_authenticated else None,
+                                from_status=existing.approval_status,
+                                to_status=existing.approval_status,
+                                action='import_update',
+                                reason=f'به‌روزرسانی مشخصات خودرو از طریق فایل اکسل (ردیف {item["row_idx"]})',
+                                diff=diff,
+                                metadata={'company_id': existing.company_id, 'row': item['row_idx']}
+                            )
                             updated_count += 1
                         else:
                             skipped_count += 1
                     else:
-                        # ایجاد اولیه همیشه در draft؛ عبور هوشمند با auto_pass_vehicle (حذف manager_approved منسوخ)
+                        # تسک ۱۱.۸ و ط-۵: ایجاد اولیه بدون فیلدهای تخت بانک تا حساب اصلی مضاعف ساخته نشود
                         new_v = VehicleDriverProfile.objects.create(
                             company_id=import_company_id,
                             plate_number=plate,
@@ -4094,16 +4248,16 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                             vehicle_type=item['vehicle_type'],
                             ownership_type=item['ownership_type'],
                             default_service_rate=item['default_service_rate'],
-                            sheba_number=item['sheba_number'] or '',
-                            bank_name=item['bank_name'] or '',
-                            account_number=item['account_number'] or '',
+                            sheba_number='',
+                            bank_name='',
+                            account_number='',
                             section=target_section,
                             project=target_section.project if (target_section and target_section.project) else None,
                             created_by=user if user and user.is_authenticated else None,
                             approval_status='draft',
                             is_active=True
                         )
-                        # ایجاد رکورد متناظر در VehicleBankAccount
+                        # ایجاد صریح رکورد اصلی در VehicleBankAccount و سپس تنظیم فیلدهای تخت با _skip_bank_sync=True
                         if item['sheba_number'] or item['account_number']:
                             VehicleBankAccount.objects.create(
                                 vehicle=new_v,
@@ -4116,17 +4270,30 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
                                 is_primary=True,
                                 is_active=True
                             )
+                            new_v.sheba_number = item['sheba_number'] or ''
+                            new_v.bank_name = item['bank_name'] or ''
+                            new_v.account_number = item['account_number'] or ''
+                            new_v._skip_bank_sync = True
+                            new_v.save(update_fields=['sheba_number', 'bank_name', 'account_number'])
+
                         # اجرای auto_pass_vehicle با draft_on_incomplete=True
                         auto_pass_vehicle(new_v, user, source='import_excel', draft_on_incomplete=True)
                         created_count += 1
         else:
             for item in parsed_vehicles:
-                q_chk = VehicleDriverProfile.objects.filter(plate_number=item['plate_number'])
+                q_chk = scoped_vehicles_qs.filter(plate_number=item['plate_number'])
                 if import_company_id:
                     q_chk = q_chk.filter(company_id=import_company_id)
-                if q_chk.exists():
+                existing = q_chk.first()
+                if existing:
                     if update_existing:
-                        updated_count += 1
+                        if existing.approval_status not in ['draft', 'revision_required']:
+                            skipped_count += 1
+                            warnings.append(
+                                f'ردیف {item["row_idx"]}: خودروی پلاک «{item["plate_number"]}» در وضعیت «{existing.get_approval_status_display() or existing.approval_status}» قرار دارد و از طریق اکسل قابل ویرایش نیست (نادیده گرفته خواهد شد).'
+                            )
+                        else:
+                            updated_count += 1
                     else:
                         skipped_count += 1
                 else:
@@ -4145,6 +4312,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
             },
             'created_count': created_count,
             'updated_count': updated_count,
+            'warnings': warnings,
             'errors': []
         })
 
@@ -4535,26 +4703,33 @@ class VehicleChangeRequestViewSet(viewsets.ModelViewSet):
         تسک ۳.۵ و ب-۲۳: لغو درخواست تغییرات فقط برای ثبت‌کننده (یا سوپریوزر)
         و فقط تا پیش از تایید سرپرست (draft, pending_supervisor, revision_required).
         """
-        from .fleet_lifecycle_services import log_vehicle_change_request_event, refresh_vehicle_has_pending_changes
-        cr = self.get_object()
+        from .fleet_lifecycle_services import log_vehicle_change_request_event, refresh_vehicle_has_pending_changes, dispatch_vehicle_workflow_notification
+        target = self.get_object()
         user = request.user
-        if not (user.is_superuser or cr.requested_by_id == user.id):
+        if not (user.is_superuser or target.requested_by_id == user.id):
             raise PermissionDenied("تنها کاربر ثبت‌کننده درخواست یا مدیر سیستم مجاز به انصراف و لغو درخواست تغییرات است.")
 
-        if cr.status not in ('draft', 'pending_supervisor', 'revision_required'):
+        if target.status not in ('draft', 'pending_supervisor', 'revision_required'):
             return Response(
-                {'error': f'درخواست در وضعیت «{cr.get_status_display()}» قابل لغو نیست؛ ابطال فقط تا پیش از تایید سرپرست ممکن است.'},
+                {'error': f'درخواست در وضعیت «{target.get_status_display()}» قابل لغو نیست؛ ابطال فقط تا پیش از تایید سرپرست ممکن است.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         reason = (request.data.get('reason') or 'لغو شده توسط ثبت‌کننده').strip()
         with transaction.atomic():
+            cr = VehicleChangeRequest.objects.select_for_update().get(pk=target.pk)
+            if cr.status not in ('draft', 'pending_supervisor', 'revision_required'):
+                return Response(
+                    {'error': f'وضعیت درخواست توسط کاربر دیگری تغییر یافته است (وضعیت فعلی: {cr.get_status_display()}).', 'code': 'conflict'},
+                    status=status.HTTP_409_CONFLICT
+                )
             cr.status = 'cancelled'
             cr.rejection_reason = reason
             cr.save(update_fields=['status', 'rejection_reason'])
             refresh_vehicle_has_pending_changes(cr.vehicle, exclude_cr_id=cr.id)
             log_vehicle_change_request_event(cr, user, 'change_request_cancelled', reason=reason)
             log_vehicle_audit(user, 'CANCEL_CHANGE_REQ', cr.vehicle, {'change_request_id': cr.id})
+            dispatch_vehicle_workflow_notification(cr.vehicle, stage='change_request_cancelled', actor=user, reason=reason, recipient_ids=[cr.requested_by_id])
             broadcast_vehicle_update(cr.vehicle, action_type='updated', message=f'درخواست تغییرات خودرو «{cr.vehicle.plate_number}» لغو شد.', sender_id=user.id if user else None)
 
         return Response({
@@ -4564,45 +4739,63 @@ class VehicleChangeRequestViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='approve-supervisor')
     def approve_supervisor(self, request, pk=None):
-        from .fleet_lifecycle_services import log_vehicle_change_request_event, FLEET_SUPERVISOR_STAGE_PERMS, user_has_any_perm
+        from .fleet_lifecycle_services import log_vehicle_change_request_event, FLEET_SUPERVISOR_STAGE_PERMS, user_has_any_perm, dispatch_vehicle_workflow_notification
         user = request.user
         if not (user.is_superuser or user_has_any_perm(user, FLEET_SUPERVISOR_STAGE_PERMS)):
             raise PermissionDenied("شما دسترسی بررسی مرحله اول (سرپرست) درخواست تغییرات ناوگان را ندارید.")
         
-        cr = self.get_object()
-        if cr.status not in ['draft', 'pending_supervisor', 'revision_required']:
-            return Response({'error': f'درخواست در وضعیت «{cr.get_status_display()}» قابل تایید سرپرست نیست.'}, status=status.HTTP_400_BAD_REQUEST)
+        target = self.get_object()
+        # تسک ۱۱.۵ و ن-۵: فقط وضعیت pending_supervisor مورد تایید سرپرست است
+        if target.status != 'pending_supervisor':
+            return Response(
+                {'error': f'درخواست در وضعیت «{target.get_status_display()}» قابل تایید سرپرست نیست و فقط در وضعیت «در انتظار بررسی سرپرست» پذیرفته می‌شود.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         with transaction.atomic():
+            cr = VehicleChangeRequest.objects.select_for_update().get(pk=target.pk)
+            if cr.status != 'pending_supervisor':
+                return Response(
+                    {'error': f'وضعیت درخواست توسط کاربر دیگری تغییر یافته است (وضعیت فعلی: {cr.get_status_display()}).', 'code': 'conflict'},
+                    status=status.HTTP_409_CONFLICT
+                )
             cr.status = 'pending_accountant'
             cr.supervisor_reviewed_by = user
             cr.supervisor_reviewed_at = timezone.now()
             cr.save(update_fields=['status', 'supervisor_reviewed_by', 'supervisor_reviewed_at'])
             log_vehicle_change_request_event(cr, user, 'change_request_supervisor_approved')
             log_vehicle_audit(user, 'APPROVE_SUPERVISOR_CHANGE_REQ', cr.vehicle, {'change_request_id': cr.id})
+            dispatch_vehicle_workflow_notification(cr.vehicle, stage='change_request_supervisor_approved', actor=user)
             broadcast_vehicle_update(cr.vehicle, action_type='updated', message=f'درخواست تغییرات خودرو «{cr.vehicle.plate_number}» به تایید سرپرست رسید.', sender_id=user.id if user else None)
         return Response({'message': 'درخواست تغییرات خودرو به تایید سرپرست رسید و به کارتابل حسابداری ارسال شد.', 'data': self.get_serializer(cr).data})
 
     @action(detail=True, methods=['post'], url_path='approve-finance')
     def approve_finance(self, request, pk=None):
-        from .fleet_lifecycle_services import log_vehicle_change_request_event, FLEET_FINANCE_STAGE_PERMS, user_has_any_perm
+        from .fleet_lifecycle_services import log_vehicle_change_request_event, FLEET_FINANCE_STAGE_PERMS, user_has_any_perm, dispatch_vehicle_workflow_notification
         user = request.user
         # ب-۸: فقط perm_approve_fleet_finance (بدون can_act_as_accountant)
         if not (user.is_superuser or user_has_any_perm(user, FLEET_FINANCE_STAGE_PERMS)):
             raise PermissionDenied("شما دسترسی تایید مرحله دوم (مالی) درخواست تغییرات ناوگان را ندارید.")
         
-        cr = self.get_object()
+        target = self.get_object()
         valid_statuses = ['pending_accountant', 'supervisor_approved']
-        if cr.status not in valid_statuses:
-            return Response({'error': f'درخواست ابتدا باید به تایید سرپرست برسد (وضعیت فعلی: {cr.get_status_display()}).'}, status=status.HTTP_400_BAD_REQUEST)
+        if target.status not in valid_statuses:
+            return Response({'error': f'درخواست ابتدا باید به تایید سرپرست برسد (وضعیت فعلی: {target.get_status_display()}).'}, status=status.HTTP_400_BAD_REQUEST)
         
         with transaction.atomic():
+            cr = VehicleChangeRequest.objects.select_for_update().get(pk=target.pk)
+            if cr.status not in valid_statuses:
+                return Response(
+                    {'error': f'وضعیت درخواست توسط کاربر دیگری تغییر یافته است (وضعیت فعلی: {cr.get_status_display()}).', 'code': 'conflict'},
+                    status=status.HTTP_409_CONFLICT
+                )
             cr.status = 'pending_manager'
             cr.accountant_reviewed_by = user
             cr.accountant_reviewed_at = timezone.now()
             cr.save(update_fields=['status', 'accountant_reviewed_by', 'accountant_reviewed_at'])
             log_vehicle_change_request_event(cr, user, 'change_request_finance_approved')
             log_vehicle_audit(user, 'APPROVE_FINANCE_CHANGE_REQ', cr.vehicle, {'change_request_id': cr.id})
+            dispatch_vehicle_workflow_notification(cr.vehicle, stage='change_request_finance_approved', actor=user)
             broadcast_vehicle_update(cr.vehicle, action_type='updated', message=f'درخواست تغییرات خودرو «{cr.vehicle.plate_number}» به تایید مالی رسید.', sender_id=user.id if user else None)
         return Response({'message': 'درخواست تغییرات خودرو به تایید مالی رسید و به کارتابل مدیر ارسال شد.', 'data': self.get_serializer(cr).data})
 
@@ -4615,21 +4808,28 @@ class VehicleChangeRequestViewSet(viewsets.ModelViewSet):
             FLEET_MANAGER_STAGE_PERMS,
             user_has_any_perm,
             VehicleWorkflowError,
+            dispatch_vehicle_workflow_notification,
         )
         user = request.user
         if not (user.is_superuser or user_has_any_perm(user, FLEET_MANAGER_STAGE_PERMS)):
             raise PermissionDenied("شما دسترسی تصویب نهایی درخواست تغییرات ناوگان را ندارید.")
         
-        cr = self.get_object()
+        target = self.get_object()
         valid_statuses = ['pending_manager', 'accountant_approved']
         if user.is_superuser:
             valid_statuses += ['pending_supervisor', 'pending_accountant', 'draft', 'manager_approved']
         
-        if cr.status not in valid_statuses:
-            return Response({'error': f'درخواست در وضعیت «{cr.get_status_display()}» قابل تصویب مدیر نیست.'}, status=status.HTTP_400_BAD_REQUEST)
+        if target.status not in valid_statuses:
+            return Response({'error': f'درخواست در وضعیت «{target.get_status_display()}» قابل تصویب مدیر نیست.'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
             with transaction.atomic():
+                cr = VehicleChangeRequest.objects.select_for_update().get(pk=target.pk)
+                if cr.status not in valid_statuses:
+                    return Response(
+                        {'error': f'وضعیت درخواست توسط کاربر دیگری تغییر یافته است (وضعیت فعلی: {cr.get_status_display()}).', 'code': 'conflict'},
+                        status=status.HTTP_409_CONFLICT
+                    )
                 # اعمال امن تغییرات بر روی پرونده خودرو با سریالایزر بدون هیچگونه setattr خام (تسک ۳.۵ و ب-۲۳)
                 vehicle = apply_vehicle_change_request(cr, request=request)
 
@@ -4647,6 +4847,7 @@ class VehicleChangeRequestViewSet(viewsets.ModelViewSet):
                 refresh_vehicle_has_pending_changes(vehicle, exclude_cr_id=cr.id)
                 log_vehicle_change_request_event(cr, user, 'change_request_applied')
                 log_vehicle_audit(user, 'APPROVE_MANAGER_CHANGE_REQ', vehicle, {'change_request_id': cr.id, 'changes': cr.proposed_changes})
+                dispatch_vehicle_workflow_notification(vehicle, stage='change_request_manager_approved', actor=user, recipient_ids=[cr.requested_by_id])
                 broadcast_vehicle_update(vehicle, action_type='updated', message=f'تغییرات خودرو «{vehicle.plate_number}» توسط مدیر تایید و اعمال گردید.', sender_id=user.id if user else None)
         except VehicleWorkflowError as e:
             return Response(e.to_response_data(), status=e.status_code)
@@ -4661,7 +4862,8 @@ class VehicleChangeRequestViewSet(viewsets.ModelViewSet):
             FLEET_SUPERVISOR_STAGE_PERMS,
             FLEET_FINANCE_STAGE_PERMS,
             FLEET_MANAGER_STAGE_PERMS,
-            user_has_any_perm
+            user_has_any_perm,
+            dispatch_vehicle_workflow_notification,
         )
         user = request.user
         can_op = (
@@ -4677,18 +4879,25 @@ class VehicleChangeRequestViewSet(viewsets.ModelViewSet):
         if not reason:
             return Response({'error': 'ثبت دلیل رد الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        cr = self.get_object()
+        target = self.get_object()
         active_statuses = ['draft', 'pending_supervisor', 'pending_accountant', 'pending_manager', 'revision_required', 'supervisor_approved', 'accountant_approved']
-        if cr.status not in active_statuses:
-            return Response({'error': f'درخواست در وضعیت «{cr.get_status_display()}» قابل رد نیست.'}, status=status.HTTP_400_BAD_REQUEST)
+        if target.status not in active_statuses:
+            return Response({'error': f'درخواست در وضعیت «{target.get_status_display()}» قابل رد نیست.'}, status=status.HTTP_400_BAD_REQUEST)
         
         with transaction.atomic():
+            cr = VehicleChangeRequest.objects.select_for_update().get(pk=target.pk)
+            if cr.status not in active_statuses:
+                return Response(
+                    {'error': f'وضعیت درخواست توسط کاربر دیگری تغییر یافته است (وضعیت فعلی: {cr.get_status_display()}).', 'code': 'conflict'},
+                    status=status.HTTP_409_CONFLICT
+                )
             cr.status = 'rejected'
             cr.rejection_reason = reason
             cr.save(update_fields=['status', 'rejection_reason'])
             refresh_vehicle_has_pending_changes(cr.vehicle, exclude_cr_id=cr.id)
             log_vehicle_change_request_event(cr, user, 'change_request_rejected', reason=reason)
             log_vehicle_audit(user, 'REJECT_CHANGE_REQ', cr.vehicle, {'change_request_id': cr.id, 'reason': reason})
+            dispatch_vehicle_workflow_notification(cr.vehicle, stage='change_request_rejected', actor=user, reason=reason, recipient_ids=[cr.requested_by_id])
             broadcast_vehicle_update(cr.vehicle, action_type='updated', message=f'درخواست تغییرات خودرو «{cr.vehicle.plate_number}» رد شد: {reason}', sender_id=user.id if user else None)
 
         return Response({'message': 'درخواست تغییرات خودرو رد شد.', 'data': self.get_serializer(cr).data})

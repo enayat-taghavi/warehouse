@@ -50,9 +50,10 @@ def forward_fleet_data(apps, schema_editor):
 
 def reverse_fleet_data(apps, schema_editor):
     VehicleDriverProfile = apps.get_model('personnel', 'VehicleDriverProfile')
-    # Reversible company assignment: clear company for the 11 legacy vehicles
-    assigned_ids = [144, 2, 3, 4, 5, 6, 10, 11, 13, 16, 18]
-    VehicleDriverProfile.objects.filter(id__in=assigned_ids).update(company_id=None)
+    # Task 11.11 (ن-۱۱): Reversible company assignment - only clear if value matches the assigned forward value
+    VehicleDriverProfile.objects.filter(id=144, company_id=1).update(company_id=None)
+    c2_vehicle_ids = [2, 3, 4, 5, 6, 10, 11, 13, 16, 18]
+    VehicleDriverProfile.objects.filter(id__in=c2_vehicle_ids, company_id=2).update(company_id=None)
     # B-11 / Task 1.7: Bank accounts are preserved; reverse is noop
 
 

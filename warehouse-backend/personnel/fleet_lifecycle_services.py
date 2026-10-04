@@ -21,11 +21,31 @@ from personnel.lifecycle_services import (
 logger = logging.getLogger(__name__)
 
 
+def is_valid_national_plate(plate_str) -> bool:
+    """
+    تسک ۱۱.۴ و ن-۴: اعتبارسنجی انطباق ساختار پلاک ملی ایران برای خودروهای جاده‌ای (ROAD_VEHICLE_TYPES).
+    قالب: ۲ رقم، ۱ حرف فارسی، ۳ رقم، ایران، ۲ رقم (کد شهر/منطقه).
+    مثال: 12 ب 345 ایران 67 یا 12-ب-345-67
+    """
+    if not plate_str:
+        return False
+    norm = normalize_digits(str(plate_str)).strip()
+    match = re.match(r'^(\d{2})\s*([^\d\s\W_]+|الف)\s*(\d{3})\s*(?:ایران|-)?\s*(\d{2})$', norm)
+    if not match:
+        return False
+    p1, letter, p3, p4 = match.groups()
+    if p1 == '00' or p3 == '000' or p4 == '00':
+        return False
+    if not re.search(r'[\u0600-\u06FF]', letter):
+        return False
+    return True
+
+
 def normalize_plate(plate_str):
     if not plate_str:
         return ''
     norm = normalize_digits(str(plate_str)).strip()
-    match = re.match(r'^(\d{2})\s*([^\d\s]+)\s*(\d{3})\s*(?:ایران|-)?\s*(\d{2})$', norm)
+    match = re.match(r'^(\d{2})\s*([^\d\s\W_]+|الف)\s*(\d{3})\s*(?:ایران|-)?\s*(\d{2})$', norm)
     if match:
         p1, p2, p3, p4 = match.groups()
         return f"{p1} {p2} {p3} ایران {p4}"
@@ -344,8 +364,8 @@ def get_vehicle_missing_fields(vehicle, stage: str) -> list[dict]:
         add_missing('plate_number', 'شماره پلاک الزامی است')
     else:
         if vtype in ROAD_VEHICLE_TYPES:
-            if not normalize_plate(plate):
-                add_missing('plate_number', 'ساختار شماره پلاک ملی برای خودروهای جاده‌ای معتبر نیست')
+            if not is_valid_national_plate(plate):
+                add_missing('plate_number', 'ساختار شماره پلاک ملی برای خودروهای جاده‌ای معتبر نیست (الگوی ۲ رقم - حرف - ۳ رقم - ایران - ۲ رقم)')
 
     if not vtype:
         add_missing('vehicle_type')
@@ -646,6 +666,12 @@ FLEET_WORKFLOW_NOTIFICATION_TEXTS = {
     'purged': ('پاک‌سازی پرونده خودرو', 'پرونده خودرو «{plate}» به دلیل رد قطعی و عدم سابقه پاک‌سازی شد.'),
     'end_collaboration': ('قطع همکاری خودرو', 'همکاری خودرو «{plate}» پایان یافت و پرونده غیرفعال شد{reason}.'),
     'reopened': ('بازگشایی پرونده خودرو', 'پرونده خودرو «{plate}» ({driver}) بازگشایی شد و به وضعیت پیش‌نویس بازگشت{reason}.'),
+    'change_request_created': ('درخواست تغییرات پرونده خودرو', 'درخواست تغییرات جدید برای خودرو «{plate}» ثبت شد و در انتظار بررسی سرپرست است.'),
+    'change_request_supervisor_approved': ('تایید مرحله اول تغییرات خودرو', 'درخواست تغییرات خودرو «{plate}» به تایید سرپرست رسید و در انتظار بررسی مالی است.'),
+    'change_request_finance_approved': ('تایید مالی تغییرات خودرو', 'درخواست تغییرات خودرو «{plate}» به تایید مالی رسید و در انتظار تصویب مدیر است.'),
+    'change_request_manager_approved': ('تصویب نهایی تغییرات خودرو', 'درخواست تغییرات خودرو «{plate}» توسط مدیر تصویب و در پرونده اعمال شد.'),
+    'change_request_rejected': ('رد درخواست تغییرات خودرو', 'درخواست تغییرات خودرو «{plate}» رد شد{reason}.'),
+    'change_request_cancelled': ('لغو درخواست تغییرات خودرو', 'درخواست تغییرات خودرو «{plate}» لغو شد{reason}.'),
 }
 FLEET_RETURN_NOTIFICATION_TEXT = ('عودت پرونده خودرو جهت بازنگری', 'پرونده خودرو «{plate}» جهت بازنگری به کارتابل شما عودت داده شد{reason}.')
 
@@ -660,12 +686,19 @@ FLEET_STAGE_URLS = {
     'end_collaboration': '/app/finance/employee-fleet',
     'purged': '/app/finance/employee-new-vehicle',
     'deleted': '/app/finance/employee-new-vehicle',
+    'change_request_created': '/app/finance/supervisor-fleet',
+    'change_request_supervisor_approved': '/app/finance/accountant-fleet',
+    'change_request_finance_approved': '/app/finance/manager-fleet',
+    'change_request_manager_approved': '/app/finance/employee-fleet',
+    'change_request_rejected': '/app/finance/employee-fleet',
+    'change_request_cancelled': '/app/finance/employee-fleet',
 }
 
 
-def dispatch_vehicle_workflow_notification(vehicle, stage: str, actor=None, reason=None, note=None, is_return=False):
+def dispatch_vehicle_workflow_notification(vehicle, stage: str, actor=None, reason=None, note=None, is_return=False, recipient_ids=None):
     """
-    تسک ۴.۱ و ب-۲۲: ارسال اعلان‌های هدفمند گردش کار ناوگان با تفکیک قلمرو شرکت و انتشار به کانال کاربر.
+    تسک ۴.۱ و ب-۲۲ و ن-۱۰ (ط-۷): ارسال اعلان‌های هدفمند گردش کار و درخواست تغییرات ناوگان
+    با تفکیک قلمرو شرکت و انتشار به کانال کاربر.
     """
     if not vehicle:
         return
@@ -702,10 +735,13 @@ def dispatch_vehicle_workflow_notification(vehicle, stage: str, actor=None, reas
             title = title_tpl
             message = message_tpl.format(plate=plate, driver=driver, reason=reason_txt)
 
-            target_user_ids = _workflow_recipient_ids(
-                stage, cid, sec_id, created_by_id,
-                perms_by_stage=FLEET_WORKFLOW_STAGE_PERMS
-            )
+            if recipient_ids is not None:
+                target_user_ids = {int(uid) for uid in recipient_ids if uid}
+            else:
+                target_user_ids = _workflow_recipient_ids(
+                    stage, cid, sec_id, created_by_id,
+                    perms_by_stage=FLEET_WORKFLOW_STAGE_PERMS
+                )
             if actor_id:
                 target_user_ids.discard(actor_id)
             if not target_user_ids:
@@ -714,13 +750,14 @@ def dispatch_vehicle_workflow_notification(vehicle, stage: str, actor=None, reas
             channel_layer = get_channel_layer()
             veh_id_str = str(veh_id) if veh_id is not None else ''
             cartable_url = FLEET_STAGE_URLS.get(stage, '/app/finance/employee-fleet')
+            notif_type = 'fleet_change_request' if stage.startswith('change_request_') else 'fleet_workflow'
 
             for uid in sorted(target_user_ids):
                 notif = Notification.objects.create(
                     recipient_id=uid,
                     title=title,
                     message=message,
-                    notification_type='fleet_workflow',
+                    notification_type=notif_type,
                     target_model='VehicleDriverProfile',
                     target_id=veh_id_str,
                 )
@@ -729,7 +766,7 @@ def dispatch_vehicle_workflow_notification(vehicle, stage: str, actor=None, reas
                         f'user_{uid}',
                         {
                             'type': 'send_notification',
-                            'type_str': 'fleet_workflow',
+                            'type_str': notif_type,
                             'notification_id': notif.id,
                             'title': title,
                             'message': message,

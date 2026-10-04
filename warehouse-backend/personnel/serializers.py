@@ -763,6 +763,9 @@ class VehicleDriverProfileSerializer(serializers.ModelSerializer):
         if not v_type and self.instance:
             v_type = self.instance.vehicle_type
         if not v_type or v_type in ROAD_VEHICLE_TYPES:
+            from .fleet_lifecycle_services import is_valid_national_plate
+            if not is_valid_national_plate(value):
+                raise serializers.ValidationError("ساختار شماره پلاک ملی برای خودروهای جاده‌ای نامعتبر است (الگوی ۲ رقم - حرف - ۳ رقم - ایران - ۲ رقم).")
             return normalize_plate(value)
         return str(value).strip()
 
