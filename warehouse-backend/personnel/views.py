@@ -3126,9 +3126,13 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
             from .fleet_lifecycle_services import normalize_shamsi_date
             title = (request.data.get('title') or '').strip() or None
             raw_issue_date = (request.data.get('issue_date') or '').strip()
-            issue_date = normalize_shamsi_date(raw_issue_date) if raw_issue_date else None
             raw_expiry_date = (request.data.get('expiry_date') or '').strip()
-            expiry_date = normalize_shamsi_date(raw_expiry_date) if raw_expiry_date else None
+            # تاریخ نامعتبر ۴۰۰ روشن می‌گیرد، نه خطای ۵۰۰ (normalize_shamsi_date برای ورودی نامعتبر ValueError می‌دهد)
+            try:
+                issue_date = normalize_shamsi_date(raw_issue_date) if raw_issue_date else None
+                expiry_date = normalize_shamsi_date(raw_expiry_date) if raw_expiry_date else None
+            except ValueError as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
             with transaction.atomic():
                 doc = VehicleDocument.objects.create(
