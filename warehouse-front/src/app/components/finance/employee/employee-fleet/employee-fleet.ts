@@ -997,70 +997,19 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
   }
 
   openNewVehicleProfileModal(): void {
-    this.isEditingVehicleProfile = false;
-    this.shebaValidationResult = null;
-    this.shebaDigitsDisplay = '';
-    this.isBankDropdownOpen = false;
-    this.bankSearchQuery = '';
-    this.selectedVehicleProfile = {
-      driver_name: '',
-      driver_national_code: '',
-      driver_phone: '',
-      plate_number: '',
-      vehicle_type: 'pickup',
-      ownership_type: 'contract',
-      default_service_rate: 1500000,
-      sheba_number: '',
-      account_number: '',
-      bank_name: 'بانک ملی ایران',
-      assigned_warehouse: this.selectedWarehouseId || undefined,
-      section: this.selectedSectionId || undefined,
-      project: this.selectedSection?.project || undefined,
-      is_active: true
-    };
-    this.isVehicleProfileModalOpen = true;
+    const queryParams: any = { new: 'true' };
+    if (this.selectedSectionId) {
+      queryParams.section_id = this.selectedSectionId;
+    }
+    this.router.navigate(['/app/finance/employee-new-vehicle'], { queryParams });
   }
 
   openEditVehicleProfileModal(vehicleId: number): void {
-    const existing = this.vehicleRows.find(v => v.vehicle_id === vehicleId);
-    this.isEditingVehicleProfile = true;
-    this.shebaValidationResult = null;
-    this.shebaDigitsDisplay = '';
-    this.isBankDropdownOpen = false;
-    this.bankSearchQuery = '';
-    this.personnelApi.getVehicleDriverProfile(vehicleId).subscribe({
-      next: (profile: VehicleDriverProfile) => {
-        this.selectedVehicleProfile = { ...profile };
-        if (profile.sheba_number) {
-          const res = validateSheba(profile.sheba_number);
-          this.shebaValidationResult = res;
-          this.shebaDigitsDisplay = res.formattedDigits;
-          if (res.accountNumber && !this.selectedVehicleProfile.account_number) {
-            this.selectedVehicleProfile.account_number = res.accountNumber;
-          }
-        }
-        this.isVehicleProfileModalOpen = true;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.selectedVehicleProfile = {
-          id: vehicleId,
-          driver_name: existing?.driver_name || '',
-          plate_number: existing?.plate_number || '',
-          vehicle_type: 'pickup',
-          ownership_type: 'contract',
-          default_service_rate: existing?.default_rate || 1500000,
-          sheba_number: '',
-          bank_name: 'بانک ملی ایران',
-          section: this.selectedSectionId || undefined,
-          project: this.selectedSection?.project || undefined,
-          is_active: true
-        };
-        this.shebaDigitsDisplay = '';
-        this.isVehicleProfileModalOpen = true;
-        this.cdr.detectChanges();
-      }
-    });
+    const queryParams: any = { edit: vehicleId };
+    if (this.selectedSectionId) {
+      queryParams.section_id = this.selectedSectionId;
+    }
+    this.router.navigate(['/app/finance/employee-new-vehicle'], { queryParams });
   }
 
   saveVehicleProfileForm(): void {

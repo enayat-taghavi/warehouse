@@ -747,28 +747,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     });
   }
 
-  // ─── Edit Vehicle Modal ───────────────────────────────────
-  openEditVehicleModal(v: VehicleDriverProfile): void {
-    this.editingVehicle = JSON.parse(JSON.stringify(v));
-    this.isVehicleModalOpen = true;
-  }
 
-  saveVehicleProfile(): void {
-    if (!this.editingVehicle.id) return;
-    this.isSaving = true;
-    this.api.updateVehicleProfile(this.editingVehicle.id, this.editingVehicle).subscribe({
-      next: (res: any) => {
-        this.isSaving = false;
-        this.isVehicleModalOpen = false;
-        this.toast.show('success', res.message || 'اطلاعات ناوگان با موفقیت ثبت شد.');
-        this.loadVehicles();
-      },
-      error: (err: any) => {
-        this.isSaving = false;
-        this.toast.show('error', err?.error?.error || 'خطا در ویرایش ناوگان');
-      }
-    });
-  }
 
   // ─── 5. Invoices & Petty Cash (Manager Approval Hub) ──────────
   loadInvoices(): void {

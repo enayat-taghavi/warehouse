@@ -342,38 +342,21 @@ describe('EmployeeFleetHubComponent Comprehensive Vitest Suite (Phase 2)', () =>
     });
   });
 
-  describe('5. Driver & Vehicle Profile Modal with Sheba Validation', () => {
-    it('should open new vehicle profile modal with section assignment', () => {
+  describe('5. Driver & Vehicle Profile Redirection to employee-new-vehicle', () => {
+    it('should navigate to employee-new-vehicle with new=true and section_id', () => {
+      component.selectedSectionId = 10;
       component.openNewVehicleProfileModal();
-      expect(component.isVehicleProfileModalOpen).toBe(true);
-      expect(component.isEditingVehicleProfile).toBe(false);
-      expect(component.selectedVehicleProfile.section).toBe(10);
-      expect(component.selectedVehicleProfile.driver_name).toBe('');
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/finance/employee-new-vehicle'], {
+        queryParams: { new: 'true', section_id: 10 }
+      });
     });
 
-    it('should validate Sheba number correctly using ISO 7064 Mod 97', () => {
-      component.openNewVehicleProfileModal();
-      // Valid Sheba format test
-      component.onShebaInput('IR000000000000000000000000');
-      // Even with invalid digits, validateSheba runs and updates validation state
-      expect(component.shebaValidationResult).toBeDefined();
-      expect(component.shebaDigitsDisplay).toBeDefined();
-    });
-
-    it('should save vehicle profile and refresh fleet matrix', () => {
-      component.openNewVehicleProfileModal();
-      component.selectedVehicleProfile.driver_name = 'محسن کریمی';
-      component.selectedVehicleProfile.plate_number = '45ب123-11';
-      component.saveVehicleProfileForm();
-
-      expect(mockPersonnelApi.createVehicleDriverProfile).toHaveBeenCalledWith(
-        expect.objectContaining({
-          driver_name: 'محسن کریمی',
-          plate_number: '45ب123-11',
-          section: 10
-        })
-      );
-      expect(component.isVehicleProfileModalOpen).toBe(false);
+    it('should navigate to employee-new-vehicle with edit id and section_id', () => {
+      component.selectedSectionId = 10;
+      component.openEditVehicleProfileModal(201);
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/finance/employee-new-vehicle'], {
+        queryParams: { edit: 201, section_id: 10 }
+      });
     });
   });
 

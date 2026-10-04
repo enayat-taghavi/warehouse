@@ -73,6 +73,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   selectedSection: ProjectSection | null = null;
   isLoadingSections: boolean = false;
   private pendingSectionId: number | null = null;
+  private pendingOpenNewModal: boolean = false;
 
   // ─── جدول خودروهای اخیراً ثبت‌شده بخش ───
   recentVehicles: VehicleDriverProfile[] = [];
@@ -348,6 +349,23 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
       if (params['search'] !== undefined) {
         this.searchQuery = params['search'] || '';
       }
+      const editId = params['edit'] ? Number(params['edit']) : (params['id'] ? Number(params['id']) : null);
+      if (editId && !isNaN(editId)) {
+        this.personnelApi.getVehicleDriverProfile(editId).subscribe({
+          next: (v) => {
+            this.openEditModal(v);
+          },
+          error: () => {
+            this.toast.show('error', 'خطا در بارگذاری پرونده خودرو برای ویرایش');
+          }
+        });
+      } else if (params['new'] === 'true' || params['new'] === true) {
+        if (this.selectedSectionId) {
+          this.openNewVehicleModal();
+        } else {
+          this.pendingOpenNewModal = true;
+        }
+      }
     });
     this.loadMySections();
   }
@@ -504,6 +522,10 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
       this.pendingSectionId = null;
       if (this.selectedSectionId) {
         this.loadRecentVehicles();
+        if (this.pendingOpenNewModal) {
+          this.pendingOpenNewModal = false;
+          this.openNewVehicleModal();
+        }
       }
     }
     this.isLoadingSections = false;
@@ -1849,34 +1871,70 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
       notes: this.newVehicle.notes?.trim() || undefined,
       section: this.selectedSectionId,
       company: this.selectedSection?.company_id || (this.selectedSection as any)?.company || this.mySections.find(s => Number(s.id) === Number(this.selectedSectionId))?.company_id || undefined,
-      approval_status: targetStatus,
       is_active: true
     };
+    delete (payload as any).approval_status;
 
     if (this.editingId) {
       this.personnelApi.updateVehicleProfile(this.editingId, payload).subscribe({
         next: (res: any) => {
-          this.isSaving = false;
+          const vehicleId = this.editingId!;
           const plate = res?.plate_number || this.newVehicle.plate_number;
-          if (this.isApprovedRecord) {
-            this.toast.show('success', `درخواست تغییرات خودرو «${plate}» ثبت و جهت بررسی به کارتابل سرپرست و مدیر ارسال گردید.`);
-          } else if (this.isRevisionMode) {
-            this.toast.show('success', `پرونده خودرو «${plate}» پس از اصلاح، مجدداً به کارتابل سرپرست ارسال گردید.`);
-          } else if (targetStatus === 'pending_supervisor') {
-            this.toast.show('success', `پرونده خودرو «${plate}» به کارتابل سرپرست ارسال گردید.`);
-          } else {
-            this.toast.show('success', `تغییرات پیش‌نویس خودرو «${plate}» با موفقیت ذخیره شد.`);
+          if (this.pendingUploadDocuments.length > 0) {
+            this.uploadAllPendingDocuments(vehicleId);
           }
-          this.closeNewVehicleModal();
-          this.loadRecentVehicles();
+
+          if (this.isApprovedRecord) {
+            this.isSaving = false;
+            this.toast.show('success', `درخواست تغییرات خودرو «${plate}» ثبت و جهت بررسی به کارتابل سرپرست و مدیر ارسال گردید.`);
+            this.closeNewVehicleModal();
+            this.loadRecentVehicles();
+            return;
+          }
+
+          const currentStatus = res?.approval_status || this.editingVehicle?.approval_status || 'draft';
+          if (targetStatus === 'pending_supervisor' && (currentStatus === 'draft' || currentStatus === 'revision_required')) {
+            this.personnelApi.submitVehicleProfile(vehicleId).subscribe({
+              next: () => {
+                this.isSaving = false;
+                this.toast.show('success', `پرونده خودرو «${plate}» به کارتابل سرپرست ارسال گردید.`);
+                this.closeNewVehicleModal();
+                this.loadRecentVehicles();
+              },
+              error: (submitErr: any) => {
+                this.isSaving = false;
+                const missing = submitErr.error?.missing_fields;
+                if (Array.isArray(missing) && missing.length > 0) {
+                  this.serverMissingFields = missing.map((m: any) => typeof m === 'object' && m !== null && m.field ? m.field : String(m));
+                  const labels = this.formatMissingFields(missing);
+                  this.toast.show('warning', 'پیش‌نویس ذخیره شد، اما به دلیل نواقص پرونده ارسال نشد: ' + labels);
+                  this.mapMissingFieldsToTab(this.serverMissingFields);
+                } else {
+                  const msg = submitErr.error?.error || submitErr.message || 'نامشخص';
+                  this.toast.show('warning', 'پیش‌نویس ذخیره شد، اما خطا در ارسال به سرپرست: ' + msg);
+                }
+                this.loadRecentVehicles();
+                this.cdr.detectChanges();
+              }
+            });
+          } else {
+            this.isSaving = false;
+            if (this.isRevisionMode) {
+              this.toast.show('success', `پرونده خودرو «${plate}» با موفقیت ذخیره شد.`);
+            } else {
+              this.toast.show('success', `تغییرات پیش‌نویس خودرو «${plate}» با موفقیت ذخیره شد.`);
+            }
+            this.closeNewVehicleModal();
+            this.loadRecentVehicles();
+          }
         },
         error: (err: any) => {
           this.isSaving = false;
           const missing = err.error?.missing_fields;
           if (Array.isArray(missing) && missing.length > 0) {
-            this.serverMissingFields = missing;
-            this.toast.show('error', 'نواقص پرونده: ' + missing.join('، '));
-            this.mapMissingFieldsToTab(missing);
+            this.serverMissingFields = missing.map((m: any) => typeof m === 'object' && m !== null && m.field ? m.field : String(m));
+            this.toast.show('error', 'نواقص پرونده: ' + this.formatMissingFields(missing));
+            this.mapMissingFieldsToTab(this.serverMissingFields);
           } else {
             const msg = err.error?.plate_number?.[0] || err.error?.error || err.message || 'نامشخص';
             this.toast.show('error', 'خطا در ویرایش خودرو: ' + msg);
@@ -1887,26 +1945,55 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
     } else {
       this.personnelApi.createVehicleProfile(payload).subscribe({
         next: (created: VehicleDriverProfile) => {
-          this.isSaving = false;
-          this.clearDraftFromStorage();
-          if (created.id && this.pendingUploadDocuments.length > 0) {
-            this.uploadAllPendingDocuments(created.id);
+          const vehicleId = created.id;
+          const plate = created.plate_number;
+
+          if (vehicleId && this.pendingUploadDocuments.length > 0) {
+            this.uploadAllPendingDocuments(vehicleId);
           }
-          if (targetStatus === 'pending_supervisor') {
-            this.toast.show('success', `خودرو «${created.plate_number}» ثبت و به کارتابل سرپرست ارسال گردید.`);
+
+          if (targetStatus === 'pending_supervisor' && vehicleId) {
+            this.personnelApi.submitVehicleProfile(vehicleId).subscribe({
+              next: () => {
+                this.isSaving = false;
+                this.clearDraftFromStorage();
+                this.toast.show('success', `خودرو «${plate}» ثبت و به کارتابل سرپرست ارسال گردید.`);
+                this.closeNewVehicleModal();
+                this.loadRecentVehicles();
+              },
+              error: (submitErr: any) => {
+                this.isSaving = false;
+                this.editingId = vehicleId;
+                this.editingVehicle = created;
+                const missing = submitErr.error?.missing_fields;
+                if (Array.isArray(missing) && missing.length > 0) {
+                  this.serverMissingFields = missing.map((m: any) => typeof m === 'object' && m !== null && m.field ? m.field : String(m));
+                  const labels = this.formatMissingFields(missing);
+                  this.toast.show('warning', 'پیش‌نویس ذخیره شد، اما به دلیل نواقص پرونده ارسال نشد: ' + labels);
+                  this.mapMissingFieldsToTab(this.serverMissingFields);
+                } else {
+                  const msg = submitErr.error?.error || submitErr.message || 'نامشخص';
+                  this.toast.show('warning', 'پیش‌نویس ذخیره شد، اما خطا در ارسال به سرپرست: ' + msg);
+                }
+                this.loadRecentVehicles();
+                this.cdr.detectChanges();
+              }
+            });
           } else {
-            this.toast.show('success', `خودرو «${created.plate_number}» با راننده «${created.driver_name}» در وضعیت پیش‌نویس ثبت شد.`);
+            this.isSaving = false;
+            this.clearDraftFromStorage();
+            this.toast.show('success', `خودرو «${plate}» با راننده «${created.driver_name}» در وضعیت پیش‌نویس ثبت شد.`);
+            this.closeNewVehicleModal();
+            this.loadRecentVehicles();
           }
-          this.closeNewVehicleModal();
-          this.loadRecentVehicles();
         },
         error: (err: any) => {
           this.isSaving = false;
           const missing = err.error?.missing_fields;
           if (Array.isArray(missing) && missing.length > 0) {
-            this.serverMissingFields = missing;
-            this.toast.show('error', 'نواقص پرونده: ' + missing.join('، '));
-            this.mapMissingFieldsToTab(missing);
+            this.serverMissingFields = missing.map((m: any) => typeof m === 'object' && m !== null && m.field ? m.field : String(m));
+            this.toast.show('error', 'نواقص پرونده: ' + this.formatMissingFields(missing));
+            this.mapMissingFieldsToTab(this.serverMissingFields);
           } else {
             const msg = err.error?.plate_number?.[0] || err.error?.error || err.message || 'نامشخص';
             this.toast.show('error', 'خطا در ثبت خودرو: ' + msg);
@@ -1915,6 +2002,17 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  // ─── قالب‌بندی متنی نواقص پرونده با برچسب فارسی (تسک ۱۱.۱۲ و ن-۱۲) ───
+  formatMissingFields(missing: any): string {
+    if (!Array.isArray(missing) || missing.length === 0) return '';
+    return missing.map((m: any) => {
+      if (typeof m === 'object' && m !== null) {
+        return m.label || m.field || JSON.stringify(m);
+      }
+      return String(m);
+    }).filter(Boolean).join('، ');
   }
 
   // ─── ارسال صریح پرونده پیش‌نویس به کارتابل سرپرست (تسک ۶.۷ - POST /submit/) ───
@@ -1953,12 +2051,13 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
         this.isSaving = false;
         const missing = err.error?.missing_fields;
         if (Array.isArray(missing) && missing.length > 0) {
-          this.serverMissingFields = missing;
-          this.toast.show('error', 'ارسال ناموفق؛ نواقص سروری: ' + missing.join('، '));
+          this.serverMissingFields = missing.map((m: any) => typeof m === 'object' && m !== null && m.field ? m.field : String(m));
+          const labels = this.formatMissingFields(missing);
+          this.toast.show('error', 'ارسال ناموفق؛ نواقص سروری: ' + labels);
           if (!this.isNewVehicleModalOpen && target) {
             this.openEditModal({ ...target, missing_fields: missing });
           } else {
-            this.mapMissingFieldsToTab(missing);
+            this.mapMissingFieldsToTab(this.serverMissingFields);
           }
         } else {
           const msg = err.error?.error || err.message || 'نامشخص';
@@ -1970,29 +2069,6 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   }
 
   submitDraftToSupervisor(v: VehicleDriverProfile): void {
-    if (typeof this.personnelApi?.submitVehicleProfile !== 'function' && v?.id) {
-      this.isSaving = true;
-      this.personnelApi.updateVehicleProfile(v.id, { approval_status: 'pending_supervisor' }).subscribe({
-        next: () => {
-          this.isSaving = false;
-          this.toast.show('success', `پرونده خودرو «${v.plate_number}» به کارتابل سرپرست بخش ارسال گردید.`);
-          this.loadRecentVehicles();
-        },
-        error: (err: any) => {
-          this.isSaving = false;
-          const missing = err.error?.missing_fields;
-          if (Array.isArray(missing) && missing.length > 0) {
-            this.serverMissingFields = missing;
-            this.toast.show('error', 'ارسال ناموفق؛ نواقص سروری: ' + missing.join('، '));
-            this.openEditModal({ ...v, missing_fields: missing });
-          } else {
-            this.toast.show('error', 'خطا در ارسال پرونده به سرپرست: ' + (err.error?.error || err.message || 'نامشخص'));
-          }
-          this.cdr.detectChanges();
-        }
-      });
-      return;
-    }
     this.submitDraftVehicle(v);
   }
 
@@ -2177,37 +2253,37 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   getWorkflowActionIcon(action?: string): string {
     switch (action) {
       case 'submit':
-        return '📤';
+        return 'send';
       case 'approve_supervisor':
       case 'approve_accountant':
       case 'approve_finance':
-        return '✓';
+        return 'check';
       case 'approve_manager':
-        return '🌟';
+        return 'star';
       case 'batch_approve':
-        return '👥';
+        return 'users';
       case 'revision':
       case 'request_revision':
-        return '↩';
+        return 'undo';
       case 'reject':
       case 'purge':
       case 'delete':
       case 'change_request_rejected':
-        return '✕';
+        return 'x';
       case 'cancel_change_request':
       case 'change_request_cancelled':
-        return '🚫';
+        return 'slash';
       case 'auto_pass':
-        return '⚡';
+        return 'zap';
       case 'reopen':
-        return '🔄';
+        return 'refresh-cw';
       case 'end_collaboration':
-        return '⏹';
+        return 'slash';
       case 'create':
       case 'change_request_created':
-        return '📝';
+        return 'file-text';
       default:
-        return '📋';
+        return 'file';
     }
   }
 
@@ -2363,19 +2439,20 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   getStatusIcon(status?: string): string {
     switch (status) {
       case 'draft':
-        return '📝';
+        return 'edit-2';
       case 'pending_supervisor':
       case 'pending_manager':
-        return '⏳';
+      case 'pending_accountant':
+        return 'clock';
       case 'manager_approved':
       case 'approved':
-        return '✓';
+        return 'check';
       case 'revision_required':
-        return '↩';
+        return 'undo';
       case 'rejected':
-        return '✕';
+        return 'x';
       default:
-        return '•';
+        return 'circle';
     }
   }
 

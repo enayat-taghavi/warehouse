@@ -259,9 +259,12 @@
         <div class="mt-4 border-t border-slate-100 pt-3 space-y-2">
           <!-- Edit / Delete -->
           <div class="flex items-center justify-between gap-2 pt-1">
-            <button (click)="toggleVehicleActive(v)" [title]="v.is_active ? 'غیرفعال‌سازی خودرو' : 'فعال‌سازی خودرو'" class="px-2.5 py-1 text-xs font-bold rounded-xl transition-colors cursor-pointer" [ngClass]="v.is_active ? 'bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-600' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'">
-              {{ v.is_active ? 'غیرفعال‌سازی' : 'فعال‌سازی' }}
+            <button *ngIf="v.is_active" (click)="toggleVehicleActive(v)" title="قطع همکاری با خودرو" class="px-2.5 py-1 text-xs font-bold rounded-xl transition-colors cursor-pointer bg-slate-100 hover:bg-amber-50 hover:text-amber-700 text-slate-600">
+              قطع همکاری
             </button>
+            <span *ngIf="!v.is_active" class="px-2.5 py-1 text-[11px] font-bold rounded-xl bg-slate-50 text-slate-400 border border-slate-100">
+              پایان همکاری{{ v.end_date ? ' (' + v.end_date + ')' : '' }}
+            </span>
             <div class="flex items-center gap-1.5">
               <button (click)="deleteVehicle(v)" title="حذف پرونده" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash"></svg>
@@ -1040,7 +1043,7 @@
     <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 p-5 space-y-4">
       <div class="flex items-center justify-between">
         <h2 id="profiles-end-collab-title" class="text-sm font-black text-slate-800">
-          قطع همکاری: {{ endCollaborationTarget?.first_name }} {{ endCollaborationTarget?.last_name }}
+          قطع همکاری: {{ endCollaborationVehicleTarget ? (endCollaborationVehicleTarget.driver_name + ' (' + endCollaborationVehicleTarget.plate_number + ')') : (endCollaborationTarget?.first_name + ' ' + endCollaborationTarget?.last_name) }}
         </h2>
         <button type="button" (click)="closeEndCollaborationModal()" class="min-w-[32px] min-h-[32px] text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer" aria-label="بستن">&times;</button>
       </div>

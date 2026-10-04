@@ -1,32 +1,32 @@
-<div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
+<div class="min-h-screen bg-surface-canvas/50 p-3 md:p-6 space-y-4" dir="rtl">
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+  <div class="sticky top-0 z-30 bg-surface-canvas/95 backdrop-blur-md pt-1 pb-2">
+    <div class="bg-surface p-2.5 md:p-3 rounded-2xl border border-line shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
       
       <!-- سمت راست: انتخابگر بخش فعال و ناوبری زیرتب‌ها در کپسول محصور -->
       <div class="flex flex-wrap items-center gap-2 md:gap-3">
         <!-- کپسول سوئیچر ماژولار (تفکیک شفاف پرسنل و خودرو) -->
-        <div class="flex bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/80 items-center shrink-0">
+        <div class="flex bg-surface-muted p-0.5 rounded-xl border border-line items-center shrink-0">
           <button
             type="button"
             (click)="navigateToPersonnel()"
-            class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+            class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-fg-muted hover:text-fg transition-colors cursor-pointer"
             title="رفتن به صفحه تعریف پرسنل">
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user"></svg>
             <span>تعریف پرسنل</span>
           </button>
           <button
             type="button"
-            class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black bg-white text-indigo-700 shadow-2xs cursor-default">
+            class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black bg-surface text-indigo-700 shadow-2xs cursor-default">
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck"></svg>
             <span>تعریف خودرو</span>
           </button>
         </div>
 
         <!-- انتخابگر بخش فعال (Guardian G1: Section Isolation) -->
-        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-100/90 py-1 px-2.5 rounded-xl border border-slate-200/80">
-          <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
+        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-surface-muted py-1 px-2.5 rounded-xl border border-line">
+          <span class="text-[11px] font-bold text-fg-muted">بخش فعال:</span>
           <select
             [(ngModel)]="selectedSectionId"
             (change)="onSectionChanged()"
@@ -38,15 +38,15 @@
         </div>
 
         <!-- ناوبری زیرتب‌ها در کپسول محصور (Subtabs Pill Container) -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
+        <div class="flex bg-surface-muted p-1 rounded-xl border border-line overflow-x-auto w-full md:w-auto">
           <button
             type="button"
             (click)="setStatusFilter('all')"
-            [ngClass]="statusFilter === 'all' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+            [ngClass]="statusFilter === 'all' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
             <span>همه</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
+                  [ngClass]="statusFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-fg-muted'">
               {{ formatNumber(vehicleMetrics.total) }}
             </span>
           </button>
@@ -54,11 +54,11 @@
           <button
             type="button"
             (click)="setStatusFilter('draft')"
-            [ngClass]="statusFilter === 'draft' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+            [ngClass]="statusFilter === 'draft' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
             <span>پیش‌نویس</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'draft' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
+                  [ngClass]="statusFilter === 'draft' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-fg-muted'">
               {{ formatNumber(vehicleMetrics.drafts) }}
             </span>
           </button>
@@ -66,11 +66,11 @@
           <button
             type="button"
             (click)="setStatusFilter('pending_supervisor')"
-            [ngClass]="statusFilter === 'pending_supervisor' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+            [ngClass]="statusFilter === 'pending_supervisor' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
             <span>در انتظار سرپرست</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'pending_supervisor' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
+                  [ngClass]="statusFilter === 'pending_supervisor' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-fg-muted'">
               {{ formatNumber(vehicleMetrics.pending) }}
             </span>
           </button>
@@ -78,7 +78,7 @@
           <button
             type="button"
             (click)="setStatusFilter('revision_required')"
-            [ngClass]="statusFilter === 'revision_required' ? 'bg-white text-orange-700 shadow-xs font-black' : 'text-orange-600 hover:text-orange-900 font-bold'"
+            [ngClass]="statusFilter === 'revision_required' ? 'bg-surface text-orange-700 shadow-xs font-black' : 'text-orange-600 hover:text-orange-900 font-bold'"
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
             <span>نیازمند اصلاح</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-orange-100 text-orange-800">
@@ -89,11 +89,11 @@
           <button
             type="button"
             (click)="setStatusFilter('approved')"
-            [ngClass]="statusFilter === 'approved' ? 'bg-white text-emerald-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+            [ngClass]="statusFilter === 'approved' ? 'bg-surface text-emerald-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
             <span>مصوب</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-200/70 text-slate-600'">
+                  [ngClass]="statusFilter === 'approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-200/70 text-fg-muted'">
               {{ formatNumber(vehicleMetrics.approved) }}
             </span>
           </button>
@@ -101,11 +101,11 @@
           <button
             type="button"
             (click)="setStatusFilter('rejected')"
-            [ngClass]="statusFilter === 'rejected' ? 'bg-white text-rose-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+            [ngClass]="statusFilter === 'rejected' ? 'bg-surface text-rose-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
             class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
             <span>رد شده</span>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-slate-200/70 text-slate-600'">
+                  [ngClass]="statusFilter === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-slate-200/70 text-fg-muted'">
               {{ formatNumber(vehicleMetrics.rejected) }}
             </span>
           </button>
@@ -140,7 +140,7 @@
           type="button"
           (click)="loadRecentVehicles()"
           [disabled]="isLoadingVehicles"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
+          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-surface-muted text-fg-muted hover:bg-surface-muted border border-line transition-colors"
           title="بروزرسانی داده‌ها">
           <svg class="w-4 h-4" [class.animate-spin]="isLoadingVehicles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="refresh-cw"></svg>
         </button>
@@ -160,14 +160,14 @@
   </div>
 
   <!-- ── ۲. کارت کارتابل و جدول ناوگان بخش (Data Table Card - Phase 7) ── -->
-  <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden space-y-0">
+  <div class="bg-surface rounded-3xl border border-line shadow-sm overflow-hidden space-y-0">
     
     <!-- نوار جستجوی زنده با دی‌بانس ۳۰۰ میلی‌ثانیه‌ای -->
-    <div class="p-3 md:p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+    <div class="p-3 md:p-4 border-b border-line-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-canvas/50">
       
       <!-- فیلد جستجو -->
       <div class="relative w-full sm:w-80">
-        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-fg-subtle">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg>
         </span>
         <input
@@ -176,24 +176,24 @@
           [(ngModel)]="searchQuery"
           (ngModelChange)="onSearchChange()"
           placeholder="جستجوی پلاک، راننده، شماره تماس، کد ملی..."
-          class="w-full pr-8 pl-8 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 shadow-2xs font-medium placeholder:text-slate-400" />
+          class="w-full pr-8 pl-8 py-1.5 text-xs bg-surface border border-line rounded-xl focus:outline-none focus:border-indigo-500 shadow-2xs font-medium placeholder:text-fg-subtle" />
         <button
           *ngIf="searchQuery"
           type="button"
           (click)="clearSearch()"
-          class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer">
+          class="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg-muted text-xs cursor-pointer">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
         </button>
       </div>
 
       <!-- وضعیت نمایش و آمار زنده -->
-      <div class="flex items-center gap-2 text-xs font-bold text-slate-500">
+      <div class="flex items-center gap-2 text-xs font-bold text-fg-muted">
         <span>نمایش</span>
         <span class="font-mono text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
           {{ formatNumber(filteredVehicles.length) }}
         </span>
         <span>از کل</span>
-        <span class="font-mono text-slate-700">{{ formatNumber(recentVehicles.length) }} خودرو</span>
+        <span class="font-mono text-fg/80">{{ formatNumber(recentVehicles.length) }} خودرو</span>
       </div>
     </div>
 
@@ -201,7 +201,7 @@
     <div class="hidden md:block overflow-x-auto">
       <table class="w-full text-right border-collapse text-xs">
         <thead>
-          <tr class="bg-slate-50/90 text-slate-600 border-b border-slate-200 text-[11px] font-black">
+          <tr class="bg-surface-muted/90 text-fg-muted border-b border-line text-[11px] font-black">
             <th class="py-3 px-3 text-center w-10">#</th>
             <th class="py-3 px-3">شماره پلاک / شناسه</th>
             <th class="py-3 px-3">مشخصات راننده</th>
@@ -212,11 +212,11 @@
             <th class="py-3 px-3 text-center w-48">عملیات</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
-          <tr *ngFor="let v of filteredVehicles; let idx = index" class="hover:bg-slate-50/80 transition-colors">
+        <tbody class="divide-y divide-line-subtle text-fg/80 font-medium">
+          <tr *ngFor="let v of filteredVehicles; let idx = index" class="hover:bg-surface-muted transition-colors">
             
             <!-- ردیف -->
-            <td class="py-2.5 px-3 text-center font-mono text-slate-400 text-[11px]">
+            <td class="py-2.5 px-3 text-center font-mono text-fg-subtle text-[11px]">
               {{ formatNumber(idx + 1) }}
             </td>
 
@@ -230,7 +230,7 @@
                 <button
                   type="button"
                   (click)="copyValue(v.plate_number, 'plate_' + v.id, 'شماره پلاک')"
-                  class="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  class="p-1 rounded-md text-fg-subtle hover:text-indigo-600 hover:bg-surface-muted transition-colors cursor-pointer"
                   [title]="isKeyCopied('plate_' + v.id) ? 'کپی شد!' : 'کپی شماره پلاک'">
                   <svg *ngIf="!isKeyCopied('plate_' + v.id)" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
                   <svg *ngIf="isKeyCopied('plate_' + v.id)" class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
@@ -240,17 +240,17 @@
 
             <!-- مشخصات راننده -->
             <td class="py-2.5 px-3 whitespace-nowrap">
-              <div class="font-bold text-slate-900 flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user"></svg>
+              <div class="font-bold text-fg flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-fg-subtle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user"></svg>
                 <span>{{ v.driver_name }}</span>
               </div>
-              <div class="text-[10px] text-slate-500 font-mono mt-0.5 flex items-center gap-2">
+              <div class="text-[10px] text-fg-muted font-mono mt-0.5 flex items-center gap-2">
                 <span *ngIf="v.driver_national_code" class="flex items-center gap-1">
                   <span>کدملی: {{ v.driver_national_code }}</span>
                   <button
                     type="button"
                     (click)="copyValue(v.driver_national_code, 'dnc_' + v.id, 'کد ملی راننده')"
-                    class="text-slate-400 hover:text-indigo-600 cursor-pointer"
+                    class="text-fg-subtle hover:text-indigo-600 cursor-pointer"
                     title="کپی کد ملی راننده">
                     <svg *ngIf="!isKeyCopied('dnc_' + v.id)" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
                     <svg *ngIf="isKeyCopied('dnc_' + v.id)" class="w-3 h-3 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
@@ -270,24 +270,24 @@
 
             <!-- نوع خودرو -->
             <td class="py-2.5 px-3 whitespace-nowrap">
-              <span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200/60">
+              <span class="px-2 py-0.5 rounded-lg bg-surface-muted text-fg/80 text-[11px] font-bold border border-line/60">
                 {{ getVehicleTypeLabel(v.vehicle_type) }}
               </span>
             </td>
 
             <!-- نوع مالکیت -->
-            <td class="py-2.5 px-3 text-slate-600 text-[11px] whitespace-nowrap">
+            <td class="py-2.5 px-3 text-fg-muted text-[11px] whitespace-nowrap">
               {{ getOwnershipTypeLabel(v.ownership_type) }}
             </td>
 
             <!-- بانک و شماره شبا -->
-            <td class="py-2.5 px-3 text-slate-600 text-[11px] whitespace-nowrap">
-              <div *ngIf="v.bank_name" class="font-bold text-slate-800 flex items-center gap-1">
-                <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
+            <td class="py-2.5 px-3 text-fg-muted text-[11px] whitespace-nowrap">
+              <div *ngIf="v.bank_name" class="font-bold text-fg flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-fg-subtle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
                 <span>{{ v.bank_name }}</span>
               </div>
               <div *ngIf="v.sheba_number" class="flex items-center gap-1 mt-0.5">
-                <span class="font-mono text-[10px] text-slate-500 uppercase tracking-wider" dir="ltr">
+                <span class="font-mono text-[10px] text-fg-muted uppercase tracking-wider" dir="ltr">
                   {{ formatShebaDisplay(v.sheba_number) }}
                 </span>
                 <button
@@ -308,7 +308,7 @@
                 <span [ngClass]="getStatusBadgeClass(v.approval_status)"
                       class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 shadow-2xs"
                       [title]="getFullStatusDescription(v.approval_status)">
-                  <span>{{ getStatusIcon(v.approval_status) }}</span>
+                  <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="getStatusIcon(v.approval_status)" [attr.aria-label]="getStatusLabel(v.approval_status)"></svg>
                   <span>{{ getStatusLabel(v.approval_status) }}</span>
                 </span>
                 
@@ -368,7 +368,7 @@
                   *ngIf="isReadOnlyVehicle(v)"
                   type="button"
                   (click)="openEditModal(v)"
-                  class="px-2 py-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg text-[11px] font-bold transition-colors cursor-pointer active:scale-95"
+                  class="px-2 py-1 text-fg-muted hover:text-indigo-600 hover:bg-indigo-50 rounded-lg text-[11px] font-bold transition-colors cursor-pointer active:scale-95"
                   title="مشاهده پرونده خودرو">
                   <span>مشاهده</span>
                 </button>
@@ -378,7 +378,7 @@
                   *ngIf="v.approval_status === 'draft'"
                   type="button"
                   (click)="openEditModal(v)"
-                  class="px-2 py-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg text-[11px] font-bold transition-colors cursor-pointer active:scale-95"
+                  class="px-2 py-1 text-fg-muted hover:text-indigo-600 hover:bg-indigo-50 rounded-lg text-[11px] font-bold transition-colors cursor-pointer active:scale-95"
                   title="ویرایش پیش‌نویس خودرو">
                   <span>ویرایش</span>
                 </button>
@@ -399,7 +399,7 @@
                   *ngIf="v.approval_status === 'approved' || v.approval_status === 'manager_approved'"
                   type="button"
                   (click)="openEditModal(v)"
-                  class="px-2 py-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg text-[11px] font-bold transition-colors cursor-pointer active:scale-95"
+                  class="px-2 py-1 text-fg-muted hover:text-indigo-600 hover:bg-indigo-50 rounded-lg text-[11px] font-bold transition-colors cursor-pointer active:scale-95"
                   title="پیشنهاد تغییرات برای خودروی مصوب">
                   <span>ویرایش</span>
                 </button>
@@ -418,7 +418,7 @@
                 <button
                   type="button"
                   (click)="openTimelineModal(v)"
-                  class="px-1.5 py-1 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg text-[11px] font-bold transition-colors cursor-pointer active:scale-95"
+                  class="px-1.5 py-1 text-fg-muted hover:text-indigo-600 hover:bg-surface-muted rounded-lg text-[11px] font-bold transition-colors cursor-pointer active:scale-95"
                   title="مشاهده تاریخچه گردش کار و ممیزی">
                   <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
                 </button>
@@ -440,19 +440,19 @@
 
           <!-- ردیف خالی -->
           <tr *ngIf="filteredVehicles.length === 0 && !isLoadingVehicles">
-            <td colspan="8" class="py-12 text-center text-slate-400">
+            <td colspan="8" class="py-12 text-center text-fg-subtle">
               <div class="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100/80 flex items-center justify-center text-2xl mb-3 shadow-2xs">
                 <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck"></svg>
               </div>
-              <p class="font-black text-slate-700 text-xs">هیچ خودرویی با فیلتر جاری یافت نشد</p>
-              <p class="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">
+              <p class="font-black text-fg/80 text-xs">هیچ خودرویی با فیلتر جاری یافت نشد</p>
+              <p class="text-[11px] text-fg-subtle mt-1 max-w-sm mx-auto">
                 {{ searchQuery || statusFilter !== 'all' ? 'با تغییر عبارت جستجو یا انتخاب تب «همه» می‌توانید کلیه خودروها را مشاهده کنید.' : 'با کلیک روی دکمه «+» می‌توانید مشخصات اولین خودرو را ثبت نمایید.' }}
               </p>
               <button
                 *ngIf="statusFilter !== 'all' || searchQuery"
                 type="button"
                 (click)="setStatusFilter('all'); clearSearch()"
-                class="mt-3 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer active:scale-95">
+                class="mt-3 px-3 py-1.5 rounded-xl bg-surface-muted hover:bg-surface text-fg/80 text-xs font-bold transition-colors cursor-pointer active:scale-95">
                 نمایش همه خودروها
               </button>
             </td>
@@ -460,9 +460,9 @@
 
           <!-- ردیف در حال بارگذاری -->
           <tr *ngIf="isLoadingVehicles">
-            <td colspan="8" class="py-12 text-center text-slate-500">
+            <td colspan="8" class="py-12 text-center text-fg-muted">
               <div class="w-7 h-7 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-              <p class="text-xs font-bold text-slate-600">در حال دریافت اطلاعات ناوگان بخش...</p>
+              <p class="text-xs font-bold text-fg-muted">در حال دریافت اطلاعات ناوگان بخش...</p>
             </td>
           </tr>
         </tbody>
@@ -470,7 +470,7 @@
     </div>
 
     <!-- نمای کارتی برای موبایل (md:hidden - با ابعاد لمسی حداقل ۴۴px طبق تسک ۷.۴) -->
-    <div class="block md:hidden divide-y divide-slate-100">
+    <div class="block md:hidden divide-y divide-line-subtle">
       <div *ngFor="let v of filteredVehicles" class="p-3.5 space-y-2.5">
         <!-- بنر شاخص خودرو -->
         <div class="flex items-center justify-between bg-indigo-50/70 p-2 rounded-xl border border-indigo-200/60">
@@ -487,19 +487,19 @@
 
         <div class="flex items-center justify-between text-xs">
           <div class="flex items-center gap-1">
-            <span class="text-slate-400 text-[11px]">راننده:</span>
-            <span class="font-bold text-slate-800">{{ v.driver_name }}</span>
-            <span *ngIf="v.driver_national_code" class="text-[10px] text-slate-500 font-mono">({{ v.driver_national_code }})</span>
+            <span class="text-fg-subtle text-[11px]">راننده:</span>
+            <span class="font-bold text-fg">{{ v.driver_name }}</span>
+            <span *ngIf="v.driver_national_code" class="text-[10px] text-fg-muted font-mono">({{ v.driver_national_code }})</span>
           </div>
           <span [ngClass]="getStatusBadgeClass(v.approval_status)"
                 class="px-2 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 shadow-2xs">
-            <span>{{ getStatusIcon(v.approval_status) }}</span>
+            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="getStatusIcon(v.approval_status)" [attr.aria-label]="getStatusLabel(v.approval_status)"></svg>
             <span>{{ getStatusLabel(v.approval_status) }}</span>
           </span>
         </div>
 
-        <div *ngIf="v.driver_phone" class="flex items-center justify-between text-[11px] text-slate-600">
-          <span class="text-slate-400">همراه راننده:</span>
+        <div *ngIf="v.driver_phone" class="flex items-center justify-between text-[11px] text-fg-muted">
+          <span class="text-fg-subtle">همراه راننده:</span>
           <a [href]="getCleanTelUrl(v.driver_phone)" class="font-mono font-bold text-indigo-600 hover:underline">
             {{ v.driver_phone }}
           </a>
@@ -511,7 +511,7 @@
             <svg class="w-3.5 h-3.5 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="key"></svg>
             <span class="font-bold">مالک:</span>
             <span>{{ v.owner_name }}</span>
-            <span *ngIf="v.owner_national_code" class="text-[10px] text-slate-500 font-mono">({{ v.owner_national_code }})</span>
+            <span *ngIf="v.owner_national_code" class="text-[10px] text-fg-muted font-mono">({{ v.owner_national_code }})</span>
           </div>
           <div *ngIf="v.owner_phone" class="font-mono text-[10px]">
             <a [href]="getCleanTelUrl(v.owner_phone)" class="text-amber-800 hover:underline">
@@ -548,7 +548,7 @@
             *ngIf="isReadOnlyVehicle(v)"
             type="button"
             (click)="openEditModal(v)"
-            class="min-h-[44px] px-3 py-1.5 text-xs font-bold bg-slate-100 text-slate-700 rounded-xl">
+            class="min-h-[44px] px-3 py-1.5 text-xs font-bold bg-surface-muted text-fg/80 rounded-xl">
             مشاهده
           </button>
           <button
@@ -582,7 +582,7 @@
           <button
             type="button"
             (click)="openTimelineModal(v)"
-            class="min-h-[44px] px-3 py-1.5 text-xs font-bold bg-slate-100 text-slate-600 rounded-xl">
+            class="min-h-[44px] px-3 py-1.5 text-xs font-bold bg-surface-muted text-fg-muted rounded-xl">
             تاریخچه
           </button>
           <button
@@ -595,7 +595,7 @@
         </div>
       </div>
       
-      <div *ngIf="filteredVehicles.length === 0 && !isLoadingVehicles" class="p-8 text-center text-slate-400 text-xs">
+      <div *ngIf="filteredVehicles.length === 0 && !isLoadingVehicles" class="p-8 text-center text-fg-subtle text-xs">
         خودرویی با فیلتر جاری یافت نشد.
       </div>
     </div>
@@ -610,12 +610,12 @@
        (click)="closeNewVehicleModal()"
        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-hidden">
     <div (click)="$event.stopPropagation()"
-         class="bg-white rounded-t-3xl sm:rounded-3xl max-w-3xl w-full border border-slate-200 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[94vh] sm:max-h-[92vh]">
+         class="bg-surface rounded-t-3xl sm:rounded-3xl max-w-3xl w-full border border-line shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[94vh] sm:max-h-[92vh]">
       
       <!-- هدر مودال -->
-      <div class="p-3.5 md:p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+      <div class="p-3.5 md:p-4 border-b border-line-subtle flex items-center justify-between bg-surface-muted">
         <div>
-          <h3 id="newVehicleModalTitle" class="text-sm font-black text-slate-800 flex items-center gap-2">
+          <h3 id="newVehicleModalTitle" class="text-sm font-black text-fg flex items-center gap-2">
             <span>{{ modalHeaderTitle }}</span>
             <span *ngIf="isApprovedRecord" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
               پیشنهاد تغییرات خودرو مصوب
@@ -623,30 +623,30 @@
             <span *ngIf="isRevisionMode" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-orange-100 text-orange-800 border border-orange-200">
               نیازمند اصلاح
             </span>
-            <span *ngIf="isReadOnlyMode" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+            <span *ngIf="isReadOnlyMode" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-muted text-fg/80 border border-line">
               فقط مشاهده
             </span>
           </h3>
-          <p class="text-[11px] text-slate-500 mt-0.5">
+          <p class="text-[11px] text-fg-muted mt-0.5">
             بخش جاری: <strong class="text-indigo-700">{{ selectedSection?.name }}</strong>
           </p>
         </div>
         <button
           type="button"
           (click)="closeNewVehicleModal()"
-          class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 flex items-center justify-center text-sm font-bold cursor-pointer transition-colors">
+          class="w-8 h-8 rounded-full bg-surface-muted text-fg-muted hover:bg-surface hover:text-fg flex items-center justify-center text-sm font-bold cursor-pointer transition-colors">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
         </button>
       </div>
 
       <!-- نوار ناوبری ۵ تب استاندارد مودال ثبت خودرو (تسک ۶.۱) -->
-      <div class="bg-slate-100/90 p-1.5 border-b border-slate-200/80 flex items-center gap-1 overflow-x-auto">
+      <div class="bg-surface-muted p-1.5 border-b border-line flex items-center gap-1 overflow-x-auto">
         
         <!-- تب ۱: مشخصات فنی و پلاک -->
         <button
           type="button"
           (click)="setActiveTab('technical')"
-          [ngClass]="activeModalTab === 'technical' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+          [ngClass]="activeModalTab === 'technical' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer transition-all">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck"></svg>
           <span>۱. مشخصات فنی و پلاک</span>
@@ -659,7 +659,7 @@
         <button
           type="button"
           (click)="setActiveTab('driver')"
-          [ngClass]="activeModalTab === 'driver' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+          [ngClass]="activeModalTab === 'driver' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer transition-all">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user"></svg>
           <span>۲. مشخصات راننده</span>
@@ -672,7 +672,7 @@
         <button
           type="button"
           (click)="setActiveTab('owner')"
-          [ngClass]="activeModalTab === 'owner' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+          [ngClass]="activeModalTab === 'owner' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer transition-all">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="key"></svg>
           <span>۳. مشخصات مالک</span>
@@ -685,7 +685,7 @@
         <button
           type="button"
           (click)="setActiveTab('banking')"
-          [ngClass]="activeModalTab === 'banking' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+          [ngClass]="activeModalTab === 'banking' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer transition-all">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
           <span>۴. حساب‌های بانکی</span>
@@ -698,7 +698,7 @@
         <button
           type="button"
           (click)="setActiveTab('documents_expiry')"
-          [ngClass]="activeModalTab === 'documents_expiry' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+          [ngClass]="activeModalTab === 'documents_expiry' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer transition-all">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
           <span>۵. مدارک و انقضا</span>
@@ -747,12 +747,12 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             <!-- نوع خودرو / ماشین‌آلات -->
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع خودرو / ماشین‌آلات *</label>
+              <label class="block text-[11px] font-bold text-fg/80 mb-1">نوع خودرو / ماشین‌آلات *</label>
               <select
                 [disabled]="isReadOnlyMode"
                 [(ngModel)]="newVehicle.vehicle_type"
                 (change)="onPlatePartChange()"
-                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none cursor-pointer disabled:bg-slate-100 disabled:text-slate-500">
+                class="w-full px-3 py-2 text-xs bg-surface-muted border border-line rounded-xl focus:bg-surface focus:border-indigo-500 focus:outline-none cursor-pointer disabled:bg-surface-muted disabled:text-fg-muted">
                 <optgroup *ngFor="let g of vehicleGroups" [label]="g.group">
                   <option *ngFor="let t of g.types" [value]="t.value">{{ t.label }}</option>
                 </optgroup>
@@ -761,21 +761,21 @@
 
             <!-- نوع مالکیت -->
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع مالکیت *</label>
+              <label class="block text-[11px] font-bold text-fg/80 mb-1">نوع مالکیت *</label>
               <select
                 [disabled]="isReadOnlyMode"
                 [(ngModel)]="newVehicle.ownership_type"
-                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none cursor-pointer disabled:bg-slate-100 disabled:text-slate-500">
+                class="w-full px-3 py-2 text-xs bg-surface-muted border border-line rounded-xl focus:bg-surface focus:border-indigo-500 focus:outline-none cursor-pointer disabled:bg-surface-muted disabled:text-fg-muted">
                 <option *ngFor="let o of ownershipTypes" [value]="o.value">{{ o.label }}</option>
               </select>
             </div>
           </div>
 
           <!-- ویجت ۴ قسمتی پلاک ملی ایران برای خودروهای جاده‌ای (تسک ۶.۳) -->
-          <div *ngIf="isRoadVehicle(newVehicle.vehicle_type)" class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+          <div *ngIf="isRoadVehicle(newVehicle.vehicle_type)" class="bg-surface-muted p-4 rounded-2xl border border-line space-y-3">
             <div class="flex items-center justify-between">
-              <label class="text-xs font-bold text-slate-800">شماره پلاک ملی خودرو *</label>
-              <span class="text-[10px] text-slate-500">طرح استاندارد پلاک ایران با فوکوس خودکار</span>
+              <label class="text-xs font-bold text-fg">شماره پلاک ملی خودرو *</label>
+              <span class="text-[10px] text-fg-muted">طرح استاندارد پلاک ایران با فوکوس خودکار</span>
             </div>
 
             <!-- ویجت ورودی ۴ قسمتی با فوکوس خودکار (UI-01) -->
@@ -790,8 +790,8 @@
                   [(ngModel)]="platePart1"
                   (input)="onPlatePart1Input($event)"
                   placeholder="12"
-                  class="w-full py-2 text-center text-sm font-mono font-black bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none shadow-2xs disabled:bg-slate-100 disabled:text-slate-500" />
-                <span class="block text-center text-[9px] text-slate-400 mt-1">۲ رقم</span>
+                  class="w-full py-2 text-center text-sm font-mono font-black bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none shadow-2xs disabled:bg-surface-muted disabled:text-fg-muted" />
+                <span class="block text-center text-[9px] text-fg-subtle mt-1">۲ رقم</span>
               </div>
 
               <!-- بخش ۲: حرف فارسی -->
@@ -801,10 +801,10 @@
                   [disabled]="isReadOnlyMode"
                   [(ngModel)]="platePart2"
                   (change)="onPlatePart2Change()"
-                  class="w-full py-2 text-center text-sm font-black bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none shadow-2xs cursor-pointer disabled:bg-slate-100 disabled:text-slate-500">
+                  class="w-full py-2 text-center text-sm font-black bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none shadow-2xs cursor-pointer disabled:bg-surface-muted disabled:text-fg-muted">
                   <option *ngFor="let l of plateLetters" [value]="l">{{ l }}</option>
                 </select>
-                <span class="block text-center text-[9px] text-slate-400 mt-1">حرف</span>
+                <span class="block text-center text-[9px] text-fg-subtle mt-1">حرف</span>
               </div>
 
               <!-- بخش ۳: سه رقم -->
@@ -818,8 +818,8 @@
                   (input)="onPlatePart3Input($event)"
                   (keydown)="onPlateKeydown($event, 3)"
                   placeholder="345"
-                  class="w-full py-2 text-center text-sm font-mono font-black bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none shadow-2xs disabled:bg-slate-100 disabled:text-slate-500" />
-                <span class="block text-center text-[9px] text-slate-400 mt-1">۳ رقم</span>
+                  class="w-full py-2 text-center text-sm font-mono font-black bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none shadow-2xs disabled:bg-surface-muted disabled:text-fg-muted" />
+                <span class="block text-center text-[9px] text-fg-subtle mt-1">۳ رقم</span>
               </div>
 
               <!-- بخش ۴: کد ایران -->
@@ -833,28 +833,28 @@
                   (input)="onPlatePart4Input($event)"
                   (keydown)="onPlateKeydown($event, 4)"
                   placeholder="63"
-                  class="w-full py-2 text-center text-sm font-mono font-black bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none shadow-2xs disabled:bg-slate-100 disabled:text-slate-500" />
-                <span class="block text-center text-[9px] text-slate-400 mt-1">ایران (کد)</span>
+                  class="w-full py-2 text-center text-sm font-mono font-black bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none shadow-2xs disabled:bg-surface-muted disabled:text-fg-muted" />
+                <span class="block text-center text-[9px] text-fg-subtle mt-1">ایران (کد)</span>
               </div>
             </div>
 
             <!-- پیش‌نمایش گرافیکی پلاک ملی -->
             <div class="flex justify-center pt-1" dir="ltr">
-              <div class="inline-flex items-stretch border-2 border-slate-900 rounded-lg overflow-hidden bg-white shadow-xs">
+              <div class="inline-flex items-stretch border-2 border-slate-900 rounded-lg overflow-hidden bg-surface shadow-xs">
                 <!-- نوار آبی سمت چپ -->
                 <div class="bg-blue-800 text-white px-2 py-1 flex flex-col items-center justify-between text-[8px] font-mono leading-none">
                   <span class="font-bold tracking-tighter">I.R.</span>
                   <span class="tracking-tighter">IRAN</span>
                 </div>
                 <!-- بدنه پلاک -->
-                <div class="px-3 py-1 flex items-center gap-2 font-mono font-black text-slate-900 text-base">
+                <div class="px-3 py-1 flex items-center gap-2 font-mono font-black text-fg text-base">
                   <span>{{ platePart1 || '۰۰' }}</span>
                   <span class="font-serif text-sm px-1">{{ platePart2 || 'الف' }}</span>
                   <span>{{ platePart3 || '۰۰۰' }}</span>
                 </div>
                 <!-- کادر ایران سمت راست -->
-                <div class="border-l border-slate-300 px-2 py-1 flex flex-col items-center justify-center bg-slate-50 text-[10px] font-bold text-slate-700">
-                  <span class="text-[8px] text-slate-400">ایران</span>
+                <div class="border-l border-slate-300 px-2 py-1 flex flex-col items-center justify-center bg-surface-muted text-[10px] font-bold text-fg/80">
+                  <span class="text-[8px] text-fg-subtle">ایران</span>
                   <span class="font-mono font-black">{{ platePart4 || '۰۰' }}</span>
                 </div>
               </div>
@@ -862,29 +862,29 @@
           </div>
 
           <!-- ورودی آزاد پلاک / شماره سریال برای ماشین‌آلات غیرجاده‌ای و لیفتراک (تسک ۶.۳) -->
-          <div *ngIf="!isRoadVehicle(newVehicle.vehicle_type)" class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
-            <label class="block text-xs font-bold text-slate-800">شماره سریال کارگاهی / پلاک داخلی ماشین‌آلات *</label>
+          <div *ngIf="!isRoadVehicle(newVehicle.vehicle_type)" class="bg-surface-muted p-4 rounded-2xl border border-line space-y-2">
+            <label class="block text-xs font-bold text-fg">شماره سریال کارگاهی / پلاک داخلی ماشین‌آلات *</label>
             <input
               type="text"
               [disabled]="isReadOnlyMode"
               [(ngModel)]="freePlateNumber"
               (input)="onPlatePartChange()"
               placeholder="مثال: FL-04 یا شماره شاسی کارگاهی"
-              class="w-full px-3 py-2 text-xs font-mono font-bold bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none" />
-            <p class="text-[10px] text-slate-500">
+              class="w-full px-3 py-2 text-xs font-mono font-bold bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none" />
+            <p class="text-[10px] text-fg-muted">
               برای لیفتراک و سایر ماشین‌آلات کارگاهی، ورود کد شناسایی یا شماره شاسی آزاد مجاز است.
             </p>
           </div>
 
           <!-- یادداشت تکمیلی فنی -->
           <div>
-            <label class="block text-[11px] font-bold text-slate-700 mb-1">توضیحات و مشخصات تکمیلی فنی (اختیاری)</label>
+            <label class="block text-[11px] font-bold text-fg/80 mb-1">توضیحات و مشخصات تکمیلی فنی (اختیاری)</label>
             <textarea
               rows="2"
               [(ngModel)]="newVehicle.notes"
               [disabled]="isReadOnlyMode"
               placeholder="مدل خودرو، ظرفیت بارگیری، وضعیت سلامت فنی و..."
-              class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500"></textarea>
+              class="w-full px-3 py-2 text-xs bg-surface-muted border border-line rounded-xl focus:bg-surface focus:border-indigo-500 focus:outline-none disabled:bg-surface-muted disabled:text-fg-muted"></textarea>
           </div>
 
         </div>
@@ -895,19 +895,19 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             <!-- نام و نام خانوادگی راننده -->
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">نام و نام خانوادگی راننده *</label>
+              <label class="block text-[11px] font-bold text-fg/80 mb-1">نام و نام خانوادگی راننده *</label>
               <input
                 type="text"
                 [disabled]="isReadOnlyMode"
                 [attr.disabled]="isReadOnlyMode ? 'disabled' : null"
                 [(ngModel)]="newVehicle.driver_name"
                 placeholder="مثال: علی حسینی"
-                class="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500" />
+                class="w-full px-3 py-2 text-xs bg-surface-muted border border-line rounded-xl focus:bg-surface focus:border-indigo-500 focus:outline-none disabled:bg-surface-muted disabled:text-fg-muted" />
             </div>
 
             <!-- کد ملی راننده -->
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">کد ملی راننده (۱۰ رقم) *</label>
+              <label class="block text-[11px] font-bold text-fg/80 mb-1">کد ملی راننده (۱۰ رقم) *</label>
               <input
                 type="text"
                 maxlength="10"
@@ -915,24 +915,26 @@
                 [(ngModel)]="newVehicle.driver_national_code"
                 (input)="onNationalCodeChange()"
                 placeholder="۰۱۲۳۴۵۶۷۸۹"
-                class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500" />
-              <p *ngIf="nationalCodeError" class="text-[10px] text-rose-600 font-bold mt-1">
-                ⚠️ {{ nationalCodeError }}
+                class="w-full px-3 py-2 text-xs font-mono bg-surface-muted border border-line rounded-xl focus:bg-surface focus:border-indigo-500 focus:outline-none disabled:bg-surface-muted disabled:text-fg-muted" />
+              <p *ngIf="nationalCodeError" class="text-[10px] text-rose-600 font-bold mt-1 flex items-center gap-1">
+                <svg class="w-3 h-3 text-rose-500 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle"></svg>
+                <span>{{ nationalCodeError }}</span>
               </p>
-              <p *ngIf="matchedPersonnelNotice" class="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg p-1.5 mt-1 font-bold">
-                ℹ️ {{ matchedPersonnelNotice }}
+              <p *ngIf="matchedPersonnelNotice" class="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg p-1.5 mt-1 font-bold flex items-center gap-1">
+                <svg class="w-3 h-3 text-indigo-600 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="info"></svg>
+                <span>{{ matchedPersonnelNotice }}</span>
               </p>
             </div>
 
             <!-- شماره همراه راننده -->
             <div>
-              <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره همراه راننده</label>
+              <label class="block text-[11px] font-bold text-fg/80 mb-1">شماره همراه راننده</label>
               <input
                 type="text"
                 [disabled]="isReadOnlyMode"
                 [(ngModel)]="newVehicle.driver_phone"
                 placeholder="۰۹۱۲..."
-                class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500" />
+                class="w-full px-3 py-2 text-xs font-mono bg-surface-muted border border-line rounded-xl focus:bg-surface focus:border-indigo-500 focus:outline-none disabled:bg-surface-muted disabled:text-fg-muted" />
             </div>
           </div>
 
@@ -950,9 +952,9 @@
                 [checked]="newVehicle.is_driver_owner"
                 (change)="toggleIsDriverOwner($any($event.target).checked)"
                 class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer disabled:opacity-60" />
-              <span class="text-xs font-black text-slate-800">مالک خودرو، شخص راننده است</span>
+              <span class="text-xs font-black text-fg">مالک خودرو، شخص راننده است</span>
             </label>
-            <p class="text-[10px] text-slate-500 pr-6">
+            <p class="text-[10px] text-fg-muted pr-6">
               در صورتی که سند خودرو یا قرارداد استیجاری به نام شخص دیگری (غیر از راننده) است، تیک این گزینه را بردارید تا مشخصات هویتی و تماسی مالک به تفکیک ثبت شود.
             </p>
           </div>
@@ -965,16 +967,16 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">نام و نام خانوادگی مالک *</label>
+                <label class="block text-[11px] font-bold text-fg/80 mb-1">نام و نام خانوادگی مالک *</label>
                 <input
                   type="text"
                   [disabled]="isReadOnlyMode"
                   [(ngModel)]="newVehicle.owner_name"
                   placeholder="مثال: رضا محمدی"
-                  class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500" />
+                  class="w-full px-3 py-2 text-xs bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-surface-muted disabled:text-fg-muted" />
               </div>
               <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">کد ملی مالک (۱۰ رقم) *</label>
+                <label class="block text-[11px] font-bold text-fg/80 mb-1">کد ملی مالک (۱۰ رقم) *</label>
                 <input
                   type="text"
                   maxlength="10"
@@ -982,19 +984,20 @@
                   [(ngModel)]="newVehicle.owner_national_code"
                   (input)="onOwnerNationalCodeChange()"
                   placeholder="۰۱۲۳۴۵۶۷۸۹"
-                  class="w-full px-3 py-2 text-xs font-mono bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500" />
-                <p *ngIf="ownerNationalCodeError" class="text-[10px] text-rose-600 font-bold mt-1">
-                  ⚠️ {{ ownerNationalCodeError }}
+                  class="w-full px-3 py-2 text-xs font-mono bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-surface-muted disabled:text-fg-muted" />
+                <p *ngIf="ownerNationalCodeError" class="text-[10px] text-rose-600 font-bold mt-1 flex items-center gap-1">
+                  <svg class="w-3 h-3 text-rose-500 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle"></svg>
+                  <span>{{ ownerNationalCodeError }}</span>
                 </p>
               </div>
               <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره همراه مالک</label>
+                <label class="block text-[11px] font-bold text-fg/80 mb-1">شماره همراه مالک</label>
                 <input
                   type="text"
                   [disabled]="isReadOnlyMode"
                   [(ngModel)]="newVehicle.owner_phone"
                   placeholder="۰۹۱۲..."
-                  class="w-full px-3 py-2 text-xs font-mono bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500" />
+                  class="w-full px-3 py-2 text-xs font-mono bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-surface-muted disabled:text-fg-muted" />
               </div>
             </div>
           </div>
@@ -1006,22 +1009,22 @@
           
           <!-- لیست حساب‌های بانکی پرونده -->
           <div *ngIf="bankAccounts.length > 0" class="space-y-2">
-            <label class="block text-xs font-bold text-slate-800">حساب‌های بانکی ثبت‌شده:</label>
+            <label class="block text-xs font-bold text-fg">حساب‌های بانکی ثبت‌شده:</label>
             <div class="space-y-2">
-              <div *ngFor="let acc of bankAccounts; let accIdx = index" class="p-3 rounded-2xl border flex items-center justify-between gap-3 transition-colors" [ngClass]="acc.is_primary ? 'bg-emerald-50/70 border-emerald-300' : 'bg-slate-50 border-slate-200'">
+              <div *ngFor="let acc of bankAccounts; let accIdx = index" class="p-3 rounded-2xl border flex items-center justify-between gap-3 transition-colors" [ngClass]="acc.is_primary ? 'bg-emerald-50/70 border-emerald-300' : 'bg-surface-muted border-line'">
                 <div class="space-y-1">
                   <div class="flex items-center gap-2">
-                    <span class="font-bold text-xs text-slate-900">{{ acc.bank_name }}</span>
+                    <span class="font-bold text-xs text-fg">{{ acc.bank_name }}</span>
                     <span *ngIf="acc.is_primary" class="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
                       حساب اصلی واریز
                     </span>
-                    <span class="text-[10px] text-slate-500">
+                    <span class="text-[10px] text-fg-muted">
                       (ذی‌نفع: {{ acc.payee_type === 'driver' ? 'راننده' : (acc.payee_type === 'owner' ? 'مالک' : 'سایر') }})
                     </span>
                   </div>
-                  <div class="text-[11px] font-mono text-slate-600 flex items-center gap-2" dir="ltr">
+                  <div class="text-[11px] font-mono text-fg-muted flex items-center gap-2" dir="ltr">
                     <span>IR{{ acc.sheba_number }}</span>
-                    <span *ngIf="acc.account_number" class="text-slate-400">| Acc: {{ acc.account_number }}</span>
+                    <span *ngIf="acc.account_number" class="text-fg-subtle">| Acc: {{ acc.account_number }}</span>
                   </div>
                 </div>
 
@@ -1030,7 +1033,7 @@
                     *ngIf="!acc.is_primary"
                     type="button"
                     (click)="setPrimaryAccount(accIdx)"
-                    class="px-2.5 py-1 text-[10px] font-bold text-emerald-700 bg-white border border-emerald-200 rounded-lg hover:bg-emerald-50 cursor-pointer transition-colors"
+                    class="px-2.5 py-1 text-[10px] font-bold text-emerald-700 bg-surface border border-emerald-200 rounded-lg hover:bg-emerald-50 cursor-pointer transition-colors"
                     title="انتخاب به عنوان حساب اصلی واریز وجه">
                     تنظیم به عنوان اصلی
                   </button>
@@ -1047,17 +1050,17 @@
           </div>
 
           <!-- فرم ورود حساب جدید -->
-          <div *ngIf="!isReadOnlyMode" class="p-4 bg-slate-50/90 rounded-2xl border border-slate-200/80 space-y-3">
+          <div *ngIf="!isReadOnlyMode" class="p-4 bg-surface-muted/90 rounded-2xl border border-line space-y-3">
             <div class="flex items-center justify-between">
-              <label class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <label class="text-xs font-bold text-fg flex items-center gap-1.5">
                 <svg class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="plus"></svg>
                 <span>افزودن حساب بانکی جدید</span>
               </label>
               <div class="flex items-center gap-2">
-                <span class="text-[11px] font-bold text-slate-600">ذی‌نفع حساب:</span>
+                <span class="text-[11px] font-bold text-fg-muted">ذی‌نفع حساب:</span>
                 <select
                   [(ngModel)]="newAccountPayeeType"
-                  class="text-xs font-bold bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none">
+                  class="text-xs font-bold bg-surface border border-line rounded-lg px-2 py-1 focus:outline-none">
                   <option value="driver">راننده</option>
                   <option value="owner">مالک</option>
                   <option value="other">شخص ثالث / سایر</option>
@@ -1068,14 +1071,15 @@
             <!-- فیلد شماره شبا LTR با تشخیص هوشمند بانک -->
             <div>
               <div class="flex items-center justify-between mb-1">
-                <label class="block text-[11px] font-bold text-slate-700">شماره شبا (۲۴ رقم بدون IR) *</label>
-                <span *ngIf="shebaValidationResult" class="text-[10px] font-bold"
+                <label class="block text-[11px] font-bold text-fg/80">شماره شبا (۲۴ رقم بدون IR) *</label>
+                <span *ngIf="shebaValidationResult" class="text-[10px] font-bold flex items-center gap-1"
                       [ngClass]="shebaValidationResult.isValid ? 'text-emerald-600' : 'text-rose-600'">
-                  {{ shebaValidationResult.isValid ? '✓ معتبر و تایید شده' : '✕ نامعتبر' }}
+                  <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="shebaValidationResult.isValid ? 'check' : 'x'"></svg>
+                  <span>{{ shebaValidationResult.isValid ? 'معتبر و تایید شده' : 'نامعتبر' }}</span>
                 </span>
               </div>
-              <div dir="ltr" class="relative flex items-center rounded-xl overflow-hidden border border-slate-200 bg-white focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
-                <span class="px-3 py-2 bg-slate-100 border-r border-slate-200 font-mono font-bold text-xs text-slate-600 select-none">IR</span>
+              <div dir="ltr" class="relative flex items-center rounded-xl overflow-hidden border border-line bg-surface focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
+                <span class="px-3 py-2 bg-surface-muted border-r border-line font-mono font-bold text-xs text-fg-muted select-none">IR</span>
                 <input
                   type="text"
                   maxlength="29"
@@ -1084,9 +1088,9 @@
                   (paste)="onShebaPaste($event)"
                   placeholder="12 3456 7890 1234 5678 9012 34"
                   dir="ltr"
-                  class="w-full bg-transparent border-0 text-left font-mono font-bold tracking-wider text-xs px-3 py-2 pr-12 focus:outline-none text-slate-800" />
+                  class="w-full bg-transparent border-0 text-left font-mono font-bold tracking-wider text-xs px-3 py-2 pr-12 focus:outline-none text-fg" />
                 <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                  <button *ngIf="newVehicle.sheba_number" type="button" (click)="copyShebaToClipboard()" class="w-7 h-7 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isShebaCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-2xs'" title="کپی شماره شبا">
+                  <button *ngIf="newVehicle.sheba_number" type="button" (click)="copyShebaToClipboard()" class="w-7 h-7 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isShebaCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-surface hover:bg-surface-muted text-fg-muted border-line shadow-2xs'" title="کپی شماره شبا">
                     <svg *ngIf="!isShebaCopied" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
                     <svg *ngIf="isShebaCopied" class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
                   </button>
@@ -1099,8 +1103,9 @@
                 <span *ngIf="shebaValidationResult.isValid">
                   بانک شناسایی‌شده: {{ shebaValidationResult.bank?.name }} (الگوریتم ISO 7064 Mod 97)
                 </span>
-                <span *ngIf="!shebaValidationResult.isValid">
-                  ⚠️ {{ shebaValidationResult.errorMessage }}
+                <span *ngIf="!shebaValidationResult.isValid" class="flex items-center gap-1">
+                  <svg class="w-3 h-3 text-rose-500 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle"></svg>
+                  <span>{{ shebaValidationResult.errorMessage }}</span>
                 </span>
               </div>
             </div>
@@ -1109,7 +1114,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
               <!-- نام بانک (کومبوباکس هوشمند و جستجوپذیر رو به بالا) -->
               <div class="relative">
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">بانک عامل:</label>
+                <label class="block text-[11px] font-bold text-fg/80 mb-1">بانک عامل:</label>
                 <div class="relative">
                   <input 
                     type="text" 
@@ -1117,32 +1122,32 @@
                     (focus)="openBankDropdown()" 
                     (input)="bankSearchQuery = $any($event.target).value; isBankDropdownOpen = true" 
                     placeholder="-- انتخاب بانک عامل --" 
-                    class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer placeholder:text-slate-400" 
+                    class="w-full bg-surface border border-line rounded-xl px-3 py-2 text-xs font-bold text-fg focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer placeholder:text-fg-subtle" 
                   />
-                  <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[9px]">▲</span>
+                  <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none text-[9px]">▲</span>
 
                   <!-- پوشش کلیک بیرونی جهت بستن کومبوباکس -->
                   <div *ngIf="isBankDropdownOpen" (click)="isBankDropdownOpen = false" class="fixed inset-0 z-40 bg-transparent"></div>
 
                   <!-- لیست آبشاری رو به بالا بانک‌ها -->
-                  <div *ngIf="isBankDropdownOpen" class="absolute bottom-full mb-1.5 left-0 right-0 max-h-52 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-2xl z-50 py-1 divide-y divide-slate-50">
+                  <div *ngIf="isBankDropdownOpen" class="absolute bottom-full mb-1.5 left-0 right-0 max-h-52 overflow-y-auto bg-surface border border-line rounded-xl shadow-2xl z-50 py-1 divide-y divide-slate-50">
                     <div *ngFor="let b of filteredBanks" (click)="selectBankFromDropdown(b, $event)" class="px-3 py-2 hover:bg-indigo-50 cursor-pointer flex items-center justify-between transition-colors" [ngClass]="{'bg-indigo-50 font-black text-indigo-700': newVehicle.bank_name === b.name}">
-                      <span class="text-xs flex items-center gap-1.5 font-bold text-slate-800">
+                      <span class="text-xs flex items-center gap-1.5 font-bold text-fg">
                         <span>{{ b.name }}</span>
                       </span>
-                      <span class="text-[10px] font-mono text-slate-400">کد {{ b.code }}</span>
+                      <span class="text-[10px] font-mono text-fg-subtle">کد {{ b.code }}</span>
                     </div>
-                    <div *ngIf="filteredBanks.length === 0" class="px-3 py-3 text-center text-xs text-slate-400">
+                    <div *ngIf="filteredBanks.length === 0" class="px-3 py-3 text-center text-xs text-fg-subtle">
                       بانکی با این مشخصات یافت نشد
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- شماره حساب با دکمه‌های کپی و تبدیل دوطرفه به شبا (⚡) -->
+              <!-- شماره حساب با دکمه‌های کپی و تبدیل دوطرفه به شبا -->
               <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره حساب بانکی:</label>
-                <div dir="ltr" class="relative flex items-center rounded-xl overflow-hidden border border-slate-200 bg-white focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
+                <label class="block text-[11px] font-bold text-fg/80 mb-1">شماره حساب بانکی:</label>
+                <div dir="ltr" class="relative flex items-center rounded-xl overflow-hidden border border-line bg-surface focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
                   <input 
                     type="text" 
                     inputmode="numeric"
@@ -1152,10 +1157,10 @@
                     (copy)="onAccountNumberCopy($event)"
                     placeholder="مثلاً: 0101111111001" 
                     dir="ltr"
-                    class="w-full bg-transparent border-0 text-left font-mono text-xs px-3 py-2 pr-16 focus:outline-none text-slate-800 placeholder:text-slate-400" 
+                    class="w-full bg-transparent border-0 text-left font-mono text-xs px-3 py-2 pr-16 focus:outline-none text-fg placeholder:text-fg-subtle" 
                   />
                   <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <button *ngIf="newVehicle.account_number" type="button" (click)="copyAccountNumberToClipboard()" class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isAccountCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-white hover:bg-slate-100 text-slate-600 border-slate-200 shadow-2xs'" title="کپی شماره حساب">
+                    <button *ngIf="newVehicle.account_number" type="button" (click)="copyAccountNumberToClipboard()" class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isAccountCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-surface hover:bg-surface-muted text-fg-muted border-line shadow-2xs'" title="کپی شماره حساب">
                       <svg *ngIf="!isAccountCopied" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
                       <svg *ngIf="isAccountCopied" class="w-3 h-3 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
                     </button>
@@ -1186,19 +1191,19 @@
         <div *ngIf="activeModalTab === 'documents_expiry'" class="space-y-5">
           
           <!-- بخش تاریخ‌های انقضا با فرم‌کنترل‌های واکنشی و کلاس .datepicker-left -->
-          <div class="space-y-3 bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80">
+          <div class="space-y-3 bg-surface-muted p-4 rounded-2xl border border-line">
             <div class="flex items-center justify-between">
-              <label class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <label class="text-xs font-bold text-fg flex items-center gap-1.5">
                 <svg class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
                 <span>تاریخ‌های انقضا و اعتبارات قانونی</span>
               </label>
-              <span class="text-[10px] text-slate-400">تقویم شمسی با فرم‌کنترل‌های واکنشی</span>
+              <span class="text-[10px] text-fg-subtle">تقویم شمسی با فرم‌کنترل‌های واکنشی</span>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               <!-- تاریخ انقضای بیمه‌نامه شخص ثالث -->
               <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">
+                <label class="block text-[11px] font-bold text-fg/80 mb-1">
                   <span>انقضای بیمه‌نامه شخص ثالث</span>
                   <span *ngIf="isRoadVehicle(newVehicle.vehicle_type)" class="text-rose-600 font-black"> *</span>
                 </label>
@@ -1211,14 +1216,14 @@
                       [formControl]="insuranceDateControl"
                       [disabled]="isReadOnlyMode"
                       placeholder="۱۴۰.../../.."
-                      class="w-full px-3 py-2 text-xs font-mono bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500" />
+                      class="w-full px-3 py-2 text-xs font-mono bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-surface-muted disabled:text-fg-muted" />
                   </ng-persian-datepicker>
                 </div>
               </div>
 
               <!-- تاریخ انقضای معاینه فنی -->
               <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">انقضای معاینه فنی</label>
+                <label class="block text-[11px] font-bold text-fg/80 mb-1">انقضای معاینه فنی</label>
                 <div class="relative datepicker-left">
                   <ng-persian-datepicker
                     [formControl]="inspectionDateControl"
@@ -1228,14 +1233,14 @@
                       [formControl]="inspectionDateControl"
                       [disabled]="isReadOnlyMode"
                       placeholder="۱۴۰.../../.."
-                      class="w-full px-3 py-2 text-xs font-mono bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500" />
+                      class="w-full px-3 py-2 text-xs font-mono bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-surface-muted disabled:text-fg-muted" />
                   </ng-persian-datepicker>
                 </div>
               </div>
 
               <!-- تاریخ انقضای گواهینامه راننده -->
               <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">انقضای گواهینامه راننده</label>
+                <label class="block text-[11px] font-bold text-fg/80 mb-1">انقضای گواهینامه راننده</label>
                 <div class="relative datepicker-left">
                   <ng-persian-datepicker
                     [formControl]="licenseDateControl"
@@ -1245,14 +1250,14 @@
                       [formControl]="licenseDateControl"
                       [disabled]="isReadOnlyMode"
                       placeholder="۱۴۰.../../.."
-                      class="w-full px-3 py-2 text-xs font-mono bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500" />
+                      class="w-full px-3 py-2 text-xs font-mono bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-surface-muted disabled:text-fg-muted" />
                   </ng-persian-datepicker>
                 </div>
               </div>
 
               <!-- پایان اعتبار قرارداد استیجاری -->
               <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">پایان اعتبار قرارداد</label>
+                <label class="block text-[11px] font-bold text-fg/80 mb-1">پایان اعتبار قرارداد</label>
                 <div class="relative datepicker-left">
                   <ng-persian-datepicker
                     [formControl]="validUntilDateControl"
@@ -1262,7 +1267,7 @@
                       [formControl]="validUntilDateControl"
                       [disabled]="isReadOnlyMode"
                       placeholder="۱۴۰.../../.."
-                      class="w-full px-3 py-2 text-xs font-mono bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-500" />
+                      class="w-full px-3 py-2 text-xs font-mono bg-surface border border-line rounded-xl focus:border-indigo-500 focus:outline-none disabled:bg-surface-muted disabled:text-fg-muted" />
                   </ng-persian-datepicker>
                 </div>
               </div>
@@ -1272,7 +1277,7 @@
           <!-- بخش آپلود و پیوست مدارک (تسک ۶.۶ - فقط آنلاین) -->
           <div class="space-y-3">
             <div class="flex items-center justify-between">
-              <label class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <label class="text-xs font-bold text-fg flex items-center gap-1.5">
                 <svg class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
                 <span>مدارک و ضمائم پرونده (فقط در حالت آنلاین)</span>
               </label>
@@ -1282,26 +1287,26 @@
             </div>
 
             <!-- فرم انتخاب و آپلود مدرک -->
-            <div *ngIf="!isReadOnlyMode && isOnline" class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3">
+            <div *ngIf="!isReadOnlyMode && isOnline" class="p-3.5 bg-surface-muted rounded-2xl border border-line space-y-3">
               <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع مدرک:</label>
+                  <label class="block text-[11px] font-bold text-fg/80 mb-1">نوع مدرک:</label>
                   <select
                     [(ngModel)]="selectedDocTypeForUpload"
-                    class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none">
+                    class="w-full px-3 py-1.5 text-xs bg-surface border border-line rounded-xl focus:outline-none">
                     <option *ngFor="let opt of docTypeOptions" [value]="opt.value">{{ opt.label }}</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">عنوان اختیاری مدرک:</label>
+                  <label class="block text-[11px] font-bold text-fg/80 mb-1">عنوان اختیاری مدرک:</label>
                   <input
                     type="text"
                     [(ngModel)]="docUploadTitle"
                     placeholder="مثال: بیمه‌نامه آسیا ۱۴۰۵"
-                    class="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none" />
+                    class="w-full px-3 py-1.5 text-xs bg-surface border border-line rounded-xl focus:outline-none" />
                 </div>
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ انقضای مدرک:</label>
+                  <label class="block text-[11px] font-bold text-fg/80 mb-1">تاریخ انقضای مدرک:</label>
                   <div class="relative datepicker-left">
                     <ng-persian-datepicker
                       [formControl]="docExpiryDateControl"
@@ -1310,7 +1315,7 @@
                         type="text"
                         [formControl]="docExpiryDateControl"
                         placeholder="۱۴۰.../../.."
-                        class="w-full px-3 py-1.5 text-xs font-mono bg-white border border-slate-200 rounded-xl focus:outline-none" />
+                        class="w-full px-3 py-1.5 text-xs font-mono bg-surface border border-line rounded-xl focus:outline-none" />
                     </ng-persian-datepicker>
                   </div>
                 </div>
@@ -1328,7 +1333,7 @@
                     (change)="onMultipleFilesSelected($event)"
                     class="hidden" />
                 </label>
-                <span class="text-[10px] text-slate-400">حداکثر ۱۰ مگابایت برای هر فایل</span>
+                <span class="text-[10px] text-fg-subtle">حداکثر ۱۰ مگابایت برای هر فایل</span>
               </div>
             </div>
 
@@ -1340,7 +1345,7 @@
                   <div class="flex items-center gap-2">
                     <svg class="w-3.5 h-3.5 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
                     <span class="font-bold">{{ p.title || p.name }}</span>
-                    <span class="text-[10px] text-slate-500 font-mono">({{ getDocTypeLabel(p.doc_type) }})</span>
+                    <span class="text-[10px] text-fg-muted font-mono">({{ getDocTypeLabel(p.doc_type) }})</span>
                   </div>
                   <button
                     type="button"
@@ -1354,14 +1359,14 @@
 
             <!-- لیست مدارک بارگذاری‌شده موجود -->
             <div *ngIf="vehicleDocuments.length > 0" class="space-y-2">
-              <label class="block text-xs font-bold text-slate-800">مدارک بارگذاری‌شده پرونده:</label>
+              <label class="block text-xs font-bold text-fg">مدارک بارگذاری‌شده پرونده:</label>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div *ngFor="let doc of vehicleDocuments" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                <div *ngFor="let doc of vehicleDocuments" class="p-2.5 bg-surface-muted border border-line rounded-xl flex items-center justify-between text-xs">
                   <div class="flex items-center gap-2 min-w-0">
                     <svg class="w-4 h-4 text-indigo-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
                     <div class="truncate">
-                      <p class="font-bold text-slate-800 truncate">{{ doc.title || doc.file_name }}</p>
-                      <p class="text-[10px] text-slate-500 font-mono">{{ getDocTypeLabel(doc.doc_type) }} <span *ngIf="doc.expiry_date">| انقضا: {{ doc.expiry_date }}</span></p>
+                      <p class="font-bold text-fg truncate">{{ doc.title || doc.file_name }}</p>
+                      <p class="text-[10px] text-fg-muted font-mono">{{ getDocTypeLabel(doc.doc_type) }} <span *ngIf="doc.expiry_date">| انقضا: {{ doc.expiry_date }}</span></p>
                     </div>
                   </div>
                   <div class="flex items-center gap-1 shrink-0">
@@ -1393,11 +1398,11 @@
       </div>
 
       <!-- فوتر مودال و دکمه‌های اقدام (تسک ۶.۷ - تفکیک کامل پیش‌نویس و ارسال به سرپرست) -->
-      <div class="p-3.5 md:p-4 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between gap-2">
+      <div class="p-3.5 md:p-4 border-t border-line-subtle bg-surface-muted flex items-center justify-between gap-2">
         <button
           type="button"
           (click)="closeNewVehicleModal()"
-          class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 cursor-pointer transition-colors">
+          class="px-4 py-2 rounded-xl border border-line text-fg-muted text-xs font-bold hover:bg-surface-muted cursor-pointer transition-colors">
           {{ isReadOnlyMode ? 'بستن پرونده' : 'انصراف' }}
         </button>
 
@@ -1420,7 +1425,7 @@
             type="button"
             (click)="saveVehicle('draft')"
             [disabled]="isSaving"
-            class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold shadow-2xs active:scale-95 cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50"
+            class="px-4 py-2 rounded-xl bg-surface-muted hover:bg-surface text-fg/80 text-xs font-bold shadow-2xs active:scale-95 cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50"
             title="ذخیره اطلاعات بدون ارسال به کارتابل سرپرست">
             <span *ngIf="isSaving" class="w-3.5 h-3.5 border-2 border-slate-700 border-t-transparent rounded-full animate-spin"></span>
             <span>ذخیره در پیش‌نویس</span>
@@ -1453,12 +1458,12 @@
        (click)="closePendingDiffModal()"
        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-hidden">
     <div (click)="$event.stopPropagation()"
-         class="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-      <div class="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between bg-amber-50/70">
+         class="bg-surface rounded-t-3xl sm:rounded-3xl max-w-lg w-full border border-line shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+      <div class="p-4 md:p-5 border-b border-line-subtle flex items-center justify-between bg-amber-50/70">
         <div>
           <h3 id="pendingDiffModalTitle" class="text-sm font-black text-amber-900 flex items-center gap-2">
             <span>درخواست تغییرات معلق خودرو</span>
-            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-white text-slate-800 border border-amber-200">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-surface text-fg border border-amber-200">
               {{ pendingDiffVehicle.plate_number }}
             </span>
           </h3>
@@ -1469,25 +1474,25 @@
         <button
           type="button"
           (click)="closePendingDiffModal()"
-          class="w-8 h-8 rounded-full bg-white text-slate-500 hover:bg-slate-100 flex items-center justify-center text-sm font-bold cursor-pointer">
+          class="w-8 h-8 rounded-full bg-surface text-fg-muted hover:bg-surface-muted flex items-center justify-center text-sm font-bold cursor-pointer">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
         </button>
       </div>
 
       <div class="p-4 md:p-5 space-y-3 text-xs max-h-[60vh] overflow-y-auto">
         <div *ngIf="pendingDiffVehicle.pending_change_request?.proposed_changes as changes" class="space-y-2.5">
-          <div *ngFor="let item of changes | keyvalue" class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
-            <div class="text-[11px] font-bold text-slate-600 flex items-center justify-between">
+          <div *ngFor="let item of changes | keyvalue" class="p-3 rounded-2xl bg-surface-muted border border-line space-y-1.5">
+            <div class="text-[11px] font-bold text-fg-muted flex items-center justify-between">
               <span>{{ getFieldLabel(item.key) }}</span>
-              <span class="font-mono text-[10px] text-slate-400">({{ item.key }})</span>
+              <span class="font-mono text-[10px] text-fg-subtle">({{ item.key }})</span>
             </div>
             <div class="flex items-center justify-between text-xs">
               <!-- مقدار قبلی -->
-              <div class="line-through text-slate-400 bg-slate-100 px-2 py-0.5 rounded font-mono text-[11px] max-w-[45%] truncate"
+              <div class="line-through text-fg-subtle bg-surface-muted px-2 py-0.5 rounded font-mono text-[11px] max-w-[45%] truncate"
                    [title]="getPreviousValueDisplay(item.key)">
                 {{ getPreviousValueDisplay(item.key) }}
               </div>
-              <span class="text-slate-400 text-xs">◀</span>
+              <span class="text-fg-subtle text-xs">◀</span>
               <!-- مقدار جدید پیشنهادی -->
               <div class="font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-mono text-[11px] max-w-[45%] truncate"
                    [title]="getProposedValueDisplay(item.key, item.value)">
@@ -1496,12 +1501,12 @@
             </div>
           </div>
         </div>
-        <div *ngIf="!pendingDiffVehicle.pending_change_request?.proposed_changes" class="text-center text-slate-400 py-6">
+        <div *ngIf="!pendingDiffVehicle.pending_change_request?.proposed_changes" class="text-center text-fg-subtle py-6">
           اطلاعات جزییات تغییرات در دسترس نیست.
         </div>
       </div>
 
-      <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-2">
+      <div class="p-4 border-t border-line-subtle bg-surface-muted flex items-center justify-between gap-2">
         <!-- اکشن ابطال درخواست تغییرات (تسک ۷.۴) -->
         <button
           type="button"
@@ -1515,7 +1520,7 @@
         <button
           type="button"
           (click)="closePendingDiffModal()"
-          class="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-300 cursor-pointer">
+          class="px-4 py-2 rounded-xl bg-slate-200 text-fg/80 text-xs font-bold hover:bg-slate-300 cursor-pointer">
           بستن
         </button>
       </div>
@@ -1530,35 +1535,35 @@
        (click)="closeTimelineModal()"
        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-hidden">
     <div (click)="$event.stopPropagation()"
-         class="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+         class="bg-surface rounded-t-3xl sm:rounded-3xl max-w-lg w-full border border-line shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
       
-      <div class="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+      <div class="p-4 md:p-5 border-b border-line-subtle flex items-center justify-between bg-surface-muted">
         <div>
-          <h3 id="timelineModalTitle" class="text-sm font-black text-slate-800 flex items-center gap-2">
+          <h3 id="timelineModalTitle" class="text-sm font-black text-fg flex items-center gap-2">
             <span>تاریخچه و تایملاین گردش کار</span>
-            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-white text-slate-800 border border-slate-200">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-surface text-fg border border-line">
               {{ timelineVehicle.plate_number }}
             </span>
           </h3>
-          <p class="text-[11px] text-slate-500 mt-0.5">
+          <p class="text-[11px] text-fg-muted mt-0.5">
             گزارش ممیزی تمامی اقدامات، مصوبات و ارجاعات پرونده
           </p>
         </div>
         <button
           type="button"
           (click)="closeTimelineModal()"
-          class="w-8 h-8 rounded-full bg-white text-slate-500 hover:bg-slate-100 flex items-center justify-center text-sm font-bold cursor-pointer">
+          class="w-8 h-8 rounded-full bg-surface text-fg-muted hover:bg-surface-muted flex items-center justify-center text-sm font-bold cursor-pointer">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
         </button>
       </div>
 
       <div class="p-4 md:p-5 space-y-3 max-h-[60vh] overflow-y-auto">
-        <div *ngIf="isLoadingTimeline" class="py-8 text-center text-slate-400 text-xs">
+        <div *ngIf="isLoadingTimeline" class="py-8 text-center text-fg-subtle text-xs">
           <div class="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
           <span>در حال دریافت سوابق ممیزی...</span>
         </div>
 
-        <div *ngIf="!isLoadingTimeline && timelineLogs.length === 0" class="py-8 text-center text-slate-400 text-xs">
+        <div *ngIf="!isLoadingTimeline && timelineLogs.length === 0" class="py-8 text-center text-fg-subtle text-xs">
           هیچ رویدادی در تاریخچه این پرونده ثبت نشده است.
         </div>
 
@@ -1568,22 +1573,22 @@
             <!-- نقطه شاخص تایملاین -->
             <span class="absolute -right-[23px] top-1.5 w-3 h-3 rounded-full bg-indigo-600 border-2 border-white shadow-2xs"></span>
             
-            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 space-y-1">
+            <div class="bg-surface-muted p-3 rounded-2xl border border-line space-y-1">
               <div class="flex items-center justify-between gap-2">
                 <span [ngClass]="getWorkflowActionBadgeClass(log.action)" class="px-2 py-0.5 rounded-md text-[10px] font-black border">
                   {{ getWorkflowActionLabel(log.action) }}
                 </span>
-                <span class="text-[10px] font-mono text-slate-400">{{ log.created_at_shamsi || log.created_at_jalali || log.created_at }}</span>
+                <span class="text-[10px] font-mono text-fg-subtle">{{ log.created_at_shamsi || log.created_at_jalali || log.created_at }}</span>
               </div>
 
-              <div class="text-[11px] text-slate-700 flex items-center justify-between">
-                <span>توسط: <strong class="text-slate-900">{{ log.actor_name || log.performed_by_name || 'کاربر سیستم' }}</strong></span>
-                <span *ngIf="log.from_status && log.to_status" class="text-[10px] font-mono text-slate-500">
+              <div class="text-[11px] text-fg/80 flex items-center justify-between">
+                <span>توسط: <strong class="text-fg">{{ log.actor_name || log.performed_by_name || 'کاربر سیستم' }}</strong></span>
+                <span *ngIf="log.from_status && log.to_status" class="text-[10px] font-mono text-fg-muted">
                   {{ log.from_status }} ◀ {{ log.to_status }}
                 </span>
               </div>
 
-              <p *ngIf="log.note" class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 mt-1">
+              <p *ngIf="log.note" class="text-[11px] text-fg-muted bg-surface p-2 rounded-xl border border-line-subtle mt-1">
                 {{ log.note }}
               </p>
             </div>
@@ -1591,11 +1596,11 @@
         </div>
       </div>
 
-      <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+      <div class="p-4 border-t border-line-subtle bg-surface-muted flex justify-end">
         <button
           type="button"
           (click)="closeTimelineModal()"
-          class="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-300 cursor-pointer">
+          class="px-4 py-2 rounded-xl bg-slate-200 text-fg/80 text-xs font-bold hover:bg-slate-300 cursor-pointer">
           بستن
         </button>
       </div>
@@ -1608,14 +1613,14 @@
        aria-modal="true"
        (click)="closeLightbox()"
        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-    <div (click)="$event.stopPropagation()" class="max-w-3xl max-h-[90vh] bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col">
+    <div (click)="$event.stopPropagation()" class="max-w-3xl max-h-[90vh] bg-surface rounded-3xl overflow-hidden shadow-2xl flex flex-col">
       <div class="p-3.5 bg-slate-900 text-white flex items-center justify-between">
         <span class="text-xs font-bold">{{ lightboxTitle }}</span>
-        <button (click)="closeLightbox()" class="text-slate-400 hover:text-white cursor-pointer p-1">
+        <button (click)="closeLightbox()" class="text-fg-subtle hover:text-white cursor-pointer p-1">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
         </button>
       </div>
-      <div class="p-2 overflow-auto flex items-center justify-center bg-slate-100">
+      <div class="p-2 overflow-auto flex items-center justify-center bg-surface-muted">
         <img [src]="lightboxImageUrl" [alt]="lightboxTitle" class="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-sm" />
       </div>
     </div>

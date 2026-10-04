@@ -226,6 +226,21 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // ناوبری هوشمند درخواست‌های تغییرات ناوگان (تسک ۱۱.۲۱ و ن-۱۰)
+    if (item.notification_type === 'fleet_change_request') {
+      const { perms, isSuper } = this.userPerms();
+      if (isSuper || perms.includes('perm_approve_fleet_manager') || perms.includes('can_act_as_manager')) {
+        this.router.navigate(['/app/finance/manager-fleet'], { queryParams: { tab: 'changes' } });
+      } else if (perms.includes('perm_approve_fleet_finance') || perms.includes('can_act_as_accountant') || perms.includes('view_sys_fleet_settlement')) {
+        this.router.navigate(['/app/finance/accountant-fleet'], { queryParams: { tab: 'changes' } });
+      } else if (perms.includes('perm_approve_fleet_supervisor') || perms.includes('can_act_as_workshop_supervisor')) {
+        this.router.navigate(['/app/finance/supervisor-fleet'], { queryParams: { tab: 'changes' } });
+      } else {
+        this.router.navigate(['/app/finance/employee-new-vehicle']);
+      }
+      return;
+    }
+
     // ناوبری هوشمند برای پرونده‌های ناوگان و رانندگان (تسک ۴.۱ و ۴.۲)
     if (item.target_model === 'VehicleDriverProfile') {
       const targetId = Number(item.target_id);

@@ -126,7 +126,9 @@
           <span class="absolute right-2.5 top-2 text-muted">
             <svg appIcon="search" class="w-3.5 h-3.5"></svg>
           </span>
-          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchFleetData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-2 text-muted hover:text-fg text-xs cursor-pointer">✕</button>
+          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchFleetData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-2 text-muted hover:text-fg text-xs cursor-pointer flex items-center justify-center">
+            <svg appIcon="x" class="w-3.5 h-3.5"></svg>
+          </button>
         </div>
 
         <button
@@ -580,7 +582,9 @@
           </h3>
           <span class="text-xs text-muted font-bold">{{ editingVehicle.vehicle_type_display || editingVehicle.vehicle_type }}</span>
         </div>
-        <button (click)="closeVehicleModal()" class="text-muted hover:text-fg cursor-pointer">✕</button>
+        <button (click)="closeVehicleModal()" class="text-muted hover:text-fg cursor-pointer p-1" title="بستن" aria-label="بستن">
+          <svg appIcon="x" class="w-4 h-4"></svg>
+        </button>
       </div>
 
       <div class="p-5 space-y-4 text-xs">
@@ -597,7 +601,7 @@
               <svg appIcon="bar-chart-2" class="w-4 h-4 text-indigo-600"></svg>
               <span>شاخص نرخ هم‌تیپ‌های پروژه ({{ rateBenchmark.project_name }}):</span>
             </span>
-            <span class="font-mono text-[10px] bg-white text-indigo-800 px-2 py-0.5 rounded-md border border-indigo-100 font-bold">
+            <span class="font-mono text-[10px] bg-surface text-indigo-800 px-2 py-0.5 rounded-md border border-indigo-100 font-bold">
               {{ rateBenchmark.count }} خودرو مصوب
             </span>
           </div>
@@ -694,6 +698,67 @@
           </div>
         </div>
 
+        <!-- تسک ۹.۲ و ن-۱۶: فهرست حساب‌های بانکی خودرو (چندحسابی) -->
+        <div class="pt-3 border-t border-line space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-fg text-xs flex items-center gap-1.5">
+              <svg appIcon="credit-card" class="w-4 h-4 text-indigo-600"></svg>
+              <span>سایر حساب‌های بانکی ثبت‌شده این خودرو:</span>
+            </span>
+            <span *ngIf="isLoadingBankAccounts" class="text-[11px] text-muted flex items-center gap-1">
+              <svg appIcon="refresh-cw" class="w-3.5 h-3.5 animate-spin"></svg>
+              <span>در حال بارگذاری...</span>
+            </span>
+          </div>
+
+          <div *ngIf="vehicleBankAccounts.length === 0 && !isLoadingBankAccounts" class="p-3 bg-surface-alt rounded-xl text-center text-muted text-[11px]">
+            تنها همین حساب پیش‌فرض برای خودرو ثبت شده است.
+          </div>
+
+          <div *ngIf="vehicleBankAccounts.length > 0" class="space-y-1.5">
+            <div *ngFor="let acc of vehicleBankAccounts"
+                 class="p-2.5 rounded-xl border flex items-center justify-between text-xs transition-colors"
+                 [ngClass]="acc.is_primary ? 'bg-indigo-50/60 border-indigo-200' : 'bg-surface-alt border-line'">
+              <div class="space-y-0.5 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-fg">{{ acc.bank_name || 'بانک نامشخص' }}</span>
+                  <span *ngIf="acc.is_primary" class="px-1.5 py-0.5 rounded-md bg-indigo-600 text-white text-[10px] font-bold">
+                    حساب اصلی تسویه
+                  </span>
+                  <span *ngIf="acc.payee_type" class="px-1.5 py-0.5 rounded-md bg-surface text-muted border border-line text-[10px]">
+                    {{ acc.payee_type === 'driver' ? 'راننده' : (acc.payee_type === 'owner' ? 'مالک' : 'سایر') }}
+                  </span>
+                </div>
+                <div class="flex items-center gap-3 font-mono text-[11px] text-muted">
+                  <span *ngIf="acc.account_number">حساب: {{ acc.account_number }}</span>
+                  <span *ngIf="acc.sheba_number" class="flex items-center gap-1">
+                    <span>IR{{ acc.sheba_number }}</span>
+                    <span *ngIf="isShebaValid(acc.sheba_number)" class="inline-flex items-center gap-0.5 text-emerald-600 text-[10px] font-sans font-bold">
+                      <svg appIcon="check" class="w-3 h-3"></svg>
+                      <span>معتبر</span>
+                    </span>
+                    <span *ngIf="!isShebaValid(acc.sheba_number)" class="inline-flex items-center gap-0.5 text-rose-600 text-[10px] font-sans font-bold">
+                      <svg appIcon="x" class="w-3 h-3"></svg>
+                      <span>نامعتبر</span>
+                    </span>
+                  </span>
+                  <span *ngIf="acc.account_owner_name" class="font-sans text-fg font-medium">به نام: {{ acc.account_owner_name }}</span>
+                </div>
+              </div>
+
+              <div>
+                <button
+                  *ngIf="!acc.is_primary"
+                  type="button"
+                  (click)="setPrimaryBankAccount(acc)"
+                  class="px-2.5 py-1 rounded-lg bg-surface hover:bg-indigo-50 border border-line hover:border-indigo-300 text-indigo-700 font-bold text-[11px] cursor-pointer shadow-2xs transition-colors">
+                  تعیین به عنوان حساب اصلی
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <div class="p-4 bg-surface-alt border-t border-line flex justify-end gap-2">
@@ -723,7 +788,9 @@
       <div class="p-4 border-b flex items-center justify-between"
            [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-50 text-amber-900 border-amber-100' : 'bg-rose-50 text-rose-900 border-rose-100'">
         <h3 class="text-sm font-black">{{ rejectTarget?.action === 'revision' ? 'عودت پرونده خودرو' : 'رد قطعی پرونده' }}</h3>
-        <button (click)="closeRejectModal()" class="text-muted hover:text-fg">✕</button>
+        <button (click)="closeRejectModal()" class="text-muted hover:text-fg cursor-pointer p-1" title="بستن" aria-label="بستن">
+          <svg appIcon="x" class="w-4 h-4"></svg>
+        </button>
       </div>
       <div class="p-4 space-y-3 text-xs">
         <p class="font-bold text-fg">{{ rejectTarget?.title }}</p>
@@ -786,7 +853,9 @@
     <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-950">تایید مالی گروهی {{ selectedVehicleIds.size }} خودرو</h3>
-        <button (click)="closeBatchApprovalModal()" class="text-muted hover:text-fg">✕</button>
+        <button (click)="closeBatchApprovalModal()" class="text-muted hover:text-fg cursor-pointer p-1" title="بستن" aria-label="بستن">
+          <svg appIcon="x" class="w-4 h-4"></svg>
+        </button>
       </div>
       <div class="p-4 space-y-3">
         <p class="text-xs text-muted leading-relaxed">
@@ -824,7 +893,9 @@
         <h3 class="text-sm font-black text-indigo-900">
           مقایسه تفاوت‌های ناوگان (Diff): {{ selectedDiffCR?.plate_number }}
         </h3>
-        <button (click)="closeDiffModal()" class="text-muted hover:text-fg">✕</button>
+        <button (click)="closeDiffModal()" class="text-muted hover:text-fg cursor-pointer p-1" title="بستن" aria-label="بستن">
+          <svg appIcon="x" class="w-4 h-4"></svg>
+        </button>
       </div>
       <div class="p-4 max-h-96 overflow-y-auto">
         <table class="w-full text-right text-xs">

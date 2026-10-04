@@ -744,6 +744,36 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ─── تسک ۹.۲ و ن-۱۶: تعیین حساب اصلی خودرو ───
+  setPrimaryBankAccount(acc: VehicleBankAccount): void {
+    if (!this.editingVehicle?.id || !acc.id) return;
+    this.personnelApi.updateVehicleBankAccount(this.editingVehicle.id, { id: acc.id, is_primary: true }).subscribe({
+      next: () => {
+        this.toast.showSuccess(`حساب بانکی «${acc.bank_name} - ${acc.account_number || acc.sheba_number}» به عنوان حساب اصلی تعیین شد.`);
+        if (this.editingVehicle?.id) {
+          this.loadVehicleBankAccounts(this.editingVehicle.id);
+          this.editingVehicle.bank_name = acc.bank_name;
+          this.editingVehicle.account_number = acc.account_number;
+          this.editingVehicle.sheba_number = acc.sheba_number;
+          if (acc.sheba_number) {
+            const clean = cleanShebaInput(acc.sheba_number);
+            this.shebaValidationResult = validateSheba(clean);
+            this.shebaDigitsDisplay = this.shebaValidationResult?.formattedDigits || clean;
+          }
+          this.cdr.detectChanges();
+        }
+      },
+      error: (err) => {
+        this.toast.showError(err?.error?.error || err?.error?.detail || 'خطا در تعیین حساب اصلی');
+      }
+    });
+  }
+
+  isShebaValid(sheba?: string): boolean {
+    if (!sheba) return false;
+    return validateSheba(cleanShebaInput(sheba)).isValid;
+  }
+
   // ─── تسک ۹.۵: اکشن‌های رد و عودت دومقصده ───
   openRejectModal(id: number, title: string, type: 'vehicle' | 'vehicle_cr', action: 'reject' | 'revision'): void {
     this.rejectTarget = { id, title, type, action };

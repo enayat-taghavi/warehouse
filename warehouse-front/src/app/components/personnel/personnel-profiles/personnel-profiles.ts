@@ -926,6 +926,7 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
 
   isEndCollaborationModalOpen = false;
   endCollaborationTarget: PersonnelProfile | null = null;
+  endCollaborationVehicleTarget: VehicleDriverProfile | null = null;
   endCollaborationDate = '';
   endCollaborationReason = '';
   isEndingCollaboration = false;
@@ -945,6 +946,7 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
 
   openEndCollaborationModal(p: PersonnelProfile): void {
     this.endCollaborationTarget = p;
+    this.endCollaborationVehicleTarget = null;
     this.endCollaborationDate = '';
     this.endCollaborationReason = '';
     this.isEndCollaborationModalOpen = true;
@@ -954,11 +956,37 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
   closeEndCollaborationModal(): void {
     this.isEndCollaborationModalOpen = false;
     this.endCollaborationTarget = null;
+    this.endCollaborationVehicleTarget = null;
     this.isEndingCollaboration = false;
     this.cdr.detectChanges();
   }
 
   submitEndCollaboration(): void {
+    if (this.endCollaborationVehicleTarget?.id) {
+      const vTarget = this.endCollaborationVehicleTarget;
+      const vehicleId = vTarget.id;
+      if (!vehicleId) return;
+      if (!this.endCollaborationDate.trim() || !this.endCollaborationReason.trim()) {
+        this.toast.show('warning', 'تاریخ پایان همکاری (شمسی) و دلیل آن الزامی است.');
+        return;
+      }
+      this.isEndingCollaboration = true;
+      this.api.endVehicleCollaboration(vehicleId, this.endCollaborationDate.trim(), this.endCollaborationReason.trim()).subscribe({
+        next: (res: any) => {
+          vTarget.is_active = false;
+          vTarget.end_date = res?.data?.end_date || this.endCollaborationDate.trim();
+          this.toast.show('success', res?.message || `همکاری خودروی «${vTarget.driver_name} (${vTarget.plate_number})» پایان یافت.`);
+          this.closeEndCollaborationModal();
+          this.loadProfiles();
+        },
+        error: (err: any) => {
+          this.isEndingCollaboration = false;
+          this.toast.show('error', err?.error?.error || err?.error?.detail || 'خطا در ثبت قطع همکاری');
+          this.cdr.detectChanges();
+        }
+      });
+      return;
+    }
     const target = this.endCollaborationTarget;
     if (!target?.id || this.isEndingCollaboration) return;
     if (!this.endCollaborationDate.trim() || !this.endCollaborationReason.trim()) {
@@ -1171,39 +1199,17 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
   }
 
   openAddVehicleModal(): void {
-    this.shebaValidationResult = null;
-    this.shebaDigitsDisplay = '';
-    this.isBankDropdownOpen = false;
-    this.bankSearchQuery = '';
-    this.editingVehicle = {
-      driver_name: '',
-      driver_national_code: '',
-      driver_phone: '',
-      plate_number: '',
-      vehicle_type: 'pickup',
-      ownership_type: 'contract',
-      default_service_rate: 1500000,
-      sheba_number: '',
-      account_number: '',
-      bank_name: 'بانک ملی ایران',
-      assigned_warehouse: this.selectedWarehouseId || undefined,
-      is_active: true
-    };
-    this.isVehicleModalOpen = true;
+    this.router.navigate(['/app/finance/employee-new-vehicle'], {
+      queryParams: { new: 'true' }
+    });
   }
 
   openEditVehicleModal(v: VehicleDriverProfile): void {
-    this.shebaValidationResult = null;
-    this.shebaDigitsDisplay = '';
-    this.isBankDropdownOpen = false;
-    this.bankSearchQuery = '';
-    this.editingVehicle = { ...v };
-    if (v.sheba_number) {
-      const res = validateSheba(v.sheba_number);
-      this.shebaValidationResult = res;
-      this.shebaDigitsDisplay = res.formattedDigits || v.sheba_number;
+    if (v?.id) {
+      this.router.navigate(['/app/finance/employee-new-vehicle'], {
+        queryParams: { edit: v.id }
+      });
     }
-    this.isVehicleModalOpen = true;
   }
 
   closeVehicleModal(): void {
@@ -1281,17 +1287,16 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
 
   toggleVehicleActive(v: VehicleDriverProfile): void {
     if (!v.id) return;
-    const newStatus = !v.is_active;
-    this.api.updateVehicleProfile(v.id, { is_active: newStatus }).subscribe({
-      next: () => {
-        v.is_active = newStatus;
-        this.toast.show('success', `وضعیت خودرو به «${newStatus ? 'فعال' : 'غیرفعال'}» تغییر یافت.`);
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.toast.show('error', 'خطا در تغییر وضعیت خودرو');
-      }
-    });
+    if (!v.is_active) {
+      this.toast.show('info', `همکاری خودروی «${v.driver_name} (${v.plate_number})» پیش‌تر پایان یافته است${v.end_date ? ` (تاریخ پایان: ${v.end_date})` : ''}.`);
+      return;
+    }
+    this.endCollaborationVehicleTarget = v;
+    this.endCollaborationTarget = null;
+    this.endCollaborationDate = '';
+    this.endCollaborationReason = '';
+    this.isEndCollaborationModalOpen = true;
+    this.cdr.detectChanges();
   }
 
   // ── درون‌ریزی اکسل پرسنل ────────────────────────────────────
