@@ -1641,4 +1641,203 @@ class VehicleLifecycleTests(TestCase):
         self.assertEqual(FLEET_STAGE_URLS['deleted'], '/app/finance/employee-new-vehicle')
         self.assertEqual(FLEET_STAGE_URLS['approved'], '/app/finance/employee-fleet')
 
+    def test_scope_vehicle_queryset_without_company_header(self):
+        """
+        تسک ۱۱.۱۷ (ن-۱۷) و ب-۲: اعتبارسنجی قلمرو شرکت در صورت عدم ارسال سربرگ X-Company-ID
+        کاربر غیرسوپریوزر هرگز نباید خودروهای شرکت‌های دیگر را ببیند حتی اگر هدر شرکت ارسال نشود.
+        """
+        from personnel.models import Company
+        company_other = Company.objects.create(code="CO-OTHER-SCOPE", name="شرکت بیگانه", is_active=True)
+        proj_other = FinancialProject.objects.create(code="998", name="پروژه بیگانه", company=company_other, is_active=True)
+        sec_other = ProjectSection.objects.create(project=proj_other, code="9981", name="کارگاه بیگانه", is_active=True)
+
+        v_other = VehicleDriverProfile.objects.create(
+            plate_number="88ج999ایران55",
+            vehicle_type="nissan",
+            driver_name="راننده شرکت دیگر",
+            company=company_other,
+            section=sec_other,
+            approval_status="approved",
+            is_active=True
+        )
+
+        # کاربر اپراتور متعلق به شرکت اول (DALAN-CO) است و بدون هدر درخواست می‌دهد
+        self.client.force_authenticate(user=self.operator)
+        res = self.client.get("/api/personnel/vehicles/")
+        self.assertEqual(res.status_code, 200)
+        plates = [item["plate_number"] for item in res.data]
+        self.assertNotIn("88ج999ایران55", plates)
+
+    def test_vehicle_trip_log_perform_create_and_update_allowed(self):
+        """
+        تسک ۱۱.۱۷ (ن-۱۷) و ب-۲۰: اعتبارسنجی گارد assert_vehicle_trip_allowed در perform_create و perform_update
+        """
+        # ۱. خودروی پیش‌نویس (تایید نشده)
+        v_unapproved = VehicleDriverProfile.objects.create(
+            plate_number="33ب111ایران44",
+            vehicle_type="nissan",
+            driver_name="راننده پیش‌نویس",
+            company=self.company,
+            section=self.section_a,
+            approval_status="draft",
+            is_active=True
+        )
+        self.client.force_authenticate(user=self.operator)
+        trip_payload = {
+            "vehicle": v_unapproved.id,
+            "section": self.section_a.id,
+            "warehouse_id": 1,
+            "date_shamsi": "1405/07/15",
+            "trip_count": 2,
+            "unit_rate": 3000000
+        }
+        res_fail = self.client.post("/api/personnel/trips/", trip_payload, format="json")
+        self.assertEqual(res_fail.status_code, 400)
+        self.assertIn("تصویب", str(res_fail.data))
+
+        # ۲. خودروی مصوب با تاریخ معتبر
+        v_approved = VehicleDriverProfile.objects.create(
+            plate_number="33ب222ایران44",
+            vehicle_type="nissan",
+            driver_name="راننده مصوب",
+            company=self.company,
+            section=self.section_a,
+            approval_status="approved",
+            is_active=True,
+            default_service_rate=4000000
+        )
+        trip_payload["vehicle"] = v_approved.id
+        res_ok = self.client.post("/api/personnel/trips/", trip_payload, format="json")
+        self.assertEqual(res_ok.status_code, 201)
+        trip_id = res_ok.data["id"]
+
+        # ۳. ویرایش با تاریخ نامعتبر (انقضا یا پس از قطع همکاری)
+        v_approved.is_active = False
+        v_approved.end_date = "1405/07/10"
+        v_approved.save()
+
+        res_update_fail = self.client.patch(f"/api/personnel/trips/{trip_id}/", {"date_shamsi": "1405/07/15"}, format="json")
+        self.assertEqual(res_update_fail.status_code, 400)
+
+    def test_fleet_excel_trip_allowed_gate(self):
+        """
+        تسک ۱۱.۱۷ (ن-۱۷) و ب-۲۰: اعتبارسنجی گارد assert_vehicle_trip_allowed در درون‌ریزی تردد اکسل
+        """
+        import openpyxl
+        import io
+        from personnel.fleet_excel_engine import import_fleet_monthly_excel
+
+        v_unapproved = VehicleDriverProfile.objects.create(
+            plate_number="77ج333ایران88",
+            vehicle_type="nissan",
+            driver_name="راننده اکسل تایید نشده",
+            company=self.company,
+            section=self.section_a,
+            approval_status="pending_supervisor",
+            is_active=True
+        )
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Fleet_Monthly"
+        # Row 1: Persian display titles
+        ws.cell(row=1, column=1, value="ردیف")
+        ws.cell(row=1, column=2, value="نام راننده")
+        ws.cell(row=1, column=3, value="شماره پلاک")
+        ws.cell(row=1, column=7, value="روز ۰۱")
+
+        # Row 2: Field keys (standard 2-row architecture)
+        ws.cell(row=2, column=1, value="row_num")
+        ws.cell(row=2, column=2, value="driver_name")
+        ws.cell(row=2, column=3, value="plate_number")
+        ws.cell(row=2, column=7, value="day_01")
+
+        # Row 3: Data
+        ws.cell(row=3, column=1, value=1)
+        ws.cell(row=3, column=2, value="راننده اکسل تایید نشده")
+        ws.cell(row=3, column=3, value="77ج333ایران88")
+        ws.cell(row=3, column=7, value=2) # ۲ تردد در روز اول
+
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        with self.assertRaises(ValueError) as ctx:
+            import_fleet_monthly_excel(
+                file_obj=buf,
+                warehouse_id=1,
+                year_month="1405/04",
+                user=self.operator
+            )
+        self.assertIn("77ج333ایران88", str(ctx.exception))
+        self.assertIn("تصویب", str(ctx.exception))
+
+    def test_vehicle_trip_log_protect_on_delete(self):
+        """
+        تسک ۱۱.۱۷ (ن-۱۷) و ب-۹: اعتبارسنجی قید PROTECT مدل VehicleTripLog
+        حذف مستقیم خودروی دارای سابقه تردد از سطح مدل باید ProtectedError پرتاب کند.
+        """
+        from django.db.models.deletion import ProtectedError
+        v = VehicleDriverProfile.objects.create(
+            plate_number="99الف111ایران22",
+            vehicle_type="nissan",
+            driver_name="راننده دارای تردد",
+            company=self.company,
+            section=self.section_a,
+            approval_status="approved",
+            is_active=True
+        )
+        VehicleTripLog.objects.create(
+            vehicle=v,
+            warehouse_id=1,
+            date_shamsi="1405/07/01",
+            trip_count=1,
+            unit_rate=2000000
+        )
+        with self.assertRaises(ProtectedError):
+            v.delete()
+
+    def test_sod_rate_silent_drop_and_forbidden_on_approved(self):
+        """
+        تسک ۱۱.۱۷ (ن-۱۷)، ن-۳ و ط-۲: تفکیک وظایف نرخ؛ حذف بی‌صدا در برابر ۴۰۳ روی پرونده مصوب
+        """
+        # ۱. پرونده پیش‌نویس: ارسال نرخ توسط کاربر غیرمالی بی‌صدا نادیده گرفته می‌شود (بدون ۴۰۰ یا ۴۰۳)
+        v_draft = VehicleDriverProfile.objects.create(
+            plate_number="44د555ایران66",
+            vehicle_type="nissan",
+            driver_name="راننده پیش‌نویس نرخ",
+            company=self.company,
+            section=self.section_a,
+            approval_status="draft",
+            is_active=True,
+            default_service_rate=0
+        )
+        self.client.force_authenticate(user=self.operator)
+        res_draft = self.client.patch(f"/api/personnel/vehicles/{v_draft.id}/", {"default_service_rate": 8000000}, format="json")
+        self.assertEqual(res_draft.status_code, 200)
+        v_draft.refresh_from_db()
+        self.assertEqual(v_draft.default_service_rate or 0, 0) # دست‌نخورده باقی می‌ماند
+
+        # ۲. پرونده مصوب: تلاش صریح کاربر غیرمالی برای تغییر نرخ به مقدار متفاوت ناتهی باید ۴۰۳ بگیرد
+        v_approved = VehicleDriverProfile.objects.create(
+            plate_number="44د777ایران66",
+            vehicle_type="nissan",
+            driver_name="راننده مصوب نرخ",
+            company=self.company,
+            section=self.section_a,
+            approval_status="approved",
+            is_active=True,
+            default_service_rate=5000000
+        )
+        res_app_forbidden = self.client.patch(f"/api/personnel/vehicles/{v_approved.id}/", {"default_service_rate": 7500000}, format="json")
+        self.assertEqual(res_app_forbidden.status_code, 403)
+        self.assertEqual(res_app_forbidden.data.get("code"), "forbidden_rate_change")
+
+        # ۳. پرونده مصوب: اگر نرخ صفر یا تهی ارسال شود (فرم‌های قدیمی یا صف آفلاین)، نباید ۴۰۳ بگیرد و باید بی‌صدا نادیده گرفته شود
+        res_app_silent = self.client.patch(f"/api/personnel/vehicles/{v_approved.id}/", {"default_service_rate": 0, "driver_phone": "09129998877"}, format="json")
+        self.assertIn(res_app_silent.status_code, (200, 202))
+        v_approved.refresh_from_db()
+        self.assertEqual(v_approved.default_service_rate, Decimal('5000000')) # نرخ دست‌نخورده
+
+
 
