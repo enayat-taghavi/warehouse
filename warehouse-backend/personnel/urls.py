@@ -62,7 +62,29 @@ router.register(r'settings', PayrollYearlySettingsViewSet, basename='payroll-set
 router.register(r'monthly-payroll', MonthlyPayrollViewSet, basename='monthly-payroll')
 router.register(r'fleet-settlement', FleetSettlementViewSet, basename='fleet-settlement')
 
+from .google_drive_views import (
+    CompanyGoogleDriveConfigView,
+    CompanyGoogleDriveAuthUrlView,
+    CompanyGoogleDriveDisconnectView,
+    CompanyGoogleDriveQueueView,
+    CompanyGoogleDriveRetryTaskView,
+    CompanyGoogleDriveSyncAllView,
+    CompanyGoogleDriveTriggerSyncView,
+    GoogleDriveOAuthCallbackView,
+)
+
 urlpatterns = [
+    # گوگل‌درایو شرکت‌ها (Google Drive Cloud Sync)
+    path('companies/<int:company_id>/gdrive/', CompanyGoogleDriveConfigView.as_view(), name='company-gdrive-config'),
+    path('companies/<int:company_id>/gdrive/status/', CompanyGoogleDriveConfigView.as_view(), name='company-gdrive-status'),
+    path('companies/<int:company_id>/gdrive/auth-url/', CompanyGoogleDriveAuthUrlView.as_view(), name='company-gdrive-auth-url'),
+    path('companies/<int:company_id>/gdrive/disconnect/', CompanyGoogleDriveDisconnectView.as_view(), name='company-gdrive-disconnect'),
+    path('companies/<int:company_id>/gdrive/queue/', CompanyGoogleDriveQueueView.as_view(), name='company-gdrive-queue'),
+    path('companies/<int:company_id>/gdrive/tasks/<int:task_id>/retry/', CompanyGoogleDriveRetryTaskView.as_view(), name='company-gdrive-retry-task'),
+    path('companies/<int:company_id>/gdrive/sync-all/', CompanyGoogleDriveSyncAllView.as_view(), name='company-gdrive-sync-all'),
+    path('companies/<int:company_id>/gdrive/trigger-sync/', CompanyGoogleDriveTriggerSyncView.as_view(), name='company-gdrive-trigger-sync'),
+    path('gdrive/callback/', GoogleDriveOAuthCallbackView.as_view(), name='gdrive-oauth-callback'),
+
     path('sync/pull/', PersonnelSyncPullView.as_view(), name='personnel-sync-pull'),
     path('cartable/supervisor/', SupervisorCartableAPIView.as_view(), name='supervisor-cartable'),
     path('cartable/accountant/', AccountantCartableAPIView.as_view(), name='accountant-cartable'),

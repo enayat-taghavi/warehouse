@@ -1,4 +1,5 @@
 from decimal import Decimal
+from datetime import time as dt_time
 from django.db import models, transaction
 from django.conf import settings
 from django.utils import timezone
@@ -350,6 +351,10 @@ class CompanyBoardMember(models.Model):
         verbose_name = "عضو هیئت‌مدیره شرکت"
         verbose_name_plural = "اعضای هیئت‌مدیره شرکت‌ها"
         ordering = ['-has_signature_right', 'role', '-created_at']
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.get_role_display()}) - {self.company.name}"
@@ -3461,4 +3466,220 @@ class WorkflowAuditLog(models.Model):
     def __str__(self):
         actor_name = self.actor.username if self.actor else "سیستم"
         return f"[{self.content_type}#{self.object_id}] {self.action} by {actor_name} -> {self.to_status}"
+
+
+# ==============================================================================
+# سرویس یکپارچه همگام‌سازی ابری گوگل‌درایو شرکت‌ها (Company Google Drive Cloud Sync)
+# ==============================================================================
+
+class CompanyGoogleDriveConfig(models.Model):
+    """
+    پیکربندی اتصال اختصاصی هر شرکت به گوگل‌درایو خود از طریق OAuth 2.0
+    """
+    company = models.OneToOneField(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='gdrive_config',
+        verbose_name="شرکت متبوع"
+    )
+    is_enabled = models.BooleanField(
+        default=False,
+        verbose_name="فعال‌بودن همگام‌سازی ابری"
+    )
+    account_email = models.EmailField(
+        blank=True,
+        null=True,
+        verbose_name="ایمیل اکانت گوگل متصل"
+    )
+    refresh_token = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="توکن دائمی بازآوری (Refresh Token)"
+    )
+    root_folder_id = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        verbose_name="شناسه پوشه ریشه اختصاصی در گوگل‌درایو"
+    )
+    root_folder_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="نام پوشه ریشه در گوگل‌درایو"
+    )
+    archive_folder_id = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        verbose_name="شناسه پوشه بایگانی اسناد حذف‌شده"
+    )
+    sync_accounting_docs = models.BooleanField(
+        default=True,
+        verbose_name="همگام‌سازی اسناد مالی و فاکتورها"
+    )
+    sync_personnel_docs = models.BooleanField(
+        default=True,
+        verbose_name="همگام‌سازی مدارک پرسنلی و اداری"
+    )
+    sync_fleet_docs = models.BooleanField(
+        default=True,
+        verbose_name="همگام‌سازی اسناد ناوگان و خودروها"
+    )
+    sync_inventory_photos = models.BooleanField(
+        default=True,
+        verbose_name="همگام‌سازی تصاویر کالاهای انبار"
+    )
+    sync_backups = models.BooleanField(
+        default=True,
+        verbose_name="همگام‌سازی پشتیبان‌های پایگاه داده"
+    )
+    SYNC_MODE_CHOICES = (
+        ('immediate', 'همگام‌سازی آنی (بلافاصله پس از بارگذاری)'),
+        ('scheduled', 'زمان‌بندی‌شده در ساعات خلوتی شبکه'),
+        ('manual', 'فقط دستی (با دستور مستقیم کاربر)'),
+    )
+    sync_mode = models.CharField(
+        max_length=20,
+        choices=SYNC_MODE_CHOICES,
+        default='immediate',
+        verbose_name="حالت همگام‌سازی"
+    )
+    scheduled_start_time = models.TimeField(
+        default=dt_time(23, 0),
+        verbose_name="ساعت شروع ارسال در ساعات خلوتی"
+    )
+    scheduled_end_time = models.TimeField(
+        default=dt_time(6, 0),
+        verbose_name="ساعت پایان ارسال در ساعات خلوتی"
+    )
+    chunk_delay_seconds = models.PositiveSmallIntegerField(
+        default=1,
+        verbose_name="تاخیر بین فایل‌ها جهت کنترل پهنای باند (ثانیه)"
+    )
+    last_sync_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="آخرین زمان همگام‌سازی موفق"
+    )
+    last_error = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="آخرین خطای ارتباط با گوگل‌درایو"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ایجاد")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ بروزرسانی")
+
+    class Meta:
+        verbose_name = "تنظیمات گوگل‌درایو شرکت"
+        verbose_name_plural = "تنظیمات گوگل‌درایو شرکت‌ها"
+
+    def __str__(self):
+        status = "متصل" if self.refresh_token else "قطع"
+        return f"{self.company.name} - Google Drive ({status})"
+
+
+class GoogleDriveSyncQueue(models.Model):
+    """
+    صف وظایف ناهمگام جهت ارسال یا بایگانی فایل‌ها در گوگل‌درایو شرکت‌ها
+    """
+    STATUS_CHOICES = (
+        ('pending', 'در انتظار ارسال'),
+        ('processing', 'در حال پردازش / ارسال'),
+        ('completed', 'همگام‌سازی موفق'),
+        ('failed', 'خطا در ارسال'),
+    )
+    ACTION_CHOICES = (
+        ('upload', 'آپلود / به‌روزرسانی فایل'),
+        ('archive_delete', 'انتقال به پوشه بایگانی اسناد حذف‌شده'),
+    )
+
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='gdrive_sync_tasks',
+        verbose_name="شرکت متبوع"
+    )
+    model_name = models.CharField(
+        max_length=100,
+        verbose_name="نام مدل مبدأ"
+    )
+    object_id = models.PositiveBigIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="شناسه رکورد مبدأ"
+    )
+    source_file_path = models.CharField(
+        max_length=600,
+        verbose_name="مسیر فایل محلی در سرور"
+    )
+    target_folder_path = models.CharField(
+        max_length=600,
+        verbose_name="سلسله‌مراتب پوشه مقصد در گوگل‌درایو"
+    )
+    target_filename = models.CharField(
+        max_length=300,
+        verbose_name="نام معنادار فایل در گوگل‌درایو"
+    )
+    action = models.CharField(
+        max_length=30,
+        choices=ACTION_CHOICES,
+        default='upload',
+        verbose_name="نوع عملیات"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        db_index=True,
+        verbose_name="وضعیت همگام‌سازی"
+    )
+    retry_count = models.IntegerField(
+        default=0,
+        verbose_name="تعداد دفعات تلاش مجدد"
+    )
+    gdrive_file_id = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        verbose_name="شناسه فایل در گوگل‌درایو"
+    )
+    file_sha256 = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        verbose_name="هش امنیتی SHA-256 فایل"
+    )
+    error_message = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="شرح خطای رخ‌داده"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        verbose_name="زمان ثبت در صف"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="زمان آخرین تغییر"
+    )
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="زمان تکمیل موفق"
+    )
+
+    class Meta:
+        verbose_name = "وظیفه صف گوگل‌درایو"
+        verbose_name_plural = "وظایف صف گوگل‌درایو"
+        indexes = [
+            models.Index(fields=['company', 'status']),
+            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['model_name', 'object_id']),
+        ]
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"[{self.company.code}] {self.target_filename} ({self.status})"
 

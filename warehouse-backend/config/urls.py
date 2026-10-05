@@ -13,8 +13,11 @@ from config.views_backup import (
 from django.urls import re_path
 from common.media_urls import serve_media
 
+from personnel.google_drive_views import GoogleDriveOAuthCallbackView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/accounts/gdrive/callback/', GoogleDriveOAuthCallbackView.as_view(), name='root-gdrive-oauth-callback'),
     path('api/auth/', include('accounts.urls')),
     path('api/accounts/', include('accounts.urls')),
     path('api/communications/', include('communications.urls')),

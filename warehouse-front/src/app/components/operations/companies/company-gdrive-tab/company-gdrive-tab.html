@@ -1,0 +1,502 @@
+<div dir="rtl" class="space-y-6">
+
+  <!-- هدر انتخاب شرکت و وضعیت کلی -->
+  <div class="bg-white p-4 md:p-5 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-2xs">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
+      </div>
+      <div>
+        <h2 class="text-base md:text-lg font-black text-slate-900 flex items-center gap-2">
+          همگام‌سازی ابری گوگل‌درایو شرکت‌ها
+          <span class="text-xs px-2.5 py-0.5 rounded-full font-bold"
+                [class.bg-emerald-50]="config()?.is_connected"
+                [class.text-emerald-700]="config()?.is_connected"
+                [class.border]="config()?.is_connected"
+                [class.border-emerald-200]="config()?.is_connected"
+                [class.bg-slate-100]="!config()?.is_connected"
+                [class.text-slate-600]="!config()?.is_connected">
+            {{ config()?.is_connected ? '● متصل به درایو' : '○ غیرمتصل' }}
+          </span>
+        </h2>
+        <p class="text-xs text-slate-500 mt-0.5">
+          انتقال خودکار و پس‌زمینه اسناد مالی، مدارک پرسنل، ناوگان و پشتیبان‌های دیتابیس با ساختار درختی و نام‌گذاری معنادار
+        </p>
+      </div>
+    </div>
+
+    <!-- انتخاب شرکت -->
+    <div *ngIf="!companyId" class="flex items-center gap-2 self-end md:self-center">
+      <span class="text-xs font-bold text-slate-500 whitespace-nowrap">شرکت هدف:</span>
+      <select 
+        [ngModel]="selectedCompanyId()" 
+        (ngModelChange)="onCompanyChange($event)"
+        class="bg-slate-50 border border-slate-200 text-slate-800 text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-indigo-500 focus:bg-white transition-all cursor-pointer">
+        <option *ngFor="let c of (activeCompanyService.availableCompanies$ | async)" [ngValue]="c.id">
+          {{ c.name }} ({{ c.code }})
+        </option>
+      </select>
+
+      <button 
+        type="button"
+        (click)="loadAll()" 
+        title="به‌روزرسانی اطلاعات"
+        class="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 cursor-pointer active:scale-95 transition-all">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-cw"></svg>
+      </button>
+    </div>
+
+    <!-- دکمه رفرش و نشان در مدال شرکت -->
+    <div *ngIf="companyId" class="flex items-center gap-2 self-end md:self-center">
+      <span *ngIf="config()" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100/80">
+        شرکت: {{ config()?.company_name }}
+      </span>
+      <button 
+        type="button"
+        (click)="loadAll()" 
+        title="به‌روزرسانی اطلاعات"
+        class="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 cursor-pointer active:scale-95 transition-all">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-cw"></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- کارت اصلی اتصال و آمار -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- ستون ۱ و ۲: مشخصات اکانت و تنظیمات دسته‌بندی -->
+    <div class="lg:col-span-2 space-y-6">
+
+      <!-- کارت مشخصات اتصال -->
+      <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+          <span class="text-xs font-black text-slate-700">حساب متصل گوگل</span>
+          <span *ngIf="config()?.last_sync_at" class="text-[11px] text-slate-400">
+            آخرین همگام‌سازی: {{ config()?.last_sync_at | date:'yyyy/MM/dd HH:mm' }}
+          </span>
+        </div>
+
+        <div *ngIf="config()?.is_connected; else notConnectedTpl" class="space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/60">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-2xs font-bold text-sm">
+                G
+              </div>
+              <div>
+                <div class="text-xs font-black text-slate-800">{{ config()?.account_email || 'اکانت تایید شده' }}</div>
+                <div class="text-[11px] text-slate-500 font-mono mt-0.5">
+                  پوشه ریشه: {{ config()?.root_folder_name || 'سامانه ابری شرکت' }}
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <a *ngIf="config()?.root_folder_url" 
+                 [href]="config()?.root_folder_url" 
+                 target="_blank" 
+                 rel="noopener noreferrer"
+                 class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold flex items-center gap-1.5 transition-all">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="external-link"></svg>
+                باز کردن در درایو
+              </a>
+
+              <button 
+                type="button"
+                (click)="disconnectGoogleDrive()"
+                class="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold transition-all">
+                قطع اتصال
+              </button>
+            </div>
+          </div>
+
+          <!-- پیام خطا در صورت وجود -->
+          <div *ngIf="config()?.last_error" class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-start gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mt-0.5 shrink-0" appIcon="alert-triangle"></svg>
+            <div>
+              <div class="font-bold">هشدار در ارتباط با گوگل:</div>
+              <div class="mt-0.5">{{ config()?.last_error }}</div>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #notConnectedTpl>
+          <div class="text-center py-6 px-4 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+            <div class="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center justify-center mx-auto text-slate-400 mb-3">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="cloud-off"></svg>
+            </div>
+            <h3 class="text-sm font-black text-slate-800">حساب گوگل‌درایو متصل نشده است</h3>
+            <p class="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
+              با اتصال حساب گوگل‌درایو، مدارک و فایل‌های این شرکت به محض آپلود، به صورت امن در فضای ابری پشتیبان‌گیری خواهند شد.
+            </p>
+            <button 
+              type="button"
+              (click)="connectGoogleDrive()"
+              class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm inline-flex items-center gap-2 cursor-pointer active:scale-95 transition-all">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
+              ورود و اتصال با حساب گوگل
+            </button>
+          </div>
+        </ng-template>
+      </div>
+
+      <!-- کارت سیاست ارسال و کنترل ترافیک شبکه (فاز ۶) -->
+      <div *ngIf="config()?.is_connected" class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-black text-slate-700">سیاست ارسال و زمان‌بندی ترافیک شبکه</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
+              مدیریت پهنای باند
+            </span>
+          </div>
+          <span class="text-[11px] text-slate-400">کنترل مصرف اینترنت در ساعات کاری</span>
+        </div>
+
+        <div *ngIf="config(); let cfg" class="space-y-4">
+          <!-- کارت‌های سه‌گانه انتخاب حالت -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+            <!-- ۱. حالت آنی -->
+            <div 
+              (click)="setSyncMode('immediate')"
+              [class.border-indigo-500]="cfg.sync_mode === 'immediate'"
+              [class.bg-indigo-50/40]="cfg.sync_mode === 'immediate'"
+              [class.border-slate-200]="cfg.sync_mode !== 'immediate'"
+              [class.bg-slate-50/50]="cfg.sync_mode !== 'immediate'"
+              class="p-3.5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <div class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-amber-500 shadow-2xs">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="zap"></svg>
+                  </div>
+                  <span *ngIf="cfg.sync_mode === 'immediate'" class="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">✓</span>
+                </div>
+                <div class="text-xs font-black text-slate-800">همگام‌سازی آنی</div>
+                <div class="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                  ارسال بلادرنگ فایل‌ها بلافاصله پس از ثبت در سیستم (مناسب اینترنت پایدار)
+                </div>
+              </div>
+            </div>
+
+            <!-- ۲. حالت زمان‌بندی ساعات خلوتی -->
+            <div 
+              (click)="setSyncMode('scheduled')"
+              [class.border-indigo-500]="cfg.sync_mode === 'scheduled'"
+              [class.bg-indigo-50/40]="cfg.sync_mode === 'scheduled'"
+              [class.border-slate-200]="cfg.sync_mode !== 'scheduled'"
+              [class.bg-slate-50/50]="cfg.sync_mode !== 'scheduled'"
+              class="p-3.5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <div class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-indigo-600 shadow-2xs">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="clock"></svg>
+                  </div>
+                  <span *ngIf="cfg.sync_mode === 'scheduled'" class="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">✓</span>
+                </div>
+                <div class="text-xs font-black text-slate-800">ساعات خلوتی شبکه</div>
+                <div class="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                  توقف ارسال در ساعات اداری؛ ارسال خودکار در ساعات کم‌ترافیک شبانه (توصیه‌شده)
+                </div>
+              </div>
+            </div>
+
+            <!-- ۳. حالت فقط دستی -->
+            <div 
+              (click)="setSyncMode('manual')"
+              [class.border-indigo-500]="cfg.sync_mode === 'manual'"
+              [class.bg-indigo-50/40]="cfg.sync_mode === 'manual'"
+              [class.border-slate-200]="cfg.sync_mode !== 'manual'"
+              [class.bg-slate-50/50]="cfg.sync_mode !== 'manual'"
+              class="p-3.5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <div class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shadow-2xs">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="send"></svg>
+                  </div>
+                  <span *ngIf="cfg.sync_mode === 'manual'" class="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">✓</span>
+                </div>
+                <div class="text-xs font-black text-slate-800">فقط با دستور دستی</div>
+                <div class="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                  فایل‌ها در صف ذخیره شده و تنها با کلیک مستقیم مدیر سیستم ارسال می‌شوند
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- زیربخش اختصاصی تنظیم ساعات خلوتی و تاخیر چانک (در صورت انتخاب scheduled) -->
+          <div *ngIf="cfg.sync_mode === 'scheduled'" class="p-4 bg-slate-50/90 rounded-2xl border border-slate-200 space-y-3">
+            <div class="flex items-center gap-2 text-xs font-bold text-slate-700">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="settings"></svg>
+              <span>تنظیم بازه ساعات کم‌ترافیک شبانه و کنترل پهنای باند</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">ساعت شروع ارسال (شب):</label>
+                <input 
+                  type="time" 
+                  [(ngModel)]="cfg.scheduled_start_time"
+                  (change)="updateToggles()"
+                  class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all">
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">ساعت پایان ارسال (صبح):</label>
+                <input 
+                  type="time" 
+                  [(ngModel)]="cfg.scheduled_end_time"
+                  (change)="updateToggles()"
+                  class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all">
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">مکث بین فایل‌ها (ثانیه):</label>
+                <input 
+                  type="number" 
+                  min="0"
+                  max="60"
+                  [(ngModel)]="cfg.chunk_delay_seconds"
+                  (change)="updateToggles()"
+                  class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all">
+              </div>
+            </div>
+
+            <div class="text-[10px] text-slate-500 flex items-center gap-1.5 pt-1">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-emerald-600" appIcon="check"></svg>
+              <span>ورکر پس‌زمینه منحصراً در این بازه فعال شده و پس از هر آپلود جهت جلوگیری از افت سرعت اینترنت مکث می‌کند.</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- کارت سوییچ‌های دسته‌بندی فایل‌ها -->
+      <div *ngIf="config()?.is_connected" class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+          <span class="text-xs font-black text-slate-700">دسته‌بندی‌های فعال جهت همگام‌سازی</span>
+          <span class="text-[11px] text-slate-400">تغییرات به صورت خودکار اعمال می‌گردد</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" *ngIf="config(); let cfg">
+          <label class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 hover:bg-slate-50/80 cursor-pointer transition-all">
+            <input type="checkbox" [(ngModel)]="cfg.sync_accounting_docs" (ngModelChange)="updateToggles()" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+            <div>
+              <div class="text-xs font-bold text-slate-800">اسناد مالی و فاکتورها</div>
+              <div class="text-[10px] text-slate-500">فاکتورهای خرید، رسیدهای تنخواه و اسناد شرکت</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 hover:bg-slate-50/80 cursor-pointer transition-all">
+            <input type="checkbox" [(ngModel)]="cfg.sync_personnel_docs" (ngModelChange)="updateToggles()" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+            <div>
+              <div class="text-xs font-bold text-slate-800">مدارک هویتی و پرسنلی</div>
+              <div class="text-[10px] text-slate-500">کارت ملی، شناسنامه و قراردادهای کار</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 hover:bg-slate-50/80 cursor-pointer transition-all">
+            <input type="checkbox" [(ngModel)]="cfg.sync_fleet_docs" (ngModelChange)="updateToggles()" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+            <div>
+              <div class="text-xs font-bold text-slate-800">مدارک ناوگان و خودروها</div>
+              <div class="text-[10px] text-slate-500">بیمه‌نامه‌ها، کارت خودرو و فاکتورهای سرویس</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 hover:bg-slate-50/80 cursor-pointer transition-all">
+            <input type="checkbox" [(ngModel)]="cfg.sync_inventory_photos" (ngModelChange)="updateToggles()" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+            <div>
+              <div class="text-xs font-bold text-slate-800">تصاویر کالاهای انبار</div>
+              <div class="text-[10px] text-slate-500">عکس‌های اقلام ثبت‌شده در انبارگردانی</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 hover:bg-slate-50/80 cursor-pointer transition-all sm:col-span-2">
+            <input type="checkbox" [(ngModel)]="cfg.sync_backups" (ngModelChange)="updateToggles()" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+            <div>
+              <div class="text-xs font-bold text-slate-800">فایل‌های پشتیبان پایگاه داده</div>
+              <div class="text-[10px] text-slate-500">بک‌آپ‌های کامل خودکار و دستی دیتابیس سرور</div>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ستون ۳: آمار صف و عملیات سریع -->
+    <div class="space-y-6">
+
+      <!-- کارت شمارنده‌ها -->
+      <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
+        <h3 class="text-xs font-black text-slate-700 pb-3 border-b border-slate-100 mb-4">آمار وظایف همگام‌سازی</h3>
+
+        <div class="grid grid-cols-2 gap-3" *ngIf="config()?.stats; let st">
+          <div class="p-3 bg-indigo-50/60 border border-indigo-100 rounded-2xl text-center">
+            <div class="text-lg font-black text-indigo-700 font-mono">{{ st.completed || 0 }}</div>
+            <div class="text-[11px] font-bold text-slate-600 mt-0.5">همگام‌شده موفق</div>
+          </div>
+
+          <div class="p-3 bg-amber-50/60 border border-amber-100 rounded-2xl text-center">
+            <div class="text-lg font-black text-amber-700 font-mono">{{ (st.pending + st.processing) || 0 }}</div>
+            <div class="text-[11px] font-bold text-slate-600 mt-0.5">در صف ارسال</div>
+          </div>
+
+          <div class="p-3 bg-rose-50/60 border border-rose-100 rounded-2xl text-center">
+            <div class="text-lg font-black text-rose-700 font-mono">{{ st.failed || 0 }}</div>
+            <div class="text-[11px] font-bold text-slate-600 mt-0.5">دارای خطا</div>
+          </div>
+
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center">
+            <div class="text-lg font-black text-slate-800 font-mono">{{ st.total || 0 }}</div>
+            <div class="text-[11px] font-bold text-slate-600 mt-0.5">کل فایل‌ها</div>
+          </div>
+        </div>
+
+        <div class="mt-5 pt-4 border-t border-slate-100 space-y-2.5" *ngIf="config()?.is_connected">
+          <!-- دکمه اقدام سریع: ارسال دستی صف فایل‌های معلق -->
+          <button 
+            type="button"
+            [disabled]="isTriggeringSync() || !config()?.stats?.pending"
+            (click)="triggerManualSync()"
+            class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="send"></svg>
+            {{ isTriggeringSync() ? 'در حال ارسال صف در پس‌زمینه...' : 'ارسال دستی صف فایل‌های معلق (' + (config()?.stats?.pending || 0) + ')' }}
+          </button>
+
+          <!-- دکمه همگام‌سازی کلیه فایل‌های موجود -->
+          <button 
+            type="button"
+            [disabled]="isSyncing()"
+            (click)="syncAllFiles()"
+            class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 text-xs font-bold shadow-2xs flex items-center justify-center gap-2 cursor-pointer transition-all">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="cloud-upload"></svg>
+            {{ isSyncing() ? 'در حال ثبت فایل‌ها در صف...' : 'پیمایش و ثبت فایل‌های پیشین' }}
+          </button>
+          <p class="text-[10px] text-slate-400 text-center mt-1">
+            فایل‌های قبلی سیستم بررسی و در صورت عدم ارسال، به صف افزوده می‌شوند.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- جدول مانیتورینگ صف تسک‌ها -->
+  <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
+    
+    <!-- نوار بالای جدول با فیلترها -->
+    <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-black text-slate-800">صف لحظه‌ای ارسال فایل‌ها</span>
+        <span class="text-[10px] font-mono font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+          {{ queueItems().length }} مورد
+        </span>
+      </div>
+
+      <!-- فیلتر وضعیت -->
+      <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs">
+        <button 
+          type="button"
+          (click)="loadQueue('all')"
+          [class.bg-white]="activeStatusFilter() === 'all'"
+          [class.text-indigo-700]="activeStatusFilter() === 'all'"
+          [class.shadow-2xs]="activeStatusFilter() === 'all'"
+          class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all">
+          همه
+        </button>
+        <button 
+          type="button"
+          (click)="loadQueue('pending')"
+          [class.bg-white]="activeStatusFilter() === 'pending'"
+          [class.text-indigo-700]="activeStatusFilter() === 'pending'"
+          [class.shadow-2xs]="activeStatusFilter() === 'pending'"
+          class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all">
+          در انتظار
+        </button>
+        <button 
+          type="button"
+          (click)="loadQueue('completed')"
+          [class.bg-white]="activeStatusFilter() === 'completed'"
+          [class.text-indigo-700]="activeStatusFilter() === 'completed'"
+          [class.shadow-2xs]="activeStatusFilter() === 'completed'"
+          class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all">
+          موفق
+        </button>
+        <button 
+          type="button"
+          (click)="loadQueue('failed')"
+          [class.bg-white]="activeStatusFilter() === 'failed'"
+          [class.text-indigo-700]="activeStatusFilter() === 'failed'"
+          [class.shadow-2xs]="activeStatusFilter() === 'failed'"
+          class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all">
+          خطا
+        </button>
+      </div>
+    </div>
+
+    <!-- جدول -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-right text-xs">
+        <thead class="bg-slate-50/75 border-b border-slate-100 text-slate-500 font-bold">
+          <tr>
+            <th class="py-3 px-4">نام فایل در درایو</th>
+            <th class="py-3 px-4">پوشه مقصد در گوگل‌درایو</th>
+            <th class="py-3 px-4">نوع عملیات</th>
+            <th class="py-3 px-4">وضعیت</th>
+            <th class="py-3 px-4">زمان ثبت</th>
+            <th class="py-3 px-4 text-center">اقدام</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 text-slate-700">
+          <tr *ngFor="let item of queueItems()" class="hover:bg-slate-50/50 transition-colors">
+            <td class="py-3 px-4 font-bold text-slate-900 flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400 shrink-0" appIcon="file-text"></svg>
+              <span class="truncate max-w-[240px]" [title]="item.target_filename">{{ item.target_filename }}</span>
+            </td>
+            <td class="py-3 px-4 text-[11px] text-slate-500 font-mono truncate max-w-[220px]" [title]="item.target_folder_path">
+              {{ item.target_folder_path }}
+            </td>
+            <td class="py-3 px-4 text-[11px]">
+              <span *ngIf="item.action === 'upload'" class="text-indigo-600 font-bold">آپلود</span>
+              <span *ngIf="item.action === 'archive_delete'" class="text-amber-600 font-bold">انتقال به بایگانی</span>
+            </td>
+            <td class="py-3 px-4">
+              <span *ngIf="item.status === 'completed'" class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                ✓ موفق
+              </span>
+              <span *ngIf="item.status === 'pending'" class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                ⌛ در انتظار
+              </span>
+              <span *ngIf="item.status === 'processing'" class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                ⟳ در حال ارسال
+              </span>
+              <span *ngIf="item.status === 'failed'" class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200" [title]="item.error_message || ''">
+                ✕ خطا ({{ item.retry_count }} تلاش)
+              </span>
+            </td>
+            <td class="py-3 px-4 text-[11px] text-slate-400 font-mono">
+              {{ item.created_at | date:'MM/dd HH:mm' }}
+            </td>
+            <td class="py-3 px-4 text-center">
+              <button 
+                *ngIf="item.status === 'failed'"
+                type="button"
+                (click)="retryTask(item.id)"
+                class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-[11px] font-bold transition-all"
+                title="تلاش مجدد برای ارسال این فایل">
+                تلاش مجدد
+              </button>
+              <span *ngIf="item.status !== 'failed'" class="text-slate-300">-</span>
+            </td>
+          </tr>
+
+          <tr *ngIf="queueItems().length === 0">
+            <td colspan="6" class="py-8 text-center text-slate-400 text-xs">
+              هیچ وظیفه‌ای در صف همگام‌سازی یافت نشد.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</div>

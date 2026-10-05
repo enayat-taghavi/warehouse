@@ -18,3 +18,9 @@ class PersonnelConfig(AppConfig):
             import personnel.signals
         except ImportError:
             pass
+
+        # بارگذاری سیگنال‌های صف همگام‌سازی گوگل‌درایو
+        try:
+            import personnel.signals_gdrive
+        except ImportError:
+            pass

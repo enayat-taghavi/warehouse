@@ -319,3 +319,14 @@ AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = timedelta(minutes=15)
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_PARAMETERS = [["username"], ["ip_address"]]
+
+# ==============================================================================
+# Google Drive Cloud Sync Settings
+# ==============================================================================
+GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '')
+GOOGLE_OAUTH_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET', '')
+GOOGLE_OAUTH_REDIRECT_URI = os.getenv(
+    'GOOGLE_OAUTH_REDIRECT_URI',
+    'https://app.farsalish.ir/api/accounts/gdrive/callback/'
+)
+OUTBOUND_HTTP_PROXY = os.getenv('OUTBOUND_HTTP_PROXY', '')
