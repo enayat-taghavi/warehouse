@@ -16,10 +16,11 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
   let toastServiceMock: any;
   let authServiceMock: any;
   let cdrMock: any;
+  let clearCachesSpy: any;
 
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.spyOn(offlineDb, 'clearServerDerivedCaches').mockResolvedValue(undefined);
+    clearCachesSpy = vi.spyOn(offlineDb, 'clearServerDerivedCaches').mockResolvedValue(undefined as any);
     vi.spyOn(offlineDb.syncQueue, 'toArray').mockResolvedValue([]);
 
     settingsServiceMock = {
@@ -134,6 +135,22 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
       expect(component.restoreConfirmInput).toBe('');
     });
 
+    it('should NOT close restore confirm modal on Escape key or backdrop click while isRestoreLoading is true', () => {
+      component.showRestoreConfirm = true;
+      component.isRestoreLoading = true;
+      component.restoreConfirmInput = 'RESTORE_DATABASE_CONFIRM';
+
+      component.onDocumentKeyDown(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(component.showRestoreConfirm).toBe(true);
+
+      const fakeEvent = new MouseEvent('click');
+      component.onRestoreBackdropClick(fakeEvent);
+      expect(component.showRestoreConfirm).toBe(true);
+
+      component.cancelRestore();
+      expect(component.showRestoreConfirm).toBe(true);
+    });
+
     it('should reject restore if confirmation text is not RESTORE_DATABASE_CONFIRM', () => {
       component.restoreFile = new File(['dump'], 'test.wbak');
       component.restorePassword = 'secretPassword123';
@@ -158,11 +175,12 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
         'secretPassword123',
         'RESTORE_DATABASE_CONFIRM'
       );
-      expect(offlineDb.clearServerDerivedCaches).toHaveBeenCalled();
-
-      // Flush microtasks before advancing timers
+      // Flush microtasks and advance timer to allow the 1500ms delay to complete
       await Promise.resolve();
       vi.advanceTimersByTime(2000);
+      await Promise.resolve();
+
+      expect(clearCachesSpy).toHaveBeenCalled();
       expect(authServiceMock.logout).toHaveBeenCalled();
     });
 

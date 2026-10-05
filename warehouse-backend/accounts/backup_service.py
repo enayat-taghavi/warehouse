@@ -24,6 +24,46 @@ def _ensure_backup_dir():
     os.makedirs(BACKUP_DIR, exist_ok=True)
 
 
+def clean_public_schema():
+    """
+    Cleanly drop all existing tables, sequences, views, and materialized views
+    in the public schema using CASCADE, leaving extensions (pg_trgm, btree_gin) intact.
+    This guarantees that pg_restore starts with an empty slate and recreates all
+    tables, primary keys, and foreign keys without dependency conflicts or duplicate rows.
+    """
+    connections.close_all()
+    try:
+        with connections['default'].cursor() as cursor:
+            cursor.execute("""
+                DO $$
+                DECLARE
+                    r RECORD;
+                BEGIN
+                    -- 1. Drop foreign keys and tables with CASCADE
+                    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+                        EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
+                    END LOOP;
+                    -- 2. Drop sequences
+                    FOR r IN (SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = 'public') LOOP
+                        EXECUTE 'DROP SEQUENCE IF EXISTS public.' || quote_ident(r.sequence_name) || ' CASCADE';
+                    END LOOP;
+                    -- 3. Drop views
+                    FOR r IN (SELECT table_name FROM information_schema.views WHERE table_schema = 'public') LOOP
+                        EXECUTE 'DROP VIEW IF EXISTS public.' || quote_ident(r.table_name) || ' CASCADE';
+                    END LOOP;
+                    -- 4. Drop materialized views
+                    FOR r IN (SELECT matviewname FROM pg_matviews WHERE schemaname = 'public') LOOP
+                        EXECUTE 'DROP MATERIALIZED VIEW IF EXISTS public.' || quote_ident(r.matviewname) || ' CASCADE';
+                    END LOOP;
+                END $$;
+            """)
+            logger.info("Successfully dropped all public tables/views prior to restore.")
+    except Exception as exc:
+        logger.warning(f"Could not pre-clean public schema tables: {exc}")
+    finally:
+        connections.close_all()
+
+
 def calculate_sha256(filepath):
     """محاسبه هش امنیتی SHA-256 فایل"""
     h = hashlib.sha256()
@@ -124,6 +164,7 @@ def create_database_backup(user=None, description="پشتیبان‌گیری د�
             details=meta
         )
 
+        _enqueue_backup_for_gdrive(dest_path, filename)
         return meta
 
     elif 'sqlite3' in engine:
@@ -174,10 +215,43 @@ def create_database_backup(user=None, description="پشتیبان‌گیری د�
             details=meta
         )
 
+        _enqueue_backup_for_gdrive(dest_path, filename)
         return meta
 
     else:
         raise NotImplementedError(f"موتور دیتابیس {engine} پشتیبانی نمی‌شود.")
+
+
+def _enqueue_backup_for_gdrive(dest_path: str, filename: str):
+    """ثبت خودکار نسخه پشتیبان دیتابیس در صف گوگل‌درایو شرکت‌های متصل"""
+    try:
+        from personnel.models import CompanyGoogleDriveConfig, GoogleDriveSyncQueue
+        from personnel.google_drive_path_resolver import get_current_shamsi_year_str
+        shamsi_year = get_current_shamsi_year_str()
+
+        configs = CompanyGoogleDriveConfig.objects.filter(
+            is_enabled=True,
+            sync_backups=True
+        ).select_related('company')
+
+        for g_cfg in configs:
+            if g_cfg.refresh_token:
+                task = GoogleDriveSyncQueue.objects.create(
+                    company=g_cfg.company,
+                    model_name='DatabaseBackup',
+                    object_id=None,
+                    source_file_path=dest_path,
+                    target_folder_path=f"پشتیبان‌های پایگاه داده/{shamsi_year}",
+                    target_filename=filename,
+                    action='upload',
+                    status='pending'
+                )
+                logger.info(f"[GDrive Sync] Backup {filename} enqueued for company {g_cfg.company.code}")
+                if getattr(g_cfg, 'sync_mode', 'immediate') == 'immediate':
+                    from personnel.signals_gdrive import _trigger_async_sync
+                    _trigger_async_sync(task.id, config=g_cfg)
+    except Exception as gdrive_err:
+        logger.warning(f"Could not enqueue backup to Google Drive: {gdrive_err}")
 
 
 def verify_backup_integrity(filename):
@@ -231,14 +305,8 @@ def restore_database_backup(filename, user=None, ip_address=None):
     backup_file = os.path.join(BACKUP_DIR, filename)
 
     if 'postgresql' in engine:
-        # پاکسازی شمای عمومی جهت اطمینان از حذف کلیه تغییرات بعد از بکاپ
-        connections.close_all()
-        try:
-            with connections['default'].cursor() as cursor:
-                cursor.execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
-        except Exception as e:
-            logger.warning(f"Error recreating public schema before restore: {e}")
-        connections.close_all()
+        # پاکسازی تمیز جداول و ویوها با حفظ اکستنشن‌های دیتابیس
+        clean_public_schema()
 
         env = os.environ.copy()
         if db_config.get('PASSWORD'):
@@ -251,6 +319,9 @@ def restore_database_backup(filename, user=None, ip_address=None):
             '-U', str(db_config.get('USER', 'postgres')),
             '-d', str(db_config.get('NAME', 'warehouse_db')),
             '--no-owner',
+            '--no-privileges',
+            '--clean',
+            '--if-exists',
             backup_file
         ]
 

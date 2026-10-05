@@ -18,6 +18,7 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from accounts.permissions import IsSuperUser, CanManageDatabaseBackup, CanRestoreDatabase
 from accounts.audit_utils import log_audit_event
+from accounts.backup_service import clean_public_schema
 
 logger = logging.getLogger(__name__)
 
@@ -380,7 +381,9 @@ class BackupRestoreView(APIView):
             "-U", db["USER"],
             "-h", db["HOST"],
             "-p", db["PORT"],
-            "--clean",          # Drop objects before recreating
+            "--no-owner",       # Prevent role mismatch errors when restoring dumps from other systems
+            "--no-privileges",  # Prevent permission grant errors
+            "--clean",          # Drop objects before recreating if any remain
             "--if-exists",      # Don't fail if object doesn't exist
             "-d", db["NAME"],
         ]
@@ -440,6 +443,9 @@ class BackupRestoreView(APIView):
             # Free decrypted bytes from memory
             del dump_bytes
 
+            # Cleanly drop existing tables with CASCADE to prevent duplicate rows and FK lock collisions
+            clean_public_schema()
+
             restore_result = subprocess.run(
                 pg_restore_base_cmd + [restore_path],
                 capture_output=True,
@@ -469,6 +475,7 @@ class BackupRestoreView(APIView):
             rollback_state = 'unavailable'
             if rollback_path and os.path.exists(rollback_path):
                 logger.info("Attempting rollback from emergency backup...")
+                clean_public_schema()
                 rb_result = subprocess.run(
                     pg_restore_base_cmd + [rollback_path],
                     capture_output=True,
@@ -521,6 +528,9 @@ class BackupRestoreView(APIView):
             return Response(resp_payload, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         finally:
+            # Always close connection so cached metadata is reloaded
+            django_connection.close()
+
             # Always clean up restore temp file
             _safe_remove(restore_path)
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../../../services/settings';
@@ -14,7 +14,7 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
   imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './settings-backup-tab.html'
 })
-export class SettingsBackupTabComponent implements OnInit {
+export class SettingsBackupTabComponent implements OnInit, OnDestroy {
   @ViewChild('confirmTextInput') confirmTextInput?: ElementRef<HTMLInputElement>;
   @ViewChild('confirmDialogContainer') confirmDialogContainer?: ElementRef<HTMLElement>;
 
@@ -40,6 +40,9 @@ export class SettingsBackupTabComponent implements OnInit {
   restoreConfirmInput = '';
   isRestoreLoading = false;
   showRestoreConfirm = false;
+  restoreStatusMessage = '';
+  restoreProgressPercent = 0;
+  private restoreTimer: any = null;
 
   private previousActiveElement: HTMLElement | null = null;
 
@@ -61,6 +64,45 @@ export class SettingsBackupTabComponent implements OnInit {
   ngOnInit() {
     if (this.canManageBackup() || this.canRestoreDatabase()) {
       this.loadSnapshots();
+    }
+  }
+
+  ngOnDestroy() {
+    this.stopRestoreProgress();
+  }
+
+  startRestoreProgress() {
+    this.stopRestoreProgress();
+    this.restoreProgressPercent = 8;
+    this.restoreStatusMessage = 'در حال ارسال فایل پشتیبان به سرور...';
+    let elapsedSeconds = 0;
+
+    this.restoreTimer = setInterval(() => {
+      elapsedSeconds += 1;
+      if (elapsedSeconds < 4) {
+        this.restoreProgressPercent = Math.min(25, this.restoreProgressPercent + 5);
+        this.restoreStatusMessage = 'در حال ارسال فایل پشتیبان به سرور...';
+      } else if (elapsedSeconds < 8) {
+        this.restoreProgressPercent = Math.min(45, this.restoreProgressPercent + 4);
+        this.restoreStatusMessage = 'در حال اعتبارسنجی و رمزگشایی فایل پشتیبان...';
+      } else if (elapsedSeconds < 14) {
+        this.restoreProgressPercent = Math.min(65, this.restoreProgressPercent + 3);
+        this.restoreStatusMessage = 'در حال ایجاد نسخه پشتیبان اضطراری و آماده‌سازی پایگاه داده...';
+      } else if (elapsedSeconds < 40) {
+        this.restoreProgressPercent = Math.min(88, this.restoreProgressPercent + 1);
+        this.restoreStatusMessage = 'در حال بازنشانی ساختار، جداول و داده‌ها (pg_restore)... لطفاً پنجره را نبندید.';
+      } else {
+        this.restoreProgressPercent = Math.min(95, this.restoreProgressPercent + 0.5);
+        this.restoreStatusMessage = 'در حال اتمام فرآیند بازگردانی و بازنشانی شاخص‌ها...';
+      }
+      this.cdr.detectChanges();
+    }, 1000);
+  }
+
+  stopRestoreProgress() {
+    if (this.restoreTimer) {
+      clearInterval(this.restoreTimer);
+      this.restoreTimer = null;
     }
   }
 
@@ -116,6 +158,7 @@ export class SettingsBackupTabComponent implements OnInit {
   }
 
   cancelRollback() {
+    if (this.isRollingBack) return;
     this.showRollbackConfirm = false;
     this.selectedRollbackSnapshot = null;
     this.rollbackConfirmInput = '';
@@ -261,16 +304,26 @@ export class SettingsBackupTabComponent implements OnInit {
 
   @HostListener('document:keydown', ['$event'])
   onDocumentKeyDown(event: KeyboardEvent) {
-    if (!this.showRestoreConfirm) return;
+    if (this.showRestoreConfirm) {
+      if (this.isRestoreLoading) return;
 
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      this.cancelRestore();
-      return;
-    }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        this.cancelRestore();
+        return;
+      }
 
-    if (event.key === 'Tab') {
-      this.handleFocusTrap(event);
+      if (event.key === 'Tab') {
+        this.handleFocusTrap(event);
+      }
+    } else if (this.showRollbackConfirm) {
+      if (this.isRollingBack) return;
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        this.cancelRollback();
+        return;
+      }
     }
   }
 
@@ -298,6 +351,9 @@ export class SettingsBackupTabComponent implements OnInit {
   }
 
   cancelRestore() {
+    if (this.isRestoreLoading) {
+      return;
+    }
     this.showRestoreConfirm = false;
     this.restoreConfirmInput = '';
     this.cdr.detectChanges();
@@ -311,6 +367,22 @@ export class SettingsBackupTabComponent implements OnInit {
     }
   }
 
+  onRestoreBackdropClick(event: MouseEvent) {
+    if (this.isRestoreLoading) {
+      event.stopPropagation();
+      return;
+    }
+    this.cancelRestore();
+  }
+
+  onRollbackBackdropClick(event: MouseEvent) {
+    if (this.isRollingBack) {
+      event.stopPropagation();
+      return;
+    }
+    this.cancelRollback();
+  }
+
   restoreBackup() {
     if (this.restoreConfirmInput.trim() !== 'RESTORE_DATABASE_CONFIRM') {
       this.toast.show('error', 'متن تایید به درستی وارد نشده است.');
@@ -318,29 +390,38 @@ export class SettingsBackupTabComponent implements OnInit {
     }
 
     this.isRestoreLoading = true;
+    this.startRestoreProgress();
     this.cdr.detectChanges();
 
     this.settingsService.restoreBackup(this.restoreFile!, this.restorePassword, this.restoreConfirmInput.trim())
       .pipe(finalize(() => {
+        this.stopRestoreProgress();
         this.isRestoreLoading = false;
         this.cdr.detectChanges();
       }))
       .subscribe({
         next: async (res: any) => {
+          this.restoreProgressPercent = 100;
+          this.restoreStatusMessage = 'بازیابی پایگاه‌داده با موفقیت انجام شد! در حال انتقال به صفحه ورود...';
+          this.cdr.detectChanges();
+
           this.toast.show('success', 'بازیابی پایگاه‌داده با موفقیت انجام شد. سیستم در حال انتقال به صفحه ورود است...');
-          this.showRestoreConfirm = false;
-          this.restoreFile = null;
-          this.restoreFileName = '';
-          this.restorePassword = '';
-          this.restoreConfirmInput = '';
-          
-          // Clear IndexedDB cache and logout cleanly (Item 3-4)
+
           await offlineDb.clearServerDerivedCaches();
+
           setTimeout(() => {
+            this.showRestoreConfirm = false;
+            this.restoreFile = null;
+            this.restoreFileName = '';
+            this.restorePassword = '';
+            this.restoreConfirmInput = '';
             this.auth.logout();
           }, 1500);
         },
         error: (err: any) => {
+          this.stopRestoreProgress();
+          this.restoreProgressPercent = 0;
+          this.restoreStatusMessage = '';
           const msg = err?.error?.error || 'خطا در بازیابی پایگاه‌داده.';
           this.toast.show('error', msg);
           if (err?.error?.rollback_state === 'failed') {
