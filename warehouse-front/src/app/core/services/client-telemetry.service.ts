@@ -138,9 +138,9 @@ export class ClientTelemetryService {
    */
   private initLocalTabBus(): void {
     this.sessionTab.onMessage((msg: TabSessionMessage) => {
-      if (msg.type === 'PING') {
-        // پاسخ به پینگ سایر تب‌ها
-        this.sessionTab.broadcastMessage('PING', {
+      // فقط به پیام‌های PING اولیه پاسخ یک‌باره PONG داده می‌شود (هرگز به PONG یا پیام دارای isReply پاسخی داده نمی‌شود)
+      if (msg.type === 'PING' && !msg.payload?.isReply) {
+        this.sessionTab.broadcastMessage('PONG', {
           deviceModel: this.cachedDeviceModel || 'این سیستم',
           appScope: this.sessionTab.getActiveApp(),
           activeRole: this.sessionTab.getActiveRole(),
@@ -148,7 +148,8 @@ export class ClientTelemetryService {
         });
       }
 
-      if (msg.payload && (msg.payload.isReply || msg.type === 'PING')) {
+      // ثبت و به‌روزرسانی مشخصات تب‌های همسایه بر اساس پیام دریافتی (چه PING اولیه چه PONG)
+      if (msg.type === 'PONG' || (msg.type === 'PING' && msg.payload)) {
         this.localTabsMap.set(msg.sourceTabId, {
           tabId: msg.sourceTabId,
           deviceModel: msg.payload.deviceModel || 'این سیستم',
@@ -184,19 +185,36 @@ export class ClientTelemetryService {
     this.sessionTab.broadcastMessage('PING', {
       deviceModel: this.cachedDeviceModel || 'این سیستم',
       appScope: this.sessionTab.getActiveApp(),
-      activeRole: this.sessionTab.getActiveRole()
+      activeRole: this.sessionTab.getActiveRole(),
+      isReply: false
     });
   }
 
   private updateLocalTabsSignal(): void {
     const now = Date.now();
+    let hasDeleted = false;
     // حذف تب‌های بی‌صدا بعد از ۲ دقیقه
     for (const [id, tab] of this.localTabsMap.entries()) {
       if (!tab.isCurrentTab && now - tab.lastSeen > 120000) {
         this.localTabsMap.delete(id);
+        hasDeleted = true;
       }
     }
-    this.localTabs.set(Array.from(this.localTabsMap.values()));
+    const currentList = this.localTabs();
+    const newList = Array.from(this.localTabsMap.values());
+    if (hasDeleted || currentList.length !== newList.length || !this.areTabListsEqual(currentList, newList)) {
+      this.localTabs.set(newList);
+    }
+  }
+
+  private areTabListsEqual(a: LocalTabTelemetry[], b: LocalTabTelemetry[]): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i].tabId !== b[i].tabId || a[i].appScope !== b[i].appScope || a[i].activeRole !== b[i].activeRole) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**

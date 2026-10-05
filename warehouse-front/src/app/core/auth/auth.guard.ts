@@ -15,7 +15,7 @@ export const WarehouseModuleMatchGuard: CanMatchFn = () => {
   if (!moduleRegistry.isModuleInstalled('warehouse')) {
     return false;
   }
-  if (activeCompany && !activeCompany.hasWarehouseModule) {
+  if (activeCompany?.activeCompany && activeCompany.activeCompany.has_warehouse_module === false) {
     return false;
   }
   return true;
@@ -28,7 +28,7 @@ export const WarehouseCompanyGuard: CanActivateFn = () => {
   const activeCompany = inject(ActiveCompanyService, { optional: true });
   const router = inject(Router);
 
-  if (activeCompany && (!activeCompany.activeCompany || !activeCompany.hasWarehouseModule)) {
+  if (activeCompany?.activeCompany && activeCompany.activeCompany.has_warehouse_module === false) {
     router.navigate(['/app/launcher']);
     return false;
   }
@@ -55,7 +55,7 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   'supervisor': ['view_sys_supervisor'],
   'manager-review': ['view_sys_manager_review', 'can_act_as_manager'],
   'recounts': ['view_sys_recounts'],
-  'settings': ['view_sys_settings'],
+  'settings': ['view_sys_settings', 'perm_sys_settings', 'view_wh_settings', 'admin_all'],
   'reports': ['view_sys_reports', 'view_sys_dashboard'],
   'docs': ['view_wh_docs'],
   'dispatch': ['view_wh_dispatch'],
@@ -154,6 +154,7 @@ const WAREHOUSE_PERMISSIONS = [
   'view_wh_dispatch', 'view_wh_customs', 'view_wh_doc_approvals',
   'view_wh_feeding', 'view_wh_feed_approvals', 'view_wh_labels',
   'view_wh_label_designer', 'view_wh_audit', 'view_wh_settings',
+  'view_sys_settings', 'perm_sys_settings',
   'view_sys_recounts', 'view_sys_export', 'view_sys_reports',
   'perm_doc_approve_action', 'perm_feed_approve_action', 'perm_inventory_finalize',
   'perm_rec_import', 'perm_rec_recount', 'perm_rec_dispatch',
@@ -309,7 +310,8 @@ export const AuthGuard: CanActivateFn = (route, state) => {
 
     return true;
   }
-  return router.parseUrl('/login');
+  const returnUrl = state.url && state.url !== '/' && state.url !== '/login' ? `?returnUrl=${encodeURIComponent(state.url)}` : '';
+  return router.parseUrl(`/login${returnUrl}`);
 };
 
 export const AuthGuardChild: CanActivateChildFn = (childRoute, state) => {

@@ -13,7 +13,7 @@
         </div>
       </div>
       <button 
-        *ngIf="companyService.activeCompany" 
+        *ngIf="companyService.activeCompany || (companyService.isSuperuser$ | async)" 
         (click)="onClose()" 
         class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 transition-colors cursor-pointer"
         title="انصراف و بستن"
@@ -68,7 +68,7 @@
     <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
       <span>پس از انتخاب، تمامی منوها، پروژه‌ها و پرسنل به این شرکت محدود خواهند شد.</span>
       <button 
-        *ngIf="companyService.activeCompany" 
+        *ngIf="companyService.activeCompany || (companyService.isSuperuser$ | async)" 
         (click)="onClose()" 
         class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-200 transition-colors font-bold cursor-pointer">
         انصراف

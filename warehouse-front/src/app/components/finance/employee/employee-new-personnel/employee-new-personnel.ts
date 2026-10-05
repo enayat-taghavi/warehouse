@@ -2208,6 +2208,7 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
     this.personnelApi.assignPersonnelToSection(this.existingPersonnelId!, {
       section_id: this.selectedSectionId!,
       job_title: this.newPersonnel.job_title?.trim() || undefined,
+      daily_base_wage: this.newPersonnel.daily_base_wage !== undefined ? this.newPersonnel.daily_base_wage : undefined,
       notes: this.newPersonnel.notes?.trim() || undefined
     }).subscribe({
       next: (res: any) => {

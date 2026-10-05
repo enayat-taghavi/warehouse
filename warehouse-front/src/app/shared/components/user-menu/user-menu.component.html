@@ -18,67 +18,6 @@
       </p>
     </div>
 
-    <!-- بخش شرکت فعال کاربر و سوئیچ سریع شرکت -->
-    <div *ngIf="activeCompanyService" class="p-2.5 border-b border-slate-100 bg-slate-50/50">
-      <div class="flex items-center justify-between px-1 mb-1">
-        <span class="text-[10px] font-bold text-slate-400">شرکت فعال شما:</span>
-        <button 
-          *ngIf="activeCompanyService.availableCompanies.length > 1" 
-          type="button" 
-          (click)="openCompanySelectionModal()" 
-          class="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold cursor-pointer">
-          تغییر شرکت
-        </button>
-      </div>
-
-      <!-- کارت شرکت فعال -->
-      <div 
-        (click)="toggleCompanySubmenu($event)"
-        class="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 hover:border-indigo-300 transition-all cursor-pointer shadow-2xs">
-        <div class="flex items-center gap-2 overflow-hidden">
-          <span class="text-sm shrink-0">🏢</span>
-          <div class="overflow-hidden">
-            <span class="text-xs font-black text-slate-800 truncate block">
-              {{ activeCompanyService.activeCompany ? activeCompanyService.activeCompany.name : 'همه شرکت‌ها (سراسری)' }}
-            </span>
-            <span *ngIf="activeCompanyService.activeCompany" class="text-[10px] text-slate-400 font-mono">
-              {{ activeCompanyService.activeCompany.code }}
-            </span>
-          </div>
-        </div>
-        <span class="text-xs text-slate-400 shrink-0 transform transition-transform" [class.rotate-180]="isCompanySubmenuOpen">
-          ▾
-        </span>
-      </div>
-
-      <!-- زیرمنوی لیست شرکت‌های مجاز کاربر برای سوئیچ سریع -->
-      <div *ngIf="isCompanySubmenuOpen" class="mt-1.5 space-y-1 max-h-40 overflow-y-auto p-1 bg-white border border-slate-200 rounded-xl shadow-xs">
-        <!-- گزینه سراسری برای سوپریوزر -->
-        <button 
-          *ngIf="activeCompanyService.isSuperuser"
-          type="button"
-          (click)="selectCompanyFromMenu(null)"
-          class="w-full text-right px-2 py-1 text-xs rounded-lg flex items-center justify-between hover:bg-indigo-50 hover:text-indigo-700 transition-colors cursor-pointer"
-          [ngClass]="!activeCompanyService.activeCompany ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-600'">
-          <span>🌐 همه شرکت‌ها (سراسری)</span>
-          <span *ngIf="!activeCompanyService.activeCompany" class="text-indigo-600 font-bold text-xs">✓</span>
-        </button>
-
-        <!-- لیست شرکت‌ها -->
-        <button 
-          *ngFor="let comp of activeCompanyService.availableCompanies"
-          type="button"
-          (click)="selectCompanyFromMenu(comp)"
-          class="w-full text-right px-2 py-1 text-xs rounded-lg flex items-center justify-between hover:bg-indigo-50 hover:text-indigo-700 transition-colors cursor-pointer"
-          [ngClass]="activeCompanyService.activeCompany?.id === comp.id ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-600'">
-          <div class="flex items-center gap-1.5 truncate">
-            <span class="text-slate-400 text-[10px] font-mono shrink-0">{{ comp.code }}</span>
-            <span class="truncate">{{ comp.name }}</span>
-          </div>
-          <span *ngIf="activeCompanyService.activeCompany?.id === comp.id" class="text-emerald-600 font-bold text-xs shrink-0">✓</span>
-        </button>
-      </div>
-    </div>
     <div class="p-2 flex flex-col space-y-0.5">
       <!-- ویرایش تصویر پروفایل -->
       <button (click)="openAvatarModal()" class="w-full text-right py-2.5 px-3 rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer">
@@ -93,6 +32,19 @@
       </button>
 
       <div class="h-px bg-slate-100 my-1"></div>
+
+      <!-- نصب برنامه روی دستگاه (PWA) -->
+      <button 
+        type="button"
+        (click)="onInstallApp(); closeUserMenu()" 
+        class="w-full text-right py-2.5 px-3 rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 cursor-pointer active:scale-95"
+        [ngClass]="pwaInstall.isInstalled() ? 'text-slate-600 bg-slate-50/80 hover:bg-slate-100' : 'text-blue-600 hover:bg-blue-50'"
+        [title]="pwaInstall.isInstalled() ? 'سامانه هم‌اکنون به صورت برنامه روی دستگاه شما نصب است' : 'نصب سامانه به عنوان نرم‌افزار مجزا روی دسکتاپ یا موبایل'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="pwaInstall.isInstalled() ? 'check-circle' : 'download'"></svg>
+        <span class="flex-1">{{ pwaInstall.isInstalled() ? 'برنامه نصب شده است' : 'نصب برنامه روی دستگاه' }}</span>
+        <span *ngIf="pwaInstall.isInstalled()" class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-bold font-mono">نصب‌شده</span>
+        <span *ngIf="!pwaInstall.isInstalled()" class="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold font-mono">PWA</span>
+      </button>
 
       <!-- بروزرسانی نسخه برنامه (PWA) -->
       <button (click)="onManualAppUpdate()" [disabled]="isCheckingAppUpdate" class="w-full text-right py-2.5 px-3 rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-emerald-600 hover:bg-emerald-50 active:scale-95 cursor-pointer" title="استعلام و دریافت فوری آخرین نسخه فرانت‌اند">
@@ -115,8 +67,6 @@
         <span>پورتال لانچر برنامه‌ها</span>
       </button>
 
-      <div class="h-px bg-slate-100 my-1"></div>
-
       <!-- راهنمای کلیدهای میانبر -->
       <button (click)="toggleShortcutsHelp(); closeUserMenu()" class="w-full text-right py-2.5 px-3 rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer" title="راهنمای کلیدهای میانبر">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="keyboard"></svg>
@@ -128,6 +78,11 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="log-out"></svg>
         <span>خروج از حساب</span>
       </button>
+
+      <!-- پلاک نسخه سامانه -->
+      <div class="pt-2 mt-1 border-t border-slate-100 text-center select-none">
+        <span class="text-[9px] font-mono text-slate-400">سامانه جامع انبار و حسابداری • نسخه ۱.۴.۲</span>
+      </div>
     </div>
   </div>
 </div>

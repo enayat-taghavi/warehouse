@@ -9,6 +9,7 @@ import { AuthStore } from '../../../core/stores/auth.store';
 import { NetworkStatusService } from '../../../core/services/network-status.service';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
 import { PwaUpdateService } from '../../../core/services/pwa-update.service';
+import { PwaInstallService } from '../../../core/services/pwa-install.service';
 import { AccountsHttpService } from '../../../core/http/accounts-http.service';
 import { WarehouseHttpService } from '../../../core/http/warehouse-http.service';
 import { StateService } from '../../../services/state.service';
@@ -49,6 +50,7 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   private toast = inject(ToastService);
   private confirmDialog = inject(ConfirmDialogService);
   public pwaUpdate = inject(PwaUpdateService);
+  public pwaInstall = inject(PwaInstallService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private personaService = inject(AppPersonaService, { optional: true });
@@ -56,7 +58,6 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   public activeCompanyService = inject(ActiveCompanyService, { optional: true });
 
   public isUserMenuOpen = false;
-  public isCompanySubmenuOpen = false;
   public isAvatarModalOpen = false;
   public isSavingAvatar = false;
   public get isCheckingAppUpdate(): boolean {
@@ -718,39 +719,16 @@ export class UserMenuComponent implements OnInit, OnDestroy {
 
   public toggleUserMenu(): void {
     this.isUserMenuOpen = !this.isUserMenuOpen;
-    if (!this.isUserMenuOpen) {
-      this.isCompanySubmenuOpen = false;
-    }
     this.cdr.detectChanges();
   }
 
   public closeUserMenu(): void {
     this.isUserMenuOpen = false;
-    this.isCompanySubmenuOpen = false;
     this.cdr.detectChanges();
   }
 
-  public toggleCompanySubmenu(event?: MouseEvent): void {
-    if (event) event.stopPropagation();
-    this.isCompanySubmenuOpen = !this.isCompanySubmenuOpen;
-    this.cdr.detectChanges();
-  }
-
-  public selectCompanyFromMenu(company: Company | null): void {
-    if (this.activeCompanyService) {
-      this.activeCompanyService.selectCompany(company);
-      this.isCompanySubmenuOpen = false;
-      this.closeUserMenu();
-      this.toast.info(`شرکت فعال به «${company ? company.name : 'همه شرکت‌ها'}» تغییر یافت.`);
-    }
-  }
-
-  public openCompanySelectionModal(): void {
-    if (this.activeCompanyService) {
-      this.activeCompanyService.openSwitchModal();
-      this.isCompanySubmenuOpen = false;
-      this.closeUserMenu();
-    }
+  public async onInstallApp(): Promise<void> {
+    await this.pwaInstall.installApp();
   }
 
   public logout(): void {

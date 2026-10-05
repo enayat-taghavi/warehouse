@@ -3,7 +3,7 @@ import { Injectable, signal } from '@angular/core';
 export type AppModuleScope = 'warehouse' | 'personnel' | 'operations' | string;
 
 export interface TabSessionMessage {
-  type: 'AUTH_LOGOUT' | 'PROFILE_UPDATED' | 'SCOPE_CHANGED' | 'PING';
+  type: 'AUTH_LOGOUT' | 'PROFILE_UPDATED' | 'SCOPE_CHANGED' | 'PING' | 'PONG';
   sourceTabId: string;
   payload?: any;
   timestamp: number;

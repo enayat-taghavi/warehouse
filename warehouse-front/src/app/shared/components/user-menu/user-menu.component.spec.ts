@@ -13,6 +13,7 @@ import { ModuleRegistryService } from '../../../core/modules/module-registry.ser
 import { ToastService } from '../toast/toast.component';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { PwaUpdateService } from '../../../core/services/pwa-update.service';
+import { PwaInstallService } from '../../../core/services/pwa-install.service';
 import { Router } from '@angular/router';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
 import { AppPersonaService } from '../../../core/services/app-persona.service';
@@ -30,6 +31,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
   let mockToast: any;
   let mockConfirmDialog: any;
   let mockPwaUpdate: any;
+  let mockPwaInstall: any;
   let mockRouter: any;
   let mockSyncService: any;
   let mockCdr: any;
@@ -96,6 +98,14 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
       checkForUpdateManually: vi.fn()
     };
 
+    mockPwaInstall = {
+      deferredPrompt: vi.fn().mockReturnValue(null),
+      isInstalled: vi.fn().mockReturnValue(false),
+      isIos: vi.fn().mockReturnValue(false),
+      canInstall: vi.fn().mockReturnValue(false),
+      installApp: vi.fn().mockResolvedValue(undefined)
+    };
+
     mockRouter = {
       url: '/app/warehouse/items',
       navigate: vi.fn()
@@ -131,6 +141,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
         { provide: ToastService, useValue: mockToast },
         { provide: ConfirmDialogService, useValue: mockConfirmDialog },
         { provide: PwaUpdateService, useValue: mockPwaUpdate },
+        { provide: PwaInstallService, useValue: mockPwaInstall },
         { provide: Router, useValue: mockRouter },
         { provide: ChangeDetectorRef, useValue: mockCdr },
         { provide: AppPersonaService, useValue: mockPersona },
@@ -304,5 +315,10 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
     const dialogArg = mockConfirmDialog.open.mock.calls[0][0];
     expect(dialogArg.message).not.toContain('<script>');
     expect(dialogArg.message).toContain('&lt;script&gt;');
+  });
+
+  it('باید با فراخوانی onInstallApp متد installApp از سرویس PwaInstallService صدا زده شود', async () => {
+    await component.onInstallApp();
+    expect(mockPwaInstall.installApp).toHaveBeenCalled();
   });
 });

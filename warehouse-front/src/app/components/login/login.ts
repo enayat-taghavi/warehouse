@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/auth/auth.service';
@@ -32,6 +32,7 @@ export class Login implements OnInit, OnDestroy {
     private toast: ToastService,
     private cdr: ChangeDetectorRef,
     private configApi: ConfigApiService,
+    private route: ActivatedRoute,
   ) {}
 
   systemVersion: string = '۱.۰';
@@ -183,7 +184,12 @@ export class Login implements OnInit, OnDestroy {
           }
         }
 
-        this.router.navigate([targetRoute]).then((navigated) => {
+        const returnUrl = this.route.snapshot.queryParams['returnUrl'];
+        if (returnUrl && typeof returnUrl === 'string' && returnUrl.startsWith('/app/')) {
+          targetRoute = returnUrl;
+        }
+
+        this.router.navigateByUrl(targetRoute).then((navigated) => {
           if (!navigated && (this.router.url === '/login' || this.router.url === '/')) {
               this.auth.logout();
               this.loginErrorMessage = 'شما دسترسی ورود به هیچ‌کدام از بخش‌های سامانه را ندارید.';

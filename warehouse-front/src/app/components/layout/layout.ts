@@ -543,6 +543,8 @@ export class Layout implements OnInit, OnDestroy {
     ...WAREHOUSE_CONTEXT_NAV_ITEMS
   ];
 
+  private lastHandledCompanyId: number | null = null;
+
   constructor(
     public auth: AuthService,
     public store: AuthStore,
@@ -605,6 +607,10 @@ export class Layout implements OnInit, OnDestroy {
         this.personaService.sanitizeActiveRole();
 
         const currentUrl = (this.router.url || '').split('?')[0];
+        const isInitialCompanyLoad = this.lastHandledCompanyId === null;
+        const hasCompanySwitched = !isInitialCompanyLoad && this.lastHandledCompanyId !== company.id;
+        this.lastHandledCompanyId = company.id;
+
         if (currentUrl.startsWith('/app/warehouse') && company.has_warehouse_module === false) {
           this.toast.show(
             'warning',
@@ -620,8 +626,8 @@ export class Layout implements OnInit, OnDestroy {
             error: () => {}
           });
 
-          // در صورت حضور در صفحات عمیق انبارداری (مانند شمارشگر یا اسناد)، بازگشت به داشبورد انبار جهت نوسازی کامل کانتکست
-          if (currentUrl.startsWith('/app/warehouse') && currentUrl !== '/app/warehouse/dashboard') {
+          // در صورت تغییر صریح شرکت توسط کاربر و حضور در صفحات عمیق انبارداری (مانند شمارشگر یا اسناد)، بازگشت به داشبورد
+          if (hasCompanySwitched && currentUrl.startsWith('/app/warehouse') && currentUrl !== '/app/warehouse/dashboard' && currentUrl !== '/app/warehouse/settings') {
             this.router.navigate(['/app/warehouse/dashboard']);
           }
         }

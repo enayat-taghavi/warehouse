@@ -41,7 +41,7 @@ export class ActiveCompanyService {
   public hasWarehouseModuleSignal = computed<boolean>(() => {
     const c = this.activeCompanySignal();
     if (!c) {
-      return false;
+      return true;
     }
     return c.has_warehouse_module !== false;
   });
@@ -172,20 +172,62 @@ export class ActiveCompanyService {
           sessionStorage.setItem('active_company_id', String(parsed.id));
         }
       }
+
+      // ۴. بازیابی لیست شرکت‌های مجاز و وضعیت سوپریوزر جهت حل Race Condition در اولین رندر
+      const savedAvailable = sessionStorage.getItem('user_available_companies') || localStorage.getItem('user_available_companies');
+      if (savedAvailable) {
+        const parsedComps = JSON.parse(savedAvailable) as Company[];
+        if (Array.isArray(parsedComps) && parsedComps.length > 0) {
+          this.availableCompaniesSubject.next(parsedComps);
+        }
+      }
+      const savedSuper = sessionStorage.getItem('user_is_superuser') || localStorage.getItem('user_is_superuser');
+      if (savedSuper !== null) {
+        this.isSuperuserSubject.next(savedSuper === 'true');
+      } else {
+        // بازیابی وضعیت مدیر ارشد از پروفایل کاربری ذخیره‌شده
+        const userProfileStr = localStorage.getItem('wh_user_profile');
+        if (userProfileStr) {
+          try {
+            const profile = JSON.parse(userProfileStr);
+            if (profile?.is_superuser || profile?.roles?.includes('superuser') || profile?.permissions?.includes('admin_all')) {
+              this.isSuperuserSubject.next(true);
+            }
+          } catch {}
+        }
+      }
     } catch {
       // Ignored
     }
   }
 
+  private inFlightAvailableRequest$: Observable<UserAvailableCompaniesResponse> | null = null;
+
   public loadAvailableCompanies(forcePrompt: boolean = false): Observable<UserAvailableCompaniesResponse> {
+    if (this.inFlightAvailableRequest$) {
+      return this.inFlightAvailableRequest$;
+    }
+
     this.isLoadingSubject.next(true);
     this.loadDocumentCompanies().subscribe();
-    return this.http.get<UserAvailableCompaniesResponse>(`${this.apiUrl}/user-available/`).pipe(
+
+    this.inFlightAvailableRequest$ = this.http.get<UserAvailableCompaniesResponse>(`${this.apiUrl}/user-available/`).pipe(
       tap((res) => {
         this.isLoadingSubject.next(false);
+        this.inFlightAvailableRequest$ = null;
         const companies = res.companies || [];
         this.availableCompaniesSubject.next(companies);
         this.isSuperuserSubject.next(!!res.is_superuser);
+
+        try {
+          if (typeof window !== 'undefined') {
+            const compsJson = JSON.stringify(companies);
+            sessionStorage.setItem('user_available_companies', compsJson);
+            localStorage.setItem('user_available_companies', compsJson);
+            sessionStorage.setItem('user_is_superuser', String(!!res.is_superuser));
+            localStorage.setItem('user_is_superuser', String(!!res.is_superuser));
+          }
+        } catch {}
 
         if (companies.length === 0) {
           this.selectCompany(null);
@@ -202,7 +244,9 @@ export class ActiveCompanyService {
 
         // اگر کاربر فقط به ۱ شرکت دسترسی دارد: مستقیم و خودکار همان شرکت فعال می‌شود
         if (companies.length === 1) {
-          this.selectCompany(companies[0]);
+          if (this.activeCompanyId !== companies[0].id) {
+            this.selectCompany(companies[0]);
+          }
           this.isModalOpenSubject.next(false);
           return;
         }
@@ -215,7 +259,9 @@ export class ActiveCompanyService {
         if (urlCid && companies.some((c) => c.id === urlCid)) {
           const matched = companies.find((c) => c.id === urlCid);
           if (matched) {
-            this.selectCompany(matched);
+            if (this.activeCompanyId !== matched.id) {
+              this.selectCompany(matched);
+            }
             this.isModalOpenSubject.next(false);
             return;
           }
@@ -226,9 +272,14 @@ export class ActiveCompanyService {
         const existsInList = currentActive && companies.some((c) => c.id === currentActive.id);
 
         if (existsInList && !forcePrompt) {
-          // شرکت ذخیره‌شده معتبر است، ادامه بده
+          // شرکت ذخیره‌شده معتبر است، فقط در صورت مغایرت شناسه انتساب انجام می‌شود
           const refreshed = companies.find((c) => c.id === currentActive!.id) || currentActive;
-          this.selectCompany(refreshed);
+          if (this.activeCompanyId !== refreshed.id) {
+            this.selectCompany(refreshed);
+          }
+          this.isModalOpenSubject.next(false);
+        } else if (!currentActive && res.is_superuser && !forcePrompt) {
+          // برای سوپریوزر در صورتی که در حالت «همه شرکت‌ها» باشد، مودال به اجبار باز نمی‌شود
           this.isModalOpenSubject.next(false);
         } else {
           // نیاز به انتخاب شرکت کاری توسط کاربر
@@ -237,14 +288,26 @@ export class ActiveCompanyService {
       }),
       catchError((err) => {
         this.isLoadingSubject.next(false);
+        this.inFlightAvailableRequest$ = null;
         return of({ companies: [], is_superuser: false, count: 0 });
       })
     );
+
+    return this.inFlightAvailableRequest$;
   }
 
   public selectCompany(company: Company | null): void {
-    this.activeCompanySubject.next(company);
-    this.activeCompanySignal.set(company);
+    const current = this.activeCompanySubject.value;
+    const isSameId = (current?.id ?? null) === (company?.id ?? null);
+
+    // به‌روزرسانی مقدار تنها در صورت تغییر واقعی یا تنظیم اولیه
+    if (!isSameId || !this.activeCompanySignal()) {
+      this.activeCompanySubject.next(company);
+      this.activeCompanySignal.set(company);
+    } else if (company && current && (current.name !== company.name || current.code !== company.code)) {
+      this.activeCompanySubject.next(company);
+      this.activeCompanySignal.set(company);
+    }
     this.isModalOpenSubject.next(false);
 
     if (typeof window !== 'undefined') {
@@ -260,27 +323,33 @@ export class ActiveCompanyService {
         sessionStorage.removeItem('active_company_data');
       }
 
-      // همگام‌سازی URL با کوئری‌پارامتر ?cid=... بدون رفرش صفحه
+      // همگام‌سازی URL با کوئری‌پارامتر ?cid=... تنها در صورت مغایرت برای جلوگیری از ناوبری مکرر
       try {
         const url = new URL(window.location.href);
-        if (company) {
-          url.searchParams.set('cid', String(company.id));
-        } else {
-          url.searchParams.delete('cid');
+        const currentCid = url.searchParams.get('cid');
+        const targetCid = company ? String(company.id) : null;
+        if (currentCid !== targetCid) {
+          if (targetCid) {
+            url.searchParams.set('cid', targetCid);
+          } else {
+            url.searchParams.delete('cid');
+          }
+          window.history.replaceState({}, '', url.toString());
+
+          if (this.router) {
+            this.router.navigate([], {
+              queryParams: { cid: company ? company.id : null },
+              queryParamsHandling: 'merge',
+              replaceUrl: true
+            }).catch(() => {});
+          }
         }
-        window.history.replaceState({}, '', url.toString());
       } catch {}
 
-      if (this.router) {
-        this.router.navigate([], {
-          queryParams: { cid: company ? company.id : null },
-          queryParamsHandling: 'merge',
-          replaceUrl: true
-        }).catch(() => {});
+      // انتشار رویداد سفارشی در پنجره مرورگر فقط در صورت تغییر شناسه شرکت
+      if (!isSameId) {
+        window.dispatchEvent(new CustomEvent('company_context_changed', { detail: company }));
       }
-
-      // انتشار رویداد سفارشی در پنجره مرورگر برای کامپوننت‌هایی که لیسنر دارند
-      window.dispatchEvent(new CustomEvent('company_context_changed', { detail: company }));
     }
   }
 
@@ -289,8 +358,8 @@ export class ActiveCompanyService {
   }
 
   public closeSwitchModal(): void {
-    // اگر شرکتی انتخاب شده اجازه بستن بده، اگر نشده و کاربر چندشرکتی است نگه دار
-    if (this.activeCompany || this.availableCompanies.length <= 1) {
+    // اگر شرکتی انتخاب شده، یا کاربر سوپریوزر است (حالت همه شرکت‌ها) یا تک‌شرکتی است، اجازه بستن داده می‌شود
+    if (this.activeCompany || this.isSuperuser || this.availableCompanies.length <= 1) {
       this.isModalOpenSubject.next(false);
     }
   }
@@ -308,6 +377,10 @@ export class ActiveCompanyService {
         sessionStorage.removeItem('active_company_data');
         localStorage.removeItem('active_company_id');
         localStorage.removeItem('active_company_data');
+        sessionStorage.removeItem('user_available_companies');
+        localStorage.removeItem('user_available_companies');
+        sessionStorage.removeItem('user_is_superuser');
+        localStorage.removeItem('user_is_superuser');
       }
     } catch {}
     this.isSuperuserSubject.next(false);

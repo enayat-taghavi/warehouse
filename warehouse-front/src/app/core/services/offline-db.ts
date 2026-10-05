@@ -381,7 +381,12 @@ export const financeOfflineDb: OfflineDatabase = getOfflineDb('finance');
  * دسترسی‌ها به جداول و متدها را به طور خودکار به دیتابیس قلمرو فعال جاری هدایت می‌کند.
  */
 export const offlineDb: OfflineDatabase = new Proxy({} as OfflineDatabase, {
-  get(_target, prop: string | symbol) {
+  get(target, prop: string | symbol) {
+    if (prop in target) {
+      const val = (target as any)[prop];
+      return typeof val === 'function' ? val.bind(target) : val;
+    }
+
     // ۱. جداول اختصاصی دامنه انبارداری
     if (['countTasks', 'items', 'dynamicFields', 'photoQueue', 'docTasks'].includes(prop as string)) {
       const whDb = getOfflineDb('warehouse');
@@ -401,10 +406,28 @@ export const offlineDb: OfflineDatabase = new Proxy({} as OfflineDatabase, {
     const val = (currentDb as any)[prop];
     return typeof val === 'function' ? val.bind(currentDb) : val;
   },
-  set(_target, prop: string | symbol, value: any) {
+  has(target, prop: string | symbol) {
+    if (prop in target) return true;
+    const currentDb = getOfflineDb();
+    return prop in currentDb;
+  },
+  set(target, prop: string | symbol, value: any) {
+    (target as any)[prop] = value;
     const currentDb = getOfflineDb();
     (currentDb as any)[prop] = value;
     return true;
+  },
+  getOwnPropertyDescriptor(target, prop: string | symbol) {
+    if (prop in target) {
+      return Object.getOwnPropertyDescriptor(target, prop);
+    }
+    const currentDb = getOfflineDb();
+    return Object.getOwnPropertyDescriptor(currentDb, prop) || {
+      configurable: true,
+      enumerable: true,
+      value: (currentDb as any)[prop],
+      writable: true
+    };
   }
 });
 

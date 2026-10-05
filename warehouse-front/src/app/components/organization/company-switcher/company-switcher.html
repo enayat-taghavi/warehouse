@@ -3,13 +3,16 @@
   <button 
     type="button" 
     (click)="toggleDropdown($event)"
-    [title]="companyService.activeCompany ? 'شرکت کاری فعال: ' + companyService.activeCompany.name : 'انتخاب شرکت کاری'"
-    class="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl border transition-all cursor-pointer shadow-xs active:scale-95 group"
+    [title]="isMultiCompanyUser ? (companyService.activeCompany ? 'شرکت کاری فعال: ' + companyService.activeCompany.name + ' (کلیک برای تغییر)' : 'انتخاب شرکت کاری') : (companyService.activeCompany ? 'شرکت کاری: ' + companyService.activeCompany.name : 'شرکت کاری')"
+    class="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl border transition-all shadow-xs group cursor-pointer active:scale-95"
     [ngClass]="companyService.activeCompany ? 'bg-indigo-50/70 hover:bg-indigo-100/70 border-indigo-200/90 text-indigo-950' : 'bg-slate-100 hover:bg-slate-200/80 border-slate-300 text-slate-700'">
     
-    <div class="w-6 h-6 rounded-lg font-black text-xs flex items-center justify-center shrink-0 shadow-2xs"
+    <div class="w-6 h-6 rounded-lg font-black text-xs flex items-center justify-center shrink-0 shadow-2xs relative"
          [ngClass]="companyService.activeCompany ? 'bg-indigo-600 text-white' : 'bg-slate-300 text-slate-700'">
       🏢
+      <!-- Status dot on mobile right over the icon -->
+      <span class="sm:hidden absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white"
+            [ngClass]="companyService.activeCompany ? 'bg-emerald-500' : 'bg-amber-400'"></span>
     </div>
 
     <!-- Desktop & Tablet View -->
@@ -26,19 +29,13 @@
       </span>
     </div>
 
-    <!-- Mobile View (Compact) -->
-    <div class="flex sm:hidden items-center gap-1 max-w-[90px]">
-      <span class="text-[11px] font-black truncate text-indigo-900">
-        {{ companyService.activeCompany ? companyService.activeCompany.name : 'شرکت' }}
-      </span>
-    </div>
-
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transition-transform duration-200 shrink-0 text-slate-400 group-hover:text-indigo-600" [class.rotate-180]="isOpen" appIcon="chevron-down"></svg>
+    <!-- Chevron arrow: Only shown on desktop & tablet for multi-company / superuser -->
+    <svg *ngIf="isMultiCompanyUser" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="hidden sm:inline transition-transform duration-200 shrink-0 text-slate-400 group-hover:text-indigo-600" [class.rotate-180]="isOpen" appIcon="chevron-down"></svg>
   </button>
 
   <!-- Dropdown Menu -->
   <div 
-    *ngIf="isOpen" 
+    *ngIf="isOpen && isMultiCompanyUser" 
     class="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-24px)] bg-white rounded-2xl border border-slate-200 shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
     
     <div class="px-3 py-1.5 border-b border-slate-100 text-[11px] font-bold text-slate-400 flex items-center justify-between">
