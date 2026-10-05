@@ -10,7 +10,10 @@ import { AppRoleSwitcherComponent } from '../../../shared/components/app-role-sw
 import { OfflinePendingBadgeComponent } from '../../../shared/components/offline-pending-badge/offline-pending-badge.component';
 import { ChatDrawerComponent } from '../../communications/chat-drawer/chat-drawer.component';
 import { UserMenuComponent } from '../../../shared/components/user-menu/user-menu.component';
+import { CompanySwitcherComponent } from '../../organization/company-switcher/company-switcher';
+import { CompanySelectionModalComponent } from '../../organization/company-selection-modal/company-selection-modal';
 import { FirstBootWizardComponent } from '../first-boot-wizard/first-boot-wizard';
+import { ActiveCompanyService } from '../../../core/services/active-company.service';
 import { filter, Subscription } from 'rxjs';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
@@ -34,6 +37,8 @@ interface NavItem {
     OfflinePendingBadgeComponent,
     ChatDrawerComponent,
     UserMenuComponent,
+    CompanySwitcherComponent,
+    CompanySelectionModalComponent,
     FirstBootWizardComponent,
     SvgIconDirective
   ],
@@ -46,6 +51,7 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
   public healthService = inject(SystemHealthService);
   public navHistory = inject(NavigationHistoryService);
   public commService = inject(CommunicationService);
+  public activeCompanyService = inject(ActiveCompanyService, { optional: true });
   private router = inject(Router);
 
   public isSidebarCollapsed = signal<boolean>(false);
@@ -108,6 +114,7 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
   ];
 
   ngOnInit(): void {
+    this.activeCompanyService?.loadAvailableCompanies().subscribe();
     this.updateActiveRoute(this.router.url);
     this.routerSub = this.router.events.pipe(
       filter(e => e instanceof NavigationEnd)

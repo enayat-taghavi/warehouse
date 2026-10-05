@@ -106,6 +106,9 @@
         <!-- Unified Shared User Menu -->
         <app-user-menu theme="cyan"></app-user-menu>
 
+        <!-- سوئیچر سریع شرکت کاری فعال -->
+        <app-company-switcher class="shrink-0"></app-company-switcher>
+
         <!-- ─── پیام‌رسان سازمانی ─── -->
         <button
           *ngIf="commService.isChatEnabled()"
@@ -215,4 +218,7 @@
 
   <!-- ویزارد راه‌اندازی اول در زمان دیتابیس خام یا عدم ثبت شرکت -->
   <app-first-boot-wizard></app-first-boot-wizard>
+
+  <!-- مودال هوشمند انتخاب شرکت کاری هنگام ورود یا تغییر -->
+  <app-company-selection-modal></app-company-selection-modal>
 </div>

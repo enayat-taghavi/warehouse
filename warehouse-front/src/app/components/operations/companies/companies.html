@@ -1,5 +1,6 @@
 <div class="space-y-4 max-w-7xl mx-auto pb-12" dir="rtl">
 
+  <ng-container *ngIf="viewMode === 'list'">
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
   <!-- ۱. نوار فرمان چسبان بالایی (Unified Sticky Command Center Standard)       -->
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
@@ -248,6 +249,17 @@
                   <span class="sr-only">استودیو</span>
                 </button>
 
+                <!-- دکمه همگام‌سازی گوگل‌درایو -->
+                <button 
+                  type="button"
+                  (click)="openGoogleDriveModal(company)"
+                  class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-200 transition-all cursor-pointer"
+                  title="تنظیمات همگام‌سازی گوگل‌درایو"
+                  aria-label="گوگل‌درایو">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
+                  <span class="sr-only">گوگل‌درایو</span>
+                </button>
+
                 <!-- دکمه حذف -->
                 <button 
                   type="button"
@@ -386,6 +398,15 @@
           </button>
           <button 
             type="button"
+            (click)="openGoogleDriveModal(company)"
+            class="w-8 h-8 rounded-xl flex items-center justify-center text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
+            title="همگام‌سازی گوگل‌درایو"
+            aria-label="گوگل‌درایو">
+            <span class="text-sm">☁️</span>
+            <span class="sr-only">گوگل‌درایو</span>
+          </button>
+          <button 
+            type="button"
             (click)="confirmDelete(company)"
             class="w-8 h-8 rounded-xl flex items-center justify-center text-rose-600 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer"
             title="حذف شرکت"
@@ -396,34 +417,69 @@
         </div>
       </div>
     </div>
-
   </div>
+  </ng-container>
 
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
-  <!-- ۳. استودیوی مودال ۶ تبی ثبت، ویرایش، اسناد، شبا و شناسنامه حقوقی شرکت‌ها     -->
+  <!-- ۲. استودیوی تمام‌صفحه شناسنامه حقوقی و مدارک شرکت‌ها (Full-Screen Studio)     -->
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="companyModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-xs transition-all">
-    <div class="bg-white rounded-none md:rounded-3xl border-0 md:border md:border-slate-200 shadow-2xl w-full max-w-4xl h-full md:h-[88vh] md:max-h-[780px] md:min-h-[600px] overflow-hidden flex flex-col">
+  <div *ngIf="viewMode === 'studio'" class="w-full flex flex-col gap-3 animate-in fade-in duration-200">
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm w-full overflow-hidden flex flex-col min-h-[calc(100vh-140px)]">
       
-      <!-- Modal Top Header -->
-      <div class="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
-        <div class="flex items-center gap-2.5">
-          <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg">
-            🏢
-          </div>
-          <div>
-            <h3 class="text-sm md:text-base font-black text-slate-800">
-              {{ companyModal.isEdit ? 'استودیوی شناسنامه حقوقی و مدارک «' + companyModal.data.name + '»' : 'ثبت شرکت حقوقی جدید' }}
-            </h3>
-            <p class="text-[11px] text-slate-500 font-medium">پروفایل ثبتی، بایگانی اسناد، هیئت‌مدیره، کارگاه بیمه، حساب‌های بانکی و دسترسی کاربران</p>
+      <!-- هدر چسبان فرماندهی استودیو (Unified Sticky Command Center Header) -->
+      <div class="sticky top-0 z-30 p-3 md:p-4 border-b border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between bg-slate-50/95 backdrop-blur-md shrink-0 gap-3">
+        <!-- سمت راست: دکمه بازگشت و مشخصات هویتی شرکت -->
+        <div class="flex items-center gap-3">
+          <button 
+            type="button" 
+            (click)="closeCompanyModal()" 
+            class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 transition-all cursor-pointer font-bold text-xs active:scale-95 shadow-2xs"
+            title="بازگشت به فهرست شرکت‌ها">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-right"></svg>
+            <span>بازگشت به فهرست</span>
+          </button>
+
+          <div class="w-px h-6 bg-slate-200 mx-0.5"></div>
+
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100/80 text-indigo-600 flex items-center justify-center font-bold text-lg overflow-hidden shrink-0">
+              <img *ngIf="companyModal.data.logo" [src]="companyModal.data.logo" alt="لوگو" class="w-full h-full object-contain" />
+              <span *ngIf="!companyModal.data.logo">🏢</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm md:text-base font-black text-slate-800">
+                  {{ companyModal.isEdit ? 'استودیوی شناسنامه حقوقی «' + companyModal.data.name + '»' : 'ثبت شرکت حقوقی جدید' }}
+                </h3>
+                <span *ngIf="companyModal.isEdit && companyModal.data.code" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
+                  {{ companyModal.data.code }}
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-500 font-medium mt-0.5">شناسنامه حقوقی، بایگانی مدارک و اسناد، هیئت‌مدیره، کارگاه بیمه و خزانه‌داری</p>
+            </div>
           </div>
         </div>
-        <button 
-          type="button" 
-          (click)="closeCompanyModal()" 
-          class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer">
-          ✕
-        </button>
+
+        <!-- سمت چپ: دکمه‌های عملیاتی بالا (ذخیره + بستن) -->
+        <div class="flex items-center gap-2">
+          <button 
+            type="button" 
+            (click)="submitCompanyForm()" 
+            [disabled]="companyModal.isSubmitting"
+            class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            [title]="companyModal.isEdit ? 'ذخیره مشخصات شرکت' : 'ثبت قطعی شرکت'">
+            <span *ngIf="companyModal.isSubmitting" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            <svg *ngIf="!companyModal.isSubmitting" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+            <span>{{ companyModal.isSubmitting ? 'در حال ذخیره...' : (companyModal.isEdit ? 'ذخیره مشخصات' : 'ثبت شرکت') }}</span>
+          </button>
+          <button 
+            type="button" 
+            (click)="closeCompanyModal()" 
+            class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+            title="انصراف و بازگشت">
+            <span class="text-xs font-bold">✕</span>
+          </button>
+        </div>
       </div>
 
       <!-- Subtab Navigation Bar (6 Standard Tabs - Legal & Financial Order) -->
@@ -498,6 +554,17 @@
           <span *ngIf="studioAccesses.length > 0" class="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-slate-200 text-slate-700 font-bold">
             {{ studioAccesses.length }}
           </span>
+        </button>
+
+        <!-- ۷. همگام‌سازی گوگل‌درایو -->
+        <button 
+          *ngIf="companyModal.isEdit"
+          type="button" 
+          (click)="setModalTab('gdrive')" 
+          [ngClass]="activeModalTab === 'gdrive' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
+          class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
+          <span>☁️</span>
+          <span>همگام‌سازی گوگل‌درایو</span>
         </button>
       </div>
 
@@ -1946,6 +2013,16 @@
               </div>
             </div>
 
+          </div>
+        </div>
+
+        <!-- ═════════════════════════════════════════════════════════════════════ -->
+        <!-- تب ۷: همگام‌سازی ابری گوگل‌درایو شرکت                                     -->
+        <!-- ═════════════════════════════════════════════════════════════════════ -->
+        <div *ngIf="activeModalTab === 'gdrive'" class="space-y-4">
+          <app-company-gdrive-tab *ngIf="companyModal.data.id" [companyId]="companyModal.data.id"></app-company-gdrive-tab>
+          <div *ngIf="!companyModal.data.id" class="py-8 text-center text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-2xl">
+            ⚠️ جهت اتصال گوگل‌درایو، لطفاً ابتدا مشخصات اولیه شرکت را ذخیره فرمایید.
           </div>
         </div>
 

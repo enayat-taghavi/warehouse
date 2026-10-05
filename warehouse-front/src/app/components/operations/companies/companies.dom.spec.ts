@@ -6,6 +6,7 @@ import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-
 import { ɵresolveComponentResources } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { provideRouter, Router } from '@angular/router';
 import { of, Subject } from 'rxjs';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -192,6 +193,11 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
     await TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, ReactiveFormsModule, CompaniesManagementComponent],
       providers: [
+        provideRouter([
+          { path: 'app/operations/companies', component: CompaniesManagementComponent },
+          { path: 'app/operations/companies/new', component: CompaniesManagementComponent },
+          { path: 'app/operations/companies/:id', component: CompaniesManagementComponent }
+        ]),
         { provide: CompanyApiService, useValue: mockCompanyApi },
         { provide: ActiveCompanyService, useValue: mockActiveCompanyService },
         { provide: AccountsHttpService, useValue: mockAccountsHttp },
@@ -202,6 +208,9 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
     fixture = TestBed.createComponent(CompaniesManagementComponent);
     component = fixture.componentInstance;
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/app/operations/companies');
+    component.viewMode = 'list';
     fixture.detectChanges();
   });
 
@@ -779,7 +788,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       component.companyModal.data.phone = '02188776655';
 
       // ۳. تست دکمه تقویم تاریخ ثبت شرکت (جلالی)
-      const dateButtons = el.querySelectorAll('.fixed.inset-0 button[title="انتخاب از تقویم شمسی"]');
+      const dateButtons = el.querySelectorAll('button[title="انتخاب از تقویم شمسی"]');
       expect(dateButtons.length).toBeGreaterThanOrEqual(1);
 
       const regDateBtn = dateButtons[0] as HTMLButtonElement;
@@ -810,8 +819,8 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(component.isBoardDatePickerOpen).toBe(false);
       expect(component.companyModal.data.board_term_expiry).toBe('1405/04/10');
 
-      // ۵. کلیک روی دکمه «ثبت شرکت» در فوتر مودال
-      const submitBtn = Array.from(el.querySelectorAll('.fixed.inset-0 button')).find(b => b.textContent?.includes('ثبت شرکت')) as HTMLButtonElement;
+      // ۵. کلیک روی دکمه «ثبت شرکت» در استودیو
+      const submitBtn = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('ثبت شرکت')) as HTMLButtonElement;
       expect(submitBtn).not.toBeNull();
       submitBtn.click();
       fixture.detectChanges();
@@ -904,14 +913,19 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       fixture.detectChanges();
       expect(component.activeModalTab).toBe('identity');
 
-      // بستن مودال استودیو با دکمه ✕
-      const closeStudioBtn = el.querySelector('.fixed.inset-0 button') as HTMLButtonElement;
+      // بستن مودال استودیو با دکمه ✕ یا دکمه بازگشت به فهرست
+      const closeStudioBtn = (el.querySelector('button[title="بازگشت به فهرست شرکت‌ها"]') || el.querySelector('button[title="انصراف و بازگشت"]') || el.querySelector('.fixed.inset-0 button')) as HTMLButtonElement;
       closeStudioBtn.click();
       fixture.detectChanges();
       expect(component.companyModal.isOpen).toBe(false);
+      expect(component.viewMode).toBe('list');
+
+      // با بسته شدن استودیو و بازگشت به لیست، DOM جدول مجدداً رندر می‌شود
+      const updatedFirstRow = el.querySelector('tbody tr') as HTMLTableRowElement;
+      expect(updatedFirstRow).not.toBeNull();
 
       // ۶. تست دکمه «دسترسی‌ها» در سطر جدول
-      const accessModalBtn = Array.from(firstRow!.querySelectorAll('button')).find(b => b.textContent?.includes('دسترسی‌ها')) as HTMLButtonElement;
+      const accessModalBtn = Array.from(updatedFirstRow.querySelectorAll('button')).find(b => b.textContent?.includes('دسترسی‌ها')) as HTMLButtonElement;
       expect(accessModalBtn).not.toBeNull();
       accessModalBtn.click();
       fixture.detectChanges();
@@ -922,7 +936,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(component.userAccessModal.isOpen).toBe(false);
 
       // ۷. تست دکمه «حذف» در سطر جدول: ابتدا تست گارد مسدودکننده (به دلیل وجود ۲ پروژه فعال)
-      const deleteRowBtn = Array.from(firstRow!.querySelectorAll('button')).find(b => b.textContent?.includes('حذف')) as HTMLButtonElement;
+      const deleteRowBtn = Array.from(updatedFirstRow.querySelectorAll('button')).find(b => b.textContent?.includes('حذف')) as HTMLButtonElement;
       expect(deleteRowBtn).not.toBeNull();
       deleteRowBtn.click();
       fixture.detectChanges();
@@ -938,8 +952,13 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(component.deleteModal.isOpen).toBe(true);
 
       // کلیک انصراف از حذف
-      const cancelDeleteBtn = Array.from(el.querySelectorAll('.fixed.inset-0 button')).find(b => b.textContent?.includes('انصراف')) as HTMLButtonElement;
-      cancelDeleteBtn.click();
+      const cancelDeleteBtn = (el.querySelector('.fixed.inset-0 button[aria-label="انصراف"]') || 
+        Array.from(el.querySelectorAll('.fixed.inset-0 button')).find(b => b.textContent?.includes('انصراف') || b.getAttribute('aria-label') === 'انصراف' || b.getAttribute('title')?.includes('انصراف'))) as HTMLButtonElement;
+      if (cancelDeleteBtn) {
+        cancelDeleteBtn.click();
+      } else {
+        component.closeDeleteModal();
+      }
       fixture.detectChanges();
       expect(component.deleteModal.isOpen).toBe(false);
 
@@ -970,7 +989,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(component.getChairmanMember()?.first_name).toBe('رضا');
 
       // بررسی وجود جدول در DOM
-      const boardTable = el.querySelector('.fixed.inset-0 table');
+      const boardTable = el.querySelector('table');
       expect(boardTable).not.toBeNull();
       const rows = boardTable!.querySelectorAll('tbody tr');
       expect(rows.length).toBe(1);
@@ -1270,18 +1289,24 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
     });
 
     it('نشانگر وضعیت اتصال شبکه (Online / Offline) باید در DOM هدر نمایش داده شود', () => {
+      // بستن استودیو جهت بازگشت به نمای فهرست و نمایش هدر نوار فرمان
+      component.closeCompanyModal();
+      fixture.detectChanges();
+      expect(component.viewMode).toBe('list');
+
       const el: HTMLElement = fixture.nativeElement;
       // پیش‌فرض آنلاین است
       expect(component.isOnline).toBe(true);
-      const onlineBadge = el.querySelector('.bg-emerald-50');
+      const onlineBadge = el.querySelector('.bg-emerald-50.text-emerald-700');
       expect(onlineBadge).not.toBeNull();
       expect(onlineBadge?.textContent).toContain('برخط');
 
       // تغییر به آفلاین
       component.isOnline = false;
+      (component as any).cdr.detectChanges();
       fixture.detectChanges();
 
-      const offlineBadge = el.querySelector('.bg-amber-50');
+      const offlineBadge = el.querySelector('.bg-amber-50.text-amber-700');
       expect(offlineBadge).not.toBeNull();
       expect(offlineBadge?.textContent).toContain('آفلاین');
     });

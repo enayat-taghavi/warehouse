@@ -63,6 +63,8 @@ export const routes: Routes = [
       { path: 'backup', redirectTo: 'snapshots', pathMatch: 'full' },
       { path: 'users', component: Users, data: { reuse: true } },
       { path: 'companies', component: CompaniesManagementComponent, data: { reuse: true } },
+      { path: 'companies/new', component: CompaniesManagementComponent, data: { reuse: false } },
+      { path: 'companies/:id', component: CompaniesManagementComponent, data: { reuse: false } },
       { path: 'health', component: HealthDashboardComponent, data: { appScope: 'operations', reuse: false } },
       { path: 'audit', component: Audit, data: { appScope: 'security', reuse: true } },
       { path: 'sync-monitor', component: OperationsSyncMonitorComponent, data: { reuse: true } },

@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
@@ -36,11 +37,12 @@ import {
   validateAccountNumber
 } from '../../../core/utils/sheba-utils';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
+import { CompanyGdriveTabComponent } from './company-gdrive-tab/company-gdrive-tab';
 
 @Component({
   selector: 'app-companies-management',
   standalone: true,
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, CompanyGdriveTabComponent],
   templateUrl: './companies.html',
   styleUrls: ['./companies.css']
 })
@@ -53,9 +55,14 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   private sanitizer = inject(DomSanitizer);
   private ws = inject(WebSocketService, { optional: true });
+  private route = inject(ActivatedRoute, { optional: true });
+  private router = inject(Router, { optional: true });
   private offlineSync = OfflineSyncService.getInstance();
   private network = NetworkStatusService.getInstance();
   private destroy$ = new Subject<void>();
+
+  // حالت نمای جاری: 'list' (فهرست شرکت‌ها) یا 'studio' (استودیوی تمام‌صفحه)
+  public viewMode: 'list' | 'studio' = 'list';
 
   public isOnline = this.network.isOnline;
 
@@ -73,8 +80,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   logoPreviewUrl: string | null = null;
   isLogoCleared = false;
 
-  // تب فعال در استودیوی مودال ۶ تبی به ترتیب استاندارد حقوقی و مالی
-  activeModalTab: 'identity' | 'fiscal_insurance' | 'treasury' | 'governance' | 'documents' | 'access' = 'identity';
+  // تب فعال در استودیوی مودال به ترتیب استاندارد حقوقی و مالی
+  activeModalTab: 'identity' | 'fiscal_insurance' | 'treasury' | 'governance' | 'documents' | 'access' | 'gdrive' = 'identity';
 
   // مدیریت باز/بسته بودن پاپ‌اورهای تقویم جلالی
   isRegDatePickerOpen = false;
@@ -327,6 +334,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.setupSearch();
     this.loadCompanies();
     this.loadSystemUsers();
+    this.setupRouteNavigation();
   }
 
   private setupRealtimeAndOfflineListeners(): void {
@@ -542,7 +550,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  setModalTab(tab: 'identity' | 'fiscal_insurance' | 'treasury' | 'governance' | 'documents' | 'access'): void {
+  setModalTab(tab: 'identity' | 'fiscal_insurance' | 'treasury' | 'governance' | 'documents' | 'access' | 'gdrive'): void {
     this.activeModalTab = tab;
     if (this.companyModal.data.id) {
       if (tab === 'treasury') {
@@ -555,7 +563,20 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         this.loadStudioAccesses(this.companyModal.data.id);
       }
     }
+    if (this.router && this.route) {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { tab },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    }
     this.cdr.markForCheck();
+  }
+
+  openGoogleDriveModal(company: Company): void {
+    this.openEditModal(company);
+    this.setModalTab('gdrive');
   }
 
   // انتخاب تاریخ‌های تقویم شمسی جلالی
@@ -590,7 +611,63 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  openCreateModal(): void {
+  private setupRouteNavigation(): void {
+    if (!this.route || !this.router) return;
+
+    this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      const idParam = params.get('id');
+      const url = this.router?.url || '';
+      const isNew = url.includes('/companies/new');
+
+      if (idParam) {
+        const companyId = Number(idParam);
+        this.viewMode = 'studio';
+        this.setupStudioForCompany(companyId);
+      } else if (isNew) {
+        this.viewMode = 'studio';
+        this.setupStudioForNew();
+      } else {
+        this.viewMode = 'list';
+        this.companyModal.isOpen = false;
+        this.cdr.markForCheck();
+      }
+    });
+
+    this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe(queryParams => {
+      const tabParam = queryParams.get('tab');
+      if (tabParam && ['identity', 'fiscal_insurance', 'treasury', 'governance', 'documents', 'access', 'gdrive'].includes(tabParam)) {
+        this.activeModalTab = tabParam as any;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private setupStudioForCompany(companyId: number): void {
+    if (this.companyModal.data?.id === companyId && this.companyModal.isOpen) {
+      return;
+    }
+    const found = this.companies.find(c => c.id === companyId);
+    if (found) {
+      this.populateStudioData(found);
+    } else {
+      this.isLoading = true;
+      this.api.getById(companyId).subscribe({
+        next: (comp) => {
+          this.isLoading = false;
+          if (comp) {
+            this.populateStudioData(comp);
+          }
+        },
+        error: () => {
+          this.isLoading = false;
+          this.toast.error('شرکت مورد نظر یافت نشد.');
+          this.router?.navigate(['/app/operations/companies']);
+        }
+      });
+    }
+  }
+
+  setupStudioForNew(): void {
     this.selectedLogoFile = null;
     this.logoPreviewUrl = null;
     this.isLogoCleared = false;
@@ -623,14 +700,14 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       data: this.getEmptyCompanyData(),
       errors: {}
     };
+    this.viewMode = 'studio';
     this.cdr.markForCheck();
   }
 
-  openEditModal(company: Company): void {
+  populateStudioData(company: Company): void {
     this.selectedLogoFile = null;
     this.logoPreviewUrl = company.logo || null;
     this.isLogoCleared = false;
-    this.activeModalTab = 'identity';
     this.newDoc = this.getEmptyDocData();
     this.newAccount = this.getEmptyBankAccountData();
     this.newBoardMember = this.getEmptyBoardMemberData();
@@ -702,11 +779,29 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       this.loadStudioAccesses(company.id);
     }
 
+    this.viewMode = 'studio';
     this.cdr.markForCheck();
+  }
+
+  openCreateModal(): void {
+    this.setupStudioForNew();
+    if (this.router) {
+      this.router.navigate(['/app/operations/companies/new']);
+    }
+  }
+
+  openEditModal(company: Company): void {
+    this.populateStudioData(company);
+    if (this.router) {
+      this.router.navigate(['/app/operations/companies', company.id], {
+        queryParams: { tab: this.activeModalTab || 'identity' }
+      });
+    }
   }
 
   closeCompanyModal(): void {
     this.companyModal.isOpen = false;
+    this.viewMode = 'list';
     this.selectedLogoFile = null;
     this.logoPreviewUrl = null;
     this.companyDocuments = [];
@@ -718,6 +813,9 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.isDocIssueDatePickerOpen = false;
     this.isDocExpiryDatePickerOpen = false;
     this.isBankDropdownOpen = false;
+    if (this.router) {
+      this.router.navigate(['/app/operations/companies']);
+    }
     this.cdr.markForCheck();
   }
 
@@ -1730,6 +1828,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         next: (updated) => {
           this.companyModal.isSubmitting = false;
           this.companyModal.isOpen = false;
+          this.viewMode = 'list';
+          this.router?.navigate(['/app/operations/companies']);
           this.toast.success(`اطلاعات شرکت «${updated.name}» با موفقیت ویرایش شد.`);
           if (this.selectedLogoFile) {
             this.api.uploadLogo(companyId, this.selectedLogoFile).subscribe({
@@ -1755,6 +1855,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         next: (created) => {
           this.companyModal.isSubmitting = false;
           this.companyModal.isOpen = false;
+          this.viewMode = 'list';
+          this.router?.navigate(['/app/operations/companies']);
           this.toast.success(`شرکت «${created.name}» با موفقیت ثبت شد.`);
           if (this.selectedLogoFile && created.id) {
             this.api.uploadLogo(created.id, this.selectedLogoFile).subscribe({
