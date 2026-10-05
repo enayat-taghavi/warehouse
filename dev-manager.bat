@@ -37,9 +37,10 @@ echo --- TOOLS ^& UTILITIES ---
 echo [B] Build Only : Frontend SSR 4200 (Single Tab)
 echo [M] Database Migrate  : Apply Migrations + Start Backend
 echo [K] Stop ^& Clean      : Kill processes on ports 8000, 4200, 4300
+echo [G] GDrive Worker     : Google Drive Sync Background Worker
 echo [0] Exit
 echo ================================================================
-choice /c 123456789BMK0 /n /m "Select an option [1-9,B,M,K,0]: "
+choice /c 123456789BMKG0 /n /m "Select an option [1-9,B,M,K,G,0]: "
 set CHOICE_VAL=%errorlevel%
 
 if "%CHOICE_VAL%"=="1" goto DO_FULL
@@ -54,7 +55,8 @@ if "%CHOICE_VAL%"=="9" goto DO_OMNI
 if "%CHOICE_VAL%"=="10" goto DO_FRONT_SSR_build
 if "%CHOICE_VAL%"=="11" goto DO_MIGRATE
 if "%CHOICE_VAL%"=="12" goto DO_CLEAN
-if "%CHOICE_VAL%"=="13" goto DO_EXIT
+if "%CHOICE_VAL%"=="13" goto DO_GDRIVE_WORKER
+if "%CHOICE_VAL%"=="14" goto DO_EXIT
 goto MENU
 
 :CHECK_VENV
@@ -141,7 +143,12 @@ for %%p in (8000 4200 4300) do (
 )
 echo All ports are freed successfully!
 echo.
-pause
+goto MENU
+
+:DO_GDRIVE_WORKER
+call :CHECK_VENV
+echo Launching Google Drive Sync Worker in a new tab...
+wt -w 0 new-tab -d "%BACKEND_DIR%" --title "GDrive Sync Worker" cmd /k ".\venv\Scripts\python.exe manage.py run_gdrive_sync_worker --interval 10"
 goto MENU
 
 :DO_EXIT

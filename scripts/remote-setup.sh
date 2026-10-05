@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Warehouse Project - Remote Server Setup Script (Ubuntu 22.04 / 24.04 LTS)
+# Warehouse Management System - Remote Server Provisioning Script
+# Target OS: Ubuntu 22.04 / 24.04 LTS
+# Note: Strictly ASCII / English to prevent encoding corruption.
 # ==============================================================================
 set -euo pipefail
 
@@ -10,13 +12,16 @@ echo "======================================================================"
 echo " Starting Remote Server Provisioning"
 echo "======================================================================"
 
-# 1. Root verification
+# 1. Verify root execution
 if [ "$(id -u)" -ne 0 ]; then
     echo "ERROR: This script must be executed as root (or with sudo)." >&2
     exit 1
 fi
 
-# 2. Required parameters validation
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
+
+# 2. Parse arguments
 DOMAIN="${1:-}"
 ADMIN_EMAIL="${2:-admin@example.com}"
 DB_NAME="${3:-warehouse_db}"
@@ -37,13 +42,15 @@ echo "--> Database Name       : ${DB_NAME}"
 echo "--> Database User       : ${DB_USER}"
 echo "--> SSH Port            : ${SSH_PORT}"
 
-# 3. Update system package index
+# 3. Update system package repository
 echo "--> Updating system package index..."
 apt-get update -y
 
-# 4. Install essential packages
+# 4. Install system packages and runtime dependencies
 echo "--> Installing system packages, runtime dependencies, and services..."
 apt-get install -y --no-install-recommends \
+    -o Dpkg::Options::="--force-confdef" \
+    -o Dpkg::Options::="--force-confold" \
     python3 \
     python3-pip \
     python3-venv \
@@ -63,7 +70,7 @@ apt-get install -y --no-install-recommends \
     curl \
     gzip
 
-# 5. Enable and start core services
+# 5. Enable and start core services (Redis & PostgreSQL)
 echo "--> Starting and enabling Redis and PostgreSQL..."
 systemctl enable --now redis-server
 systemctl enable --now postgresql
@@ -80,9 +87,14 @@ sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'"
     sudo -u postgres psql -c "CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USER}\";"
 
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"${DB_NAME}\" TO \"${DB_USER}\";"
+
+# Ensure full schema ownership and privileges in PostgreSQL 15/16
+sudo -u postgres psql -d "${DB_NAME}" -c "ALTER SCHEMA public OWNER TO \"${DB_USER}\";" || true
 sudo -u postgres psql -d "${DB_NAME}" -c "GRANT ALL ON SCHEMA public TO \"${DB_USER}\";"
 sudo -u postgres psql -d "${DB_NAME}" -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO \"${DB_USER}\";"
 sudo -u postgres psql -d "${DB_NAME}" -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO \"${DB_USER}\";"
+sudo -u postgres psql -d "${DB_NAME}" -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+sudo -u postgres psql -d "${DB_NAME}" -c "CREATE EXTENSION IF NOT EXISTS btree_gin;"
 
 # 7. Unpack application bundle
 echo "--> Preparing application directory..."
@@ -90,14 +102,14 @@ mkdir -p /var/www/warehouse
 mkdir -p /var/backups/warehouse
 
 if [ -f "/tmp/deploy_bundle.zip" ]; then
-    echo "--> Unzipping project bundle..."
+    echo "--> Unpacking project bundle..."
     unzip -q -o /tmp/deploy_bundle.zip -d /var/www/warehouse
     rm -f /tmp/deploy_bundle.zip
 else
     echo "WARNING: /tmp/deploy_bundle.zip not found. Assuming files already placed in /var/www/warehouse."
 fi
 
-# 8. Setup Python Virtual Environment
+# 8. Setup Python Virtual Environment & Dependencies
 echo "--> Setting up Python virtual environment..."
 cd /var/www/warehouse/warehouse-backend
 if [ ! -d "venv" ]; then
@@ -106,7 +118,7 @@ fi
 
 ./venv/bin/pip install --upgrade pip setuptools wheel
 if [ -f "requirements.txt" ]; then
-    echo "--> Installing Python dependencies..."
+    echo "--> Installing Python dependencies from requirements.txt..."
     ./venv/bin/pip install -r requirements.txt
 fi
 
@@ -125,7 +137,7 @@ REDIS_URL=redis://127.0.0.1:6379/1
 EOF
 chmod 600 /var/www/warehouse/warehouse-backend/.env
 
-# 10. Database Migrations & Static Files
+# 10. Database Migrations & Static Files Collection
 echo "--> Applying database migrations..."
 ./venv/bin/python manage.py migrate --noinput
 
@@ -163,7 +175,35 @@ systemctl daemon-reload
 systemctl enable warehouse-backend
 systemctl restart warehouse-backend
 
-# 12. Configure Nginx
+# 11.1 Create Systemd Service for Google Drive Sync Worker
+echo "--> Creating Systemd service for Google Drive Sync Worker (warehouse-gdrive-worker.service)..."
+cat <<EOF > /etc/systemd/system/warehouse-gdrive-worker.service
+[Unit]
+Description=Warehouse Google Drive Sync Worker Service
+After=network.target postgresql.service redis-server.service warehouse-backend.service
+Wants=postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/warehouse/warehouse-backend
+ExecStart=/var/www/warehouse/warehouse-backend/venv/bin/python manage.py run_gdrive_sync_worker --interval 10
+Restart=always
+RestartSec=10
+KillSignal=SIGTERM
+StandardOutput=journal
+StandardError=journal
+EnvironmentFile=-/var/www/warehouse/warehouse-backend/.env
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable warehouse-gdrive-worker
+systemctl restart warehouse-gdrive-worker
+
+# 12. Configure Nginx Web Server and Reverse Proxy
 echo "--> Configuring Nginx reverse proxy and frontend server..."
 SERVER_NAME="${DOMAIN:-_}"
 cat <<EOF > /etc/nginx/sites-available/warehouse
@@ -181,7 +221,7 @@ server {
     gzip_comp_level 6;
     gzip_types text/plain text/css text/xml application/json application/javascript application/rss+xml application/atom+xml image/svg+xml;
 
-    # Angular SPA Frontend
+    # Angular SPA Frontend Root
     root /var/www/warehouse/warehouse-front/dist/warehouse-app/browser;
     index index.html;
 
@@ -256,23 +296,23 @@ ufw allow 80/tcp || true
 ufw allow 443/tcp || true
 ufw --force enable || true
 
-# 14. SSL Certificate Setup via Certbot (if domain is provided)
+# 14. SSL Certificate Setup via Certbot (if domain is configured)
 if [ -n "$DOMAIN" ] && [ "$DOMAIN" != "_" ]; then
     echo "--> Requesting SSL certificate from Let's Encrypt for ${DOMAIN}..."
     if certbot --nginx --non-interactive --agree-tos --redirect -m "${ADMIN_EMAIL}" -d "${DOMAIN}"; then
         echo "--> SSL certificate successfully installed and configured."
     else
-        echo "WARNING: Certbot could not obtain a certificate for ${DOMAIN}."
-        echo "This typically happens if the domain DNS is not yet pointed to this server IP."
-        echo "The site remains operational over HTTP. Run 'certbot --nginx -d ${DOMAIN}' once DNS propagates."
+        echo "WARNING: Certbot could not obtain an SSL certificate for ${DOMAIN}."
+        echo "This typically occurs if the domain DNS records have not yet propagated to this server IP."
+        echo "HTTP remains active. You can run 'certbot --nginx -d ${DOMAIN}' once DNS points here."
     fi
 fi
 
 # 15. Final Health Verification
 echo "======================================================================"
-echo " Provisioning Completed Successfully!"
-echo " Backend Service Status: $(systemctl is-active warehouse-backend)"
-echo " Nginx Service Status  : $(systemctl is-active nginx)"
-echo " Redis Service Status  : $(systemctl is-active redis-server)"
-echo " PostgreSQL Status     : $(systemctl is-active postgresql)"
+echo " Server Provisioning Completed Successfully!"
+echo " Backend Status : $(systemctl is-active warehouse-backend)"
+echo " Nginx Status   : $(systemctl is-active nginx)"
+echo " Redis Status   : $(systemctl is-active redis-server)"
+echo " Postgres Status: $(systemctl is-active postgresql)"
 echo "======================================================================"
