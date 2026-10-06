@@ -132,7 +132,10 @@ class Command(BaseCommand):
         now_ts = time.time()
         if now_ts - self.last_heartbeat_time >= 60:
             try:
-                SystemGoogleDriveConfig.objects.filter(id=1).update(worker_heartbeat_at=timezone.now())
+                updated = SystemGoogleDriveConfig.objects.filter(id=1).update(worker_heartbeat_at=timezone.now())
+                if updated == 0:
+                    SystemGoogleDriveConfig.get_solo()
+                    SystemGoogleDriveConfig.objects.filter(id=1).update(worker_heartbeat_at=timezone.now())
                 self.last_heartbeat_time = now_ts
             except Exception as exc:
                 logger.debug(f"[Worker] Heartbeat update failed: {exc}")

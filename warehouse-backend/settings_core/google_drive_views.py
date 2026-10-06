@@ -264,22 +264,25 @@ class SystemGoogleDriveConfigView(APIView):
             delta = (timezone.now() - config.worker_heartbeat_at).total_seconds()
             worker_alive = delta < 180
 
-        # Query companies configured to receive database backups
+        # Query companies configured for google drive to toggle backup sync
         backup_companies = []
         try:
             from django.apps import apps
             if apps.is_installed('personnel'):
                 CompanyGoogleDriveConfig = apps.get_model('personnel', 'CompanyGoogleDriveConfig')
-                cfgs = CompanyGoogleDriveConfig.objects.filter(sync_backups=True).select_related('company')
+                cfgs = CompanyGoogleDriveConfig.objects.filter(company__is_active=True).select_related('company').order_by('company__id')
                 for c in cfgs:
                     backup_companies.append({
                         'company_id': c.company.id,
                         'company_name': c.company.name,
                         'account_email': c.account_email,
                         'is_connected': bool(c.refresh_token),
+                        'sync_backups': bool(c.sync_backups),
                     })
         except Exception:
             pass
+
+        root_folder_url = f"https://drive.google.com/drive/folders/{config.root_folder_id}" if config.root_folder_id else None
 
         data = {
             'is_enabled': config.is_enabled,
@@ -287,6 +290,7 @@ class SystemGoogleDriveConfigView(APIView):
             'account_email': config.account_email,
             'root_folder_id': config.root_folder_id,
             'root_folder_name': config.root_folder_name,
+            'root_folder_url': root_folder_url,
             'last_sync_at': config.last_sync_at,
             'last_error': config.last_error,
             'auth_status': config.auth_status,

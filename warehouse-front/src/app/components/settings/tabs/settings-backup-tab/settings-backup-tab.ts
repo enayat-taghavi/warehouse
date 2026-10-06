@@ -1,24 +1,31 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Router, ActivatedRoute } from '@angular/router';
 import { SettingsService } from '../../../../services/settings';
 import { ToastService } from '../../../../services/toast.service';
 import { finalize } from 'rxjs/operators';
 import { offlineDb, downloadLocalDatabaseSnapshotFile } from '../../../../core/services/offline-db';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { PersianDatePipe } from '../../../../shared/pipes/persian-date.pipe';
+import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-settings-backup-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, PersianDatePipe],
   templateUrl: './settings-backup-tab.html'
 })
 export class SettingsBackupTabComponent implements OnInit, OnDestroy {
   @ViewChild('confirmTextInput') confirmTextInput?: ElementRef<HTMLInputElement>;
   @ViewChild('confirmDialogContainer') confirmDialogContainer?: ElementRef<HTMLElement>;
+
+  private confirmDialog = inject(ConfirmDialogService, { optional: true });
+  private router = inject(Router, { optional: true });
+  private route = inject(ActivatedRoute, { optional: true });
 
   // ─── اسنپ‌شات‌های سرور و بازگشت سریع ───
   snapshots: any[] = [];
@@ -500,31 +507,57 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
 
   connectSystemGDrive() {
     this.isConnectingGDrive = true;
-    this.settingsService.getSystemGDriveAuthUrl('popup')
+    const width = 600;
+    const height = 700;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
+
+    let popup: Window | null = null;
+    try {
+      popup = window.open('about:blank', 'GoogleDriveSystemAuth', `width=${width},height=${height},top=${top},left=${left},status=no,toolbar=no,menubar=no`);
+    } catch {
+      popup = null;
+    }
+
+    const isPopupBlocked = !popup || popup.closed || typeof popup.closed === 'undefined';
+    const mode = isPopupBlocked ? 'redirect' : 'popup';
+
+    this.settingsService.getSystemGDriveAuthUrl(mode)
       .pipe(finalize(() => { this.isConnectingGDrive = false; this.cdr.detectChanges(); }))
       .subscribe({
         next: (res) => {
           if (res?.auth_url) {
-            const popup = window.open(res.auth_url, 'gdrive_oauth_popup', 'width=600,height=700,status=no,toolbar=no,menubar=no');
-            if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-              this.settingsService.getSystemGDriveAuthUrl('redirect').subscribe({
-                next: (redRes) => {
-                  window.location.href = redRes.auth_url;
-                }
-              });
+            if (mode === 'popup' && popup && !popup.closed) {
+              popup.location.href = res.auth_url;
+            } else {
+              window.location.href = res.auth_url;
             }
+          } else {
+            if (popup && !popup.closed) popup.close();
+            this.toast.show('error', 'خطا در دریافت لینک اتصال به گوگل‌درایو');
           }
         },
         error: (err) => {
+          if (popup && !popup.closed) popup.close();
           this.toast.show('error', err?.error?.error || 'خطا در ایجاد لینک اتصال به گوگل‌درایو');
         }
       });
   }
 
-  disconnectSystemGDrive() {
-    if (!confirm('آیا از قطع اتصال حساب درایو سراسری سامانه اطمینان دارید؟ پشتیبان‌های جدید دیتابیس تا اتصال مجدد بر روی ابر ذخیره نخواهند شد.')) {
+  async disconnectSystemGDrive() {
+    if (this.confirmDialog) {
+      const confirmed = await this.confirmDialog.open({
+        title: 'قطع اتصال حساب درایو سراسری سامانه',
+        message: 'آیا از قطع ارتباط حساب درایو سراسری سامانه اطمینان دارید؟\nدر صورت قطع ارتباط، فایل‌های پشتیبان جدید تا زمان اتصال مجدد بر روی ابر ذخیره نخواهند شد.',
+        type: 'danger',
+        confirmText: 'قطع اتصال',
+        cancelText: 'انصراف'
+      });
+      if (!confirmed) return;
+    } else if (!confirm('آیا از قطع اتصال حساب درایو سراسری سامانه اطمینان دارید؟ پشتیبان‌های جدید دیتابیس تا اتصال مجدد بر روی ابر ذخیره نخواهند شد.')) {
       return;
     }
+
     this.isDisconnectingGDrive = true;
     this.settingsService.disconnectSystemGDrive()
       .pipe(finalize(() => { this.isDisconnectingGDrive = false; this.cdr.detectChanges(); }))
@@ -555,10 +588,10 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
   }
 
   toggleCompanyBackupSync(company: any) {
-    const current = company.sync_backups === true;
-    this.http.patch(`${environment.apiUrl}/personnel/companies/${company.company_id}/gdrive/`, { sync_backups: !current }).subscribe({
+    const nextState = !company.sync_backups;
+    this.http.patch(`${environment.apiUrl}/personnel/companies/${company.company_id}/gdrive/`, { sync_backups: nextState }).subscribe({
       next: () => {
-        company.sync_backups = !current;
+        company.sync_backups = nextState;
         this.toast.show('success', `تنظیمات ارسال پشتیبان برای شرکت ${company.company_name} بروزرسانی شد.`);
         this.loadSystemGDrive();
       },
@@ -608,8 +641,16 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
       } else {
         this.toast.show('error', 'خطا در اتصال به درایو سامانه');
       }
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, '', cleanUrl);
+      if (this.router) {
+        this.router.navigate([], {
+          queryParams: { gdrive: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+      } else {
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
+      }
     }
   }
 }
