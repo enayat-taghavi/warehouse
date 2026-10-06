@@ -27,6 +27,38 @@ def get_current_shamsi_year_str() -> str:
     return str(timezone.now().year)
 
 
+def extract_instance_date_str(instance, default_date: str) -> str:
+    """
+    استخراج تاریخ معنادار سند (به جای تاریخ امروز) در صورت وجود بر روی موجودیت (GD-16)
+    """
+    for attr in ('issue_date', 'document_date', 'invoice_date', 'transaction_date', 'date', 'issue_date_shamsi', 'invoice_date_shamsi', 'transaction_date_shamsi'):
+        val = getattr(instance, attr, None)
+        if val:
+            if hasattr(val, 'strftime'):
+                if jdatetime:
+                    try:
+                        j_dt = jdatetime.date.fromgregorian(date=val)
+                        return j_dt.strftime('%Y-%m-%d')
+                    except Exception:
+                        pass
+                return val.strftime('%Y-%m-%d')
+            s_val = str(val).strip()
+            if s_val and len(s_val) >= 4:
+                return s_val.replace('/', '-')
+
+    if hasattr(instance, 'created_at') and instance.created_at:
+        val = instance.created_at
+        if jdatetime:
+            try:
+                j_dt = jdatetime.datetime.fromgregorian(datetime=val)
+                return j_dt.strftime('%Y-%m-%d')
+            except Exception:
+                pass
+        return val.strftime('%Y-%m-%d')
+
+    return default_date
+
+
 def sanitize_filename(name: str) -> str:
     """Remove illegal characters for filesystem and Google Drive display"""
     # Replace dangerous characters while preserving Persian and English characters
@@ -53,6 +85,8 @@ class GoogleDrivePathResolver:
         model_name = instance.__class__.__name__
         shamsi_date = get_current_shamsi_date_str()
         shamsi_year = get_current_shamsi_year_str()
+        doc_date = extract_instance_date_str(instance, shamsi_date)
+        doc_year = doc_date.split('-')[0] if '-' in doc_date else shamsi_year
 
         # استخراج نام فایل اصلی
         if not orig_name:
@@ -75,14 +109,14 @@ class GoogleDrivePathResolver:
             doc_type_label = instance.get_document_type_display() if hasattr(instance, 'get_document_type_display') else "سند"
             folder = f"سامانه حسابداری و اداری/اسناد مرکزی شرکت/{doc_type_label}"
             title = sanitize_filename(instance.title or doc_type_label)
-            filename = f"{shamsi_date}_{doc_type_label}_{instance.id}_{title}{ext}"
+            filename = f"{doc_date}_{doc_type_label}_{instance.id}_{title}{ext}"
             return company, folder, filename
 
         elif model_name == 'Company':
             company = instance
             doc_label = "اساسنامه" if field_name == 'articles_of_association' else "روزنامه_رسمی" if field_name == 'latest_gazette' else "لوگو"
             folder = f"سامانه حسابداری و اداری/اسناد مرکزی شرکت/{doc_label}"
-            filename = f"{shamsi_date}_{doc_label}_{company.code}{ext}"
+            filename = f"{doc_date}_{doc_label}_{company.code}_{company.id}{ext}"
             return company, folder, filename
 
         elif model_name == 'CompanyBoardMember':
@@ -91,7 +125,7 @@ class GoogleDrivePathResolver:
             raw_full_name = getattr(instance, 'full_name', None) or f"{getattr(instance, 'first_name', '')} {getattr(instance, 'last_name', '')}".strip()
             member_name = sanitize_filename(raw_full_name or f"عضو_{instance.id}")
             folder = f"سامانه حسابداری و اداری/اسناد مرکزی شرکت/ارکان_و_هیئت_مدیره/{member_name}"
-            filename = f"{shamsi_date}_{doc_label}_{member_name}{ext}"
+            filename = f"{doc_date}_{doc_label}_{member_name}_{instance.id}{ext}"
             return company, folder, filename
 
         # =====================================================================
@@ -119,19 +153,11 @@ class GoogleDrivePathResolver:
                 logger.warning(f"[GDrive Path Resolver] Company not resolved for {model_name} (id={getattr(instance, 'id', None)}). Skipping.")
                 return None
 
-            inv_date = getattr(instance, 'invoice_date_shamsi', None)
-            if inv_date and len(str(inv_date).strip()) >= 4:
-                doc_date = str(inv_date).strip().replace('/', '-')
-                doc_year = doc_date.split('-')[0] if '-' in doc_date else shamsi_year
-            else:
-                doc_date = shamsi_date
-                doc_year = shamsi_year
-
             inv_num = getattr(instance, 'invoice_number', str(instance.id)) or str(instance.id)
             inv_desc = getattr(instance, 'category', None) or getattr(instance, 'description', None) or (os.path.splitext(orig_name)[0] if orig_name else 'سند')
             clean_desc = sanitize_filename(inv_desc)[:40]
             folder = f"سامانه حسابداری و اداری/{project_name}/{section_name}/فاکتورها_و_تنخواه/{doc_year}"
-            filename = f"{doc_date}_فاکتور_{inv_num}_{clean_desc}{ext}"
+            filename = f"{doc_date}_فاکتور_{inv_num}_{instance.id}_{clean_desc}{ext}"
             return company, folder, filename
 
         elif model_name == 'PettyCashTransaction':
@@ -161,18 +187,10 @@ class GoogleDrivePathResolver:
                 logger.warning(f"[GDrive Path Resolver] Company not resolved for {model_name} (id={getattr(instance, 'id', None)}). Skipping.")
                 return None
 
-            tx_shamsi = getattr(instance, 'transaction_date_shamsi', None)
-            if tx_shamsi and len(str(tx_shamsi).strip()) >= 4:
-                doc_date = str(tx_shamsi).strip().replace('/', '-')
-                doc_year = doc_date.split('-')[0] if '-' in doc_date else shamsi_year
-            else:
-                doc_date = shamsi_date
-                doc_year = shamsi_year
-
             tx_num = getattr(instance, 'receipt_number', None) or getattr(instance, 'tracking_code', None) or str(instance.id)
             tx_title = sanitize_filename(getattr(instance, 'title', None) or getattr(instance, 'category', 'تنخواه'))[:40]
             folder = f"سامانه حسابداری و اداری/{project_name}/{section_name}/رسیدهای_تنخواه/{doc_year}"
-            filename = f"{doc_date}_رسید_تنخواه_{tx_num}_{tx_title}{ext}"
+            filename = f"{doc_date}_رسید_تنخواه_{tx_num}_{instance.id}_{tx_title}{ext}"
             return company, folder, filename
 
         # =====================================================================
@@ -187,7 +205,7 @@ class GoogleDrivePathResolver:
             full_name = sanitize_filename(f"{instance.first_name}_{instance.last_name}" if hasattr(instance, 'first_name') else f"پرسنل_{instance.id}")
             nat_id = getattr(instance, 'national_code', None) or getattr(instance, 'national_id', str(instance.id))
             folder = f"سامانه حسابداری و اداری/مدارک پرسنلی/{full_name}_{nat_id}"
-            filename = f"{shamsi_date}_مدارک_هویتی_{full_name}_{nat_id}{ext}"
+            filename = f"{doc_date}_مدارک_هویتی_{full_name}_{nat_id}_{instance.id}{ext}"
             return company, folder, filename
 
         elif model_name == 'PersonnelDocument':
@@ -201,7 +219,7 @@ class GoogleDrivePathResolver:
             nat_id = getattr(personnel, 'national_code', None) or getattr(personnel, 'national_id', str(getattr(personnel, 'id', instance.id)))
             doc_type = instance.get_doc_type_display() if hasattr(instance, 'get_doc_type_display') else getattr(instance, 'doc_type', 'سند')
             folder = f"سامانه حسابداری و اداری/مدارک پرسنلی/{full_name}_{nat_id}"
-            filename = f"{shamsi_date}_{sanitize_filename(doc_type)}_{full_name}_{instance.id}{ext}"
+            filename = f"{doc_date}_{sanitize_filename(doc_type)}_{full_name}_{instance.id}{ext}"
             return company, folder, filename
 
         # =====================================================================
@@ -217,9 +235,6 @@ class GoogleDrivePathResolver:
             plate = sanitize_filename(getattr(vehicle, 'plate_number', f"خودرو_{vehicle.id if vehicle else instance.id}"))
             doc_type_display = instance.get_doc_type_display() if hasattr(instance, 'get_doc_type_display') else "مدرک"
             doc_title = sanitize_filename(instance.title or doc_type_display)[:40]
-            doc_date = getattr(instance, 'issue_date', None) or shamsi_date
-            if doc_date and '/' in doc_date:
-                doc_date = doc_date.replace('/', '-')
 
             folder = f"سامانه حسابداری و اداری/ناوگان و خودروها/{plate}"
             filename = f"{doc_date}_{doc_title}_{plate}_{instance.id}{ext}"
@@ -245,7 +260,7 @@ class GoogleDrivePathResolver:
             item_code = sanitize_filename(getattr(item, 'fa_unic_code', None) or getattr(item, 'code', None) or str(instance.id))
             item_desc = sanitize_filename(getattr(item, 'description', None) or getattr(item, 'name', None) or 'کالا')[:40]
             folder = f"سامانه انبارداری/{warehouse_name}/تصاویر کالاها/{item_code}_{item_desc}"
-            filename = f"{shamsi_date}_عکس_کالا_کد{item_code}_{instance.id}{ext or '.webp'}"
+            filename = f"{doc_date}_عکس_کالا_کد{item_code}_{instance.id}{ext or '.webp'}"
             return company, folder, filename
 
         # =====================================================================

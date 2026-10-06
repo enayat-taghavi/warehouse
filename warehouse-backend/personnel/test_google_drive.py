@@ -478,13 +478,13 @@ class GoogleDriveCoreTestCase(TestCase):
         comp, folder, fname = res_id
         self.assertEqual(comp.id, self.company.id)
         self.assertIn("ارکان_و_هیئت_مدیره/سارا_محمدی", folder)
-        self.assertIn("کارت_ملی_شناسنامه_سارا_محمدی.jpg", fname)
+        self.assertIn(f"کارت_ملی_شناسنامه_سارا_محمدی_{member.id}.jpg", fname)
 
         # تست Resolver برای حکم انتصاب
         res_app = GoogleDrivePathResolver.resolve(member, field_name='attached_appointment_doc', orig_name='hokm.pdf')
         self.assertIsNotNone(res_app)
         _, _, fname_app = res_app
-        self.assertIn("حکم_انتصاب_سارا_محمدی.pdf", fname_app)
+        self.assertIn(f"حکم_انتصاب_سارا_محمدی_{member.id}.pdf", fname_app)
 
     def test_petty_cash_transaction_resolution(self):
         """تست نگاشت مسیر رسید تنخواه با شماره رسید، تاریخ شمسی و عنوان"""
@@ -512,7 +512,7 @@ class GoogleDriveCoreTestCase(TestCase):
         comp, folder, fname = res
         self.assertEqual(comp.id, self.company.id)
         self.assertIn("پروژه_بیمارستان/تاسیسات_برق/رسیدهای_تنخواه/1405", folder)
-        self.assertIn("1405-03-20_رسید_تنخواه_REC-9988_خرید_کابل_برق_نسوز.png", fname)
+        self.assertIn(f"1405-03-20_رسید_تنخواه_REC-9988_{tx.id}_خرید_کابل_برق_نسوز.png", fname)
 
     def test_vehicle_document_resolution(self):
         """تست نگاشت مسیر مدارک خودرو با استفاده از عنوان مدرک و get_doc_type_display"""
@@ -750,3 +750,304 @@ class GoogleDriveCoreTestCase(TestCase):
         self.assertEqual(ordered_tasks[0].id, task_backup.id)
         self.assertEqual(ordered_tasks[1].id, task_normal.id)
         self.assertEqual(ordered_tasks[2].id, task_scan.id)
+
+    def test_checksum_mismatch_marks_task_failed(self):
+        """تست تشخیص عدم تطابق هش MD5 و علامت‌گذاری تسک با وضعیت failed و کد CHECKSUM_MISMATCH (GD-14)"""
+        import tempfile
+        from unittest.mock import patch, MagicMock
+
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp.write(b"Hello Google Drive Integrity Test")
+            tmp_path = tmp.name
+
+        try:
+            config, _ = CompanyGoogleDriveConfig.objects.get_or_create(company=self.company)
+            config.refresh_token = 'enc_token_123'
+            config.is_enabled = True
+            config.account_email = 'test@gmail.com'
+            config.save()
+
+            task = GoogleDriveSyncQueue.objects.create(
+                company=self.company,
+                model_name='CompanyDocument',
+                object_id=99,
+                field_name='file',
+                drive_account=config.account_email,
+                source_file_path=tmp_path,
+                target_folder_path='اسناد',
+                target_filename='test_checksum.pdf',
+                status='pending',
+                action='upload',
+                priority=10
+            )
+
+            mock_service = MagicMock()
+            mock_files = MagicMock()
+            mock_service.files.return_value = mock_files
+
+            # بازگرداندن چک‌سام نادرست از گوگل
+            mock_req = MagicMock()
+            mock_req.next_chunk.return_value = (None, {'id': 'drv_file_123', 'md5Checksum': 'bad_fake_md5_hash'})
+            mock_files.create.return_value = mock_req
+
+            with patch('personnel.google_drive_service.get_google_drive_service', return_value=mock_service), \
+                 patch('personnel.google_drive_service.ensure_company_drive_folders', return_value=('root_id', 'arch_id')), \
+                 patch('personnel.google_drive_service.resolve_folder_hierarchy', return_value='folder_id'):
+                from personnel.google_drive_service import sync_single_queue_item
+                res = sync_single_queue_item(task.id)
+                self.assertFalse(res)
+
+            task.refresh_from_db()
+            self.assertEqual(task.status, 'failed')
+            self.assertEqual(task.error_code, 'CHECKSUM_MISMATCH')
+            self.assertIn('عدم تطابق هش فایل', task.error_message)
+        finally:
+            try:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            except (PermissionError, OSError):
+                pass
+
+    def test_replaced_file_triggers_archive_delete(self):
+        """تست انتقال نسخه قبلی فایل جایگزین‌شده به پوشه بایگانی (GD-13)"""
+        from unittest.mock import MagicMock
+        from personnel.signals_gdrive import enqueue_file_upload
+
+        config, _ = CompanyGoogleDriveConfig.objects.get_or_create(company=self.company)
+        config.refresh_token = 'enc_token_123'
+        config.is_enabled = True
+        config.account_email = 'test@gmail.com'
+        config.save()
+
+        doc = CompanyDocument.objects.create(
+            company=self.company,
+            title='اساسنامه نگارش اول',
+            document_type='other'
+        )
+
+        file_old = MagicMock()
+        file_old.name = 'docs/v1.pdf'
+
+        # تسک موفق قبلی برای نگارش اول
+        GoogleDriveSyncQueue.objects.create(
+            company=self.company,
+            model_name='CompanyDocument',
+            object_id=doc.id,
+            field_name='file',
+            drive_account=config.account_email,
+            source_file_path=file_old.name,
+            target_folder_path='اسناد',
+            target_filename='v1.pdf',
+            gdrive_file_id='gdrive_v1_id',
+            action='upload',
+            status='completed'
+        )
+
+        file_new = MagicMock()
+        file_new.name = 'docs/v2.pdf'
+
+        # بارگذاری نگارش دوم (فایل جایگزین)
+        with self.captureOnCommitCallbacks(execute=True):
+            enqueue_file_upload(doc, 'file', file_new)
+
+        # باید تسک archive_delete برای فایل قدیمی در صف ثبت شده باشد
+        arch_task = GoogleDriveSyncQueue.objects.filter(
+            company=self.company,
+            gdrive_file_id='gdrive_v1_id',
+            action='archive_delete'
+        ).first()
+        self.assertIsNotNone(arch_task)
+        self.assertEqual(arch_task.status, 'pending')
+        self.assertEqual(arch_task.field_name, 'file')
+
+        # و تسک جدید آپلود برای نگارش ۲
+        upload_task = GoogleDriveSyncQueue.objects.filter(
+            company=self.company,
+            source_file_path=file_new.name,
+            action='upload'
+        ).first()
+        self.assertIsNotNone(upload_task)
+        self.assertEqual(upload_task.status, 'pending')
+        self.assertEqual(upload_task.field_name, 'file')
+
+    def test_delete_instance_archives_per_field(self):
+        """تست بایگانی مستقل مدارک چندفیلدی (مانند عضو هیئت‌مدیره) بر اساس field_name (GD-13)"""
+        from unittest.mock import MagicMock
+        from personnel.signals_gdrive import enqueue_file_archive_delete
+
+        config, _ = CompanyGoogleDriveConfig.objects.get_or_create(company=self.company)
+        config.refresh_token = 'enc_token_123'
+        config.is_enabled = True
+        config.account_email = 'test@gmail.com'
+        config.save()
+
+        member = CompanyBoardMember.objects.create(
+            company=self.company,
+            first_name='حمید',
+            last_name='رضایی'
+        )
+
+        # تسک موفق کارت ملی
+        GoogleDriveSyncQueue.objects.create(
+            company=self.company,
+            model_name='CompanyBoardMember',
+            object_id=member.id,
+            field_name='attached_id_doc',
+            drive_account=config.account_email,
+            source_file_path='id_card.jpg',
+            target_folder_path='ارکان',
+            target_filename='id_card.jpg',
+            gdrive_file_id='gdrive_id_card_1',
+            action='upload',
+            status='completed'
+        )
+        # تسک موفق حکم انتصاب
+        GoogleDriveSyncQueue.objects.create(
+            company=self.company,
+            model_name='CompanyBoardMember',
+            object_id=member.id,
+            field_name='attached_appointment_doc',
+            drive_account=config.account_email,
+            source_file_path='appointment.pdf',
+            target_folder_path='ارکان',
+            target_filename='appointment.pdf',
+            gdrive_file_id='gdrive_app_doc_2',
+            action='upload',
+            status='completed'
+        )
+
+        file1 = MagicMock()
+        file1.name = 'id_card.jpg'
+        file2 = MagicMock()
+        file2.name = 'appointment.pdf'
+
+        with self.captureOnCommitCallbacks(execute=True):
+            enqueue_file_archive_delete(member, 'attached_id_doc', file1)
+            enqueue_file_archive_delete(member, 'attached_appointment_doc', file2)
+
+        arch_tasks = GoogleDriveSyncQueue.objects.filter(
+            company=self.company,
+            model_name='CompanyBoardMember',
+            object_id=member.id,
+            action='archive_delete'
+        )
+        self.assertEqual(arch_tasks.count(), 2)
+        fields = set(arch_tasks.values_list('field_name', flat=True))
+        self.assertEqual(fields, {'attached_id_doc', 'attached_appointment_doc'})
+
+    def test_folder_cache_invalidation_and_root_archive_cache(self):
+        """تست کش پوشه‌ها و ابطال ایمن آن در صورت تغییر یا خطای 404 (GD-15)"""
+        from personnel.google_drive_service import (
+            _FOLDER_CACHE,
+            _ROOT_ARCHIVE_CACHE,
+            invalidate_folder_cache
+        )
+
+        # پر کردن آزمایشی کش
+        _FOLDER_CACHE[(self.company.id, 'parent1', 'folder1')] = 'f_id_1'
+        _FOLDER_CACHE[(999, 'parent2', 'folder2')] = 'f_id_2'
+        _ROOT_ARCHIVE_CACHE[self.company.id] = ('root1', 'arch1', 123456789.0)
+
+        # ابطال کش برای همین شرکت
+        invalidate_folder_cache(self.company.id)
+        self.assertNotIn((self.company.id, 'parent1', 'folder1'), _FOLDER_CACHE)
+        self.assertIn((999, 'parent2', 'folder2'), _FOLDER_CACHE)
+        self.assertNotIn(self.company.id, _ROOT_ARCHIVE_CACHE)
+
+        # ابطال سراسری
+        invalidate_folder_cache(None)
+        self.assertEqual(len(_FOLDER_CACHE), 0)
+        self.assertEqual(len(_ROOT_ARCHIVE_CACHE), 0)
+
+    def test_get_config_does_not_create_database_record(self):
+        """تست عدم ساخت رکورد در پایگاه داده هنگام درخواست GET تنظیمات (GD-19)"""
+        comp_new = Company.objects.create(name="شرکت جدید بدون درایو", code="NEWCO")
+        UserCompanyAccess.objects.create(
+            user=self.user,
+            company=comp_new,
+            access_level='workspace_full'
+        )
+        # اطمینان از نبود کانفیگ
+        CompanyGoogleDriveConfig.objects.filter(company=comp_new).delete()
+
+        res = self.client.get(f"/api/personnel/companies/{comp_new.id}/gdrive/")
+        self.assertEqual(res.status_code, 200)
+        self.assertFalse(res.data['is_connected'])
+        self.assertFalse(res.data['is_enabled'])
+        self.assertEqual(res.data['auth_status'], 'unlinked')
+        self.assertEqual(res.data['other_accounts_count'], 0)
+
+        # بررسی قطعی عدم درج رکورد در دیتابیس
+        exists = CompanyGoogleDriveConfig.objects.filter(company=comp_new).exists()
+        self.assertFalse(exists)
+
+    def test_queue_api_limit_and_status_validation(self):
+        """تست اعتبارسنجی پارامترهای limit و status در اندپوینت صف (GD-19)"""
+        url = f"/api/personnel/companies/{self.company.id}/gdrive/queue/"
+
+        # 1. limit نامعتبر (متنی)
+        res_text = self.client.get(f"{url}?limit=not_a_number")
+        self.assertEqual(res_text.status_code, 400)
+        self.assertIn("error", res_text.data)
+
+        # 2. limit کمتر از ۱
+        res_zero = self.client.get(f"{url}?limit=0")
+        self.assertEqual(res_zero.status_code, 400)
+
+        # 3. limit بیشتر از ۱۰۰
+        res_huge = self.client.get(f"{url}?limit=150")
+        self.assertEqual(res_huge.status_code, 400)
+
+        # 4. status نامعتبر
+        res_bad_status = self.client.get(f"{url}?status=unknown_status")
+        self.assertEqual(res_bad_status.status_code, 400)
+
+        # 5. مقادیر معتبر
+        res_ok = self.client.get(f"{url}?status=pending&limit=20")
+        self.assertEqual(res_ok.status_code, 200)
+        self.assertIn("results", res_ok.data)
+
+    def test_other_accounts_count_calculation(self):
+        """تست محاسبه تعداد اسناد متعلق به سایر حساب‌های متصل پیشین (GD-31 / D8)"""
+        url = f"/api/personnel/companies/{self.company.id}/gdrive/"
+
+        # حساب جاری
+        config, _ = CompanyGoogleDriveConfig.objects.get_or_create(company=self.company)
+        config.account_email = "primary@company.ir"
+        config.save(update_fields=['account_email'])
+
+        # سند ۱ در حساب قدیمی bob تکمیل شده
+        GoogleDriveSyncQueue.objects.create(
+            company=self.company,
+            model_name='CompanyDocument',
+            object_id=1,
+            field_name='file',
+            drive_account='old_bob@gmail.com',
+            target_filename='doc1.pdf',
+            status='completed'
+        )
+        # سند ۲ نیز در حساب قدیمی bob تکمیل شده
+        GoogleDriveSyncQueue.objects.create(
+            company=self.company,
+            model_name='CompanyDocument',
+            object_id=2,
+            field_name='file',
+            drive_account='old_bob@gmail.com',
+            target_filename='doc2.pdf',
+            status='completed'
+        )
+        # سند ۱ در حساب جاری primary هم تکمیل شده است
+        GoogleDriveSyncQueue.objects.create(
+            company=self.company,
+            model_name='CompanyDocument',
+            object_id=1,
+            field_name='file',
+            drive_account='primary@company.ir',
+            target_filename='doc1.pdf',
+            status='completed'
+        )
+
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 200)
+        # فقط سند ۲ است که در حساب دیگری هست و در حساب جاری نیست
+        self.assertEqual(res.data['other_accounts_count'], 1)

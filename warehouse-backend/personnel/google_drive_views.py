@@ -183,7 +183,7 @@ class CompanyGoogleDriveConfigView(APIView):
         if not check_user_company_access(request.user, company):
             return Response({"error": "شما دسترسی مجاز به اطلاعات این شرکت ندارید."}, status=status.HTTP_403_FORBIDDEN)
 
-        config, _ = CompanyGoogleDriveConfig.objects.get_or_create(company=company)
+        config = CompanyGoogleDriveConfig.objects.filter(company=company).first()
 
         # محاسبه آمار لحظه‌ای صف تسک‌های شرکت
         stats = GoogleDriveSyncQueue.objects.filter(company=company).aggregate(
@@ -193,6 +193,31 @@ class CompanyGoogleDriveConfigView(APIView):
             completed=Count('id', filter=Q(status='completed')),
             failed=Count('id', filter=Q(status='failed')),
         )
+
+        # محاسبه تعداد رکوردهای تکمیل‌شده در حسابی غیر از حساب جاری (GD-31 / D8)
+        current_email = config.account_email if config else None
+        other_accounts_count = 0
+        if current_email:
+            other_completed_keys = set(
+                GoogleDriveSyncQueue.objects.filter(
+                    company=company,
+                    status='completed'
+                ).exclude(
+                    drive_account=current_email
+                ).exclude(
+                    drive_account__isnull=True
+                ).exclude(
+                    drive_account=''
+                ).values_list('model_name', 'object_id', 'field_name')
+            )
+            current_completed_keys = set(
+                GoogleDriveSyncQueue.objects.filter(
+                    company=company,
+                    drive_account=current_email,
+                    status='completed'
+                ).values_list('model_name', 'object_id', 'field_name')
+            )
+            other_accounts_count = len(other_completed_keys - current_completed_keys)
 
         # محاسبه وضعیت ورکر مرکزی (GD-06 / D4)
         worker_alive = False
@@ -206,32 +231,63 @@ class CompanyGoogleDriveConfigView(APIView):
         except Exception:
             pass
 
-        data = {
-            "company_id": company.id,
-            "company_name": company.name,
-            "is_enabled": config.is_enabled,
-            "is_connected": bool(config.refresh_token),
-            "auth_status": getattr(config, 'auth_status', 'ok'),
-            "account_email": config.account_email,
-            "root_folder_id": config.root_folder_id,
-            "root_folder_name": config.root_folder_name,
-            "root_folder_url": f"https://drive.google.com/drive/folders/{config.root_folder_id}" if config.root_folder_id else None,
-            "sync_accounting_docs": config.sync_accounting_docs,
-            "sync_personnel_docs": config.sync_personnel_docs,
-            "sync_fleet_docs": config.sync_fleet_docs,
-            "sync_inventory_photos": config.sync_inventory_photos,
-            "sync_backups": config.sync_backups,
-            "sync_mode": config.sync_mode,
-            "scheduled_start_time": _format_time_field(config.scheduled_start_time, '23:00'),
-            "scheduled_end_time": _format_time_field(config.scheduled_end_time, '06:00'),
-            "chunk_delay_seconds": config.chunk_delay_seconds,
-            "force_sync_until": config.force_sync_until,
-            "worker_alive": worker_alive,
-            "worker_heartbeat_at": worker_heartbeat_at,
-            "last_sync_at": config.last_sync_at,
-            "last_error": config.last_error,
-            "stats": stats
-        }
+        if config:
+            data = {
+                "company_id": company.id,
+                "company_name": company.name,
+                "is_enabled": config.is_enabled,
+                "is_connected": bool(config.refresh_token),
+                "auth_status": getattr(config, 'auth_status', 'ok'),
+                "account_email": config.account_email,
+                "root_folder_id": config.root_folder_id,
+                "root_folder_name": config.root_folder_name,
+                "root_folder_url": f"https://drive.google.com/drive/folders/{config.root_folder_id}" if config.root_folder_id else None,
+                "sync_accounting_docs": config.sync_accounting_docs,
+                "sync_personnel_docs": config.sync_personnel_docs,
+                "sync_fleet_docs": config.sync_fleet_docs,
+                "sync_inventory_photos": config.sync_inventory_photos,
+                "sync_backups": config.sync_backups,
+                "sync_mode": config.sync_mode,
+                "scheduled_start_time": _format_time_field(config.scheduled_start_time, '23:00'),
+                "scheduled_end_time": _format_time_field(config.scheduled_end_time, '06:00'),
+                "chunk_delay_seconds": config.chunk_delay_seconds,
+                "force_sync_until": config.force_sync_until,
+                "worker_alive": worker_alive,
+                "worker_heartbeat_at": worker_heartbeat_at,
+                "last_sync_at": config.last_sync_at,
+                "last_error": config.last_error,
+                "other_accounts_count": other_accounts_count,
+                "stats": stats
+            }
+        else:
+            # بازگرداندن مقادیر پیش‌فرض بدون ساخت رکورد در دیتابیس (GD-19)
+            data = {
+                "company_id": company.id,
+                "company_name": company.name,
+                "is_enabled": False,
+                "is_connected": False,
+                "auth_status": 'unlinked',
+                "account_email": None,
+                "root_folder_id": None,
+                "root_folder_name": None,
+                "root_folder_url": None,
+                "sync_accounting_docs": True,
+                "sync_personnel_docs": True,
+                "sync_fleet_docs": True,
+                "sync_inventory_photos": True,
+                "sync_backups": False,
+                "sync_mode": 'immediate',
+                "scheduled_start_time": '23:00',
+                "scheduled_end_time": '06:00',
+                "chunk_delay_seconds": 1,
+                "force_sync_until": None,
+                "worker_alive": worker_alive,
+                "worker_heartbeat_at": worker_heartbeat_at,
+                "last_sync_at": None,
+                "last_error": None,
+                "other_accounts_count": 0,
+                "stats": stats
+            }
         return Response(data, status=status.HTTP_200_OK)
 
     def patch(self, request, company_id):
@@ -375,7 +431,7 @@ class CompanyGoogleDriveDisconnectView(APIView):
 
 class CompanyGoogleDriveQueueView(APIView):
     """
-    مشاهده لیست فایل‌های صف همگام‌سازی گوگل‌درایو شرکت (شامل اولویت و زمان تکرار بعدی)
+    مشاهده لیست فایل‌های صف همگام‌سازی گوگل‌درایو شرکت با اعتبارسنجی ورودی‌ها (GD-19)
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -385,7 +441,20 @@ class CompanyGoogleDriveQueueView(APIView):
             return Response({"error": "شما دسترسی مجاز به این شرکت ندارید."}, status=status.HTTP_403_FORBIDDEN)
 
         status_filter = request.GET.get('status')
-        limit = min(int(request.GET.get('limit', 50)), 100)
+        allowed_statuses = {'all', 'pending', 'processing', 'completed', 'failed'}
+        if status_filter and status_filter not in allowed_statuses:
+            return Response(
+                {"error": f"وضعیت درخواستی نامعتبر است. مقادیر مجاز: {', '.join(sorted(allowed_statuses))}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        raw_limit = request.GET.get('limit', '50')
+        try:
+            limit = int(raw_limit)
+            if limit < 1 or limit > 100:
+                return Response({"error": "پارامتر limit باید عددی بین ۱ تا ۱۰۰ باشد."}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, TypeError):
+            return Response({"error": "پارامتر limit باید یک عدد صحیح معتبر باشد."}, status=status.HTTP_400_BAD_REQUEST)
 
         qs = GoogleDriveSyncQueue.objects.filter(company=company).order_by('priority', '-created_at')
         if status_filter and status_filter != 'all':
@@ -397,6 +466,8 @@ class CompanyGoogleDriveQueueView(APIView):
                 "id": t.id,
                 "model_name": t.model_name,
                 "object_id": t.object_id,
+                "field_name": t.field_name,
+                "drive_account": t.drive_account,
                 "target_filename": t.target_filename,
                 "target_folder_path": t.target_folder_path,
                 "action": t.action,
@@ -404,6 +475,7 @@ class CompanyGoogleDriveQueueView(APIView):
                 "priority": t.priority,
                 "retry_count": t.retry_count,
                 "next_retry_at": t.next_retry_at,
+                "error_code": t.error_code,
                 "error_message": t.error_message,
                 "gdrive_file_id": t.gdrive_file_id,
                 "created_at": t.created_at,
@@ -435,8 +507,9 @@ class CompanyGoogleDriveRetryTaskView(APIView):
         task.status = 'pending'
         task.retry_count = 0
         task.next_retry_at = None
+        task.error_code = None
         task.error_message = None
-        task.save(update_fields=['status', 'retry_count', 'next_retry_at', 'error_message', 'updated_at'])
+        task.save(update_fields=['status', 'retry_count', 'next_retry_at', 'error_code', 'error_message', 'updated_at'])
 
         return Response({
             "success": True,
@@ -482,6 +555,8 @@ class CompanyGoogleDriveSyncAllView(APIView):
             company=company,
             model_name='Company',
             object_id=company.id,
+            field_name='',
+            drive_account=config.account_email or '',
             source_file_path='',
             target_folder_path='',
             target_filename=f"پیمایش سراسری اسناد شرکت {company.name}",

@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 def enqueue_file_upload(instance, field_name: str, file_obj):
     """
-    ثبت امن تسک آپلود فایل در صف پس از Commit موفق تراکنش اصلی (فاز ۳ - D4 بدون اسپاون نخ)
+    ثبت امن تسک آپلود فایل در صف پس از Commit موفق تراکنش اصلی (فاز ۴ - GD-12، GD-13 تفکیک فیلد و حساب)
     """
     if not file_obj or not hasattr(file_obj, 'name') or not file_obj.name:
         return
@@ -51,11 +51,15 @@ def enqueue_file_upload(instance, field_name: str, file_obj):
             if model_name == 'ItemPhoto' and not config.sync_inventory_photos:
                 return
 
+            current_account = config.account_email or ''
+
             # جلوگیری از ثبت تسک‌های تکراری هنگام تغییر وضعیت‌های متوالی در کارتابل
             existing = GoogleDriveSyncQueue.objects.filter(
                 company=company,
                 model_name=model_name,
                 object_id=instance.id,
+                field_name=field_name,
+                drive_account=current_account,
                 source_file_path=file_obj.name,
             ).order_by('-created_at').first()
 
@@ -70,14 +74,52 @@ def enqueue_file_upload(instance, field_name: str, file_obj):
                     existing.next_retry_at = None
                     existing.error_message = None
                     existing.save(update_fields=['status', 'priority', 'retry_count', 'next_retry_at', 'error_message', 'updated_at'])
-                    logger.info(f"[GDrive Queue] Reset failed task for {model_name}#{instance.id} -> pending")
+                    logger.info(f"[GDrive Queue] Reset failed task for {model_name}#{instance.id} (field={field_name}) -> pending")
                     return
+
+            # بررسی اینکه آیا قبلاً فایلی برای این رکورد و فیلد همگام‌سازی شده و اکنون با فایل جدید جایگزین شده است (GD-13)
+            prev_completed = GoogleDriveSyncQueue.objects.filter(
+                company=company,
+                model_name=model_name,
+                object_id=instance.id,
+                field_name=field_name,
+                drive_account=current_account,
+                status='completed',
+                gdrive_file_id__isnull=False
+            ).exclude(source_file_path=file_obj.name).order_by('-created_at').first()
+
+            if prev_completed and prev_completed.gdrive_file_id:
+                # انتقال نسخه قبلی به پوشه بایگانی اسناد حذف‌شده/جایگزین‌شده
+                already_archived = GoogleDriveSyncQueue.objects.filter(
+                    company=company,
+                    gdrive_file_id=prev_completed.gdrive_file_id,
+                    action='archive_delete',
+                    status__in=['pending', 'processing', 'completed']
+                ).exists()
+                if not already_archived:
+                    GoogleDriveSyncQueue.objects.create(
+                        company=company,
+                        model_name=model_name,
+                        object_id=instance.id,
+                        field_name=field_name,
+                        drive_account=current_account,
+                        source_file_path=prev_completed.source_file_path,
+                        target_folder_path=f"بایگانی و اسناد حذف‌شده/{get_current_shamsi_year_str()}",
+                        target_filename=prev_completed.target_filename,
+                        gdrive_file_id=prev_completed.gdrive_file_id,
+                        action='archive_delete',
+                        status='pending',
+                        priority=10
+                    )
+                    logger.info(f"[GDrive Queue] Enqueued archive_delete for replaced file of {model_name}#{instance.id} (field={field_name})")
 
             # ثبت تسک در صف با اولویت معمولی
             task = GoogleDriveSyncQueue.objects.create(
                 company=company,
                 model_name=model_name,
                 object_id=instance.id,
+                field_name=field_name,
+                drive_account=current_account,
                 source_file_path=file_obj.name,
                 target_folder_path=target_folder,
                 target_filename=target_filename,
@@ -85,7 +127,7 @@ def enqueue_file_upload(instance, field_name: str, file_obj):
                 status='pending',
                 priority=10
             )
-            logger.info(f"[GDrive Queue] Enqueued upload task #{task.id} for {model_name}#{instance.id} -> {target_filename}")
+            logger.info(f"[GDrive Queue] Enqueued upload task #{task.id} for {model_name}#{instance.id} (field={field_name}) -> {target_filename}")
         except Exception as exc:
             logger.error(f"[GDrive Queue] Error enqueuing {instance.__class__.__name__}#{getattr(instance, 'id', None)}: {exc}")
 
@@ -94,7 +136,7 @@ def enqueue_file_upload(instance, field_name: str, file_obj):
 
 def enqueue_file_archive_delete(instance, field_name: str, file_obj):
     """
-    ثبت تسک انتقال به بایگانی پس از حذف رکورد در سامانه
+    ثبت تسک انتقال به بایگانی پس از حذف رکورد در سامانه (تفکیک دقیق بر اساس field_name - GD-13)
     """
     if not file_obj or not hasattr(file_obj, 'name') or not file_obj.name:
         return
@@ -106,16 +148,18 @@ def enqueue_file_archive_delete(instance, field_name: str, file_obj):
             already_archiving = GoogleDriveSyncQueue.objects.filter(
                 model_name=model_name,
                 object_id=instance.id,
+                field_name=field_name,
                 action='archive_delete',
                 status__in=['pending', 'processing', 'completed']
             ).exists()
             if already_archiving:
                 return
 
-            # پیدا کردن آخرین تسک موفق همگام‌سازی این رکورد برای بدست آوردن gdrive_file_id
+            # پیدا کردن آخرین تسک موفق همگام‌سازی این رکورد و فیلد برای بدست آوردن gdrive_file_id
             last_task = GoogleDriveSyncQueue.objects.filter(
                 model_name=model_name,
                 object_id=instance.id,
+                field_name=field_name,
                 status='completed',
                 gdrive_file_id__isnull=False
             ).order_by('-created_at').first()
@@ -132,6 +176,8 @@ def enqueue_file_archive_delete(instance, field_name: str, file_obj):
                 company=company,
                 model_name=model_name,
                 object_id=instance.id,
+                field_name=field_name,
+                drive_account=last_task.drive_account or (config.account_email or ''),
                 source_file_path=last_task.source_file_path,
                 target_folder_path=f"بایگانی و اسناد حذف‌شده/{get_current_shamsi_year_str()}",
                 target_filename=last_task.target_filename,
@@ -140,7 +186,7 @@ def enqueue_file_archive_delete(instance, field_name: str, file_obj):
                 status='pending',
                 priority=10
             )
-            logger.info(f"[GDrive Queue] Enqueued archive_delete task #{archive_task.id} for {model_name}#{instance.id}")
+            logger.info(f"[GDrive Queue] Enqueued archive_delete task #{archive_task.id} for {model_name}#{instance.id} (field={field_name})")
         except Exception as exc:
             logger.error(f"[GDrive Queue] Error enqueuing archive_delete: {exc}")
 
@@ -286,6 +332,8 @@ try:
                         company=g_cfg.company,
                         model_name='DatabaseBackup',
                         object_id=None,
+                        field_name='backup',
+                        drive_account=g_cfg.account_email or '',
                         source_file_path=dest_path,
                         target_folder_path=f"پشتیبان‌های پایگاه داده/{shamsi_year}",
                         target_filename=filename,

@@ -3678,6 +3678,23 @@ class GoogleDriveSyncQueue(models.Model):
         null=True,
         verbose_name="هش امنیتی SHA-256 فایل"
     )
+    field_name = models.CharField(
+        max_length=64,
+        default='',
+        blank=True,
+        verbose_name="نام فیلد فایل در مدل"
+    )
+    drive_account = models.EmailField(
+        blank=True,
+        null=True,
+        verbose_name="ایمیل حساب گوگل مقصد"
+    )
+    error_code = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        verbose_name="کد استاندارد خطا"
+    )
     error_message = models.TextField(
         blank=True,
         null=True,
@@ -3707,6 +3724,7 @@ class GoogleDriveSyncQueue(models.Model):
             models.Index(fields=['model_name', 'object_id']),
             models.Index(fields=['status', 'priority', 'created_at']),
             models.Index(fields=['status', 'next_retry_at']),
+            models.Index(fields=['company', 'model_name', 'object_id', 'field_name', 'drive_account'], name='idx_gdrive_dedup_acct'),
         ]
         ordering = ['priority', 'created_at']
 
