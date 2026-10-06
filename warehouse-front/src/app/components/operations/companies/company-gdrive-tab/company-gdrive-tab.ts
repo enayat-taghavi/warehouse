@@ -215,7 +215,7 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
     const cid = this.selectedCompanyId();
     if (!cid) return;
 
-    this.http.get<{ auth_url: string }>(`${environment.apiUrl}/personnel/companies/${cid}/gdrive/auth-url/`).subscribe({
+    this.http.get<{ auth_url: string }>(`${environment.apiUrl}/personnel/companies/${cid}/gdrive/auth-url/?_t=${Date.now()}`).subscribe({
       next: (res) => {
         if (res.auth_url) {
           const width = 600;
