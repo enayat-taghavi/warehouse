@@ -573,8 +573,8 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
       if (window.BroadcastChannel) {
         this.gdriveBroadcast = new BroadcastChannel('gdrive-oauth');
         this.gdriveBroadcast.onmessage = (e) => {
-          if (e.data && e.data.type === 'gdrive_oauth_callback') {
-            if (e.data.status === 'connected') {
+          if (e.data && (e.data.type === 'gdrive_oauth_callback' || e.data.type === 'GDRIVE_OAUTH_SUCCESS')) {
+            if (e.data.status === 'connected' || e.data.type === 'GDRIVE_OAUTH_SUCCESS') {
               this.toast.show('success', 'اتصال گوگل‌درایو با موفقیت برقرار شد.');
               this.loadSystemGDrive();
             } else {
@@ -586,8 +586,8 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
     } catch {}
 
     this.messageListener = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'gdrive_oauth_callback') {
-        if (event.data.status === 'connected') {
+      if (event.data && (event.data.type === 'gdrive_oauth_callback' || event.data.type === 'GDRIVE_OAUTH_SUCCESS')) {
+        if (event.data.status === 'connected' || event.data.type === 'GDRIVE_OAUTH_SUCCESS') {
           this.toast.show('success', 'اتصال گوگل‌درایو برقرار شد.');
           this.loadSystemGDrive();
         } else {

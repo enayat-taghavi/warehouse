@@ -431,15 +431,17 @@ def execute_company_scan_all(scan_task) -> bool:
     current_account = config.account_email or ''
 
     def _enqueue_or_reopen(model_name: str, object_id, field_name: str, source_path: str, target_folder: str, target_fname: str) -> bool:
-        t = GoogleDriveSyncQueue.objects.filter(
+        qs = GoogleDriveSyncQueue.objects.filter(
             company=company,
             model_name=model_name,
             object_id=object_id,
         ).filter(
             Q(field_name=field_name) | Q(field_name='')
-        ).filter(
-            Q(drive_account=current_account) | Q(drive_account__isnull=True) | Q(drive_account='')
-        ).first()
+        )
+        if current_account:
+            t = qs.filter(Q(drive_account=current_account) | Q(drive_account__isnull=True) | Q(drive_account='')).first()
+        else:
+            t = qs.filter(Q(drive_account__isnull=True) | Q(drive_account='')).first()
 
         if not t:
             GoogleDriveSyncQueue.objects.create(

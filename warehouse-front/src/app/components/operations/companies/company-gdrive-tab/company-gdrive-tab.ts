@@ -248,7 +248,12 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
         return;
       }
 
-      if (event.data && event.data.type === 'GDRIVE_OAUTH_SUCCESS') {
+      const isSuccess = event.data && (
+        event.data.type === 'GDRIVE_OAUTH_SUCCESS' ||
+        (event.data.type === 'gdrive_oauth_callback' && event.data.status === 'connected')
+      );
+
+      if (isSuccess) {
         if (event.data.companyId && this.selectedCompanyId() && Number(event.data.companyId) !== this.selectedCompanyId()) {
           return;
         }
@@ -262,7 +267,11 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
       try {
         this.broadcastChannel = new BroadcastChannel('gdrive-oauth');
         this.broadcastChannel.onmessage = (event) => {
-          if (event.data && event.data.type === 'GDRIVE_OAUTH_SUCCESS') {
+          const isSuccess = event.data && (
+            event.data.type === 'GDRIVE_OAUTH_SUCCESS' ||
+            (event.data.type === 'gdrive_oauth_callback' && event.data.status === 'connected')
+          );
+          if (isSuccess) {
             if (event.data.companyId && this.selectedCompanyId() && Number(event.data.companyId) !== this.selectedCompanyId()) {
               return;
             }
