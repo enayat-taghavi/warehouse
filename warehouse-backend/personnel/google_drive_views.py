@@ -179,7 +179,10 @@ class CompanyGoogleDriveAuthUrlView(APIView):
 
         try:
             auth_url, state = generate_company_auth_url(company.id)
-            return Response({"auth_url": auth_url, "state": state}, status=status.HTTP_200_OK)
+            res = Response({"auth_url": auth_url, "state": state}, status=status.HTTP_200_OK)
+            res['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
+            res['Pragma'] = 'no-cache'
+            return res
         except Exception as exc:
             logger.error(f"Error generating OAuth URL for company {company.name}: {exc}")
             return Response(

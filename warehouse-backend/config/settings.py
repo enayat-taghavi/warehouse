@@ -323,6 +323,7 @@ AXES_LOCKOUT_PARAMETERS = [["username"], ["ip_address"]]
 # ==============================================================================
 # Google Drive Cloud Sync Settings
 # ==============================================================================
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '')
 GOOGLE_OAUTH_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET', '')
 GOOGLE_OAUTH_REDIRECT_URI = os.getenv(

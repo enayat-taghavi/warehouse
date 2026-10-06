@@ -20,8 +20,12 @@ import google_auth_httplib2
 
 logger = logging.getLogger(__name__)
 
+# Allow OAuth scope relaxation (Google automatically adds 'openid' when userinfo.email is requested)
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+
 # Scopes needed for managing files created by this application
 SCOPES = [
+    'openid',
     'https://www.googleapis.com/auth/drive.file',
     'https://www.googleapis.com/auth/userinfo.email',
 ]
@@ -91,6 +95,12 @@ def get_http_client() -> httplib2.Http:
     return httplib2.Http(timeout=60)
 
 
+def _get_pkce_verifier(company_id: int) -> str:
+    """Generate a stable, secure PKCE code_verifier for stateless OAuth flow (43-128 chars)"""
+    raw_secret = getattr(settings, 'SECRET_KEY', 'default-gdrive-pkce-key')
+    return hashlib.sha256(f"gdrive_pkce:{company_id}:{raw_secret}".encode('utf-8')).hexdigest() + "warehousepkce"
+
+
 def create_oauth_flow(company_id: int) -> Flow:
     """Create Google OAuth 2.0 Flow with company state signature"""
     client_id = getattr(settings, 'GOOGLE_OAUTH_CLIENT_ID', '')
@@ -115,6 +125,10 @@ def create_oauth_flow(company_id: int) -> Flow:
         scopes=SCOPES,
         redirect_uri=redirect_uri
     )
+    # Confidential Web applications with client_secret do not require PKCE.
+    # Disabling autogenerate_code_verifier ensures no code_challenge is sent in auth URL.
+    flow.autogenerate_code_verifier = False
+    flow.code_verifier = None
 
     proxy_url = getattr(settings, 'OUTBOUND_HTTP_PROXY', '') or os.getenv('OUTBOUND_HTTP_PROXY', '')
     if proxy_url and hasattr(flow, 'session') and flow.session:
