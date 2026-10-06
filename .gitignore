@@ -27,8 +27,7 @@ scratch/
 # Dependencies
 node_modules/
 
-# Chat archives: still tracked; listed only so ripgrep/Grep code searches skip them.
-# To search them, pass the path explicitly.
+# Local chat archives (untracked, local viewing only)
 chat_history_data.json
 chat_history_dashboard.html
 
