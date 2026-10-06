@@ -1,6 +1,10 @@
 import logging
+from typing import Optional
+from urllib.parse import urlparse
+from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils.html import escape
 from django.db.models import Count, Q
 from rest_framework import status, permissions
 from rest_framework.views import APIView
@@ -10,6 +14,7 @@ from .models import Company, CompanyGoogleDriveConfig, GoogleDriveSyncQueue
 from .google_drive_service import (
     generate_company_auth_url,
     verify_oauth_state,
+    verify_and_consume_oauth_state,
     exchange_code_and_store_credentials,
     sync_single_queue_item
 )
@@ -20,19 +25,18 @@ logger = logging.getLogger(__name__)
 
 def check_user_company_access(user, company, require_write: bool = False) -> bool:
     """
-    اعتبارسنجی دسترسی کاربر جاری به شرکت (چندمستأجری / Multi-Tenant RBAC)
+    اعتبارسنجی دسترسی کاربر جاری به شرکت (چندمستأجری / Multi-Tenant RBAC) - فاز ۱ (GD-05 / D3)
     """
     if not user or not user.is_authenticated:
         return False
-    if user.is_superuser or user.is_staff:
-        return True
-    from .models import UserCompanyAccess
-    qs = UserCompanyAccess.objects.filter(user=user, company=company)
-    if not qs.exists():
+    if not company or not getattr(company, 'is_active', True):
         return False
-    if require_write:
-        return qs.filter(access_level__in=['docs_write', 'workspace_full']).exists()
-    return True
+    if user.is_superuser:
+        return True
+    from .views import get_user_allowed_companies
+    required_level = 'workspace_full' if require_write else 'docs_read'
+    allowed_qs = get_user_allowed_companies(user, required_level=required_level)
+    return allowed_qs.filter(id=company.id).exists()
 
 
 def _format_time_field(val, fallback: str) -> str:
@@ -48,6 +52,124 @@ def _format_time_field(val, fallback: str) -> str:
         return val.strftime('%H:%M')
     except Exception:
         return str(val)[:5]
+
+
+def _get_target_origin(request) -> str:
+    """استخراج مبدأ امن هدایتگر (Target Origin) از تنظیمات یا درخواست جاری"""
+    redirect_uri = getattr(settings, 'GOOGLE_OAUTH_REDIRECT_URI', '')
+    if redirect_uri:
+        parsed = urlparse(redirect_uri)
+        if parsed.scheme and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}"
+    return request.build_absolute_uri('/')[:-1]
+
+
+def _render_oauth_response(
+    request,
+    is_success: bool,
+    mode: str,
+    company_id: Optional[int],
+    company_name: str,
+    account_email: str,
+    error_message: str = ''
+) -> HttpResponse:
+    """
+    رندر صفحه پاسخ بازگشتی OAuth گوگل با فرار کامل تمام ورودی‌ها و جلوگیری از XSS (GD-03)
+    پشتیبانی همزمان از پنجره پاپ‌آپ و BroadcastChannel و بازگشت به همان تب (Redirect)
+    """
+    target_origin = _get_target_origin(request)
+    safe_company_name = escape(company_name or 'شرکت')
+    safe_email = escape(account_email or '')
+    safe_error = escape(error_message or 'خطای نامشخص در اتصال به حساب گوگل')
+    safe_mode = escape(mode or 'popup')
+    cid_js = company_id if company_id else 'null'
+    redirect_url = (
+        f"/app/operations/companies/{company_id}?tab=gdrive&gdrive={'connected' if is_success else 'error'}"
+        if company_id else "/app/operations/companies?gdrive=error"
+    )
+
+    if is_success:
+        title = "اتصال به گوگل‌درایو برقرار شد"
+        badge_html = '<div style="background: #dcfce7; color: #15803d; padding: 6px 14px; border-radius: 9999px; font-weight: bold; font-size: 13px; display: inline-block; margin-bottom: 16px;">✓ اتصال موفق</div>'
+        msg_html = f'<p style="color: #334155; font-size: 14px; margin-bottom: 24px; line-height: 1.6;">شرکت <strong>{safe_company_name}</strong> با موفقیت به حساب <strong>{safe_email}</strong> متصل شد.</p>'
+    else:
+        title = "خطا در اتصال به گوگل‌درایو"
+        badge_html = '<div style="background: #fee2e2; color: #b91c1c; padding: 6px 14px; border-radius: 9999px; font-weight: bold; font-size: 13px; display: inline-block; margin-bottom: 16px;">✕ عدم موفقیت در اتصال</div>'
+        msg_html = f'<p style="color: #475569; font-size: 14px; margin-bottom: 24px; line-height: 1.6;">{safe_error}</p>'
+
+    html_content = f"""<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{escape(title)}</title>
+    <style>
+        body {{ font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 40px 16px; background: #f8fafc; color: #0f172a; margin: 0; }}
+        .card {{ background: white; max-width: 440px; margin: 0 auto; padding: 32px 24px; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }}
+        h2 {{ margin: 0 0 12px; font-size: 18px; font-weight: 800; color: #1e293b; }}
+        .btn {{ display: inline-block; text-decoration: none; background: #4f46e5; color: white; border: none; padding: 10px 24px; border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; }}
+        .btn:hover {{ background: #4338ca; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        {badge_html}
+        <h2>{escape(title)}</h2>
+        {msg_html}
+        <div id="action-container">
+            <button class="btn" onclick="handleClose();">بستن پنجره و بازگشت</button>
+        </div>
+    </div>
+    <script>
+        const isSuccess = {'true' if is_success else 'false'};
+        const mode = '{safe_mode}';
+        const companyId = {cid_js};
+        const targetOrigin = '{target_origin}';
+        const redirectUrl = '{redirect_url}';
+
+        function notifyOpener() {{
+            const payload = {{
+                type: isSuccess ? 'GDRIVE_OAUTH_SUCCESS' : 'GDRIVE_OAUTH_ERROR',
+                companyId: companyId
+            }};
+            try {{
+                const bc = new BroadcastChannel('gdrive-oauth');
+                bc.postMessage(payload);
+                bc.close();
+            }} catch (e) {{}}
+
+            if (window.opener) {{
+                try {{
+                    window.opener.postMessage(payload, targetOrigin);
+                }} catch (e) {{}}
+            }}
+        }}
+
+        function handleClose() {{
+            notifyOpener();
+            if (mode === 'redirect') {{
+                window.location.replace(redirectUrl);
+            }} else {{
+                window.close();
+                setTimeout(() => {{
+                    const container = document.getElementById('action-container');
+                    if (container) {{
+                        container.innerHTML = '<a href="' + redirectUrl + '" class="btn">بازگشت مستقیم به سامانه</a>';
+                    }}
+                }}, 1500);
+            }}
+        }}
+
+        notifyOpener();
+        if (mode === 'redirect') {{
+            setTimeout(() => {{ window.location.replace(redirectUrl); }}, 1200);
+        }} else {{
+            setTimeout(handleClose, 1800);
+        }}
+    </script>
+</body>
+</html>"""
+    return HttpResponse(html_content, status=200 if is_success else 400)
 
 
 class CompanyGoogleDriveConfigView(APIView):
@@ -102,6 +224,13 @@ class CompanyGoogleDriveConfigView(APIView):
             return Response({"error": "شما مجوز تغییر تنظیمات گوگل‌درایو این شرکت را ندارید."}, status=status.HTTP_403_FORBIDDEN)
 
         config, _ = CompanyGoogleDriveConfig.objects.get_or_create(company=company)
+
+        # تغییر sync_backups فقط برای سوپریوزر مجاز است (GD-01 / D1)
+        if 'sync_backups' in request.data and not request.user.is_superuser:
+            return Response(
+                {"error": "تغییر تنظیمات پشتیبان پایگاه داده تنها برای مدیر ارشد سامانه (سوپریوزر) مجاز است."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         updatable_fields = [
             'is_enabled',
@@ -168,7 +297,7 @@ class CompanyGoogleDriveConfigView(APIView):
 
 class CompanyGoogleDriveAuthUrlView(APIView):
     """
-    تولید لینک هدایت احراز هویت OAuth 2.0 برای اتصال اکانت گوگل‌درایو شرکت
+    تولید لینک هدایت احراز هویت OAuth 2.0 برای اتصال اکانت گوگل‌درایو شرکت (GD-02)
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -177,9 +306,13 @@ class CompanyGoogleDriveAuthUrlView(APIView):
         if not check_user_company_access(request.user, company, require_write=True):
             return Response({"error": "شما مجوز اتصال حساب گوگل‌درایو برای این شرکت را ندارید."}, status=status.HTTP_403_FORBIDDEN)
 
+        mode = request.query_params.get('mode', 'popup')
+        if mode not in ('popup', 'redirect'):
+            mode = 'popup'
+
         try:
-            auth_url, state = generate_company_auth_url(company.id)
-            res = Response({"auth_url": auth_url, "state": state}, status=status.HTTP_200_OK)
+            auth_url, state = generate_company_auth_url(company.id, user=request.user, mode=mode)
+            res = Response({"auth_url": auth_url, "state": state, "mode": mode}, status=status.HTTP_200_OK)
             res['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
             res['Pragma'] = 'no-cache'
             return res
@@ -193,7 +326,7 @@ class CompanyGoogleDriveAuthUrlView(APIView):
 
 class GoogleDriveOAuthCallbackView(APIView):
     """
-    رسیدگی به Callback بازگشتی از گوگل پس از تایید دسترسی توسط کاربر
+    رسیدگی امن به Callback بازگشتی از گوگل پس از احراز هویت (GD-02, GD-03)
     """
     permission_classes = [permissions.AllowAny]
 
@@ -202,72 +335,99 @@ class GoogleDriveOAuthCallbackView(APIView):
         state = request.GET.get('state')
         error = request.GET.get('error')
 
+        payload = verify_and_consume_oauth_state(state) if state else None
+        mode = (payload.get('m') if payload else 'popup') or 'popup'
+        company_id = payload.get('c') if payload else None
+
         if error:
-            logger.warning(f"Google OAuth error returned: {error}")
-            html_content = f"""
-            <!DOCTYPE html>
-            <html dir="rtl" lang="fa">
-            <head><meta charset="utf-8"><title>خطا در اتصال</title></head>
-            <body style="font-family: sans-serif; text-align: center; padding: 40px;">
-                <h3 style="color: #e11d48;">خطا در اتصال به حساب گوگل</h3>
-                <p>کاربر دسترسی را تایید نکرد یا خطایی رخ داد: {error}</p>
-                <button onclick="window.close();" style="padding: 10px 20px; border-radius: 8px; cursor: pointer;">بستن پنجره</button>
-            </body>
-            </html>
-            """
-            return HttpResponse(html_content, status=400)
+            logger.warning(f"[GDrive OAuth] Google returned error: {error}")
+            return _render_oauth_response(
+                request,
+                is_success=False,
+                mode=mode,
+                company_id=company_id,
+                company_name='',
+                account_email='',
+                error_message="اتصال توسط کاربر لغو شد یا دسترسی از طرف گوگل رد شد."
+            )
 
-        if not code or not state:
-            return HttpResponse("کد یا وضعیت احراز هویت ارسال نشده است.", status=400)
+        if not payload or not company_id:
+            logger.warning("[GDrive OAuth] Invalid, expired or reused state received.")
+            return _render_oauth_response(
+                request,
+                is_success=False,
+                mode='popup',
+                company_id=None,
+                company_name='',
+                account_email='',
+                error_message="شناسه امنیتی اتصال (State) نامعتبر است، منقضی شده، یا قبلاً استفاده شده است."
+            )
 
-        company_id = verify_oauth_state(state)
-        if not company_id:
-            return HttpResponse("شناسه وضعیت (State) نامعتبر است یا منقضی شده است.", status=400)
+        if not code:
+            return _render_oauth_response(
+                request,
+                is_success=False,
+                mode=mode,
+                company_id=company_id,
+                company_name='',
+                account_email='',
+                error_message="کد مجوز احراز هویت از سوی گوگل دریافت نشد."
+            )
+
+        company = Company.objects.filter(id=company_id).first()
+        if not company or not getattr(company, 'is_active', True):
+            return _render_oauth_response(
+                request,
+                is_success=False,
+                mode=mode,
+                company_id=company_id,
+                company_name='',
+                account_email='',
+                error_message="شرکت موردنظر یافت نشد یا در سیستم غیرفعال است."
+            )
+
+        # بررسی مجدد دسترسی کاربر ثبت‌شده در State به شرکت (D3 / GD-05)
+        user_id = payload.get('u')
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        origin_user = User.objects.filter(id=user_id).first() if user_id else None
+        if not origin_user or not check_user_company_access(origin_user, company, require_write=True):
+            logger.warning(f"[GDrive OAuth] User {user_id} lacks workspace_full access to company {company_id}")
+            return _render_oauth_response(
+                request,
+                is_success=False,
+                mode=mode,
+                company_id=company_id,
+                company_name=company.name,
+                account_email='',
+                error_message="کاربر درخواست‌کننده دیگر مجوز مدیریت و اتصال گوگل‌درایو این شرکت را ندارد."
+            )
 
         try:
             result = exchange_code_and_store_credentials(code, company_id)
             account_email = result.get('account_email', '')
-            company_name = result.get('company_name', '')
+            company_name = result.get('company_name', company.name)
 
-            html_content = f"""
-            <!DOCTYPE html>
-            <html dir="rtl" lang="fa">
-            <head>
-                <meta charset="utf-8">
-                <title>اتصال به گوگل‌درایو موفقیت‌آمیز بود</title>
-                <style>
-                    body {{ font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 50px; background: #f8fafc; color: #1e293b; }}
-                    .card {{ background: white; max-width: 450px; margin: 0 auto; padding: 30px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }}
-                    .badge {{ background: #dcfce7; color: #15803d; padding: 6px 12px; border-radius: 9999px; font-weight: bold; font-size: 14px; display: inline-block; margin-bottom: 16px; }}
-                    h2 {{ margin: 0 0 10px; font-size: 20px; }}
-                    p {{ color: #64748b; font-size: 14px; margin-bottom: 24px; }}
-                    button {{ background: #4f46e5; color: white; border: none; padding: 10px 24px; border-radius: 10px; font-weight: bold; cursor: pointer; }}
-                </style>
-            </head>
-            <body>
-                <div class="card">
-                    <div class="badge">✓ اتصال موفق</div>
-                    <h2>اتصال گوگل‌درایو برقرار شد</h2>
-                    <p>شرکت <strong>{company_name}</strong> با موفقیت به حساب <strong>{account_email}</strong> متصل شد.</p>
-                    <button onclick="finish();">تایید و بازگشت به سامانه</button>
-                </div>
-                <script>
-                    function finish() {{
-                        if (window.opener) {{
-                            window.opener.postMessage({{ type: 'GDRIVE_OAUTH_SUCCESS', companyId: {company_id} }}, '*');
-                        }}
-                        window.close();
-                    }}
-                    setTimeout(finish, 2000);
-                </script>
-            </body>
-            </html>
-            """
-            return HttpResponse(html_content, status=200)
-
+            return _render_oauth_response(
+                request,
+                is_success=True,
+                mode=mode,
+                company_id=company.id,
+                company_name=company_name,
+                account_email=account_email
+            )
         except Exception as exc:
-            logger.error(f"Error handling Google OAuth callback for company {company_id}: {exc}", exc_info=True)
-            return HttpResponse(f"خطا در پردازش توکن گوگل: {str(exc)}", status=500)
+            logger.error(f"[GDrive OAuth] Error exchanging code for company {company_id}: {exc}", exc_info=True)
+            return _render_oauth_response(
+                request,
+                is_success=False,
+                mode=mode,
+                company_id=company_id,
+                company_name=company.name,
+                account_email='',
+                error_message="خطا در برقراری ارتباط با سرویس گوگل و تبادل توکن احراز هویت."
+            )
+
 
 
 class CompanyGoogleDriveDisconnectView(APIView):

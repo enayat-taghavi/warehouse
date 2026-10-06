@@ -1,7 +1,10 @@
 import os
 import re
+import logging
 from typing import Optional, Tuple, Any
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 try:
     import jdatetime
@@ -113,11 +116,7 @@ class GoogleDrivePathResolver:
                 section_name = sanitize_filename(section.name)
 
             if not company:
-                # Fallback to active company or first company
-                from .models import Company
-                company = Company.objects.filter(is_active=True).first()
-
-            if not company:
+                logger.warning(f"[GDrive Path Resolver] Company not resolved for {model_name} (id={getattr(instance, 'id', None)}). Skipping.")
                 return None
 
             inv_date = getattr(instance, 'invoice_date_shamsi', None)
@@ -159,10 +158,7 @@ class GoogleDrivePathResolver:
                     company = project.company
 
             if not company:
-                from .models import Company
-                company = Company.objects.filter(is_active=True).first()
-
-            if not company:
+                logger.warning(f"[GDrive Path Resolver] Company not resolved for {model_name} (id={getattr(instance, 'id', None)}). Skipping.")
                 return None
 
             tx_shamsi = getattr(instance, 'transaction_date_shamsi', None)
@@ -185,10 +181,7 @@ class GoogleDrivePathResolver:
         elif model_name == 'PersonnelProfile':
             company = getattr(instance, 'company', None)
             if not company:
-                from .models import Company
-                company = Company.objects.filter(is_active=True).first()
-
-            if not company:
+                logger.warning(f"[GDrive Path Resolver] Company not resolved for {model_name} (id={getattr(instance, 'id', None)}). Skipping.")
                 return None
 
             full_name = sanitize_filename(f"{instance.first_name}_{instance.last_name}" if hasattr(instance, 'first_name') else f"پرسنل_{instance.id}")
@@ -201,10 +194,7 @@ class GoogleDrivePathResolver:
             personnel = getattr(instance, 'personnel', None)
             company = getattr(personnel, 'company', None) if personnel else None
             if not company:
-                from .models import Company
-                company = Company.objects.filter(is_active=True).first()
-
-            if not company:
+                logger.warning(f"[GDrive Path Resolver] Company not resolved for {model_name} (id={getattr(instance, 'id', None)}). Skipping.")
                 return None
 
             full_name = sanitize_filename(f"{personnel.first_name}_{personnel.last_name}" if personnel and hasattr(personnel, 'first_name') else f"پرسنل_{getattr(personnel, 'id', instance.id)}")
@@ -221,10 +211,7 @@ class GoogleDrivePathResolver:
             vehicle = getattr(instance, 'vehicle', None)
             company = getattr(vehicle, 'company', None) if vehicle else None
             if not company:
-                from .models import Company
-                company = Company.objects.filter(is_active=True).first()
-
-            if not company:
+                logger.warning(f"[GDrive Path Resolver] Company not resolved for {model_name} (id={getattr(instance, 'id', None)}). Skipping.")
                 return None
 
             plate = sanitize_filename(getattr(vehicle, 'plate_number', f"خودرو_{vehicle.id if vehicle else instance.id}"))
@@ -252,10 +239,7 @@ class GoogleDrivePathResolver:
                 company = getattr(warehouse, 'company', None)
 
             if not company:
-                from .models import Company
-                company = Company.objects.filter(is_active=True).first()
-
-            if not company:
+                logger.warning(f"[GDrive Path Resolver] Company not resolved for {model_name} (id={getattr(instance, 'id', None)}). Skipping.")
                 return None
 
             item_code = sanitize_filename(getattr(item, 'fa_unic_code', None) or getattr(item, 'code', None) or str(instance.id))
@@ -271,10 +255,7 @@ class GoogleDrivePathResolver:
             # Backups are company-specific or global
             company = getattr(instance, 'company', None)
             if not company:
-                from .models import Company
-                company = Company.objects.filter(is_active=True).first()
-
-            if not company:
+                logger.warning(f"[GDrive Path Resolver] Company not resolved for {model_name} (id={getattr(instance, 'id', None)}). Skipping.")
                 return None
 
             filename = getattr(instance, 'filename', orig_name or f"backup_{shamsi_date}.dump")

@@ -2,11 +2,13 @@ import os
 import json
 import base64
 import hashlib
+import secrets
 import logging
 from typing import Optional, Tuple, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.conf import settings
+from django.core import signing
 from django.utils import timezone
 from cryptography.fernet import Fernet
 
@@ -132,16 +134,38 @@ def create_oauth_flow(company_id: int) -> Flow:
     return flow
 
 
-def generate_company_auth_url(company_id: int) -> Tuple[str, str]:
+def generate_company_auth_url(company_id: int, user=None, mode: str = 'popup') -> Tuple[str, str]:
     """
-    Generate Google OAuth 2.0 authorization URL for a specific company
-    Returns (authorization_url, state)
+    Generate Google OAuth 2.0 authorization URL for a specific company (Phase 1 / GD-02).
+    State is cryptographically signed and backed by an atomic single-use database nonce.
     """
-    flow = create_oauth_flow(company_id)
-    # State format: company_id:signature
-    h = hashlib.sha256(f"{company_id}:{settings.SECRET_KEY}".encode('utf-8')).hexdigest()[:16]
-    state = f"{company_id}:{h}"
+    if mode not in ('popup', 'redirect'):
+        mode = 'popup'
 
+    nonce = secrets.token_urlsafe(32)
+    now = timezone.now()
+    expires_at = now + timedelta(seconds=600)
+
+    from settings_core.models import GoogleOAuthState
+    GoogleOAuthState.objects.create(
+        nonce=nonce,
+        user=user if (user and getattr(user, 'is_authenticated', False)) else None,
+        target='company',
+        company_id=company_id,
+        mode=mode,
+        expires_at=expires_at
+    )
+
+    payload = {
+        'c': company_id,
+        'u': getattr(user, 'id', None) if user else None,
+        'n': nonce,
+        'm': mode,
+        't': 'company'
+    }
+    state = signing.dumps(payload, salt='gdrive-oauth')
+
+    flow = create_oauth_flow(company_id)
     auth_url, _ = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true',
@@ -151,19 +175,58 @@ def generate_company_auth_url(company_id: int) -> Tuple[str, str]:
     return auth_url, state
 
 
-def verify_oauth_state(state: str) -> Optional[int]:
-    """Verify state token and return company_id if valid"""
+def verify_and_consume_oauth_state(state: str) -> Optional[Dict[str, Any]]:
+    """
+    Atomically verify and consume signed OAuth state (GD-02).
+    Returns payload dictionary {'c': company_id, 'u': user_id, 'n': nonce, 'm': mode, 't': target} if valid.
+    """
+    if not state:
+        return None
+
     try:
-        parts = state.split(':')
-        if len(parts) != 2:
-            return None
-        company_id = int(parts[0])
-        expected_sig = hashlib.sha256(f"{company_id}:{settings.SECRET_KEY}".encode('utf-8')).hexdigest()[:16]
-        if parts[1] == expected_sig:
-            return company_id
-    except Exception as exc:
-        logger.error(f"Invalid OAuth state: {exc}")
-    return None
+        payload = signing.loads(state, salt='gdrive-oauth', max_age=600)
+    except (signing.BadSignature, signing.SignatureExpired) as exc:
+        logger.warning(f"[GDrive OAuth] Invalid or expired signature: {exc}")
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    nonce = payload.get('n')
+    if not nonce:
+        return None
+
+    from settings_core.models import GoogleOAuthState
+    now = timezone.now()
+
+    # Atomic consumption: UPDATE ... SET used_at=now WHERE nonce=? AND used_at IS NULL AND expires_at > now
+    updated = GoogleOAuthState.objects.filter(
+        nonce=nonce,
+        used_at__isnull=True,
+        expires_at__gt=now
+    ).update(used_at=now)
+
+    if updated == 0:
+        logger.warning(f"[GDrive OAuth] Nonce {nonce[:8]}... was already used, expired, or not found.")
+        return None
+
+    # Invalidate other pending states for this company/target
+    target = payload.get('t', 'company')
+    company_id = payload.get('c')
+    if target == 'company' and company_id:
+        GoogleOAuthState.objects.filter(
+            target='company',
+            company_id=company_id,
+            used_at__isnull=True
+        ).exclude(nonce=nonce).update(used_at=now)
+
+    return payload
+
+
+def verify_oauth_state(state: str) -> Optional[int]:
+    """Compatibility helper returning company_id if valid"""
+    res = verify_and_consume_oauth_state(state)
+    return res.get('c') if res else None
 
 
 def exchange_code_and_store_credentials(code: str, company_id: int) -> Dict[str, Any]:

@@ -45,6 +45,12 @@ class GoogleDriveCoreTestCase(TestCase):
             name='شرکت آزمایشی آوا',
             is_active=True
         )
+        UserCompanyAccess.objects.create(
+            user=self.user,
+            company=self.company,
+            access_level='workspace_full',
+            is_default=True
+        )
 
     def test_token_encryption_and_decryption(self):
         """تست رمزنگاری و رمزگشایی امن توکن‌های گوگل"""
@@ -63,15 +69,18 @@ class GoogleDriveCoreTestCase(TestCase):
         self.assertIn("1042", clean)
 
     def test_oauth_state_generation_and_verification(self):
-        """تست ایجاد امضای امن وضعیت OAuth و اعتبارسنجی آن"""
+        """تست ایجاد امضای امن وضعیت OAuth و اعتبارسنجی یک‌بارمصرف آن (GD-02)"""
         with override_settings(GOOGLE_OAUTH_CLIENT_ID='test_client_id', GOOGLE_OAUTH_CLIENT_SECRET='test_secret'):
-            url, state = generate_company_auth_url(self.company.id)
+            url, state = generate_company_auth_url(self.company.id, user=self.user, mode='popup')
             self.assertIn("https://accounts.google.com/o/oauth2/auth", url)
             self.assertIn("test_client_id", url)
 
-            # بررسی اعتبار State
+            # بررسی اعتبار State و مصرف اتمیک
             verified_id = verify_oauth_state(state)
             self.assertEqual(verified_id, self.company.id)
+
+            # تلاش برای مصرف دوباره باید ناموفق باشد (یک‌بارمصرف)
+            self.assertIsNone(verify_oauth_state(state))
 
             # بررسی State دستکاری‌شده
             fake_state = f"{self.company.id}:invalid_sig"
@@ -538,6 +547,92 @@ class GoogleDriveCoreTestCase(TestCase):
         self.assertIn("سامانه انبارداری/انبار_تجهیزات_جنوب/تصاویر کالاها/UNIQ-7788_شیرفلکه_صنعتی_فولادی", folder)
         self.assertIn("عکس_کالا_کدUNIQ-7788", fname)
         self.assertTrue(fname.endswith('.webp'))
+
+    def test_sync_backups_restricted_to_superuser(self):
+        """تست محدودسازی تغییر تنظیمات پشتیبان پایگاه داده به سوپریوزر (GD-01)"""
+        url = f"/api/personnel/companies/{self.company.id}/gdrive/"
+
+        # کاربر غیر سوپریوزر (حتی با دسترسی workspace_full) باید ۴۰۳ بگیرد
+        res = self.client.patch(url, {'sync_backups': True}, format='json')
+        self.assertEqual(res.status_code, 403)
+        self.assertIn("مدیر ارشد سامانه", res.data['error'])
+
+        # سوپریوزر باید بتواند این گزینه را تغییر دهد
+        super_user = User.objects.create_superuser(username='test_superuser', password='Password123!')
+        self.client.force_authenticate(user=super_user)
+
+        res_super = self.client.patch(url, {'sync_backups': True}, format='json')
+        self.assertEqual(res_super.status_code, 200)
+
+        cfg = CompanyGoogleDriveConfig.objects.get(company=self.company)
+        self.assertTrue(cfg.sync_backups)
+
+    def test_oauth_state_concurrent_and_single_use(self):
+        """تست اعتبارسنجی همزمان و مصرف اتمیک state و ابطال stateهای باز قبلی (GD-02)"""
+        with override_settings(GOOGLE_OAUTH_CLIENT_ID='test_client_id', GOOGLE_OAUTH_CLIENT_SECRET='test_secret'):
+            _, state1 = generate_company_auth_url(self.company.id, user=self.user, mode='popup')
+            _, state2 = generate_company_auth_url(self.company.id, user=self.user, mode='popup')
+
+            # هر دو state ایجاد شده و معتبر هستند
+            # مصرف state2
+            verified2 = verify_oauth_state(state2)
+            self.assertEqual(verified2, self.company.id)
+
+            # حال state2 دیگر نباید قابل مصرف باشد
+            self.assertIsNone(verify_oauth_state(state2))
+
+            # و state1 نیز به دلیل اتصال موفق همان مقصد باید باطل شده باشد
+            self.assertIsNone(verify_oauth_state(state1))
+
+    def test_callback_xss_protection(self):
+        """تست پیشگیری از XSS بازتابی در کال‌بک OAuth گوگل (GD-03)"""
+        client = APIClient()
+        xss_payload = '<script>alert("pwned")</script>'
+        res = client.get('/api/accounts/gdrive/callback/', {'error': xss_payload})
+        self.assertEqual(res.status_code, 400)
+        content = res.content.decode('utf-8')
+        # نباید تگ خام اسکریپت رندر شده باشد
+        self.assertNotIn('<script>alert("pwned")</script>', content)
+        # بلکه باید پیام عمومی امن نمایش داده شود
+        self.assertIn("اتصال توسط کاربر لغو شد", content)
+
+    def test_callback_redirect_mode(self):
+        """تست بازگشت در حالت ریدایرکت برای پنجره‌های مسدودشده (GD-03 / D5)"""
+        client = APIClient()
+        with override_settings(GOOGLE_OAUTH_CLIENT_ID='test_client_id', GOOGLE_OAUTH_CLIENT_SECRET='test_secret'):
+            _, state = generate_company_auth_url(self.company.id, user=self.user, mode='redirect')
+            res = client.get('/api/accounts/gdrive/callback/', {'error': 'access_denied', 'state': state})
+            content = res.content.decode('utf-8')
+            self.assertIn(f"/app/operations/companies/{self.company.id}?tab=gdrive&gdrive=error", content)
+
+    def test_path_resolver_skips_unassociated_records(self):
+        """تست عدم ارسال رکوردهای فاقد شرکت به شرکت‌های دیگر (GD-04)"""
+        invoice = ExpenseInvoice(
+            invoice_number='INV-NO-COMP-999',
+            amount=500000
+        )
+        resolved = GoogleDrivePathResolver.resolve(invoice, field_name='file')
+        self.assertIsNone(resolved)
+
+    def test_staff_without_workspace_full_rejected(self):
+        """تست رد دسترسی کاربران staff بدون سطح workspace_full به تغییر تنظیمات (GD-05)"""
+        staff_user = User.objects.create_user(username='plain_staff', password='Password123!', is_staff=True)
+        # انتساب صرفاً با دسترسی docs_read
+        UserCompanyAccess.objects.create(
+            user=staff_user,
+            company=self.company,
+            access_level='docs_read'
+        )
+        self.client.force_authenticate(user=staff_user)
+
+        # تلاش برای دریافت auth-url باید ۴۰۳ بدهد
+        res_auth = self.client.get(f"/api/personnel/companies/{self.company.id}/gdrive/auth-url/")
+        self.assertEqual(res_auth.status_code, 403)
+
+        # تلاش برای تغییر تنظیمات باید ۴۰۳ بدهد
+        res_patch = self.client.patch(f"/api/personnel/companies/{self.company.id}/gdrive/", {'is_enabled': True}, format='json')
+        self.assertEqual(res_patch.status_code, 403)
+
 
 
 

@@ -3531,7 +3531,7 @@ class CompanyGoogleDriveConfig(models.Model):
         verbose_name="همگام‌سازی تصاویر کالاهای انبار"
     )
     sync_backups = models.BooleanField(
-        default=True,
+        default=False,
         verbose_name="همگام‌سازی پشتیبان‌های پایگاه داده"
     )
     SYNC_MODE_CHOICES = (
