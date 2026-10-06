@@ -1,9 +1,9 @@
 import time
 import signal
 import logging
-from datetime import time as dt_time, datetime
+from datetime import time as dt_time, datetime, timedelta
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from django.db import transaction, close_old_connections, models, connection
 from django.utils import timezone
 
 from settings_core.models import SystemGoogleDriveConfig, SystemDriveUploadTask
@@ -61,6 +61,16 @@ class Command(BaseCommand):
             help='فیلتر برای پردازش فقط یک شرکت خاص'
         )
 
+    def _log(self, msg, style_func=None):
+        try:
+            self.stdout.write(style_func(msg) if style_func else msg)
+        except (UnicodeEncodeError, Exception):
+            try:
+                safe = msg.encode('ascii', errors='replace').decode('ascii')
+                self.stdout.write(style_func(safe) if style_func else safe)
+            except Exception:
+                pass
+
     def handle(self, *args, **options):
         once = options['once']
         interval = options['interval']
@@ -69,17 +79,24 @@ class Command(BaseCommand):
         company_id = options.get('company_id')
 
         def _stop_signal(signum, frame):
-            self.stdout.write(self.style.WARNING("\nدرخواست توقف ورکر دریافت شد. در حال تکمیل و خروج..."))
+            self._log("\nدرخواست توقف ورکر دریافت شد. در حال تکمیل و خروج...", self.style.WARNING)
             self.keep_running = False
 
         signal.signal(signal.SIGINT, _stop_signal)
         signal.signal(signal.SIGTERM, _stop_signal)
 
-        self.stdout.write(self.style.SUCCESS(
-            f"=== شروع به کار ورکر مرکزی گوگل‌درایو (Once={once}, Interval={interval}s, Limit={limit}) ==="
-        ))
+        self._log(
+            f"=== شروع به کار ورکر مرکزی گوگل‌درایو (Once={once}, Interval={interval}s, Limit={limit}) ===",
+            self.style.SUCCESS
+        )
 
         while self.keep_running:
+            try:
+                if not connection.in_atomic_block:
+                    close_old_connections()
+            except Exception:
+                pass
+
             self._update_heartbeat()
             total_processed = 0
 
@@ -102,7 +119,7 @@ class Command(BaseCommand):
                 logger.error(f"[Worker] Error processing company tasks: {exc}", exc_info=True)
 
             if once:
-                self.stdout.write(self.style.SUCCESS(f"پردازش پایان یافت. مجموع تسک‌های انجام‌شده: {total_processed}"))
+                self._log(f"پردازش پایان یافت. مجموع تسک‌های انجام‌شده: {total_processed}", self.style.SUCCESS)
                 break
 
             if total_processed == 0:
@@ -126,26 +143,33 @@ class Command(BaseCommand):
         if not config or not config.refresh_token:
             return 0
 
+        # بازیابی تسک‌های رها شده در وضعیت processing بیش از ۳۰ دقیقه (Zombies)
+        cutoff = timezone.now() - timedelta(minutes=30)
+        try:
+            recovered = SystemDriveUploadTask.objects.filter(
+                status='processing',
+                updated_at__lt=cutoff
+            ).update(status='pending', updated_at=timezone.now())
+            if recovered > 0:
+                logger.warning(f"[Worker] Recovered {recovered} zombie system tasks back to pending.")
+        except Exception as z_exc:
+            logger.debug(f"[Worker] Zombie recovery error: {z_exc}")
+
         candidate_ids = []
         with transaction.atomic():
             tasks = list(
                 SystemDriveUploadTask.objects.select_for_update(skip_locked=True)
                 .filter(status='pending', retry_count__lt=5)
+                .filter(models.Q(next_retry_at__isnull=True) | models.Q(next_retry_at__lte=timezone.now()))
                 .order_by('priority', 'created_at')[:limit]
             )
             for t in tasks:
                 candidate_ids.append(t.id)
 
-            if candidate_ids:
-                SystemDriveUploadTask.objects.filter(id__in=candidate_ids).update(
-                    status='processing',
-                    updated_at=timezone.now()
-                )
-
         if not candidate_ids:
             return 0
 
-        self.stdout.write(f"[System GDrive] در حال ارسال {len(candidate_ids)} تسک پشتیبان سامانه...")
+        self._log(f"[System GDrive] در حال ارسال {len(candidate_ids)} تسک پشتیبان سامانه...")
         success = 0
         for tid in candidate_ids:
             if not self.keep_running:
@@ -153,9 +177,9 @@ class Command(BaseCommand):
             ok = sync_single_system_task(tid)
             if ok:
                 success += 1
-                self.stdout.write(self.style.SUCCESS(f"  [✓] پشتیبان سامانه #{tid} با موفقیت ارسال شد."))
+                self._log(f"  [✓] پشتیبان سامانه #{tid} با موفقیت ارسال شد.", self.style.SUCCESS)
             else:
-                self.stdout.write(self.style.WARNING(f"  [!] ارسال پشتیبان سامانه #{tid} ناموفق بود."))
+                self._log(f"  [!] ارسال پشتیبان سامانه #{tid} ناموفق بود.", self.style.WARNING)
 
         return len(candidate_ids)
 

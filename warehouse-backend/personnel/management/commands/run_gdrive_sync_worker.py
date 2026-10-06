@@ -1,9 +1,9 @@
 import time
 import signal
 import logging
-from datetime import time as dt_time
+from datetime import time as dt_time, timedelta
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from django.db import transaction, close_old_connections, models, connection
 from django.utils import timezone
 
 from personnel.models import GoogleDriveSyncQueue, CompanyGoogleDriveConfig
@@ -47,6 +47,9 @@ def is_company_eligible_for_sync(config: CompanyGoogleDriveConfig, ignore_schedu
 
     if ignore_schedule:
         return True, "ارسال اجباری / دستور مستقیم مدیر (Ignore Schedule)"
+
+    if config.force_sync_until and config.force_sync_until > timezone.now():
+        return True, "همگام‌سازی اجباری موقت فعال است (Force Sync Window)"
 
     if config.sync_mode == 'immediate':
         return True, "حالت همگام‌سازی آنی (Immediate)"
@@ -103,6 +106,16 @@ class Command(BaseCommand):
             help='نادیده‌گرفتن بازه زمانی ساعات خلوتی و ارسال فوری تسک‌ها'
         )
 
+    def _log(self, msg, style_func=None):
+        try:
+            self.stdout.write(style_func(msg) if style_func else msg)
+        except (UnicodeEncodeError, Exception):
+            try:
+                safe = msg.encode('ascii', errors='replace').decode('ascii')
+                self.stdout.write(style_func(safe) if style_func else safe)
+            except Exception:
+                pass
+
     def handle(self, *args, **options):
         once = options['once']
         interval = options['interval']
@@ -112,20 +125,33 @@ class Command(BaseCommand):
 
         # ثبت مدیریت سیگنال‌های توقف نرم
         def _stop_signal(signum, frame):
-            self.stdout.write(self.style.WARNING("\nدرخواست توقف ورکر دریافت شد. در حال اتمام وظایف جاری..."))
+            self._log("\nدرخواست توقف ورکر دریافت شد. در حال اتمام وظایف جاری...", self.style.WARNING)
             self.keep_running = False
 
         signal.signal(signal.SIGINT, _stop_signal)
         signal.signal(signal.SIGTERM, _stop_signal)
 
-        self.stdout.write(self.style.SUCCESS(
-            f"=== شروع به کار ورکر گوگل‌درایو (Once={once}, Interval={interval}s, Limit={limit}, IgnoreSchedule={ignore_schedule}) ==="
-        ))
+        self._log(
+            f"=== شروع به کار ورکر گوگل‌درایو شرکت‌ها (Once={once}, Interval={interval}s, Limit={limit}, IgnoreSchedule={ignore_schedule}) ===",
+            self.style.SUCCESS
+        )
 
         while self.keep_running:
-            processed = self.process_batch(limit=limit, company_id=company_id, ignore_schedule=ignore_schedule)
+            try:
+                if not connection.in_atomic_block:
+                    close_old_connections()
+            except Exception:
+                pass
+
+            processed = 0
+            try:
+                processed = self.process_batch(limit=limit, company_id=company_id, ignore_schedule=ignore_schedule)
+            except Exception as loop_exc:
+                logger.error(f"[Company GDrive Worker] Error during process_batch: {loop_exc}", exc_info=True)
+                self._log(f"[Company GDrive Worker] خطا در پردازش دسته: {loop_exc}", self.style.ERROR)
+
             if once:
-                self.stdout.write(self.style.SUCCESS(f"پردازش صف با موفقیت پایان یافت. مجموع تسک‌های پردازش‌شده: {processed}"))
+                self._log(f"پردازش صف با موفقیت پایان یافت. مجموع تسک‌های پردازش‌شده: {processed}", self.style.SUCCESS)
                 break
 
             if processed == 0:
@@ -138,6 +164,18 @@ class Command(BaseCommand):
         """
         برداشتن امن تسک‌های صف با قفل ردیف و پردازش آن‌ها با رعایت سیاست‌های زمان‌بندی و تاخیر چانک
         """
+        # ۰. بازیابی تسک‌های رها شده در وضعیت processing بیش از ۳۰ دقیقه (Zombies - GD-07)
+        cutoff = timezone.now() - timedelta(minutes=30)
+        try:
+            recovered = GoogleDriveSyncQueue.objects.filter(
+                status='processing',
+                updated_at__lt=cutoff
+            ).update(status='pending', updated_at=timezone.now())
+            if recovered > 0:
+                logger.warning(f"[Company GDrive Worker] Recovered {recovered} zombie tasks back to pending.")
+        except Exception as z_exc:
+            logger.debug(f"[Company GDrive Worker] Zombie recovery error: {z_exc}")
+
         # ۱. تعیین شرکت‌های واجد شرایط در این لحظه
         config_qs = CompanyGoogleDriveConfig.objects.filter(
             is_enabled=True,
@@ -156,7 +194,7 @@ class Command(BaseCommand):
                 eligible_company_ids.append(cfg.company_id)
                 company_delay_map[cfg.company_id] = cfg.chunk_delay_seconds if cfg.chunk_delay_seconds is not None else 1
             else:
-                logger.debug(f"[GDrive Worker] Company #{cfg.company_id} ({cfg.company.name}) skipped: {reason}")
+                logger.debug(f"[GDDrive Worker] Company #{cfg.company_id} ({cfg.company.name}) skipped: {reason}")
 
         if not eligible_company_ids:
             return 0
@@ -164,29 +202,26 @@ class Command(BaseCommand):
         candidate_ids = []
         task_company_map = {}
 
-        # ۲. انتخاب تسک‌های در انتظار ارسال با رد شدن از رکوردهای در حال پردازش
+        # ۲. انتخاب تسک‌های در انتظار ارسال با ترتیب اولویت و تاریخ
+        # نکته: وضعیت به processing در خود sync_single_queue_item به طور اتمیک تغییر می‌یابد (GD-06)
         with transaction.atomic():
             qs = GoogleDriveSyncQueue.objects.select_for_update(skip_locked=True).filter(
                 company_id__in=eligible_company_ids,
                 status='pending',
                 retry_count__lt=5
-            ).order_by('created_at')
+            ).filter(
+                models.Q(next_retry_at__isnull=True) | models.Q(next_retry_at__lte=timezone.now())
+            ).order_by('priority', 'created_at')
 
             candidate_tasks = list(qs[:limit])
             for t in candidate_tasks:
                 candidate_ids.append(t.id)
                 task_company_map[t.id] = t.company_id
 
-            if candidate_ids:
-                GoogleDriveSyncQueue.objects.filter(id__in=candidate_ids).update(
-                    status='processing',
-                    updated_at=timezone.now()
-                )
-
         if not candidate_ids:
             return 0
 
-        self.stdout.write(f"در حال پردازش {len(candidate_ids)} تسک همگام‌سازی...")
+        self._log(f"در حال پردازش {len(candidate_ids)} تسک همگام‌سازی...")
         success_count = 0
 
         for task_id in candidate_ids:
@@ -197,11 +232,11 @@ class Command(BaseCommand):
                 ok = sync_single_queue_item(task_id)
                 if ok:
                     success_count += 1
-                    self.stdout.write(self.style.SUCCESS(f"  [✓] تسک #{task_id} با موفقیت همگام شد."))
+                    self._log(f"  [✓] تسک #{task_id} با موفقیت همگام شد.", self.style.SUCCESS)
                 else:
-                    self.stdout.write(self.style.WARNING(f"  [!] تسک #{task_id} ناموفق بود."))
+                    self._log(f"  [!] تسک #{task_id} ناموفق بود.", self.style.WARNING)
             except Exception as exc:
-                self.stdout.write(self.style.ERROR(f"  [✗] خطا در اجرای تسک #{task_id}: {exc}"))
+                self._log(f"  [✗] خطا در اجرای تسک #{task_id}: {exc}", self.style.ERROR)
 
             # اعمال مکث تاخیر بین چانک‌ها جهت جلوگیری از اشغال ۱۰۰ درصدی پهنای باند آپلود
             cid = task_company_map.get(task_id)
@@ -210,3 +245,4 @@ class Command(BaseCommand):
                 time.sleep(delay)
 
         return len(candidate_ids)
+

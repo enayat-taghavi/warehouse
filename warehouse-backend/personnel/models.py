@@ -3567,6 +3567,22 @@ class CompanyGoogleDriveConfig(models.Model):
         null=True,
         verbose_name="آخرین خطای ارتباط با گوگل‌درایو"
     )
+    AUTH_STATUS_CHOICES = (
+        ('ok', 'معتبر و متصل'),
+        ('needs_reauth', 'نیازمند احراز مجدد'),
+        ('unlinked', 'متصل نشده'),
+    )
+    auth_status = models.CharField(
+        max_length=30,
+        choices=AUTH_STATUS_CHOICES,
+        default='ok',
+        verbose_name="وضعیت احراز هویت"
+    )
+    force_sync_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="مجوز ارسال فوری خارج از ساعات خلوتی تا زمان مشخص"
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ایجاد")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ بروزرسانی")
 
@@ -3592,6 +3608,7 @@ class GoogleDriveSyncQueue(models.Model):
     ACTION_CHOICES = (
         ('upload', 'آپلود / به‌روزرسانی فایل'),
         ('archive_delete', 'انتقال به پوشه بایگانی اسناد حذف‌شده'),
+        ('scan_all', 'پیمایش و صف‌بندی اسناد قدیمی'),
     )
 
     company = models.ForeignKey(
@@ -3634,9 +3651,20 @@ class GoogleDriveSyncQueue(models.Model):
         db_index=True,
         verbose_name="وضعیت همگام‌سازی"
     )
+    priority = models.IntegerField(
+        default=10,
+        db_index=True,
+        verbose_name="اولویت پردازش (کمتر=مهم‌تر)"
+    )
     retry_count = models.IntegerField(
         default=0,
         verbose_name="تعداد دفعات تلاش مجدد"
+    )
+    next_retry_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="زمان تلاش مجدد بعدی"
     )
     gdrive_file_id = models.CharField(
         max_length=120,
@@ -3677,8 +3705,10 @@ class GoogleDriveSyncQueue(models.Model):
             models.Index(fields=['company', 'status']),
             models.Index(fields=['status', 'created_at']),
             models.Index(fields=['model_name', 'object_id']),
+            models.Index(fields=['status', 'priority', 'created_at']),
+            models.Index(fields=['status', 'next_retry_at']),
         ]
-        ordering = ['created_at']
+        ordering = ['priority', 'created_at']
 
     def __str__(self):
         return f"[{self.company.code}] {self.target_filename} ({self.status})"

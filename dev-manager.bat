@@ -148,7 +148,7 @@ goto MENU
 :DO_GDRIVE_WORKER
 call :CHECK_VENV
 echo Launching Google Drive Sync Worker in a new tab...
-wt -w 0 new-tab -d "%BACKEND_DIR%" --title "GDrive Sync Worker" cmd /k ".\venv\Scripts\python.exe manage.py run_gdrive_sync_worker --interval 10"
+wt -w 0 new-tab -d "%BACKEND_DIR%" --title "GDrive Sync Worker" cmd /k "for /l %%i in (1,0,2) do (.\venv\Scripts\python.exe manage.py run_gdrive_sync_worker --interval 5 & timeout /t 10 /nobreak >nul)"
 goto MENU
 
 :DO_EXIT

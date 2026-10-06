@@ -105,7 +105,9 @@ Plan: warehouse counting and accounting as two independently installable modules
   2. Frontend build in `warehouse-front`: `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js`. The flag keeps files that are being served from being deleted mid-build.
   3. Backend restart: close the daphne process on port 8000 and its venv launcher with `taskkill`. Then relaunch it in a Windows Terminal tab so it doesn't depend on the Claude session:
      `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "E:\warehouse project\warehouse-backend" --title "Backend Daphne" cmd /k ".\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application"`
-  4. Verify: `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/` must return 200.
+  4. GDrive sync worker (D9): launch in an auto-restarting tab (to restart during release, simply `taskkill` the python worker process):
+     `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "E:\warehouse project\warehouse-backend" --title "GDrive Sync Worker" cmd /k "for /l %i in (1,0,2) do (.\venv\Scripts\python.exe manage.py run_gdrive_sync_worker --interval 5 & timeout /t 10 /nobreak >nul)"`
+  5. Verify: `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/` must return 200, and worker heartbeat is fresh.
 - Claude Code automation:
   - **Hooks** in `.claude/settings.json` run `.claude/hooks/guard.py`; Antigravity calls the same script from `.agents/hooks.json`.
     - The two tools take different output formats: Claude Code accepts only `hookSpecificOutput`, and at most one JSON per run.

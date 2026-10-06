@@ -329,9 +329,15 @@ class GoogleDriveCoreTestCase(TestCase):
         )
 
         res = self.client.post(f"/api/personnel/companies/{self.company.id}/gdrive/sync-all/")
-        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.status_code, 202)
         self.assertTrue(res.data['success'])
-        self.assertGreaterEqual(res.data['enqueued_count'], 1)
+        self.assertIn('task_id', res.data)
+
+        # اجرای تسک پیمایش توسط ورکر / سرویس (GD-10)
+        from personnel.google_drive_service import execute_company_scan_all
+        scan_task = GoogleDriveSyncQueue.objects.get(id=res.data['task_id'])
+        ok = execute_company_scan_all(scan_task)
+        self.assertTrue(ok)
 
         # بررسی بازنشانی وضعیت تسک خطادار به pending
         failed_task.refresh_from_db()
@@ -448,9 +454,12 @@ class GoogleDriveCoreTestCase(TestCase):
         )
 
         res = self.client.post(f"/api/personnel/companies/{self.company.id}/gdrive/trigger-sync/")
-        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.status_code, 202)
         self.assertTrue(res.data['success'])
         self.assertEqual(res.data['pending_count'], 1)
+
+        cfg = CompanyGoogleDriveConfig.objects.get(company=self.company)
+        self.assertIsNotNone(cfg.force_sync_until)
 
     def test_company_board_member_resolution_and_full_name(self):
         """تست ویژگی full_name در اعضای هیئت‌مدیره و تفکیک پوشه‌ها و نام‌گذاری مدارک آن‌ها"""
@@ -633,6 +642,111 @@ class GoogleDriveCoreTestCase(TestCase):
         res_patch = self.client.patch(f"/api/personnel/companies/{self.company.id}/gdrive/", {'is_enabled': True}, format='json')
         self.assertEqual(res_patch.status_code, 403)
 
+    def test_retry_endpoint_rejects_non_failed_tasks(self):
+        """تست رد درخواست تلاش مجدد برای تسک‌های غیر failed و پذیرش ۲02 برای تسک failed (GD-09)"""
+        pending_task = GoogleDriveSyncQueue.objects.create(
+            company=self.company,
+            model_name='CompanyDocument',
+            object_id=1,
+            source_file_path='test.pdf',
+            target_folder_path='f',
+            target_filename='test.pdf',
+            status='pending'
+        )
+        url_pending = f"/api/personnel/companies/{self.company.id}/gdrive/tasks/{pending_task.id}/retry/"
+        res_bad = self.client.post(url_pending)
+        self.assertEqual(res_bad.status_code, 400)
+        self.assertIn("failed", res_bad.data['error'])
 
+        # حال تغییر وضعیت به failed و ارسال درخواست
+        pending_task.status = 'failed'
+        pending_task.error_message = 'Network Error'
+        pending_task.save()
 
+        res_ok = self.client.post(url_pending)
+        self.assertEqual(res_ok.status_code, 202)
+        self.assertTrue(res_ok.data['success'])
 
+        pending_task.refresh_from_db()
+        self.assertEqual(pending_task.status, 'pending')
+        self.assertIsNone(pending_task.next_retry_at)
+
+    def test_disconnect_endpoint_revokes_token_and_sets_unlinked(self):
+        """تست ابطال توکن گوگل در هنگام قطع اتصال و تغییر وضعیت به unlinked (GD-11)"""
+        from unittest.mock import patch
+        cfg, _ = CompanyGoogleDriveConfig.objects.get_or_create(company=self.company)
+        cfg.refresh_token = encrypt_secret("test_refresh_token_to_revoke")
+        cfg.account_email = "test@gmail.com"
+        cfg.auth_status = "ok"
+        cfg.save()
+
+        with patch('settings_core.google_drive_client.revoke_google_token') as mock_revoke:
+            mock_revoke.return_value = True
+            res = self.client.post(f"/api/personnel/companies/{self.company.id}/gdrive/disconnect/")
+            self.assertEqual(res.status_code, 200)
+            mock_revoke.assert_called_once_with("test_refresh_token_to_revoke")
+
+        cfg.refresh_from_db()
+        self.assertIsNone(cfg.refresh_token)
+        self.assertIsNone(cfg.account_email)
+        self.assertEqual(cfg.auth_status, 'unlinked')
+
+    def test_classify_gdrive_error(self):
+        """تست دسته‌بندی پیشرفته خطاهای گوگل‌درایو بر اساس کد و reason (GD-08)"""
+        from googleapiclient.errors import HttpError
+        import httplib2
+        from settings_core.google_drive_client import classify_gdrive_error
+
+        # 1. 403 Rate Limit Exceeded -> Transient backoff
+        resp_403_rate = httplib2.Response({'status': 403})
+        content_403_rate = b'{"error": {"errors": [{"reason": "rateLimitExceeded"}], "code": 403, "message": "User Rate Limit Exceeded"}}'
+        err_rate = HttpError(resp_403_rate, content_403_rate)
+        info_rate = classify_gdrive_error(err_rate)
+        self.assertEqual(info_rate['category'], 'transient')
+        self.assertEqual(info_rate['reason'], 'rateLimitExceeded')
+
+        # 2. 403 Storage Quota Exceeded -> Permanent Failed
+        content_403_quota = b'{"error": {"errors": [{"reason": "storageQuotaExceeded"}], "code": 403, "message": "Storage Quota Exceeded"}}'
+        err_quota = HttpError(resp_403_rate, content_403_quota)
+        info_quota = classify_gdrive_error(err_quota)
+        self.assertEqual(info_quota['category'], 'permanent')
+        self.assertEqual(info_quota['reason'], 'storageQuotaExceeded')
+
+        # 3. 401 Invalid Credentials -> needs_reauth
+        resp_401 = httplib2.Response({'status': 401})
+        err_401 = HttpError(resp_401, b'{"error": "invalid_grant"}')
+        info_auth = classify_gdrive_error(err_401)
+        self.assertEqual(info_auth['category'], 'needs_reauth')
+
+    def test_worker_queue_priority_and_ordering(self):
+        """تست اولویت صف ورکر: پشتیبان دیتابیس (۱) > فایل جاری (۱۰) > اسکن سراسری (۵۰) (GD-10)"""
+        # تسک پیمایش سراسری ابتدا ساخته می‌شود
+        task_scan = GoogleDriveSyncQueue.objects.create(
+            company=self.company,
+            model_name='Company',
+            object_id=self.company.id,
+            action='scan_all',
+            status='pending',
+            priority=50
+        )
+        # سپس تسک آپلود جاری
+        task_normal = GoogleDriveSyncQueue.objects.create(
+            company=self.company,
+            model_name='CompanyDocument',
+            object_id=10,
+            status='pending',
+            priority=10
+        )
+        # سپس تسک پشتیبان دیتابیس
+        task_backup = GoogleDriveSyncQueue.objects.create(
+            company=self.company,
+            model_name='DatabaseBackup',
+            object_id=None,
+            status='pending',
+            priority=1
+        )
+
+        ordered_tasks = list(GoogleDriveSyncQueue.objects.filter(company=self.company).order_by('priority', 'created_at'))
+        self.assertEqual(ordered_tasks[0].id, task_backup.id)
+        self.assertEqual(ordered_tasks[1].id, task_normal.id)
+        self.assertEqual(ordered_tasks[2].id, task_scan.id)

@@ -17,8 +17,16 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.errors import HttpError
+try:
+    from google.auth.exceptions import RefreshError
+except ImportError:
+    class RefreshError(Exception):
+        pass
 import httplib2
 import google_auth_httplib2
+import urllib.request
+import urllib.parse
+import socket
 
 logger = logging.getLogger(__name__)
 
@@ -349,3 +357,156 @@ def upload_file_resumable(drive_service, local_path: str, parent_folder_id: str,
             logger.debug(f"[GDrive Client] Uploading '{filename}': {int(status.progress() * 100)}%")
 
     return response
+
+
+def revoke_google_token(token: str) -> bool:
+    """
+    Revoke a token with Google OAuth server (GD-11):
+    POST https://oauth2.googleapis.com/revoke?token={token}
+    """
+    if not token:
+        return True
+    try:
+        data = urllib.parse.urlencode({'token': token}).encode('utf-8')
+        req = urllib.request.Request(
+            'https://oauth2.googleapis.com/revoke',
+            data=data,
+            headers={'Content-Type': 'application/x-www-form-urlencoded'}
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status == 200
+    except Exception as exc:
+        logger.warning(f"[GDrive Client] Token revocation request failed: {exc}")
+        return False
+
+
+def classify_gdrive_error(exc: Exception) -> Dict[str, Any]:
+    """
+    Categorize errors based on HTTP status code and reason in HttpError body (GD-07, GD-08, GD-11).
+    Returns dict:
+      {
+        'category': 'transient' | 'needs_reauth' | 'permanent',
+        'reason': str,
+        'user_message': str,
+        'status_code': Optional[int]
+      }
+    """
+    # 1. Check for token refresh failure / invalid grant
+    str_exc = str(exc)
+    str_lower = str_exc.lower()
+
+    if isinstance(exc, RefreshError) or 'invalid_grant' in str_lower:
+        return {
+            'category': 'needs_reauth',
+            'reason': 'invalid_grant',
+            'user_message': 'حساب گوگل متصل نیازمند ورود و احراز مجدد است (توکن نامعتبر یا منقضی شده).',
+            'status_code': 401
+        }
+
+    # 2. Check for HttpError from googleapiclient
+    if isinstance(exc, HttpError):
+        status_code = getattr(getattr(exc, 'resp', None), 'status', None)
+        reasons = []
+        if hasattr(exc, 'content') and exc.content:
+            try:
+                data = json.loads(exc.content.decode('utf-8'))
+                errors = data.get('error', {}).get('errors', [])
+                for err in errors:
+                    if 'reason' in err:
+                        reasons.append(err['reason'])
+            except Exception:
+                pass
+
+        if status_code == 401 or 'invalid_grant' in reasons:
+            return {
+                'category': 'needs_reauth',
+                'reason': 'invalid_grant',
+                'user_message': 'حساب گوگل متصل نیازمند ورود و احراز مجدد است (کد ۴۰۱).',
+                'status_code': 401
+            }
+
+        # 403 checks: rate limit vs storage quota vs permissions
+        if status_code == 403:
+            if any(r in ('rateLimitExceeded', 'userRateLimitExceeded', 'dailyLimitExceeded') for r in reasons) or 'ratelimit' in str_lower:
+                return {
+                    'category': 'transient',
+                    'reason': 'rateLimitExceeded',
+                    'user_message': 'محدودیت موقت نرخ درخواست‌های گوگل (Rate Limit)؛ ارسال مجدد با تاخیر افزایشی انجام می‌شود.',
+                    'status_code': 403
+                }
+            if any(r in ('storageQuotaExceeded', 'quotaExceeded') for r in reasons) or 'storagequota' in str_lower:
+                return {
+                    'category': 'permanent',
+                    'reason': 'storageQuotaExceeded',
+                    'user_message': 'فضای ابری درایو پر شده است (عدم کفایت سهمیه دیسک حساب گوگل).',
+                    'status_code': 403
+                }
+            if any(r in ('insufficientPermissions', 'insufficientFilePermissions') for r in reasons) or 'insufficient' in str_lower:
+                return {
+                    'category': 'permanent',
+                    'reason': 'insufficientPermissions',
+                    'user_message': 'عدم دسترسی کافی برای ایجاد یا ویرایش فایل در درایو مقصد.',
+                    'status_code': 403
+                }
+            # Generic 403
+            return {
+                'category': 'permanent',
+                'reason': reasons[0] if reasons else 'forbidden_403',
+                'user_message': f'دسترسی غیرمجاز یا محدود شده به گوگل‌درایو: {str_exc}',
+                'status_code': 403
+            }
+
+        # Transient HTTP status codes
+        if status_code in (408, 429, 500, 502, 503, 504):
+            return {
+                'category': 'transient',
+                'reason': f'http_{status_code}',
+                'user_message': f'خطای موقت سرور گوگل (کد {status_code})؛ ارسال مجدد زمان‌بندی شد.',
+                'status_code': status_code
+            }
+
+        # Resumable session 404
+        if status_code == 404:
+            return {
+                'category': 'transient',
+                'reason': 'session_404',
+                'user_message': 'نشست ارسال تکه‌ای منقضی گردید؛ ارسال از ابتدا آغاز می‌شود.',
+                'status_code': 404
+            }
+
+        # Other 4xx permanent errors
+        if status_code and 400 <= status_code < 500:
+            return {
+                'category': 'permanent',
+                'reason': f'http_{status_code}',
+                'user_message': f'خطای درخواست نامعتبر (کد {status_code}): {str_exc}',
+                'status_code': status_code
+            }
+
+    # 3. File not found
+    if isinstance(exc, FileNotFoundError) or 'فایل مبدأ' in str_exc or 'not found' in str_lower:
+        return {
+            'category': 'permanent',
+            'reason': 'file_not_found',
+            'user_message': f'فایل مبدأ در سرور یافت نشد: {str_exc}',
+            'status_code': None
+        }
+
+    # 4. Network and socket exceptions
+    if isinstance(exc, (socket.error, ConnectionError, TimeoutError, httplib2.ServerNotFoundError)) or \
+       any(k in str_lower for k in ('connection', 'timeout', 'timed out', 'network', 'reset by peer')):
+        return {
+            'category': 'transient',
+            'reason': 'network_error',
+            'user_message': f'خطای موقت در ارتباط شبکه با گوگل: {str_exc}',
+            'status_code': None
+        }
+
+    # 5. Fallback for other errors
+    return {
+        'category': 'permanent',
+        'reason': 'unknown_error',
+        'user_message': f'خطا در پردازش فایل: {str_exc}',
+        'status_code': None
+    }
+

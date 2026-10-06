@@ -129,14 +129,8 @@ def disconnect_system_google_drive() -> bool:
     config = SystemGoogleDriveConfig.get_solo()
     raw_token = decrypt_secret(config.refresh_token)
     if raw_token:
-        try:
-            import urllib.request
-            import urllib.parse
-            data = urllib.parse.urlencode({'token': raw_token}).encode('utf-8')
-            req = urllib.request.Request('https://oauth2.googleapis.com/revoke', data=data)
-            urllib.request.urlopen(req, timeout=10)
-        except Exception as exc:
-            logger.warning(f"[System GDrive] Could not revoke token with Google: {exc}")
+        from .google_drive_client import revoke_google_token
+        revoke_google_token(raw_token)
 
     config.refresh_token = None
     config.account_email = None
@@ -156,14 +150,26 @@ def get_system_drive_service():
 
 def sync_single_system_task(task_id: int) -> bool:
     """
-    پردازش و ارسال تک وظیفه پشتیبان درایو سراسری سامانه به گوگل‌درایو (فاز ۲)
+    پردازش و ارسال تک وظیفه پشتیبان درایو سراسری سامانه به گوگل‌درایو با تصاحب اتمیک و مدیریت خطا (فاز ۳)
     """
     import os
+    from datetime import timedelta
     from .models import SystemDriveUploadTask
     from .google_drive_client import (
         resolve_folder_hierarchy,
         upload_file_resumable,
+        classify_gdrive_error,
     )
+
+    # تصاحب اتمیک تسک (GD-06)
+    acquired = SystemDriveUploadTask.objects.filter(
+        id=task_id,
+        status='pending'
+    ).update(status='processing', updated_at=timezone.now())
+
+    if acquired == 0:
+        logger.debug(f"[System GDrive] Task #{task_id} could not be acquired (already processing or not pending).")
+        return False
 
     task = SystemDriveUploadTask.objects.filter(id=task_id).first()
     if not task:
@@ -178,8 +184,12 @@ def sync_single_system_task(task_id: int) -> bool:
 
     service = build_drive_service_from_token(config.refresh_token)
     if not service:
-        task.status = 'failed'
-        task.error_message = "امکان ساخت کلاینت احراز هویت شده گوگل با توکن موجود وجود ندارد."
+        config.auth_status = 'needs_reauth'
+        config.last_error = "امکان ساخت کلاینت احراز هویت شده گوگل با توکن موجود وجود ندارد؛ نیازمند ورود مجدد است."
+        config.save(update_fields=['auth_status', 'last_error', 'updated_at'])
+
+        task.status = 'pending'
+        task.error_message = config.last_error
         task.save(update_fields=['status', 'error_message', 'updated_at'])
         return False
 
@@ -214,17 +224,51 @@ def sync_single_system_task(task_id: int) -> bool:
 
         config.last_sync_at = timezone.now()
         config.last_error = None
-        config.save(update_fields=['last_sync_at', 'last_error', 'updated_at'])
+        config.auth_status = 'authenticated'
+        config.save(update_fields=['last_sync_at', 'last_error', 'auth_status', 'updated_at'])
         return True
 
     except Exception as exc:
         logger.error(f"[System GDrive] Error syncing task #{task_id}: {exc}", exc_info=True)
-        task.status = 'failed'
-        task.retry_count += 1
-        task.error_message = str(exc)
-        task.save(update_fields=['status', 'retry_count', 'error_message', 'updated_at'])
+        err_info = classify_gdrive_error(exc)
+        category = err_info['category']
+        user_msg = err_info['user_message']
 
-        config.last_error = f"خطا در ارسال پشتیبان: {str(exc)}"
-        config.save(update_fields=['last_error', 'updated_at'])
-        return False
+        if category == 'needs_reauth':
+            config.auth_status = 'needs_reauth'
+            config.last_error = user_msg
+            config.save(update_fields=['auth_status', 'last_error', 'updated_at'])
+
+            task.status = 'pending'
+            task.error_message = user_msg
+            task.save(update_fields=['status', 'error_message', 'updated_at'])
+            return False
+
+        elif category == 'transient':
+            task.retry_count += 1
+            if task.retry_count < 5:
+                backoff_secs = min(3600, (2 ** task.retry_count) * 30)
+                task.next_retry_at = timezone.now() + timedelta(seconds=backoff_secs)
+                task.status = 'pending'
+                task.error_message = f"{user_msg} (تلاش مجدد در {backoff_secs} ثانیه)"
+                task.save(update_fields=['retry_count', 'next_retry_at', 'status', 'error_message', 'updated_at'])
+            else:
+                task.status = 'failed'
+                task.error_message = f"پایان سقف تلاش‌های مجدد: {user_msg}"
+                task.save(update_fields=['retry_count', 'status', 'error_message', 'updated_at'])
+
+            config.last_error = f"خطای موقت در ارسال پشتیبان: {user_msg}"
+            config.save(update_fields=['last_error', 'updated_at'])
+            return False
+
+        else:  # permanent
+            task.status = 'failed'
+            task.retry_count += 1
+            task.error_message = user_msg
+            task.save(update_fields=['status', 'retry_count', 'error_message', 'updated_at'])
+
+            config.last_error = f"خطا در ارسال پشتیبان: {user_msg}"
+            config.save(update_fields=['last_error', 'updated_at'])
+            return False
+
 

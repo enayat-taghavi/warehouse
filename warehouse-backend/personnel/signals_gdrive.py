@@ -20,33 +20,9 @@ from .google_drive_path_resolver import GoogleDrivePathResolver, get_current_sha
 logger = logging.getLogger(__name__)
 
 
-def _trigger_async_sync(task_id: int, config=None):
-    """
-    اجرای فوری و کاملاً ناهمگام وظیفه صف توسط Daemon Thread مجزا
-    جهت همگام‌سازی بلادرنگ فایل‌ها در گوگل‌درایو بدون مسدودسازی پاسخ به کاربر.
-    منحصراً در صورت همگام‌سازی آنی (sync_mode == 'immediate') نخ پس‌زمینه اجرا می‌شود.
-    """
-    try:
-        if config is None:
-            task = GoogleDriveSyncQueue.objects.filter(id=task_id).select_related('company__gdrive_config').first()
-            if task and hasattr(task.company, 'gdrive_config'):
-                config = task.company.gdrive_config
-
-        if config and getattr(config, 'sync_mode', 'immediate') != 'immediate':
-            logger.info(f"[GDrive Queue] Task #{task_id} in mode '{config.sync_mode}' - skipping immediate thread execution.")
-            return
-
-        import threading
-        from .google_drive_service import sync_single_queue_item
-        th = threading.Thread(target=sync_single_queue_item, args=(task_id,), daemon=True)
-        th.start()
-    except Exception as exc:
-        logger.warning(f"[GDrive Async Trigger] Could not start daemon thread for task #{task_id}: {exc}")
-
-
 def enqueue_file_upload(instance, field_name: str, file_obj):
     """
-    ثبت امن تسک آپلود فایل در صف پس از Commit موفق تراکنش اصلی
+    ثبت امن تسک آپلود فایل در صف پس از Commit موفق تراکنش اصلی (فاز ۳ - D4 بدون اسپاون نخ)
     """
     if not file_obj or not hasattr(file_obj, 'name') or not file_obj.name:
         return
@@ -89,14 +65,15 @@ def enqueue_file_upload(instance, field_name: str, file_obj):
                     return
                 elif existing.status == 'failed' and existing.retry_count < 5:
                     existing.status = 'pending'
+                    existing.priority = 10
+                    existing.retry_count = 0
+                    existing.next_retry_at = None
                     existing.error_message = None
-                    existing.save(update_fields=['status', 'error_message', 'updated_at'])
+                    existing.save(update_fields=['status', 'priority', 'retry_count', 'next_retry_at', 'error_message', 'updated_at'])
                     logger.info(f"[GDrive Queue] Reset failed task for {model_name}#{instance.id} -> pending")
-                    if config.sync_mode == 'immediate':
-                        _trigger_async_sync(existing.id, config=config)
                     return
 
-            # ثبت تسک در صف
+            # ثبت تسک در صف با اولویت معمولی
             task = GoogleDriveSyncQueue.objects.create(
                 company=company,
                 model_name=model_name,
@@ -105,13 +82,10 @@ def enqueue_file_upload(instance, field_name: str, file_obj):
                 target_folder_path=target_folder,
                 target_filename=target_filename,
                 action='upload',
-                status='pending'
+                status='pending',
+                priority=10
             )
-            logger.info(f"[GDrive Queue] Enqueued upload task for {model_name}#{instance.id} -> {target_filename} (mode={config.sync_mode})")
-            if config.sync_mode == 'immediate':
-                _trigger_async_sync(task.id, config=config)
-            else:
-                logger.info(f"[GDrive Queue] Skipping async thread for task #{task.id} due to sync_mode='{config.sync_mode}'")
+            logger.info(f"[GDrive Queue] Enqueued upload task #{task.id} for {model_name}#{instance.id} -> {target_filename}")
         except Exception as exc:
             logger.error(f"[GDrive Queue] Error enqueuing {instance.__class__.__name__}#{getattr(instance, 'id', None)}: {exc}")
 
@@ -163,13 +137,10 @@ def enqueue_file_archive_delete(instance, field_name: str, file_obj):
                 target_filename=last_task.target_filename,
                 gdrive_file_id=last_task.gdrive_file_id,
                 action='archive_delete',
-                status='pending'
+                status='pending',
+                priority=10
             )
-            logger.info(f"[GDrive Queue] Enqueued archive_delete task for {model_name}#{instance.id} (mode={getattr(config, 'sync_mode', 'immediate')})")
-            if getattr(config, 'sync_mode', 'immediate') == 'immediate':
-                _trigger_async_sync(archive_task.id, config=config)
-            else:
-                logger.info(f"[GDrive Queue] Skipping async thread for archive task #{archive_task.id} due to sync_mode='{getattr(config, 'sync_mode', 'immediate')}'")
+            logger.info(f"[GDrive Queue] Enqueued archive_delete task #{archive_task.id} for {model_name}#{instance.id}")
         except Exception as exc:
             logger.error(f"[GDrive Queue] Error enqueuing archive_delete: {exc}")
 
@@ -319,11 +290,10 @@ try:
                         target_folder_path=f"پشتیبان‌های پایگاه داده/{shamsi_year}",
                         target_filename=filename,
                         action='upload',
-                        status='pending'
+                        status='pending',
+                        priority=1  # اولویت حداکثری برای فایل‌های پشتیبان
                     )
-                    logger.info(f"[GDrive Sync] Backup {filename} enqueued for company {g_cfg.company.code}")
-                    if getattr(g_cfg, 'sync_mode', 'immediate') == 'immediate':
-                        _trigger_async_sync(task.id, config=g_cfg)
+                    logger.info(f"[GDrive Sync] Backup {filename} enqueued for company {g_cfg.company.code} (priority=1)")
         except Exception as gdrive_err:
             logger.warning(f"Could not enqueue backup to Google Drive: {gdrive_err}")
 except ImportError:

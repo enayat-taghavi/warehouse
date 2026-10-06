@@ -33,6 +33,8 @@ from settings_core.google_drive_client import (
     find_or_create_folder as _find_or_create_folder,
     escape_gdrive_query_string as _escape_gdrive_query_string,
     verify_and_consume_oauth_state,
+    classify_gdrive_error,
+    revoke_google_token,
 )
 
 # Memory cache for Google Drive folder IDs to minimize API calls
@@ -205,6 +207,7 @@ def exchange_code_and_store_credentials(code: str, company_id: int) -> Dict[str,
 
     config, _ = CompanyGoogleDriveConfig.objects.get_or_create(company=company)
     config.is_enabled = True
+    config.auth_status = 'ok'
     if refresh_token:
         config.refresh_token = encrypt_secret(refresh_token)
     if account_email:
@@ -244,6 +247,10 @@ def get_google_drive_service(company_id: int):
 
     decrypted_token = decrypt_secret(config.refresh_token)
     if not decrypted_token:
+        if config.refresh_token:
+            config.auth_status = 'needs_reauth'
+            config.last_error = "خطا در رمزگشایی کلید دسترسی گوگل؛ نیازمند اتصال مجدد است."
+            config.save(update_fields=['auth_status', 'last_error', 'updated_at'])
         return None
 
     client_id = getattr(settings, 'GOOGLE_OAUTH_CLIENT_ID', '')
@@ -359,15 +366,193 @@ def resolve_folder_hierarchy(company_id: int, drive_service, root_folder_id: str
     return current_parent_id
 
 
+def execute_company_scan_all(scan_task) -> bool:
+    """
+    اجرای ناهمگام پیمایش اسناد و مدارک پیشین شرکت با اولویت پایین و بدون مسدودسازی (GD-10)
+    """
+    from django.db.models import Q
+    from django.apps import apps
+    from .models import (
+        GoogleDriveSyncQueue,
+        CompanyDocument,
+        CompanyBoardMember,
+        ExpenseInvoice,
+        PettyCashTransaction,
+        PersonnelProfile,
+        PersonnelDocument,
+        VehicleDocument,
+    )
+    from .google_drive_path_resolver import GoogleDrivePathResolver, get_current_shamsi_year_str
+
+    company = scan_task.company
+    config = getattr(company, 'gdrive_config', None)
+    if not config or not config.is_enabled or not config.refresh_token:
+        scan_task.status = 'failed'
+        scan_task.error_message = "سرویس گوگل‌درایو برای این شرکت فعال یا متصل نیست."
+        scan_task.save(update_fields=['status', 'error_message', 'updated_at'])
+        return False
+
+    enqueued_count = 0
+
+    def _enqueue_or_reopen(model_name: str, object_id, source_path: str, target_folder: str, target_fname: str) -> bool:
+        t = GoogleDriveSyncQueue.objects.filter(
+            company=company,
+            model_name=model_name,
+            object_id=object_id,
+            source_file_path=source_path
+        ).first()
+
+        if not t:
+            GoogleDriveSyncQueue.objects.create(
+                company=company,
+                model_name=model_name,
+                object_id=object_id,
+                source_file_path=source_path,
+                target_folder_path=target_folder,
+                target_filename=target_fname,
+                status='pending',
+                action='upload',
+                priority=50  # اولویت پایین برای فایل‌های سوابق تاریخی (GD-10)
+            )
+            return True
+        elif t.status == 'failed':
+            t.status = 'pending'
+            t.priority = 50
+            t.retry_count = 0
+            t.next_retry_at = None
+            t.error_message = None
+            t.target_folder_path = target_folder
+            t.target_filename = target_fname
+            t.save(update_fields=['status', 'priority', 'retry_count', 'next_retry_at', 'error_message', 'target_folder_path', 'target_filename', 'updated_at'])
+            return True
+        return False
+
+    # ۱. اسناد رسمی و مرکزی شرکت و اسناد مالی
+    if config.sync_accounting_docs:
+        for ffield in ('articles_of_association', 'latest_gazette', 'logo'):
+            fobj = getattr(company, ffield, None)
+            if fobj and fobj.name:
+                res = GoogleDrivePathResolver.resolve(company, field_name=ffield, file_obj=fobj)
+                if res:
+                    _, folder, fname = res
+                    if _enqueue_or_reopen('Company', company.id, fobj.name, folder, fname):
+                        enqueued_count += 1
+
+        for doc in CompanyDocument.objects.filter(company=company, file__isnull=False).exclude(file='').iterator():
+            res = GoogleDrivePathResolver.resolve(doc, field_name='file')
+            if res:
+                _, folder, fname = res
+                if _enqueue_or_reopen('CompanyDocument', doc.id, doc.file.name, folder, fname):
+                    enqueued_count += 1
+
+        for bm in CompanyBoardMember.objects.filter(company=company).iterator():
+            for bfield in ('attached_id_doc', 'attached_appointment_doc'):
+                bfobj = getattr(bm, bfield, None)
+                if bfobj and bfobj.name:
+                    res = GoogleDrivePathResolver.resolve(bm, field_name=bfield, file_obj=bfobj)
+                    if res:
+                        _, folder, fname = res
+                        if _enqueue_or_reopen('CompanyBoardMember', bm.id, bfobj.name, folder, fname):
+                            enqueued_count += 1
+
+        for inv in ExpenseInvoice.objects.filter(section__project__company=company, attachment__isnull=False).exclude(attachment='').iterator():
+            res = GoogleDrivePathResolver.resolve(inv, field_name='attachment')
+            if res:
+                _, folder, fname = res
+                if _enqueue_or_reopen('ExpenseInvoice', inv.id, inv.attachment.name, folder, fname):
+                    enqueued_count += 1
+
+        for tx in PettyCashTransaction.objects.filter(
+            Q(section__project__company=company) | Q(account__section__project__company=company),
+            attachment__isnull=False
+        ).exclude(attachment='').distinct().iterator():
+            res = GoogleDrivePathResolver.resolve(tx, field_name='attachment')
+            if res:
+                _, folder, fname = res
+                if _enqueue_or_reopen('PettyCashTransaction', tx.id, tx.attachment.name, folder, fname):
+                    enqueued_count += 1
+
+    # ۲. مدارک پرسنلی
+    if config.sync_personnel_docs:
+        for p in PersonnelProfile.objects.filter(company=company, attachment__isnull=False).exclude(attachment='').iterator():
+            res = GoogleDrivePathResolver.resolve(p, field_name='attachment')
+            if res:
+                _, folder, fname = res
+                if _enqueue_or_reopen('PersonnelProfile', p.id, p.attachment.name, folder, fname):
+                    enqueued_count += 1
+
+        for pdoc in PersonnelDocument.objects.filter(personnel__company=company, file__isnull=False).exclude(file='').iterator():
+            res = GoogleDrivePathResolver.resolve(pdoc, field_name='file')
+            if res:
+                _, folder, fname = res
+                if _enqueue_or_reopen('PersonnelDocument', pdoc.id, pdoc.file.name, folder, fname):
+                    enqueued_count += 1
+
+    # ۳. مدارک ناوگان
+    if config.sync_fleet_docs:
+        for vdoc in VehicleDocument.objects.filter(vehicle__company=company, file__isnull=False).exclude(file='').iterator():
+            res = GoogleDrivePathResolver.resolve(vdoc, field_name='file')
+            if res:
+                _, folder, fname = res
+                if _enqueue_or_reopen('VehicleDocument', vdoc.id, vdoc.file.name, folder, fname):
+                    enqueued_count += 1
+
+    # ۴. تصاویر اقلام انبار
+    if config.sync_inventory_photos and apps.is_installed('inventory'):
+        ItemPhoto = apps.get_model('inventory', 'ItemPhoto')
+        for iphoto in ItemPhoto.objects.filter(item__warehouse__company=company, image__isnull=False).exclude(image='').iterator():
+            res = GoogleDrivePathResolver.resolve(iphoto, field_name='image')
+            if res:
+                _, folder, fname = res
+                if _enqueue_or_reopen('ItemPhoto', iphoto.id, iphoto.image.name, folder, fname):
+                    enqueued_count += 1
+
+    # ۵. نسخه‌های پشتیبان دیتابیس
+    if config.sync_backups:
+        try:
+            import os
+            from accounts.backup_service import get_backup_list, BACKUP_DIR
+            shamsi_year = get_current_shamsi_year_str()
+            existing_backups = get_backup_list()
+            for b in existing_backups[:10]:
+                fname = b.get('filename')
+                if not fname:
+                    continue
+                full_backup_path = os.path.join(BACKUP_DIR, fname)
+                if not os.path.exists(full_backup_path):
+                    continue
+                target_folder = f"پشتیبان‌های پایگاه داده/{shamsi_year}"
+                if _enqueue_or_reopen('DatabaseBackup', None, full_backup_path, target_folder, fname):
+                    enqueued_count += 1
+        except Exception as b_exc:
+            logger.warning(f"Error scanning existing database backups for scan_all: {b_exc}")
+
+    scan_task.status = 'completed'
+    scan_task.completed_at = timezone.now()
+    scan_task.error_message = f"پیمایش با موفقیت انجام شد ({enqueued_count} فایل در صف قرار گرفت یا به‌روز شد)."
+    scan_task.save(update_fields=['status', 'completed_at', 'error_message', 'updated_at'])
+    return True
+
+
 def sync_single_queue_item(task_id: int) -> bool:
     """
-    Processes a single GoogleDriveSyncQueue task (upload or archive)
+    پردازش تک وظیفه صف گوگل‌درایو با تصاحب اتمیک، دسته‌بندی پیشرفته خطا و تکرار مقاوم (GD-06 تا GD-11)
     """
+    from datetime import timedelta
     from .models import GoogleDriveSyncQueue
 
-    try:
-        task = GoogleDriveSyncQueue.objects.select_related('company', 'company__gdrive_config').get(id=task_id)
-    except GoogleDriveSyncQueue.DoesNotExist:
+    # ۱. تصاحب اتمیک تسک (GD-06)
+    acquired = GoogleDriveSyncQueue.objects.filter(
+        id=task_id,
+        status='pending'
+    ).update(status='processing', updated_at=timezone.now())
+
+    if acquired == 0:
+        logger.debug(f"[GDrive Queue] Task #{task_id} could not be acquired (already processing or not pending).")
+        return False
+
+    task = GoogleDriveSyncQueue.objects.select_related('company', 'company__gdrive_config').filter(id=task_id).first()
+    if not task:
         return False
 
     company = task.company
@@ -378,24 +563,28 @@ def sync_single_queue_item(task_id: int) -> bool:
         task.save(update_fields=['status', 'error_message', 'updated_at'])
         return False
 
+    # ۲. بررسی تسک از نوع پیمایش سراسری (GD-10)
+    if task.action == 'scan_all':
+        return execute_company_scan_all(task)
+
     drive_service = get_google_drive_service(company.id)
     if not drive_service:
-        task.status = 'failed'
-        task.error_message = "امکان برقراری ارتباط با گوگل‌درایو (احراز هویت یا پروکسی) وجود ندارد."
+        config.auth_status = 'needs_reauth'
+        config.last_error = "امکان ساخت کلاینت گوگل‌درایو برای این شرکت وجود ندارد؛ نیازمند اتصال مجدد است."
+        config.save(update_fields=['auth_status', 'last_error', 'updated_at'])
+
+        task.status = 'pending'
+        task.error_message = config.last_error
         task.save(update_fields=['status', 'error_message', 'updated_at'])
         return False
-
-    task.status = 'processing'
-    task.save(update_fields=['status', 'updated_at'])
 
     try:
         root_id, archive_id = ensure_company_drive_folders(company, drive_service)
 
         if task.action == 'archive_delete':
-            # Handle archiving of a deleted file
+            # انتقال فایل حذف‌شده به پوشه بایگانی سالانه
             if task.gdrive_file_id:
                 try:
-                    # Move to year-based archive subfolder e.g. "بایگانی و اسناد حذف‌شده/۱۴۰۵"
                     from .google_drive_path_resolver import get_current_shamsi_year_str
                     shamsi_year = get_current_shamsi_year_str()
                     dest_archive_folder_id = resolve_folder_hierarchy(
@@ -416,20 +605,21 @@ def sync_single_queue_item(task_id: int) -> bool:
                     task.status = 'completed'
                     task.completed_at = timezone.now()
                     task.error_message = None
-                    task.save()
+                    task.save(update_fields=['status', 'completed_at', 'error_message', 'updated_at'])
                     return True
                 except HttpError as he:
-                    if he.resp.status == 404:
+                    if getattr(getattr(he, 'resp', None), 'status', None) == 404:
                         task.status = 'completed'
                         task.completed_at = timezone.now()
-                        task.save()
+                        task.error_message = "فایل در درایو یافت نشد (احتمالاً قبلاً حذف شده)."
+                        task.save(update_fields=['status', 'completed_at', 'error_message', 'updated_at'])
                         return True
                     raise
             else:
                 task.status = 'completed'
                 task.completed_at = timezone.now()
                 task.error_message = "فایل در گوگل‌درایو بارگذاری نشده بود (فاقد شناسه فایل)."
-                task.save()
+                task.save(update_fields=['status', 'completed_at', 'error_message', 'updated_at'])
                 return True
 
         elif task.action == 'upload':
@@ -463,14 +653,14 @@ def sync_single_queue_item(task_id: int) -> bool:
                 task.save(update_fields=['status', 'error_message', 'updated_at'])
                 return False
 
-            # Calculate SHA-256
+            # محاسبه هش امنیتی SHA-256
             hasher = hashlib.sha256()
             with open(abs_local_path, 'rb') as f:
                 while chunk := f.read(65536):
                     hasher.update(chunk)
             task.file_sha256 = hasher.hexdigest()
 
-            # Resolve target folder in Google Drive
+            # مسیر پوشه مقصد در گوگل‌درایو
             dest_folder_id = resolve_folder_hierarchy(
                 company_id=company.id,
                 drive_service=drive_service,
@@ -486,10 +676,9 @@ def sync_single_queue_item(task_id: int) -> bool:
             media = MediaFileUpload(
                 abs_local_path,
                 resumable=True,
-                chunksize=1024 * 1024 * 5  # 5MB chunk
+                chunksize=1024 * 1024 * 5  # قطعات ۵ مگابایتی
             )
 
-            # Check if file with same name already exists in target folder to update rather than duplicate
             existing_id = None
             try:
                 safe_target_name = _escape_gdrive_query_string(task.target_filename)
@@ -515,28 +704,61 @@ def sync_single_queue_item(task_id: int) -> bool:
 
             uploaded = None
             while uploaded is None:
-                _, uploaded = req.next_chunk()
+                _, uploaded = req.next_chunk(num_retries=3)
 
             task.gdrive_file_id = uploaded.get('id')
             task.status = 'completed'
             task.completed_at = timezone.now()
             task.error_message = None
-            task.save()
+            task.save(update_fields=['gdrive_file_id', 'status', 'completed_at', 'error_message', 'updated_at'])
 
             config.last_sync_at = timezone.now()
             config.last_error = None
-            config.save(update_fields=['last_sync_at', 'last_error'])
+            config.auth_status = 'ok'
+            config.save(update_fields=['last_sync_at', 'last_error', 'auth_status', 'updated_at'])
             return True
 
     except Exception as exc:
         logger.error(f"Error processing GDrive task #{task_id}: {exc}", exc_info=True)
-        task.retry_count += 1
-        task.status = 'failed'
-        task.error_message = str(exc)
-        task.save(update_fields=['retry_count', 'status', 'error_message', 'updated_at'])
+        err_info = classify_gdrive_error(exc)
+        category = err_info['category']
+        user_msg = err_info['user_message']
 
-        config.last_error = f"خطا در همگام‌سازی فایل {task.target_filename}: {str(exc)}"
-        config.save(update_fields=['last_error'])
-        return False
+        if category == 'needs_reauth':
+            config.auth_status = 'needs_reauth'
+            config.last_error = user_msg
+            config.save(update_fields=['auth_status', 'last_error', 'updated_at'])
+
+            task.status = 'pending'
+            task.error_message = user_msg
+            task.save(update_fields=['status', 'error_message', 'updated_at'])
+            return False
+
+        elif category == 'transient':
+            task.retry_count += 1
+            if task.retry_count < 5:
+                backoff_secs = min(3600, (2 ** task.retry_count) * 30)
+                task.next_retry_at = timezone.now() + timedelta(seconds=backoff_secs)
+                task.status = 'pending'
+                task.error_message = f"{user_msg} (تلاش مجدد در {backoff_secs} ثانیه)"
+                task.save(update_fields=['retry_count', 'next_retry_at', 'status', 'error_message', 'updated_at'])
+            else:
+                task.status = 'failed'
+                task.error_message = f"پایان سقف تلاش‌های مجدد: {user_msg}"
+                task.save(update_fields=['retry_count', 'status', 'error_message', 'updated_at'])
+
+            config.last_error = f"خطای موقت در همگام‌سازی فایل {task.target_filename}: {user_msg}"
+            config.save(update_fields=['last_error', 'updated_at'])
+            return False
+
+        else:  # permanent
+            task.status = 'failed'
+            task.retry_count += 1
+            task.error_message = user_msg
+            task.save(update_fields=['status', 'retry_count', 'error_message', 'updated_at'])
+
+            config.last_error = f"خطا در همگام‌سازی فایل {task.target_filename}: {user_msg}"
+            config.save(update_fields=['last_error', 'updated_at'])
+            return False
 
     return False

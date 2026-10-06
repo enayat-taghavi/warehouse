@@ -194,11 +194,24 @@ class CompanyGoogleDriveConfigView(APIView):
             failed=Count('id', filter=Q(status='failed')),
         )
 
+        # محاسبه وضعیت ورکر مرکزی (GD-06 / D4)
+        worker_alive = False
+        worker_heartbeat_at = None
+        try:
+            from settings_core.models import SystemGoogleDriveConfig
+            sys_cfg = SystemGoogleDriveConfig.objects.filter(id=1).only('worker_heartbeat_at').first()
+            if sys_cfg and sys_cfg.worker_heartbeat_at:
+                worker_heartbeat_at = sys_cfg.worker_heartbeat_at
+                worker_alive = (timezone.now() - sys_cfg.worker_heartbeat_at).total_seconds() < 180
+        except Exception:
+            pass
+
         data = {
             "company_id": company.id,
             "company_name": company.name,
             "is_enabled": config.is_enabled,
             "is_connected": bool(config.refresh_token),
+            "auth_status": getattr(config, 'auth_status', 'ok'),
             "account_email": config.account_email,
             "root_folder_id": config.root_folder_id,
             "root_folder_name": config.root_folder_name,
@@ -212,6 +225,9 @@ class CompanyGoogleDriveConfigView(APIView):
             "scheduled_start_time": _format_time_field(config.scheduled_start_time, '23:00'),
             "scheduled_end_time": _format_time_field(config.scheduled_end_time, '06:00'),
             "chunk_delay_seconds": config.chunk_delay_seconds,
+            "force_sync_until": config.force_sync_until,
+            "worker_alive": worker_alive,
+            "worker_heartbeat_at": worker_heartbeat_at,
             "last_sync_at": config.last_sync_at,
             "last_error": config.last_error,
             "stats": stats
@@ -328,11 +344,9 @@ class CompanyGoogleDriveAuthUrlView(APIView):
 from settings_core.google_drive_views import GoogleDriveOAuthCallbackView
 
 
-
-
 class CompanyGoogleDriveDisconnectView(APIView):
     """
-    قطع اتصال حساب گوگل‌درایو شرکت و پاکسازی توکن‌ها
+    قطع اتصال حساب گوگل‌درایو شرکت و ابطال توکن در سرور گوگل (GD-11)
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -342,9 +356,18 @@ class CompanyGoogleDriveDisconnectView(APIView):
             return Response({"error": "شما مجوز قطع اتصال گوگل‌درایو این شرکت را ندارید."}, status=status.HTTP_403_FORBIDDEN)
 
         config, _ = CompanyGoogleDriveConfig.objects.get_or_create(company=company)
+
+        # ابطال توکن نزد سرور گوگل (GD-11)
+        if config.refresh_token:
+            from settings_core.google_drive_client import decrypt_secret, revoke_google_token
+            plain_token = decrypt_secret(config.refresh_token)
+            if plain_token:
+                revoke_google_token(plain_token)
+
         config.refresh_token = None
         config.account_email = None
         config.is_enabled = False
+        config.auth_status = 'unlinked'
         config.last_error = None
         config.save()
         return Response({"success": True, "message": "اتصال گوگل‌درایو شرکت با موفقیت قطع شد."}, status=status.HTTP_200_OK)
@@ -352,7 +375,7 @@ class CompanyGoogleDriveDisconnectView(APIView):
 
 class CompanyGoogleDriveQueueView(APIView):
     """
-    مشاهده لیست فایل‌های صف همگام‌سازی گوگل‌درایو شرکت
+    مشاهده لیست فایل‌های صف همگام‌سازی گوگل‌درایو شرکت (شامل اولویت و زمان تکرار بعدی)
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -364,7 +387,7 @@ class CompanyGoogleDriveQueueView(APIView):
         status_filter = request.GET.get('status')
         limit = min(int(request.GET.get('limit', 50)), 100)
 
-        qs = GoogleDriveSyncQueue.objects.filter(company=company).order_by('-created_at')
+        qs = GoogleDriveSyncQueue.objects.filter(company=company).order_by('priority', '-created_at')
         if status_filter and status_filter != 'all':
             qs = qs.filter(status=status_filter)
 
@@ -378,7 +401,9 @@ class CompanyGoogleDriveQueueView(APIView):
                 "target_folder_path": t.target_folder_path,
                 "action": t.action,
                 "status": t.status,
+                "priority": t.priority,
                 "retry_count": t.retry_count,
+                "next_retry_at": t.next_retry_at,
                 "error_message": t.error_message,
                 "gdrive_file_id": t.gdrive_file_id,
                 "created_at": t.created_at,
@@ -391,7 +416,7 @@ class CompanyGoogleDriveQueueView(APIView):
 
 class CompanyGoogleDriveRetryTaskView(APIView):
     """
-    تلاش مجدد برای ارسال یک تسک دارای خطا
+    تلاش مجدد برای ارسال یک تسک دارای خطا (فقط برای تسک‌های failed، بدون مسدودسازی HTTP - فاز ۳)
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -401,24 +426,29 @@ class CompanyGoogleDriveRetryTaskView(APIView):
             return Response({"error": "شما مجوز اجرای مجدد تسک را ندارید."}, status=status.HTTP_403_FORBIDDEN)
 
         task = get_object_or_404(GoogleDriveSyncQueue, id=task_id, company=company)
+        if task.status != 'failed':
+            return Response(
+                {"error": "تنها تسک‌های دارای وضعیت خطا (failed) امکان تلاش مجدد دارند."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         task.status = 'pending'
         task.retry_count = 0
+        task.next_retry_at = None
         task.error_message = None
-        task.save(update_fields=['status', 'retry_count', 'error_message', 'updated_at'])
+        task.save(update_fields=['status', 'retry_count', 'next_retry_at', 'error_message', 'updated_at'])
 
-        success = sync_single_queue_item(task.id)
-        task.refresh_from_db()
         return Response({
             "success": True,
-            "synced_immediately": success,
+            "message": "تسک با موفقیت جهت ارسال مجدد توسط ورکر در صف قرار گرفت.",
             "task_id": task.id,
             "status": task.status
-        }, status=status.HTTP_200_OK)
+        }, status=status.HTTP_202_ACCEPTED)
 
 
 class CompanyGoogleDriveSyncAllView(APIView):
     """
-    پیمایش اسناد و فایل‌های موجود این شرکت و افزودن موارد سینک‌نشده به صف
+    ثبت وظیفه پیمایش اسناد و فایل‌های موجود شرکت در صف ناهمگام (GD-10 - اولویت پایین بدون مسدودسازی)
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -428,181 +458,49 @@ class CompanyGoogleDriveSyncAllView(APIView):
             return Response({"error": "شما مجوز اجرای همگام‌سازی کلی برای این شرکت را ندارید."}, status=status.HTTP_403_FORBIDDEN)
 
         config, _ = CompanyGoogleDriveConfig.objects.get_or_create(company=company)
-
         if not config.is_enabled or not config.refresh_token:
             return Response(
                 {"error": "سرویس گوگل‌درایو برای این شرکت فعال یا متصل نیست."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        enqueued_count = 0
+        existing_scan = GoogleDriveSyncQueue.objects.filter(
+            company=company,
+            action='scan_all',
+            status__in=['pending', 'processing']
+        ).first()
 
-        def _enqueue_or_reopen(model_name: str, object_id, source_path: str, target_folder: str, target_fname: str) -> bool:
-            task = GoogleDriveSyncQueue.objects.filter(
-                company=company,
-                model_name=model_name,
-                object_id=object_id,
-                source_file_path=source_path
-            ).first()
+        if existing_scan:
+            return Response({
+                "success": True,
+                "message": "یک فرآیند پیمایش اسناد در حال حاضر در صف یا در حال اجراست.",
+                "task_id": existing_scan.id,
+                "status": existing_scan.status
+            }, status=status.HTTP_202_ACCEPTED)
 
-            if not task:
-                GoogleDriveSyncQueue.objects.create(
-                    company=company,
-                    model_name=model_name,
-                    object_id=object_id,
-                    source_file_path=source_path,
-                    target_folder_path=target_folder,
-                    target_filename=target_fname,
-                    status='pending',
-                    action='upload'
-                )
-                return True
-            elif task.status == 'failed':
-                task.status = 'pending'
-                task.retry_count = 0
-                task.error_message = None
-                task.target_folder_path = target_folder
-                task.target_filename = target_fname
-                task.save(update_fields=['status', 'retry_count', 'error_message', 'target_folder_path', 'target_filename', 'updated_at'])
-                return True
-            return False
-
-        # ۱. اسناد رسمی و مرکزی شرکت و اسناد مالی
-        if config.sync_accounting_docs:
-            from .models import CompanyDocument, CompanyBoardMember, ExpenseInvoice, PettyCashTransaction
-
-            # مدارک پایه شرکت
-            for ffield in ('articles_of_association', 'latest_gazette', 'logo'):
-                fobj = getattr(company, ffield, None)
-                if fobj and fobj.name:
-                    res = GoogleDrivePathResolver.resolve(company, field_name=ffield, file_obj=fobj)
-                    if res:
-                        _, folder, fname = res
-                        if _enqueue_or_reopen('Company', company.id, fobj.name, folder, fname):
-                            enqueued_count += 1
-
-            for doc in CompanyDocument.objects.filter(company=company, file__isnull=False).exclude(file=''):
-                res = GoogleDrivePathResolver.resolve(doc, field_name='file')
-                if res:
-                    comp, folder, fname = res
-                    if _enqueue_or_reopen('CompanyDocument', doc.id, doc.file.name, folder, fname):
-                        enqueued_count += 1
-
-            for bm in CompanyBoardMember.objects.filter(company=company):
-                for bfield in ('attached_id_doc', 'attached_appointment_doc'):
-                    bfobj = getattr(bm, bfield, None)
-                    if bfobj and bfobj.name:
-                        res = GoogleDrivePathResolver.resolve(bm, field_name=bfield, file_obj=bfobj)
-                        if res:
-                            _, folder, fname = res
-                            if _enqueue_or_reopen('CompanyBoardMember', bm.id, bfobj.name, folder, fname):
-                                enqueued_count += 1
-
-            for inv in ExpenseInvoice.objects.filter(section__project__company=company, attachment__isnull=False).exclude(attachment=''):
-                res = GoogleDrivePathResolver.resolve(inv, field_name='attachment')
-                if res:
-                    _, folder, fname = res
-                    if _enqueue_or_reopen('ExpenseInvoice', inv.id, inv.attachment.name, folder, fname):
-                        enqueued_count += 1
-
-            for tx in PettyCashTransaction.objects.filter(
-                Q(section__project__company=company) | Q(account__section__project__company=company),
-                attachment__isnull=False
-            ).exclude(attachment='').distinct():
-                res = GoogleDrivePathResolver.resolve(tx, field_name='attachment')
-                if res:
-                    _, folder, fname = res
-                    if _enqueue_or_reopen('PettyCashTransaction', tx.id, tx.attachment.name, folder, fname):
-                        enqueued_count += 1
-
-        # ۲. مدارک پرسنلی (PersonnelProfile, PersonnelDocument)
-        if config.sync_personnel_docs:
-            from .models import PersonnelProfile, PersonnelDocument
-            for p in PersonnelProfile.objects.filter(company=company, attachment__isnull=False).exclude(attachment=''):
-                res = GoogleDrivePathResolver.resolve(p, field_name='attachment')
-                if res:
-                    _, folder, fname = res
-                    if _enqueue_or_reopen('PersonnelProfile', p.id, p.attachment.name, folder, fname):
-                        enqueued_count += 1
-
-            for pdoc in PersonnelDocument.objects.filter(personnel__company=company, file__isnull=False).exclude(file=''):
-                res = GoogleDrivePathResolver.resolve(pdoc, field_name='file')
-                if res:
-                    _, folder, fname = res
-                    if _enqueue_or_reopen('PersonnelDocument', pdoc.id, pdoc.file.name, folder, fname):
-                        enqueued_count += 1
-
-        # ۳. مدارک ناوگان شرکت (VehicleDocument)
-        if config.sync_fleet_docs:
-            from .models import VehicleDocument
-            for vdoc in VehicleDocument.objects.filter(vehicle__company=company, file__isnull=False).exclude(file=''):
-                res = GoogleDrivePathResolver.resolve(vdoc, field_name='file')
-                if res:
-                    comp, folder, fname = res
-                    if _enqueue_or_reopen('VehicleDocument', vdoc.id, vdoc.file.name, folder, fname):
-                        enqueued_count += 1
-
-        # ۴. تصاویر اقلام انبار (ItemPhoto)
-        if config.sync_inventory_photos:
-            from django.apps import apps
-            if apps.is_installed('inventory'):
-                ItemPhoto = apps.get_model('inventory', 'ItemPhoto')
-                for iphoto in ItemPhoto.objects.filter(item__warehouse__company=company, image__isnull=False).exclude(image=''):
-                    res = GoogleDrivePathResolver.resolve(iphoto, field_name='image')
-                    if res:
-                        _, folder, fname = res
-                        if _enqueue_or_reopen('ItemPhoto', iphoto.id, iphoto.image.name, folder, fname):
-                            enqueued_count += 1
-
-        # ۵. نسخه‌های پشتیبان پایگاه داده (Database Backups)
-        if config.sync_backups:
-            try:
-                import os
-                from accounts.backup_service import get_backup_list, BACKUP_DIR
-                from personnel.google_drive_path_resolver import get_current_shamsi_year_str
-                shamsi_year = get_current_shamsi_year_str()
-                existing_backups = get_backup_list()
-                for b in existing_backups[:10]:
-                    fname = b.get('filename')
-                    if not fname:
-                        continue
-                    full_backup_path = os.path.join(BACKUP_DIR, fname)
-                    if not os.path.exists(full_backup_path):
-                        continue
-                    target_folder = f"پشتیبان‌های پایگاه داده/{shamsi_year}"
-                    if _enqueue_or_reopen('DatabaseBackup', None, full_backup_path, target_folder, fname):
-                        enqueued_count += 1
-            except Exception as b_exc:
-                logger.warning(f"Error scanning existing database backups for sync-all: {b_exc}")
-
-        if enqueued_count > 0 and config.sync_mode == 'immediate':
-            import threading
-            def _run_sync_all_async():
-                try:
-                    from personnel.management.commands.run_gdrive_sync_worker import Command
-                    cmd = Command()
-                    processed_total = 0
-                    while processed_total < enqueued_count + 10:
-                        done = cmd.process_batch(limit=50, company_id=company.id, ignore_schedule=True)
-                        if done == 0:
-                            break
-                        processed_total += done
-                except Exception as exc:
-                    logger.error(f"[GDrive SyncAll] Error running auto-triggered batch for company #{company.id}: {exc}", exc_info=True)
-
-            th = threading.Thread(target=_run_sync_all_async, daemon=True)
-            th.start()
+        scan_task = GoogleDriveSyncQueue.objects.create(
+            company=company,
+            model_name='Company',
+            object_id=company.id,
+            source_file_path='',
+            target_folder_path='',
+            target_filename=f"پیمایش سراسری اسناد شرکت {company.name}",
+            action='scan_all',
+            status='pending',
+            priority=50  # اولویت پایین جهت عدم تداخل با فایل‌های روزمره (GD-10)
+        )
 
         return Response({
             "success": True,
-            "message": f"تعداد {enqueued_count} فایل به صف همگام‌سازی گوگل‌درایو افزوده شد.",
-            "enqueued_count": enqueued_count
-        }, status=status.HTTP_200_OK)
+            "message": "وظیفه پیمایش اسناد با موفقیت در صف قرار گرفت و توسط ورکر پردازش خواهد شد.",
+            "task_id": scan_task.id,
+            "status": scan_task.status
+        }, status=status.HTTP_202_ACCEPTED)
 
 
 class CompanyGoogleDriveTriggerSyncView(APIView):
     """
-    شروع فوری ارسال صف فایل‌های معلق خارج از نوبت (برای حالت دستی یا ارسال اضطراری)
+    صدور مجوز ارسال فوری خارج از نوبت برای ساعات خلوتی (D4 / GD-07 - بدون اسپاون نخ)
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -633,28 +531,16 @@ class CompanyGoogleDriveTriggerSyncView(APIView):
                 "pending_count": 0
             }, status=status.HTTP_200_OK)
 
-        # اجرای ورکر در نخ پس‌زمینه با نادیده‌گرفتن بازه زمان‌بندی
-        import threading
-        def _run_trigger():
-            try:
-                from personnel.management.commands.run_gdrive_sync_worker import Command
-                cmd = Command()
-                # پردازش در دسته‌های تا سقف ۵۰ تسک تا خالی شدن صف معلق
-                processed_total = 0
-                while processed_total < count + 10:
-                    done = cmd.process_batch(limit=50, company_id=company.id, ignore_schedule=True)
-                    if done == 0:
-                        break
-                    processed_total += done
-            except Exception as exc:
-                logger.error(f"[GDrive TriggerSync] Error running triggered sync for company #{company.id}: {exc}", exc_info=True)
-
-        th = threading.Thread(target=_run_trigger, daemon=True)
-        th.start()
+        # تنظیم فیلد force_sync_until جهت عبور ورکر از پنجره ساعات خلوتی
+        from datetime import timedelta
+        from django.utils import timezone
+        config.force_sync_until = timezone.now() + timedelta(hours=1)
+        config.save(update_fields=['force_sync_until'])
 
         return Response({
             "success": True,
-            "message": f"فرآیند ارسال {count} فایل معلق در صف با موفقیت در پس‌زمینه آغاز شد.",
+            "message": f"مجوز ارسال فوری صادر شد. ورکر همگام‌سازی تعداد {count} فایل معلق را خارج از ساعات خلوتی ارسال خواهد کرد.",
             "pending_count": count
-        }, status=status.HTTP_200_OK)
+        }, status=status.HTTP_202_ACCEPTED)
+
 

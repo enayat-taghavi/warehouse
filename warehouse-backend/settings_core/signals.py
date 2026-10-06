@@ -1,12 +1,10 @@
 import logging
-from django.dispatch import receiver
-from accounts.signals import backup_created
+from django.apps import apps
 from .models import SystemGoogleDriveConfig, SystemDriveUploadTask
 
 logger = logging.getLogger(__name__)
 
 
-@receiver(backup_created)
 def on_system_backup_created(sender, dest_path, filename, meta=None, **kwargs):
     """
     ثبت خودکار نسخه پشتیبان دیتابیس در صف درایو سراسری سامانه (فاز ۲ - D1)
@@ -34,3 +32,12 @@ def on_system_backup_created(sender, dest_path, filename, meta=None, **kwargs):
         logger.info(f"[System GDrive] Backup {filename} enqueued in SystemDriveUploadTask #{task.id}")
     except Exception as exc:
         logger.warning(f"[System GDrive] Could not enqueue system backup task: {exc}")
+
+
+try:
+    if apps.is_installed('accounts'):
+        from accounts.signals import backup_created
+        backup_created.connect(on_system_backup_created)
+except Exception:
+    pass
+
