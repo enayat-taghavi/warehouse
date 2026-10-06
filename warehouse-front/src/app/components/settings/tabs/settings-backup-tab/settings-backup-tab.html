@@ -145,6 +145,153 @@
           </div>
         </div>
 
+        <!-- ── کارت درایو سراسری سامانه (گوگل‌درایو - فاز ۲ - D1) ── -->
+        <div *ngIf="isSuperuser()" class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="bg-gradient-to-r from-indigo-50 via-blue-50 to-slate-50 border-b border-indigo-100/80 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm text-white" style="background: linear-gradient(135deg, #4f46e5, #3b82f6)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" appIcon="google-drive"></svg>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-black text-slate-800 text-sm">درایو ابری سراسری سامانه (System Google Drive)</h4>
+                  <span *ngIf="systemGDrive?.is_connected" class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    متصل و فعال
+                  </span>
+                  <span *ngIf="!systemGDrive?.is_connected" class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                    غیرمتصل
+                  </span>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-0.5">
+                  ارسال خودکار و امن فایل‌های پشتیبان پایگاه داده سرور به حساب ابری مرکزی سامانه
+                </p>
+              </div>
+            </div>
+
+            <!-- دکمه‌های کنترل اتصال -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <button
+                *ngIf="!systemGDrive?.is_connected"
+                type="button"
+                (click)="connectSystemGDrive()"
+                [disabled]="isConnectingGDrive"
+                class="px-4 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-2 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                style="background: linear-gradient(135deg, #4f46e5, #3730a3)"
+              >
+                <span *ngIf="isConnectingGDrive" class="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span>
+                <svg *ngIf="!isConnectingGDrive" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="google-drive"></svg>
+                <span>{{ isConnectingGDrive ? 'در حال هدایت...' : '+ اتصال به گوگل‌درایو' }}</span>
+              </button>
+
+              <button
+                *ngIf="systemGDrive?.is_connected"
+                type="button"
+                (click)="toggleSystemGDriveEnabled()"
+                class="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border"
+                [ngClass]="systemGDrive.is_enabled ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'"
+              >
+                <span>{{ systemGDrive.is_enabled ? 'توقف موقت ارسال' : 'فعال‌سازی ارسال' }}</span>
+              </button>
+
+              <button
+                *ngIf="systemGDrive?.is_connected"
+                type="button"
+                (click)="disconnectSystemGDrive()"
+                [disabled]="isDisconnectingGDrive"
+                class="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <span *ngIf="isDisconnectingGDrive" class="animate-spin w-3.5 h-3.5 border-2 border-rose-700 border-t-transparent rounded-full"></span>
+                <span *ngIf="!isDisconnectingGDrive">قطع اتصال</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="p-6 space-y-5">
+            <!-- بنر هشدار امنیت و تفکیک داده -->
+            <div class="flex items-start gap-3 bg-blue-50/80 border border-blue-100 rounded-2xl p-4">
+              <svg class="shrink-0 mt-0.5 text-blue-600" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="database"></svg>
+              <div class="text-[11px] text-blue-900 leading-relaxed space-y-1">
+                <p class="font-bold">درایو ابری سرور (مخصوص مدیر ارشد سیستم):</p>
+                <p class="text-blue-700">نسخه‌های پشتیبان کامل پایگاه‌داده سرور شامل تمامی اطلاعات جداول، انبارها، اسناد و شرکت‌ها است. دسترسی به این بخش و فعال‌سازی نسخه‌های پشتیبان در انحصار سوپریوزر سیستم می‌باشد.</p>
+              </div>
+            </div>
+
+            <!-- جزییات وضعیت اتصال -->
+            <div *ngIf="systemGDrive?.is_connected" class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <div>
+                <span class="text-[10px] text-slate-400 block font-bold">حساب گوگل متصل:</span>
+                <span class="text-xs font-bold text-slate-800 font-mono mt-0.5 block dir-ltr text-right">{{ systemGDrive.account_email || 'نامشخص' }}</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 block font-bold">پوشه ابری سرور:</span>
+                <span class="text-xs font-bold text-slate-800 mt-0.5 block">{{ systemGDrive.root_folder_name || 'سامانه ابری پشتیبان پایگاه داده' }}</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 block font-bold">وضعیت سرویس ورکر:</span>
+                <span class="inline-flex items-center gap-1.5 text-xs font-bold mt-0.5" [ngClass]="systemGDrive.worker_alive ? 'text-emerald-700' : 'text-amber-700'">
+                  <span class="w-2 h-2 rounded-full" [ngClass]="systemGDrive.worker_alive ? 'bg-emerald-500' : 'bg-amber-500'"></span>
+                  <span>{{ systemGDrive.worker_alive ? 'ورکر فعال و برخط' : 'ورکر متوقف (نیازمند بررسی)' }}</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- شرکت‌هایی که ارسال پشتیبان برای آنها فعال شده است -->
+            <div *ngIf="systemGDrive?.backup_companies && systemGDrive.backup_companies.length > 0" class="space-y-3">
+              <div class="flex items-center justify-between">
+                <h5 class="text-xs font-black text-slate-700">شرکت‌های منتخب جهت ارسال نسخه‌های پشتیبان:</h5>
+                <span class="text-[10px] text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200/80">
+                  ⚠ حاوی دادهٔ همهٔ شرکت‌هاست
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <div *ngFor="let comp of systemGDrive.backup_companies" class="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition-all flex items-center justify-between gap-2 shadow-2xs">
+                  <div>
+                    <div class="text-xs font-bold text-slate-800">{{ comp.company_name }}</div>
+                    <div class="text-[10px] text-slate-400 font-mono">{{ comp.account_email || 'بدون ایمیل' }}</div>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="toggleCompanyBackupSync(comp)"
+                    class="px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border"
+                    [ngClass]="comp.sync_backups !== false ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'"
+                  >
+                    {{ comp.sync_backups !== false ? 'لغو ارسال' : 'فعال‌سازی' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- آخرین وظایف ارسال شده به درایو سامانه -->
+            <div *ngIf="gdriveTasks && gdriveTasks.length > 0" class="space-y-2">
+              <h5 class="text-xs font-black text-slate-700">آخرین ارسال‌های پشتیبان به ابر سامانه:</h5>
+              <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                <table class="w-full text-right text-xs">
+                  <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+                    <tr>
+                      <th class="p-2.5">نام فایل پشتیبان</th>
+                      <th class="p-2.5">وضعیت</th>
+                      <th class="p-2.5">زمان ثبت</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    <tr *ngFor="let t of gdriveTasks" class="hover:bg-slate-50/50">
+                      <td class="p-2.5 font-mono text-[11px] text-slate-800 dir-ltr text-right">{{ t.target_filename }}</td>
+                      <td class="p-2.5">
+                        <span *ngIf="t.status === 'completed'" class="text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded-md">موفق</span>
+                        <span *ngIf="t.status === 'processing'" class="text-blue-700 font-bold text-[10px] bg-blue-50 px-2 py-0.5 rounded-md">در حال ارسال</span>
+                        <span *ngIf="t.status === 'pending'" class="text-amber-700 font-bold text-[10px] bg-amber-50 px-2 py-0.5 rounded-md">در صف</span>
+                        <span *ngIf="t.status === 'failed'" class="text-rose-700 font-bold text-[10px] bg-rose-50 px-2 py-0.5 rounded-md" [title]="t.error_message || ''">خطا</span>
+                      </td>
+                      <td class="p-2.5 text-slate-400 text-[10px]">{{ t.created_at | date:'yyyy/MM/dd HH:mm' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- ── کارت ۱: دانلود نسخه پشتیبان ── -->
         <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden" [class.opacity-60]="!canManageBackup()" [class.pointer-events-none]="!canManageBackup()">
           <div class="bg-slate-50 border-b border-slate-100 p-5 flex items-center gap-3">

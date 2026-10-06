@@ -23,76 +23,22 @@ import google_auth_httplib2
 logger = logging.getLogger(__name__)
 
 
-# Scopes needed for managing files created by this application
-SCOPES = [
-    'openid',
-    'https://www.googleapis.com/auth/drive.file',
-    'https://www.googleapis.com/auth/userinfo.email',
-]
+from settings_core.google_drive_client import (
+    SCOPES,
+    encrypt_secret,
+    decrypt_secret,
+    get_http_client,
+    create_base_oauth_flow,
+    check_folder_exists as _check_folder_exists,
+    find_or_create_folder as _find_or_create_folder,
+    escape_gdrive_query_string as _escape_gdrive_query_string,
+    verify_and_consume_oauth_state,
+)
 
 # Memory cache for Google Drive folder IDs to minimize API calls
 # Structure: {(company_id, parent_id, folder_name): folder_id}
 _FOLDER_CACHE: Dict[Tuple[int, str, str], str] = {}
 
-
-def _get_encryption_key() -> bytes:
-    """Generate a stable 32-byte Fernet key from Django SECRET_KEY"""
-    raw_key = getattr(settings, 'SECRET_KEY', 'default-gdrive-secret-key-32-bytes!')
-    digest = hashlib.sha256(raw_key.encode('utf-8')).digest()
-    return base64.urlsafe_b64encode(digest)
-
-
-def encrypt_secret(plain_text: Optional[str]) -> Optional[str]:
-    """Encrypt sensitive tokens before saving in database"""
-    if not plain_text:
-        return None
-    try:
-        f = Fernet(_get_encryption_key())
-        return f.encrypt(plain_text.encode('utf-8')).decode('utf-8')
-    except Exception as exc:
-        logger.error(f"Error encrypting secret: {exc}")
-        return plain_text
-
-
-def decrypt_secret(cipher_text: Optional[str]) -> Optional[str]:
-    """Decrypt sensitive tokens retrieved from database"""
-    if not cipher_text:
-        return None
-    try:
-        f = Fernet(_get_encryption_key())
-        return f.decrypt(cipher_text.encode('utf-8')).decode('utf-8')
-    except Exception:
-        # Fallback in case token was saved unencrypted
-        return cipher_text
-
-
-def get_http_client() -> httplib2.Http:
-    """
-    Construct httplib2.Http instance with optional outbound proxy support
-    (supports HTTP, HTTPS, and SOCKS5 proxies)
-    """
-    proxy_url = getattr(settings, 'OUTBOUND_HTTP_PROXY', '') or os.getenv('OUTBOUND_HTTP_PROXY', '')
-    if proxy_url:
-        try:
-            from urllib.parse import urlparse
-            parsed = urlparse(proxy_url)
-            proxy_type = httplib2.socks.PROXY_TYPE_HTTP
-            if 'socks5' in (parsed.scheme or ''):
-                proxy_type = httplib2.socks.PROXY_TYPE_SOCKS5
-            elif 'socks4' in (parsed.scheme or ''):
-                proxy_type = httplib2.socks.PROXY_TYPE_SOCKS4
-
-            proxy_info = httplib2.ProxyInfo(
-                proxy_type=proxy_type,
-                proxy_host=parsed.hostname,
-                proxy_port=parsed.port or (1080 if 'socks' in (parsed.scheme or '') else 8080),
-                proxy_user=parsed.username,
-                proxy_pass=parsed.password
-            )
-            return httplib2.Http(proxy_info=proxy_info, timeout=60)
-        except Exception as exc:
-            logger.warning(f"Could not configure proxy '{proxy_url}': {exc}. Using direct connection.")
-    return httplib2.Http(timeout=60)
 
 
 def create_oauth_flow(company_id: int) -> Flow:

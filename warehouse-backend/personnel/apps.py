@@ -24,3 +24,25 @@ class PersonnelConfig(AppConfig):
             import personnel.signals_gdrive
         except ImportError:
             pass
+
+        # ثبت هندلر گوگل‌درایو شرکت‌ها در رجیستری هسته (فاز ۲ - D1)
+        try:
+            from settings_core.google_drive_client import register_gdrive_target_handler
+            from personnel.google_drive_service import exchange_code_and_store_credentials
+            from personnel.google_drive_views import check_user_company_access
+
+            def _company_batch_runner(limit=20, ignore_schedule=False, company_id=None):
+                from personnel.management.commands.run_gdrive_sync_worker import Command as PersonnelWorkerCommand
+                pw = PersonnelWorkerCommand()
+                return pw.process_batch(limit=limit, company_id=company_id, ignore_schedule=ignore_schedule)
+
+            register_gdrive_target_handler(
+                target='company',
+                exchange_handler=lambda code, **kwargs: exchange_code_and_store_credentials(code, kwargs.get('company_id')),
+                access_checker=lambda user, **kwargs: check_user_company_access(user, kwargs.get('company_id')),
+                redirect_builder=lambda company_id, status: f"/app/operations/companies/{company_id}?tab=gdrive&gdrive={status}",
+                batch_runner=_company_batch_runner,
+            )
+        except Exception:
+            pass
+

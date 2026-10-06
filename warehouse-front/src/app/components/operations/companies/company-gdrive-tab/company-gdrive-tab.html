@@ -310,11 +310,11 @@
             </div>
           </label>
 
-          <label class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 hover:bg-slate-50/80 cursor-pointer transition-all sm:col-span-2">
+          <label *ngIf="isSuperuser()" class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 hover:bg-slate-50/80 cursor-pointer transition-all sm:col-span-2">
             <input type="checkbox" [(ngModel)]="cfg.sync_backups" (ngModelChange)="updateToggles()" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
             <div>
-              <div class="text-xs font-bold text-slate-800">فایل‌های پشتیبان پایگاه داده</div>
-              <div class="text-[10px] text-slate-500">بک‌آپ‌های کامل خودکار و دستی دیتابیس سرور</div>
+              <div class="text-xs font-bold text-slate-800">فایل‌های پشتیبان پایگاه داده (ویژه مدیر ارشد سیستم)</div>
+              <div class="text-[10px] text-slate-500">بک‌آپ‌های کامل خودکار و دستی دیتابیس سرور (حاوی اطلاعات تمام شرکت‌ها)</div>
             </div>
           </label>
         </div>

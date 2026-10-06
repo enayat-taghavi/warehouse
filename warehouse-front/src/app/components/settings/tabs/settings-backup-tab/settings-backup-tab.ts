@@ -1,12 +1,14 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { SettingsService } from '../../../../services/settings';
 import { ToastService } from '../../../../services/toast.service';
 import { finalize } from 'rxjs/operators';
 import { offlineDb, downloadLocalDatabaseSnapshotFile } from '../../../../core/services/offline-db';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-settings-backup-tab',
@@ -28,6 +30,15 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
   showRollbackConfirm = false;
   rollbackConfirmInput = '';
   isExportingLocalDb = false;
+
+  // ─── درایو سراسری سامانه (فاز ۲ - D1) ───
+  systemGDrive: any = null;
+  isLoadingGDrive = false;
+  isConnectingGDrive = false;
+  isDisconnectingGDrive = false;
+  gdriveTasks: any[] = [];
+  private gdriveBroadcast?: BroadcastChannel;
+  private messageListener?: (event: MessageEvent) => void;
 
   backupPassword = '';
   backupShowPassword = false;
@@ -54,21 +65,37 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
     return this.auth.hasPermission('CanRestoreDatabase');
   }
 
+  isSuperuser() {
+    return this.auth.isSuperuser();
+  }
+
   constructor(
     private settingsService: SettingsService,
     private toast: ToastService,
     private cdr: ChangeDetectorRef,
-    private auth: AuthService
+    private auth: AuthService,
+    private http: HttpClient
   ) {}
 
   ngOnInit() {
     if (this.canManageBackup() || this.canRestoreDatabase()) {
       this.loadSnapshots();
     }
+    if (this.isSuperuser()) {
+      this.loadSystemGDrive();
+      this.initGDriveListeners();
+      this.checkUrlCallbackParams();
+    }
   }
 
   ngOnDestroy() {
     this.stopRestoreProgress();
+    if (this.gdriveBroadcast) {
+      try { this.gdriveBroadcast.close(); } catch {}
+    }
+    if (this.messageListener) {
+      window.removeEventListener('message', this.messageListener);
+    }
   }
 
   startRestoreProgress() {
@@ -440,5 +467,149 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
           }
         }
       });
+  }
+
+  // ─── توابع مدیریت درایو سراسری سامانه (فاز ۲) ───
+  loadSystemGDrive() {
+    this.isLoadingGDrive = true;
+    this.settingsService.getSystemGDriveConfig()
+      .pipe(finalize(() => { this.isLoadingGDrive = false; this.cdr.detectChanges(); }))
+      .subscribe({
+        next: (res) => {
+          this.systemGDrive = res;
+          if (res?.is_connected) {
+            this.loadSystemGDriveTasks();
+          }
+        },
+        error: (err) => {
+          console.warn('Could not load system gdrive config:', err);
+        }
+      });
+  }
+
+  loadSystemGDriveTasks() {
+    this.settingsService.getSystemGDriveTasks(10)
+      .subscribe({
+        next: (res) => {
+          this.gdriveTasks = res.results || [];
+          this.cdr.detectChanges();
+        },
+        error: () => {}
+      });
+  }
+
+  connectSystemGDrive() {
+    this.isConnectingGDrive = true;
+    this.settingsService.getSystemGDriveAuthUrl('popup')
+      .pipe(finalize(() => { this.isConnectingGDrive = false; this.cdr.detectChanges(); }))
+      .subscribe({
+        next: (res) => {
+          if (res?.auth_url) {
+            const popup = window.open(res.auth_url, 'gdrive_oauth_popup', 'width=600,height=700,status=no,toolbar=no,menubar=no');
+            if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+              this.settingsService.getSystemGDriveAuthUrl('redirect').subscribe({
+                next: (redRes) => {
+                  window.location.href = redRes.auth_url;
+                }
+              });
+            }
+          }
+        },
+        error: (err) => {
+          this.toast.show('error', err?.error?.error || 'خطا در ایجاد لینک اتصال به گوگل‌درایو');
+        }
+      });
+  }
+
+  disconnectSystemGDrive() {
+    if (!confirm('آیا از قطع اتصال حساب درایو سراسری سامانه اطمینان دارید؟ پشتیبان‌های جدید دیتابیس تا اتصال مجدد بر روی ابر ذخیره نخواهند شد.')) {
+      return;
+    }
+    this.isDisconnectingGDrive = true;
+    this.settingsService.disconnectSystemGDrive()
+      .pipe(finalize(() => { this.isDisconnectingGDrive = false; this.cdr.detectChanges(); }))
+      .subscribe({
+        next: () => {
+          this.toast.show('success', 'ارتباط درایو سراسری سامانه قطع گردید.');
+          this.loadSystemGDrive();
+        },
+        error: (err) => {
+          this.toast.show('error', err?.error?.error || 'خطا در قطع ارتباط');
+        }
+      });
+  }
+
+  toggleSystemGDriveEnabled() {
+    if (!this.systemGDrive) return;
+    const newVal = !this.systemGDrive.is_enabled;
+    this.settingsService.patchSystemGDriveConfig({ is_enabled: newVal }).subscribe({
+      next: () => {
+        this.systemGDrive.is_enabled = newVal;
+        this.toast.show('success', newVal ? 'ارسال ابری سامانه فعال گردید.' : 'ارسال ابری سامانه متوقف شد.');
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.toast.show('error', 'خطا در تغییر وضعیت ارسال ابری');
+      }
+    });
+  }
+
+  toggleCompanyBackupSync(company: any) {
+    const current = company.sync_backups === true;
+    this.http.patch(`${environment.apiUrl}/personnel/companies/${company.company_id}/gdrive/`, { sync_backups: !current }).subscribe({
+      next: () => {
+        company.sync_backups = !current;
+        this.toast.show('success', `تنظیمات ارسال پشتیبان برای شرکت ${company.company_name} بروزرسانی شد.`);
+        this.loadSystemGDrive();
+      },
+      error: (err) => {
+        this.toast.show('error', err?.error?.error || 'خطا در تغییر تنظیمات شرکت');
+      }
+    });
+  }
+
+  private initGDriveListeners() {
+    try {
+      if (window.BroadcastChannel) {
+        this.gdriveBroadcast = new BroadcastChannel('gdrive-oauth');
+        this.gdriveBroadcast.onmessage = (e) => {
+          if (e.data && e.data.type === 'gdrive_oauth_callback') {
+            if (e.data.status === 'connected') {
+              this.toast.show('success', 'اتصال گوگل‌درایو با موفقیت برقرار شد.');
+              this.loadSystemGDrive();
+            } else {
+              this.toast.show('error', e.data.message || 'خطا در اتصال به گوگل‌درایو');
+            }
+          }
+        };
+      }
+    } catch {}
+
+    this.messageListener = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'gdrive_oauth_callback') {
+        if (event.data.status === 'connected') {
+          this.toast.show('success', 'اتصال گوگل‌درایو برقرار شد.');
+          this.loadSystemGDrive();
+        } else {
+          this.toast.show('error', event.data.message || 'خطا در اتصال به گوگل');
+        }
+      }
+    };
+    window.addEventListener('message', this.messageListener);
+  }
+
+  private checkUrlCallbackParams() {
+    const params = new URLSearchParams(window.location.search);
+    const gdriveParam = params.get('gdrive');
+    if (gdriveParam) {
+      if (gdriveParam === 'connected') {
+        this.toast.show('success', 'اتصال درایو سامانه با موفقیت برقرار شد.');
+        this.loadSystemGDrive();
+      } else {
+        this.toast.show('error', 'خطا در اتصال به درایو سامانه');
+      }
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+    }
   }
 }

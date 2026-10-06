@@ -43,6 +43,7 @@ export class AuthService {
   readonly userDepartment = computed(() => this._user()?.department ?? '');
   readonly userRoleTitles = computed(() => this._user()?.role_titles ?? []);
   readonly userPermissions = computed(() => this._user()?.permissions ?? []);
+  readonly isSuperuser = computed(() => this._user()?.is_superuser === true);
 
   updateUserAvatar(avatarUrl: string | null) {
     const current = this._user();

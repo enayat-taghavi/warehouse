@@ -111,5 +111,35 @@ export class SettingsService {
       context: new HttpContext().set(SKIP_OFFLINE, true)
     });
   }
+
+  getSystemGDriveConfig(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/settings/gdrive/system/`, {
+      context: new HttpContext().set(SKIP_OFFLINE, true)
+    });
+  }
+
+  patchSystemGDriveConfig(data: any): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/settings/gdrive/system/`, data, {
+      context: new HttpContext().set(SKIP_OFFLINE, true)
+    });
+  }
+
+  getSystemGDriveAuthUrl(mode: string = 'popup'): Observable<{ auth_url: string; state: string }> {
+    return this.http.get<{ auth_url: string; state: string }>(`${this.apiUrl}/settings/gdrive/system/auth-url/?mode=${mode}`, {
+      context: new HttpContext().set(SKIP_OFFLINE, true)
+    });
+  }
+
+  disconnectSystemGDrive(): Observable<any> {
+    return this.http.post(`${this.apiUrl}/settings/gdrive/system/disconnect/`, {}, {
+      context: new HttpContext().set(SKIP_OFFLINE, true)
+    });
+  }
+
+  getSystemGDriveTasks(limit: number = 10): Observable<{ count: number; results: any[] }> {
+    return this.http.get<{ count: number; results: any[] }>(`${this.apiUrl}/settings/gdrive/system/tasks/?limit=${limit}`, {
+      context: new HttpContext().set(SKIP_OFFLINE, true)
+    });
+  }
 }
 

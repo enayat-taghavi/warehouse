@@ -7,6 +7,7 @@ import { ActiveCompanyService } from '../../../../core/services/active-company.s
 import { ToastService } from '../../../../services/toast.service';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { Subscription } from 'rxjs';
+import { AuthService } from '../../../../core/auth/auth.service';
 
 export interface GDriveConfigResponse {
   company_id: number;
@@ -63,6 +64,8 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
   private http = inject(HttpClient);
   public activeCompanyService = inject(ActiveCompanyService);
   private toastService = inject(ToastService);
+  private auth = inject(AuthService);
+  public isSuperuser = this.auth.isSuperuser;
 
   public config = signal<GDriveConfigResponse | null>(null);
   public queueItems = signal<GDriveQueueItem[]>([]);

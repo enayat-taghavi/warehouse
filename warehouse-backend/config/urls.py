@@ -42,8 +42,18 @@ for _code in installed_modules():
         for _prefix, _urlconf in _spec.url_includes:
             urlpatterns.append(path(_prefix, include(_urlconf)))
 
-# شرط موقت مرحله ۰: در مرحله ۲ callback به هسته می‌رود و بی‌شرط ثبت می‌شود
-if 'accounting' in installed_modules():
-    from personnel.google_drive_views import GoogleDriveOAuthCallbackView
-    urlpatterns.append(path('api/accounts/gdrive/callback/', GoogleDriveOAuthCallbackView.as_view(), name='root-gdrive-oauth-callback'))
+# فاز ۲: ثبت بی‌شرط مسیر کال‌بک گوگل‌درایو در هسته و مسیرهای درایو سراسری سامانه
+from settings_core.google_drive_views import (
+    GoogleDriveOAuthCallbackView,
+    SystemGoogleDriveConfigView,
+    SystemGoogleDriveAuthUrlView,
+    SystemGoogleDriveDisconnectView,
+    SystemGoogleDriveTasksView,
+)
+urlpatterns.append(path('api/accounts/gdrive/callback/', GoogleDriveOAuthCallbackView.as_view(), name='root-gdrive-oauth-callback'))
+urlpatterns.append(path('api/settings/gdrive/system/', SystemGoogleDriveConfigView.as_view(), name='system-gdrive-config'))
+urlpatterns.append(path('api/settings/gdrive/system/auth-url/', SystemGoogleDriveAuthUrlView.as_view(), name='system-gdrive-auth-url'))
+urlpatterns.append(path('api/settings/gdrive/system/disconnect/', SystemGoogleDriveDisconnectView.as_view(), name='system-gdrive-disconnect'))
+urlpatterns.append(path('api/settings/gdrive/system/tasks/', SystemGoogleDriveTasksView.as_view(), name='system-gdrive-tasks'))
+
 
