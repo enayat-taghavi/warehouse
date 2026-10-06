@@ -1,24 +1,14 @@
 import logging
-from typing import Optional
-from urllib.parse import urlparse
-from django.conf import settings
-from django.http import HttpResponse
+from datetime import timedelta
 from django.shortcuts import get_object_or_404
-from django.utils.html import escape
+from django.utils import timezone
 from django.db.models import Count, Q
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from .models import Company, CompanyGoogleDriveConfig, GoogleDriveSyncQueue
-from .google_drive_service import (
-    generate_company_auth_url,
-    verify_oauth_state,
-    verify_and_consume_oauth_state,
-    exchange_code_and_store_credentials,
-    sync_single_queue_item
-)
-from .google_drive_path_resolver import GoogleDrivePathResolver
+from .google_drive_service import generate_company_auth_url
 
 logger = logging.getLogger(__name__)
 
@@ -52,124 +42,6 @@ def _format_time_field(val, fallback: str) -> str:
         return val.strftime('%H:%M')
     except Exception:
         return str(val)[:5]
-
-
-def _get_target_origin(request) -> str:
-    """استخراج مبدأ امن هدایتگر (Target Origin) از تنظیمات یا درخواست جاری"""
-    redirect_uri = getattr(settings, 'GOOGLE_OAUTH_REDIRECT_URI', '')
-    if redirect_uri:
-        parsed = urlparse(redirect_uri)
-        if parsed.scheme and parsed.netloc:
-            return f"{parsed.scheme}://{parsed.netloc}"
-    return request.build_absolute_uri('/')[:-1]
-
-
-def _render_oauth_response(
-    request,
-    is_success: bool,
-    mode: str,
-    company_id: Optional[int],
-    company_name: str,
-    account_email: str,
-    error_message: str = ''
-) -> HttpResponse:
-    """
-    رندر صفحه پاسخ بازگشتی OAuth گوگل با فرار کامل تمام ورودی‌ها و جلوگیری از XSS (GD-03)
-    پشتیبانی همزمان از پنجره پاپ‌آپ و BroadcastChannel و بازگشت به همان تب (Redirect)
-    """
-    target_origin = _get_target_origin(request)
-    safe_company_name = escape(company_name or 'شرکت')
-    safe_email = escape(account_email or '')
-    safe_error = escape(error_message or 'خطای نامشخص در اتصال به حساب گوگل')
-    safe_mode = escape(mode or 'popup')
-    cid_js = company_id if company_id else 'null'
-    redirect_url = (
-        f"/app/operations/companies/{company_id}?tab=gdrive&gdrive={'connected' if is_success else 'error'}"
-        if company_id else "/app/operations/companies?gdrive=error"
-    )
-
-    if is_success:
-        title = "اتصال به گوگل‌درایو برقرار شد"
-        badge_html = '<div style="background: #dcfce7; color: #15803d; padding: 6px 14px; border-radius: 9999px; font-weight: bold; font-size: 13px; display: inline-block; margin-bottom: 16px;">✓ اتصال موفق</div>'
-        msg_html = f'<p style="color: #334155; font-size: 14px; margin-bottom: 24px; line-height: 1.6;">شرکت <strong>{safe_company_name}</strong> با موفقیت به حساب <strong>{safe_email}</strong> متصل شد.</p>'
-    else:
-        title = "خطا در اتصال به گوگل‌درایو"
-        badge_html = '<div style="background: #fee2e2; color: #b91c1c; padding: 6px 14px; border-radius: 9999px; font-weight: bold; font-size: 13px; display: inline-block; margin-bottom: 16px;">✕ عدم موفقیت در اتصال</div>'
-        msg_html = f'<p style="color: #475569; font-size: 14px; margin-bottom: 24px; line-height: 1.6;">{safe_error}</p>'
-
-    html_content = f"""<!DOCTYPE html>
-<html dir="rtl" lang="fa">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{escape(title)}</title>
-    <style>
-        body {{ font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 40px 16px; background: #f8fafc; color: #0f172a; margin: 0; }}
-        .card {{ background: white; max-width: 440px; margin: 0 auto; padding: 32px 24px; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }}
-        h2 {{ margin: 0 0 12px; font-size: 18px; font-weight: 800; color: #1e293b; }}
-        .btn {{ display: inline-block; text-decoration: none; background: #4f46e5; color: white; border: none; padding: 10px 24px; border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s; }}
-        .btn:hover {{ background: #4338ca; }}
-    </style>
-</head>
-<body>
-    <div class="card">
-        {badge_html}
-        <h2>{escape(title)}</h2>
-        {msg_html}
-        <div id="action-container">
-            <button class="btn" onclick="handleClose();">بستن پنجره و بازگشت</button>
-        </div>
-    </div>
-    <script>
-        const isSuccess = {'true' if is_success else 'false'};
-        const mode = '{safe_mode}';
-        const companyId = {cid_js};
-        const targetOrigin = '{target_origin}';
-        const redirectUrl = '{redirect_url}';
-
-        function notifyOpener() {{
-            const payload = {{
-                type: isSuccess ? 'GDRIVE_OAUTH_SUCCESS' : 'GDRIVE_OAUTH_ERROR',
-                companyId: companyId
-            }};
-            try {{
-                const bc = new BroadcastChannel('gdrive-oauth');
-                bc.postMessage(payload);
-                bc.close();
-            }} catch (e) {{}}
-
-            if (window.opener) {{
-                try {{
-                    window.opener.postMessage(payload, targetOrigin);
-                }} catch (e) {{}}
-            }}
-        }}
-
-        function handleClose() {{
-            notifyOpener();
-            if (mode === 'redirect') {{
-                window.location.replace(redirectUrl);
-            }} else {{
-                window.close();
-                setTimeout(() => {{
-                    const container = document.getElementById('action-container');
-                    if (container) {{
-                        container.innerHTML = '<a href="' + redirectUrl + '" class="btn">بازگشت مستقیم به سامانه</a>';
-                    }}
-                }}, 1500);
-            }}
-        }}
-
-        notifyOpener();
-        if (mode === 'redirect') {{
-            setTimeout(() => {{ window.location.replace(redirectUrl); }}, 1200);
-        }} else {{
-            setTimeout(handleClose, 1800);
-        }}
-    </script>
-</body>
-</html>"""
-    return HttpResponse(html_content, status=200 if is_success else 400)
 
 
 class CompanyGoogleDriveConfigView(APIView):
@@ -395,7 +267,7 @@ class CompanyGoogleDriveAuthUrlView(APIView):
         except Exception as exc:
             logger.error(f"Error generating OAuth URL for company {company.name}: {exc}")
             return Response(
-                {"error": f"خطا در ایجاد لینک اتصال گوگل: {str(exc)}"},
+                {"error": "ایجاد لینک اتصال گوگل با خطا روبه‌رو شد. تنظیمات OAuth سرور را بررسی کنید."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -605,8 +477,7 @@ class CompanyGoogleDriveTriggerSyncView(APIView):
         # شمارش تسک‌های معلق
         pending_qs = GoogleDriveSyncQueue.objects.filter(
             company=company,
-            status='pending',
-            retry_count__lt=5
+            status='pending'
         )
         count = pending_qs.count()
 
@@ -618,8 +489,6 @@ class CompanyGoogleDriveTriggerSyncView(APIView):
             }, status=status.HTTP_200_OK)
 
         # تنظیم فیلد force_sync_until جهت عبور ورکر از پنجره ساعات خلوتی
-        from datetime import timedelta
-        from django.utils import timezone
         config.force_sync_until = timezone.now() + timedelta(hours=1)
         config.save(update_fields=['force_sync_until'])
 

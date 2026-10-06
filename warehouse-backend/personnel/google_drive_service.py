@@ -35,6 +35,7 @@ from settings_core.google_drive_client import (
     verify_and_consume_oauth_state,
     classify_gdrive_error,
     revoke_google_token,
+    transient_backoff_seconds,
 )
 
 # Memory cache for Google Drive folder IDs to minimize API calls
@@ -63,42 +64,8 @@ def invalidate_folder_cache(company_id: Optional[int] = None):
 
 
 def create_oauth_flow(company_id: int) -> Flow:
-    """Create Google OAuth 2.0 Flow with company state signature"""
-    client_id = getattr(settings, 'GOOGLE_OAUTH_CLIENT_ID', '')
-    client_secret = getattr(settings, 'GOOGLE_OAUTH_CLIENT_SECRET', '')
-    redirect_uri = getattr(settings, 'GOOGLE_OAUTH_REDIRECT_URI', '')
-
-    if not client_id or not client_secret:
-        raise ValueError("شناسه و کلید برنامه گوگل (GOOGLE_OAUTH_CLIENT_ID / SECRET) در تنظیمات سرور ثبت نشده است.")
-
-    client_config = {
-        "web": {
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [redirect_uri],
-        }
-    }
-
-    flow = Flow.from_client_config(
-        client_config,
-        scopes=SCOPES,
-        redirect_uri=redirect_uri
-    )
-    # Confidential Web applications with client_secret do not require PKCE.
-    # Disabling autogenerate_code_verifier ensures no code_challenge is sent in auth URL.
-    flow.autogenerate_code_verifier = False
-    flow.code_verifier = None
-
-    proxy_url = getattr(settings, 'OUTBOUND_HTTP_PROXY', '') or os.getenv('OUTBOUND_HTTP_PROXY', '')
-    if proxy_url and hasattr(flow, 'session') and flow.session:
-        flow.session.proxies = {
-            'http': proxy_url,
-            'https': proxy_url,
-        }
-
-    return flow
+    """Google OAuth 2.0 Flow (ساخت عمومی در هسته؛ PKCE خاموش و پراکسی خروجی)"""
+    return create_base_oauth_flow()
 
 
 def generate_company_auth_url(company_id: int, user=None, mode: str = 'popup') -> Tuple[str, str]:
@@ -140,54 +107,6 @@ def generate_company_auth_url(company_id: int, user=None, mode: str = 'popup') -
         state=state
     )
     return auth_url, state
-
-
-def verify_and_consume_oauth_state(state: str) -> Optional[Dict[str, Any]]:
-    """
-    Atomically verify and consume signed OAuth state (GD-02).
-    Returns payload dictionary {'c': company_id, 'u': user_id, 'n': nonce, 'm': mode, 't': target} if valid.
-    """
-    if not state:
-        return None
-
-    try:
-        payload = signing.loads(state, salt='gdrive-oauth', max_age=600)
-    except (signing.BadSignature, signing.SignatureExpired) as exc:
-        logger.warning(f"[GDrive OAuth] Invalid or expired signature: {exc}")
-        return None
-
-    if not isinstance(payload, dict):
-        return None
-
-    nonce = payload.get('n')
-    if not nonce:
-        return None
-
-    from settings_core.models import GoogleOAuthState
-    now = timezone.now()
-
-    # Atomic consumption: UPDATE ... SET used_at=now WHERE nonce=? AND used_at IS NULL AND expires_at > now
-    updated = GoogleOAuthState.objects.filter(
-        nonce=nonce,
-        used_at__isnull=True,
-        expires_at__gt=now
-    ).update(used_at=now)
-
-    if updated == 0:
-        logger.warning(f"[GDrive OAuth] Nonce {nonce[:8]}... was already used, expired, or not found.")
-        return None
-
-    # Invalidate other pending states for this company/target
-    target = payload.get('t', 'company')
-    company_id = payload.get('c')
-    if target == 'company' and company_id:
-        GoogleOAuthState.objects.filter(
-            target='company',
-            company_id=company_id,
-            used_at__isnull=True
-        ).exclude(nonce=nonce).update(used_at=now)
-
-    return payload
 
 
 def verify_oauth_state(state: str) -> Optional[int]:
@@ -322,52 +241,6 @@ def ensure_company_drive_folders(company, drive_service) -> Tuple[str, str]:
     config.save(update_fields=['root_folder_id', 'root_folder_name', 'archive_folder_id'])
     _ROOT_ARCHIVE_CACHE[company.id] = (root_id, archive_id, now_ts)
     return root_id, archive_id
-
-
-def _escape_gdrive_query_string(val: str) -> str:
-    """Escape single quotes and backslashes for Google Drive API query strings"""
-    return val.replace('\\', '\\\\').replace("'", r"\'")
-
-
-def _check_folder_exists(drive_service, folder_id: str) -> bool:
-    """Verify if a folder exists and is not trashed"""
-    try:
-        res = drive_service.files().get(fileId=folder_id, fields='id, trashed').execute()
-        return not res.get('trashed', False)
-    except Exception:
-        return False
-
-
-def _find_or_create_folder(drive_service, parent_id: str, folder_name: str) -> str:
-    """Find existing folder or create new one in Google Drive"""
-    safe_name = _escape_gdrive_query_string(folder_name)
-    query = f"mimeType = 'application/vnd.google-apps.folder' and name = '{safe_name}' and trashed = false"
-    if parent_id:
-        query += f" and '{parent_id}' in parents"
-
-    try:
-        response = drive_service.files().list(
-            q=query,
-            spaces='drive',
-            fields='files(id, name)',
-            pageSize=1
-        ).execute()
-        files = response.get('files', [])
-        if files:
-            return files[0]['id']
-    except Exception as exc:
-        logger.warning(f"Error searching folder '{folder_name}': {exc}")
-
-    # Create new folder
-    folder_metadata = {
-        'name': folder_name,
-        'mimeType': 'application/vnd.google-apps.folder',
-    }
-    if parent_id and parent_id != 'root':
-        folder_metadata['parents'] = [parent_id]
-
-    created = drive_service.files().create(body=folder_metadata, fields='id').execute()
-    return created['id']
 
 
 def resolve_folder_hierarchy(company_id: int, drive_service, root_folder_id: str, relative_path: str) -> str:
@@ -605,7 +478,8 @@ def sync_single_queue_item(task_id: int) -> bool:
     company = task.company
     config = getattr(company, 'gdrive_config', None)
     if not config or not config.is_enabled or not config.refresh_token:
-        task.status = 'failed'
+        # تسک آزاد می‌شود و در صف می‌ماند تا پس از اتصال یا فعال‌سازی دوباره ارسال شود.
+        task.status = 'pending'
         task.error_message = "سرویس گوگل‌درایو برای این شرکت فعال یا متصل نیست."
         task.save(update_fields=['status', 'error_message', 'updated_at'])
         return False
@@ -724,11 +598,18 @@ def sync_single_queue_item(task_id: int) -> bool:
                 'parents': [dest_folder_id]
             }
 
-            media = MediaFileUpload(
-                abs_local_path,
-                resumable=True,
-                chunksize=1024 * 1024 * 5  # قطعات ۵ مگابایتی
-            )
+            def _new_media():
+                return MediaFileUpload(
+                    abs_local_path,
+                    resumable=True,
+                    chunksize=1024 * 1024 * 5  # قطعات ۵ مگابایتی
+                )
+
+            def _run_upload(req):
+                result = None
+                while result is None:
+                    _, result = req.next_chunk(num_retries=3)
+                return result
 
             # به‌روزرسانی فقط با شناسه گوگل‌درایو از رکورد قبلی همان کلید انجام می‌شود (حذف جستجوی هم‌نام GD-12)
             existing_id = task.gdrive_file_id
@@ -746,33 +627,27 @@ def sync_single_queue_item(task_id: int) -> bool:
                 if prev_completed and prev_completed.gdrive_file_id:
                     existing_id = prev_completed.gdrive_file_id
 
+            uploaded = None
             if existing_id:
                 try:
-                    req = drive_service.files().update(
+                    uploaded = _run_upload(drive_service.files().update(
                         fileId=existing_id,
-                        media_body=media,
+                        media_body=_new_media(),
                         fields='id, md5Checksum'
-                    )
+                    ))
                 except HttpError as he:
-                    if getattr(getattr(he, 'resp', None), 'status', None) == 404:
-                        existing_id = None
-                        req = drive_service.files().create(
-                            body=file_metadata,
-                            media_body=media,
-                            fields='id, md5Checksum'
-                        )
-                    else:
+                    # خطای 404 فقط هنگام ارسال (next_chunk) بالا می‌آید: فایل در درایو حذف شده،
+                    # پس فایل تازه ساخته می‌شود به‌جای تکرار بی‌پایان به‌روزرسانی.
+                    if getattr(getattr(he, 'resp', None), 'status', None) != 404:
                         raise
-            else:
-                req = drive_service.files().create(
+                    logger.warning(f"[GDrive Sync] File {existing_id} for task #{task.id} not found in Drive; uploading as new file.")
+                    task.gdrive_file_id = None
+            if uploaded is None:
+                uploaded = _run_upload(drive_service.files().create(
                     body=file_metadata,
-                    media_body=media,
+                    media_body=_new_media(),
                     fields='id, md5Checksum'
-                )
-
-            uploaded = None
-            while uploaded is None:
-                _, uploaded = req.next_chunk(num_retries=3)
+                ))
 
             # مقایسه md5Checksum گوگل با MD5 محلی (GD-14)
             gdrive_md5 = uploaded.get('md5Checksum')
@@ -820,17 +695,13 @@ def sync_single_queue_item(task_id: int) -> bool:
             return False
 
         elif category == 'transient':
+            # خطای گذرا هیچ‌وقت تسک را failed نمی‌کند؛ با تأخیر نمایی (سقف یک ساعت) دوباره تلاش می‌شود.
             task.retry_count += 1
-            if task.retry_count < 5:
-                backoff_secs = min(3600, (2 ** task.retry_count) * 30)
-                task.next_retry_at = timezone.now() + timedelta(seconds=backoff_secs)
-                task.status = 'pending'
-                task.error_message = f"{user_msg} (تلاش مجدد در {backoff_secs} ثانیه)"
-                task.save(update_fields=['retry_count', 'next_retry_at', 'status', 'error_code', 'error_message', 'updated_at'])
-            else:
-                task.status = 'failed'
-                task.error_message = f"پایان سقف تلاش‌های مجدد: {user_msg}"
-                task.save(update_fields=['retry_count', 'status', 'error_code', 'error_message', 'updated_at'])
+            backoff_secs = transient_backoff_seconds(task.retry_count)
+            task.next_retry_at = timezone.now() + timedelta(seconds=backoff_secs)
+            task.status = 'pending'
+            task.error_message = f"{user_msg} (تلاش مجدد در {backoff_secs} ثانیه)"
+            task.save(update_fields=['retry_count', 'next_retry_at', 'status', 'error_code', 'error_message', 'updated_at'])
 
             # ثبت خطای سطح ارتباط فقط در صورت خطای کلی شبکه یا سرور (GD-20)
             if 'network' in reason_code or 'http_5' in reason_code:

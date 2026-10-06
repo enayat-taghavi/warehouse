@@ -15,6 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { environment } from '../../../../../environments/environment';
 import { ActiveCompanyService } from '../../../../core/services/active-company.service';
@@ -79,22 +80,18 @@ export interface GDriveQueueItem {
   completed_at: string | null;
 }
 
+// نام مدل‌هایی که بک‌اند در صف ثبت می‌کند (signals_gdrive.py و execute_company_scan_all)
 export const MODEL_NAME_PERSIAN_MAP: Record<string, string> = {
-  AccountingDocument: 'سند مالی / فاکتور',
+  Company: 'سند پایهٔ شرکت',
+  CompanyDocument: 'سند مرکزی شرکت',
+  CompanyBoardMember: 'مدرک عضو هیئت‌مدیره',
+  ExpenseInvoice: 'فاکتور هزینه',
+  PettyCashTransaction: 'رسید تنخواه',
   PersonnelProfile: 'پرونده پرسنلی',
-  PersonnelDocument: 'مدرک هویتی پرسنل',
+  PersonnelDocument: 'مدرک پرسنلی',
   VehicleDocument: 'مدرک خودرو / ناوگان',
   ItemPhoto: 'تصویر کالای انبار',
-  DatabaseBackup: 'پشتیبان پایگاه داده',
-  CompanyRegistrationDoc: 'مدرک ثبتی شرکت',
-  CompanyBoardMember: 'مدرک عضو هیئت‌مدیره',
-  CompanySealSignature: 'مهر و امضای مجاز',
-  CompanyContract: 'قرارداد رسمی شرکت',
-  CompanyAsset: 'سند دارایی شرکت',
-  CompanyInsurancePolicy: 'بیمه‌نامه شرکت',
-  CompanyLegalCase: 'پرونده حقوقی شرکت',
-  CompanyBankStatement: 'صورت‌حساب بانکی',
-  CompanyTaxReport: 'گزارش مالیاتی شرکت'
+  DatabaseBackup: 'پشتیبان پایگاه داده'
 };
 
 @Component({
@@ -153,6 +150,7 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
   private pollTimer: any = null;
   private sub: Subscription | null = null;
   private initialLoadDone = false;
+  private lastOAuthEventAt = 0;
 
   constructor() {
     this.destroyRef.onDestroy(() => {
@@ -238,51 +236,35 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
    */
   private setupOAuthListeners(): void {
     this.messageListener = (event: MessageEvent) => {
-      const allowedHost = window.location.hostname;
-      try {
-        const originUrl = new URL(event.origin);
-        if (originUrl.hostname !== allowedHost && !originUrl.hostname.includes('farsalish.ir') && originUrl.hostname !== 'localhost') {
-          return;
-        }
-      } catch {
-        return;
-      }
-
-      const isSuccess = event.data && (
-        event.data.type === 'GDRIVE_OAUTH_SUCCESS' ||
-        (event.data.type === 'gdrive_oauth_callback' && event.data.status === 'connected')
-      );
-
-      if (isSuccess) {
-        if (event.data.companyId && this.selectedCompanyId() && Number(event.data.companyId) !== this.selectedCompanyId()) {
-          return;
-        }
-        this.toastService.success('اتصال به حساب گوگل‌درایو با موفقیت برقرار شد.');
-        this.loadAll();
-      }
+      // فقط پیام صفحهٔ callback همین مبدأ پذیرفته می‌شود
+      if (event.origin !== window.location.origin) return;
+      this.handleOAuthEvent(event.data);
     };
     window.addEventListener('message', this.messageListener);
 
     if (typeof BroadcastChannel !== 'undefined') {
       try {
         this.broadcastChannel = new BroadcastChannel('gdrive-oauth');
-        this.broadcastChannel.onmessage = (event) => {
-          const isSuccess = event.data && (
-            event.data.type === 'GDRIVE_OAUTH_SUCCESS' ||
-            (event.data.type === 'gdrive_oauth_callback' && event.data.status === 'connected')
-          );
-          if (isSuccess) {
-            if (event.data.companyId && this.selectedCompanyId() && Number(event.data.companyId) !== this.selectedCompanyId()) {
-              return;
-            }
-            this.toastService.success('اتصال به حساب گوگل‌درایو با موفقیت برقرار شد.');
-            this.loadAll();
-          }
-        };
+        this.broadcastChannel.onmessage = (event) => this.handleOAuthEvent(event.data);
       } catch {
         this.broadcastChannel = null;
       }
     }
+  }
+
+  private handleOAuthEvent(data: any): void {
+    if (!data || data.type !== 'gdrive_oauth_callback' || data.target !== 'company') return;
+    if (Number(data.companyId) !== this.selectedCompanyId()) return;
+    // پنجرهٔ بازشو هم postMessage و هم BroadcastChannel می‌فرستد؛ یک بار پردازش شود
+    const now = Date.now();
+    if (now - this.lastOAuthEventAt < 3000) return;
+    this.lastOAuthEventAt = now;
+    if (data.status === 'connected') {
+      this.toastService.success('اتصال به حساب گوگل‌درایو با موفقیت برقرار شد.');
+    } else {
+      this.toastService.error('اتصال به حساب گوگل‌درایو با خطا مواجه شد.');
+    }
+    this.loadAll();
   }
 
   /**
@@ -315,7 +297,7 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     if (!gdriveStatus && this.route) {
-      this.route.queryParamMap.subscribe((map) => {
+      this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((map) => {
         const val = map.get('gdrive');
         if (val) {
           this.handleOAuthReturnStatus(val);
@@ -380,7 +362,7 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
       this.isOffline.set(false);
     }
 
-    this.http.get<GDriveConfigResponse>(`${environment.apiUrl}/personnel/companies/${cid}/gdrive/`).subscribe({
+    this.http.get<GDriveConfigResponse>(`${environment.apiUrl}/personnel/companies/${cid}/gdrive/`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (cfg) => {
         this.config.set(cfg);
         this.isLoading.set(false);
@@ -408,7 +390,8 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
     const cid = this.selectedCompanyId();
     if (!cid) return;
 
-    this.http.get<GDriveConfigResponse>(`${environment.apiUrl}/personnel/companies/${cid}/gdrive/`).subscribe({
+    // takeUntilDestroyed: پاسخ دیررسیده پس از خروج از تب، polling تازه‌ای راه نیندازد
+    this.http.get<GDriveConfigResponse>(`${environment.apiUrl}/personnel/companies/${cid}/gdrive/`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (cfg) => {
         this.config.set(cfg);
         this.loadQueue(this.activeStatusFilter(), true);
@@ -458,14 +441,17 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
       url += `&status=${filterStatus}`;
     }
 
-    this.http.get<{ results: GDriveQueueItem[]; count: number }>(url).subscribe({
+    this.http.get<{ results: GDriveQueueItem[]; count: number }>(url).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.queueItems.set(res.results || []);
         this.totalQueueCount.set(res.count ?? (res.results ? res.results.length : 0));
         this.isQueueLoading.set(false);
       },
-      error: () => {
+      error: (err) => {
         this.isQueueLoading.set(false);
+        if (!silent) {
+          this.toastService.error(err?.error?.error || 'خطا در دریافت لیست صف گوگل‌درایو');
+        }
       }
     });
   }
@@ -495,7 +481,8 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
     return this.expandedTaskIds().has(taskId);
   }
 
-  public getModelNamePersian(modelName: string): string {
+  public getModelNamePersian(modelName: string, action?: string): string {
+    if (action === 'scan_all') return 'پیمایش سوابق';
     return MODEL_NAME_PERSIAN_MAP[modelName] || modelName || 'سند ناشناخته';
   }
 

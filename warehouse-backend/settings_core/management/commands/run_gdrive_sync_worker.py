@@ -158,11 +158,16 @@ class Command(BaseCommand):
         except Exception as z_exc:
             logger.debug(f"[Worker] Zombie recovery error: {z_exc}")
 
+        # با توکن باطل، تسک‌ها تا اتصال دوباره در صف می‌مانند؛ برداشتنشان فقط حلقهٔ داغ
+        # درخواست به گوگل می‌سازد (هر ثانیه یک بار).
+        if config.auth_status == 'needs_reauth':
+            return 0
+
         candidate_ids = []
         with transaction.atomic():
             tasks = list(
                 SystemDriveUploadTask.objects.select_for_update(skip_locked=True)
-                .filter(status='pending', retry_count__lt=5)
+                .filter(status='pending')
                 .filter(models.Q(next_retry_at__isnull=True) | models.Q(next_retry_at__lte=timezone.now()))
                 .order_by('priority', 'created_at')[:limit]
             )

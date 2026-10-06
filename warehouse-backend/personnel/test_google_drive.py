@@ -582,15 +582,26 @@ class GoogleDriveCoreTestCase(TestCase):
             _, state1 = generate_company_auth_url(self.company.id, user=self.user, mode='popup')
             _, state2 = generate_company_auth_url(self.company.id, user=self.user, mode='popup')
 
-            # هر دو state ایجاد شده و معتبر هستند
+            from django.core import signing
+            from settings_core.models import GoogleOAuthState
+            from settings_core.google_drive_client import (
+                verify_and_consume_oauth_state as core_consume,
+                invalidate_other_oauth_states,
+            )
+            nonce1 = signing.loads(state1, salt='gdrive-oauth')['n']
+
             # مصرف state2
-            verified2 = verify_oauth_state(state2)
-            self.assertEqual(verified2, self.company.id)
+            payload2 = core_consume(state2)
+            self.assertEqual(payload2['c'], self.company.id)
 
             # حال state2 دیگر نباید قابل مصرف باشد
             self.assertIsNone(verify_oauth_state(state2))
 
-            # و state1 نیز به دلیل اتصال موفق همان مقصد باید باطل شده باشد
+            # مصرف یک state (پیش از موفقیت اتصال) state دیگر را باطل نمی‌کند
+            self.assertIsNone(GoogleOAuthState.objects.get(nonce=nonce1).used_at)
+
+            # پس از اتصال موفق همان مقصد، state1 باطل می‌شود
+            invalidate_other_oauth_states(payload2)
             self.assertIsNone(verify_oauth_state(state1))
 
     def test_callback_xss_protection(self):
@@ -1051,3 +1062,62 @@ class GoogleDriveCoreTestCase(TestCase):
         self.assertEqual(res.status_code, 200)
         # فقط سند ۲ است که در حساب دیگری هست و در حساب جاری نیست
         self.assertEqual(res.data['other_accounts_count'], 1)
+
+    def test_config_reports_worker_alive_from_fresh_heartbeat(self):
+        """ضربان تازهٔ ورکر در تب شرکت «ورکر فعال» دیده شود (بازبینی اجرای طرح)"""
+        from django.utils import timezone
+        from settings_core.models import SystemGoogleDriveConfig
+        SystemGoogleDriveConfig.get_solo()
+        SystemGoogleDriveConfig.objects.filter(id=1).update(worker_heartbeat_at=timezone.now())
+        res = self.client.get(f'/api/personnel/companies/{self.company.id}/gdrive/')
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.data['worker_alive'])
+
+    def test_callback_access_checker_resolves_company_and_requires_full_access(self):
+        """بررسی‌کنندهٔ دسترسی callback با شناسهٔ شرکت کار کند و docs_write کافی نباشد (D3)"""
+        from settings_core.google_drive_client import get_gdrive_target_handler
+        checker = get_gdrive_target_handler('company')['access_checker']
+        self.assertTrue(checker(self.user, company_id=self.company.id))
+
+        reader = User.objects.create_user(username='gdrive_docs_writer', password='Password123!')
+        UserCompanyAccess.objects.create(user=reader, company=self.company, access_level='docs_write')
+        self.assertFalse(checker(reader, company_id=self.company.id))
+
+        self.company.is_active = False
+        self.company.save(update_fields=['is_active'])
+        self.assertFalse(checker(self.user, company_id=self.company.id))
+
+    def test_transient_error_never_marks_task_failed(self):
+        """خطای گذرا پس از چند بار تکرار هم failed نشود و دوباره زمان‌بندی شود (GD-08)"""
+        import socket
+        from unittest.mock import patch
+        from personnel.google_drive_service import sync_single_queue_item
+        CompanyGoogleDriveConfig.objects.create(
+            company=self.company, is_enabled=True,
+            refresh_token=encrypt_secret('tok'), account_email='a@b.ir'
+        )
+        task = GoogleDriveSyncQueue.objects.create(
+            company=self.company, model_name='CompanyDocument', object_id=1, field_name='file',
+            source_file_path='x.pdf', target_folder_path='f', target_filename='x.pdf',
+            status='pending', retry_count=9
+        )
+        with patch('personnel.google_drive_service.get_google_drive_service', return_value=object()), \
+             patch('personnel.google_drive_service.ensure_company_drive_folders', side_effect=socket.timeout('timed out')):
+            self.assertFalse(sync_single_queue_item(task.id))
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'pending')
+        self.assertEqual(task.retry_count, 10)
+        self.assertIsNotNone(task.next_retry_at)
+
+    def test_worker_skips_company_that_needs_reauth(self):
+        """ورکر تسک‌های شرکت needs_reauth را برندارد تا حلقهٔ داغ ساخته نشود (GD-11)"""
+        from personnel.management.commands.run_gdrive_sync_worker import Command
+        CompanyGoogleDriveConfig.objects.create(
+            company=self.company, is_enabled=True, sync_mode='immediate',
+            refresh_token=encrypt_secret('tok'), auth_status='needs_reauth'
+        )
+        GoogleDriveSyncQueue.objects.create(
+            company=self.company, model_name='CompanyDocument', object_id=1, field_name='file',
+            source_file_path='x.pdf', target_folder_path='f', target_filename='x.pdf', status='pending'
+        )
+        self.assertEqual(Command().process_batch(limit=5), 0)

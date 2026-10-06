@@ -31,6 +31,12 @@ class PersonnelConfig(AppConfig):
             from personnel.google_drive_service import exchange_code_and_store_credentials
             from personnel.google_drive_views import check_user_company_access
 
+            def _company_access_checker(user, company_id=None, **kwargs):
+                # D3: اتصال فقط با workspace_full یا سوپریوزر؛ شرکت از روی شناسه خوانده می‌شود
+                from personnel.models import Company
+                company = Company.objects.filter(id=company_id).first() if company_id else None
+                return check_user_company_access(user, company, require_write=True)
+
             def _company_batch_runner(limit=20, ignore_schedule=False, company_id=None):
                 from personnel.management.commands.run_gdrive_sync_worker import Command as PersonnelWorkerCommand
                 pw = PersonnelWorkerCommand()
@@ -39,7 +45,7 @@ class PersonnelConfig(AppConfig):
             register_gdrive_target_handler(
                 target='company',
                 exchange_handler=lambda code, **kwargs: exchange_code_and_store_credentials(code, kwargs.get('company_id')),
-                access_checker=lambda user, **kwargs: check_user_company_access(user, kwargs.get('company_id')),
+                access_checker=_company_access_checker,
                 redirect_builder=lambda company_id, status: f"/app/operations/companies/{company_id}?tab=gdrive&gdrive={status}",
                 batch_runner=_company_batch_runner,
             )

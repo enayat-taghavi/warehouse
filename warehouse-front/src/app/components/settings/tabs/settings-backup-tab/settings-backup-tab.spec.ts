@@ -56,7 +56,8 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
         settingsServiceMock,
         toastServiceMock,
         cdrMock,
-        authServiceMock
+        authServiceMock,
+        { patch: vi.fn().mockReturnValue(of({})) } as any
       );
     });
   });

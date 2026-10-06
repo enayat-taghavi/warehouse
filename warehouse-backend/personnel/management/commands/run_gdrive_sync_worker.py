@@ -177,10 +177,12 @@ class Command(BaseCommand):
             logger.debug(f"[Company GDrive Worker] Zombie recovery error: {z_exc}")
 
         # ۱. تعیین شرکت‌های واجد شرایط در این لحظه
+        # شرکت با توکن باطل (needs_reauth) کنار گذاشته می‌شود تا اتصال دوباره؛ وگرنه
+        # تسک‌هایش هر ثانیه برداشته و به گوگل فرستاده می‌شوند (حلقهٔ داغ).
         config_qs = CompanyGoogleDriveConfig.objects.filter(
             is_enabled=True,
             refresh_token__isnull=False
-        ).exclude(refresh_token='')
+        ).exclude(refresh_token='').exclude(auth_status='needs_reauth')
 
         if company_id:
             config_qs = config_qs.filter(company_id=company_id)
@@ -207,8 +209,7 @@ class Command(BaseCommand):
         with transaction.atomic():
             qs = GoogleDriveSyncQueue.objects.select_for_update(skip_locked=True).filter(
                 company_id__in=eligible_company_ids,
-                status='pending',
-                retry_count__lt=5
+                status='pending'
             ).filter(
                 models.Q(next_retry_at__isnull=True) | models.Q(next_retry_at__lte=timezone.now())
             ).order_by('priority', 'created_at')

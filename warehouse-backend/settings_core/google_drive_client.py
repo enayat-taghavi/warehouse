@@ -105,22 +105,27 @@ def verify_and_consume_oauth_state(state: str) -> Optional[Dict[str, Any]]:
         logger.warning(f"[GDrive OAuth] Nonce {nonce[:8]}... was already used, expired, or not found.")
         return None
 
-    # Invalidate other pending states for this target
-    target = payload.get('t', 'company')
-    company_id = payload.get('c')
-    if target == 'company' and company_id:
-        GoogleOAuthState.objects.filter(
-            target='company',
-            company_id=company_id,
-            used_at__isnull=True
-        ).exclude(nonce=nonce).update(used_at=now)
-    elif target == 'system':
-        GoogleOAuthState.objects.filter(
-            target='system',
-            used_at__isnull=True
-        ).exclude(nonce=nonce).update(used_at=now)
-
     return payload
+
+
+def invalidate_other_oauth_states(payload: Dict[str, Any]) -> None:
+    """
+    پس از اتصال موفق، stateهای باز دیگر همان مقصد مصرف‌شده ثبت می‌شوند (GD-02).
+    فقط بعد از موفقیت صدا زده می‌شود تا لغو یا خطای یک تب، تب‌های دیگر را باطل نکند.
+    """
+    from settings_core.models import GoogleOAuthState
+    now = timezone.now()
+    nonce = payload.get('n')
+    target = payload.get('t', 'company')
+    qs = GoogleOAuthState.objects.filter(target=target, used_at__isnull=True).exclude(nonce=nonce)
+    if target == 'company':
+        company_id = payload.get('c')
+        if not company_id:
+            return
+        qs = qs.filter(company_id=company_id)
+    elif target != 'system':
+        return
+    qs.update(used_at=now)
 
 
 
@@ -253,12 +258,18 @@ def escape_gdrive_query_string(val: str) -> str:
 
 
 def check_folder_exists(drive_service, folder_id: str) -> bool:
-    """Verify if a folder exists and is not trashed"""
+    """
+    Verify if a folder exists and is not trashed.
+    فقط 404 (یا پوشهٔ در سطل زباله) یعنی «وجود ندارد»؛ خطای شبکه بالا می‌رود تا
+    پوشهٔ ریشهٔ تکراری ساخته نشود.
+    """
     try:
         res = drive_service.files().get(fileId=folder_id, fields='id, trashed').execute()
         return not res.get('trashed', False)
-    except Exception:
-        return False
+    except HttpError as exc:
+        if getattr(getattr(exc, 'resp', None), 'status', None) == 404:
+            return False
+        raise
 
 
 def find_or_create_folder(drive_service, parent_id: str, folder_name: str) -> str:
@@ -270,18 +281,17 @@ def find_or_create_folder(drive_service, parent_id: str, folder_name: str) -> st
     elif parent_id == 'root':
         query += " and 'root' in parents"
 
-    try:
-        response = drive_service.files().list(
-            q=query,
-            spaces='drive',
-            fields='files(id, name)',
-            pageSize=1
-        ).execute()
-        files = response.get('files', [])
-        if files:
-            return files[0]['id']
-    except Exception as exc:
-        logger.warning(f"[GDrive Client] Error searching folder '{folder_name}': {exc}")
+    # خطای جست‌وجو بالا می‌رود تا تسک دوباره تلاش شود؛ اگر بلعیده شود، با یک خطای
+    # گذرای شبکه پوشهٔ هم‌نام تکراری ساخته می‌شود.
+    response = drive_service.files().list(
+        q=query,
+        spaces='drive',
+        fields='files(id, name)',
+        pageSize=1
+    ).execute()
+    files = response.get('files', [])
+    if files:
+        return files[0]['id']
 
     # Create new folder
     folder_metadata = {
@@ -380,6 +390,11 @@ def revoke_google_token(token: str) -> bool:
         return False
 
 
+def transient_backoff_seconds(retry_count: int) -> int:
+    """تأخیر نمایی تلاش دوباره برای خطای گذرا، با سقف یک ساعت (بدون سقف تعداد تلاش)."""
+    return min(3600, (2 ** min(max(retry_count, 1), 7)) * 30)
+
+
 def classify_gdrive_error(exc: Exception) -> Dict[str, Any]:
     """
     Categorize errors based on HTTP status code and reason in HttpError body (GD-07, GD-08, GD-11).
@@ -452,7 +467,7 @@ def classify_gdrive_error(exc: Exception) -> Dict[str, Any]:
             return {
                 'category': 'permanent',
                 'reason': reasons[0] if reasons else 'forbidden_403',
-                'user_message': f'دسترسی غیرمجاز یا محدود شده به گوگل‌درایو: {str_exc}',
+                'user_message': 'دسترسی غیرمجاز یا محدود شده به گوگل‌درایو.',
                 'status_code': 403
             }
 
@@ -479,7 +494,7 @@ def classify_gdrive_error(exc: Exception) -> Dict[str, Any]:
             return {
                 'category': 'permanent',
                 'reason': f'http_{status_code}',
-                'user_message': f'خطای درخواست نامعتبر (کد {status_code}): {str_exc}',
+                'user_message': f'درخواست به گوگل‌درایو پذیرفته نشد (کد {status_code}).',
                 'status_code': status_code
             }
 
@@ -488,7 +503,7 @@ def classify_gdrive_error(exc: Exception) -> Dict[str, Any]:
         return {
             'category': 'permanent',
             'reason': 'file_not_found',
-            'user_message': f'فایل مبدأ در سرور یافت نشد: {str_exc}',
+            'user_message': 'فایل مبدأ در سرور یافت نشد.',
             'status_code': None
         }
 
@@ -498,7 +513,7 @@ def classify_gdrive_error(exc: Exception) -> Dict[str, Any]:
         return {
             'category': 'transient',
             'reason': 'network_error',
-            'user_message': f'خطای موقت در ارتباط شبکه با گوگل: {str_exc}',
+            'user_message': 'خطای موقت در ارتباط شبکه با گوگل؛ ارسال دوباره زمان‌بندی شد.',
             'status_code': None
         }
 
@@ -506,7 +521,7 @@ def classify_gdrive_error(exc: Exception) -> Dict[str, Any]:
     return {
         'category': 'permanent',
         'reason': 'unknown_error',
-        'user_message': f'خطا در پردازش فایل: {str_exc}',
+        'user_message': 'خطای پیش‌بینی‌نشده در پردازش فایل؛ جزئیات در لاگ سرور ثبت شد.',
         'status_code': None
     }
 

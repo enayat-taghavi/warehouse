@@ -159,6 +159,7 @@ def sync_single_system_task(task_id: int) -> bool:
         resolve_folder_hierarchy,
         upload_file_resumable,
         classify_gdrive_error,
+        transient_backoff_seconds,
     )
 
     # تصاحب اتمیک تسک (GD-06)
@@ -177,7 +178,8 @@ def sync_single_system_task(task_id: int) -> bool:
 
     config = SystemGoogleDriveConfig.get_solo()
     if not config.is_enabled or not config.refresh_token:
-        task.status = 'failed'
+        # تسک آزاد می‌شود و در صف می‌ماند تا پس از اتصال یا فعال‌سازی دوباره ارسال شود.
+        task.status = 'pending'
         task.error_message = "درایو سراسری سامانه غیرفعال است یا توکن اتصال ندارد."
         task.save(update_fields=['status', 'error_message', 'updated_at'])
         return False
@@ -245,17 +247,13 @@ def sync_single_system_task(task_id: int) -> bool:
             return False
 
         elif category == 'transient':
+            # خطای گذرا هیچ‌وقت تسک را failed نمی‌کند؛ با تأخیر نمایی (سقف یک ساعت) دوباره تلاش می‌شود.
             task.retry_count += 1
-            if task.retry_count < 5:
-                backoff_secs = min(3600, (2 ** task.retry_count) * 30)
-                task.next_retry_at = timezone.now() + timedelta(seconds=backoff_secs)
-                task.status = 'pending'
-                task.error_message = f"{user_msg} (تلاش مجدد در {backoff_secs} ثانیه)"
-                task.save(update_fields=['retry_count', 'next_retry_at', 'status', 'error_message', 'updated_at'])
-            else:
-                task.status = 'failed'
-                task.error_message = f"پایان سقف تلاش‌های مجدد: {user_msg}"
-                task.save(update_fields=['retry_count', 'status', 'error_message', 'updated_at'])
+            backoff_secs = transient_backoff_seconds(task.retry_count)
+            task.next_retry_at = timezone.now() + timedelta(seconds=backoff_secs)
+            task.status = 'pending'
+            task.error_message = f"{user_msg} (تلاش مجدد در {backoff_secs} ثانیه)"
+            task.save(update_fields=['retry_count', 'next_retry_at', 'status', 'error_message', 'updated_at'])
 
             config.last_error = f"خطای موقت در ارسال پشتیبان: {user_msg}"
             config.save(update_fields=['last_error', 'updated_at'])

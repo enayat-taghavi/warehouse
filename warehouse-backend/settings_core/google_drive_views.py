@@ -13,6 +13,7 @@ from .models import SystemGoogleDriveConfig, SystemDriveUploadTask
 from .google_drive_client import (
     get_gdrive_target_handler,
     verify_and_consume_oauth_state,
+    invalidate_other_oauth_states,
 )
 from .google_drive_service import (
     generate_system_auth_url,
@@ -205,12 +206,13 @@ class GoogleDriveOAuthCallbackView(APIView):
                 # System Drive: verify requesting user was superuser
                 from django.contrib.auth import get_user_model
                 User = get_user_model()
-                requesting_user = User.objects.filter(id=user_id).first() if user_id else None
+                requesting_user = User.objects.filter(id=user_id, is_active=True).first() if user_id else None
                 if not requesting_user or not requesting_user.is_superuser:
                     logger.warning(f"[System GDrive Callback] User {user_id} is not authorized for system drive.")
                     return _render_oauth_response('error', "تنها مدیران ارشد سیستم مجاز به اتصال درایو سراسری هستند.", target='system', mode=mode)
 
                 res = exchange_system_code_and_store_credentials(code)
+                invalidate_other_oauth_states(payload)
                 account_email = res.get('account_email') or ''
                 return _render_oauth_response('connected', "اتصال درایو سامانه با موفقیت برقرار شد.", target='system', mode=mode, account_email=account_email)
 
@@ -220,28 +222,28 @@ class GoogleDriveOAuthCallbackView(APIView):
                     logger.warning("[GDrive Callback] Company target handler not registered (accounting app may be disabled).")
                     return _render_oauth_response('error', "ماژول مدیریت حسابداری و شرکت‌ها در این سرور فعال نیست.", target='company', company_id=company_id, mode=mode)
 
-                # Re-verify user company permissions if user was present in state
-                if user_id:
-                    from django.contrib.auth import get_user_model
-                    User = get_user_model()
-                    user = User.objects.filter(id=user_id).first()
-                    access_checker = handler_info.get('access_checker')
-                    if access_checker and user:
-                        if not access_checker(user, company_id=company_id):
-                            logger.warning(f"[GDrive Callback] User {user.username} lost workspace_full access to company {company_id}.")
-                            return _render_oauth_response('error', "شما مجوز دسترسی لازم برای اتصال این شرکت را ندارید.", target='company', company_id=company_id, mode=mode)
+                # بررسی دوبارهٔ دسترسی کاربر state طبق D3؛ بدون کاربر یا بررسی‌کننده، اتصال رد می‌شود.
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                user = User.objects.filter(id=user_id, is_active=True).first() if user_id else None
+                access_checker = handler_info.get('access_checker')
+                if not user or not access_checker or not access_checker(user, company_id=company_id):
+                    logger.warning(f"[GDrive Callback] User {user_id} has no workspace_full access to company {company_id}.")
+                    return _render_oauth_response('error', "شما مجوز دسترسی لازم برای اتصال این شرکت را ندارید.", target='company', company_id=company_id, mode=mode)
 
                 exchange_handler = handler_info['exchange_handler']
                 res = exchange_handler(code, company_id=company_id)
+                invalidate_other_oauth_states(payload)
                 account_email = res.get('account_email') or ''
                 return _render_oauth_response('connected', "اتصال به گوگل‌درایو با موفقیت انجام شد.", target='company', company_id=company_id, mode=mode, account_email=account_email)
 
             else:
-                return _render_oauth_response('error', f"مقصد نامعتبر: {target}", target=target, mode=mode)
+                return _render_oauth_response('error', "مقصد اتصال نامعتبر است.", target='company', mode=mode)
 
         except Exception as exc:
             logger.error(f"[GDrive Callback] Error exchanging code for target '{target}': {exc}", exc_info=True)
-            return _render_oauth_response('error', f"خطا در ثبت توکن دسترسی: {str(exc)}", target=target, company_id=company_id, mode=mode)
+            # جزئیات فقط در لاگ؛ پیام عمومی فارسی به کاربر (GD-03)
+            return _render_oauth_response('error', "ثبت دسترسی گوگل‌درایو با خطا روبه‌رو شد. لطفاً دوباره تلاش کنید.", target=target, company_id=company_id, mode=mode)
 
 
 class SystemGoogleDriveConfigView(APIView):
@@ -348,7 +350,11 @@ class SystemGoogleDriveTasksView(APIView):
         if not request.user.is_superuser:
             raise PermissionDenied("دسترسی محدود به مدیر ارشد سیستم است.")
 
-        limit = min(int(request.GET.get('limit', 20)), 100)
+        try:
+            limit = int(request.GET.get('limit', 20))
+        except (TypeError, ValueError):
+            return Response({'error': "پارامتر limit باید عدد صحیح باشد."}, status=status.HTTP_400_BAD_REQUEST)
+        limit = max(1, min(limit, 100))
         tasks = SystemDriveUploadTask.objects.all().order_by('-created_at')[:limit]
         items = []
         for t in tasks:

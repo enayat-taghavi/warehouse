@@ -67,7 +67,7 @@ def enqueue_file_upload(instance, field_name: str, file_obj):
                 if existing.status in ('pending', 'processing', 'completed'):
                     # فایل بدون تغییر است و تسک در جریان یا با موفقیت ارسال شده است
                     return
-                elif existing.status == 'failed' and existing.retry_count < 5:
+                elif existing.status == 'failed':
                     existing.status = 'pending'
                     existing.priority = 10
                     existing.retry_count = 0
@@ -160,6 +160,7 @@ def enqueue_file_archive_delete(instance, field_name: str, file_obj):
                 model_name=model_name,
                 object_id=instance.id,
                 field_name=field_name,
+                action='upload',
                 status='completed',
                 gdrive_file_id__isnull=False
             ).order_by('-created_at').first()
@@ -170,6 +171,11 @@ def enqueue_file_archive_delete(instance, field_name: str, file_obj):
             company = last_task.company
             config = getattr(company, 'gdrive_config', None)
             if not config or not config.is_enabled:
+                return
+
+            # فایل حساب قبلی با توکن حساب فعلی دیده نمی‌شود (404 و completed بی‌صدا، GD-31)
+            if last_task.drive_account and last_task.drive_account != (config.account_email or ''):
+                logger.info(f"[GDrive Queue] Skip archive of {model_name}#{instance.id}: file belongs to a previous Google account.")
                 return
 
             archive_task = GoogleDriveSyncQueue.objects.create(

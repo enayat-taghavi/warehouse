@@ -223,7 +223,9 @@ describe('CompanyGdriveTabComponent', () => {
   });
 
   it('should return Persian model name properly', () => {
-    expect(component.getModelNamePersian('AccountingDocument')).toBe(MODEL_NAME_PERSIAN_MAP['AccountingDocument']);
+    expect(component.getModelNamePersian('ExpenseInvoice')).toBe(MODEL_NAME_PERSIAN_MAP['ExpenseInvoice']);
+    expect(component.getModelNamePersian('CompanyDocument')).toBe(MODEL_NAME_PERSIAN_MAP['CompanyDocument']);
+    expect(component.getModelNamePersian('Company', 'scan_all')).toBe('پیمایش سوابق');
     expect(component.getModelNamePersian('UnknownModel')).toBe('UnknownModel');
   });
 });

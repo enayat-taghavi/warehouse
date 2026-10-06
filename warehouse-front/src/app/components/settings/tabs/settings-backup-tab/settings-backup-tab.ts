@@ -6,6 +6,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { SettingsService } from '../../../../services/settings';
 import { ToastService } from '../../../../services/toast.service';
 import { finalize } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import { offlineDb, downloadLocalDatabaseSnapshotFile } from '../../../../core/services/offline-db';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
@@ -46,6 +47,7 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
   gdriveTasks: any[] = [];
   private gdriveBroadcast?: BroadcastChannel;
   private messageListener?: (event: MessageEvent) => void;
+  private routeSub?: Subscription;
 
   backupPassword = '';
   backupShowPassword = false;
@@ -97,6 +99,10 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopRestoreProgress();
+    if (this.routeSub) {
+      this.routeSub.unsubscribe();
+      this.routeSub = undefined;
+    }
     if (this.gdriveBroadcast) {
       try { this.gdriveBroadcast.close(); } catch {}
     }
@@ -601,56 +607,79 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
     });
   }
 
+  private lastGDriveEventAt = 0;
+
   private initGDriveListeners() {
     try {
       if (window.BroadcastChannel) {
         this.gdriveBroadcast = new BroadcastChannel('gdrive-oauth');
-        this.gdriveBroadcast.onmessage = (e) => {
-          if (e.data && (e.data.type === 'gdrive_oauth_callback' || e.data.type === 'GDRIVE_OAUTH_SUCCESS')) {
-            if (e.data.status === 'connected' || e.data.type === 'GDRIVE_OAUTH_SUCCESS') {
-              this.toast.show('success', 'اتصال گوگل‌درایو با موفقیت برقرار شد.');
-              this.loadSystemGDrive();
-            } else {
-              this.toast.show('error', e.data.message || 'خطا در اتصال به گوگل‌درایو');
-            }
-          }
-        };
+        this.gdriveBroadcast.onmessage = (e) => this.handleGDriveOAuthEvent(e.data);
       }
     } catch {}
 
     this.messageListener = (event: MessageEvent) => {
-      if (event.data && (event.data.type === 'gdrive_oauth_callback' || event.data.type === 'GDRIVE_OAUTH_SUCCESS')) {
-        if (event.data.status === 'connected' || event.data.type === 'GDRIVE_OAUTH_SUCCESS') {
-          this.toast.show('success', 'اتصال گوگل‌درایو برقرار شد.');
-          this.loadSystemGDrive();
-        } else {
-          this.toast.show('error', event.data.message || 'خطا در اتصال به گوگل');
-        }
-      }
+      // فقط پیام صفحهٔ callback همین مبدأ پذیرفته می‌شود
+      if (event.origin !== window.location.origin) return;
+      this.handleGDriveOAuthEvent(event.data);
     };
     window.addEventListener('message', this.messageListener);
   }
 
+  private handleGDriveOAuthEvent(data: any) {
+    // فقط رویداد درایو سامانه؛ اتصال درایو شرکت‌ها در تب دیگر به این کارت ربطی ندارد
+    if (!data || data.type !== 'gdrive_oauth_callback' || data.target !== 'system') return;
+    // پنجرهٔ بازشو هم postMessage و هم BroadcastChannel می‌فرستد؛ یک بار پردازش شود
+    const now = Date.now();
+    if (now - this.lastGDriveEventAt < 3000) return;
+    this.lastGDriveEventAt = now;
+    if (data.status === 'connected') {
+      this.toast.show('success', 'اتصال درایو سامانه با موفقیت برقرار شد.');
+      this.loadSystemGDrive();
+    } else {
+      this.toast.show('error', 'اتصال درایو سامانه با خطا مواجه شد.');
+    }
+  }
+
   private checkUrlCallbackParams() {
-    const params = new URLSearchParams(window.location.search);
-    const gdriveParam = params.get('gdrive');
+    let gdriveParam: string | null = null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      gdriveParam = params.get('gdrive');
+    } catch {
+      gdriveParam = null;
+    }
+
+    if (!gdriveParam && this.route) {
+      this.routeSub = this.route.queryParamMap.subscribe((map) => {
+        const val = map.get('gdrive');
+        if (val) {
+          this.handleGDriveUrlParam(val);
+        }
+      });
+      return;
+    }
+
     if (gdriveParam) {
-      if (gdriveParam === 'connected') {
-        this.toast.show('success', 'اتصال درایو سامانه با موفقیت برقرار شد.');
-        this.loadSystemGDrive();
-      } else {
-        this.toast.show('error', 'خطا در اتصال به درایو سامانه');
-      }
-      if (this.router) {
-        this.router.navigate([], {
-          queryParams: { gdrive: null },
-          queryParamsHandling: 'merge',
-          replaceUrl: true
-        });
-      } else {
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, '', cleanUrl);
-      }
+      this.handleGDriveUrlParam(gdriveParam);
+    }
+  }
+
+  private handleGDriveUrlParam(gdriveParam: string) {
+    if (gdriveParam === 'connected') {
+      this.toast.show('success', 'اتصال درایو سامانه با موفقیت برقرار شد.');
+      this.loadSystemGDrive();
+    } else {
+      this.toast.show('error', 'خطا در اتصال به درایو سامانه');
+    }
+    if (this.router) {
+      this.router.navigate([], {
+        queryParams: { gdrive: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    } else {
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
     }
   }
 }
