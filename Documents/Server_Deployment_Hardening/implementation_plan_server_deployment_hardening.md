@@ -1,8 +1,8 @@
 # طرح اصلاح ایرادات استقرار و به‌روزرسانی سرور (`deploy.ps1` و اسکریپت‌های وابسته)
 
-- **ویرایش:** ۲. در ۱۳ مهر ۱۴۰۵ (2026-10-05) بازبینی شد و پاسخ‌های کاربر در آن آمده است.
+- **ویرایش:** ۳. در ۱۴ مهر ۱۴۰۵ (2026-10-06) گزارش بازبینی بیرونی با کد سنجیده شد و موارد پذیرفته‌شده اعمال شدند (بخش ۲.۲). ویرایش ۲ (۱۳ مهر ۱۴۰۵) پاسخ‌های کاربر را ثبت کرده بود.
 - **وضعیت:** آمادهٔ اجرا از فاز ۱. تا این لحظه هیچ کدی تغییر نکرده و هیچ فرمانی روی سرور اجرا نشده است.
-- **فایل‌های بررسی‌شده:** `deploy.ps1`، `scripts/remote-setup.sh`، `scripts/remote-update.sh`، `scripts/deploy_runner.py`، `dev-manager.bat`، `warehouse-front/server.js`، `warehouse-front/tools/patch-ngsw-530.js`، `warehouse-front/angular.json`، `warehouse-backend/config/settings.py`، `config/urls.py`، `config/views_backup.py`، `common/media_urls.py`، `accounts/backup_service.py`، `personnel/dbf_generator.py`، `warehouse-backend/requirements.txt`، `.gitignore`.
+- **فایل‌های بررسی‌شده:** `deploy.ps1`، `scripts/remote-setup.sh`، `scripts/remote-update.sh`، `scripts/deploy_runner.py`، `dev-manager.bat`، `warehouse-front/server.js`، `warehouse-front/tools/patch-ngsw-530.js`، `warehouse-front/angular.json`، `warehouse-backend/config/settings.py`، `config/urls.py`، `config/views_backup.py`، `common/media_urls.py`، `accounts/backup_service.py`، `personnel/dbf_generator.py`، `warehouse-backend/requirements.txt`، `.gitignore`. در ویرایش ۳: `.agents/AGENTS.md`، `warehouse-front/ngsw-config.json`، `accounts/management/commands/{init_roles,seed_permissions}.py`، `reports/excel.py`، `reports/management/commands/run_export_worker.py` و دو فایل `run_gdrive_sync_worker.py` (`settings_core` و `personnel`).
 
 ---
 
@@ -13,7 +13,7 @@
 - **`app.farsalish.ir`:** همین ماشین ویندوزی، پشت Cloudflare Tunnel. فقط برای تست شخصی کاربر است، کاربر واقعی ندارد و داده‌هایش آزمایشی‌اند.
 - **`soft.farsalish.ir`:** سرور واقعی Ubuntu که کاربران واقعی روی آن کار خواهند کرد. هنوز نصب نشده است. **داده‌های آن در هیچ به‌روزرسانی‌ای نباید حذف شوند.**
 - **بدون انتقال داده:** هیچ داده‌ای از `app` به `soft` منتقل نمی‌شود و `soft` از صفر شروع می‌کند. دادهٔ تست و فایل‌های آزمایشی هرگز نباید به `soft` برسند.
-- **تضاد با CLAUDE.md:** متن CLAUDE.md هنوز می‌گوید «این ماشین production است و کاربران واقعی دارد». این متن با اجازهٔ کاربر در گام ۱.۰ اصلاح می‌شود.
+- **تضاد با دستورالعمل عامل‌ها:** CLAUDE.md و بند ۸ از `.agents/AGENTS.md` (دستورالعمل عامل Antigravity) هنوز می‌گویند «این ماشین production است و کاربران واقعی دارد». هر دو در گام ۱.۰ اصلاح می‌شوند.
 
 ### ۱.۲ تصمیم‌های کاربر (۱۳ مهر ۱۴۰۵)
 
@@ -46,10 +46,16 @@
 5. `ssh-keygen -N '""'` در PowerShell 5.1 رشتهٔ خالی می‌فرستد، ولی در pwsh 7 خود عبارت `""` را به‌عنوان رمز کلید می‌فرستد.
 6. منطقهٔ زمانی این ماشین `Iran Standard Time` و نسخهٔ PostgreSQL محلی 15.18 است.
 7. هیچ migrationی نقش، مجوز یا کاربر seed نمی‌کند.
+8. Django 5.0.4 زیر ASGI، `FileResponse` را با `sync_to_async(list)` مصرف می‌کند (`django/http/response.py:524` در venv). پس هر فایل media که Django سرو کند، کامل در RAM خوانده می‌شود. درخواست Range هم پشتیبانی نمی‌شود.
+9. دیتابیس محلی `UTF8` با collation `en_US.utf8` (libc) است و حروف فارسی را به ترتیب کد یونیکد مرتب می‌کند: «پ» و «چ» پس از «ز» می‌آیند. collation `C` هم همین ترتیب را داد. `C.UTF-8` لینوکس هم به ترتیب کد مرتب می‌کند.
+10. `get_commands()` کامند `run_gdrive_sync_worker` را از `settings_core` برمی‌دارد، چون اپی که زودتر در `INSTALLED_APPS` آمده برنده است. همین worker مرکزی صف سیستم و صف شرکت‌ها را پردازش می‌کند. کامند هم‌نام `personnel` از راه `manage.py` در دسترس نیست.
+11. pwsh 7 در `C:\Program Files\PowerShell\7\pwsh.exe` نصب است.
 
 ---
 
-## ۲. نتیجهٔ بازبینی ویرایش ۱ (ایرادهای خود طرح)
+## ۲. نتیجهٔ بازبینی‌های طرح
+
+### ۲.۱ بازبینی ویرایش ۱ (ایرادهای خود طرح)
 
 | شناسه | ایراد ویرایش ۱ | اصلاح در ویرایش ۲ |
 |---|---|---|
@@ -69,11 +75,37 @@
 | R-14 | مسیرهای ویندوزیِ hardcode در `dbf_generator.py` دیده نشده بود. | به D-23 اضافه شد. |
 | R-15 | در D-15 دربارهٔ `ngsw-worker.js` اغراق شده بود. | دقیق شد. |
 
+### ۲.۲ گزارش بازبینی بیرونی (ویرایش ۳)
+
+هر ۱۹ ادعای گزارش با کد سنجیده شد: ۷ پذیرفته، ۹ بخشی و ۳ رد.
+
+| # | ادعای گزارش | نتیجه | اعمال در |
+|---|---|---|---|
+| ۱ | `.agents/AGENTS.md` هنوز این ماشین را production می‌داند. | پذیرفته. | ۱.۱، ۱.۰، فاز ۷ |
+| ۲ | نیاوردن دادهٔ پایهٔ واقعی از app خطرناک است. | رد: تصمیم صریح کاربر است (۱.۱). دادهٔ app آزمایشی است و منتقل نمی‌شود. | — |
+| ۳ | سیستم تازه پوستهٔ خالی است. | بخشی: نقش‌های `init_roles` واقعاً هیچ مجوزی ندارند. ولی superuser با `admin_all` همهٔ منوها و انبارها را می‌بیند (`accounts/serializers.py:737`، `warehouses/views.py:33`) و خالی بودن سیستم تازه طبیعی است. | ۶.۴، ۶.۶ |
+| ۴ | تعویض symlink، chunkهای قدیمی فرانت را حذف می‌کند. | پذیرفته با اصلاح: Nginx فعلی برای فایل گمشده 404 می‌دهد، نه `index.html` (`remote-setup.sh:233`). کلاینتی که Service Worker دارد نسخهٔ قبلی را prefetch کرده است. خطر برای تب بدون SW و نصب نیمه‌کارهٔ SW است. | ۳.۱، ۵.۲ |
+| ۵ | ساخت venv در هر release پرهزینه است. | بخشی: venv با hash فایل lock بازمصرف می‌شود. venv مشترکِ درجا رد شد، چون اتمیک بودن و بازگشت را می‌شکند. ارقام گزارش اغراق است: pandas وابستگی نیست و venv محلی با ابزارهای dev ۲۹۸MB است. | ۵.۱، ۵.۲ |
+| ۶ | بازگشت پس از migrate ناسازگار توهم است. | پذیرفته. | ۵.۲، ۵.۴ |
+| ۷ | سرو media با Daphne بدون `X-Accel-Redirect`. | پذیرفته با اصلاح: event loop قفل نمی‌شود، ولی کل فایل در RAM خوانده می‌شود (آزمون ۸). | ۳.۱، ۳.۲ |
+| ۸ | بن‌بست certbot و nginx در نصب اول. | پذیرفته. | ۳.۱، ۵.۳ |
+| ۹ | حذف Cloudflare سرور را بی‌حفاظ می‌گذارد. | بخشی: تصمیم کاربر (DNS مستقیم) می‌ماند. سخت‌سازی، پایش انقضای گواهی و DNS-01 جایگزین اضافه شد. | ۲.۱، ۲.۲، ۳.۱، ۳.۸، ۵.۴ |
+| ۱۰ | نگه‌داشتن همهٔ بکاپ‌ها دیسک را پر می‌کند. | بخشی: حذف خودکار رد شد، چون خلاف تصمیم کاربر است. media افزایشی، حفاظ فضای آزاد و حذف دستیِ فقط بکاپ‌های تأییدشدهٔ بیرونی اضافه شد. برآورد «۳ تا ۴ هفته» حدس است؛ soft از صفر شروع می‌کند. | ۲.۲، ۴.۲، ۴.۸ |
+| ۱۱ | Task ویندوز به روشن بودن کامپیوتر وابسته است. | بخشی: طرح همهٔ بکاپ‌های جاافتاده را دانلود می‌کند. اجرای Task جاافتاده و هشدار کهنگی نسخهٔ بیرونی اضافه شد. | ۴.۳ |
+| ۱۲ | worker خروجی گزارش‌ساز فراموش شده است. | پذیرفته (D-29). | ۳.۷، ۵.۲، ۶.۱ |
+| ۱۳ | دو کامند هم‌نام `run_gdrive_sync_worker`. | بخشی: سازوکار گزارش برعکس است. اپ زودتر برنده است و worker مرکزی `settings_core` اجرا می‌شود (آزمون ۱۰). استقرار آسیب نمی‌بیند و پاک‌سازی کامند مرده بیرون از دامنه است. | ۵.۲، بخش ۸ |
+| ۱۴ | مسیرهای hardcode لاگ و media اجرای غیر root را می‌شکنند. | بخشی: متغیرهای env از قبل در ۵.۱ بودند. خواندن env پیش از `mkdir` و اجرای `manage.py` با کاربر `warehouse` اضافه شد. | ۵.۱ |
+| ۱۵ | encoding و collation دیتابیس صریح نیست. | پذیرفته با اصلاح: `C.UTF-8` پیشنهادی گزارش ترتیب فارسی را درست نمی‌کند (آزمون ۹). | D-30، ۲.۲، ۶.۱ |
+| ۱۶ | Google و Let's Encrypt ممکن است مسدود باشند. | رد: پیش‌تر در ۲.۱، ۲.۲ و D-22 پوشش داده شده بود. بخش Let's Encrypt در مورد ۹ آمد. | — |
+| ۱۷ | `EnvironmentFile` با `#`، `$` یا فاصله سرویس را بالا نمی‌آورد. | رد: در systemd، `#` فقط در ابتدای خط توضیح است، `$` بسط داده نمی‌شود، فاصلهٔ میانی حفظ می‌شود و خط نامعتبر فقط با هشدار نادیده گرفته می‌شود. یک بهبود مرتبط اضافه شد: اسرار با الفبای امن و یک مسیر خواندن `.env`. | ۳.۳، ۳.۵، ۵.۱ |
+| ۱۸ | `#Requires -Version 7.2` کاربر را در PowerShell 5.1 گیر می‌اندازد. | بخشی: `#Requires` می‌ماند، چون پیش از هر اقدامی و بی‌خطر متوقف می‌کند. Claude حالت‌های کاربر را در تب pwsh باز می‌کند (آزمون ۱۱). | بخش ۴، ۴.۳ |
+| ۱۹ | junction در `scratch/` خطر حذف `node_modules` دارد. | بخشی: قاعدهٔ `cmd /c rmdir` از قبل در ۱.۱ بود. چرخهٔ عمر junction و بررسی پیش از حذف بازگشتی اضافه شد. | ۱.۱، ۱.۹ |
+
 ---
 
 ## ۳. فهرست ایرادات (Findings)
 
-خلاصه: **۴ بحرانی، ۱۰ بالا، ۱۱ متوسط، ۳ پایین** (جمعاً ۲۸).
+خلاصه: **۴ بحرانی، ۱۰ بالا، ۱۳ متوسط، ۳ پایین** (جمعاً ۳۰).
 
 ### بحرانی
 
@@ -229,6 +261,14 @@
 - **محل:** `deploy.ps1:254,269,381,397` (`accept-new`)، `deploy_runner.py:126`.
 - **مشکل:** اولین کلید بدون بررسی پذیرفته می‌شود و اثر انگشت در config ثبت نمی‌شود. برای وقتی که سرور دوباره نصب می‌شود (مثل ۱۳ مهر) هیچ روال مستندی نیست.
 
+**D-29 — worker خروجی گزارش‌ساز در استقرار نیست.**
+- **محل:** `remote-setup.sh` فقط unitهای Daphne و worker گوگل‌درایو را دارد؛ `reports/management/commands/run_export_worker.py` هیچ unitی ندارد.
+- **پیامد:** بدون نبض `ExportWorkerStatus`، خروجی‌های بزرگ در thread خود Daphne اجرا می‌شوند (`reports/excel.py:135-156`) و در برابر restart پایدار نیستند.
+
+**D-30 — دیتابیس بدون encoding و collation صریح ساخته می‌شود.**
+- **محل:** `remote-setup.sh:87` (`CREATE DATABASE ... OWNER ...`).
+- **مشکل:** encoding و collation از locale خوشهٔ PostgreSQL ارث می‌رسند. با locale `C` یا `POSIX`، encoding ممکن است `SQL_ASCII` شود. با `C.UTF-8` یا `en_US.utf8` هم ترتیب الفبای فارسی غلط است (آزمون ۹).
+
 ### پایین
 
 **D-24 — بهداشت بسته.**
@@ -265,20 +305,23 @@
 - **پس از go-live:**
   - هر اقدام اثرگذار یک پرسش جدا دارد.
   - هر update بکاپ pre-update تأییدشده لازم دارد که **پیش از migrate به همین ماشین منتقل و checksum آن تطبیق شده باشد**.
-  - این عملیات مخرب مسدودند: Setup دوباره، ساخت دوبارهٔ دیتابیس، دست زدن به `shared/` و restore بدون تأیید تایپی.
+  - این عملیات مخرب مسدودند: Setup دوباره، ساخت دوبارهٔ دیتابیس، دست زدن خودکار به `shared/`، و restore یا `-PruneBackups` بدون تأیید تایپی.
 - **اسرار:** Claude هیچ رمز یا رازی را نمی‌سازد، نمی‌بیند و منتقل نمی‌کند. اسرار سرور روی خود سرور تولید می‌شوند. ورود رمزها فقط کار کاربر است، با `-InstallKey`، `-CreateAdmin` و `-SetSecret`.
+- **اجرای حالت‌های کاربر:** Claude این حالت‌ها را در یک تب تازهٔ Windows Terminal با `pwsh -NoProfile -File deploy.ps1 ...` باز می‌کند و کاربر فقط رمز را تایپ می‌کند. `#Requires -Version 7.2` می‌ماند، چون در PowerShell 5.1 پیش از هر اقدامی متوقف می‌شود.
 
 ### فاز ۱: پیکربندی پروژه و حفاظ‌های محلی `deploy.ps1`
 پوشش: D-01، D-02، D-05، D-06، D-19، D-20، D-24، D-27.
 
 - **۱.۰ پیکربندی پروژه** (مجاز طبق تصمیم کاربر):
   - در CLAUDE.md بخش «This machine is production» با نقش واقعی محیط‌ها جایگزین شود و قواعد پرسش بله/خیر با آن هماهنگ شود.
+  - بند ۸ از `.agents/AGENTS.md` («Local Machine is Production» و پروتکل استقرارش) هم با همان متن هماهنگ شود (پذیرفته در ویرایش ۳)، تا دو عامل دستور متناقض نگیرند.
   - در `.claude/settings.json` خواندن `deploy_config.json` کنار `.env` ممنوع شود، سپس `python scripts/test_guard_hooks.py` اجرا شود.
   - پیش از شروع، مطمئن شو عامل Antigravity هم‌زمان روی فایل‌های استقرار کار نمی‌کند. پایهٔ ویرایش working tree است.
 - **۱.۱ بیلد ایزوله:**
   - snapshot از commit هدف با `git archive` در `scratch/deploy/<sha>/` ساخته شود و `node_modules` با junction وصل شود (`cmd /c mklink /J`؛ برداشتن فقط با `cmd /c rmdir`).
   - `npx ng build && node tools/patch-ngsw-530.js` داخل snapshot اجرا شود.
   - `warehouse-front/dist` هرگز لمس نشود.
+  - ساختن و برداشتن junction فقط در یک تابع با `try/finally` انجام شود. پیش از هر حذف بازگشتی snapshot بررسی شود که هیچ reparse pointی در آن نمانده است؛ وگرنه حذف متوقف شود. هیچ ابزار دیگری (`rm -rf` یا `Remove-Item -Recurse`) snapshot را پاک نکند، چون ممکن است از junction عبور کند و `node_modules` اصلی را پاک کند.
 - **۱.۲ گارد git:**
   - اگر working tree تمیز نباشد، استقرار متوقف شود، مگر با `-AllowDirty` و تأیید صریح. migration untracked همیشه مانع است.
   - بک‌اند از `git archive <sha>` برداشته شود و فایل‌های آزمایشی با `export-ignore` کنار گذاشته شوند.
@@ -303,7 +346,8 @@
 - **۱.۹ guardian 53** (`scripts/e2e/guardian_53_deploy_safety.py`)، فقط‌خواندنی و بدون دسترسی به دیتابیس. این موارد را بررسی کند:
   - ابزار استقرار در `warehouse-front/dist` بیلد نکند؛
   - `.gitattributes` قاعدهٔ LF برای `*.sh` را داشته باشد؛
-  - قالب nginx `location ^~ /media/` را پروکسی کند و `alias` برای media نداشته باشد (از فاز ۳)؛
+  - قالب nginx `location ^~ /media/` را پروکسی کند و `alias` مسیر media فقط در location از نوع `internal` باشد (از فاز ۳)؛
+  - `deploy.ps1` junction را فقط از راه همان تابع ۱.۱ بردارد؛
   - `requirements.txt` قفل باشد (از فاز ۲)؛
   - اسرار در argv فرستاده نشوند.
 - **معیار پذیرش:**
@@ -320,38 +364,54 @@
 
 - **۲.۱ کشف فقط‌خواندنی با SSH:**
   - سیستم‌عامل، Python و نسخهٔ قابل نصب PostgreSQL؛
-  - CPU، RAM، دیسک، منطقهٔ زمانی، `sudo -n`، ufw و پورت‌های در حال گوش دادن؛
+  - CPU، RAM، دیسک و پارتیشن‌ها (دیسک جدا برای بکاپ)، locale، منطقهٔ زمانی، `sudo -n`، ufw و پورت‌های در حال گوش دادن؛
   - علت پاسخ ندادن 80 و 443؛
-  - دسترسی خروجی به PyPI، مخزن Ubuntu، `apt.postgresql.org`، Let's Encrypt و Google OAuth/Drive.
+  - دسترسی خروجی به PyPI، مخزن Ubuntu، `apt.postgresql.org`، Let's Encrypt، Google OAuth/Drive و API کلودفلر (برای DNS-01).
 - **۲.۲ تصمیم‌ها بر اساس نتایج** (در طرح ثبت می‌شوند):
   - **PostgreSQL:** 15 یا جدیدتر؛ اگر Ubuntu 22.04 باشد، از مخزن PGDG.
   - **Python:** 3.12، یا قفل برای همان نسخه‌ای که سرور دارد.
   - **نصب بسته‌ها:** wheelhouse ساخته‌شده در کانتینر Linux روی این ماشین (پیشنهادی، بی‌نیاز از PyPI روی سرور) یا PyPI مستقیم.
   - **Google:** اگر دسترسی مسدود باشد، دربارهٔ پروکسی خروجی از کاربر پرسیده می‌شود.
+  - **گواهی TLS:** پیش‌فرض HTTP-01 با webroot است. اگر اعتبارسنجی از بیرون کشور ناپایدار باشد، DNS-01 با API کلودفلر انجام شود (zone `farsalish.ir` به‌خاطر Tunnel محیط تست روی Cloudflare است). توکن محدود به همان zone را کاربر با `-SetSecret` وارد می‌کند.
+  - **collation دیتابیس:** ICU `fa-IR` (PostgreSQL 15 به بالا)، پس از آزمون مرتب‌سازی فارسی در کانتینر (D-30).
+  - **جای بکاپ:** اگر دیسک یا پارتیشن جدایی هست، `shared/backups` روی آن باشد تا پر شدنش PostgreSQL را از کار نیندازد.
 - **۲.۳ نسخه‌های دقیق:** نسخه‌های دقیق در `requirements.txt` برگردانده شوند و `Pillow` و `packaging` صریح اضافه شوند.
 - **۲.۴ lock:** `warehouse-backend/requirements.lock` با hash برای Python و معماری سرور ساخته شود. wheelhouse در صورت انتخاب در `scratch/deploy/wheels/` ساخته شود. نصب با `--require-hashes` (و `--no-index --find-links` اگر wheelhouse انتخاب شده باشد).
 - **معیار پذیرش:** نصب از lock و `manage.py check` در کانتینرِ همان نسخهٔ سیستم‌عامل بدون خطا اجرا شوند.
 
 ### فاز ۳: قالب‌های امن زیرساخت (Nginx، پروکسی، اسرار، سخت‌سازی)
-پوشش: D-03، D-10، D-13، D-14، D-15، D-18، D-21، D-22.
+پوشش: D-03، D-10، D-13، D-14، D-15، D-18، D-21، D-22، D-29.
 
-- **۳.۱ قالب `scripts/deploy/templates/nginx-warehouse.conf`:**
-  - `location ^~ /media/` به Django پروکسی شود (`serve_media` امضا را بررسی می‌کند).
+- **۳.۱ قالب‌های nginx در `scripts/deploy/templates/`:**
+  - **media:** `location ^~ /media/` به Django پروکسی شود (`serve_media` امضا را بررسی می‌کند). Django پس از تأیید امضا، فایل را خودش نمی‌فرستد و هدر `X-Accel-Redirect` به یک location از نوع `internal` با `alias shared/media/` برمی‌گرداند. Nginx فایل را با `sendfile` و پشتیبانی Range می‌فرستد (آزمون ۸).
+    - Django باید `Content-Type` درست را بفرستد.
+    - `nosniff` و `X-Frame-Options` در همان location داخلی با `add_header` گذاشته شوند، چون Nginx هدرهای سفارشی upstream را منتقل نمی‌کند.
   - `location ^~ /static/` به `current/.../staticfiles/` اشاره کند.
+  - **fallback:** fallback به `index.html` فقط برای مسیرهای ناوبری باشد. مسیری که پسوند فایل دارد و پیدا نشود، 404 بدهد (مثل `remote-setup.sh:233`)، نه `index.html`.
   - کش مثل `server.js`: `no-cache` برای `index.html`، `ngsw.json`، `manifest.webmanifest`، `ngsw-worker.js`، `safety-worker.js` و fallback مسیرهای SPA؛ `immutable` فقط برای فایل‌های hash‌دار؛ یک روز برای بقیه.
   - `X-Forwarded-For $remote_addr` و `X-Forwarded-Proto $scheme`.
-  - TLS داخل خود قالب باشد و گواهی با `certbot certonly --webroot` و `--deploy-hook "systemctl reload nginx"` صادر شود.
+  - **TLS در دو مرحله:**
+    1. قالب فقط-HTTP بالا بیاید (`/.well-known/acme-challenge/` و redirect).
+    2. گواهی با `certbot certonly --webroot` (یا DNS-01، طبق ۲.۲) و `--deploy-hook "systemctl reload nginx"` صادر شود.
+    3. قالب TLS رندر شود، `nginx -t` اجرا و سپس reload شود.
+    - قالب TLS بدون فایل گواهی هرگز نصب نشود، وگرنه Nginx بالا نمی‌آید.
+  - **سخت‌سازی بدون Cloudflare:**
+    - `server_tokens off`.
+    - server پیش‌فرض به درخواست‌های بدون Host درست (اسکنرهای IP) پاسخ ندهد: `return 444`، و `ssl_reject_handshake on` اگر نسخهٔ nginx پشتیبانی کند.
+    - سقف اندازهٔ بدنه و timeoutها تعیین شود.
+    - محدودیت نرخ سراسری برای کاربران واردشده اضافه نشود (تصمیم کاربر).
   - حالت فقط-IP حذف شود.
-- **۳.۲ تنظیمات Django:** `DJANGO_SECURE_PROXY_SSL=1` و `DJANGO_CSRF_TRUSTED_ORIGINS` (پیش‌فرض خاموش، پس محیط تست تغییر نمی‌کند) و Daphne با `--proxy-headers`.
+- **۳.۲ تنظیمات Django:** `DJANGO_SECURE_PROXY_SSL=1`، `DJANGO_CSRF_TRUSTED_ORIGINS` و `DJANGO_MEDIA_ACCEL_REDIRECT` (پیش‌فرض همه خاموش، پس محیط تست تغییر نمی‌کند) و Daphne با `--proxy-headers`.
 - **۳.۳ تولید اسرار روی سرور:**
-  - Setup `DJANGO_SECRET_KEY` و رمز دیتابیس را روی سرور با `secrets` بسازد و مستقیم در `shared/.env` بنویسد (`umask 077`). هرگز چاپ نشوند، به ماشین محلی برنگردند و در argv نباشند.
+  - Setup `DJANGO_SECRET_KEY` و رمز دیتابیس را روی سرور با `secrets.token_urlsafe` بسازد و مستقیم در `shared/.env` بنویسد (`umask 077`). الفبای امن باعث می‌شود systemd و خوانندهٔ `.env` در `settings.py` یک مقدار را بخوانند. هرگز چاپ نشوند، به ماشین محلی برنگردند و در argv نباشند.
   - `deploy_config.json` فقط تنظیمات غیرمحرمانه داشته باشد (host، user، port، domain، email و fingerprint). مقادیر `DbPassword` و `DjangoSecretKey` فعلی که هرگز روی سرور جدید استفاده نشده‌اند، حذف شوند.
 - **۳.۴ `.env` موجود هرگز بازنویسی نشود:** فقط کلیدهای غایب اضافه شوند (merge، با بکاپ `.env.bak.<ts>`). اگر `GO_LIVE` وجود داشته باشد و یک کلید حیاتی تغییر کند، اجرا متوقف شود.
-- **۳.۵ حالت `-SetSecret <NAME>`:** کاربر مقدار (مثلاً `GOOGLE_OAUTH_CLIENT_SECRET`) را خودش تایپ می‌کند و از stdin به سرور می‌رود. redirect گوگل از دامنهٔ پیکربندی ساخته شود.
-- **۳.۶ fail-closed:** با `DJANGO_ENV=production`، نبود `DJANGO_SECRET_KEY` خطا بدهد و `DEBUG` اجباراً False باشد. `EnvironmentFile` بدون `-` تعریف شود.
+- **۳.۵ حالت `-SetSecret <NAME>`:** کاربر مقدار (مثلاً `GOOGLE_OAUTH_CLIENT_SECRET`) را خودش تایپ می‌کند و از stdin به سرور می‌رود. مقداری که خط جدید، کوتیشن، بک‌اسلش یا فاصلهٔ ابتدا و انتها دارد رد شود. redirect گوگل از دامنهٔ پیکربندی ساخته شود.
+- **۳.۶ fail-closed:** با `DJANGO_ENV=production`، نبود `DJANGO_SECRET_KEY` خطا بدهد و `DEBUG` اجباراً False باشد. `EnvironmentFile` بدون `-` تعریف شود. پیش از هر restart، قالب `.env` بررسی شود: فقط خط `KEY=VALUE` یا توضیح.
 - **۳.۷ سخت‌سازی سرویس:**
   - کاربر سیستمی `warehouse` ساخته شود.
   - unitها با `NoNewPrivileges`، `ProtectSystem=full`، `PrivateTmp` و `ReadWritePaths=shared` اجرا شوند.
+  - unit تازهٔ `warehouse-export-worker` برای `run_export_worker` (D-29) با همان سخت‌سازی ساخته شود.
   - کد متعلق به root و فقط‌خواندنی باشد.
   - `.env` مجوز 600 داشته باشد و پوشهٔ بکاپ 700.
   - `chmod -R` حذف شود.
@@ -359,11 +419,13 @@
 - **۳.۸ دسترسی:**
   - ufw برای پورت SSH واقعی (`sshd -T`)، 80 و 443 باز شود.
   - پس از تأیید ورود با کلید، `PasswordAuthentication no` تنظیم شود.
+  - fail2ban برای sshd نصب شود.
   - پس از go-live، sudoers به `/usr/local/sbin/warehouse-deploy` و فرمان‌های فقط‌خواندنی status و logs محدود شود.
 - **معیار پذیرش:**
   - `nginx -t` در کانتینر بدون خطا اجرا شود.
   - ماتریس curl روی soft (پیش از go-live):
-    - media امضاشده 200 و بدون امضا 403 بدهد.
+    - media امضاشده 200 و بدون امضا 403 بدهد. media امضاشده `Content-Type` درست و `nosniff` داشته باشد، با نام فایل فارسی کار کند و به Range پاسخ 206 بدهد.
+    - مسیر asset ناموجود 404 بدهد، نه `index.html`.
     - `/static/admin/css/base.css` کد 200 بدهد.
     - هدرهای کش درست باشند.
     - وب‌سوکت کد 101 بدهد.
@@ -378,8 +440,13 @@
   - آرشیو media ساخته شود.
   - نسخه‌ای از `.env` با نام محافظت‌شدهٔ `.env.soft-<ts>` گرفته شود.
   - موفقیت فقط پس از تأیید اعلام شود.
-- **۴.۲ timer شبانهٔ systemd روی سرور** (۰۲:۳۰ به وقت تهران) برای دیتابیس و media، **بدون هیچ حذف خودکاری**. هشدار فضای دیسک (بالای ۸۰٪) در لاگ و `-Status` نمایش داده شود.
-- **۴.۳ نسخهٔ بیرونی ۱ (همین ماشین):** Task زمان‌بندی‌شدهٔ ویندوز هر شب `deploy.ps1 -PullBackups` را اجرا کند. همهٔ بکاپ‌های جاافتاده را در `backups/soft/` (gitignored) دانلود کند، sha256 را تطبیق دهد و هیچ فایلی را حذف نکند.
+- **۴.۲ timer شبانهٔ systemd روی سرور** (۰۲:۳۰ به وقت تهران) برای دیتابیس و media، **بدون هیچ حذف خودکاری**:
+  - media افزایشی با `rsync --link-dest` (hardlink) گرفته شود تا فایل‌های بدون تغییر فضای تازه نگیرند.
+  - هشدار فضای دیسک (بالای ۸۰٪ و ۹۰٪) در لاگ و `-Status` نمایش داده شود.
+  - **حفاظ فضای آزاد:** اگر پس از بکاپ فضای آزاد از حد ذخیره (پیش‌فرض ۱۰٪) کمتر شود، بکاپ ساخته نشود و هشدار بلند داده شود. بکاپ نباید دیسک دیتابیس را پر کند. داده‌ای هم از دست نمی‌رود: دیتابیس سالم است و بکاپ‌های قبلی و نسخهٔ بیرونی سر جایشان‌اند.
+- **۴.۳ نسخهٔ بیرونی ۱ (همین ماشین):** Task زمان‌بندی‌شدهٔ ویندوز هر شب `pwsh.exe -File deploy.ps1 -PullBackups` را اجرا کند. همهٔ بکاپ‌های جاافتاده را در `backups/soft/` (gitignored) دانلود کند، sha256 را تطبیق دهد و هیچ فایلی را حذف نکند.
+  - Task گزینهٔ «اجرای Task جاافتاده در اولین فرصت» (`StartWhenAvailable`) را داشته باشد و هنگام ورود به ویندوز هم اجرا شود.
+  - `-Status` سن آخرین نسخهٔ بیرونی تأییدشده را نشان دهد و اگر از ۴۸ ساعت بیشتر بود هشدار دهد.
 - **۴.۴ نسخهٔ بیرونی ۲ (گوگل‌درایو):** پس از تکمیل آن قابلیت (کار عامل دیگر)، بکاپ‌های شبانه به صف گوگل‌درایو وصل شوند. تا آن زمان ۴.۳ کافی است.
 - **۴.۵ رفع D-28:** متغیر `WAREHOUSE_BACKUP_KEEP` (0 یعنی بدون حذف) در `rotate_snapshots` و `run_auto_backup` اضافه شود. روی soft مقدار 0 باشد؛ پیش‌فرض محیط تست تغییر نکند.
 - **۴.۶ `-Restore`:**
@@ -387,8 +454,13 @@
   - پیش از آن یک بکاپ اضطراری تازه گرفته شود.
   - تمرین restore فقط در کانتینر انجام شود.
 - **۴.۷ بکاپ pre-update:** بدون چرخش و حذف، همراه بررسی فضای دیسک.
+- **۴.۸ حالت `-PruneBackups` (فقط به درخواست کاربر):**
+  - با تأیید تایپی اجرا شود و هیچ اجرای خودکاری نداشته باشد.
+  - فقط بکاپ‌هایی را از سرور بردارد که نسخهٔ بیرونی‌شان روی همین ماشین با sha256 تطبیق شده باشد.
+  - آخرین بکاپ تأییدشده هرگز حذف نشود.
 - **معیار پذیرش:**
   - pg_dump که عمداً شکست داده شده، به‌درستی «شکست» گزارش شود.
+  - حفاظ فضای آزاد در کانتینری با دیسک کوچک آزموده شود: بکاپ ساخته نشود و هشدار بیاید.
   - تمرین restore در کانتینر موفق باشد و تعداد ردیف‌ها تطبیق کند.
   - یک pull شبانه موفق انجام شود.
 
@@ -396,49 +468,66 @@
 پوشش: D-07، D-08، D-16، D-24.
 
 - **۵.۱ چیدمان از روز اول** (سرور تازه است و انتقالی لازم نیست):
-  - ساختار: `/var/www/warehouse/{releases/<ts>_<sha>, shared/{.env,media,backups,logs,report_exports}, current}`.
-  - متغیرهای env: `DJANGO_MEDIA_ROOT`، `DJANGO_LOG_DIR`، `WAREHOUSE_BACKUP_DIR` و `WAREHOUSE_REPORT_EXPORT_DIR`. پیش‌فرض‌ها همان مقدار فعلی بمانند.
+  - ساختار: `/var/www/warehouse/{releases/<ts>_<sha>, venvs/<hash>, shared/{.env,media,backups,logs,report_exports}, current}`.
+  - متغیرهای env: `DJANGO_MEDIA_ROOT`، `DJANGO_LOG_DIR`، `WAREHOUSE_BACKUP_DIR` و `WAREHOUSE_REPORT_EXPORT_DIR`. پیش‌فرض‌ها همان مقدار فعلی بمانند. `DJANGO_LOG_DIR` باید پیش از `mkdir` در `settings.py:47-48` خوانده شود، وگرنه `mkdir` روی کد فقط‌خواندنی release با `PermissionError` شکست می‌خورد.
+  - `.env` هر release پیوندی به `shared/.env` باشد تا systemd و خوانندهٔ `settings.py` یک فایل را بخوانند. اسکریپت استقرار هرگز `.env` را در bash با `source` نخواند.
+  - همهٔ فرمان‌های `manage.py` در استقرار با کاربر `warehouse` اجرا شوند تا فایلی در `shared/` (مثل `django-errors.log`) مال root نشود. release تازه تا پایان `collectstatic` برای `warehouse` قابل نوشتن است و پیش از تعویض symlink به root برمی‌گردد و فقط‌خواندنی می‌شود.
   - static مخصوص هر release باشد.
 - **۵.۲ اسکریپت `/usr/local/sbin/warehouse-deploy`**؛ ترتیب گام‌ها:
   1. `flock` و بررسی checksum بسته.
-  2. استخراج در یک release تازه.
-  3. ساخت venv از lock.
+  2. استخراج در یک release تازه. فایل‌های hash‌دار فرانتِ release قبلی (فقط فهرست `ngsw.json` همان release) بدون بازنویسی به فرانت تازه کپی شوند، چون تب باز بدون Service Worker و نصب نیمه‌کارهٔ SW هنوز chunkهای قدیمی را می‌خواهند.
+  3. venv: اگر `venvs/<sha256 فایل lock و نسخهٔ Python>` وجود دارد، همان استفاده شود. وگرنه در پوشهٔ موقت از wheelhouse ساخته و با `mv` اتمیک جابه‌جا شود. `pip install` روی venv در حال استفاده ممنوع است، چون فرایند قدیمی را با بسته‌های تازه اجرا و بازگشت را بی‌اثر می‌کند.
   4. `manage.py check --deploy`.
   5. بکاپ pre-update و تأیید آن. پس از go-live: pull به همین ماشین و تطبیق checksum.
-  6. نمایش `migrate --plan`. حالت online فقط برای migrationهای expand-contract است؛ برای بقیه، پرچم `-Maintenance` (stop، migrate، switch، start)، که پس از بازبینی با safe-migration تعیین می‌شود.
+  6. نمایش `migrate --plan` و تعیین حالت پس از بازبینی با safe-migration:
+     - **online:** فقط وقتی migrationی نیست یا همه با کد قبلی سازگارند (مرحلهٔ expand).
+     - **`-Maintenance`:** برای بقیه. Nginx به کلاینت‌ها 503 با `Retry-After` می‌دهد و فقط سلامت‌سنجی از 127.0.0.1 مستثناست. 503 در `isServerUnreachable()` «دسترس‌ناپذیر» است، پس اپ آفلاین کار می‌کند و صف بعداً همگام می‌شود. سپس بک‌اند stop و migrate اجرا می‌شود. گام‌های ۷ تا ۱۰ مثل همیشه اجرا می‌شوند و حالت نگهداری فقط پس از موفقیت گام ۱۰ برداشته می‌شود.
   7. `collectstatic`.
   8. تعویض اتمیک symlink (`ln -s` سپس `mv -Tf`).
-  9. restart بک‌اند و worker گوگل‌درایو.
-  10. سلامت‌سنجی: `curl -fsS http://127.0.0.1:8000/api/public/config/`، `curl --resolve soft.farsalish.ir:443:127.0.0.1 https://soft.farsalish.ir/` و `/ngsw.json`.
-  11. در صورت شکست: بازگشت symlink و restart. restore دیتابیس فقط دستی و با تأیید انجام شود.
-  12. N release کد نگه داشته شود. `shared/` هرگز لمس نشود.
+  9. restart بک‌اند، worker گوگل‌درایو و worker خروجی (D-29).
+  10. سلامت‌سنجی: `curl -fsS http://127.0.0.1:8000/api/public/config/`، `curl --resolve soft.farsalish.ir:443:127.0.0.1 https://soft.farsalish.ir/` و `/ngsw.json`، و تازه بودن نبض دو worker.
+  11. در صورت شکست:
+     - **حالت online:** بازگشت خودکار symlink و restart.
+     - **پس از migration ناسازگار:** بازگشت خودکار کد ممنوع است، چون کد قبلی با schema تازه کار نمی‌کند. سیستم در حالت نگهداری می‌ماند و کاربر تصمیم می‌گیرد: اصلاح رو به جلو، یا restore بکاپ pre-update با تأیید تایپی. در حالت نگهداری چیزی نوشته نشده است، پس restore داده‌ای را از دست نمی‌دهد.
+  12. N release کد نگه داشته شود. venvهایی که هیچ release نگه‌داشته‌شده‌ای به آن‌ها اشاره نمی‌کند پاک شوند؛ این‌ها مصنوع قابل بازسازی‌اند، نه داده. `shared/` هرگز لمس نشود.
 - **۵.۳ اعمال idempotent زیرساخت در هر update:**
   - unitها و nginx از قالب رندر شوند.
   - `daemon-reload` فقط در صورت تغییر اجرا شود.
   - پیش از reload، `nginx -t` اجرا شود.
+  - قالب TLS فقط وقتی رندر شود که فایل گواهی وجود دارد؛ وگرنه قالب فقط-HTTP رندر و هشدار داده شود.
   - هیچ `|| true` باقی نماند.
-- **۵.۴ حالت‌های تازه:** `-Rollback` و `-Status` همراه با نمایش sha جاری، تازگی بکاپ و فضای دیسک. قفل محلی هم اضافه شود.
+- **۵.۴ حالت‌های تازه:**
+  - `-Rollback`، تابع همان قواعد گام ۵.۲.۱۱.
+  - `-Status`: sha جاری، تازگی بکاپ و نسخهٔ بیرونی، فضای دیسک، روزهای باقی‌مانده تا انقضای گواهی (هشدار زیر ۲۱ روز) و نبض workerها.
+  - قفل محلی.
 - **معیار پذیرش:**
   - شکست‌های تزریقی (pip، migrate، health) `current` را دست‌نخورده بگذارند.
+  - شکست تزریقی پس از migration ناسازگار، سیستم را در حالت نگهداری نگه دارد و کد را خودکار برنگرداند.
+  - پس از تعویض release، یک chunk قدیمیِ release قبلی 200 بدهد.
+  - استقرار دوم با lock بدون تغییر، venv تازه نسازد.
   - فاصلهٔ ناهمخوانی فرانت و بک‌اند به چند ثانیه کاهش یابد.
 
 ### فاز ۶: نصب اولیه و راه‌اندازی `soft.farsalish.ir`
-پوشش: D-04، D-11، D-17، D-23.
+پوشش: D-04، D-11، D-17، D-23، D-30.
 
 - **۶.۱ Setup** (یک پرسش بله/خیر):
   - بسته‌ها با نسخه‌های تعیین‌شده در فاز ۲؛
   - `timedatectl set-timezone Asia/Tehran`؛
-  - PostgreSQL 15 یا جدیدتر همراه `pg_trgm` و `btree_gin`؛ Redis؛ nginx؛ certbot؛
-  - کاربر `warehouse`، قالب‌ها و اولین release؛
+  - PostgreSQL 15 یا جدیدتر همراه `pg_trgm` و `btree_gin`. دیتابیس صریحاً با `ENCODING 'UTF8'`، `TEMPLATE template0` و collation فاز ۲ ساخته شود (D-30) و ترتیب «ب، پ، چ، ز، ژ، ک، گ، ی» آزموده شود؛
+  - Redis؛ nginx؛ certbot؛ fail2ban؛
+  - کاربر `warehouse`، قالب‌ها (هر سه unit) و اولین release؛
   - `seed_permissions` و `init_roles`. هرگز `setup_project`.
 - **۶.۲ حفاظ D-04:** اگر `GO_LIVE` وجود داشته باشد یا دیتابیس خالی نباشد، Setup متوقف شود. حتی `-Reprovision` با تأیید تایپی هم به دیتابیس، `shared/.env` و media دست نزند.
 - **۶.۳ قالب بیمه (D-23):** `DSKKAR00.DBF` و `DSKWOR00.DBF` به `warehouse-backend/personnel/data/insurance_templates/` منتقل شوند و مسیرهای hardcode ویندوزی حذف شوند. مسیرهای قدیمی برای محیط تست fallback بمانند.
-- **۶.۴ اقدام کاربر:** یک بار `deploy.ps1 -CreateAdmin` را اجرا کند؛ `createsuperuser` تعاملی با `ssh -t` اجرا می‌شود و رمز را خودش تایپ می‌کند. در صورت نیاز `-SetSecret` را هم برای Google اجرا کند.
+- **۶.۴ اقدام کاربر:**
+  - یک بار `deploy.ps1 -CreateAdmin` در تبی که Claude باز می‌کند؛ `createsuperuser` تعاملی با `ssh -t` اجرا می‌شود و کاربر رمز را خودش تایپ می‌کند. در صورت نیاز `-SetSecret` را هم برای Google اجرا کند.
+  - **راه‌اندازی اولیه پس از ورود:** superuser با `admin_all` به همه‌چیز دسترسی دارد، ولی نقش‌های `init_roles` هیچ مجوزی ندارند و کاربر عادیِ دارای این نقش‌ها چیزی نمی‌بیند. کاربر مجوز نقش‌ها را در صفحهٔ نقش‌ها تنظیم می‌کند (ورود گروهی با Excel نقش‌ها هم هست)، سپس شرکت، بخش‌ها، انبارها و کاربران را تعریف می‌کند.
 - **۶.۵ smoke test عمومی (Claude):**
   - `/` و `/api/public/config/` کد 200 بدهند.
   - گواهی TLS معتبر باشد.
   - هدرهای کش، وب‌سوکت و media امضاشده/بدون امضا درست کار کنند.
-- **۶.۶ آزمون‌های وابسته به ورود (کاربر):** ورود، داشبورد، عکس کالا، اسناد، چت، نصب PWA و حالت آفلاین.
+  - نبض worker گوگل‌درایو و worker خروجی تازه باشد.
+- **۶.۶ آزمون‌های وابسته به ورود (کاربر):** ورود، داشبورد، عکس کالا، اسناد، چت، نصب PWA، حالت آفلاین، خروجی Excel گزارش‌ساز، و ورود یک کاربر غیر superuser با نقش تنظیم‌شده.
 - **۶.۷ چک‌لیست go-live:**
   - بکاپ شبانه و pull دست‌کم یک بار موفق شده باشند.
   - تمرین restore موفق بوده باشد.
@@ -449,7 +538,7 @@
 پوشش: D-26.
 
 - موارد D-26: پشتیبانی از `-Help`، حذف کلید تکراری، اصلاح `ssh-keygen`، پوشش همهٔ unitها، تبدیل منو به حلقه، حذف Setup خودکار در Update، اجرای `-Logs` با sudo.
-- در CLAUDE.md بخش «استقرار soft.farsalish.ir» اضافه شود: فرمان‌های `deploy.ps1`، قواعد go-live و بکاپ. بخش «Release on this machine» برای محیط تست بماند.
+- در CLAUDE.md و `.agents/AGENTS.md` بخش «استقرار soft.farsalish.ir» اضافه شود: فرمان‌های `deploy.ps1`، قواعد go-live و بکاپ. بخش «Release on this machine» برای محیط تست بماند.
 
 ---
 
@@ -457,7 +546,7 @@
 
 | فایل | فاز |
 |---|---|
-| `CLAUDE.md`، `.claude/settings.json` | ۱، ۷ |
+| `CLAUDE.md`، `.agents/AGENTS.md`، `.claude/settings.json` | ۱، ۷ |
 | `deploy.ps1` | ۱، ۳، ۴، ۵، ۶، ۷ |
 | `.gitattributes` (جدید) | ۱ |
 | `scripts/e2e/guardian_53_deploy_safety.py` (جدید) | ۱ |
@@ -465,6 +554,7 @@
 | `warehouse-backend/requirements.txt`، `requirements.lock` (جدید) | ۲ |
 | `scripts/deploy/templates/*` و `warehouse-deploy` (جدید، جایگزین `remote-*.sh`) | ۳، ۵ |
 | `warehouse-backend/config/settings.py` | ۳، ۵ |
+| `common/media_urls.py` (شاخهٔ X-Accel-Redirect) | ۳ |
 | `accounts/backup_service.py`، `accounts/management/commands/run_auto_backup.py` | ۴ |
 | `reports/models.py` (مسیر `report_exports` از env) | ۵ |
 | `personnel/dbf_generator.py` و `personnel/data/insurance_templates/` | ۶ |
@@ -475,8 +565,8 @@
 - **یکپارچه:** کانتینر همان نسخهٔ Ubuntu روی این ماشین (Docker Desktop نصب است). سپس خود `soft` پیش از go-live به‌عنوان staging.
 - **بازبین‌ها:**
   - `data-loss-reviewer` برای فازهای ۴، ۵ و ۶؛
-  - `tenant-scope-reviewer` اگر نحوهٔ سرو media در Django تغییر کند.
-- **آزمون‌های بک‌اند:** فقط با برچسب اپ (مثلاً `manage.py test accounts config`). تغییرهای D-28 و env پوشش تست بگیرند.
+  - `tenant-scope-reviewer` برای فاز ۳، چون شاخهٔ X-Accel-Redirect نحوهٔ سرو media در Django را تغییر می‌دهد.
+- **آزمون‌های بک‌اند:** فقط با برچسب اپ (مثلاً `manage.py test accounts config`). تغییرهای D-28، env و شاخهٔ X-Accel-Redirect پوشش تست بگیرند.
 - **سهم کاربر:** آزمون‌های پشت صفحهٔ ورود (گام ۶.۶).
 
 ## ۷. نکات «عدم از دست رفتن داده» (برای `soft`)
@@ -484,20 +574,25 @@
 - پیش از هر دادهٔ واقعی، فاز ۴ کامل شده باشد.
 - پس از go-live، هیچ migrate بدون بکاپی که به همین ماشین منتقل و تطبیق شده باشد اجرا نشود.
 - `shared/` (media، backups، `.env`) را هیچ گام خودکاری حذف یا بازنویسی نکند.
-- هیچ بکاپی خودکار حذف نشود؛ این قاعده خود برنامه را هم شامل می‌شود (D-28).
+- هیچ بکاپی خودکار حذف نشود؛ این قاعده خود برنامه را هم شامل می‌شود (D-28). حذف فقط دستی با `-PruneBackups`، با تأیید تایپی و فقط برای بکاپ‌هایی است که نسخهٔ بیرونی‌شان تطبیق شده است (۴.۸).
+- بکاپ نباید دیسک دیتابیس را پر کند (حفاظ فضای آزاد ۴.۲).
 - restore همیشه دستی، با تأیید تایپی و پس از یک بکاپ اضطراری تازه انجام شود.
+- پس از migration ناسازگار، کد خودکار برنمی‌گردد. بازگشت فقط در حالت نگهداری و با restore تأییدشده انجام می‌شود (۵.۲.۱۱).
 
 ## ۸. موارد مرتبط بیرون از دامنه
 
 - **قابلیت‌های مخرب داخل برنامه** که پیش از go-live باید جداگانه بازبینی شوند: restore (`clean_public_schema` همهٔ جدول‌ها را حذف می‌کند)، rollback اسنپ‌شات، و `purge_expired_chat_media` که روی soft نباید بدون تصمیم صریح کاربر زمان‌بندی شود.
 - **فایل‌های آزمایشی tracked** (`users.json`، `user_dump.json`، `sync_pull_res.json`): محتوایشان بررسی نشد و شاید باید از git حذف شوند.
 - **قفل مشترک axes روی محیط تست:** چون محیط تست است، اولویت پایینی دارد.
+- **کامند هم‌نام `run_gdrive_sync_worker` در `personnel`:** از راه `manage.py` در دسترس نیست (آزمون ۱۰). اگر ترتیب `INSTALLED_APPS` عوض شود، ممکن است جای worker مرکزی را بگیرد؛ آن‌وقت صف سیستم، و بکاپ گوگل‌درایو در ۴.۴، پردازش نمی‌شود. پاک‌سازی آن جزو کار گوگل‌درایو است؛ هر دو فایل الان تغییر commit‌نشده دارند.
+- **ترتیب فارسی در محیط تست:** دیتابیس محلی حروف فارسی را به ترتیب کد مرتب می‌کند (آزمون ۹). پس ترتیب فهرست‌ها روی soft با محیط تست فرق خواهد داشت و روی soft درست است.
 
 ## ۹. پرسش‌های باقی‌مانده
 
 - در حال حاضر پرسش بازی نیست.
 - پس از کشف فاز ۲ ممکن است این پرسش‌ها لازم شوند:
   - پروکسی خروجی برای Google، اگر مسدود باشد؛
+  - توکن API کلودفلر برای DNS-01، اگر اعتبارسنجی HTTP-01 از بیرون ناپایدار باشد؛
   - ارتقای سیستم‌عامل، اگر نسخهٔ PostgreSQL یا Python ناسازگار باشد.
 
 ---
@@ -510,5 +605,12 @@
   - **تصمیم‌های کاربر:** ثبت شدند (بخش ۱.۲).
   - **SSH:** کلید میزبان جدید سرور پس از تأیید کاربر در `known_hosts` این ماشین ثبت شد. ورود با کلید رد شد، پس کشف سرور معوق است.
   - **حافظه:** نقش محیط‌ها در حافظهٔ Claude ثبت شد (`project_environment_roles.md`).
+  - **کد:** هیچ کدی تغییر نکرد.
+  - **اقدام بعدی:** فاز ۱ در نشست تازه.
+- **۱۴ مهر ۱۴۰۵ — ویرایش ۳:**
+  - **بازبینی:** ۱۹ ادعای گزارش بازبینی بیرونی با کد سنجیده شد: ۷ پذیرفته، ۹ بخشی و ۳ رد (بخش ۲.۲). آزمون‌های ۸ تا ۱۱ اضافه شدند.
+  - **ایرادهای تازه:** D-29 (worker خروجی) و D-30 (encoding و collation دیتابیس).
+  - **تغییرهای اصلی:** هماهنگی `.agents/AGENTS.md`، media با X-Accel-Redirect، TLS دومرحله‌ای، نگه‌داشتن chunkهای release قبلی، venv با hash فایل lock، قواعد بازگشت پس از migrate و حالت نگهداری با 503، media افزایشی و حفاظ فضای آزاد بکاپ، `-PruneBackups` دستی، راه‌اندازی اولیهٔ نقش‌ها.
+  - **تصمیم‌های کاربر تغییر نکردند:** DNS مستقیم بدون Cloudflare، نبود حذف خودکار بکاپ و نبود انتقال داده.
   - **کد:** هیچ کدی تغییر نکرد.
   - **اقدام بعدی:** فاز ۱ در نشست تازه.
