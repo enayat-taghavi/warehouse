@@ -162,3 +162,11 @@ def login_log_post_save(sender, instance, created, **kwargs):
         transaction.on_commit(send_broadcast)
     except Exception as e:
         logger.warning(f"[WebSocket] Error in login_log_post_save signal: {e}")
+
+
+# ==============================================================================
+# سیگنال ساخت نسخه پشتیبان جدید (جهت دریافت توسط ماژول‌های متصل مثل گوگل‌درایو)
+# ==============================================================================
+from django.dispatch import Signal
+
+backup_created = Signal()  # providing_args: ['dest_path', 'filename', 'meta']

@@ -83,7 +83,6 @@ urlpatterns = [
     path('companies/<int:company_id>/gdrive/tasks/<int:task_id>/retry/', CompanyGoogleDriveRetryTaskView.as_view(), name='company-gdrive-retry-task'),
     path('companies/<int:company_id>/gdrive/sync-all/', CompanyGoogleDriveSyncAllView.as_view(), name='company-gdrive-sync-all'),
     path('companies/<int:company_id>/gdrive/trigger-sync/', CompanyGoogleDriveTriggerSyncView.as_view(), name='company-gdrive-trigger-sync'),
-    path('gdrive/callback/', GoogleDriveOAuthCallbackView.as_view(), name='gdrive-oauth-callback'),
 
     path('sync/pull/', PersonnelSyncPullView.as_view(), name='personnel-sync-pull'),
     path('cartable/supervisor/', SupervisorCartableAPIView.as_view(), name='supervisor-cartable'),

@@ -164,7 +164,11 @@ def create_database_backup(user=None, description="پشتیبان‌گیری د�
             details=meta
         )
 
-        _enqueue_backup_for_gdrive(dest_path, filename)
+        try:
+            from accounts.signals import backup_created
+            backup_created.send(sender=None, dest_path=dest_path, filename=filename, meta=meta)
+        except Exception as sig_err:
+            logger.warning(f"Could not dispatch backup_created signal: {sig_err}")
         return meta
 
     elif 'sqlite3' in engine:
@@ -215,43 +219,15 @@ def create_database_backup(user=None, description="پشتیبان‌گیری د�
             details=meta
         )
 
-        _enqueue_backup_for_gdrive(dest_path, filename)
+        try:
+            from accounts.signals import backup_created
+            backup_created.send(sender=None, dest_path=dest_path, filename=filename, meta=meta)
+        except Exception as sig_err:
+            logger.warning(f"Could not dispatch backup_created signal: {sig_err}")
         return meta
 
     else:
         raise NotImplementedError(f"موتور دیتابیس {engine} پشتیبانی نمی‌شود.")
-
-
-def _enqueue_backup_for_gdrive(dest_path: str, filename: str):
-    """ثبت خودکار نسخه پشتیبان دیتابیس در صف گوگل‌درایو شرکت‌های متصل"""
-    try:
-        from personnel.models import CompanyGoogleDriveConfig, GoogleDriveSyncQueue
-        from personnel.google_drive_path_resolver import get_current_shamsi_year_str
-        shamsi_year = get_current_shamsi_year_str()
-
-        configs = CompanyGoogleDriveConfig.objects.filter(
-            is_enabled=True,
-            sync_backups=True
-        ).select_related('company')
-
-        for g_cfg in configs:
-            if g_cfg.refresh_token:
-                task = GoogleDriveSyncQueue.objects.create(
-                    company=g_cfg.company,
-                    model_name='DatabaseBackup',
-                    object_id=None,
-                    source_file_path=dest_path,
-                    target_folder_path=f"پشتیبان‌های پایگاه داده/{shamsi_year}",
-                    target_filename=filename,
-                    action='upload',
-                    status='pending'
-                )
-                logger.info(f"[GDrive Sync] Backup {filename} enqueued for company {g_cfg.company.code}")
-                if getattr(g_cfg, 'sync_mode', 'immediate') == 'immediate':
-                    from personnel.signals_gdrive import _trigger_async_sync
-                    _trigger_async_sync(task.id, config=g_cfg)
-    except Exception as gdrive_err:
-        logger.warning(f"Could not enqueue backup to Google Drive: {gdrive_err}")
 
 
 def verify_backup_integrity(filename):

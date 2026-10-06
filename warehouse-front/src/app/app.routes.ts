@@ -27,11 +27,6 @@ export const routes: Routes = [
   { path: 'verify-card/:code', component: VerifyCard },
   { path: 'verify-card', component: VerifyCard },
   { path: 'change-password', component: ChangePassword, canActivate: [AuthGuard] },
-  {
-    path: 'api/accounts/gdrive/callback',
-    loadComponent: () => import('./components/operations/companies/company-gdrive-tab/gdrive-oauth-callback.component').then(m => m.GDriveOAuthCallbackComponent)
-  },
-
   // ─── پورتال لانچر برنامه‌ها (App Launcher) ──────────────
   { path: 'app/launcher', component: AppLauncherComponent, canActivate: [AuthGuard] },
 

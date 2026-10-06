@@ -484,16 +484,15 @@ class CompanyGoogleDriveSyncAllView(APIView):
 
         # ۴. تصاویر اقلام انبار (ItemPhoto)
         if config.sync_inventory_photos:
-            try:
-                from inventory.models import ItemPhoto
+            from django.apps import apps
+            if apps.is_installed('inventory'):
+                ItemPhoto = apps.get_model('inventory', 'ItemPhoto')
                 for iphoto in ItemPhoto.objects.filter(item__warehouse__company=company, image__isnull=False).exclude(image=''):
                     res = GoogleDrivePathResolver.resolve(iphoto, field_name='image')
                     if res:
                         _, folder, fname = res
                         if _enqueue_or_reopen('ItemPhoto', iphoto.id, iphoto.image.name, folder, fname):
                             enqueued_count += 1
-            except ImportError:
-                pass
 
         # ۵. نسخه‌های پشتیبان پایگاه داده (Database Backups)
         if config.sync_backups:

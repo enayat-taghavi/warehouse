@@ -20,8 +20,6 @@ import google_auth_httplib2
 
 logger = logging.getLogger(__name__)
 
-# Allow OAuth scope relaxation (Google automatically adds 'openid' when userinfo.email is requested)
-os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 # Scopes needed for managing files created by this application
 SCOPES = [
@@ -93,12 +91,6 @@ def get_http_client() -> httplib2.Http:
         except Exception as exc:
             logger.warning(f"Could not configure proxy '{proxy_url}': {exc}. Using direct connection.")
     return httplib2.Http(timeout=60)
-
-
-def _get_pkce_verifier(company_id: int) -> str:
-    """Generate a stable, secure PKCE code_verifier for stateless OAuth flow (43-128 chars)"""
-    raw_secret = getattr(settings, 'SECRET_KEY', 'default-gdrive-pkce-key')
-    return hashlib.sha256(f"gdrive_pkce:{company_id}:{raw_secret}".encode('utf-8')).hexdigest() + "warehousepkce"
 
 
 def create_oauth_flow(company_id: int) -> Flow:

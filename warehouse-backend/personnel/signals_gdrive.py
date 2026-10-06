@@ -274,8 +274,10 @@ def on_company_board_member_deleted(sender, instance, **kwargs):
 # ==============================================================================
 # اتصال به تصاویر کالاهای انبارگردانی
 # ==============================================================================
-try:
-    from inventory.models import ItemPhoto
+from django.apps import apps
+
+if apps.is_installed('inventory'):
+    ItemPhoto = apps.get_model('inventory', 'ItemPhoto')
 
     @receiver(post_save, sender=ItemPhoto)
     def on_item_photo_saved(sender, instance, created, **kwargs):
@@ -286,5 +288,43 @@ try:
     def on_item_photo_deleted(sender, instance, **kwargs):
         if instance.image:
             enqueue_file_archive_delete(instance, 'image', instance.image)
+
+
+# ==============================================================================
+# اتصال به سیگنال ساخت نسخه پشتیبان دیتابیس (هسته -> گوگل‌درایو)
+# ==============================================================================
+try:
+    from accounts.signals import backup_created
+
+    @receiver(backup_created)
+    def on_backup_created(sender, dest_path, filename, meta=None, **kwargs):
+        """ثبت خودکار نسخه پشتیبان دیتابیس در صف گوگل‌درایو شرکت‌های متصل"""
+        try:
+            from personnel.models import CompanyGoogleDriveConfig, GoogleDriveSyncQueue
+            from personnel.google_drive_path_resolver import get_current_shamsi_year_str
+            shamsi_year = get_current_shamsi_year_str()
+
+            configs = CompanyGoogleDriveConfig.objects.filter(
+                is_enabled=True,
+                sync_backups=True
+            ).select_related('company')
+
+            for g_cfg in configs:
+                if g_cfg.refresh_token:
+                    task = GoogleDriveSyncQueue.objects.create(
+                        company=g_cfg.company,
+                        model_name='DatabaseBackup',
+                        object_id=None,
+                        source_file_path=dest_path,
+                        target_folder_path=f"پشتیبان‌های پایگاه داده/{shamsi_year}",
+                        target_filename=filename,
+                        action='upload',
+                        status='pending'
+                    )
+                    logger.info(f"[GDrive Sync] Backup {filename} enqueued for company {g_cfg.company.code}")
+                    if getattr(g_cfg, 'sync_mode', 'immediate') == 'immediate':
+                        _trigger_async_sync(task.id, config=g_cfg)
+        except Exception as gdrive_err:
+            logger.warning(f"Could not enqueue backup to Google Drive: {gdrive_err}")
 except ImportError:
     pass
