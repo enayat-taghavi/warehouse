@@ -363,6 +363,10 @@ class CompanyGoogleDriveConfigView(APIView):
             except (ValueError, TypeError):
                 return Response({"error": "مقدار تاخیر بین فایل‌ها باید عدد صحیح باشد."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # اعتبارسنجی تفاوت ساعت شروع و پایان (GD-25)
+        if config.scheduled_start_time == config.scheduled_end_time:
+            return Response({"error": "ساعت شروع و پایان ارسال نمی‌تواند یکسان باشد."}, status=status.HTTP_400_BAD_REQUEST)
+
         config.save()
         return Response({"success": True, "message": "تنظیمات گوگل‌درایو با موفقیت ذخیره شد."}, status=status.HTTP_200_OK)
 
@@ -456,11 +460,18 @@ class CompanyGoogleDriveQueueView(APIView):
         except (ValueError, TypeError):
             return Response({"error": "پارامتر limit باید یک عدد صحیح معتبر باشد."}, status=status.HTTP_400_BAD_REQUEST)
 
+        raw_offset = request.GET.get('offset', '0')
+        try:
+            offset = max(0, int(raw_offset))
+        except (ValueError, TypeError):
+            offset = 0
+
         qs = GoogleDriveSyncQueue.objects.filter(company=company).order_by('priority', '-created_at')
         if status_filter and status_filter != 'all':
             qs = qs.filter(status=status_filter)
 
-        tasks = qs[:limit]
+        total_count = qs.count()
+        tasks = qs[offset:offset + limit]
         results = [
             {
                 "id": t.id,
@@ -483,7 +494,7 @@ class CompanyGoogleDriveQueueView(APIView):
             }
             for t in tasks
         ]
-        return Response({"results": results, "count": qs.count()}, status=status.HTTP_200_OK)
+        return Response({"results": results, "count": total_count}, status=status.HTTP_200_OK)
 
 
 class CompanyGoogleDriveRetryTaskView(APIView):
