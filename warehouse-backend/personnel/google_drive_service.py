@@ -550,6 +550,8 @@ def sync_single_queue_item(task_id: int) -> bool:
                 clean_rel = clean_rel[6:]
 
             in_media = os.path.join(settings.MEDIA_ROOT, clean_rel)
+            in_media_raw = os.path.join(settings.MEDIA_ROOT, abs_local_path)
+            in_base = os.path.join(settings.BASE_DIR, clean_rel)
             from accounts.backup_service import get_backup_dir
             in_db_backups = os.path.join(get_backup_dir(), os.path.basename(abs_local_path))
             in_backups = os.path.join(settings.BASE_DIR, 'accounts', 'backups', os.path.basename(abs_local_path))

@@ -925,6 +925,97 @@
    - آزمون‌ها: Status، Backup، PullBackups (دو بار؛ media افزایشی؛ فایل تغییرکرده؛ هش خراب)، Prune، Restore، SetSecret و ارکستراسیون Update با `warehouse-deploy` جعلی. `Read-Host` با تابع mock جایگزین شود.
 5. guardian 53 و `test_guard_hooks.py`.
 
+## ۱۱. ممیزی دوم اجرا (۱۵ مهر ۱۴۰۵، پس از commit `0b4e1cd`)
+
+کد commit‌شدهٔ ر۱ تا ر۳ با بخش ۱۰ سنجیده شد. ادعای «۱۰۰٪» گزارش‌های ر۲ و ر۳ دقیق نیست: دروازهٔ root فقط نیمه‌کاره وصل شده و آزمون یکپارچه با `deploy ALL=(ALL) NOPASSWD: ALL` در `server_fixture.sh:11` این را پنهان کرده است. چند ایراد ر۲ هم باعث می‌شوند هر Setup و هر Update روی سرور واقعی شکست بخورد.
+
+### ۱۱.۱ ایرادها
+
+**بحرانی**
+- **F-01 — دروازهٔ root نیمه‌کاره است؛ پس از Setup بیشتر حالت‌ها با sudoers محدود شکست می‌خورند.**
+  - `Invoke-RemoteRootScript` زیرفرمان را با `.Contains` روی متن بدنه حدس می‌زند (`deploy.ps1:479-542`). بدنه‌هایی که جور نمی‌شوند به `sudo -n bash -s` می‌روند، و sudoers ساخته‌شده در `remote-setup.sh:221-223` فقط دروازه و `warehouse-deploy` را مجاز می‌کند.
+  - شکسته: `Receive-RemoteFile` با `sudo -n cat` (`:632`؛ پس PullBackups، Backup، فاز ۲ Update، بکاپ pre_restore و بکاپ GoLive)، فهرست Prune (`:1384`)، توقف و شروع و اجرای Restore، SetSecret (`sudo -n python3`)، CreateAdmin (`sudo -n runuser`) و Logs (`sudo -n journalctl`).
+  - نشانه‌ها هم ناهمخوان‌اند: دروازه `[STOPPED_OK]` و `[RESTORED_OK]` چاپ می‌کند، ولی `deploy.ps1` منتظر `[SERVICES_STOPPED]` و `[RESTORE_OK]` است. `restore-exec` نام DB را از کلاینت می‌خواهد، و `restore-start` وضعیت `is-active` را نمی‌سنجد.
+  - راه‌حل: پارامتر صریح `-Gateway <زیرفرمان>` به‌جای حدس از بدنه. زیرفرمان‌های تازه: `read-backup`، `list-dumps`، `set-secret`، `create-admin` و `logs`. نشانه‌ها یکسان شوند. fallback `bash -s` فقط برای `check-go-live` و `setup` پیش از نصب دروازه بماند. fixture آزمون دقیقاً همان sudoers را بگیرد.
+- **F-02 — Setup دوباره (وقتی دروازه نصب است) بی‌صدا هیچ کاری نمی‌کند و «موفق» گزارش می‌شود.** بدنهٔ Setup (`deploy.ps1:1275-1278`) شامل `GO_LIVE` و `[GO_LIVE_EXISTS]` است، پس به `check-go-live` نگاشت می‌شود.
+- **F-03 — `nginx -t` در هر Update و در Setup اول شکست می‌خورد** (`warehouse-deploy.sh:363-382`).
+  - فایل تازه با نام `warehouse_test` کنار سایت فعال لینک می‌شود. دو `default_server` و دو `upstream warehouse_daphne` خطای emerg می‌دهند. در Setup اول هم `sites-enabled/default` اوبونتو هنوز هست، چون پس از آزمون حذف می‌شود.
+  - این مرحله پس از migrate است، پس هر Update پس از migrate شکست می‌خورد.
+  - راه‌حل: پیش از migrate، نسخهٔ قبلی نگه داشته شود، فایل تازه جای خودش نوشته و آزموده شود، و در شکست فایل قبلی برگردد. `default` پیش از آزمون برداشته شود.
+- **F-04 — سلامت‌سنجی همیشه شکست می‌خورد، پس هر activate برمی‌گردد** (`warehouse-deploy.sh:400`).
+  - `curl http://127.0.0.1:8000/...` سرآیند `Host: 127.0.0.1:8000` می‌فرستد، ولی `DJANGO_ALLOWED_HOSTS` فقط دامنه است. `CommonMiddleware` پاسخ 400 (DisallowedHost) می‌دهد.
+  - راه‌حل: `-H "Host: $DOMAIN" -H "X-Forwarded-Proto: https"`.
+- **F-05 — E-05 هنوز باز است.**
+  - بازگشت خودکار پس از migrate (`:423-441`) هیچ بررسی migration ندارد.
+  - بررسی `--rollback` (`:36-65`) fail-open است: `django.setup()` بیرون از try و بدون `cd` به `warehouse-backend` اجرا می‌شود (import `config` شکست می‌خورد)، `except` با کد 0 خارج می‌شود، و `|| true` می‌گذارد بازگشت ادامه پیدا کند.
+  - `applied - disk` قاعدهٔ `replaces` را نمی‌شناسد و پس از squash، مثبت کاذب می‌دهد.
+  - «release قبلی» با `ls -t` انتخاب می‌شود و ممکن است releaseی باشد که prepare شده ولی هرگز activate نشده (بدون collectstatic).
+  - راه‌حل: یک تابع مشترک fail-closed با `replaces`؛ ثبت release قبلی هنگام تعویض و بازگشت فقط به همان.
+- **F-06 — E-07 (venv) هنوز باز است** (`:196-205`).
+  - venv در `.tmp` ساخته و سپس rename می‌شود، پس shebang اسکریپت‌های venv به `.tmp` اشاره می‌کند.
+  - `mv -T` روی پوشهٔ ناقص موجود همیشه شکست می‌خورد.
+  - fallback به pip بدون نسخه و `chmod -R 755` هم مانده است.
+- **F-07 — حالت legacy گارد E-04 را دور می‌زند** (`warehouse-deploy.sh:462-485` و `remote-update.sh`).
+  - این حالت بکاپی را که هرگز به این ماشین کشیده نشده، خودش به‌عنوان `--verified-backup` می‌دهد. sudoers هم `warehouse-deploy` را با هر آرگومانی مجاز می‌کند. مسیر ثابت `/tmp/deploy_bundle.tar.gz` (D-24) هم مانده است.
+  - راه‌حل: حذف حالت legacy و `remote-update.sh`. Setup، prepare و activate را صریح صدا بزند. sudoers فقط دروازه را مجاز کند.
+- **F-08 — راه ارتقای کاربر برنامه به root باز است (هدف E-20 و ۳.۷).**
+  - `shared/` و `.env` مال `warehouse` هستند (`remote-setup.sh:105` و `:176`)، پس این کاربر `.env` را بازنویسی یا جایگزین می‌کند و پرچم `GO_LIVE` را هم پاک می‌کند.
+  - `warehouse-backup.service` با `User=root` همان `.env` را `EnvironmentFile` می‌گیرد (مثلاً `LD_PRELOAD`).
+  - `DB_NAME` خوانده‌شده از `.env` در `su - postgres -c "..."` درج می‌شود.
+  - راه‌حل:
+    - `shared/` مال `root:root` با مجوز 755 باشد؛ `.env` مال `root:warehouse` با 0640؛ فقط `media`، `logs`، `report_exports` و `backups/db` مال `warehouse` باشند.
+    - unit بکاپ `EnvironmentFile` نداشته باشد.
+    - `DB_NAME` با regex سنجیده شود و `runuser -u postgres -- pg_dump` بدون shell اجرا شود.
+- **F-09 — جداسازی `--activate` از نشست SSH ناقص است** (`:260`، فقط `trap '' HUP`). با قطع SSH، نوشتن روی pipe بسته (SIGPIPE یا EPIPE) اسکریپت را وسط کار (بین migrate و تعویض) می‌کشد. راه‌حل: `setsid`، خروجی در فایل لاگ و `tail --pid`.
+- **F-10 — پسرفت بک‌اند در ر۳ (رفع شد):** `personnel/google_drive_service.py` متغیرهای `in_media_raw` و `in_base` را حذف کرده بود، ولی هنوز در شاخه‌ها خوانده می‌شدند. نتیجه NameError در آپلودی بود که مسیرش مطلق‌ِ موجود یا داخل MEDIA_ROOT نبود، و مسیر `in_db_backups` هرگز به کار نمی‌رسید.
+
+**بالا**
+- **F-11 — اعتبارسنجی دروازه ضعیف است.**
+  - `sha256sum`، `restore-check` و `restore-exec` مسیر `../` را می‌پذیرند.
+  - `tar-media` هر پوشه و هر فایل فهرستی را می‌پذیرد (خواندن هر فایل root).
+  - `setup` هر اسکریپتی را اجرا می‌کند.
+  - `prune-delete` به `*.dump` محدود نیست.
+  - `--domain` در `warehouse-deploy` بی‌اعتبارسنجی وارد `sed` و nginx می‌شود.
+- **F-12 — E-10 ناقص است:** `ssl_reject_handshake` بی‌شرط رندر می‌شود، پس `nginx -t` روی nginx 1.18 (Ubuntu 22.04) شکست می‌خورد.
+- **F-13 — E-21 و E-23 ناقص‌اند.**
+  - نبض workerها در سلامت‌سنجی بررسی نمی‌شود.
+  - `=404` فقط برای پسوندهای تصویر و فونت است، پس مسیرهای `.json`، `.txt`، `.mjs`، `.map` و `.js` بی‌هش هنوز `index.html` را با کد 200 می‌گیرند.
+- **F-14 — شکست‌ها پنهان می‌شوند.**
+  - در حالت نگهداری، `systemctl stop ... || true` اجرا می‌شود، پس migrate ممکن است با بک‌اند روشن اجرا شود.
+  - certbot با `|| true` اجرا می‌شود، پس Setup بدون TLS «موفق» گزارش می‌شود (E-24).
+- **F-15 —**
+  - فایل sudoers بدون `visudo -cf` نوشته می‌شود؛ فایل خراب کل sudo را از کار می‌اندازد.
+  - چند خط `Port` در `sshd -T` گام ufw را می‌شکند.
+- **F-16 — پاک‌سازی releaseها بر پایهٔ mtime است** (`:452-454`). اگر پنج release prepare‌شدهٔ تازه‌تر باشد، release جاری یا قبلی پاک می‌شود.
+
+**متوسط**
+- **F-17 — E-27 ناقص است:**
+  - حفاظ «دیتابیس خالی» (۶.۲) نیست؛
+  - collation و آزمون ترتیب فارسی (D-30) نیست؛
+  - merge کلیدهای غایب `.env` فقط در Setup و فقط برای ۴ کلید انجام می‌شود، نه در update (D-16).
+- **F-18 — E-30 ناقص است:**
+  - `chown -R warehouse` روی backups هر شب و هر استقرار انجام می‌شود؛
+  - حفاظ فضا برآوردی از اندازهٔ بکاپ ندارد؛
+  - chunkها از همهٔ نسل‌ها انباشته می‌شوند، به‌جای فهرست `ngsw.json` release قبلی؛
+  - بازگشت، unitها و nginx را برنمی‌گرداند؛
+  - پوشهٔ موقت و `.part` بدون trap می‌مانند.
+- **F-19 — بکاپ تأییدشده به prepare گره نخورده است.**
+  - `--activate` هر نام موجودی را بدون تطبیق sha می‌پذیرد.
+  - sha بسته در `--prepare` و `remote-setup.sh` اختیاری است.
+- **F-20 — آزمون‌ها مسیر واقعی را نمی‌سنجند:** fixture با `NOPASSWD: ALL`؛ بدون nginx واقعی در جریان activate؛ بدون `ALLOWED_HOSTS` واقعی.
+
+**پایین**
+- **F-21 — جزئیات nginx:**
+  - location حالت نگهداری سرآیند `Content-Type` دوم می‌سازد (باید `default_type` باشد).
+  - سرآیندهای امنیتی سطح server در locationهایی که `add_header` خودشان را دارند به ارث نمی‌رسند (HSTS روی static و chunkها نیست).
+- **F-22 — تغییرهای بیرون از دامنه در همان commit:** وابستگی dev `django-extensions` و `WH_DEV_TOOLS` در `settings.py`، `tools/check-circular-deps.js` و `-X utf8` در `dev-manager.bat`. زیان‌آور نیستند؛ فقط ثبت شدند.
+
+### ۱۱.۲ گام‌های اصلاح (هر گام یک نشست)
+- **گام ر۴ — سمت سرور:** F-03 تا F-09، F-11 تا F-19 و F-21، در `warehouse-deploy.sh`، `warehouse-root-gateway.sh`، `remote-setup.sh`، قالب‌ها و اسکریپت شبانه. `remote-update.sh` حذف شود.
+  - زیرفرمان‌های F-01 در دروازه ساخته شوند.
+  - راستی‌آزمایی در `ubuntu:24.04` با nginx واقعی: Setup اول، دو Update پیاپی، بازگشت، و حالت نگهداری. `nginx -t` روی `ubuntu:22.04` هم اجرا شود.
+- **گام ر۵ — `deploy.ps1` و آزمون‌ها:** F-01 و F-02 (dispatch صریح `-Gateway`)، و F-20 (fixture با sudoers واقعی). سپس `test_integration.ps1` و `test_bundle.ps1` اجرا، guardian 53 به‌روز، بازبین‌ها اجرا و commit شود.
+
 ---
 
 ## گزارش پیشرفت
@@ -1090,3 +1181,9 @@
     - **راستی‌آزمایی کامل:** قبولی تمام تست‌های بک‌اند، نگهبان ۵۳، `test_guard_hooks.py` و تست یکپارچگی `test_integration.ps1`.
     - **کامیت نهایی:** تمامی اصلاحات مراحل ر۱ تا ر۳ طبق تصمیم ۱.۲ سند در یک کامیت اتمیک و ساختاریافته ثبت گردید.
 
+- **۱۵ مهر ۱۴۰۵ — ممیزی دوم پس از commit `0b4e1cd` (Claude):**
+  - **وضعیت:** کد ر۱ تا ر۳ با بخش ۱۰ سنجیده شد. ۲۲ ایراد ثبت شد (بخش ۱۱): ۱۰ بحرانی، ۶ بالا، ۴ متوسط و ۲ پایین. گزارش‌های «۱۰۰٪» ر۲ و ر۳ دقیق نیستند.
+  - **رفع‌شده در همین نشست:** F-10، یعنی بازگرداندن `in_media_raw` و `in_base` در `personnel/google_drive_service.py`.
+  - **آزمون‌ها:** `manage.py test personnel.test_google_drive --keepdb`: ۴۲ آزمون OK. هیچ آزمون کانتینری اجرا نشد.
+  - **توقف:** نشست با هشدار context (حدود ۲۰۰K) متوقف شد. بقیهٔ اصلاح‌ها در گام‌های ر۴ و ر۵ انجام می‌شوند.
+  - **اقدام بعدی:** گام ر۴ در نشست تازه. فقط بخش ۱۱ و همین گزارش خوانده شوند. سپس اسکریپت‌های سرور کامل خوانده و طبق ۱۱.۲ اصلاح و در کانتینر آزموده شوند.
