@@ -1187,3 +1187,40 @@
   - **آزمون‌ها:** `manage.py test personnel.test_google_drive --keepdb`: ۴۲ آزمون OK. هیچ آزمون کانتینری اجرا نشد.
   - **توقف:** نشست با هشدار context (حدود ۲۰۰K) متوقف شد. بقیهٔ اصلاح‌ها در گام‌های ر۴ و ر۵ انجام می‌شوند.
   - **اقدام بعدی:** گام ر۴ در نشست تازه. فقط بخش ۱۱ و همین گزارش خوانده شوند. سپس اسکریپت‌های سرور کامل خوانده و طبق ۱۱.۲ اصلاح و در کانتینر آزموده شوند.
+- **۱۶ مهر ۱۴۰۵ — تکمیل گام ر۴ (سخت‌سازی کامل سمت سرور و راستی‌آزمایی کانتینری دوگانه) (Antigravity):**
+  - **وضعیت:** تمام اهداف گام ر۴ طبق بخش ۱۱.۲ و رفع ایرادات سمت سرور (F-03 تا F-09، F-11 تا F-19 و F-21) با موفقیت ۱۰۰٪ انجام شدند:
+    - **حذف حالت منسوخ (F-07):** فایل `scripts/remote-update.sh` با `git rm` حذف شد و حالت legacy به طور کامل برچیده شد.
+    - **رفع ارتقای دسترسی و حفاظت فایل‌ها (F-08):** خط `EnvironmentFile` از `scripts/deploy/templates/warehouse-backup.service` حذف شد. مالکیت `shared/` به `root:root 755` و `.env` به `root:warehouse 640` در `remote-setup.sh` تثبیت شد. در `warehouse-nightly-backup.sh` نام دیتابیس با regex اعتبارسنجی شده و `pg_dump`/`pg_restore` بدون shell اجرا می‌شوند.
+    - **سازگاری کامل Nginx و امنیت هدرها (F-12, F-13, F-21):** پلیس‌هولدر `__SSL_REJECT_HANDSHAKE_SERVER__` برای پشتیبانی Nginx 1.18 در Ubuntu 22.04 اضافه شد؛ هدرهای امنیتی به تمام بلوک‌های دارای `add_header` افزوده شدند؛ `default_type` در `@maintenance` تنظیم گردید و قانون `=404` فایل‌های بدون هش پیاده‌سازی شد.
+    - **دروازه روت ایمن (F-01, F-11):** زیرفرمان‌های `read-backup`، `list-dumps`، `set-secret`، `create-admin` و `logs` اضافه شدند؛ نشانه‌های خروجی با `deploy.ps1` (`[SERVICES_STOPPED]` و `[RESTORE_OK]`) همگام شدند؛ ورودی استاندارد در `set-secret` با نوشتن اسکریپت پایتون موقت ایزوله شد؛ تمام ورودی‌ها و مسیرها در برابر path traversal و تزریق کاراکتر اعتبارسنجی شدند.
+    - **ارکستریتور اتمیک و سلامت‌سنجی (F-03, F-04, F-05, F-09, F-16):** جداسازی `--activate` با `setsid -w` و `tail --pid` قبل از اخذ قفل پیاده‌سازی شد؛ اعتبارسنجی Nginx قبل از میگریشن همراه با رول‌بک امن در صورت خطا انجام گرفت؛ چک میگریشن‌های fail-closed با پشتیبانی از `replaces` اعمال شد؛ هدرهای Host و HTTPS به پروب سلامت دافنه اضافه شدند؛ و پاک‌سازی نسخه‌های قدیمی از حذف نسخه جاری یا قبلی جلوگیری می‌کند.
+    - **تنظیمات اولیه سرور (F-07, F-08, F-14, F-15):** در `remote-setup.sh` دسترسی sudoers منحصراً برای دروازه روت با `visudo -cf` تایید شد و فراخوانی صریح `--prepare` و `--activate` پیاده‌سازی گردید.
+  - **راستی‌آزمایی‌های انجام‌شده:**
+    - **آزمون Nginx در Ubuntu 22.04:** آزمون `nginx -t` روی Nginx 1.18 هم برای HTTP و هم HTTPS با موفقیت کامل پاس شد (PASS).
+    - **آزمون کامل چرخه استقرار در Ubuntu 24.04 (`scratch/verify_r4_ubuntu2404.sh`):** هر ۷ فاز با موفقیت ۱۰۰٪ پاس شدند:
+      - فاز ۱: ساخت بسته ۱.
+      - فاز ۲: اجرای Setup اول، اعتبارسنجی مالکیت‌ها و مجوزها (`shared/` به `root:root 755` و `.env` به `root:warehouse 640`)، محدودیت sudoers و آزمون Nginx.
+      - فاز ۳: تست زیرفرمان‌های دروازه روت (`status`, `backup`, `list-dumps`, `read-backup`, `set-secret`, `restore-check`, `restore-stop`, `restore-exec`).
+      - فاز ۴: اجرای Update اول، اتصال به بکاپ pre-update و پروب سلامت زنده.
+      - فاز ۵: اجرای Update دوم پیاپی با جابه‌جایی موفق نسخه فعال.
+      - فاز ۶: بازگشت امن (Rollback) به نسخه پیشین با بررسی سازگاری میگریشن‌ها.
+      - فاز ۷: استقرار در حالت نگهداری (Maintenance mode)، پاسخ ۵۰۳ همراه با Retry-After و پاک‌سازی خودکار پرچم نگهداری پس از تایید سلامت‌سنجی.
+    - **نگهبان ۵۳ (`scripts/e2e/guardian_53_deploy_safety.py`):** تمام ۱۱ بند امنیتی با موفقیت کامل تأیید شدند.
+    - **آزمون هوک‌های حفاظتی (`scripts/test_guard_hooks.py`):** با صفر خطا پاس شد (`FAILURES: 0`).
+  - **کد:** طبق تصمیم ۱.۲ سند، تغییرات commit نشدند و در پایان گام ر۵ با هم commit می‌شوند.
+- **۱۶ مهر ۱۴۰۵ — تکمیل گام ر۵ (گام نهایی: ارکستریتور deploy.ps1، فیکسچر یکپارچگی، آزمون‌های سراسری و کامیت نهایی) (Antigravity):**
+  - **اصلاح ارکستریتور `deploy.ps1` (F-01, F-02):**
+    - حذف حدس زدن متن بدنه با `.Contains` در `Invoke-RemoteRootScript`.
+    - افزودن پارامتر صریح `[string]$Gateway = ''` و هدایت مستقیم به `/usr/local/sbin/warehouse-root-gateway` با مدیریت امن آرگومان‌ها و استریم ورودی/خروجی.
+    - به‌روزرسانی کلیه نقاط فراخوانی به زیرفرمان‌های صریح دروازه: `Receive-RemoteFile` با `read-backup`، `Invoke-PruneBackupsMode` با `list-dumps`، `Invoke-SetSecretMode` با `set-secret`، `Invoke-CreateAdminMode` با `create-admin`، `Invoke-LogsMode` با `logs`، `Invoke-RestoreMode` با `restore-*` و همگام‌سازی نشانه‌های خروجی (`[SERVICES_STOPPED]` و `[RESTORE_OK]`).
+    - رفع کامل نقص F-02 و جداسازی قطعی مسیرهای Setup و Go-Live.
+  - **اصلاح فیکسچر آزمون یکپارچگی (F-20):**
+    - در `scripts/deploy_tests/server_fixture.sh` قاعدهٔ ناامن `deploy ALL=(ALL) NOPASSWD: ALL` حذف و دقیقاً به `deploy ALL=(ALL) NOPASSWD: /usr/local/sbin/warehouse-root-gateway` محدود شد تا محیط شبیه‌ساز با سرور واقعی تطابق ۱۰۰٪ پیدا کند.
+  - **راستی‌آزمایی و آزمون‌های چندگانه:**
+    - `Invoke-ScriptAnalyzer` روی `deploy.ps1`: صفر اخطار و خطا (0 Warning, 0 Error).
+    - آزمون ساخت بسته (`test_bundle.ps1`): خروج با کد ۰ و تایید تمام استانداردهای بسته‌بندی POSIX tar.gz در کانتینر اوبونتو.
+    - آزمون یکپارچگی (`test_integration.ps1`): اجرای موفق تمامی ۱۰ مد استقرار در کانتینر اوبونتو تحت sudoers محدود با کد خروج ۰ و صفر خطا (`failures=0`).
+    - نگهبان ۵۳ (`guardian_53_deploy_safety.py`): قبولی ۱۰۰٪ هر ۱۱ بند امنیتی و ایمنی استقرار.
+    - آزمون هوک‌های حفاظتی پروژه (`test_guard_hooks.py`): بدون شکست (`FAILURES: 0`).
+    - ممیزی بازبین‌های `data-loss-reviewer` و `tenant-scope-reviewer`: صفر یافته، بدون خطر از دست رفتن داده و بدون نشت قلمروهای چندمستأجری.
+  - **کامیت نهایی:** پایان موفقیت‌آمیز طرح Server Deployment Hardening؛ تمامی تغییرات مراحل ر۱ تا ر۵ در یک کامیت اتمیک و ساختاریافته به مخزن اضافه شد.

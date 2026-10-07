@@ -6,9 +6,33 @@
 # ==============================================================================
 set -euo pipefail
 
+# If running --activate without detachment, detach FIRST before acquiring the lock (F-09)
+if [[ "${1:-}" == "--activate" && -z "${WAREHOUSE_DETACHED:-}" ]]; then
+    export WAREHOUSE_DETACHED=1
+    mkdir -p /var/log/warehouse
+    REL_NAME=""
+    for arg in "$@"; do
+        if [[ "$arg" != -* && "$arg" != "--activate" ]]; then
+            REL_NAME="$arg"
+            break
+        fi
+    done
+    ACTIVATE_LOG="/var/log/warehouse/activate-${REL_NAME:-deploy}.log"
+    touch "$ACTIVATE_LOG"
+    chmod 600 "$ACTIVATE_LOG"
+    trap '' HUP PIPE
+    setsid -w "$0" "$@" > "$ACTIVATE_LOG" 2>&1 &
+    CHILD_PID=$!
+    tail -f --pid="$CHILD_PID" "$ACTIVATE_LOG"
+    wait "$CHILD_PID"
+    exit $?
+fi
+
 LOCK_FILE="/var/lock/warehouse-deploy.lock"
 exec 200>"$LOCK_FILE"
+python3 -c "import fcntl; fcntl.fcntl(200, fcntl.F_SETFD, fcntl.FD_CLOEXEC)" 2>/dev/null || true
 flock -n 200 || { echo "[ERROR] Another deployment is already in progress. Aborting." >&2; exit 1; }
+
 
 # Base filesystem layout (must be defined before rollback block for Guardian 53)
 BASE_DIR="/var/www/warehouse"
@@ -18,27 +42,21 @@ SHARED_DIR="${BASE_DIR}/shared"
 CURRENT_LINK="${BASE_DIR}/current"
 BACKUPS_DIR="${SHARED_DIR}/backups"
 
-# ==============================================================================
-# Mode: --rollback
-# ==============================================================================
-if [[ "${1:-}" == "--rollback" ]]; then
-    echo "=== Initiating Release Rollback ==="
-    ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
-    # shellcheck disable=SC2012
-    PREV_RELEASE=$(ls -1dt "${RELEASES_DIR}"/*/ 2>/dev/null | sed -e 's/\/$//' | grep -v "^${ACTIVE_RELEASE}$" | head -n 1 || true)
-    if [[ -z "$PREV_RELEASE" || ! -d "$PREV_RELEASE" ]]; then
-        echo "[ERROR] No previous release directory found in ${RELEASES_DIR} to rollback to!" >&2
-        exit 1
+# Common fail-closed migration compatibility check (E-05, F-05)
+check_migration_compatibility() {
+    local target="$1"
+    if [[ ! -x "${target}/venv/bin/python" || ! -f "${target}/warehouse-backend/manage.py" ]]; then
+        echo "[ERROR] Cannot verify migrations: target release missing venv or manage.py" >&2
+        return 1
     fi
-
-    # Check forward migration conflict (E-05)
-    echo "[INFO] Inspecting target rollback release migration compatibility..."
-    if [[ -x "${PREV_RELEASE}/venv/bin/python" && -f "${PREV_RELEASE}/warehouse-backend/manage.py" ]]; then
-        MIG_CHECK=$(su -s /bin/bash warehouse -c "
-            export DJANGO_SETTINGS_MODULE=config.settings
-            export DJANGO_ENV=production
-            ${PREV_RELEASE}/venv/bin/python -c '
-import sys, django
+    local res
+    res=$(su -s /bin/bash warehouse -c "
+        cd \"${target}/warehouse-backend\"
+        export DJANGO_SETTINGS_MODULE=config.settings
+        export DJANGO_ENV=production
+        \"${target}/venv/bin/python\" -c '
+import sys, os, django
+sys.path.insert(0, os.path.abspath(\".\"))
 django.setup()
 from django.db import connection
 from django.db.migrations.loader import MigrationLoader
@@ -47,26 +65,71 @@ try:
     loader.build_graph()
     applied = set(loader.applied_migrations.keys())
     disk = set(loader.disk_migrations.keys())
-    forward = applied - disk
+    replaced = set()
+    for key, mig_obj in loader.disk_migrations.items():
+        for r in getattr(mig_obj, \"replaces\", []):
+            replaced.add(r)
+    forward = applied - disk - replaced
     if forward:
         print(\"FORWARD_MIGRATIONS:\" + \", \".join(f\"{a}.{b}\" for a, b in forward))
         sys.exit(2)
     sys.exit(0)
 except Exception as e:
     print(\"MIGRATION_CHECK_ERROR:\" + str(e))
-    sys.exit(0)
+    sys.exit(3)
 ' 2>&1" || true)
-        if [[ "$MIG_CHECK" =~ FORWARD_MIGRATIONS:(.+) ]]; then
-            echo "[CRITICAL] Cannot safely rollback to ${PREV_RELEASE}!" >&2
-            echo "[CRITICAL] Database has applied migrations unknown to the target release: ${BASH_REMATCH[1]}" >&2
-            echo "[CRITICAL] Automatic rollback rejected to prevent database schema mismatch. Restore pre-update backup manually." >&2
-            exit 1
+
+    if [[ "$res" =~ FORWARD_MIGRATIONS:(.+) ]]; then
+        echo "[CRITICAL] Target release ${target} does not contain applied migrations: ${BASH_REMATCH[1]}" >&2
+        return 2
+    elif [[ "$res" =~ MIGRATION_CHECK_ERROR:(.+) ]]; then
+        echo "[CRITICAL] Migration compatibility check failed: ${BASH_REMATCH[1]}" >&2
+        return 3
+    fi
+    return 0
+}
+
+# ==============================================================================
+# Mode: --rollback
+# ==============================================================================
+if [[ "${1:-}" == "--rollback" ]]; then
+    echo "=== Initiating Release Rollback ==="
+    ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
+    
+    # Prefer explicitly registered previous release (F-05)
+    PREV_RELEASE=""
+    if [[ -f "${SHARED_DIR}/PREVIOUS_RELEASE" ]]; then
+        CANDIDATE="${RELEASES_DIR}/$(cat "${SHARED_DIR}/PREVIOUS_RELEASE" 2>/dev/null || true)"
+        if [[ -d "$CANDIDATE" && "$CANDIDATE" != "$ACTIVE_RELEASE" ]]; then
+            PREV_RELEASE="$CANDIDATE"
         fi
+    fi
+    if [[ -z "$PREV_RELEASE" ]]; then
+        # shellcheck disable=SC2012
+        PREV_RELEASE=$(ls -1dt "${RELEASES_DIR}"/*/ 2>/dev/null | sed -e 's/\/$//' | grep -v "^${ACTIVE_RELEASE}$" | head -n 1 || true)
+    fi
+
+    if [[ -z "$PREV_RELEASE" || ! -d "$PREV_RELEASE" ]]; then
+        echo "[ERROR] No previous release directory found in ${RELEASES_DIR} to rollback to!" >&2
+        exit 1
+    fi
+
+    echo "[INFO] Inspecting target rollback release (${PREV_RELEASE}) migration compatibility..."
+    if ! check_migration_compatibility "$PREV_RELEASE"; then
+        echo "[CRITICAL] Automatic rollback rejected to prevent database schema mismatch. Restore pre-update backup manually." >&2
+        exit 1
     fi
 
     echo "[INFO] Rolling back symlink to previous release: $PREV_RELEASE"
     ln -sfn "$PREV_RELEASE" "${BASE_DIR}/current_tmp"
     mv -Tf "${BASE_DIR}/current_tmp" "$CURRENT_LINK"
+    
+    # Update active release record
+    basename "$PREV_RELEASE" > "${SHARED_DIR}/ACTIVE_RELEASE"
+    if [[ -n "$ACTIVE_RELEASE" ]]; then
+        basename "$ACTIVE_RELEASE" > "${SHARED_DIR}/PREVIOUS_RELEASE"
+    fi
+
     systemctl daemon-reload
     systemctl restart warehouse-backend warehouse-gdrive-worker warehouse-export-worker
     nginx -t
@@ -92,12 +155,18 @@ if [[ "${1:-}" == "--prepare" ]]; then
         esac
     done
 
+    # Validate Domain format (F-11)
+    if ! [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]; then
+        echo "[ERROR] Invalid domain format: $DOMAIN" >&2
+        exit 1
+    fi
+
     if [[ -z "$BUNDLE_PATH" || ! -f "$BUNDLE_PATH" ]]; then
         echo "[ERROR] Valid bundle file path required for --prepare." >&2
         exit 1
     fi
 
-    # Check bundle sha256 checksum
+    # Check bundle sha256 checksum (F-19)
     if [[ -n "$BUNDLE_SHA256" ]]; then
         ACTUAL_SHA=$(sha256sum "$BUNDLE_PATH" | cut -d' ' -f1)
         if [[ "$ACTUAL_SHA" != "$BUNDLE_SHA256" ]]; then
@@ -112,7 +181,21 @@ if [[ "${1:-}" == "--prepare" ]]; then
     chown -R warehouse:warehouse "${SHARED_DIR}/media" "${SHARED_DIR}/logs" "${SHARED_DIR}/report_exports"
     chmod 700 "$BACKUPS_DIR"
 
-    # Pre-Update Database Snapshot (E-04, E-30, D-12)
+    # Merge missing .env configuration keys during prepare (D-16, F-17)
+    if [[ -f "${SHARED_DIR}/.env" ]]; then
+        for key in DJANGO_MEDIA_ACCEL_REDIRECT WAREHOUSE_REPORT_EXPORT_DIR WAREHOUSE_BACKUP_DIR GOOGLE_OAUTH_REDIRECT_URI; do
+            if ! grep -q "^${key}=" "${SHARED_DIR}/.env"; then
+                case "$key" in
+                    DJANGO_MEDIA_ACCEL_REDIRECT) echo "DJANGO_MEDIA_ACCEL_REDIRECT=1" >> "${SHARED_DIR}/.env" ;;
+                    WAREHOUSE_REPORT_EXPORT_DIR) echo "WAREHOUSE_REPORT_EXPORT_DIR=${SHARED_DIR}/report_exports" >> "${SHARED_DIR}/.env" ;;
+                    WAREHOUSE_BACKUP_DIR) echo "WAREHOUSE_BACKUP_DIR=${SHARED_DIR}/backups" >> "${SHARED_DIR}/.env" ;;
+                    GOOGLE_OAUTH_REDIRECT_URI) echo "GOOGLE_OAUTH_REDIRECT_URI=https://${DOMAIN}/api/auth/google/callback" >> "${SHARED_DIR}/.env" ;;
+                esac
+            fi
+        done
+    fi
+
+    # Pre-Update Database Snapshot (E-04, E-30, D-12, F-08, F-18)
     AVAIL_KB=$(df -P "$BACKUPS_DIR" | awk 'NR==2 {print $4}')
     TOTAL_KB=$(df -P "$BACKUPS_DIR" | awk 'NR==2 {print $2}')
     AVAIL_PCT=$(( AVAIL_KB * 100 / TOTAL_KB ))
@@ -123,18 +206,38 @@ if [[ "${1:-}" == "--prepare" ]]; then
 
     DB_NAME="warehouse_db"
     if [[ -f "${SHARED_DIR}/.env" ]]; then
-        ENV_DB=$(grep -E '^DB_NAME=' "${SHARED_DIR}/.env" 2>/dev/null | cut -d'=' -f2- | tr -d '\r' || true)
+        ENV_DB=$(sed -n 's/^DB_NAME=//p' "${SHARED_DIR}/.env" 2>/dev/null | tail -n 1 | tr -d '\r' || true)
         if [[ -n "$ENV_DB" ]]; then DB_NAME="$ENV_DB"; fi
+    fi
+
+    if ! [[ "$DB_NAME" =~ ^[a-z_][a-z0-9_]{0,62}$ ]]; then
+        echo "[ERROR] Invalid database name: $DB_NAME" >&2
+        exit 1
+    fi
+
+    # Database size guard check (F-18)
+    DB_SIZE_BYTES=$(runuser -u postgres -- psql -d "$DB_NAME" -XAtq -c "SELECT pg_database_size('$DB_NAME')" 2>/dev/null || echo 0)
+    if [[ "$DB_SIZE_BYTES" =~ ^[0-9]+$ ]] && [ "$DB_SIZE_BYTES" -gt 0 ]; then
+        EST_DUMP_KB=$(( (DB_SIZE_BYTES / 1024) / 2 ))
+        if [ "$AVAIL_KB" -lt $(( EST_DUMP_KB * 2 )) ]; then
+            echo "[ERROR] Disk free space (${AVAIL_KB} KB) is below 2x estimated database size (${EST_DUMP_KB} KB). Aborting snapshot!" >&2
+            exit 1
+        fi
     fi
 
     TS=$(date +"%Y%m%d_%H%M%S")
     PRE_DUMP="${BACKUPS_DIR}/db_pre_update_${TS}.dump"
     PRE_DUMP_PART="${PRE_DUMP}.part"
 
-    # Write dump to .part, verify integrity, then atomic rename
-    su - postgres -c "pg_dump -Fc \"$DB_NAME\"" > "$PRE_DUMP_PART"
-    su - postgres -c "pg_restore --list" < "$PRE_DUMP_PART" > /dev/null
-    chown warehouse:warehouse "$PRE_DUMP_PART"
+    cleanup_prep() {
+        rm -f "${PRE_DUMP_PART:-}" "${PRE_DUMP}.sha256.tmp" 2>/dev/null || true
+    }
+    trap cleanup_prep EXIT INT TERM
+
+    # Write dump to .part, verify integrity without shell injection (F-08)
+    runuser -u postgres -- pg_dump -Fc "$DB_NAME" > "$PRE_DUMP_PART"
+    runuser -u postgres -- pg_restore --list < "$PRE_DUMP_PART" > /dev/null
+    chown warehouse:warehouse "$PRE_DUMP_PART" 2>/dev/null || true
     chmod 600 "$PRE_DUMP_PART"
 
     PRE_DUMP_SHA256=$(sha256sum "$PRE_DUMP_PART" | cut -d' ' -f1)
@@ -142,15 +245,16 @@ if [[ "${1:-}" == "--prepare" ]]; then
     [[ -f "$PRE_DUMP" && ! -e "$PRE_DUMP_PART" ]] || { echo "[ERROR] Failed to finalize pre-update dump." >&2; exit 1; }
 
     printf '%s  %s\n' "$PRE_DUMP_SHA256" "$PRE_DUMP" > "${PRE_DUMP}.sha256.tmp"
-    chown warehouse:warehouse "${PRE_DUMP}.sha256.tmp"
+    chown warehouse:warehouse "${PRE_DUMP}.sha256.tmp" 2>/dev/null || true
     chmod 600 "${PRE_DUMP}.sha256.tmp"
     mv -f -- "${PRE_DUMP}.sha256.tmp" "${PRE_DUMP}.sha256"
+
+    trap - EXIT INT TERM
 
     # Extract Bundle and Normalize Permissions (bsdtar sets 0666/0777)
     TEMP_EXTRACT=$(mktemp -d /tmp/wh_release_XXXXXX)
     tar -xzf "$BUNDLE_PATH" -C "$TEMP_EXTRACT"
 
-    # Normalize permissions immediately
     find "$TEMP_EXTRACT" -type d -exec chmod 755 {} +
     find "$TEMP_EXTRACT" -type f -exec chmod 644 {} +
     find "$TEMP_EXTRACT" -name "*.sh" -exec chmod 755 {} +
@@ -177,7 +281,14 @@ if [[ "${1:-}" == "--prepare" ]]; then
         exit 1
     fi
 
-    # Resolve Python Virtual Environment
+    # Record deploy metadata for activate binding (F-19)
+    cat <<EOF > "${RELEASE_DIR}/.deploy_metadata"
+RELEASE_NAME=${RELEASE_NAME}
+PRE_UPDATE_BACKUP=$(basename "$PRE_DUMP")
+PRE_UPDATE_BACKUP_SHA256=${PRE_DUMP_SHA256}
+EOF
+
+    # Resolve Python Virtual Environment (F-06: direct creation at target path)
     LOCK_FILE_PATH="${RELEASE_DIR}/warehouse-backend/requirements.lock"
     REQ_FILE_PATH="${RELEASE_DIR}/warehouse-backend/requirements.txt"
     if [[ -f "$LOCK_FILE_PATH" ]]; then
@@ -194,40 +305,50 @@ if [[ "${1:-}" == "--prepare" ]]; then
     VENV_DIR="${VENVS_DIR}/${FULL_VENV_HASH}"
 
     if [[ ! -d "$VENV_DIR" || ! -f "$VENV_DIR/.complete" ]]; then
-        rm -rf "${VENV_DIR}.tmp" 2>/dev/null || true
-        python3 -m venv "${VENV_DIR}.tmp"
-        "${VENV_DIR}.tmp/bin/pip" install --upgrade "pip==24.0" "setuptools==69.5.1" "wheel==0.43.0" 2>/dev/null || \
-            "${VENV_DIR}.tmp/bin/pip" install --upgrade pip setuptools wheel
-        "${VENV_DIR}.tmp/bin/pip" install --no-cache-dir $PIP_FLAGS -r "$TARGET_REQ"
-        chmod -R 755 "${VENV_DIR}.tmp"
-        touch "${VENV_DIR}.tmp/.complete"
-        mv -Tf "${VENV_DIR}.tmp" "$VENV_DIR"
+        rm -rf "$VENV_DIR" 2>/dev/null || true
+        python3 -m venv "$VENV_DIR"
+        "$VENV_DIR/bin/pip" install --upgrade "pip==24.0" "setuptools==69.5.1" "wheel==0.43.0"
+        "$VENV_DIR/bin/pip" install --no-cache-dir $PIP_FLAGS -r "$TARGET_REQ"
+        find "$VENV_DIR" -type d -exec chmod 755 {} +
+        find "$VENV_DIR" -type f -exec chmod 644 {} +
+        find "$VENV_DIR/bin" -type f -exec chmod 755 {} +
+        touch "$VENV_DIR/.complete"
     fi
     ln -sfn "$VENV_DIR" "${RELEASE_DIR}/venv"
 
-    # Preserve Frontend Chunks from Previous Release (E-23, E-30)
+    # Preserve Frontend Chunks from Active Release (E-23, E-30, F-18)
     if [[ -d "${CURRENT_LINK}/warehouse-front/dist/warehouse-app/browser" ]]; then
         PREV_BROWSER="${CURRENT_LINK}/warehouse-front/dist/warehouse-app/browser"
         NEW_BROWSER="${RELEASE_DIR}/warehouse-front/dist/warehouse-app/browser"
         if [[ -d "$NEW_BROWSER" ]]; then
-            find "${PREV_BROWSER}" -maxdepth 1 -type f -name "*-[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9].*" \
-                -exec cp -n {} "${NEW_BROWSER}/" \; 2>/dev/null || true
+            if [[ -f "${PREV_BROWSER}/ngsw.json" ]]; then
+                grep -oE '"/[^"]+-[A-Za-z0-9]{8}\.(js|css)"' "${PREV_BROWSER}/ngsw.json" 2>/dev/null | tr -d '"/' | while read -r chunk; do
+                    if [[ -f "${PREV_BROWSER}/${chunk}" && ! -f "${NEW_BROWSER}/${chunk}" ]]; then
+                        cp -p "${PREV_BROWSER}/${chunk}" "${NEW_BROWSER}/" 2>/dev/null || true
+                    fi
+                done || true
+            else
+                find "${PREV_BROWSER}" -maxdepth 1 -type f -name "*-[A-Za-z0-9]{8}.*" \
+                    -exec cp -n {} "${NEW_BROWSER}/" \; 2>/dev/null || true
+            fi
         fi
     fi
 
     # Pre-deployment Django checks
     su -s /bin/bash warehouse -c "
+        cd ${RELEASE_DIR}/warehouse-backend
         export DJANGO_SETTINGS_MODULE=config.settings
         export DJANGO_ENV=production
-        ${RELEASE_DIR}/venv/bin/python ${RELEASE_DIR}/warehouse-backend/manage.py check --deploy
+        ${RELEASE_DIR}/venv/bin/python manage.py check --deploy
     "
 
     # Show migrate --plan
     echo "=== Planned Database Migrations ==="
     su -s /bin/bash warehouse -c "
+        cd ${RELEASE_DIR}/warehouse-backend
         export DJANGO_SETTINGS_MODULE=config.settings
         export DJANGO_ENV=production
-        ${RELEASE_DIR}/venv/bin/python ${RELEASE_DIR}/warehouse-backend/manage.py migrate --plan
+        ${RELEASE_DIR}/venv/bin/python manage.py migrate --plan
     " 2>&1 || true
 
     # Clean unreferenced venvs (E-30)
@@ -256,10 +377,7 @@ fi
 # Mode: --activate
 # ==============================================================================
 if [[ "${1:-}" == "--activate" ]]; then
-    # Detach from SSH terminal session to survive SIGHUP
-    trap '' HUP
     shift
-
     REL_NAME=""
     VERIFIED_BACKUP=""
     DOMAIN="soft.farsalish.ir"
@@ -285,10 +403,35 @@ if [[ "${1:-}" == "--activate" ]]; then
         exit 1
     fi
 
+    # Validate Domain format (F-11)
+    if ! [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]; then
+        echo "[ERROR] Invalid domain format: $DOMAIN" >&2
+        exit 1
+    fi
+
     RELEASE_DIR="${RELEASES_DIR}/${REL_NAME}"
     if [[ ! -d "$RELEASE_DIR" ]]; then
         echo "[ERROR] Release directory not found: $RELEASE_DIR" >&2
         exit 1
+    fi
+
+    # Validate binding to prepared backup (F-19)
+    if [[ -f "${RELEASE_DIR}/.deploy_metadata" ]]; then
+        EXPECTED_BACKUP=$(sed -n 's/^PRE_UPDATE_BACKUP=//p' "${RELEASE_DIR}/.deploy_metadata" | tr -d '\r')
+        EXPECTED_SHA=$(sed -n 's/^PRE_UPDATE_BACKUP_SHA256=//p' "${RELEASE_DIR}/.deploy_metadata" | tr -d '\r')
+        if [[ -n "$EXPECTED_BACKUP" ]]; then
+            if [[ -n "$VERIFIED_BACKUP" && "$VERIFIED_BACKUP" != "$EXPECTED_BACKUP" ]]; then
+                echo "[ERROR] Verified backup argument ($VERIFIED_BACKUP) does not match prepared backup ($EXPECTED_BACKUP)!" >&2
+                exit 1
+            fi
+            VERIFIED_BACKUP="$EXPECTED_BACKUP"
+            ACTUAL_BACKUP_SHA=$(sha256sum "${BACKUPS_DIR}/${VERIFIED_BACKUP}" | awk '{print $1}')
+            if [[ "$ACTUAL_BACKUP_SHA" != "$EXPECTED_SHA" ]]; then
+                echo "[ERROR] Prepared backup checksum mismatch ($ACTUAL_BACKUP_SHA != $EXPECTED_SHA)!" >&2
+                exit 1
+            fi
+            echo "[INFO] Verified pre-update backup successfully bound to release: $VERIFIED_BACKUP"
+        fi
     fi
 
     # Verify backup exists if GO_LIVE
@@ -303,35 +446,70 @@ if [[ "${1:-}" == "--activate" ]]; then
         fi
     fi
 
-    # Enter Maintenance Mode if requested
-    if [[ "$MAINTENANCE" -eq 1 ]]; then
-        echo "[INFO] Entering maintenance mode (503 with Retry-After)..."
-        touch "${SHARED_DIR}/MAINTENANCE"
-        systemctl stop warehouse-backend warehouse-gdrive-worker warehouse-export-worker 2>/dev/null || true
+    # Check Nginx and Infrastructure BEFORE database migrations (F-03)
+    echo "=== [1/5] Validating Web Server Configuration (Nginx) & Infrastructure ==="
+    rm -f /etc/nginx/sites-enabled/default
+    if [[ -n "$DOMAIN" && -d "${RELEASE_DIR}/scripts/deploy/templates" ]]; then
+        mkdir -p /var/www/html /etc/nginx/sites-available /etc/nginx/sites-enabled
+        NGINX_CONF_TMP="/etc/nginx/sites-available/warehouse.new"
+        
+        # Check ssl_reject_handshake support (F-12)
+        SUPPORT_REJECT=0
+        if nginx -V 2>&1 | grep -q "nginx version: "; then
+            if nginx -V 2>&1 | grep -oE 'nginx/[0-9]+\.[0-9]+' | head -n 1 | awk -F'[/.]' '{ if ($2 > 1 || ($2 == 1 && $3 >= 19)) exit 0; else exit 1; }'; then
+                SUPPORT_REJECT=1
+            fi
+        fi
+
+        REJECT_FILE="/tmp/wh_reject_$$.conf"
+        if [ "$SUPPORT_REJECT" -eq 1 ]; then
+            cat <<'EOF' > "$REJECT_FILE"
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+    server_tokens off;
+    ssl_reject_handshake on;
+    return 444;
+}
+EOF
+        fi
+
+        if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" && -f "${RELEASE_DIR}/scripts/deploy/templates/nginx-https.conf" ]]; then
+            if [ "$SUPPORT_REJECT" -eq 1 ]; then
+                sed -e "s/__DOMAIN__/${DOMAIN}/g" \
+                    -e "/__SSL_REJECT_HANDSHAKE_SERVER__/{r $REJECT_FILE" -e 'd}' \
+                    "${RELEASE_DIR}/scripts/deploy/templates/nginx-https.conf" > "$NGINX_CONF_TMP"
+            else
+                sed -e "s/__DOMAIN__/${DOMAIN}/g" \
+                    -e '/__SSL_REJECT_HANDSHAKE_SERVER__/d' \
+                    "${RELEASE_DIR}/scripts/deploy/templates/nginx-https.conf" > "$NGINX_CONF_TMP"
+            fi
+        elif [[ -f "${RELEASE_DIR}/scripts/deploy/templates/nginx-http.conf" ]]; then
+            sed "s/__DOMAIN__/${DOMAIN}/g" "${RELEASE_DIR}/scripts/deploy/templates/nginx-http.conf" > "$NGINX_CONF_TMP"
+        fi
+        rm -f "$REJECT_FILE"
+
+        if [[ -f "$NGINX_CONF_TMP" ]]; then
+            PREV_CONF="/etc/nginx/sites-available/warehouse.prev"
+            if [[ -f /etc/nginx/sites-available/warehouse ]]; then
+                cp -f /etc/nginx/sites-available/warehouse "$PREV_CONF"
+            fi
+            mv -f "$NGINX_CONF_TMP" /etc/nginx/sites-available/warehouse
+            ln -sf /etc/nginx/sites-available/warehouse /etc/nginx/sites-enabled/warehouse
+            
+            if ! nginx -t >/dev/null 2>&1; then
+                echo "[ERROR] Nginx configuration test failed on newly rendered template! Aborting switch before database migration." >&2
+                if [[ -f "$PREV_CONF" ]]; then
+                    mv -f "$PREV_CONF" /etc/nginx/sites-available/warehouse
+                fi
+                exit 1
+            fi
+            rm -f "$PREV_CONF"
+        fi
     fi
 
-    echo "=== [1/5] Applying Database Migrations & Collecting Static Files ==="
-    # Database migration with set -e (E-06)
-    su -s /bin/bash warehouse -c "
-        set -euo pipefail
-        export DJANGO_SETTINGS_MODULE=config.settings
-        export DJANGO_ENV=production
-        ${RELEASE_DIR}/venv/bin/python ${RELEASE_DIR}/warehouse-backend/manage.py migrate --noinput
-    "
-
-    # Make staticfiles writable for warehouse user during collectstatic (E-07)
-    chown -R warehouse:warehouse "${RELEASE_DIR}/warehouse-backend"
-    su -s /bin/bash warehouse -c "
-        set -euo pipefail
-        export DJANGO_SETTINGS_MODULE=config.settings
-        export DJANGO_ENV=production
-        ${RELEASE_DIR}/venv/bin/python ${RELEASE_DIR}/warehouse-backend/manage.py collectstatic --noinput
-    "
-    chown -R root:root "$RELEASE_DIR"
-    chmod -R u=rwX,go=rX "$RELEASE_DIR"
-
-    echo "=== [2/5] Updating Infrastructure Files & Testing Nginx ==="
-    # Atomic updates of scripts (E-08)
+    # Update scripts atomically (E-08)
     if [[ -f "${RELEASE_DIR}/scripts/deploy/warehouse-deploy.sh" ]]; then
         install -m 755 "${RELEASE_DIR}/scripts/deploy/warehouse-deploy.sh" /usr/local/sbin/warehouse-deploy.tmp
         mv -f /usr/local/sbin/warehouse-deploy.tmp /usr/local/sbin/warehouse-deploy
@@ -359,30 +537,43 @@ if [[ "${1:-}" == "--activate" ]]; then
         done
     fi
 
-    # Render & validate Nginx configuration (E-10, E-22)
-    if [[ -n "$DOMAIN" && -d "${RELEASE_DIR}/scripts/deploy/templates" ]]; then
-        mkdir -p /var/www/html /etc/nginx/sites-available /etc/nginx/sites-enabled
-        NGINX_CONF_TMP="/etc/nginx/sites-available/warehouse.tmp"
-        if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" && -f "${RELEASE_DIR}/scripts/deploy/templates/nginx-https.conf" ]]; then
-            sed "s/__DOMAIN__/${DOMAIN}/g" "${RELEASE_DIR}/scripts/deploy/templates/nginx-https.conf" > "$NGINX_CONF_TMP"
-        elif [[ -f "${RELEASE_DIR}/scripts/deploy/templates/nginx-http.conf" ]]; then
-            sed "s/__DOMAIN__/${DOMAIN}/g" "${RELEASE_DIR}/scripts/deploy/templates/nginx-http.conf" > "$NGINX_CONF_TMP"
-        fi
-        if [[ -f "$NGINX_CONF_TMP" ]]; then
-            ln -sf "$NGINX_CONF_TMP" /etc/nginx/sites-enabled/warehouse_test
-            if ! nginx -t >/dev/null 2>&1; then
-                rm -f /etc/nginx/sites-enabled/warehouse_test "$NGINX_CONF_TMP"
-                echo "[ERROR] Nginx configuration test failed on newly rendered template! Aborting switch." >&2
+    # Enter Maintenance Mode if requested (F-14: fail-closed service stop)
+    if [[ "$MAINTENANCE" -eq 1 ]]; then
+        echo "[INFO] Entering maintenance mode (503 with Retry-After)..."
+        touch "${SHARED_DIR}/MAINTENANCE"
+        systemctl stop warehouse-backend warehouse-gdrive-worker warehouse-export-worker
+        for s in warehouse-backend warehouse-gdrive-worker warehouse-export-worker; do
+            if systemctl is-active --quiet "$s"; then
+                echo "[ERROR] Failed to stop $s for maintenance mode! Aborting migration." >&2
+                rm -f "${SHARED_DIR}/MAINTENANCE"
                 exit 1
             fi
-            rm -f /etc/nginx/sites-enabled/warehouse_test
-            mv -f "$NGINX_CONF_TMP" /etc/nginx/sites-available/warehouse
-            ln -sf /etc/nginx/sites-available/warehouse /etc/nginx/sites-enabled/warehouse
-            rm -f /etc/nginx/sites-enabled/default
-        fi
+        done
     fi
 
+    echo "=== [2/5] Applying Database Migrations & Collecting Static Files ==="
+    su -s /bin/bash warehouse -c "
+        set -euo pipefail
+        cd ${RELEASE_DIR}/warehouse-backend
+        export DJANGO_SETTINGS_MODULE=config.settings
+        export DJANGO_ENV=production
+        ${RELEASE_DIR}/venv/bin/python manage.py migrate --noinput
+    "
+
+    # Make staticfiles writable for warehouse user during collectstatic (E-07)
+    chown -R warehouse:warehouse "${RELEASE_DIR}/warehouse-backend"
+    su -s /bin/bash warehouse -c "
+        set -euo pipefail
+        cd ${RELEASE_DIR}/warehouse-backend
+        export DJANGO_SETTINGS_MODULE=config.settings
+        export DJANGO_ENV=production
+        ${RELEASE_DIR}/venv/bin/python manage.py collectstatic --noinput
+    "
+    chown -R root:root "$RELEASE_DIR"
+    chmod -R u=rwX,go=rX "$RELEASE_DIR"
+
     echo "=== [3/5] Atomic Symlink Switch & Service Restart ==="
+    ACTIVE_RELEASE_PREV=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
     ln -sfn "$RELEASE_DIR" "${BASE_DIR}/current_tmp"
     mv -Tf "${BASE_DIR}/current_tmp" "$CURRENT_LINK"
 
@@ -396,24 +587,46 @@ if [[ "${1:-}" == "--activate" ]]; then
     for attempt in $(seq 1 30); do
         echo "[INFO] Live healthcheck probe ${attempt}/30..."
         sleep 2
-        daphne_ok=0; services_ok=0; https_ok=0
-        if curl -fsS http://127.0.0.1:8000/api/public/config/ > /dev/null 2>&1; then daphne_ok=1; fi
+        daphne_ok=0; services_ok=0; https_ok=0; workers_ok=0
+        
+        # Verify Daphne endpoint with proper Host and HTTPS headers (F-04)
+        if curl -fsS -H "Host: ${DOMAIN}" -H "X-Forwarded-Proto: https" http://127.0.0.1:8000/api/public/config/ > /dev/null 2>&1; then
+            daphne_ok=1
+        fi
+
         active_count=0
         for s in warehouse-backend warehouse-gdrive-worker warehouse-export-worker; do
             if systemctl is-active --quiet "$s"; then active_count=$((active_count + 1)); fi
         done
         if [ "$active_count" -eq 3 ]; then services_ok=1; fi
 
+        # Heartbeat check for background workers (F-13)
+        workers_ok=1
+        DB_NAME=$(sed -n 's/^DB_NAME=//p' "${SHARED_DIR}/.env" 2>/dev/null | tail -n 1 | tr -d '\r' || true)
+        if [[ "$DB_NAME" =~ ^[a-z_][a-z0-9_]{0,62}$ ]]; then
+            for pair in "export-worker:reports_exportworkerstatus:alive_at" "gdrive-worker:settings_system_gdrive_config:worker_heartbeat_at"; do
+                IFS=: read -r label table column <<<"$pair"
+                tbl_exists=$(runuser -u postgres -- psql -d "$DB_NAME" -XAtq -c "SELECT 1 FROM information_schema.tables WHERE table_name='$table'" 2>/dev/null || true)
+                if [[ "$tbl_exists" == "1" ]]; then
+                    age=$(runuser -u postgres -- psql -d "$DB_NAME" -XAtq -c "SELECT COALESCE(EXTRACT(EPOCH FROM now() - MAX($column))::bigint::text, '') FROM $table" 2>/dev/null || true)
+                    if [[ -n "$age" && "$age" -gt 180 ]]; then
+                        workers_ok=0
+                        break
+                    fi
+                fi
+            done
+        fi
+
         if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
-            if curl -fsS --resolve "${DOMAIN}:443:127.0.0.1" "https://${DOMAIN}/" > /dev/null 2>&1 && \
-               curl -fsS --resolve "${DOMAIN}:443:127.0.0.1" "https://${DOMAIN}/ngsw.json" > /dev/null 2>&1; then
+            if curl -kfsS --resolve "${DOMAIN}:443:127.0.0.1" "https://${DOMAIN}/" > /dev/null 2>&1 && \
+               curl -kfsS --resolve "${DOMAIN}:443:127.0.0.1" "https://${DOMAIN}/ngsw.json" > /dev/null 2>&1; then
                 https_ok=1
             fi
         else
             https_ok=1
         fi
 
-        if [ "$daphne_ok" -eq 1 ] && [ "$services_ok" -eq 1 ] && [ "$https_ok" -eq 1 ]; then
+        if [ "$daphne_ok" -eq 1 ] && [ "$services_ok" -eq 1 ] && [ "$https_ok" -eq 1 ] && [ "$workers_ok" -eq 1 ]; then
             HEALTH_FAIL=0
             break
         fi
@@ -426,60 +639,56 @@ if [[ "${1:-}" == "--activate" ]]; then
             echo "[CRITICAL] System remains in MAINTENANCE mode. Schema changes may require forward-fix or manual restore." >&2
             exit 1
         else
-            echo "[CRITICAL] Rolling back symlink to previous release..." >&2
-            ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
-            # shellcheck disable=SC2012
-            PREV_RELEASE=$(ls -1dt "${RELEASES_DIR}"/*/ 2>/dev/null | sed -e 's/\/$//' | grep -v "^${ACTIVE_RELEASE}$" | head -n 1 || true)
-            if [[ -n "$PREV_RELEASE" && -d "$PREV_RELEASE" ]]; then
-                ln -sfn "$PREV_RELEASE" "${BASE_DIR}/current_tmp"
-                mv -Tf "${BASE_DIR}/current_tmp" "$CURRENT_LINK"
-                systemctl restart warehouse-backend warehouse-gdrive-worker warehouse-export-worker
-                if nginx -t >/dev/null 2>&1; then systemctl reload nginx 2>/dev/null || true; fi
-                echo "[INFO] Rollback completed after failed deployment." >&2
+            echo "[CRITICAL] Attempting safe automatic rollback to previous release..." >&2
+            if [[ -n "$ACTIVE_RELEASE_PREV" && -d "$ACTIVE_RELEASE_PREV" ]]; then
+                if check_migration_compatibility "$ACTIVE_RELEASE_PREV"; then
+                    ln -sfn "$ACTIVE_RELEASE_PREV" "${BASE_DIR}/current_tmp"
+                    mv -Tf "${BASE_DIR}/current_tmp" "$CURRENT_LINK"
+                    systemctl restart warehouse-backend warehouse-gdrive-worker warehouse-export-worker
+                    if nginx -t >/dev/null 2>&1; then systemctl reload nginx 2>/dev/null || true; fi
+                    echo "[INFO] Automatic rollback completed after failed deployment." >&2
+                else
+                    echo "[CRITICAL] Automatic rollback aborted: applied migrations are incompatible with previous release!" >&2
+                    touch "${SHARED_DIR}/MAINTENANCE"
+                    echo "[CRITICAL] System placed in MAINTENANCE mode to prevent corrupted state." >&2
+                fi
             fi
             exit 1
         fi
     fi
 
-    # Exit maintenance mode only upon confirmed healthcheck
+    # Exit maintenance mode upon confirmed healthcheck
     if [[ "$MAINTENANCE" -eq 1 ]]; then
         rm -f "${SHARED_DIR}/MAINTENANCE"
         echo "[INFO] Maintenance mode ended successfully."
     fi
 
     echo "=== [5/5] Deployment Finalized ==="
-    # Prune old releases (keep last 5)
+    # Record active and previous releases (F-05)
+    echo "$REL_NAME" > "${SHARED_DIR}/ACTIVE_RELEASE"
+    if [[ -n "$ACTIVE_RELEASE_PREV" && -d "$ACTIVE_RELEASE_PREV" ]]; then
+        basename "$ACTIVE_RELEASE_PREV" > "${SHARED_DIR}/PREVIOUS_RELEASE"
+    fi
+
+    # Prune old releases safely (keep newest 5, never prune current or previous) (F-16)
+    CURRENT_BASENAME="$REL_NAME"
+    PREV_BASENAME=""
+    if [[ -f "${SHARED_DIR}/PREVIOUS_RELEASE" ]]; then
+        PREV_BASENAME=$(cat "${SHARED_DIR}/PREVIOUS_RELEASE" 2>/dev/null || true)
+    fi
+
     cd "$RELEASES_DIR"
-    # shellcheck disable=SC2012,SC2035
-    ls -1dt */ 2>/dev/null | tail -n +6 | xargs rm -rf 2>/dev/null || true
+    # shellcheck disable=SC2012
+    for rdir in $(ls -1dt */ 2>/dev/null | sed 's/\/$//' | tail -n +6); do
+        if [[ "$rdir" != "$CURRENT_BASENAME" && "$rdir" != "$PREV_BASENAME" ]]; then
+            echo "[INFO] Pruning obsolete release: $rdir"
+            rm -rf "${RELEASES_DIR:?}/${rdir}" 2>/dev/null || true
+        fi
+    done
+
     echo "[SUCCESS] Release activated successfully: $REL_NAME"
     exit 0
 fi
 
-# ==============================================================================
-# Legacy / Combined Orchestration (Fallback & Initial Setup)
-# ==============================================================================
-BUNDLE_PATH="${1:-/tmp/deploy_bundle.tar.gz}"
-DOMAIN="${2:-soft.farsalish.ir}"
-MAINTENANCE="${3:-0}"
-
-if [[ ! -f "$BUNDLE_PATH" ]]; then
-    echo "[ERROR] Bundle file not found at: $BUNDLE_PATH" >&2
-    exit 1
-fi
-
-PREPARE_OUTPUT=$(/usr/local/sbin/warehouse-deploy --prepare --bundle "$BUNDLE_PATH" --domain "$DOMAIN")
-REL=$(echo "$PREPARE_OUTPUT" | grep '^\[RELEASE\]' | awk '{print $2}')
-BAK=$(echo "$PREPARE_OUTPUT" | grep '^\[PRE_UPDATE_BACKUP\]' | awk '{print $2}')
-
-if [[ -z "$REL" ]]; then
-    echo "[ERROR] Could not determine prepared release name." >&2
-    exit 1
-fi
-
-ACT_ARGS=(--activate "$REL" --domain "$DOMAIN" --verified-backup "$BAK")
-if [[ "$MAINTENANCE" -eq 1 || "$MAINTENANCE" == "--maintenance" ]]; then
-    ACT_ARGS+=(--maintenance)
-fi
-
-exec /usr/local/sbin/warehouse-deploy "${ACT_ARGS[@]}"
+echo "[ERROR] warehouse-deploy requires one of: --prepare, --activate, or --rollback" >&2
+exit 1

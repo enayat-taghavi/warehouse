@@ -30,7 +30,37 @@ case "$SUBCMD" in
             exit 2
         fi
         cd "$BACKUPS_DIR"
+        for arg in "$@"; do
+            case "$arg" in
+                */*|..*|'') echo "[ERROR] sha256sum: invalid path argument: $arg" >&2; exit 2 ;;
+            esac
+            if ! [[ "$arg" =~ ^[a-zA-Z0-9_.-]+$ ]]; then
+                echo "[ERROR] sha256sum: argument contains forbidden characters: $arg" >&2
+                exit 2
+            fi
+        done
         exec sha256sum -- "$@"
+        ;;
+
+    read-backup)
+        if [ $# -ne 1 ]; then
+            echo "[ERROR] read-backup requires exactly one filename." >&2
+            exit 2
+        fi
+        TARGET="$1"
+        case "$TARGET" in
+            */*|..*|'') echo "[ERROR] read-backup: invalid filename: $TARGET" >&2; exit 2 ;;
+        esac
+        if ! [[ "$TARGET" =~ ^[a-zA-Z0-9_.-]+$ ]]; then
+            echo "[ERROR] read-backup: filename contains forbidden characters: $TARGET" >&2
+            exit 2
+        fi
+        f="${BACKUPS_DIR}/${TARGET}"
+        if [ ! -f "$f" ]; then
+            echo "[ERROR] read-backup: file not found: $TARGET" >&2
+            exit 1
+        fi
+        exec cat "$f"
         ;;
 
     backup)
@@ -42,6 +72,18 @@ case "$SUBCMD" in
         mkdir -p "$BACKUPS_DIR"
         cd "$BACKUPS_DIR"
         exec find . -mindepth 1 \( -name 'media_daily_*' -o -name 'latest_media' \) -prune -o -type f ! -name '*.part' ! -name '*.tmp' -printf '%s\t%P\0'
+        ;;
+
+    list-dumps)
+        mkdir -p "$BACKUPS_DIR"
+        cd "$BACKUPS_DIR"
+        shopt -s nullglob
+        for f in *.dump; do
+            if [ -f "$f" ] && [ -f "$f.sha256" ]; then
+                printf '%s\t%s\0' "$(stat -c %Y -- "$f")" "$f"
+            fi
+        done
+        exit 0
         ;;
 
     list-media)
@@ -60,11 +102,26 @@ case "$SUBCMD" in
         fi
         SNAPSHOT_DIR="$1"
         LIST_FILE="$2"
-        if [ ! -d "$SNAPSHOT_DIR" ] || [ ! -f "$LIST_FILE" ]; then
-            echo "[ERROR] tar-media: invalid snapshot_dir or list_file." >&2
+        # Validate SNAPSHOT_DIR is within BACKUPS_DIR and exists
+        CANONICAL_SNAP=$(readlink -f "$SNAPSHOT_DIR" 2>/dev/null || true)
+        if [[ -z "$CANONICAL_SNAP" || ! -d "$CANONICAL_SNAP" || "$CANONICAL_SNAP" != "${BACKUPS_DIR}/media_daily_"* ]]; then
+            echo "[ERROR] tar-media: snapshot_dir must be a media_daily directory inside ${BACKUPS_DIR}" >&2
             exit 2
         fi
-        cd "$SNAPSHOT_DIR"
+        if [ ! -f "$LIST_FILE" ]; then
+            echo "[ERROR] tar-media: invalid list_file." >&2
+            exit 2
+        fi
+        # Validate LIST_FILE entries do not contain path traversal
+        while IFS= read -r -d '' entry || [ -n "$entry" ]; do
+            case "$entry" in
+                /*|*../*|*/..|..)
+                    echo "[ERROR] tar-media: list_file contains forbidden path: $entry" >&2
+                    exit 2
+                    ;;
+            esac
+        done < "$LIST_FILE"
+        cd "$CANONICAL_SNAP"
         exec tar --null --verbatim-files-from --no-recursion --format=pax -T "$LIST_FILE" -cf -
         ;;
 
@@ -82,11 +139,19 @@ case "$SUBCMD" in
             echo "[ERROR] setup requires script path." >&2
             exit 2
         fi
+        SCRIPT_PATH="$1"
         if [ -e "$GO_LIVE_FLAG" ]; then
             echo '[GO_LIVE_EXISTS]'
             exit 3
         fi
-        exec bash "$@"
+        # Validate script is in /tmp
+        CANONICAL_SCRIPT=$(readlink -f "$SCRIPT_PATH" 2>/dev/null || true)
+        if [[ -z "$CANONICAL_SCRIPT" || ! -f "$CANONICAL_SCRIPT" || "$CANONICAL_SCRIPT" != "/tmp/"* ]]; then
+            echo "[ERROR] setup: script must be a valid file in /tmp: $SCRIPT_PATH" >&2
+            exit 2
+        fi
+        shift
+        exec bash "$CANONICAL_SCRIPT" "$@"
         ;;
 
     deploy-prepare)
@@ -108,6 +173,10 @@ case "$SUBCMD" in
             case "$f" in
                 */*|.*|'') echo "[PRUNE_REJECTED] $f"; continue ;;
             esac
+            if ! [[ "$f" =~ ^[a-zA-Z0-9_.-]+\.dump$ ]]; then
+                echo "[PRUNE_REJECTED] $f"
+                continue
+            fi
             rm -f -- "$f" "$f.sha256"
             if [ ! -e "$f" ] && [ ! -e "$f.sha256" ]; then echo "[PRUNED] $f"; else echo "[PRUNE_FAILED] $f"; fi
         done
@@ -130,12 +199,19 @@ case "$SUBCMD" in
             exit 2
         fi
         TARGET="$1"
+        case "$TARGET" in
+            */*|..*|'') echo "[ERROR] restore-check: invalid filename $TARGET" >&2; exit 2 ;;
+        esac
+        if ! [[ "$TARGET" =~ ^[a-zA-Z0-9_.-]+\.dump$ ]]; then
+            echo "[ERROR] restore-check: invalid dump extension $TARGET" >&2
+            exit 2
+        fi
         f="${BACKUPS_DIR}/${TARGET}"
-        [ -f "$f" ] && [ -f "$f.sha256" ] || { echo "[ERROR] $TARGET or its .sha256 is missing"; exit 2; }
+        [ -f "$f" ] && [ -f "$f.sha256" ] || { echo "[ERROR] $TARGET or its .sha256 is missing" >&2; exit 2; }
         expected=$(awk '{print $1; exit}' "$f.sha256")
         actual=$(sha256sum -- "$f" | awk '{print $1}')
-        [ "$expected" = "$actual" ] || { echo "[ERROR] sha256 mismatch for $TARGET"; exit 2; }
-        cat -- "$f" | runuser -u postgres -- pg_restore --list > /dev/null
+        [ "$expected" = "$actual" ] || { echo "[ERROR] sha256 mismatch for $TARGET" >&2; exit 2; }
+        runuser -u postgres -- pg_restore --list < "$f" > /dev/null
         echo '[RESTORE_SOURCE_OK]'
         exit 0
         ;;
@@ -145,33 +221,198 @@ case "$SUBCMD" in
         systemctl stop $SERVICES || true
         for s in $SERVICES; do
             if systemctl is-active --quiet "$s"; then
-                echo "[ERROR] $s did not stop; restore aborted before touching the database. Starting the services again."
+                echo "[ERROR] $s did not stop; restore aborted before touching the database. Starting the services again." >&2
                 systemctl start $SERVICES || true
                 exit 3
             fi
         done
-        echo '[STOPPED_OK]'
+        echo '[SERVICES_STOPPED]'
         exit 0
         ;;
 
     restore-start)
         SERVICES="warehouse-backend warehouse-gdrive-worker warehouse-export-worker"
         systemctl start $SERVICES
+        sleep 3
+        for s in $SERVICES; do
+            if ! systemctl is-active --quiet "$s"; then
+                echo "[ERROR] $s did not start" >&2
+                exit 5
+            fi
+        done
         echo '[STARTED_OK]'
         exit 0
         ;;
 
     restore-exec)
-        if [ $# -lt 2 ]; then
-            echo "[ERROR] restore-exec requires dump filename and database name." >&2
+        if [ $# -lt 1 ]; then
+            echo "[ERROR] restore-exec requires dump filename." >&2
             exit 2
         fi
         TARGET="$1"
-        DB="$2"
+        case "$TARGET" in
+            */*|..*|'') echo "[ERROR] restore-exec: invalid filename $TARGET" >&2; exit 2 ;;
+        esac
+        if ! [[ "$TARGET" =~ ^[a-zA-Z0-9_.-]+\.dump$ ]]; then
+            echo "[ERROR] restore-exec: invalid dump extension $TARGET" >&2
+            exit 2
+        fi
         f="${BACKUPS_DIR}/${TARGET}"
-        cat -- "$f" | runuser -u postgres -- pg_restore -d "$DB" --clean --if-exists --single-transaction --exit-on-error
-        echo '[RESTORED_OK]'
+        [ -f "$f" ] && [ -f "$f.sha256" ] || { echo "[ERROR] $TARGET or its .sha256 is missing" >&2; exit 2; }
+
+        # Resolve DB_NAME strictly from shared/.env (F-01, F-08)
+        DB_NAME=$(sed -n 's/^DB_NAME=//p' "${SHARED_DIR}/.env" 2>/dev/null | tail -n 1 | tr -d '\r' || true)
+        if ! [[ "$DB_NAME" =~ ^[a-z_][a-z0-9_]{0,62}$ ]]; then
+            echo "[ERROR] DB_NAME in shared/.env is missing or invalid; restore aborted" >&2
+            exit 2
+        fi
+
+        # Verify services are stopped
+        SERVICES="warehouse-backend warehouse-gdrive-worker warehouse-export-worker"
+        for s in $SERVICES; do
+            if systemctl is-active --quiet "$s"; then
+                echo "[ERROR] $s is running; restore aborted before touching the database" >&2
+                exit 3
+            fi
+        done
+
+        set +e
+        cat -- "$f" | runuser -u postgres -- pg_restore --clean --if-exists --single-transaction --exit-on-error -d "$DB_NAME"
+        rc=$?
+        set -e
+        if [ "$rc" -ne 0 ]; then
+            echo "[RESTORE_FAILED] pg_restore exited with $rc; the transaction was rolled back." >&2
+            echo "[RESTORE_FAILED] Services remain STOPPED. Inspect the error, then start them with: systemctl start $SERVICES" >&2
+            exit 4
+        fi
+
+        systemctl start $SERVICES
+        sleep 3
+        for s in $SERVICES; do
+            if ! systemctl is-active --quiet "$s"; then
+                echo "[ERROR] $s is not active after restore" >&2
+                exit 5
+            fi
+        done
+
+        echo '[RESTORE_OK]'
         exit 0
+        ;;
+
+    set-secret)
+        if [ $# -lt 1 ]; then
+            echo "[ERROR] set-secret requires key name." >&2
+            exit 2
+        fi
+        KEY_NAME="$1"
+        case "$KEY_NAME" in
+            GOOGLE_OAUTH_CLIENT_ID|GOOGLE_OAUTH_CLIENT_SECRET|OUTBOUND_HTTP_PROXY) ;;
+            *) echo "[ERROR] set-secret: key $KEY_NAME is not in the allow-list" >&2; exit 2 ;;
+        esac
+
+        ENV_PATH="${SHARED_DIR}/.env"
+        if [ ! -f "$ENV_PATH" ]; then
+            echo "[ERROR] set-secret: $ENV_PATH does not exist" >&2
+            exit 1
+        fi
+
+        PY_SCRIPT=$(mktemp /tmp/wh_secret_XXXXXX.py)
+        cat <<'PYEOF' > "$PY_SCRIPT"
+import os, sys, time
+
+key = sys.argv[1]
+path = sys.argv[2]
+raw = sys.stdin.buffer.read()
+try:
+    val = raw.decode("utf-8")
+except UnicodeDecodeError:
+    print("[ERROR] value is not valid UTF-8", file=sys.stderr)
+    sys.exit(2)
+
+if val.endswith("\r\n"):
+    val = val[:-2]
+elif val.endswith("\n"):
+    val = val[:-1]
+
+if not val or len(val) > 4096 or val != val.strip():
+    print("[ERROR] value is empty, too long, or has surrounding whitespace", file=sys.stderr)
+    sys.exit(2)
+
+if any(c in val for c in "'\"\\") or any(ord(c) < 32 or ord(c) == 127 for c in val):
+    print("[ERROR] value contains quotes, backslash, or control characters", file=sys.stderr)
+    sys.exit(2)
+
+st = os.stat(path)
+mode = st.st_mode & 0o7777
+uid = st.st_uid
+gid = st.st_gid
+
+with open(path, "rb") as f:
+    original = f.read()
+
+directory = os.path.dirname(path)
+bak_path = path + ".bak." + time.strftime("%Y%m%d_%H%M%S")
+fd = os.open(bak_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+try:
+    os.write(fd, original)
+    os.fsync(fd)
+    os.fchown(fd, uid, gid)
+    os.fchmod(fd, mode)
+finally:
+    os.close(fd)
+
+lines = original.decode("utf-8").splitlines(True)
+out = []
+found = False
+for line in lines:
+    if line.startswith(key + "="):
+        if not found:
+            out.append(key + "=" + val + "\n")
+            found = True
+        continue
+    out.append(line)
+if not found:
+    if out and not out[-1].endswith("\n"):
+        out[-1] += "\n"
+    out.append(key + "=" + val + "\n")
+
+tmp = os.path.join(directory, f".env.tmp.{os.getpid()}")
+fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+try:
+    os.write(fd, "".join(out).encode("utf-8"))
+    os.fsync(fd)
+    os.fchown(fd, uid, gid)
+    os.fchmod(fd, mode)
+finally:
+    os.close(fd)
+
+os.replace(tmp, path)
+dfd = os.open(directory, os.O_RDONLY)
+try:
+    os.fsync(dfd)
+finally:
+    os.close(dfd)
+
+print("[OK_UPDATED]")
+PYEOF
+        python3 "$PY_SCRIPT" "$KEY_NAME" "$ENV_PATH"
+        rc=$?
+        rm -f "$PY_SCRIPT"
+        exit $rc
+        ;;
+
+    create-admin)
+        if [[ ! -x /var/www/warehouse/current/venv/bin/python || ! -f /var/www/warehouse/current/warehouse-backend/manage.py ]]; then
+            echo "[ERROR] Active release manage.py or venv not found" >&2
+            exit 1
+        fi
+        exec runuser -u warehouse -- /var/www/warehouse/current/venv/bin/python /var/www/warehouse/current/warehouse-backend/manage.py createsuperuser "$@"
+        ;;
+
+    logs)
+        LINES="${1:-100}"
+        if ! [[ "$LINES" =~ ^[0-9]+$ ]]; then LINES=100; fi
+        exec journalctl -u warehouse-backend -u warehouse-gdrive-worker -u warehouse-export-worker -n "$LINES" --no-pager
         ;;
 
     check-go-live-checklist)
@@ -220,7 +461,7 @@ case "$SUBCMD" in
         sleep 3
         for s in $SERVICES nginx; do
             if ! systemctl is-active --quiet "$s"; then
-                echo "[ERROR] $s is not active"
+                echo "[ERROR] $s is not active" >&2
                 exit 1
             fi
         done

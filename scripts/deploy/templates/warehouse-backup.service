@@ -6,5 +6,5 @@ After=postgresql.service
 Type=oneshot
 User=root
 Group=root
-EnvironmentFile=/var/www/warehouse/shared/.env
 ExecStart=/usr/local/bin/warehouse-nightly-backup.sh
+

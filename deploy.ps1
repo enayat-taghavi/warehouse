@@ -64,7 +64,6 @@ $FrontDistRelative = 'dist\warehouse-app\browser'
 
 $RemoteBackupDir = '/var/www/warehouse/shared/backups'
 $RemoteGoLiveFlag = '/var/www/warehouse/shared/GO_LIVE'
-$AppServices = @('warehouse-backend', 'warehouse-gdrive-worker', 'warehouse-export-worker')
 
 $PullTaskPath = '\Warehouse\'
 $PullTaskName = 'WarehouseSoftPullBackups'
@@ -464,98 +463,38 @@ function Invoke-Ssh {
 
 function Invoke-RemoteRootScript {
     # The single seam for privileged remote work: dispatches to /usr/local/sbin/warehouse-root-gateway
-    # when available on the target system (with restricted sudoers approval), falling back to
-    # "sudo -n bash -s -- <quoted args>" with the body on stdin when the gateway is not installed.
+    # when -Gateway is specified (with restricted sudoers approval), or falls back to
+    # "sudo -n bash -s -- <quoted args>" with the body on stdin for bootstrap cases (e.g. initial setup).
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]$Config,
-        [Parameter(Mandatory)][string]$Body,
+        [string]$Gateway = '',
+        [string]$Body = '',
         [string[]]$ArgumentList = @(),
         [string]$StdoutFile,
+        [string]$StdinText,
+        [switch]$Tty,
         [switch]$Capture,
         [switch]$Raw,
         [switch]$Quiet
     )
-    $clean = $Body.Replace("`r", '').Trim()
-    $subcmd = $null
-    $gwArgs = @()
-
-    if ($clean.Contains('warehouse-deploy --prepare')) {
-        $subcmd = 'deploy-prepare'
-        if ($ArgumentList.Count -ge 3) {
-            $gwArgs = @('--bundle', $ArgumentList[0], '--bundle-sha256', $ArgumentList[1], '--domain', $ArgumentList[2])
-        } else {
-            $gwArgs = $ArgumentList
-        }
-    } elseif ($clean.Contains('warehouse-deploy --activate')) {
-        $subcmd = 'deploy-activate'
-        if ($ArgumentList.Count -ge 3) {
-            $gwArgs = @($ArgumentList[0], '--verified-backup', $ArgumentList[1], '--domain', $ArgumentList[2])
-            if ($ArgumentList.Count -ge 4) { $gwArgs += $ArgumentList[3..($ArgumentList.Count - 1)] }
-        } else {
-            $gwArgs = $ArgumentList
-        }
-    } elseif ($clean.Contains('warehouse-deploy --rollback')) {
-        $subcmd = 'deploy-rollback'
-    } elseif ($clean.Contains('warehouse-nightly-backup.sh')) {
-        $subcmd = 'backup'
-        if ($ArgumentList.Count -gt 0) { $gwArgs = @('--prefix', $ArgumentList[0]) }
-    } elseif ($clean.Contains('sha256sum -- "$@"')) {
-        $subcmd = 'sha256sum'
-        $gwArgs = $ArgumentList
-    } elseif ($clean.Contains('media_daily_*') -and $clean.Contains('latest_media') -and $clean.Contains('find .')) {
-        $subcmd = 'list-backups'
-    } elseif ($clean.Contains('latest_media') -and $clean.Contains('readlink')) {
-        $subcmd = 'list-media'
-    } elseif ($clean.Contains('tar --null --verbatim-files-from')) {
-        $subcmd = 'tar-media'
-        $gwArgs = $ArgumentList
-    } elseif ($clean.Contains('remote-setup.sh') -or $clean -eq 'bash "$@"') {
-        $subcmd = 'setup'
-        $gwArgs = $ArgumentList
-    } elseif ($clean.Contains('rm -f -- "$f" "$f.sha256"')) {
-        $subcmd = 'prune-delete'
-        $gwArgs = $ArgumentList
-    } elseif ($clean.Contains('for f in *.dump; do') -and $clean.Contains('printf ''%s\0'' "$f"')) {
-        $subcmd = 'restore-list'
-    } elseif ($clean.Contains('[RESTORE_SOURCE_OK]')) {
-        $subcmd = 'restore-check'
-        $gwArgs = $ArgumentList
-    } elseif ($clean.Contains('[STOPPED_OK]')) {
-        $subcmd = 'restore-stop'
-    } elseif ($clean.Contains('[RESTORED_OK]')) {
-        $subcmd = 'restore-exec'
-        $gwArgs = $ArgumentList
-    } elseif ($clean.Contains('[STARTED_OK]')) {
-        $subcmd = 'restore-start'
-    } elseif ($clean.Contains('GO_LIVE') -and $clean.Contains('[GO_LIVE_EXISTS]')) {
-        $subcmd = 'check-go-live'
-    } elseif ($clean.Contains('sshd -T') -and $clean.Contains('[CHECK]')) {
-        $subcmd = 'check-go-live-checklist'
-    } elseif ($clean.Contains('[GO_LIVE_ACTIVE]')) {
-        $subcmd = 'set-go-live'
-    } elseif ($clean.Contains('[RESTART_OK]')) {
-        $subcmd = 'restart'
-    } elseif ($clean.Contains('=== [1] Active release ===')) {
-        $subcmd = 'status'
-        $gwArgs = $ArgumentList
-    }
-
     $sudoPrefix = Get-SudoPrefix $Config
     $quotedArgs = @($ArgumentList | ForEach-Object { ConvertTo-ShellLiteral $_ }) -join ' '
 
-    if ($subcmd) {
-        $quotedGwArgs = @($gwArgs | ForEach-Object { ConvertTo-ShellLiteral $_ }) -join ' '
-        $callStr = if ($quotedGwArgs) { "$subcmd $quotedGwArgs" } else { $subcmd }
-        $command = "if [ -x /usr/local/sbin/warehouse-root-gateway ]; then exec ${sudoPrefix}/usr/local/sbin/warehouse-root-gateway $callStr; else exec ${sudoPrefix}bash -s -- $quotedArgs; fi"
+    if ($Gateway) {
+        $command = "${sudoPrefix}/usr/local/sbin/warehouse-root-gateway $Gateway"
+        if ($quotedArgs) { $command += " $quotedArgs" }
+        $p = @{ Config = $Config; RemoteCommand = $command }
+        if ($StdinText) { $p.StdinText = $StdinText }
     } else {
         $command = "${sudoPrefix}bash -s --"
         if ($quotedArgs) { $command += " $quotedArgs" }
+        $script = "set -euo pipefail`n__wh_main() {`n" + $Body.Replace("`r", '').TrimEnd() + "`n}`n__wh_main `"`$@`" </dev/null`n"
+        $p = @{ Config = $Config; RemoteCommand = $command; StdinText = $script }
     }
 
-    $script = "set -euo pipefail`n__wh_main() {`n" + $Body.Replace("`r", '').TrimEnd() + "`n}`n__wh_main `"`$@`" </dev/null`n"
-    $p = @{ Config = $Config; RemoteCommand = $command; StdinText = $script }
     if ($StdoutFile) { $p.StdoutFile = $StdoutFile }
+    if ($Tty) { $p.Tty = $true }
     foreach ($k in 'Capture', 'Raw', 'Quiet') { if ($PSBoundParameters[$k]) { $p[$k] = $true } }
     return (Invoke-Ssh @p)
 }
@@ -629,8 +568,8 @@ function Receive-RemoteFile($Config, [string]$RemotePath, [string]$LocalPartPath
         Write-Warn "Removing stale partial download: $LocalPartPath"
         Remove-Item -LiteralPath $LocalPartPath -Force
     }
-    $cmd = "$(Get-SudoPrefix $Config)cat -- $(ConvertTo-ShellLiteral $RemotePath)"
-    $r = Invoke-Ssh -Config $Config -RemoteCommand $cmd -StdoutFile $LocalPartPath
+    $targetName = Split-Path -Leaf $RemotePath
+    $r = Invoke-RemoteRootScript -Config $Config -Gateway 'read-backup' -ArgumentList @($targetName) -StdoutFile $LocalPartPath
     if ($r.ExitCode -ne 0) {
         if (Test-Path -LiteralPath $LocalPartPath) { Remove-Item -LiteralPath $LocalPartPath -Force }
         throw "Download of $RemotePath failed (exit $($r.ExitCode))."
@@ -639,13 +578,9 @@ function Receive-RemoteFile($Config, [string]$RemotePath, [string]$LocalPartPath
 
 function Get-RemoteSha256($Config, [string[]]$RelativePaths) {
     $result = @{}
-    $body = @'
-cd /var/www/warehouse/shared/backups
-sha256sum -- "$@"
-'@
     for ($i = 0; $i -lt $RelativePaths.Count; $i += 100) {
         $batch = @($RelativePaths[$i..([math]::Min($i + 99, $RelativePaths.Count - 1))])
-        $r = Invoke-RemoteRootScript -Config $Config -Body $body -ArgumentList $batch -Capture -Quiet
+        $r = Invoke-RemoteRootScript -Config $Config -Gateway 'sha256sum' -ArgumentList $batch -Capture -Quiet
         if ($r.ExitCode -ne 0) { throw "Remote sha256sum failed (exit $($r.ExitCode))." }
         foreach ($line in $r.Output) {
             if ($line -match '^([0-9a-f]{64})  (.+)$') { $result[$Matches[2]] = $Matches[1] }
@@ -955,10 +890,7 @@ function Remove-LocalBundle($Bundle) {
 function Invoke-RemoteBackup($Config, [ValidateSet('manual', 'pre_restore')][string]$Prefix) {
     # Runs the server backup script (no fallback), then pulls and verifies the very file it reported.
     Write-Step "Creating a '$Prefix' backup on the server..."
-    $body = @'
-/usr/local/bin/warehouse-nightly-backup.sh --prefix "$1"
-'@
-    $r = Invoke-RemoteRootScript -Config $Config -Body $body -ArgumentList @($Prefix) -Capture
+    $r = Invoke-RemoteRootScript -Config $Config -Gateway 'backup' -ArgumentList @('--prefix', $Prefix) -Capture
     if ($r.ExitCode -ne 0) { throw "Server backup script failed with exit code $($r.ExitCode)." }
     $names = @($r.Output | ForEach-Object { if ($_ -match '^\[BACKUP_DB\] (db_[a-z_]+_\d{8}_\d{6}\.dump)$') { $Matches[1] } })
     $hashes = @($r.Output | ForEach-Object { if ($_ -match '^\[BACKUP_DB_SHA256\] ([0-9a-f]{64})$') { $Matches[1] } })
@@ -996,13 +928,7 @@ function Invoke-PullBackupsCore($Config) {
     [void][System.IO.Directory]::CreateDirectory($LocalBackupRoot)
     $failures = 0
 
-    $listBody = @'
-B=/var/www/warehouse/shared/backups
-if [ ! -d "$B" ]; then exit 0; fi
-cd "$B"
-find . -mindepth 1 \( -name 'media_daily_*' -o -name 'latest_media' \) -prune -o -type f ! -name '*.part' ! -name '*.tmp' -printf '%s\t%P\0'
-'@
-    $r = Invoke-RemoteRootScript -Config $Config -Body $listBody -Raw -Quiet
+    $r = Invoke-RemoteRootScript -Config $Config -Gateway 'list-backups' -Raw -Quiet
     if ($r.ExitCode -ne 0) { throw "Listing remote backups failed (exit $($r.ExitCode))." }
     $remote = @{}
     foreach ($token in $r.Output.Split([char]0)) {
@@ -1078,15 +1004,7 @@ find . -mindepth 1 \( -name 'media_daily_*' -o -name 'latest_media' \) -prune -o
 function Sync-MediaMirror($Config) {
     # Incremental, additive media mirror of shared/backups/latest_media into backups/soft/media. Never deletes.
     $mirror = Join-Path $LocalBackupRoot 'media'
-    $listBody = @'
-M=/var/www/warehouse/shared/backups/latest_media
-if [ ! -d "$M/" ]; then exit 0; fi
-T=$(readlink -f "$M")
-printf '%s\0' "$T"
-cd "$T"
-find . -type f -printf '%s\t%P\0'
-'@
-    $r = Invoke-RemoteRootScript -Config $Config -Body $listBody -Raw -Quiet
+    $r = Invoke-RemoteRootScript -Config $Config -Gateway 'list-media' -Raw -Quiet
     if ($r.ExitCode -ne 0) { throw "Listing the media snapshot failed (exit $($r.ExitCode))." }
     $tokens = @($r.Output.Split([char]0) | Where-Object { $_ })
     if ($tokens.Count -eq 0) {
@@ -1127,11 +1045,7 @@ find . -type f -printf '%s\t%P\0'
         [System.IO.File]::WriteAllBytes($listFile, $listBytes)
         $stage = New-RemoteStage $Config
         [void](Send-RemoteFile $Config $listFile $stage 'media.list')
-        $tarBody = @'
-cd "$1"
-tar --null --verbatim-files-from --no-recursion --format=pax -T "$2" -cf -
-'@
-        $t = Invoke-RemoteRootScript -Config $Config -Body $tarBody -ArgumentList @($snapshot, "$stage/media.list") -StdoutFile $tarPart
+        $t = Invoke-RemoteRootScript -Config $Config -Gateway 'tar-media' -ArgumentList @($snapshot, "$stage/media.list") -StdoutFile $tarPart
         if ($t.ExitCode -ne 0) { throw "Remote media tar failed (exit $($t.ExitCode))." }
         $failures += Expand-MediaTransfer $tarPart $mirror $wanted $stamp
     } finally {
@@ -1308,10 +1222,8 @@ function Invoke-UpdateMode {
         [void](Send-RemoteFile $config $bundle.Path $stage 'bundle.tar.gz')
 
         Write-Step 'Phase 1/3: preparing the release on the server (venv, checks, pre-update backup, migrate --plan)...'
-        $prepareBody = @'
-/usr/local/sbin/warehouse-deploy --prepare --bundle "$1" --bundle-sha256 "$2" --domain "$3"
-'@
-        $prep = Invoke-RemoteRootScript -Config $config -Body $prepareBody -ArgumentList @("$stage/bundle.tar.gz", $bundle.Sha256, $config.Domain) -Capture
+        $prepArgs = @('--bundle', "$stage/bundle.tar.gz", '--bundle-sha256', $bundle.Sha256, '--domain', $config.Domain)
+        $prep = Invoke-RemoteRootScript -Config $config -Gateway 'deploy-prepare' -ArgumentList $prepArgs -Capture
         if ($prep.ExitCode -ne 0) {
             Write-Err "Prepare failed with exit code $($prep.ExitCode); nothing was activated."
             return $prep.ExitCode
@@ -1332,12 +1244,9 @@ function Invoke-UpdateMode {
         Receive-VerifiedBackup -Config $config -RelativePath $backups[0] -ExpectedSha256 $hashes[0] -CompanionRelativePath "$($backups[0]).sha256"
 
         Write-Step "Phase 3/3: activating release $($releases[0])..."
-        $activateBody = @'
-/usr/local/sbin/warehouse-deploy --activate "$1" --verified-backup "$2" --domain "$3" "${@:4}"
-'@
-        $activateArgs = @($releases[0], $backups[0], $config.Domain)
+        $activateArgs = @($releases[0], '--verified-backup', $backups[0], '--domain', $config.Domain)
         if ($Maintenance) { $activateArgs += '--maintenance' }
-        $act = Invoke-RemoteRootScript -Config $config -Body $activateBody -ArgumentList $activateArgs
+        $act = Invoke-RemoteRootScript -Config $config -Gateway 'deploy-activate' -ArgumentList $activateArgs
         if ($act.ExitCode -ne 0) {
             Write-Err "Activation failed with exit code $($act.ExitCode). Run deploy.ps1 -Status to see the server state."
             return $act.ExitCode
@@ -1381,14 +1290,7 @@ function Invoke-PruneBackupsMode {
     if ((Invoke-PullBackupsCore $config) -ne 0) { throw 'PullBackups must finish without failures before pruning.' }
 
     # Only complete dumps (with .sha256) count, so a partial or failed dump can never become the "newest" that is kept.
-    $body = @'
-shopt -s nullglob
-cd /var/www/warehouse/shared/backups
-for f in *.dump; do
-    if [ -f "$f" ] && [ -f "$f.sha256" ]; then printf '%s\t%s\0' "$(stat -c %Y -- "$f")" "$f"; fi
-done
-'@
-    $r = Invoke-RemoteRootScript -Config $config -Body $body -Raw -Quiet
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'list-dumps' -Raw -Quiet
     if ($r.ExitCode -ne 0) { throw "Listing remote dumps failed (exit $($r.ExitCode))." }
     $remote = @($r.Output.Split([char]0) | Where-Object { $_ } | ForEach-Object {
             $p = $_.Split("`t", 2)
@@ -1428,17 +1330,7 @@ done
         Write-Info 'Nothing matched; no server file was deleted.'
         return 0
     }
-    $deleteBody = @'
-cd /var/www/warehouse/shared/backups
-for f in "$@"; do
-    case "$f" in
-        */*|.*|'') echo "[PRUNE_REJECTED] $f"; continue ;;
-    esac
-    rm -f -- "$f" "$f.sha256"
-    if [ ! -e "$f" ] && [ ! -e "$f.sha256" ]; then echo "[PRUNED] $f"; else echo "[PRUNE_FAILED] $f"; fi
-done
-'@
-    $d = Invoke-RemoteRootScript -Config $config -Body $deleteBody -ArgumentList $matched.ToArray() -Capture
+    $d = Invoke-RemoteRootScript -Config $config -Gateway 'prune-delete' -ArgumentList $matched.ToArray() -Capture
     $pruned = @($d.Output | Where-Object { $_ -like '[[]PRUNED[]] *' }).Count
     if ($d.ExitCode -ne 0 -or $pruned -ne $matched.Count) {
         Write-Err "Pruning finished with problems (exit $($d.ExitCode); pruned $pruned of $($matched.Count))."
@@ -1451,14 +1343,7 @@ done
 function Invoke-RestoreMode {
     Assert-Interactive 'Restore'
     $config = Connect-Server
-    $listBody = @'
-shopt -s nullglob
-cd /var/www/warehouse/shared/backups
-for f in *.dump; do
-    if [ -f "$f.sha256" ]; then printf '%s\0' "$f"; fi
-done
-'@
-    $r = Invoke-RemoteRootScript -Config $config -Body $listBody -Raw -Quiet
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'restore-list' -Raw -Quiet
     if ($r.ExitCode -ne 0) { throw "Listing remote dumps failed (exit $($r.ExitCode))." }
     $dumps = @($r.Output.Split([char]0) | Where-Object { $_ -and (Get-BackupTimestamp $_) -and $_ -match '^[A-Za-z0-9_.-]+$' } |
             Sort-Object -Property @{ Expression = { Get-BackupTimestamp $_ } } -Descending)
@@ -1476,75 +1361,27 @@ done
     }
 
     Write-Step "Verifying $target on the server (sha256 and pg_restore --list)..."
-    $checkBody = @'
-f="/var/www/warehouse/shared/backups/$1"
-[ -f "$f" ] && [ -f "$f.sha256" ] || { echo "[ERROR] $1 or its .sha256 is missing"; exit 2; }
-expected=$(awk '{print $1; exit}' "$f.sha256")
-actual=$(sha256sum -- "$f" | awk '{print $1}')
-[ "$expected" = "$actual" ] || { echo "[ERROR] sha256 mismatch for $1"; exit 2; }
-cat -- "$f" | runuser -u postgres -- pg_restore --list > /dev/null
-echo '[RESTORE_SOURCE_OK]'
-'@
-    $c = Invoke-RemoteRootScript -Config $config -Body $checkBody -ArgumentList @($target) -Capture
+    $c = Invoke-RemoteRootScript -Config $config -Gateway 'restore-check' -ArgumentList @($target) -Capture
     if ($c.ExitCode -ne 0 -or -not ($c.Output -contains '[RESTORE_SOURCE_OK]')) { throw "Backup $target failed verification; nothing was changed." }
 
     # Services stop BEFORE the pre_restore backup, so no write can land between that backup and the restore.
     Write-Step 'Stopping services (no writes from here until the restore finishes)...'
-    $stopBody = @'
-SERVICES="warehouse-backend warehouse-gdrive-worker warehouse-export-worker"
-systemctl stop $SERVICES || true
-for s in $SERVICES; do
-    if systemctl is-active --quiet "$s"; then
-        echo "[ERROR] $s did not stop; restore aborted before touching the database. Starting the services again."
-        systemctl start $SERVICES || true
-        exit 3
-    fi
-done
-echo '[SERVICES_STOPPED]'
-'@
-    $stop = Invoke-RemoteRootScript -Config $config -Body $stopBody -Capture
+    $stop = Invoke-RemoteRootScript -Config $config -Gateway 'restore-stop' -Capture
     if ($stop.ExitCode -ne 0 -or -not ($stop.Output -contains '[SERVICES_STOPPED]')) {
         Write-Err "Services could not be stopped (exit $($stop.ExitCode)); nothing was restored."
         return $(if ($stop.ExitCode -ne 0) { $stop.ExitCode } else { 1 })
     }
-    $startBody = @'
-systemctl start warehouse-backend warehouse-gdrive-worker warehouse-export-worker
-'@
     try {
         [void](Invoke-RemoteBackup $config 'pre_restore')
     } catch {
         Write-Err "pre_restore backup failed: $($_.Exception.Message)"
-        $st = Invoke-RemoteRootScript -Config $config -Body $startBody
+        $st = Invoke-RemoteRootScript -Config $config -Gateway 'restore-start'
         if ($st.ExitCode -ne 0) { Write-Err "Starting the services again failed (exit $($st.ExitCode)); start them manually." }
         throw 'Restore aborted before touching the database (no verified pre_restore backup).'
     }
 
     Write-Step "Restoring $target..."
-    $restoreBody = @'
-f="/var/www/warehouse/shared/backups/$1"
-DB_NAME=$(sed -n 's/^DB_NAME=//p' /var/www/warehouse/shared/.env | tail -n 1 | tr -d '\r')
-if ! [[ "$DB_NAME" =~ ^[a-z_][a-z0-9_]{0,62}$ ]]; then echo '[ERROR] DB_NAME in shared/.env is missing or invalid; services remain STOPPED'; exit 2; fi
-SERVICES="warehouse-backend warehouse-gdrive-worker warehouse-export-worker"
-for s in $SERVICES; do
-    if systemctl is-active --quiet "$s"; then echo "[ERROR] $s is running again; restore aborted before touching the database"; exit 3; fi
-done
-set +e
-cat -- "$f" | runuser -u postgres -- pg_restore --clean --if-exists --single-transaction --exit-on-error -d "$DB_NAME"
-rc=$?
-set -e
-if [ "$rc" -ne 0 ]; then
-    echo "[RESTORE_FAILED] pg_restore exited with $rc; the transaction was rolled back."
-    echo "[RESTORE_FAILED] Services remain STOPPED. Inspect the error, then start them with: systemctl start $SERVICES"
-    exit 4
-fi
-systemctl start $SERVICES
-sleep 3
-for s in $SERVICES; do
-    if ! systemctl is-active --quiet "$s"; then echo "[ERROR] $s is not active after restore"; exit 5; fi
-done
-echo '[RESTORE_OK]'
-'@
-    $res = Invoke-RemoteRootScript -Config $config -Body $restoreBody -ArgumentList @($target) -Capture
+    $res = Invoke-RemoteRootScript -Config $config -Gateway 'restore-exec' -ArgumentList @($target) -Capture
     if ($res.ExitCode -ne 0 -or -not ($res.Output -contains '[RESTORE_OK]')) {
         Write-Err "Restore failed (exit $($res.ExitCode)). See the messages above."
         return $(if ($res.ExitCode -ne 0) { $res.ExitCode } else { 1 })
@@ -1648,7 +1485,7 @@ function Invoke-RollbackMode {
         Write-Warn 'Rollback cancelled.'
         return 0
     }
-    $r = Invoke-RemoteRootScript -Config $config -Body '/usr/local/sbin/warehouse-deploy --rollback'
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'deploy-rollback'
     if ($r.ExitCode -ne 0) { Write-Err "Rollback failed with exit code $($r.ExitCode)." } else { Write-Success 'Rollback completed.' }
     return $r.ExitCode
 }
@@ -1656,7 +1493,7 @@ function Invoke-RollbackMode {
 function Invoke-GoLiveMode {
     Assert-Interactive 'GoLive'
     $config = Connect-Server
-    $flag = Invoke-RemoteRootScript -Config $config -Body "if [ -e $RemoteGoLiveFlag ]; then echo '[GO_LIVE_EXISTS]'; else echo '[NO_GO_LIVE]'; fi" -Capture -Quiet
+    $flag = Invoke-RemoteRootScript -Config $config -Gateway 'check-go-live' -Capture -Quiet
     if ($flag.ExitCode -ne 0) { throw 'Could not read the GO_LIVE flag.' }
     if ($flag.Output -contains '[GO_LIVE_EXISTS]') {
         Write-Success 'Server is already GO-LIVE.'
@@ -1665,20 +1502,7 @@ function Invoke-GoLiveMode {
 
     Write-Step 'Go-live checklist (section 6.7)...'
     $results = [System.Collections.Generic.List[object]]::new()
-    $checkBody = @'
-shopt -s nullglob
-for s in warehouse-backend warehouse-gdrive-worker warehouse-export-worker nginx postgresql warehouse-backup.timer; do
-    if systemctl is-active --quiet "$s"; then echo "[CHECK] PASS service $s is active"; else echo "[CHECK] FAIL service $s is not active"; fi
-done
-n=0
-for f in /var/www/warehouse/shared/backups/db_nightly_*.dump; do
-    if [ -f "$f.sha256" ]; then n=$((n + 1)); fi
-done
-if [ "$n" -gt 0 ]; then echo "[CHECK] PASS $n nightly dump(s) with .sha256 on the server"; else echo "[CHECK] FAIL no db_nightly_*.dump with .sha256 on the server"; fi
-out=$(sshd -T 2>/dev/null || true)
-if grep -qix 'passwordauthentication no' <<<"$out"; then echo "[CHECK] PASS sshd PasswordAuthentication is no"; else echo "[CHECK] FAIL sshd PasswordAuthentication is not 'no'"; fi
-'@
-    $remote = Invoke-RemoteRootScript -Config $config -Body $checkBody -Capture
+    $remote = Invoke-RemoteRootScript -Config $config -Gateway 'check-go-live-checklist' -Capture
     if ($remote.ExitCode -ne 0) { $results.Add([pscustomobject]@{ Pass = $false; Text = "server checklist script failed (exit $($remote.ExitCode))" }) }
     foreach ($line in $remote.Output) {
         if ($line -match '^\[CHECK\] (PASS|FAIL) (.+)$') { $results.Add([pscustomobject]@{ Pass = ($Matches[1] -eq 'PASS'); Text = $Matches[2] }) }
@@ -1721,14 +1545,7 @@ if grep -qix 'passwordauthentication no' <<<"$out"; then echo "[CHECK] PASS sshd
         Write-Warn 'Go-live cancelled.'
         return 0
     }
-    $setBody = @'
-F=/var/www/warehouse/shared/GO_LIVE
-if [ -e "$F" ]; then echo '[GO_LIVE_ACTIVE]'; exit 0; fi
-install -o root -g root -m 0644 /dev/null "$F"
-test -f "$F"
-echo '[GO_LIVE_ACTIVE]'
-'@
-    $s = Invoke-RemoteRootScript -Config $config -Body $setBody -Capture
+    $s = Invoke-RemoteRootScript -Config $config -Gateway 'set-go-live' -Capture
     if ($s.ExitCode -ne 0 -or -not ($s.Output -contains '[GO_LIVE_ACTIVE]')) { throw 'Creating the GO_LIVE flag failed.' }
     Write-Success 'Server is now marked GO-LIVE.'
     return 0
@@ -1749,8 +1566,7 @@ function Invoke-CreateAdminMode {
     Assert-Interactive 'CreateAdmin'
     $config = Connect-Server
     Write-Info 'Enter the Django superuser details interactively:'
-    $cmd = "$(Get-SudoPrefix $config)runuser -u warehouse -- /var/www/warehouse/current/venv/bin/python /var/www/warehouse/current/warehouse-backend/manage.py createsuperuser"
-    $r = Invoke-Ssh -Config $config -RemoteCommand $cmd -Tty
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'create-admin' -Tty
     if ($r.ExitCode -ne 0) { Write-Err "createsuperuser failed with exit code $($r.ExitCode)." } else { Write-Success 'Superuser created.' }
     return $r.ExitCode
 }
@@ -1773,71 +1589,7 @@ function Invoke-SetSecretMode([string]$KeyName) {
     $problem = Test-SecretValue $value
     if ($problem) { throw "Rejected: $problem." }
 
-    $python = @'
-import os, sys, time
-ALLOWED = {"GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "OUTBOUND_HTTP_PROXY"}
-PATH = "/var/www/warehouse/shared/.env"
-
-def fail(msg):
-    print("[ERROR] " + msg)
-    sys.exit(2)
-
-key = sys.argv[2] if len(sys.argv) > 2 else ""
-if key not in ALLOWED:
-    fail("key is not in the allow-list")
-raw = sys.stdin.buffer.read()
-try:
-    value = raw.decode("utf-8")
-except UnicodeDecodeError:
-    fail("value is not valid UTF-8")
-if not value or len(value) > 4096 or value != value.strip():
-    fail("value is empty, too long, or has surrounding whitespace")
-if any(c in value for c in "'\"\\") or any(ord(c) < 32 or ord(c) == 127 for c in value):
-    fail("value contains a quote, backslash or control character")
-st = os.stat(PATH)
-mode = st.st_mode & 0o7777
-with open(PATH, "rb") as fh:
-    original = fh.read()
-directory = os.path.dirname(PATH)
-
-def write_new(path, data):
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    try:
-        os.write(fd, data)
-        os.fsync(fd)
-        os.fchown(fd, st.st_uid, st.st_gid)
-        os.fchmod(fd, mode)
-    finally:
-        os.close(fd)
-
-write_new(PATH + ".bak." + time.strftime("%Y%m%d_%H%M%S"), original)
-lines = original.decode("utf-8").splitlines(True)
-out, found = [], False
-for line in lines:
-    if line.startswith(key + "="):
-        if not found:
-            out.append(key + "=" + value + "\n")
-            found = True
-        continue
-    out.append(line)
-if not found:
-    if out and not out[-1].endswith("\n"):
-        out[-1] += "\n"
-    out.append(key + "=" + value + "\n")
-tmp = os.path.join(directory, ".env.tmp.%d" % os.getpid())
-write_new(tmp, "".join(out).encode("utf-8"))
-os.replace(tmp, PATH)
-dfd = os.open(directory, os.O_RDONLY)
-try:
-    os.fsync(dfd)
-finally:
-    os.close(dfd)
-print("[OK_UPDATED]")
-'@
-    $code = [Convert]::ToBase64String($Utf8NoBom.GetBytes($python.Replace("`r", '')))
-    $bootstrap = 'import base64,sys;exec(base64.b64decode(sys.argv[1]).decode())'
-    $cmd = "$(Get-SudoPrefix $config)python3 -c $(ConvertTo-ShellLiteral $bootstrap) $code $KeyName"
-    $r = Invoke-Ssh -Config $config -RemoteCommand $cmd -StdinText $value -Capture
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'set-secret' -ArgumentList @($KeyName) -StdinText $value -Capture
     if ($r.ExitCode -ne 0 -or -not ($r.Output -contains '[OK_UPDATED]')) { throw "Updating $KeyName failed (exit $($r.ExitCode))." }
     Write-Success "$KeyName updated in shared/.env (previous file kept as .env.bak.<timestamp>)."
     Write-Warn 'Restart the services (deploy.ps1 -Restart) for the new value to take effect.'
@@ -1848,25 +1600,13 @@ function Invoke-LogsMode {
     Assert-Interactive 'Logs'
     $config = Connect-Server
     Write-Step 'Streaming service logs (Ctrl+C to exit)...'
-    $units = ($AppServices | ForEach-Object { "-u $_" }) -join ' '
-    return (Invoke-Ssh -Config $config -RemoteCommand "$(Get-SudoPrefix $config)journalctl $units -f -n 50" -Tty).ExitCode
+    return (Invoke-RemoteRootScript -Config $config -Gateway 'logs' -Tty).ExitCode
 }
 
 function Invoke-RestartMode {
     $config = Connect-Server
     Write-Step 'Restarting application services and reloading Nginx...'
-    $body = @'
-SERVICES="warehouse-backend warehouse-gdrive-worker warehouse-export-worker"
-systemctl restart $SERVICES
-nginx -t
-systemctl reload nginx
-sleep 3
-for s in $SERVICES nginx; do
-    if ! systemctl is-active --quiet "$s"; then echo "[ERROR] $s is not active"; exit 1; fi
-done
-echo '[RESTART_OK]'
-'@
-    $r = Invoke-RemoteRootScript -Config $config -Body $body
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'restart'
     if ($r.ExitCode -ne 0) { Write-Err "Restart failed with exit code $($r.ExitCode)." } else { Write-Success 'Services restarted.' }
     return $r.ExitCode
 }
@@ -1874,81 +1614,7 @@ echo '[RESTART_OK]'
 function Invoke-StatusMode {
     $config = Connect-Server
     Write-Step "Server status of $($config.ServerHost)..."
-    $body = @'
-DOMAIN="$1"
-B=/var/www/warehouse/shared/backups
-S=/var/www/warehouse/shared
-shopt -s nullglob
-echo '=== [1] Active release ==='
-if [ -L /var/www/warehouse/current ]; then echo "current -> $(readlink /var/www/warehouse/current)"; fi
-if [ -f /var/www/warehouse/current/RELEASE ]; then cat /var/www/warehouse/current/RELEASE; else echo 'No active release.'; fi
-echo
-echo '=== [2] Services ==='
-for s in warehouse-backend warehouse-gdrive-worker warehouse-export-worker warehouse-backup.timer nginx postgresql redis-server; do
-    printf '%-28s %s\n' "$s" "$(systemctl is-active "$s" 2>/dev/null || true)"
-done
-res=$(systemctl show warehouse-backup.service -p Result --value 2>/dev/null || true)
-code=$(systemctl show warehouse-backup.service -p ExecMainStatus --value 2>/dev/null || true)
-when=$(systemctl show warehouse-backup.service -p ExecMainExitTimestamp --value 2>/dev/null || true)
-echo "Last warehouse-backup.service run: result=${res:-unknown} exit=${code:-?} at ${when:-never}"
-if [ -n "$res" ] && [ "$res" != "success" ]; then echo '[WARNING] The last nightly backup run did not succeed.'; fi
-echo
-echo '=== [3] Worker heartbeats ==='
-DB_NAME=$(sed -n 's/^DB_NAME=//p' "$S/.env" 2>/dev/null | tail -n 1 | tr -d '\r' || true)
-if [[ "$DB_NAME" =~ ^[a-z_][a-z0-9_]{0,62}$ ]]; then
-    for pair in "export-worker:reports_exportworkerstatus:alive_at" "gdrive-worker:settings_system_gdrive_config:worker_heartbeat_at"; do
-        IFS=: read -r label table column <<<"$pair"
-        age=$(runuser -u postgres -- psql -d "$DB_NAME" -XAtq -c "SELECT COALESCE(EXTRACT(EPOCH FROM now() - MAX($column))::bigint::text, '') FROM $table" 2>/dev/null || true)
-        if [ -z "$age" ]; then echo "[WARNING] $label: no heartbeat recorded"
-        elif [ "$age" -gt 180 ]; then echo "[WARNING] $label: last heartbeat ${age}s ago (over 180s)"
-        else echo "$label: last heartbeat ${age}s ago"; fi
-    done
-else
-    echo '[WARNING] DB_NAME not readable from shared/.env; heartbeats skipped.'
-fi
-echo
-echo '=== [4] Backups ==='
-dumps=( "$B"/*.dump )
-if [ ${#dumps[@]} -eq 0 ]; then echo 'No dumps on the server.'; else { ls -1t "${dumps[@]}" | head -n 5 | while read -r f; do printf '%8s  %s\n' "$(du -h "$f" | cut -f1)" "$(basename "$f")"; done; } || true; fi
-nightly=( "$B"/db_nightly_*.dump )
-if [ ${#nightly[@]} -gt 0 ]; then
-    latest=$({ ls -1t "${nightly[@]}" | head -n 1; } || true)
-    age_h=$(( ( $(date +%s) - $(stat -c %Y "$latest") ) / 3600 ))
-    echo "Latest nightly: $(basename "$latest") (${age_h}h old)"
-    if [ "$age_h" -gt 26 ]; then echo '[WARNING] The latest nightly backup is older than 26 hours.'; fi
-else
-    echo '[WARNING] No nightly backup on the server.'
-fi
-echo
-echo '=== [5] Disk ==='
-for m in / "$B"; do
-    if [ -e "$m" ]; then
-        pct=$(df -P "$m" | awk 'NR==2 {gsub("%","",$5); print $5}')
-        echo "$m: ${pct}% used"
-        if [ "$pct" -ge 90 ]; then echo "[CRITICAL] $m is ${pct}% full"
-        elif [ "$pct" -ge 80 ]; then echo "[WARNING] $m is ${pct}% full"; fi
-    fi
-done
-echo
-echo '=== [6] Memory ==='
-free -h
-echo
-echo '=== [7] TLS certificate ==='
-cert="/etc/letsencrypt/live/$DOMAIN/cert.pem"
-if [ -f "$cert" ]; then
-    end=$(openssl x509 -enddate -noout -in "$cert" | cut -d= -f2)
-    days=$(( ( $(date -d "$end" +%s) - $(date +%s) ) / 86400 ))
-    echo "Expires: $end ($days days left)"
-    if [ "$days" -lt 21 ]; then echo '[WARNING] Certificate expires in less than 21 days.'; fi
-else
-    echo "No Let's Encrypt certificate for $DOMAIN."
-fi
-echo
-echo '=== [8] Flags ==='
-if [ -e "$S/GO_LIVE" ]; then echo 'GO_LIVE: set'; else echo 'GO_LIVE: not set'; fi
-if [ -e "$S/MAINTENANCE" ]; then echo '[WARNING] MAINTENANCE: set'; else echo 'MAINTENANCE: not set'; fi
-'@
-    $r = Invoke-RemoteRootScript -Config $config -Body $body -ArgumentList @($config.Domain)
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'status' -ArgumentList @($config.Domain)
 
     Write-Host "`n=== [9] Off-server copies (this machine) ===" -ForegroundColor Cyan
     $newest = @(Get-LocalDumpList | Select-Object -First 1)

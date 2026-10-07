@@ -8,7 +8,7 @@ apt-get update -qq
 apt-get install -y -qq --no-install-recommends sudo python3 postgresql rsync procps openssl ca-certificates >/dev/null
 
 useradd -m -s /bin/bash deploy
-printf 'deploy ALL=(ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/deploy
+printf 'deploy ALL=(ALL) NOPASSWD: /usr/local/sbin/warehouse-root-gateway\n' > /etc/sudoers.d/deploy
 chmod 440 /etc/sudoers.d/deploy
 useradd -r -M -s /usr/sbin/nologin warehouse
 

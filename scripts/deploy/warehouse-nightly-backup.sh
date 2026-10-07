@@ -39,14 +39,26 @@ MEDIA_DIR="${SHARED_DIR}/media"
 ENV_FILE="${SHARED_DIR}/.env"
 
 mkdir -p "$BACKUP_DIR"
-chown -R warehouse:warehouse "$BACKUP_DIR"
 chmod 700 "$BACKUP_DIR"
 
 TS=$(date +"%Y%m%d_%H%M%S")
-echo "=== [1/5] Starting Nightly Backup at ${TS} ==="
+echo "=== [1/5] Starting Backup (${PREFIX}) at ${TS} ==="
 
-# 1. Disk Space Safety Guard (Section 4.2 / D-12)
-# Ensure at least 10% or 2GB free space on backup volume to prevent crashing PostgreSQL
+DB_NAME="warehouse_db"
+if [[ -f "$ENV_FILE" ]]; then
+    ENV_DB=$(sed -n 's/^DB_NAME=//p' "$ENV_FILE" 2>/dev/null | tail -n 1 | tr -d '\r' || true)
+    if [[ -n "$ENV_DB" ]]; then
+        DB_NAME="$ENV_DB"
+    fi
+fi
+
+if ! [[ "$DB_NAME" =~ ^[a-z_][a-z0-9_]{0,62}$ ]]; then
+    echo "[ERROR] Invalid database name from environment: $DB_NAME" >&2
+    exit 1
+fi
+
+# 1. Disk Space Safety Guard (Section 4.2 / D-12, F-18)
+# Ensure at least 10% or 2GB free space on backup volume, and at least 2x DB size
 AVAIL_KB=$(df -P "$BACKUP_DIR" | awk 'NR==2 {print $4}')
 TOTAL_KB=$(df -P "$BACKUP_DIR" | awk 'NR==2 {print $2}')
 AVAIL_PCT=$(( AVAIL_KB * 100 / TOTAL_KB ))
@@ -57,28 +69,35 @@ if [ "$AVAIL_PCT" -lt 10 ] || [ "$AVAIL_KB" -lt 2097152 ]; then
     exit 1
 fi
 
+DB_SIZE_BYTES=$(runuser -u postgres -- psql -d "$DB_NAME" -XAtq -c "SELECT pg_database_size('$DB_NAME')" 2>/dev/null || echo 0)
+if [[ "$DB_SIZE_BYTES" =~ ^[0-9]+$ ]] && [ "$DB_SIZE_BYTES" -gt 0 ]; then
+    EST_DUMP_KB=$(( (DB_SIZE_BYTES / 1024) / 2 ))
+    if [ "$AVAIL_KB" -lt $(( EST_DUMP_KB * 2 )) ]; then
+        echo "[ERROR] Disk free space (${AVAIL_KB} KB) is below 2x estimated compressed dump size (${EST_DUMP_KB} KB). Aborting backup!" >&2
+        exit 1
+    fi
+fi
+
 if [ "$AVAIL_PCT" -lt 20 ]; then
     echo "[WARNING] Disk space is below 20%! High disk usage warning." >&2
 fi
 
 # 2. Database Backup (PostgreSQL custom format .dump)
 echo "=== [2/5] Creating Database Snapshot ==="
-DB_NAME="warehouse_db"
-if [[ -f "$ENV_FILE" ]]; then
-    ENV_DB=$(grep '^DB_NAME=' "$ENV_FILE" | cut -d'=' -f2 || true)
-    if [[ -n "$ENV_DB" ]]; then
-        DB_NAME="$ENV_DB"
-    fi
-fi
-
 DB_DUMP_FILE="${BACKUP_DIR}/db_${PREFIX}_${TS}.dump"
-# Written to .part and renamed only after verification, so a failed dump never appears as a complete *.dump.
 DB_DUMP_PART="${DB_DUMP_FILE}.part"
-su - postgres -c "pg_dump -Fc \"$DB_NAME\"" > "$DB_DUMP_PART"
+
+cleanup_dump() {
+    rm -f "${DB_DUMP_PART:-}" "${DB_DUMP_FILE:-}.sha256.tmp" 2>/dev/null || true
+}
+trap cleanup_dump EXIT INT TERM
+
+# Run without shell string interpolation (F-08)
+runuser -u postgres -- pg_dump -Fc "$DB_NAME" > "$DB_DUMP_PART"
 
 # Verify dump file integrity with pg_restore list
-su - postgres -c "pg_restore --list" < "$DB_DUMP_PART" > /dev/null
-chown warehouse:warehouse "$DB_DUMP_PART"
+runuser -u postgres -- pg_restore --list < "$DB_DUMP_PART" > /dev/null
+chown warehouse:warehouse "$DB_DUMP_PART" 2>/dev/null || true
 chmod 600 "$DB_DUMP_PART"
 
 # Generate SHA256 checksum
@@ -86,7 +105,7 @@ DB_DUMP_SHA256=$(sha256sum "$DB_DUMP_PART" | cut -d' ' -f1)
 mv -n -- "$DB_DUMP_PART" "$DB_DUMP_FILE"
 [[ -f "$DB_DUMP_FILE" && ! -e "$DB_DUMP_PART" ]] || { echo "[ERROR] Could not move the verified dump into place." >&2; exit 1; }
 printf '%s  %s\n' "$DB_DUMP_SHA256" "$DB_DUMP_FILE" > "${DB_DUMP_FILE}.sha256.tmp"
-chown warehouse:warehouse "${DB_DUMP_FILE}.sha256.tmp"
+chown warehouse:warehouse "${DB_DUMP_FILE}.sha256.tmp" 2>/dev/null || true
 chmod 600 "${DB_DUMP_FILE}.sha256.tmp"
 mv -f -- "${DB_DUMP_FILE}.sha256.tmp" "${DB_DUMP_FILE}.sha256"
 echo "[SUCCESS] Verified database backup: ${DB_DUMP_FILE}"
@@ -96,10 +115,10 @@ echo "=== [3/5] Backing up Environment File ==="
 if [[ -f "$ENV_FILE" ]]; then
     ENV_BACKUP="${BACKUP_DIR}/.env.soft-${TS}"
     cp "$ENV_FILE" "$ENV_BACKUP"
-    chown warehouse:warehouse "$ENV_BACKUP"
+    chown warehouse:warehouse "$ENV_BACKUP" 2>/dev/null || true
     chmod 600 "$ENV_BACKUP"
     sha256sum "$ENV_BACKUP" > "${ENV_BACKUP}.sha256"
-    chown warehouse:warehouse "${ENV_BACKUP}.sha256"
+    chown warehouse:warehouse "${ENV_BACKUP}.sha256" 2>/dev/null || true
     chmod 600 "${ENV_BACKUP}.sha256"
     echo "[SUCCESS] Backed up .env to ${ENV_BACKUP}"
 fi
@@ -119,13 +138,16 @@ elif [[ -d "$MEDIA_DIR" ]]; then
     fi
 
     rsync "${RSYNC_OPTS[@]}" "${MEDIA_DIR}/" "${CURRENT_MEDIA_BACKUP}/"
-    chown -R warehouse:warehouse "$CURRENT_MEDIA_BACKUP"
+    chown -R warehouse:warehouse "$CURRENT_MEDIA_BACKUP" 2>/dev/null || true
     chmod 700 "$CURRENT_MEDIA_BACKUP"
 
     # Update latest symlink
     ln -sfn "$CURRENT_MEDIA_BACKUP" "$LATEST_MEDIA_LINK"
     echo "[SUCCESS] Media backup completed: ${CURRENT_MEDIA_BACKUP}"
 fi
+
+# Reset trap
+trap - EXIT INT TERM
 
 # 5. Backup Retention Policy
 # Per user decision (Section 1.2, 4.2), ZERO automatic deletion is performed.

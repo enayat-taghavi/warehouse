@@ -37,6 +37,12 @@ if [[ -z "$ALLOWED_HOSTS" || "$ALLOWED_HOSTS" == "*" ]]; then
     ALLOWED_HOSTS="${DOMAIN:-127.0.0.1}"
 fi
 
+# Validate domain format if specified (F-11)
+if [[ -n "$DOMAIN" ]] && ! [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]; then
+    echo "ERROR: Invalid domain format: $DOMAIN" >&2
+    exit 1
+fi
+
 echo "--> Target Domain       : ${DOMAIN:-[Direct IP]}"
 echo "--> Admin Email         : ${ADMIN_EMAIL}"
 echo "--> Database Name       : ${DB_NAME}"
@@ -45,12 +51,16 @@ echo "--> Allowed Hosts       : ${ALLOWED_HOSTS}"
 echo "--> Configured SSH Port : ${SSH_PORT}"
 echo "--> Bundle Path         : ${BUNDLE_PATH}"
 
-# Verify bundle sha256 if provided
-if [[ -n "$BUNDLE_SHA256" && -f "$BUNDLE_PATH" ]]; then
+# Verify bundle sha256 (F-19)
+if [[ -f "$BUNDLE_PATH" ]]; then
     ACTUAL_BUNDLE_SHA=$(sha256sum "$BUNDLE_PATH" | cut -d' ' -f1)
-    if [[ "$ACTUAL_BUNDLE_SHA" != "$BUNDLE_SHA256" ]]; then
-        echo "ERROR: Bundle SHA256 checksum mismatch (expected: $BUNDLE_SHA256, actual: $ACTUAL_BUNDLE_SHA)!" >&2
-        exit 1
+    if [[ -n "$BUNDLE_SHA256" ]]; then
+        if [[ "$ACTUAL_BUNDLE_SHA" != "$BUNDLE_SHA256" ]]; then
+            echo "ERROR: Bundle SHA256 checksum mismatch (expected: $BUNDLE_SHA256, actual: $ACTUAL_BUNDLE_SHA)!" >&2
+            exit 1
+        fi
+    else
+        BUNDLE_SHA256="$ACTUAL_BUNDLE_SHA"
     fi
     echo "--> Bundle SHA256 verified: ${ACTUAL_BUNDLE_SHA}"
 fi
@@ -94,15 +104,16 @@ if ! id -u warehouse >/dev/null 2>&1; then
     useradd -r -M -s /usr/sbin/nologin warehouse
 fi
 
-# 4. Directory Layout Initialization (root owns root/releases/venvs, warehouse owns shared)
+# 4. Directory Layout Initialization (F-08: root owns shared/ to prevent privesc)
 BASE_DIR="/var/www/warehouse"
 SHARED_DIR="${BASE_DIR}/shared"
 mkdir -p "${BASE_DIR}/releases" "${BASE_DIR}/venvs" "${SHARED_DIR}"
-chown -R root:root "${BASE_DIR}/releases" "${BASE_DIR}/venvs"
-chmod 755 "${BASE_DIR}/releases" "${BASE_DIR}/venvs"
+chown -R root:root "${BASE_DIR}/releases" "${BASE_DIR}/venvs" "${SHARED_DIR}"
+chmod 755 "${BASE_DIR}/releases" "${BASE_DIR}/venvs" "${SHARED_DIR}"
 
 mkdir -p "${SHARED_DIR}/media" "${SHARED_DIR}/backups" "${SHARED_DIR}/logs" "${SHARED_DIR}/report_exports"
-chown -R warehouse:warehouse "${SHARED_DIR}"
+chown -R warehouse:warehouse "${SHARED_DIR}/media" "${SHARED_DIR}/logs" "${SHARED_DIR}/report_exports" "${SHARED_DIR}/backups"
+chmod 755 "${SHARED_DIR}/media" "${SHARED_DIR}/logs" "${SHARED_DIR}/report_exports"
 chmod 700 "${SHARED_DIR}/backups"
 
 # 5. PostgreSQL Database Provisioning (PostgreSQL >= 15 check & stdin SQL)
@@ -123,7 +134,6 @@ if [[ ! -f "$ENV_FILE" ]]; then
     DJANGO_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
 
     echo "--> Creating PostgreSQL database user and database with UTF-8 encoding..."
-    # SQL execution via stdin with ON_ERROR_STOP (no password in argv)
     runuser -u postgres -- psql -v ON_ERROR_STOP=1 <<EOSQL
 DO \$\$
 BEGIN
@@ -148,9 +158,9 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS btree_gin;
 EOSQL
 
-    # Write .env with umask 077 to ensure 0600 permissions from creation
+    # Write .env with umask 077 and root:warehouse ownership (0640) (F-08)
     (
-        umask 077
+        umask 027
         cat <<EOF > "$ENV_FILE"
 DJANGO_ENV=production
 DJANGO_SECRET_KEY=${DJANGO_SECRET}
@@ -173,11 +183,10 @@ DB_PORT=5432
 REDIS_URL=redis://127.0.0.1:6379/1
 EOF
     )
-    chown warehouse:warehouse "$ENV_FILE"
-    chmod 600 "$ENV_FILE"
+    chown root:warehouse "$ENV_FILE"
+    chmod 640 "$ENV_FILE"
 else
     echo "--> Existing ${ENV_FILE} preserved. Merging missing configuration keys..."
-    # Merge missing keys into existing .env
     for key in DJANGO_MEDIA_ACCEL_REDIRECT WAREHOUSE_REPORT_EXPORT_DIR WAREHOUSE_BACKUP_DIR GOOGLE_OAUTH_REDIRECT_URI; do
         if ! grep -q "^${key}=" "$ENV_FILE"; then
             case "$key" in
@@ -188,6 +197,8 @@ else
             esac
         fi
     done
+    chown root:warehouse "$ENV_FILE"
+    chmod 640 "$ENV_FILE"
 fi
 
 # 6. Extract bundle and install deployment orchestrator & root gateway
@@ -213,21 +224,38 @@ if [[ -f "$BUNDLE_PATH" ]]; then
 fi
 rm -rf "$TEMP_BOOTSTRAP"
 
-# 7. Configure sudoers restriction (E-24, 10.4-C)
-# Allow warehouse-root-gateway and warehouse-deploy for callers, eliminating unrestricted ALL
+# 7. Configure sudoers restriction (E-24, F-07, F-15)
+# Sudoers only allows warehouse-root-gateway, validated with visudo -cf
 SUDO_TARGET_USER="${SUDO_USER:-deploy}"
 if id "$SUDO_TARGET_USER" >/dev/null 2>&1; then
     echo "--> Configuring restricted sudoers permissions for ${SUDO_TARGET_USER}..."
-    cat <<EOF > /etc/sudoers.d/warehouse
-${SUDO_TARGET_USER} ALL=(ALL) NOPASSWD: /usr/local/sbin/warehouse-root-gateway, /usr/local/sbin/warehouse-deploy
+    SUDOERS_TMP="/etc/sudoers.d/warehouse.tmp"
+    cat <<EOF > "$SUDOERS_TMP"
+${SUDO_TARGET_USER} ALL=(ALL) NOPASSWD: /usr/local/sbin/warehouse-root-gateway
 EOF
-    chmod 440 /etc/sudoers.d/warehouse
+    if visudo -cf "$SUDOERS_TMP" >/dev/null 2>&1; then
+        mv -f "$SUDOERS_TMP" /etc/sudoers.d/warehouse
+        chmod 440 /etc/sudoers.d/warehouse
+    else
+        rm -f "$SUDOERS_TMP"
+        echo "ERROR: visudo validation failed for /etc/sudoers.d/warehouse.tmp!" >&2
+        exit 1
+    fi
 fi
 
-# 8. Run initial release deployment via orchestrator
+# 8. Run initial release deployment via orchestrator (F-07: explicit prepare & activate)
 if [[ -f "/usr/local/sbin/warehouse-deploy" && -f "$BUNDLE_PATH" ]]; then
-    echo "--> Running initial release deployment via /usr/local/sbin/warehouse-deploy..."
-    /usr/local/sbin/warehouse-deploy "$BUNDLE_PATH" "$DOMAIN"
+    echo "--> Preparing initial release via /usr/local/sbin/warehouse-deploy --prepare..."
+    PREPARE_OUTPUT=$(/usr/local/sbin/warehouse-deploy --prepare --bundle "$BUNDLE_PATH" --bundle-sha256 "$BUNDLE_SHA256" --domain "${DOMAIN:-soft.farsalish.ir}")
+    echo "$PREPARE_OUTPUT"
+    REL=$(echo "$PREPARE_OUTPUT" | grep '^\[RELEASE\]' | awk '{print $2}')
+    BAK=$(echo "$PREPARE_OUTPUT" | grep '^\[PRE_UPDATE_BACKUP\]' | awk '{print $2}')
+    if [[ -z "$REL" ]]; then
+        echo "ERROR: Failed to determine prepared release name from warehouse-deploy." >&2
+        exit 1
+    fi
+    echo "--> Activating initial release via /usr/local/sbin/warehouse-deploy --activate..."
+    /usr/local/sbin/warehouse-deploy --activate "$REL" --domain "${DOMAIN:-soft.farsalish.ir}" --verified-backup "$BAK"
 fi
 
 # 9. Seed permissions and initialize roles
@@ -259,7 +287,7 @@ if [[ -n "$DOMAIN" ]]; then
         if [[ "$ADMIN_EMAIL" != *"@example.com"* && -n "$ADMIN_EMAIL" ]]; then
             echo "--> Requesting Let's Encrypt TLS certificate via webroot..."
             certbot certonly --webroot -w /var/www/html -d "$DOMAIN" --email "$ADMIN_EMAIL" \
-                --agree-tos --non-interactive --deploy-hook "systemctl reload nginx" || true
+                --agree-tos --non-interactive --deploy-hook "systemctl reload nginx"
         else
             echo "--> [WARNING] AdminEmail is default or invalid (${ADMIN_EMAIL}); skipping automated Let's Encrypt registration."
         fi
@@ -267,27 +295,56 @@ if [[ -n "$DOMAIN" ]]; then
 
     # Stage 3: Full HTTPS if certificate obtained
     if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" && -f "${BASE_DIR}/current/scripts/deploy/templates/nginx-https.conf" ]]; then
-        sed "s/__DOMAIN__/${DOMAIN}/g" "${BASE_DIR}/current/scripts/deploy/templates/nginx-https.conf" > /etc/nginx/sites-available/warehouse
+        SUPPORT_REJECT=0
+        if nginx -V 2>&1 | grep -q "nginx version: "; then
+            if nginx -V 2>&1 | grep -oE 'nginx/[0-9]+\.[0-9]+' | head -n 1 | awk -F'[/.]' '{ if ($2 > 1 || ($2 == 1 && $3 >= 19)) exit 0; else exit 1; }'; then
+                SUPPORT_REJECT=1
+            fi
+        fi
+
+        REJECT_FILE="/tmp/wh_reject_$$.conf"
+        if [ "$SUPPORT_REJECT" -eq 1 ]; then
+            cat <<'EOF' > "$REJECT_FILE"
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+    server_tokens off;
+    ssl_reject_handshake on;
+    return 444;
+}
+EOF
+            sed -e "s/__DOMAIN__/${DOMAIN}/g" \
+                -e "/__SSL_REJECT_HANDSHAKE_SERVER__/{r $REJECT_FILE" -e 'd}' \
+                "${BASE_DIR}/current/scripts/deploy/templates/nginx-https.conf" > /etc/nginx/sites-available/warehouse
+            rm -f "$REJECT_FILE"
+        else
+            sed -e "s/__DOMAIN__/${DOMAIN}/g" \
+                -e '/__SSL_REJECT_HANDSHAKE_SERVER__/d' \
+                "${BASE_DIR}/current/scripts/deploy/templates/nginx-https.conf" > /etc/nginx/sites-available/warehouse
+        fi
         nginx -t
         systemctl reload nginx
         echo "--> HTTPS operational with Let's Encrypt TLS certificate!"
     fi
 fi
 
-# 12. Security Hardening & Firewall (UFW & Fail2ban)
+# 12. Security Hardening & Firewall (UFW & Fail2ban) (F-15)
 echo "--> Configuring UFW firewall and Fail2ban..."
-ACTUAL_SSH_PORT="$SSH_PORT"
-SSHD_DETECTED_PORT=$(sshd -T 2>/dev/null | grep -i '^port ' | awk '{print $2}' || true)
-if [[ -n "$SSHD_DETECTED_PORT" ]]; then
-    ACTUAL_SSH_PORT="$SSHD_DETECTED_PORT"
-fi
+ACTUAL_SSH_PORTS=$(sshd -T 2>/dev/null | grep -i '^port ' | awk '{print $2}' || true)
 
-ufw default deny incoming
-ufw default allow outgoing
-ufw allow "${ACTUAL_SSH_PORT}/tcp"
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw --force enable
+ufw default deny incoming || true
+ufw default allow outgoing || true
+if [[ -n "$ACTUAL_SSH_PORTS" ]]; then
+    for p in $ACTUAL_SSH_PORTS; do
+        ufw allow "${p}/tcp" || true
+    done
+else
+    ufw allow "${SSH_PORT}/tcp" || true
+fi
+ufw allow 80/tcp || true
+ufw allow 443/tcp || true
+ufw --force enable || true
 
 systemctl enable --now fail2ban || true
 
