@@ -24,7 +24,8 @@ case "$PREFIX" in
     *) echo "[ERROR] --prefix must be nightly, manual or pre_restore" >&2; exit 2 ;;
 esac
 
-LOCK_FILE="/var/lock/warehouse-backup.lock"
+# Root-only /run, not the world-writable /var/lock, so no other user can pre-create the lock file.
+LOCK_FILE="/run/warehouse-backup.lock"
 exec 201>"$LOCK_FILE"
 if [[ "$PREFIX" == "nightly" ]]; then
     flock -n 201 || { echo "[WARNING] Another backup is already in progress. Skipping." >&2; exit 0; }
@@ -38,8 +39,14 @@ BACKUP_DIR="${SHARED_DIR}/backups"
 MEDIA_DIR="${SHARED_DIR}/media"
 ENV_FILE="${SHARED_DIR}/.env"
 
+# G-01: backups/ is root:warehouse 0710 (the application user may only traverse it to reach its
+# own backups/db). It can therefore never pre-create or swap a name this root script writes, and
+# every file and directory written here stays root's.
+if [[ -L "$BACKUP_DIR" ]]; then echo "[ERROR] $BACKUP_DIR is a symlink; refusing to continue." >&2; exit 1; fi
 mkdir -p "$BACKUP_DIR"
-chmod 700 "$BACKUP_DIR"
+chown root:warehouse "$BACKUP_DIR"
+chmod 0710 "$BACKUP_DIR"
+umask 077
 
 TS=$(date +"%Y%m%d_%H%M%S")
 echo "=== [1/5] Starting Backup (${PREFIX}) at ${TS} ==="
@@ -87,26 +94,24 @@ echo "=== [2/5] Creating Database Snapshot ==="
 DB_DUMP_FILE="${BACKUP_DIR}/db_${PREFIX}_${TS}.dump"
 DB_DUMP_PART="${DB_DUMP_FILE}.part"
 
+MEDIA_STAGE=""
 cleanup_dump() {
     rm -f "${DB_DUMP_PART:-}" "${DB_DUMP_FILE:-}.sha256.tmp" 2>/dev/null || true
+    if [[ -n "$MEDIA_STAGE" && -d "$MEDIA_STAGE" ]]; then rm -rf -- "$MEDIA_STAGE"; fi
 }
 trap cleanup_dump EXIT INT TERM
 
-# Run without shell string interpolation (F-08)
-runuser -u postgres -- pg_dump -Fc "$DB_NAME" > "$DB_DUMP_PART"
+# Run without shell string interpolation (F-08); noclobber never writes through an existing name.
+( set -C; runuser -u postgres -- pg_dump -Fc "$DB_NAME" > "$DB_DUMP_PART" )
 
 # Verify dump file integrity with pg_restore list
 runuser -u postgres -- pg_restore --list < "$DB_DUMP_PART" > /dev/null
-chown warehouse:warehouse "$DB_DUMP_PART" 2>/dev/null || true
-chmod 600 "$DB_DUMP_PART"
 
 # Generate SHA256 checksum
 DB_DUMP_SHA256=$(sha256sum "$DB_DUMP_PART" | cut -d' ' -f1)
 mv -n -- "$DB_DUMP_PART" "$DB_DUMP_FILE"
 [[ -f "$DB_DUMP_FILE" && ! -e "$DB_DUMP_PART" ]] || { echo "[ERROR] Could not move the verified dump into place." >&2; exit 1; }
-printf '%s  %s\n' "$DB_DUMP_SHA256" "$DB_DUMP_FILE" > "${DB_DUMP_FILE}.sha256.tmp"
-chown warehouse:warehouse "${DB_DUMP_FILE}.sha256.tmp" 2>/dev/null || true
-chmod 600 "${DB_DUMP_FILE}.sha256.tmp"
+( set -C; printf '%s  %s\n' "$DB_DUMP_SHA256" "$DB_DUMP_FILE" > "${DB_DUMP_FILE}.sha256.tmp" )
 mv -f -- "${DB_DUMP_FILE}.sha256.tmp" "${DB_DUMP_FILE}.sha256"
 echo "[SUCCESS] Verified database backup: ${DB_DUMP_FILE}"
 
@@ -114,12 +119,8 @@ echo "[SUCCESS] Verified database backup: ${DB_DUMP_FILE}"
 echo "=== [3/5] Backing up Environment File ==="
 if [[ -f "$ENV_FILE" ]]; then
     ENV_BACKUP="${BACKUP_DIR}/.env.soft-${TS}"
-    cp "$ENV_FILE" "$ENV_BACKUP"
-    chown warehouse:warehouse "$ENV_BACKUP" 2>/dev/null || true
-    chmod 600 "$ENV_BACKUP"
-    sha256sum "$ENV_BACKUP" > "${ENV_BACKUP}.sha256"
-    chown warehouse:warehouse "${ENV_BACKUP}.sha256" 2>/dev/null || true
-    chmod 600 "${ENV_BACKUP}.sha256"
+    ( set -C; cat -- "$ENV_FILE" > "$ENV_BACKUP" )
+    ( set -C; sha256sum "$ENV_BACKUP" > "${ENV_BACKUP}.sha256" )
     echo "[SUCCESS] Backed up .env to ${ENV_BACKUP}"
 fi
 
@@ -137,9 +138,15 @@ elif [[ -d "$MEDIA_DIR" ]]; then
         echo "[INFO] Using hardlink-dest against latest media snapshot."
     fi
 
-    rsync "${RSYNC_OPTS[@]}" "${MEDIA_DIR}/" "${CURRENT_MEDIA_BACKUP}/"
-    chown -R warehouse:warehouse "$CURRENT_MEDIA_BACKUP" 2>/dev/null || true
-    chmod 700 "$CURRENT_MEDIA_BACKUP"
+    # rsync copies the media directory's owner and mode onto its target, so it writes inside a
+    # root-only staging directory; the snapshot is locked down (root:root 0700) before it gets its name.
+    MEDIA_STAGE=$(mktemp -d "${BACKUP_DIR}/.incoming_media_XXXXXX")
+    rsync "${RSYNC_OPTS[@]}" "${MEDIA_DIR}/" "${MEDIA_STAGE}/media/"
+    chown root:root "${MEDIA_STAGE}/media"
+    chmod 700 "${MEDIA_STAGE}/media"
+    mv -T -- "${MEDIA_STAGE}/media" "$CURRENT_MEDIA_BACKUP"
+    rmdir -- "$MEDIA_STAGE"
+    MEDIA_STAGE=""
 
     # Update latest symlink
     ln -sfn "$CURRENT_MEDIA_BACKUP" "$LATEST_MEDIA_LINK"

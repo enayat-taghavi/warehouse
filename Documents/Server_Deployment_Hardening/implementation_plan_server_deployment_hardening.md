@@ -1305,3 +1305,151 @@
   - **آزمون‌ها:** فقط خواندن کد؛ هیچ آزمونی دوباره اجرا نشد. ادعای آزمون‌های Antigravity بررسی نشد.
   - **کد:** تغییری نکرد؛ فقط همین سند به‌روز شد.
   - **اقدام بعدی:** گام ر۶ در نشست تازه. فقط بخش ۱۲ و همین گزارش خوانده شوند. سپس اسکریپت‌های سرور، دروازه و بخش‌های مربوط در `deploy.ps1` طبق ۱۲.۲ اصلاح و در کانتینر آزموده شوند.
+- **۱۶ مهر ۱۴۰۵ — گام ر۶، بخش اول: کد G-01 تا G-15 (Claude؛ با هشدار context متوقف شد):**
+  - **وضعیت:** کد همهٔ ۱۵ ایراد نوشته شد. هنوز در کانتینر آزموده نشده و commit نشده است.
+  - **`warehouse-deploy.sh` (بازنویسی کامل):**
+    - **G-01:** تابع `secure_backup_layout` در `--prepare`: `backups/` با `root:warehouse 0710` و `backups/db` با `warehouse:warehouse 0700`. مهاجرت یک‌باره: مالک ورودی‌های سطح اول با `chown -h` به root برمی‌گردد، پوشه‌ها 0700 و فایل‌ها 0600 می‌شوند. اگر `backups` یا `backups/db` symlink باشد، خطا می‌دهد. همهٔ `chown warehouse` حذف شد. dump با `set -C` (noclobber) نوشته می‌شود.
+    - **G-02:** پایتون بررسی migration کامل داخل `try` است (`django.setup` هم). فقط کد 0 همراه خط `[MIGRATIONS_OK]` سازگار است. `|| true` و fallback `ls -t` حذف شد؛ rollback فقط به `PREVIOUS_RELEASE` (با regex نام) می‌رود.
+    - **G-05:** `--bundle-sha256` (۶۴ هگز) اجباری است. بسته باید فایل عادی، بدون symlink، مستقیم در `/tmp/wh-deploy.*` و مال `SUDO_UID` باشد (`assert_stage_file`).
+    - **G-06:** نام release با `^[0-9]{8}_[0-9]{6}_[A-Za-z0-9]+$` پیش از جداسازی و پیش از ساخت مسیر لاگ سنجیده می‌شود (`parse_activate_args`). `COMMIT` فایل `RELEASE` باید ۱۲ هگز باشد. همهٔ `su -c` با `runuser -u warehouse -- env ...` بدون درج رشته جایگزین شد (`run_manage`).
+    - **G-07:**
+      - `apply_nginx_config` در شکست `nginx -t` وضعیت قبلی را دقیقاً برمی‌گرداند؛ در نصب اول یعنی بدون پیکربندی، و `sites-enabled/default` هم برمی‌گردد.
+      - rollback دستی و خودکار nginx و unitهای release مقصد را نصب می‌کنند (`install_runtime_infra`). ابزار root (deploy، gateway، nightly) هرگز پایین نمی‌آید.
+      - استخراج در `releases/.incoming_*` (همان filesystem) انجام می‌شود. trap در شکست پوشهٔ موقت و release نیمه‌کاره را پاک می‌کند.
+      - `.deploy_metadata` آخرین کار prepare است و `--activate` بدون آن رد می‌کند. `--verified-backup` همیشه اجباری است.
+    - **G-11:** شکست `systemctl stop`، migrate یا collectstatic به `abort_before_switch` می‌رسد. nginx و unitهای release فعال برمی‌گردند. اگر migrate شروع نشده یا release فعال سازگار است، سرویس‌ها روشن و MAINTENANCE پاک می‌شود؛ وگرنه پیام صریح restore چاپ می‌شود. trap خروج هر توقف ناموفق را با وضعیت `current` و MAINTENANCE گزارش می‌دهد.
+    - **G-12:** خروجی `nginx -t` چاپ می‌شود.
+    - **G-14:** fallback chunkها با `-regextype posix-extended -regex` درست شد.
+    - **G-15:** فقط `staticfiles/` در زمان collectstatic مال `warehouse` است و بعد به root برمی‌گردد.
+    - **G-08 (بخش prepare):** `merge_env_defaults` همهٔ ۱۵ کلید غیرمحرمانهٔ قالب `.env` را به‌صورت اتمیک اضافه می‌کند.
+    - **حالت تازهٔ `--refresh-nginx --domain`:** برای `remote-setup.sh` پس از certbot. از راه دروازه در دسترس نیست. `--rollback` حالا `--domain` می‌پذیرد (پیش‌فرض: `shared/DOMAIN` که activate ثبت می‌کند).
+    - قفل به `/run/warehouse-deploy.lock` منتقل شد. `/var/lock` برای همه قابل نوشتن است و کاربر برنامه می‌توانست فایل قفل را از قبل بسازد (هم‌خانوادهٔ G-01).
+  - **`warehouse-root-gateway.sh`:**
+    - **G-03:** `sha256sum` و `read-backup` مسیر نسبی را با پایتون باز می‌کنند: هر بخش `[A-Za-z0-9_.-]+`، بدون `.` و `..`، با `O_NOFOLLOW` در هر پوشه و فایل نهایی. پس symlink داخل `backups/db` دنبال نمی‌شود و TOCTOU هم ندارد. `list-backups` فقط نام‌های پذیرفتنی را فهرست می‌کند و `.incoming*` را کنار می‌گذارد.
+    - **G-06:** `tar-media` فقط مسیر دقیق `media_daily_<ts>` و فهرستِ stage خود کاربر را می‌پذیرد، و symlink در هیچ بخش مسیر ورودی‌ها را نمی‌پذیرد. `setup` هم اسکریپت را با `assert_stage_file` می‌سنجد.
+    - **G-09:** `logs [LINES] [--follow]`.
+    - **G-10:** `set-secret` پایتون را با `-c` اجرا می‌کند (فایل موقتی نمی‌ماند). `create-admin` هیچ آرگومانی نمی‌پذیرد.
+  - **`warehouse-nightly-backup.sh` (G-01):** `backups/` با `root:warehouse 0710`، `umask 077` و noclobber. بدون هیچ `chown warehouse`. snapshot media در `.incoming_media_*` (فقط root) ساخته، به `root:root 0700` تبدیل و سپس نام‌گذاری می‌شود. قفل به `/run/warehouse-backup.lock` رفت.
+  - **`remote-setup.sh`:**
+    - **G-05:** دقیقاً ۸ آرگومان؛ sha اجباری؛ بسته در stage.
+    - **G-13:** `DB_NAME`، `DB_USER`، allowed hosts، پورت و ایمیل سنجیده می‌شوند.
+    - **G-01:** چیدمان `backups` مانند بالا.
+    - **G-08:**
+      - حفاظ دیتابیس خالی: بدون `.env`، اگر دیتابیس relation داشته باشد یا role مالک دیتابیس دیگری باشد، Setup متوقف می‌شود.
+      - ساخت با `LOCALE_PROVIDER icu ICU_LOCALE 'fa-IR' LOCALE 'C.UTF-8'`.
+      - آزمون ترتیب «ب پ چ ز ژ ک گ ی» با `chr()`، چون اسکریپت ASCII می‌ماند.
+      - Setup دوم به دیتابیس و `.env` دست نمی‌زند؛ فقط `DJANGO_ALLOWED_HOSTS` غایب را می‌افزاید و بقیه با prepare.
+    - **G-07:** پیکربندی nginx فقط از راه activate و `--refresh-nginx` نوشته می‌شود (رندر تکراری و `/tmp/wh_reject_$$` حذف شد).
+  - **`deploy.ps1`:**
+    - **G-03:** `Receive-RemoteFile` مسیر نسبی می‌فرستد.
+    - **G-04:** Setup اول با `test -x` (بدون sudo) دروازه را تشخیص می‌دهد؛ اگر نصب باشد `check-go-live` و `setup` از راه دروازه اجرا می‌شوند.
+    - **G-09:** Logs با `200 --follow`.
+    - Rollback حالا `--domain` می‌فرستد.
+  - **آزمون‌ها:**
+    - fixture آزمون یکپارچه چیدمان واقعی `backups` را می‌سازد و یک بکاپ برنامه با `.meta.json` در `db/` می‌گذارد.
+    - دو assert تازه در `test_integration.ps1` اضافه شد: کشیدن و تطبیق `db/*.dump` با `.meta.json`، و مالکیت‌ها پس از بکاپ.
+  - **آزمون‌های انجام‌شده:**
+    - `bash -n` روی هر ۵ اسکریپت پاس شد. CR و نویسهٔ غیر ASCII نیست.
+    - Parser روی `deploy.ps1` و `test_integration.ps1`: صفر خطا.
+    - guardian 53: هر ۱۱ بند پاس (`scratch/logs/guardian53_r6.log`).
+    - هیچ آزمون کانتینری اجرا نشد.
+  - **یافتهٔ تازه:** آزمون rollback در `scratch/verify_r4_ubuntu2404.sh` (Antigravity) فقط به دلیل همان fail-open (G-02) پاس می‌شد. venv آن Django نداشت، خروجی بی‌نشانه بود و «سازگار» شمرده می‌شد. برای ر۶ قابل استفاده نیست.
+  - **اقدام بعدی (نشست تازه؛ فقط همین گزارش و بخش ۱۲.۲ خوانده شوند):**
+    1. `scripts/deploy_tests/test_bundle.ps1` اجرا شود. commit موقت شامل همین تغییرهای commit‌نشده است و بیلد واقعی را در `scratch/deploy/<sha>` می‌سازد.
+    2. آزمون سرتاسری تازه در `scripts/deploy_tests/` (مثلاً `test_server_e2e.ps1`): کانتینر `ubuntu:24.04` با nginx، PostgreSQL 16، python3-venv و sudo. کاربر `deploy` اول sudo کامل دارد (مثل Setup اول واقعی)؛ ssh جعلی (`fake_ssh.cs`).
+       - systemctl جعلی باید `ExecStart`، `User` و `WorkingDirectory` را از unit واقعی بخواند و daphne واقعی را بالا بیاورد، با fd 200 بسته.
+       - همهٔ حالت‌ها از راه `Invoke-Mode` با `-SkipBuild` اجرا شوند.
+       - سناریوها:
+         - Setup اول، سپس بررسی `/etc/sudoers.d/warehouse` (فقط دروازه)؛
+         - Setup دوم (باید از راه دروازه موفق شود و دیتابیس و `.env` دست نخورند)؛
+         - دو Update پیاپی (commit دوم: کپی پوشهٔ بیلد با marker جدید)؛
+         - Rollback سازگار؛
+         - release ناسازگار: commit موقت با یک migration اضافه، Update، سپس Rollback باید رد شود؛
+         - شکست عمدی `django.setup`: یک `raise` به settings همان release قبلی، Rollback باید رد شود و `current` تغییر نکند؛
+         - PullBackups با بکاپ واقعی برنامه در `db/` (یا fixture)؛
+         - حملهٔ symlink با `runuser -u warehouse`:
+           - ساخت `backups/x` باید رد شود؛
+           - symlink `db/evil.dump` به `/etc/shadow`: `read-backup` و `sha256sum` باید رد کنند؛
+           - symlink در media و `tar-media` با فهرست بیرون از stage باید رد شوند.
+         - آزمون ترتیب فارسی ICU در PostgreSQL 16 هم سنجیده شود. اگر نحو `CREATE DATABASE` در PG16 خطا بدهد، اصلاح شود.
+    3. `test_integration.ps1` و guardian 53 اجرا شوند، و PSScriptAnalyzer روی `deploy.ps1`.
+    4. `data-loss-reviewer` روی diff اجرا شود و یافته‌های تأییدشده رفع شوند.
+    5. commit، سپس ثبت پایان ر۶ در همین گزارش.
+- **۱۶ مهر ۱۴۰۵ — گام ر۶، بخش دوم: آزمون کانتینری سرتاسری (Claude؛ با هشدار context متوقف شد):**
+  - **وضعیت بندهای «اقدام بعدی» بخش اول:**
+    1. **انجام شد:** `test_bundle.ps1` با بیلد واقعی پاس شد (`failures=0`، لاگ `scratch/logs/test_bundle_r6.log`). بیلد commit موقت `97f7546161d9358ba6188777f848d63bc0a8ecf0` در `scratch/deploy/` است.
+    2. **نوشته شد، هنوز پاس نشده:** آزمون تازهٔ `scripts/deploy_tests/test_server_e2e.ps1` با پارامتر `-BuildSha`.
+       - خودش از درخت کاری commit موقت می‌سازد و dist همان بیلد را کپی می‌کند، پس تغییر اسکریپت‌ها بیلد دوباره نمی‌خواهد.
+       - commitهای فرعی: release دوم و سوم، و release با migration تازهٔ `accounts/0036_e2e_forward_only`.
+       - کانتینر `ubuntu:24.04` با `--init`. همهٔ اسکریپت‌های واقعی اجرا می‌شوند، با apt و pip واقعی.
+       - فقط دو چیز جعلی است:
+         - systemctl: postgresql، redis، nginx و daphne را واقعی بالا می‌آورد؛ daphne را از unit نصب‌شده می‌خواند و fd 200 را می‌بندد؛
+         - certbot: گواهی خودامضا می‌سازد.
+       - `deploy` اول sudo کامل دارد و پس از Setup اول برداشته می‌شود.
+       - سناریوها: A تا H (Setup اول، Setup دوم، دو Update که دومی با Maintenance است، Rollback سازگار، `django.setup` خراب، migration رو به جلو، PullBackups با بکاپ واقعی برنامه، و حمله‌های symlink، hardlink و مسیر).
+       - `Register-PullTask` mock شده است.
+    3. تا 5. انجام نشد.
+  - **اجرای اول (`scratch/logs/test_server_e2e_1.log`):**
+    - **سالم:** apt نصب شد. `CREATE DATABASE ... LOCALE_PROVIDER icu ICU_LOCALE 'fa-IR'` در PG16 کار کرد و ترتیب فارسی تأیید شد. sudoers فقط دروازه را دارد و چیدمان `shared` درست است.
+    - **ایراد H-01 (بحرانی):** `--prepare` با خطای pip شکست خورد:
+      - پیام خطا: `In --require-hashes mode, all requirements must have their versions pinned`؛
+      - علت: `google-api-core==2.40.0` به `opentelemetry-api` نیاز دارد، اما این بسته در `requirements.lock` نیست؛
+      - نتیجه: `requirements.lock` بستهٔ وابستگی کامل نیست (۶۹ بسته؛ `pip freeze` محلی ۷۳ بسته دارد)، پس هیچ Setup یا Update واقعی ممکن نیست؛
+      - پاک‌سازی شکست درست کار کرد: release نیمه‌کاره برداشته شد.
+    - **ایراد آزمون (رفع شد):** `datlocprovider` نوع `"char"` دارد؛ cast به `::text` اضافه شد.
+  - **رفع‌شده در همین نشست:**
+    - **H-02:** `remote-setup.sh` در Setup دوم با `chown -R root:root shared/` مالک همهٔ media و بکاپ‌های برنامه را root می‌کرد.
+    - حالا chown فقط روی خود پوشه‌هاست.
+    - آزمون B این را می‌سنجد.
+  - **کد:** چیزی commit نشد. کانتینر آزمون پاک شد.
+  - **اقدام بعدی (نشست تازه؛ فقط همین بند و ۱۲.۲ خوانده شوند):**
+    1. **H-01:** `warehouse-backend/requirements.lock` بازسازی شود:
+       - بستهٔ کامل وابستگی‌ها برای Linux و Python 3.12؛
+       - نسخه‌ها همان نسخه‌های `pip freeze` venv محلی (آزموده‌شده)، به‌عنوان constraint؛
+       - همهٔ هش‌های PyPI؛
+       - مثلاً `pip-compile --generate-hashes` در کانتینر `ubuntu:24.04`؛
+       - بسته‌های فقط ویندوزی کنار گذاشته شوند؛
+       - سپس `pip install --require-hashes` در همان کانتینر آزموده شود.
+    2. اجرای دوباره: `pwsh -File scripts/deploy_tests/test_server_e2e.ps1 -BuildSha 97f7546161d9358ba6188777f848d63bc0a8ecf0`، با لاگ در `scratch/logs/`، و رفع ایرادهای پیداشده تا `failures=0`.
+    3. سپس بندهای 3 تا 5 «اقدام بعدی» بخش اول: `test_integration.ps1`، guardian 53، PSScriptAnalyzer، `data-loss-reviewer`، commit و ثبت پایان ر۶.
+- **۱۵ مهر ۱۴۰۵ (2026-10-07) — گام ر۶، بخش سوم: پایان ر۶ (Claude):**
+  - **H-01 (رفع شد):** `warehouse-backend/requirements.lock` بازسازی شد.
+    - بستهٔ کامل وابستگی برای Linux و Python 3.12، با `pip-compile --generate-hashes` (pip-tools 7.4.1 روی pip 24.0) در کانتینر `ubuntu:24.04`.
+    - constraint: `pip freeze` همان venv محلی، بدون بسته‌های فقط ویندوزی (`colorama`) و فقط dev (`django-extensions`، `import-linter`، `grimp`).
+    - ۶۶ بسته با همهٔ هش‌ها. `opentelemetry-api==1.45.0` اضافه شد. `bcrypt`، `click`، `PyNaCl` و `tzdata` در لینوکس لازم نیستند و حذف شدند.
+    - روش بازسازی در سرآیند خود فایل نوشته شده است.
+    - آزمون: نصب `--require-hashes` در کانتینر تازه پاس شد، `pip check` سالم بود و import همهٔ بسته‌های برنامه درست بود (`scratch/logs/lock_install_test.log`).
+  - **ایرادهای تازهٔ آزمون سرتاسری (همه رفع شدند):**
+    - **H-03 (کد):** `--rollback` بی‌هیچ بررسی سلامت «SUCCESS» می‌داد؛ آزمون بلافاصله 502 دید.
+      - حالا تا ۶۰ ثانیه منتظر پاسخ daphne می‌ماند: با دامنهٔ معلوم پاسخ 200 از `/api/public/config/` لازم است، وگرنه هر پاسخ HTTP کافی است.
+      - اگر daphne پاسخ ندهد، با خروجی غیرصفر و پیام CRITICAL تمام می‌شود.
+    - **H-04 (کد):** `Read-RecordedHash` در `deploy.ps1` قالب فایل همراه را از پسوند مسیر `.part` تشخیص می‌داد.
+      - در نتیجه `.meta.json` هرگز JSON خوانده نمی‌شد و PullBackups هیچ بکاپ درون‌برنامه‌ای را دریافت نمی‌کرد.
+      - حالا نام واقعی همراه به تابع داده می‌شود.
+    - **ایرادهای خود آزمون:**
+      - کاوش `DAPHNE_CWD` والد `runuser` را می‌گرفت و root در Docker بدون `CAP_SYS_PTRACE` cwd را نمی‌خواند؛ حالا فرایند `warehouse` با همان کاربر خوانده می‌شود.
+      - مالک `e2e_marker` حالا نقش برنامه است، تا `pg_dump` برنامه به آن دسترسی داشته باشد.
+  - **`data-loss-reviewer` روی diff کل ر۶:** هیچ مسیر از دست رفتن یا بازنویسی داده پیدا نشد. چهار شکاف گزارش شد که سه تای اول با کد تأیید و رفع شدند:
+    1. **متوسط:** `--activate` بررسی نمی‌کرد که release تازه همهٔ migrationهای اعمال‌شده را داشته باشد؛ پس Update به commit قدیمی‌تر کد کهنه را روی schema تازه بالا می‌آورد.
+       - حالا `check_migration_compatibility` روی release تازه، پیش از هر تغییری اجرا می‌شود.
+       - سناریوی تازهٔ F2 در آزمون: Update به commit بدون `0036` رد می‌شود و release فعال و رکوردها دست نمی‌خورند.
+    2. **متوسط:** پرچم `MAINTENANCE` که مسیر «rollback خودکار ردشده» می‌گذاشت، با Update یا Rollback موفق بعدی پاک نمی‌شد. سایت برای همه 503 می‌داد، ولی probeهای 127.0.0.1 آن را نمی‌دیدند.
+       - حالا Update سالم و Rollback سالم (پس از بررسی migration و liveness) پرچم کهنه را پاک و گزارش می‌کنند.
+       - آزمون: پرچم پیش از Update #1 و پیش از Rollback کاشته می‌شود.
+    3. **پایین:** رکوردهای `ACTIVE_RELEASE` و `PREVIOUS_RELEASE` فقط پس از health موفق نوشته می‌شدند.
+       - حالا بلافاصله پس از switch نوشته می‌شوند و rollback خودکار رکورد قبلی را برمی‌گرداند.
+       - `systemctl restart` و `reload nginx` پس از switch دیگر زیر `set -e` از health-check و rollback خودکار نمی‌گذرند.
+    4. **باز (بیرون از diff این گام):** `restore-start` و `restore-exec` در دروازه، پس از بازیابی dump قدیمی‌تر، سرویس‌ها را روی `current` بالا می‌آورند، بی‌آنکه migrationهای اعمال‌نشده یا پرچم `MAINTENANCE` را بسنجند. `restore-exec` فقط وجود `.sha256` را می‌سنجد، نه تطابق آن را.
+       - مسیر `deploy.ps1 -Restore` پیش از آن `restore-check` را اجرا می‌کند و dump فقط برای root خواناست، پس خطر کم است.
+  - **آزمون‌ها (همه در همین نشست):**
+    - `test_server_e2e.ps1 -BuildSha 97f7546…`: **۸۶ پاس، `failures=0`** (`scratch/logs/test_server_e2e_6.log`). اجراهای ۲ تا ۵ ایرادهای بالا را نشان دادند.
+    - `test_integration.ps1 -Sha 97f7546…`: **۷۰ پاس، `failures=0`** (`scratch/logs/test_integration_r6.log`).
+      - پس از اصلاح `deploy.ps1` اجرا شد. اصلاحات بعدی فقط در `warehouse-deploy.sh` بودند که این آزمون نسخهٔ جعلی‌اش را به کار می‌برد.
+    - guardian 53: ۱۱ از ۱۱ ✅.
+    - `guardian_all.py`: همه ✅ جز فازهای ۱ تا ۵ (دادهٔ E2E ندارند) و guardian 29 (پس‌رفت مرز ایمپورت‌های پایتون). هر دو از پیش بوده‌اند و diff این گام هیچ کد پایتونی را تغییر نمی‌دهد.
+    - PSScriptAnalyzer: `deploy.ps1` بدون خطا و بدون هشدار است. در دو فایل آزمون فقط هشدارهای متغیرهای dot-source و mock هست.
+    - `bash -n` روی همهٔ اسکریپت‌های سرور پاس شد. `scripts/test_guard_hooks.py` با `FAILURES: 0` پاس شد.
+  - **وضعیت:** ر۶ کامل شد و commit شد. روی سرور `soft` هنوز هیچ فرمانی اجرا نشده است.
+  - **اقدام بعدی:**
+    - شکاف ۴ بازبین (سخت‌سازی مسیر restore در دروازه) در یک نشست جدا رفع شود.
+    - سپس، با بله/خیر کاربر، نصب کلید (`deploy.ps1 -InstallKey`) و کشف سرور (فاز ۲) روی `soft.farsalish.ir`.

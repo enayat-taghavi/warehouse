@@ -22,7 +22,15 @@ su - postgres -c "psql -q -d warehouse_db -c 'CREATE TABLE reports_exportworkers
 su - postgres -c "psql -q -d warehouse_db -c 'CREATE TABLE settings_system_gdrive_config (worker_heartbeat_at timestamptz); INSERT INTO settings_system_gdrive_config VALUES (now() - interval '\''1 hour'\'')'"
 
 S=/var/www/warehouse/shared
-mkdir -p "$S/backups" "$S/media/sub dir" /var/www/warehouse/releases
+mkdir -p "$S/media/sub dir" /var/www/warehouse/releases
+# Real layout (G-01): backups/ root:warehouse 0710, backups/db (in-app backups) warehouse:warehouse 0700
+install -d -o root -g warehouse -m 0710 "$S/backups"
+install -d -o warehouse -g warehouse -m 0700 "$S/backups/db"
+# An in-app backup with its .meta.json companion, as accounts/backup_service.py writes it (G-03)
+head -c 5000 /dev/urandom > "$S/backups/db/backup_20261001_120000.dump"
+printf '{\n  "filename": "backup_20261001_120000.dump",\n  "checksum": "%s"\n}\n' \
+    "$(sha256sum "$S/backups/db/backup_20261001_120000.dump" | cut -d' ' -f1)" > "$S/backups/db/backup_20261001_120000.dump.meta.json"
+chown warehouse:warehouse "$S/backups/db/"*
 printf 'DB_NAME=warehouse_db\nDJANGO_SECRET_KEY=test-only\nOUTBOUND_HTTP_PROXY=http://old.proxy.test:1\n' > "$S/.env"
 chown warehouse:warehouse "$S/.env"
 chmod 640 "$S/.env"

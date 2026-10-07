@@ -24,26 +24,59 @@ if [[ -f "/var/www/warehouse/shared/GO_LIVE" ]]; then
     exit 1
 fi
 
-DOMAIN="${1:-}"
-ADMIN_EMAIL="${2:-admin@example.com}"
-DB_NAME="${3:-warehouse_db}"
-DB_USER="${4:-warehouse_user}"
-ALLOWED_HOSTS="${5:-}"
-SSH_PORT="${6:-22}"
-BUNDLE_PATH="${7:-/tmp/deploy_bundle.tar.gz}"
-BUNDLE_SHA256="${8:-}"
+if [[ $# -ne 8 ]]; then
+    echo "Usage: remote-setup.sh <domain> <admin_email> <db_name> <db_user> <allowed_hosts> <ssh_port> <bundle_path> <bundle_sha256>" >&2
+    exit 2
+fi
+DOMAIN="$1"
+ADMIN_EMAIL="$2"
+DB_NAME="$3"
+DB_USER="$4"
+ALLOWED_HOSTS="$5"
+SSH_PORT="$6"
+BUNDLE_PATH="$7"
+BUNDLE_SHA256="$8"
 
 if [[ -z "$ALLOWED_HOSTS" || "$ALLOWED_HOSTS" == "*" ]]; then
-    ALLOWED_HOSTS="${DOMAIN:-127.0.0.1}"
+    ALLOWED_HOSTS="$DOMAIN"
 fi
 
-# Validate domain format if specified (F-11)
-if [[ -n "$DOMAIN" ]] && ! [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]; then
+# Validate every value before it reaches SQL, .env or a command line (F-11, G-13)
+if ! [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]; then
     echo "ERROR: Invalid domain format: $DOMAIN" >&2
     exit 1
 fi
+for pair in "DB_NAME:$DB_NAME" "DB_USER:$DB_USER"; do
+    if ! [[ "${pair#*:}" =~ ^[a-z_][a-z0-9_]{0,62}$ ]]; then
+        echo "ERROR: ${pair%%:*} must match ^[a-z_][a-z0-9_]{0,62}\$ (got: ${pair#*:})" >&2
+        exit 1
+    fi
+done
+if ! [[ "$ALLOWED_HOSTS" =~ ^[A-Za-z0-9.:,-]+$ ]]; then
+    echo "ERROR: Invalid allowed hosts: $ALLOWED_HOSTS" >&2
+    exit 1
+fi
+if ! [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]]; then
+    echo "ERROR: Invalid SSH port: $SSH_PORT" >&2
+    exit 1
+fi
+if ! [[ "$ADMIN_EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
+    echo "ERROR: Invalid admin email: $ADMIN_EMAIL" >&2
+    exit 1
+fi
 
-echo "--> Target Domain       : ${DOMAIN:-[Direct IP]}"
+# The bundle and its sha256 are mandatory (G-05): a regular file (no symlink) in the caller's
+# /tmp/wh-deploy.* stage directory, checked against the hash computed on the operator's machine.
+if ! [[ "$BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+    echo "ERROR: bundle sha256 (64 lowercase hex digits) is required." >&2
+    exit 1
+fi
+if ! [[ "$BUNDLE_PATH" =~ ^/tmp/wh-deploy\.[A-Za-z0-9]{10}/[A-Za-z0-9._-]+$ ]] || [[ ! -f "$BUNDLE_PATH" || -L "$BUNDLE_PATH" ]]; then
+    echo "ERROR: bundle must be a regular file inside a /tmp/wh-deploy.* stage directory: $BUNDLE_PATH" >&2
+    exit 1
+fi
+
+echo "--> Target Domain       : ${DOMAIN}"
 echo "--> Admin Email         : ${ADMIN_EMAIL}"
 echo "--> Database Name       : ${DB_NAME}"
 echo "--> Database User       : ${DB_USER}"
@@ -51,19 +84,13 @@ echo "--> Allowed Hosts       : ${ALLOWED_HOSTS}"
 echo "--> Configured SSH Port : ${SSH_PORT}"
 echo "--> Bundle Path         : ${BUNDLE_PATH}"
 
-# Verify bundle sha256 (F-19)
-if [[ -f "$BUNDLE_PATH" ]]; then
-    ACTUAL_BUNDLE_SHA=$(sha256sum "$BUNDLE_PATH" | cut -d' ' -f1)
-    if [[ -n "$BUNDLE_SHA256" ]]; then
-        if [[ "$ACTUAL_BUNDLE_SHA" != "$BUNDLE_SHA256" ]]; then
-            echo "ERROR: Bundle SHA256 checksum mismatch (expected: $BUNDLE_SHA256, actual: $ACTUAL_BUNDLE_SHA)!" >&2
-            exit 1
-        fi
-    else
-        BUNDLE_SHA256="$ACTUAL_BUNDLE_SHA"
-    fi
-    echo "--> Bundle SHA256 verified: ${ACTUAL_BUNDLE_SHA}"
+# Verify bundle sha256 (F-19, G-05)
+ACTUAL_BUNDLE_SHA=$(sha256sum -- "$BUNDLE_PATH" | cut -d' ' -f1)
+if [[ "$ACTUAL_BUNDLE_SHA" != "$BUNDLE_SHA256" ]]; then
+    echo "ERROR: Bundle SHA256 checksum mismatch (expected: $BUNDLE_SHA256, actual: $ACTUAL_BUNDLE_SHA)!" >&2
+    exit 1
 fi
+echo "--> Bundle SHA256 verified: ${ACTUAL_BUNDLE_SHA}"
 
 # 1. System Timezone (Asia/Tehran)
 echo "--> Setting server timezone to Asia/Tehran..."
@@ -108,13 +135,28 @@ fi
 BASE_DIR="/var/www/warehouse"
 SHARED_DIR="${BASE_DIR}/shared"
 mkdir -p "${BASE_DIR}/releases" "${BASE_DIR}/venvs" "${SHARED_DIR}"
-chown -R root:root "${BASE_DIR}/releases" "${BASE_DIR}/venvs" "${SHARED_DIR}"
+# Not recursive: on a second Setup shared/ holds the application's media and in-app backups,
+# which must keep their owner (warehouse) or the application can no longer write or read them.
+chown root:root "${BASE_DIR}/releases" "${BASE_DIR}/venvs" "${SHARED_DIR}"
 chmod 755 "${BASE_DIR}/releases" "${BASE_DIR}/venvs" "${SHARED_DIR}"
 
-mkdir -p "${SHARED_DIR}/media" "${SHARED_DIR}/backups" "${SHARED_DIR}/logs" "${SHARED_DIR}/report_exports"
-chown -R warehouse:warehouse "${SHARED_DIR}/media" "${SHARED_DIR}/logs" "${SHARED_DIR}/report_exports" "${SHARED_DIR}/backups"
+mkdir -p "${SHARED_DIR}/media" "${SHARED_DIR}/logs" "${SHARED_DIR}/report_exports"
+chown warehouse:warehouse "${SHARED_DIR}/media" "${SHARED_DIR}/logs" "${SHARED_DIR}/report_exports"
 chmod 755 "${SHARED_DIR}/media" "${SHARED_DIR}/logs" "${SHARED_DIR}/report_exports"
-chmod 700 "${SHARED_DIR}/backups"
+# G-01: backups/ is root's (the application user may only traverse it); only backups/db, where the
+# in-app backups go (get_backup_dir() appends /db), belongs to the application user.
+# warehouse-deploy --prepare (step 8) also migrates the top-level entries of older layouts to root.
+if [[ -L "${SHARED_DIR}/backups" ]]; then
+    echo "ERROR: ${SHARED_DIR}/backups is a symlink; refusing to continue." >&2
+    exit 1
+fi
+install -d -o root -g warehouse -m 0710 "${SHARED_DIR}/backups"
+# Only now (backups/ no longer writable by the application user) may backups/db be inspected safely.
+if [[ -L "${SHARED_DIR}/backups/db" || ( -e "${SHARED_DIR}/backups/db" && ! -d "${SHARED_DIR}/backups/db" ) ]]; then
+    echo "ERROR: ${SHARED_DIR}/backups/db is not a plain directory; check it by hand." >&2
+    exit 1
+fi
+install -d -o warehouse -g warehouse -m 0700 "${SHARED_DIR}/backups/db"
 
 # 5. PostgreSQL Database Provisioning (PostgreSQL >= 15 check & stdin SQL)
 echo "--> Configuring PostgreSQL service..."
@@ -127,14 +169,39 @@ if [[ -n "$PG_VER" && "$PG_VER" -lt 15 ]]; then
     exit 1
 fi
 
+pg_query() {
+    runuser -u postgres -- psql -XAtq -v ON_ERROR_STOP=1 "$@"
+}
+
 ENV_FILE="${SHARED_DIR}/.env"
+if [[ -L "$ENV_FILE" ]]; then
+    echo "ERROR: ${ENV_FILE} is a symlink; refusing to continue." >&2
+    exit 1
+fi
 if [[ ! -f "$ENV_FILE" ]]; then
+    # Empty-database guard (6.2, D-04, G-08): without .env this is a first install. Setup never
+    # touches existing data, so it stops if the database holds anything or the role owns another database.
+    DB_EXISTS=$(pg_query -c "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'")
+    if [[ "$DB_EXISTS" == "1" ]]; then
+        REL_COUNT=$(pg_query -d "$DB_NAME" -c "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname NOT IN ('pg_catalog', 'information_schema') AND n.nspname NOT LIKE 'pg_toast%' AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')")
+        if [[ "$REL_COUNT" != "0" ]]; then
+            echo "ERROR: Database ${DB_NAME} already holds ${REL_COUNT} relation(s) but ${ENV_FILE} is missing." >&2
+            echo "Setup never touches existing data. Put the original ${ENV_FILE} back (e.g. from a .env.soft-* backup) and run Setup again." >&2
+            exit 1
+        fi
+    fi
+    OTHER_DBS=$(pg_query -c "SELECT count(*) FROM pg_database d JOIN pg_roles r ON r.oid = d.datdba WHERE r.rolname = '${DB_USER}' AND d.datname <> '${DB_NAME}'")
+    if [[ "$OTHER_DBS" != "0" ]]; then
+        echo "ERROR: Role ${DB_USER} owns ${OTHER_DBS} other database(s); refusing to reset its password." >&2
+        exit 1
+    fi
+
     echo "--> Generating cryptographically secure credentials on-server..."
     DB_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
     DJANGO_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
 
-    echo "--> Creating PostgreSQL database user and database with UTF-8 encoding..."
-    runuser -u postgres -- psql -v ON_ERROR_STOP=1 <<EOSQL
+    echo "--> Creating PostgreSQL database user and database (UTF-8, ICU fa-IR collation)..."
+    runuser -u postgres -- psql -X -v ON_ERROR_STOP=1 <<EOSQL
 DO \$\$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${DB_USER}') THEN
@@ -146,10 +213,19 @@ END
 \$\$;
 EOSQL
 
-    DB_EXISTS=$(runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" || true)
     if [[ "$DB_EXISTS" != "1" ]]; then
-        runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USER}\" ENCODING 'UTF8' TEMPLATE template0;"
+        # D-30: explicit UTF-8 and ICU Persian collation (libc C.UTF-8 and en_US sort Persian letters wrongly).
+        pg_query -c "CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USER}\" ENCODING 'UTF8' TEMPLATE template0 LOCALE_PROVIDER icu ICU_LOCALE 'fa-IR' LOCALE 'C.UTF-8';"
     fi
+
+    # Persian alphabetical order must hold: be, pe, che, ze, zhe, kaf, gaf, ye (as code points, ASCII-only script).
+    PERSIAN_ORDER=$(pg_query -d "$DB_NAME" -c "SELECT string_agg(ascii(x)::text, ',' ORDER BY x) FROM unnest(ARRAY[chr(1740), chr(1711), chr(1705), chr(1688), chr(1586), chr(1670), chr(1662), chr(1576)]) AS t(x)")
+    if [[ "$PERSIAN_ORDER" != "1576,1662,1670,1586,1688,1705,1711,1740" ]]; then
+        echo "ERROR: Database ${DB_NAME} does not sort Persian correctly (got ${PERSIAN_ORDER})." >&2
+        echo "It is empty: drop it by hand and run Setup again so it is created with the ICU fa-IR collation." >&2
+        exit 1
+    fi
+    echo "--> Persian collation order verified."
 
     runuser -u postgres -- psql -v ON_ERROR_STOP=1 -d "${DB_NAME}" <<EOSQL
 ALTER SCHEMA public OWNER TO "${DB_USER}";
@@ -186,43 +262,39 @@ EOF
     chown root:warehouse "$ENV_FILE"
     chmod 640 "$ENV_FILE"
 else
-    echo "--> Existing ${ENV_FILE} preserved. Merging missing configuration keys..."
-    for key in DJANGO_MEDIA_ACCEL_REDIRECT WAREHOUSE_REPORT_EXPORT_DIR WAREHOUSE_BACKUP_DIR GOOGLE_OAUTH_REDIRECT_URI; do
-        if ! grep -q "^${key}=" "$ENV_FILE"; then
-            case "$key" in
-                DJANGO_MEDIA_ACCEL_REDIRECT) echo "DJANGO_MEDIA_ACCEL_REDIRECT=1" >> "$ENV_FILE" ;;
-                WAREHOUSE_REPORT_EXPORT_DIR) echo "WAREHOUSE_REPORT_EXPORT_DIR=${SHARED_DIR}/report_exports" >> "$ENV_FILE" ;;
-                WAREHOUSE_BACKUP_DIR) echo "WAREHOUSE_BACKUP_DIR=${SHARED_DIR}/backups" >> "$ENV_FILE" ;;
-                GOOGLE_OAUTH_REDIRECT_URI) echo "GOOGLE_OAUTH_REDIRECT_URI=https://${DOMAIN}/api/auth/google/callback" >> "$ENV_FILE" ;;
-            esac
-        fi
-    done
+    # Second Setup: the database and .env are never touched (6.2). warehouse-deploy --prepare (step 8)
+    # appends every missing non-secret key; only the allowed hosts from the configuration are added here.
+    echo "--> Existing ${ENV_FILE} preserved; the database is not touched."
+    if ! grep -q '^DJANGO_ALLOWED_HOSTS=' "$ENV_FILE"; then
+        [[ -z "$(tail -c 1 "$ENV_FILE")" ]] || printf '\n' >> "$ENV_FILE"
+        echo "DJANGO_ALLOWED_HOSTS=${ALLOWED_HOSTS}" >> "$ENV_FILE"
+    fi
     chown root:warehouse "$ENV_FILE"
     chmod 640 "$ENV_FILE"
 fi
 
 # 6. Extract bundle and install deployment orchestrator & root gateway
 TEMP_BOOTSTRAP=$(mktemp -d /tmp/wh_bootstrap_XXXXXX)
-if [[ -f "$BUNDLE_PATH" ]]; then
-    tar -xzf "$BUNDLE_PATH" -C "$TEMP_BOOTSTRAP"
-    if [[ -f "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-deploy.sh" ]]; then
-        install -m 755 "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-deploy.sh" /usr/local/sbin/warehouse-deploy
+trap 'rm -rf -- "$TEMP_BOOTSTRAP"' EXIT
+tar -xzf "$BUNDLE_PATH" -C "$TEMP_BOOTSTRAP"
+for f in warehouse-deploy.sh warehouse-nightly-backup.sh warehouse-root-gateway.sh; do
+    if [[ ! -f "${TEMP_BOOTSTRAP}/scripts/deploy/${f}" ]]; then
+        echo "ERROR: Bundle has no scripts/deploy/${f}." >&2
+        exit 1
     fi
-    if [[ -f "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-nightly-backup.sh" ]]; then
-        install -m 755 "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-nightly-backup.sh" /usr/local/bin/warehouse-nightly-backup.sh
-    fi
-    if [[ -f "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-root-gateway.sh" ]]; then
-        install -m 755 "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-root-gateway.sh" /usr/local/sbin/warehouse-root-gateway
-    fi
-    if [[ -d "${TEMP_BOOTSTRAP}/scripts/deploy/templates" ]]; then
-        for u in "${TEMP_BOOTSTRAP}/scripts/deploy/templates"/warehouse-*.service "${TEMP_BOOTSTRAP}/scripts/deploy/templates"/warehouse-*.timer; do
-            if [[ -f "$u" ]]; then
-                install -m 644 "$u" "/etc/systemd/system/$(basename "$u")"
-            fi
-        done
-    fi
+done
+install -o root -g root -m 755 "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-deploy.sh" /usr/local/sbin/warehouse-deploy
+install -o root -g root -m 755 "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-nightly-backup.sh" /usr/local/bin/warehouse-nightly-backup.sh
+install -o root -g root -m 755 "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-root-gateway.sh" /usr/local/sbin/warehouse-root-gateway
+if [[ -d "${TEMP_BOOTSTRAP}/scripts/deploy/templates" ]]; then
+    for u in "${TEMP_BOOTSTRAP}/scripts/deploy/templates"/warehouse-*.service "${TEMP_BOOTSTRAP}/scripts/deploy/templates"/warehouse-*.timer; do
+        if [[ -f "$u" ]]; then
+            install -m 644 "$u" "/etc/systemd/system/$(basename "$u")"
+        fi
+    done
 fi
-rm -rf "$TEMP_BOOTSTRAP"
+rm -rf -- "$TEMP_BOOTSTRAP"
+trap - EXIT
 
 # 7. Configure sudoers restriction (E-24, F-07, F-15)
 # Sudoers only allows warehouse-root-gateway, validated with visudo -cf
@@ -244,19 +316,17 @@ EOF
 fi
 
 # 8. Run initial release deployment via orchestrator (F-07: explicit prepare & activate)
-if [[ -f "/usr/local/sbin/warehouse-deploy" && -f "$BUNDLE_PATH" ]]; then
-    echo "--> Preparing initial release via /usr/local/sbin/warehouse-deploy --prepare..."
-    PREPARE_OUTPUT=$(/usr/local/sbin/warehouse-deploy --prepare --bundle "$BUNDLE_PATH" --bundle-sha256 "$BUNDLE_SHA256" --domain "${DOMAIN:-soft.farsalish.ir}")
-    echo "$PREPARE_OUTPUT"
-    REL=$(echo "$PREPARE_OUTPUT" | grep '^\[RELEASE\]' | awk '{print $2}')
-    BAK=$(echo "$PREPARE_OUTPUT" | grep '^\[PRE_UPDATE_BACKUP\]' | awk '{print $2}')
-    if [[ -z "$REL" ]]; then
-        echo "ERROR: Failed to determine prepared release name from warehouse-deploy." >&2
-        exit 1
-    fi
-    echo "--> Activating initial release via /usr/local/sbin/warehouse-deploy --activate..."
-    /usr/local/sbin/warehouse-deploy --activate "$REL" --domain "${DOMAIN:-soft.farsalish.ir}" --verified-backup "$BAK"
+echo "--> Preparing the release via /usr/local/sbin/warehouse-deploy --prepare..."
+PREPARE_OUTPUT=$(/usr/local/sbin/warehouse-deploy --prepare --bundle "$BUNDLE_PATH" --bundle-sha256 "$BUNDLE_SHA256" --domain "$DOMAIN")
+echo "$PREPARE_OUTPUT"
+REL=$(echo "$PREPARE_OUTPUT" | sed -n 's/^\[RELEASE\] //p')
+BAK=$(echo "$PREPARE_OUTPUT" | sed -n 's/^\[PRE_UPDATE_BACKUP\] //p')
+if [[ -z "$REL" || -z "$BAK" ]]; then
+    echo "ERROR: warehouse-deploy --prepare did not report the release and its pre-update backup." >&2
+    exit 1
 fi
+echo "--> Activating the release via /usr/local/sbin/warehouse-deploy --activate..."
+/usr/local/sbin/warehouse-deploy --activate "$REL" --domain "$DOMAIN" --verified-backup "$BAK"
 
 # 9. Seed permissions and initialize roles
 echo "--> Initializing system permissions and roles..."
@@ -271,62 +341,21 @@ systemctl enable warehouse-backend warehouse-gdrive-worker warehouse-export-work
 systemctl start warehouse-backend warehouse-gdrive-worker warehouse-export-worker warehouse-backup.timer
 
 # 11. Web Server (Nginx) & TLS Configuration
-if [[ -n "$DOMAIN" ]]; then
-    echo "--> Configuring Nginx for domain ${DOMAIN}..."
-    mkdir -p /var/www/html /etc/nginx/sites-available /etc/nginx/sites-enabled
-
-    # Stage 1: Temporary HTTP for ACME challenge
-    if [[ -f "${BASE_DIR}/current/scripts/deploy/templates/nginx-http.conf" ]]; then
-        sed "s/__DOMAIN__/${DOMAIN}/g" "${BASE_DIR}/current/scripts/deploy/templates/nginx-http.conf" > /etc/nginx/sites-available/warehouse
-        ln -sf /etc/nginx/sites-available/warehouse /etc/nginx/sites-enabled/warehouse
-        rm -f /etc/nginx/sites-enabled/default
-        nginx -t
-        systemctl reload nginx
-
-        # Stage 2: Request Let's Encrypt TLS certificate via webroot (reject @example.com)
-        if [[ "$ADMIN_EMAIL" != *"@example.com"* && -n "$ADMIN_EMAIL" ]]; then
-            echo "--> Requesting Let's Encrypt TLS certificate via webroot..."
-            certbot certonly --webroot -w /var/www/html -d "$DOMAIN" --email "$ADMIN_EMAIL" \
-                --agree-tos --non-interactive --deploy-hook "systemctl reload nginx"
-        else
-            echo "--> [WARNING] AdminEmail is default or invalid (${ADMIN_EMAIL}); skipping automated Let's Encrypt registration."
-        fi
+# The activation above already rendered the HTTP site (with the ACME webroot) through the tested
+# path of warehouse-deploy, which restores the previous configuration if "nginx -t" fails (G-07).
+echo "--> Configuring TLS for domain ${DOMAIN}..."
+if [[ ! -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
+    if [[ "$ADMIN_EMAIL" != *"@example.com" ]]; then
+        echo "--> Requesting Let's Encrypt TLS certificate via webroot..."
+        certbot certonly --webroot -w /var/www/html -d "$DOMAIN" --email "$ADMIN_EMAIL" \
+            --agree-tos --non-interactive --deploy-hook "systemctl reload nginx"
+    else
+        echo "--> [WARNING] AdminEmail is a placeholder (${ADMIN_EMAIL}); skipping automated Let's Encrypt registration."
     fi
-
-    # Stage 3: Full HTTPS if certificate obtained
-    if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" && -f "${BASE_DIR}/current/scripts/deploy/templates/nginx-https.conf" ]]; then
-        SUPPORT_REJECT=0
-        if nginx -V 2>&1 | grep -q "nginx version: "; then
-            if nginx -V 2>&1 | grep -oE 'nginx/[0-9]+\.[0-9]+' | head -n 1 | awk -F'[/.]' '{ if ($2 > 1 || ($2 == 1 && $3 >= 19)) exit 0; else exit 1; }'; then
-                SUPPORT_REJECT=1
-            fi
-        fi
-
-        REJECT_FILE="/tmp/wh_reject_$$.conf"
-        if [ "$SUPPORT_REJECT" -eq 1 ]; then
-            cat <<'EOF' > "$REJECT_FILE"
-server {
-    listen 443 ssl default_server;
-    listen [::]:443 ssl default_server;
-    server_name _;
-    server_tokens off;
-    ssl_reject_handshake on;
-    return 444;
-}
-EOF
-            sed -e "s/__DOMAIN__/${DOMAIN}/g" \
-                -e "/__SSL_REJECT_HANDSHAKE_SERVER__/{r $REJECT_FILE" -e 'd}' \
-                "${BASE_DIR}/current/scripts/deploy/templates/nginx-https.conf" > /etc/nginx/sites-available/warehouse
-            rm -f "$REJECT_FILE"
-        else
-            sed -e "s/__DOMAIN__/${DOMAIN}/g" \
-                -e '/__SSL_REJECT_HANDSHAKE_SERVER__/d' \
-                "${BASE_DIR}/current/scripts/deploy/templates/nginx-https.conf" > /etc/nginx/sites-available/warehouse
-        fi
-        nginx -t
-        systemctl reload nginx
-        echo "--> HTTPS operational with Let's Encrypt TLS certificate!"
-    fi
+fi
+if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
+    /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$DOMAIN"
+    echo "--> HTTPS operational with Let's Encrypt TLS certificate!"
 fi
 
 # 12. Security Hardening & Firewall (UFW & Fail2ban) (F-15)

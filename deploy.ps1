@@ -563,16 +563,16 @@ function Send-RemoteFile($Config, [string]$LocalPath, [string]$StageDir, [string
     return $localHash
 }
 
-function Receive-RemoteFile($Config, [string]$RemotePath, [string]$LocalPartPath) {
+function Receive-RemoteFile($Config, [string]$RelativePath, [string]$LocalPartPath) {
+    # $RelativePath is relative to shared/backups (e.g. db/backup_x.dump); the gateway validates every segment (G-03).
     if (Test-Path -LiteralPath $LocalPartPath) {
         Write-Warn "Removing stale partial download: $LocalPartPath"
         Remove-Item -LiteralPath $LocalPartPath -Force
     }
-    $targetName = Split-Path -Leaf $RemotePath
-    $r = Invoke-RemoteRootScript -Config $Config -Gateway 'read-backup' -ArgumentList @($targetName) -StdoutFile $LocalPartPath
+    $r = Invoke-RemoteRootScript -Config $Config -Gateway 'read-backup' -ArgumentList @($RelativePath) -StdoutFile $LocalPartPath
     if ($r.ExitCode -ne 0) {
         if (Test-Path -LiteralPath $LocalPartPath) { Remove-Item -LiteralPath $LocalPartPath -Force }
-        throw "Download of $RemotePath failed (exit $($r.ExitCode))."
+        throw "Download of $RemoteBackupDir/$RelativePath failed (exit $($r.ExitCode))."
     }
 }
 
@@ -608,9 +608,10 @@ function Get-LocalPathFor([string]$Root, [string]$RelativePath) {
     return $full
 }
 
-function Read-RecordedHash([string]$CompanionPath) {
+function Read-RecordedHash([string]$CompanionPath, [string]$CompanionName = $CompanionPath) {
+    # The format follows the companion's real name; the file read may be its .part download.
     $text = [System.IO.File]::ReadAllText($CompanionPath)
-    if ($CompanionPath.EndsWith('.meta.json')) {
+    if ($CompanionName.EndsWith('.meta.json')) {
         try { $meta = $text | ConvertFrom-Json } catch { return $null }
         $value = ([string]$meta.checksum).ToLowerInvariant()
         if ($value -match '^[0-9a-f]{64}$') { return $value }
@@ -634,8 +635,8 @@ function Receive-VerifiedBackup {
     if ($CompanionRelativePath) {
         $companionLocal = Get-LocalPathFor $LocalBackupRoot $CompanionRelativePath
         $companionPart = "$companionLocal.part"
-        Receive-RemoteFile $Config "$RemoteBackupDir/$CompanionRelativePath" $companionPart
-        $recorded = Read-RecordedHash $companionPart
+        Receive-RemoteFile $Config $CompanionRelativePath $companionPart
+        $recorded = Read-RecordedHash $companionPart $CompanionRelativePath
         if (-not $recorded) {
             Remove-Item -LiteralPath $companionPart -Force
             throw "Companion $CompanionRelativePath records no readable sha256 (empty or incomplete); $RelativePath was not pulled."
@@ -656,7 +657,7 @@ function Receive-VerifiedBackup {
     } else {
         $part = "$local.part"
         Write-Info "Downloading $RelativePath ..."
-        Receive-RemoteFile $Config "$RemoteBackupDir/$RelativePath" $part
+        Receive-RemoteFile $Config $RelativePath $part
         $actual = Get-FileSha256 $part
         if ($actual -ne $ExpectedSha256) {
             Remove-Item -LiteralPath $part -Force
@@ -1173,9 +1174,23 @@ function Invoke-InstallKeyMode {
 function Invoke-SetupMode {
     Test-LocalTool 'git', 'tar', 'npm'
     $config = Connect-Server -ForSetup
-    $check = Invoke-RemoteRootScript -Config $config -Body "if [ -e $RemoteGoLiveFlag ]; then echo '[GO_LIVE_EXISTS]'; else echo '[NO_GO_LIVE]'; fi" -Capture -Quiet
-    if ($check.ExitCode -ne 0) { throw "Could not check the GO_LIVE flag (exit $($check.ExitCode))." }
-    if ($check.Output -contains '[GO_LIVE_EXISTS]') { throw 'Server is GO-LIVE; initial Setup is blocked to protect live data.' }
+    # G-04: once the first Setup has installed the root gateway, sudoers allows nothing else,
+    # so every later Setup must go through its check-go-live and setup subcommands.
+    $probe = Invoke-Ssh -Config $config -RemoteCommand 'if [ -x /usr/local/sbin/warehouse-root-gateway ]; then echo [GATEWAY_PRESENT]; else echo [NO_GATEWAY]; fi' -Capture -Quiet
+    if ($probe.ExitCode -ne 0 -or -not (($probe.Output -contains '[GATEWAY_PRESENT]') -xor ($probe.Output -contains '[NO_GATEWAY]'))) {
+        throw "Could not detect the root gateway (exit $($probe.ExitCode))."
+    }
+    $viaGateway = $probe.Output -contains '[GATEWAY_PRESENT]'
+    Write-Info $(if ($viaGateway) { 'Root gateway found: Setup runs through it (re-provisioning; database, .env and media are not touched).' } else { 'No root gateway yet: first Setup runs with full sudo.' })
+    if ($viaGateway) {
+        $check = Invoke-RemoteRootScript -Config $config -Gateway 'check-go-live' -Capture -Quiet
+    } else {
+        $check = Invoke-RemoteRootScript -Config $config -Body "if [ -e $RemoteGoLiveFlag ]; then echo '[GO_LIVE_EXISTS]'; else echo '[NO_GO_LIVE]'; fi" -Capture -Quiet
+    }
+    if ($check.ExitCode -ne 0 -or -not (($check.Output -contains '[GO_LIVE_EXISTS]') -xor ($check.Output -contains '[NO_GO_LIVE]'))) {
+        throw "Could not check the GO_LIVE flag (exit $($check.ExitCode))."
+    }
+    if ($check.Output -contains '[GO_LIVE_EXISTS]') { throw 'Server is GO-LIVE; Setup is blocked to protect live data.' }
 
     $sha = Get-DeployCommit
     $front = Build-IsolatedFrontend $sha
@@ -1192,7 +1207,11 @@ bash "$@"
 '@
         $setupArgs = @("$stage/remote-setup.sh", $config.Domain, $config.AdminEmail, $config.DbName, $config.DbUser,
             $config.AllowedHosts, [string]$config.SshPort, "$stage/bundle.tar.gz", $bundle.Sha256)
-        $r = Invoke-RemoteRootScript -Config $config -Body $body -ArgumentList $setupArgs
+        if ($viaGateway) {
+            $r = Invoke-RemoteRootScript -Config $config -Gateway 'setup' -ArgumentList $setupArgs
+        } else {
+            $r = Invoke-RemoteRootScript -Config $config -Body $body -ArgumentList $setupArgs
+        }
         if ($r.ExitCode -ne 0) {
             Write-Err "Remote setup failed with exit code $($r.ExitCode)."
             return $r.ExitCode
@@ -1485,7 +1504,7 @@ function Invoke-RollbackMode {
         Write-Warn 'Rollback cancelled.'
         return 0
     }
-    $r = Invoke-RemoteRootScript -Config $config -Gateway 'deploy-rollback'
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'deploy-rollback' -ArgumentList @('--domain', $config.Domain)
     if ($r.ExitCode -ne 0) { Write-Err "Rollback failed with exit code $($r.ExitCode)." } else { Write-Success 'Rollback completed.' }
     return $r.ExitCode
 }
@@ -1600,7 +1619,7 @@ function Invoke-LogsMode {
     Assert-Interactive 'Logs'
     $config = Connect-Server
     Write-Step 'Streaming service logs (Ctrl+C to exit)...'
-    return (Invoke-RemoteRootScript -Config $config -Gateway 'logs' -Tty).ExitCode
+    return (Invoke-RemoteRootScript -Config $config -Gateway 'logs' -ArgumentList @('200', '--follow') -Tty).ExitCode
 }
 
 function Invoke-RestartMode {

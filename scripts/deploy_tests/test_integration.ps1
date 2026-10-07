@@ -133,6 +133,11 @@ try {
     Assert-True ((Invoke-TestMode 'PullBackups' -NonInteractiveRun) -eq 0) 'PullBackups #1 exit 0'
     Assert-True ((Get-LocalNames 'db_nightly_*.dump').Count -eq 1) 'nightly dump pulled'
     Assert-True ((Get-LocalNames '.env.soft-*').Count -ge 2) '.env backup and its .sha256 pulled'
+    $appDump = Join-Path $LocalBackupRoot 'db\backup_20261001_120000.dump'
+    Assert-True ((Test-Path -LiteralPath $appDump) -and (Test-Path -LiteralPath "$appDump.meta.json") -and
+        (Get-FileSha256 $appDump) -eq (Read-RecordedHash "$appDump.meta.json")) 'in-app backup db/*.dump pulled with its .meta.json and verified (G-03)'
+    $perms = @(Invoke-Server 'stat -c "%U:%G:%a" /var/www/warehouse/shared/backups /var/www/warehouse/shared/backups/db; find /var/www/warehouse/shared/backups -mindepth 1 -maxdepth 1 ! -name db ! -user root | wc -l')
+    Assert-True ($perms[0] -eq 'root:warehouse:710' -and $perms[1] -eq 'warehouse:warehouse:700' -and $perms[2] -eq '0') "backups layout after backups: root:warehouse 0710, db warehouse 0700, every other entry root's ($($perms -join ' | '))"
     Assert-True ((Get-ChildItem -LiteralPath $LocalBackupRoot -Filter '*.part' -File).Count -eq 0) 'no .part file left'
     Test-MediaMirror 'PullBackups #1'
     Assert-True ((Get-StageCount) -eq 0) 'no remote staging directory left behind'

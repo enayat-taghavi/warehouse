@@ -23,44 +23,83 @@ SHARED_DIR="/var/www/warehouse/shared"
 BACKUPS_DIR="${SHARED_DIR}/backups"
 GO_LIVE_FLAG="${SHARED_DIR}/GO_LIVE"
 
+# A file handed in by the SSH user must be a regular file (no symlink) directly inside a
+# /tmp/wh-deploy.* stage directory, and both must belong to the calling user (G-06).
+assert_stage_file() {
+    local f="$1" dir owner="${SUDO_UID:-0}"
+    if ! [[ "$f" =~ ^/tmp/wh-deploy\.[A-Za-z0-9]{10}/[A-Za-z0-9._-]+$ ]]; then
+        echo "[ERROR] $SUBCMD: file must be directly inside a /tmp/wh-deploy.* stage directory." >&2
+        exit 2
+    fi
+    dir="${f%/*}"
+    if [[ ! -d "$dir" || -L "$dir" || ! -f "$f" || -L "$f" ]] \
+        || [[ "$(stat -c %u -- "$dir")" != "$owner" || "$(stat -c %u -- "$f")" != "$owner" ]]; then
+        echo "[ERROR] $SUBCMD: not a regular stage file owned by the calling user." >&2
+        exit 2
+    fi
+}
+
+# Reads or hashes files below backups/ by a validated relative path (G-03). Every segment must match
+# [A-Za-z0-9_.-]+ (no "." or ".."), and every directory and the file are opened with O_NOFOLLOW,
+# so a symlink planted by the application user in backups/db is never followed (no TOCTOU either).
+SAFE_READ_PY='
+import hashlib, os, re, stat, sys
+SEG = re.compile(r"^[A-Za-z0-9_.-]+$")
+def open_safe(base, rel):
+    parts = rel.split("/")
+    if not rel or len(rel) > 400 or any(p in (".", "..") or not SEG.match(p) for p in parts):
+        raise ValueError("invalid backup path")
+    fd = os.open(base, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        for p in parts[:-1]:
+            nfd = os.open(p, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+            os.close(fd)
+            fd = nfd
+        f = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
+    finally:
+        os.close(fd)
+    if not stat.S_ISREG(os.fstat(f).st_mode):
+        os.close(f)
+        raise ValueError("not a regular file")
+    return f
+mode, base, rels = sys.argv[1], sys.argv[2], sys.argv[3:]
+rc = 0
+for rel in rels:
+    try:
+        fd = open_safe(base, rel)
+    except (OSError, ValueError) as exc:
+        print("[ERROR] %s: %s" % (rel, exc), file=sys.stderr)
+        rc = 1
+        continue
+    with os.fdopen(fd, "rb") as fh:
+        if mode == "sha256":
+            h = hashlib.sha256()
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                h.update(chunk)
+            print("%s  %s" % (h.hexdigest(), rel), flush=True)
+        else:
+            out = sys.stdout.buffer
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                out.write(chunk)
+            out.flush()
+sys.exit(rc)
+'
+
 case "$SUBCMD" in
     sha256sum)
         if [ $# -eq 0 ]; then
-            echo "[ERROR] sha256sum requires at least one file path." >&2
+            echo "[ERROR] sha256sum requires at least one relative backup path." >&2
             exit 2
         fi
-        cd "$BACKUPS_DIR"
-        for arg in "$@"; do
-            case "$arg" in
-                */*|..*|'') echo "[ERROR] sha256sum: invalid path argument: $arg" >&2; exit 2 ;;
-            esac
-            if ! [[ "$arg" =~ ^[a-zA-Z0-9_.-]+$ ]]; then
-                echo "[ERROR] sha256sum: argument contains forbidden characters: $arg" >&2
-                exit 2
-            fi
-        done
-        exec sha256sum -- "$@"
+        exec python3 -c "$SAFE_READ_PY" sha256 "$BACKUPS_DIR" "$@"
         ;;
 
     read-backup)
         if [ $# -ne 1 ]; then
-            echo "[ERROR] read-backup requires exactly one filename." >&2
+            echo "[ERROR] read-backup requires exactly one relative backup path." >&2
             exit 2
         fi
-        TARGET="$1"
-        case "$TARGET" in
-            */*|..*|'') echo "[ERROR] read-backup: invalid filename: $TARGET" >&2; exit 2 ;;
-        esac
-        if ! [[ "$TARGET" =~ ^[a-zA-Z0-9_.-]+$ ]]; then
-            echo "[ERROR] read-backup: filename contains forbidden characters: $TARGET" >&2
-            exit 2
-        fi
-        f="${BACKUPS_DIR}/${TARGET}"
-        if [ ! -f "$f" ]; then
-            echo "[ERROR] read-backup: file not found: $TARGET" >&2
-            exit 1
-        fi
-        exec cat "$f"
+        exec python3 -c "$SAFE_READ_PY" read "$BACKUPS_DIR" "$1"
         ;;
 
     backup)
@@ -71,7 +110,10 @@ case "$SUBCMD" in
     list-backups)
         mkdir -p "$BACKUPS_DIR"
         cd "$BACKUPS_DIR"
-        exec find . -mindepth 1 \( -name 'media_daily_*' -o -name 'latest_media' \) -prune -o -type f ! -name '*.part' ! -name '*.tmp' -printf '%s\t%P\0'
+        # Only names that sha256sum/read-backup accept are listed (G-03); symlinks are never listed.
+        exec find . -mindepth 1 \( -name 'media_daily_*' -o -name 'latest_media' -o -name '.incoming*' \) -prune -o \
+            -type f ! -name '*.part' ! -name '*.tmp' -regextype posix-extended -regex '\./[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*' \
+            -printf '%s\t%P\0'
         ;;
 
     list-dumps)
@@ -96,32 +138,40 @@ case "$SUBCMD" in
         ;;
 
     tar-media)
-        if [ $# -lt 2 ]; then
+        if [ $# -ne 2 ]; then
             echo "[ERROR] tar-media requires snapshot_dir and list_file." >&2
             exit 2
         fi
         SNAPSHOT_DIR="$1"
         LIST_FILE="$2"
-        # Validate SNAPSHOT_DIR is within BACKUPS_DIR and exists
-        CANONICAL_SNAP=$(readlink -f "$SNAPSHOT_DIR" 2>/dev/null || true)
-        if [[ -z "$CANONICAL_SNAP" || ! -d "$CANONICAL_SNAP" || "$CANONICAL_SNAP" != "${BACKUPS_DIR}/media_daily_"* ]]; then
-            echo "[ERROR] tar-media: snapshot_dir must be a media_daily directory inside ${BACKUPS_DIR}" >&2
+        if ! [[ "$SNAPSHOT_DIR" =~ ^/var/www/warehouse/shared/backups/media_daily_[0-9]{8}_[0-9]{6}$ ]] \
+            || [[ ! -d "$SNAPSHOT_DIR" || -L "$SNAPSHOT_DIR" ]]; then
+            echo "[ERROR] tar-media: snapshot_dir must be a media_daily_<ts> directory inside ${BACKUPS_DIR}" >&2
             exit 2
         fi
-        if [ ! -f "$LIST_FILE" ]; then
-            echo "[ERROR] tar-media: invalid list_file." >&2
-            exit 2
-        fi
-        # Validate LIST_FILE entries do not contain path traversal
+        # The list must be the caller's own stage file, never an arbitrary root-readable file (G-06).
+        assert_stage_file "$LIST_FILE"
+        cd "$SNAPSHOT_DIR"
+        # No absolute path, no "..", and no symlink anywhere along an entry's path.
         while IFS= read -r -d '' entry || [ -n "$entry" ]; do
             case "$entry" in
-                /*|*../*|*/..|..)
+                /*|*../*|*/..|..|'')
                     echo "[ERROR] tar-media: list_file contains forbidden path: $entry" >&2
                     exit 2
                     ;;
             esac
+            rest="$entry"
+            acc=""
+            while [ -n "$rest" ]; do
+                seg="${rest%%/*}"
+                if [[ "$rest" == */* ]]; then rest="${rest#*/}"; else rest=""; fi
+                acc="${acc:+$acc/}$seg"
+                if [ -L "$acc" ]; then
+                    echo "[ERROR] tar-media: symlink in path: $entry" >&2
+                    exit 2
+                fi
+            done
         done < "$LIST_FILE"
-        cd "$CANONICAL_SNAP"
         exec tar --null --verbatim-files-from --no-recursion --format=pax -T "$LIST_FILE" -cf -
         ;;
 
@@ -144,14 +194,9 @@ case "$SUBCMD" in
             echo '[GO_LIVE_EXISTS]'
             exit 3
         fi
-        # Validate script is in /tmp
-        CANONICAL_SCRIPT=$(readlink -f "$SCRIPT_PATH" 2>/dev/null || true)
-        if [[ -z "$CANONICAL_SCRIPT" || ! -f "$CANONICAL_SCRIPT" || "$CANONICAL_SCRIPT" != "/tmp/"* ]]; then
-            echo "[ERROR] setup: script must be a valid file in /tmp: $SCRIPT_PATH" >&2
-            exit 2
-        fi
+        assert_stage_file "$SCRIPT_PATH"
         shift
-        exec bash "$CANONICAL_SCRIPT" "$@"
+        exec bash "$SCRIPT_PATH" "$@"
         ;;
 
     deploy-prepare)
@@ -316,8 +361,9 @@ case "$SUBCMD" in
             exit 1
         fi
 
-        PY_SCRIPT=$(mktemp /tmp/wh_secret_XXXXXX.py)
-        cat <<'PYEOF' > "$PY_SCRIPT"
+        # The program is passed with -c (no temporary file to leak when python fails, G-10);
+        # stdin still carries only the secret value.
+        read -r -d '' SET_SECRET_PY <<'PYEOF' || true
 import os, sys, time
 
 key = sys.argv[1]
@@ -395,24 +441,41 @@ finally:
 
 print("[OK_UPDATED]")
 PYEOF
-        python3 "$PY_SCRIPT" "$KEY_NAME" "$ENV_PATH"
-        rc=$?
-        rm -f "$PY_SCRIPT"
-        exit $rc
+        exec python3 -c "$SET_SECRET_PY" "$KEY_NAME" "$ENV_PATH"
         ;;
 
     create-admin)
+        # No pass-through arguments (G-10): --settings/--pythonpath would let the caller choose the code.
+        if [ $# -ne 0 ]; then
+            echo "[ERROR] create-admin takes no arguments; the details are asked interactively." >&2
+            exit 2
+        fi
         if [[ ! -x /var/www/warehouse/current/venv/bin/python || ! -f /var/www/warehouse/current/warehouse-backend/manage.py ]]; then
             echo "[ERROR] Active release manage.py or venv not found" >&2
             exit 1
         fi
-        exec runuser -u warehouse -- /var/www/warehouse/current/venv/bin/python /var/www/warehouse/current/warehouse-backend/manage.py createsuperuser "$@"
+        cd /var/www/warehouse/current/warehouse-backend
+        exec runuser -u warehouse -- env DJANGO_SETTINGS_MODULE=config.settings DJANGO_ENV=production \
+            /var/www/warehouse/current/venv/bin/python manage.py createsuperuser
         ;;
 
     logs)
-        LINES="${1:-100}"
-        if ! [[ "$LINES" =~ ^[0-9]+$ ]]; then LINES=100; fi
-        exec journalctl -u warehouse-backend -u warehouse-gdrive-worker -u warehouse-export-worker -n "$LINES" --no-pager
+        # logs [LINES] [--follow] (G-09)
+        LINES=100
+        FOLLOW=()
+        for a in "$@"; do
+            case "$a" in
+                --follow) FOLLOW=(-f) ;;
+                *)
+                    if ! [[ "$a" =~ ^[0-9]{1,5}$ ]]; then
+                        echo "[ERROR] logs accepts only a line count and --follow." >&2
+                        exit 2
+                    fi
+                    LINES="$a"
+                    ;;
+            esac
+        done
+        exec journalctl -u warehouse-backend -u warehouse-gdrive-worker -u warehouse-export-worker -n "$LINES" --no-pager "${FOLLOW[@]}"
         ;;
 
     check-go-live-checklist)
