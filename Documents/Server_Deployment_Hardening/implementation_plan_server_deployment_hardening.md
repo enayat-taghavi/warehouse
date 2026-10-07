@@ -1551,3 +1551,39 @@
     2. با ۳.۸ گیگ RAM و بدون swap، یک swap کوچک (مثلاً ۲ گیگ) پیشنهاد می‌شود.
     3. `PasswordAuthentication no` (۳.۸) هنوز دستی است و فقط در چک‌لیست GoLive سنجیده می‌شود.
   - **وضعیت:** هیچ فایلی روی سرور تغییر نکرده است، جز `~/.ssh/authorized_keys` که با `-InstallKey` تغییر کرد.
+- **۱۶ مهر ۱۴۰۵ (2026-10-08) — نخستین Setup روی `soft` (Claude؛ با بلهٔ کاربر؛ با هشدار context متوقف شد):**
+  - **تصمیم‌های کاربر:**
+    - `PasswordAuthentication` فعلاً باز بماند؛ چک‌لیست GoLive دوباره آن را می‌پرسد.
+    - Setup روی `soft` اجرا شود.
+    - گواهی HTTPS از راه **DNS-01 با Cloudflare** گرفته شود.
+  - **`deploy.ps1 -Setup -NonInteractive` از commit `48f20f2`** (`scratch/logs/soft_setup_1.log`): همه‌چیز تا گام ۱۰ انجام شد.
+    - انجام‌شده: بسته‌ها، PostgreSQL 16 با ICU `fa-IR` (ترتیب فارسی تأیید شد)، `.env` و رمزهای ساخته‌شده روی خود سرور، sudoers محدود به دروازه، و release `20261008_011348_48f20f259833` (prepare، activate و migrate).
+    - همهٔ سرویس‌ها فعال‌اند و heartbeat هر دو worker تازه است (`scratch/logs/soft_status_1.log`).
+  - **شکست در گام ۱۱ (TLS):** certbot از روش webroot (HTTP-01) خطای `Timeout during connect (likely firewall problem)` داد.
+    - سرور از بیرون ایران اصلاً در دسترس نیست. از این ماشین با VPN هم `http://soft.farsalish.ir/` پاسخی نداد، در حالی که ufw هنوز روشن نشده بود.
+    - چون `set -e` است، **گام ۱۲ (ufw و fail2ban) اجرا نشد.** اکنون فقط 22 و 80 بیرونی‌اند؛ PostgreSQL، Redis و daphne روی 127.0.0.1 هستند.
+  - **اقدام کاربر:** ساخت توکن Cloudflare با قالب «Edit zone DNS» و فقط برای zone `farsalish.ir` (راهنما در گفتگو داده شد). توکن هرگز در گفتگو نوشته نمی‌شود.
+  - **طراحی گام بعد (DNS-01):**
+    1. **`scripts/remote-setup.sh`:**
+       - `python3-certbot-dns-cloudflare` نصب شود.
+       - اگر `/etc/letsencrypt/cloudflare.ini` وجود داشت، `certbot certonly --dns-cloudflare --dns-cloudflare-credentials … --dns-cloudflare-propagation-seconds 30` اجرا شود؛ وگرنه webroot.
+       - **شکست TLS دیگر Setup را متوقف نکند:** نشانهٔ `[TLS_PENDING]` چاپ شود و گام ۱۲ (ufw و fail2ban) حتماً اجرا شود.
+    2. **دروازه:**
+       - `set-dns-token`: توکن را از stdin می‌خواند، `[A-Za-z0-9_-]{30,100}` را می‌سنجد و `/etc/letsencrypt/cloudflare.ini` را با مالک root و حالت 0600 اتمیک می‌نویسد. **در `.env` نه**، چون کاربر برنامه آن را می‌خواند.
+       - `issue-cert <email>`: ایمیل اعتبارسنجی می‌شود و DOMAIN از `shared/DOMAIN` خوانده می‌شود. certbot با dns-cloudflare و `--deploy-hook "systemctl reload nginx"` اجرا می‌شود و سپس `warehouse-deploy --refresh-nginx --domain`.
+       - تمدید خودکار با `certbot.timer` و همان renewal conf انجام می‌شود.
+    3. **`deploy.ps1`:**
+       - `-SetSecret CLOUDFLARE_DNS_API_TOKEN` به `set-dns-token` برود. ورود با `Read-Host -MaskInput` در تبی است که کاربر خودش در آن تایپ می‌کند.
+       - حالت تازهٔ `-IssueCert`.
+       - Setup خروجی را `-Capture` کند و در حالت `[TLS_PENDING]` راه بعدی را بگوید.
+    4. **آزمون‌ها:**
+       - certbot جعلی در e2e: با `/run/fake-certbot-http01-fail` روش webroot شکست بخورد، dns-cloudflare با بررسی مالک و حالت `cloudflare.ini` گواهی بدهد.
+       - سناریو: Setup با TLS در انتظار → ufw و fail2ban اجرا شده → SetSecret → IssueCert → HTTPS برقرار.
+       - integration و e2e پشت سر هم با `-AptMirror http://ir.archive.ubuntu.com/ubuntu`.
+    5. reviewer (`data-loss-reviewer` لازم نیست مگر مسیر داده تغییر کند) و commit.
+    6. **اجرا روی `soft` (Setup دوباره از راه دروازه داده را حفظ می‌کند):**
+       - `-Setup`، که ufw و fail2ban و دروازهٔ تازه را نصب می‌کند و TLS در انتظار می‌ماند.
+       - سپس کاربر در تب Windows Terminal با `-SetSecret CLOUDFLARE_DNS_API_TOKEN` توکن را تایپ می‌کند.
+       - سپس `-IssueCert` و `-Status`.
+  - **وضعیت:** کد این بند تغییری نکرده است و فقط این گزارش افزوده شد. روی `soft` برنامه روی HTTP بالاست و هنوز گواهی، ufw و fail2ban ندارد.
+  - **مورد باز دیگر:** `/etc/sudoers.d/90-cloud-init-users` احتمالاً هنوز sudo آزاد به `cloud-admin` می‌دهد. پیش از GoLive سنجیده و با تصمیم کاربر بسته شود.
