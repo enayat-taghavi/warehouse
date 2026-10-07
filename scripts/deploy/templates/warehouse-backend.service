@@ -2,6 +2,8 @@
 Description=Warehouse Daphne ASGI Backend Service
 After=network.target postgresql.service redis-server.service
 Wants=postgresql.service redis-server.service
+# Set by a restore whose release does not match the schema; no start, restart or reboot runs it then.
+ConditionPathExists=!/var/www/warehouse/shared/SERVICES_HELD
 
 [Service]
 Type=simple

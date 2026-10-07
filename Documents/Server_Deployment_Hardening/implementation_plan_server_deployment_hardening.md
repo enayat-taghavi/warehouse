@@ -1453,3 +1453,69 @@
   - **اقدام بعدی:**
     - شکاف ۴ بازبین (سخت‌سازی مسیر restore در دروازه) در یک نشست جدا رفع شود.
     - سپس، با بله/خیر کاربر، نصب کلید (`deploy.ps1 -InstallKey`) و کشف سرور (فاز ۲) روی `soft.farsalish.ir`.
+- **۱۵ مهر ۱۴۰۵ (2026-10-07) — شکاف ۴ بازبین، بخش اول: کد و آزمون‌ها نوشته شد (Claude؛ با هشدار context متوقف شد):**
+  - **وضعیت:** کد کامل است ولی هنوز commit نشده. شش فایل در درخت کاری `main` تغییر کرده‌اند (`git status`). آزمون‌های اجرایی و بازبین هنوز اجرا نشده‌اند.
+  - **`warehouse-deploy.sh`:**
+    - `MIGRATION_CHECK_PY` آرگومان اختیاری `strict` گرفت. در این حالت migrationهای اعمال‌نشدهٔ release هم رد می‌شوند و با `[PENDING_MIGRATIONS]` گزارش می‌شوند. رفتار بدون `strict` (activate و rollback) تغییری نکرده است.
+    - حلقهٔ liveness در `rollback` به تابع مشترک `wait_backend_live` منتقل شد. رفتار rollback تغییری نکرده است.
+    - حالت تازهٔ `--start-services` (با همان قفل `/run/warehouse-deploy.lock`):
+      - روی `current` بررسی `strict` انجام می‌دهد.
+      - اگر release با schema نخواند، سرویس‌ها خاموش می‌مانند، `MAINTENANCE` گذاشته می‌شود، `[SERVICES_HELD]` چاپ می‌شود و خروج ۶ است.
+      - اگر بخواند، سرویس‌ها روشن می‌شوند، liveness و `is-active` سنجیده می‌شود، پرچم کهنهٔ `MAINTENANCE` پاک می‌شود و `[STARTED_OK]` چاپ می‌شود. اگر پاسخی نیاید، خروج ۵ است.
+  - **دروازه:**
+    - تابع `open_verified_dump`: dump را یک بار روی fd 9 باز می‌کند، symlink را رد می‌کند و **تطابق** sha256 را می‌سنجد. `pg_restore` از همان fd می‌خواند، پس حذف یا جایگزینی نام در این فاصله اثری ندارد. `restore-check` هم از همین تابع استفاده می‌کند.
+    - `restore-exec`:
+      - در تمام مدت `pg_restore` قفل استقرار را نگه می‌دارد. اگر قفل گرفته باشد، با خروج ۳ و پیش از دست زدن به DB رد می‌شود.
+      - پس از بازیابی `[DB_RESTORED]` چاپ می‌کند، سپس قفل را رها می‌کند و `warehouse-deploy --start-services` را صدا می‌زند.
+    - `restore-start` فقط `exec warehouse-deploy --start-services` است.
+  - **`deploy.ps1 -Restore`:**
+    - اگر `[DB_RESTORED]` بیاید ولی `[RESTORE_OK]` نیاید، صریح می‌گوید که DB بازیابی شده و سرویس‌ها روشن نشده‌اند. در حالت `[SERVICES_HELD]` راه بعدی را هم می‌گوید: `-Update`، یا `-Restore` یک بکاپ سازگار.
+    - مسیر شکست بکاپ `pre_restore` حالا خروجی `restore-start` را می‌گیرد و حالت held را جدا گزارش می‌کند.
+  - **آزمون‌ها (نوشته شده، اجرا نشده):**
+    - `server_fixture.sh`: warehouse-deploy جعلی حالت `--start-services` را دارد. اگر فایل `/run/fake-deploy-hold` باشد، رفتار held را شبیه‌سازی می‌کند.
+    - `test_integration.ps1`: سناریوی 8d اضافه شد (DB بازیابی می‌شود، خروج ۶، سرویس‌ها خاموش، `MAINTENANCE`، بکاپ `pre_restore` دوم دریافت می‌شود).
+    - `test_server_e2e.ps1`، بخش I:
+      - I1: dump قدیمی‌تر بدون `0036` روی release دارای `0036` → خروج ۶ و `PENDING`.
+      - I2: Update همان commit، `0036` را روی دادهٔ بازیابی‌شده اعمال می‌کند.
+      - I3: migration ناشناختهٔ `0099` → `FORWARD` و held، سپس start موفق.
+      - I4: رد dump دست‌خورده، dump symlink و قفل گرفته‌شده (DB دست نمی‌خورد).
+      - I5: Restore سازگار → سرویس‌ها روشن و پرچم کهنه پاک می‌شود.
+  - **بررسی‌های انجام‌شده:** `bash -n` روی سه اسکریپت پاس شد. parse پاورشل روی `deploy.ps1` و دو آزمون بدون خطا بود.
+  - **مورد باز (بیرون از شکاف ۴؛ عمداً تغییر داده نشد):** `--rollback` هنوز فقط بررسی forward دارد. پس از بازیابی dump قدیمی‌تر، rollback به releaseی که migration اعمال‌نشده دارد پذیرفته می‌شود. پیشنهاد: `check_migration_compatibility "$PREV_RELEASE" strict`، با تصمیم کاربر.
+  - **اقدام بعدی (دقیق):**
+    1. `pwsh -File scripts/deploy_tests/test_integration.ps1 -Sha 97f7546161d9358ba6188777f848d63bc0a8ecf0 > scratch/logs/test_integration_gap4.log 2>&1`
+    2. `pwsh -File scripts/deploy_tests/test_server_e2e.ps1 -BuildSha 97f7546161d9358ba6188777f848d63bc0a8ecf0 > scratch/logs/test_server_e2e_gap4.log 2>&1`؛ باید `failures=0` باشد. ایرادها رفع و دوباره اجرا شوند.
+    3. guardian 53، PSScriptAnalyzer روی `deploy.ps1` و `python scripts/test_guard_hooks.py`.
+    4. `data-loss-reviewer` یک بار روی diff این شکاف؛ یافته‌های تأییدشده رفع شوند.
+    5. commit، و یک بند پایانی در این گزارش (نتیجهٔ آزمون‌ها و بازبین).
+- **۱۶ مهر ۱۴۰۵ (2026-10-08) — شکاف ۴ بازبین، بخش دوم: پایان (Claude):**
+  - **تصمیم کاربر (۱۵ مهر):** بررسی دقیق (`strict`) به `--rollback` هم اضافه شد. پس پس از بازیابی dump قدیمی‌تر، rollback به releaseی که migration اعمال‌نشده دارد رد می‌شود. مورد باز بخش اول با این تصمیم بسته شد.
+  - **یافته‌های `data-loss-reviewer` (هیچ مسیر از دست رفتن داده پیدا نشد؛ هر چهار یافته تأیید و رفع شدند):**
+    1. **متوسط:** نشانهٔ `[SERVICES_HELD]` با متن دنبالش در یک خط چاپ می‌شد، پس `-contains` در `deploy.ps1` و آزمون‌ها هرگز آن را نمی‌دید. حالا در خطی جدا چاپ می‌شود.
+    2. **متوسط:** حالت held پایدار نبود؛ با `-Restart` یا راه‌اندازی دوبارهٔ سرور، سرویس‌ها روی schema ناجور بالا می‌آمدند.
+       - حالا پرچم ماندگار `shared/SERVICES_HELD` گذاشته می‌شود و هر سه unit دارای `ConditionPathExists=!/var/www/warehouse/shared/SERVICES_HELD` هستند.
+       - دروازهٔ `restart` در حالت held با خروج ۶ رد می‌شود. `status` هم این پرچم را نشان می‌دهد.
+       - پرچم فقط در سه حالت برداشته می‌شود: `--start-services` پس از بررسی `strict`، `--rollback` پس از بررسی `strict`، و activation درست پس از switch (پس از migrate).
+       - `abort_before_switch` در حالت held سرویس‌های release قبلی را روشن نمی‌کند و `MAINTENANCE` را نگه می‌دارد.
+    3. **پایین:** فاصلهٔ میان رها کردن قفل و گرفتن دوباره‌اش بسته شد. `restore-exec` قفل fd 200 را با `WAREHOUSE_LOCK_INHERITED=1` به `warehouse-deploy` تحویل می‌دهد و آن فقط وقتی `/proc/self/fd/200` همان فایل قفل باشد می‌پذیرد.
+    4. **پایین:** اگر بازیابی پیش از دست زدن به DB رد شود (یا `pg_restore` rollback شود)، `deploy.ps1` حالا با `restore-start` سرویس‌ها را دوباره روشن می‌کند (تابع `Start-ServicesAfterRestoreAbort`).
+  - **ایراد تازه در آزمون سرتاسری (از پیش در کد بود؛ رفع شد):** `cat dump | pg_restore` زیر `pipefail` خروج 141 می‌داد.
+    - `pg_restore` پیش از پایان فایل خواندن را تمام می‌کند و `cat` سیگنال SIGPIPE می‌گیرد.
+    - نتیجه: بازیابیِ commitشده به‌دروغ «شکست‌خورده و rollback‌شده» گزارش می‌شد و `deploy.ps1` می‌گفت DB تغییری نکرده است.
+    - آزمون یکپارچگی این را نمی‌دید، چون dumpهایش کوچک‌اند.
+    - حالا `pg_restore` مستقیم از `< /proc/self/fd/9` می‌خواند و فقط خروج خود آن ملاک است.
+  - **گزینهٔ آزمونی `-AptMirror`:** در `test_integration.ps1` و `test_server_e2e.ps1` اضافه شد و فقط در کانتینر آزمون اثر دارد.
+    - علت: `archive.ubuntu.com` و `security.ubuntu.com` از این سیستم (حتی با VPN) در دسترس نبودند.
+    - اجرا با `http://ir.archive.ubuntu.com/ubuntu` انجام شد. کد ارسالی به سرور تغییری نکرد.
+  - **آزمون‌ها (پشت سر هم؛ اجرای هم‌زمان به قفل محلی `scratch/deploy/deploy.lock` برمی‌خورد):**
+    - `test_integration.ps1 -Sha 97f7546… -AptMirror …`: **۷۳ پاس، `failures=0`** (`scratch/logs/test_integration_gap4.log`).
+    - `test_server_e2e.ps1 -BuildSha 97f7546… -AptMirror …`: **۱۲۱ پاس، `failures=0`** (`scratch/logs/test_server_e2e_gap4b.log`).
+      - بخش I شامل این موارد است: held با `PENDING` و `FORWARD`، رد `restart` و start هنگام boot در حالت held، Update پس از held، رد rollback ناجور، رد dump دست‌خورده، dump symlink و قفل گرفته‌شده، و Restore سازگار با پاک شدن پرچم کهنه.
+      - اجرای قبلی (`test_server_e2e_gap4.log`) ایراد SIGPIPE را نشان داده بود.
+    - guardian 53: ✅. PSScriptAnalyzer روی `deploy.ps1`: فقط ۷ مورد Information قدیمی. `bash -n` روی همهٔ اسکریپت‌های سرور: ✅. `scripts/test_guard_hooks.py`: `FAILURES: 0`.
+  - **همراه این commit (جدا از شکاف ۴، به درخواست کاربر):** آستانهٔ اول هشدار context در `.claude/hooks/guard.py` از ۲۰۰ هزار به ۳۵۰ هزار رسید، همراه با آزمون‌ها و `CLAUDE.md`.
+  - **مورد باز (پایین؛ از دست رفتن داده ندارد):** `pg_restore --clean --if-exists` فقط اشیای داخل dump را حذف می‌کند.
+    - پس از بازیابی dump قدیمی‌تر روی schema تازه‌تر، جدول‌های migrationهای بعدی سر جایشان می‌مانند. ممکن است `-Update` بعدی با «relation already exists» شکست بخورد (اتمیک است و rollback می‌شود).
+    - راه کامل این است: بازیابی در یک DB تازه و جابه‌جایی نام‌ها، با نگه داشتن DB قبلی.
+  - **وضعیت:** شکاف ۴ کامل شد و commit شد. روی سرور `soft` هنوز هیچ فرمانی اجرا نشده است.
+  - **اقدام بعدی:** با بله/خیر کاربر، نصب کلید (`deploy.ps1 -InstallKey`) و کشف سرور (فاز ۲) روی `soft.farsalish.ir`.

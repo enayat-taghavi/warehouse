@@ -9,9 +9,13 @@
 # frontend build of -BuildSha (from test_bundle.ps1), so only the backend and the scripts come from the working tree.
 param(
     [Parameter(Mandatory)][string]$BuildSha,   # commit with a completed build in scratch/deploy
+    [string]$AptMirror,                        # e.g. http://ir.archive.ubuntu.com/ubuntu
     [switch]$KeepContainer
 )
 $ErrorActionPreference = 'Stop'
+# Optional apt mirror for the test container only (when archive/security.ubuntu.com are unreachable).
+if ($AptMirror -and $AptMirror -cnotmatch '^http://[A-Za-z0-9.-]+(/[A-Za-z0-9._-]+)*/?$') { throw "Invalid -AptMirror: $AptMirror" }
+$AptMirrorScript = if ($AptMirror) { "sed -i -E 's#https?://(archive|security)\.ubuntu\.com/ubuntu/?#$AptMirror#' /etc/apt/sources.list.d/ubuntu.sources`n" } else { '' }
 . (Join-Path $PSScriptRoot '..\..\deploy.ps1')
 
 $TestRoot = Join-Path $ScriptRoot 'scratch\deploy_tests'
@@ -154,6 +158,20 @@ function Invoke-GatewayAsDeploy([string]$Arguments) {
         Err = @($r.Output | Where-Object { $_.StartsWith('ERR:') } | ForEach-Object { $_.Substring(4) })
     }
 }
+function Get-RestoreMenuIndex([string]$Name) {
+    # Position of a dump in the Restore menu (same listing and order: newest first by the timestamp in the name).
+    $list = @(Invoke-Server 'cd /var/www/warehouse/shared/backups; for f in *.dump; do if [ -f "$f.sha256" ]; then echo "$f"; fi; done' |
+            Where-Object { Get-BackupTimestamp $_ } | Sort-Object -Property @{ Expression = { Get-BackupTimestamp $_ } } -Descending)
+    $i = [array]::IndexOf($list, $Name)
+    if ($i -lt 0) { throw "$Name is not in the Restore menu." }
+    return [string]($i + 1)
+}
+function Get-Applied0036 {
+    return [int](@(Invoke-Server "runuser -u postgres -- psql -XAtq -d warehouse_db -c `"SELECT count(*) FROM django_migrations WHERE app = 'accounts' AND name = '0036_e2e_forward_only'`"")[0])
+}
+function Get-InactiveServiceCount {
+    return @(Invoke-Server 'for s in warehouse-backend warehouse-gdrive-worker warehouse-export-worker; do systemctl is-active "$s" || true; done' | Where-Object { $_ -eq 'inactive' }).Count
+}
 
 # --- container bootstrap (root): a fresh Ubuntu server plus the two fakes ----------------------------
 $bootstrap = @'
@@ -209,8 +227,18 @@ start_from_unit() {
     echo $! > "$D/$u.pid"
     cd / || true
 }
+# ConditionPathExists[=!]PATH of an installed unit, as systemd checks it: a failed condition skips the start.
+condition_ok() {
+    local f="/etc/systemd/system/$1.service" p
+    [[ -f "$f" ]] || return 0
+    while IFS= read -r p; do
+        if [[ "$p" == '!'* ]]; then [[ ! -e "${p#!}" ]] || return 1; else [[ -e "$p" ]] || return 1; fi
+    done < <(sed -n 's/^ConditionPathExists=//p' "$f")
+    return 0
+}
 start_one() {
     active "$1" && return 0
+    condition_ok "$1" || return 0
     case "$1" in
         postgresql) pg_ctlcluster "$(pg_ver)" main start ;;
         redis-server) redis-server --daemonize yes --bind 127.0.0.1 --port 6379 >/dev/null ;;
@@ -325,7 +353,7 @@ try {
     # --- container -----------------------------------------------------------------------------
     $run = Invoke-Process -FilePath $DockerExe -ArgumentList @('run', '-d', '--init', '--name', $container, 'ubuntu:24.04', 'sleep', 'infinity') -Capture -Quiet
     if ($run.ExitCode -ne 0) { throw 'docker run failed.' }
-    $bs = Invoke-Server $bootstrap
+    $bs = Invoke-Server ($AptMirrorScript + $bootstrap)
     if (-not ($bs -contains '[BOOTSTRAP_READY]')) { throw 'Container bootstrap did not finish.' }
     Write-Host '[INFO] fresh server ready' -ForegroundColor Cyan
 
@@ -508,7 +536,105 @@ rm -rf -- "`$s"
     Assert-True ($layout[0] -eq 'root:warehouse:710' -and $layout[1] -eq 'warehouse:warehouse:700' -and $layout[2] -eq '0' -and $layout[3] -eq 'NO_X') "backups layout intact after the attacks ($($layout -join ' | '))"
     Assert-True ((Invoke-TestMode 'PullBackups' -NonInteractiveRun) -eq 0) 'PullBackups still exit 0 with the planted links present'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $LocalBackupRoot 'db\evil.dump')) -and -not (Test-Path -LiteralPath (Join-Path $LocalBackupRoot 'media\shadow_link'))) '... and pulled none of them'
-    Assert-Serving (Get-ServerState) $shaMig 'end of test'
+    Assert-Serving (Get-ServerState) $shaMig 'after the attacks'
+
+    # === I. Restore: the services start only on a release that matches the restored schema ===========
+    $rMig = (Get-ServerState).CURRENT
+    $dumpInfo = @(Invoke-Server @'
+cd /var/www/warehouse/shared/backups
+for f in db_*.dump; do
+    [ -f "$f.sha256" ] || continue
+    rows=$(pg_restore -a -t django_migrations -f - "$f" 2>/dev/null || true)
+    if grep -q 0036_e2e_forward_only <<<"$rows"; then echo "WITH $f"; else echo "WITHOUT $f"; fi
+done
+'@)
+    $older = @($dumpInfo | Where-Object { $_ -like 'WITHOUT db_pre_update_*' } | ForEach-Object { $_.Substring(8) } | Sort-Object) | Select-Object -Last 1
+    $newer = @($dumpInfo | Where-Object { $_ -like 'WITH db_nightly_*' } | ForEach-Object { $_.Substring(5) } | Sort-Object) | Select-Object -Last 1
+    Assert-True ($older -and $newer) "a pre-update dump without 0036 ($older) and a nightly with it ($newer) are on the server"
+
+    # I1. an older dump onto the release with 0036: the database is restored, the services stay stopped
+    $script:ReadHostQueue.Enqueue((Get-RestoreMenuIndex $older))
+    $script:ReadHostQueue.Enqueue('RESTORE')
+    $code = Invoke-TestMode 'Restore'
+    Assert-True ($code -eq 6) "Restore of an older dump onto $rMig exits 6 ($code)"
+    $sI1 = Get-ServerState
+    Assert-True ((Get-Applied0036) -eq 0 -and (Get-InactiveServiceCount) -eq 3 -and $sI1.MAINTENANCE -eq 'yes' -and -not $sI1.DAPHNE_CWD) '... database restored without 0036, services held stopped, MAINTENANCE set'
+    $preRestore = @(Get-ChildItem -LiteralPath $LocalBackupRoot -Filter 'db_pre_restore_*.dump' -File)
+    Assert-True ($preRestore.Count -eq 1 -and (Test-LocalDumpVerified $preRestore[0])) '... its pre_restore backup was pulled and verified'
+    $kept = @(Invoke-Server "pg_restore -a -t django_migrations -f - /var/www/warehouse/shared/backups/$($preRestore[0].Name) | grep -c 0036_e2e_forward_only || true")[0]
+    Assert-True ($kept -eq '1') '... and keeps the state before the restore (0036 applied)'
+    $g = Invoke-GatewayAsDeploy 'restore-start'
+    Assert-True ($g.ExitCode -eq 6 -and ($g.Out -contains '[SERVICES_HELD]') -and @($g.Err | Where-Object { $_ -like '*PENDING_MIGRATIONS*accounts.0036_e2e_forward_only*' }).Count -ge 1) "restore-start refuses too: 0036 is unapplied (exit $($g.ExitCode))"
+    Assert-True ((Get-InactiveServiceCount) -eq 3) '... and the services stay stopped'
+    # The hold survives an operator restart and a reboot (systemd starts enabled units; ConditionPathExists skips them).
+    $g = Invoke-GatewayAsDeploy 'restart'
+    Assert-True ($g.ExitCode -eq 6 -and ($g.Out -contains '[SERVICES_HELD]')) "gateway restart refused while held (exit $($g.ExitCode))"
+    $boot = @(Invoke-Server 'systemctl start warehouse-backend warehouse-gdrive-worker warehouse-export-worker; test -e /var/www/warehouse/shared/SERVICES_HELD && echo HELD')
+    Assert-True (($boot -contains 'HELD') -and (Get-InactiveServiceCount) -eq 3) '... and a start at boot leaves the held units stopped'
+
+    # I2. an Update brings the release in line: migrate applies 0036 to the restored data, MAINTENANCE cleared
+    $script:DeploySha = $shaMig
+    Assert-True ((Invoke-TestMode 'Update') -eq 0) 'Update after the held restore exit 0'
+    $sI2 = Get-ServerState
+    Assert-Serving $sI2 $shaMig 'Update after the held restore'
+    Assert-True ((Get-Applied0036) -eq 1 -and $sI2.CURRENT -ne $rMig) "... 0036 applied to the restored data by a new release ($($sI2.CURRENT))"
+
+    # I3. Rollback to a release with an unapplied migration is refused (strict), before any change
+    $g = Invoke-GatewayAsDeploy 'restore-stop'
+    Assert-True ($g.ExitCode -eq 0 -and ($g.Out -contains '[SERVICES_STOPPED]')) "restore-stop exit 0 ($($g.ExitCode))"
+    [void](Invoke-Server "runuser -u postgres -- psql -XAtq -d warehouse_db -c `"DELETE FROM django_migrations WHERE app = 'accounts' AND name = '0036_e2e_forward_only'`"")
+    $g = Invoke-GatewayAsDeploy "deploy-rollback --domain $Domain"
+    $sI3 = Get-ServerState
+    Assert-True ($g.ExitCode -ne 0 -and @($g.Out + $g.Err | Where-Object { $_ -like '*PENDING_MIGRATIONS*accounts.0036_e2e_forward_only*' }).Count -ge 1) "Rollback to $rMig with 0036 unapplied refused (exit $($g.ExitCode))"
+    Assert-True ($sI3.CURRENT -eq $sI2.CURRENT -and $sI3.PREVIOUS -eq $rMig -and (Get-InactiveServiceCount) -eq 3) '... current, the records and the stopped services unchanged'
+    [void](Invoke-Server "runuser -u postgres -- psql -XAtq -d warehouse_db -c `"INSERT INTO django_migrations (app, name, applied) VALUES ('accounts', '0036_e2e_forward_only', now())`"")
+
+    # I3b. an applied migration the release does not know: held; started once it is gone
+    [void](Invoke-Server "runuser -u postgres -- psql -XAtq -d warehouse_db -c `"INSERT INTO django_migrations (app, name, applied) VALUES ('accounts', '0099_e2e_unknown', now())`"")
+    $g = Invoke-GatewayAsDeploy 'restore-start'
+    Assert-True ($g.ExitCode -eq 6 -and ($g.Out -contains '[SERVICES_HELD]') -and @($g.Err | Where-Object { $_ -like '*FORWARD_MIGRATIONS*accounts.0099_e2e_unknown*' }).Count -ge 1) "restore-start refuses an applied migration the release lacks (exit $($g.ExitCode))"
+    Assert-True ((Get-ServerState).MAINTENANCE -eq 'yes' -and (Get-InactiveServiceCount) -eq 3) '... services stopped, MAINTENANCE set'
+    [void](Invoke-Server "runuser -u postgres -- psql -XAtq -d warehouse_db -c `"DELETE FROM django_migrations WHERE name = '0099_e2e_unknown'`"")
+    $g = Invoke-GatewayAsDeploy 'restore-start'
+    Assert-True ($g.ExitCode -eq 0 -and ($g.Out -contains '[STARTED_OK]')) "restore-start starts a matching release (exit $($g.ExitCode))"
+    Assert-Serving (Get-ServerState) $shaMig 'after restore-start'
+
+    # I4. restore-exec refuses an altered dump, a symlinked dump and a running deployment, before any change
+    [void](Invoke-Server @"
+B=/var/www/warehouse/shared/backups
+cp -p "`$B/$newer" "`$B/db_manual_20260101_000000.dump"
+cp -p "`$B/$newer.sha256" "`$B/db_manual_20260101_000000.dump.sha256"
+printf 'X' >> "`$B/db_manual_20260101_000000.dump"
+ln -s "`$B/$newer" "`$B/db_manual_20260101_000001.dump"
+cp -p "`$B/$newer.sha256" "`$B/db_manual_20260101_000001.dump.sha256"
+runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VALUES ('after-nightly')"
+"@)
+    $g = Invoke-GatewayAsDeploy 'restore-stop'
+    Assert-True ($g.ExitCode -eq 0) "restore-stop exit 0 ($($g.ExitCode))"
+    $g = Invoke-GatewayAsDeploy 'restore-check db_manual_20260101_000000.dump'
+    Assert-True ($g.ExitCode -eq 2 -and @($g.Err | Where-Object { $_ -like '*sha256 mismatch*' }).Count -eq 1) "restore-check refuses the altered dump (exit $($g.ExitCode))"
+    $g = Invoke-GatewayAsDeploy 'restore-exec db_manual_20260101_000000.dump'
+    Assert-True ($g.ExitCode -eq 2 -and @($g.Err | Where-Object { $_ -like '*sha256 mismatch*' }).Count -eq 1 -and -not ($g.Out -contains '[DB_RESTORED]')) "restore-exec refuses the altered dump (exit $($g.ExitCode))"
+    $g = Invoke-GatewayAsDeploy 'restore-exec db_manual_20260101_000001.dump'
+    Assert-True ($g.ExitCode -eq 2 -and @($g.Err | Where-Object { $_ -like '*symlink*' }).Count -eq 1 -and -not ($g.Out -contains '[DB_RESTORED]')) "restore-exec refuses a symlinked dump (exit $($g.ExitCode))"
+    [void](Invoke-Server 'setsid flock -F /run/warehouse-deploy.lock sleep 120 </dev/null >/dev/null 2>&1 & echo $! > /root/lock.pid; sleep 1')
+    $g = Invoke-GatewayAsDeploy "restore-exec $newer"
+    [void](Invoke-Server 'kill "$(cat /root/lock.pid)" 2>/dev/null || true; rm -f /root/lock.pid')
+    Assert-True ($g.ExitCode -eq 3 -and @($g.Err | Where-Object { $_ -like '*deployment is in progress*' }).Count -eq 1 -and -not ($g.Out -contains '[DB_RESTORED]')) "restore-exec refuses while the deploy lock is held (exit $($g.ExitCode))"
+    $markerRows = @(Invoke-Server "runuser -u postgres -- psql -XAtq -d warehouse_db -c `"SELECT string_agg(v, ',' ORDER BY v) FROM e2e_marker`"")[0]
+    Assert-True ($markerRows -eq 'after-nightly,kept' -and (Get-Applied0036) -eq 1) "... the database was not touched ($markerRows)"
+    [void](Invoke-Server 'rm -f /var/www/warehouse/shared/backups/db_manual_20260101_00000[01].dump*')
+    $g = Invoke-GatewayAsDeploy 'restore-start'
+    Assert-True ($g.ExitCode -eq 0 -and ($g.Out -contains '[STARTED_OK]')) "restore-start exit 0 ($($g.ExitCode))"
+
+    # I5. a dump that matches the release: restored, services started, a stale MAINTENANCE flag cleared
+    [void](Invoke-Server 'touch /var/www/warehouse/shared/MAINTENANCE')
+    $script:ReadHostQueue.Enqueue((Get-RestoreMenuIndex $newer))
+    $script:ReadHostQueue.Enqueue('RESTORE')
+    Assert-True ((Invoke-TestMode 'Restore') -eq 0) "Restore of $newer (matches the release) exit 0"
+    Assert-Serving (Get-ServerState) $shaMig 'after the matching restore (end of test)'
+    $markerRows = @(Invoke-Server "runuser -u postgres -- psql -XAtq -d warehouse_db -c `"SELECT string_agg(v, ',' ORDER BY v) FROM e2e_marker`"")[0]
+    Assert-True ($markerRows -eq 'kept' -and (Get-Applied0036) -eq 1) "... the database holds the nightly's rows only ($markerRows)"
 } catch {
     Write-Host "[FAIL] test aborted: $($_.Exception.Message)`n$($_.ScriptStackTrace)" -ForegroundColor Red
     $script:failures++

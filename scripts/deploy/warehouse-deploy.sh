@@ -59,8 +59,16 @@ fi
 
 # The lock lives in root-only /run (not the world-writable /var/lock) so no other user can pre-create it.
 LOCK_FILE="/run/warehouse-deploy.lock"
-exec 200>"$LOCK_FILE"
-flock -n 200 || die "Another deployment is already in progress. Aborting."
+# The gateway's restore-exec hands over the lock it holds on fd 200, so no activation fits in between.
+if [[ "${WAREHOUSE_LOCK_INHERITED:-}" == 1 && "$(readlink /proc/self/fd/200 2>/dev/null || true)" == "$LOCK_FILE" ]]; then
+    flock -n 200 || die "Another deployment is already in progress. Aborting."
+else
+    exec 200>"$LOCK_FILE"
+    flock -n 200 || die "Another deployment is already in progress. Aborting."
+fi
+unset WAREHOUSE_LOCK_INHERITED
+# Set while the services are held after a restore (the units carry ConditionPathExists=! on it).
+HELD_FLAG="${SHARED_DIR}/SERVICES_HELD"
 
 # ------------------------------------------------------------------------------
 # Backup directory layout (G-01): the application user may only traverse backups/
@@ -151,8 +159,10 @@ run_manage() {
 
 # Fail-closed migration compatibility check (E-05, F-05, G-02): only exit 0 together with the
 # explicit [MIGRATIONS_OK] marker counts as compatible; any import, settings or database error is a refusal.
+# "strict" also refuses unapplied migrations of the release (a database restored from an older dump).
 MIGRATION_CHECK_PY='
 import sys
+strict = sys.argv[1:] == ["strict"]
 try:
     import django
     django.setup()
@@ -165,22 +175,28 @@ try:
     for migration in loader.disk_migrations.values():
         replaced.update(tuple(r) for r in (getattr(migration, "replaces", None) or []))
     forward = sorted(applied - disk - replaced)
+    # The graph holds either a squashed migration or the ones it replaces, as migrate would apply them.
+    pending = sorted(set(loader.graph.nodes) - applied) if strict else []
 except BaseException as exc:
     print("[MIGRATION_CHECK_ERROR] %s: %s" % (type(exc).__name__, exc))
     sys.exit(3)
 if forward:
     print("[FORWARD_MIGRATIONS] " + ", ".join("%s.%s" % m for m in forward))
+if pending:
+    print("[PENDING_MIGRATIONS] " + ", ".join("%s.%s" % m for m in pending))
+if forward or pending:
     sys.exit(2)
 print("[MIGRATIONS_OK]")
 '
+# check_migration_compatibility <release dir> [strict]
 check_migration_compatibility() {
-    local target="$1" out rc
+    local target="$1" mode="${2:-}" out rc
     if [[ ! -x "${target}/venv/bin/python" || ! -f "${target}/warehouse-backend/manage.py" ]]; then
         echo "[CRITICAL] Cannot verify migrations: ${target} has no venv or manage.py." >&2
         return 1
     fi
     if out=$(cd "${target}/warehouse-backend" && runuser -u warehouse -- env DJANGO_SETTINGS_MODULE=config.settings \
-            DJANGO_ENV=production "${target}/venv/bin/python" -c "$MIGRATION_CHECK_PY" 2>&1); then
+            DJANGO_ENV=production "${target}/venv/bin/python" -c "$MIGRATION_CHECK_PY" ${mode:+"$mode"} 2>&1); then
         rc=0
     else
         rc=$?
@@ -190,6 +206,23 @@ check_migration_compatibility() {
     fi
     printf '%s\n' "$out" | tail -n 20 >&2
     echo "[CRITICAL] Migration compatibility of ${target##*/} is NOT confirmed (exit ${rc})." >&2
+    return 1
+}
+
+# Liveness proof: daphne must answer within 60s (200 from the public API when the domain is known,
+# any HTTP answer otherwise).
+wait_backend_live() {
+    local domain="$1" code
+    for _ in $(seq 1 30); do
+        sleep 2
+        if [[ -n "$domain" ]]; then
+            code=$(curl -s -o /dev/null -w '%{http_code}' -H "Host: ${domain}" -H "X-Forwarded-Proto: https" http://127.0.0.1:8000/api/public/config/ || true)
+            if [[ "$code" == "200" ]]; then return 0; fi
+        else
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/public/config/ || true)
+            if [[ -n "$code" && "$code" != "000" ]]; then return 0; fi
+        fi
+    done
     return 1
 }
 
@@ -305,10 +338,13 @@ if [[ "${1:-}" == "--rollback" ]]; then
     [[ -d "$PREV_RELEASE" && ! -L "$PREV_RELEASE" ]] || die "Recorded previous release ${PREV_NAME} no longer exists."
     [[ "$PREV_RELEASE" != "$ACTIVE_RELEASE" ]] || die "Recorded previous release ${PREV_NAME} is already active."
 
-    echo "[INFO] Checking migration compatibility of ${PREV_NAME}..."
-    if ! check_migration_compatibility "$PREV_RELEASE"; then
-        die "Rollback refused to prevent a database schema mismatch. Restore the pre-update backup instead (deploy.ps1 -Restore)."
+    # Strict: after a restored older dump the previous release may have unapplied migrations too.
+    echo "[INFO] Checking that ${PREV_NAME} matches the database schema exactly..."
+    if ! check_migration_compatibility "$PREV_RELEASE" strict; then
+        die "Rollback refused to prevent a database schema mismatch. Restore a backup that matches ${PREV_NAME} (deploy.ps1 -Restore), or Update."
     fi
+    # The target matches the schema exactly, so a hold left by a restore no longer applies.
+    rm -f "$HELD_FLAG"
 
     if [[ -n "$DOMAIN" ]]; then
         if ! install_runtime_infra "$PREV_RELEASE" "$DOMAIN"; then
@@ -329,20 +365,7 @@ if [[ "${1:-}" == "--rollback" ]]; then
     systemctl restart "${SERVICES[@]}"
     systemctl reload nginx
 
-    # Liveness proof before reporting success: daphne must answer within 60s
-    # (200 from the public API when the domain is known, any HTTP answer otherwise).
-    BACKEND_UP=0
-    for _ in $(seq 1 30); do
-        sleep 2
-        if [[ -n "$DOMAIN" ]]; then
-            code=$(curl -s -o /dev/null -w '%{http_code}' -H "Host: ${DOMAIN}" -H "X-Forwarded-Proto: https" http://127.0.0.1:8000/api/public/config/ || true)
-            if [[ "$code" == "200" ]]; then BACKEND_UP=1; break; fi
-        else
-            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/public/config/ || true)
-            if [[ -n "$code" && "$code" != "000" ]]; then BACKEND_UP=1; break; fi
-        fi
-    done
-    if [[ "$BACKEND_UP" -ne 1 ]]; then
+    if ! wait_backend_live "$DOMAIN"; then
         die "${PREV_NAME} is active but the backend did not answer within 60s. Check: journalctl -u warehouse-backend"
     fi
     # The target passed the migration check and answers, so a flag left by a failed activation is stale.
@@ -364,6 +387,56 @@ if [[ "${1:-}" == "--refresh-nginx" ]]; then
     apply_nginx_config "$ACTIVE_RELEASE" "$3" || exit 1
     systemctl reload nginx
     echo "[SUCCESS] nginx configuration re-rendered for $3"
+    exit 0
+fi
+
+# ==============================================================================
+# Mode: --start-services  (gateway restore-start and restore-exec)
+# The services start only on a current release that matches the database schema exactly: none of its
+# migrations unapplied (a restored older dump) and no applied migration it does not know. Otherwise
+# they stay stopped and MAINTENANCE is set (exit 6), so no code runs on a schema it was not built for.
+# ==============================================================================
+if [[ "${1:-}" == "--start-services" ]]; then
+    [[ $# -eq 1 ]] || die "Usage: --start-services"
+    hold_services() {
+        touch "$HELD_FLAG" "${SHARED_DIR}/MAINTENANCE"
+        systemctl stop "${SERVICES[@]}" || true
+        echo "[CRITICAL] $1" >&2
+        echo "[CRITICAL] Services stay STOPPED (also across restarts and reboots) and MAINTENANCE is set (503)." >&2
+        echo '[SERVICES_HELD]'
+        exit 6
+    }
+    ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
+    if [[ -z "$ACTIVE_RELEASE" || "${ACTIVE_RELEASE%/*}" != "$RELEASES_DIR" || ! -d "$ACTIVE_RELEASE" ]]; then
+        hold_services "current does not point to a release in ${RELEASES_DIR}."
+    fi
+    REL_NAME="${ACTIVE_RELEASE##*/}"
+    echo "[INFO] Checking that ${REL_NAME} matches the database schema exactly..."
+    if ! check_migration_compatibility "$ACTIVE_RELEASE" strict; then
+        hold_services "${REL_NAME} does not match the database schema. deploy.ps1 -Update with a commit that has every applied migration brings it in line (unapplied ones are migrated); or -Restore a backup that matches ${REL_NAME}."
+    fi
+
+    rm -f "$HELD_FLAG"
+    systemctl start "${SERVICES[@]}" || echo "[WARNING] systemctl start reported an error; checking the units..." >&2
+    DOMAIN=""
+    if [[ -f "${SHARED_DIR}/DOMAIN" ]]; then DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN"); fi
+    [[ "$DOMAIN" =~ $DOMAIN_RE ]] || DOMAIN=""
+    if ! wait_backend_live "$DOMAIN"; then
+        echo "[ERROR] ${REL_NAME}: the backend did not answer within 60s. Check: journalctl -u warehouse-backend" >&2
+        exit 5
+    fi
+    for s in "${SERVICES[@]}"; do
+        if ! systemctl is-active --quiet "$s"; then
+            echo "[ERROR] $s is not active" >&2
+            exit 5
+        fi
+    done
+    # The release matches the schema and answers, so a flag left by a failed activation or hold is stale.
+    if [[ -e "${SHARED_DIR}/MAINTENANCE" ]]; then
+        rm -f "${SHARED_DIR}/MAINTENANCE"
+        echo "[INFO] A MAINTENANCE flag was cleared; ${REL_NAME} matches the database and answers."
+    fi
+    echo '[STARTED_OK]'
     exit 0
 fi
 
@@ -605,6 +678,11 @@ if [[ "${1:-}" == "--activate" ]]; then
         fi
         install_runtime_infra "$ACTIVE_RELEASE_PREV" "$DOMAIN" \
             || echo "[ERROR] Could not restore nginx/units of ${ACTIVE_RELEASE_PREV##*/}." >&2
+        if [[ -e "$HELD_FLAG" ]]; then
+            # The running release was held after a restore: it did not match the schema before either.
+            echo "[CRITICAL] SERVICES_HELD is set: the services of ${ACTIVE_RELEASE_PREV##*/} stay stopped and MAINTENANCE stays set." >&2
+            exit 1
+        fi
         # Before migrate the database is untouched, so the running release can always resume.
         if [[ "$MIGRATE_STARTED" -eq 0 ]] || check_migration_compatibility "$ACTIVE_RELEASE_PREV"; then
             if [[ "$MAINTENANCE" -eq 1 ]]; then
@@ -686,6 +764,12 @@ if [[ "${1:-}" == "--activate" ]]; then
     # targets the release that ran before this one (F-05).
     write_record ACTIVE_RELEASE "$REL_NAME"
     if [[ -n "$ACTIVE_RELEASE_PREV" ]]; then write_record PREVIOUS_RELEASE "$(basename "$ACTIVE_RELEASE_PREV")"; fi
+    # The new release knows every applied migration and has just migrated the rest, so it matches the
+    # schema: a hold left by a restore no longer applies.
+    if [[ -e "$HELD_FLAG" ]]; then
+        rm -f "$HELD_FLAG"
+        echo "[INFO] SERVICES_HELD cleared; ${REL_NAME} matches the migrated database."
+    fi
     # A failed restart must not skip the health check and its automatic rollback.
     systemctl restart "${SERVICES[@]}" || echo "[WARNING] systemctl restart reported an error; the health check decides." >&2
     systemctl reload nginx || echo "[WARNING] nginx reload reported an error; the health check decides." >&2
@@ -796,4 +880,4 @@ if [[ "${1:-}" == "--activate" ]]; then
     exit 0
 fi
 
-die "warehouse-deploy requires one of: --prepare, --activate, --rollback or --refresh-nginx"
+die "warehouse-deploy requires one of: --prepare, --activate, --rollback, --refresh-nginx or --start-services"

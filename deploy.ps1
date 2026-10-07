@@ -1359,6 +1359,17 @@ function Invoke-PruneBackupsMode {
     return 0
 }
 
+function Start-ServicesAfterRestoreAbort($Config) {
+    # The database was not changed; restore-start brings the services back (only on a matching release).
+    Write-Step 'Starting the services again...'
+    $st = Invoke-RemoteRootScript -Config $Config -Gateway 'restore-start' -Capture
+    if ($st.Output -contains '[SERVICES_HELD]') {
+        Write-Err 'The services stay stopped with MAINTENANCE set: the active release does not match the database schema (see above).'
+    } elseif ($st.ExitCode -ne 0 -or -not ($st.Output -contains '[STARTED_OK]')) {
+        Write-Err "Starting the services again failed (exit $($st.ExitCode)); see -Status."
+    }
+}
+
 function Invoke-RestoreMode {
     Assert-Interactive 'Restore'
     $config = Connect-Server
@@ -1394,19 +1405,30 @@ function Invoke-RestoreMode {
         [void](Invoke-RemoteBackup $config 'pre_restore')
     } catch {
         Write-Err "pre_restore backup failed: $($_.Exception.Message)"
-        $st = Invoke-RemoteRootScript -Config $config -Gateway 'restore-start'
-        if ($st.ExitCode -ne 0) { Write-Err "Starting the services again failed (exit $($st.ExitCode)); start them manually." }
+        Start-ServicesAfterRestoreAbort $config
         throw 'Restore aborted before touching the database (no verified pre_restore backup).'
     }
 
     Write-Step "Restoring $target..."
     $res = Invoke-RemoteRootScript -Config $config -Gateway 'restore-exec' -ArgumentList @($target) -Capture
-    if ($res.ExitCode -ne 0 -or -not ($res.Output -contains '[RESTORE_OK]')) {
-        Write-Err "Restore failed (exit $($res.ExitCode)). See the messages above."
-        return $(if ($res.ExitCode -ne 0) { $res.ExitCode } else { 1 })
+    if ($res.ExitCode -eq 0 -and ($res.Output -contains '[RESTORE_OK]')) {
+        Write-Success "Database restored from $target; services are running."
+        return 0
     }
-    Write-Success "Database restored from $target; services are running."
-    return 0
+    $code = if ($res.ExitCode -ne 0) { $res.ExitCode } else { 1 }
+    if (-not ($res.Output -contains '[DB_RESTORED]')) {
+        # Refused before pg_restore, or pg_restore rolled back: the database is unchanged.
+        Write-Err "Restore failed (exit $code); the database was not changed. See the messages above."
+        Start-ServicesAfterRestoreAbort $config
+        return $code
+    }
+    # The database is restored (the pre_restore backup holds the state before it); only the start failed.
+    Write-Err "The database WAS restored from $target, but the services were not started (exit $code)."
+    if ($res.Output -contains '[SERVICES_HELD]') {
+        Write-Err 'The active release does not match the restored schema: services stay stopped and MAINTENANCE is set (503).'
+        Write-Err 'Next: -Update with a commit that has every applied migration (unapplied ones are migrated), or -Restore a backup that matches the active release.'
+    }
+    return $code
 }
 
 function Get-DumpPgMajor([string]$Path) {

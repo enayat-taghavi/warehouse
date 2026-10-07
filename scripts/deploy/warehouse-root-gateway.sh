@@ -39,6 +39,32 @@ assert_stage_file() {
     fi
 }
 
+# Opens a top-level dump ONCE on fd 9 and checks it against its .sha256. Everything after reads the
+# same open file through /proc/self/fd/9, so the verified bytes are the restored bytes even if the
+# name is replaced or pruned meanwhile. Symlinks are refused.
+open_verified_dump() {
+    local name="$1" f expected actual
+    case "$name" in
+        */*|..*|'') echo "[ERROR] $SUBCMD: invalid filename $name" >&2; exit 2 ;;
+    esac
+    if ! [[ "$name" =~ ^[a-zA-Z0-9_.-]+\.dump$ ]]; then
+        echo "[ERROR] $SUBCMD: invalid dump extension $name" >&2
+        exit 2
+    fi
+    f="${BACKUPS_DIR}/${name}"
+    if [[ ! -f "$f" || -L "$f" || ! -f "$f.sha256" || -L "$f.sha256" ]]; then
+        echo "[ERROR] $SUBCMD: $name or its .sha256 is missing or a symlink" >&2
+        exit 2
+    fi
+    exec 9< "$f"
+    expected=$(awk '{print $1; exit}' "$f.sha256")
+    actual=$(sha256sum < /proc/self/fd/9 | awk '{print $1}')
+    if ! [[ "$expected" =~ ^[0-9a-f]{64}$ ]] || [[ "$expected" != "$actual" ]]; then
+        echo "[ERROR] $SUBCMD: sha256 mismatch for $name; nothing was changed" >&2
+        exit 2
+    fi
+}
+
 # Reads or hashes files below backups/ by a validated relative path (G-03). Every segment must match
 # [A-Za-z0-9_.-]+ (no "." or ".."), and every directory and the file are opened with O_NOFOLLOW,
 # so a symlink planted by the application user in backups/db is never followed (no TOCTOU either).
@@ -243,20 +269,8 @@ case "$SUBCMD" in
             echo "[ERROR] restore-check requires dump filename." >&2
             exit 2
         fi
-        TARGET="$1"
-        case "$TARGET" in
-            */*|..*|'') echo "[ERROR] restore-check: invalid filename $TARGET" >&2; exit 2 ;;
-        esac
-        if ! [[ "$TARGET" =~ ^[a-zA-Z0-9_.-]+\.dump$ ]]; then
-            echo "[ERROR] restore-check: invalid dump extension $TARGET" >&2
-            exit 2
-        fi
-        f="${BACKUPS_DIR}/${TARGET}"
-        [ -f "$f" ] && [ -f "$f.sha256" ] || { echo "[ERROR] $TARGET or its .sha256 is missing" >&2; exit 2; }
-        expected=$(awk '{print $1; exit}' "$f.sha256")
-        actual=$(sha256sum -- "$f" | awk '{print $1}')
-        [ "$expected" = "$actual" ] || { echo "[ERROR] sha256 mismatch for $TARGET" >&2; exit 2; }
-        runuser -u postgres -- pg_restore --list < "$f" > /dev/null
+        open_verified_dump "$1"
+        runuser -u postgres -- pg_restore --list < /proc/self/fd/9 > /dev/null
         echo '[RESTORE_SOURCE_OK]'
         exit 0
         ;;
@@ -276,17 +290,13 @@ case "$SUBCMD" in
         ;;
 
     restore-start)
-        SERVICES="warehouse-backend warehouse-gdrive-worker warehouse-export-worker"
-        systemctl start $SERVICES
-        sleep 3
-        for s in $SERVICES; do
-            if ! systemctl is-active --quiet "$s"; then
-                echo "[ERROR] $s did not start" >&2
-                exit 5
-            fi
-        done
-        echo '[STARTED_OK]'
-        exit 0
+        if [ $# -ne 0 ]; then
+            echo "[ERROR] restore-start takes no arguments." >&2
+            exit 2
+        fi
+        # Same rule as after a restore: the services start only on a release that matches the schema
+        # (exit 6 and MAINTENANCE otherwise); a stale MAINTENANCE flag is cleared once it answers.
+        exec /usr/local/sbin/warehouse-deploy --start-services
         ;;
 
     restore-exec)
@@ -295,15 +305,13 @@ case "$SUBCMD" in
             exit 2
         fi
         TARGET="$1"
-        case "$TARGET" in
-            */*|..*|'') echo "[ERROR] restore-exec: invalid filename $TARGET" >&2; exit 2 ;;
-        esac
-        if ! [[ "$TARGET" =~ ^[a-zA-Z0-9_.-]+\.dump$ ]]; then
-            echo "[ERROR] restore-exec: invalid dump extension $TARGET" >&2
-            exit 2
+        # The deploy lock keeps a (detached) activation and its migrate away from the restore.
+        exec 200>/run/warehouse-deploy.lock
+        if ! flock -n 200; then
+            echo "[ERROR] A deployment is in progress; restore aborted before touching the database." >&2
+            exit 3
         fi
-        f="${BACKUPS_DIR}/${TARGET}"
-        [ -f "$f" ] && [ -f "$f.sha256" ] || { echo "[ERROR] $TARGET or its .sha256 is missing" >&2; exit 2; }
+        open_verified_dump "$TARGET"
 
         # Resolve DB_NAME strictly from shared/.env (F-01, F-08)
         DB_NAME=$(sed -n 's/^DB_NAME=//p' "${SHARED_DIR}/.env" 2>/dev/null | tail -n 1 | tr -d '\r' || true)
@@ -321,25 +329,30 @@ case "$SUBCMD" in
             fi
         done
 
+        # A redirect, not "cat |": pg_restore may stop reading before EOF, and the SIGPIPE of cat (141)
+        # would report a committed restore as failed under pipefail.
         set +e
-        cat -- "$f" | runuser -u postgres -- pg_restore --clean --if-exists --single-transaction --exit-on-error -d "$DB_NAME"
+        runuser -u postgres -- pg_restore --clean --if-exists --single-transaction --exit-on-error -d "$DB_NAME" < /proc/self/fd/9
         rc=$?
         set -e
         if [ "$rc" -ne 0 ]; then
             echo "[RESTORE_FAILED] pg_restore exited with $rc; the transaction was rolled back." >&2
-            echo "[RESTORE_FAILED] Services remain STOPPED. Inspect the error, then start them with: systemctl start $SERVICES" >&2
+            echo "[RESTORE_FAILED] Services remain STOPPED. Inspect the error, then start them with: warehouse-root-gateway restore-start" >&2
             exit 4
         fi
+        echo '[DB_RESTORED]'
 
-        systemctl start $SERVICES
-        sleep 3
-        for s in $SERVICES; do
-            if ! systemctl is-active --quiet "$s"; then
-                echo "[ERROR] $s is not active after restore" >&2
-                exit 5
-            fi
-        done
-
+        # The lock on fd 200 is handed over (no gap for an activation). Exit 6 means the database is
+        # restored but the active release does not match it: the services stay held with MAINTENANCE set.
+        exec 9<&-
+        set +e
+        WAREHOUSE_LOCK_INHERITED=1 /usr/local/sbin/warehouse-deploy --start-services
+        rc=$?
+        set -e
+        if [ "$rc" -ne 0 ]; then
+            echo "[ERROR] The database was restored from $TARGET, but the services were not started (exit $rc)." >&2
+            exit "$rc"
+        fi
         echo '[RESTORE_OK]'
         exit 0
         ;;
@@ -517,6 +530,11 @@ PYEOF
         ;;
 
     restart)
+        if [ -e "${SHARED_DIR}/SERVICES_HELD" ]; then
+            echo "[ERROR] SERVICES_HELD is set: the active release does not match the restored database; nothing was restarted." >&2
+            echo '[SERVICES_HELD]'
+            exit 6
+        fi
         SERVICES="warehouse-backend warehouse-gdrive-worker warehouse-export-worker"
         systemctl restart $SERVICES
         nginx -t
@@ -605,6 +623,7 @@ PYEOF
         echo '=== [8] Flags ==='
         if [ -e "$S/GO_LIVE" ]; then echo 'GO_LIVE: set'; else echo 'GO_LIVE: not set'; fi
         if [ -e "$S/MAINTENANCE" ]; then echo '[WARNING] MAINTENANCE: set'; else echo 'MAINTENANCE: not set'; fi
+        if [ -e "$S/SERVICES_HELD" ]; then echo '[CRITICAL] SERVICES_HELD: set (the services stay stopped until the release matches the database)'; else echo 'SERVICES_HELD: not set'; fi
         exit 0
         ;;
 

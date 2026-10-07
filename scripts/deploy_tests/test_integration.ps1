@@ -6,9 +6,13 @@
 # never to the real backups/soft.
 param(
     [Parameter(Mandatory)][string]$Sha,   # commit with a completed build in scratch/deploy (from test_bundle.ps1)
+    [string]$AptMirror,                   # e.g. http://ir.archive.ubuntu.com/ubuntu
     [switch]$KeepContainer
 )
 $ErrorActionPreference = 'Stop'
+# Optional apt mirror for the test container only (when archive/security.ubuntu.com are unreachable).
+if ($AptMirror -and $AptMirror -cnotmatch '^http://[A-Za-z0-9.-]+(/[A-Za-z0-9._-]+)*/?$') { throw "Invalid -AptMirror: $AptMirror" }
+$AptMirrorScript = if ($AptMirror) { "sed -i -E 's#https?://(archive|security)\.ubuntu\.com/ubuntu/?#$AptMirror#' /etc/apt/sources.list.d/ubuntu.sources`n" } else { '' }
 . (Join-Path $PSScriptRoot '..\..\deploy.ps1')
 
 $TestRoot = Join-Path $ScriptRoot 'scratch\deploy_tests'
@@ -103,7 +107,7 @@ try {
         $cp = Invoke-Process -FilePath $DockerExe -ArgumentList @('cp', $f, "${container}:/fixture/") -Capture -Quiet
         if ($cp.ExitCode -ne 0) { throw "docker cp $f failed." }
     }
-    $fx = Invoke-Server 'sed -i "s/\r$//" /fixture/*.sh; bash /fixture/server_fixture.sh'
+    $fx = Invoke-Server ($AptMirrorScript + 'sed -i "s/\r$//" /fixture/*.sh; bash /fixture/server_fixture.sh')
     if (-not ($fx -contains '[FIXTURE_READY]')) { throw 'Server fixture did not finish.' }
     Write-Host '[INFO] server fixture ready' -ForegroundColor Cyan
 
@@ -255,6 +259,21 @@ su - postgres -c "psql -XAtq -d pre_restore_check -c 'SELECT count(*) FROM items
 su - postgres -c 'dropdb pre_restore_check'
 "@)
     Assert-True ($rows[0] -eq '5') "pre_restore backup holds every row written before the restore ($($rows[0]))"
+    # d: the active release does not match the restored schema -> database restored, services held
+    [void](Invoke-Server @'
+su - postgres -c "psql -q -d warehouse_db -c \"INSERT INTO items (name) VALUES ('f')\""
+touch /run/fake-deploy-hold; : > /run/fake-systemd/log; : > /run/fake-deploy.log
+'@)
+    Start-Sleep -Seconds 1
+    $serverList = Get-ServerDumpList
+    $script:ReadHostQueue.Enqueue([string]([array]::IndexOf($serverList, $newest) + 1))
+    $script:ReadHostQueue.Enqueue('RESTORE')
+    $code = Invoke-TestMode 'Restore'
+    Assert-True ($code -eq 6) "Restore onto a release that does not match the schema exits 6 ($code)"
+    $held = @(Invoke-Server 'cat /run/fake-deploy.log; for s in warehouse-backend warehouse-gdrive-worker warehouse-export-worker; do systemctl is-active "$s" || true; done; cd /var/www/warehouse/shared; for f in MAINTENANCE SERVICES_HELD; do if [ -e "$f" ]; then echo "$f"; fi; done')
+    Assert-True ((Get-ItemCount) -eq 3 -and ($held -contains 'start-services') -and @($held | Where-Object { $_ -eq 'inactive' }).Count -eq 3 -and ($held -contains 'MAINTENANCE') -and ($held -contains 'SERVICES_HELD')) "database restored, services held stopped, MAINTENANCE and SERVICES_HELD set ($($held -join ', '))"
+    Assert-True ((Get-LocalNames 'db_pre_restore_*.dump').Count -eq 2) 'its pre_restore backup was pulled too'
+    [void](Invoke-Server 'rm -f /run/fake-deploy-hold /var/www/warehouse/shared/MAINTENANCE /var/www/warehouse/shared/SERVICES_HELD; systemctl start warehouse-backend warehouse-gdrive-worker warehouse-export-worker; : > /run/fake-systemd/log')
     Assert-True ((Invoke-TestMode 'Restore' -NonInteractiveRun) -ne 0) 'Restore refused in -NonInteractive'
 
     # --- 9. SetSecret ---------------------------------------------------------------------------

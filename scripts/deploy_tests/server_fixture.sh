@@ -122,6 +122,21 @@ case "$mode" in
         echo "[ACTIVATED] $rel" ;;
     --rollback)
         echo "rollback" >> "$LOG" ;;
+    --start-services)
+        # /run/fake-deploy-hold plays a release that does not match the restored schema.
+        echo "start-services" >> "$LOG"
+        svc="warehouse-backend warehouse-gdrive-worker warehouse-export-worker"
+        if [ -e /run/fake-deploy-hold ]; then
+            touch /var/www/warehouse/shared/SERVICES_HELD /var/www/warehouse/shared/MAINTENANCE
+            systemctl stop $svc
+            echo "[CRITICAL] (fake) the active release does not match the database schema" >&2
+            echo '[SERVICES_HELD]'
+            exit 6
+        fi
+        rm -f /var/www/warehouse/shared/SERVICES_HELD
+        systemctl start $svc
+        rm -f /var/www/warehouse/shared/MAINTENANCE
+        echo '[STARTED_OK]' ;;
     *) echo "[ERROR] unknown mode $mode"; exit 2 ;;
 esac
 EOF

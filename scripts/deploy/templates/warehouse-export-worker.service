@@ -2,6 +2,8 @@
 Description=Warehouse Report Export Background Worker
 After=network.target warehouse-backend.service
 Wants=warehouse-backend.service
+# Set by a restore whose release does not match the schema; no start, restart or reboot runs it then.
+ConditionPathExists=!/var/www/warehouse/shared/SERVICES_HELD
 
 [Service]
 Type=simple
