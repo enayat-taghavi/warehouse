@@ -113,7 +113,7 @@ Plan: warehouse counting and accounting as two independently installable modules
 - Claude Code automation:
   - **Hooks** in `.claude/settings.json` run `.claude/hooks/guard.py`; Antigravity calls the same script from `.agents/hooks.json`.
     - The two tools take different output formats: Claude Code accepts only `hookSpecificOutput`, and at most one JSON per run.
-    - On every `PostToolUse` it also runs the context watchdog: one warning when context passes 200K tokens, then one per additional 100K (state in `.claude/tmp/context-watch/`).
+    - On every `PostToolUse` it also runs the context watchdog: one warning when context passes 350K tokens, then one per additional 100K (state in `.claude/tmp/context-watch/`).
     - Test: `python scripts/test_guard_hooks.py`.
   - **Subagents** in `.claude/agents/`: `data-loss-reviewer`, `tenant-scope-reviewer` and `ui-reviewer` (all `model: sonnet` to save tokens).
   - **Skills** in `.claude/skills/`: `safe-migration`, `systematic-debugging`, `verification-before-completion` and `design-system`.
