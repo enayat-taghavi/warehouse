@@ -444,7 +444,9 @@ function Invoke-Ssh {
     )
     $sshArgs = [System.Collections.Generic.List[string]]::new()
     $sshArgs.AddRange([string[]]@('-p', [string]$Config.SshPort,
-            '-o', 'StrictHostKeyChecking=yes', '-o', 'ConnectTimeout=15',
+            # UpdateHostKeys=no: OpenSSH would otherwise add the server's other host keys after login,
+            # and Assert-PinnedHostKey then (rightly) refuses every unpinned entry.
+            '-o', 'StrictHostKeyChecking=yes', '-o', 'UpdateHostKeys=no', '-o', 'ConnectTimeout=15',
             '-o', 'ServerAliveInterval=30', '-o', 'ServerAliveCountMax=4'))
     if ($NonInteractive) { $sshArgs.AddRange([string[]]@('-o', 'BatchMode=yes')) }
     $sshArgs.Add($(if ($Tty) { '-t' } else { '-T' }))

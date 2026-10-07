@@ -1519,3 +1519,35 @@
     - راه کامل این است: بازیابی در یک DB تازه و جابه‌جایی نام‌ها، با نگه داشتن DB قبلی.
   - **وضعیت:** شکاف ۴ کامل شد و commit شد. روی سرور `soft` هنوز هیچ فرمانی اجرا نشده است.
   - **اقدام بعدی:** با بله/خیر کاربر، نصب کلید (`deploy.ps1 -InstallKey`) و کشف سرور (فاز ۲) روی `soft.farsalish.ir`.
+- **۱۶ مهر ۱۴۰۵ (2026-10-08) — نصب کلید و فاز ۲ (کشف فقط‌خواندنی `soft`) (Claude؛ با بلهٔ کاربر):**
+  - **کلید میزبان عوض شده بود:** سرور حالا `SHA256:AJQXh29OmGXn+vPdfbou5pdlajDDPFXoIuDObHn9/X8` (ED25519) نشان می‌داد، نه کلید ثبت‌شدهٔ ۱۳ مهر.
+    - کاربر تأیید کرد که سیستم‌عامل دوباره نصب شده است.
+    - کلید تازه هم در `known_hosts` و هم در `HostKeyFingerprint` فایل `deploy_config.json` ثبت شد. فایل با اسکریپت و بدون خواندن محتوا ویرایش شد. نسخهٔ قبلی در `scratch/deploy_config.json.bak-20261008` است.
+  - **`-InstallKey`:** کاربر رمز را در یک تب Windows Terminal تایپ کرد و کلید نصب شد. ورود با کلید و `BatchMode` موفق بود.
+    - **ایراد پیدا و رفع شد:** OpenSSH پس از ورود، کلیدهای RSA و ECDSA سرور را خودکار به `known_hosts` افزود (`UpdateHostKeys`)، و `Assert-PinnedHostKey` به‌درستی رد کرد.
+    - حالا `Invoke-Ssh` گزینهٔ `-o UpdateHostKeys=no` دارد و `known_hosts` فقط همان کلید پین‌شده را دارد.
+  - **نتایج کشف (`scratch/logs/soft_discovery.log`):**
+    - **سیستم:** Ubuntu 24.04.5 LTS، کرنل 6.8، KVM. ۲ هستهٔ CPU و ۳.۸ گیگ RAM، **بدون swap**.
+    - **دیسک:** یک دیسک ۴۰ گیگ (`/` با ۳۶ گیگ آزاد)؛ دیسک جدایی برای بکاپ نیست.
+    - **زبان و زمان:** locale `C.UTF-8`، منطقهٔ زمانی UTC. `remote-setup.sh` آن را `Asia/Tehran` می‌کند.
+    - **کاربر و sudo:** `cloud-admin` (گروه admin)، `sudo -n` بدون رمز کار می‌کند.
+    - **Python:** 3.12.3 (با lock می‌خواند). `python3-venv` نصب نیست؛ `remote-setup.sh` نصبش می‌کند.
+    - **نسخه‌های قابل نصب:** PostgreSQL 16، nginx 1.24 (از `ssl_reject_handshake` پشتیبانی می‌کند)، redis 7.0.
+    - **پورت‌ها و شبکه:** فقط 22 و DNS محلی گوش می‌دهند. ufw غیرفعال است و iptables همه را می‌پذیرد.
+      - روی 80 و 443 چیزی گوش نمی‌دهد، ولی از بیرون اتصال TCP به آن‌ها برقرار می‌شود. پس احتمالاً تجهیزات میزبان (یا مسیر VPN) دست‌دهی TCP را جواب می‌دهد.
+      - علت پاسخ ندادن 80 و 443 همین نبودِ وب‌سرور است. رسیدن اعتبارسنجی HTTP-01 به nginx پس از Setup سنجیده شود.
+    - **sshd:** `passwordauthentication yes`، `permitrootlogin without-password`.
+    - **دسترسی خروجی:**
+      - در دسترس: PyPI، `nova.clouds.archive.ubuntu.com` (آینهٔ اصلی خود سرور)، `ir.archive.ubuntu.com`، `apt.postgresql.org`، Let's Encrypt، Google (OAuth/Drive)، API کلودفلر و GitHub.
+      - **مسدود:** `archive.ubuntu.com` و **`security.ubuntu.com`**. فهرست security ساعت 13:24 همان روز به‌روز شده بود، پس انسداد متناوب است.
+  - **تصمیم‌های ۲.۲ بر اساس نتایج:**
+    - **PostgreSQL:** 16 از مخزن خود Ubuntu؛ PGDG لازم نیست. ICU `fa-IR` روی 16 در آزمون سرتاسری تأیید شده است.
+    - **Python و بسته‌ها:** 3.12 و PyPI مستقیم با `--require-hashes`؛ wheelhouse لازم نیست.
+    - **Google:** پروکسی خروجی فعلاً لازم نیست.
+    - **TLS:** HTTP-01 پیش‌فرض است، اگر ورودی 80 از بیرون به nginx برسد. اگر نرسد، DNS-01 با API کلودفلر (که در دسترس است).
+    - **بکاپ:** روی همان دیسک ریشه می‌ماند، با هشدارهای فضای دیسک موجود.
+  - **موارد باز برای فاز ۶ (Setup):**
+    1. اگر `security.ubuntu.com` هنگام Setup مسدود باشد، `apt-get update` فقط هشدار می‌دهد و فهرست قبلی را به کار می‌برد. راه جایگزین: نشانی security به همان آینهٔ `nova.clouds` برده شود.
+    2. با ۳.۸ گیگ RAM و بدون swap، یک swap کوچک (مثلاً ۲ گیگ) پیشنهاد می‌شود.
+    3. `PasswordAuthentication no` (۳.۸) هنوز دستی است و فقط در چک‌لیست GoLive سنجیده می‌شود.
+  - **وضعیت:** هیچ فایلی روی سرور تغییر نکرده است، جز `~/.ssh/authorized_keys` که با `-InstallKey` تغییر کرد.
