@@ -1587,3 +1587,39 @@
        - سپس `-IssueCert` و `-Status`.
   - **وضعیت:** کد این بند تغییری نکرده است و فقط این گزارش افزوده شد. روی `soft` برنامه روی HTTP بالاست و هنوز گواهی، ufw و fail2ban ندارد.
   - **مورد باز دیگر:** `/etc/sudoers.d/90-cloud-init-users` احتمالاً هنوز sudo آزاد به `cloud-admin` می‌دهد. پیش از GoLive سنجیده و با تصمیم کاربر بسته شود.
+- **۱۶ مهر ۱۴۰۵ (2026-10-08) — DNS-01 پیاده شد؛ HTTPS روی `soft` برقرار است (Claude):**
+  - **کد** (commit `388f9f0`)، مطابق طراحی بند قبل:
+    - `remote-setup.sh`:
+      - افزونهٔ `python3-certbot-dns-cloudflare` نصب می‌شود.
+      - DNS-01 وقتی به کار می‌رود که `/etc/letsencrypt/cloudflare.ini` وجود داشته باشد.
+      - شکست TLS دیگر Setup را متوقف نمی‌کند؛ `[TLS_PENDING]` چاپ می‌شود و ufw و fail2ban همیشه روشن می‌شوند.
+    - دروازه:
+      - `set-dns-token`: توکن فقط از stdin خوانده می‌شود. با Cloudflare از راه یک فایل header با دسترسی root سنجیده می‌شود، پس توکن هیچ‌گاه روی خط فرمان نمی‌آید. سپس در فایل `cloudflare.ini` با مالک root و حالت 0600 ذخیره می‌شود.
+      - `issue-cert <email>`.
+    - `deploy.ps1`: کلید تازهٔ `-SetSecret CLOUDFLARE_DNS_API_TOKEN`، حالت تازهٔ `-IssueCert`، و هشدار Setup در حالت `[TLS_PENDING]`.
+  - **اصلاح یک برداشت نادرست:** قالب `nginx-http.conf` جز ACME همه‌چیز را به HTTPS می‌فرستد (301). پس بدون گواهی، سایت برای هیچ‌کس در دسترس نیست. متن `[TLS_PENDING]` و هشدار `deploy.ps1` بر همین پایه اصلاح شدند.
+  - **آزمون‌ها:**
+    - integration: ۷۳ پاس (`scratch/logs/test_integration_dns.log`).
+    - e2e: **۱۳۰ پاس، `failures=0`** (`scratch/logs/test_server_e2e_dns2.log`).
+      - شکست HTTP-01 مثل `soft` شبیه‌سازی شد، Setup تمام شد و fail2ban اجرا شد.
+      - توکن نادرست و توکنی که Cloudflare نمی‌پذیرد رد شدند.
+      - توکن درست با حالت 0600 ذخیره شد، در `.env` نیامد، و در هیچ argv دیده نشد (۰ از ۲ فراخوانی).
+      - `-IssueCert` با DNS-01 اجرا شد و HTTPS 200 داد.
+    - guardian 53 ✅. PSScriptAnalyzer فقط ۷ مورد Information قدیمی گزارش کرد.
+  - **اجرا روی `soft`:**
+    1. **Setup دوم از راه دروازه** (`scratch/logs/soft_setup_2.log`): release `20261008_015447_388f9f022669`. **ufw فعال شد**، fail2ban فعال شد و `[TLS_PENDING]` چاپ شد. Task شبانهٔ pull (`\Warehouse\WarehouseSoftPullBackups`، ساعت 04:00) روی این ماشین ثبت شد. SSH پس از روشن شدن ufw سالم است.
+    2. کاربر توکن Cloudflare را در یک تب Windows Terminal با `-SetSecret CLOUDFLARE_DNS_API_TOKEN` وارد کرد.
+    3. **`-IssueCert`** (`scratch/logs/soft_issuecert_1.log`): گواهی Let's Encrypt صادر شد (انقضا 2027-01-05). nginx دوباره ساخته شد.
+  - **راستی‌آزمایی روی سرور:**
+    - `https://soft.farsalish.ir/`، `/api/public/config/` و `/ngsw.json` همگی 200 دادند و زنجیرهٔ گواهی معتبر است (`ssl_verify_result=0`). HTTP با 301 به HTTPS می‌رود.
+    - `certbot.timer` فعال است. renewal conf شامل `authenticator = dns-cloudflare` و `renew_hook = systemctl reload nginx` است.
+    - `-Status`: همهٔ سرویس‌ها فعال‌اند، heartbeatها تازه‌اند و پرچمی گذاشته نشده است.
+  - **آنچه هنوز آزموده نشده:**
+    - باز شدن سایت از داخل ایران (از بیرون، حتی با VPN، مسدود است). کاربر باید با VPN خاموش `https://soft.farsalish.ir/` را باز کند.
+    - `certbot renew --dry-run`. دروازه زیرفرمانی برای آن ندارد؛ تمدید واقعی حدود ۶۰ روز دیگر است و `-Status` روزهای باقی‌مانده را نشان می‌دهد.
+  - **مورد باز تأییدشده:** `cloud-admin` هنوز sudo آزاد دارد (یک `sudo -n grep` فقط‌خواندنی کار کرد)، احتمالاً از `/etc/sudoers.d/90-cloud-init-users`. پیش از GoLive با تصمیم کاربر بسته شود. `PasswordAuthentication` هم به تصمیم کاربر باز مانده است.
+  - **اقدام بعدی:**
+    - آزمون کاربر از داخل ایران.
+    - `-CreateAdmin` (کاربر رمز را خودش تایپ می‌کند).
+    - `-PullBackups` و `-RestoreDrill`.
+    - سپس چک‌لیست `-GoLive`: بستن sudo آزاد و `PasswordAuthentication` با تصمیم کاربر.
