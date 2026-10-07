@@ -457,6 +457,80 @@ PYEOF
         exec python3 -c "$SET_SECRET_PY" "$KEY_NAME" "$ENV_PATH"
         ;;
 
+    set-dns-token)
+        # Cloudflare API token for DNS-01 certificates, read from stdin only. It goes to a root-only file,
+        # not shared/.env: the application never needs it.
+        if [ $# -ne 0 ]; then
+            echo "[ERROR] set-dns-token takes no arguments; the token is read from stdin." >&2
+            exit 2
+        fi
+        TOKEN=""
+        IFS= read -r TOKEN || true
+        TOKEN="${TOKEN%$'\r'}"
+        if ! [[ "$TOKEN" =~ ^[A-Za-z0-9_-]{30,100}$ ]]; then
+            echo "[ERROR] set-dns-token: the value does not look like a Cloudflare API token." >&2
+            exit 2
+        fi
+        CF_INI=/etc/letsencrypt/cloudflare.ini
+        mkdir -p /etc/letsencrypt
+        if [ -L "$CF_INI" ]; then
+            echo "[ERROR] set-dns-token: $CF_INI is a symlink; nothing was changed." >&2
+            exit 2
+        fi
+        # Verify with Cloudflare first; the header comes from a root-only file, never from the command line.
+        hdr=$(mktemp /etc/letsencrypt/.cf-hdr.XXXXXX)
+        printf 'Authorization: Bearer %s\n' "$TOKEN" > "$hdr"
+        set +e
+        verify=$(curl -sS -m 20 -H @"$hdr" https://api.cloudflare.com/client/v4/user/tokens/verify 2>&1)
+        crc=$?
+        set -e
+        rm -f -- "$hdr"
+        if [ "$crc" -ne 0 ]; then
+            echo "[WARNING] Cloudflare could not be reached to verify the token (curl exit $crc); it is stored unverified." >&2
+        elif ! grep -Eq '"status" *: *"active"' <<<"$verify"; then
+            echo "[ERROR] Cloudflare does not accept this token as active; nothing was changed." >&2
+            exit 3
+        else
+            echo '[TOKEN_ACTIVE]'
+        fi
+        tmp=$(mktemp /etc/letsencrypt/.cloudflare.ini.XXXXXX)
+        printf 'dns_cloudflare_api_token = %s\n' "$TOKEN" > "$tmp"
+        chown root:root "$tmp"
+        chmod 600 "$tmp"
+        mv -f -- "$tmp" "$CF_INI"
+        echo '[OK_UPDATED]'
+        exit 0
+        ;;
+
+    issue-cert)
+        # issue-cert <admin email>: Let's Encrypt certificate for shared/DOMAIN through DNS-01 (Cloudflare);
+        # certbot.timer renews it with the same plugin and reloads nginx.
+        if [ $# -ne 1 ] || ! [[ "$1" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
+            echo "[ERROR] issue-cert requires exactly one valid admin email." >&2
+            exit 2
+        fi
+        DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null || true)
+        if ! [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]; then
+            echo "[ERROR] issue-cert: shared/DOMAIN is missing or invalid." >&2
+            exit 2
+        fi
+        CF_INI=/etc/letsencrypt/cloudflare.ini
+        if [[ ! -f "$CF_INI" || -L "$CF_INI" ]]; then
+            echo "[ERROR] issue-cert: no Cloudflare token on the server; run deploy.ps1 -SetSecret CLOUDFLARE_DNS_API_TOKEN first." >&2
+            exit 2
+        fi
+        certbot certonly --dns-cloudflare --dns-cloudflare-credentials "$CF_INI" --dns-cloudflare-propagation-seconds 30 \
+            -d "$DOMAIN" --email "$1" --agree-tos --non-interactive --keep-until-expiring \
+            --deploy-hook "systemctl reload nginx"
+        if [ ! -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
+            echo "[ERROR] issue-cert: certbot finished but no certificate exists for $DOMAIN." >&2
+            exit 4
+        fi
+        /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$DOMAIN"
+        echo '[CERT_OK]'
+        exit 0
+        ;;
+
     create-admin)
         # No pass-through arguments (G-10): --settings/--pythonpath would let the caller choose the code.
         if [ $# -ne 0 ]; then

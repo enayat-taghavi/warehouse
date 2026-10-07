@@ -118,6 +118,7 @@ apt-get install -y --no-install-recommends \
     nginx \
     certbot \
     python3-certbot-nginx \
+    python3-certbot-dns-cloudflare \
     ufw \
     fail2ban \
     curl \
@@ -343,19 +344,31 @@ systemctl start warehouse-backend warehouse-gdrive-worker warehouse-export-worke
 # 11. Web Server (Nginx) & TLS Configuration
 # The activation above already rendered the HTTP site (with the ACME webroot) through the tested
 # path of warehouse-deploy, which restores the previous configuration if "nginx -t" fails (G-07).
+# DNS-01 through Cloudflare when the root-only token file exists (set by the gateway's set-dns-token),
+# HTTP-01 (webroot) otherwise. A failed request never stops the setup: the firewall below must still
+# be enabled, and the certificate can be requested later with deploy.ps1 -IssueCert.
 echo "--> Configuring TLS for domain ${DOMAIN}..."
+CF_INI=/etc/letsencrypt/cloudflare.ini
 if [[ ! -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
-    if [[ "$ADMIN_EMAIL" != *"@example.com" ]]; then
+    if [[ "$ADMIN_EMAIL" == *"@example.com" ]]; then
+        echo "--> [WARNING] AdminEmail is a placeholder (${ADMIN_EMAIL}); skipping automated Let's Encrypt registration."
+    elif [[ -f "$CF_INI" && ! -L "$CF_INI" ]]; then
+        echo "--> Requesting Let's Encrypt TLS certificate via DNS-01 (Cloudflare)..."
+        certbot certonly --dns-cloudflare --dns-cloudflare-credentials "$CF_INI" --dns-cloudflare-propagation-seconds 30 \
+            -d "$DOMAIN" --email "$ADMIN_EMAIL" --agree-tos --non-interactive --deploy-hook "systemctl reload nginx" \
+            || echo "--> [WARNING] The DNS-01 certificate request failed (see above)."
+    else
         echo "--> Requesting Let's Encrypt TLS certificate via webroot..."
         certbot certonly --webroot -w /var/www/html -d "$DOMAIN" --email "$ADMIN_EMAIL" \
-            --agree-tos --non-interactive --deploy-hook "systemctl reload nginx"
-    else
-        echo "--> [WARNING] AdminEmail is a placeholder (${ADMIN_EMAIL}); skipping automated Let's Encrypt registration."
+            --agree-tos --non-interactive --deploy-hook "systemctl reload nginx" \
+            || echo "--> [WARNING] The HTTP-01 certificate request failed (see above)."
     fi
 fi
 if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
     /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$DOMAIN"
     echo "--> HTTPS operational with Let's Encrypt TLS certificate!"
+else
+    echo "[TLS_PENDING] No certificate yet: the application runs, but nginx only redirects HTTP to HTTPS, so the site is not reachable until a certificate exists. Set the Cloudflare token (deploy.ps1 -SetSecret CLOUDFLARE_DNS_API_TOKEN), then run deploy.ps1 -IssueCert."
 fi
 
 # 12. Security Hardening & Firewall (UFW & Fail2ban) (F-15)

@@ -311,12 +311,29 @@ chmod 755 /usr/local/sbin/systemctl
 cat > /usr/local/sbin/certbot <<'EOF'
 #!/usr/bin/env bash
 # Fake certbot (e2e container only): a self-signed certificate where Let's Encrypt would put it.
+# /run/fake-certbot-http01-fail makes webroot (HTTP-01) fail like the unreachable soft server; DNS-01
+# (Cloudflare) needs a root-only credentials file holding the test token of /run/fake-cf-token.
 echo "certbot $*" >> /run/fake-certbot.log
 domain=""
+webroot=0
+creds=""
 while [[ $# -gt 0 ]]; do
-    case "$1" in -d) domain="$2"; shift 2 ;; *) shift ;; esac
+    case "$1" in
+        -d) domain="$2"; shift 2 ;;
+        --webroot) webroot=1; shift ;;
+        --dns-cloudflare-credentials) creds="$2"; shift 2 ;;
+        *) shift ;;
+    esac
 done
 [[ -n "$domain" ]] || { echo "fake certbot: no -d" >&2; exit 1; }
+if [[ "$webroot" -eq 1 && -e /run/fake-certbot-http01-fail ]]; then
+    echo "  Detail: Timeout during connect (likely firewall problem)" >&2
+    exit 1
+fi
+if [[ -n "$creds" ]]; then
+    [[ "$(stat -c '%U:%G:%a' "$creds" 2>/dev/null)" == root:root:600 ]] || { echo "fake certbot: $creds is not root-only" >&2; exit 1; }
+    grep -qx "dns_cloudflare_api_token = $(cat /run/fake-cf-token)" "$creds" || { echo "fake certbot: wrong token" >&2; exit 1; }
+fi
 d="/etc/letsencrypt/live/$domain"
 mkdir -p "$d"
 openssl req -x509 -newkey rsa:2048 -nodes -days 90 -subj "/CN=$domain" -addext "subjectAltName=DNS:$domain" \
@@ -324,6 +341,31 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 90 -subj "/CN=$domain" -addext "
 cp "$d/cert.pem" "$d/fullchain.pem"
 EOF
 chmod 755 /usr/local/sbin/certbot
+
+cat > /usr/local/bin/curl <<'EOF'
+#!/usr/bin/env bash
+# Fake curl (e2e container only): answers Cloudflare's token check from the -H @file header;
+# every other call goes to the real curl. argv is logged so the test can prove the token is never in it.
+for a in "$@"; do
+    if [[ "$a" == https://api.cloudflare.com/client/v4/user/tokens/verify ]]; then
+        printf '%s\n' "$*" >> /run/fake-curl-argv.log
+        hdr=""
+        prev=""
+        for b in "$@"; do
+            if [[ "$prev" == -H && "$b" == @* ]]; then hdr="${b#@}"; fi
+            prev="$b"
+        done
+        if [[ -n "$hdr" && -f "$hdr" ]] && grep -qx "Authorization: Bearer $(cat /run/fake-cf-token)" "$hdr"; then
+            echo '{"result":{"id":"e2e","status": "active"},"success":true,"errors":[],"messages":[]}'
+        else
+            echo '{"success":false,"errors":[{"code":1000,"message":"Invalid API Token"}]}'
+        fi
+        exit 0
+    fi
+done
+exec /usr/bin/curl "$@"
+EOF
+chmod 755 /usr/local/bin/curl
 # Ubuntu starts nginx right after installing it.
 systemctl start nginx
 echo '[BOOTSTRAP_READY]'
@@ -359,7 +401,27 @@ try {
 
     # === A. first Setup (full sudo) ================================================================
     $script:DeploySha = $sha1
-    Assert-True ((Invoke-TestMode 'Setup') -eq 0) 'Setup #1 exit 0'
+    # Like soft: Let's Encrypt cannot reach the server, so HTTP-01 fails; the setup must still finish.
+    $cfToken = 'e2eTestToken_0123456789abcdefghijklmnopqrstu'
+    [void](Invoke-Server "touch /run/fake-certbot-http01-fail; printf '%s' '$cfToken' > /run/fake-cf-token")
+    Assert-True ((Invoke-TestMode 'Setup') -eq 0) 'Setup #1 exit 0 although HTTP-01 fails'
+    $tls = @(Invoke-Server 'if [ -e /etc/letsencrypt/live/soft.example.test/fullchain.pem ]; then echo CERT; else echo NOCERT; fi; grep -c -- "--webroot" /run/fake-certbot.log || true; systemctl is-active fail2ban || true; curl -s -o /dev/null -w "%{http_code}" -H "Host: soft.example.test" http://127.0.0.1/ || true; echo; curl -s -o /dev/null -w "%{http_code}" -H "Host: soft.example.test" -H "X-Forwarded-Proto: https" http://127.0.0.1:8000/api/public/config/ || true')
+    Assert-True ($tls[0] -eq 'NOCERT' -and $tls[1] -eq '1' -and $tls[2] -eq 'active' -and $tls[3] -eq '301' -and $tls[4] -eq '200') "... no certificate, nginx only redirects to HTTPS, the application answers, and the firewall step (fail2ban) still ran ($($tls -join ', '))"
+    # DNS-01: the token goes to a root-only file through the gateway, then -IssueCert
+    $SetSecret = 'CLOUDFLARE_DNS_API_TOKEN'
+    $script:ReadHostQueue.Enqueue('short-token')
+    Assert-True ((Invoke-TestMode 'SetSecret') -ne 0) 'a malformed Cloudflare token is refused'
+    $script:ReadHostQueue.Enqueue('e2eWrongToken_0123456789abcdefghijklmnopqrs')
+    Assert-True ((Invoke-TestMode 'SetSecret') -ne 0) '... and a token Cloudflare does not accept'
+    Assert-True (@(Invoke-Server 'test -e /etc/letsencrypt/cloudflare.ini && echo PRESENT || echo ABSENT')[0] -eq 'ABSENT') '... neither was stored'
+    $script:ReadHostQueue.Enqueue($cfToken)
+    Assert-True ((Invoke-TestMode 'SetSecret') -eq 0) 'SetSecret CLOUDFLARE_DNS_API_TOKEN exit 0'
+    $SetSecret = $null
+    $cf = @(Invoke-Server "stat -c '%U:%G:%a' /etc/letsencrypt/cloudflare.ini; grep -c -- '$cfToken' /var/www/warehouse/shared/.env || true; { ls /etc/letsencrypt/.cf-hdr.* /etc/letsencrypt/.cloudflare.ini.* 2>/dev/null || true; } | wc -l; grep -c -- '$cfToken' /run/fake-curl-argv.log || true; wc -l < /run/fake-curl-argv.log")
+    Assert-True ($cf[0] -eq 'root:root:600' -and $cf[1] -eq '0' -and $cf[2] -eq '0') "token stored root-only (0600), not in shared/.env, no temporary file left ($($cf[0..2] -join ', '))"
+    Assert-True ($cf[3] -eq '0' -and $cf[4] -eq '2') "the token was verified with Cloudflare and never appeared on a command line ($($cf[3]) of $($cf[4]) calls)"
+    Assert-True ((Invoke-TestMode 'IssueCert') -eq 0) 'IssueCert exit 0'
+    Assert-True (@(Invoke-Server 'grep -c -- "--dns-cloudflare-credentials /etc/letsencrypt/cloudflare.ini" /run/fake-certbot.log || true')[0] -eq '1') '... certbot used DNS-01 with the root-only credentials'
     $sA = Get-ServerState
     Assert-Serving $sA $sha1 'Setup #1'
     $r1 = $sA.CURRENT

@@ -37,6 +37,7 @@ param(
     [switch]$RegisterPullTask,
     [switch]$Logs,
     [switch]$Restart,
+    [switch]$IssueCert,
     [switch]$Status,
     [Alias('Help')]
     [switch]$ShowHelp,
@@ -67,7 +68,7 @@ $RemoteGoLiveFlag = '/var/www/warehouse/shared/GO_LIVE'
 
 $PullTaskPath = '\Warehouse\'
 $PullTaskName = 'WarehouseSoftPullBackups'
-$SecretKeyAllowList = @('GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 'OUTBOUND_HTTP_PROXY')
+$SecretKeyAllowList = @('GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 'OUTBOUND_HTTP_PROXY', 'CLOUDFLARE_DNS_API_TOKEN')
 
 function Find-Application([string]$Name) {
     $cmd = Get-Command $Name -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -1210,9 +1211,9 @@ bash "$@"
         $setupArgs = @("$stage/remote-setup.sh", $config.Domain, $config.AdminEmail, $config.DbName, $config.DbUser,
             $config.AllowedHosts, [string]$config.SshPort, "$stage/bundle.tar.gz", $bundle.Sha256)
         if ($viaGateway) {
-            $r = Invoke-RemoteRootScript -Config $config -Gateway 'setup' -ArgumentList $setupArgs
+            $r = Invoke-RemoteRootScript -Config $config -Gateway 'setup' -ArgumentList $setupArgs -Capture
         } else {
-            $r = Invoke-RemoteRootScript -Config $config -Body $body -ArgumentList $setupArgs
+            $r = Invoke-RemoteRootScript -Config $config -Body $body -ArgumentList $setupArgs -Capture
         }
         if ($r.ExitCode -ne 0) {
             Write-Err "Remote setup failed with exit code $($r.ExitCode)."
@@ -1222,7 +1223,12 @@ bash "$@"
         if ($stage) { Remove-RemoteStage $config $stage }
         Remove-LocalBundle $bundle
     }
-    Write-Success "Setup completed: https://$($config.Domain)/"
+    if (@($r.Output | Where-Object { $_ -like '[[]TLS_PENDING[]]*' }).Count -gt 0) {
+        Write-Warn "Setup completed WITHOUT a certificate: the application runs, but $($config.Domain) is not reachable until one is issued (HTTP only redirects to HTTPS)."
+        Write-Warn 'Next: deploy.ps1 -SetSecret CLOUDFLARE_DNS_API_TOKEN, then deploy.ps1 -IssueCert.'
+    } else {
+        Write-Success "Setup completed: https://$($config.Domain)/"
+    }
     try {
         [void](Register-PullTask)
     } catch {
@@ -1632,6 +1638,13 @@ function Invoke-SetSecretMode([string]$KeyName) {
     $problem = Test-SecretValue $value
     if ($problem) { throw "Rejected: $problem." }
 
+    if ($KeyName -ceq 'CLOUDFLARE_DNS_API_TOKEN') {
+        # Root-only /etc/letsencrypt/cloudflare.ini (never shared/.env: the application does not need it).
+        $r = Invoke-RemoteRootScript -Config $config -Gateway 'set-dns-token' -StdinText $value -Capture
+        if ($r.ExitCode -ne 0 -or -not ($r.Output -contains '[OK_UPDATED]')) { throw "Storing the Cloudflare token failed (exit $($r.ExitCode))." }
+        Write-Success 'Cloudflare token stored root-only on the server. Next: deploy.ps1 -IssueCert.'
+        return 0
+    }
     $r = Invoke-RemoteRootScript -Config $config -Gateway 'set-secret' -ArgumentList @($KeyName) -StdinText $value -Capture
     if ($r.ExitCode -ne 0 -or -not ($r.Output -contains '[OK_UPDATED]')) { throw "Updating $KeyName failed (exit $($r.ExitCode))." }
     Write-Success "$KeyName updated in shared/.env (previous file kept as .env.bak.<timestamp>)."
@@ -1652,6 +1665,18 @@ function Invoke-RestartMode {
     $r = Invoke-RemoteRootScript -Config $config -Gateway 'restart'
     if ($r.ExitCode -ne 0) { Write-Err "Restart failed with exit code $($r.ExitCode)." } else { Write-Success 'Services restarted.' }
     return $r.ExitCode
+}
+
+function Invoke-IssueCertMode {
+    $config = Connect-Server
+    Write-Step "Requesting the Let's Encrypt certificate for $($config.Domain) through DNS-01 (Cloudflare)..."
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'issue-cert' -ArgumentList @($config.AdminEmail) -Capture
+    if ($r.ExitCode -ne 0 -or -not ($r.Output -contains '[CERT_OK]')) {
+        Write-Err "Issuing the certificate failed (exit $($r.ExitCode)). See the messages above."
+        return $(if ($r.ExitCode -ne 0) { $r.ExitCode } else { 1 })
+    }
+    Write-Success "HTTPS is active: https://$($config.Domain)/ (renewed automatically by certbot.timer)."
+    return 0
 }
 
 function Invoke-StatusMode {
@@ -1700,6 +1725,7 @@ $MenuItems = @(
     @('RegisterPullTask', 'Register the scheduled backup pull task'),
     @('Logs', 'Stream service logs'),
     @('Restart', 'Restart services and reload Nginx'),
+    @('IssueCert', "Issue the Let's Encrypt certificate (DNS-01, Cloudflare)"),
     @('Status', 'Server and off-server backup status')
 )
 
@@ -1742,10 +1768,12 @@ Modes (exactly one):
   -Rollback          Switch back to the previous release
   -GoLive            Run the go-live checklist, then set the GO_LIVE flag
   -CreateAdmin       Create a Django superuser over an interactive SSH session
-  -SetSecret <KEY>   Set GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET or OUTBOUND_HTTP_PROXY
+  -SetSecret <KEY>   Set GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET or OUTBOUND_HTTP_PROXY,
+                     or CLOUDFLARE_DNS_API_TOKEN (root-only file for DNS-01 certificates)
   -RegisterPullTask  Register the daily backup pull task (use -Force to re-register)
   -Logs              Stream the service journal
   -Restart           Restart application services and reload Nginx
+  -IssueCert         Issue the Let's Encrypt certificate through DNS-01 (needs the Cloudflare token)
   -Status            Server state, heartbeats, disk, certificate and off-server copies
   -Help              Show this help
 
@@ -1779,6 +1807,7 @@ function Invoke-Mode([string]$Name) {
             'RegisterPullTask' { Register-PullTask }
             'Logs' { Invoke-LogsMode }
             'Restart' { Invoke-RestartMode }
+            'IssueCert' { Invoke-IssueCertMode }
             'Status' { Invoke-StatusMode }
             'Help' { Show-Help; 0 }
             default { throw "Unknown mode: $Name" }
@@ -1800,7 +1829,7 @@ function Invoke-Main {
             RestoreDrill = [bool]$RestoreDrill; Rollback = [bool]$Rollback; GoLive = [bool]$GoLive
             CreateAdmin = [bool]$CreateAdmin; SetSecret = -not [string]::IsNullOrEmpty($SetSecret)
             RegisterPullTask = [bool]$RegisterPullTask; Logs = [bool]$Logs; Restart = [bool]$Restart
-            Status = [bool]$Status; Help = [bool]$ShowHelp
+            IssueCert = [bool]$IssueCert; Status = [bool]$Status; Help = [bool]$ShowHelp
         }
         $chosen = @($flags.Keys | Where-Object { $flags[$_] })
         if ($chosen.Count -gt 1) {
