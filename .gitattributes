@@ -1,0 +1,22 @@
+# Line endings: everything that runs on the Linux server must stay LF in checkouts and archives
+*.sh text eol=lf
+scripts/deploy/** text eol=lf
+
+# Binary data files (insurance DBF templates): never convert line endings
+*.DBF binary
+*.dbf binary
+
+# Deployment archives (git archive). deploy.ps1 also whitelists the paths it ships;
+# these rules are defence in depth.
+# warehouse-backend root: only manage.py and the requirements files ship (app packages have no dot in their name)
+warehouse-backend/*.* export-ignore
+warehouse-backend/manage.py -export-ignore
+warehouse-backend/requirements.txt -export-ignore
+warehouse-backend/requirements.lock -export-ignore
+warehouse-backend/**/test_phase*.py export-ignore
+users.json export-ignore
+user_dump.json export-ignore
+sync_pull_res.json export-ignore
+scripts/e2e/** export-ignore
+scripts/setup_e2e_data.py export-ignore
+scripts/test_guard_hooks.py export-ignore

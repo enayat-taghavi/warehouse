@@ -24,7 +24,7 @@ def is_time_in_range(start_time: dt_time, end_time: dt_time, current_time: dt_ti
 
 
 class Command(BaseCommand):
-    help = "ورکر مرکزی همگام‌سازی فایل‌ها و پشتیبان‌ها با گوگل‌درایو (System & Company GDrive Worker)"
+    help = "Central Google Drive Sync Worker (System & Company GDrive Worker)"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -35,30 +35,30 @@ class Command(BaseCommand):
         parser.add_argument(
             '--once',
             action='store_true',
-            help='پردازش صف‌های موجود یک‌بار و خروج (مناسب تست یا کران‌جاب)'
+            help='Process pending queues once and exit (for testing or cron)'
         )
         parser.add_argument(
             '--interval',
             type=int,
             default=5,
-            help='فاصله بررسی مجدد صف‌ها بر حسب ثانیه (پیش‌فرض: ۵ ثانیه)'
+            help='Polling interval in seconds (default: 5s)'
         )
         parser.add_argument(
             '--limit',
             type=int,
             default=20,
-            help='حداکثر تعداد تسک‌ها در هر دور'
+            help='Max tasks per batch'
         )
         parser.add_argument(
             '--ignore-schedule',
             action='store_true',
-            help='نادیده‌گرفتن بازه ساعات خلوتی و ارسال فوری'
+            help='Ignore off-peak hours and send immediately'
         )
         parser.add_argument(
             '--company-id',
             type=int,
             default=None,
-            help='فیلتر برای پردازش فقط یک شرکت خاص'
+            help='Filter for a specific company ID'
         )
 
     def _log(self, msg, style_func=None):
@@ -79,14 +79,14 @@ class Command(BaseCommand):
         company_id = options.get('company_id')
 
         def _stop_signal(signum, frame):
-            self._log("\nدرخواست توقف ورکر دریافت شد. در حال تکمیل و خروج...", self.style.WARNING)
+            self._log("\nShutdown signal received. Exiting gracefully...", self.style.WARNING)
             self.keep_running = False
 
         signal.signal(signal.SIGINT, _stop_signal)
         signal.signal(signal.SIGTERM, _stop_signal)
 
         self._log(
-            f"=== شروع به کار ورکر مرکزی گوگل‌درایو (Once={once}, Interval={interval}s, Limit={limit}) ===",
+            f"=== Starting Central GDrive Worker (Once={once}, Interval={interval}s, Limit={limit}) ===",
             self.style.SUCCESS
         )
 
@@ -119,7 +119,7 @@ class Command(BaseCommand):
                 logger.error(f"[Worker] Error processing company tasks: {exc}", exc_info=True)
 
             if once:
-                self._log(f"پردازش پایان یافت. مجموع تسک‌های انجام‌شده: {total_processed}", self.style.SUCCESS)
+                self._log(f"Processing finished. Total tasks completed: {total_processed}", self.style.SUCCESS)
                 break
 
             if total_processed == 0:
@@ -177,7 +177,7 @@ class Command(BaseCommand):
         if not candidate_ids:
             return 0
 
-        self._log(f"[System GDrive] در حال ارسال {len(candidate_ids)} تسک پشتیبان سامانه...")
+        self._log(f"[System GDrive] Uploading {len(candidate_ids)} system backup task(s)...")
         success = 0
         for tid in candidate_ids:
             if not self.keep_running:
@@ -185,9 +185,9 @@ class Command(BaseCommand):
             ok = sync_single_system_task(tid)
             if ok:
                 success += 1
-                self._log(f"  [✓] پشتیبان سامانه #{tid} با موفقیت ارسال شد.", self.style.SUCCESS)
+                self._log(f"  [✓] System backup #{tid} uploaded successfully.", self.style.SUCCESS)
             else:
-                self._log(f"  [!] ارسال پشتیبان سامانه #{tid} ناموفق بود.", self.style.WARNING)
+                self._log(f"  [!] System backup #{tid} upload failed.", self.style.WARNING)
 
         return len(candidate_ids)
 

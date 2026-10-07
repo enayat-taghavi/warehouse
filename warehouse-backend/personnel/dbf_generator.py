@@ -11,13 +11,14 @@ from .iransystem import to_iransystem_bytes, encode_dbf_string, encode_dbf_numbe
 
 
 def _get_raw_template_bytes(filename: str) -> bytes:
-    """Reads raw empty template header from project's `فایل خام بیمه` folder."""
+    """Reads raw empty template header from package's data folder or fallback paths."""
+    pkg_dir = os.path.join(os.path.dirname(__file__), 'data', 'insurance_templates')
     base_dirs = [
+        pkg_dir,
+        os.path.join(settings.BASE_DIR, 'personnel', 'data', 'insurance_templates'),
         os.path.join(settings.BASE_DIR, '..', 'Documents', 'SalaryCalculation', 'فایل خام بیمه'),
         os.path.join(settings.BASE_DIR, '..', 'فایل خام بیمه'),
         os.path.join(settings.BASE_DIR, 'فایل خام بیمه'),
-        r'E:\warehouse project\Documents\SalaryCalculation\فایل خام بیمه',
-        r'E:\warehouse project\فایل خام بیمه'
     ]
     for d in base_dirs:
         p = os.path.join(d, filename)

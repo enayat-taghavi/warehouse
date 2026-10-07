@@ -1,53 +1,69 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Warehouse Management System - Remote Server Provisioning Script
+# Warehouse Management System - Hardened Server Provisioning Script
 # Target OS: Ubuntu 22.04 / 24.04 LTS
 # Note: Strictly ASCII / English to prevent encoding corruption.
 # ==============================================================================
 set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
 
 echo "======================================================================"
-echo " Starting Remote Server Provisioning"
+echo " Starting Hardened Server Provisioning"
 echo "======================================================================"
 
-# 1. Verify root execution
 if [ "$(id -u)" -ne 0 ]; then
     echo "ERROR: This script must be executed as root (or with sudo)." >&2
     exit 1
 fi
 
-export DEBIAN_FRONTEND=noninteractive
-export NEEDRESTART_MODE=a
+if [[ -f "/var/www/warehouse/shared/GO_LIVE" ]]; then
+    echo "ERROR: Server is in production GO-LIVE state (/var/www/warehouse/shared/GO_LIVE exists)." >&2
+    echo "Initial provisioning is blocked to protect production data." >&2
+    exit 1
+fi
 
-# 2. Parse arguments
 DOMAIN="${1:-}"
 ADMIN_EMAIL="${2:-admin@example.com}"
 DB_NAME="${3:-warehouse_db}"
 DB_USER="${4:-warehouse_user}"
-DB_PASSWORD="${5:-warehouse_password}"
-DJANGO_SECRET_KEY="${6:-}"
-ALLOWED_HOSTS="${7:-*}"
-SSH_PORT="${8:-22}"
+ALLOWED_HOSTS="${5:-}"
+SSH_PORT="${6:-22}"
+BUNDLE_PATH="${7:-/tmp/deploy_bundle.tar.gz}"
+BUNDLE_SHA256="${8:-}"
 
-if [ -z "$DJANGO_SECRET_KEY" ]; then
-    echo "ERROR: DJANGO_SECRET_KEY argument is required." >&2
-    exit 1
+if [[ -z "$ALLOWED_HOSTS" || "$ALLOWED_HOSTS" == "*" ]]; then
+    ALLOWED_HOSTS="${DOMAIN:-127.0.0.1}"
 fi
 
 echo "--> Target Domain       : ${DOMAIN:-[Direct IP]}"
 echo "--> Admin Email         : ${ADMIN_EMAIL}"
 echo "--> Database Name       : ${DB_NAME}"
 echo "--> Database User       : ${DB_USER}"
-echo "--> SSH Port            : ${SSH_PORT}"
+echo "--> Allowed Hosts       : ${ALLOWED_HOSTS}"
+echo "--> Configured SSH Port : ${SSH_PORT}"
+echo "--> Bundle Path         : ${BUNDLE_PATH}"
 
-# 3. Update system package repository
-echo "--> Updating system package index..."
+# Verify bundle sha256 if provided
+if [[ -n "$BUNDLE_SHA256" && -f "$BUNDLE_PATH" ]]; then
+    ACTUAL_BUNDLE_SHA=$(sha256sum "$BUNDLE_PATH" | cut -d' ' -f1)
+    if [[ "$ACTUAL_BUNDLE_SHA" != "$BUNDLE_SHA256" ]]; then
+        echo "ERROR: Bundle SHA256 checksum mismatch (expected: $BUNDLE_SHA256, actual: $ACTUAL_BUNDLE_SHA)!" >&2
+        exit 1
+    fi
+    echo "--> Bundle SHA256 verified: ${ACTUAL_BUNDLE_SHA}"
+fi
+
+# 1. System Timezone (Asia/Tehran)
+echo "--> Setting server timezone to Asia/Tehran..."
+timedatectl set-timezone Asia/Tehran || true
+
+# 2. Package Management & Dependencies (including rsync)
+echo "--> Updating package repository..."
 apt-get update -y
 
-# 4. Install system packages and runtime dependencies
-echo "--> Installing system packages, runtime dependencies, and services..."
+echo "--> Installing system runtime packages and security tools..."
 apt-get install -y --no-install-recommends \
     -o Dpkg::Options::="--force-confdef" \
     -o Dpkg::Options::="--force-confold" \
@@ -66,68 +82,89 @@ apt-get install -y --no-install-recommends \
     certbot \
     python3-certbot-nginx \
     ufw \
-    unzip \
+    fail2ban \
     curl \
-    gzip
+    tar \
+    gzip \
+    rsync
 
-# 5. Enable and start core services (Redis & PostgreSQL)
-echo "--> Starting and enabling Redis and PostgreSQL..."
-systemctl enable --now redis-server
+# 3. Create Sandboxed System User (warehouse - no login, no home)
+echo "--> Ensuring system service user 'warehouse' exists..."
+if ! id -u warehouse >/dev/null 2>&1; then
+    useradd -r -M -s /usr/sbin/nologin warehouse
+fi
+
+# 4. Directory Layout Initialization (root owns root/releases/venvs, warehouse owns shared)
+BASE_DIR="/var/www/warehouse"
+SHARED_DIR="${BASE_DIR}/shared"
+mkdir -p "${BASE_DIR}/releases" "${BASE_DIR}/venvs" "${SHARED_DIR}"
+chown -R root:root "${BASE_DIR}/releases" "${BASE_DIR}/venvs"
+chmod 755 "${BASE_DIR}/releases" "${BASE_DIR}/venvs"
+
+mkdir -p "${SHARED_DIR}/media" "${SHARED_DIR}/backups" "${SHARED_DIR}/logs" "${SHARED_DIR}/report_exports"
+chown -R warehouse:warehouse "${SHARED_DIR}"
+chmod 700 "${SHARED_DIR}/backups"
+
+# 5. PostgreSQL Database Provisioning (PostgreSQL >= 15 check & stdin SQL)
+echo "--> Configuring PostgreSQL service..."
 systemctl enable --now postgresql
+systemctl enable --now redis-server
 
-# 6. Configure PostgreSQL Database & Role
-echo "--> Configuring PostgreSQL database and credentials..."
-sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1 || \
-    sudo -u postgres psql -c "CREATE USER \"${DB_USER}\" WITH PASSWORD '${DB_PASSWORD}';"
-
-sudo -u postgres psql -c "ALTER USER \"${DB_USER}\" WITH PASSWORD '${DB_PASSWORD}';"
-sudo -u postgres psql -c "ALTER USER \"${DB_USER}\" CREATEDB;"
-
-sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1 || \
-    sudo -u postgres psql -c "CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USER}\";"
-
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"${DB_NAME}\" TO \"${DB_USER}\";"
-
-# Ensure full schema ownership and privileges in PostgreSQL 15/16
-sudo -u postgres psql -d "${DB_NAME}" -c "ALTER SCHEMA public OWNER TO \"${DB_USER}\";" || true
-sudo -u postgres psql -d "${DB_NAME}" -c "GRANT ALL ON SCHEMA public TO \"${DB_USER}\";"
-sudo -u postgres psql -d "${DB_NAME}" -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO \"${DB_USER}\";"
-sudo -u postgres psql -d "${DB_NAME}" -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO \"${DB_USER}\";"
-sudo -u postgres psql -d "${DB_NAME}" -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
-sudo -u postgres psql -d "${DB_NAME}" -c "CREATE EXTENSION IF NOT EXISTS btree_gin;"
-
-# 7. Unpack application bundle
-echo "--> Preparing application directory..."
-mkdir -p /var/www/warehouse
-mkdir -p /var/backups/warehouse
-
-if [ -f "/tmp/deploy_bundle.zip" ]; then
-    echo "--> Unpacking project bundle..."
-    unzip -q -o /tmp/deploy_bundle.zip -d /var/www/warehouse
-    rm -f /tmp/deploy_bundle.zip
-else
-    echo "WARNING: /tmp/deploy_bundle.zip not found. Assuming files already placed in /var/www/warehouse."
+PG_VER=$(runuser -u postgres -- psql -V | grep -oE '[0-9]+' | head -n 1 || true)
+if [[ -n "$PG_VER" && "$PG_VER" -lt 15 ]]; then
+    echo "ERROR: PostgreSQL >= 15 is required. Detected version: $PG_VER." >&2
+    exit 1
 fi
 
-# 8. Setup Python Virtual Environment & Dependencies
-echo "--> Setting up Python virtual environment..."
-cd /var/www/warehouse/warehouse-backend
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
-fi
+ENV_FILE="${SHARED_DIR}/.env"
+if [[ ! -f "$ENV_FILE" ]]; then
+    echo "--> Generating cryptographically secure credentials on-server..."
+    DB_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
+    DJANGO_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
 
-./venv/bin/pip install --upgrade pip setuptools wheel
-if [ -f "requirements.txt" ]; then
-    echo "--> Installing Python dependencies from requirements.txt..."
-    ./venv/bin/pip install -r requirements.txt
-fi
+    echo "--> Creating PostgreSQL database user and database with UTF-8 encoding..."
+    # SQL execution via stdin with ON_ERROR_STOP (no password in argv)
+    runuser -u postgres -- psql -v ON_ERROR_STOP=1 <<EOSQL
+DO \$\$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${DB_USER}') THEN
+        CREATE ROLE "${DB_USER}" WITH LOGIN PASSWORD '${DB_PASSWORD}';
+    ELSE
+        ALTER ROLE "${DB_USER}" WITH PASSWORD '${DB_PASSWORD}';
+    END IF;
+END
+\$\$;
+EOSQL
 
-# 9. Write Production .env Configuration
-echo "--> Generating production .env file..."
-cat <<EOF > /var/www/warehouse/warehouse-backend/.env
-DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+    DB_EXISTS=$(runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" || true)
+    if [[ "$DB_EXISTS" != "1" ]]; then
+        runuser -u postgres -- psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USER}\" ENCODING 'UTF8' TEMPLATE template0;"
+    fi
+
+    runuser -u postgres -- psql -v ON_ERROR_STOP=1 -d "${DB_NAME}" <<EOSQL
+ALTER SCHEMA public OWNER TO "${DB_USER}";
+GRANT ALL ON SCHEMA public TO "${DB_USER}";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS btree_gin;
+EOSQL
+
+    # Write .env with umask 077 to ensure 0600 permissions from creation
+    (
+        umask 077
+        cat <<EOF > "$ENV_FILE"
+DJANGO_ENV=production
+DJANGO_SECRET_KEY=${DJANGO_SECRET}
 DJANGO_DEBUG=False
 DJANGO_ALLOWED_HOSTS=${ALLOWED_HOSTS}
+DJANGO_SECURE_PROXY_SSL=1
+DJANGO_CSRF_TRUSTED_ORIGINS=https://${DOMAIN}
+DJANGO_MEDIA_ACCEL_REDIRECT=1
+DJANGO_LOG_DIR=${SHARED_DIR}/logs
+DJANGO_MEDIA_ROOT=${SHARED_DIR}/media
+WAREHOUSE_REPORT_EXPORT_DIR=${SHARED_DIR}/report_exports
+WAREHOUSE_BACKUP_DIR=${SHARED_DIR}/backups
+WAREHOUSE_BACKUP_KEEP=0
+GOOGLE_OAUTH_REDIRECT_URI=https://${DOMAIN}/api/auth/google/callback
 DB_NAME=${DB_NAME}
 DB_USER=${DB_USER}
 DB_PASSWORD=${DB_PASSWORD}
@@ -135,184 +172,125 @@ DB_HOST=127.0.0.1
 DB_PORT=5432
 REDIS_URL=redis://127.0.0.1:6379/1
 EOF
-chmod 600 /var/www/warehouse/warehouse-backend/.env
-
-# 10. Database Migrations & Static Files Collection
-echo "--> Applying database migrations..."
-./venv/bin/python manage.py migrate --noinput
-
-echo "--> Collecting static files..."
-./venv/bin/python manage.py collectstatic --noinput
-
-mkdir -p /var/www/warehouse/warehouse-backend/media
-chmod -R 755 /var/www/warehouse
-
-# 11. Create Systemd Service for Daphne ASGI
-echo "--> Creating Systemd service (warehouse-backend.service)..."
-cat <<EOF > /etc/systemd/system/warehouse-backend.service
-[Unit]
-Description=Warehouse Daphne ASGI Service
-After=network.target postgresql.service redis-server.service
-Wants=postgresql.service redis-server.service
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/var/www/warehouse/warehouse-backend
-ExecStart=/var/www/warehouse/warehouse-backend/venv/bin/daphne -b 127.0.0.1 -p 8000 config.asgi:application
-Restart=always
-RestartSec=3
-KillSignal=SIGTERM
-StandardOutput=journal
-StandardError=journal
-EnvironmentFile=-/var/www/warehouse/warehouse-backend/.env
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable warehouse-backend
-systemctl restart warehouse-backend
-
-# 11.1 Create Systemd Service for Google Drive Sync Worker
-echo "--> Creating Systemd service for Google Drive Sync Worker (warehouse-gdrive-worker.service)..."
-cat <<EOF > /etc/systemd/system/warehouse-gdrive-worker.service
-[Unit]
-Description=Warehouse Google Drive Sync Worker Service
-After=network.target postgresql.service redis-server.service warehouse-backend.service
-Wants=postgresql.service redis-server.service
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/var/www/warehouse/warehouse-backend
-ExecStart=/var/www/warehouse/warehouse-backend/venv/bin/python manage.py run_gdrive_sync_worker --interval 10
-Restart=always
-RestartSec=10
-KillSignal=SIGTERM
-StandardOutput=journal
-StandardError=journal
-EnvironmentFile=-/var/www/warehouse/warehouse-backend/.env
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable warehouse-gdrive-worker
-systemctl restart warehouse-gdrive-worker
-
-# 12. Configure Nginx Web Server and Reverse Proxy
-echo "--> Configuring Nginx reverse proxy and frontend server..."
-SERVER_NAME="${DOMAIN:-_}"
-cat <<EOF > /etc/nginx/sites-available/warehouse
-server {
-    listen 80;
-    listen [::]:80;
-    server_name ${SERVER_NAME};
-
-    client_max_body_size 50M;
-
-    # Gzip Compression
-    gzip on;
-    gzip_vary on;
-    gzip_proxied any;
-    gzip_comp_level 6;
-    gzip_types text/plain text/css text/xml application/json application/javascript application/rss+xml application/atom+xml image/svg+xml;
-
-    # Angular SPA Frontend Root
-    root /var/www/warehouse/warehouse-front/dist/warehouse-app/browser;
-    index index.html;
-
-    # Static Assets & Service Worker Caching
-    location ~* \.(?:ico|css|js|gif|jpe?g|png|woff2?|eot|ttf|svg|webp)$ {
-        expires 6M;
-        access_log off;
-        add_header Cache-Control "public, max-age=15552000, immutable";
-        try_files \$uri =404;
-    }
-
-    # Django Media Uploads
-    location /media/ {
-        alias /var/www/warehouse/warehouse-backend/media/;
-        expires 30d;
-        access_log off;
-    }
-
-    # Django Static Files (Admin, DRF)
-    location /static/ {
-        alias /var/www/warehouse/warehouse-backend/staticfiles/;
-        expires 30d;
-        access_log off;
-    }
-
-    # Django API and Admin Reverse Proxy
-    location ~ ^/(api|admin)/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 120s;
-        proxy_connect_timeout 60s;
-    }
-
-    # Daphne WebSockets Reverse Proxy
-    location /ws/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 86400s;
-        proxy_send_timeout 86400s;
-    }
-
-    # Default SPA routing
-    location / {
-        try_files \$uri \$uri/ /index.html;
-    }
-}
-EOF
-
-# Enable Nginx site configuration
-ln -sf /etc/nginx/sites-available/warehouse /etc/nginx/sites-enabled/warehouse
-if [ -f "/etc/nginx/sites-enabled/default" ]; then
-    rm -f /etc/nginx/sites-enabled/default
+    )
+    chown warehouse:warehouse "$ENV_FILE"
+    chmod 600 "$ENV_FILE"
+else
+    echo "--> Existing ${ENV_FILE} preserved. Merging missing configuration keys..."
+    # Merge missing keys into existing .env
+    for key in DJANGO_MEDIA_ACCEL_REDIRECT WAREHOUSE_REPORT_EXPORT_DIR WAREHOUSE_BACKUP_DIR GOOGLE_OAUTH_REDIRECT_URI; do
+        if ! grep -q "^${key}=" "$ENV_FILE"; then
+            case "$key" in
+                DJANGO_MEDIA_ACCEL_REDIRECT) echo "DJANGO_MEDIA_ACCEL_REDIRECT=1" >> "$ENV_FILE" ;;
+                WAREHOUSE_REPORT_EXPORT_DIR) echo "WAREHOUSE_REPORT_EXPORT_DIR=${SHARED_DIR}/report_exports" >> "$ENV_FILE" ;;
+                WAREHOUSE_BACKUP_DIR) echo "WAREHOUSE_BACKUP_DIR=${SHARED_DIR}/backups" >> "$ENV_FILE" ;;
+                GOOGLE_OAUTH_REDIRECT_URI) echo "GOOGLE_OAUTH_REDIRECT_URI=https://${DOMAIN}/api/auth/google/callback" >> "$ENV_FILE" ;;
+            esac
+        fi
+    done
 fi
 
-nginx -t
-systemctl reload nginx
+# 6. Extract bundle and install deployment orchestrator & root gateway
+TEMP_BOOTSTRAP=$(mktemp -d /tmp/wh_bootstrap_XXXXXX)
+if [[ -f "$BUNDLE_PATH" ]]; then
+    tar -xzf "$BUNDLE_PATH" -C "$TEMP_BOOTSTRAP"
+    if [[ -f "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-deploy.sh" ]]; then
+        install -m 755 "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-deploy.sh" /usr/local/sbin/warehouse-deploy
+    fi
+    if [[ -f "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-nightly-backup.sh" ]]; then
+        install -m 755 "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-nightly-backup.sh" /usr/local/bin/warehouse-nightly-backup.sh
+    fi
+    if [[ -f "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-root-gateway.sh" ]]; then
+        install -m 755 "${TEMP_BOOTSTRAP}/scripts/deploy/warehouse-root-gateway.sh" /usr/local/sbin/warehouse-root-gateway
+    fi
+    if [[ -d "${TEMP_BOOTSTRAP}/scripts/deploy/templates" ]]; then
+        for u in "${TEMP_BOOTSTRAP}/scripts/deploy/templates"/warehouse-*.service "${TEMP_BOOTSTRAP}/scripts/deploy/templates"/warehouse-*.timer; do
+            if [[ -f "$u" ]]; then
+                install -m 644 "$u" "/etc/systemd/system/$(basename "$u")"
+            fi
+        done
+    fi
+fi
+rm -rf "$TEMP_BOOTSTRAP"
 
-# 13. Configure UFW Firewall
-echo "--> Configuring UFW firewall rules..."
-ufw allow "${SSH_PORT}/tcp" || true
-ufw allow 80/tcp || true
-ufw allow 443/tcp || true
-ufw --force enable || true
+# 7. Configure sudoers restriction (E-24, 10.4-C)
+# Allow warehouse-root-gateway and warehouse-deploy for callers, eliminating unrestricted ALL
+SUDO_TARGET_USER="${SUDO_USER:-deploy}"
+if id "$SUDO_TARGET_USER" >/dev/null 2>&1; then
+    echo "--> Configuring restricted sudoers permissions for ${SUDO_TARGET_USER}..."
+    cat <<EOF > /etc/sudoers.d/warehouse
+${SUDO_TARGET_USER} ALL=(ALL) NOPASSWD: /usr/local/sbin/warehouse-root-gateway, /usr/local/sbin/warehouse-deploy
+EOF
+    chmod 440 /etc/sudoers.d/warehouse
+fi
 
-# 14. SSL Certificate Setup via Certbot (if domain is configured)
-if [ -n "$DOMAIN" ] && [ "$DOMAIN" != "_" ]; then
-    echo "--> Requesting SSL certificate from Let's Encrypt for ${DOMAIN}..."
-    if certbot --nginx --non-interactive --agree-tos --redirect -m "${ADMIN_EMAIL}" -d "${DOMAIN}"; then
-        echo "--> SSL certificate successfully installed and configured."
-    else
-        echo "WARNING: Certbot could not obtain an SSL certificate for ${DOMAIN}."
-        echo "This typically occurs if the domain DNS records have not yet propagated to this server IP."
-        echo "HTTP remains active. You can run 'certbot --nginx -d ${DOMAIN}' once DNS points here."
+# 8. Run initial release deployment via orchestrator
+if [[ -f "/usr/local/sbin/warehouse-deploy" && -f "$BUNDLE_PATH" ]]; then
+    echo "--> Running initial release deployment via /usr/local/sbin/warehouse-deploy..."
+    /usr/local/sbin/warehouse-deploy "$BUNDLE_PATH" "$DOMAIN"
+fi
+
+# 9. Seed permissions and initialize roles
+echo "--> Initializing system permissions and roles..."
+if [[ -d "${BASE_DIR}/current" ]]; then
+    runuser -u warehouse -- "${BASE_DIR}/current/venv/bin/python" "${BASE_DIR}/current/warehouse-backend/manage.py" seed_permissions
+    runuser -u warehouse -- "${BASE_DIR}/current/venv/bin/python" "${BASE_DIR}/current/warehouse-backend/manage.py" init_roles
+fi
+
+# 10. Enable application services
+systemctl daemon-reload
+systemctl enable warehouse-backend warehouse-gdrive-worker warehouse-export-worker warehouse-backup.timer
+systemctl start warehouse-backend warehouse-gdrive-worker warehouse-export-worker warehouse-backup.timer
+
+# 11. Web Server (Nginx) & TLS Configuration
+if [[ -n "$DOMAIN" ]]; then
+    echo "--> Configuring Nginx for domain ${DOMAIN}..."
+    mkdir -p /var/www/html /etc/nginx/sites-available /etc/nginx/sites-enabled
+
+    # Stage 1: Temporary HTTP for ACME challenge
+    if [[ -f "${BASE_DIR}/current/scripts/deploy/templates/nginx-http.conf" ]]; then
+        sed "s/__DOMAIN__/${DOMAIN}/g" "${BASE_DIR}/current/scripts/deploy/templates/nginx-http.conf" > /etc/nginx/sites-available/warehouse
+        ln -sf /etc/nginx/sites-available/warehouse /etc/nginx/sites-enabled/warehouse
+        rm -f /etc/nginx/sites-enabled/default
+        nginx -t
+        systemctl reload nginx
+
+        # Stage 2: Request Let's Encrypt TLS certificate via webroot (reject @example.com)
+        if [[ "$ADMIN_EMAIL" != *"@example.com"* && -n "$ADMIN_EMAIL" ]]; then
+            echo "--> Requesting Let's Encrypt TLS certificate via webroot..."
+            certbot certonly --webroot -w /var/www/html -d "$DOMAIN" --email "$ADMIN_EMAIL" \
+                --agree-tos --non-interactive --deploy-hook "systemctl reload nginx" || true
+        else
+            echo "--> [WARNING] AdminEmail is default or invalid (${ADMIN_EMAIL}); skipping automated Let's Encrypt registration."
+        fi
+    fi
+
+    # Stage 3: Full HTTPS if certificate obtained
+    if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" && -f "${BASE_DIR}/current/scripts/deploy/templates/nginx-https.conf" ]]; then
+        sed "s/__DOMAIN__/${DOMAIN}/g" "${BASE_DIR}/current/scripts/deploy/templates/nginx-https.conf" > /etc/nginx/sites-available/warehouse
+        nginx -t
+        systemctl reload nginx
+        echo "--> HTTPS operational with Let's Encrypt TLS certificate!"
     fi
 fi
 
-# 15. Final Health Verification
+# 12. Security Hardening & Firewall (UFW & Fail2ban)
+echo "--> Configuring UFW firewall and Fail2ban..."
+ACTUAL_SSH_PORT="$SSH_PORT"
+SSHD_DETECTED_PORT=$(sshd -T 2>/dev/null | grep -i '^port ' | awk '{print $2}' || true)
+if [[ -n "$SSHD_DETECTED_PORT" ]]; then
+    ACTUAL_SSH_PORT="$SSHD_DETECTED_PORT"
+fi
+
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow "${ACTUAL_SSH_PORT}/tcp"
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw --force enable
+
+systemctl enable --now fail2ban || true
+
 echo "======================================================================"
-echo " Server Provisioning Completed Successfully!"
-echo " Backend Status : $(systemctl is-active warehouse-backend)"
-echo " Nginx Status   : $(systemctl is-active nginx)"
-echo " Redis Status   : $(systemctl is-active redis-server)"
-echo " Postgres Status: $(systemctl is-active postgresql)"
+echo " Hardened Server Provisioning Completed Successfully!"
 echo "======================================================================"

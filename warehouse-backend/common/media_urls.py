@@ -110,8 +110,17 @@ def serve_media(request, path):
     ):
         return HttpResponseForbidden('لینک تصویر معتبر نیست یا منقضی شده است.')
 
-    # برای سرو دیسک نیز مسیر باید unquote باشد تا نام فارسی روی هارددیسک پیدا شود
-    response = serve(request, normalized, document_root=settings.MEDIA_ROOT)
+    # در صورت فعال بودن X-Accel-Redirect (محیط پروداکشن لینوکس با Nginx)،
+    # فایل مستقیماً توسط وب‌سرور با sendfile و پشتیبانی Range ارسال می‌شود.
+    if getattr(settings, 'MEDIA_ACCEL_REDIRECT', False):
+        import mimetypes
+        from django.http import HttpResponse
+        content_type, _ = mimetypes.guess_type(normalized)
+        response = HttpResponse(content_type=content_type or 'application/octet-stream')
+        response['X-Accel-Redirect'] = f'/internal_media/{quote(normalized)}'
+    else:
+        # برای سرو دیسک محلی نیز مسیر باید unquote باشد تا نام فارسی پیدا شود
+        response = serve(request, normalized, document_root=settings.MEDIA_ROOT)
     response['X-Content-Type-Options'] = 'nosniff'
     response['X-Frame-Options'] = 'SAMEORIGIN'
 

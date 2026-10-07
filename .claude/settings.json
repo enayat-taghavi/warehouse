@@ -3,7 +3,9 @@
     "allow": [],
     "deny": [
       "Read(./.env)",
-      "Read(./.env.*)"
+      "Read(./.env.*)",
+      "Read(./deploy_config.json)",
+      "Read(./backups/**)"
     ]
   },
   "model": "claude-sonnet-5",

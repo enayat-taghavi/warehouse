@@ -67,14 +67,20 @@
      - Live validation feedback banners must indicate validity (`✓ شماره شبا معتبر و تایید شد (الگوریتم ISO 7064 Mod 97)`) or specific error warnings (`⚠`).
   3) **Searchable Bank Combobox:**
      - Bank selection must feature an upward/downward searchable combobox leveraging `IRANIAN_BANKS` with bank logos/emojis, Persian titles, 3-digit bank codes, and click-outside dismissal.
-### 8. Production Machine, Deployment & Guardian Integrity Standards
-- **Local Machine is Production:** This machine directly hosts and serves production traffic through Cloudflare tunnel (`cloudflared`). Backend Daphne listens on 0.0.0.0:8000 (`config.asgi:application`), Frontend Express serves `warehouse-front/dist/` on port 4200, and PostgreSQL on 5432 is the active live production database. Any front-end build, backend restart, or database migration directly impacts live active users.
-- **Safe Production Deployment Protocol:**
-  1) **Database Backup:** Before migrations or deploys, execute `create_database_backup` from `accounts.backup_service` (DO NOT run `run_auto_backup`, as it deletes all except the last 7 backups).
-  2) **Zero-Downtime Front-End Build:** In `warehouse-front`, run `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js` so currently served bundles remain online during the build.
+### 8. Environment Roles, Deployment & Guardian Integrity Standards
+- **Environment Roles (`app` vs `soft`):**
+  - **`app.farsalish.ir` (Local Windows Machine):** Hosts personal test/staging environment behind Cloudflare tunnel (`cloudflared`). Daphne on 0.0.0.0:8000, Express on 4200 serving `warehouse-front/dist/`, PostgreSQL on 5432 with test data. Has NO real users; used for user testing and validation. Frontend builds or restarts here do not impact real production users.
+  - **`soft.farsalish.ir` (Production Server):** Dedicated Ubuntu server hosting live application for real users. Direct DNS to server IP, Nginx with Let's Encrypt TLS. Production data must NEVER be lost or deleted. No test data or test artifacts from `app` may ever be transferred to `soft`.
+- **Local Test Deployment Protocol (`app.farsalish.ir`):**
+  1) **Database Backup:** Before local test migrations, execute `create_database_backup` from `accounts.backup_service` (DO NOT run `run_auto_backup`).
+  2) **Zero-Downtime Front-End Build:** In `warehouse-front`, run `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js` so currently served bundles remain online during build.
   3) **Daphne Backend Restart:** Terminate existing Daphne process on port 8000 and spawn in a detached Windows Terminal tab:
      `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "E:\warehouse project\warehouse-backend" --title "Backend Daphne" cmd /k ".\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application"`
   4) **Health Checks:** Confirm HTTP 200 on `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/`.
+- **Production Deployment Protocol (`soft.farsalish.ir`):**
+  - Governed strictly by `deploy.ps1` and `Documents/Server_Deployment_Hardening/implementation_plan_server_deployment_hardening.md`.
+  - Frontend is compiled in isolated scratch snapshot; `warehouse-front/dist` is never touched.
+  - Pre-update backup verified before schema migration; zero data loss guaranteed.
 - **Environment & Secrets Protection:**
   - Sensitive server variables (`DJANGO_SECRET_KEY`, `DJANGO_DEBUG`) are isolated in `warehouse-backend/.env` (excluded from git). NEVER read, dump, print, or commit this file.
 - **Guardian Test Suite Invariants:**

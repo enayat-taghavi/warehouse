@@ -1,0 +1,23 @@
+[Unit]
+Description=Warehouse Report Export Background Worker
+After=network.target warehouse-backend.service
+Wants=warehouse-backend.service
+
+[Service]
+Type=simple
+User=warehouse
+Group=warehouse
+WorkingDirectory=/var/www/warehouse/current/warehouse-backend
+EnvironmentFile=/var/www/warehouse/shared/.env
+ExecStart=/var/www/warehouse/current/venv/bin/python -X utf8 manage.py run_export_worker
+Restart=always
+RestartSec=5
+
+# System Security & Sandboxing
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+ReadWritePaths=/var/www/warehouse/shared
+
+[Install]
+WantedBy=multi-user.target

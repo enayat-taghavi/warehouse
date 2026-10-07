@@ -61,8 +61,10 @@
 - **Do all the work yourself** (since 30 Sep 2026): the user runs no commands at all — not build, restart, git or install. Never prepare commands for the user to run.
   - Ask one short yes/no question only before work that directly affects production (next item) or opens a data-loss path.
   - Replies stay short and in Persian.
-- **This machine is production.** `cloudflared`, the daphne backend (port 8000) and the express frontend (port 4200, serving `warehouse-front/dist/`) run here. The local database is the production database. So a frontend build, a backend restart and `migrate` directly affect real users.
-  - Alongside the stack, an `ng serve` on `localhost:4300` serves the working tree live. Use it for safe visual review (config `attach-frontend-dev-4300` in `.claude/launch.json`). 4200 is production.
+- **Environment roles (`app` vs `soft`):**
+  - **`app.farsalish.ir` (This Windows machine):** Local test and staging environment behind Cloudflare Tunnel (`cloudflared`). Daphne listens on port 8000, Express on port 4200 serves `warehouse-front/dist/`, PostgreSQL on port 5432 holds test/staging data. There are NO real users here. Building frontend or restarting services on this machine is for personal testing and does not require yes/no prompts.
+  - **`soft.farsalish.ir` (Production Server):** Dedicated Ubuntu server hosting the live application for real users. Direct DNS (no Cloudflare), TLS via Let's Encrypt / Nginx. Real user data must NEVER be lost or deleted during updates, and no test data from `app` may ever be transferred to `soft`. Any operation directly affecting `soft` or opening data-loss paths requires explicit approval.
+  - Alongside the stack, an `ng serve` on `localhost:4300` serves the working tree live. Use it for safe visual review (config `attach-frontend-dev-4300` in `.claude/launch.json`). 4200 is local test.
 
 ## Token economy (never at the expense of quality)
 
@@ -106,7 +108,7 @@ Plan: warehouse counting and accounting as two independently installable modules
   3. Backend restart: close the daphne process on port 8000 and its venv launcher with `taskkill`. Then relaunch it in a Windows Terminal tab so it doesn't depend on the Claude session:
      `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "E:\warehouse project\warehouse-backend" --title "Backend Daphne" cmd /k ".\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application"`
   4. GDrive sync worker (D9): launch in an auto-restarting tab (to restart during release, simply `taskkill` the python worker process):
-     `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "E:\warehouse project\warehouse-backend" --title "GDrive Sync Worker" cmd /k "for /l %i in (1,0,2) do (.\venv\Scripts\python.exe manage.py run_gdrive_sync_worker --interval 5 & timeout /t 10 /nobreak >nul)"`
+     `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "E:\warehouse project\warehouse-backend" --title "GDrive Sync Worker" cmd /k "for /l %i in (1,0,2) do (.\venv\Scripts\python.exe -X utf8 manage.py run_gdrive_sync_worker --interval 5 & timeout /t 10 /nobreak >nul)"`
   5. Verify: `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/` must return 200, and worker heartbeat is fresh.
 - Claude Code automation:
   - **Hooks** in `.claude/settings.json` run `.claude/hooks/guard.py`; Antigravity calls the same script from `.agents/hooks.json`.

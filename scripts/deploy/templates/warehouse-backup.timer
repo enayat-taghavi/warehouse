@@ -1,0 +1,9 @@
+[Unit]
+Description=Trigger Warehouse Automated Backup Nightly at 02:30 Tehran Time
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 Asia/Tehran
+Persistent=true
+
+[Install]
+WantedBy=timers.target

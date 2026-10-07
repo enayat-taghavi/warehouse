@@ -76,7 +76,11 @@ class ReportExportJob(models.Model):
 
     @staticmethod
     def exports_dir() -> Path:
-        d = Path(settings.BASE_DIR) / 'report_exports'
+        custom_dir = getattr(settings, 'WAREHOUSE_REPORT_EXPORT_DIR', None)
+        if custom_dir:
+            d = Path(custom_dir)
+        else:
+            d = Path(settings.BASE_DIR) / 'report_exports'
         d.mkdir(parents=True, exist_ok=True)
         return d
 
@@ -84,6 +88,9 @@ class ReportExportJob(models.Model):
     def absolute_file_path(self):
         if not self.file_path:
             return None
+        custom_dir = getattr(settings, 'WAREHOUSE_REPORT_EXPORT_DIR', None)
+        if custom_dir:
+            return Path(custom_dir) / Path(self.file_path).name
         return Path(settings.BASE_DIR) / self.file_path
 
 

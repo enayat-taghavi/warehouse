@@ -2768,8 +2768,8 @@ class DatabaseBackupViewSet(viewsets.ViewSet):
         if not filename or '/' in filename or '\\' in filename:
             return Response({'error': 'نام فایل نامعتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        from django.conf import settings
-        file_path = os.path.join(settings.BASE_DIR, 'backups', 'db', filename)
+        from accounts.backup_service import get_backup_dir
+        file_path = os.path.join(get_backup_dir(), filename)
         if not os.path.exists(file_path):
             return Response({'error': 'فایل یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 

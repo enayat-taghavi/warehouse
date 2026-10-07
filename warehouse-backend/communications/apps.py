@@ -11,14 +11,14 @@ def check_channel_layer_configuration(app_configs, **kwargs):
 
     if 'InMemoryChannelLayer' in backend:
         msg = (
-            "سامانه پیام‌رسانی بلادرنگ از InMemoryChannelLayer استفاده می‌کند. "
-            "ارسال و دریافت پیام‌های وب‌سوکت تنها در محیط تک‌پروسه کار می‌کند و در حالت چند Worker به Redis نیاز است."
+            "Real-time messaging system is using InMemoryChannelLayer. "
+            "WebSocket messaging only works in a single-process environment; multiple workers require Redis."
         )
         if not getattr(settings, 'DEBUG', True):
             errors.append(
                 checks.Warning(
                     msg,
-                    hint="متغیرهای REDIS_URL یا REDIS_HOST را در تنظیمات محیطی سرور پروداکشن مقداردهی کنید.",
+                    hint="Set REDIS_URL or REDIS_HOST in production server environment variables.",
                     id='communications.W001'
                 )
             )

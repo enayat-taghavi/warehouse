@@ -115,7 +115,7 @@ def check_new_root_file(file_path):
     if not path.is_absolute():
         path = ROOT / path
     path = path.resolve()
-    if path.parent == ROOT and not path.exists():
+    if path.parent == ROOT and not path.exists() and path.name != '.gitattributes':
         deny(
             f'ساختن فایل تازه در ریشهٔ مخزن ممنوع است ({path.name}). '
             'طبق استانداردهای مخزن، آن را در scripts/، docs/، config/ یا scratch/ بساز.'

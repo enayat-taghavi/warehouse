@@ -31,9 +31,10 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-# ابزارهای سنجش مرز (حصار فاز ۰). عمداً در requirements.txt تولیدی نیست.
+# ابزارهای توسعه. عمداً در requirements.txt تولیدی نیستند.
 dev = [
-    "import-linter==2.3",
+    "import-linter==2.3",  # سنجش مرز (حصار فاز ۰)
+    "django-extensions==4.1",  # فقط با WH_DEV_TOOLS=1 بار می‌شود (config/settings.py)
 ]
 
 [project.entry-points."wh.module"]

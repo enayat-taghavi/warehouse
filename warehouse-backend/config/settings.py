@@ -38,14 +38,27 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-856c7!+vun4k3&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
+if os.environ.get('DJANGO_ENV') == 'production':
+    DEBUG = False
+    if not os.environ.get('DJANGO_SECRET_KEY'):
+        raise RuntimeError("DJANGO_SECRET_KEY must be set in production environment!")
+
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',') if h.strip()]
+
+if os.environ.get('DJANGO_SECURE_PROXY_SSL') in ('1', 'true', 'True'):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+_csrf_origins = os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS')
+if _csrf_origins:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(',') if o.strip()]
 
 # ثبت ماندگار خطاها: خطاهای سطح ERROR به بالای Django و اپ‌های پروژه، علاوه بر
 # کنسول daphne (مثل قبل)، در `warehouse-backend/logs/django-errors.log` هم ذخیره
 # می‌شوند (بیرون از git). سطح لاگرها و انتشار به لاگر ریشه دست نمی‌خورد، پس خروجی
 # کنسول عیناً مثل قبل می‌ماند.
-_LOG_DIR = BASE_DIR / 'logs'
-_LOG_DIR.mkdir(exist_ok=True)
+_custom_log_dir = os.environ.get('DJANGO_LOG_DIR')
+_LOG_DIR = Path(_custom_log_dir) if _custom_log_dir else (BASE_DIR / 'logs')
+_LOG_DIR.mkdir(parents=True, exist_ok=True)
 _PROJECT_LOGGERS = (
     'accounts', 'common', 'communications', 'config', 'inventory', 'notifications',
     'personnel', 'platform_core', 'reports', 'settings_core', 'warehouses',
@@ -132,6 +145,15 @@ INSTALLED_APPS = [
     # Local apps
     *LOCAL_APPS,
 ]
+
+# django-extensions ابزار توسعه است و فقط با درخواست صریح بار می‌شود، مثلاً:
+#   WH_DEV_TOOLS=1 ./venv/Scripts/python.exe manage.py show_urls
+# daphne و worker این متغیر را ندارند؛ پس دستورهای مخرب آن (reset_db، reset_schema،
+# delete_squashed_migrations) و افشاگرش (print_settings، sqldsn) در manage.py عادی
+# نیستند و سرور بدون این بسته هم بالا می‌آید (فقط در وابستگی‌های dev است، نه
+# requirements.txt). ته فهرست می‌آید تا دستور هم‌نام اپ‌های پروژه را نپوشاند.
+if os.environ.get('WH_DEV_TOOLS', '').strip().lower() in ('1', 'true', 'yes'):
+    INSTALLED_APPS.append('django_extensions')
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -248,7 +270,12 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+_custom_media_root = os.environ.get('DJANGO_MEDIA_ROOT')
+MEDIA_ROOT = Path(_custom_media_root) if _custom_media_root else (BASE_DIR / 'media')
+MEDIA_ACCEL_REDIRECT = os.environ.get('DJANGO_MEDIA_ACCEL_REDIRECT') in ('1', 'true', 'True')
+
+WAREHOUSE_REPORT_EXPORT_DIR = os.environ.get('WAREHOUSE_REPORT_EXPORT_DIR')
+WAREHOUSE_BACKUP_DIR = os.environ.get('WAREHOUSE_BACKUP_DIR')
 
 # سقف تعداد فایل در یک درخواست. پیش‌فرض Django عدد ۱۰۰ است؛ سقف واقعی برنامه
 # ۳۰ عکس برای هر کالاست (MAX_PHOTOS_PER_ITEM)، پس ۶۰ هم حاشیه کافی می‌دهد و هم

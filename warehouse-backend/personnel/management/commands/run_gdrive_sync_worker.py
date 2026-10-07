@@ -70,7 +70,7 @@ def is_company_eligible_for_sync(config: CompanyGoogleDriveConfig, ignore_schedu
 
 
 class Command(BaseCommand):
-    help = "اجرای ورکر پس‌زمینه همگام‌سازی فایل‌ها با گوگل‌درایو شرکت‌ها (Google Drive Sync Worker)"
+    help = "Background worker for syncing company files to Google Drive"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -80,30 +80,30 @@ class Command(BaseCommand):
         parser.add_argument(
             '--once',
             action='store_true',
-            help='پردازش صف موجود یک‌بار و خروج (مناسب برای کران‌جاب یا تست)'
+            help='Process pending queue once and exit (for testing or cron)'
         )
         parser.add_argument(
             '--interval',
             type=int,
             default=10,
-            help='فاصله زمانی بررسی مجدد صف بر حسب ثانیه در حالت دائمی (پیش‌فرض: ۱۰ ثانیه)'
+            help='Polling interval in seconds (default: 10s)'
         )
         parser.add_argument(
             '--limit',
             type=int,
             default=20,
-            help='حداکثر تعداد تسک‌ها در هر دور پردازش (پیش‌فرض: ۲۰)'
+            help='Max tasks per batch (default: 20)'
         )
         parser.add_argument(
             '--company-id',
             type=int,
             default=None,
-            help='فیلتر بر اساس شناسه یک شرکت خاص'
+            help='Filter for a specific company ID'
         )
         parser.add_argument(
             '--ignore-schedule',
             action='store_true',
-            help='نادیده‌گرفتن بازه زمانی ساعات خلوتی و ارسال فوری تسک‌ها'
+            help='Ignore off-peak hours and send immediately'
         )
 
     def _log(self, msg, style_func=None):
@@ -125,14 +125,14 @@ class Command(BaseCommand):
 
         # ثبت مدیریت سیگنال‌های توقف نرم
         def _stop_signal(signum, frame):
-            self._log("\nدرخواست توقف ورکر دریافت شد. در حال اتمام وظایف جاری...", self.style.WARNING)
+            self._log("\nShutdown signal received. Exiting gracefully...", self.style.WARNING)
             self.keep_running = False
 
         signal.signal(signal.SIGINT, _stop_signal)
         signal.signal(signal.SIGTERM, _stop_signal)
 
         self._log(
-            f"=== شروع به کار ورکر گوگل‌درایو شرکت‌ها (Once={once}, Interval={interval}s, Limit={limit}, IgnoreSchedule={ignore_schedule}) ===",
+            f"=== Starting Company GDrive Worker (Once={once}, Interval={interval}s, Limit={limit}, IgnoreSchedule={ignore_schedule}) ===",
             self.style.SUCCESS
         )
 
@@ -148,10 +148,10 @@ class Command(BaseCommand):
                 processed = self.process_batch(limit=limit, company_id=company_id, ignore_schedule=ignore_schedule)
             except Exception as loop_exc:
                 logger.error(f"[Company GDrive Worker] Error during process_batch: {loop_exc}", exc_info=True)
-                self._log(f"[Company GDrive Worker] خطا در پردازش دسته: {loop_exc}", self.style.ERROR)
+                self._log(f"[Company GDrive Worker] Error during process_batch: {loop_exc}", self.style.ERROR)
 
             if once:
-                self._log(f"پردازش صف با موفقیت پایان یافت. مجموع تسک‌های پردازش‌شده: {processed}", self.style.SUCCESS)
+                self._log(f"Queue processing completed. Total processed tasks: {processed}", self.style.SUCCESS)
                 break
 
             if processed == 0:
@@ -222,7 +222,7 @@ class Command(BaseCommand):
         if not candidate_ids:
             return 0
 
-        self._log(f"در حال پردازش {len(candidate_ids)} تسک همگام‌سازی...")
+        self._log(f"Processing {len(candidate_ids)} sync task(s)...")
         success_count = 0
 
         for task_id in candidate_ids:
@@ -233,11 +233,11 @@ class Command(BaseCommand):
                 ok = sync_single_queue_item(task_id)
                 if ok:
                     success_count += 1
-                    self._log(f"  [✓] تسک #{task_id} با موفقیت همگام شد.", self.style.SUCCESS)
+                    self._log(f"  [✓] Task #{task_id} synced successfully.", self.style.SUCCESS)
                 else:
-                    self._log(f"  [!] تسک #{task_id} ناموفق بود.", self.style.WARNING)
+                    self._log(f"  [!] Task #{task_id} sync failed.", self.style.WARNING)
             except Exception as exc:
-                self._log(f"  [✗] خطا در اجرای تسک #{task_id}: {exc}", self.style.ERROR)
+                self._log(f"  [✗] Error syncing task #{task_id}: {exc}", self.style.ERROR)
 
             # اعمال مکث تاخیر بین چانک‌ها جهت جلوگیری از اشغال ۱۰۰ درصدی پهنای باند آپلود
             cid = task_company_map.get(task_id)

@@ -1,0 +1,10 @@
+[Unit]
+Description=Warehouse Automated Nightly Database and Media Backup
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+EnvironmentFile=/var/www/warehouse/shared/.env
+ExecStart=/usr/local/bin/warehouse-nightly-backup.sh

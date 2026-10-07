@@ -35,3 +35,6 @@ chat_history_dashboard.html
 deploy_config.json
 deploy_bundle.zip
 backups/
+
+# Windows Explorer folder metadata
+desktop.ini

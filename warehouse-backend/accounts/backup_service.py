@@ -17,11 +17,22 @@ from .audit_utils import log_audit_event
 
 logger = logging.getLogger(__name__)
 
-BACKUP_DIR = os.path.join(settings.BASE_DIR, 'backups', 'db')
+def get_backup_dir() -> str:
+    """مسیر پوشهٔ پشتیبان‌های دیتابیس (بر پایهٔ WAREHOUSE_BACKUP_DIR یا مسیر پیش‌فرض)."""
+    base = getattr(settings, 'WAREHOUSE_BACKUP_DIR', None)
+    if base:
+        return os.path.join(base, 'db')
+    return os.path.join(settings.BASE_DIR, 'backups', 'db')
+
+
+def __getattr__(name):
+    if name == 'BACKUP_DIR':
+        return get_backup_dir()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 def _ensure_backup_dir():
-    os.makedirs(BACKUP_DIR, exist_ok=True)
+    os.makedirs(get_backup_dir(), exist_ok=True)
 
 
 def clean_public_schema():
@@ -76,16 +87,17 @@ def calculate_sha256(filepath):
 def get_backup_list():
     """دریافت لیست تمام فایل‌های پشتیبان ثبت‌شده همراه با متادیتا و وضعیت سلامت"""
     _ensure_backup_dir()
+    backup_dir = get_backup_dir()
     backups = []
 
-    for item in os.listdir(BACKUP_DIR):
+    for item in os.listdir(backup_dir):
         if item.endswith('.meta.json'):
-            meta_path = os.path.join(BACKUP_DIR, item)
+            meta_path = os.path.join(backup_dir, item)
             try:
                 with open(meta_path, 'r', encoding='utf-8') as f:
                     meta = json.load(f)
                     
-                data_file = os.path.join(BACKUP_DIR, meta.get('filename', ''))
+                data_file = os.path.join(backup_dir, meta.get('filename', ''))
                 if os.path.exists(data_file):
                     meta['file_exists'] = True
                     meta['actual_size'] = os.path.getsize(data_file)
@@ -111,9 +123,11 @@ def create_database_backup(user=None, description="پشتیبان‌گیری د�
     now_str = datetime.now().strftime('%Y%m%d_%H%M%S')
     prefix = 'emergency' if is_emergency else 'backup'
 
+    backup_dir = get_backup_dir()
+
     if 'postgresql' in engine:
         filename = f"{prefix}_{now_str}.dump"
-        dest_path = os.path.join(BACKUP_DIR, filename)
+        dest_path = os.path.join(backup_dir, filename)
 
         env = os.environ.copy()
         if db_config.get('PASSWORD'):
@@ -149,7 +163,7 @@ def create_database_backup(user=None, description="پشتیبان‌گیری د�
             'created_at': datetime.now().isoformat()
         }
 
-        meta_path = os.path.join(BACKUP_DIR, f"{filename}.meta.json")
+        meta_path = os.path.join(backup_dir, f"{filename}.meta.json")
         with open(meta_path, 'w', encoding='utf-8') as f:
             json.dump(meta, f, ensure_ascii=False, indent=2)
 
@@ -177,7 +191,7 @@ def create_database_backup(user=None, description="پشتیبان‌گیری د�
             raise FileNotFoundError(f"Database file not found at {db_path}")
 
         filename = f"{prefix}_{now_str}.sqlite3"
-        dest_path = os.path.join(BACKUP_DIR, filename)
+        dest_path = os.path.join(backup_dir, filename)
 
         src_conn = sqlite3.connect(db_path)
         dest_conn = sqlite3.connect(dest_path)
@@ -204,7 +218,7 @@ def create_database_backup(user=None, description="پشتیبان‌گیری د�
             'created_at': datetime.now().isoformat()
         }
 
-        meta_path = os.path.join(BACKUP_DIR, f"{filename}.meta.json")
+        meta_path = os.path.join(backup_dir, f"{filename}.meta.json")
         with open(meta_path, 'w', encoding='utf-8') as f:
             json.dump(meta, f, ensure_ascii=False, indent=2)
 
@@ -233,8 +247,9 @@ def create_database_backup(user=None, description="پشتیبان‌گیری د�
 def verify_backup_integrity(filename):
     """اعتبارسنجی یکپارچگی فایل پشتیبان با تطبیق هش SHA-256 و بررسی اولیه فایل"""
     _ensure_backup_dir()
-    data_path = os.path.join(BACKUP_DIR, filename)
-    meta_path = os.path.join(BACKUP_DIR, f"{filename}.meta.json")
+    backup_dir = get_backup_dir()
+    data_path = os.path.join(backup_dir, filename)
+    meta_path = os.path.join(backup_dir, f"{filename}.meta.json")
 
     if not os.path.exists(data_path):
         return {'is_valid': False, 'error': 'فایل داده پشتیبان در سرور یافت نشد.'}
@@ -278,7 +293,7 @@ def restore_database_backup(filename, user=None, ip_address=None):
 
     db_config = settings.DATABASES['default']
     engine = db_config.get('ENGINE', '')
-    backup_file = os.path.join(BACKUP_DIR, filename)
+    backup_file = os.path.join(get_backup_dir(), filename)
 
     if 'postgresql' in engine:
         # پاکسازی تمیز جداول و ویوها با حفظ اکستنشن‌های دیتابیس
@@ -380,8 +395,20 @@ def format_shamsi(iso_or_datetime_str):
 
 
 def rotate_snapshots(keep_count=7):
-    """حفظ N نسخه اخیر از اسنپ‌شات‌های روتین سرور و پاکسازی نسخه‌های قدیمی‌تر"""
+    """حفظ N نسخه اخیر از اسنپ‌شات‌های روتین سرور و پاکسازی نسخه‌های قدیمی‌تر (WAREHOUSE_BACKUP_KEEP=0 یعنی بدون حذف)"""
+    env_keep = os.environ.get('WAREHOUSE_BACKUP_KEEP')
+    if env_keep is not None:
+        try:
+            keep_count = int(env_keep)
+        except (ValueError, TypeError):
+            pass
+
+    if keep_count <= 0:
+        logger.info("Snapshot rotation disabled (keep_count <= 0). Preserving all backups.")
+        return 0
+
     _ensure_backup_dir()
+    backup_dir = get_backup_dir()
     backups = get_backup_list()
     routine_backups = [b for b in backups if not b.get('is_emergency')]
 
@@ -389,8 +416,8 @@ def rotate_snapshots(keep_count=7):
     if len(routine_backups) > keep_count:
         to_delete = routine_backups[keep_count:]
         for b in to_delete:
-            data_file = os.path.join(BACKUP_DIR, b.get('filename', ''))
-            meta_file = os.path.join(BACKUP_DIR, f"{b.get('filename', '')}.meta.json")
+            data_file = os.path.join(backup_dir, b.get('filename', ''))
+            meta_file = os.path.join(backup_dir, f"{b.get('filename', '')}.meta.json")
 
             if os.path.exists(data_file):
                 try:
