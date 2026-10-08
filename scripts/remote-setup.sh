@@ -24,8 +24,8 @@ if [[ -f "/var/www/warehouse/shared/GO_LIVE" ]]; then
     exit 1
 fi
 
-if [[ $# -ne 9 ]]; then
-    echo "Usage: remote-setup.sh <domain> <admin_email> <db_name> <db_user> <allowed_hosts> <ssh_port> <bundle_path> <bundle_sha256> <modules>" >&2
+if [[ $# -lt 9 || $# -gt 10 ]]; then
+    echo "Usage: remote-setup.sh <domain> <admin_email> <db_name> <db_user> <allowed_hosts> <ssh_port> <bundle_path> <bundle_sha256> <modules> [cert_mode]" >&2
     exit 2
 fi
 DOMAIN="$1"
@@ -37,6 +37,15 @@ SSH_PORT="$6"
 BUNDLE_PATH="$7"
 BUNDLE_SHA256="$8"
 MODULES_ARG="$9"
+CERT_MODE_ARG="${10:-http01}"
+
+case "$CERT_MODE_ARG" in
+    http01|dns01-cloudflare|cloudflare-origin|custom) ;;
+    *)
+        echo "ERROR: Invalid cert_mode '$CERT_MODE_ARG'. Must be http01, dns01-cloudflare, cloudflare-origin, or custom." >&2
+        exit 1
+        ;;
+esac
 
 if [[ -z "$ALLOWED_HOSTS" || "$ALLOWED_HOSTS" == "*" ]]; then
     ALLOWED_HOSTS="$DOMAIN"
@@ -302,10 +311,14 @@ EOF
     chown root:warehouse "$ENV_FILE"
     chmod 640 "$ENV_FILE"
     printf '%s\n' "$MODULES" > "${SHARED_DIR}/MODULES"
+    printf '%s\n' "$CERT_MODE_ARG" > "${SHARED_DIR}/CERT_MODE"
 else
     # Second Setup: the database and .env are never touched (6.2). warehouse-deploy --prepare (step 8)
     # appends every missing non-secret key; only the allowed hosts from the configuration are added here.
     echo "--> Existing ${ENV_FILE} preserved; the database is not touched."
+    if [[ ! -f "${SHARED_DIR}/CERT_MODE" ]]; then
+        printf '%s\n' "$CERT_MODE_ARG" > "${SHARED_DIR}/CERT_MODE"
+    fi
     if ! grep -q '^DJANGO_ALLOWED_HOSTS=' "$ENV_FILE"; then
         [[ -z "$(tail -c 1 "$ENV_FILE")" ]] || printf '\n' >> "$ENV_FILE"
         echo "DJANGO_ALLOWED_HOSTS=${ALLOWED_HOSTS}" >> "$ENV_FILE"
@@ -384,31 +397,49 @@ systemctl start warehouse-backend warehouse-gdrive-worker warehouse-export-worke
 # 11. Web Server (Nginx) & TLS Configuration
 # The activation above already rendered the HTTP site (with the ACME webroot) through the tested
 # path of warehouse-deploy, which restores the previous configuration if "nginx -t" fails (G-07).
-# DNS-01 through Cloudflare when the root-only token file exists (set by the gateway's set-dns-token),
-# HTTP-01 (webroot) otherwise. A failed request never stops the setup: the firewall below must still
-# be enabled, and the certificate can be requested later with deploy.ps1 -IssueCert.
-echo "--> Configuring TLS for domain ${DOMAIN}..."
+# Unified certificate path: /etc/warehouse/tls/${DOMAIN}/fullchain.pem and privkey.pem.
+# Certificate mode: http01 (webroot), dns01-cloudflare, cloudflare-origin, or custom.
+echo "--> Configuring TLS for domain ${DOMAIN} (mode: ${CERT_MODE_ARG})..."
+TLS_DIR="/etc/warehouse/tls/${DOMAIN}"
+mkdir -p "$TLS_DIR"
 CF_INI=/etc/letsencrypt/cloudflare.ini
-if [[ ! -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
-    if [[ "$ADMIN_EMAIL" == *"@example.com" ]]; then
-        echo "--> [WARNING] AdminEmail is a placeholder (${ADMIN_EMAIL}); skipping automated Let's Encrypt registration."
-    elif [[ -f "$CF_INI" && ! -L "$CF_INI" ]]; then
-        echo "--> Requesting Let's Encrypt TLS certificate via DNS-01 (Cloudflare)..."
-        certbot certonly --dns-cloudflare --dns-cloudflare-credentials "$CF_INI" --dns-cloudflare-propagation-seconds 30 \
-            -d "$DOMAIN" --email "$ADMIN_EMAIL" --agree-tos --non-interactive --deploy-hook "systemctl reload nginx" \
-            || echo "--> [WARNING] The DNS-01 certificate request failed (see above)."
+
+if [[ "$CERT_MODE_ARG" == "cloudflare-origin" || "$CERT_MODE_ARG" == "custom" ]]; then
+    if [[ -f "${TLS_DIR}/fullchain.pem" ]]; then
+        /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$DOMAIN"
+        echo "--> HTTPS operational with installed TLS certificate (${CERT_MODE_ARG})!"
     else
-        echo "--> Requesting Let's Encrypt TLS certificate via webroot..."
-        certbot certonly --webroot -w /var/www/html -d "$DOMAIN" --email "$ADMIN_EMAIL" \
-            --agree-tos --non-interactive --deploy-hook "systemctl reload nginx" \
-            || echo "--> [WARNING] The HTTP-01 certificate request failed (see above)."
+        echo "[TLS_PENDING] CertMode is ${CERT_MODE_ARG}: install the certificate files using deploy.ps1 -InstallCert -CertFile <path> -KeyFile <path>."
     fi
-fi
-if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
-    /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$DOMAIN"
-    echo "--> HTTPS operational with Let's Encrypt TLS certificate!"
 else
-    echo "[TLS_PENDING] No certificate yet: the application runs, but nginx only redirects HTTP to HTTPS, so the site is not reachable until a certificate exists. Set the Cloudflare token (deploy.ps1 -SetSecret CLOUDFLARE_DNS_API_TOKEN), then run deploy.ps1 -IssueCert."
+    # Let's Encrypt modes: http01 or dns01-cloudflare
+    if [[ ! -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
+        if [[ "$ADMIN_EMAIL" == *"@example.com" ]]; then
+            echo "--> [WARNING] AdminEmail is a placeholder (${ADMIN_EMAIL}); skipping automated Let's Encrypt registration."
+        elif [[ "$CERT_MODE_ARG" == "dns01-cloudflare" ]]; then
+            if [[ -f "$CF_INI" && ! -L "$CF_INI" ]]; then
+                echo "--> Requesting Let's Encrypt TLS certificate via DNS-01 (Cloudflare)..."
+                certbot certonly --dns-cloudflare --dns-cloudflare-credentials "$CF_INI" --dns-cloudflare-propagation-seconds 30 \
+                    -d "$DOMAIN" --email "$ADMIN_EMAIL" --agree-tos --non-interactive --deploy-hook "systemctl reload nginx" \
+                    || echo "--> [WARNING] The DNS-01 certificate request failed (see above)."
+            else
+                echo "--> [WARNING] CertMode is dns01-cloudflare but Cloudflare token is not set yet; skipping certbot."
+            fi
+        else
+            echo "--> Requesting Let's Encrypt TLS certificate via webroot (HTTP-01)..."
+            certbot certonly --webroot -w /var/www/html -d "$DOMAIN" --email "$ADMIN_EMAIL" \
+                --agree-tos --non-interactive --deploy-hook "systemctl reload nginx" \
+                || echo "--> [WARNING] The HTTP-01 certificate request failed (see above)."
+        fi
+    fi
+    if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
+        ln -sfn "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" "${TLS_DIR}/fullchain.pem"
+        ln -sfn "/etc/letsencrypt/live/${DOMAIN}/privkey.pem" "${TLS_DIR}/privkey.pem"
+        /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$DOMAIN"
+        echo "--> HTTPS operational with Let's Encrypt TLS certificate!"
+    else
+        echo "[TLS_PENDING] No certificate yet: the application runs, but nginx only redirects HTTP to HTTPS, so the site is not reachable until a certificate exists. Set the Cloudflare token (deploy.ps1 -SetSecret CLOUDFLARE_DNS_API_TOKEN), then run deploy.ps1 -IssueCert."
+    fi
 fi
 
 # 12. Security Hardening & Firewall (UFW & Fail2ban) (F-15)

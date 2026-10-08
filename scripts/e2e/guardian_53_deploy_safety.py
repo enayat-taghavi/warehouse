@@ -241,6 +241,43 @@ def verify_deploy_safety() -> bool:
     else:
         print("✅ بند ۱۲: انتخاب سامانه: Modules معتبر، Update/Setup بدون تغییر سامانه، بدون حذف سامانه، ResetServer فقط پیش از GO_LIVE و با پشتیبان، AddModule با پشتیبان و بازگشت.")
 
+    # 13. Certificate modes and TLS safety (plan Modular_Deploy_Options step 4)
+    known_cert_modes = ("http01", "dns01-cloudflare", "cloudflare-origin", "custom")
+    cert_problems = []
+    if DEPLOY_CONFIG.exists():
+        try:
+            cfg_cert_mode = json.loads(DEPLOY_CONFIG.read_text(encoding="utf-8")).get("CertMode")
+        except Exception:
+            cfg_cert_mode = None
+        if cfg_cert_mode is not None and cfg_cert_mode not in known_cert_modes:
+            cert_problems.append("کلید CertMode در deploy_config.json روش ناشناخته دارد")
+
+    nginx_https_tpl = REPO_ROOT / "scripts" / "deploy" / "templates" / "nginx-https.conf"
+    tpl_text = nginx_https_tpl.read_text(encoding="utf-8") if nginx_https_tpl.exists() else ""
+    backup_sh = REPO_ROOT / "scripts" / "deploy" / "warehouse-nightly-backup.sh"
+    backup_text = backup_sh.read_text(encoding="utf-8") if backup_sh.exists() else ""
+
+    gw_install_cert = gateway_text[gateway_text.find("    install-cert)"):] if "    install-cert)" in gateway_text else ""
+    install_mode_block = ps1_text[ps1_text.find("function Invoke-InstallCertMode"):ps1_text.find("function Invoke-InstallCertMode") + 1200] if "function Invoke-InstallCertMode" in ps1_text else ""
+    cert_checks = [
+        ("KnownCertModes" in ps1_text and "InstallCert" in ps1_text and "CertFile" in ps1_text and "KeyFile" in ps1_text, "پارامترهای -InstallCert در deploy.ps1 غایب هستند"),
+        ("ssl_certificate /etc/warehouse/tls/__DOMAIN__/fullchain.pem" in tpl_text, "مسیر یکپارچه fullchain.pem در قالب nginx-https.conf رعایت نشده"),
+        ("ssl_certificate_key /etc/warehouse/tls/__DOMAIN__/privkey.pem" in tpl_text, "مسیر یکپارچه privkey.pem در قالب nginx-https.conf رعایت نشده"),
+        ("__CLOUDFLARE_REAL_IP__" in tpl_text and "CF-Connecting-IP" in deploy_text, "تنظیمات real_ip کلودفلر در قالب یا اسکریپت استقرار غایب است"),
+        ("install-cert" in gateway_text and "CERT_VERIFY_PY" in gateway_text, "زیرفرمان install-cert یا موتور اعتبارسنجی در دروازه غایب است"),
+        ("chmod 600" in gw_install_cert or "chmod 0600" in gw_install_cert, "مجوز 0600 برای کلید خصوصی در install-cert اعمال نشده"),
+        (("--refresh-nginx" in gw_install_cert or "nginx -t" in gw_install_cert) and ("TLS_BACKUP" in gw_install_cert or "RESTORE" in gw_install_cert), "بررسی nginx یا قابلیت بازیابی گواهی قبلی در دروازه غایب است"),
+        ("checkend" in gateway_text, "بررسی عدم انقضای گواهی با checkend در دروازه غایب است"),
+        ("TLS certificate" in backup_text and "30" in backup_text, "پایش انقضای گواهی در پشتیبان شبانه غایب است"),
+        ("Set-Clipboard" not in ps1_text and "Get-Content" not in install_mode_block, "نشت یا خواندن غیرضروری محتوای کلید خصوصی در حافظه/کنسول"),
+    ]
+    cert_problems += [msg for ok, msg in cert_checks if not ok]
+    if cert_problems:
+        errors.extend(cert_problems)
+        print("❌ بند ۱۳: " + "؛ ".join(cert_problems))
+    else:
+        print("✅ بند ۱۳: روش‌های گواهی TLS: اعتبارسنجی CertMode، نصب امن InstallCert، مسیر یکپارچه /etc/warehouse/tls/، گارد اعتبارسنجی OpenSSL، فقدان کلید در argv و real_ip کلودفلر.")
+
     print("=" * 74)
     if errors:
         print(f"❌ نگهبان ۵۳ شکست خورد: {', '.join(errors)}")

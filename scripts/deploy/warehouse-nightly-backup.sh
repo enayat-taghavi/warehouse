@@ -153,6 +153,34 @@ elif [[ -d "$MEDIA_DIR" ]]; then
     echo "[SUCCESS] Media backup completed: ${CURRENT_MEDIA_BACKUP}"
 fi
 
+# 4b. TLS Certificate Expiry Logging
+DOMAIN_FILE="${SHARED_DIR}/DOMAIN"
+if [[ -f "$DOMAIN_FILE" ]] && command -v openssl >/dev/null 2>&1; then
+    CERT_DOMAIN=$(head -n 1 "$DOMAIN_FILE" 2>/dev/null | tr -d '\r\n' || true)
+    if [[ -n "$CERT_DOMAIN" ]]; then
+        CERT_MODE_LOG=$(cat "${SHARED_DIR}/CERT_MODE" 2>/dev/null | tr -d '\r\n' || true)
+        if [[ -z "$CERT_MODE_LOG" ]]; then CERT_MODE_LOG="http01"; fi
+        CERT_FILE="/etc/warehouse/tls/${CERT_DOMAIN}/fullchain.pem"
+        if [[ ! -f "$CERT_FILE" && -f "/etc/letsencrypt/live/${CERT_DOMAIN}/cert.pem" ]]; then
+            CERT_FILE="/etc/letsencrypt/live/${CERT_DOMAIN}/cert.pem"
+        fi
+        if [[ -f "$CERT_FILE" ]]; then
+            EXP_DATE=$(openssl x509 -enddate -noout -in "$CERT_FILE" 2>/dev/null | cut -d= -f2 || true)
+            if [[ -n "$EXP_DATE" ]]; then
+                DAYS_LEFT=$(( ( $(date -d "$EXP_DATE" +%s) - $(date +%s) ) / 86400 ))
+                echo "[INFO] TLS certificate (${CERT_MODE_LOG}) for ${CERT_DOMAIN} expires in ${DAYS_LEFT} days (${EXP_DATE})."
+                if [[ "$CERT_MODE_LOG" == "cloudflare-origin" || "$CERT_MODE_LOG" == "custom" ]]; then
+                    if [[ "$DAYS_LEFT" -lt 30 ]]; then
+                        echo "[WARNING] TLS certificate (${CERT_MODE_LOG}) expires in less than 30 days (${DAYS_LEFT} days left)."
+                    fi
+                elif [[ "$DAYS_LEFT" -lt 21 ]]; then
+                    echo "[WARNING] TLS certificate (${CERT_MODE_LOG}) expires in less than 21 days (${DAYS_LEFT} days left)."
+                fi
+            fi
+        fi
+    fi
+fi
+
 # Reset trap
 trap - EXIT INT TERM
 

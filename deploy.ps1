@@ -39,6 +39,10 @@ param(
     [switch]$Logs,
     [switch]$Restart,
     [switch]$IssueCert,
+    [switch]$InstallCert,
+    [string]$CertFile,
+    [string]$KeyFile,
+    [string]$ChainFile,
     [switch]$Status,
     [string]$AddModule,
     [switch]$ResetServer,
@@ -75,6 +79,9 @@ $SecretKeyAllowList = @('GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 
 # Installable modules in catalog order (platform_core/module_catalog.py); WH_MODULES on the server.
 $KnownModules = @('warehouse', 'accounting')
 $AllModules = $KnownModules -join ','
+# Certificate modes: http01 (webroot), dns01-cloudflare, cloudflare-origin, custom.
+$KnownCertModes = @('http01', 'dns01-cloudflare', 'cloudflare-origin', 'custom')
+$DefaultCertMode = 'http01'
 
 function Find-Application([string]$Name) {
     $cmd = Get-Command $Name -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -394,6 +401,10 @@ function Assert-DeployConfig {
     $modules = if ($modulesSet) { ConvertTo-CanonicalModuleList ([string]$RawConfig.Modules) } else { $AllModules }
     if (-not $modules) { $problems.Add("Modules must list known modules separated by commas ($($KnownModules -join ', '))") }
 
+    $certModeSet = $null -ne $RawConfig.PSObject.Properties['CertMode']
+    $certMode = if ($certModeSet) { ([string]$RawConfig.CertMode).Trim().ToLowerInvariant() } else { $DefaultCertMode }
+    if ($certMode -notin $KnownCertModes) { $problems.Add("CertMode must be one of: $($KnownCertModes -join ', ')") }
+
     $adminEmail = ([string]$RawConfig.AdminEmail).Trim()
     if ($ForSetup) {
         if ($adminEmail -notmatch '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$') { $problems.Add('AdminEmail must be a valid e-mail address (required for Setup)') }
@@ -410,6 +421,7 @@ function Assert-DeployConfig {
         HostKeyFingerprint = $fingerprint; DbName = $dbName; DbUser = $dbUser
         AllowedHosts = $allowedHosts; AdminEmail = $adminEmail; SourcePath = $SourcePath
         Modules = $modules; ModulesSet = $modulesSet
+        CertMode = $certMode; CertModeSet = $certModeSet
     }
 }
 
@@ -1257,7 +1269,7 @@ if [ -e /var/www/warehouse/shared/GO_LIVE ]; then echo '[GO_LIVE_EXISTS]'; exit 
 bash "$@"
 '@
         $setupArgs = @("$stage/remote-setup.sh", $config.Domain, $config.AdminEmail, $config.DbName, $config.DbUser,
-            $config.AllowedHosts, [string]$config.SshPort, "$stage/bundle.tar.gz", $bundle.Sha256, $modules)
+            $config.AllowedHosts, [string]$config.SshPort, "$stage/bundle.tar.gz", $bundle.Sha256, $modules, $config.CertMode)
         if ($viaGateway) {
             $r = Invoke-RemoteRootScript -Config $config -Gateway 'setup' -ArgumentList $setupArgs -Capture
         } else {
@@ -1832,13 +1844,62 @@ function Invoke-RestartMode {
 
 function Invoke-IssueCertMode {
     $config = Connect-Server
-    Write-Step "Requesting the Let's Encrypt certificate for $($config.Domain) through DNS-01 (Cloudflare)..."
-    $r = Invoke-RemoteRootScript -Config $config -Gateway 'issue-cert' -ArgumentList @($config.AdminEmail) -Capture
+    if ($config.CertMode -in @('cloudflare-origin', 'custom')) {
+        throw "IssueCert is for Let's Encrypt modes ('http01' or 'dns01-cloudflare'). For '$($config.CertMode)', use deploy.ps1 -InstallCert -CertFile <path> -KeyFile <path> [-ChainFile <path>]."
+    }
+    $targetMode = if ($config.CertModeSet) { $config.CertMode } else { $null }
+    Write-Step "Requesting the Let's Encrypt certificate for $($config.Domain)$(if ($targetMode) { " via $targetMode" })..."
+    $gatewayArgs = @($config.AdminEmail)
+    if ($targetMode) { $gatewayArgs += $targetMode }
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'issue-cert' -ArgumentList $gatewayArgs -Capture
     if ($r.ExitCode -ne 0 -or -not ($r.Output -contains '[CERT_OK]')) {
         Write-Err "Issuing the certificate failed (exit $($r.ExitCode)). See the messages above."
         return $(if ($r.ExitCode -ne 0) { $r.ExitCode } else { 1 })
     }
     Write-Success "HTTPS is active: https://$($config.Domain)/ (renewed automatically by certbot.timer)."
+    return 0
+}
+
+function Invoke-InstallCertMode([string]$CertPath, [string]$KeyPath, [string]$ChainPath) {
+    if (-not $CertPath) {
+        Assert-Interactive 'InstallCert without -CertFile'
+        $CertPath = ([string](Read-Host -Prompt 'Path to certificate file (PEM)')).Trim()
+    }
+    if (-not $KeyPath) {
+        Assert-Interactive 'InstallCert without -KeyFile'
+        $KeyPath = ([string](Read-Host -Prompt 'Path to private key file (PEM)')).Trim()
+    }
+    if (-not (Test-Path -LiteralPath $CertPath -PathType Leaf)) { throw "Certificate file not found: $CertPath" }
+    if (-not (Test-Path -LiteralPath $KeyPath -PathType Leaf)) { throw "Private key file not found: $KeyPath" }
+    if ($ChainPath -and -not (Test-Path -LiteralPath $ChainPath -PathType Leaf)) { throw "Chain file not found: $ChainPath" }
+
+    $config = Connect-Server
+    if ($config.CertMode -notin @('cloudflare-origin', 'custom')) {
+        throw "InstallCert is for CertMode 'cloudflare-origin' or 'custom' only (configured: '$($config.CertMode)'). Update CertMode in deploy_config.json first."
+    }
+
+    Write-Step "Uploading certificate files to temporary stage on $($config.ServerHost)..."
+    $stage = $null
+    try {
+        $stage = New-RemoteStage $config
+        [void](Send-RemoteFile -Config $config -LocalPath $CertPath -StageDir $stage -Name 'cert.pem')
+        [void](Send-RemoteFile -Config $config -LocalPath $KeyPath -StageDir $stage -Name 'privkey.pem')
+        $gatewayArgs = @($config.CertMode, "$stage/cert.pem", "$stage/privkey.pem")
+        if ($ChainPath) {
+            [void](Send-RemoteFile -Config $config -LocalPath $ChainPath -StageDir $stage -Name 'chain.pem')
+            $gatewayArgs += "$stage/chain.pem"
+        }
+
+        Write-Step "Verifying and installing certificate on $($config.ServerHost) (mode: $($config.CertMode))..."
+        $r = Invoke-RemoteRootScript -Config $config -Gateway 'install-cert' -ArgumentList $gatewayArgs -Capture
+        if ($r.ExitCode -ne 0 -or -not ($r.Output -contains "[CERT_INSTALLED] $($config.CertMode)")) {
+            Write-Err "Certificate installation failed (exit $($r.ExitCode)). See messages above."
+            return $(if ($r.ExitCode -ne 0) { $r.ExitCode } else { 1 })
+        }
+    } finally {
+        if ($stage) { Remove-RemoteStage $config $stage }
+    }
+    Write-Success "Certificate installed successfully ($($config.CertMode)) on https://$($config.Domain)/"
     return 0
 }
 
@@ -1889,7 +1950,8 @@ $MenuItems = @(
     @('RegisterPullTask', 'Register the scheduled backup pull task'),
     @('Logs', 'Stream service logs'),
     @('Restart', 'Restart services and reload Nginx'),
-    @('IssueCert', "Issue the Let's Encrypt certificate (DNS-01, Cloudflare)"),
+    @('IssueCert', "Issue the Let's Encrypt certificate (HTTP-01 or DNS-01 by CertMode)"),
+    @('InstallCert', 'Install a Cloudflare Origin or Custom TLS certificate'),
     @('Status', 'Server and off-server backup status'),
     @('ResetServer', 'Recreate the database empty (before GO_LIVE only)')
 )
@@ -1942,7 +2004,8 @@ Modes (exactly one):
   -RegisterPullTask  Register the daily backup pull task (use -Force to re-register)
   -Logs              Stream the service journal
   -Restart           Restart application services and reload Nginx
-  -IssueCert         Issue the Let's Encrypt certificate through DNS-01 (needs the Cloudflare token)
+  -IssueCert         Issue the Let's Encrypt certificate (HTTP-01 or DNS-01 by CertMode)
+  -InstallCert       Install a Cloudflare Origin or Custom TLS certificate (-CertFile, -KeyFile)
   -Status            Server state, heartbeats, disk, certificate and off-server copies
   -Help              Show this help
 
@@ -1952,6 +2015,9 @@ Options:
   -SkipBuild         Reuse a completed build of the same commit
   -Maintenance       Activate the update in maintenance mode
   -Force             Re-register the scheduled task
+  -CertFile <path>   Certificate file for -InstallCert
+  -KeyFile <path>    Private key file for -InstallCert
+  -ChainFile <path>  Optional intermediate CA chain file for -InstallCert
   -ConfigFile <path> Configuration file (default deploy_config.json; absolute paths allowed)
 '@
 }
@@ -1979,6 +2045,7 @@ function Invoke-Mode([string]$Name) {
             'Logs' { Invoke-LogsMode }
             'Restart' { Invoke-RestartMode }
             'IssueCert' { Invoke-IssueCertMode }
+            'InstallCert' { Invoke-InstallCertMode -CertPath $CertFile -KeyPath $KeyFile -ChainPath $ChainPath }
             'Status' { Invoke-StatusMode }
             'Help' { Show-Help; 0 }
             default { throw "Unknown mode: $Name" }
@@ -2000,7 +2067,7 @@ function Invoke-Main {
             RestoreDrill = [bool]$RestoreDrill; Rollback = [bool]$Rollback; GoLive = [bool]$GoLive
             CreateAdmin = [bool]$CreateAdmin; SetSecret = -not [string]::IsNullOrEmpty($SetSecret)
             RegisterPullTask = [bool]$RegisterPullTask; Logs = [bool]$Logs; Restart = [bool]$Restart
-            IssueCert = [bool]$IssueCert; Status = [bool]$Status; Help = [bool]$ShowHelp
+            IssueCert = [bool]$IssueCert; InstallCert = [bool]$InstallCert; Status = [bool]$Status; Help = [bool]$ShowHelp
             AddModule = -not [string]::IsNullOrEmpty($AddModule); ResetServer = [bool]$ResetServer
         }
         $chosen = @($flags.Keys | Where-Object { $flags[$_] })

@@ -41,6 +41,7 @@ printf 'c.part is user data\n' > "$S/media/c.txt.part"
 head -c 300000 /dev/urandom > "$S/media/sub dir/file one.bin"
 printf 'persian name\n' > "$S/media/"$'\xd8\xb9\xda\xa9\xd8\xb3.jpg'
 chown -R warehouse:warehouse "$S/media"
+printf 'soft.example.test\n' > "$S/DOMAIN"
 
 install -m 0755 /fixture/warehouse-nightly-backup.sh /usr/local/bin/warehouse-nightly-backup.sh
 [ -f /fixture/warehouse-root-gateway.sh ] && install -m 0755 /fixture/warehouse-root-gateway.sh /usr/local/sbin/warehouse-root-gateway
@@ -127,6 +128,8 @@ case "$mode" in
         if [ -z "$v" ]; then v=warehouse,accounting; fi
         case "$v" in warehouse|accounting|warehouse,accounting) ;; *) echo "[ERROR] invalid WH_MODULES" >&2; exit 1 ;; esac
         echo "[MODULES] $v" ;;
+    --refresh-nginx)
+        echo "refresh-nginx $*" >> "$LOG" ;;
     --add-module|--reset-database)
         echo "${mode#--} $*" >> "$LOG"
         echo "[ERROR] (fake) ${mode} is exercised by test_server_e2e.ps1" >&2

@@ -111,6 +111,106 @@ for rel in rels:
 sys.exit(rc)
 '
 
+CERT_VERIFY_PY='
+import os, re, subprocess, sys
+
+cert_path = sys.argv[1]
+key_path = sys.argv[2]
+domain = sys.argv[3].lower()
+mode = sys.argv[4]
+chain_path = sys.argv[5] if len(sys.argv) > 5 and sys.argv[5] else None
+
+# 1. Private key validity
+r = subprocess.run(["openssl", "pkey", "-in", key_path, "-noout"], capture_output=True)
+if r.returncode != 0:
+    print("[ERROR] install-cert: invalid private key format", file=sys.stderr)
+    sys.exit(3)
+
+# 2. Certificate validity
+r = subprocess.run(["openssl", "x509", "-in", cert_path, "-noout"], capture_output=True)
+if r.returncode != 0:
+    print("[ERROR] install-cert: invalid certificate format", file=sys.stderr)
+    sys.exit(3)
+
+# 3. Not expired
+r = subprocess.run(["openssl", "x509", "-in", cert_path, "-checkend", "0", "-noout"], capture_output=True)
+if r.returncode != 0:
+    print("[ERROR] install-cert: certificate is expired", file=sys.stderr)
+    sys.exit(3)
+
+# 4. Key matches certificate
+c_pub = subprocess.run(["openssl", "x509", "-in", cert_path, "-pubkey", "-noout"], capture_output=True, text=True).stdout.strip().replace("\r\n", "\n")
+k_pub = subprocess.run(["openssl", "pkey", "-in", key_path, "-pubout"], capture_output=True, text=True).stdout.strip().replace("\r\n", "\n")
+if not c_pub or not k_pub or c_pub != k_pub:
+    print("[ERROR] install-cert: private key does not match certificate", file=sys.stderr)
+    sys.exit(3)
+
+# 5. SAN covers domain
+san_res = subprocess.run(["openssl", "x509", "-in", cert_path, "-ext", "subjectAltName", "-noout"], capture_output=True, text=True)
+sans = []
+if san_res.returncode == 0:
+    for m in re.finditer(r"DNS:([^\s,]+)", san_res.stdout):
+        sans.append(m.group(1).lower())
+subj_res = subprocess.run(["openssl", "x509", "-in", cert_path, "-subject", "-noout"], capture_output=True, text=True)
+cn_m = re.search(r"CN\s*=\s*([^\s,/]+)", subj_res.stdout)
+if cn_m:
+    sans.append(cn_m.group(1).lower())
+
+def matches_pattern(pattern, target):
+    if pattern == target:
+        return True
+    if pattern.startswith("*."):
+        parent = pattern[2:]
+        parts = target.split(".")
+        if len(parts) > 1 and ".".join(parts[1:]) == parent:
+            return True
+    return False
+
+if not any(matches_pattern(s, domain) for s in sans):
+    print("[ERROR] install-cert: certificate SAN does not cover domain %s" % domain, file=sys.stderr)
+    sys.exit(3)
+
+# 6. For custom: chain completeness
+if mode == "custom":
+    with open(cert_path, "r", encoding="utf-8") as f:
+        cert_data = f.read()
+    if chain_path and os.path.isfile(chain_path):
+        with open(chain_path, "r", encoding="utf-8") as f:
+            cert_data += "\n" + f.read()
+    blocks = [b for b in cert_data.split("-----END CERTIFICATE-----") if "-----BEGIN CERTIFICATE-----" in b]
+    if not blocks:
+        print("[ERROR] install-cert: no certificates found in data", file=sys.stderr)
+        sys.exit(3)
+    leaf_text = blocks[0].strip() + "\n-----END CERTIFICATE-----\n"
+    import tempfile
+    with tempfile.NamedTemporaryFile("w", delete=False) as tf_leaf, tempfile.NamedTemporaryFile("w", delete=False) as tf_full:
+        tf_leaf.write(leaf_text)
+        tf_leaf_path = tf_leaf.name
+        tf_full.write(cert_data)
+        tf_full_path = tf_full.name
+    try:
+        s_out = subprocess.run(["openssl", "x509", "-subject", "-noout", "-in", tf_leaf_path], capture_output=True, text=True).stdout.strip()
+        i_out = subprocess.run(["openssl", "x509", "-issuer", "-noout", "-in", tf_leaf_path], capture_output=True, text=True).stdout.strip()
+        s_val = s_out.replace("subject=", "").strip()
+        i_val = i_out.replace("issuer=", "").strip()
+        is_self_signed = (s_val == i_val and bool(s_val))
+        if len(blocks) == 1:
+            if not is_self_signed:
+                print("[ERROR] install-cert: chain is incomplete: leaf certificate is not self-signed and no intermediate chain provided", file=sys.stderr)
+                sys.exit(3)
+        else:
+            v1 = subprocess.run(["openssl", "verify", "-untrusted", tf_full_path, tf_leaf_path], capture_output=True)
+            v2 = subprocess.run(["openssl", "verify", "-CAfile", tf_full_path, tf_leaf_path], capture_output=True)
+            if v1.returncode != 0 and v2.returncode != 0:
+                print("[ERROR] install-cert: certificate chain verification failed", file=sys.stderr)
+                sys.exit(3)
+    finally:
+        if os.path.exists(tf_leaf_path): os.unlink(tf_leaf_path)
+        if os.path.exists(tf_full_path): os.unlink(tf_full_path)
+
+sys.exit(0)
+'
+
 case "$SUBCMD" in
     sha256sum)
         if [ $# -eq 0 ]; then
@@ -526,10 +626,26 @@ PYEOF
         ;;
 
     issue-cert)
-        # issue-cert <admin email>: Let's Encrypt certificate for shared/DOMAIN through DNS-01 (Cloudflare);
+        # issue-cert <admin email> [cert_mode]: Let's Encrypt certificate for shared/DOMAIN;
         # certbot.timer renews it with the same plugin and reloads nginx.
-        if [ $# -ne 1 ] || ! [[ "$1" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
-            echo "[ERROR] issue-cert requires exactly one valid admin email." >&2
+        if [ $# -lt 1 ] || [ $# -gt 2 ] || ! [[ "$1" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
+            echo "[ERROR] issue-cert requires a valid admin email and optional cert mode." >&2
+            exit 2
+        fi
+        EMAIL="$1"
+        REQ_MODE="${2:-}"
+        if [ -z "$REQ_MODE" ]; then
+            if [[ -f "/etc/letsencrypt/cloudflare.ini" && ! -L "/etc/letsencrypt/cloudflare.ini" ]]; then
+                REQ_MODE="dns01-cloudflare"
+            elif [ -f "${SHARED_DIR}/CERT_MODE" ]; then
+                REQ_MODE=$(cat "${SHARED_DIR}/CERT_MODE" 2>/dev/null | tr -d '\r\n')
+            fi
+            if [[ "$REQ_MODE" != "http01" && "$REQ_MODE" != "dns01-cloudflare" ]]; then
+                REQ_MODE="http01"
+            fi
+        fi
+        if [[ "$REQ_MODE" != "http01" && "$REQ_MODE" != "dns01-cloudflare" ]]; then
+            echo "[ERROR] issue-cert: cert mode must be 'http01' or 'dns01-cloudflare' (got: $REQ_MODE)." >&2
             exit 2
         fi
         DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null || true)
@@ -537,20 +653,126 @@ PYEOF
             echo "[ERROR] issue-cert: shared/DOMAIN is missing or invalid." >&2
             exit 2
         fi
-        CF_INI=/etc/letsencrypt/cloudflare.ini
-        if [[ ! -f "$CF_INI" || -L "$CF_INI" ]]; then
-            echo "[ERROR] issue-cert: no Cloudflare token on the server; run deploy.ps1 -SetSecret CLOUDFLARE_DNS_API_TOKEN first." >&2
-            exit 2
+        if [[ "$REQ_MODE" == "dns01-cloudflare" ]]; then
+            CF_INI=/etc/letsencrypt/cloudflare.ini
+            if [[ ! -f "$CF_INI" || -L "$CF_INI" ]]; then
+                echo "[ERROR] issue-cert: no Cloudflare token on the server; run deploy.ps1 -SetSecret CLOUDFLARE_DNS_API_TOKEN first." >&2
+                exit 2
+            fi
+            certbot certonly --dns-cloudflare --dns-cloudflare-credentials "$CF_INI" --dns-cloudflare-propagation-seconds 30 \
+                -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive --keep-until-expiring \
+                --deploy-hook "systemctl reload nginx"
+        else
+            certbot certonly --webroot -w /var/www/html \
+                -d "$DOMAIN" --email "$EMAIL" --agree-tos --non-interactive --keep-until-expiring \
+                --deploy-hook "systemctl reload nginx"
         fi
-        certbot certonly --dns-cloudflare --dns-cloudflare-credentials "$CF_INI" --dns-cloudflare-propagation-seconds 30 \
-            -d "$DOMAIN" --email "$1" --agree-tos --non-interactive --keep-until-expiring \
-            --deploy-hook "systemctl reload nginx"
         if [ ! -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
             echo "[ERROR] issue-cert: certbot finished but no certificate exists for $DOMAIN." >&2
             exit 4
         fi
+        TLS_DIR="/etc/warehouse/tls/${DOMAIN}"
+        mkdir -p "$TLS_DIR"
+        ln -sfn "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" "$TLS_DIR/fullchain.pem"
+        ln -sfn "/etc/letsencrypt/live/${DOMAIN}/privkey.pem" "$TLS_DIR/privkey.pem"
+        printf '%s\n' "$REQ_MODE" > "${SHARED_DIR}/CERT_MODE"
         /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$DOMAIN"
         echo '[CERT_OK]'
+        exit 0
+        ;;
+
+    install-cert)
+        # install-cert <mode> <cert_stage_file> <key_stage_file> [<chain_stage_file>]
+        # Installs a Cloudflare Origin or Custom certificate after rigorous OpenSSL verification.
+        # Mode must be 'cloudflare-origin' or 'custom'.
+        # Private key is verified and installed with root:root 0600 permissions.
+        # Nginx configuration is updated and tested with nginx -t before previous cert is removed.
+        if [ $# -lt 3 ] || [ $# -gt 4 ]; then
+            echo "[ERROR] install-cert requires: <mode> <cert_stage> <key_stage> [<chain_stage>]" >&2
+            exit 2
+        fi
+        CERT_MODE_REQ="$1"
+        CERT_STAGE="$2"
+        KEY_STAGE="$3"
+        CHAIN_STAGE="${4:-}"
+
+        if [[ "$CERT_MODE_REQ" != "cloudflare-origin" && "$CERT_MODE_REQ" != "custom" ]]; then
+            echo "[ERROR] install-cert: mode must be 'cloudflare-origin' or 'custom' (got: $CERT_MODE_REQ)." >&2
+            exit 2
+        fi
+
+        assert_stage_file "$CERT_STAGE"
+        assert_stage_file "$KEY_STAGE"
+        if [[ -n "$CHAIN_STAGE" ]]; then
+            assert_stage_file "$CHAIN_STAGE"
+        fi
+
+        DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null || true)
+        if ! [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]; then
+            echo "[ERROR] install-cert: shared/DOMAIN is missing or invalid." >&2
+            exit 2
+        fi
+
+        # Verification via OpenSSL and Python
+        if ! python3 -c "$CERT_VERIFY_PY" "$CERT_STAGE" "$KEY_STAGE" "$DOMAIN" "$CERT_MODE_REQ" "$CHAIN_STAGE"; then
+            exit 3
+        fi
+
+        # Pre-installation backup of previous certificate directory
+        TLS_DIR="/etc/warehouse/tls/${DOMAIN}"
+        mkdir -p /etc/warehouse/tls
+        TLS_BACKUP=""
+        if [[ -d "$TLS_DIR" ]]; then
+            TLS_BACKUP=$(mktemp -d /etc/warehouse/tls/.backup_${DOMAIN}_XXXXXX)
+            cp -a "$TLS_DIR/." "$TLS_BACKUP/"
+        fi
+
+        TMP_TLS=$(mktemp -d /etc/warehouse/tls/.stage_${DOMAIN}_XXXXXX)
+        chmod 755 "$TMP_TLS"
+        chown root:root "$TMP_TLS"
+        cat "$CERT_STAGE" > "$TMP_TLS/fullchain.pem"
+        if [[ -n "$CHAIN_STAGE" ]]; then
+            printf '\n' >> "$TMP_TLS/fullchain.pem"
+            cat "$CHAIN_STAGE" >> "$TMP_TLS/fullchain.pem"
+        fi
+        chmod 644 "$TMP_TLS/fullchain.pem"
+        chown root:root "$TMP_TLS/fullchain.pem"
+
+        cat "$KEY_STAGE" > "$TMP_TLS/privkey.pem"
+        chmod 600 "$TMP_TLS/privkey.pem"
+        chown root:root "$TMP_TLS/privkey.pem"
+
+        mkdir -p "$TLS_DIR"
+        rm -f "$TLS_DIR/fullchain.pem" "$TLS_DIR/privkey.pem"
+        mv -f "$TMP_TLS/fullchain.pem" "$TLS_DIR/fullchain.pem"
+        mv -f "$TMP_TLS/privkey.pem" "$TLS_DIR/privkey.pem"
+        rmdir "$TMP_TLS"
+
+        PREV_MODE=""
+        if [[ -f "${SHARED_DIR}/CERT_MODE" ]]; then
+            PREV_MODE=$(cat "${SHARED_DIR}/CERT_MODE" 2>/dev/null | tr -d '\r\n')
+        fi
+        printf '%s\n' "$CERT_MODE_REQ" > "${SHARED_DIR}/CERT_MODE"
+
+        if ! /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$DOMAIN"; then
+            echo "[ERROR] install-cert: nginx configuration test failed with the new certificate; restoring previous state." >&2
+            if [[ -n "$TLS_BACKUP" && -d "$TLS_BACKUP" ]]; then
+                cp -a "$TLS_BACKUP/." "$TLS_DIR/"
+                rm -rf "$TLS_BACKUP"
+            fi
+            if [[ -n "$PREV_MODE" ]]; then
+                printf '%s\n' "$PREV_MODE" > "${SHARED_DIR}/CERT_MODE"
+            else
+                rm -f "${SHARED_DIR}/CERT_MODE"
+            fi
+            /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$DOMAIN" || true
+            exit 4
+        fi
+
+        if [[ -n "$TLS_BACKUP" && -d "$TLS_BACKUP" ]]; then
+            rm -rf "$TLS_BACKUP"
+        fi
+        echo "[CERT_INSTALLED] $CERT_MODE_REQ"
         exit 0
         ;;
 
@@ -712,14 +934,26 @@ PYEOF
         free -h
         echo
         echo '=== [7] TLS certificate ==='
-        cert="/etc/letsencrypt/live/$DOMAIN/cert.pem"
+        cert="/etc/warehouse/tls/$DOMAIN/fullchain.pem"
+        if [[ ! -f "$cert" && -f "/etc/letsencrypt/live/$DOMAIN/cert.pem" ]]; then
+            cert="/etc/letsencrypt/live/$DOMAIN/cert.pem"
+        fi
+        mode="http01"
+        if [[ -f "${SHARED_DIR}/CERT_MODE" ]]; then
+            mode=$(cat "${SHARED_DIR}/CERT_MODE" | tr -d '\r\n')
+        fi
         if [ -f "$cert" ]; then
-            end=$(openssl x509 -enddate -noout -in "$cert" | cut -d= -f2)
+            end=$(openssl x509 -enddate -noout -in "$cert" 2>/dev/null | cut -d= -f2 || true)
             days=$(( ( $(date -d "$end" +%s) - $(date +%s) ) / 86400 ))
+            echo "Mode: $mode"
             echo "Expires: $end ($days days left)"
-            if [ "$days" -lt 21 ]; then echo '[WARNING] Certificate expires in less than 21 days.'; fi
+            if [[ "$mode" == "cloudflare-origin" || "$mode" == "custom" ]]; then
+                if [ "$days" -lt 30 ]; then echo "[WARNING] Certificate expires in less than 30 days ($days days left)."; fi
+            elif [ "$days" -lt 21 ]; then
+                echo "[WARNING] Certificate expires in less than 21 days ($days days left).";
+            fi
         else
-            echo "No Let's Encrypt certificate for $DOMAIN."
+            echo "No certificate installed for $DOMAIN (mode: $mode)."
         fi
         echo
         echo '=== [8] Flags ==='

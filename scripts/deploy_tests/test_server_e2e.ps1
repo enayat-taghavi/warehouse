@@ -111,6 +111,12 @@ function Set-ConfigModules([string]$Modules) {
     Write-Utf8LfFile $ConfigFile ($c | ConvertTo-Json)
 }
 function Get-ConfigModules { return [string](Get-Content -LiteralPath $ConfigFile -Raw -Encoding utf8 | ConvertFrom-Json).Modules }
+function Set-ConfigCertMode([string]$Mode) {
+    $c = Get-Content -LiteralPath $ConfigFile -Raw -Encoding utf8 | ConvertFrom-Json
+    $c | Add-Member -NotePropertyName 'CertMode' -NotePropertyValue $Mode -Force
+    Write-Utf8LfFile $ConfigFile ($c | ConvertTo-Json)
+}
+function Get-ConfigCertMode { return [string](Get-Content -LiteralPath $ConfigFile -Raw -Encoding utf8 | ConvertFrom-Json).CertMode }
 
 function Invoke-Container([string]$User, [string]$Script) {
     $wd = if ($User -eq 'deploy') { '/home/deploy' } else { '/' }
@@ -814,6 +820,99 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
     Assert-True ($reset[2] -eq 'i:fa-IR' -and $reset[3] -eq 'user upload') "... ICU fa-IR collation again and the media kept ($($reset[2]))"
     $preAfterReset = @(Get-ChildItem -LiteralPath $LocalBackupRoot -Filter 'db_pre_update_*.dump' -File)
     Assert-True ($preAfterReset.Count -eq $preBeforeReset + 1 -and @($preAfterReset | Where-Object { -not (Test-LocalDumpVerified $_) }).Count -eq 0) '... its pre-update backup (the old data) was pulled and verified before the drop'
+
+    # === O. Certificate modes (plan Modular_Deploy_Options step 4) ===================================
+    # O1. IssueCert with http01 (when webroot succeeds)
+    [void](Invoke-Server 'rm -f /run/fake-certbot-http01-fail')
+    Set-ConfigCertMode 'http01'
+    Assert-True ((Invoke-TestMode 'IssueCert') -eq 0) 'IssueCert (http01) exit 0'
+    Assert-True (@(Invoke-Server 'grep -c -- "--webroot -w /var/www/html" /run/fake-certbot.log || true')[0] -ge '1') 'certbot was called with --webroot -w /var/www/html'
+    Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/CERT_MODE')[0] -eq 'http01') 'shared/CERT_MODE is http01'
+    Assert-True (@(Invoke-Server 'test -L /etc/warehouse/tls/soft.example.test/fullchain.pem && echo SYMLINK')[0] -eq 'SYMLINK') '/etc/warehouse/tls/ fullchain.pem is a symlink for http01'
+    $sO1 = Get-ServerState
+    Assert-True ($sO1.HTTPS_ROOT -eq '200' -and $sO1.HTTPS_API -eq '200') 'HTTPS serves after http01 IssueCert'
+
+    # O2. Rejection cases for InstallCert (mismatched key, wrong SAN, expired)
+    $certTestDir = Join-Path $TestRoot 'tls_e2e_tests'
+    if (Test-Path -LiteralPath $certTestDir) { Remove-Item -LiteralPath $certTestDir -Recurse -Force }
+    [void][System.IO.Directory]::CreateDirectory($certTestDir)
+
+    $validKey = Join-Path $certTestDir 'valid_key.pem'
+    $validCert = Join-Path $certTestDir 'valid_cert.pem'
+    $mismatchKey = Join-Path $certTestDir 'mismatch_key.pem'
+    $wrongSanCert = Join-Path $certTestDir 'wrong_san_cert.pem'
+    $wrongSanKey = Join-Path $certTestDir 'wrong_san_key.pem'
+    $expiredCert = Join-Path $certTestDir 'expired_cert.pem'
+    $expiredKey = Join-Path $certTestDir 'expired_key.pem'
+
+    $opensslExe = if (Get-Command openssl -ErrorAction SilentlyContinue) { 'openssl' } elseif (Test-Path 'C:\Program Files\Git\usr\bin\openssl.exe') { 'C:\Program Files\Git\usr\bin\openssl.exe' } else { 'openssl' }
+    [void](Invoke-Process -FilePath $opensslExe -ArgumentList @('req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '365', '-subj', '/CN=soft.example.test', '-addext', 'subjectAltName=DNS:soft.example.test', '-keyout', $validKey, '-out', $validCert) -Capture -Quiet)
+    [void](Invoke-Process -FilePath $opensslExe -ArgumentList @('genrsa', '-out', $mismatchKey, '2048') -Capture -Quiet)
+    [void](Invoke-Process -FilePath $opensslExe -ArgumentList @('req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '365', '-subj', '/CN=wrong.example.test', '-addext', 'subjectAltName=DNS:wrong.example.test', '-keyout', $wrongSanKey, '-out', $wrongSanCert) -Capture -Quiet)
+    [void](Invoke-Process -FilePath $opensslExe -ArgumentList @('req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-not_before', '20190101000000Z', '-not_after', '20200101000000Z', '-subj', '/CN=soft.example.test', '-addext', 'subjectAltName=DNS:soft.example.test', '-keyout', $expiredKey, '-out', $expiredCert) -Capture -Quiet)
+
+    # In http01 mode, InstallCert is refused
+    $script:CertFile = $validCert; $script:KeyFile = $validKey; $script:ChainFile = ''
+    Assert-True ((Invoke-TestMode 'InstallCert') -ne 0) 'InstallCert is refused when CertMode is http01'
+
+    # Switch config to cloudflare-origin
+    Set-ConfigCertMode 'cloudflare-origin'
+
+    # Mismatched key rejected
+    $script:CertFile = $validCert; $script:KeyFile = $mismatchKey
+    Assert-True ((Invoke-TestMode 'InstallCert') -ne 0) 'InstallCert refuses mismatched private key'
+
+    # Wrong SAN rejected
+    $script:CertFile = $wrongSanCert; $script:KeyFile = $wrongSanKey
+    Assert-True ((Invoke-TestMode 'InstallCert') -ne 0) 'InstallCert refuses certificate with wrong SAN'
+
+    # Expired cert rejected
+    $script:CertFile = $expiredCert; $script:KeyFile = $expiredKey
+    Assert-True ((Invoke-TestMode 'InstallCert') -ne 0) 'InstallCert refuses expired certificate'
+
+    # Zero downtime: previous cert and HTTPS still working after all failed attempts!
+    $sO2 = Get-ServerState
+    Assert-True ($sO2.HTTPS_ROOT -eq '200' -and $sO2.HTTPS_API -eq '200') 'HTTPS still functions without disruption after rejected cert attempts'
+
+    # O3. Successful InstallCert for cloudflare-origin
+    $script:CertFile = $validCert; $script:KeyFile = $validKey
+    Assert-True ((Invoke-TestMode 'InstallCert') -eq 0) 'InstallCert (cloudflare-origin) exit 0'
+    Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/CERT_MODE')[0] -eq 'cloudflare-origin') 'shared/CERT_MODE is cloudflare-origin'
+    Assert-True (@(Invoke-Server 'test -f /etc/warehouse/tls/soft.example.test/fullchain.pem && test ! -L /etc/warehouse/tls/soft.example.test/fullchain.pem && echo REAL')[0] -eq 'REAL') 'cert is a real file for cloudflare-origin'
+    Assert-True (@(Invoke-Server 'stat -c "%U:%G:%a" /etc/warehouse/tls/soft.example.test/privkey.pem')[0] -eq 'root:root:600') 'privkey has root:root 0600 permissions'
+
+    # Nginx config has Cloudflare real_ip directives
+    $nginxSite = @(Invoke-Server 'cat /etc/nginx/sites-available/warehouse')
+    Assert-True ($nginxSite -contains '    real_ip_header CF-Connecting-IP;' -and @($nginxSite | Where-Object { $_ -like '*set_real_ip_from 173.245.48.0/20;*' }).Count -ge 1) 'nginx configured with Cloudflare real_ip ranges and CF-Connecting-IP'
+    $sO3 = Get-ServerState
+    Assert-True ($sO3.HTTPS_ROOT -eq '200' -and $sO3.HTTPS_API -eq '200') 'HTTPS serves under cloudflare-origin'
+
+    # O4. Successful InstallCert for custom
+    Set-ConfigCertMode 'custom'
+    Assert-True ((Invoke-TestMode 'InstallCert') -eq 0) 'InstallCert (custom) exit 0'
+    Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/CERT_MODE')[0] -eq 'custom') 'shared/CERT_MODE is custom'
+    $nginxSiteCustom = @(Invoke-Server 'cat /etc/nginx/sites-available/warehouse')
+    Assert-True (@($nginxSiteCustom | Where-Object { $_ -like '*set_real_ip_from*' }).Count -eq 0) 'nginx does not contain set_real_ip_from in custom mode'
+    $sO4 = Get-ServerState
+    Assert-True ($sO4.HTTPS_ROOT -eq '200' -and $sO4.HTTPS_API -eq '200') 'HTTPS serves under custom mode'
+
+    # O5. Status and Nightly Backup remaining days logging
+    $stOut = Invoke-Server "$Gateway status soft.example.test"
+    Assert-True ($stOut -contains 'Mode: custom') 'Status shows Mode: custom'
+    Assert-True (@($stOut | Where-Object { $_ -match 'Expires: .* \(\d+ days left\)' }).Count -ge 1) 'Status shows days left'
+    $backupLog = Invoke-Server '/usr/local/bin/warehouse-nightly-backup.sh'
+    Assert-True (@($backupLog | Where-Object { $_ -match '\[INFO\] TLS certificate \(custom\) for soft\.example\.test expires in \d+ days' }).Count -ge 1) 'Nightly backup logs TLS certificate remaining days'
+
+    # O6. Switch back to dns01-cloudflare without downtime
+    Set-ConfigCertMode 'dns01-cloudflare'
+    Assert-True ((Invoke-TestMode 'IssueCert') -eq 0) 'IssueCert (dns01-cloudflare) exit 0'
+    Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/CERT_MODE')[0] -eq 'dns01-cloudflare') 'shared/CERT_MODE is dns01-cloudflare'
+    Assert-True (@(Invoke-Server 'test -L /etc/warehouse/tls/soft.example.test/fullchain.pem && echo SYMLINK')[0] -eq 'SYMLINK') 'fullchain.pem switched back to symlink'
+    $sO6 = Get-ServerState
+    Assert-True ($sO6.HTTPS_ROOT -eq '200' -and $sO6.HTTPS_API -eq '200') 'HTTPS serves after switching back to dns01-cloudflare'
+
+    # Cleanup test params
+    $script:CertFile = ''; $script:KeyFile = ''; $script:ChainFile = ''
 } catch {
     Write-Host "[FAIL] test aborted: $($_.Exception.Message)`n$($_.ScriptStackTrace)" -ForegroundColor Red
     $script:failures++

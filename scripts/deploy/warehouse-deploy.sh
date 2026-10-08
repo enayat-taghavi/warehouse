@@ -390,10 +390,19 @@ apply_nginx_config() {
     local rel="$1" domain="$2" tdir="$1/scripts/deploy/templates"
     local avail=/etc/nginx/sites-available/warehouse enabled=/etc/nginx/sites-enabled/warehouse
     local default_link=/etc/nginx/sites-enabled/default
-    local new prev had_prev=0 had_link=0 had_default=0 out reject
+    local new prev had_prev=0 had_link=0 had_default=0 out reject cf_ip
+    local tls_dir="/etc/warehouse/tls/${domain}" cert_mode="http01"
     mkdir -p /var/www/html /etc/nginx/sites-available /etc/nginx/sites-enabled
+    if [[ ! -f "${tls_dir}/fullchain.pem" && -f "/etc/letsencrypt/live/${domain}/fullchain.pem" ]]; then
+        mkdir -p "$tls_dir"
+        ln -sfn "/etc/letsencrypt/live/${domain}/fullchain.pem" "${tls_dir}/fullchain.pem"
+        ln -sfn "/etc/letsencrypt/live/${domain}/privkey.pem" "${tls_dir}/privkey.pem"
+    fi
+    if [[ -f "${SHARED_DIR}/CERT_MODE" ]]; then
+        cert_mode=$(head -n 1 "${SHARED_DIR}/CERT_MODE" 2>/dev/null | tr -d '\r\n' || echo "http01")
+    fi
     new=$(mktemp /etc/nginx/sites-available/.warehouse.new.XXXXXX)
-    if [[ -f "/etc/letsencrypt/live/${domain}/fullchain.pem" && -f "${tdir}/nginx-https.conf" ]]; then
+    if [[ -f "${tls_dir}/fullchain.pem" && -f "${tdir}/nginx-https.conf" ]]; then
         if nginx_supports_reject_handshake; then
             reject=$(mktemp /etc/nginx/sites-available/.warehouse.reject.XXXXXX)
             cat > "$reject" <<'EOF'
@@ -411,6 +420,39 @@ EOF
             rm -f "$reject"
         else
             sed -e "s/__DOMAIN__/${domain}/g" -e '/__SSL_REJECT_HANDSHAKE_SERVER__/d' "${tdir}/nginx-https.conf" > "$new"
+        fi
+        if [[ "$cert_mode" == "cloudflare-origin" ]]; then
+            cf_ip=$(mktemp /etc/nginx/sites-available/.warehouse.cfip.XXXXXX)
+            cat > "$cf_ip" <<'EOF'
+    # Cloudflare official IP ranges for real_ip (CF-Connecting-IP)
+    set_real_ip_from 173.245.48.0/20;
+    set_real_ip_from 103.21.244.0/22;
+    set_real_ip_from 103.22.200.0/22;
+    set_real_ip_from 103.31.4.0/22;
+    set_real_ip_from 141.101.64.0/18;
+    set_real_ip_from 108.162.192.0/18;
+    set_real_ip_from 190.93.240.0/20;
+    set_real_ip_from 188.114.96.0/20;
+    set_real_ip_from 197.234.240.0/22;
+    set_real_ip_from 198.41.128.0/17;
+    set_real_ip_from 162.158.0.0/15;
+    set_real_ip_from 104.16.0.0/13;
+    set_real_ip_from 104.24.0.0/14;
+    set_real_ip_from 172.64.0.0/13;
+    set_real_ip_from 131.0.72.0/22;
+    set_real_ip_from 2400:cb00::/32;
+    set_real_ip_from 2606:4700::/32;
+    set_real_ip_from 2803:f800::/32;
+    set_real_ip_from 2405:b500::/32;
+    set_real_ip_from 2405:8100::/32;
+    set_real_ip_from 2a06:98c0::/29;
+    set_real_ip_from 2c0f:f248::/32;
+    real_ip_header CF-Connecting-IP;
+EOF
+            sed -i -e "/__CLOUDFLARE_REAL_IP__/{r ${cf_ip}" -e 'd}' "$new"
+            rm -f "$cf_ip"
+        else
+            sed -i '/__CLOUDFLARE_REAL_IP__/d' "$new"
         fi
     elif [[ -f "${tdir}/nginx-http.conf" ]]; then
         sed "s/__DOMAIN__/${domain}/g" "${tdir}/nginx-http.conf" > "$new"
@@ -1125,7 +1167,7 @@ if [[ "${1:-}" == "--activate" ]]; then
             done
         fi
 
-        if [[ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
+        if [[ -f "/etc/warehouse/tls/${DOMAIN}/fullchain.pem" || -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]]; then
             if curl -kfsS --resolve "${DOMAIN}:443:127.0.0.1" "https://${DOMAIN}/" > /dev/null 2>&1 && \
                curl -kfsS --resolve "${DOMAIN}:443:127.0.0.1" "https://${DOMAIN}/ngsw.json" > /dev/null 2>&1; then
                 https_ok=1

@@ -366,6 +366,83 @@ touch /run/fake-deploy-hold; : > /run/fake-systemd/log; : > /run/fake-deploy.log
     Assert-True ($g.ExitCode -eq 3 -and @(Invoke-Server 'grep -c "^reset-database" /run/fake-deploy.log || true')[0] -eq '0') "gateway reset-database is refused once GO_LIVE is set (exit $($g.ExitCode))"
     [void](Invoke-Server "rm -f /var/www/warehouse/shared/GO_LIVE; sed -i '/^WH_MODULES=/d' /var/www/warehouse/shared/.env")
     Assert-True ((Invoke-TestMode 'ResetServer' -NonInteractiveRun) -ne 0) 'ResetServer is refused in -NonInteractive'
+
+    # --- 12. Certificate Modes & Gateway install-cert (plan Modular_Deploy_Options step 4) ----------
+    $origConfig = [System.IO.File]::ReadAllText($ConfigFile)
+    # 12.1 Assert-DeployConfig validates CertMode
+    Write-Utf8LfFile $ConfigFile ($origConfig.TrimEnd().TrimEnd('}') + ",`n  `"CertMode`": `"invalid-mode`"`n}`n")
+    Assert-True ((Invoke-TestMode 'Status') -ne 0) 'Status refuses an unknown CertMode in config'
+    Write-Utf8LfFile $ConfigFile $origConfig
+
+    # 12.2 Gateway status shows cert mode and message when no cert exists
+    $statusOut = Invoke-Server "$Gateway status soft.example.test"
+    Assert-True ($statusOut -contains 'No certificate installed for soft.example.test (mode: http01).') 'Status reports no certificate installed initially with default mode'
+
+    # 12.3 Setup local test certificates (valid, mismatched key, wrong SAN, expired)
+    $certTestDir = Join-Path $TestRoot 'tls_tests'
+    if (Test-Path -LiteralPath $certTestDir) { Remove-Item -LiteralPath $certTestDir -Recurse -Force }
+    [void][System.IO.Directory]::CreateDirectory($certTestDir)
+
+    $validKey = Join-Path $certTestDir 'valid_key.pem'
+    $validCert = Join-Path $certTestDir 'valid_cert.pem'
+    $mismatchKey = Join-Path $certTestDir 'mismatch_key.pem'
+    $wrongSanCert = Join-Path $certTestDir 'wrong_san_cert.pem'
+    $wrongSanKey = Join-Path $certTestDir 'wrong_san_key.pem'
+    $expiredCert = Join-Path $certTestDir 'expired_cert.pem'
+    $expiredKey = Join-Path $certTestDir 'expired_key.pem'
+
+    $opensslExe = if (Get-Command openssl -ErrorAction SilentlyContinue) { 'openssl' } elseif (Test-Path 'C:\Program Files\Git\usr\bin\openssl.exe') { 'C:\Program Files\Git\usr\bin\openssl.exe' } else { 'openssl' }
+    [void](Invoke-Process -FilePath $opensslExe -ArgumentList @('req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '365', '-subj', '/CN=soft.example.test', '-addext', 'subjectAltName=DNS:soft.example.test', '-keyout', $validKey, '-out', $validCert) -Capture -Quiet)
+    [void](Invoke-Process -FilePath $opensslExe -ArgumentList @('genrsa', '-out', $mismatchKey, '2048') -Capture -Quiet)
+    [void](Invoke-Process -FilePath $opensslExe -ArgumentList @('req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '365', '-subj', '/CN=wrong.example.test', '-addext', 'subjectAltName=DNS:wrong.example.test', '-keyout', $wrongSanKey, '-out', $wrongSanCert) -Capture -Quiet)
+    [void](Invoke-Process -FilePath $opensslExe -ArgumentList @('req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-not_before', '20190101000000Z', '-not_after', '20200101000000Z', '-subj', '/CN=soft.example.test', '-addext', 'subjectAltName=DNS:soft.example.test', '-keyout', $expiredKey, '-out', $expiredCert) -Capture -Quiet)
+
+    # 12.4 InstallCert is rejected if CertMode in config is http01
+    $script:CertFile = $validCert; $script:KeyFile = $validKey; $script:ChainFile = ''
+    Assert-True ((Invoke-TestMode 'InstallCert') -ne 0) 'InstallCert is refused when CertMode is default (http01)'
+
+    # 12.5 Set CertMode to custom in config and test InstallCert rejection cases
+    Write-Utf8LfFile $ConfigFile ($origConfig.TrimEnd().TrimEnd('}') + ",`n  `"CertMode`": `"custom`"`n}`n")
+
+    # Mismatched key rejected
+    $script:CertFile = $validCert; $script:KeyFile = $mismatchKey
+    Assert-True ((Invoke-TestMode 'InstallCert') -ne 0) 'InstallCert refuses mismatched private key'
+    Assert-True ((Get-StageCount) -eq 0) '... and staging directory cleaned up'
+
+    # Wrong SAN rejected
+    $script:CertFile = $wrongSanCert; $script:KeyFile = $wrongSanKey
+    Assert-True ((Invoke-TestMode 'InstallCert') -ne 0) 'InstallCert refuses certificate with wrong SAN'
+    Assert-True ((Get-StageCount) -eq 0) '... and staging directory cleaned up'
+
+    # Expired cert rejected
+    $script:CertFile = $expiredCert; $script:KeyFile = $expiredKey
+    Assert-True ((Invoke-TestMode 'InstallCert') -ne 0) 'InstallCert refuses expired certificate'
+    Assert-True ((Get-StageCount) -eq 0) '... and staging directory cleaned up'
+
+    # 12.6 Valid certificate installation (custom)
+    $script:CertFile = $validCert; $script:KeyFile = $validKey
+    Assert-True ((Invoke-TestMode 'InstallCert') -eq 0) 'InstallCert succeeds with valid certificate and key (custom)'
+    Assert-True ((Get-StageCount) -eq 0) '... and staging directory cleaned up'
+
+    $installedMode = @(Invoke-Server 'cat /var/www/warehouse/shared/CERT_MODE')[0]
+    Assert-True ($installedMode -eq 'custom') 'shared/CERT_MODE recorded custom'
+
+    $certPerm = @(Invoke-Server 'stat -c "%U:%G:%a" /etc/warehouse/tls/soft.example.test/privkey.pem')[0]
+    Assert-True ($certPerm -eq 'root:root:600') "private key has root:root:600 permissions ($certPerm)"
+
+    # Status shows installed cert and remaining days
+    $statusOut2 = Invoke-Server "$Gateway status soft.example.test"
+    Assert-True ($statusOut2 -contains 'Mode: custom') 'Status reports Mode: custom after installation'
+    Assert-True (@($statusOut2 | Where-Object { $_ -match 'Expires: .* \(\d+ days left\)' }).Count -eq 1) 'Status reports remaining days'
+
+    # 12.7 Switch to cloudflare-origin
+    Write-Utf8LfFile $ConfigFile ($origConfig.TrimEnd().TrimEnd('}') + ",`n  `"CertMode`": `"cloudflare-origin`"`n}`n")
+    Assert-True ((Invoke-TestMode 'InstallCert') -eq 0) 'InstallCert succeeds for cloudflare-origin'
+    Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/CERT_MODE')[0] -eq 'cloudflare-origin') 'shared/CERT_MODE updated to cloudflare-origin'
+
+    # Restore original config
+    Write-Utf8LfFile $ConfigFile $origConfig
+    $script:CertFile = ''; $script:KeyFile = ''; $script:ChainFile = ''
 } catch {
     Write-Host "[FAIL] test aborted: $($_.Exception.Message)`n$($_.ScriptStackTrace)" -ForegroundColor Red
     $script:failures++
