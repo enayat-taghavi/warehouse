@@ -1,5 +1,8 @@
 import { Injectable, inject } from '@angular/core';
+import { HttpContext } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
+import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
 import { ApiService } from './api.service';
 import { ModuleRegistryService } from '../modules/module-registry.service';
 
@@ -27,5 +30,15 @@ export class ConfigApiService {
         }
       })
     );
+  }
+
+  /**
+   * سنجش واقعی دسترسی به سرور: از کش SWR آفلاین و toast سراسری خطا عبور نمی‌کند،
+   * پس پاسخ کش‌شده هرگز «سرور در دسترس است» تعبیر نمی‌شود.
+   */
+  probePublicConfig(): Observable<PublicConfig> {
+    return this.apiService.get<PublicConfig>('public/config', { _probe: Date.now() }, {
+      context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true),
+    });
   }
 }

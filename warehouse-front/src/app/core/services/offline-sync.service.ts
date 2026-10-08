@@ -1327,6 +1327,18 @@ export class OfflineSyncService {
     return wh + fin;
   }
 
+  /**
+   * همهٔ رکوردهای صف هر دو پایگاه‌داده، با هر وضعیتی (از جمله sending که در getPendingCount نیست).
+   * خطای خواندن IndexedDB به فراخوان می‌رسد تا «خطا» هرگز «صف خالی» تعبیر نشود.
+   */
+  async getUnsentCountStrict(): Promise<number> {
+    const [wh, fin] = await Promise.all([
+      warehouseOfflineDb.syncQueue.count(),
+      financeOfflineDb.syncQueue.count(),
+    ]);
+    return wh + fin;
+  }
+
   /** تخلیه کامل صف (برای حالت‌های اضطراری یا لغو کاربر) */
   async clearQueue(scope?: AppScope | 'all'): Promise<void> {
     const targetScope = scope || 'all';

@@ -120,8 +120,8 @@ domain = sys.argv[3].lower()
 mode = sys.argv[4]
 chain_path = sys.argv[5] if len(sys.argv) > 5 and sys.argv[5] else None
 
-# 1. Private key validity
-r = subprocess.run(["openssl", "pkey", "-in", key_path, "-noout"], capture_output=True)
+# 1. Private key validity (an encrypted key fails at once instead of waiting for a passphrase)
+r = subprocess.run(["openssl", "pkey", "-in", key_path, "-noout", "-passin", "pass:"], capture_output=True, stdin=subprocess.DEVNULL)
 if r.returncode != 0:
     print("[ERROR] install-cert: invalid private key format", file=sys.stderr)
     sys.exit(3)
@@ -138,9 +138,21 @@ if r.returncode != 0:
     print("[ERROR] install-cert: certificate is expired", file=sys.stderr)
     sys.exit(3)
 
+# 3b. Already valid (notBefore not in the future)
+import ssl, time
+r = subprocess.run(["openssl", "x509", "-in", cert_path, "-startdate", "-noout"], capture_output=True, text=True)
+try:
+    not_before = ssl.cert_time_to_seconds(r.stdout.strip().split("=", 1)[1])
+except (IndexError, ValueError):
+    print("[ERROR] install-cert: cannot read the certificate start date", file=sys.stderr)
+    sys.exit(3)
+if not_before > time.time() + 300:
+    print("[ERROR] install-cert: certificate is not valid yet", file=sys.stderr)
+    sys.exit(3)
+
 # 4. Key matches certificate
 c_pub = subprocess.run(["openssl", "x509", "-in", cert_path, "-pubkey", "-noout"], capture_output=True, text=True).stdout.strip().replace("\r\n", "\n")
-k_pub = subprocess.run(["openssl", "pkey", "-in", key_path, "-pubout"], capture_output=True, text=True).stdout.strip().replace("\r\n", "\n")
+k_pub = subprocess.run(["openssl", "pkey", "-in", key_path, "-pubout", "-passin", "pass:"], capture_output=True, text=True, stdin=subprocess.DEVNULL).stdout.strip().replace("\r\n", "\n")
 if not c_pub or not k_pub or c_pub != k_pub:
     print("[ERROR] install-cert: private key does not match certificate", file=sys.stderr)
     sys.exit(3)
@@ -151,10 +163,12 @@ sans = []
 if san_res.returncode == 0:
     for m in re.finditer(r"DNS:([^\s,]+)", san_res.stdout):
         sans.append(m.group(1).lower())
-subj_res = subprocess.run(["openssl", "x509", "-in", cert_path, "-subject", "-noout"], capture_output=True, text=True)
-cn_m = re.search(r"CN\s*=\s*([^\s,/]+)", subj_res.stdout)
-if cn_m:
-    sans.append(cn_m.group(1).lower())
+# Browsers ignore the CN when a SAN exists, so the CN counts only for a certificate without any DNS SAN.
+if not sans:
+    subj_res = subprocess.run(["openssl", "x509", "-in", cert_path, "-subject", "-noout"], capture_output=True, text=True)
+    cn_m = re.search(r"CN\s*=\s*([^\s,/]+)", subj_res.stdout)
+    if cn_m:
+        sans.append(cn_m.group(1).lower())
 
 def matches_pattern(pattern, target):
     if pattern == target:
@@ -210,6 +224,65 @@ if mode == "custom":
 
 sys.exit(0)
 '
+
+
+# Copies a caller stage file into a root-only work file without following a symlink, after checking the
+# OPENED file (not the path) is a small regular file of the caller: no swap after assert_stage_file helps.
+STAGE_COPY_PY='
+import os, stat, sys
+src, dst, uid = sys.argv[1], sys.argv[2], int(sys.argv[3])
+limit = 1048576
+try:
+    fd = os.open(src, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+except OSError:
+    print("[ERROR] stage file cannot be opened (symlink or missing)", file=sys.stderr)
+    sys.exit(2)
+try:
+    st = os.fstat(fd)
+    if not stat.S_ISREG(st.st_mode) or st.st_uid != uid or st.st_nlink != 1 or st.st_size > limit:
+        print("[ERROR] stage file is not a small regular file of the calling user", file=sys.stderr)
+        sys.exit(2)
+    data = b""
+    while True:
+        chunk = os.read(fd, 65536)
+        if not chunk:
+            break
+        data += chunk
+        if len(data) > limit:
+            print("[ERROR] stage file is too large", file=sys.stderr)
+            sys.exit(2)
+finally:
+    os.close(fd)
+out = os.open(dst, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+with os.fdopen(out, "wb") as f:
+    f.write(data)
+'
+
+# The primary domain of this server (shared/DOMAIN), or the given fallback before the first setup wrote it.
+primary_domain_or() {
+    local p
+    p=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null | tr -d '\r' || true)
+    if [[ "$p" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]; then echo "$p"; else echo "$1"; fi
+}
+
+restore_cert_mode() {
+    if [[ -n "$1" ]]; then printf '%s\n' "$1" > "${SHARED_DIR}/CERT_MODE"; else rm -f "${SHARED_DIR}/CERT_MODE"; fi
+}
+
+# A copy of a domain's previous TLS directory: real certificate or key files are archived (never deleted)
+# to shared/retired/tls/ (root-only); a copy holding only Let's Encrypt symlinks has nothing to keep.
+retire_tls_backup() {
+    local bk="$1" d="$2" dest
+    if [[ -n "$(find "$bk" -maxdepth 1 -type f -print -quit)" ]]; then
+        mkdir -p "${SHARED_DIR}/retired/tls"
+        chmod 700 "${SHARED_DIR}/retired" "${SHARED_DIR}/retired/tls"
+        dest="${SHARED_DIR}/retired/tls/${d}_replaced_$(date +%Y%m%d_%H%M%S)"
+        mv "$bk" "$dest"
+        echo "[INFO] The previous certificate files of $d were kept in $dest."
+    else
+        rm -rf "$bk"
+    fi
+}
 
 case "$SUBCMD" in
     sha256sum)
@@ -678,10 +751,26 @@ PYEOF
         fi
         TLS_DIR="/etc/warehouse/tls/${DOMAIN}"
         mkdir -p "$TLS_DIR"
+        # Real files here (a Cloudflare Origin or custom pair) are kept: copied aside before the links
+        # replace them, put back if nginx refuses, and archived (never deleted) once it accepts.
+        PREV_TLS=$(mktemp -d "/etc/warehouse/tls/.backup_${DOMAIN}_XXXXXX")
+        cp -a "$TLS_DIR/." "$PREV_TLS/"
+        PREV_MODE=$(head -n 1 "${SHARED_DIR}/CERT_MODE" 2>/dev/null | tr -d '\r\n' || true)
         ln -sfn "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" "$TLS_DIR/fullchain.pem"
         ln -sfn "/etc/letsencrypt/live/${DOMAIN}/privkey.pem" "$TLS_DIR/privkey.pem"
         printf '%s\n' "$REQ_MODE" > "${SHARED_DIR}/CERT_MODE"
-        /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$DOMAIN"
+        # nginx is rendered for the CURRENT primary domain: a certificate for a future domain
+        # (deploy.ps1 -ChangeDomain) must never take the live domain off its server block.
+        if ! /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$(primary_domain_or "$DOMAIN")"; then
+            echo "[ERROR] issue-cert: nginx refused the configuration; restoring the previous certificate files." >&2
+            rm -f "$TLS_DIR/fullchain.pem" "$TLS_DIR/privkey.pem"
+            cp -a "$PREV_TLS/." "$TLS_DIR/"
+            rm -rf "$PREV_TLS"
+            restore_cert_mode "$PREV_MODE"
+            /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$(primary_domain_or "$DOMAIN")" || true
+            exit 4
+        fi
+        retire_tls_backup "$PREV_TLS" "$DOMAIN"
         echo '[CERT_OK]'
         exit 0
         ;;
@@ -733,64 +822,71 @@ PYEOF
             exit 2
         fi
 
+        # Everything below works on root-only copies: the caller owns the stage directory and could swap a
+        # checked file for a symlink to a root-only file, or change its content after the verification.
+        umask 077
+        CERT_WORK=$(mktemp -d /run/wh-install-cert.XXXXXX)
+        trap 'rm -rf "$CERT_WORK"' EXIT
+        python3 -c "$STAGE_COPY_PY" "$CERT_STAGE" "$CERT_WORK/cert.pem" "${SUDO_UID:-0}" || exit 2
+        python3 -c "$STAGE_COPY_PY" "$KEY_STAGE" "$CERT_WORK/privkey.pem" "${SUDO_UID:-0}" || exit 2
+        CHAIN_WORK=""
+        if [[ -n "$CHAIN_STAGE" ]]; then
+            CHAIN_WORK="$CERT_WORK/chain.pem"
+            python3 -c "$STAGE_COPY_PY" "$CHAIN_STAGE" "$CHAIN_WORK" "${SUDO_UID:-0}" || exit 2
+        fi
+
         # Verification via OpenSSL and Python
-        if ! python3 -c "$CERT_VERIFY_PY" "$CERT_STAGE" "$KEY_STAGE" "$DOMAIN" "$CERT_MODE_REQ" "$CHAIN_STAGE"; then
+        if ! python3 -c "$CERT_VERIFY_PY" "$CERT_WORK/cert.pem" "$CERT_WORK/privkey.pem" "$DOMAIN" "$CERT_MODE_REQ" "$CHAIN_WORK"; then
             exit 3
         fi
 
         # Pre-installation backup of previous certificate directory
         TLS_DIR="/etc/warehouse/tls/${DOMAIN}"
         mkdir -p /etc/warehouse/tls
+        chmod 755 /etc/warehouse /etc/warehouse/tls
         TLS_BACKUP=""
         if [[ -d "$TLS_DIR" ]]; then
-            TLS_BACKUP=$(mktemp -d /etc/warehouse/tls/.backup_${DOMAIN}_XXXXXX)
+            TLS_BACKUP=$(mktemp -d "/etc/warehouse/tls/.backup_${DOMAIN}_XXXXXX")
             cp -a "$TLS_DIR/." "$TLS_BACKUP/"
         fi
 
-        TMP_TLS=$(mktemp -d /etc/warehouse/tls/.stage_${DOMAIN}_XXXXXX)
-        chmod 755 "$TMP_TLS"
-        chown root:root "$TMP_TLS"
-        cat "$CERT_STAGE" > "$TMP_TLS/fullchain.pem"
-        if [[ -n "$CHAIN_STAGE" ]]; then
+        TMP_TLS=$(mktemp -d "/etc/warehouse/tls/.stage_${DOMAIN}_XXXXXX")
+        cat "$CERT_WORK/cert.pem" > "$TMP_TLS/fullchain.pem"
+        if [[ -n "$CHAIN_WORK" ]]; then
             printf '\n' >> "$TMP_TLS/fullchain.pem"
-            cat "$CHAIN_STAGE" >> "$TMP_TLS/fullchain.pem"
+            cat "$CHAIN_WORK" >> "$TMP_TLS/fullchain.pem"
         fi
         chmod 644 "$TMP_TLS/fullchain.pem"
         chown root:root "$TMP_TLS/fullchain.pem"
-
-        cat "$KEY_STAGE" > "$TMP_TLS/privkey.pem"
+        # umask 077: the key file is 0600 from its creation, never readable by others.
+        cat "$CERT_WORK/privkey.pem" > "$TMP_TLS/privkey.pem"
         chmod 600 "$TMP_TLS/privkey.pem"
         chown root:root "$TMP_TLS/privkey.pem"
 
         mkdir -p "$TLS_DIR"
-        rm -f "$TLS_DIR/fullchain.pem" "$TLS_DIR/privkey.pem"
+        chmod 755 "$TLS_DIR"
+        # rename(2) replaces each file (or the old Let's Encrypt symlink) in one step: no moment without a file.
         mv -f "$TMP_TLS/fullchain.pem" "$TLS_DIR/fullchain.pem"
         mv -f "$TMP_TLS/privkey.pem" "$TLS_DIR/privkey.pem"
         rmdir "$TMP_TLS"
 
-        PREV_MODE=""
-        if [[ -f "${SHARED_DIR}/CERT_MODE" ]]; then
-            PREV_MODE=$(cat "${SHARED_DIR}/CERT_MODE" 2>/dev/null | tr -d '\r\n')
-        fi
+        PREV_MODE=$(head -n 1 "${SHARED_DIR}/CERT_MODE" 2>/dev/null | tr -d '\r\n' || true)
         printf '%s\n' "$CERT_MODE_REQ" > "${SHARED_DIR}/CERT_MODE"
 
-        if ! /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$DOMAIN"; then
+        # nginx is rendered for the CURRENT primary domain (see issue-cert).
+        if ! /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$(primary_domain_or "$DOMAIN")"; then
             echo "[ERROR] install-cert: nginx configuration test failed with the new certificate; restoring previous state." >&2
             if [[ -n "$TLS_BACKUP" && -d "$TLS_BACKUP" ]]; then
                 cp -a "$TLS_BACKUP/." "$TLS_DIR/"
                 rm -rf "$TLS_BACKUP"
             fi
-            if [[ -n "$PREV_MODE" ]]; then
-                printf '%s\n' "$PREV_MODE" > "${SHARED_DIR}/CERT_MODE"
-            else
-                rm -f "${SHARED_DIR}/CERT_MODE"
-            fi
-            /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$DOMAIN" || true
+            restore_cert_mode "$PREV_MODE"
+            /usr/local/sbin/warehouse-deploy --refresh-nginx --domain "$(primary_domain_or "$DOMAIN")" || true
             exit 4
         fi
 
         if [[ -n "$TLS_BACKUP" && -d "$TLS_BACKUP" ]]; then
-            rm -rf "$TLS_BACKUP"
+            retire_tls_backup "$TLS_BACKUP" "$DOMAIN"
         fi
         echo "[CERT_INSTALLED] $CERT_MODE_REQ"
         exit 0

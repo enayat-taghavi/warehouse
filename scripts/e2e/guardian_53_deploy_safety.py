@@ -19,8 +19,8 @@
       Update و Setup سامانه‌ها را تغییر نمی‌دهند؛ حذف سامانه وجود ندارد؛ بازسازی پایگاه پس از GO_LIVE در
       دروازه و در warehouse-deploy رد می‌شود؛ AddModule پیش از تغییر پشتیبان تأییدشده می‌گیرد و در شکست برمی‌گردد
   ۱۴) تغییر دامنه (طرح Modular_Deploy_Options گام ۵): پارامترهای ChangeDomain، FinishDomainChange و RemoveLegacyDomain؛
-      بازنویسی اتمیک کلیدهای دامنه در .env؛ رهگیری دامنه‌های قبلی در DOMAINS_LEGACY؛ حالت‌های transition و redirect با 404
-      برای ngsw.json؛ انتقال گواهی‌های قبلی به shared/retired/ در حذف؛ بازگشت خودکار در شکست تغییر دامنه.
+      بازنویسی اتمیک کلیدهای دامنه در .env؛ رهگیری دامنه‌های قبلی در DOMAINS_LEGACY؛ حالت‌های transition و redirect امن (API و ngsw.json
+      دامنهٔ قبلی سرو می‌شوند و فقط ناوبری 301 است)؛ انتقال گواهی‌های قبلی به shared/retired/ در حذف؛ بازگشت خودکار در شکست تغییر دامنه.
 """
 
 import json
@@ -273,6 +273,9 @@ def verify_deploy_safety() -> bool:
         ("checkend" in gateway_text, "بررسی عدم انقضای گواهی با checkend در دروازه غایب است"),
         ("TLS certificate" in backup_text and "30" in backup_text, "پایش انقضای گواهی در پشتیبان شبانه غایب است"),
         ("Set-Clipboard" not in ps1_text and "Get-Content" not in install_mode_block, "نشت یا خواندن غیرضروری محتوای کلید خصوصی در حافظه/کنسول"),
+        ("STAGE_COPY_PY" in gw_install_cert and "O_NOFOLLOW" in gateway_text and "umask 077" in gw_install_cert, "install-cert باید فایل‌های stage را بدون دنبال کردن symlink در کپی root-only بخواند (TOCTOU)"),
+        ("primary_domain_or" in gw_install_cert and gateway_text.count("--refresh-nginx --domain \"$(primary_domain_or") >= 4, "issue-cert و install-cert باید nginx را برای دامنهٔ اصلی فعلی بسازند، نه دامنهٔ مقصد"),
+        (gateway_text.count('retire_tls_backup "$') >= 2, "گواهی قبلی origin/custom در issue-cert و install-cert باید بایگانی شود، نه حذف"),
     ]
     cert_problems += [msg for ok, msg in cert_checks if not ok]
     if cert_problems:
@@ -288,13 +291,17 @@ def verify_deploy_safety() -> bool:
     views_py = REPO_ROOT / "warehouse-backend" / "settings_core" / "views.py"
     views_text = views_py.read_text(encoding="utf-8") if views_py.exists() else ""
 
+    remove_start = deploy_text.find('if [[ "${1:-}" == "--remove-legacy-domain" ]]')
+    remove_block = deploy_text[remove_start:deploy_text.find('die "warehouse-deploy requires one of:', remove_start)] if remove_start != -1 else ""
     domain_checks = [
         ("ChangeDomain" in ps1_text and "FinishDomainChange" in ps1_text and "RemoveLegacyDomain" in ps1_text, "پارامترهای مدیریت دامنه در deploy.ps1 غایب هستند"),
         ("Save-ConfigDomain" in ps1_text and "Confirm-TypedWord" in ps1_text, "ذخیره دامنه با نسخه پشتیبان یا تایید تایپی در deploy.ps1 غایب است"),
         ("write_env_domains" in deploy_text and "WH_CANONICAL_DOMAIN" in deploy_text, "بازنویسی اتمیک کلیدهای دامنه .env در warehouse-deploy.sh غایب است"),
         ("DOMAINS_LEGACY" in deploy_text and "transition" in deploy_text and "redirect" in deploy_text, "مدیریت دامنه‌های قبلی (DOMAINS_LEGACY) در warehouse-deploy.sh غایب است"),
-        ("return 404" in deploy_text and "ngsw.json" in deploy_text, "پاسخ 404 برای ngsw.json در بلوک ریدایرکت دامنه‌های قدیمی غایب است"),
-        ("retired/tls" in deploy_text and "rm -rf" not in deploy_text[deploy_text.find("--remove-legacy-domain"):], "انتقال امن گواهی به retired/tls بدون حذف در warehouse-deploy.sh غایب است"),
+        ("location = /ngsw.json" not in deploy_text and "return 301 https://\" + target + \"$request_uri;" in deploy_text, "حالت redirect باید API، ngsw.json و فایل‌های اپ را سرو کند و فقط ناوبری صفحه را 301 کند (صف آفلاین origin قبلی جا نماند)"),
+        ("retired/tls" in remove_block and "LEG_MODE\" == \"redirect\"" in remove_block and not any(x in remove_block for x in ('rm -rf "/etc/warehouse', 'rm -f "/etc/warehouse', 'rm -rf "${SHARED_DIR}/retired')), "remove-legacy-domain باید فقط از حالت redirect و با بایگانی (بدون حذف) گواهی در retired/tls انجام شود"),
+        ("DOMAIN_CHANGE_ROLLED_BACK" in deploy_text and "check_tls_pair \"$OLD_DOMAIN\"" in deploy_text, "change-domain باید با trap به وضعیت قبل برگردد و گواهی دامنهٔ فعلی را پیش از گذار بسنجد"),
+        ("assert_not_legacy_domain" in deploy_text and deploy_text.count("assert_not_legacy_domain \"$") >= 6, "Domain کهنهٔ deploy_config.json (دامنهٔ قبلی) باید پیش از هر تغییری رد شود"),
         ("change-domain" in gateway_text and "finish-domain-change" in gateway_text and "remove-legacy-domain" in gateway_text, "زیرفرمان‌های مدیریت دامنه در دروازه غایب هستند"),
         ("WH_CANONICAL_DOMAIN" in settings_text and "canonical_domain" in views_text, "پشتیبانی از canonical_domain در بک‌اند غایب است"),
     ]
@@ -303,7 +310,7 @@ def verify_deploy_safety() -> bool:
         errors.extend(domain_problems)
         print("❌ بند ۱۴: " + "؛ ".join(domain_problems))
     else:
-        print("✅ بند ۱۴: تغییر دامنه: پارامترهای deploy.ps1، بازنویسی اتمیک .env، تفکیک transition/redirect با 404 سرویس‌ورکر، بایگانی در retired/ و canonical_domain بک‌اند.")
+        print("✅ بند ۱۴: تغییر دامنه: پارامترهای deploy.ps1، بازنویسی اتمیک .env، تفکیک transition/redirect امن (API و سرویس‌ورکر دامنهٔ قبلی می‌مانند)، بازگشت با trap، بایگانی در retired/ و canonical_domain بک‌اند.")
 
     print("=" * 74)
     if errors:

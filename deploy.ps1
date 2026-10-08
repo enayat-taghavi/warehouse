@@ -2007,6 +2007,7 @@ function Invoke-ChangeDomainMode([string]$NewDomain) {
     Write-Success "  Legacy domain (transition): $($config.Domain)"
     Write-Warn "CRITICAL: OAuth redirect URI in Google Cloud Console must be updated to:"
     Write-Warn "  https://$NewDomain/api/accounts/gdrive/callback/"
+    Write-Warn "Run -FinishDomainChange only after users have opened the app on $NewDomain. Even then $($config.Domain) keeps serving the API and app files (only page navigation is redirected), so an installed app can still send its offline data before it moves."
     return 0
 }
 
@@ -2168,7 +2169,7 @@ function Invoke-Mode([string]$Name) {
             'Logs' { Invoke-LogsMode }
             'Restart' { Invoke-RestartMode }
             'IssueCert' { Invoke-IssueCertMode }
-            'InstallCert' { Invoke-InstallCertMode -CertPath $CertFile -KeyPath $KeyFile -ChainPath $ChainPath }
+            'InstallCert' { Invoke-InstallCertMode -CertPath $CertFile -KeyPath $KeyFile -ChainPath $ChainFile }
             'ChangeDomain' { Invoke-ChangeDomainMode $ChangeDomain }
             'FinishDomainChange' { Invoke-FinishDomainChangeMode }
             'RemoveLegacyDomain' { Invoke-RemoveLegacyDomainMode $RemoveLegacyDomain }

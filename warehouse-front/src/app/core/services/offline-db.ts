@@ -501,6 +501,13 @@ export async function getPersonnelLocalDraft(key: string): Promise<PersonnelLoca
   return (await db.drafts.get(key)) ?? null;
 }
 
+/** تعداد همهٔ پیش‌نویس‌های محلی این مرورگر (همهٔ کاربران)؛ خطای IndexedDB به فراخوان می‌رسد */
+export async function countPersonnelLocalDraftsStrict(): Promise<number> {
+  const db = getPersonnelDraftDb();
+  if (!db) return 0;
+  return db.drafts.count();
+}
+
 export async function deletePersonnelLocalDraft(key: string): Promise<void> {
   const db = getPersonnelDraftDb();
   if (!db) return;

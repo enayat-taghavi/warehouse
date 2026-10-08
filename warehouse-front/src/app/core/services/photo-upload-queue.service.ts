@@ -173,6 +173,16 @@ export class PhotoUploadQueueService {
     }
   }
 
+  /** مانند countPending ولی خطای IndexedDB را پنهان نمی‌کند (برای تصمیم‌های ایمنی مثل انتقال دامنه) */
+  async countPendingStrict(): Promise<number> {
+    return offlineDb.photoQueue.where('status').anyOf(['pending', 'sending', 'failed']).count();
+  }
+
+  /** آیا هم‌اکنون دوری از ارسال عکس در جریان است؟ */
+  get isFlushing(): boolean {
+    return this.flushing;
+  }
+
   /** همه رکوردهای صف مربوط به یک کالا (منتظر ارسال + ردشده) */
   async entriesForItem(itemId: number): Promise<PhotoQueueEntry[]> {
     try {

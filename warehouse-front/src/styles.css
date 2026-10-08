@@ -453,3 +453,16 @@ ng-persian-datepicker {
     animation: none !important;
   }
 }
+/* ==========================================================================
+   نوار انتقال دامنه: ارتفاعش در --domain-banner-h است (صفر وقتی نوار نیست)،
+   پس چیدمان تمام‌صفحه زیر نوار کوتاه می‌شود و پایین صفحه بریده نمی‌شود.
+   ========================================================================== */
+#app-screen {
+  height: calc(100dvh - var(--domain-banner-h, 0px));
+}
+
+@media (min-width: 768px) {
+  #app-screen > #sidebar {
+    height: calc(100vh - var(--domain-banner-h, 0px)) !important;
+  }
+}

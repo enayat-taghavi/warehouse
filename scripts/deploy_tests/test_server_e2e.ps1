@@ -886,6 +886,10 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
     Assert-True ($nginxSite -contains '    real_ip_header CF-Connecting-IP;' -and @($nginxSite | Where-Object { $_ -like '*set_real_ip_from 173.245.48.0/20;*' }).Count -ge 1) 'nginx configured with Cloudflare real_ip ranges and CF-Connecting-IP'
     $sO3 = Get-ServerState
     Assert-True ($sO3.HTTPS_ROOT -eq '200' -and $sO3.HTTPS_API -eq '200') 'HTTPS serves under cloudflare-origin'
+    # The key never lands anywhere but the TLS directory (stage, root work copies, logs).
+    $leak = @(Invoke-Server '{ find /tmp /run /var/log -xdev -type f -size -2M -print0 2>/dev/null | xargs -0 -r grep -l -- "PRIVATE KEY" 2>/dev/null || true; } | wc -l')[0]
+    Assert-True ($leak -eq '0') "no private key material left in /tmp, /run or /var/log ($leak file(s))"
+    Assert-True (@(Invoke-Server '{ ls -d /run/wh-install-cert.* 2>/dev/null || true; } | wc -l')[0] -eq '0') 'install-cert root work directory removed'
 
     # O4. Successful InstallCert for custom
     Set-ConfigCertMode 'custom'
@@ -895,6 +899,24 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
     Assert-True (@($nginxSiteCustom | Where-Object { $_ -like '*set_real_ip_from*' }).Count -eq 0) 'nginx does not contain set_real_ip_from in custom mode'
     $sO4 = Get-ServerState
     Assert-True ($sO4.HTTPS_ROOT -eq '200' -and $sO4.HTTPS_API -eq '200') 'HTTPS serves under custom mode'
+    # The replaced Cloudflare Origin pair is archived root-only, never deleted.
+    Assert-True (@(Invoke-Server 'find /var/www/warehouse/shared/retired/tls -mindepth 2 -maxdepth 2 -path "*/soft.example.test_replaced_*" -name privkey.pem | wc -l')[0] -ge '1') 'previous origin key archived to shared/retired/tls (not deleted)'
+    Assert-True (@(Invoke-Server 'stat -c "%U:%a" /var/www/warehouse/shared/retired/tls')[0] -eq 'root:700') 'shared/retired/tls is root-only (0700)'
+
+    # O4b. custom with a CA-issued leaf: refused without -ChainFile, installed with it (deploy.ps1 passes -ChainFile)
+    $caKey = Join-Path $certTestDir 'ca_key.pem'; $caCert = Join-Path $certTestDir 'ca_cert.pem'
+    $leafKey = Join-Path $certTestDir 'leaf_key.pem'; $leafCsr = Join-Path $certTestDir 'leaf.csr'; $leafCert = Join-Path $certTestDir 'leaf_cert.pem'
+    [void](Invoke-Process -FilePath $opensslExe -ArgumentList @('req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '365', '-subj', '/CN=E2E-Test-CA', '-addext', 'basicConstraints=critical,CA:TRUE', '-addext', 'keyUsage=critical,keyCertSign,cRLSign', '-keyout', $caKey, '-out', $caCert) -Capture -Quiet)
+    [void](Invoke-Process -FilePath $opensslExe -ArgumentList @('req', '-newkey', 'rsa:2048', '-nodes', '-subj', '/CN=soft.example.test', '-addext', 'subjectAltName=DNS:soft.example.test', '-keyout', $leafKey, '-out', $leafCsr) -Capture -Quiet)
+    [void](Invoke-Process -FilePath $opensslExe -ArgumentList @('x509', '-req', '-in', $leafCsr, '-CA', $caCert, '-CAkey', $caKey, '-CAcreateserial', '-days', '90', '-copy_extensions', 'copyall', '-out', $leafCert) -Capture -Quiet)
+    $script:CertFile = $leafCert; $script:KeyFile = $leafKey; $script:ChainFile = ''
+    Assert-True ((Invoke-TestMode 'InstallCert') -ne 0) 'InstallCert (custom) refuses a CA-issued leaf without -ChainFile'
+    $script:ChainFile = $caCert
+    Assert-True ((Invoke-TestMode 'InstallCert') -eq 0) 'InstallCert (custom) with -ChainFile exit 0'
+    Assert-True (@(Invoke-Server 'grep -c "BEGIN CERTIFICATE" /etc/warehouse/tls/soft.example.test/fullchain.pem')[0] -eq '2') 'fullchain.pem holds the leaf plus the -ChainFile chain'
+    $script:ChainFile = ''
+    $sO4b = Get-ServerState
+    Assert-True ($sO4b.HTTPS_ROOT -eq '200' -and $sO4b.HTTPS_API -eq '200') 'HTTPS serves with the custom chain'
 
     # O5. Status and Nightly Backup remaining days logging
     $stOut = Invoke-Server "$Gateway status soft.example.test"
@@ -915,6 +937,14 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
     $script:CertFile = ''; $script:KeyFile = ''; $script:ChainFile = ''
 
     # === P. Domain migration (plan Modular_Deploy_Options step 5) ===================================
+    # P0. A certificate for a future domain never re-renders nginx away from the live domain
+    $gP0 = Invoke-GatewayAsDeploy 'issue-cert admin@example.test dns01-cloudflare future.example.test'
+    Assert-True ($gP0.ExitCode -eq 0 -and ($gP0.Out -contains '[CERT_OK]')) "issue-cert for a future domain exit 0 ($($gP0.ExitCode))"
+    Assert-True (@(Invoke-Server 'grep -c "server_name future.example.test" /etc/nginx/sites-available/warehouse || true')[0] -eq '0') 'nginx not rendered for the future domain'
+    $sP0 = Get-ServerState
+    Assert-True ($sP0.HTTPS_ROOT -eq '200' -and $sP0.HTTPS_API -eq '200') 'live domain still served after a certificate for another domain'
+    Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/DOMAIN')[0] -eq 'soft.example.test') 'shared/DOMAIN untouched by issue-cert for another domain'
+
     # P1. Add custom secret to .env to verify byte-by-byte preservation
     [void](Invoke-Server 'echo "CUSTOM_PRESERVED_SECRET=secret_value_123" >> /var/www/warehouse/shared/.env')
     $origEnvPerm = @(Invoke-Server 'stat -c "%U:%G:%a" /var/www/warehouse/shared/.env')[0]
@@ -958,6 +988,35 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
     $resAfterFail = @(Invoke-Server 'curl -ks -o /dev/null -w "%{http_code}" --resolve new.example.test:443:127.0.0.1 https://new.example.test/api/public/config/ || true')[0]
     Assert-True ($resAfterFail -eq '200') 'Services still healthy after ChangeDomain failure'
 
+    # P2b. A failure AFTER DOMAIN, DOMAINS_LEGACY and .env were rewritten (nginx -t refuses a broken legacy pair)
+    # puts all three back byte for byte, and both domains keep serving.
+    [void](Invoke-Server @'
+mkdir -p /etc/warehouse/tls/new2.example.test /etc/warehouse/tls/broken.example.test
+openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj "/CN=new2.example.test" -addext "subjectAltName=DNS:new2.example.test" -keyout /etc/warehouse/tls/new2.example.test/privkey.pem -out /etc/warehouse/tls/new2.example.test/fullchain.pem 2>/dev/null
+openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj "/CN=broken.example.test" -addext "subjectAltName=DNS:broken.example.test" -keyout /root/broken_unused.pem -out /etc/warehouse/tls/broken.example.test/fullchain.pem 2>/dev/null
+openssl genrsa -out /etc/warehouse/tls/broken.example.test/privkey.pem 2048 2>/dev/null
+rm -f /root/broken_unused.pem
+printf 'broken.example.test redirect\n' >> /var/www/warehouse/shared/DOMAINS_LEGACY
+sha256sum /var/www/warehouse/shared/.env /var/www/warehouse/shared/DOMAIN /var/www/warehouse/shared/DOMAINS_LEGACY > /root/p2b.sha
+'@)
+    $gRb = Invoke-GatewayAsDeploy 'change-domain new2.example.test'
+    Assert-True ($gRb.ExitCode -ne 0 -and @($gRb.Err | Where-Object { $_ -like '*DOMAIN_CHANGE_ROLLED_BACK*' }).Count -ge 1) "change-domain failing at nginx -t rolls back (exit $($gRb.ExitCode))"
+    Assert-True (@(Invoke-Server 'sha256sum -c --quiet /root/p2b.sha >/dev/null 2>&1 && echo SAME || echo DIFF')[0] -eq 'SAME') 'DOMAIN, DOMAINS_LEGACY and .env byte-identical after the rollback'
+    $resRbNew = @(Invoke-Server 'curl -ks -o /dev/null -w "%{http_code}" --resolve new.example.test:443:127.0.0.1 https://new.example.test/api/public/config/ || true')[0]
+    $resRbOld = @(Invoke-Server 'curl -ks -o /dev/null -w "%{http_code}" --resolve soft.example.test:443:127.0.0.1 https://soft.example.test/api/public/config/ || true')[0]
+    Assert-True ($resRbNew -eq '200' -and $resRbOld -eq '200') "both domains serve after the rolled-back change (new: $resRbNew, old: $resRbOld)"
+    [void](Invoke-Server 'sed -i "/^broken\.example\.test /d" /var/www/warehouse/shared/DOMAINS_LEGACY; rm -rf /etc/warehouse/tls/broken.example.test /etc/warehouse/tls/new2.example.test /root/p2b.sha')
+
+    # P2c. A stale Domain (the former domain) from deploy_config.json is refused before anything changes
+    $rStale = Invoke-Container 'root' '/usr/local/sbin/warehouse-deploy --refresh-nginx --domain soft.example.test'
+    Assert-True ($rStale.ExitCode -ne 0) "warehouse-deploy refuses a former domain as primary (exit $($rStale.ExitCode))"
+    Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/DOMAIN')[0] -eq 'new.example.test' -and @(Invoke-Server 'grep -c "server_name new.example.test" /etc/nginx/sites-available/warehouse || true')[0] -ge '1') 'shared/DOMAIN and nginx still on new.example.test'
+
+    # P2d. RemoveLegacyDomain refuses a domain still in transition (installed apps there may hold offline data)
+    $gRt = Invoke-GatewayAsDeploy 'remove-legacy-domain soft.example.test'
+    Assert-True ($gRt.ExitCode -ne 0 -and @($gRt.Err | Where-Object { $_ -like '*still in transition mode*' }).Count -ge 1) 'remove-legacy-domain refuses a domain in transition'
+    Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/DOMAINS_LEGACY')[0] -eq 'soft.example.test transition' -and @(Invoke-Server 'test -d /etc/warehouse/tls/soft.example.test && echo KEPT || echo GONE')[0] -eq 'KEPT') 'transition domain and its certificate kept'
+
     # P3. FinishDomainChange
     Assert-True ((Invoke-TestMode 'FinishDomainChange') -eq 0) 'FinishDomainChange exit 0'
     Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/DOMAINS_LEGACY')[0] -eq 'soft.example.test redirect') 'shared/DOMAINS_LEGACY updated to redirect'
@@ -967,9 +1026,16 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
     Assert-True (@($redirHdr | Where-Object { $_ -match '^HTTP/.* 301' }).Count -ge 1) 'legacy domain returns HTTP 301'
     Assert-True (@($redirHdr | Where-Object { $_ -match 'location:\s*https://new\.example\.test/app/inventory\?filter=1' }).Count -ge 1) '301 redirect preserves path and query'
 
-    # ngsw.json on legacy domain returns 404 to unregister service worker
+    # Safe redirect: an app installed on the old origin keeps its service worker and can still send its
+    # offline queue (IndexedDB is per origin), so ngsw.json, the API and the app files stay served there.
     $ngswCode = @(Invoke-Server 'curl -ks -o /dev/null -w "%{http_code}" --resolve soft.example.test:443:127.0.0.1 https://soft.example.test/ngsw.json || true')[0]
-    Assert-True ($ngswCode -eq '404') "legacy domain returns 404 for /ngsw.json ($ngswCode)"
+    Assert-True ($ngswCode -eq '200') "legacy domain still serves /ngsw.json in redirect mode ($ngswCode)"
+    $legApi = @(Invoke-Server 'curl -ks -o /dev/null -w "%{http_code}" --resolve soft.example.test:443:127.0.0.1 https://soft.example.test/api/public/config/ || true')[0]
+    Assert-True ($legApi -eq '200') "legacy domain still serves the API in redirect mode ($legApi)"
+    $legIndex = @(Invoke-Server 'curl -ks -o /dev/null -w "%{http_code}" --resolve soft.example.test:443:127.0.0.1 https://soft.example.test/index.html || true')[0]
+    Assert-True ($legIndex -eq '200') "legacy domain still serves /index.html for the installed app ($legIndex)"
+    $legRoot = @(Invoke-Server 'curl -ks -o /dev/null -w "%{http_code}" --resolve soft.example.test:443:127.0.0.1 https://soft.example.test/ || true')[0]
+    Assert-True ($legRoot -eq '301') "page navigation on the legacy domain is redirected ($legRoot)"
 
     # Primary domain still serves 200
     $resPrim = @(Invoke-Server 'curl -ks -o /dev/null -w "%{http_code}" --resolve new.example.test:443:127.0.0.1 https://new.example.test/ || true')[0]
@@ -986,7 +1052,10 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
 
     Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/DOMAINS_LEGACY || true').Count -eq 0 -or @(Invoke-Server 'grep -c "soft.example.test" /var/www/warehouse/shared/DOMAINS_LEGACY || true')[0] -eq '0') 'soft.example.test removed from shared/DOMAINS_LEGACY'
     Assert-True (@(Invoke-Server 'test ! -d /etc/warehouse/tls/soft.example.test && echo GONE')[0] -eq 'GONE') 'TLS directory removed from /etc/warehouse/tls/'
-    Assert-True (@(Invoke-Server '{ ls -d /var/www/warehouse/shared/retired/tls/soft.example.test_* 2>/dev/null || true; } | wc -l')[0] -ge 1) 'TLS directory archived into shared/retired/tls/'
+    Assert-True (@(Invoke-Server '{ ls -d /var/www/warehouse/shared/retired/tls/soft.example.test_2* 2>/dev/null || true; } | wc -l')[0] -ge 1) 'TLS directory archived into shared/retired/tls/'
+    Assert-True (@(Invoke-Server 'grep -c "server_name soft.example.test" /etc/nginx/sites-available/warehouse || true')[0] -eq '0') 'nginx no longer references the removed domain'
+    $resAfterRemove = @(Invoke-Server 'nginx -t >/dev/null 2>&1 && curl -ks -o /dev/null -w "%{http_code}" --resolve new.example.test:443:127.0.0.1 https://new.example.test/ || true')[0]
+    Assert-True ($resAfterRemove -eq '200') "nginx -t passes and the primary domain serves after RemoveLegacyDomain ($resAfterRemove)"
 } catch {
     Write-Host "[FAIL] test aborted: $($_.Exception.Message)`n$($_.ScriptStackTrace)" -ForegroundColor Red
     $script:failures++

@@ -62,6 +62,17 @@ if [[ "${1:-}" == "--print-modules" ]]; then
     exit 0
 fi
 
+# A domain handed in by deploy.ps1 must not be one this server already moved away from: a stale Domain in
+# deploy_config.json would otherwise re-render nginx and shared/DOMAIN for the old domain (step 5 review).
+assert_not_legacy_domain() {
+    local d="$1" legacy="${SHARED_DIR}/DOMAINS_LEGACY" primary
+    [[ -n "$d" && -f "$legacy" ]] || return 0
+    if awk -v d="$d" '{ sub(/\r$/, "") } $1 == d { found = 1 } END { exit !found }' "$legacy"; then
+        primary=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null | tr -d '\r' || true)
+        die "Domain $d is a former domain of this server (primary: ${primary:-unknown}); set Domain in deploy_config.json to the primary domain."
+    fi
+}
+
 # Parses "--activate <release> [--verified-backup <dump>] [--domain <d>] [--maintenance]" (G-06).
 parse_activate_args() {
     REL_NAME=""
@@ -79,6 +90,7 @@ parse_activate_args() {
     done
     [[ "$REL_NAME" =~ $RELEASE_NAME_RE ]] || die "Missing or invalid release name: '${REL_NAME}'"
     [[ "$DOMAIN" =~ $DOMAIN_RE ]] || die "Invalid domain format: $DOMAIN"
+    assert_not_legacy_domain "$DOMAIN"
     [[ "$VERIFIED_BACKUP" =~ $PRE_UPDATE_RE ]] || die "--verified-backup db_pre_update_<YYYYMMDD_HHMMSS>.dump is required"
 }
 
@@ -97,6 +109,7 @@ parse_add_module_args() {
     done
     [[ -n "$ADD_CODE" && " ${KNOWN_MODULES[*]} " == *" ${ADD_CODE} "* ]] || die "Unknown module: '${ADD_CODE}' (known: ${KNOWN_MODULES[*]})"
     [[ -z "$DOMAIN" || "$DOMAIN" =~ $DOMAIN_RE ]] || die "Invalid domain format: $DOMAIN"
+    assert_not_legacy_domain "$DOMAIN"
     [[ "$VERIFIED_BACKUP" =~ $PRE_MODULE_RE ]] || die "--verified-backup db_pre_module_<YYYYMMDD_HHMMSS>.dump is required"
 }
 
@@ -118,6 +131,7 @@ parse_reset_args() {
     [[ "$REL_NAME" =~ $RELEASE_NAME_RE ]] || die "Missing or invalid release name: '${REL_NAME}'"
     RESET_MODULES=$(canonical_modules "$RESET_MODULES") || die "--modules must list known modules (${KNOWN_MODULES[*]})"
     [[ -z "$DOMAIN" || "$DOMAIN" =~ $DOMAIN_RE ]] || die "Invalid domain format: $DOMAIN"
+    assert_not_legacy_domain "$DOMAIN"
     [[ "$VERIFIED_BACKUP" =~ $PRE_UPDATE_RE ]] || die "--verified-backup db_pre_update_<YYYYMMDD_HHMMSS>.dump is required"
 }
 
@@ -527,7 +541,7 @@ EOF
     # Render legacy domains from shared/DOMAINS_LEGACY if present in HTTPS mode
     local legacy_file="${SHARED_DIR}/DOMAINS_LEGACY"
     if [[ -f "$legacy_file" && ! -L "$legacy_file" && -f "${tls_dir}/fullchain.pem" && -f "${tdir}/nginx-https.conf" ]]; then
-        local leg_d leg_m leg_tls
+        local leg_d leg_m leg_tls leg_block leg_label port80_target
         # Extract main 443 server block for transition domains
         local trans_base
         trans_base=$(python3 -c '
@@ -558,82 +572,62 @@ if p != -1:
                 continue
             fi
 
-            if [[ "$leg_m" == "redirect" ]]; then
-                cat >> "$new" <<EOF
-
-# Legacy Domain: ${leg_d} (301 Permanent Redirect to https://${domain})
-server {
-    listen 80;
-    listen [::]:80;
-    server_name ${leg_d};
-    server_tokens off;
-
-    location ^~ /.well-known/acme-challenge/ {
-        root /var/www/html;
-        default_type "text/plain";
-        allow all;
-    }
-
-    location / {
-        return 301 https://${domain}\$request_uri;
-    }
-}
-
-server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    server_name ${leg_d};
-    server_tokens off;
-
-    ssl_certificate /etc/warehouse/tls/${leg_d}/fullchain.pem;
-    ssl_certificate_key /etc/warehouse/tls/${leg_d}/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_prefer_server_ciphers off;
-
-    location ^~ /.well-known/acme-challenge/ {
-        root /var/www/html;
-        default_type "text/plain";
-        allow all;
-    }
-
-    location = /ngsw.json {
-        return 404;
-    }
-
-    location / {
-        return 301 https://${domain}\$request_uri;
-    }
-}
-EOF
-            elif [[ "$leg_m" == "transition" ]]; then
-                cat >> "$new" <<EOF
-
-# Legacy Domain: ${leg_d} (Transition mode: full app served)
-server {
-    listen 80;
-    listen [::]:80;
-    server_name ${leg_d};
-    server_tokens off;
-
-    location ^~ /.well-known/acme-challenge/ {
-        root /var/www/html;
-        default_type "text/plain";
-        allow all;
-    }
-
-    location / {
-        return 301 https://\$host\$request_uri;
-    }
-}
-EOF
-                if [[ -n "$trans_base" ]]; then
-                    local trans_block="${trans_base// default_server/}"
-                    trans_block="${trans_block// ssl http2/ ssl}"
-                    trans_block="${trans_block//${domain}/${leg_d}}"
-                    printf '%s\n\n' "$trans_block" >> "$new"
-                fi
+            if [[ -z "$trans_base" ]]; then
+                echo "[ERROR] Could not extract the main HTTPS server block for legacy domain $leg_d." >&2
+                rm -f "$new"
+                return 1
             fi
+            leg_block="${trans_base// default_server/}"
+            leg_block="${leg_block// ssl http2/ ssl}"
+            leg_block="${leg_block//${domain}/${leg_d}}"
+            if [[ "$leg_m" == "redirect" ]]; then
+                # Safe redirect: the old origin keeps serving /api/, /ws/, ngsw.json and the app files, so an
+                # installed app that still holds an offline queue (IndexedDB is per origin) can send it and then
+                # move itself. Only page navigation (the SPA fallback) gets the permanent redirect.
+                if ! leg_block=$(printf '%s' "$leg_block" | python3 -c '
+import sys
+text = sys.stdin.read()
+target = sys.argv[1]
+marker = "    location / {"
+p = text.rfind(marker)
+end = text.find("\n    }", p) if p != -1 else -1
+if p == -1 or end == -1:
+    sys.exit(3)
+end += len("\n    }")
+text = text[:p] + "    location / {\n        return 301 https://" + target + "$request_uri;\n    }" + text[end:]
+sys.stdout.write(text)
+' "$domain"); then
+                    echo "[ERROR] Could not render the redirect server block for legacy domain $leg_d." >&2
+                    rm -f "$new"
+                    return 1
+                fi
+                port80_target="https://${domain}\$request_uri"
+                leg_label="redirect: page navigation 301 to https://${domain}; API, websocket and app files still served"
+            else
+                port80_target="https://\$host\$request_uri"
+                leg_label="transition: full app served"
+            fi
+            cat >> "$new" <<EOF
+
+# Legacy Domain: ${leg_d} (${leg_label})
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${leg_d};
+    server_tokens off;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/html;
+        default_type "text/plain";
+        allow all;
+    }
+
+    location / {
+        return 301 ${port80_target};
+    }
+}
+EOF
+            printf '%s\n\n' "$leg_block" >> "$new"
         done < "$legacy_file"
     fi
 
@@ -696,6 +690,7 @@ if [[ "${1:-}" == "--rollback" ]]; then
     done
     if [[ -z "$DOMAIN" && -f "${SHARED_DIR}/DOMAIN" ]]; then DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN"); fi
     [[ -z "$DOMAIN" || "$DOMAIN" =~ $DOMAIN_RE ]] || die "Invalid domain format: $DOMAIN"
+    assert_not_legacy_domain "$DOMAIN"
 
     echo "=== Initiating Release Rollback ==="
     ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
@@ -749,6 +744,7 @@ fi
 # ==============================================================================
 if [[ "${1:-}" == "--refresh-nginx" ]]; then
     [[ "${2:-}" == "--domain" && $# -eq 3 && "$3" =~ $DOMAIN_RE ]] || die "Usage: --refresh-nginx --domain <domain>"
+    assert_not_legacy_domain "$3"
     ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
     [[ -n "$ACTIVE_RELEASE" && -d "$ACTIVE_RELEASE" ]] || die "No active release."
     apply_nginx_config "$ACTIVE_RELEASE" "$3" || exit 1
@@ -994,6 +990,7 @@ if [[ "${1:-}" == "--prepare" ]]; then
         esac
     done
     [[ "$DOMAIN" =~ $DOMAIN_RE ]] || die "Invalid domain format: $DOMAIN"
+    assert_not_legacy_domain "$DOMAIN"
     # An update never changes the installed modules (deploy.ps1 -AddModule adds one; none is ever removed).
     if [[ -n "$EXPECTED_MODULES" ]]; then
         WANT_MODULES=$(canonical_modules "$EXPECTED_MODULES") || die "--modules must list known modules (${KNOWN_MODULES[*]})."
@@ -1415,87 +1412,127 @@ if [[ "${1:-}" == "--activate" ]]; then
 fi
 
 # ==============================================================================
+# Domain modes (plan Modular_Deploy_Options step 5): shared helpers
+# ==============================================================================
+# The TLS pair of a domain in /etc/warehouse/tls is usable: both files, valid now, covering the name,
+# and the key matching the certificate. nginx -t checks none of these except the key.
+check_tls_pair() {
+    local d="$1" dir="/etc/warehouse/tls/$1" cpub kpub
+    if [[ ! -f "$dir/fullchain.pem" || ! -f "$dir/privkey.pem" ]]; then
+        echo "[ERROR] TLS certificate for $d is missing in $dir. Issue or install it first." >&2
+        return 1
+    fi
+    if ! openssl x509 -in "$dir/fullchain.pem" -noout -checkend 0 >/dev/null 2>&1; then
+        echo "[ERROR] TLS certificate for $d in $dir is unreadable or expired." >&2
+        return 1
+    fi
+    if ! openssl x509 -in "$dir/fullchain.pem" -noout -checkhost "$d" 2>/dev/null | grep -q 'does match'; then
+        echo "[ERROR] TLS certificate in $dir does not cover $d." >&2
+        return 1
+    fi
+    cpub=$(openssl x509 -in "$dir/fullchain.pem" -noout -pubkey 2>/dev/null || true)
+    kpub=$(openssl pkey -in "$dir/privkey.pem" -pubout -passin pass: </dev/null 2>/dev/null || true)
+    if [[ -z "$cpub" || "$cpub" != "$kpub" ]]; then
+        echo "[ERROR] TLS private key in $dir does not match its certificate." >&2
+        return 1
+    fi
+    return 0
+}
+
+# Lines of a DOMAINS_LEGACY file without the given domains (exact first-field match, never a regex).
+legacy_lines_without() {
+    awk -v a="$2" -v b="${3:-}" '{ sub(/\r$/, "") } NF == 0 || $1 ~ /^#/ { next } $1 != a && $1 != b { print $1, $2 }' "$1"
+}
+
+# Replaces a shared state file atomically with the content of another file, keeping owner and mode.
+replace_shared_file() {
+    local dest="$1" src="$2" tmp
+    tmp="${1%/*}/.${1##*/}.new.$$"
+    if [[ -f "$dest" ]]; then cp -p -- "$dest" "$tmp"; fi
+    cat -- "$src" > "$tmp"
+    sync -- "$tmp"
+    mv -f -- "$tmp" "$dest"
+}
+
+# ==============================================================================
 # Mode: --change-domain <new_domain>
+# The new domain becomes primary and the current one goes to transition (still serving the app).
+# Every exit before the end puts DOMAIN, DOMAINS_LEGACY, .env and nginx back (trap).
 # ==============================================================================
 if [[ "${1:-}" == "--change-domain" ]]; then
     [[ $# -eq 2 && "$2" =~ $DOMAIN_RE ]] || die "Usage: --change-domain <new_domain>"
     NEW_DOMAIN="$2"
-    OLD_DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null || true)
+    OLD_DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null | tr -d '\r' || true)
     [[ -n "$OLD_DOMAIN" ]] || die "Primary domain in shared/DOMAIN is missing."
     [[ "$NEW_DOMAIN" != "$OLD_DOMAIN" ]] || die "Domain $NEW_DOMAIN is already the active primary domain."
-
-    NEW_TLS="/etc/warehouse/tls/${NEW_DOMAIN}"
-    [[ -f "${NEW_TLS}/fullchain.pem" && -f "${NEW_TLS}/privkey.pem" ]] \
-        || die "TLS certificate for $NEW_DOMAIN is missing in $NEW_TLS. Issue or install it first."
+    [[ -f "${SHARED_DIR}/.env" && ! -L "${SHARED_DIR}/.env" ]] || die "Production environment file ${SHARED_DIR}/.env does not exist."
+    check_tls_pair "$NEW_DOMAIN" || exit 1
+    # The current domain keeps serving the app during the transition, so it must keep a working certificate.
+    check_tls_pair "$OLD_DOMAIN" || die "The current domain $OLD_DOMAIN has no usable certificate in /etc/warehouse/tls; it could not stay on HTTPS during the transition."
 
     ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
     [[ -n "$ACTIVE_RELEASE" && -d "$ACTIVE_RELEASE" ]] || die "No active release."
 
-    DOMAIN_BAK="${SHARED_DIR}/.DOMAIN.bak.$$"
-    LEGACY_BAK="${SHARED_DIR}/.DOMAINS_LEGACY.bak.$$"
-    ENV_BAK="${SHARED_DIR}/.env.bak.$$"
-    cp -p "${SHARED_DIR}/DOMAIN" "$DOMAIN_BAK"
-    if [[ -f "${SHARED_DIR}/DOMAINS_LEGACY" ]]; then
-        cp -p "${SHARED_DIR}/DOMAINS_LEGACY" "$LEGACY_BAK"
-    else
-        touch "$LEGACY_BAK"
+    CD_BAK=$(mktemp -d "${SHARED_DIR}/.change-domain.XXXXXX")
+    cp -p "${SHARED_DIR}/DOMAIN" "$CD_BAK/DOMAIN"
+    if [[ -f "${SHARED_DIR}/DOMAINS_LEGACY" ]]; then cp -p "${SHARED_DIR}/DOMAINS_LEGACY" "$CD_BAK/DOMAINS_LEGACY"; fi
+    cp -p "${SHARED_DIR}/.env" "$CD_BAK/.env"
+    CD_DONE=0
+    CD_RESTARTED=0
+    restore_domain_state() {
+        echo "[ERROR] $1 Restoring the previous domain state." >&2
+        replace_shared_file "${SHARED_DIR}/DOMAIN" "$CD_BAK/DOMAIN" || true
+        if [[ -f "$CD_BAK/DOMAINS_LEGACY" ]]; then
+            replace_shared_file "${SHARED_DIR}/DOMAINS_LEGACY" "$CD_BAK/DOMAINS_LEGACY" || true
+        else
+            rm -f "${SHARED_DIR}/DOMAINS_LEGACY"
+        fi
+        replace_shared_file "${SHARED_DIR}/.env" "$CD_BAK/.env" || true
+        if apply_nginx_config "$ACTIVE_RELEASE" "$OLD_DOMAIN"; then systemctl reload nginx || true; fi
+        if [[ "$CD_RESTARTED" -eq 1 ]]; then systemctl restart "${SERVICES[@]}" || true; fi
+        rm -rf "$CD_BAK"
+        echo "[DOMAIN_CHANGE_ROLLED_BACK] ${OLD_DOMAIN}" >&2
+    }
+    trap 'if [[ "$CD_DONE" -ne 1 ]]; then restore_domain_state "--change-domain stopped before it finished."; fi' EXIT
+    trap 'exit 143' TERM HUP
+    trap 'exit 130' INT
+
+    # 1. shared/DOMAIN and shared/DOMAINS_LEGACY (the old primary goes to transition)
+    printf '%s\n' "$NEW_DOMAIN" > "$CD_BAK/DOMAIN.new"
+    replace_shared_file "${SHARED_DIR}/DOMAIN" "$CD_BAK/DOMAIN.new"
+    : > "$CD_BAK/DOMAINS_LEGACY.new"
+    if [[ -f "$CD_BAK/DOMAINS_LEGACY" ]]; then
+        legacy_lines_without "$CD_BAK/DOMAINS_LEGACY" "$NEW_DOMAIN" "$OLD_DOMAIN" > "$CD_BAK/DOMAINS_LEGACY.new"
     fi
-    cp -p "${SHARED_DIR}/.env" "$ENV_BAK"
+    printf '%s transition\n' "$OLD_DOMAIN" >> "$CD_BAK/DOMAINS_LEGACY.new"
+    replace_shared_file "${SHARED_DIR}/DOMAINS_LEGACY" "$CD_BAK/DOMAINS_LEGACY.new"
 
-    # 1. Update shared/DOMAIN
-    printf '%s\n' "$NEW_DOMAIN" > "${SHARED_DIR}/DOMAIN"
-
-    # 2. Update shared/DOMAINS_LEGACY
-    TMP_LEGACY="${SHARED_DIR}/.DOMAINS_LEGACY.tmp.$$"
-    touch "$TMP_LEGACY"
-    if [[ -f "$LEGACY_BAK" ]]; then
-        grep -v -E "^${NEW_DOMAIN}[[:space:]]" "$LEGACY_BAK" | grep -v -E "^${OLD_DOMAIN}[[:space:]]" > "$TMP_LEGACY" || true
-    fi
-    printf '%s transition\n' "$OLD_DOMAIN" >> "$TMP_LEGACY"
-    mv -f "$TMP_LEGACY" "${SHARED_DIR}/DOMAINS_LEGACY"
-
-    # 3. Rewrite .env domain keys
+    # 2. Managed .env keys (atomic; every other line kept)
     write_env_domains "$NEW_DOMAIN"
 
-    # 4. Re-render Nginx site
-    if ! apply_nginx_config "$ACTIVE_RELEASE" "$NEW_DOMAIN"; then
-        echo "[ERROR] Nginx configuration failed for $NEW_DOMAIN; rolling back." >&2
-        cp -f "$DOMAIN_BAK" "${SHARED_DIR}/DOMAIN"
-        cp -f "$LEGACY_BAK" "${SHARED_DIR}/DOMAINS_LEGACY"
-        cp -f "$ENV_BAK" "${SHARED_DIR}/.env"
-        apply_nginx_config "$ACTIVE_RELEASE" "$OLD_DOMAIN" || true
-        rm -f "$DOMAIN_BAK" "$LEGACY_BAK" "$ENV_BAK"
-        exit 1
-    fi
+    # 3. nginx (nginx -t inside; the previous site file is put back on failure), then reload
+    apply_nginx_config "$ACTIVE_RELEASE" "$NEW_DOMAIN" || exit 1
+    systemctl reload nginx || exit 1
 
-    # 5. Reload Nginx and restart backend services
-    systemctl reload nginx || true
-    systemctl restart "${SERVICES[@]}" || true
+    # 4. Backend services read the new .env
+    CD_RESTARTED=1
+    systemctl restart "${SERVICES[@]}" || echo "[WARNING] systemctl restart reported an error; the health check decides." >&2
 
-    # 6. Health check
-    sleep 2
+    # 5. Both domains answer through nginx with the right Host (also proves ALLOWED_HOSTS)
     hc_ok=0
-    for _ in {1..10}; do
-        if curl -f -s -k "http://127.0.0.1:8000/api/public/config/" >/dev/null 2>&1; then
+    for _ in {1..30}; do
+        if curl -kfsS --resolve "${NEW_DOMAIN}:443:127.0.0.1" "https://${NEW_DOMAIN}/api/public/config/" > /dev/null 2>&1 \
+            && curl -kfsS --resolve "${OLD_DOMAIN}:443:127.0.0.1" "https://${OLD_DOMAIN}/api/public/config/" > /dev/null 2>&1; then
             hc_ok=1
             break
         fi
         sleep 1
     done
+    [[ "$hc_ok" -eq 1 ]] || { echo "[ERROR] Health check through nginx failed for ${NEW_DOMAIN} or ${OLD_DOMAIN}." >&2; exit 1; }
 
-    if [[ "$hc_ok" -eq 0 ]]; then
-        echo "[ERROR] Health check failed after domain change; rolling back." >&2
-        cp -f "$DOMAIN_BAK" "${SHARED_DIR}/DOMAIN"
-        cp -f "$LEGACY_BAK" "${SHARED_DIR}/DOMAINS_LEGACY"
-        cp -f "$ENV_BAK" "${SHARED_DIR}/.env"
-        apply_nginx_config "$ACTIVE_RELEASE" "$OLD_DOMAIN" || true
-        systemctl reload nginx || true
-        systemctl restart "${SERVICES[@]}" || true
-        rm -f "$DOMAIN_BAK" "$LEGACY_BAK" "$ENV_BAK"
-        exit 1
-    fi
-
-    rm -f "$DOMAIN_BAK" "$LEGACY_BAK" "$ENV_BAK"
+    CD_DONE=1
+    trap - EXIT TERM HUP INT
+    rm -rf "$CD_BAK"
     echo "[DOMAIN_CHANGED] ${NEW_DOMAIN}"
     echo "[SUCCESS] Primary domain changed to ${NEW_DOMAIN}; ${OLD_DOMAIN} is in transition mode."
     exit 0
@@ -1503,11 +1540,13 @@ fi
 
 # ==============================================================================
 # Mode: --finish-domain-change
+# transition -> redirect. The old domain keeps serving /api/, /ws/ and the app files, so an installed app
+# that still holds an offline queue can send it; only page navigation gets the 301.
 # ==============================================================================
 if [[ "${1:-}" == "--finish-domain-change" ]]; then
     [[ $# -eq 1 ]] || die "Usage: --finish-domain-change"
     LEGACY_FILE="${SHARED_DIR}/DOMAINS_LEGACY"
-    if [[ ! -f "$LEGACY_FILE" ]] || ! grep -q '[[:space:]]transition' "$LEGACY_FILE"; then
+    if [[ ! -f "$LEGACY_FILE" ]] || ! awk '{ sub(/\r$/, "") } $2 == "transition" { found = 1 } END { exit !found }' "$LEGACY_FILE"; then
         echo "[INFO] No legacy domains in transition state."
         echo "[FINISH_DOMAIN_CHANGE_OK]"
         exit 0
@@ -1515,60 +1554,90 @@ if [[ "${1:-}" == "--finish-domain-change" ]]; then
 
     ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
     [[ -n "$ACTIVE_RELEASE" && -d "$ACTIVE_RELEASE" ]] || die "No active release."
-    PRIMARY_DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null || true)
+    PRIMARY_DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null | tr -d '\r' || true)
     [[ -n "$PRIMARY_DOMAIN" ]] || die "Primary domain in shared/DOMAIN is missing."
 
-    LEGACY_BAK="${SHARED_DIR}/.DOMAINS_LEGACY.bak.$$"
-    cp -p "$LEGACY_FILE" "$LEGACY_BAK"
+    FD_BAK=$(mktemp -d "${SHARED_DIR}/.finish-domain.XXXXXX")
+    cp -p "$LEGACY_FILE" "$FD_BAK/DOMAINS_LEGACY"
+    FD_DONE=0
+    trap 'if [[ "$FD_DONE" -ne 1 ]]; then
+        echo "[ERROR] --finish-domain-change stopped before it finished; restoring the transition state." >&2
+        replace_shared_file "$LEGACY_FILE" "$FD_BAK/DOMAINS_LEGACY" || true
+        if apply_nginx_config "$ACTIVE_RELEASE" "$PRIMARY_DOMAIN"; then systemctl reload nginx || true; fi
+        rm -rf "$FD_BAK"
+    fi' EXIT
+    trap 'exit 143' TERM HUP
+    trap 'exit 130' INT
 
-    sed -i -E 's/[[:space:]]transition$/ redirect/' "$LEGACY_FILE"
+    awk '{ sub(/\r$/, "") } NF == 0 || $1 ~ /^#/ { next } { m = $2; if (m == "transition") m = "redirect"; print $1, m }' \
+        "$FD_BAK/DOMAINS_LEGACY" > "$FD_BAK/DOMAINS_LEGACY.new"
+    replace_shared_file "$LEGACY_FILE" "$FD_BAK/DOMAINS_LEGACY.new"
+    apply_nginx_config "$ACTIVE_RELEASE" "$PRIMARY_DOMAIN" || exit 1
+    systemctl reload nginx || exit 1
 
-    if ! apply_nginx_config "$ACTIVE_RELEASE" "$PRIMARY_DOMAIN"; then
-        echo "[ERROR] Nginx configuration failed during finish-domain-change; rolling back." >&2
-        cp -f "$LEGACY_BAK" "$LEGACY_FILE"
-        apply_nginx_config "$ACTIVE_RELEASE" "$PRIMARY_DOMAIN" || true
-        rm -f "$LEGACY_BAK"
-        exit 1
-    fi
-
-    systemctl reload nginx || true
-    rm -f "$LEGACY_BAK"
+    FD_DONE=1
+    trap - EXIT TERM HUP INT
+    rm -rf "$FD_BAK"
     echo "[FINISH_DOMAIN_CHANGE_OK]"
-    echo "[SUCCESS] All transition domains converted to permanent 301 redirects."
+    echo "[SUCCESS] Transition domains now redirect page navigation to https://${PRIMARY_DOMAIN}; their API stays served so installed apps can still send offline data."
     exit 0
 fi
 
 # ==============================================================================
 # Mode: --remove-legacy-domain <domain>
+# Only a domain already in redirect mode. nginx stops referencing it first; only then its certificate
+# directory is archived (never deleted) to shared/retired/tls/.
 # ==============================================================================
 if [[ "${1:-}" == "--remove-legacy-domain" ]]; then
     [[ $# -eq 2 && "$2" =~ $DOMAIN_RE ]] || die "Usage: --remove-legacy-domain <domain>"
     REMOVE_DOMAIN="$2"
-    PRIMARY_DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null || true)
+    PRIMARY_DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null | tr -d '\r' || true)
+    [[ -n "$PRIMARY_DOMAIN" ]] || die "Primary domain in shared/DOMAIN is missing."
     [[ "$REMOVE_DOMAIN" != "$PRIMARY_DOMAIN" ]] || die "Cannot remove primary domain $REMOVE_DOMAIN."
 
     LEGACY_FILE="${SHARED_DIR}/DOMAINS_LEGACY"
-    [[ -f "$LEGACY_FILE" ]] && grep -q -E "^${REMOVE_DOMAIN}[[:space:]]" "$LEGACY_FILE" \
-        || die "Domain $REMOVE_DOMAIN is not listed in shared/DOMAINS_LEGACY."
+    LEG_MODE=""
+    if [[ -f "$LEGACY_FILE" ]]; then
+        LEG_MODE=$(awk -v d="$REMOVE_DOMAIN" '{ sub(/\r$/, "") } $1 == d { print $2; exit }' "$LEGACY_FILE")
+    fi
+    [[ -n "$LEG_MODE" ]] || die "Domain $REMOVE_DOMAIN is not listed in shared/DOMAINS_LEGACY."
+    [[ "$LEG_MODE" == "redirect" ]] \
+        || die "Domain $REMOVE_DOMAIN is still in $LEG_MODE mode: apps installed on it may hold unsent offline data. Run deploy.ps1 -FinishDomainChange first and keep the redirect long enough."
 
     ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
     [[ -n "$ACTIVE_RELEASE" && -d "$ACTIVE_RELEASE" ]] || die "No active release."
 
-    mkdir -p "${SHARED_DIR}/retired/tls"
+    RL_BAK=$(mktemp -d "${SHARED_DIR}/.remove-legacy.XXXXXX")
+    cp -p "$LEGACY_FILE" "$RL_BAK/DOMAINS_LEGACY"
+    cp -p "${SHARED_DIR}/.env" "$RL_BAK/.env"
+    RL_DONE=0
+    trap 'if [[ "$RL_DONE" -ne 1 ]]; then
+        echo "[ERROR] --remove-legacy-domain stopped before it finished; restoring the previous state." >&2
+        replace_shared_file "$LEGACY_FILE" "$RL_BAK/DOMAINS_LEGACY" || true
+        replace_shared_file "${SHARED_DIR}/.env" "$RL_BAK/.env" || true
+        if apply_nginx_config "$ACTIVE_RELEASE" "$PRIMARY_DOMAIN"; then systemctl reload nginx || true; fi
+        rm -rf "$RL_BAK"
+    fi' EXIT
+    trap 'exit 143' TERM HUP
+    trap 'exit 130' INT
+
+    legacy_lines_without "$RL_BAK/DOMAINS_LEGACY" "$REMOVE_DOMAIN" > "$RL_BAK/DOMAINS_LEGACY.new"
+    replace_shared_file "$LEGACY_FILE" "$RL_BAK/DOMAINS_LEGACY.new"
+    write_env_domains "$PRIMARY_DOMAIN"
+    apply_nginx_config "$ACTIVE_RELEASE" "$PRIMARY_DOMAIN" || exit 1
+    systemctl reload nginx || exit 1
+
+    # nginx no longer references the domain: archive its certificate directory (never deleted).
     RETIRED_TS=$(date +%Y%m%d_%H%M%S)
+    mkdir -p "${SHARED_DIR}/retired/tls"
+    chmod 700 "${SHARED_DIR}/retired/tls"
     if [[ -d "/etc/warehouse/tls/${REMOVE_DOMAIN}" ]]; then
         mv "/etc/warehouse/tls/${REMOVE_DOMAIN}" "${SHARED_DIR}/retired/tls/${REMOVE_DOMAIN}_${RETIRED_TS}"
     fi
 
-    TMP_LEGACY="${SHARED_DIR}/.DOMAINS_LEGACY.tmp.$$"
-    grep -v -E "^${REMOVE_DOMAIN}[[:space:]]" "$LEGACY_FILE" > "$TMP_LEGACY" || true
-    mv -f "$TMP_LEGACY" "$LEGACY_FILE"
-
-    write_env_domains "$PRIMARY_DOMAIN"
-
-    apply_nginx_config "$ACTIVE_RELEASE" "$PRIMARY_DOMAIN"
-    systemctl reload nginx || true
-
+    RL_DONE=1
+    trap - EXIT TERM HUP INT
+    rm -rf "$RL_BAK"
     echo "[LEGACY_DOMAIN_REMOVED] ${REMOVE_DOMAIN}"
     echo "[SUCCESS] Legacy domain ${REMOVE_DOMAIN} removed and archived to shared/retired/tls/${REMOVE_DOMAIN}_${RETIRED_TS}."
     exit 0
