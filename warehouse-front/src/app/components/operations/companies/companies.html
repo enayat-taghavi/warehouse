@@ -125,8 +125,8 @@
             <th class="py-3 px-3.5">شناسه ملی</th>
             <th class="py-3 px-3.5">کد کارگاه بیمه</th>
             <th class="py-3 px-3.5">مدیرعامل</th>
-            <th class="py-3 px-3.5 text-center">پروژه‌ها</th>
-            <th class="py-3 px-3.5 text-center">سلامت مدارک</th>
+            <th *ngIf="isAccountingInstalled" class="py-3 px-3.5 text-center">پروژه‌ها</th>
+            <th *ngIf="isAccountingInstalled" class="py-3 px-3.5 text-center">سلامت مدارک</th>
             <th class="py-3 px-3.5 text-center">سامانه انبار</th>
             <th class="py-3 px-3.5 text-center">وضعیت</th>
             <th class="py-3 px-3.5 text-center w-28">عملیات</th>
@@ -134,14 +134,14 @@
         </thead>
         <tbody class="divide-y divide-slate-100">
           <tr *ngIf="isLoading" class="bg-white">
-            <td colspan="11" class="py-12 text-center text-slate-400">
+            <td [attr.colspan]="isAccountingInstalled ? 11 : 9" class="py-12 text-center text-slate-400">
               <div class="inline-block animate-spin text-indigo-600 text-xl mb-2">⟳</div>
               <div>در حال بارگذاری اطلاعات شرکت‌ها...</div>
             </td>
           </tr>
 
           <tr *ngIf="!isLoading && filteredCompanies.length === 0" class="bg-white">
-            <td colspan="11" class="py-12 text-center text-slate-400 font-bold">
+            <td [attr.colspan]="isAccountingInstalled ? 11 : 9" class="py-12 text-center text-slate-400 font-bold">
               هیچ شرکتی با معیارهای جستجو یافت نشد.
             </td>
           </tr>
@@ -164,14 +164,14 @@
             <td class="py-3 px-3.5 font-mono text-slate-600">{{ company.national_id || '—' }}</td>
             <td class="py-3 px-3.5 font-mono text-slate-600">{{ company.workshop_code || '—' }}</td>
             <td class="py-3 px-3.5 text-slate-700">{{ company.ceo_name || '—' }}</td>
-            <td class="py-3 px-3.5 text-center">
+            <td *ngIf="isAccountingInstalled" class="py-3 px-3.5 text-center">
               <span class="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full text-[11px]">
                 {{ company.projects_count || 0 }} پروژه
               </span>
             </td>
 
             <!-- ستون سلامت اسناد و مدارک رسمی -->
-            <td class="py-3 px-3.5 text-center">
+            <td *ngIf="isAccountingInstalled" class="py-3 px-3.5 text-center">
               <span *ngIf="company.documents_health_status === 'valid'" 
                     class="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full text-[10px]"
                     title="کلیه مدارک رسمی معتبر هستند">
@@ -251,6 +251,7 @@
 
                 <!-- دکمه همگام‌سازی گوگل‌درایو -->
                 <button 
+                  *ngIf="isAccountingInstalled"
                   type="button"
                   (click)="openGoogleDriveModal(company)"
                   class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-200 transition-all cursor-pointer"
@@ -336,7 +337,7 @@
             <span class="text-slate-400 block text-[10px]">کد کارگاه بیمه:</span>
             <span class="font-mono text-slate-700 font-bold">{{ company.workshop_code || '—' }}</span>
           </div>
-          <div class="flex items-center gap-1.5">
+          <div *ngIf="isAccountingInstalled" class="flex items-center gap-1.5">
             <span class="text-slate-400 text-[10px]">پروژه‌ها:</span>
             <span class="font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded-full text-[10px]">
               {{ company.projects_count || 0 }}
@@ -350,7 +351,7 @@
         </div>
 
         <!-- سلامت اسناد و مدارک رسمی -->
-        <div class="flex items-center justify-between text-[11px] px-1">
+        <div *ngIf="isAccountingInstalled" class="flex items-center justify-between text-[11px] px-1">
           <span class="text-slate-500 text-[10px]">وضعیت مدارک:</span>
           <div>
             <span *ngIf="company.documents_health_status === 'valid'" 
@@ -397,6 +398,7 @@
             <span class="sr-only">استودیو</span>
           </button>
           <button 
+            *ngIf="isAccountingInstalled"
             type="button"
             (click)="openGoogleDriveModal(company)"
             class="w-8 h-8 rounded-xl flex items-center justify-center text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
@@ -455,7 +457,7 @@
                   {{ companyModal.data.code }}
                 </span>
               </div>
-              <p class="text-[11px] text-slate-500 font-medium mt-0.5">شناسنامه حقوقی، بایگانی مدارک و اسناد، هیئت‌مدیره، کارگاه بیمه و خزانه‌داری</p>
+              <p class="text-[11px] text-slate-500 font-medium mt-0.5">{{ isAccountingInstalled ? 'شناسنامه حقوقی، بایگانی مدارک و اسناد، هیئت‌مدیره، کارگاه بیمه و خزانه‌داری' : 'شناسنامه حقوقی، اسناد پایه، کارگاه بیمه و دسترسی کاربران' }}</p>
             </div>
           </div>
         </div>
@@ -506,6 +508,7 @@
 
         <!-- ۳. خزانه‌داری، بانک و شبا -->
         <button 
+          *ngIf="isAccountingInstalled"
           type="button" 
           (click)="setModalTab('treasury')" 
           [ngClass]="activeModalTab === 'treasury' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
@@ -519,6 +522,7 @@
 
         <!-- ۴. ارکان، هیئت‌مدیره و صاحبان امضا -->
         <button 
+          *ngIf="isAccountingInstalled"
           type="button" 
           (click)="setModalTab('governance')" 
           [ngClass]="activeModalTab === 'governance' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
@@ -558,7 +562,7 @@
 
         <!-- ۷. همگام‌سازی گوگل‌درایو -->
         <button 
-          *ngIf="companyModal.isEdit"
+          *ngIf="companyModal.isEdit && isAccountingInstalled"
           type="button" 
           (click)="setModalTab('gdrive')" 
           [ngClass]="activeModalTab === 'gdrive' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
@@ -925,6 +929,8 @@
 
             </div>
 
+            <!-- بایگانی جامع مدارک در حسابداری است؛ در نصب «فقط انبار» فقط دو سند مادر نمایش داده می‌شوند -->
+            <ng-container *ngIf="isAccountingInstalled">
             <!-- فرم بارگذاری مدرک جدید به آرشیو جامع -->
             <div class="p-4 bg-slate-50/60 rounded-2xl border border-slate-200 space-y-3">
               <div class="flex items-center gap-2">
@@ -1169,6 +1175,7 @@
                 </table>
               </div>
             </div>
+            </ng-container>
 
           </div>
 
@@ -1177,7 +1184,7 @@
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <!-- تب ۳: هیئت‌مدیره و صاحبان امضا (ساختار پویا و پرونده هویتی و مدارک) -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <div *ngIf="activeModalTab === 'governance'" class="space-y-4">
+        <div *ngIf="activeModalTab === 'governance' && isAccountingInstalled" class="space-y-4">
           <!-- هدر آماری و شاخص‌های کلیدی هیئت‌مدیره -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
             <div class="bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80 flex items-center gap-2.5">
@@ -1606,7 +1613,7 @@
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <!-- تب ۵: خزانه‌داری، مدیریت چند شماره شبا و حساب‌های بانکی رسمی شرکت         -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <div *ngIf="activeModalTab === 'treasury'" class="space-y-4">
+        <div *ngIf="activeModalTab === 'treasury' && isAccountingInstalled" class="space-y-4">
           <!-- بخش مدیریت چند شماره شبا و کارت‌های حساب‌های بانکی -->
           <div class="space-y-3">
             <div class="flex items-center justify-between">
@@ -2019,7 +2026,7 @@
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <!-- تب ۷: همگام‌سازی ابری گوگل‌درایو شرکت                                     -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <div *ngIf="activeModalTab === 'gdrive'" class="space-y-4">
+        <div *ngIf="activeModalTab === 'gdrive' && isAccountingInstalled" class="space-y-4">
           <app-company-gdrive-tab *ngIf="companyModal.data.id" [companyId]="companyModal.data.id"></app-company-gdrive-tab>
           <div *ngIf="!companyModal.data.id" class="py-8 text-center text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-2xl">
             ⚠️ جهت اتصال گوگل‌درایو، لطفاً ابتدا مشخصات اولیه شرکت را ذخیره فرمایید.

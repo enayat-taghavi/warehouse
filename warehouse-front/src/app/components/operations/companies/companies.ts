@@ -14,6 +14,7 @@ import { ToastService } from '../../../shared/components/toast/toast.component';
 import { WebSocketService } from '../../../core/http/websocket.service';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
 import { NetworkStatusService } from '../../../core/services/network-status.service';
+import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 import {
   Company,
   CompanyDocument,
@@ -47,6 +48,9 @@ import { CompanyGdriveTabComponent } from './company-gdrive-tab/company-gdrive-t
   styleUrls: ['./companies.css']
 })
 export class CompaniesManagementComponent implements OnInit, OnDestroy {
+  /** تب‌هایی که داده‌شان در حسابداری است (بانک، هیئت‌مدیره، گوگل‌درایو). در تب مدارک فقط بایگانی حسابداری پنهان می‌شود. */
+  private static readonly ACCOUNTING_TABS = ['treasury', 'governance', 'gdrive'];
+
   private api = inject(CompanyApiService);
   private http = inject(HttpClient);
   public activeCompanyService = inject(ActiveCompanyService);
@@ -57,6 +61,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   private ws = inject(WebSocketService, { optional: true });
   private route = inject(ActivatedRoute, { optional: true });
   private router = inject(Router, { optional: true });
+  private moduleRegistry = inject(ModuleRegistryService);
   private offlineSync = OfflineSyncService.getInstance();
   private network = NetworkStatusService.getInstance();
   private destroy$ = new Subject<void>();
@@ -382,7 +387,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.offlineSync.liveDataUpdates$.pipe(takeUntil(this.destroy$)).subscribe(({ url, data }) => {
       if (!url) return;
       const currentCompanyId = this.companyModal.data?.id;
-      if (url.includes('/personnel/companies/')) {
+      if (url.includes('/personnel/companies/') || url.includes('/org/companies/')) {
         if (Array.isArray(data)) {
           this.companies = data;
           this.applyFilter();
@@ -417,7 +422,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           }
           this.applyDocumentFilters();
         }
-      } else if (url.includes('/personnel/user-company-access/')) {
+      } else if (url.includes('/user-company-access/')) {
         if (this.companyModal.isOpen && currentCompanyId && url.includes(`company_id=${currentCompanyId}`)) {
           if (Array.isArray(data)) {
             this.studioAccesses = data;
@@ -550,7 +555,17 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  /** در نصب «فقط انبار» تب‌ها و بخش‌های حسابداری شرکت پنهان‌اند */
+  get isAccountingInstalled(): boolean {
+    return this.moduleRegistry.isModuleInstalled('accounting');
+  }
+
+  private isTabAvailable(tab: string): boolean {
+    return this.isAccountingInstalled || !CompaniesManagementComponent.ACCOUNTING_TABS.includes(tab);
+  }
+
   setModalTab(tab: 'identity' | 'fiscal_insurance' | 'treasury' | 'governance' | 'documents' | 'access' | 'gdrive'): void {
+    if (!this.isTabAvailable(tab)) tab = 'identity';
     this.activeModalTab = tab;
     if (this.companyModal.data.id) {
       if (tab === 'treasury') {
@@ -636,7 +651,12 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe(queryParams => {
       const tabParam = queryParams.get('tab');
       if (tabParam && ['identity', 'fiscal_insurance', 'treasury', 'governance', 'documents', 'access', 'gdrive'].includes(tabParam)) {
-        this.activeModalTab = tabParam as any;
+        if (this.isTabAvailable(tabParam)) {
+          this.activeModalTab = tabParam as any;
+        } else {
+          // پیوند مستقیم به تب حسابداری در نصب «فقط انبار»: بازگشت به تب مشخصات
+          this.setModalTab('identity');
+        }
         this.cdr.markForCheck();
       }
     });
@@ -821,6 +841,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   // بارگذاری اسناد آرشیو شرکت
   loadCompanyDocuments(companyId: number): void {
+    if (!this.isAccountingInstalled) return;
     this.isLoadingDocuments = true;
     this.api.getDocuments({ company_id: companyId }).subscribe({
       next: (res) => {
@@ -1128,6 +1149,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   // مدیریت حساب‌های بانکی و شبای شرکت (چند حسابی)
   // ═════════════════════════════════════════════════════════════════════
   loadCompanyBankAccounts(companyId: number): void {
+    if (!this.isAccountingInstalled) return;
     this.isLoadingBankAccounts = true;
     this.api.getBankAccounts(companyId).subscribe({
       next: (res) => {
@@ -1385,6 +1407,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   }
 
   loadCompanyBoardMembers(companyId: number): void {
+    if (!this.isAccountingInstalled) return;
     this.isLoadingBoardMembers = true;
     this.api.getBoardMembers(companyId).subscribe({
       next: (res) => {

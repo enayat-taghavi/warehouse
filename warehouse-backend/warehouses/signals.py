@@ -34,20 +34,22 @@ def purge_warehouse_settings(sender, instance, **kwargs):
         try:
             from personnel.models import (
                 PersonnelProfile, VehicleDriverProfile,
-                DailyAttendance, MonthlyWorkPeriod
+                DailyAttendance, MonthlyWorkPeriod, VehicleTripLog
             )
             PersonnelProfile.objects.filter(assigned_warehouse_id=instance.id).update(assigned_warehouse_id=None)
             VehicleDriverProfile.objects.filter(assigned_warehouse_id=instance.id).update(assigned_warehouse_id=None)
             DailyAttendance.objects.filter(warehouse_id=instance.id).update(warehouse_id=None)
             MonthlyWorkPeriod.objects.filter(warehouse_id=instance.id).update(warehouse_id=None)
+            VehicleTripLog.objects.filter(warehouse_id=instance.id).update(warehouse_id=None)
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"[WarehouseSignals] Error cleaning personnel warehouse_ids: {e}")
 
     if apps.is_installed('communications'):
         try:
-            from communications.models import Conversation
+            from communications.models import Conversation, GenericComment
             Conversation.objects.filter(warehouse_id=instance.id).update(warehouse_id=None)
+            GenericComment.objects.filter(warehouse_id=instance.id).update(warehouse_id=None)
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"[WarehouseSignals] Error cleaning communications warehouse_ids: {e}")

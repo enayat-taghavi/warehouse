@@ -11,16 +11,37 @@ import {
   ExpiringDocumentsResponse,
   UserAvailableCompaniesResponse
 } from '../models/company.model';
+import { ModuleRegistryService } from '../modules/module-registry.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CompanyApiService {
   private http = inject(HttpClient);
-  private endpoint = `${environment.apiUrl}/personnel/companies`;
+  private moduleRegistry = inject(ModuleRegistryService);
   private documentsEndpoint = `${environment.apiUrl}/personnel/company-documents`;
   private bankAccountsEndpoint = `${environment.apiUrl}/personnel/company-bank-accounts`;
   private boardMembersEndpoint = `${environment.apiUrl}/personnel/company-board-members`;
+
+  /**
+   * شرکت‌ها در هسته‌اند (/org/companies). اگر حسابداری نصب باشد، نسخهٔ حسابداری همان منبع
+   * (/personnel/companies) شمار پروژه‌ها، مدارک، حساب‌های بانکی و هیئت‌مدیره را هم برمی‌گرداند.
+   */
+  private get endpoint(): string {
+    return this.moduleRegistry.isModuleInstalled('accounting')
+      ? `${environment.apiUrl}/personnel/companies`
+      : `${environment.apiUrl}/org/companies`;
+  }
+
+  /**
+   * دسترسی کاربر به شرکت هم در هسته است. با نصب حسابداری همان مسیر قبلی (نام مستعار همان ویوست هسته)
+   * نگه داشته می‌شود تا کلید کش آفلاین و نشانیِ درخواست‌های صف‌شدهٔ قبلی عوض نشود.
+   */
+  private get accessEndpoint(): string {
+    return this.moduleRegistry.isModuleInstalled('accounting')
+      ? `${environment.apiUrl}/personnel/user-company-access`
+      : `${environment.apiUrl}/org/user-company-access`;
+  }
 
   getAll(filters?: { search?: string; is_active?: boolean }): Observable<Company[] | { results: Company[]; count: number }> {
     let params = new HttpParams();
@@ -110,7 +131,7 @@ export class CompanyApiService {
     let httpParams = new HttpParams();
     if (params?.user_id) httpParams = httpParams.set('user_id', String(params.user_id));
     if (params?.company_id) httpParams = httpParams.set('company_id', String(params.company_id));
-    return this.http.get<any[]>(`${environment.apiUrl}/personnel/user-company-access/`, { params: httpParams });
+    return this.http.get<any[]>(`${this.accessEndpoint}/`, { params: httpParams });
   }
 
   createUserAccess(payload: {
@@ -120,15 +141,15 @@ export class CompanyApiService {
     role_in_company?: string | null;
     is_default?: boolean;
   }): Observable<any> {
-    return this.http.post<any>(`${environment.apiUrl}/personnel/user-company-access/`, payload);
+    return this.http.post<any>(`${this.accessEndpoint}/`, payload);
   }
 
   updateUserAccess(id: number, payload: any): Observable<any> {
-    return this.http.patch<any>(`${environment.apiUrl}/personnel/user-company-access/${id}/`, payload);
+    return this.http.patch<any>(`${this.accessEndpoint}/${id}/`, payload);
   }
 
   deleteUserAccess(id: number): Observable<void> {
-    return this.http.delete<void>(`${environment.apiUrl}/personnel/user-company-access/${id}/`);
+    return this.http.delete<void>(`${this.accessEndpoint}/${id}/`);
   }
 
   // مدیریت حساب‌های بانکی و شبای رسمی شرکت

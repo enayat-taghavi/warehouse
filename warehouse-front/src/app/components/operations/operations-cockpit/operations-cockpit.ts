@@ -7,6 +7,7 @@ import { CompanyApiService } from '../../../core/api/company-api.service';
 import { CompanyDocument } from '../../../core/models/company.model';
 import { ToastService } from '../../../shared/components/toast/toast.component';
 import { downloadLocalDatabaseSnapshotFile } from '../../../core/services/offline-db';
+import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 
 @Component({
   selector: 'app-operations-cockpit',
@@ -21,6 +22,12 @@ export class OperationsCockpitComponent implements OnInit {
   private settingsService = inject(SettingsService);
   private companyApi = inject(CompanyApiService);
   private toast = inject(ToastService);
+  private moduleRegistry = inject(ModuleRegistryService);
+
+  /** بایگانی مدارک شرکت در حسابداری است؛ در نصب «فقط انبار» ویجت سررسید مدارک نمایش داده نمی‌شود */
+  get isAccountingInstalled(): boolean {
+    return this.moduleRegistry.isModuleInstalled('accounting');
+  }
 
   public isCreatingSnapshot = signal<boolean>(false);
   public snapshotCount = signal<number>(0);
@@ -51,6 +58,7 @@ export class OperationsCockpitComponent implements OnInit {
   }
 
   public loadExpiringDocuments(): void {
+    if (!this.isAccountingInstalled) return;
     this.isLoadingExpiringDocs.set(true);
     this.companyApi.getExpiringDocuments().subscribe({
       next: (res) => {

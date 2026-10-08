@@ -52,7 +52,7 @@
   </div>
 
   <!-- ویجت پایش سررسید مدارک و روزنامه‌های رسمی هلدینگ -->
-  <div class="rounded-2xl p-5 bg-white border border-slate-200 shadow-xs" [class.border-amber-300]="expiringDocs().length > 0">
+  <div *ngIf="isAccountingInstalled" class="rounded-2xl p-5 bg-white border border-slate-200 shadow-xs" [class.border-amber-300]="expiringDocs().length > 0">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold"

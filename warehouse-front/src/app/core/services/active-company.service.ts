@@ -6,13 +6,21 @@ import { tap, catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Company, UserAvailableCompaniesResponse } from '../models/company.model';
 import { SessionTabService } from './session-tab.service';
+import { ModuleRegistryService } from '../modules/module-registry.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ActiveCompanyService {
   private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/personnel/companies`;
+  private moduleRegistry = inject(ModuleRegistryService);
+
+  /** شرکت‌ها در هسته‌اند؛ با نصب حسابداری، نسخهٔ کامل‌تر حسابداری خوانده می‌شود (مانند CompanyApiService). */
+  private get apiUrl(): string {
+    return this.moduleRegistry.isModuleInstalled('accounting')
+      ? `${environment.apiUrl}/personnel/companies`
+      : `${environment.apiUrl}/org/companies`;
+  }
 
   private activeCompanySubject = new BehaviorSubject<Company | null>(null);
   public activeCompany$ = this.activeCompanySubject.asObservable();
