@@ -20,8 +20,47 @@ DOMAIN_RE='^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$'
 DB_NAME_RE='^[a-z_][a-z0-9_]{0,62}$'
 PRE_UPDATE_RE='^db_pre_update_[0-9]{8}_[0-9]{6}\.dump$'
 STAGE_FILE_RE='^/tmp/wh-deploy\.[A-Za-z0-9]{10}/[A-Za-z0-9._-]+$'
+PRE_MODULE_RE='^db_pre_module_[0-9]{8}_[0-9]{6}\.dump$'
+
+# Installable modules in catalog order (platform_core/module_catalog.py). WH_MODULES in shared/.env selects
+# them; a missing or empty value means all of them (Django's default and every install made before it existed).
+KNOWN_MODULES=(warehouse accounting)
+# Units that run only when their module is installed. Every unit today is core (backend, export worker,
+# gdrive worker of settings_core, backup timer), so no module has a unit of its own yet.
+declare -A MODULE_SERVICES=([warehouse]="" [accounting]="")
 
 die() { echo "[ERROR] $*" >&2; exit 1; }
+
+# Prints a module list in catalog order without duplicates; fails on an empty list or an unknown module.
+canonical_modules() {
+    local raw="$1" m k out=() seen=" "
+    [[ "$raw" =~ ^[a-z]+(,[a-z]+)*$ ]] || return 1
+    IFS=',' read -ra _mods <<<"$raw"
+    for m in "${_mods[@]}"; do
+        [[ " ${KNOWN_MODULES[*]} " == *" $m "* ]] || return 1
+        seen+="$m "
+    done
+    for k in "${KNOWN_MODULES[@]}"; do
+        if [[ "$seen" == *" $k "* ]]; then out+=("$k"); fi
+    done
+    (IFS=','; echo "${out[*]}")
+}
+
+# The modules installed on this server (fails if WH_MODULES holds something unknown).
+effective_modules() {
+    local v
+    v=$(sed -n 's/^WH_MODULES=//p' "${SHARED_DIR}/.env" 2>/dev/null | tail -n 1 | tr -d '\r' || true)
+    if [[ -z "$v" ]]; then (IFS=','; echo "${KNOWN_MODULES[*]}"); return 0; fi
+    canonical_modules "$v"
+}
+
+# Read-only, without the deployment lock (gateway "modules" and "status").
+if [[ "${1:-}" == "--print-modules" ]]; then
+    [[ $# -eq 1 ]] || die "Usage: --print-modules"
+    MODS=$(effective_modules) || die "WH_MODULES in ${SHARED_DIR}/.env is invalid."
+    echo "[MODULES] ${MODS}"
+    exit 0
+fi
 
 # Parses "--activate <release> [--verified-backup <dump>] [--domain <d>] [--maintenance]" (G-06).
 parse_activate_args() {
@@ -43,12 +82,56 @@ parse_activate_args() {
     [[ "$VERIFIED_BACKUP" =~ $PRE_UPDATE_RE ]] || die "--verified-backup db_pre_update_<YYYYMMDD_HHMMSS>.dump is required"
 }
 
-# --activate detaches FIRST (before the lock), so a dropped SSH session cannot kill a migration (F-09).
-if [[ "${1:-}" == "--activate" && -z "${WAREHOUSE_DETACHED:-}" ]]; then
-    parse_activate_args "${@:2}"
+# Parses "--add-module <code> --verified-backup <db_pre_module dump> [--domain <d>]".
+parse_add_module_args() {
+    ADD_CODE=""
+    VERIFIED_BACKUP=""
+    DOMAIN=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --verified-backup) [[ $# -ge 2 ]] || die "--verified-backup needs a value"; VERIFIED_BACKUP="$2"; shift 2 ;;
+            --domain) [[ $# -ge 2 ]] || die "--domain needs a value"; DOMAIN="$2"; shift 2 ;;
+            -*) die "Unknown add-module option: $1" ;;
+            *) [[ -z "$ADD_CODE" ]] || die "Unexpected add-module argument: $1"; ADD_CODE="$1"; shift ;;
+        esac
+    done
+    [[ -n "$ADD_CODE" && " ${KNOWN_MODULES[*]} " == *" ${ADD_CODE} "* ]] || die "Unknown module: '${ADD_CODE}' (known: ${KNOWN_MODULES[*]})"
+    [[ -z "$DOMAIN" || "$DOMAIN" =~ $DOMAIN_RE ]] || die "Invalid domain format: $DOMAIN"
+    [[ "$VERIFIED_BACKUP" =~ $PRE_MODULE_RE ]] || die "--verified-backup db_pre_module_<YYYYMMDD_HHMMSS>.dump is required"
+}
+
+# Parses "--reset-database <release> --modules <list> --verified-backup <dump> [--domain <d>]".
+parse_reset_args() {
+    REL_NAME=""
+    RESET_MODULES=""
+    VERIFIED_BACKUP=""
+    DOMAIN=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --modules) [[ $# -ge 2 ]] || die "--modules needs a value"; RESET_MODULES="$2"; shift 2 ;;
+            --verified-backup) [[ $# -ge 2 ]] || die "--verified-backup needs a value"; VERIFIED_BACKUP="$2"; shift 2 ;;
+            --domain) [[ $# -ge 2 ]] || die "--domain needs a value"; DOMAIN="$2"; shift 2 ;;
+            -*) die "Unknown reset-database option: $1" ;;
+            *) [[ -z "$REL_NAME" ]] || die "Unexpected reset-database argument: $1"; REL_NAME="$1"; shift ;;
+        esac
+    done
+    [[ "$REL_NAME" =~ $RELEASE_NAME_RE ]] || die "Missing or invalid release name: '${REL_NAME}'"
+    RESET_MODULES=$(canonical_modules "$RESET_MODULES") || die "--modules must list known modules (${KNOWN_MODULES[*]})"
+    [[ -z "$DOMAIN" || "$DOMAIN" =~ $DOMAIN_RE ]] || die "Invalid domain format: $DOMAIN"
+    [[ "$VERIFIED_BACKUP" =~ $PRE_UPDATE_RE ]] || die "--verified-backup db_pre_update_<YYYYMMDD_HHMMSS>.dump is required"
+}
+
+# --activate, --add-module and --reset-database detach FIRST (before the lock), so a dropped SSH session
+# cannot kill a migration (F-09).
+if [[ "${1:-}" =~ ^--(activate|add-module|reset-database)$ && -z "${WAREHOUSE_DETACHED:-}" ]]; then
+    case "$1" in
+        --activate) parse_activate_args "${@:2}"; LOG_TAG="activate-${REL_NAME}" ;;
+        --add-module) parse_add_module_args "${@:2}"; LOG_TAG="add-module-${ADD_CODE}-$(date +%Y%m%d_%H%M%S)" ;;
+        --reset-database) parse_reset_args "${@:2}"; LOG_TAG="reset-database-${REL_NAME}" ;;
+    esac
     export WAREHOUSE_DETACHED=1
     install -d -o root -g root -m 750 /var/log/warehouse
-    ACTIVATE_LOG="/var/log/warehouse/activate-${REL_NAME}.log"
+    ACTIVATE_LOG="/var/log/warehouse/${LOG_TAG}.log"
     ( umask 077; : > "$ACTIVATE_LOG" )
     trap '' HUP PIPE
     setsid -w "$0" "$@" > "$ACTIVATE_LOG" 2>&1 &
@@ -96,6 +179,54 @@ secure_backup_layout() {
 write_record() {
     printf '%s\n' "$2" > "${SHARED_DIR}/.$1.tmp"
     mv -f "${SHARED_DIR}/.$1.tmp" "${SHARED_DIR}/$1"
+}
+
+# Replaces the WH_MODULES line of shared/.env atomically (no such line for an empty argument); every
+# other line, the owner and the mode stay as they are.
+write_env_modules_line() {
+    local line="$1" env="${SHARED_DIR}/.env" tmp="${SHARED_DIR}/.env.modules.$$"
+    [[ -f "$env" && ! -L "$env" ]] || die "Production environment file $env does not exist."
+    cp -p -- "$env" "$tmp"
+    # grep exits 1 when every line is WH_MODULES (nothing kept); 2 is a read error and must stop here.
+    grep -v '^WH_MODULES=' -- "$env" > "$tmp" || [[ $? -eq 1 ]] || { rm -f -- "$tmp"; die "Could not read $env."; }
+    [[ "$(grep -c '' -- "$tmp" || true)" == "$(grep -cv '^WH_MODULES=' -- "$env" || true)" ]] \
+        || { rm -f -- "$tmp"; die "Rewriting $env lost lines; it was left unchanged."; }
+    if [[ -n "$line" ]]; then
+        if [[ -s "$tmp" && -n "$(tail -c 1 "$tmp")" ]]; then printf '\n' >> "$tmp"; fi
+        printf '%s\n' "$line" >> "$tmp"
+    fi
+    sync -- "$tmp"
+    mv -f -- "$tmp" "$env"
+}
+
+# Sets the installed modules: WH_MODULES in shared/.env and the shared/MODULES record.
+set_env_modules() {
+    write_env_modules_line "WH_MODULES=$1"
+    write_record MODULES "$1"
+}
+
+# A backup handed to a mode must be a regular file that matches the sha256 recorded next to it.
+assert_backup_matches_record() {
+    local bk="${BACKUPS_DIR}/$1" recorded actual
+    [[ -f "$bk" && ! -L "$bk" && -f "${bk}.sha256" && ! -L "${bk}.sha256" ]] || die "Backup $1 or its .sha256 is missing."
+    recorded=$(head -n 1 -- "${bk}.sha256" | cut -d' ' -f1)
+    actual=$(sha256sum -- "$bk" | cut -d' ' -f1)
+    [[ "$recorded" =~ ^[0-9a-f]{64}$ && "$recorded" == "$actual" ]] || die "Backup $1 does not match its recorded sha256."
+}
+
+# The backup that --prepare bound to a release (.deploy_metadata) must be the one the operator machine
+# pulled and verified (F-19).
+assert_release_backup() {
+    local rel_dir="$1" backup="$2" meta expected_backup expected_sha actual
+    meta="${rel_dir}/.deploy_metadata"
+    [[ -f "$meta" ]] || die "Release ${rel_dir##*/} was not completely prepared (no .deploy_metadata); refusing to continue."
+    expected_backup=$(sed -n 's/^PRE_UPDATE_BACKUP=//p' "$meta" | head -n 1)
+    expected_sha=$(sed -n 's/^PRE_UPDATE_BACKUP_SHA256=//p' "$meta" | head -n 1)
+    [[ "$expected_backup" =~ $PRE_UPDATE_RE && "$expected_sha" =~ ^[0-9a-f]{64}$ ]] || die "Release metadata of ${rel_dir##*/} is invalid."
+    [[ "$backup" == "$expected_backup" ]] || die "Verified backup ${backup} is not the backup prepared with this release (${expected_backup})."
+    [[ -f "${BACKUPS_DIR}/${backup}" && ! -L "${BACKUPS_DIR}/${backup}" && -f "${BACKUPS_DIR}/${backup}.sha256" ]] || die "Pre-update backup ${backup} or its .sha256 is missing."
+    actual=$(sha256sum -- "${BACKUPS_DIR}/${backup}" | cut -d' ' -f1)
+    [[ "$actual" == "$expected_sha" ]] || die "Prepared backup checksum mismatch (${actual} != ${expected_sha})."
 }
 
 # A file handed in by the SSH user must be a regular file (no symlink) directly inside a
@@ -149,12 +280,16 @@ EOF
     fi
 }
 
+# Extra environment for manage.py (e.g. WH_MODULES before shared/.env is switched); settings.py only
+# fills in from .env what the environment does not set.
+MANAGE_ENV=()
+
 # Runs manage.py of a release as the application user (no shell string, no interpolation).
 run_manage() {
     local rel="$1"
     shift
     (cd "${rel}/warehouse-backend" && runuser -u warehouse -- env DJANGO_SETTINGS_MODULE=config.settings \
-        DJANGO_ENV=production "${rel}/venv/bin/python" manage.py "$@")
+        DJANGO_ENV=production "${MANAGE_ENV[@]}" "${rel}/venv/bin/python" manage.py "$@")
 }
 
 # Fail-closed migration compatibility check (E-05, F-05, G-02): only exit 0 together with the
@@ -169,7 +304,21 @@ try:
     from django.db import connection
     from django.db.migrations.loader import MigrationLoader
     loader = MigrationLoader(connection, ignore_no_migrations=True)
-    applied = set(loader.applied_migrations.keys())
+    from django.apps import apps
+    # Rows of a catalog module that is not installed in this profile (e.g. left by a failed --add-module)
+    # are not part of the schema of this release: its code never touches those tables. Rows of any other
+    # app the release does not know (a newer core app) still count as forward migrations.
+    ignored = set()
+    try:
+        from platform_core.module_catalog import MODULE_CATALOG
+    except ImportError:
+        MODULE_CATALOG = {}
+    installed = {a.label for a in apps.get_app_configs()}
+    for spec in MODULE_CATALOG.values():
+        labels = {path.split(".")[0] for path in spec.django_apps}
+        if not labels & installed:
+            ignored |= labels
+    applied = {m for m in loader.applied_migrations.keys() if m[0] not in ignored}
     disk = set(loader.disk_migrations.keys())
     replaced = set()
     for migration in loader.disk_migrations.values():
@@ -196,7 +345,7 @@ check_migration_compatibility() {
         return 1
     fi
     if out=$(cd "${target}/warehouse-backend" && runuser -u warehouse -- env DJANGO_SETTINGS_MODULE=config.settings \
-            DJANGO_ENV=production "${target}/venv/bin/python" -c "$MIGRATION_CHECK_PY" ${mode:+"$mode"} 2>&1); then
+            DJANGO_ENV=production "${MANAGE_ENV[@]}" "${target}/venv/bin/python" -c "$MIGRATION_CHECK_PY" ${mode:+"$mode"} 2>&1); then
         rc=0
     else
         rc=$?
@@ -441,6 +590,174 @@ if [[ "${1:-}" == "--start-services" ]]; then
 fi
 
 # ==============================================================================
+# Mode: --add-module <code> --verified-backup <db_pre_module dump> [--domain <d>]  (deploy.ps1 -AddModule)
+# Adds one module to the active release: WH_MODULES, migrate, permissions and roles, the module's units,
+# restart and a check of installed_modules. Any failure puts WH_MODULES back and restarts the services
+# with the previous modules; tables that were already migrated stay (nothing is deleted).
+# Removing a module is not supported.
+# ==============================================================================
+if [[ "${1:-}" == "--add-module" ]]; then
+    parse_add_module_args "${@:2}"
+    if [[ -z "$DOMAIN" && -f "${SHARED_DIR}/DOMAIN" ]]; then DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN"); fi
+    [[ -z "$DOMAIN" || "$DOMAIN" =~ $DOMAIN_RE ]] || DOMAIN=""
+    [[ ! -e "$HELD_FLAG" ]] || die "SERVICES_HELD is set: the active release does not match the database; resolve that first."
+    [[ ! -e "${SHARED_DIR}/MAINTENANCE" ]] || die "MAINTENANCE is set; resolve the earlier failure first (deploy.ps1 -Status)."
+    ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
+    [[ -n "$ACTIVE_RELEASE" && "${ACTIVE_RELEASE%/*}" == "$RELEASES_DIR" && -d "$ACTIVE_RELEASE" ]] || die "No active release in ${RELEASES_DIR}."
+    OLD_MODULES=$(effective_modules) || die "WH_MODULES in ${SHARED_DIR}/.env is invalid."
+    [[ ",${OLD_MODULES}," != *",${ADD_CODE},"* ]] || die "Module ${ADD_CODE} is already installed (${OLD_MODULES})."
+    NEW_MODULES=$(canonical_modules "${OLD_MODULES},${ADD_CODE}") || die "Cannot build the new module list."
+
+    # The backup taken for this change must be fresh and intact (deploy.ps1 pulled and verified it).
+    assert_backup_matches_record "$VERIFIED_BACKUP"
+    BK_AGE=$(( $(date +%s) - $(stat -c %Y -- "${BACKUPS_DIR}/${VERIFIED_BACKUP}") ))
+    [[ "$BK_AGE" -le 21600 ]] || die "Backup ${VERIFIED_BACKUP} is older than 6 hours; take a new one (deploy.ps1 -AddModule does)."
+    echo "[INFO] Verified backup before the change: ${VERIFIED_BACKUP}"
+
+    REL_NAME="${ACTIVE_RELEASE##*/}"
+    echo "[INFO] Checking that ${REL_NAME} matches the applied migrations..."
+    check_migration_compatibility "$ACTIVE_RELEASE" || die "Refused before any change: ${REL_NAME} does not match the database."
+
+    OLD_LINE=$(grep '^WH_MODULES=' -- "${SHARED_DIR}/.env" | tail -n 1 || true)
+    OLD_RECORD=$(head -n 1 "${SHARED_DIR}/MODULES" 2>/dev/null || true)
+    ENV_SWITCHED=0
+    ADD_DONE=0
+    REVERTING=0
+    revert_modules() {
+        [[ "$REVERTING" -eq 0 ]] || return 0
+        REVERTING=1
+        echo "[CRITICAL] $1" >&2
+        MANAGE_ENV=()
+        if [[ "$ENV_SWITCHED" -eq 1 ]]; then
+            write_env_modules_line "$OLD_LINE"
+            if [[ -n "$OLD_RECORD" ]]; then write_record MODULES "$OLD_RECORD"; else rm -f "${SHARED_DIR}/MODULES"; fi
+            for u in ${MODULE_SERVICES[$ADD_CODE]}; do systemctl disable --now "$u" || true; done
+            echo "[INFO] WH_MODULES put back to ${OLD_MODULES}; restarting the services..." >&2
+            systemctl restart "${SERVICES[@]}" || true
+            if wait_backend_live "$DOMAIN"; then
+                echo "[INFO] The services run again with ${OLD_MODULES}." >&2
+            else
+                echo "[CRITICAL] The backend did not answer after the revert. Check: journalctl -u warehouse-backend" >&2
+            fi
+        else
+            echo "[INFO] shared/.env was not changed; the services kept running with ${OLD_MODULES}." >&2
+        fi
+        echo "[INFO] Tables already migrated for ${ADD_CODE} stay; nothing was deleted." >&2
+        echo '[MODULE_ROLLED_BACK]'
+        exit 1
+    }
+    # Any other exit (set -e, a signal) also puts the modules back.
+    trap 'if [[ "$ADD_DONE" -ne 1 ]]; then revert_modules "--add-module stopped before it finished."; fi' EXIT
+    trap 'exit 143' TERM HUP
+    trap 'exit 130' INT
+
+    # migrate, permissions and roles run with the new modules through the environment while shared/.env
+    # (and so every running service and a reboot) still has the old ones.
+    MANAGE_ENV=("WH_MODULES=${NEW_MODULES}")
+    echo "=== [1/4] Migrating the database, permissions and roles for ${NEW_MODULES} ==="
+    run_manage "$ACTIVE_RELEASE" migrate --noinput || revert_modules "Database migration for ${ADD_CODE} failed."
+    run_manage "$ACTIVE_RELEASE" seed_permissions || revert_modules "seed_permissions failed."
+    run_manage "$ACTIVE_RELEASE" init_roles || revert_modules "init_roles failed."
+    check_migration_compatibility "$ACTIVE_RELEASE" strict || revert_modules "${REL_NAME} does not match the migrated schema with ${NEW_MODULES}."
+    MANAGE_ENV=()
+
+    echo "=== [2/4] Modules: ${OLD_MODULES} -> ${NEW_MODULES} ==="
+    ENV_SWITCHED=1
+    set_env_modules "$NEW_MODULES"
+
+    echo "=== [3/4] Restarting the services ==="
+    for u in ${MODULE_SERVICES[$ADD_CODE]}; do systemctl enable "$u"; done
+    # shellcheck disable=SC2086
+    systemctl restart "${SERVICES[@]}" ${MODULE_SERVICES[$ADD_CODE]} || echo "[WARNING] systemctl restart reported an error; the health check decides." >&2
+
+    echo "=== [4/4] Health check ==="
+    wait_backend_live "$DOMAIN" || revert_modules "The backend did not answer within 60s with ${NEW_MODULES}."
+    for s in "${SERVICES[@]}" ${MODULE_SERVICES[$ADD_CODE]}; do
+        systemctl is-active --quiet "$s" || revert_modules "$s is not active."
+    done
+    CONFIG_JSON=$(curl -fsS -H "Host: ${DOMAIN:-localhost}" -H "X-Forwarded-Proto: https" http://127.0.0.1:8000/api/public/config/ || true)
+    if ! python3 -c 'import json, sys; sys.exit(0 if sys.argv[1] in (json.loads(sys.stdin.read() or "{}").get("installed_modules") or []) else 1)' "$ADD_CODE" <<<"$CONFIG_JSON"; then
+        revert_modules "/api/public/config/ does not list ${ADD_CODE} in installed_modules."
+    fi
+    ADD_DONE=1
+    trap - EXIT TERM HUP INT
+    echo "[MODULE_ADDED] ${ADD_CODE}"
+    echo "[MODULES] ${NEW_MODULES}"
+    exit 0
+fi
+
+# ==============================================================================
+# Mode: --reset-database <release> --modules <list> --verified-backup <dump> [--domain <d>]
+# Before GO_LIVE only (deploy.ps1 -ResetServer): stops the services, drops and recreates the application
+# database, sets WH_MODULES and migrates it with the prepared release (which --activate then switches to).
+# Bound to the pre-update backup of that release, which the operator machine pulled and verified first.
+# Media, in-app backups and shared/.env (apart from WH_MODULES) are not touched.
+# ==============================================================================
+if [[ "${1:-}" == "--reset-database" ]]; then
+    parse_reset_args "${@:2}"
+    [[ ! -e "${SHARED_DIR}/GO_LIVE" ]] || die "The server is GO-LIVE; resetting the database is refused."
+    RELEASE_DIR="${RELEASES_DIR}/${REL_NAME}"
+    [[ -d "$RELEASE_DIR" && ! -L "$RELEASE_DIR" ]] || die "Release directory not found: $RELEASE_DIR"
+    assert_release_backup "$RELEASE_DIR" "$VERIFIED_BACKUP"
+    BK_AGE=$(( $(date +%s) - $(stat -c %Y -- "${BACKUPS_DIR}/${VERIFIED_BACKUP}") ))
+    [[ "$BK_AGE" -le 7200 ]] || die "Backup ${VERIFIED_BACKUP} is older than 2 hours; run deploy.ps1 -ResetServer again (it prepares a new one)."
+    echo "[INFO] Verified pre-update backup bound to release: ${VERIFIED_BACKUP}"
+    DB_NAME=$(sed -n 's/^DB_NAME=//p' "${SHARED_DIR}/.env" 2>/dev/null | tail -n 1 | tr -d '\r' || true)
+    DB_USER=$(sed -n 's/^DB_USER=//p' "${SHARED_DIR}/.env" 2>/dev/null | tail -n 1 | tr -d '\r' || true)
+    [[ "$DB_NAME" =~ $DB_NAME_RE && "$DB_USER" =~ $DB_NAME_RE ]] || die "DB_NAME or DB_USER in shared/.env is missing or invalid."
+    pg_exec() { runuser -u postgres -- psql -XAtq -v ON_ERROR_STOP=1 "$@"; }
+
+    echo "=== [1/4] Stopping the services (MAINTENANCE set) ==="
+    touch "${SHARED_DIR}/MAINTENANCE"
+    systemctl stop "${SERVICES[@]}" || echo "[WARNING] systemctl stop reported an error; checking the units..." >&2
+    resume_services() {
+        systemctl start "${SERVICES[@]}" || true
+        rm -f "${SHARED_DIR}/MAINTENANCE"
+        die "$1 The database was not touched."
+    }
+    for s in "${SERVICES[@]}"; do
+        if systemctl is-active --quiet "$s"; then resume_services "$s did not stop."; fi
+    done
+
+    # Final dump with the services stopped: holds everything written since the pre-update backup.
+    TS=$(date +"%Y%m%d_%H%M%S")
+    FINAL_DUMP="${BACKUPS_DIR}/db_pre_reset_${TS}.dump"
+    [[ ! -e "$FINAL_DUMP" ]] || resume_services "${FINAL_DUMP} already exists."
+    if ! ( set -C; umask 077; runuser -u postgres -- pg_dump -Fc "$DB_NAME" > "${FINAL_DUMP}.part" ) \
+        || ! runuser -u postgres -- pg_restore --list < "${FINAL_DUMP}.part" > /dev/null; then
+        rm -f -- "${FINAL_DUMP}.part"
+        resume_services "The final dump before the reset failed."
+    fi
+    mv -n -- "${FINAL_DUMP}.part" "$FINAL_DUMP"
+    ( set -C; umask 077; printf '%s  %s\n' "$(sha256sum -- "$FINAL_DUMP" | cut -d' ' -f1)" "$FINAL_DUMP" > "${FINAL_DUMP}.sha256" )
+    echo "[PRE_RESET_BACKUP] $(basename "$FINAL_DUMP")"
+
+    # GO_LIVE may have been set while the services stopped (set-go-live does not take this lock).
+    [[ ! -e "${SHARED_DIR}/GO_LIVE" ]] || resume_services "The server became GO-LIVE."
+
+    echo "=== [2/4] Recreating database ${DB_NAME} (owner ${DB_USER}) ==="
+    # From here the services stay stopped across restarts and reboots until --activate clears the hold.
+    touch "$HELD_FLAG"
+    pg_exec -c "DROP DATABASE IF EXISTS \"${DB_NAME}\" WITH (FORCE);"
+    # Same database as Setup: UTF-8 with the ICU fa-IR collation (D-30).
+    pg_exec -c "CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USER}\" ENCODING 'UTF8' TEMPLATE template0 LOCALE_PROVIDER icu ICU_LOCALE 'fa-IR' LOCALE 'C.UTF-8';"
+    PERSIAN_ORDER=$(pg_exec -d "$DB_NAME" -c "SELECT string_agg(ascii(x)::text, ',' ORDER BY x) FROM unnest(ARRAY[chr(1740), chr(1711), chr(1705), chr(1688), chr(1586), chr(1670), chr(1662), chr(1576)]) AS t(x)")
+    [[ "$PERSIAN_ORDER" == "1576,1662,1670,1586,1688,1705,1711,1740" ]] || die "The new database does not sort Persian correctly (${PERSIAN_ORDER})."
+    pg_exec -d "$DB_NAME" -c "ALTER SCHEMA public OWNER TO \"${DB_USER}\"; GRANT ALL ON SCHEMA public TO \"${DB_USER}\"; CREATE EXTENSION IF NOT EXISTS pg_trgm; CREATE EXTENSION IF NOT EXISTS btree_gin;"
+
+    echo "=== [3/4] Modules: ${RESET_MODULES} ==="
+    set_env_modules "$RESET_MODULES"
+
+    echo "=== [4/4] Migrating with ${REL_NAME}, permissions and roles ==="
+    run_manage "$RELEASE_DIR" migrate --noinput || die "Migration of the new database failed; services stay stopped (SERVICES_HELD, MAINTENANCE)."
+    run_manage "$RELEASE_DIR" seed_permissions || die "seed_permissions failed; services stay stopped (SERVICES_HELD, MAINTENANCE)."
+    run_manage "$RELEASE_DIR" init_roles || die "init_roles failed; services stay stopped (SERVICES_HELD, MAINTENANCE)."
+    echo "[DATABASE_RESET] ${DB_NAME}"
+    echo "[MODULES] ${RESET_MODULES}"
+    exit 0
+fi
+
+# ==============================================================================
 # Mode: --prepare --bundle <stage file> --bundle-sha256 <64 hex> [--domain <d>]
 # ==============================================================================
 if [[ "${1:-}" == "--prepare" ]]; then
@@ -448,15 +765,23 @@ if [[ "${1:-}" == "--prepare" ]]; then
     BUNDLE_PATH=""
     BUNDLE_SHA256=""
     DOMAIN="soft.farsalish.ir"
+    EXPECTED_MODULES=""
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --bundle) [[ $# -ge 2 ]] || die "--bundle needs a value"; BUNDLE_PATH="$2"; shift 2 ;;
             --bundle-sha256) [[ $# -ge 2 ]] || die "--bundle-sha256 needs a value"; BUNDLE_SHA256="$2"; shift 2 ;;
             --domain) [[ $# -ge 2 ]] || die "--domain needs a value"; DOMAIN="$2"; shift 2 ;;
+            --modules) [[ $# -ge 2 ]] || die "--modules needs a value"; EXPECTED_MODULES="$2"; shift 2 ;;
             *) die "Unknown prepare option: $1" ;;
         esac
     done
     [[ "$DOMAIN" =~ $DOMAIN_RE ]] || die "Invalid domain format: $DOMAIN"
+    # An update never changes the installed modules (deploy.ps1 -AddModule adds one; none is ever removed).
+    if [[ -n "$EXPECTED_MODULES" ]]; then
+        WANT_MODULES=$(canonical_modules "$EXPECTED_MODULES") || die "--modules must list known modules (${KNOWN_MODULES[*]})."
+        HAVE_MODULES=$(effective_modules) || die "WH_MODULES in ${SHARED_DIR}/.env is invalid."
+        [[ "$WANT_MODULES" == "$HAVE_MODULES" ]] || die "Modules mismatch: the server has '${HAVE_MODULES}', the configuration asks for '${WANT_MODULES}'. Update never changes the installed modules: add one with deploy.ps1 -AddModule <code>; removing a module is not supported."
+    fi
     [[ "$BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]] || die "--bundle-sha256 with 64 lowercase hex digits is required (G-05)."
     assert_stage_file "$BUNDLE_PATH"
     ACTUAL_SHA=$(sha256sum -- "$BUNDLE_PATH" | cut -d' ' -f1)
@@ -636,16 +961,7 @@ if [[ "${1:-}" == "--activate" ]]; then
     [[ -d "$RELEASE_DIR" && ! -L "$RELEASE_DIR" ]] || die "Release directory not found: $RELEASE_DIR"
 
     # Binding to the prepared, verified backup is mandatory (F-19)
-    META="${RELEASE_DIR}/.deploy_metadata"
-    [[ -f "$META" ]] || die "Release ${REL_NAME} was not completely prepared (no .deploy_metadata); refusing to activate."
-    EXPECTED_BACKUP=$(sed -n 's/^PRE_UPDATE_BACKUP=//p' "$META" | head -n 1)
-    EXPECTED_SHA=$(sed -n 's/^PRE_UPDATE_BACKUP_SHA256=//p' "$META" | head -n 1)
-    [[ "$EXPECTED_BACKUP" =~ $PRE_UPDATE_RE && "$EXPECTED_SHA" =~ ^[0-9a-f]{64}$ ]] || die "Release metadata of ${REL_NAME} is invalid."
-    [[ "$VERIFIED_BACKUP" == "$EXPECTED_BACKUP" ]] || die "Verified backup ${VERIFIED_BACKUP} is not the backup prepared with this release (${EXPECTED_BACKUP})."
-    BK="${BACKUPS_DIR}/${VERIFIED_BACKUP}"
-    [[ -f "$BK" && ! -L "$BK" && -f "${BK}.sha256" ]] || die "Pre-update backup ${VERIFIED_BACKUP} or its .sha256 is missing."
-    ACTUAL_BACKUP_SHA=$(sha256sum -- "$BK" | cut -d' ' -f1)
-    [[ "$ACTUAL_BACKUP_SHA" == "$EXPECTED_SHA" ]] || die "Prepared backup checksum mismatch (${ACTUAL_BACKUP_SHA} != ${EXPECTED_SHA})."
+    assert_release_backup "$RELEASE_DIR" "$VERIFIED_BACKUP"
     echo "[INFO] Verified pre-update backup bound to release: ${VERIFIED_BACKUP}"
 
     ACTIVE_RELEASE_PREV=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
@@ -880,4 +1196,4 @@ if [[ "${1:-}" == "--activate" ]]; then
     exit 0
 fi
 
-die "warehouse-deploy requires one of: --prepare, --activate, --rollback, --refresh-nginx or --start-services"
+die "warehouse-deploy requires one of: --prepare, --activate, --rollback, --refresh-nginx, --start-services, --add-module, --reset-database or --print-modules"

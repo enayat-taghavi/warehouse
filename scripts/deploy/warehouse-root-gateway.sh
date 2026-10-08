@@ -237,6 +237,29 @@ case "$SUBCMD" in
         exec /usr/local/sbin/warehouse-deploy --rollback "$@"
         ;;
 
+    modules)
+        # Installed modules of this server ([MODULES] <list>); read-only.
+        if [ $# -ne 0 ]; then
+            echo "[ERROR] modules takes no arguments." >&2
+            exit 2
+        fi
+        /usr/local/sbin/warehouse-deploy --print-modules || exit 4
+        exit 0
+        ;;
+
+    add-module)
+        exec /usr/local/sbin/warehouse-deploy --add-module "$@"
+        ;;
+
+    reset-database)
+        if [ -e "$GO_LIVE_FLAG" ]; then
+            echo "[ERROR] The server is GO-LIVE; resetting the database is refused." >&2
+            echo '[GO_LIVE_EXISTS]'
+            exit 3
+        fi
+        exec /usr/local/sbin/warehouse-deploy --reset-database "$@"
+        ;;
+
     prune-delete)
         mkdir -p "$BACKUPS_DIR"
         cd "$BACKUPS_DIR"
@@ -632,6 +655,11 @@ PYEOF
         echo '=== [1] Active release ==='
         if [ -L /var/www/warehouse/current ]; then echo "current -> $(readlink /var/www/warehouse/current)"; fi
         if [ -f /var/www/warehouse/current/RELEASE ]; then cat /var/www/warehouse/current/RELEASE; else echo 'No active release.'; fi
+        mods=$(/usr/local/sbin/warehouse-deploy --print-modules 2>&1 || true)
+        case "$mods" in
+            '[MODULES] '*) echo "Installed modules: ${mods#\[MODULES\] }" ;;
+            *) echo "[WARNING] Installed modules unknown: ${mods}" ;;
+        esac
         echo
         echo '=== [2] Services ==='
         for s in warehouse-backend warehouse-gdrive-worker warehouse-export-worker warehouse-backup.timer nginx postgresql redis-server; do

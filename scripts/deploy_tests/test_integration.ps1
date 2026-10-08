@@ -63,6 +63,11 @@ function Invoke-Server([string]$Script) {
     if ($r.ExitCode -ne 0) { throw "Server script failed (exit $($r.ExitCode)): $($r.Output -join ' | ') $($r.StdErr)" }
     return @($r.Output)
 }
+function Invoke-Container([string]$User, [string]$Script) {
+    $r = Invoke-Process -FilePath $DockerExe -ArgumentList @('exec', '-i', '-u', $User, $container, 'bash', '-s') -StdinText $Script.Replace("`r", '') -Capture -Quiet
+    return $r
+}
+$Gateway = '/usr/local/sbin/warehouse-root-gateway'
 function Get-ItemCount { return [int](@(Invoke-Server "su - postgres -c `"psql -XAtq -d warehouse_db -c 'SELECT count(*) FROM items'`"")[0]) }
 function Get-StageCount { return [int](@(Invoke-Server '{ ls -d /tmp/wh-deploy.* 2>/dev/null || true; } | wc -l')[0]) }
 function Get-ServerDumpList {
@@ -299,6 +304,8 @@ touch /run/fake-deploy-hold; : > /run/fake-systemd/log; : > /run/fake-deploy.log
     $deployLog = Invoke-Server 'cat /run/fake-deploy.log'
     $act = @($deployLog | Where-Object { $_ -like 'activate *' })
     Assert-True ($act.Count -eq 1 -and $act[0] -match "^activate \d{8}_\d{6}_$($Sha.Substring(0, 12)) --verified-backup db_pre_update_\d{8}_\d{6}\.dump --domain soft\.example\.test --maintenance$") "activate called once with release, verified backup and --maintenance ($($act[0]))"
+    $prepLine = @($deployLog | Where-Object { $_ -like 'prepare *' })
+    Assert-True ($prepLine.Count -eq 1 -and $prepLine[0] -like '* --modules warehouse,accounting') "prepare is told the modules the server runs, so it re-checks them ($($prepLine[0]))"
     $pre = @(Get-LocalNames 'db_pre_update_*.dump')
     Assert-True ($pre.Count -eq 1 -and (Test-LocalDumpVerified (Get-Item -LiteralPath (Join-Path $LocalBackupRoot $pre[0])))) 'pre-update backup pulled and verified before activation'
     $rel = Invoke-Server 'cat /var/www/warehouse/current/RELEASE'
@@ -321,6 +328,44 @@ touch /run/fake-deploy-hold; : > /run/fake-systemd/log; : > /run/fake-deploy.log
     [void](Invoke-Server ': > /run/fake-deploy.log; rm -f /run/fake-deploy-wrong-hash; touch /run/fake-deploy-reuse-backup')
     Assert-True ((Invoke-TestMode 'Update') -ne 0) 'Update that reports an older (already pulled) pre-update backup exits non-zero'
     Assert-True (@(Invoke-Server 'grep -c "^activate" /run/fake-deploy.log || true')[0] -eq '0') '... and never activates'
+    [void](Invoke-Server 'rm -f /run/fake-deploy-reuse-backup')
+
+    # --- 11. Modules (plan Modular_Deploy_Options step 3) ------------------------------------------
+    # The fixture's .env has no WH_MODULES: an install from before module selection, which runs every module.
+    $origConfig = [System.IO.File]::ReadAllText($ConfigFile)
+    $statusOut = Invoke-Server "$Gateway status soft.example.test"
+    Assert-True ($statusOut -contains 'Installed modules: warehouse,accounting') 'Status shows the installed modules (no WH_MODULES = all)'
+    Assert-True (@(Invoke-Server "$Gateway modules")[0] -eq '[MODULES] warehouse,accounting') 'gateway modules reports every module for an .env without WH_MODULES'
+
+    [void](Invoke-Server ': > /run/fake-deploy.log')
+    Write-Utf8LfFile $ConfigFile ($origConfig.TrimEnd().TrimEnd('}') + ",`n  `"Modules`": `"accounting`"`n}`n")
+    Assert-True ((Invoke-TestMode 'Update') -ne 0) 'Update whose Modules (accounting) differ from the server (both) exits non-zero'
+    Assert-True (@(Invoke-Server 'grep -c "^prepare" /run/fake-deploy.log || true')[0] -eq '0') '... before anything is uploaded or prepared'
+
+    Write-Utf8LfFile $ConfigFile ($origConfig.TrimEnd().TrimEnd('}') + ",`n  `"Modules`": `"payroll`"`n}`n")
+    Assert-True ((Invoke-TestMode 'Update') -ne 0) 'a configuration with an unknown module is refused'
+    Write-Utf8LfFile $ConfigFile $origConfig
+
+    $dumpsBefore = @(Get-ServerDumpList).Count
+    $script:AddModule = 'warehouse'
+    Assert-True ((Invoke-TestMode 'AddModule') -eq 1) 'AddModule of a module that is already installed exits 1'
+    $script:AddModule = 'payroll'
+    Assert-True ((Invoke-TestMode 'AddModule') -ne 0) 'AddModule of an unknown module is refused'
+    $script:AddModule = ''
+    Assert-True (@(Get-ServerDumpList).Count -eq $dumpsBefore -and @(Invoke-Server 'grep -c "^add-module" /run/fake-deploy.log || true')[0] -eq '0') '... neither took a backup or reached the server script'
+
+    [void](Invoke-Server 'printf "WH_MODULES=warehouse;rm\n" >> /var/www/warehouse/shared/.env')
+    $g = Invoke-Container 'deploy' "sudo -n $Gateway modules"
+    Assert-True ($g.ExitCode -eq 4) "gateway modules refuses an invalid WH_MODULES (exit $($g.ExitCode))"
+    Assert-True ((Invoke-TestMode 'Update') -ne 0) '... and Update stops on it'
+    [void](Invoke-Server "sed -i '/^WH_MODULES=/d' /var/www/warehouse/shared/.env")
+
+    [void](Invoke-Server 'printf "WH_MODULES=accounting\n" >> /var/www/warehouse/shared/.env; : > /run/fake-deploy.log; touch /var/www/warehouse/shared/GO_LIVE')
+    Assert-True (@(Invoke-Server "$Gateway modules")[0] -eq '[MODULES] accounting') 'gateway modules reads WH_MODULES'
+    $g = Invoke-Container 'deploy' "sudo -n $Gateway reset-database 20261008_000000_abcdef123456 --modules accounting --verified-backup db_pre_update_20261008_000000.dump"
+    Assert-True ($g.ExitCode -eq 3 -and @(Invoke-Server 'grep -c "^reset-database" /run/fake-deploy.log || true')[0] -eq '0') "gateway reset-database is refused once GO_LIVE is set (exit $($g.ExitCode))"
+    [void](Invoke-Server "rm -f /var/www/warehouse/shared/GO_LIVE; sed -i '/^WH_MODULES=/d' /var/www/warehouse/shared/.env")
+    Assert-True ((Invoke-TestMode 'ResetServer' -NonInteractiveRun) -ne 0) 'ResetServer is refused in -NonInteractive'
 } catch {
     Write-Host "[FAIL] test aborted: $($_.Exception.Message)`n$($_.ScriptStackTrace)" -ForegroundColor Red
     $script:failures++

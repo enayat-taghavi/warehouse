@@ -7,7 +7,7 @@
 # ==============================================================================
 set -euo pipefail
 
-# --prefix nightly|manual|pre_restore (default nightly). deploy.ps1 uses manual and pre_restore
+# --prefix nightly|manual|pre_restore|pre_module (default nightly). deploy.ps1 uses manual, pre_restore and pre_module
 # and reads the [BACKUP_DB] / [BACKUP_DB_SHA256] markers printed at the end.
 PREFIX="nightly"
 while [[ $# -gt 0 ]]; do
@@ -20,8 +20,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 case "$PREFIX" in
-    nightly|manual|pre_restore) ;;
-    *) echo "[ERROR] --prefix must be nightly, manual or pre_restore" >&2; exit 2 ;;
+    nightly|manual|pre_restore|pre_module) ;;
+    *) echo "[ERROR] --prefix must be nightly, manual, pre_restore or pre_module" >&2; exit 2 ;;
 esac
 
 # Root-only /run, not the world-writable /var/lock, so no other user can pre-create the lock file.

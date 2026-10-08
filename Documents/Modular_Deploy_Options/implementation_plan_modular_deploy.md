@@ -209,3 +209,58 @@
     - **بررسی‌نشده:** نمای «فقط انبار» در مرورگر بررسی نشد، چون پشت ورود است. کاربر می‌تواند با build `warehouse-only` یا مقدار `wh_installed_modules` در localStorage آن را ببیند.
     - **بررسی‌نشده:** صفحهٔ شرکت‌ها و مرکز عملیات در حالت کامل هم پشت ورود است و کاربر باید آن را ببیند.
   - **اقدام بعدی (گام ۳):** استقرار: کلید `Modules` و `WH_MODULES` در Setup، `-AddModule`، `-ResetServer`، سرویس‌های وابسته به ماژول و `-Status`. آزمون‌ها طبق جدول §۵.
+- **۱۷ مهر ۱۴۰۵ (2026-10-08) — گام ۳ انجام شد (Claude):**
+  - **وضعیت زیرگام‌ها:**
+    - **کلید `Modules`** در `deploy_config.json`: پیش‌فرض `warehouse,accounting`؛ مقدار به ترتیب کاتالوگ و بدون تکرار یکسان می‌شود و سامانهٔ ناشناخته رد می‌شود.
+    - **Setup:**
+      - اگر کلید `Modules` نباشد، در حالت تعاملی پرسیده می‌شود و پس از Setup در پیکربندی ثبت می‌شود.
+      - `remote-setup.sh` حالا آرگومان نهم `<modules>` را می‌گیرد. در نصب اول `WH_MODULES` را در `.env` و رکورد `shared/MODULES` می‌نویسد.
+      - در Setup دوم، اگر سامانه‌ها با سرور جور نباشند، پیش از هر تغییری (حتی apt) با کد ۴ رد می‌شود.
+    - **Update:** سامانه‌های سرور را با دروازهٔ `modules` می‌خواند و اگر با پیکربندی فرق کنند، پیش از build متوقف می‌شود و `-AddModule` را پیشنهاد می‌دهد. `--prepare --modules` هم همین را روی سرور دوباره بررسی می‌کند.
+      - روی سرور با ابزار قدیمی (دروازه بدون `modules`)، فرض «همهٔ سامانه‌ها» با هشدار گذاشته می‌شود.
+    - **`-AddModule <code>`:**
+      1. پشتیبان `pre_module` گرفته، کشیده و تأیید می‌شود.
+      2. سپس `warehouse-deploy --add-module` اجرا می‌شود (جدا از نشست SSH، با قفل استقرار).
+      3. `migrate`، `seed_permissions`، `init_roles` و بررسی strict مایگریشن با `WH_MODULES` جدید از راه **متغیر محیطی** اجرا می‌شوند. `.env` تا این‌جا دست نمی‌خورد.
+      4. فقط بعد از آن `.env` و `MODULES` عوض می‌شوند و ری‌استارت و سلامت‌سنجی (شامل `installed_modules`) انجام می‌شود.
+      5. در هر شکستی، و با trap روی EXIT و سیگنال‌ها، `WH_MODULES` قبلی برمی‌گردد و سرویس‌ها دوباره بالا می‌آیند. جدول‌ها می‌مانند.
+      6. پس از موفقیت، `Modules` در پیکربندی به‌روز می‌شود (با نسخهٔ `.bak-<زمان>`). نصب دوبارهٔ یک سامانه با کد ۱ رد می‌شود.
+    - **`-ResetServer`:**
+      - فقط تعاملی، با تأیید تایپی `RESET`، و GO_LIVE در deploy.ps1، دروازه و `warehouse-deploy` رد می‌شود.
+      - ترتیب: prepare، کشیدن و تأیید پشتیبان pre-update، سپس `--reset-database`، سپس activate.
+      - `--reset-database` پشتیبان را به `.deploy_metadata` گره می‌زند و باید کمتر از ۲ ساعت عمر داشته باشد.
+      - سرویس‌ها را متوقف می‌کند و یک dump نهایی `db_pre_reset_*` می‌گیرد (با `pg_restore --list` بررسی می‌شود).
+      - GO_LIVE را دوباره بررسی می‌کند، سپس `SERVICES_HELD` می‌گذارد، پایگاه را با ICU fa-IR از نو می‌سازد، `WH_MODULES` را می‌نویسد و migrate و seed را اجرا می‌کند. فعال‌سازی، hold را برمی‌دارد.
+    - **سرویس‌های وابسته به ماژول:** جدول نگاشت `MODULE_SERVICES` در `warehouse-deploy.sh` اضافه شد. هر دو ماژول فعلاً خالی‌اند، چون همهٔ سرویس‌ها هسته‌اند: backend، export، worker گوگل‌درایو (`settings_core`) و تایمر پشتیبان. `-AddModule` واحدهای ماژول را enable و start می‌کند.
+    - **`-Status`:** «Installed modules» در بخش [1] دروازه نمایش داده می‌شود.
+    - **بررسی مایگریشن:** `MIGRATION_CHECK_PY` حالا فقط ردیف‌های ماژول‌های کاتالوگِ نصب‌نشده را نادیده می‌گیرد (مثلاً باقی‌ماندهٔ AddModule شکست‌خورده). اپ ناشناختهٔ هسته همچنان «forward» حساب می‌شود.
+  - **انحراف‌ها و تصمیم‌ها:**
+    - پشتیبان AddModule یک prefix تازه (`pre_module`) در `warehouse-nightly-backup.sh` گرفت.
+    - **تست e2e و آینهٔ PyPI:** `files.pythonhosted.org` از این شبکه resolve نمی‌شد، پس پارامتر `-PipIndex` (فقط برای کانتینر تست) اضافه شد و اجرا با `https://mirrors.aliyun.com/pypi/simple` انجام شد. `--require-hashes` همچنان هش هر بسته را بررسی می‌کند. آینهٔ runflare از کانتینر وصل نشد.
+  - **آزمون‌ها:**
+    - `test_integration.ps1` (دروازهٔ واقعی): ۸۷ پاس، ۰ شکست. ۱۴ بررسی تازه دارد: modules پیش‌فرض و خواندن WH_MODULES، رد ناهمخوانی و سامانهٔ ناشناخته، رد AddModule تکراری یا ناشناخته بدون گرفتن پشتیبان، رد WH_MODULES نامعتبر، رد reset-database پس از GO_LIVE، و رد ResetServer در NonInteractive.
+    - `test_server_e2e.ps1` (اسکریپت‌های واقعی، Ubuntu 24.04): ۱۷۲ پاس، ۰ شکست. سناریوها:
+      - Setup «فقط حسابداری» (`installed_modules`=platform,accounting و API انبار 404).
+      - رد Update و Setup ناهمخوان.
+      - AddModule با migrate شکسته: بازگشت به accounting، سرویس‌ها سالم، جدول‌ها ماندند، پشتیبان کشیده شد.
+      - Update پس از آن، با وجود ردیف‌های انبار.
+      - AddModule موفق و به‌روز شدن پیکربندی.
+      - رد AddModule تکراری و رد حذف سامانه.
+      - ResetServer: لغو با کلمهٔ نادرست، رد NonInteractive، رد GO_LIVE، و اجرای موفق (پایگاه تازه، ICU، مجوزها، مدیا ماند، پشتیبان کشیده شد).
+    - نگهبان ۵۳ با بند تازهٔ ۱۲ پاس شد.
+    - shellcheck (warning) و PSScriptAnalyzer: صفر یافته.
+    - بازبین `data-loss-reviewer`: یک یافتهٔ high و پنج medium، همه رفع شد:
+      - فیلتر مایگریشن محدود به ماژول‌های کاتالوگ شد.
+      - migrate با env override انجام می‌شود و `.env` فقط پس از موفقیت عوض می‌شود.
+      - بررسی دوبارهٔ GO_LIVE پیش از drop.
+      - تازگی پشتیبان، dump نهایی و `SERVICES_HELD` در reset.
+      - بازنویسی `.env` در خطای خواندن متوقف می‌شود و شمار خط‌ها را بررسی می‌کند.
+      - `.bak` زمان‌دار شد.
+  - **موارد باز:**
+    - **soft هنوز ابزار قدیمی دارد** (دروازه بدون `modules` و `reset-database`). برای گام ۶ ترتیب این است:
+      1. Setup با `Modules=warehouse,accounting`، همخوان با `.env` بدون WH_MODULES. این دروازه و `warehouse-deploy` تازه را نصب می‌کند. فعال‌سازی آن به‌خاطر مایگریشن‌های squash‌شده رد می‌شود و این انتظار می‌رود.
+      2. سپس `Modules=accounting` و `-ResetServer`.
+      3. سپس `-AddModule warehouse`.
+    - **مسیر «ابزار قدیمی» در Update** (تشخیص `unrecognized subcommand`) در تست‌ها پوشش داده نشده است. fixture دروازهٔ تازه را دارد.
+    - **قفل `set-go-live`:** دروازه قفل استقرار نمی‌گیرد. reset این را با بررسی دوباره پیش از drop پوشش می‌دهد.
+  - **اقدام بعدی (گام ۴):** روش‌های گواهی: `CertMode`، مسیر یکسان TLS، `http01`، `-InstallCert` برای origin و custom، real-ip در Cloudflare، و انقضا در `-Status`. آزمون‌ها طبق جدول §۵.

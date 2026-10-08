@@ -15,6 +15,9 @@
   ۶) اسکریپت قدیمی و ناامن scripts/deploy_runner.py در مخزن وجود نداشته باشد
   ۷) عدم ارسال اسرار در آرگومان‌های خط فرمان (argv) در اسکریپت‌های استقرار
   ۸) بسته‌بندی با tar.exe و اعتبارسنجی عدم وجود جداکننده بک‌اسلش و کاراکتر CR
+  ۱۲) انتخاب سامانه (طرح Modular_Deploy_Options گام ۳): کلید Modules در deploy_config.json (اگر هست) معتبر است؛
+      Update و Setup سامانه‌ها را تغییر نمی‌دهند؛ حذف سامانه وجود ندارد؛ بازسازی پایگاه پس از GO_LIVE در
+      دروازه و در warehouse-deploy رد می‌شود؛ AddModule پیش از تغییر پشتیبان تأییدشده می‌گیرد و در شکست برمی‌گردد
 """
 
 import json
@@ -199,6 +202,44 @@ def verify_deploy_safety() -> bool:
             print("❌ بند ۱۱: مدیریت حالت نگهداری غایب است.")
         else:
             print("✅ بند ۱۱: اسکریپت warehouse-deploy.sh دارای گارد فضای دیسک، ترتیب صحیح متغیرها، پایش سلامت و حالت نگهداری است.")
+
+    # 12. Module selection (plan Modular_Deploy_Options step 3)
+    known_modules = ("warehouse", "accounting")
+    gateway_sh = REPO_ROOT / "scripts" / "deploy" / "warehouse-root-gateway.sh"
+    setup_sh = REPO_ROOT / "scripts" / "remote-setup.sh"
+    mod_problems = []
+    if DEPLOY_CONFIG.exists():
+        try:
+            cfg_modules = json.loads(DEPLOY_CONFIG.read_text(encoding="utf-8")).get("Modules")
+        except Exception:
+            cfg_modules = None
+        if cfg_modules is not None:
+            parts = [m.strip() for m in str(cfg_modules).split(",")]
+            if not parts or any(m not in known_modules for m in parts):
+                mod_problems.append("کلید Modules در deploy_config.json سامانهٔ ناشناخته دارد")
+    deploy_text = deploy_sh.read_text(encoding="utf-8") if deploy_sh.exists() else ""
+    gateway_text = gateway_sh.read_text(encoding="utf-8") if gateway_sh.exists() else ""
+    setup_text = setup_sh.read_text(encoding="utf-8") if setup_sh.exists() else ""
+    reset_block = deploy_text[deploy_text.find('if [[ "${1:-}" == "--reset-database" ]]'):]
+    gw_reset = gateway_text[gateway_text.find("    reset-database)"):]
+    add_block = deploy_text[deploy_text.find('if [[ "${1:-}" == "--add-module" ]]'):]
+    checks = [
+        ('KNOWN_MODULES=(warehouse accounting)' in deploy_text, "فهرست سامانه‌ها در warehouse-deploy.sh با کاتالوگ یکی نیست"),
+        ('Modules mismatch' in deploy_text and '--modules' in deploy_text, "prepare ناهمخوانی سامانه‌ها را رد نمی‌کند"),
+        ('Modules mismatch' in setup_text and 'WH_MODULES=${MODULES}' in setup_text, "remote-setup.sh سامانه‌ها را ثبت یا بررسی نمی‌کند"),
+        ('GO_LIVE' in reset_block[:600], "--reset-database پس از GO_LIVE رد نمی‌شود"),
+        ('GO_LIVE_FLAG' in gw_reset[:300], "دروازه reset-database را پس از GO_LIVE رد نمی‌کند"),
+        ('assert_release_backup' in reset_block[:1200], "--reset-database به پشتیبان تأییدشدهٔ release گره نخورده است"),
+        ('assert_backup_matches_record' in add_block[:1800] and 'revert_modules' in add_block, "--add-module پشتیبان را بررسی نمی‌کند یا در شکست برنمی‌گردد"),
+        ('remove-module' not in deploy_text + gateway_text and 'RemoveModule' not in ps1_text, "مسیر حذف سامانه نباید وجود داشته باشد"),
+        ("Invoke-RemoteBackup $config 'pre_module'" in ps1_text and "Confirm-TypedWord 'RESET'" in ps1_text, "AddModule پشتیبان نمی‌گیرد یا ResetServer تأیید تایپی ندارد"),
+    ]
+    mod_problems += [msg for ok, msg in checks if not ok]
+    if mod_problems:
+        errors.extend(mod_problems)
+        print("❌ بند ۱۲: " + "؛ ".join(mod_problems))
+    else:
+        print("✅ بند ۱۲: انتخاب سامانه: Modules معتبر، Update/Setup بدون تغییر سامانه، بدون حذف سامانه، ResetServer فقط پیش از GO_LIVE و با پشتیبان، AddModule با پشتیبان و بازگشت.")
 
     print("=" * 74)
     if errors:

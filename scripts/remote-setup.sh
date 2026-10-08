@@ -24,8 +24,8 @@ if [[ -f "/var/www/warehouse/shared/GO_LIVE" ]]; then
     exit 1
 fi
 
-if [[ $# -ne 8 ]]; then
-    echo "Usage: remote-setup.sh <domain> <admin_email> <db_name> <db_user> <allowed_hosts> <ssh_port> <bundle_path> <bundle_sha256>" >&2
+if [[ $# -ne 9 ]]; then
+    echo "Usage: remote-setup.sh <domain> <admin_email> <db_name> <db_user> <allowed_hosts> <ssh_port> <bundle_path> <bundle_sha256> <modules>" >&2
     exit 2
 fi
 DOMAIN="$1"
@@ -36,6 +36,7 @@ ALLOWED_HOSTS="$5"
 SSH_PORT="$6"
 BUNDLE_PATH="$7"
 BUNDLE_SHA256="$8"
+MODULES_ARG="$9"
 
 if [[ -z "$ALLOWED_HOSTS" || "$ALLOWED_HOSTS" == "*" ]]; then
     ALLOWED_HOSTS="$DOMAIN"
@@ -65,6 +66,42 @@ if ! [[ "$ADMIN_EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; t
     exit 1
 fi
 
+# Installable modules in catalog order; same rules as warehouse-deploy (canonical_modules).
+KNOWN_MODULES=(warehouse accounting)
+canonical_modules() {
+    local raw="$1" m k out=() seen=" "
+    [[ "$raw" =~ ^[a-z]+(,[a-z]+)*$ ]] || return 1
+    IFS=',' read -ra _mods <<<"$raw"
+    for m in "${_mods[@]}"; do
+        [[ " ${KNOWN_MODULES[*]} " == *" $m "* ]] || return 1
+        seen+="$m "
+    done
+    for k in "${KNOWN_MODULES[@]}"; do
+        if [[ "$seen" == *" $k "* ]]; then out+=("$k"); fi
+    done
+    (IFS=','; echo "${out[*]}")
+}
+if ! MODULES=$(canonical_modules "$MODULES_ARG"); then
+    echo "ERROR: Invalid modules: $MODULES_ARG (known: ${KNOWN_MODULES[*]})" >&2
+    exit 1
+fi
+# A second Setup never changes the installed modules (deploy.ps1 -AddModule adds one; none is removed).
+# Checked before any change; a missing or empty WH_MODULES means all modules (installs made before it existed).
+if [[ -f /var/www/warehouse/shared/.env && ! -L /var/www/warehouse/shared/.env ]]; then
+    HAVE_MODULES=$(sed -n 's/^WH_MODULES=//p' /var/www/warehouse/shared/.env | tail -n 1 | tr -d '\r' || true)
+    if [[ -z "$HAVE_MODULES" ]]; then
+        HAVE_MODULES=$(IFS=','; echo "${KNOWN_MODULES[*]}")
+    elif ! HAVE_MODULES=$(canonical_modules "$HAVE_MODULES"); then
+        echo "ERROR: WH_MODULES in /var/www/warehouse/shared/.env is invalid; fix it by hand." >&2
+        exit 1
+    fi
+    if [[ "$HAVE_MODULES" != "$MODULES" ]]; then
+        echo "ERROR: Modules mismatch: the server has '${HAVE_MODULES}', the configuration asks for '${MODULES}'." >&2
+        echo "Setup never changes the installed modules: add one with deploy.ps1 -AddModule <code>; removing a module is not supported." >&2
+        exit 4
+    fi
+fi
+
 # The bundle and its sha256 are mandatory (G-05): a regular file (no symlink) in the caller's
 # /tmp/wh-deploy.* stage directory, checked against the hash computed on the operator's machine.
 if ! [[ "$BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
@@ -83,6 +120,7 @@ echo "--> Database User       : ${DB_USER}"
 echo "--> Allowed Hosts       : ${ALLOWED_HOSTS}"
 echo "--> Configured SSH Port : ${SSH_PORT}"
 echo "--> Bundle Path         : ${BUNDLE_PATH}"
+echo "--> Modules             : ${MODULES}"
 
 # Verify bundle sha256 (F-19, G-05)
 ACTUAL_BUNDLE_SHA=$(sha256sum -- "$BUNDLE_PATH" | cut -d' ' -f1)
@@ -258,10 +296,12 @@ DB_PASSWORD=${DB_PASSWORD}
 DB_HOST=127.0.0.1
 DB_PORT=5432
 REDIS_URL=redis://127.0.0.1:6379/1
+WH_MODULES=${MODULES}
 EOF
     )
     chown root:warehouse "$ENV_FILE"
     chmod 640 "$ENV_FILE"
+    printf '%s\n' "$MODULES" > "${SHARED_DIR}/MODULES"
 else
     # Second Setup: the database and .env are never touched (6.2). warehouse-deploy --prepare (step 8)
     # appends every missing non-secret key; only the allowed hosts from the configuration are added here.
@@ -318,7 +358,7 @@ fi
 
 # 8. Run initial release deployment via orchestrator (F-07: explicit prepare & activate)
 echo "--> Preparing the release via /usr/local/sbin/warehouse-deploy --prepare..."
-PREPARE_OUTPUT=$(/usr/local/sbin/warehouse-deploy --prepare --bundle "$BUNDLE_PATH" --bundle-sha256 "$BUNDLE_SHA256" --domain "$DOMAIN")
+PREPARE_OUTPUT=$(/usr/local/sbin/warehouse-deploy --prepare --bundle "$BUNDLE_PATH" --bundle-sha256 "$BUNDLE_SHA256" --domain "$DOMAIN" --modules "$MODULES")
 echo "$PREPARE_OUTPUT"
 REL=$(echo "$PREPARE_OUTPUT" | sed -n 's/^\[RELEASE\] //p')
 BAK=$(echo "$PREPARE_OUTPUT" | sed -n 's/^\[PRE_UPDATE_BACKUP\] //p')

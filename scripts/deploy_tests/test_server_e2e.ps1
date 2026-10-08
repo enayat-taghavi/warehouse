@@ -10,12 +10,17 @@
 param(
     [Parameter(Mandatory)][string]$BuildSha,   # commit with a completed build in scratch/deploy
     [string]$AptMirror,                        # e.g. http://ir.archive.ubuntu.com/ubuntu
+    [string]$PipIndex,                         # e.g. https://mirror-pypi.runflare.com/simple (hashes are still enforced)
     [switch]$KeepContainer
 )
 $ErrorActionPreference = 'Stop'
 # Optional apt mirror for the test container only (when archive/security.ubuntu.com are unreachable).
 if ($AptMirror -and $AptMirror -cnotmatch '^http://[A-Za-z0-9.-]+(/[A-Za-z0-9._-]+)*/?$') { throw "Invalid -AptMirror: $AptMirror" }
 $AptMirrorScript = if ($AptMirror) { "sed -i -E 's#https?://(archive|security)\.ubuntu\.com/ubuntu/?#$AptMirror#' /etc/apt/sources.list.d/ubuntu.sources`n" } else { '' }
+# Optional PyPI index for the test container only (when files.pythonhosted.org is unreachable); requirements.lock
+# is installed with --require-hashes, so a mirror cannot change a package.
+if ($PipIndex -and $PipIndex -cnotmatch '^https://[A-Za-z0-9.-]+(/[A-Za-z0-9._-]+)*/?$') { throw "Invalid -PipIndex: $PipIndex" }
+if ($PipIndex) { $AptMirrorScript += "printf '[global]\nindex-url = %s\n' '$PipIndex' > /etc/pip.conf`n" }
 . (Join-Path $PSScriptRoot '..\..\deploy.ps1')
 
 $TestRoot = Join-Path $ScriptRoot 'scratch\deploy_tests'
@@ -98,8 +103,14 @@ $ConfigFile = Join-Path $TestRoot 'config_e2e.json'
 Write-Utf8LfFile $ConfigFile (@{
         ServerHost = 'example.test'; SshUser = 'deploy'; SshPort = 22; Domain = $Domain
         HostKeyFingerprint = $fingerprint; DbName = 'warehouse_db'; DbUser = 'warehouse_user'
-        AllowedHosts = $Domain; AdminEmail = 'ops@farsalish.ir'
+        AllowedHosts = $Domain; AdminEmail = 'ops@farsalish.ir'; Modules = 'accounting'
     } | ConvertTo-Json)
+function Set-ConfigModules([string]$Modules) {
+    $c = Get-Content -LiteralPath $ConfigFile -Raw -Encoding utf8 | ConvertFrom-Json
+    $c | Add-Member -NotePropertyName 'Modules' -NotePropertyValue $Modules -Force
+    Write-Utf8LfFile $ConfigFile ($c | ConvertTo-Json)
+}
+function Get-ConfigModules { return [string](Get-Content -LiteralPath $ConfigFile -Raw -Encoding utf8 | ConvertFrom-Json).Modules }
 
 function Invoke-Container([string]$User, [string]$Script) {
     $wd = if ($User -eq 'deploy') { '/home/deploy' } else { '/' }
@@ -168,6 +179,21 @@ function Get-RestoreMenuIndex([string]$Name) {
 }
 function Get-Applied0036 {
     return [int](@(Invoke-Server "runuser -u postgres -- psql -XAtq -d warehouse_db -c `"SELECT count(*) FROM django_migrations WHERE app = 'accounts' AND name = '0036_e2e_forward_only'`"")[0])
+}
+function Get-ModuleState {
+    # installed_modules of the public API, WH_MODULES and the MODULES record on the server, and whether the
+    # warehouse API exists (404 when the module is not installed).
+    $o = Invoke-Server @'
+echo "API=$(curl -ks --resolve soft.example.test:443:127.0.0.1 https://soft.example.test/api/public/config/ | python3 -c 'import json, sys; print(",".join(json.load(sys.stdin).get("installed_modules") or []))' || true)"
+echo "ENV=$(sed -n 's/^WH_MODULES=//p' /var/www/warehouse/shared/.env | tail -n 1)"
+echo "RECORD=$(cat /var/www/warehouse/shared/MODULES 2>/dev/null || true)"
+echo "WH_API=$(curl -ks -o /dev/null -w '%{http_code}' --resolve soft.example.test:443:127.0.0.1 https://soft.example.test/api/warehouses/ || true)"
+echo "WH_TABLE=$(runuser -u postgres -- psql -XAtq -d warehouse_db -c "SELECT count(*) FROM pg_tables WHERE tablename = 'warehouses_warehouse'")"
+'@
+    $h = @{}
+    foreach ($l in $o) { if ($l -match '^([A-Z_]+)=(.*)$') { $h[$Matches[1]] = $Matches[2] } }
+    Write-Host "[INFO] module state: $(($h.GetEnumerator() | Sort-Object Name | ForEach-Object { "$($_.Name)=$($_.Value)" }) -join '; ')" -ForegroundColor Cyan
+    return $h
 }
 function Get-InactiveServiceCount {
     return @(Invoke-Server 'for s in warehouse-backend warehouse-gdrive-worker warehouse-export-worker; do systemctl is-active "$s" || true; done' | Where-Object { $_ -eq 'inactive' }).Count
@@ -380,6 +406,19 @@ class Migration(migrations.Migration):
     operations = [migrations.RunPython(migrations.RunPython.noop, migrations.RunPython.noop)]
 '@
 
+$brokenWarehouseMigration = @'
+from django.db import migrations
+
+
+def fail(apps, schema_editor):
+    raise RuntimeError('e2e: broken warehouse migration')
+
+
+class Migration(migrations.Migration):
+    dependencies = [('inventory', '0001_initial')]
+    operations = [migrations.RunPython(fail, migrations.RunPython.noop)]
+'@
+
 try {
     # --- commits -------------------------------------------------------------------------------
     if ($BuildSha -cnotmatch '^[0-9a-f]{40}$' -or -not (Test-Path -LiteralPath (Join-Path $LocalDeployScratch "$BuildSha\warehouse-front\dist\warehouse-app\browser\ngsw.json"))) {
@@ -390,6 +429,8 @@ try {
     $sha2 = New-TestCommit $sha1 'e2e: second release'
     $sha3 = New-TestCommit $sha1 'e2e: third release'
     $shaMig = New-TestCommit $sha1 'e2e: release with a forward-only migration' @{ 'warehouse-backend/accounts/migrations/0036_e2e_forward_only.py' = $migration }
+    # A warehouse migration that fails: harmless while warehouse is not installed, fatal for -AddModule warehouse.
+    $shaBrokenWh = New-TestCommit $shaMig 'e2e: release whose warehouse migration fails' @{ 'warehouse-backend/inventory/migrations/0002_e2e_broken.py' = $brokenWarehouseMigration }
     $SkipBuild = $true
 
     # --- container -----------------------------------------------------------------------------
@@ -407,6 +448,8 @@ try {
     Assert-True ((Invoke-TestMode 'Setup') -eq 0) 'Setup #1 exit 0 although HTTP-01 fails'
     $tls = @(Invoke-Server 'if [ -e /etc/letsencrypt/live/soft.example.test/fullchain.pem ]; then echo CERT; else echo NOCERT; fi; grep -c -- "--webroot" /run/fake-certbot.log || true; systemctl is-active fail2ban || true; curl -s -o /dev/null -w "%{http_code}" -H "Host: soft.example.test" http://127.0.0.1/ || true; echo; curl -s -o /dev/null -w "%{http_code}" -H "Host: soft.example.test" -H "X-Forwarded-Proto: https" http://127.0.0.1:8000/api/public/config/ || true')
     Assert-True ($tls[0] -eq 'NOCERT' -and $tls[1] -eq '1' -and $tls[2] -eq 'active' -and $tls[3] -eq '301' -and $tls[4] -eq '200') "... no certificate, nginx only redirects to HTTPS, the application answers, and the firewall step (fail2ban) still ran ($($tls -join ', '))"
+    $mods = @(Invoke-Server 'sed -n "s/^WH_MODULES=//p" /var/www/warehouse/shared/.env; cat /var/www/warehouse/shared/MODULES; curl -s -H "Host: soft.example.test" -H "X-Forwarded-Proto: https" http://127.0.0.1:8000/api/public/config/ | python3 -c "import json, sys; print(\",\".join(json.load(sys.stdin)[\"installed_modules\"]))"')
+    Assert-True ($mods.Count -eq 3 -and $mods[0] -eq 'accounting' -and $mods[1] -eq 'accounting' -and $mods[2] -eq 'platform,accounting') "Setup #1 installed accounting only: WH_MODULES, the MODULES record and installed_modules ($($mods -join ' | '))"
     # DNS-01: the token goes to a root-only file through the gateway, then -IssueCert
     $SetSecret = 'CLOUDFLARE_DNS_API_TOKEN'
     $script:ReadHostQueue.Enqueue('short-token')
@@ -697,6 +740,80 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
     Assert-Serving (Get-ServerState) $shaMig 'after the matching restore (end of test)'
     $markerRows = @(Invoke-Server "runuser -u postgres -- psql -XAtq -d warehouse_db -c `"SELECT string_agg(v, ',' ORDER BY v) FROM e2e_marker`"")[0]
     Assert-True ($markerRows -eq 'kept' -and (Get-Applied0036) -eq 1) "... the database holds the nightly's rows only ($markerRows)"
+
+    # === M. modules (plan Modular_Deploy_Options step 3): accounting only so far ====================
+    $mA = Get-ModuleState
+    Assert-True ($mA.API -eq 'platform,accounting' -and $mA.ENV -eq 'accounting' -and $mA.RECORD -eq 'accounting' -and $mA.WH_API -eq '404') "accounting-only install: installed_modules, WH_MODULES, MODULES and a 404 warehouse API ($($mA.API))"
+    $st = @(Invoke-Server "$Gateway status $Domain")
+    Assert-True ($st -contains 'Installed modules: accounting') 'Status shows the installed modules'
+
+    # M1. Update and Setup never change the modules
+    $script:DeploySha = $shaMig
+    Set-ConfigModules 'warehouse,accounting'
+    $relBefore = (Get-ServerState).CURRENT
+    Assert-True ((Invoke-TestMode 'Update') -ne 0) 'Update whose Modules differ from the server exits non-zero'
+    Assert-True ((Invoke-TestMode 'Setup') -ne 0) 'Setup whose Modules differ from the server exits non-zero'
+    Assert-True ((Get-ServerState).CURRENT -eq $relBefore -and (Get-ModuleState).ENV -eq 'accounting') '... current release and WH_MODULES unchanged'
+    Set-ConfigModules 'accounting'
+
+    # M2. AddModule whose migration fails: WH_MODULES goes back, the services run again, nothing is deleted
+    $script:DeploySha = $shaBrokenWh
+    Assert-True ((Invoke-TestMode 'Update') -eq 0) 'Update to a release with a broken warehouse migration exit 0 (warehouse is not installed)'
+    $preModuleBefore = @(Get-ChildItem -LiteralPath $LocalBackupRoot -Filter 'db_pre_module_*.dump' -File).Count
+    $script:AddModule = 'warehouse'
+    Assert-True ((Invoke-TestMode 'AddModule') -ne 0) 'AddModule warehouse with a failing migration exits non-zero'
+    $mB = Get-ModuleState
+    $sB2 = Get-ServerState
+    Assert-Serving $sB2 $shaBrokenWh 'after the failed AddModule'
+    Assert-True ($mB.API -eq 'platform,accounting' -and $mB.ENV -eq 'accounting' -and $mB.RECORD -eq 'accounting' -and $mB.WH_API -eq '404') "... WH_MODULES and installed_modules are back to accounting ($($mB.API))"
+    Assert-True ($mB.WH_TABLE -eq '1') '... the warehouse tables migrated before the failure stay (nothing deleted)'
+    Assert-True ((Get-ConfigModules) -eq 'accounting') '... and the configuration still says accounting'
+    $preModule = @(Get-ChildItem -LiteralPath $LocalBackupRoot -Filter 'db_pre_module_*.dump' -File)
+    Assert-True ($preModule.Count -eq $preModuleBefore + 1 -and @($preModule | Where-Object { -not (Test-LocalDumpVerified $_) }).Count -eq 0) '... its pre_module backup was pulled and verified first'
+
+    # M3. a release without the broken migration: the leftover warehouse rows do not block it
+    $script:DeploySha = $shaMig
+    Assert-True ((Invoke-TestMode 'Update') -eq 0) 'Update with leftover rows of the uninstalled warehouse module exit 0'
+    Assert-Serving (Get-ServerState) $shaMig 'after the Update past the failed AddModule'
+
+    # M4. AddModule warehouse succeeds
+    Assert-True ((Invoke-TestMode 'AddModule') -eq 0) 'AddModule warehouse exit 0'
+    $mC = Get-ModuleState
+    Assert-Serving (Get-ServerState) $shaMig 'after AddModule warehouse'
+    Assert-True ($mC.API -eq 'platform,warehouse,accounting' -and $mC.ENV -eq 'warehouse,accounting' -and $mC.RECORD -eq 'warehouse,accounting' -and $mC.WH_API -ne '404') "... installed_modules, WH_MODULES and MODULES list both and the warehouse API exists ($($mC.API), $($mC.WH_API))"
+    Assert-True ((Get-ConfigModules) -eq 'warehouse,accounting' -and (@(Get-ChildItem -LiteralPath (Split-Path $ConfigFile) -Filter "$(Split-Path $ConfigFile -Leaf).bak-*" -File).Count -ge 1)) '... the configuration now says warehouse,accounting (previous copy in .bak-<timestamp>)'
+    Assert-True (@(Invoke-Server "runuser -u postgres -- psql -XAtq -d warehouse_db -c `"SELECT v FROM e2e_marker`"")[0] -eq 'kept') '... and the existing data is still there'
+
+    # M5. removing a module is not supported
+    Assert-True ((Invoke-TestMode 'AddModule') -eq 1) 'AddModule of an installed module exits 1'
+    $script:AddModule = ''
+    Set-ConfigModules 'accounting'
+    Assert-True ((Invoke-TestMode 'Update') -ne 0) 'Update with Modules=accounting (removing warehouse) exits non-zero'
+    Assert-True ((Get-ModuleState).ENV -eq 'warehouse,accounting') '... WH_MODULES unchanged'
+
+    # === N. ResetServer (before GO_LIVE only) =======================================================
+    $script:ReadHostQueue.Enqueue('no')
+    Assert-True ((Invoke-TestMode 'ResetServer') -eq 0) 'ResetServer cancelled on a wrong confirmation word'
+    Assert-True (@(Invoke-Server "runuser -u postgres -- psql -XAtq -d warehouse_db -c `"SELECT v FROM e2e_marker`"")[0] -eq 'kept') '... the database was not touched'
+    Assert-True ((Invoke-TestMode 'ResetServer' -NonInteractiveRun) -ne 0) 'ResetServer is refused in -NonInteractive'
+    [void](Invoke-Server 'touch /var/www/warehouse/shared/GO_LIVE')
+    Assert-True ((Invoke-TestMode 'ResetServer') -ne 0) 'ResetServer is refused after GO_LIVE'
+    $g = Invoke-GatewayAsDeploy "reset-database 20261008_000000_abcdef123456 --modules accounting --verified-backup db_pre_update_20261008_000000.dump"
+    Assert-True ($g.ExitCode -eq 3 -and ($g.Out -contains '[GO_LIVE_EXISTS]')) "... and so is the gateway's reset-database (exit $($g.ExitCode))"
+    [void](Invoke-Server 'rm -f /var/www/warehouse/shared/GO_LIVE')
+
+    $preBeforeReset = @(Get-ChildItem -LiteralPath $LocalBackupRoot -Filter 'db_pre_update_*.dump' -File).Count
+    $script:ReadHostQueue.Enqueue('RESET')
+    Assert-True ((Invoke-TestMode 'ResetServer') -eq 0) 'ResetServer with Modules=accounting exit 0'
+    $sN = Get-ServerState
+    Assert-Serving $sN $shaMig 'after ResetServer'
+    $mN = Get-ModuleState
+    Assert-True ($mN.API -eq 'platform,accounting' -and $mN.ENV -eq 'accounting' -and $mN.RECORD -eq 'accounting' -and $mN.WH_TABLE -eq '0') "... a new database with accounting only, without warehouse tables ($($mN.API))"
+    $reset = @(Invoke-Server 'runuser -u postgres -- psql -XAtq -d warehouse_db -c "SELECT count(*) FROM pg_tables WHERE tablename = ''e2e_marker''"; runuser -u postgres -- psql -XAtq -d warehouse_db -c "SELECT count(*) FROM auth_permission"; runuser -u postgres -- psql -XAtq -d warehouse_db -c "SELECT datlocprovider::text || '':'' || daticulocale FROM pg_database WHERE datname = ''warehouse_db''"; cat /var/www/warehouse/shared/media/uploads/u.txt')
+    Assert-True ($reset[0] -eq '0' -and [int]$reset[1] -gt 0) "... old rows gone, permissions seeded ($($reset[1]) permissions)"
+    Assert-True ($reset[2] -eq 'i:fa-IR' -and $reset[3] -eq 'user upload') "... ICU fa-IR collation again and the media kept ($($reset[2]))"
+    $preAfterReset = @(Get-ChildItem -LiteralPath $LocalBackupRoot -Filter 'db_pre_update_*.dump' -File)
+    Assert-True ($preAfterReset.Count -eq $preBeforeReset + 1 -and @($preAfterReset | Where-Object { -not (Test-LocalDumpVerified $_) }).Count -eq 0) '... its pre-update backup (the old data) was pulled and verified before the drop'
 } catch {
     Write-Host "[FAIL] test aborted: $($_.Exception.Message)`n$($_.ScriptStackTrace)" -ForegroundColor Red
     $script:failures++

@@ -14,6 +14,7 @@
 .EXAMPLE
     .\deploy.ps1                      # Interactive menu
     .\deploy.ps1 -Update              # Build, bundle, prepare, pull pre-update backup, activate
+    .\deploy.ps1 -AddModule warehouse # Add the warehouse module (verified backup first)
     .\deploy.ps1 -PullBackups -NonInteractive
     .\deploy.ps1 -Help
 #>
@@ -39,6 +40,8 @@ param(
     [switch]$Restart,
     [switch]$IssueCert,
     [switch]$Status,
+    [string]$AddModule,
+    [switch]$ResetServer,
     [Alias('Help')]
     [switch]$ShowHelp,
     [switch]$NonInteractive,
@@ -69,6 +72,9 @@ $RemoteGoLiveFlag = '/var/www/warehouse/shared/GO_LIVE'
 $PullTaskPath = '\Warehouse\'
 $PullTaskName = 'WarehouseSoftPullBackups'
 $SecretKeyAllowList = @('GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 'OUTBOUND_HTTP_PROXY', 'CLOUDFLARE_DNS_API_TOKEN')
+# Installable modules in catalog order (platform_core/module_catalog.py); WH_MODULES on the server.
+$KnownModules = @('warehouse', 'accounting')
+$AllModules = $KnownModules -join ','
 
 function Find-Application([string]$Name) {
     $cmd = Get-Command $Name -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -341,6 +347,15 @@ function Remove-SafeDirectoryRecursively([string]$Path) {
 # ==============================================================================
 # Configuration, host key pinning and SSH
 # ==============================================================================
+function ConvertTo-CanonicalModuleList([string]$Value) {
+    # Catalog order, no duplicates; $null for an empty list or an unknown module (same rules as the server).
+    $text = ([string]$Value).Trim() -replace '\s*,\s*', ','
+    if ($text -cnotmatch '^[a-z]+(,[a-z]+)*$') { return $null }
+    $parts = @($text.Split(','))
+    if (@($parts | Where-Object { $_ -notin $KnownModules }).Count -gt 0) { return $null }
+    return (@($KnownModules | Where-Object { $_ -in $parts }) -join ',')
+}
+
 function Assert-DeployConfig {
     param([Parameter(Mandatory)]$RawConfig, [string]$SourcePath, [switch]$ForSetup)
     $hostRegex = '^(?=.{1,253}$)[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$'
@@ -375,6 +390,10 @@ function Assert-DeployConfig {
     if (-not $allowedHosts) { $allowedHosts = $domain }
     if ($allowedHosts -notmatch '^[A-Za-z0-9.,*-]+$') { $problems.Add('AllowedHosts must match ^[A-Za-z0-9.,*-]+$') }
 
+    $modulesSet = $null -ne $RawConfig.PSObject.Properties['Modules']
+    $modules = if ($modulesSet) { ConvertTo-CanonicalModuleList ([string]$RawConfig.Modules) } else { $AllModules }
+    if (-not $modules) { $problems.Add("Modules must list known modules separated by commas ($($KnownModules -join ', '))") }
+
     $adminEmail = ([string]$RawConfig.AdminEmail).Trim()
     if ($ForSetup) {
         if ($adminEmail -notmatch '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$') { $problems.Add('AdminEmail must be a valid e-mail address (required for Setup)') }
@@ -390,7 +409,28 @@ function Assert-DeployConfig {
         ServerHost = $serverHost; SshUser = $sshUser; SshPort = $port; Domain = $domain
         HostKeyFingerprint = $fingerprint; DbName = $dbName; DbUser = $dbUser
         AllowedHosts = $allowedHosts; AdminEmail = $adminEmail; SourcePath = $SourcePath
+        Modules = $modules; ModulesSet = $modulesSet
     }
+}
+
+function Get-ServerModuleList($Config) {
+    # Installed modules of the server; $null when its root tooling predates modules (unknown subcommand),
+    # which only happens on servers set up before WH_MODULES existed, where every module is installed.
+    $r = Invoke-RemoteRootScript -Config $Config -Gateway 'modules' -Capture -Quiet
+    $found = @($r.Output | ForEach-Object { if ($_ -match '^\[MODULES\] ([a-z,]+)$') { $Matches[1] } })
+    if ($r.ExitCode -eq 0 -and $found.Count -eq 1 -and (ConvertTo-CanonicalModuleList $found[0]) -ceq $found[0]) { return $found[0] }
+    if ($r.ExitCode -eq 2 -and $found.Count -eq 0 -and $r.StdErr -like '*unrecognized subcommand*') { return $null }
+    throw "Could not read the installed modules of the server (exit $($r.ExitCode))."
+}
+
+function Save-ConfigModuleList([string]$Modules) {
+    # Records the server's new module list in the configuration file (a .bak copy is kept), so that
+    # Update keeps matching the server. Every other key is left as it is.
+    $path = Get-ConfigPath
+    $raw = Get-Content -LiteralPath $path -Raw -Encoding utf8 | ConvertFrom-Json
+    $raw | Add-Member -NotePropertyName 'Modules' -NotePropertyValue $Modules -Force
+    Copy-Item -LiteralPath $path -Destination "$path.bak-$((Get-Date).ToString('yyyyMMdd_HHmmss'))"
+    Write-Utf8LfFile $path (($raw | ConvertTo-Json -Depth 10) + "`n")
 }
 
 function Get-ConfigPath {
@@ -891,7 +931,7 @@ function Remove-LocalBundle($Bundle) {
 # ==============================================================================
 # Remote backups
 # ==============================================================================
-function Invoke-RemoteBackup($Config, [ValidateSet('manual', 'pre_restore')][string]$Prefix) {
+function Invoke-RemoteBackup($Config, [ValidateSet('manual', 'pre_restore', 'pre_module')][string]$Prefix) {
     # Runs the server backup script (no fallback), then pulls and verifies the very file it reported.
     Write-Step "Creating a '$Prefix' backup on the server..."
     $r = Invoke-RemoteRootScript -Config $Config -Gateway 'backup' -ArgumentList @('--prefix', $Prefix) -Capture
@@ -1195,6 +1235,14 @@ function Invoke-SetupMode {
     }
     if ($check.Output -contains '[GO_LIVE_EXISTS]') { throw 'Server is GO-LIVE; Setup is blocked to protect live data.' }
 
+    $modules = $config.Modules
+    if (-not $config.ModulesSet -and -not $NonInteractive) {
+        $answer = ([string](Read-Host -Prompt 'Modules to install: 1) warehouse  2) accounting  3) both [3]')).Trim()
+        $modules = switch ($answer) { '1' { 'warehouse' } '2' { 'accounting' } { $_ -in @('', '3') } { $AllModules } default { $null } }
+        if (-not $modules) { throw "Invalid selection '$answer'." }
+    }
+    Write-Info "Modules: $modules (remote-setup refuses to change the modules of an existing installation)."
+
     $sha = Get-DeployCommit
     $front = Build-IsolatedFrontend $sha
     $bundle = New-DeploymentBundle $sha $front
@@ -1209,7 +1257,7 @@ if [ -e /var/www/warehouse/shared/GO_LIVE ]; then echo '[GO_LIVE_EXISTS]'; exit 
 bash "$@"
 '@
         $setupArgs = @("$stage/remote-setup.sh", $config.Domain, $config.AdminEmail, $config.DbName, $config.DbUser,
-            $config.AllowedHosts, [string]$config.SshPort, "$stage/bundle.tar.gz", $bundle.Sha256)
+            $config.AllowedHosts, [string]$config.SshPort, "$stage/bundle.tar.gz", $bundle.Sha256, $modules)
         if ($viaGateway) {
             $r = Invoke-RemoteRootScript -Config $config -Gateway 'setup' -ArgumentList $setupArgs -Capture
         } else {
@@ -1229,6 +1277,9 @@ bash "$@"
     } else {
         Write-Success "Setup completed: https://$($config.Domain)/"
     }
+    if (-not $config.ModulesSet) {
+        try { Save-ConfigModuleList $modules } catch { Write-Warn "Could not record Modules=$modules in the configuration: $($_.Exception.Message)" }
+    }
     try {
         [void](Register-PullTask)
     } catch {
@@ -1237,9 +1288,53 @@ bash "$@"
     return 0
 }
 
+function Invoke-PrepareAndPullBackup($Config, [string]$Sha, $Bundle, [string]$Stage, [string[]]$ExtraPrepareArgs = @()) {
+    # Phases 1 and 2 of Update (also used by ResetServer): prepare the release on the server, then pull and
+    # verify its pre-update backup. Returns { Release, Backup }, or { ExitCode } when prepare failed.
+    Write-Step 'Phase 1/3: preparing the release on the server (venv, checks, pre-update backup, migrate --plan)...'
+    $prepArgs = @('--bundle', "$Stage/bundle.tar.gz", '--bundle-sha256', $Bundle.Sha256, '--domain', $Config.Domain) + $ExtraPrepareArgs
+    $prep = Invoke-RemoteRootScript -Config $Config -Gateway 'deploy-prepare' -ArgumentList $prepArgs -Capture
+    if ($prep.ExitCode -ne 0) {
+        Write-Err "Prepare failed with exit code $($prep.ExitCode); nothing was activated."
+        return [pscustomobject]@{ ExitCode = $prep.ExitCode }
+    }
+    $releases = @($prep.Output | ForEach-Object { if ($_ -match '^\[RELEASE\] (\d{8}_\d{6}_[0-9a-f]{12})$') { $Matches[1] } })
+    $backups = @($prep.Output | ForEach-Object { if ($_ -match '^\[PRE_UPDATE_BACKUP\] ([A-Za-z0-9][A-Za-z0-9_.-]*\.dump)$') { $Matches[1] } })
+    $hashes = @($prep.Output | ForEach-Object { if ($_ -match '^\[PRE_UPDATE_BACKUP_SHA256\] ([0-9a-f]{64})$') { $Matches[1] } })
+    if ($releases.Count -ne 1 -or $backups.Count -ne 1 -or $hashes.Count -ne 1) {
+        throw 'Prepare did not print exactly one [RELEASE], [PRE_UPDATE_BACKUP] and [PRE_UPDATE_BACKUP_SHA256] marker; not activating.'
+    }
+    if (-not $releases[0].EndsWith('_' + $Sha.Substring(0, 12))) { throw "Prepared release $($releases[0]) does not belong to commit $Sha." }
+
+    Write-Step "Phase 2/3: pulling and verifying the pre-update backup $($backups[0])..."
+    # A backup made by this prepare cannot already be here; an existing copy means a stale or reused dump.
+    if ($backups[0] -cnotmatch '^db_pre_update_\d{8}_\d{6}\.dump$' -or (Test-Path -LiteralPath (Get-LocalPathFor $LocalBackupRoot $backups[0]))) {
+        throw "Pre-update backup $($backups[0]) is not a fresh db_pre_update_* dump; not activating."
+    }
+    Receive-VerifiedBackup -Config $Config -RelativePath $backups[0] -ExpectedSha256 $hashes[0] -CompanionRelativePath "$($backups[0]).sha256"
+    return [pscustomobject]@{ ExitCode = 0; Release = $releases[0]; Backup = $backups[0] }
+}
+
 function Invoke-UpdateMode {
     Test-LocalTool 'git', 'tar', 'npm'
     $config = Connect-Server
+    # Update never changes the installed modules: -AddModule adds one, and none is ever removed.
+    $serverModules = Get-ServerModuleList $config
+    $prepareExtra = @()
+    if ($null -eq $serverModules) {
+        Write-Warn "The server tooling predates module selection; it runs every module ($AllModules). This Update installs the new tooling."
+        if ($config.Modules -cne $AllModules) {
+            Write-Err "The configuration asks for Modules=$($config.Modules), but the server runs $AllModules. Update never changes the modules."
+            return 1
+        }
+    } else {
+        if ($serverModules -cne $config.Modules) {
+            Write-Err "Modules mismatch: the server has '$serverModules', the configuration asks for '$($config.Modules)'."
+            Write-Err 'Update never changes the installed modules. Add a module with deploy.ps1 -AddModule <code>; removing a module is not supported.'
+            return 1
+        }
+        $prepareExtra = @('--modules', $serverModules)
+    }
     $sha = Get-DeployCommit
     $front = Build-IsolatedFrontend $sha
     $bundle = New-DeploymentBundle $sha $front
@@ -1247,31 +1342,11 @@ function Invoke-UpdateMode {
     try {
         $stage = New-RemoteStage $config
         [void](Send-RemoteFile $config $bundle.Path $stage 'bundle.tar.gz')
+        $prepared = Invoke-PrepareAndPullBackup $config $sha $bundle $stage $prepareExtra
+        if ($prepared.ExitCode -ne 0) { return $prepared.ExitCode }
 
-        Write-Step 'Phase 1/3: preparing the release on the server (venv, checks, pre-update backup, migrate --plan)...'
-        $prepArgs = @('--bundle', "$stage/bundle.tar.gz", '--bundle-sha256', $bundle.Sha256, '--domain', $config.Domain)
-        $prep = Invoke-RemoteRootScript -Config $config -Gateway 'deploy-prepare' -ArgumentList $prepArgs -Capture
-        if ($prep.ExitCode -ne 0) {
-            Write-Err "Prepare failed with exit code $($prep.ExitCode); nothing was activated."
-            return $prep.ExitCode
-        }
-        $releases = @($prep.Output | ForEach-Object { if ($_ -match '^\[RELEASE\] (\d{8}_\d{6}_[0-9a-f]{12})$') { $Matches[1] } })
-        $backups = @($prep.Output | ForEach-Object { if ($_ -match '^\[PRE_UPDATE_BACKUP\] ([A-Za-z0-9][A-Za-z0-9_.-]*\.dump)$') { $Matches[1] } })
-        $hashes = @($prep.Output | ForEach-Object { if ($_ -match '^\[PRE_UPDATE_BACKUP_SHA256\] ([0-9a-f]{64})$') { $Matches[1] } })
-        if ($releases.Count -ne 1 -or $backups.Count -ne 1 -or $hashes.Count -ne 1) {
-            throw 'Prepare did not print exactly one [RELEASE], [PRE_UPDATE_BACKUP] and [PRE_UPDATE_BACKUP_SHA256] marker; not activating.'
-        }
-        if (-not $releases[0].EndsWith('_' + $sha.Substring(0, 12))) { throw "Prepared release $($releases[0]) does not belong to commit $sha." }
-
-        Write-Step "Phase 2/3: pulling and verifying the pre-update backup $($backups[0])..."
-        # A backup made by this prepare cannot already be here; an existing copy means a stale or reused dump.
-        if ($backups[0] -cnotmatch '^db_pre_update_\d{8}_\d{6}\.dump$' -or (Test-Path -LiteralPath (Get-LocalPathFor $LocalBackupRoot $backups[0]))) {
-            throw "Pre-update backup $($backups[0]) is not a fresh db_pre_update_* dump; not activating."
-        }
-        Receive-VerifiedBackup -Config $config -RelativePath $backups[0] -ExpectedSha256 $hashes[0] -CompanionRelativePath "$($backups[0]).sha256"
-
-        Write-Step "Phase 3/3: activating release $($releases[0])..."
-        $activateArgs = @($releases[0], '--verified-backup', $backups[0], '--domain', $config.Domain)
+        Write-Step "Phase 3/3: activating release $($prepared.Release)..."
+        $activateArgs = @($prepared.Release, '--verified-backup', $prepared.Backup, '--domain', $config.Domain)
         if ($Maintenance) { $activateArgs += '--maintenance' }
         $act = Invoke-RemoteRootScript -Config $config -Gateway 'deploy-activate' -ArgumentList $activateArgs
         if ($act.ExitCode -ne 0) {
@@ -1283,6 +1358,94 @@ function Invoke-UpdateMode {
         Remove-LocalBundle $bundle
     }
     Write-Success "Update deployed: https://$($config.Domain)/"
+    return 0
+}
+
+function Invoke-AddModuleMode([string]$Code) {
+    if (-not $Code) {
+        Assert-Interactive 'AddModule without a module name'
+        $Code = ([string](Read-Host -Prompt "Module to add ($($KnownModules -join ' or '))")).Trim()
+    }
+    if ($Code -cnotin $KnownModules) { throw "Unknown module '$Code' (known: $($KnownModules -join ', '))." }
+    $config = Connect-Server
+    $serverModules = Get-ServerModuleList $config
+    if ($null -eq $serverModules) { throw 'The server tooling predates module selection and already runs every module; run deploy.ps1 -Update first.' }
+    if ($Code -in $serverModules.Split(',')) {
+        Write-Err "Module $Code is already installed ($serverModules). Removing a module is not supported."
+        if ($config.Modules -cne $serverModules) { Write-Warn "The configuration says Modules=$($config.Modules); set it to $serverModules so that Update matches the server." }
+        return 1
+    }
+    $newModules = ConvertTo-CanonicalModuleList "$serverModules,$Code"
+    Write-Info "Modules: $serverModules -> $newModules"
+
+    # The backup is stored off-server and verified before anything changes.
+    $backup = Invoke-RemoteBackup $config 'pre_module'
+    Write-Step "Adding module $Code on the server (migrate, permissions, restart, health check)..."
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'add-module' -ArgumentList @($Code, '--verified-backup', $backup.Name, '--domain', $config.Domain) -Capture
+    if ($r.ExitCode -ne 0 -or -not ($r.Output -contains "[MODULE_ADDED] $Code")) {
+        if ($r.Output -contains '[MODULE_ROLLED_BACK]') {
+            Write-Err "Adding $Code failed; the server runs $serverModules again. Tables already migrated stay; nothing was deleted."
+        } else {
+            Write-Err "Adding $Code failed (exit $($r.ExitCode)). Run deploy.ps1 -Status to see the server state."
+        }
+        return $(if ($r.ExitCode -ne 0) { $r.ExitCode } else { 1 })
+    }
+    try {
+        Save-ConfigModuleList $newModules
+    } catch {
+        Write-Warn "Module added, but Modules=$newModules could not be written to the configuration: $($_.Exception.Message). Set it by hand before the next Update."
+    }
+    Write-Success "Module $Code added; the server runs $newModules (configuration updated, previous copy in .bak-<timestamp>)."
+    return 0
+}
+
+function Invoke-ResetServerMode {
+    # Before GO_LIVE only: recreates the application database empty with the configured modules and deploys
+    # HEAD on it. The pre-update backup of the new release is pulled and verified before the database is dropped.
+    Assert-Interactive 'ResetServer'
+    Test-LocalTool 'git', 'tar', 'npm'
+    $config = Connect-Server
+    $check = Invoke-RemoteRootScript -Config $config -Gateway 'check-go-live' -Capture -Quiet
+    if ($check.ExitCode -ne 0 -or -not (($check.Output -contains '[GO_LIVE_EXISTS]') -xor ($check.Output -contains '[NO_GO_LIVE]'))) {
+        throw "Could not check the GO_LIVE flag (exit $($check.ExitCode))."
+    }
+    if ($check.Output -contains '[GO_LIVE_EXISTS]') { throw 'Server is GO-LIVE; ResetServer is refused to protect live data.' }
+    Write-Warn "ResetServer DROPS the application database on $($config.ServerHost) and creates it empty with Modules=$($config.Modules)."
+    Write-Warn 'A verified pre-update backup is pulled to this machine first; media and in-app backup files are kept.'
+    if (-not (Confirm-TypedWord 'RESET' "Type RESET to recreate the database of $($config.ServerHost)")) {
+        Write-Warn 'ResetServer cancelled; nothing was changed.'
+        return 0
+    }
+    $sha = Get-DeployCommit
+    $front = Build-IsolatedFrontend $sha
+    $bundle = New-DeploymentBundle $sha $front
+    $stage = $null
+    try {
+        $stage = New-RemoteStage $config
+        [void](Send-RemoteFile $config $bundle.Path $stage 'bundle.tar.gz')
+        $prepared = Invoke-PrepareAndPullBackup $config $sha $bundle $stage
+        if ($prepared.ExitCode -ne 0) { return $prepared.ExitCode }
+
+        Write-Step "Recreating the database with Modules=$($config.Modules)..."
+        $resetArgs = @($prepared.Release, '--modules', $config.Modules, '--verified-backup', $prepared.Backup, '--domain', $config.Domain)
+        $reset = Invoke-RemoteRootScript -Config $config -Gateway 'reset-database' -ArgumentList $resetArgs -Capture
+        if ($reset.ExitCode -ne 0 -or -not (@($reset.Output | Where-Object { $_ -like '[[]DATABASE_RESET[]] *' }).Count -eq 1)) {
+            Write-Err "Resetting the database failed (exit $($reset.ExitCode)). The pre-update backup $($prepared.Backup) is stored here and verified."
+            return $(if ($reset.ExitCode -ne 0) { $reset.ExitCode } else { 1 })
+        }
+
+        Write-Step "Activating release $($prepared.Release) on the new database..."
+        $act = Invoke-RemoteRootScript -Config $config -Gateway 'deploy-activate' -ArgumentList @($prepared.Release, '--verified-backup', $prepared.Backup, '--domain', $config.Domain)
+        if ($act.ExitCode -ne 0) {
+            Write-Err "Activation failed with exit code $($act.ExitCode). Run deploy.ps1 -Status to see the server state."
+            return $act.ExitCode
+        }
+    } finally {
+        if ($stage) { Remove-RemoteStage $config $stage }
+        Remove-LocalBundle $bundle
+    }
+    Write-Success "Server reset: empty database with Modules=$($config.Modules) on https://$($config.Domain)/"
+    Write-Info 'Next: deploy.ps1 -CreateAdmin to create the first administrator.'
     return 0
 }
 
@@ -1713,6 +1876,7 @@ $MenuItems = @(
     @('InstallKey', 'Install SSH public key on the server'),
     @('Setup', 'Initial server provisioning and first deployment'),
     @('Update', 'Two-phase update (prepare, pull backup, activate)'),
+    @('AddModule', 'Add a module (warehouse or accounting)'),
     @('Backup', 'Create a manual server backup and pull it'),
     @('PullBackups', 'Pull and verify all server backups'),
     @('PruneBackups', 'Prune server dumps verified off-server'),
@@ -1726,7 +1890,8 @@ $MenuItems = @(
     @('Logs', 'Stream service logs'),
     @('Restart', 'Restart services and reload Nginx'),
     @('IssueCert', "Issue the Let's Encrypt certificate (DNS-01, Cloudflare)"),
-    @('Status', 'Server and off-server backup status')
+    @('Status', 'Server and off-server backup status'),
+    @('ResetServer', 'Recreate the database empty (before GO_LIVE only)')
 )
 
 function Show-Menu {
@@ -1760,6 +1925,10 @@ Modes (exactly one):
   -InstallKey        Install the local ED25519 public key on the server (interactive)
   -Setup             Provision the server and deploy HEAD (blocked after GO_LIVE)
   -Update            Build HEAD, upload, prepare, pull the pre-update backup, activate
+                     (never changes the installed modules; Modules must match the server)
+  -AddModule <code>  Add the warehouse or accounting module: verified backup, migrate, restart, health
+                     check; a failure restores the previous modules (removing a module is not supported)
+  -ResetServer       Before GO_LIVE only: recreate the database empty with Modules and deploy HEAD (typed RESET)
   -Backup            Create a manual server backup and pull it (verified)
   -PullBackups       Pull new verified backups and the media mirror into backups/soft
   -PruneBackups      Delete server dumps whose local copy matches a fresh server sha256
@@ -1795,6 +1964,8 @@ function Invoke-Mode([string]$Name) {
             'InstallKey' { Invoke-InstallKeyMode }
             'Setup' { Invoke-SetupMode }
             'Update' { Invoke-UpdateMode }
+            'AddModule' { Invoke-AddModuleMode $AddModule }
+            'ResetServer' { Invoke-ResetServerMode }
             'Backup' { Invoke-BackupMode }
             'PullBackups' { Invoke-PullBackupsMode }
             'PruneBackups' { Invoke-PruneBackupsMode }
@@ -1830,6 +2001,7 @@ function Invoke-Main {
             CreateAdmin = [bool]$CreateAdmin; SetSecret = -not [string]::IsNullOrEmpty($SetSecret)
             RegisterPullTask = [bool]$RegisterPullTask; Logs = [bool]$Logs; Restart = [bool]$Restart
             IssueCert = [bool]$IssueCert; Status = [bool]$Status; Help = [bool]$ShowHelp
+            AddModule = -not [string]::IsNullOrEmpty($AddModule); ResetServer = [bool]$ResetServer
         }
         $chosen = @($flags.Keys | Where-Object { $flags[$_] })
         if ($chosen.Count -gt 1) {

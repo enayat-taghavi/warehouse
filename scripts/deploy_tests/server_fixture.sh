@@ -122,6 +122,15 @@ case "$mode" in
         echo "[ACTIVATED] $rel" ;;
     --rollback)
         echo "rollback" >> "$LOG" ;;
+    --print-modules)
+        v=$(sed -n 's/^WH_MODULES=//p' /var/www/warehouse/shared/.env | tail -n 1)
+        if [ -z "$v" ]; then v=warehouse,accounting; fi
+        case "$v" in warehouse|accounting|warehouse,accounting) ;; *) echo "[ERROR] invalid WH_MODULES" >&2; exit 1 ;; esac
+        echo "[MODULES] $v" ;;
+    --add-module|--reset-database)
+        echo "${mode#--} $*" >> "$LOG"
+        echo "[ERROR] (fake) ${mode} is exercised by test_server_e2e.ps1" >&2
+        exit 9 ;;
     --start-services)
         # /run/fake-deploy-hold plays a release that does not match the restored schema.
         echo "start-services" >> "$LOG"
