@@ -298,7 +298,8 @@ DJANGO_MEDIA_ROOT=${SHARED_DIR}/media
 WAREHOUSE_REPORT_EXPORT_DIR=${SHARED_DIR}/report_exports
 WAREHOUSE_BACKUP_DIR=${SHARED_DIR}/backups
 WAREHOUSE_BACKUP_KEEP=0
-GOOGLE_OAUTH_REDIRECT_URI=https://${DOMAIN}/api/auth/google/callback
+GOOGLE_OAUTH_REDIRECT_URI=https://${DOMAIN}/api/accounts/gdrive/callback/
+WH_CANONICAL_DOMAIN=${DOMAIN}
 DB_NAME=${DB_NAME}
 DB_USER=${DB_USER}
 DB_PASSWORD=${DB_PASSWORD}
@@ -312,12 +313,16 @@ EOF
     chmod 640 "$ENV_FILE"
     printf '%s\n' "$MODULES" > "${SHARED_DIR}/MODULES"
     printf '%s\n' "$CERT_MODE_ARG" > "${SHARED_DIR}/CERT_MODE"
+    printf '%s\n' "$DOMAIN" > "${SHARED_DIR}/DOMAIN"
 else
     # Second Setup: the database and .env are never touched (6.2). warehouse-deploy --prepare (step 8)
     # appends every missing non-secret key; only the allowed hosts from the configuration are added here.
     echo "--> Existing ${ENV_FILE} preserved; the database is not touched."
     if [[ ! -f "${SHARED_DIR}/CERT_MODE" ]]; then
         printf '%s\n' "$CERT_MODE_ARG" > "${SHARED_DIR}/CERT_MODE"
+    fi
+    if [[ ! -f "${SHARED_DIR}/DOMAIN" ]]; then
+        printf '%s\n' "$DOMAIN" > "${SHARED_DIR}/DOMAIN"
     fi
     if ! grep -q '^DJANGO_ALLOWED_HOSTS=' "$ENV_FILE"; then
         [[ -z "$(tail -c 1 "$ENV_FILE")" ]] || printf '\n' >> "$ENV_FILE"

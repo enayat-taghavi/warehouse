@@ -46,6 +46,9 @@ param(
     [switch]$Status,
     [string]$AddModule,
     [switch]$ResetServer,
+    [string]$ChangeDomain,
+    [switch]$FinishDomainChange,
+    [string]$RemoveLegacyDomain,
     [Alias('Help')]
     [switch]$ShowHelp,
     [switch]$NonInteractive,
@@ -441,6 +444,16 @@ function Save-ConfigModuleList([string]$Modules) {
     $path = Get-ConfigPath
     $raw = Get-Content -LiteralPath $path -Raw -Encoding utf8 | ConvertFrom-Json
     $raw | Add-Member -NotePropertyName 'Modules' -NotePropertyValue $Modules -Force
+    Copy-Item -LiteralPath $path -Destination "$path.bak-$((Get-Date).ToString('yyyyMMdd_HHmmss'))"
+    Write-Utf8LfFile $path (($raw | ConvertTo-Json -Depth 10) + "`n")
+}
+
+function Save-ConfigDomain([string]$Domain) {
+    # Records the server's new primary domain in the configuration file (a .bak copy is kept).
+    # Every other key is left as it is.
+    $path = Get-ConfigPath
+    $raw = Get-Content -LiteralPath $path -Raw -Encoding utf8 | ConvertFrom-Json
+    $raw | Add-Member -NotePropertyName 'Domain' -NotePropertyValue $Domain -Force
     Copy-Item -LiteralPath $path -Destination "$path.bak-$((Get-Date).ToString('yyyyMMdd_HHmmss'))"
     Write-Utf8LfFile $path (($raw | ConvertTo-Json -Depth 10) + "`n")
 }
@@ -1933,6 +1946,110 @@ function Invoke-StatusMode {
 # ==============================================================================
 # Menu, help and entry point
 # ==============================================================================
+function Invoke-ChangeDomainMode([string]$NewDomain) {
+    if (-not $NewDomain) {
+        Assert-Interactive 'ChangeDomain'
+        $NewDomain = ([string](Read-Host -Prompt 'New primary domain name (lower-case)')).Trim()
+    }
+    $domainRegex = '^(?=.{1,253}$)[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$'
+    if ($NewDomain -cnotmatch $domainRegex) { throw "New domain must be a lower-case hostname (got: '$NewDomain')." }
+
+    $config = Connect-Server
+    if ($NewDomain -ceq $config.Domain) { throw "Domain '$NewDomain' is already the active primary domain." }
+
+    Write-Step "Changing primary domain from $($config.Domain) to $NewDomain on $($config.ServerHost)..."
+
+    # Certificate check/issuance:
+    # If the certificate for $NewDomain is not present yet, obtain it using CertMode.
+    if ($config.CertMode -in @('http01', 'dns01-cloudflare')) {
+        Write-Step "Requesting Let's Encrypt certificate for $NewDomain via $($config.CertMode)..."
+        $gatewayArgs = @($config.AdminEmail, $config.CertMode, $NewDomain)
+        $rCert = Invoke-RemoteRootScript -Config $config -Gateway 'issue-cert' -ArgumentList $gatewayArgs -Capture
+        if ($rCert.ExitCode -ne 0 -or -not ($rCert.Output -contains '[CERT_OK]')) {
+            throw "Issuing certificate for $NewDomain failed (exit $($rCert.ExitCode))."
+        }
+    } elseif ($config.CertMode -in @('cloudflare-origin', 'custom')) {
+        if ($CertFile -and $KeyFile) {
+            Write-Step "Installing TLS certificate for $NewDomain via $($config.CertMode)..."
+            $stage = $null
+            try {
+                $stage = New-RemoteStage $config
+                [void](Send-RemoteFile -Config $config -LocalPath $CertFile -StageDir $stage -Name 'cert.pem')
+                [void](Send-RemoteFile -Config $config -LocalPath $KeyFile -StageDir $stage -Name 'privkey.pem')
+                $gatewayArgs = @($config.CertMode, "$stage/cert.pem", "$stage/privkey.pem")
+                if ($ChainFile) {
+                    [void](Send-RemoteFile -Config $config -LocalPath $ChainFile -StageDir $stage -Name 'chain.pem')
+                    $gatewayArgs += "$stage/chain.pem"
+                }
+                $gatewayArgs += $NewDomain
+                $rCert = Invoke-RemoteRootScript -Config $config -Gateway 'install-cert' -ArgumentList $gatewayArgs -Capture
+                if ($rCert.ExitCode -ne 0 -or -not ($rCert.Output -contains "[CERT_INSTALLED] $($config.CertMode)")) {
+                    throw "Installing certificate for $NewDomain failed (exit $($rCert.ExitCode))."
+                }
+            } finally {
+                if ($stage) { Remove-RemoteStage $config $stage }
+            }
+        }
+    }
+
+    # Execute domain change on server (atomically updates shared/DOMAIN, shared/DOMAINS_LEGACY, .env, and Nginx)
+    Write-Step "Applying domain change on $($config.ServerHost)..."
+    $rChange = Invoke-RemoteRootScript -Config $config -Gateway 'change-domain' -ArgumentList @($NewDomain) -Capture
+    if ($rChange.ExitCode -ne 0 -or -not ($rChange.Output -contains "[DOMAIN_CHANGED] $NewDomain")) {
+        throw "Domain change failed on the server (exit $($rChange.ExitCode)). State was rolled back on the server."
+    }
+
+    # Update deploy_config.json with timestamped backup
+    Save-ConfigDomain $NewDomain
+
+    Write-Success "Domain changed successfully!"
+    Write-Success "  Primary domain (active): $NewDomain"
+    Write-Success "  Legacy domain (transition): $($config.Domain)"
+    Write-Warn "CRITICAL: OAuth redirect URI in Google Cloud Console must be updated to:"
+    Write-Warn "  https://$NewDomain/api/accounts/gdrive/callback/"
+    return 0
+}
+
+function Invoke-FinishDomainChangeMode {
+    $config = Connect-Server
+    Write-Step "Finalizing domain change on $($config.ServerHost) (converting transition domains to 301 redirects)..."
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'finish-domain-change' -Capture
+    if ($r.ExitCode -ne 0 -or -not ($r.Output -contains '[FINISH_DOMAIN_CHANGE_OK]')) {
+        throw "Finalizing domain change failed (exit $($r.ExitCode))."
+    }
+    Write-Success "All transition domains converted to permanent 301 redirects."
+    Write-Info "Certificates for legacy domains continue to be renewed automatically for HTTPS redirection."
+    return 0
+}
+
+function Invoke-RemoveLegacyDomainMode([string]$LegacyDomain) {
+    if (-not $LegacyDomain) {
+        Assert-Interactive 'RemoveLegacyDomain'
+        $LegacyDomain = ([string](Read-Host -Prompt 'Domain to retire from legacy redirect')).Trim()
+    }
+    $domainRegex = '^(?=.{1,253}$)[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$'
+    if ($LegacyDomain -cnotmatch $domainRegex) { throw "Legacy domain must be a lower-case hostname (got: '$LegacyDomain')." }
+
+    $config = Connect-Server
+    if ($LegacyDomain -ceq $config.Domain) { throw "Cannot remove active primary domain '$LegacyDomain'." }
+
+    Assert-Interactive 'RemoveLegacyDomain'
+    Write-Warn "This will remove the 301 redirect for legacy domain '$LegacyDomain'."
+    Write-Warn "Its TLS certificate directory will be archived into shared/retired/tls/ (no files deleted)."
+    if (-not (Confirm-TypedWord "RETIRE $LegacyDomain" "Type 'RETIRE $LegacyDomain' to confirm removal")) {
+        Write-Warn "Removal of legacy domain $LegacyDomain cancelled."
+        return 0
+    }
+
+    Write-Step "Removing legacy domain $LegacyDomain on $($config.ServerHost)..."
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'remove-legacy-domain' -ArgumentList @($LegacyDomain) -Capture
+    if ($r.ExitCode -ne 0 -or -not ($r.Output -contains "[LEGACY_DOMAIN_REMOVED] $LegacyDomain")) {
+        throw "Removing legacy domain failed on the server (exit $($r.ExitCode))."
+    }
+    Write-Success "Legacy domain $LegacyDomain removed and archived to shared/retired/ on the server."
+    return 0
+}
+
 $MenuItems = @(
     @('InstallKey', 'Install SSH public key on the server'),
     @('Setup', 'Initial server provisioning and first deployment'),
@@ -1952,6 +2069,9 @@ $MenuItems = @(
     @('Restart', 'Restart services and reload Nginx'),
     @('IssueCert', "Issue the Let's Encrypt certificate (HTTP-01 or DNS-01 by CertMode)"),
     @('InstallCert', 'Install a Cloudflare Origin or Custom TLS certificate'),
+    @('ChangeDomain', 'Change primary domain (new domain active, old in transition)'),
+    @('FinishDomainChange', 'Finish domain change (convert transition domains to 301 redirect)'),
+    @('RemoveLegacyDomain', 'Remove legacy domain redirect (archives TLS to shared/retired)'),
     @('Status', 'Server and off-server backup status'),
     @('ResetServer', 'Recreate the database empty (before GO_LIVE only)')
 )
@@ -2006,6 +2126,9 @@ Modes (exactly one):
   -Restart           Restart application services and reload Nginx
   -IssueCert         Issue the Let's Encrypt certificate (HTTP-01 or DNS-01 by CertMode)
   -InstallCert       Install a Cloudflare Origin or Custom TLS certificate (-CertFile, -KeyFile)
+  -ChangeDomain <d>  Change primary domain to <d>: issues/installs cert, puts old domain in transition
+  -FinishDomainChange Convert all legacy transition domains to permanent 301 redirects
+  -RemoveLegacyDomain <d> Remove legacy domain redirect (archives its TLS files to shared/retired/)
   -Status            Server state, heartbeats, disk, certificate and off-server copies
   -Help              Show this help
 
@@ -2046,6 +2169,9 @@ function Invoke-Mode([string]$Name) {
             'Restart' { Invoke-RestartMode }
             'IssueCert' { Invoke-IssueCertMode }
             'InstallCert' { Invoke-InstallCertMode -CertPath $CertFile -KeyPath $KeyFile -ChainPath $ChainPath }
+            'ChangeDomain' { Invoke-ChangeDomainMode $ChangeDomain }
+            'FinishDomainChange' { Invoke-FinishDomainChangeMode }
+            'RemoveLegacyDomain' { Invoke-RemoveLegacyDomainMode $RemoveLegacyDomain }
             'Status' { Invoke-StatusMode }
             'Help' { Show-Help; 0 }
             default { throw "Unknown mode: $Name" }
@@ -2069,6 +2195,9 @@ function Invoke-Main {
             RegisterPullTask = [bool]$RegisterPullTask; Logs = [bool]$Logs; Restart = [bool]$Restart
             IssueCert = [bool]$IssueCert; InstallCert = [bool]$InstallCert; Status = [bool]$Status; Help = [bool]$ShowHelp
             AddModule = -not [string]::IsNullOrEmpty($AddModule); ResetServer = [bool]$ResetServer
+            ChangeDomain = -not [string]::IsNullOrEmpty($ChangeDomain)
+            FinishDomainChange = [bool]$FinishDomainChange
+            RemoveLegacyDomain = -not [string]::IsNullOrEmpty($RemoveLegacyDomain)
         }
         $chosen = @($flags.Keys | Where-Object { $flags[$_] })
         if ($chosen.Count -gt 1) {

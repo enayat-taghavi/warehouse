@@ -626,14 +626,15 @@ PYEOF
         ;;
 
     issue-cert)
-        # issue-cert <admin email> [cert_mode]: Let's Encrypt certificate for shared/DOMAIN;
+        # issue-cert <admin email> [cert_mode] [target_domain]: Let's Encrypt certificate for target or shared/DOMAIN;
         # certbot.timer renews it with the same plugin and reloads nginx.
-        if [ $# -lt 1 ] || [ $# -gt 2 ] || ! [[ "$1" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
-            echo "[ERROR] issue-cert requires a valid admin email and optional cert mode." >&2
+        if [ $# -lt 1 ] || [ $# -gt 3 ] || ! [[ "$1" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
+            echo "[ERROR] issue-cert requires a valid admin email, optional cert mode, and optional target domain." >&2
             exit 2
         fi
         EMAIL="$1"
         REQ_MODE="${2:-}"
+        TARGET_DOMAIN="${3:-}"
         if [ -z "$REQ_MODE" ]; then
             if [[ -f "/etc/letsencrypt/cloudflare.ini" && ! -L "/etc/letsencrypt/cloudflare.ini" ]]; then
                 REQ_MODE="dns01-cloudflare"
@@ -648,9 +649,13 @@ PYEOF
             echo "[ERROR] issue-cert: cert mode must be 'http01' or 'dns01-cloudflare' (got: $REQ_MODE)." >&2
             exit 2
         fi
-        DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null || true)
+        if [ -n "$TARGET_DOMAIN" ]; then
+            DOMAIN="$TARGET_DOMAIN"
+        else
+            DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null || true)
+        fi
         if ! [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]; then
-            echo "[ERROR] issue-cert: shared/DOMAIN is missing or invalid." >&2
+            echo "[ERROR] issue-cert: target domain or shared/DOMAIN is missing or invalid." >&2
             exit 2
         fi
         if [[ "$REQ_MODE" == "dns01-cloudflare" ]]; then
@@ -682,19 +687,30 @@ PYEOF
         ;;
 
     install-cert)
-        # install-cert <mode> <cert_stage_file> <key_stage_file> [<chain_stage_file>]
+        # install-cert <mode> <cert_stage_file> <key_stage_file> [<chain_stage_file>] [<target_domain>]
         # Installs a Cloudflare Origin or Custom certificate after rigorous OpenSSL verification.
         # Mode must be 'cloudflare-origin' or 'custom'.
         # Private key is verified and installed with root:root 0600 permissions.
         # Nginx configuration is updated and tested with nginx -t before previous cert is removed.
-        if [ $# -lt 3 ] || [ $# -gt 4 ]; then
-            echo "[ERROR] install-cert requires: <mode> <cert_stage> <key_stage> [<chain_stage>]" >&2
+        if [ $# -lt 3 ] || [ $# -gt 5 ]; then
+            echo "[ERROR] install-cert requires: <mode> <cert_stage> <key_stage> [<chain_stage>] [<target_domain>]" >&2
             exit 2
         fi
         CERT_MODE_REQ="$1"
         CERT_STAGE="$2"
         KEY_STAGE="$3"
-        CHAIN_STAGE="${4:-}"
+        CHAIN_STAGE=""
+        TARGET_DOMAIN=""
+        if [ $# -eq 4 ]; then
+            if [[ "$4" =~ ^/tmp/wh-deploy\. ]]; then
+                CHAIN_STAGE="$4"
+            else
+                TARGET_DOMAIN="$4"
+            fi
+        elif [ $# -eq 5 ]; then
+            CHAIN_STAGE="$4"
+            TARGET_DOMAIN="$5"
+        fi
 
         if [[ "$CERT_MODE_REQ" != "cloudflare-origin" && "$CERT_MODE_REQ" != "custom" ]]; then
             echo "[ERROR] install-cert: mode must be 'cloudflare-origin' or 'custom' (got: $CERT_MODE_REQ)." >&2
@@ -707,9 +723,13 @@ PYEOF
             assert_stage_file "$CHAIN_STAGE"
         fi
 
-        DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null || true)
+        if [ -n "$TARGET_DOMAIN" ]; then
+            DOMAIN="$TARGET_DOMAIN"
+        else
+            DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null || true)
+        fi
         if ! [[ "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]; then
-            echo "[ERROR] install-cert: shared/DOMAIN is missing or invalid." >&2
+            echo "[ERROR] install-cert: target domain or shared/DOMAIN is missing or invalid." >&2
             exit 2
         fi
 
@@ -773,6 +793,36 @@ PYEOF
             rm -rf "$TLS_BACKUP"
         fi
         echo "[CERT_INSTALLED] $CERT_MODE_REQ"
+        exit 0
+        ;;
+
+    change-domain)
+        # change-domain <new_domain>
+        if [ $# -ne 1 ] || ! [[ "$1" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]; then
+            echo "[ERROR] change-domain requires a valid domain name." >&2
+            exit 2
+        fi
+        /usr/local/sbin/warehouse-deploy --change-domain "$1"
+        exit 0
+        ;;
+
+    finish-domain-change)
+        # finish-domain-change
+        if [ $# -ne 0 ]; then
+            echo "[ERROR] finish-domain-change takes no arguments." >&2
+            exit 2
+        fi
+        /usr/local/sbin/warehouse-deploy --finish-domain-change
+        exit 0
+        ;;
+
+    remove-legacy-domain)
+        # remove-legacy-domain <domain>
+        if [ $# -ne 1 ] || ! [[ "$1" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$ ]]; then
+            echo "[ERROR] remove-legacy-domain requires a valid domain name." >&2
+            exit 2
+        fi
+        /usr/local/sbin/warehouse-deploy --remove-legacy-domain "$1"
         exit 0
         ;;
 

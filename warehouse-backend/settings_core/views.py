@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -116,6 +117,7 @@ class PublicConfigViewSet(viewsets.ViewSet):
         return Response({
             'system_version': get_setting('system_version'),
             'system_name': 'سامانه یکپارچه مدیریت انبارگردانی فارس عالیش',
+            'canonical_domain': getattr(settings, 'WH_CANONICAL_DOMAIN', ''),
             'offline_sync_interval_minutes': clamped_minutes('offline_sync_interval_minutes', 1, 1440),
             # صفر = «هیچ‌وقت کهنه نشود» و مقدار معتبری است، پس کف بازه صفر است
             'offline_cache_ttl_minutes': clamped_minutes('offline_cache_ttl_minutes', 0, 10080),

@@ -443,6 +443,25 @@ touch /run/fake-deploy-hold; : > /run/fake-systemd/log; : > /run/fake-deploy.log
     # Restore original config
     Write-Utf8LfFile $ConfigFile $origConfig
     $script:CertFile = ''; $script:KeyFile = ''; $script:ChainFile = ''
+
+    # 13. Domain migration parameter checks and helpers (plan Modular_Deploy_Options step 5)
+    # 13.1 Invalid domain names rejected
+    $script:ChangeDomain = 'INVALID_DOMAIN!'
+    Assert-True ((Invoke-TestMode 'ChangeDomain') -ne 0) 'ChangeDomain refuses invalid hostname'
+    $script:ChangeDomain = 'soft.example.test'
+    Assert-True ((Invoke-TestMode 'ChangeDomain') -ne 0) 'ChangeDomain refuses identical domain'
+    $script:ChangeDomain = ''
+
+    # 13.2 NonInteractive without domain parameter rejected
+    Assert-True ((Invoke-TestMode 'ChangeDomain' -NonInteractiveRun) -ne 0) 'ChangeDomain in -NonInteractive without domain argument exits non-zero'
+    Assert-True ((Invoke-TestMode 'RemoveLegacyDomain' -NonInteractiveRun) -ne 0) 'RemoveLegacyDomain in -NonInteractive exits non-zero'
+
+    # 13.3 Save-ConfigDomain helper
+    $origDomainCfg = (Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json).Domain
+    Save-ConfigDomain 'sub.domain.test'
+    Assert-True ((Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json).Domain -eq 'sub.domain.test') 'Save-ConfigDomain updates domain in config'
+    Assert-True (@(Get-ChildItem -LiteralPath (Split-Path $ConfigFile) -Filter "$(Split-Path $ConfigFile -Leaf).bak-*" -File).Count -ge 1) '... and timestamped backup is created'
+    Save-ConfigDomain $origDomainCfg
 } catch {
     Write-Host "[FAIL] test aborted: $($_.Exception.Message)`n$($_.ScriptStackTrace)" -ForegroundColor Red
     $script:failures++

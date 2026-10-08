@@ -2,6 +2,8 @@ import { Component, signal, effect, inject } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { ToastContainerComponent } from './shared/components/toast/toast.component';
 import { ConfirmDialogComponent } from './shared/components/confirm-dialog/confirm-dialog.component';
+import { DomainMigrationBannerComponent } from './shared/components/domain-migration-banner/domain-migration-banner.component';
+import { DomainMigrationService } from './core/services/domain-migration.service';
 import { AuthService } from './core/auth/auth.service';
 import { WebSocketService } from './core/http/websocket.service';
 import { ClientTelemetryService } from './core/services/client-telemetry.service';
@@ -9,7 +11,7 @@ import { PwaUpdateService } from './core/services/pwa-update.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ToastContainerComponent, ConfirmDialogComponent],
+  imports: [RouterOutlet, ToastContainerComponent, ConfirmDialogComponent, DomainMigrationBannerComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -20,6 +22,7 @@ export class App {
   private ws = inject(WebSocketService);
   private telemetry = inject(ClientTelemetryService);
   private pwaUpdate = inject(PwaUpdateService);
+  private domainMigration = inject(DomainMigrationService);
 
   constructor() {
     // پشتیبانی از لینک‌های دارای هش استعلام
@@ -44,6 +47,7 @@ export class App {
     });
 
     this.pwaUpdate.init();
+    this.domainMigration.init();
   }
 }
 

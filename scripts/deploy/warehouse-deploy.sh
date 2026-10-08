@@ -205,6 +205,67 @@ set_env_modules() {
     write_record MODULES "$1"
 }
 
+# Rewrites the domain-managed keys in shared/.env atomically:
+# DJANGO_ALLOWED_HOSTS, DJANGO_CSRF_TRUSTED_ORIGINS, GOOGLE_OAUTH_REDIRECT_URI, and WH_CANONICAL_DOMAIN.
+# Every other line (especially secrets and db config) stays byte-for-byte untouched, preserving owner and mode.
+write_env_domains() {
+    local canonical="$1" env="${SHARED_DIR}/.env" tmp="${SHARED_DIR}/.env.domains.$$"
+    [[ -n "$canonical" ]] || die "write_env_domains requires a canonical domain."
+    [[ -f "$env" && ! -L "$env" ]] || die "Production environment file $env does not exist."
+
+    local legacy_file="${SHARED_DIR}/DOMAINS_LEGACY"
+    local domains=("$canonical")
+    local d m
+    if [[ -f "$legacy_file" && ! -L "$legacy_file" ]]; then
+        while read -r d m _rest; do
+            [[ -n "$d" && ! "$d" =~ ^# ]] || continue
+            if [[ "$d" != "$canonical" ]]; then
+                domains+=("$d")
+            fi
+        done < "$legacy_file"
+    fi
+
+    local unique_domains=()
+    local seen=" "
+    for d in "${domains[@]}"; do
+        if [[ "$seen" != *" $d "* ]]; then
+            unique_domains+=("$d")
+            seen="${seen}${d} "
+        fi
+    done
+
+    local allowed_hosts="${unique_domains[*]}"
+    allowed_hosts="${allowed_hosts// /,}"
+    allowed_hosts="${allowed_hosts},127.0.0.1,localhost"
+
+    local csrf_origins=""
+    for d in "${unique_domains[@]}"; do
+        if [[ -z "$csrf_origins" ]]; then
+            csrf_origins="https://${d}"
+        else
+            csrf_origins="${csrf_origins},https://${d}"
+        fi
+    done
+
+    local oauth_redirect="https://${canonical}/api/accounts/gdrive/callback/"
+
+    cp -p -- "$env" "$tmp"
+    local pattern='^(DJANGO_ALLOWED_HOSTS|DJANGO_CSRF_TRUSTED_ORIGINS|GOOGLE_OAUTH_REDIRECT_URI|WH_CANONICAL_DOMAIN)='
+
+    grep -v -E "$pattern" -- "$env" > "$tmp" || [[ $? -eq 1 ]] || { rm -f -- "$tmp"; die "Could not read $env."; }
+    [[ "$(grep -c '' -- "$tmp" || true)" == "$(grep -cv -E "$pattern" -- "$env" || true)" ]] \
+        || { rm -f -- "$tmp"; die "Rewriting $env lost lines; it was left unchanged."; }
+
+    if [[ -s "$tmp" && -n "$(tail -c 1 "$tmp")" ]]; then printf '\n' >> "$tmp"; fi
+    printf 'DJANGO_ALLOWED_HOSTS=%s\n' "$allowed_hosts" >> "$tmp"
+    printf 'DJANGO_CSRF_TRUSTED_ORIGINS=%s\n' "$csrf_origins" >> "$tmp"
+    printf 'GOOGLE_OAUTH_REDIRECT_URI=%s\n' "$oauth_redirect" >> "$tmp"
+    printf 'WH_CANONICAL_DOMAIN=%s\n' "$canonical" >> "$tmp"
+
+    sync -- "$tmp"
+    mv -f -- "$tmp" "$env"
+}
+
 # A backup handed to a mode must be a regular file that matches the sha256 recorded next to it.
 assert_backup_matches_record() {
     local bk="${BACKUPS_DIR}/$1" recorded actual
@@ -266,7 +327,8 @@ DJANGO_MEDIA_ROOT=${SHARED_DIR}/media
 WAREHOUSE_REPORT_EXPORT_DIR=${SHARED_DIR}/report_exports
 WAREHOUSE_BACKUP_DIR=${SHARED_DIR}/backups
 WAREHOUSE_BACKUP_KEEP=0
-GOOGLE_OAUTH_REDIRECT_URI=https://${domain}/api/auth/google/callback
+GOOGLE_OAUTH_REDIRECT_URI=https://${domain}/api/accounts/gdrive/callback/
+WH_CANONICAL_DOMAIN=${domain}
 DB_HOST=127.0.0.1
 DB_PORT=5432
 REDIS_URL=redis://127.0.0.1:6379/1
@@ -461,6 +523,120 @@ EOF
         echo "[WARNING] ${rel##*/} has no nginx template; nginx configuration left unchanged." >&2
         return 0
     fi
+
+    # Render legacy domains from shared/DOMAINS_LEGACY if present in HTTPS mode
+    local legacy_file="${SHARED_DIR}/DOMAINS_LEGACY"
+    if [[ -f "$legacy_file" && ! -L "$legacy_file" && -f "${tls_dir}/fullchain.pem" && -f "${tdir}/nginx-https.conf" ]]; then
+        local leg_d leg_m leg_tls
+        # Extract main 443 server block for transition domains
+        local trans_base
+        trans_base=$(python3 -c '
+import sys
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    text = f.read()
+target = sys.argv[2]
+needle = "listen 443 ssl http2;"
+p = text.find(needle)
+if p != -1:
+    idx = text.rfind("server {", 0, p)
+    if idx != -1:
+        print(text[idx:])
+' "$new" "$domain")
+
+        while read -r leg_d leg_m _rest; do
+            [[ -n "$leg_d" && ! "$leg_d" =~ ^# ]] || continue
+            [[ "$leg_d" != "$domain" ]] || continue
+            [[ "$leg_m" =~ ^(transition|redirect)$ ]] || continue
+            leg_tls="/etc/warehouse/tls/${leg_d}"
+            if [[ ! -f "${leg_tls}/fullchain.pem" && -f "/etc/letsencrypt/live/${leg_d}/fullchain.pem" ]]; then
+                mkdir -p "$leg_tls"
+                ln -sfn "/etc/letsencrypt/live/${leg_d}/fullchain.pem" "${leg_tls}/fullchain.pem"
+                ln -sfn "/etc/letsencrypt/live/${leg_d}/privkey.pem" "${leg_tls}/privkey.pem"
+            fi
+            if [[ ! -f "${leg_tls}/fullchain.pem" || ! -f "${leg_tls}/privkey.pem" ]]; then
+                echo "[WARNING] Legacy domain $leg_d has no TLS certificate in $leg_tls; skipping." >&2
+                continue
+            fi
+
+            if [[ "$leg_m" == "redirect" ]]; then
+                cat >> "$new" <<EOF
+
+# Legacy Domain: ${leg_d} (301 Permanent Redirect to https://${domain})
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${leg_d};
+    server_tokens off;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/html;
+        default_type "text/plain";
+        allow all;
+    }
+
+    location / {
+        return 301 https://${domain}\$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name ${leg_d};
+    server_tokens off;
+
+    ssl_certificate /etc/warehouse/tls/${leg_d}/fullchain.pem;
+    ssl_certificate_key /etc/warehouse/tls/${leg_d}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers off;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/html;
+        default_type "text/plain";
+        allow all;
+    }
+
+    location = /ngsw.json {
+        return 404;
+    }
+
+    location / {
+        return 301 https://${domain}\$request_uri;
+    }
+}
+EOF
+            elif [[ "$leg_m" == "transition" ]]; then
+                cat >> "$new" <<EOF
+
+# Legacy Domain: ${leg_d} (Transition mode: full app served)
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${leg_d};
+    server_tokens off;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/html;
+        default_type "text/plain";
+        allow all;
+    }
+
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
+EOF
+                if [[ -n "$trans_base" ]]; then
+                    local trans_block="${trans_base// default_server/}"
+                    trans_block="${trans_block// ssl http2/ ssl}"
+                    trans_block="${trans_block//${domain}/${leg_d}}"
+                    printf '%s\n\n' "$trans_block" >> "$new"
+                fi
+            fi
+        done < "$legacy_file"
+    fi
+
     chmod 644 "$new"
 
     prev="${avail}.prev"
@@ -1238,4 +1414,164 @@ if [[ "${1:-}" == "--activate" ]]; then
     exit 0
 fi
 
-die "warehouse-deploy requires one of: --prepare, --activate, --rollback, --refresh-nginx, --start-services, --add-module, --reset-database or --print-modules"
+# ==============================================================================
+# Mode: --change-domain <new_domain>
+# ==============================================================================
+if [[ "${1:-}" == "--change-domain" ]]; then
+    [[ $# -eq 2 && "$2" =~ $DOMAIN_RE ]] || die "Usage: --change-domain <new_domain>"
+    NEW_DOMAIN="$2"
+    OLD_DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null || true)
+    [[ -n "$OLD_DOMAIN" ]] || die "Primary domain in shared/DOMAIN is missing."
+    [[ "$NEW_DOMAIN" != "$OLD_DOMAIN" ]] || die "Domain $NEW_DOMAIN is already the active primary domain."
+
+    NEW_TLS="/etc/warehouse/tls/${NEW_DOMAIN}"
+    [[ -f "${NEW_TLS}/fullchain.pem" && -f "${NEW_TLS}/privkey.pem" ]] \
+        || die "TLS certificate for $NEW_DOMAIN is missing in $NEW_TLS. Issue or install it first."
+
+    ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
+    [[ -n "$ACTIVE_RELEASE" && -d "$ACTIVE_RELEASE" ]] || die "No active release."
+
+    DOMAIN_BAK="${SHARED_DIR}/.DOMAIN.bak.$$"
+    LEGACY_BAK="${SHARED_DIR}/.DOMAINS_LEGACY.bak.$$"
+    ENV_BAK="${SHARED_DIR}/.env.bak.$$"
+    cp -p "${SHARED_DIR}/DOMAIN" "$DOMAIN_BAK"
+    if [[ -f "${SHARED_DIR}/DOMAINS_LEGACY" ]]; then
+        cp -p "${SHARED_DIR}/DOMAINS_LEGACY" "$LEGACY_BAK"
+    else
+        touch "$LEGACY_BAK"
+    fi
+    cp -p "${SHARED_DIR}/.env" "$ENV_BAK"
+
+    # 1. Update shared/DOMAIN
+    printf '%s\n' "$NEW_DOMAIN" > "${SHARED_DIR}/DOMAIN"
+
+    # 2. Update shared/DOMAINS_LEGACY
+    TMP_LEGACY="${SHARED_DIR}/.DOMAINS_LEGACY.tmp.$$"
+    touch "$TMP_LEGACY"
+    if [[ -f "$LEGACY_BAK" ]]; then
+        grep -v -E "^${NEW_DOMAIN}[[:space:]]" "$LEGACY_BAK" | grep -v -E "^${OLD_DOMAIN}[[:space:]]" > "$TMP_LEGACY" || true
+    fi
+    printf '%s transition\n' "$OLD_DOMAIN" >> "$TMP_LEGACY"
+    mv -f "$TMP_LEGACY" "${SHARED_DIR}/DOMAINS_LEGACY"
+
+    # 3. Rewrite .env domain keys
+    write_env_domains "$NEW_DOMAIN"
+
+    # 4. Re-render Nginx site
+    if ! apply_nginx_config "$ACTIVE_RELEASE" "$NEW_DOMAIN"; then
+        echo "[ERROR] Nginx configuration failed for $NEW_DOMAIN; rolling back." >&2
+        cp -f "$DOMAIN_BAK" "${SHARED_DIR}/DOMAIN"
+        cp -f "$LEGACY_BAK" "${SHARED_DIR}/DOMAINS_LEGACY"
+        cp -f "$ENV_BAK" "${SHARED_DIR}/.env"
+        apply_nginx_config "$ACTIVE_RELEASE" "$OLD_DOMAIN" || true
+        rm -f "$DOMAIN_BAK" "$LEGACY_BAK" "$ENV_BAK"
+        exit 1
+    fi
+
+    # 5. Reload Nginx and restart backend services
+    systemctl reload nginx || true
+    systemctl restart "${SERVICES[@]}" || true
+
+    # 6. Health check
+    sleep 2
+    hc_ok=0
+    for _ in {1..10}; do
+        if curl -f -s -k "http://127.0.0.1:8000/api/public/config/" >/dev/null 2>&1; then
+            hc_ok=1
+            break
+        fi
+        sleep 1
+    done
+
+    if [[ "$hc_ok" -eq 0 ]]; then
+        echo "[ERROR] Health check failed after domain change; rolling back." >&2
+        cp -f "$DOMAIN_BAK" "${SHARED_DIR}/DOMAIN"
+        cp -f "$LEGACY_BAK" "${SHARED_DIR}/DOMAINS_LEGACY"
+        cp -f "$ENV_BAK" "${SHARED_DIR}/.env"
+        apply_nginx_config "$ACTIVE_RELEASE" "$OLD_DOMAIN" || true
+        systemctl reload nginx || true
+        systemctl restart "${SERVICES[@]}" || true
+        rm -f "$DOMAIN_BAK" "$LEGACY_BAK" "$ENV_BAK"
+        exit 1
+    fi
+
+    rm -f "$DOMAIN_BAK" "$LEGACY_BAK" "$ENV_BAK"
+    echo "[DOMAIN_CHANGED] ${NEW_DOMAIN}"
+    echo "[SUCCESS] Primary domain changed to ${NEW_DOMAIN}; ${OLD_DOMAIN} is in transition mode."
+    exit 0
+fi
+
+# ==============================================================================
+# Mode: --finish-domain-change
+# ==============================================================================
+if [[ "${1:-}" == "--finish-domain-change" ]]; then
+    [[ $# -eq 1 ]] || die "Usage: --finish-domain-change"
+    LEGACY_FILE="${SHARED_DIR}/DOMAINS_LEGACY"
+    if [[ ! -f "$LEGACY_FILE" ]] || ! grep -q '[[:space:]]transition' "$LEGACY_FILE"; then
+        echo "[INFO] No legacy domains in transition state."
+        echo "[FINISH_DOMAIN_CHANGE_OK]"
+        exit 0
+    fi
+
+    ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
+    [[ -n "$ACTIVE_RELEASE" && -d "$ACTIVE_RELEASE" ]] || die "No active release."
+    PRIMARY_DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null || true)
+    [[ -n "$PRIMARY_DOMAIN" ]] || die "Primary domain in shared/DOMAIN is missing."
+
+    LEGACY_BAK="${SHARED_DIR}/.DOMAINS_LEGACY.bak.$$"
+    cp -p "$LEGACY_FILE" "$LEGACY_BAK"
+
+    sed -i -E 's/[[:space:]]transition$/ redirect/' "$LEGACY_FILE"
+
+    if ! apply_nginx_config "$ACTIVE_RELEASE" "$PRIMARY_DOMAIN"; then
+        echo "[ERROR] Nginx configuration failed during finish-domain-change; rolling back." >&2
+        cp -f "$LEGACY_BAK" "$LEGACY_FILE"
+        apply_nginx_config "$ACTIVE_RELEASE" "$PRIMARY_DOMAIN" || true
+        rm -f "$LEGACY_BAK"
+        exit 1
+    fi
+
+    systemctl reload nginx || true
+    rm -f "$LEGACY_BAK"
+    echo "[FINISH_DOMAIN_CHANGE_OK]"
+    echo "[SUCCESS] All transition domains converted to permanent 301 redirects."
+    exit 0
+fi
+
+# ==============================================================================
+# Mode: --remove-legacy-domain <domain>
+# ==============================================================================
+if [[ "${1:-}" == "--remove-legacy-domain" ]]; then
+    [[ $# -eq 2 && "$2" =~ $DOMAIN_RE ]] || die "Usage: --remove-legacy-domain <domain>"
+    REMOVE_DOMAIN="$2"
+    PRIMARY_DOMAIN=$(head -n 1 "${SHARED_DIR}/DOMAIN" 2>/dev/null || true)
+    [[ "$REMOVE_DOMAIN" != "$PRIMARY_DOMAIN" ]] || die "Cannot remove primary domain $REMOVE_DOMAIN."
+
+    LEGACY_FILE="${SHARED_DIR}/DOMAINS_LEGACY"
+    [[ -f "$LEGACY_FILE" ]] && grep -q -E "^${REMOVE_DOMAIN}[[:space:]]" "$LEGACY_FILE" \
+        || die "Domain $REMOVE_DOMAIN is not listed in shared/DOMAINS_LEGACY."
+
+    ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
+    [[ -n "$ACTIVE_RELEASE" && -d "$ACTIVE_RELEASE" ]] || die "No active release."
+
+    mkdir -p "${SHARED_DIR}/retired/tls"
+    RETIRED_TS=$(date +%Y%m%d_%H%M%S)
+    if [[ -d "/etc/warehouse/tls/${REMOVE_DOMAIN}" ]]; then
+        mv "/etc/warehouse/tls/${REMOVE_DOMAIN}" "${SHARED_DIR}/retired/tls/${REMOVE_DOMAIN}_${RETIRED_TS}"
+    fi
+
+    TMP_LEGACY="${SHARED_DIR}/.DOMAINS_LEGACY.tmp.$$"
+    grep -v -E "^${REMOVE_DOMAIN}[[:space:]]" "$LEGACY_FILE" > "$TMP_LEGACY" || true
+    mv -f "$TMP_LEGACY" "$LEGACY_FILE"
+
+    write_env_domains "$PRIMARY_DOMAIN"
+
+    apply_nginx_config "$ACTIVE_RELEASE" "$PRIMARY_DOMAIN"
+    systemctl reload nginx || true
+
+    echo "[LEGACY_DOMAIN_REMOVED] ${REMOVE_DOMAIN}"
+    echo "[SUCCESS] Legacy domain ${REMOVE_DOMAIN} removed and archived to shared/retired/tls/${REMOVE_DOMAIN}_${RETIRED_TS}."
+    exit 0
+fi
+
+die "warehouse-deploy requires one of: --prepare, --activate, --rollback, --refresh-nginx, --start-services, --add-module, --reset-database, --change-domain, --finish-domain-change, --remove-legacy-domain or --print-modules"

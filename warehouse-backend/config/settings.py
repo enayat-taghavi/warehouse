@@ -44,6 +44,7 @@ if os.environ.get('DJANGO_ENV') == 'production':
         raise RuntimeError("DJANGO_SECRET_KEY must be set in production environment!")
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',') if h.strip()]
+WH_CANONICAL_DOMAIN = os.environ.get('WH_CANONICAL_DOMAIN', '').strip()
 
 if os.environ.get('DJANGO_SECURE_PROXY_SSL') in ('1', 'true', 'True'):
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -356,6 +357,6 @@ GOOGLE_OAUTH_CLIENT_ID = os.getenv('GOOGLE_OAUTH_CLIENT_ID', '')
 GOOGLE_OAUTH_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET', '')
 GOOGLE_OAUTH_REDIRECT_URI = os.getenv(
     'GOOGLE_OAUTH_REDIRECT_URI',
-    'https://app.farsalish.ir/api/accounts/gdrive/callback/'
+    f'https://{WH_CANONICAL_DOMAIN}/api/accounts/gdrive/callback/' if WH_CANONICAL_DOMAIN else 'https://app.farsalish.ir/api/accounts/gdrive/callback/'
 )
 OUTBOUND_HTTP_PROXY = os.getenv('OUTBOUND_HTTP_PROXY', '')

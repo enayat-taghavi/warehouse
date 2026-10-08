@@ -6,6 +6,7 @@ import { ModuleRegistryService } from '../modules/module-registry.service';
 export interface PublicConfig {
   system_version: string;
   system_name: string;
+  canonical_domain?: string;
   installed_modules?: string[];
   offline_sync_interval_minutes?: number;
   offline_cache_ttl_minutes?: number;

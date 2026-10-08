@@ -913,6 +913,80 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
 
     # Cleanup test params
     $script:CertFile = ''; $script:KeyFile = ''; $script:ChainFile = ''
+
+    # === P. Domain migration (plan Modular_Deploy_Options step 5) ===================================
+    # P1. Add custom secret to .env to verify byte-by-byte preservation
+    [void](Invoke-Server 'echo "CUSTOM_PRESERVED_SECRET=secret_value_123" >> /var/www/warehouse/shared/.env')
+    $origEnvPerm = @(Invoke-Server 'stat -c "%U:%G:%a" /var/www/warehouse/shared/.env')[0]
+
+    # Generate TLS certificate for new.example.test
+    [void](Invoke-Server 'mkdir -p /etc/warehouse/tls/new.example.test; openssl req -x509 -newkey rsa:2048 -nodes -days 365 -subj "/CN=new.example.test" -addext "subjectAltName=DNS:new.example.test" -keyout /etc/warehouse/tls/new.example.test/privkey.pem -out /etc/warehouse/tls/new.example.test/fullchain.pem 2>/dev/null; chmod 600 /etc/warehouse/tls/new.example.test/privkey.pem')
+
+    # ChangeDomain to new.example.test
+    $script:ChangeDomain = 'new.example.test'
+    Assert-True ((Invoke-TestMode 'ChangeDomain') -eq 0) 'ChangeDomain exit 0'
+    $script:ChangeDomain = ''
+
+    # Verify DOMAIN and DOMAINS_LEGACY
+    Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/DOMAIN')[0] -eq 'new.example.test') 'shared/DOMAIN updated to new.example.test'
+    Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/DOMAINS_LEGACY')[0] -eq 'soft.example.test transition') 'shared/DOMAINS_LEGACY has soft.example.test transition'
+
+    # Verify .env atomic rewrite
+    $newEnv = @(Invoke-Server 'cat /var/www/warehouse/shared/.env')
+    Assert-True ($newEnv -contains 'CUSTOM_PRESERVED_SECRET=secret_value_123') 'custom secrets preserved byte-by-byte in .env'
+    Assert-True ($newEnv -contains 'WH_CANONICAL_DOMAIN=new.example.test') 'WH_CANONICAL_DOMAIN set in .env'
+    Assert-True (@($newEnv | Where-Object { $_ -match '^DJANGO_ALLOWED_HOSTS=.*new\.example\.test.*soft\.example\.test' }).Count -eq 1) 'DJANGO_ALLOWED_HOSTS includes both new and legacy domains'
+    Assert-True (@($newEnv | Where-Object { $_ -match '^DJANGO_CSRF_TRUSTED_ORIGINS=.*https://new\.example\.test.*https://soft\.example\.test' }).Count -eq 1) 'DJANGO_CSRF_TRUSTED_ORIGINS includes both domains'
+    Assert-True ($newEnv -contains 'GOOGLE_OAUTH_REDIRECT_URI=https://new.example.test/api/accounts/gdrive/callback/') 'GOOGLE_OAUTH_REDIRECT_URI updated to canonical domain callback'
+
+    $newEnvPerm = @(Invoke-Server 'stat -c "%U:%G:%a" /var/www/warehouse/shared/.env')[0]
+    Assert-True ($newEnvPerm -eq $origEnvPerm) ".env permissions/ownership preserved ($newEnvPerm)"
+
+    # Verify deploy_config.json updated
+    Assert-True ((Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json).Domain -eq 'new.example.test') 'deploy_config.json updated to new.example.test'
+
+    # Both domains serve 200 during transition period
+    $resNew = @(Invoke-Server 'curl -ks -o /dev/null -w "%{http_code}" --resolve new.example.test:443:127.0.0.1 https://new.example.test/api/public/config/ || true')[0]
+    $resOld = @(Invoke-Server 'curl -ks -o /dev/null -w "%{http_code}" --resolve soft.example.test:443:127.0.0.1 https://soft.example.test/api/public/config/ || true')[0]
+    Assert-True ($resNew -eq '200' -and $resOld -eq '200') "Both domains return 200 in transition (new: $resNew, old: $resOld)"
+
+    # P2. Rollback test on ChangeDomain failure:
+    # Gateway change-domain refuses when TLS cert is missing
+    $gFail = Invoke-GatewayAsDeploy 'change-domain no-cert.example.test'
+    Assert-True ($gFail.ExitCode -ne 0 -and ($gFail.Err -like '*TLS certificate for no-cert.example.test is missing*')) 'change-domain without TLS cert fails'
+    Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/DOMAIN')[0] -eq 'new.example.test') 'shared/DOMAIN kept as new.example.test'
+    $resAfterFail = @(Invoke-Server 'curl -ks -o /dev/null -w "%{http_code}" --resolve new.example.test:443:127.0.0.1 https://new.example.test/api/public/config/ || true')[0]
+    Assert-True ($resAfterFail -eq '200') 'Services still healthy after ChangeDomain failure'
+
+    # P3. FinishDomainChange
+    Assert-True ((Invoke-TestMode 'FinishDomainChange') -eq 0) 'FinishDomainChange exit 0'
+    Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/DOMAINS_LEGACY')[0] -eq 'soft.example.test redirect') 'shared/DOMAINS_LEGACY updated to redirect'
+
+    # 301 redirect with path preserved
+    $redirHdr = @(Invoke-Server 'curl -ks -I --resolve soft.example.test:443:127.0.0.1 "https://soft.example.test/app/inventory?filter=1" || true')
+    Assert-True (@($redirHdr | Where-Object { $_ -match '^HTTP/.* 301' }).Count -ge 1) 'legacy domain returns HTTP 301'
+    Assert-True (@($redirHdr | Where-Object { $_ -match 'location:\s*https://new\.example\.test/app/inventory\?filter=1' }).Count -ge 1) '301 redirect preserves path and query'
+
+    # ngsw.json on legacy domain returns 404 to unregister service worker
+    $ngswCode = @(Invoke-Server 'curl -ks -o /dev/null -w "%{http_code}" --resolve soft.example.test:443:127.0.0.1 https://soft.example.test/ngsw.json || true')[0]
+    Assert-True ($ngswCode -eq '404') "legacy domain returns 404 for /ngsw.json ($ngswCode)"
+
+    # Primary domain still serves 200
+    $resPrim = @(Invoke-Server 'curl -ks -o /dev/null -w "%{http_code}" --resolve new.example.test:443:127.0.0.1 https://new.example.test/ || true')[0]
+    Assert-True ($resPrim -eq '200') 'Primary domain returns 200 after finish'
+
+    # P4. RemoveLegacyDomain
+    $script:RemoveLegacyDomain = 'soft.example.test'
+    $script:ReadHostQueue.Enqueue('NO')
+    Assert-True ((Invoke-TestMode 'RemoveLegacyDomain') -eq 0) 'RemoveLegacyDomain cancelled on wrong confirmation'
+    $script:RemoveLegacyDomain = 'soft.example.test'
+    $script:ReadHostQueue.Enqueue('RETIRE soft.example.test')
+    Assert-True ((Invoke-TestMode 'RemoveLegacyDomain') -eq 0) 'RemoveLegacyDomain exit 0 with typed confirmation'
+    $script:RemoveLegacyDomain = ''
+
+    Assert-True (@(Invoke-Server 'cat /var/www/warehouse/shared/DOMAINS_LEGACY || true').Count -eq 0 -or @(Invoke-Server 'grep -c "soft.example.test" /var/www/warehouse/shared/DOMAINS_LEGACY || true')[0] -eq '0') 'soft.example.test removed from shared/DOMAINS_LEGACY'
+    Assert-True (@(Invoke-Server 'test ! -d /etc/warehouse/tls/soft.example.test && echo GONE')[0] -eq 'GONE') 'TLS directory removed from /etc/warehouse/tls/'
+    Assert-True (@(Invoke-Server '{ ls -d /var/www/warehouse/shared/retired/tls/soft.example.test_* 2>/dev/null || true; } | wc -l')[0] -ge 1) 'TLS directory archived into shared/retired/tls/'
 } catch {
     Write-Host "[FAIL] test aborted: $($_.Exception.Message)`n$($_.ScriptStackTrace)" -ForegroundColor Red
     $script:failures++

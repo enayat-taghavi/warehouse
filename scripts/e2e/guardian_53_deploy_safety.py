@@ -18,6 +18,9 @@
   ۱۲) انتخاب سامانه (طرح Modular_Deploy_Options گام ۳): کلید Modules در deploy_config.json (اگر هست) معتبر است؛
       Update و Setup سامانه‌ها را تغییر نمی‌دهند؛ حذف سامانه وجود ندارد؛ بازسازی پایگاه پس از GO_LIVE در
       دروازه و در warehouse-deploy رد می‌شود؛ AddModule پیش از تغییر پشتیبان تأییدشده می‌گیرد و در شکست برمی‌گردد
+  ۱۴) تغییر دامنه (طرح Modular_Deploy_Options گام ۵): پارامترهای ChangeDomain، FinishDomainChange و RemoveLegacyDomain؛
+      بازنویسی اتمیک کلیدهای دامنه در .env؛ رهگیری دامنه‌های قبلی در DOMAINS_LEGACY؛ حالت‌های transition و redirect با 404
+      برای ngsw.json؛ انتقال گواهی‌های قبلی به shared/retired/ در حذف؛ بازگشت خودکار در شکست تغییر دامنه.
 """
 
 import json
@@ -277,6 +280,30 @@ def verify_deploy_safety() -> bool:
         print("❌ بند ۱۳: " + "؛ ".join(cert_problems))
     else:
         print("✅ بند ۱۳: روش‌های گواهی TLS: اعتبارسنجی CertMode، نصب امن InstallCert، مسیر یکپارچه /etc/warehouse/tls/، گارد اعتبارسنجی OpenSSL، فقدان کلید در argv و real_ip کلودفلر.")
+
+    # 14. Domain migration and legacy domain safety (plan Modular_Deploy_Options step 5)
+    domain_problems = []
+    settings_py = REPO_ROOT / "warehouse-backend" / "config" / "settings.py"
+    settings_text = settings_py.read_text(encoding="utf-8") if settings_py.exists() else ""
+    views_py = REPO_ROOT / "warehouse-backend" / "settings_core" / "views.py"
+    views_text = views_py.read_text(encoding="utf-8") if views_py.exists() else ""
+
+    domain_checks = [
+        ("ChangeDomain" in ps1_text and "FinishDomainChange" in ps1_text and "RemoveLegacyDomain" in ps1_text, "پارامترهای مدیریت دامنه در deploy.ps1 غایب هستند"),
+        ("Save-ConfigDomain" in ps1_text and "Confirm-TypedWord" in ps1_text, "ذخیره دامنه با نسخه پشتیبان یا تایید تایپی در deploy.ps1 غایب است"),
+        ("write_env_domains" in deploy_text and "WH_CANONICAL_DOMAIN" in deploy_text, "بازنویسی اتمیک کلیدهای دامنه .env در warehouse-deploy.sh غایب است"),
+        ("DOMAINS_LEGACY" in deploy_text and "transition" in deploy_text and "redirect" in deploy_text, "مدیریت دامنه‌های قبلی (DOMAINS_LEGACY) در warehouse-deploy.sh غایب است"),
+        ("return 404" in deploy_text and "ngsw.json" in deploy_text, "پاسخ 404 برای ngsw.json در بلوک ریدایرکت دامنه‌های قدیمی غایب است"),
+        ("retired/tls" in deploy_text and "rm -rf" not in deploy_text[deploy_text.find("--remove-legacy-domain"):], "انتقال امن گواهی به retired/tls بدون حذف در warehouse-deploy.sh غایب است"),
+        ("change-domain" in gateway_text and "finish-domain-change" in gateway_text and "remove-legacy-domain" in gateway_text, "زیرفرمان‌های مدیریت دامنه در دروازه غایب هستند"),
+        ("WH_CANONICAL_DOMAIN" in settings_text and "canonical_domain" in views_text, "پشتیبانی از canonical_domain در بک‌اند غایب است"),
+    ]
+    domain_problems += [msg for ok, msg in domain_checks if not ok]
+    if domain_problems:
+        errors.extend(domain_problems)
+        print("❌ بند ۱۴: " + "؛ ".join(domain_problems))
+    else:
+        print("✅ بند ۱۴: تغییر دامنه: پارامترهای deploy.ps1، بازنویسی اتمیک .env، تفکیک transition/redirect با 404 سرویس‌ورکر، بایگانی در retired/ و canonical_domain بک‌اند.")
 
     print("=" * 74)
     if errors:
