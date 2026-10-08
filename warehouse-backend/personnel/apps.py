@@ -12,7 +12,12 @@ class PersonnelConfig(AppConfig):
         from platform_core.registry import register_module
         from platform_core.module_catalog import ACCOUNTING_SPEC
         register_module(ACCOUNTING_SPEC)
-        
+
+        # دسترسی مشتق از عضویت بخش‌های پروژه در قواعد دسترسی شرکتِ هسته
+        from companies.access import register_derived_company_source
+        from personnel.company_access import section_derived_company_ids
+        register_derived_company_source(section_derived_company_ids)
+
         # بارگذاری سیگنال‌های خودکار همگام‌سازی شرکت و مدارک
         try:
             import personnel.signals

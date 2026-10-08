@@ -106,6 +106,7 @@ else:
 # اپ‌های پایهٔ پلتفرم (هسته) — بدون نام ماژول.
 PLATFORM_APPS = [
     'accounts.apps.AccountsConfig',
+    'companies.apps.CompaniesConfig',
     'settings_core.apps.SettingsCoreConfig',
     'platform_core.apps.PlatformCoreConfig',
     'notifications.apps.NotificationsConfig',

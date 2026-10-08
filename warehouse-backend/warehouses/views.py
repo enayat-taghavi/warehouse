@@ -26,13 +26,13 @@ class WarehouseViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         company_id = req.query_params.get('company_id') or req.headers.get('X-Company-ID') or req.META.get('HTTP_X_COMPANY_ID')
         
         if company_id:
-            from personnel.views import validate_user_company_access
+            from companies.access import validate_user_company_access
             cid = validate_user_company_access(req.user, company_id)
             if cid:
                 qs = qs.filter(company_id=cid)
         elif req.user and req.user.is_authenticated and not req.user.is_superuser:
             # کاربر عادی بدون فیلتر شرکت صریح، فقط انبارهای شرکت‌های مجاز خود را می‌بیند
-            from personnel.views import get_user_allowed_companies
+            from companies.access import get_user_allowed_companies
             allowed_cids = get_user_allowed_companies(req.user).values_list('id', flat=True)
             qs = qs.filter(company_id__in=allowed_cids)
             
@@ -55,8 +55,8 @@ class WarehouseViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         from accounts.audit_utils import log_audit_event
-        from personnel.models import Company
-        from personnel.views import validate_user_company_access
+        from companies.models import Company
+        from companies.access import validate_user_company_access
 
         # استخراج شرکت فعال جهت انتساب خودکار انبار ثبت‌شده به شرکت با اعتبارسنجی دسترسی کاربر
         company_id = self.request.headers.get('X-Company-ID') or self.request.META.get('HTTP_X_COMPANY_ID') or self.request.data.get('company_id')

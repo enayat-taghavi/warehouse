@@ -59,3 +59,11 @@ def purge_warehouse_settings(sender, instance, **kwargs):
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"[WarehouseSignals] Error cleaning audit log warehouse_ids: {e}")
+
+    if apps.is_installed('reports'):
+        try:
+            from reports.models import ReportTemplate
+            ReportTemplate.objects.filter(warehouse_id=instance.id).update(warehouse_id=None)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"[WarehouseSignals] Error cleaning report template warehouse_ids: {e}")

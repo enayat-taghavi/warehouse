@@ -242,7 +242,7 @@ class AuditContextMiddleware:
         # اعتبارسنجی امنیتی ضدجعل کانتکست شرکت (Anti-Tenant-Spoofing)
         if company_id and user and user.is_authenticated and not user.is_superuser:
             try:
-                from personnel.views import validate_user_company_access
+                from companies.access import validate_user_company_access
                 validate_user_company_access(user, company_id)
             except Exception as e:
                 from django.http import JsonResponse

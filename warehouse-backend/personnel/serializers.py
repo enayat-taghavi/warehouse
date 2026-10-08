@@ -1208,83 +1208,28 @@ class MonthlyWorkPeriodSerializer(serializers.ModelSerializer):
 # سریالایزرهای ساختار سازمانی، شرکت، پروژه، بخش، طرف‌حساب و فاکتور هزینه
 # ==============================================================================
 
-ALLOWED_DOCUMENT_EXTENSIONS = (
-    '.pdf', '.jpg', '.jpeg', '.png', '.webp', '.zip', '.rar',
-    '.xlsx', '.xls', '.docx', '.doc'
+from companies.serializers import (  # noqa: F401
+    CompanySerializer as CoreCompanySerializer,
+    UserCompanyAccessSerializer,
 )
-MAX_DOCUMENT_SIZE_BYTES = 25 * 1024 * 1024  # 25 MB
+from common.serializer_fields import (  # noqa: F401
+    ALLOWED_DOCUMENT_EXTENSIONS,
+    MAX_DOCUMENT_SIZE_BYTES,
+    validate_uploaded_document,
+    ShamsiDateField,
+)
 
 
-def validate_uploaded_document(file_obj, max_size_bytes=MAX_DOCUMENT_SIZE_BYTES, allowed_exts=ALLOWED_DOCUMENT_EXTENSIONS):
+class CompanySerializer(CoreCompanySerializer):
     """
-    اعتبارسنجی یکپارچه حجم و فرمت فایل‌های اسناد و مدارک شرکت‌ها
+    سریالایزر شرکت در حسابداری: سریالایزر پایهٔ هسته به‌علاوهٔ شمار پروژه‌ها و مدارک،
+    سلامت مدارک، حساب‌های بانکی و اعضای هیئت‌مدیره.
     """
-    if not file_obj:
-        return file_obj
-
-    # ۱. بررسی حجم فایل
-    if hasattr(file_obj, 'size') and file_obj.size > max_size_bytes:
-        max_mb = max_size_bytes // (1024 * 1024)
-        raise serializers.ValidationError(f"حجم فایل نمی‌تواند بیشتر از {max_mb} مگابایت باشد.")
-
-    # ۲. بررسی پسوند فایل
-    name = getattr(file_obj, 'name', '') or ''
-    ext = os.path.splitext(name)[1].lower()
-    if not ext or ext not in allowed_exts:
-        exts_display = ', '.join([e.replace('.', '').upper() for e in allowed_exts])
-        raise serializers.ValidationError(f"فرمت فایل غیرمجاز است ({ext or 'نامشخص'}). پسوندهای مجاز: {exts_display}")
-
-    return file_obj
-
-
-class ShamsiDateField(serializers.Field):
-    """
-    فیلد اختصاصی تاریخ برای پشتیبانی دوطرفه از تاریخ شمسی و میلادی:
-    - در ورودی (to_internal_value): دریافت رشته شمسی (۱۴۰۳/۰۵/۲۰ یا 1403/05/20)، میلادی یا شیء تاریخ و تبدیل به datetime.date
-    - در خروجی (to_representation): رشته استاندارد شمسی YYYY/MM/DD
-    """
-    def __init__(self, output_shamsi=True, **kwargs):
-        self.output_shamsi = output_shamsi
-        super().__init__(**kwargs)
-
-    def to_internal_value(self, data):
-        if data in (None, '', 'null'):
-            return None
-        if isinstance(data, dt_date) and not isinstance(data, dt_datetime):
-            return data
-        if isinstance(data, dt_datetime):
-            return data.date()
-        try:
-            parsed = parse_date_smart(data, as_datetime=False, strict=True)
-            if parsed is None:
-                raise serializers.ValidationError("فرمت تاریخ ارسالی نامعتبر است.")
-            return parsed
-        except serializers.ValidationError:
-            raise
-        except Exception as e:
-            raise serializers.ValidationError(f"تاریخ نامعتبر است: {e}")
-
-    def to_representation(self, value):
-        if not value:
-            return None
-        if self.output_shamsi:
-            return format_to_shamsi_str(value)
-        return str(value)
-
-
-class CompanySerializer(serializers.ModelSerializer):
     projects_count = serializers.SerializerMethodField()
     documents_count = serializers.SerializerMethodField()
     documents_health_status = serializers.SerializerMethodField()
     bank_accounts = serializers.SerializerMethodField()
     board_members = serializers.SerializerMethodField()
-    registration_date = ShamsiDateField(required=False, allow_null=True)
-    board_term_expiry = ShamsiDateField(required=False, allow_null=True)
-
-    class Meta:
-        model = Company
-        fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at']
 
     def get_projects_count(self, obj):
         if hasattr(obj, 'projects_count'):
@@ -1327,38 +1272,6 @@ class CompanySerializer(serializers.ModelSerializer):
         else:
             members = obj.board_members.filter(is_active=True)
         return CompanyBoardMemberSerializer(members, many=True, context=self.context).data
-
-    def validate_code(self, value):
-        if not value:
-            raise serializers.ValidationError("کد یکتای شرکت الزامی است.")
-        return value.strip().upper()
-
-    def validate_national_id(self, value):
-        if not value:
-            return value
-        cleaned = normalize_digits(str(value)).strip()
-        if cleaned and not cleaned.isdigit():
-            raise serializers.ValidationError("شناسه ملی باید فقط شامل ارقام عددی باشد.")
-        if cleaned and len(cleaned) != 11:
-            raise serializers.ValidationError("شناسه ملی شرکت باید دقیقاً ۱۱ رقم باشد.")
-        return cleaned
-
-    def validate_articles_of_association(self, value):
-        return validate_uploaded_document(value)
-
-    def validate_latest_gazette(self, value):
-        return validate_uploaded_document(value)
-
-    def to_representation(self, instance):
-        ret = super().to_representation(instance)
-        request = self.context.get('request')
-        if instance.articles_of_association and instance.articles_of_association.name:
-            signed_url = signed_media_url(instance.articles_of_association.name)
-            ret['articles_of_association'] = request.build_absolute_uri(signed_url) if request else signed_url
-        if instance.latest_gazette and instance.latest_gazette.name:
-            signed_url = signed_media_url(instance.latest_gazette.name)
-            ret['latest_gazette'] = request.build_absolute_uri(signed_url) if request else signed_url
-        return ret
 
 
 class CompanyDocumentSerializer(serializers.ModelSerializer):
@@ -1471,24 +1384,6 @@ class CompanyBankAccountSerializer(serializers.ModelSerializer):
         if not is_valid:
             raise serializers.ValidationError(msg or "شماره شبا نامعتبر است.")
         return clean
-
-
-class UserCompanyAccessSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username', read_only=True)
-    user_full_name = serializers.SerializerMethodField()
-    company_name = serializers.CharField(source='company.name', read_only=True)
-    company_code = serializers.CharField(source='company.code', read_only=True)
-    access_level_display = serializers.CharField(source='get_access_level_display', read_only=True)
-
-    class Meta:
-        model = UserCompanyAccess
-        fields = '__all__'
-        read_only_fields = ['created_at']
-
-    def get_user_full_name(self, obj):
-        if obj.user:
-            return f"{obj.user.first_name} {obj.user.last_name}".strip() or obj.user.username
-        return None
 
 
 class FinancialProjectSerializer(serializers.ModelSerializer):

@@ -21,7 +21,7 @@ class Warehouse(models.Model):
     description = models.TextField(blank=True, null=True)
     operator_company = models.CharField(max_length=255, blank=True, null=True)
     company = models.ForeignKey(
-        'personnel.Company',
+        'companies.Company',
         on_delete=models.PROTECT,
         null=True,
         blank=True,

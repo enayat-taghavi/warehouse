@@ -10,6 +10,7 @@ from .registry import get_registry
 class ReportTemplateSerializer(serializers.ModelSerializer):
     owner_username = serializers.CharField(source='owner.username', read_only=True)
     is_owner = serializers.SerializerMethodField()
+    warehouse = serializers.IntegerField(source='warehouse_id', required=False, allow_null=True)
 
     class Meta:
         model = ReportTemplate
@@ -23,6 +24,16 @@ class ReportTemplateSerializer(serializers.ModelSerializer):
     def get_is_owner(self, obj):
         request = self.context.get('request')
         return bool(request and request.user and obj.owner_id == request.user.id)
+
+    def validate_warehouse(self, value):
+        if value is None:
+            return value
+        from django.apps import apps
+        if not apps.is_installed('warehouses'):
+            raise serializers.ValidationError('سامانهٔ انبار نصب نیست.')
+        if not apps.get_model('warehouses', 'Warehouse').objects.filter(pk=value).exists():
+            raise serializers.ValidationError('انبار نامعتبر است.')
+        return value
 
     def validate_entity(self, value):
         if value not in get_registry():

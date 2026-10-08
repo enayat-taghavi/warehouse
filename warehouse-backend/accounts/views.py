@@ -67,14 +67,11 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         prefetch_items = ['groups__customrole', 'user_permissions']
         if apps.is_installed('warehouses'):
             prefetch_items.append('assigned_warehouses')
-        if apps.is_installed('personnel'):
-            prefetch_items.append('company_accesses__company')
+        prefetch_items.append('company_accesses__company')
         qs = qs.prefetch_related(*prefetch_items)
 
         user = self.request.user
-        get_user_allowed_companies = None
-        if apps.is_installed('personnel'):
-            from personnel.views import get_user_allowed_companies
+        from companies.access import get_user_allowed_companies
 
         # تفکیک چندشرکتی اختیاری بر مبنای کوئری‌پارامتر یا فیلتر دسترسی سازمانی
         company_id_param = self.request.query_params.get('company_id')
@@ -144,11 +141,11 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 raise PermissionDenied('شما به کاربران این شرکت دسترسی ندارید.')
             allowed_cids = {int(company_id_param)}
         # عضو شرکت = دسترسی صریح workspace_full یا انتساب فعال در بخش‌های پروژه‌های همان شرکت
-        return qs.filter(
-            Q(company_accesses__company_id__in=allowed_cids, company_accesses__access_level='workspace_full')
-            | Q(section_assignments__is_active=True, section_assignments__section__project__company_id__in=allowed_cids)
-            | Q(id=user.id)
-        ).distinct()
+        members = Q(company_accesses__company_id__in=allowed_cids, company_accesses__access_level='workspace_full') | Q(id=user.id)
+        from django.apps import apps
+        if apps.is_installed('personnel'):
+            members |= Q(section_assignments__is_active=True, section_assignments__section__project__company_id__in=allowed_cids)
+        return qs.filter(members).distinct()
 
     def get_serializer_class(self):
         if self._is_org_admin_directory():
@@ -1928,7 +1925,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
             c_int = int(company_id)
             if user and user.is_authenticated and not user.is_superuser:
                 try:
-                    from personnel.views import validate_user_company_access
+                    from companies.access import validate_user_company_access
                     validate_user_company_access(user, c_int)
                 except Exception:
                     return qs.none()
@@ -1936,7 +1933,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(Q(company_id=c_int) | Q(details__company_id=c_int) | Q(details__company_id=str(c_int)))
         elif user and user.is_authenticated and not user.is_superuser:
             try:
-                from personnel.views import get_user_allowed_companies
+                from companies.access import get_user_allowed_companies
                 from django.db.models import Q
                 allowed_cids = list(get_user_allowed_companies(user).values_list('id', flat=True))
                 qs = qs.filter(Q(company_id__in=allowed_cids) | Q(company_id__isnull=True))

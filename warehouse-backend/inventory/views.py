@@ -2876,7 +2876,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 pass
         elif not request.user.is_superuser:
             try:
-                from personnel.views import get_user_allowed_companies
+                from companies.access import get_user_allowed_companies
                 allowed_comp_ids = list(get_user_allowed_companies(request.user, required_level='workspace_full').values_list('id', flat=True))
                 items = items.filter(warehouse__company_id__in=allowed_comp_ids)
             except Exception:

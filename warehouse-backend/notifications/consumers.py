@@ -168,16 +168,11 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             if not user or not user.is_authenticated:
                 return []
             if getattr(user, 'is_superuser', False):
-                from personnel.models import Company
+                from companies.models import Company
                 return list(Company.objects.filter(is_active=True).values_list('id', flat=True))
-            from personnel.models import Company, UserCompanyAccess, UserSectionAssignment
-            # UserCompanyAccess فیلد is_active ندارد؛ فیلتر قبلی FieldError می‌داد و کاربر عادی در هیچ کانال شرکتی عضو نمی‌شد.
-            # همان قاعدهٔ get_user_allowed_companies بک‌اند: دسترسی کامل صریح، یا انتساب فعال به بخشی از پروژه‌های شرکت.
-            direct_ids = set(UserCompanyAccess.objects.filter(user=user, access_level='workspace_full').values_list('company_id', flat=True))
-            derived_ids = set(UserSectionAssignment.objects.filter(
-                user=user, is_active=True, section__project__company__isnull=False
-            ).values_list('section__project__company_id', flat=True))
-            return list(Company.objects.filter(id__in=direct_ids | derived_ids, is_active=True).values_list('id', flat=True))
+            from companies.access import get_user_allowed_companies
+            # همان قاعدهٔ بک‌اند: دسترسی کامل صریح، یا دسترسی مشتق ماژول‌ها (انتساب فعال به بخش پروژه‌های شرکت)
+            return list(get_user_allowed_companies(user).values_list('id', flat=True))
         except Exception as e:
             logger.error(f"[NotificationConsumer] Error getting allowed companies: {e}")
             return []

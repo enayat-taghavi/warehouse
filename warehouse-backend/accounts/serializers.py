@@ -104,11 +104,8 @@ def _sync_user_company_access(user, company_ids=None, default_company_id=None, c
     actor غیرسوپریوزر فقط دسترسی شرکت‌های مجاز خودش را می‌دهد، تغییر می‌دهد یا حذف می‌کند؛
     دسترسی‌های موجود کاربر در شرکت‌های دیگر دست‌نخورده می‌مانند.
     """
-    from django.apps import apps
-    if not apps.is_installed('personnel'):
-        return
-
-    from personnel.models import UserCompanyAccess, Company, UserSectionAssignment
+    from companies.access import derived_company_ids
+    from companies.models import UserCompanyAccess, Company
 
     target_accesses = {}
     if company_accesses_data is not None and isinstance(company_accesses_data, list):
@@ -151,9 +148,9 @@ def _sync_user_company_access(user, company_ids=None, default_company_id=None, c
         scope_ids = set(UserCompanyAccess.objects.filter(
             user=actor, access_level='workspace_full', company__is_active=True
         ).values_list('company_id', flat=True))
-        scope_ids |= set(UserSectionAssignment.objects.filter(
-            user=actor, is_active=True, section__project__company__is_active=True
-        ).values_list('section__project__company_id', flat=True))
+        scope_ids |= set(Company.objects.filter(
+            id__in=derived_company_ids(actor), is_active=True
+        ).values_list('id', flat=True))
         existing_ids = set(UserCompanyAccess.objects.filter(user=user).values_list('company_id', flat=True))
         outside = [cid for cid in target_accesses if cid not in scope_ids and cid not in existing_ids]
         if outside:
@@ -384,7 +381,7 @@ class UserSerializer(serializers.ModelSerializer):
                         active_comp_ids.add(int(item['company_id']))
                     except (ValueError, TypeError):
                         pass
-        elif self.instance and apps.is_installed('personnel'):
+        elif self.instance:
             active_comp_ids.update(self.instance.company_accesses.values_list('company_id', flat=True))
 
         if default_company_id and active_comp_ids and default_company_id not in active_comp_ids:
@@ -426,7 +423,7 @@ class UserSerializer(serializers.ModelSerializer):
         # Multi-company accesses
         try:
             from django.apps import apps
-            if apps.is_installed('personnel'):
+            if apps.is_installed('companies'):
                 accesses = list(instance.company_accesses.select_related('company').all())
                 comp_access_data = []
                 comp_ids = []
@@ -448,26 +445,27 @@ class UserSerializer(serializers.ModelSerializer):
 
                 # همچنین شرکت‌های متناظر با انتساب‌های فعال در بخش‌های پروژه
                 existing_comp_ids = set(comp_ids)
-                from personnel.models import UserSectionAssignment
-                sec_assignments = UserSectionAssignment.objects.filter(
-                    user=instance, is_active=True, section__project__company__isnull=False
-                ).select_related('section__project__company')
-                for sa in sec_assignments:
-                    sec_comp = sa.section.project.company
-                    if sec_comp and sec_comp.id not in existing_comp_ids:
-                        existing_comp_ids.add(sec_comp.id)
-                        comp_ids.append(sec_comp.id)
-                        is_first = (def_cid is None)
-                        if is_first:
-                            def_cid = sec_comp.id
-                        comp_access_data.append({
-                            'company_id': sec_comp.id,
-                            'company_name': sec_comp.name,
-                            'company_code': sec_comp.code,
-                            'access_level': 'workspace_full',
-                            'role_in_company': sa.get_role_display() if hasattr(sa, 'get_role_display') else '',
-                            'is_default': is_first
-                        })
+                if apps.is_installed('personnel'):
+                    from personnel.models import UserSectionAssignment
+                    sec_assignments = UserSectionAssignment.objects.filter(
+                        user=instance, is_active=True, section__project__company__isnull=False
+                    ).select_related('section__project__company')
+                    for sa in sec_assignments:
+                        sec_comp = sa.section.project.company
+                        if sec_comp and sec_comp.id not in existing_comp_ids:
+                            existing_comp_ids.add(sec_comp.id)
+                            comp_ids.append(sec_comp.id)
+                            is_first = (def_cid is None)
+                            if is_first:
+                                def_cid = sec_comp.id
+                            comp_access_data.append({
+                                'company_id': sec_comp.id,
+                                'company_name': sec_comp.name,
+                                'company_code': sec_comp.code,
+                                'access_level': 'workspace_full',
+                                'role_in_company': sa.get_role_display() if hasattr(sa, 'get_role_display') else '',
+                                'is_default': is_first
+                            })
 
                 ret['company_accesses'] = comp_access_data
                 ret['company_ids'] = comp_ids

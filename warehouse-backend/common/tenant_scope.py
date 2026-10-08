@@ -54,7 +54,7 @@ def scope_tenant_queryset(queryset, user, company_id=None, company_field='compan
     cid = company_id or get_current_tenant_company_id(request=request, user=user)
 
     if cid is not None:
-        from personnel.views import validate_user_company_access
+        from companies.access import validate_user_company_access
         try:
             valid_cid = validate_user_company_access(user, cid)
             if valid_cid:
@@ -69,7 +69,7 @@ def scope_tenant_queryset(queryset, user, company_id=None, company_field='compan
 
     # کاربر عادی بدون انتخاب شرکت: محدود به شرکت‌های مجاز کاربر
     try:
-        from personnel.views import get_user_allowed_companies
+        from companies.access import get_user_allowed_companies
         allowed_cids = list(get_user_allowed_companies(user).values_list('id', flat=True))
         if allowed_cids:
             return queryset.filter(**{f"{company_field}__in": allowed_cids})

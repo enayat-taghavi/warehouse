@@ -24,9 +24,10 @@ class ReportTemplate(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name='report_templates', verbose_name="سازنده",
     )
-    warehouse = models.ForeignKey(
-        'warehouses.Warehouse', on_delete=models.CASCADE,
-        null=True, blank=True, related_name='report_templates',
+    # شناسهٔ عددی انبار (نه FK) تا گزارش‌ساز بدون ماژول انبار هم نصب‌شدنی باشد؛ با حذف انبار،
+    # سیگنال post_delete در warehouses/signals.py آن را تهی می‌کند.
+    warehouse_id = models.IntegerField(
+        null=True, blank=True, db_index=True,
         verbose_name="انبار (برای فیلدهای پویا)",
     )
     created_at = models.DateTimeField(auto_now_add=True)

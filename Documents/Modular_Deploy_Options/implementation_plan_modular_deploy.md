@@ -141,3 +141,39 @@
 
 ## گزارش پیشرفت
 - **۱۷ مهر ۱۴۰۵ (2026-10-08):** طرح نوشته شد. اقدام بعدی: گام ۱.
+- **۱۷ مهر ۱۴۰۵ (2026-10-08) — گام ۱ انجام شد (Claude):**
+  - **وضعیت زیرگام‌ها:**
+    - اپ هستهٔ `companies` ساخته شد: `Company` و `UserCompanyAccess` (با `db_table` قبلی)، `access.py` (قواعد دسترسی و `register_derived_company_source`)، `permissions.py`، `realtime.py`، `serializers.py`، `views.py` و `urls.py`.
+    - حسابداری در `personnel/apps.py` منبع دسترسی مشتق از عضویت بخش را ثبت می‌کند (`personnel/company_access.py`). `personnel` نام‌های قبلی را دوباره صادر می‌کند. `CompanyViewSet` و `CompanySerializer` حسابداری زیرکلاس نسخهٔ هسته‌اند، با همان مسیرهای قدیمی `api/personnel/companies*`.
+    - `ShamsiDateField` و `validate_uploaded_document` به `common/serializer_fields.py` منتقل شدند.
+    - ایمپورت‌های هسته و انبار از `personnel.*` به `companies.*` تغییر کردند: `accounts` (serializers، views، middleware)، `common/tenant_scope.py`، `notifications/consumers.py`، `warehouses/views.py` و `inventory/views.py`. بخش‌های وابسته به بخش‌های پروژه پشت `apps.is_installed('personnel')` رفتند.
+    - `ReportTemplate.warehouse` به `warehouse_id` عددی تبدیل شد (نام فیلد API همان `warehouse` است و وجود انبار اعتبارسنجی می‌شود).
+    - همهٔ مایگریشن‌ها از نو ساخته شدند. گراف یک‌طرفه است: `warehouses`/`inventory`/`personnel` فقط به `companies` وابسته‌اند، `reports` به هیچ ماژولی.
+    - `inventory/0001` با `TrigramExtension()` شروع می‌شود. دادهٔ پایهٔ سمت‌های بیمه در `personnel/0002_seed_insurance_job_titles.py` حفظ شد (۱۷ جفت که ۷ تای آن غیرفعال‌اند).
+    - `companies` در `.importlinter` به لایهٔ هسته و C3 اضافه شد. آزمون `FleetDataMigrationReverseTests` (برای مایگریشن حذف‌شدهٔ 0035) حذف شد. fixture آزمون e2e استقرار حالا به `accounts/0001_initial` وابسته است.
+  - **انحراف‌ها و تصمیم‌ها:**
+    - پیشوند API هسته `/api/org/` شد (`/api/org/companies/` و `/api/org/user-company-access/`)، نه `/api/companies/`.
+    - Google Drive شرکت (`CompanyGoogleDriveConfig` و صف آن) در حسابداری ماند. هسته از قبل با `is_installed('personnel')` آن را محافظت می‌کند. فرمان `run_gdrive_sync_worker` که اجرا می‌شود نسخهٔ `settings_core` است، پس سرویس gdrive در هر دو پروفایل اجراشدنی است.
+    - مایگریشن دادهٔ دو شرکت ثابت (`PTS` و `FA`، 0013) و انتساب انبارهای 0003 و 0005 حذف شدند، چون مخصوص یک محیط‌اند.
+    - با حذف انبار، قالب گزارش دیگر حذف نمی‌شود و فقط `warehouse_id` آن تهی می‌شود (قبلاً CASCADE بود).
+    - رفع ایراد: پخش رویداد `company_access` شناسهٔ شرکت را به‌جای `project_id` می‌فرستاد. حالا به کانال همان شرکت می‌رود.
+    - رفع ایراد پیدا شده در بازبینی: `_org_admin_directory_queryset` در `accounts/views.py` در نصب «فقط انبار» `FieldError` می‌داد.
+    - در نصب «فقط انبار»، سه مسیر که قبلاً با ImportError بی‌صدا شکست می‌خوردند حالا درست کار می‌کنند: middleware شرکت، `tenant_scope` و همگام‌سازی دسترسی شرکت کاربر.
+  - **آزمون‌ها:**
+    - postgres موقت در Docker (`wh_pg_profiles`، پورت 55432، نقش غیرسوپریوزر `whapp`): `check` و `migrate` روی پایگاه خالی برای هر سه پروفایل پاس شد و `makemigrations --check` در هر سه «No changes».
+    - افزودن ماژول در هر دو جهت پاس شد: حسابداری سپس انبار، و انبار سپس حسابداری (`scratch/logs/migrate_add_*.log`).
+    - تست‌های بک‌اند پروفایل کامل: ۷۰۸ تست، ۳۳ شکست. همان اجرا روی HEAD (۷۰۵ تست) ۳۲ شکست داشت. مجموعهٔ شکست‌ها یکسان است، جز آزمون مایگریشن 0035 که حذف شد. شکست‌ها از قبل بوده‌اند (بیشترشان نبود مجوزهایی مثل `view_wh_stocktaking` در setUp).
+    - آزمون‌های تازهٔ `companies/tests.py` (۹ تست) و `reports` در «فقط انبار» پاس شدند. در «فقط حسابداری» آزمون‌های `companies` پاس شدند، ولی ماژول `reports.tests` بارگذاری نمی‌شود چون خودش `inventory` را ایمپورت می‌کند (فقط آزمون؛ کد اجرایی گزارش‌ساز محافظت شده است).
+    - نگهبان 29: نقض‌ها از ۵۰ (HEAD) به ۳۶ رسید و نقض‌های تولیدی از ۲۴ به ۱۰. هیچ شاخصی بدتر نشد. وضعیت REJECTED از قبل روی HEAD هم بوده است.
+    - بازبین‌ها: `tenant-scope-reviewer` هیچ نشتی پیدا نکرد. `data-loss-reviewer` هیچ مسیر از دست رفتن داده پیدا نکرد.
+  - **موارد باز:**
+    - مسیرهای `/api/org/` زیر پیشوند هیچ ماژولی نیستند، پس محدودیت app-scope توکن روی آن‌ها اعمال نمی‌شود. این عمدی است، چون مدیریت شرکت هسته است و محدودهٔ شرکت و مجوزها همچنان اعمال می‌شوند.
+    - **پایگاه محلی app هنوز ساخته نشده است.** `migrate` روی آن خطای `InconsistentMigrationHistory` می‌دهد. پشتیبان: `warehouse-backend/backups/db/backup_20261008_130539.dump`. این پشتیبان نام مایگریشن‌های قدیمی را دارد و فقط برای بازگشت کامل به کد قبلی به کار می‌آید.
+    - **روی soft تا گام ۶ نباید `-Update` زد.** `check_migration_compatibility` آن را پیش از هر تغییری رد می‌کند (fail-closed).
+    - ۳۱ آزمون شکست‌خوردهٔ قدیمی بیرون از دامنهٔ این طرح است.
+  - **اقدام بعدی (گام ۲):**
+    1. پشتیبان تازه، سپس drop و create پایگاه app محلی.
+    2. `migrate` و `seed_permissions` و `init_roles`، سپس ساخت دوبارهٔ دادهٔ E2E نگهبان‌ها.
+    3. فرانت: استفاده از `/api/org/` و پنهان کردن تب‌های حسابداری شرکت در «فقط انبار».
+    4. نگهبان استقلال ماژول.
+    5. release روی app.

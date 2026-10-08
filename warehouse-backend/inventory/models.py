@@ -19,7 +19,7 @@ class ItemFieldDefinition(SyncModelMixin):
     ]
 
     company = models.ForeignKey(
-        'personnel.Company',
+        'companies.Company',
         on_delete=models.CASCADE,
         null=True,
         blank=True,

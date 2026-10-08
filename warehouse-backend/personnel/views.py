@@ -117,84 +117,19 @@ from .fleet_excel_engine import export_fleet_monthly_excel, import_fleet_monthly
 from .fleet_settlement_engine import calculate_monthly_fleet_settlement, generate_fleet_bank_meli_excel
 
 
-def get_user_allowed_companies(user, required_level='workspace_full'):
-    """
-    محاسبه شرکت‌های مجاز کاربر (ترکیبی: سوپریوزر = همه، عادی = انتساب صریح یا عضویت در بخش‌های پروژه‌های آن شرکت)
-    دارای حافظه کش در سطح چرخه درخواست کلاینت (Request Scope) جهت جلوگیری از اجرای کوئری‌های تکراری N+1
-    """
-    if not user or not user.is_authenticated:
-        return Company.objects.none()
-    if user.is_superuser:
-        return Company.objects.filter(is_active=True)
-
-    from accounts.middleware import get_allowed_companies_cache
-    req_cache = get_allowed_companies_cache()
-    user_id = getattr(user, 'id', None)
-    cache_key = (user_id, required_level)
-    if req_cache is not None and cache_key in req_cache:
-        return req_cache[cache_key]
-
-    derived_ids = set(UserSectionAssignment.objects.filter(
-        user=user, is_active=True, section__project__company__isnull=False
-    ).values_list('section__project__company_id', flat=True))
-
-    access_qs = UserCompanyAccess.objects.filter(user=user)
-    if required_level == 'workspace_full':
-        direct_ids = set(access_qs.filter(access_level='workspace_full').values_list('company_id', flat=True))
-        allowed_ids = direct_ids.union(derived_ids)
-    elif required_level == 'docs_write':
-        direct_ids = set(access_qs.filter(access_level__in=['docs_write', 'workspace_full']).values_list('company_id', flat=True))
-        allowed_ids = direct_ids
-    elif required_level == 'docs_read':
-        direct_ids = set(access_qs.filter(access_level__in=['docs_read', 'docs_write', 'workspace_full']).values_list('company_id', flat=True))
-        allowed_ids = direct_ids
-    else:
-        direct_ids = set(access_qs.values_list('company_id', flat=True))
-        allowed_ids = direct_ids.union(derived_ids)
-
-    qs = Company.objects.filter(id__in=allowed_ids, is_active=True)
-    if req_cache is not None:
-        req_cache[cache_key] = qs
-    return qs
-
-
-def get_request_company_id(request):
-    """
-    استخراج شناسه شرکت از هدر یا کوئری‌پارامتر
-    """
-    return request.query_params.get('company_id') or request.query_params.get('company') or request.headers.get('X-Company-ID')
-
-
-def validate_user_company_access(user, company_id, required_level='workspace_full'):
-    """
-    اعتبارسنجی دسترسی کاربر به شناسه شرکت داده‌شده. در صورت عدم دسترسی، PermissionDenied پرتاب می‌شود.
-    پیش‌فرض: required_level='workspace_full' برای جلوگیری از دسترسی کاربران غیرمجاز به اطلاعات پروژه‌ها و انبار.
-    """
-    if not company_id:
-        return None
-    try:
-        cid = int(company_id)
-    except (ValueError, TypeError):
-        return None
-    if not user or not user.is_authenticated:
-        raise PermissionDenied("کاربر احراز هویت نشده است.")
-    if user.is_superuser:
-        return cid
-    allowed_ids = set(get_user_allowed_companies(user, required_level=required_level).values_list('id', flat=True))
-    if cid not in allowed_ids:
-        raise PermissionDenied("شما به اطلاعات و پروژه‌های این شرکت دسترسی ندارید.")
-    return cid
-
-
-# ─── نوشتن محدود به شرکت برای همهٔ کاربران غیرسوپریوزر (requires_company_scope) ───
-def ensure_scoped_write(user, company_id, message):
-    """
-    رکورد باید به یکی از شرکت‌های مجاز کاربر تعلق داشته باشد. رکورد سراسری (بدون شرکت) هم رد می‌شود،
-    چون بین همهٔ شرکت‌ها مشترک است و فقط سوپریوزر آن را تغییر می‌دهد. در صورت نقض، PermissionDenied پرتاب می‌شود.
-    """
-    allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
-    if company_id is None or company_id not in allowed_ids:
-        raise PermissionDenied(message)
+# قواعد دسترسی شرکت در هستهٔ companies هستند و این‌جا دوباره صادر می‌شوند؛ دسترسی مشتق از عضویت بخش
+# در personnel.apps ثبت می‌شود (personnel.company_access).
+from companies.realtime import broadcast_org_structure_updated as core_broadcast_org_structure_updated  # noqa: E402
+from companies.views import (  # noqa: E402,F401
+    CompanyViewSet as CoreCompanyViewSet,
+    UserCompanyAccessViewSet,
+)
+from companies.access import (  # noqa: E402,F401
+    get_user_allowed_companies,
+    get_request_company_id,
+    validate_user_company_access,
+    ensure_scoped_write,
+)
 
 
 def user_belongs_to_company(user_id, company_id):
@@ -9173,157 +9108,33 @@ class FleetSettlementViewSet(viewsets.ViewSet):
 # ══════════════════════════════════════════════════════════════════════════════
 def broadcast_org_structure_updated(entity_type, action, entity_id=None, name=None, project_id=None, client_tab_id=None, sender_id=None, company_id=None):
     """
-    ارسال بلادرنگ رویداد تغییرات ساختار سازمانی (پروژه، بخش، انتساب، طرف‌حساب) به وب‌سوکت شرکتی
+    ارسال بلادرنگ رویداد تغییرات ساختار سازمانی به وب‌سوکت شرکتی؛ اگر فقط پروژه داده شده باشد،
+    شرکتِ پروژه پیدا می‌شود و ارسال به هستهٔ companies سپرده می‌شود.
     """
-    try:
-        from channels.layers import get_channel_layer
-        from asgiref.sync import async_to_sync
-        channel_layer = get_channel_layer()
-        if channel_layer is not None:
-            cid = company_id
-            if not cid and project_id:
-                try:
-                    from personnel.models import FinancialProject
-                    cid = FinancialProject.objects.filter(id=project_id).values_list('company_id', flat=True).first()
-                except Exception:
-                    pass
-
-            payload = {
-                'type': 'send_notification',
-                'type_str': 'org_structure_updated',
-                'entity_type': entity_type,  # 'project' | 'section' | 'assignment' | 'counterparty'
-                'action': action,            # 'create' | 'update' | 'delete'
-                'entity_id': entity_id,
-                'name': name,
-                'project_id': project_id,
-                'company_id': cid,
-                'client_tab_id': client_tab_id,
-                'sender_id': sender_id,
-                'message': f"ساختار سازمانی ({entity_type}) به‌روزرسانی شد."
-            }
-            target_group = f'company_{cid}_notifications' if cid else 'global_notifications'
-            async_to_sync(channel_layer.group_send)(
-                target_group,
-                payload
-            )
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"[WebSocket] Error broadcasting org_structure_updated: {e}")
+    cid = company_id
+    if not cid and project_id:
+        try:
+            cid = FinancialProject.objects.filter(id=project_id).values_list('company_id', flat=True).first()
+        except Exception:
+            pass
+    core_broadcast_org_structure_updated(entity_type, action, entity_id, name, project_id, client_tab_id, sender_id, cid)
 
 
 # ویوست‌های مدیریت ساختار سازمانی، شرکت، پروژه، بخش، طرف‌حساب و فاکتور
 # ══════════════════════════════════════════════════════════════════════════════
 
-class CompanyViewSet(viewsets.ModelViewSet):
+class CompanyViewSet(CoreCompanyViewSet):
     """
-    مدیریت شرکت‌ها (هلدینگ و شرکت‌های تابعه)
+    مدیریت شرکت‌ها در حسابداری: ویوست هسته به‌علاوهٔ شمار پروژه‌ها، مدارک، حساب‌های بانکی،
+    اعضای هیئت‌مدیره و پایش سررسید مدارک.
     """
     queryset = Company.objects.all().annotate(projects_count=Count('projects'))
     serializer_class = CompanySerializer
-    permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
-    pagination_class = OptionalPageNumberPagination
 
-    def get_queryset(self):
-        user = self.request.user
-        qs = Company.objects.all().annotate(
+    def base_queryset(self):
+        return Company.objects.all().annotate(
             projects_count=Count('projects')
         ).prefetch_related('documents', 'bank_accounts', 'board_members')
-
-        if not user.is_superuser and self.action != 'user_available':
-            allowed_ids = get_user_allowed_companies(user).values_list('id', flat=True)
-            qs = qs.filter(id__in=allowed_ids)
-
-        is_active = self.request.query_params.get('is_active')
-        if is_active is not None:
-            qs = qs.filter(is_active=is_active.lower() == 'true')
-
-        search = self.request.query_params.get('search')
-        if search:
-            search_clean = normalize_digits(str(search)).strip()
-            qs = qs.filter(
-                Q(name__icontains=search) |
-                Q(code__icontains=search_clean) |
-                Q(national_id__icontains=search_clean) |
-                Q(ceo_name__icontains=search)
-            )
-        return qs.order_by('code')
-
-    def perform_create(self, serializer):
-        if not (self.request.user.is_superuser or self.request.user.is_staff):
-            raise PermissionDenied("تنها مدیران ارشد مجاز به ایجاد شرکت جدید هستند.")
-        instance = serializer.save()
-        tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
-        broadcast_org_structure_updated('company', 'create', instance.id, instance.name, None, tab_id, self.request.user.id)
-
-    def perform_update(self, serializer):
-        if not (self.request.user.is_superuser or self.request.user.is_staff):
-            raise PermissionDenied("تنها مدیران ارشد مجاز به ویرایش اطلاعات شرکت هستند.")
-        instance = serializer.save()
-        tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
-        broadcast_org_structure_updated('company', 'update', instance.id, instance.name, None, tab_id, self.request.user.id)
-
-    def perform_destroy(self, instance):
-        if not (self.request.user.is_superuser or self.request.user.is_staff):
-            raise PermissionDenied("تنها مدیران ارشد مجاز به حذف شرکت هستند.")
-        if instance.projects.exists():
-            raise serializers.ValidationError("این شرکت دارای پروژه‌های ثبت‌شده است و نمی‌توان آن را حذف کرد.")
-        if hasattr(instance, 'warehouses') and instance.warehouses.exists():
-            raise serializers.ValidationError("این شرکت دارای انبارهای ثبت‌شده در سامانه است و نمی‌توان آن را حذف کرد.")
-        if hasattr(instance, 'personnel_profiles') and instance.personnel_profiles.exists():
-            raise serializers.ValidationError("این شرکت دارای پرونده‌های پرسنلی ثبت‌شده است و نمی‌توان آن را حذف کرد.")
-        if hasattr(instance, 'monthly_work_periods') and instance.monthly_work_periods.exists():
-            raise serializers.ValidationError("این شرکت دارای دوره‌های کارکرد ثبت‌شده است و نمی‌توان آن را حذف کرد.")
-        if hasattr(instance, 'counterparties') and instance.counterparties.exists():
-            raise serializers.ValidationError("این شرکت دارای طرف‌حساب‌های مالی ثبت‌شده است و نمی‌توان آن را حذف کرد.")
-        if hasattr(instance, 'fiscal_periods') and instance.fiscal_periods.exists():
-            raise serializers.ValidationError("این شرکت دارای دوره‌های مالی تعریف‌شده است و نمی‌توان آن را حذف کرد.")
-        instance_id = instance.id
-        instance_name = instance.name
-        instance.delete()
-        tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company', 'delete', instance_id, instance_name, None, tab_id, self.request.user.id)
-
-    @action(detail=False, methods=['get'], url_path='user-available')
-    def user_available(self, request):
-        """
-        لیست شرکت‌های در دسترس کاربر جاری برای نمایش در مودال ورود، هدر سوئیچر و کارتابل مدارک
-        اگر scope='documents' یا 'docs' باشد: شرکت‌هایی که کاربر حداقل دسترسی docs_read دارد.
-        اگر scope='all' باشد: تمامی شرکت‌های منتسب به کاربر.
-        پیش‌فرض: شرکت‌هایی که کاربر عضویت فضای کاری (workspace_full) دارد.
-        """
-        user = request.user
-        scope = request.query_params.get('scope', 'workspace')
-        if scope in ('documents', 'docs'):
-            companies = get_user_allowed_companies(user, required_level='docs_read')
-        elif scope == 'all':
-            companies = get_user_allowed_companies(user, required_level=None)
-        else:
-            companies = get_user_allowed_companies(user, required_level='workspace_full')
-
-        serializer = self.get_serializer(companies, many=True)
-        data = list(serializer.data)
-
-        # الحاق سطح دسترسی کاربر در هر شرکت برای هدایت هوشمند در فرانت‌اند
-        user_accesses = {
-            a.company_id: a.access_level
-            for a in UserCompanyAccess.objects.filter(user=user)
-        }
-        for c in data:
-            if user.is_superuser:
-                c['user_access_level'] = 'workspace_full'
-            elif c['id'] in user_accesses:
-                c['user_access_level'] = user_accesses[c['id']]
-            elif UserSectionAssignment.objects.filter(user=user, is_active=True, section__project__company_id=c['id']).exists():
-                c['user_access_level'] = 'workspace_full'
-            else:
-                c['user_access_level'] = 'docs_read'
-
-        return Response({
-            'companies': data,
-            'is_superuser': user.is_superuser,
-            'count': len(data)
-        })
 
     @action(detail=False, methods=['get'], url_path='expiring-documents')
     def expiring_documents(self, request):
@@ -9353,115 +9164,6 @@ class CompanyViewSet(viewsets.ModelViewSet):
             'count': expiring_qs.count(),
             'results': serializer.data
         })
-
-
-    @action(detail=False, methods=['get'], url_path='export-excel')
-    def export_excel(self, request):
-        """
-        خروجی اکسل استاندارد ۲ ردیفه اطلاعات شرکت‌ها منطبق بر استانداردهای مهندسی
-        """
-        import openpyxl
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-
-        qs = self.get_queryset()
-
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "شرکت‌های هلدینگ"
-        ws.views.sheetView[0].rightToLeft = True
-
-        headers_fa = [
-            'ردیف', 'کد یکتا', 'نام کامل شرکت', 'نوع شرکت', 'شناسه ملی', 'کد اقتصادی',
-            'شماره ثبت', 'تلفن تماس', 'مدیرعامل', 'رئیس هیئت‌مدیره', 'کد کارگاه بیمه',
-            'شناسه مودیان', 'شماره شبا رسمی', 'تعداد پروژه‌ها', 'تعداد اسناد', 'وضعیت', 'نشانی دفتر مرکزی'
-        ]
-        headers_en = [
-            'row_num', 'code', 'name', 'company_type', 'national_id', 'economic_code',
-            'registration_number', 'phone', 'ceo_name', 'board_chairman', 'workshop_code',
-            'tax_memory_id', 'primary_iban', 'projects_count', 'documents_count', 'is_active', 'address'
-        ]
-
-        title_font = Font(name='B Nazanin', size=11, bold=True, color='FFFFFF')
-        key_font = Font(name='Segoe UI', size=8, italic=True, color='94A3B8')
-        title_fill = PatternFill(start_color='1E293B', end_color='1E293B', fill_type='solid')
-        key_fill = PatternFill(start_color='0F172A', end_color='0F172A', fill_type='solid')
-
-        thin_border = Border(
-            left=Side(style='thin', color='E2E8F0'),
-            right=Side(style='thin', color='E2E8F0'),
-            top=Side(style='thin', color='E2E8F0'),
-            bottom=Side(style='thin', color='E2E8F0')
-        )
-
-        ws.append(headers_fa)
-        ws.append(headers_en)
-
-        for col_idx in range(1, len(headers_fa) + 1):
-            cell_fa = ws.cell(row=1, column=col_idx)
-            cell_fa.font = title_font
-            cell_fa.fill = title_fill
-            cell_fa.alignment = Alignment(horizontal='center', vertical='center')
-
-            cell_en = ws.cell(row=2, column=col_idx)
-            cell_en.font = key_font
-            cell_en.fill = key_fill
-            cell_en.alignment = Alignment(horizontal='center', vertical='center')
-
-        ws.row_dimensions[1].height = 26
-        ws.row_dimensions[2].height = 16
-        ws.freeze_panes = 'A3'
-
-        data_font = Font(name='B Nazanin', size=10)
-        data_font_num = Font(name='Segoe UI', size=10)
-
-        for idx, comp in enumerate(qs, start=1):
-            p_count = comp.projects_count if hasattr(comp, 'projects_count') else comp.projects.count()
-            d_count = comp.documents.count()
-            ws.append([
-                idx,
-                comp.code,
-                comp.name,
-                comp.get_company_type_display(),
-                comp.national_id or '',
-                comp.economic_code or '',
-                comp.registration_number or '',
-                comp.phone or '',
-                comp.ceo_name or '',
-                comp.board_chairman or '',
-                comp.workshop_code or '',
-                comp.tax_memory_id or '',
-                comp.primary_iban or '',
-                p_count,
-                d_count,
-                'فعال' if comp.is_active else 'غیرفعال',
-                comp.address or ''
-            ])
-            curr_row = idx + 2
-            ws.row_dimensions[curr_row].height = 20
-            for col_idx in range(1, len(headers_fa) + 1):
-                c = ws.cell(row=curr_row, column=col_idx)
-                c.border = thin_border
-                c.alignment = Alignment(horizontal='center' if col_idx not in [3, 17] else 'right', vertical='center')
-                if col_idx in [1, 2, 5, 6, 7, 8, 11, 12, 13, 14, 15]:
-                    c.font = data_font_num
-                else:
-                    c.font = data_font
-
-        for col in ws.columns:
-            max_len = max(len(str(cell.value or '')) for cell in col)
-            col_letter = openpyxl.utils.get_column_letter(col[0].column)
-            ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
-
-        buf = io.BytesIO()
-        wb.save(buf)
-        buf.seek(0)
-        filename = f"companies_{timezone.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-        response = HttpResponse(
-            buf.getvalue(),
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
 
 
 class CompanyDocumentViewSet(viewsets.ModelViewSet):
@@ -9747,59 +9449,6 @@ class CompanyBoardMemberViewSet(viewsets.ModelViewSet):
         instance.delete()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_board_member', 'delete', instance_id, title, comp_id, tab_id, user.id)
-
-
-class UserCompanyAccessViewSet(viewsets.ModelViewSet):
-    """
-    مدیریت انتساب دسترسی کاربران به شرکت‌ها
-    """
-    queryset = UserCompanyAccess.objects.all().select_related('user', 'company')
-    serializer_class = UserCompanyAccessSerializer
-    permission_classes = [permissions.IsAuthenticated, IsOrgStructureManagerOrReadOnly]
-    pagination_class = OptionalPageNumberPagination
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-        if requires_company_scope(user):
-            # کاربر غیرسوپریوزر فقط دسترسی‌های شرکت‌های مجاز خودش و ردیف‌های خودش را می‌بیند
-            allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
-            qs = qs.filter(Q(company_id__in=allowed_ids) | Q(user=user))
-        user_id = self.request.query_params.get('user_id')
-        company_id = self.request.query_params.get('company_id')
-        if user_id:
-            qs = qs.filter(user_id=user_id)
-        if company_id:
-            qs = qs.filter(company_id=company_id)
-        return qs.order_by('-created_at')
-
-    def perform_create(self, serializer):
-        if requires_company_scope(self.request.user):
-            company = serializer.validated_data.get('company')
-            ensure_scoped_write(self.request.user, company.id if company else None, "دسترسی فقط برای شرکت‌های مجاز شما قابل اعطاست.")
-        instance = serializer.save()
-        tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_access', 'create', instance.id, str(instance.user), instance.company_id, tab_id, self.request.user.id)
-
-    def perform_update(self, serializer):
-        if requires_company_scope(self.request.user):
-            ensure_scoped_write(self.request.user, serializer.instance.company_id, "فقط دسترسی‌های شرکت‌های مجاز خود را می‌توانید تغییر دهید.")
-            if 'company' in serializer.validated_data:
-                company = serializer.validated_data.get('company')
-                ensure_scoped_write(self.request.user, company.id if company else None, "انتقال دسترسی به شرکتی که مجاز نیستید ممکن نیست.")
-        instance = serializer.save()
-        tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_access', 'update', instance.id, str(instance.user), instance.company_id, tab_id, self.request.user.id)
-
-    def perform_destroy(self, instance):
-        if requires_company_scope(self.request.user):
-            ensure_scoped_write(self.request.user, instance.company_id, "فقط دسترسی‌های شرکت‌های مجاز خود را می‌توانید حذف کنید.")
-        instance_id = instance.id
-        user_title = str(instance.user)
-        comp_id = instance.company_id
-        instance.delete()
-        tab_id = self.request.headers.get('X-Client-Tab-Id')
-        broadcast_org_structure_updated('company_access', 'delete', instance_id, user_title, comp_id, tab_id, self.request.user.id)
 
 
 class CompanyFiscalPeriodViewSet(viewsets.ModelViewSet):
