@@ -439,3 +439,13 @@
     - **پیش از گام ۶:** اگر `CertMode` در `deploy_config.json` روی soft تنظیم نشده باشد، Setup مقدار `http01` را در `shared/CERT_MODE` ثبت می‌کند. این فقط در `-Status` نادرست دیده می‌شود، چون صدور دوباره با وجود `cloudflare.ini` همان DNS-01 را برمی‌گزیند. بهتر است `CertMode=dns01-cloudflare` صریح شود. (`deploy_config.json` خوانده نشد.)
   - **اقدام بعدی:** گام ۶ طبق ترتیب یادداشت گام ۳ و ۵.
 
+- **۱۸ مهر ۱۴۰۵ (2026-10-09) — تغییر در گام ۶ (تصمیم کاربر):** سرور soft را کاربر از نو نصب کرد و داده‌ای روی آن نیست. پس پشتیبان‌گیری و کشیدن آن و `-ResetServer` حذف می‌شوند. ترتیب تازه:
+  1. آماده‌سازی سرور تازه: کاربر SSH، sudo بدون رمز موقت برای نخستین Setup، اثر انگشت کلید میزبان، `known_hosts`، و سپس `-InstallKey`.
+  2. در `deploy_config.json`: `HostKeyFingerprint` تازه، `Modules=accounting` و `CertMode=dns01-cloudflare`.
+  3. `-Setup` و سپس حذف sudo موقت.
+  4. `-SetSecret CLOUDFLARE_DNS_API_TOKEN` و `-IssueCert`.
+  5. `-CreateAdmin` و بررسی (`-Status`، `/`، `/api/public/config/` با `installed_modules=[accounting]`، و `ngsw.json`).
+  6. `-AddModule warehouse` و بررسی دوباره.
+
+  کاربر این مراحل را خودش اجرا می‌کند. Claude در نشست تازه راهنمایی و بررسی خروجی‌ها را انجام می‌دهد.
+
