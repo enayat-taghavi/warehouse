@@ -116,7 +116,7 @@ class PublicConfigViewSet(viewsets.ViewSet):
 
         return Response({
             'system_version': get_setting('system_version'),
-            'system_name': 'سامانه یکپارچه مدیریت انبارگردانی فارس عالیش',
+            'system_name': 'سامانه یکپارچه مدیریت شرکت ها',
             'canonical_domain': getattr(settings, 'WH_CANONICAL_DOMAIN', ''),
             'offline_sync_interval_minutes': clamped_minutes('offline_sync_interval_minutes', 1, 1440),
             # صفر = «هیچ‌وقت کهنه نشود» و مقدار معتبری است، پس کف بازه صفر است
