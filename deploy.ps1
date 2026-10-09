@@ -492,32 +492,107 @@ function Get-ConfigPath {
     return (Join-Path $ScriptRoot $ConfigFile)
 }
 
-function Read-ModuleChoice {
-    $answer = ([string](Read-Host -Prompt 'Modules to install: 1) warehouse  2) accounting  3) both [3]')).Trim()
-    $modules = switch ($answer) { '1' { 'warehouse' } '2' { 'accounting' } { $_ -in @('', '3') } { $AllModules } default { $null } }
-    if (-not $modules) { throw "Invalid selection '$answer'." }
-    return $modules
+function Read-MenuChoice {
+    # Numbered menu; Enter picks $DefaultIndex. Returns the chosen 0-based index.
+    param([string]$Title, [string[]]$Labels, [int]$DefaultIndex, [string]$DefaultTag = 'current')
+    Write-Info $Title
+    for ($i = 0; $i -lt $Labels.Count; $i++) {
+        Write-Host ('  {0}) {1}{2}' -f ($i + 1), $Labels[$i], $(if ($i -eq $DefaultIndex) { "   <- $DefaultTag" } else { '' }))
+    }
+    for ($try = 0; ; $try++) {
+        $answer = ([string](Read-Host -Prompt "Choice [Enter = $($DefaultIndex + 1)]")).Trim()
+        if (-not $answer) { return $DefaultIndex }
+        $n = 0
+        if ([int]::TryParse($answer, [ref]$n) -and $n -ge 1 -and $n -le $Labels.Count) { return ($n - 1) }
+        Write-Warn "Enter a number from 1 to $($Labels.Count)."
+        if ($try -ge 4) { throw "Invalid selection '$answer'." }
+    }
 }
 
-function Read-CertModeChoice {
-    Write-Info 'Certificate modes:'
-    Write-Host '  1) http01            Let''s Encrypt over HTTP (DNS points straight at the server, port 80 open)'
-    Write-Host '  2) dns01-cloudflare  Let''s Encrypt over Cloudflare DNS (needs a Cloudflare API token; deploy.ps1 asks for it)'
-    Write-Host '  3) cloudflare-origin Cloudflare Origin certificate (files from the Cloudflare dashboard)'
-    Write-Host '  4) custom            your own certificate files'
-    $answer = ([string](Read-Host -Prompt 'Certificate mode [1]')).Trim()
-    $mode = switch ($answer) { { $_ -in @('', '1') } { 'http01' } '2' { 'dns01-cloudflare' } '3' { 'cloudflare-origin' } '4' { 'custom' } default { $null } }
-    if (-not $mode) { throw "Invalid selection '$answer'." }
-    return $mode
+function Read-ModuleChoice([string]$Current) {
+    $options = @('warehouse', 'accounting', $AllModules)
+    $idx = [array]::IndexOf($options, $Current)
+    $tag = 'current'
+    if ($idx -lt 0) { $idx = 2; $tag = 'default' }
+    return $options[(Read-MenuChoice 'Modules to install:' @('warehouse only', 'accounting only', 'warehouse and accounting') $idx $tag)]
 }
 
-# Questions for missing or invalid configuration keys (Modules, CertMode and HostKeyFingerprint have their own flows).
-$BrandingPrompts = @{
-    SystemName       = 'Full system name (page title, login page)'
-    AppShortName     = 'Short app name (login heading, installed app name)'
-    OrganizationName = 'Organization that owns the system (login footer, ID card verification page)'
+function Read-CertModeChoice([string]$Current) {
+    $options = @('http01', 'dns01-cloudflare', 'cloudflare-origin', 'custom')
+    $labels = @(
+        'http01            Let''s Encrypt over HTTP (DNS points straight at the server, port 80 open)',
+        'dns01-cloudflare  Let''s Encrypt over Cloudflare DNS (needs a Cloudflare API token; deploy.ps1 asks for it)',
+        'cloudflare-origin Cloudflare Origin certificate (files from the Cloudflare dashboard)',
+        'custom            your own certificate files')
+    $idx = [array]::IndexOf($options, $Current)
+    $tag = 'current'
+    if ($idx -lt 0) { $idx = 0; $tag = 'default' }
+    return $options[(Read-MenuChoice 'Certificate mode:' $labels $idx $tag)]
 }
 
+function Get-BrandingPreset {
+    # System name choices from config/deploy/branding-presets.json (kept out of this ASCII-only script).
+    $path = Join-Path $ScriptRoot 'config\deploy\branding-presets.json'
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return @() }
+    return @(([System.IO.File]::ReadAllText($path, $Utf8NoBom) | ConvertFrom-Json).systemNames |
+            Where-Object { ([string]$_.systemName) -match $BrandingValueRegex -and ([string]$_.shortName) -match $BrandingValueRegex })
+}
+
+function Read-ConfigText {
+    # One text question showing the current value; Enter keeps it. $Validate returns a problem text or $null.
+    param([string]$Prompt, [string]$Current, [scriptblock]$Validate, [switch]$AllowClear)
+    $hint = if ($Current) { " [$Current]" } elseif ($AllowClear) { ' [none]' } else { '' }
+    if ($AllowClear -and $Current) { $hint += ' (- clears)' }
+    for ($try = 0; ; $try++) {
+        $answer = ([string](Read-Host -Prompt "$Prompt$hint")).Trim()
+        if (-not $answer) { $answer = $Current }
+        if ($AllowClear -and $answer -eq '-') { return '' }
+        $problem = if ($Validate) { & $Validate $answer } else { $null }
+        if (-not $problem) { return $answer }
+        Write-Warn $problem
+        if ($try -ge 4) { throw "Invalid value for: $Prompt" }
+    }
+}
+
+function Read-BrandingChoice {
+    # System and short name from the preset list (Enter keeps the current names), then the organization.
+    # Returns the changed keys.
+    param([Parameter(Mandatory)]$RawConfig, [string]$Modules)
+    $changes = [ordered]@{}
+    $curSystem = [string]$RawConfig.SystemName
+    $curShort = [string]$RawConfig.AppShortName
+    $entries = [System.Collections.Generic.List[object]]::new()
+    $default = -1
+    foreach ($p in (Get-BrandingPreset)) {
+        $fits = if ([string]$p.modules -ceq $Modules) { '   (fits the selected modules)' } else { '' }
+        if ($p.systemName -ceq $curSystem -and $p.shortName -ceq $curShort) { $default = $entries.Count }
+        $entries.Add([pscustomobject]@{ Label = "$($p.systemName)  /  $($p.shortName)$fits"; System = $p.systemName; Short = $p.shortName; Custom = $false })
+    }
+    if ($default -lt 0) {
+        $default = $entries.Count
+        $inCode = '(name in the code)'
+        $keepLabel = if ($curSystem -or $curShort) { "Keep: $(if ($curSystem) { $curSystem } else { $inCode })  /  $(if ($curShort) { $curShort } else { $inCode })" } else { 'Keep the names in the code' }
+        $entries.Add([pscustomobject]@{ Label = $keepLabel; System = $curSystem; Short = $curShort; Custom = $false })
+    }
+    $entries.Add([pscustomobject]@{ Label = 'Other (type the names)'; System = $null; Short = $null; Custom = $true })
+    $pick = $entries[(Read-MenuChoice 'System name  /  short name (page title, login page, installed app):' @($entries | ForEach-Object { $_.Label }) $default)]
+    $check = { param($v) if ($v -and $v -notmatch $BrandingValueRegex) { 'At most 80 characters, without < > & " '' \ ` { }.' } else { $null } }
+    if ($pick.Custom) {
+        $system = Read-ConfigText -Prompt 'Full system name' -Current $curSystem -Validate $check
+        $short = Read-ConfigText -Prompt 'Short app name' -Current $curShort -Validate $check
+    } else {
+        $system = $pick.System
+        $short = $pick.Short
+    }
+    if ($null -eq $RawConfig.PSObject.Properties['SystemName'] -or $system -cne $curSystem) { $changes['SystemName'] = $system }
+    if ($null -eq $RawConfig.PSObject.Properties['AppShortName'] -or $short -cne $curShort) { $changes['AppShortName'] = $short }
+    $curOrg = [string]$RawConfig.OrganizationName
+    $org = Read-ConfigText -Prompt 'Organization that owns the system (login footer, ID card page)' -Current $curOrg -Validate $check -AllowClear
+    if ($null -eq $RawConfig.PSObject.Properties['OrganizationName'] -or $org -cne $curOrg) { $changes['OrganizationName'] = $org }
+    return $changes
+}
+
+# Questions for configuration keys (Modules, CertMode, branding and HostKeyFingerprint have their own flows).
 $ConfigPrompts = [ordered]@{
     ServerHost   = @{ Prompt = 'Server IP address or hostname'; Default = '' }
     SshUser      = @{ Prompt = 'SSH user on the server (a sudo user, not root)'; Default = '' }
@@ -529,11 +604,31 @@ $ConfigPrompts = [ordered]@{
     DbUser       = @{ Prompt = 'PostgreSQL user name'; Default = 'warehouse' }
 }
 
+function Read-ConfigKey {
+    # Asks one key of $ConfigPrompts showing its current value (or default); validated with Test-DeployConfig.
+    param([Parameter(Mandatory)]$RawConfig, [Parameter(Mandatory)][string]$Key, [switch]$ForSetup)
+    $current = [string]$RawConfig.$Key
+    if (-not $current) { $current = if ($Key -eq 'AllowedHosts') { [string]$RawConfig.Domain } else { $ConfigPrompts[$Key].Default } }
+    $forSetupFlag = [bool]$ForSetup
+    $validate = {
+        param($v)
+        $probe = $RawConfig.PSObject.Copy()
+        $probe | Add-Member -NotePropertyName $Key -NotePropertyValue $(if ($Key -eq 'Domain') { $v.ToLowerInvariant() } else { $v }) -Force
+        (Test-DeployConfig -RawConfig $probe -ForSetup:$forSetupFlag).Problems[$Key]
+    }.GetNewClosure()
+    $value = Read-ConfigText -Prompt $ConfigPrompts[$Key].Prompt -Current $current -Validate $validate
+    if ($Key -eq 'Domain') { $value = $value.ToLowerInvariant() }
+    if ($Key -eq 'SshPort') { $value = [int]$value }
+    return $value
+}
+
 function Complete-DeployConfig {
-    # Interactive only: asks for every missing or invalid key, pins the host key when no fingerprint is
-    # recorded yet, and saves the answers. Valid keys are never asked again.
+    # Interactive only: asks for every missing or invalid key (showing the current value), the branding names
+    # before a build when they were never answered, pins the host key when no fingerprint is recorded yet,
+    # and saves the answers. Valid keys are not asked again here (Setup reviews them, see Invoke-SetupReview).
     param([Parameter(Mandatory)]$RawConfig, [string]$Path, [switch]$ForSetup, [switch]$ForBuild)
     $changed = [ordered]@{}
+    $askNames = $false
     for ($round = 0; $round -lt 5; $round++) {
         $t = Test-DeployConfig -RawConfig $RawConfig -SourcePath $Path -ForSetup:$ForSetup
         $keys = @($t.Problems.Keys | Where-Object { $_ -ne 'HostKeyFingerprint' })
@@ -541,34 +636,25 @@ function Complete-DeployConfig {
         if ($round -eq 0) { Write-Step "Completing the deployment configuration ($Path)..." }
         foreach ($key in $keys) {
             if ($null -ne $RawConfig.PSObject.Properties[$key] -and [string]$RawConfig.$key) { Write-Warn $t.Problems[$key] }
-            $value = switch ($key) {
-                'Modules' { Read-ModuleChoice }
-                'CertMode' { Read-CertModeChoice }
-                default {
-                    $spec = $ConfigPrompts[$key]
-                    $default = if ($key -eq 'AllowedHosts') { [string]$RawConfig.Domain } else { $spec.Default }
-                    $answer = ([string](Read-Host -Prompt ($spec.Prompt + $(if ($default) { " [$default]" } else { '' })))).Trim()
-                    if ($answer) { $answer } else { $default }
-                }
+            if ($key -in $BrandingKeys) {
+                # An invalid name is asked again through the name menu below.
+                $RawConfig.PSObject.Properties.Remove($key)
+                $askNames = $true
+                continue
             }
-            if ($key -eq 'Domain') { $value = $value.ToLowerInvariant() }
-            if ($key -eq 'SshPort' -and $value -match '^\d{1,5}$') { $value = [int]$value }
+            $value = switch ($key) {
+                'Modules' { Read-ModuleChoice ([string]$RawConfig.Modules) }
+                'CertMode' { Read-CertModeChoice ([string]$RawConfig.CertMode) }
+                default { Read-ConfigKey -RawConfig $RawConfig -Key $key -ForSetup:$ForSetup }
+            }
             $RawConfig | Add-Member -NotePropertyName $key -NotePropertyValue $value -Force
             $changed[$key] = $value
         }
     }
-    if ($ForBuild) {
-        # Asked once; the answer (even an empty one, which keeps the names in the code) is recorded.
-        foreach ($key in @($BrandingKeys | Where-Object { $null -eq $RawConfig.PSObject.Properties[$_] })) {
-            for ($try = 0; ; $try++) {
-                $answer = ([string](Read-Host -Prompt "$($BrandingPrompts[$key]) [Enter = keep the name in the code]")).Trim()
-                if (-not $answer -or $answer -match $BrandingValueRegex) { break }
-                Write-Warn 'At most 80 characters, without < > & " '' \ ` { }.'
-                if ($try -ge 4) { throw "Invalid $key." }
-            }
-            $RawConfig | Add-Member -NotePropertyName $key -NotePropertyValue $answer -Force
-            $changed[$key] = $answer
-        }
+    if (($ForBuild -or $askNames) -and @($BrandingKeys | Where-Object { $null -eq $RawConfig.PSObject.Properties[$_] }).Count -gt 0) {
+        $modules = ConvertTo-CanonicalModuleList $(if ($null -ne $RawConfig.PSObject.Properties['Modules']) { [string]$RawConfig.Modules } else { $AllModules })
+        $names = Read-BrandingChoice -RawConfig $RawConfig -Modules $modules
+        foreach ($k in $names.Keys) { $RawConfig | Add-Member -NotePropertyName $k -NotePropertyValue $names[$k] -Force; $changed[$k] = $names[$k] }
     }
     $t = Test-DeployConfig -RawConfig $RawConfig -SourcePath $Path -ForSetup:$ForSetup
     if ($t.Problems.Contains('HostKeyFingerprint') -and -not $t.Problems.Contains('ServerHost') -and -not $t.Problems.Contains('SshPort')) {
@@ -583,8 +669,42 @@ function Complete-DeployConfig {
     return $RawConfig
 }
 
+function Invoke-SetupReview {
+    # Setup (interactive): the settings are asked again with their current value; Enter keeps it.
+    # First Setup: domain, hosts, e-mail, database, modules, certificate mode and names. A later Setup cannot
+    # change domain, modules or database (use -ChangeDomain or -AddModule), so only the names are asked.
+    # Returns the re-read configuration.
+    param([Parameter(Mandatory)][bool]$FirstSetup)
+    $path = Get-ConfigPath
+    $raw = Get-Content -LiteralPath $path -Raw -Encoding utf8 | ConvertFrom-Json
+    Write-Step 'Reviewing the settings for this Setup (Enter keeps the value in brackets)...'
+    $changed = [ordered]@{}
+    if ($FirstSetup) {
+        foreach ($key in @('Domain', 'AllowedHosts', 'AdminEmail', 'DbName', 'DbUser')) {
+            $value = Read-ConfigKey -RawConfig $raw -Key $key -ForSetup
+            if ([string]$value -cne [string]$raw.$key) { $raw | Add-Member -NotePropertyName $key -NotePropertyValue $value -Force; $changed[$key] = $value }
+        }
+        $t = Test-DeployConfig -RawConfig $raw -ForSetup
+        $modules = Read-ModuleChoice $(if ($t.Config.ModulesSet) { $t.Config.Modules } else { '' })
+        if (-not $t.Config.ModulesSet -or $modules -cne $t.Config.Modules) { $raw | Add-Member -NotePropertyName 'Modules' -NotePropertyValue $modules -Force; $changed['Modules'] = $modules }
+        $certMode = Read-CertModeChoice $(if ($t.Config.CertModeSet) { $t.Config.CertMode } else { '' })
+        if (-not $t.Config.CertModeSet -or $certMode -cne $t.Config.CertMode) { $raw | Add-Member -NotePropertyName 'CertMode' -NotePropertyValue $certMode -Force; $changed['CertMode'] = $certMode }
+    } else {
+        Write-Info 'The server is already set up: domain, modules and database stay as they are (use -ChangeDomain or -AddModule to change them).'
+    }
+    $names = Read-BrandingChoice -RawConfig $raw -Modules (Test-DeployConfig -RawConfig $raw -ForSetup).Config.Modules
+    foreach ($k in $names.Keys) { $changed[$k] = $names[$k] }
+    if ($changed.Count -gt 0) {
+        Save-ConfigSetting $changed
+        Write-Success "Configuration saved: $path ($(@($changed.Keys) -join ', '))."
+    } else {
+        Write-Info 'No setting changed.'
+    }
+    return (Get-DeployConfig -ForSetup)
+}
+
 function Get-DeployConfig {
-    # -ForBuild (Setup, Update, ResetServer): interactive runs also ask for the branding names once.
+    # -ForBuild (Update, ResetServer): interactive runs also ask for the branding names once (Setup reviews them).
     param([switch]$ForSetup, [switch]$ForBuild)
     $path = Get-ConfigPath
     if (Test-Path -LiteralPath $path -PathType Leaf) {
@@ -599,7 +719,7 @@ function Get-DeployConfig {
         Write-Info "No configuration file yet; it is created from your answers: $path"
         $raw = [pscustomobject]@{}
     }
-    if (-not $NonInteractive) { $raw = Complete-DeployConfig -RawConfig $raw -Path $path -ForSetup:$ForSetup -ForBuild:($ForBuild -or $ForSetup) }
+    if (-not $NonInteractive) { $raw = Complete-DeployConfig -RawConfig $raw -Path $path -ForSetup:$ForSetup -ForBuild:$ForBuild }
     return (Assert-DeployConfig -RawConfig $raw -SourcePath $path -ForSetup:$ForSetup)
 }
 
@@ -1671,11 +1791,10 @@ function Invoke-SetupMode {
     }
     if ($check.Output -contains '[GO_LIVE_EXISTS]') { throw 'Server is GO-LIVE; Setup is blocked to protect live data.' }
 
+    if (-not $NonInteractive) { $config = Invoke-SetupReview -FirstSetup (-not $viaGateway) }
     $modules = $config.Modules
-    if (-not $config.ModulesSet -and -not $NonInteractive) { $modules = Read-ModuleChoice }
     Write-Info "Modules: $modules (remote-setup refuses to change the modules of an existing installation)."
     $certMode = $config.CertMode
-    if (-not $config.CertModeSet -and -not $NonInteractive) { $certMode = Read-CertModeChoice }
     Write-Info "Certificate mode: $certMode"
 
     $sha = Get-DeployCommit
@@ -1807,7 +1926,11 @@ function Invoke-UpdateMode {
 function Invoke-AddModuleMode([string]$Code) {
     if (-not $Code) {
         Assert-Interactive 'AddModule without a module name'
-        $Code = ([string](Read-Host -Prompt "Module to add ($($KnownModules -join ' or '))")).Trim()
+        $installed = @((Get-DeployConfig).Modules.Split(','))
+        $missing = @($KnownModules | Where-Object { $_ -notin $installed })
+        if ($missing.Count -eq 0) { throw "Every module is already installed ($($installed -join ', '))." }
+        Write-Info "Installed modules (configuration): $($installed -join ', ')"
+        $Code = $missing[(Read-MenuChoice 'Module to add:' $missing 0 'default')]
     }
     if ($Code -cnotin $KnownModules) { throw "Unknown module '$Code' (known: $($KnownModules -join ', '))." }
     $config = Connect-Server
@@ -2235,7 +2358,7 @@ function Test-SecretValue([string]$Value) {
 
 function Invoke-SetSecretMode([string]$KeyName) {
     Assert-Interactive 'SetSecret'
-    if (-not $KeyName) { $KeyName = ([string](Read-Host -Prompt "Secret name ($($SecretKeyAllowList -join ', '))")).Trim() }
+    if (-not $KeyName) { $KeyName = $SecretKeyAllowList[(Read-MenuChoice 'Secret to set (the current value is never shown):' $SecretKeyAllowList 0 'default')] }
     if ($SecretKeyAllowList -cnotcontains $KeyName) { throw "Only these keys may be set: $($SecretKeyAllowList -join ', ')." }
     $config = Connect-Server
     $value = [string](Read-Host -Prompt "Value for $KeyName" -MaskInput)
@@ -2365,7 +2488,7 @@ function Invoke-StatusMode {
 function Invoke-ChangeDomainMode([string]$NewDomain) {
     if (-not $NewDomain) {
         Assert-Interactive 'ChangeDomain'
-        $NewDomain = ([string](Read-Host -Prompt 'New primary domain name (lower-case)')).Trim()
+        $NewDomain = ([string](Read-Host -Prompt "New primary domain name (current: $((Get-DeployConfig).Domain))")).Trim().ToLowerInvariant()
     }
     $domainRegex = '^(?=.{1,253}$)[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$'
     if ($NewDomain -cnotmatch $domainRegex) { throw "New domain must be a lower-case hostname (got: '$NewDomain')." }
@@ -2607,6 +2730,8 @@ function Invoke-Mode([string]$Name) {
 }
 
 function Invoke-Main {
+    # Persian names (branding) must show and be typed correctly in the console.
+    try { [Console]::OutputEncoding = $Utf8NoBom; [Console]::InputEncoding = $Utf8NoBom } catch { Write-Verbose "Console encoding unchanged: $_" }
     try {
         $flags = [ordered]@{
             InstallKey = [bool]$InstallKey; Setup = [bool]$Setup; Update = [bool]$Update; Backup = [bool]$Backup

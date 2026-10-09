@@ -137,12 +137,13 @@ try {
     Assert-True ($raw.HostKeyFingerprint -ceq $new.Fp -and $null -eq (Get-PinnedHostKeyProblem '203.0.113.7' $new.Fp)) '... the host key is pinned from the console reading and recorded'
     Assert-True ($null -eq $raw.PSObject.Properties['AdminEmail'] -and $script:ReadHostQueue.Count -eq 0) '... Setup-only keys are not asked outside Setup'
 
-    # --- 7. Setup asks only for its missing keys --------------------------------------------------
+    # --- 7. Setup asks only for its missing keys, showing the default -----------------------------------
     Reset-Mocks
-    foreach ($a in @('ops@farsalish.ir', '', '', '', '', '')) { $script:ReadHostQueue.Enqueue($a) }
+    foreach ($a in @('ops@farsalish.ir', '', '')) { $script:ReadHostQueue.Enqueue($a) }
     $cfg = Get-DeployConfig -ForSetup
     $raw = Get-RawConfig
-    Assert-True ($script:ReadHostPrompts.Count -eq 6 -and $raw.AdminEmail -eq 'ops@farsalish.ir' -and $raw.DbName -eq 'warehouse_db' -and $raw.DbUser -eq 'warehouse') "Setup asks only AdminEmail, DbName, DbUser (defaults taken) and the three names ($($script:ReadHostPrompts.Count) questions)"
+    Assert-True ($script:ReadHostPrompts.Count -eq 3 -and $raw.AdminEmail -eq 'ops@farsalish.ir' -and $raw.DbName -eq 'warehouse_db' -and $raw.DbUser -eq 'warehouse') "Setup asks only AdminEmail, DbName and DbUser; Enter takes the default ($($script:ReadHostPrompts.Count) questions)"
+    Assert-True ($script:ReadHostPrompts[1] -like '*`[warehouse_db`]*' -and $script:ReadHostPrompts[2] -like '*`[warehouse`]*') "... and the default is shown in the question ($($script:ReadHostPrompts[1]))"
     Reset-Mocks
     [void](Get-DeployConfig -ForSetup)
     Assert-True ($script:ReadHostPrompts.Count -eq 0) '... and nothing once the configuration is complete'
@@ -161,20 +162,31 @@ try {
     $cfg = Get-DeployConfig
     Assert-True ($cfg.SshUser -eq 'cloud-admin' -and (Get-RawConfig).SshUser -eq 'cloud-admin') 'an invalid value is asked again until it is valid, then saved'
 
-    # --- 9a. builds ask the branding names once; invalid ones are asked again --------------------------
+    # --- 9a. builds ask the names once from the preset menu; "other" is typed and checked --------------------
+    $presets = @(Get-BrandingPreset)
+    Assert-True ($presets.Count -eq 3) "config/deploy/branding-presets.json offers 3 names ($($presets.Count))"
     $raw = Get-RawConfig
     foreach ($k in $BrandingKeys) { $raw.PSObject.Properties.Remove($k) }
     Write-Utf8LfFile $ConfigFile (($raw | ConvertTo-Json) + "`n")
     Reset-Mocks
-    foreach ($a in @('سامانه <آزمون>', 'سامانه آزمون', '', 'شرکت نمونه')) { $script:ReadHostQueue.Enqueue($a) }
+    # menu: 3 presets, 4 = keep the code's names (default), 5 = other
+    foreach ($a in @('5', 'سامانه <آزمون>', 'سامانه آزمون', '', 'شرکت نمونه')) { $script:ReadHostQueue.Enqueue($a) }
     $cfg = Get-DeployConfig -ForBuild
     $raw = Get-RawConfig
-    Assert-True ($cfg.SystemName -eq 'سامانه آزمون' -and $cfg.AppShortName -eq '' -and $cfg.OrganizationName -eq 'شرکت نمونه') 'a build asks the three names (an invalid one again; Enter keeps the code''s name)'
-    Assert-True ($null -ne $raw.PSObject.Properties['AppShortName'] -and $raw.SystemName -eq 'سامانه آزمون') '... and records them, the empty answer too'
+    Assert-True ($cfg.SystemName -eq 'سامانه آزمون' -and $cfg.AppShortName -eq '' -and $cfg.OrganizationName -eq 'شرکت نمونه') '"other": typed names (an invalid one asked again; Enter keeps the code''s short name)'
+    Assert-True ($null -ne $raw.PSObject.Properties['AppShortName'] -and $raw.SystemName -eq 'سامانه آزمون') '... recorded, the empty answer too'
+    Assert-True ($script:ReadHostPrompts[0] -like '*Enter = 4*') "... the menu default is to keep the current names ($($script:ReadHostPrompts[0]))"
     Reset-Mocks
     [void](Get-DeployConfig -ForBuild)
     [void](Get-DeployConfig)
-    Assert-True ($script:ReadHostPrompts.Count -eq 0) '... so they are not asked again, and never outside builds'
+    Assert-True ($script:ReadHostPrompts.Count -eq 0) '... not asked again, and never outside builds'
+    foreach ($k in $BrandingKeys) { $raw.PSObject.Properties.Remove($k) }
+    Write-Utf8LfFile $ConfigFile (($raw | ConvertTo-Json) + "`n")
+    Reset-Mocks
+    foreach ($a in @('2', '')) { $script:ReadHostQueue.Enqueue($a) }
+    $cfg = Get-DeployConfig -ForBuild
+    Assert-True ($cfg.SystemName -eq $presets[1].systemName -and $cfg.AppShortName -eq $presets[1].shortName -and $cfg.OrganizationName -eq '') 'a preset sets the full and the short name together'
+    $raw = Get-RawConfig
     $raw.OrganizationName = 'a{b}'
     Write-Utf8LfFile $ConfigFile (($raw | ConvertTo-Json) + "`n")
     $script:NonInteractive = $true
@@ -182,6 +194,29 @@ try {
     try { [void](Get-DeployConfig -ForBuild) } catch { $err = $_.Exception.Message }
     $script:NonInteractive = $false
     Assert-True ($err -like '*OrganizationName must be at most 80*') '-NonInteractive refuses an invalid name'
+    Reset-Mocks
+    foreach ($a in @('', 'شرکت نمونه')) { $script:ReadHostQueue.Enqueue($a) }
+    $cfg = Get-DeployConfig
+    Assert-True ($cfg.OrganizationName -eq 'شرکت نمونه' -and $cfg.SystemName -eq $presets[1].systemName -and $script:ReadHostPrompts[0] -like '*Enter = 2*') 'an invalid name is asked again through the menu, which keeps the current preset by default'
+
+    # --- 9d. Setup review: every setting with its current value; a later Setup only asks the names ---------
+    Reset-Mocks
+    foreach ($i in 1..9) { $script:ReadHostQueue.Enqueue('') }
+    $before = Get-RawConfig
+    $cfg = Invoke-SetupReview -FirstSetup $true
+    $after = Get-RawConfig
+    $p = $script:ReadHostPrompts
+    Assert-True ($p.Count -eq 9 -and $p[0] -like "*[[]$($before.Domain)[]]*" -and $p[2] -like "*[[]$($before.AdminEmail)[]]*" -and $p[3] -like '*`[warehouse_db`]*') "first Setup asks domain, hosts, e-mail, database, modules, certificate mode and names, each with its current value ($($p.Count) questions)"
+    Assert-True ($after.Domain -eq $before.Domain -and $after.Modules -eq 'warehouse,accounting' -and $after.CertMode -eq 'http01' -and $after.SystemName -eq $before.SystemName -and $after.OrganizationName -eq $before.OrganizationName) '... Enter keeps every value; unset Modules and CertMode get their defaults recorded'
+    Reset-Mocks
+    foreach ($a in @('New.Example.Org', '', '', '', '', '2', '2', '', '')) { $script:ReadHostQueue.Enqueue($a) }
+    $cfg = Invoke-SetupReview -FirstSetup $true
+    Assert-True ($cfg.Domain -ceq 'new.example.org' -and $cfg.Modules -eq 'accounting' -and $cfg.CertMode -eq 'dns01-cloudflare' -and (Get-RawConfig).Domain -ceq 'new.example.org') 'a changed domain (lower-cased), modules and certificate mode are saved'
+    Assert-True ($script:ReadHostPrompts[5] -like '*Enter = 3*' -and $script:ReadHostPrompts[6] -like '*Enter = 1*') '... the module and certificate menus default to the current values'
+    Reset-Mocks
+    foreach ($a in @('', '')) { $script:ReadHostQueue.Enqueue($a) }
+    [void](Invoke-SetupReview -FirstSetup $false)
+    Assert-True ($script:ReadHostPrompts.Count -eq 2 -and (Get-RawConfig).Domain -ceq 'new.example.org') 'a later Setup asks only the names'
 
     # --- 9b. names written into a snapshot copy of the real files; the build marker follows them ------------
     $snap = Join-Path $TestRoot 'snapshot'

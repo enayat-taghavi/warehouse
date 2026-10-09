@@ -1,0 +1,8 @@
+{
+  "_comment": "System name choices offered by deploy.ps1 (Setup and before builds). modules = the Modules value the name fits best.",
+  "systemNames": [
+    { "modules": "warehouse,accounting", "systemName": "سامانه یکپارچه مدیریت شرکت ها", "shortName": "اتوماسیون هوشمند" },
+    { "modules": "accounting", "systemName": "سامانه یکپارچه مالی و پرسنلی", "shortName": "مالی و پرسنلی" },
+    { "modules": "warehouse", "systemName": "سامانه اتوماسیون انبار", "shortName": "اتوماسیون انبار" }
+  ]
+}

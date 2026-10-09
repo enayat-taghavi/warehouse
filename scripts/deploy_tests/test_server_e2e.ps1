@@ -451,10 +451,10 @@ try {
     # Like soft: Let's Encrypt cannot reach the server, so HTTP-01 fails; the setup must still finish.
     $cfToken = 'e2eTestToken_0123456789abcdefghijklmnopqrstu'
     [void](Invoke-Server "touch /run/fake-certbot-http01-fail; printf '%s' '$cfToken' > /run/fake-cf-token")
-    # Setup asks the three branding names (Enter keeps the code's names) and CertMode (1 = http01); afterwards it
-    # offers the certificate, an outbound proxy, Google OAuth and the administrator (all declined here; the token
-    # and IssueCert are tested as separate modes below).
-    foreach ($a in @('', '', '', '1', 'n', 'n', 'n', 'n')) { $script:ReadHostQueue.Enqueue($a) }
+    # The first Setup reviews domain, hosts, e-mail, database, modules, certificate mode (unset: http01), the name
+    # menu and the organization; Enter keeps each. Afterwards it offers the certificate, an outbound proxy,
+    # Google OAuth and the administrator (all declined here; the token and IssueCert are separate modes below).
+    foreach ($a in @('', '', '', '', '', '', '', '', '', 'n', 'n', 'n', 'n')) { $script:ReadHostQueue.Enqueue($a) }
     Assert-True ((Invoke-TestMode 'Setup') -eq 0) 'Setup #1 exit 0 although HTTP-01 fails'
     Assert-True ((Get-ConfigCertMode) -eq 'http01') "Setup #1 recorded the chosen CertMode in the configuration ($(Get-ConfigCertMode))"
     Assert-True (@(Invoke-Server 'test -e /etc/sudoers.d/90-warehouse-setup-temp && echo PRESENT || echo ABSENT')[0] -eq 'ABSENT') 'Setup #1 removed the temporary bootstrap sudo rule'
@@ -506,6 +506,7 @@ runuser -u warehouse -- sh -c 'printf "user upload\n" > /var/www/warehouse/share
 sha256sum /var/www/warehouse/shared/.env | cut -d' ' -f1
 runuser -u postgres -- psql -XAtq -c "SELECT oid FROM pg_database WHERE datname = 'warehouse_db'"
 '@ | Where-Object { $_ -and $_ -notmatch '^(CREATE|INSERT|ALTER)' })
+    foreach ($a in @('', '')) { $script:ReadHostQueue.Enqueue($a) }   # a later Setup reviews only the names
     Assert-True ((Invoke-TestMode 'Setup') -eq 0) 'Setup #2 (gateway only) exit 0'
     $sB = Get-ServerState
     Assert-Serving $sB $sha1 'Setup #2'
@@ -764,6 +765,7 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "INSERT INTO e2e_marker VAL
     Set-ConfigModules 'warehouse,accounting'
     $relBefore = (Get-ServerState).CURRENT
     Assert-True ((Invoke-TestMode 'Update') -ne 0) 'Update whose Modules differ from the server exits non-zero'
+    foreach ($a in @('', '')) { $script:ReadHostQueue.Enqueue($a) }
     Assert-True ((Invoke-TestMode 'Setup') -ne 0) 'Setup whose Modules differ from the server exits non-zero'
     Assert-True ((Get-ServerState).CURRENT -eq $relBefore -and (Get-ModuleState).ENV -eq 'accounting') '... current release and WH_MODULES unchanged'
     Set-ConfigModules 'accounting'
