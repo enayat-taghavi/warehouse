@@ -106,6 +106,9 @@ if (Test-Path -LiteralPath (Join-Path $WindowsOpenSsh 'ssh.exe')) {
     $SshKeyscanExe = Find-Application 'ssh-keyscan.exe'
 }
 $KnownHostsFile = Join-Path $env:USERPROFILE '.ssh\known_hosts'
+# Branding asked before every build (Setup, Update, ResetServer); written into the build snapshot only.
+$BrandingKeys = @('SystemName', 'AppShortName', 'OrganizationName')
+$BrandingValueRegex = '^[^\x00-\x1f\x7f<>&"''\\`{}]{1,80}$'
 # The temporary password-less sudo file the first Setup asks for; Setup removes it once the gateway is installed.
 $BootstrapSudoersFile = '/etc/sudoers.d/90-warehouse-setup-temp'
 $GitExe = Find-Application 'git.exe'
@@ -414,6 +417,14 @@ function Test-DeployConfig {
     $certMode = if ($certModeSet) { ([string]$RawConfig.CertMode).Trim().ToLowerInvariant() } else { $DefaultCertMode }
     if ($certMode -notin $KnownCertModes) { $problems['CertMode'] = "CertMode must be one of: $($KnownCertModes -join ', ')" }
 
+    # Names shown in the user interface; empty keeps the names in the code (warehouse-front/src/app/core/branding.ts).
+    $branding = [ordered]@{}
+    foreach ($key in $BrandingKeys) {
+        $value = ([string]$RawConfig.$key).Trim()
+        if ($value -and $value -notmatch $BrandingValueRegex) { $problems[$key] = "$key must be at most 80 characters without control characters or any of < > & `" ' \ `` { }" }
+        $branding[$key] = $value
+    }
+
     $adminEmail = ([string]$RawConfig.AdminEmail).Trim()
     if ($ForSetup) {
         if ($adminEmail -notmatch '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$') { $problems['AdminEmail'] = 'AdminEmail must be a valid e-mail address (required for Setup)' }
@@ -428,6 +439,7 @@ function Test-DeployConfig {
         AllowedHosts = $allowedHosts; AdminEmail = $adminEmail; SourcePath = $SourcePath
         Modules = $modules; ModulesSet = $modulesSet
         CertMode = $certMode; CertModeSet = $certModeSet
+        SystemName = $branding['SystemName']; AppShortName = $branding['AppShortName']; OrganizationName = $branding['OrganizationName']
     }
     return [pscustomobject]@{ Problems = $problems; Config = $config }
 }
@@ -500,6 +512,12 @@ function Read-CertModeChoice {
 }
 
 # Questions for missing or invalid configuration keys (Modules, CertMode and HostKeyFingerprint have their own flows).
+$BrandingPrompts = @{
+    SystemName       = 'Full system name (page title, login page)'
+    AppShortName     = 'Short app name (login heading, installed app name)'
+    OrganizationName = 'Organization that owns the system (login footer, ID card verification page)'
+}
+
 $ConfigPrompts = [ordered]@{
     ServerHost   = @{ Prompt = 'Server IP address or hostname'; Default = '' }
     SshUser      = @{ Prompt = 'SSH user on the server (a sudo user, not root)'; Default = '' }
@@ -514,7 +532,7 @@ $ConfigPrompts = [ordered]@{
 function Complete-DeployConfig {
     # Interactive only: asks for every missing or invalid key, pins the host key when no fingerprint is
     # recorded yet, and saves the answers. Valid keys are never asked again.
-    param([Parameter(Mandatory)]$RawConfig, [string]$Path, [switch]$ForSetup)
+    param([Parameter(Mandatory)]$RawConfig, [string]$Path, [switch]$ForSetup, [switch]$ForBuild)
     $changed = [ordered]@{}
     for ($round = 0; $round -lt 5; $round++) {
         $t = Test-DeployConfig -RawConfig $RawConfig -SourcePath $Path -ForSetup:$ForSetup
@@ -539,6 +557,19 @@ function Complete-DeployConfig {
             $changed[$key] = $value
         }
     }
+    if ($ForBuild) {
+        # Asked once; the answer (even an empty one, which keeps the names in the code) is recorded.
+        foreach ($key in @($BrandingKeys | Where-Object { $null -eq $RawConfig.PSObject.Properties[$_] })) {
+            for ($try = 0; ; $try++) {
+                $answer = ([string](Read-Host -Prompt "$($BrandingPrompts[$key]) [Enter = keep the name in the code]")).Trim()
+                if (-not $answer -or $answer -match $BrandingValueRegex) { break }
+                Write-Warn 'At most 80 characters, without < > & " '' \ ` { }.'
+                if ($try -ge 4) { throw "Invalid $key." }
+            }
+            $RawConfig | Add-Member -NotePropertyName $key -NotePropertyValue $answer -Force
+            $changed[$key] = $answer
+        }
+    }
     $t = Test-DeployConfig -RawConfig $RawConfig -SourcePath $Path -ForSetup:$ForSetup
     if ($t.Problems.Contains('HostKeyFingerprint') -and -not $t.Problems.Contains('ServerHost') -and -not $t.Problems.Contains('SshPort')) {
         $fp = Update-PinnedHostKey -ServerHost $t.Config.ServerHost -Port $t.Config.SshPort
@@ -553,7 +584,8 @@ function Complete-DeployConfig {
 }
 
 function Get-DeployConfig {
-    param([switch]$ForSetup)
+    # -ForBuild (Setup, Update, ResetServer): interactive runs also ask for the branding names once.
+    param([switch]$ForSetup, [switch]$ForBuild)
     $path = Get-ConfigPath
     if (Test-Path -LiteralPath $path -PathType Leaf) {
         try {
@@ -567,7 +599,7 @@ function Get-DeployConfig {
         Write-Info "No configuration file yet; it is created from your answers: $path"
         $raw = [pscustomobject]@{}
     }
-    if (-not $NonInteractive) { $raw = Complete-DeployConfig -RawConfig $raw -Path $path -ForSetup:$ForSetup }
+    if (-not $NonInteractive) { $raw = Complete-DeployConfig -RawConfig $raw -Path $path -ForSetup:$ForSetup -ForBuild:($ForBuild -or $ForSetup) }
     return (Assert-DeployConfig -RawConfig $raw -SourcePath $path -ForSetup:$ForSetup)
 }
 
@@ -748,9 +780,9 @@ function Test-SshConnection($Config) {
 }
 
 function Connect-Server {
-    param([switch]$ForSetup)
+    param([switch]$ForSetup, [switch]$ForBuild)
     Test-LocalTool 'ssh', 'ssh-keygen'
-    $config = Get-DeployConfig -ForSetup:$ForSetup
+    $config = Get-DeployConfig -ForSetup:$ForSetup -ForBuild:$ForBuild
     Test-SshConnection $config
     return $config
 }
@@ -955,14 +987,62 @@ function Get-DeployCommit {
     return $sha
 }
 
-function Build-IsolatedFrontend([string]$Sha) {
+function Get-BrandingStamp($Config) {
+    # $null when no name is configured (the code's names are built); otherwise a hash of the names.
+    $values = @($BrandingKeys | ForEach-Object { if ($Config) { [string]$Config.$_ } else { '' } })
+    if (-not ($values -join '')) { return $null }
+    $text = @(for ($i = 0; $i -lt $BrandingKeys.Count; $i++) { "$($BrandingKeys[$i])=$($values[$i])" }) -join "`n"
+    return [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($Utf8NoBom.GetBytes($text))).ToLowerInvariant()
+}
+
+function Set-SnapshotBranding([string]$SnapshotFront, $Config) {
+    # Writes the configured names into the build snapshot (never into the working tree); empty keeps the code's names.
+    # The values were validated (no quote, backslash, < > & { } or control character), so they are safe as
+    # TypeScript string, HTML text and JSON value.
+    $system = [string]$Config.SystemName
+    $short = [string]$Config.AppShortName
+    $org = [string]$Config.OrganizationName
+    if (-not ($system -or $short -or $org)) { return }
+    Write-Info 'Writing the configured names into the build snapshot...'
+
+    $tsPath = Join-Path $SnapshotFront 'src\app\core\branding.ts'
+    $ts = [System.IO.File]::ReadAllText($tsPath)
+    foreach ($pair in @(@('systemName', $system), @('shortName', $short), @('organizationName', $org))) {
+        if (-not $pair[1]) { continue }
+        $pattern = "(?m)^(\s*$($pair[0]): )'[^'\r\n]*',"
+        if ([regex]::Matches($ts, $pattern).Count -ne 1) { throw "branding.ts in the snapshot has no single '$($pair[0])' entry." }
+        $ts = [regex]::Replace($ts, $pattern, '${1}''' + $pair[1].Replace('$', '$$') + "',")
+    }
+    Write-Utf8LfFile $tsPath $ts
+
+    $manifestPath = Join-Path $SnapshotFront 'public\manifest.webmanifest'
+    $manifest = [System.IO.File]::ReadAllText($manifestPath) | ConvertFrom-Json
+    if ($short) { $manifest.name = $short; $manifest.short_name = $short }
+    if ($system) { $manifest.description = $system }
+    Write-Utf8LfFile $manifestPath (($manifest | ConvertTo-Json -Depth 10) + "`n")
+
+    if ($system) {
+        $indexPath = Join-Path $SnapshotFront 'src\index.html'
+        $html = [System.IO.File]::ReadAllText($indexPath)
+        foreach ($pattern in @('<title>[^<]*</title>', '(<meta name="description" content=")[^"]*(")')) {
+            if ([regex]::Matches($html, $pattern).Count -ne 1) { throw "index.html in the snapshot has no single match for $pattern." }
+        }
+        $html = [regex]::Replace($html, '<title>[^<]*</title>', '<title>' + $system.Replace('$', '$$') + '</title>')
+        $html = [regex]::Replace($html, '(<meta name="description" content=")[^"]*(")', '${1}' + $system.Replace('$', '$$') + '${2}')
+        Write-Utf8LfFile $indexPath $html
+    }
+}
+
+function Build-IsolatedFrontend([string]$Sha, $Config) {
     # Builds warehouse-front from the commit inside scratch/deploy/<sha>; the project's own dist is never touched.
+    # The configured branding names are written into the snapshot before the build and are part of the marker.
     if ($Sha -cnotmatch '^[0-9a-f]{40}$') { throw "Invalid commit: $Sha" }
     $scratchDir = Join-Path $LocalDeployScratch $Sha
     $snapshotFront = Join-Path $scratchDir 'warehouse-front'
     $distDir = Join-Path $snapshotFront $FrontDistRelative
     $marker = Join-Path $scratchDir '.build-complete'
-    $expectedMarker = "COMMIT=$Sha"
+    $stamp = Get-BrandingStamp $Config
+    $expectedMarker = if ($stamp) { "COMMIT=$Sha BRANDING=$stamp" } else { "COMMIT=$Sha" }
 
     if ($SkipBuild) {
         $markerOk = (Test-Path -LiteralPath $marker) -and ([System.IO.File]::ReadAllText($marker).Trim() -ceq $expectedMarker)
@@ -993,6 +1073,7 @@ function Build-IsolatedFrontend([string]$Sha) {
     } finally {
         if (Test-Path -LiteralPath $frontTar) { Remove-Item -LiteralPath $frontTar -Force }
     }
+    if ($Config) { Set-SnapshotBranding $snapshotFront $Config }
 
     $sourceNodeModules = Join-Path $ScriptRoot 'warehouse-front\node_modules'
     if (-not (Test-Path -LiteralPath $sourceNodeModules)) { throw "node_modules not found at $sourceNodeModules" }
@@ -1499,6 +1580,26 @@ function Invoke-PostSetupGuide {
         if ($null -eq $code) { Write-Info "Later: $later" } elseif ($code -ne 0) { Write-Warn "The certificate is not installed yet; fix the cause above and run: $later" }
     }
     if ($FirstSetup) {
+        Write-Step 'Optional settings (each can be set later with deploy.ps1 -SetSecret <KEY>)...'
+        $restart = $false
+        try {
+            Write-Info 'An outbound proxy is needed only if the server cannot reach Google directly (Google Drive backups).'
+            if (Read-YesNo 'Set an outbound HTTP proxy now?' $false) {
+                if ((Invoke-SetSecretMode 'OUTBOUND_HTTP_PROXY') -eq 0) { $restart = $true }
+            }
+            Write-Info 'Google Drive backups need an OAuth client: Google Cloud console > APIs & Services > Credentials > Create OAuth client ID (Web application),'
+            Write-Info "with the authorized redirect URI https://$($Config.Domain)/api/accounts/gdrive/callback/"
+            if (Read-YesNo 'Enter the Google OAuth client ID and secret now?' $false) {
+                if ((Invoke-SetSecretMode 'GOOGLE_OAUTH_CLIENT_ID') -eq 0) { $restart = $true }
+                if ((Invoke-SetSecretMode 'GOOGLE_OAUTH_CLIENT_SECRET') -eq 0) { $restart = $true }
+            }
+        } catch {
+            Write-Err "Optional setting stopped: $($_.Exception.Message)"
+        }
+        if ($restart) {
+            try { [void](Invoke-RestartMode) } catch { Write-Err "Restart stopped: $($_.Exception.Message). Later: deploy.ps1 -Restart" }
+        }
+
         Write-Step 'First administrator...'
         if (Read-YesNo 'Create the first administrator (Django superuser) now?') {
             try { [void](Invoke-CreateAdminMode) } catch { Write-Err "CreateAdmin stopped: $($_.Exception.Message). Later: deploy.ps1 -CreateAdmin" }
@@ -1578,7 +1679,7 @@ function Invoke-SetupMode {
     Write-Info "Certificate mode: $certMode"
 
     $sha = Get-DeployCommit
-    $front = Build-IsolatedFrontend $sha
+    $front = Build-IsolatedFrontend $sha $config
     $bundle = New-DeploymentBundle $sha $front
     $stage = $null
     try {
@@ -1659,7 +1760,7 @@ function Invoke-PrepareAndPullBackup($Config, [string]$Sha, $Bundle, [string]$St
 
 function Invoke-UpdateMode {
     Test-LocalTool 'git', 'tar', 'npm'
-    $config = Connect-Server
+    $config = Connect-Server -ForBuild
     # Update never changes the installed modules: -AddModule adds one, and none is ever removed.
     $serverModules = Get-ServerModuleList $config
     $prepareExtra = @()
@@ -1678,7 +1779,7 @@ function Invoke-UpdateMode {
         $prepareExtra = @('--modules', $serverModules)
     }
     $sha = Get-DeployCommit
-    $front = Build-IsolatedFrontend $sha
+    $front = Build-IsolatedFrontend $sha $config
     $bundle = New-DeploymentBundle $sha $front
     $stage = $null
     try {
@@ -1746,7 +1847,7 @@ function Invoke-ResetServerMode {
     # HEAD on it. The pre-update backup of the new release is pulled and verified before the database is dropped.
     Assert-Interactive 'ResetServer'
     Test-LocalTool 'git', 'tar', 'npm'
-    $config = Connect-Server
+    $config = Connect-Server -ForBuild
     $check = Invoke-RemoteRootScript -Config $config -Gateway 'check-go-live' -Capture -Quiet
     if ($check.ExitCode -ne 0 -or -not (($check.Output -contains '[GO_LIVE_EXISTS]') -xor ($check.Output -contains '[NO_GO_LIVE]'))) {
         throw "Could not check the GO_LIVE flag (exit $($check.ExitCode))."
@@ -1759,7 +1860,7 @@ function Invoke-ResetServerMode {
         return 0
     }
     $sha = Get-DeployCommit
-    $front = Build-IsolatedFrontend $sha
+    $front = Build-IsolatedFrontend $sha $config
     $bundle = New-DeploymentBundle $sha $front
     $stage = $null
     try {

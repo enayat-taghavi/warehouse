@@ -14,8 +14,8 @@
           <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-xl" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none" appIcon="logo-cube"></svg>
           </div>
-          <h1 class="text-xl font-black text-white text-center leading-tight">اتوماسیون هوشمند</h1>
-          <p class="text-xs text-slate-400 mt-1.5 text-center">سامانه یکپارچه مدیریت شرکت ها</p>
+          <h1 class="text-xl font-black text-white text-center leading-tight">{{ branding.shortName }}</h1>
+          <p class="text-xs text-slate-400 mt-1.5 text-center">{{ branding.systemName }}</p>
           <div class="flex items-center gap-2 mt-3 rounded-full px-3 py-1 border"
                [ngClass]="statusIsHealthy
                  ? 'bg-emerald-500/10 border-emerald-500/20'
@@ -68,7 +68,7 @@
           </button>
         </form>
 
-        <p class="text-center text-[10px] text-slate-600 mt-4">سامانه یکپارچه مدیریت شرکت ها</p>
+        <p class="text-center text-[10px] text-slate-600 mt-4">{{ branding.organizationName || branding.systemName }}</p>
       </div>
     </div>
   </div>

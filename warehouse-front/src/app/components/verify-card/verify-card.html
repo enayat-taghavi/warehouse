@@ -176,7 +176,9 @@
 
     <!-- فوتر امنیتی -->
     <div class="text-center text-[10px] text-slate-500 space-y-0.5 pt-2">
-      <p>کلیه حقوق و اطلاعات این سامانه متعلق به شرکت بازرگانی فارس عالیش می‌باشد.</p>
+      @if (branding.organizationName) {
+        <p>کلیه حقوق و اطلاعات این سامانه متعلق به {{ branding.organizationName }} می‌باشد.</p>
+      }
       <p class="font-mono text-[9px]">AALISH WAREHOUSE AUTHENTICATION ENGINE v5.0</p>
     </div>
 

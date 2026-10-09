@@ -139,10 +139,10 @@ try {
 
     # --- 7. Setup asks only for its missing keys --------------------------------------------------
     Reset-Mocks
-    foreach ($a in @('ops@farsalish.ir', '', '')) { $script:ReadHostQueue.Enqueue($a) }
+    foreach ($a in @('ops@farsalish.ir', '', '', '', '', '')) { $script:ReadHostQueue.Enqueue($a) }
     $cfg = Get-DeployConfig -ForSetup
     $raw = Get-RawConfig
-    Assert-True ($script:ReadHostPrompts.Count -eq 3 -and $raw.AdminEmail -eq 'ops@farsalish.ir' -and $raw.DbName -eq 'warehouse_db' -and $raw.DbUser -eq 'warehouse') "Setup asks only AdminEmail, DbName and DbUser (defaults taken) ($($script:ReadHostPrompts.Count) questions)"
+    Assert-True ($script:ReadHostPrompts.Count -eq 6 -and $raw.AdminEmail -eq 'ops@farsalish.ir' -and $raw.DbName -eq 'warehouse_db' -and $raw.DbUser -eq 'warehouse') "Setup asks only AdminEmail, DbName, DbUser (defaults taken) and the three names ($($script:ReadHostPrompts.Count) questions)"
     Reset-Mocks
     [void](Get-DeployConfig -ForSetup)
     Assert-True ($script:ReadHostPrompts.Count -eq 0) '... and nothing once the configuration is complete'
@@ -160,6 +160,62 @@ try {
     foreach ($a in @('Still Bad', 'cloud-admin')) { $script:ReadHostQueue.Enqueue($a) }
     $cfg = Get-DeployConfig
     Assert-True ($cfg.SshUser -eq 'cloud-admin' -and (Get-RawConfig).SshUser -eq 'cloud-admin') 'an invalid value is asked again until it is valid, then saved'
+
+    # --- 9a. builds ask the branding names once; invalid ones are asked again --------------------------
+    $raw = Get-RawConfig
+    foreach ($k in $BrandingKeys) { $raw.PSObject.Properties.Remove($k) }
+    Write-Utf8LfFile $ConfigFile (($raw | ConvertTo-Json) + "`n")
+    Reset-Mocks
+    foreach ($a in @('سامانه <آزمون>', 'سامانه آزمون', '', 'شرکت نمونه')) { $script:ReadHostQueue.Enqueue($a) }
+    $cfg = Get-DeployConfig -ForBuild
+    $raw = Get-RawConfig
+    Assert-True ($cfg.SystemName -eq 'سامانه آزمون' -and $cfg.AppShortName -eq '' -and $cfg.OrganizationName -eq 'شرکت نمونه') 'a build asks the three names (an invalid one again; Enter keeps the code''s name)'
+    Assert-True ($null -ne $raw.PSObject.Properties['AppShortName'] -and $raw.SystemName -eq 'سامانه آزمون') '... and records them, the empty answer too'
+    Reset-Mocks
+    [void](Get-DeployConfig -ForBuild)
+    [void](Get-DeployConfig)
+    Assert-True ($script:ReadHostPrompts.Count -eq 0) '... so they are not asked again, and never outside builds'
+    $raw.OrganizationName = 'a{b}'
+    Write-Utf8LfFile $ConfigFile (($raw | ConvertTo-Json) + "`n")
+    $script:NonInteractive = $true
+    $err = $null
+    try { [void](Get-DeployConfig -ForBuild) } catch { $err = $_.Exception.Message }
+    $script:NonInteractive = $false
+    Assert-True ($err -like '*OrganizationName must be at most 80*') '-NonInteractive refuses an invalid name'
+
+    # --- 9b. names written into a snapshot copy of the real files; the build marker follows them ------------
+    $snap = Join-Path $TestRoot 'snapshot'
+    foreach ($rel in @('src\app\core\branding.ts', 'public\manifest.webmanifest', 'src\index.html')) {
+        $dst = Join-Path $snap $rel
+        [void][System.IO.Directory]::CreateDirectory((Split-Path -Parent $dst))
+        Copy-Item -LiteralPath (Join-Path $ScriptRoot "warehouse-front\$rel") -Destination $dst
+    }
+    $origManifest = [System.IO.File]::ReadAllText((Join-Path $snap 'public\manifest.webmanifest')) | ConvertFrom-Json
+    Set-SnapshotBranding $snap ([pscustomobject]@{ SystemName = 'سامانه $1 آزمون'; AppShortName = ''; OrganizationName = 'شرکت نمونه' })
+    $ts = [System.IO.File]::ReadAllText((Join-Path $snap 'src\app\core\branding.ts'))
+    $mf = [System.IO.File]::ReadAllText((Join-Path $snap 'public\manifest.webmanifest')) | ConvertFrom-Json
+    $html = [System.IO.File]::ReadAllText((Join-Path $snap 'src\index.html'))
+    Assert-True ($ts -match "systemName: 'سامانه \`$1 آزمون'," -and $ts -match "organizationName: 'شرکت نمونه'," -and $ts -match "shortName: '[^']+',") "branding.ts gets the names literally (`$ kept), the empty one keeps the code's value"
+    Assert-True ($mf.description -eq 'سامانه $1 آزمون' -and $mf.name -eq $origManifest.name -and $mf.short_name -eq $origManifest.short_name -and $mf.theme_color -eq $origManifest.theme_color) 'manifest: description replaced; name, short_name and other keys kept'
+    Assert-True ($html -match '<title>سامانه \$1 آزمون</title>' -and $html -match '<meta name="description" content="سامانه \$1 آزمون">') 'index.html: title and description replaced'
+    Assert-True ($null -eq (Get-BrandingStamp ([pscustomobject]@{ SystemName = ''; AppShortName = ''; OrganizationName = '' })) -and $null -eq (Get-BrandingStamp $null)) 'no names: the build marker stays COMMIT=<sha> (old builds remain reusable)'
+    Assert-True ((Get-BrandingStamp $cfg) -ne (Get-BrandingStamp ([pscustomobject]@{ SystemName = 'x'; AppShortName = ''; OrganizationName = '' }))) 'other names give another build marker'
+
+    # --- 9c. post-Setup flow (DNS-01): token + certificate, proxy, restart once, no OAuth, no admin ---------
+    $script:Calls = [System.Collections.Generic.List[string]]::new()
+    function Invoke-SetSecretMode([string]$KeyName) { $script:Calls.Add("secret:$KeyName"); return 0 }
+    function Invoke-IssueCertMode { $script:Calls.Add('issue'); return 0 }
+    function Invoke-CreateAdminMode { $script:Calls.Add('admin'); return 0 }
+    function Invoke-RestartMode { $script:Calls.Add('restart'); return 0 }
+    function Test-KeyLogin($Config) { return $false }
+    Reset-Mocks
+    foreach ($a in @('', 'y', 'n', 'n')) { $script:ReadHostQueue.Enqueue($a) }
+    Invoke-PostSetupGuide -Config $cfg -CertMode 'dns01-cloudflare' -TlsPending $true -FirstSetup $true
+    Assert-True (($script:Calls -join ',') -eq 'secret:CLOUDFLARE_DNS_API_TOKEN,issue,secret:OUTBOUND_HTTP_PROXY,restart' -and $script:ReadHostQueue.Count -eq 0) "post-Setup: token then certificate, proxy, one restart ($($script:Calls -join ','))"
+    $script:Calls.Clear()
+    Reset-Mocks
+    Invoke-PostSetupGuide -Config $cfg -CertMode 'dns01-cloudflare' -TlsPending $false -FirstSetup $false
+    Assert-True ($script:Calls.Count -eq 0 -and $script:ReadHostPrompts.Count -eq 0) 'a later Setup with a certificate asks nothing'
 
     # --- 9. NonInteractive without a configuration file ----------------------------------------------
     Remove-Item -LiteralPath $ConfigFile

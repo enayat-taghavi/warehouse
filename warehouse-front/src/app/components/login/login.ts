@@ -12,6 +12,7 @@ import { isServerUnreachable } from '../../core/services/server-reachability';
 import { Subscription } from 'rxjs';
 import { detectClientDeviceModel } from '../../core/utils/device-detector';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { BRANDING } from '../../core/branding';
 @Component({
   selector: 'app-login',
   imports: [CommonModule, FormsModule, SvgIconDirective],
@@ -25,6 +26,7 @@ export class Login implements OnInit, OnDestroy {
   isLoggingIn = false;
   loginErrorMessage: string | null = null;
   showForgotModal = false;
+  readonly branding = BRANDING;
 
   constructor(
     private auth: AuthService,

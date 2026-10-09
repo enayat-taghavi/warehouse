@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../../core/error/error.interceptor';
 import { environment } from '../../../environments/environment';
+import { BRANDING } from '../../core/branding';
 
 export interface VerifiedPersonnel {
   valid: boolean;
@@ -32,6 +33,7 @@ export interface VerifiedPersonnel {
   styleUrl: './verify-card.css'
 })
 export class VerifyCard implements OnInit {
+  readonly branding = BRANDING;
   code: string = '';
   isLoading: boolean = true;
   error: string | null = null;
