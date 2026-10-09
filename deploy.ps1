@@ -99,10 +99,15 @@ $WindowsOpenSsh = Join-Path $env:SystemRoot 'System32\OpenSSH'
 if (Test-Path -LiteralPath (Join-Path $WindowsOpenSsh 'ssh.exe')) {
     $SshExe = Join-Path $WindowsOpenSsh 'ssh.exe'
     $SshKeygenExe = Join-Path $WindowsOpenSsh 'ssh-keygen.exe'
+    $SshKeyscanExe = Join-Path $WindowsOpenSsh 'ssh-keyscan.exe'
 } else {
     $SshExe = Find-Application 'ssh.exe'
     $SshKeygenExe = Find-Application 'ssh-keygen.exe'
+    $SshKeyscanExe = Find-Application 'ssh-keyscan.exe'
 }
+$KnownHostsFile = Join-Path $env:USERPROFILE '.ssh\known_hosts'
+# The temporary password-less sudo file the first Setup asks for; Setup removes it once the gateway is installed.
+$BootstrapSudoersFile = '/etc/sudoers.d/90-warehouse-setup-temp'
 $GitExe = Find-Application 'git.exe'
 $NpmCmd = Find-Application 'npm.cmd'
 $DockerExe = Find-Application 'docker.exe'
@@ -309,7 +314,7 @@ function Invoke-Git {
 }
 
 function Test-LocalTool([string[]]$Name) {
-    $map = @{ ssh = $SshExe; 'ssh-keygen' = $SshKeygenExe; git = $GitExe; tar = $TarExe; npm = $NpmCmd; docker = $DockerExe }
+    $map = @{ ssh = $SshExe; 'ssh-keygen' = $SshKeygenExe; 'ssh-keyscan' = $SshKeyscanExe; git = $GitExe; tar = $TarExe; npm = $NpmCmd; docker = $DockerExe }
     foreach ($n in $Name) {
         $path = $map[$n]
         if (-not $path -or -not (Test-Path -LiteralPath $path -PathType Leaf)) {
@@ -366,66 +371,74 @@ function ConvertTo-CanonicalModuleList([string]$Value) {
     return (@($KnownModules | Where-Object { $_ -in $parts }) -join ',')
 }
 
-function Assert-DeployConfig {
+function Test-DeployConfig {
+    # Validates the raw configuration. Returns { Problems (ordered: key -> message), Config }.
     param([Parameter(Mandatory)]$RawConfig, [string]$SourcePath, [switch]$ForSetup)
     $hostRegex = '^(?=.{1,253}$)[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$'
     $domainRegex = '^(?=.{1,253}$)[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$'
-    $problems = [System.Collections.Generic.List[string]]::new()
+    $problems = [ordered]@{}
 
     $serverHost = ([string]$RawConfig.ServerHost).Trim()
     $ip = $null
-    if (-not ($serverHost -match $hostRegex -or [System.Net.IPAddress]::TryParse($serverHost, [ref]$ip))) { $problems.Add('ServerHost must be a hostname or an IP address') }
+    if (-not ($serverHost -match $hostRegex -or [System.Net.IPAddress]::TryParse($serverHost, [ref]$ip))) { $problems['ServerHost'] = 'ServerHost must be a hostname or an IP address' }
 
     $sshUser = ([string]$RawConfig.SshUser).Trim()
-    if ($sshUser -notmatch '^[a-z_][a-z0-9_-]{0,31}$') { $problems.Add('SshUser must match ^[a-z_][a-z0-9_-]{0,31}$') }
+    if ($sshUser -notmatch '^[a-z_][a-z0-9_-]{0,31}$') { $problems['SshUser'] = 'SshUser must match ^[a-z_][a-z0-9_-]{0,31}$' }
 
     $portText = [string]$RawConfig.SshPort
     if (-not $portText) { $portText = '22' }
     $port = 0
-    if (-not [int]::TryParse($portText, [ref]$port) -or $port -lt 1 -or $port -gt 65535) { $problems.Add('SshPort must be between 1 and 65535') }
+    if (-not [int]::TryParse($portText, [ref]$port) -or $port -lt 1 -or $port -gt 65535) { $problems['SshPort'] = 'SshPort must be between 1 and 65535' }
 
     $domain = ([string]$RawConfig.Domain).Trim()
-    if ($domain -cnotmatch $domainRegex) { $problems.Add('Domain must be a lower-case hostname') }
+    if ($domain -cnotmatch $domainRegex) { $problems['Domain'] = 'Domain must be a lower-case hostname' }
 
     $fingerprint = ([string]$RawConfig.HostKeyFingerprint).Trim()
-    if ($fingerprint -cnotmatch '^SHA256:[A-Za-z0-9+/]{43}$') { $problems.Add('HostKeyFingerprint is required and must match ^SHA256:[A-Za-z0-9+/]{43}$') }
+    if ($fingerprint -cnotmatch '^SHA256:[A-Za-z0-9+/]{43}$') { $problems['HostKeyFingerprint'] = 'HostKeyFingerprint is required and must match ^SHA256:[A-Za-z0-9+/]{43}$' }
 
     $dbName = ([string]$RawConfig.DbName).Trim()
     $dbUser = ([string]$RawConfig.DbUser).Trim()
     foreach ($pair in @(@('DbName', $dbName), @('DbUser', $dbUser))) {
-        if ($pair[1] -and $pair[1] -cnotmatch '^[a-z_][a-z0-9_]{0,62}$') { $problems.Add("$($pair[0]) must match ^[a-z_][a-z0-9_]{0,62}$") }
+        if ($pair[1] -and $pair[1] -cnotmatch '^[a-z_][a-z0-9_]{0,62}$') { $problems[$pair[0]] = "$($pair[0]) must match ^[a-z_][a-z0-9_]{0,62}$" }
     }
 
     $allowedHosts = ([string]$RawConfig.AllowedHosts).Trim() -replace '\s*,\s*', ','
     if (-not $allowedHosts) { $allowedHosts = $domain }
-    if ($allowedHosts -notmatch '^[A-Za-z0-9.,*-]+$') { $problems.Add('AllowedHosts must match ^[A-Za-z0-9.,*-]+$') }
+    if ($allowedHosts -notmatch '^[A-Za-z0-9.,*-]+$') { $problems['AllowedHosts'] = 'AllowedHosts must match ^[A-Za-z0-9.,*-]+$' }
 
     $modulesSet = $null -ne $RawConfig.PSObject.Properties['Modules']
     $modules = if ($modulesSet) { ConvertTo-CanonicalModuleList ([string]$RawConfig.Modules) } else { $AllModules }
-    if (-not $modules) { $problems.Add("Modules must list known modules separated by commas ($($KnownModules -join ', '))") }
+    if (-not $modules) { $problems['Modules'] = "Modules must list known modules separated by commas ($($KnownModules -join ', '))" }
 
     $certModeSet = $null -ne $RawConfig.PSObject.Properties['CertMode']
     $certMode = if ($certModeSet) { ([string]$RawConfig.CertMode).Trim().ToLowerInvariant() } else { $DefaultCertMode }
-    if ($certMode -notin $KnownCertModes) { $problems.Add("CertMode must be one of: $($KnownCertModes -join ', ')") }
+    if ($certMode -notin $KnownCertModes) { $problems['CertMode'] = "CertMode must be one of: $($KnownCertModes -join ', ')" }
 
     $adminEmail = ([string]$RawConfig.AdminEmail).Trim()
     if ($ForSetup) {
-        if ($adminEmail -notmatch '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$') { $problems.Add('AdminEmail must be a valid e-mail address (required for Setup)') }
-        elseif ($adminEmail -match '@example\.com$') { $problems.Add('AdminEmail must not be an @example.com address (Let''s Encrypt rejects it)') }
-        if (-not $dbName) { $problems.Add('DbName is required for Setup') }
-        if (-not $dbUser) { $problems.Add('DbUser is required for Setup') }
+        if ($adminEmail -notmatch '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$') { $problems['AdminEmail'] = 'AdminEmail must be a valid e-mail address (required for Setup)' }
+        elseif ($adminEmail -match '@example\.com$') { $problems['AdminEmail'] = 'AdminEmail must not be an @example.com address (Let''s Encrypt rejects it)' }
+        if (-not $dbName) { $problems['DbName'] = 'DbName is required for Setup' }
+        if (-not $dbUser) { $problems['DbUser'] = 'DbUser is required for Setup' }
     }
 
-    if ($problems.Count -gt 0) {
-        throw "Invalid deployment configuration ($SourcePath): $($problems -join '; ')."
-    }
-    return [pscustomobject]@{
+    $config = [pscustomobject]@{
         ServerHost = $serverHost; SshUser = $sshUser; SshPort = $port; Domain = $domain
         HostKeyFingerprint = $fingerprint; DbName = $dbName; DbUser = $dbUser
         AllowedHosts = $allowedHosts; AdminEmail = $adminEmail; SourcePath = $SourcePath
         Modules = $modules; ModulesSet = $modulesSet
         CertMode = $certMode; CertModeSet = $certModeSet
     }
+    return [pscustomobject]@{ Problems = $problems; Config = $config }
+}
+
+function Assert-DeployConfig {
+    param([Parameter(Mandatory)]$RawConfig, [string]$SourcePath, [switch]$ForSetup)
+    $t = Test-DeployConfig -RawConfig $RawConfig -SourcePath $SourcePath -ForSetup:$ForSetup
+    if ($t.Problems.Count -gt 0) {
+        throw "Invalid deployment configuration ($SourcePath): $(@($t.Problems.Values) -join '; ')."
+    }
+    return $t.Config
 }
 
 function Get-ServerModuleList($Config) {
@@ -438,24 +451,28 @@ function Get-ServerModuleList($Config) {
     throw "Could not read the installed modules of the server (exit $($r.ExitCode))."
 }
 
-function Save-ConfigModuleList([string]$Modules) {
-    # Records the server's new module list in the configuration file (a .bak copy is kept), so that
-    # Update keeps matching the server. Every other key is left as it is.
+function Save-ConfigSetting([System.Collections.IDictionary]$Values) {
+    # Writes the given keys into the configuration file (a .bak copy of an existing file is kept).
+    # Every other key is left as it is; a missing file is created.
     $path = Get-ConfigPath
-    $raw = Get-Content -LiteralPath $path -Raw -Encoding utf8 | ConvertFrom-Json
-    $raw | Add-Member -NotePropertyName 'Modules' -NotePropertyValue $Modules -Force
-    Copy-Item -LiteralPath $path -Destination "$path.bak-$((Get-Date).ToString('yyyyMMdd_HHmmss'))"
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+        $raw = Get-Content -LiteralPath $path -Raw -Encoding utf8 | ConvertFrom-Json
+        Copy-Item -LiteralPath $path -Destination "$path.bak-$((Get-Date).ToString('yyyyMMdd_HHmmss'))"
+    } else {
+        $raw = [pscustomobject]@{}
+    }
+    foreach ($k in $Values.Keys) { $raw | Add-Member -NotePropertyName $k -NotePropertyValue $Values[$k] -Force }
     Write-Utf8LfFile $path (($raw | ConvertTo-Json -Depth 10) + "`n")
 }
 
+function Save-ConfigModuleList([string]$Modules) {
+    # Records the server's new module list, so that Update keeps matching the server.
+    Save-ConfigSetting ([ordered]@{ Modules = $Modules })
+}
+
 function Save-ConfigDomain([string]$Domain) {
-    # Records the server's new primary domain in the configuration file (a .bak copy is kept).
-    # Every other key is left as it is.
-    $path = Get-ConfigPath
-    $raw = Get-Content -LiteralPath $path -Raw -Encoding utf8 | ConvertFrom-Json
-    $raw | Add-Member -NotePropertyName 'Domain' -NotePropertyValue $Domain -Force
-    Copy-Item -LiteralPath $path -Destination "$path.bak-$((Get-Date).ToString('yyyyMMdd_HHmmss'))"
-    Write-Utf8LfFile $path (($raw | ConvertTo-Json -Depth 10) + "`n")
+    # Records the server's new primary domain.
+    Save-ConfigSetting ([ordered]@{ Domain = $Domain })
 }
 
 function Get-ConfigPath {
@@ -463,15 +480,94 @@ function Get-ConfigPath {
     return (Join-Path $ScriptRoot $ConfigFile)
 }
 
+function Read-ModuleChoice {
+    $answer = ([string](Read-Host -Prompt 'Modules to install: 1) warehouse  2) accounting  3) both [3]')).Trim()
+    $modules = switch ($answer) { '1' { 'warehouse' } '2' { 'accounting' } { $_ -in @('', '3') } { $AllModules } default { $null } }
+    if (-not $modules) { throw "Invalid selection '$answer'." }
+    return $modules
+}
+
+function Read-CertModeChoice {
+    Write-Info 'Certificate modes:'
+    Write-Host '  1) http01            Let''s Encrypt over HTTP (DNS points straight at the server, port 80 open)'
+    Write-Host '  2) dns01-cloudflare  Let''s Encrypt over Cloudflare DNS (needs a Cloudflare API token; deploy.ps1 asks for it)'
+    Write-Host '  3) cloudflare-origin Cloudflare Origin certificate (files from the Cloudflare dashboard)'
+    Write-Host '  4) custom            your own certificate files'
+    $answer = ([string](Read-Host -Prompt 'Certificate mode [1]')).Trim()
+    $mode = switch ($answer) { { $_ -in @('', '1') } { 'http01' } '2' { 'dns01-cloudflare' } '3' { 'cloudflare-origin' } '4' { 'custom' } default { $null } }
+    if (-not $mode) { throw "Invalid selection '$answer'." }
+    return $mode
+}
+
+# Questions for missing or invalid configuration keys (Modules, CertMode and HostKeyFingerprint have their own flows).
+$ConfigPrompts = [ordered]@{
+    ServerHost   = @{ Prompt = 'Server IP address or hostname'; Default = '' }
+    SshUser      = @{ Prompt = 'SSH user on the server (a sudo user, not root)'; Default = '' }
+    SshPort      = @{ Prompt = 'SSH port'; Default = '22' }
+    Domain       = @{ Prompt = 'Domain of the application (e.g. soft.example.com)'; Default = '' }
+    AllowedHosts = @{ Prompt = 'Allowed hosts, comma separated'; Default = '' }
+    AdminEmail   = @{ Prompt = 'Administrator e-mail (certificate expiry notices)'; Default = '' }
+    DbName       = @{ Prompt = 'PostgreSQL database name'; Default = 'warehouse_db' }
+    DbUser       = @{ Prompt = 'PostgreSQL user name'; Default = 'warehouse' }
+}
+
+function Complete-DeployConfig {
+    # Interactive only: asks for every missing or invalid key, pins the host key when no fingerprint is
+    # recorded yet, and saves the answers. Valid keys are never asked again.
+    param([Parameter(Mandatory)]$RawConfig, [string]$Path, [switch]$ForSetup)
+    $changed = [ordered]@{}
+    for ($round = 0; $round -lt 5; $round++) {
+        $t = Test-DeployConfig -RawConfig $RawConfig -SourcePath $Path -ForSetup:$ForSetup
+        $keys = @($t.Problems.Keys | Where-Object { $_ -ne 'HostKeyFingerprint' })
+        if ($keys.Count -eq 0) { break }
+        if ($round -eq 0) { Write-Step "Completing the deployment configuration ($Path)..." }
+        foreach ($key in $keys) {
+            if ($null -ne $RawConfig.PSObject.Properties[$key] -and [string]$RawConfig.$key) { Write-Warn $t.Problems[$key] }
+            $value = switch ($key) {
+                'Modules' { Read-ModuleChoice }
+                'CertMode' { Read-CertModeChoice }
+                default {
+                    $spec = $ConfigPrompts[$key]
+                    $default = if ($key -eq 'AllowedHosts') { [string]$RawConfig.Domain } else { $spec.Default }
+                    $answer = ([string](Read-Host -Prompt ($spec.Prompt + $(if ($default) { " [$default]" } else { '' })))).Trim()
+                    if ($answer) { $answer } else { $default }
+                }
+            }
+            if ($key -eq 'Domain') { $value = $value.ToLowerInvariant() }
+            if ($key -eq 'SshPort' -and $value -match '^\d{1,5}$') { $value = [int]$value }
+            $RawConfig | Add-Member -NotePropertyName $key -NotePropertyValue $value -Force
+            $changed[$key] = $value
+        }
+    }
+    $t = Test-DeployConfig -RawConfig $RawConfig -SourcePath $Path -ForSetup:$ForSetup
+    if ($t.Problems.Contains('HostKeyFingerprint') -and -not $t.Problems.Contains('ServerHost') -and -not $t.Problems.Contains('SshPort')) {
+        $fp = Update-PinnedHostKey -ServerHost $t.Config.ServerHost -Port $t.Config.SshPort
+        $RawConfig | Add-Member -NotePropertyName 'HostKeyFingerprint' -NotePropertyValue $fp -Force
+        $changed['HostKeyFingerprint'] = $fp
+    }
+    if ($changed.Count -gt 0) {
+        Save-ConfigSetting $changed
+        Write-Success "Configuration saved: $Path ($(@($changed.Keys) -join ', '))."
+    }
+    return $RawConfig
+}
+
 function Get-DeployConfig {
     param([switch]$ForSetup)
     $path = Get-ConfigPath
-    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Configuration file not found: $path" }
-    try {
-        $raw = Get-Content -LiteralPath $path -Raw -Encoding utf8 | ConvertFrom-Json
-    } catch {
-        throw "Configuration file is not valid JSON: $path"
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+        try {
+            $raw = Get-Content -LiteralPath $path -Raw -Encoding utf8 | ConvertFrom-Json
+        } catch {
+            throw "Configuration file is not valid JSON: $path"
+        }
+    } elseif ($NonInteractive) {
+        throw "Configuration file not found: $path"
+    } else {
+        Write-Info "No configuration file yet; it is created from your answers: $path"
+        $raw = [pscustomobject]@{}
     }
+    if (-not $NonInteractive) { $raw = Complete-DeployConfig -RawConfig $raw -Path $path -ForSetup:$ForSetup }
     return (Assert-DeployConfig -RawConfig $raw -SourcePath $path -ForSetup:$ForSetup)
 }
 
@@ -480,19 +576,93 @@ function Get-SudoPrefix($Config) {
     return 'sudo -n '
 }
 
-function Assert-PinnedHostKey($Config) {
-    $lookup = if ($Config.SshPort -eq 22) { $Config.ServerHost } else { "[$($Config.ServerHost)]:$($Config.SshPort)" }
-    $r = Invoke-Process -FilePath $SshKeygenExe -ArgumentList @('-l', '-F', $lookup) -Capture -Quiet
+function Get-KnownHostsLookup([string]$ServerHost, [int]$Port) {
+    if ($Port -eq 22) { return $ServerHost }
+    return "[$ServerHost]:$Port"
+}
+
+function Get-PinnedHostKeyProblem([string]$Lookup, [string]$Fingerprint) {
+    # $null when known_hosts holds the host and every entry for it matches the pinned fingerprint.
+    $r = Invoke-Process -FilePath $SshKeygenExe -ArgumentList @('-l', '-F', $Lookup, '-f', $KnownHostsFile) -Capture -Quiet
     $found = @($r.Output | Where-Object { $_ -and -not $_.StartsWith('#') } | ForEach-Object {
             if ($_ -match '(SHA256:[A-Za-z0-9+/]{43})') { $Matches[1] } else { '<unparsed>' }
         })
-    if ($found.Count -eq 0) {
-        throw "Host $lookup is not in known_hosts. Add and verify its key out-of-band first; refusing to connect."
-    }
-    $mismatch = @($found | Where-Object { $_ -cne $Config.HostKeyFingerprint })
+    if ($found.Count -eq 0) { return "Host $Lookup is not in known_hosts." }
+    $mismatch = @($found | Where-Object { $_ -cne $Fingerprint })
     if ($mismatch.Count -gt 0) {
-        throw "SECURITY: known_hosts entry for $lookup does not match the pinned fingerprint $($Config.HostKeyFingerprint) (found: $($found -join ', '))."
+        return "SECURITY: known_hosts entry for $Lookup does not match the pinned fingerprint $Fingerprint (found: $($found -join ', '))."
     }
+    return $null
+}
+
+function Get-SshKeyFingerprint([string]$KeyBase64) {
+    # OpenSSH SHA256 fingerprint: unpadded base64 of the SHA-256 of the key blob.
+    $hash = [System.Security.Cryptography.SHA256]::HashData([Convert]::FromBase64String($KeyBase64))
+    return 'SHA256:' + [Convert]::ToBase64String($hash).TrimEnd('=')
+}
+
+function Get-ServerHostKey([string]$ServerHost, [int]$Port) {
+    # The ED25519 host key the network offers (base64). Unauthenticated until compared with the console reading.
+    Test-LocalTool 'ssh-keyscan'
+    $r = Invoke-Process -FilePath $SshKeyscanExe -ArgumentList @('-T', '15', '-t', 'ed25519', '-p', [string]$Port, $ServerHost) -Capture -Quiet
+    $keys = @($r.Output | ForEach-Object { if ($_ -match '^\S+ ssh-ed25519 ([A-Za-z0-9+/]+={0,2})$') { $Matches[1] } })
+    if ($keys.Count -ne 1) {
+        throw "Could not read the ED25519 host key of ${ServerHost}:$Port (ssh-keyscan exit $($r.ExitCode)). Check ServerHost, SshPort and that the server is running."
+    }
+    return $keys[0]
+}
+
+function Update-PinnedHostKey {
+    # Pins the server's host key from the operator's out-of-band reading on the server console: the key the
+    # network offers is accepted only if its fingerprint equals the typed one. The host's known_hosts entries
+    # are replaced (ssh-keygen keeps known_hosts.old). Returns the fingerprint; the caller records it.
+    param([Parameter(Mandatory)][string]$ServerHost, [Parameter(Mandatory)][int]$Port, [string]$PinnedFingerprint)
+    Assert-Interactive 'Pinning the SSH host key'
+    $lookup = Get-KnownHostsLookup $ServerHost $Port
+    Write-Step "Pinning the SSH host key of $lookup..."
+    if ($PinnedFingerprint) {
+        Write-Warn "Pinned until now: $PinnedFingerprint. A new key is expected only after the server was reinstalled; otherwise stop (Ctrl+C) and investigate."
+    }
+    Write-Info 'Read the fingerprint on the server itself, not over SSH: open the provider''s web console (VNC/KVM), log in and run:'
+    Write-Host '    ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub' -ForegroundColor Yellow
+    Write-Info 'Then paste its output line here (or only the SHA256:... part).'
+    $typedLine = [string](Read-Host -Prompt 'Fingerprint shown on the server console')
+    if ($typedLine -cnotmatch '(SHA256:[A-Za-z0-9+/]{43})') { throw 'No SHA256:... fingerprint in the input; nothing was changed.' }
+    $typed = $Matches[1]
+    $key = Get-ServerHostKey $ServerHost $Port
+    $offered = Get-SshKeyFingerprint $key
+    if ($offered -cne $typed) {
+        throw "SECURITY: the key offered over the network ($offered) does not match the console fingerprint ($typed). Nothing was changed. Make sure you read the ED25519 key of this server ($ServerHost); a mismatch can mean someone is intercepting the connection."
+    }
+    [void][System.IO.Directory]::CreateDirectory((Split-Path -Parent $KnownHostsFile))
+    $prefix = ''
+    if (Test-Path -LiteralPath $KnownHostsFile -PathType Leaf) {
+        $r = Invoke-Process -FilePath $SshKeygenExe -ArgumentList @('-R', $lookup, '-f', $KnownHostsFile) -Capture -Quiet
+        if ($r.ExitCode -ne 0) { throw "Removing the old known_hosts entries for $lookup failed (exit $($r.ExitCode))." }
+        $existing = [System.IO.File]::ReadAllText($KnownHostsFile)
+        if ($existing -and -not $existing.EndsWith("`n")) { $prefix = "`n" }
+    }
+    [System.IO.File]::AppendAllText($KnownHostsFile, "$prefix$lookup ssh-ed25519 $key`n", $Utf8NoBom)
+    Write-Success "Host key pinned: $typed (the previous known_hosts is kept as known_hosts.old)."
+    return $typed
+}
+
+function Assert-PinnedHostKey($Config) {
+    $lookup = Get-KnownHostsLookup $Config.ServerHost $Config.SshPort
+    $problem = Get-PinnedHostKeyProblem $lookup $Config.HostKeyFingerprint
+    if (-not $problem) { return }
+    if ($NonInteractive) {
+        throw "$problem Refusing to connect; run deploy.ps1 interactively to pin the key from the server console."
+    }
+    Write-Warn $problem
+    $fp = Update-PinnedHostKey -ServerHost $Config.ServerHost -Port $Config.SshPort -PinnedFingerprint $Config.HostKeyFingerprint
+    if ($fp -cne $Config.HostKeyFingerprint) {
+        Save-ConfigSetting ([ordered]@{ HostKeyFingerprint = $fp })
+        $Config.HostKeyFingerprint = $fp
+        Write-Success "HostKeyFingerprint updated in $(Get-ConfigPath)."
+    }
+    $problem = Get-PinnedHostKeyProblem $lookup $fp
+    if ($problem) { throw $problem }
 }
 
 function Invoke-Ssh {
@@ -1215,7 +1385,132 @@ function Register-PullTask {
 # ==============================================================================
 # Modes
 # ==============================================================================
+function Read-YesNo([string]$Prompt, [bool]$Default = $true) {
+    $answer = ([string](Read-Host -Prompt "$Prompt $(if ($Default) { '[Y/n]' } else { '[y/N]' })")).Trim().ToLowerInvariant()
+    if (-not $answer) { return $Default }
+    return ($answer -in @('y', 'yes'))
+}
+
+function Test-KeyLogin($Config) {
+    # True when the server accepts the local key without a password (BatchMode never prompts).
+    $sshArgs = @('-p', [string]$Config.SshPort, '-o', 'StrictHostKeyChecking=yes', '-o', 'UpdateHostKeys=no', '-o', 'ConnectTimeout=15',
+        '-o', 'BatchMode=yes', '-o', 'PreferredAuthentications=publickey', '-T', "$($Config.SshUser)@$($Config.ServerHost)", 'echo [KEY_LOGIN_OK]')
+    $r = Invoke-Process -FilePath $SshExe -ArgumentList $sshArgs -Capture -Quiet
+    return ($r.ExitCode -eq 0 -and $r.Output -contains '[KEY_LOGIN_OK]')
+}
+
+function Test-SudoRestricted($Config) {
+    # True when "sudo -n -l" is readable and grants no unrestricted ALL rule.
+    $sudo = Invoke-Ssh -Config $Config -RemoteCommand 'sudo -n -l' -Capture -Quiet
+    $unrestricted = @($sudo.Output | Where-Object { $_ -match '\)\s*((NOPASSWD|PASSWD|SETENV|NOSETENV):\s*)*ALL\s*$' })
+    return ($sudo.ExitCode -eq 0 -and $unrestricted.Count -eq 0)
+}
+
+function Assert-BootstrapSudo($Config) {
+    # The first Setup (no root gateway yet) needs password-less sudo; shows the console steps until it works.
+    if ($Config.SshUser -eq 'root') { return }
+    $user = $Config.SshUser
+    for ($attempt = 1; ; $attempt++) {
+        $r = Invoke-Ssh -Config $Config -RemoteCommand 'sudo -n true && echo [SUDO_OK]' -Capture -Quiet
+        if ($r.ExitCode -eq 0 -and $r.Output -contains '[SUDO_OK]') {
+            Write-Success "Password-less sudo is available for $user."
+            return
+        }
+        Write-Warn "The first Setup needs temporary password-less sudo for '$user'; Setup removes it again when it succeeds."
+        Write-Info 'On the server console (the provider''s web console), logged in as this user, run:'
+        Write-Host "    echo '$user ALL=(ALL) NOPASSWD:ALL' | sudo tee $BootstrapSudoersFile" -ForegroundColor Yellow
+        Write-Host "    sudo chmod 440 $BootstrapSudoersFile" -ForegroundColor Yellow
+        Write-Host "    sudo visudo -cf $BootstrapSudoersFile" -ForegroundColor Yellow
+        Write-Info "The last command must print 'parsed OK'. If '$user' cannot use sudo at all, log in as root and run the same commands without 'sudo'."
+        if ($NonInteractive -or $attempt -ge 3) { throw "Password-less sudo is not available for $user; run the commands above on the server, then Setup again." }
+        Wait-Console 'Press Enter once the commands have run on the server...'
+    }
+}
+
+function Remove-BootstrapSudo($Config) {
+    # After Setup: removes the temporary sudoers file; the gateway rule (/etc/sudoers.d/warehouse) stays.
+    # Without full password-less sudo there is nothing left to remove (also after a re-run of a failed first Setup).
+    if ($Config.SshUser -eq 'root') { return }
+    $user = $Config.SshUser
+    $probe = Invoke-Ssh -Config $Config -RemoteCommand 'sudo -n true && echo [SUDO_OK]' -Capture -Quiet
+    if (-not ($probe.ExitCode -eq 0 -and $probe.Output -contains '[SUDO_OK]')) { return }
+    $r = Invoke-RemoteRootScript -Config $Config -Body "rm -f -- $BootstrapSudoersFile`necho '[BOOTSTRAP_SUDO_REMOVED]'" -Capture -Quiet
+    if ($r.ExitCode -ne 0 -or -not ($r.Output -contains '[BOOTSTRAP_SUDO_REMOVED]')) {
+        Write-Warn "Could not remove $BootstrapSudoersFile (exit $($r.ExitCode)). On the server console run: sudo rm -f $BootstrapSudoersFile"
+        return
+    }
+    Write-Success "Temporary password-less sudo removed ($BootstrapSudoersFile)."
+    if (-not (Test-SudoRestricted $Config)) {
+        Write-Warn "sudo of '$user' is still unrestricted through another rule. Everything works, but -GoLive refuses it."
+        Write-Info 'Before go-live, on the server console, list the rules that grant it:'
+        Write-Host "    sudo -l -U $user" -ForegroundColor Yellow
+        Write-Host "    sudo grep -rn '$user\|%sudo\|%admin' /etc/sudoers /etc/sudoers.d" -ForegroundColor Yellow
+        Write-Info "Remove the ALL rule for '$user' (or take it out of the sudo group) only after making sure you can still become root on the console; keep /etc/sudoers.d/warehouse."
+    }
+}
+
+function Show-SshHardeningGuide($Config) {
+    # Password login is turned off by the operator on the console, and only once key login is proven.
+    Write-Step 'SSH hardening...'
+    if (-not (Test-KeyLogin $Config)) {
+        Write-Warn 'Key login does not work yet, so keep password login on for now. Run deploy.ps1 -InstallKey first.'
+        return
+    }
+    Write-Success 'Key login works.'
+    Write-Info 'Turn off SSH password login (-GoLive requires it). On the server console, as root or with sudo, run:'
+    Write-Host "    printf 'PasswordAuthentication no\nKbdInteractiveAuthentication no\n' | sudo tee /etc/ssh/sshd_config.d/00-warehouse-no-password.conf" -ForegroundColor Yellow
+    Write-Host '    sudo sshd -t && sudo systemctl reload ssh' -ForegroundColor Yellow
+    Write-Info 'Keep the console open until deploy.ps1 -Status still connects afterwards.'
+}
+
+function Invoke-PostSetupGuide {
+    # Interactive follow-up of Setup, each step optional: certificate, first administrator, SSH hardening.
+    param([Parameter(Mandatory)]$Config, [Parameter(Mandatory)][string]$CertMode, [bool]$TlsPending, [bool]$FirstSetup)
+    if ($TlsPending) {
+        Write-Step "Certificate for $($Config.Domain) (mode $CertMode)..."
+        try {
+            $code = switch ($CertMode) {
+                'dns01-cloudflare' {
+                    Write-Info 'Cloudflare API token: dash.cloudflare.com > My Profile > API Tokens > Create Token > template "Edit zone DNS",'
+                    Write-Info "Zone Resources: Include > Specific zone > the zone of $($Config.Domain). Copy the token (Cloudflare shows it once)."
+                    if (Read-YesNo 'Enter the token and issue the certificate now?') {
+                        $c = Invoke-SetSecretMode 'CLOUDFLARE_DNS_API_TOKEN'
+                        if ($c -eq 0) { Invoke-IssueCertMode } else { $c }
+                    } else { $null }
+                }
+                'http01' {
+                    Write-Info "The DNS A record of $($Config.Domain) must point to $($Config.ServerHost) (in Cloudflare: 'DNS only', grey cloud) and port 80 must be open."
+                    if (Read-YesNo 'Issue the certificate now?') { Invoke-IssueCertMode } else { $null }
+                }
+                default {
+                    if ($CertMode -eq 'cloudflare-origin') {
+                        Write-Info 'Cloudflare dashboard > SSL/TLS > Origin Server > Create Certificate (PEM): save the certificate and the private key as two files on this computer; set SSL/TLS mode to Full (strict).'
+                    } else {
+                        Write-Info 'Have the certificate (PEM), its private key and, if any, the intermediate chain ready as files on this computer.'
+                    }
+                    if (Read-YesNo 'Install the certificate files now?') { Invoke-InstallCertMode } else { $null }
+                }
+            }
+        } catch {
+            Write-Err "Certificate step stopped: $($_.Exception.Message)"
+            $code = 1
+        }
+        $later = switch ($CertMode) { 'dns01-cloudflare' { 'deploy.ps1 -SetSecret CLOUDFLARE_DNS_API_TOKEN, then deploy.ps1 -IssueCert' } 'http01' { 'deploy.ps1 -IssueCert' } default { 'deploy.ps1 -InstallCert' } }
+        if ($null -eq $code) { Write-Info "Later: $later" } elseif ($code -ne 0) { Write-Warn "The certificate is not installed yet; fix the cause above and run: $later" }
+    }
+    if ($FirstSetup) {
+        Write-Step 'First administrator...'
+        if (Read-YesNo 'Create the first administrator (Django superuser) now?') {
+            try { [void](Invoke-CreateAdminMode) } catch { Write-Err "CreateAdmin stopped: $($_.Exception.Message). Later: deploy.ps1 -CreateAdmin" }
+        } else {
+            Write-Info 'Later: deploy.ps1 -CreateAdmin'
+        }
+        Show-SshHardeningGuide $Config
+    }
+}
+
 function Invoke-InstallKeyMode {
+    param([switch]$FromSetup)
     Assert-Interactive 'InstallKey'
     Test-LocalTool 'ssh', 'ssh-keygen'
     $config = Get-DeployConfig
@@ -1229,19 +1524,33 @@ function Invoke-InstallKeyMode {
     }
     $pub = ([System.IO.File]::ReadAllText("$key.pub")).Trim()
     if ($pub -notmatch '^ssh-ed25519 [A-Za-z0-9+/=]+( [^\r\n]*)?$') { throw "Unexpected public key format in $key.pub" }
-    $lit = ConvertTo-ShellLiteral $pub
-    $remote = "umask 077; mkdir -p ~/.ssh && touch ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys && (grep -qxF $lit ~/.ssh/authorized_keys || printf '%s\n' $lit >> ~/.ssh/authorized_keys)"
-    Write-Info 'Connecting to install the key (enter the SSH password when prompted)...'
-    $r = Invoke-Ssh -Config $config -RemoteCommand $remote -Tty
-    if ($r.ExitCode -ne 0) { throw "Installing the public key failed (exit $($r.ExitCode))." }
+    if (Test-KeyLogin $config) {
+        Write-Success "The server already accepts this key for $($config.SshUser); nothing to install."
+    } else {
+        $lit = ConvertTo-ShellLiteral $pub
+        $remote = "umask 077; mkdir -p ~/.ssh && touch ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys && (grep -qxF $lit ~/.ssh/authorized_keys || printf '%s\n' $lit >> ~/.ssh/authorized_keys)"
+        Write-Info "Connecting as $($config.SshUser) to install the key: enter that user's SSH password when prompted."
+        Write-Info '(A fresh server allows password login. If it is refused, check the user name and password on the server console.)'
+        $r = Invoke-Ssh -Config $config -RemoteCommand $remote -Tty
+        if ($r.ExitCode -ne 0) { throw "Installing the public key failed (exit $($r.ExitCode))." }
+    }
     Test-SshConnection $config
-    Write-Warn 'Change the SSH password on the server and disable PasswordAuthentication.'
+    if (-not $FromSetup) { Write-Info 'Next: deploy.ps1 -Setup. Keep password login on until Setup has finished; Setup then shows how to turn it off.' }
     return 0
 }
 
 function Invoke-SetupMode {
-    Test-LocalTool 'git', 'tar', 'npm'
-    $config = Connect-Server -ForSetup
+    Test-LocalTool 'git', 'tar', 'npm', 'ssh', 'ssh-keygen'
+    $config = Get-DeployConfig -ForSetup
+    Assert-PinnedHostKey $config
+    if (-not (Test-KeyLogin $config)) {
+        # Without the key every remote step would ask for the SSH password again.
+        if ($NonInteractive) { throw "The server does not accept this computer's SSH key for $($config.SshUser); run deploy.ps1 -InstallKey first." }
+        Write-Warn "The server does not accept this computer's SSH key for $($config.SshUser) yet."
+        if (-not (Read-YesNo 'Install it now (asks for the SSH password once)?')) { throw 'Run deploy.ps1 -InstallKey first.' }
+        [void](Invoke-InstallKeyMode -FromSetup)
+    }
+    Test-SshConnection $config
     # G-04: once the first Setup has installed the root gateway, sudoers allows nothing else,
     # so every later Setup must go through its check-go-live and setup subcommands.
     $probe = Invoke-Ssh -Config $config -RemoteCommand 'if [ -x /usr/local/sbin/warehouse-root-gateway ]; then echo [GATEWAY_PRESENT]; else echo [NO_GATEWAY]; fi' -Capture -Quiet
@@ -1253,6 +1562,7 @@ function Invoke-SetupMode {
     if ($viaGateway) {
         $check = Invoke-RemoteRootScript -Config $config -Gateway 'check-go-live' -Capture -Quiet
     } else {
+        Assert-BootstrapSudo $config
         $check = Invoke-RemoteRootScript -Config $config -Body "if [ -e $RemoteGoLiveFlag ]; then echo '[GO_LIVE_EXISTS]'; else echo '[NO_GO_LIVE]'; fi" -Capture -Quiet
     }
     if ($check.ExitCode -ne 0 -or -not (($check.Output -contains '[GO_LIVE_EXISTS]') -xor ($check.Output -contains '[NO_GO_LIVE]'))) {
@@ -1261,12 +1571,11 @@ function Invoke-SetupMode {
     if ($check.Output -contains '[GO_LIVE_EXISTS]') { throw 'Server is GO-LIVE; Setup is blocked to protect live data.' }
 
     $modules = $config.Modules
-    if (-not $config.ModulesSet -and -not $NonInteractive) {
-        $answer = ([string](Read-Host -Prompt 'Modules to install: 1) warehouse  2) accounting  3) both [3]')).Trim()
-        $modules = switch ($answer) { '1' { 'warehouse' } '2' { 'accounting' } { $_ -in @('', '3') } { $AllModules } default { $null } }
-        if (-not $modules) { throw "Invalid selection '$answer'." }
-    }
+    if (-not $config.ModulesSet -and -not $NonInteractive) { $modules = Read-ModuleChoice }
     Write-Info "Modules: $modules (remote-setup refuses to change the modules of an existing installation)."
+    $certMode = $config.CertMode
+    if (-not $config.CertModeSet -and -not $NonInteractive) { $certMode = Read-CertModeChoice }
+    Write-Info "Certificate mode: $certMode"
 
     $sha = Get-DeployCommit
     $front = Build-IsolatedFrontend $sha
@@ -1282,7 +1591,7 @@ if [ -e /var/www/warehouse/shared/GO_LIVE ]; then echo '[GO_LIVE_EXISTS]'; exit 
 bash "$@"
 '@
         $setupArgs = @("$stage/remote-setup.sh", $config.Domain, $config.AdminEmail, $config.DbName, $config.DbUser,
-            $config.AllowedHosts, [string]$config.SshPort, "$stage/bundle.tar.gz", $bundle.Sha256, $modules, $config.CertMode)
+            $config.AllowedHosts, [string]$config.SshPort, "$stage/bundle.tar.gz", $bundle.Sha256, $modules, $certMode)
         if ($viaGateway) {
             $r = Invoke-RemoteRootScript -Config $config -Gateway 'setup' -ArgumentList $setupArgs -Capture
         } else {
@@ -1296,20 +1605,28 @@ bash "$@"
         if ($stage) { Remove-RemoteStage $config $stage }
         Remove-LocalBundle $bundle
     }
-    if (@($r.Output | Where-Object { $_ -like '[[]TLS_PENDING[]]*' }).Count -gt 0) {
+    $tlsPending = @($r.Output | Where-Object { $_ -like '[[]TLS_PENDING[]]*' }).Count -gt 0
+    if ($tlsPending) {
         Write-Warn "Setup completed WITHOUT a certificate: the application runs, but $($config.Domain) is not reachable until one is issued (HTTP only redirects to HTTPS)."
-        Write-Warn 'Next: deploy.ps1 -SetSecret CLOUDFLARE_DNS_API_TOKEN, then deploy.ps1 -IssueCert.'
+        if ($NonInteractive) {
+            Write-Warn $(switch ($certMode) { 'dns01-cloudflare' { 'Next: deploy.ps1 -SetSecret CLOUDFLARE_DNS_API_TOKEN, then deploy.ps1 -IssueCert.' } 'http01' { 'Next: deploy.ps1 -IssueCert.' } default { 'Next: deploy.ps1 -InstallCert.' } })
+        }
     } else {
         Write-Success "Setup completed: https://$($config.Domain)/"
     }
-    if (-not $config.ModulesSet) {
-        try { Save-ConfigModuleList $modules } catch { Write-Warn "Could not record Modules=$modules in the configuration: $($_.Exception.Message)" }
+    $record = [ordered]@{}
+    if (-not $config.ModulesSet) { $record['Modules'] = $modules }
+    if (-not $config.CertModeSet) { $record['CertMode'] = $certMode }
+    if ($record.Count -gt 0) {
+        try { Save-ConfigSetting $record } catch { Write-Warn "Could not record $(@($record.Keys) -join ', ') in the configuration: $($_.Exception.Message)" }
     }
     try {
         [void](Register-PullTask)
     } catch {
         Write-Warn "Could not register the backup pull task: $($_.Exception.Message). Run deploy.ps1 -RegisterPullTask."
     }
+    Remove-BootstrapSudo $config
+    if (-not $NonInteractive) { Invoke-PostSetupGuide -Config $config -CertMode $certMode -TlsPending $tlsPending -FirstSetup (-not $viaGateway) }
     return 0
 }
 
@@ -1748,9 +2065,7 @@ function Invoke-GoLiveMode {
     if ($config.SshUser -eq 'root') {
         $results.Add([pscustomobject]@{ Pass = $false; Text = 'SSH login as root is not acceptable for go-live' })
     } else {
-        $sudo = Invoke-Ssh -Config $config -RemoteCommand 'sudo -n -l' -Capture -Quiet
-        $unrestricted = @($sudo.Output | Where-Object { $_ -match '\)\s*((NOPASSWD|PASSWD|SETENV|NOSETENV):\s*)*ALL\s*$' })
-        $pass = $sudo.ExitCode -eq 0 -and $unrestricted.Count -eq 0
+        $pass = Test-SudoRestricted $config
         $results.Add([pscustomobject]@{ Pass = $pass; Text = $(if ($pass) { 'sudo of the SSH user is restricted' } else { 'sudo of the SSH user is unrestricted or unreadable (sudo -n -l)' }) })
     }
 
@@ -2104,6 +2419,10 @@ function Show-Help {
 ======================================================================
   Warehouse Management System - deploy.ps1
 ======================================================================
+New server: deploy.ps1 -InstallKey, then deploy.ps1 -Setup. Interactive runs ask for any missing or
+invalid configuration value, pin the host key against the fingerprint read on the server console, and
+show every step that has to be done on the server console.
+
 Modes (exactly one):
   -InstallKey        Install the local ED25519 public key on the server (interactive)
   -Setup             Provision the server and deploy HEAD (blocked after GO_LIVE)

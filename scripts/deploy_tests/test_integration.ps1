@@ -371,7 +371,9 @@ touch /run/fake-deploy-hold; : > /run/fake-systemd/log; : > /run/fake-deploy.log
     $origConfig = [System.IO.File]::ReadAllText($ConfigFile)
     # 12.1 Assert-DeployConfig validates CertMode
     Write-Utf8LfFile $ConfigFile ($origConfig.TrimEnd().TrimEnd('}') + ",`n  `"CertMode`": `"invalid-mode`"`n}`n")
-    Assert-True ((Invoke-TestMode 'Status') -ne 0) 'Status refuses an unknown CertMode in config'
+    Assert-True ((Invoke-TestMode 'Status' -NonInteractiveRun) -ne 0) 'Status refuses an unknown CertMode in config (-NonInteractive)'
+    $script:ReadHostQueue.Enqueue('2')
+    Assert-True ((Invoke-TestMode 'Status') -eq 0 -and ([string](Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json).CertMode) -eq 'dns01-cloudflare') '... interactively it asks for CertMode and records the answer'
     Write-Utf8LfFile $ConfigFile $origConfig
 
     # 12.2 Gateway status shows cert mode and message when no cert exists

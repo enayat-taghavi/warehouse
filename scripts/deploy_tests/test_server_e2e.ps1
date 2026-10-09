@@ -4,7 +4,7 @@
 # the root gateway and the nightly backup are the real scripts from the bundle; apt and pip fetch real packages.
 # Only two things are faked: systemctl (real processes for postgresql, redis-server, nginx and warehouse-backend,
 # which is started from its installed unit; state files for every other unit) and certbot (self-signed certificate).
-# The deploy user starts with full sudo, like a real first Setup; after it only /etc/sudoers.d/warehouse remains.
+# The deploy user starts with full sudo, like a real first Setup; Setup removes it, so only /etc/sudoers.d/warehouse remains.
 # The tested commits are made from the working tree without touching any ref or the real index; they reuse the
 # frontend build of -BuildSha (from test_bundle.ps1), so only the backend and the scripts come from the working tree.
 param(
@@ -214,9 +214,9 @@ chmod 755 /usr/sbin/policy-rc.d
 apt-get update -qq
 apt-get install -y -qq --no-install-recommends sudo openssl ca-certificates procps nginx >/dev/null
 useradd -m -s /bin/bash deploy
-# First Setup: the SSH user still has full sudo; the test removes it after Setup, like the operator does.
-printf 'deploy ALL=(ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/deploy-bootstrap
-chmod 440 /etc/sudoers.d/deploy-bootstrap
+# First Setup: the SSH user has the temporary full sudo rule that deploy.ps1 asks for; Setup removes it.
+printf 'deploy ALL=(ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/90-warehouse-setup-temp
+chmod 440 /etc/sudoers.d/90-warehouse-setup-temp
 
 cat > /usr/local/sbin/systemctl <<'EOF'
 #!/usr/bin/env bash
@@ -451,12 +451,19 @@ try {
     # Like soft: Let's Encrypt cannot reach the server, so HTTP-01 fails; the setup must still finish.
     $cfToken = 'e2eTestToken_0123456789abcdefghijklmnopqrstu'
     [void](Invoke-Server "touch /run/fake-certbot-http01-fail; printf '%s' '$cfToken' > /run/fake-cf-token")
+    # CertMode is not configured: Setup asks (1 = http01); afterwards it offers to issue the certificate and to
+    # create the administrator (both declined here; the token and IssueCert are tested as separate modes below).
+    foreach ($a in @('1', 'n', 'n')) { $script:ReadHostQueue.Enqueue($a) }
     Assert-True ((Invoke-TestMode 'Setup') -eq 0) 'Setup #1 exit 0 although HTTP-01 fails'
+    Assert-True ((Get-ConfigCertMode) -eq 'http01') "Setup #1 recorded the chosen CertMode in the configuration ($(Get-ConfigCertMode))"
+    Assert-True (@(Invoke-Server 'test -e /etc/sudoers.d/90-warehouse-setup-temp && echo PRESENT || echo ABSENT')[0] -eq 'ABSENT') 'Setup #1 removed the temporary bootstrap sudo rule'
     $tls = @(Invoke-Server 'if [ -e /etc/letsencrypt/live/soft.example.test/fullchain.pem ]; then echo CERT; else echo NOCERT; fi; grep -c -- "--webroot" /run/fake-certbot.log || true; systemctl is-active fail2ban || true; curl -s -o /dev/null -w "%{http_code}" -H "Host: soft.example.test" http://127.0.0.1/ || true; echo; curl -s -o /dev/null -w "%{http_code}" -H "Host: soft.example.test" -H "X-Forwarded-Proto: https" http://127.0.0.1:8000/api/public/config/ || true')
     Assert-True ($tls[0] -eq 'NOCERT' -and $tls[1] -eq '1' -and $tls[2] -eq 'active' -and $tls[3] -eq '301' -and $tls[4] -eq '200') "... no certificate, nginx only redirects to HTTPS, the application answers, and the firewall step (fail2ban) still ran ($($tls -join ', '))"
     $mods = @(Invoke-Server 'sed -n "s/^WH_MODULES=//p" /var/www/warehouse/shared/.env; cat /var/www/warehouse/shared/MODULES; curl -s -H "Host: soft.example.test" -H "X-Forwarded-Proto: https" http://127.0.0.1:8000/api/public/config/ | python3 -c "import json, sys; print(\",\".join(json.load(sys.stdin)[\"installed_modules\"]))"')
     Assert-True ($mods.Count -eq 3 -and $mods[0] -eq 'accounting' -and $mods[1] -eq 'accounting' -and $mods[2] -eq 'platform,accounting') "Setup #1 installed accounting only: WH_MODULES, the MODULES record and installed_modules ($($mods -join ' | '))"
-    # DNS-01: the token goes to a root-only file through the gateway, then -IssueCert
+    # DNS-01: the operator switches to DNS-01 (HTTP-01 cannot reach the server); the token goes to a
+    # root-only file through the gateway, then -IssueCert
+    Set-ConfigCertMode 'dns01-cloudflare'
     $SetSecret = 'CLOUDFLARE_DNS_API_TOKEN'
     $script:ReadHostQueue.Enqueue('short-token')
     Assert-True ((Invoke-TestMode 'SetSecret') -ne 0) 'a malformed Cloudflare token is refused'
@@ -485,8 +492,6 @@ runuser -u postgres -- psql -XAtq -d warehouse_db -c "SELECT string_agg(ascii(x)
     Assert-True ($icu[0] -eq 'i:fa-IR') "database uses the ICU fa-IR collation ($($icu[0]))"
     Assert-True ($icu[1] -eq '1576,1662,1670,1586,1688,1705,1711,1740') "Persian letters sort in Persian order in PostgreSQL 16 ($($icu[1]))"
     Assert-True (@(Invoke-Server 'test -f /etc/letsencrypt/live/soft.example.test/fullchain.pem && grep -c "ssl_certificate " /etc/nginx/sites-available/warehouse')[0] -eq '1') 'certificate issued and the HTTPS site rendered by --refresh-nginx'
-    # The operator removes the bootstrap sudo rule after the first Setup.
-    [void](Invoke-Server 'rm -f /etc/sudoers.d/deploy-bootstrap')
     $sudoCheck = Invoke-Container 'deploy' 'sudo -n true; echo "RC=$?"'
     Assert-True ($sudoCheck.Output -contains 'RC=1') 'deploy has no sudo beyond the gateway any more'
 
