@@ -112,6 +112,10 @@ $BrandingValueRegex = '^[^\x00-\x1f\x7f<>&"''\\`{}]{1,80}$'
 # The temporary password-less sudo file the first Setup asks for; Setup removes it once the gateway is installed.
 $BootstrapSudoersFile = '/etc/sudoers.d/90-warehouse-setup-temp'
 $GitExe = Find-Application 'git.exe'
+if ($GitExe) {
+    $gitKeyscan = Join-Path (Split-Path (Split-Path $GitExe)) 'usr\bin\ssh-keyscan.exe'
+    if (Test-Path -LiteralPath $gitKeyscan) { $SshKeyscanExe = $gitKeyscan }
+}
 $NpmCmd = Find-Application 'npm.cmd'
 $DockerExe = Find-Application 'docker.exe'
 
@@ -669,10 +673,36 @@ function Complete-DeployConfig {
     return $RawConfig
 }
 
+function Invoke-ConnectionReview {
+    param([switch]$ForSetup)
+    if ($NonInteractive) { return (Get-DeployConfig -ForSetup:$ForSetup) }
+    $path = Get-ConfigPath
+    $raw = if (Test-Path -LiteralPath $path -PathType Leaf) {
+        Get-Content -LiteralPath $path -Raw -Encoding utf8 | ConvertFrom-Json
+    } else {
+        [pscustomobject]@{}
+    }
+    Write-Step 'Reviewing server connection settings (Enter keeps the value in brackets)...'
+    $changed = [ordered]@{}
+    foreach ($key in @('ServerHost', 'SshUser', 'SshPort')) {
+        $value = Read-ConfigKey -RawConfig $raw -Key $key -ForSetup:$ForSetup
+        if ([string]$value -cne [string]$raw.$key) {
+            $raw | Add-Member -NotePropertyName $key -NotePropertyValue $value -Force
+            $changed[$key] = $value
+        }
+    }
+    if ($changed.Count -gt 0) {
+        Save-ConfigSetting $changed
+        Write-Success "Configuration saved: $path ($(@($changed.Keys) -join ', '))."
+    } else {
+        Write-Info 'Connection settings confirmed.'
+    }
+    return (Get-DeployConfig -ForSetup:$ForSetup)
+}
+
 function Invoke-SetupReview {
     # Setup (interactive): the settings are asked again with their current value; Enter keeps it.
-    # First Setup: domain, hosts, e-mail, database, modules, certificate mode and names. A later Setup cannot
-    # change domain, modules or database (use -ChangeDomain or -AddModule), so only the names are asked.
+    # First Setup: server host, ssh user, ssh port, domain, hosts, e-mail, database, modules, certificate mode and names.
     # Returns the re-read configuration.
     param([Parameter(Mandatory)][bool]$FirstSetup)
     $path = Get-ConfigPath
@@ -680,7 +710,7 @@ function Invoke-SetupReview {
     Write-Step 'Reviewing the settings for this Setup (Enter keeps the value in brackets)...'
     $changed = [ordered]@{}
     if ($FirstSetup) {
-        foreach ($key in @('Domain', 'AllowedHosts', 'AdminEmail', 'DbName', 'DbUser')) {
+        foreach ($key in @('ServerHost', 'SshUser', 'SshPort', 'Domain', 'AllowedHosts', 'AdminEmail', 'DbName', 'DbUser')) {
             $value = Read-ConfigKey -RawConfig $raw -Key $key -ForSetup
             if ([string]$value -cne [string]$raw.$key) { $raw | Add-Member -NotePropertyName $key -NotePropertyValue $value -Force; $changed[$key] = $value }
         }
@@ -815,6 +845,34 @@ function Assert-PinnedHostKey($Config) {
     }
     $problem = Get-PinnedHostKeyProblem $lookup $fp
     if ($problem) { throw $problem }
+}
+
+function Sync-HostKeyIfChanged($Config) {
+    # If the remote server host key has changed (e.g. server OS was reinstalled), automatically
+    # remove stale known_hosts entries and sync the new host key into known_hosts and deploy_config.json.
+    try {
+        $lookup = Get-KnownHostsLookup $Config.ServerHost $Config.SshPort
+        $key = Get-ServerHostKey $Config.ServerHost $Config.SshPort
+        $offeredFp = Get-SshKeyFingerprint $key
+        $currentProblem = Get-PinnedHostKeyProblem $lookup $offeredFp
+        if ($currentProblem -or ($Config.HostKeyFingerprint -and $Config.HostKeyFingerprint -cne $offeredFp)) {
+            Write-Info "Server host key changed on $lookup ($offeredFp). Updating known_hosts and configuration automatically..."
+            [void][System.IO.Directory]::CreateDirectory((Split-Path -Parent $KnownHostsFile))
+            if (Test-Path -LiteralPath $KnownHostsFile -PathType Leaf) {
+                [void](Invoke-Process -FilePath $SshKeygenExe -ArgumentList @('-R', $lookup, '-f', $KnownHostsFile) -Capture -Quiet)
+            }
+            $existing = if (Test-Path -LiteralPath $KnownHostsFile -PathType Leaf) { [System.IO.File]::ReadAllText($KnownHostsFile) } else { '' }
+            $prefix = if ($existing -and -not $existing.EndsWith("`n")) { "`n" } else { '' }
+            [System.IO.File]::AppendAllText($KnownHostsFile, "$prefix$lookup ssh-ed25519 $key`n", $Utf8NoBom)
+            if ($Config.HostKeyFingerprint -cne $offeredFp) {
+                $Config.HostKeyFingerprint = $offeredFp
+                try { Save-ConfigSetting ([ordered]@{ HostKeyFingerprint = $offeredFp }) } catch {}
+            }
+            Write-Success "Host key synced automatically: $offeredFp"
+        }
+    } catch {
+        Write-Verbose "Sync-HostKeyIfChanged skipped: $_"
+    }
 }
 
 function Invoke-Ssh {
@@ -1734,7 +1792,8 @@ function Invoke-InstallKeyMode {
     param([switch]$FromSetup)
     Assert-Interactive 'InstallKey'
     Test-LocalTool 'ssh', 'ssh-keygen'
-    $config = Get-DeployConfig
+    $config = Invoke-ConnectionReview
+    Sync-HostKeyIfChanged $config
     Assert-PinnedHostKey $config
     $sshDir = Join-Path $env:USERPROFILE '.ssh'
     [void][System.IO.Directory]::CreateDirectory($sshDir)
@@ -1762,7 +1821,8 @@ function Invoke-InstallKeyMode {
 
 function Invoke-SetupMode {
     Test-LocalTool 'git', 'tar', 'npm', 'ssh', 'ssh-keygen'
-    $config = Get-DeployConfig -ForSetup
+    $config = Invoke-ConnectionReview -ForSetup
+    Sync-HostKeyIfChanged $config
     Assert-PinnedHostKey $config
     if (-not (Test-KeyLogin $config)) {
         # Without the key every remote step would ask for the SSH password again.
@@ -2591,9 +2651,18 @@ function Invoke-RemoveLegacyDomainMode([string]$LegacyDomain) {
 }
 
 $MenuItems = @(
-    @('InstallKey', 'Install SSH public key on the server'),
     @('Setup', 'Initial server provisioning and first deployment'),
+    @('InstallKey', 'Install SSH public key on the server'),
+    @('CreateAdmin', 'Create a Django superuser interactively'),
+    @('IssueCert', "Issue the Let's Encrypt certificate (HTTP-01 or DNS-01 by CertMode)"),
+    @('InstallCert', 'Install a Cloudflare Origin or Custom TLS certificate'),
+    @('SetSecret', 'Set an allowed secret in shared/.env'),
+    @('RegisterPullTask', 'Register the scheduled backup pull task'),
+    @('GoLive', 'Run the go-live checklist and set GO_LIVE'),
+    @('Status', 'Server and off-server backup status'),
     @('Update', 'Two-phase update (prepare, pull backup, activate)'),
+    @('Restart', 'Restart services and reload Nginx'),
+    @('Logs', 'Stream service logs'),
     @('AddModule', 'Add a module (warehouse or accounting)'),
     @('Backup', 'Create a manual server backup and pull it'),
     @('PullBackups', 'Pull and verify all server backups'),
@@ -2601,18 +2670,9 @@ $MenuItems = @(
     @('Restore', 'Restore the database from a server dump'),
     @('RestoreDrill', 'Restore drill of the newest local dump (Docker)'),
     @('Rollback', 'Roll back to the previous release'),
-    @('GoLive', 'Run the go-live checklist and set GO_LIVE'),
-    @('CreateAdmin', 'Create a Django superuser interactively'),
-    @('SetSecret', 'Set an allowed secret in shared/.env'),
-    @('RegisterPullTask', 'Register the scheduled backup pull task'),
-    @('Logs', 'Stream service logs'),
-    @('Restart', 'Restart services and reload Nginx'),
-    @('IssueCert', "Issue the Let's Encrypt certificate (HTTP-01 or DNS-01 by CertMode)"),
-    @('InstallCert', 'Install a Cloudflare Origin or Custom TLS certificate'),
     @('ChangeDomain', 'Change primary domain (new domain active, old in transition)'),
     @('FinishDomainChange', 'Finish domain change (convert transition domains to 301 redirect)'),
     @('RemoveLegacyDomain', 'Remove legacy domain redirect (archives TLS to shared/retired)'),
-    @('Status', 'Server and off-server backup status'),
     @('ResetServer', 'Recreate the database empty (before GO_LIVE only)')
 )
 
@@ -2643,37 +2703,37 @@ function Show-Help {
 ======================================================================
   Warehouse Management System - deploy.ps1
 ======================================================================
-New server: deploy.ps1 -InstallKey, then deploy.ps1 -Setup. Interactive runs ask for any missing or
-invalid configuration value, pin the host key against the fingerprint read on the server console, and
+New server: deploy.ps1 -Setup (or deploy.ps1 -InstallKey, then -Setup). Interactive runs ask for
+any missing or invalid configuration value, pin the host key against the server console, and
 show every step that has to be done on the server console.
 
 Modes (exactly one):
-  -InstallKey        Install the local ED25519 public key on the server (interactive)
   -Setup             Provision the server and deploy HEAD (blocked after GO_LIVE)
+  -InstallKey        Install the local ED25519 public key on the server (interactive)
+  -CreateAdmin       Create a Django superuser over an interactive SSH session
+  -IssueCert         Issue the Let's Encrypt certificate (HTTP-01 or DNS-01 by CertMode)
+  -InstallCert       Install a Cloudflare Origin or Custom TLS certificate (-CertFile, -KeyFile)
+  -SetSecret <KEY>   Set GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET or OUTBOUND_HTTP_PROXY,
+                     or CLOUDFLARE_DNS_API_TOKEN (root-only file for DNS-01 certificates)
+  -RegisterPullTask  Register the daily backup pull task (use -Force to re-register)
+  -GoLive            Run the go-live checklist, then set the GO_LIVE flag
+  -Status            Server state, heartbeats, disk, certificate and off-server copies
   -Update            Build HEAD, upload, prepare, pull the pre-update backup, activate
                      (never changes the installed modules; Modules must match the server)
+  -Restart           Restart application services and reload Nginx
+  -Logs              Stream the service journal
   -AddModule <code>  Add the warehouse or accounting module: verified backup, migrate, restart, health
                      check; a failure restores the previous modules (removing a module is not supported)
-  -ResetServer       Before GO_LIVE only: recreate the database empty with Modules and deploy HEAD (typed RESET)
   -Backup            Create a manual server backup and pull it (verified)
   -PullBackups       Pull new verified backups and the media mirror into backups/soft
   -PruneBackups      Delete server dumps whose local copy matches a fresh server sha256
   -Restore           Restore the database from a server dump (typed confirmation)
   -RestoreDrill      Restore the newest verified local dump into a throwaway Docker PostgreSQL
   -Rollback          Switch back to the previous release
-  -GoLive            Run the go-live checklist, then set the GO_LIVE flag
-  -CreateAdmin       Create a Django superuser over an interactive SSH session
-  -SetSecret <KEY>   Set GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET or OUTBOUND_HTTP_PROXY,
-                     or CLOUDFLARE_DNS_API_TOKEN (root-only file for DNS-01 certificates)
-  -RegisterPullTask  Register the daily backup pull task (use -Force to re-register)
-  -Logs              Stream the service journal
-  -Restart           Restart application services and reload Nginx
-  -IssueCert         Issue the Let's Encrypt certificate (HTTP-01 or DNS-01 by CertMode)
-  -InstallCert       Install a Cloudflare Origin or Custom TLS certificate (-CertFile, -KeyFile)
   -ChangeDomain <d>  Change primary domain to <d>: issues/installs cert, puts old domain in transition
   -FinishDomainChange Convert all legacy transition domains to permanent 301 redirects
   -RemoveLegacyDomain <d> Remove legacy domain redirect (archives its TLS files to shared/retired/)
-  -Status            Server state, heartbeats, disk, certificate and off-server copies
+  -ResetServer       Before GO_LIVE only: recreate the database empty with Modules and deploy HEAD (typed RESET)
   -Help              Show this help
 
 Options:
