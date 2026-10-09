@@ -47,6 +47,7 @@ export class ActiveCompanyService {
   public isLoading$ = this.isLoadingSubject.asObservable();
 
   public hasWarehouseModuleSignal = computed<boolean>(() => {
+    if (!this.moduleRegistry.isModuleInstalled('warehouse')) return false;
     const c = this.activeCompanySignal();
     if (!c) {
       return true;
@@ -96,7 +97,7 @@ export class ActiveCompanyService {
   }
 
   public hasWarehouseModule$ = this.activeCompany$.pipe(
-    map((c) => !!c && c.has_warehouse_module !== false)
+    map((c) => this.moduleRegistry.isModuleInstalled('warehouse') && !!c && c.has_warehouse_module !== false)
   );
 
   public loadDocumentCompanies(): Observable<Company[]> {

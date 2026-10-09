@@ -7,6 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { of } from 'rxjs';
 import { ActiveCompanyService } from './active-company.service';
 import { SessionTabService } from './session-tab.service';
+import { ModuleRegistryService } from '../modules/module-registry.service';
 import { Company } from '../models/company.model';
 
 try {
@@ -86,6 +87,9 @@ describe('ActiveCompanyService (Tab Isolation & Multi-Tenant State)', () => {
     TestBed.resetTestingModule();
     mockSessionStorage.clear();
     mockLocalStorage.clear();
+    try {
+      localStorage.removeItem('wh_installed_modules');
+    } catch {}
   });
 
   it('۱. باید در حالت اولیه بدون شرکت ذخیره‌شده، مقدار null باشد', () => {
@@ -187,5 +191,32 @@ describe('ActiveCompanyService (Tab Isolation & Multi-Tenant State)', () => {
     service.loadAvailableCompanies().subscribe(res => {
       expect(service.activeCompanyId).toBe(2);
     });
+  });
+
+  it('۸. ایزولاسیون تک‌ماژول: در صورت عدم نصب ماژول انبارداری، hasWarehouseModuleSignal و hasWarehouseModule$ باید false باشند حتی اگر شرکت has_warehouse_module=true داشته باشد', () => {
+    const registry = TestBed.inject(ModuleRegistryService);
+    registry.setInstalledModules(['platform', 'accounting']);
+
+    service.selectCompany(mockCompanyA);
+    expect(mockCompanyA.has_warehouse_module).toBe(true);
+    expect(service.hasWarehouseModuleSignal()).toBe(false);
+    expect(service.hasWarehouseModule).toBe(false);
+
+    let obsVal: boolean | null = null;
+    const sub = service.hasWarehouseModule$.subscribe(val => { obsVal = val; });
+    expect(obsVal).toBe(false);
+    sub.unsubscribe();
+  });
+
+  it('۹. در صورت نصب ماژول انبارداری، hasWarehouseModuleSignal باید مقدار شرکت را منعکس کند', () => {
+    const registry = TestBed.inject(ModuleRegistryService);
+    registry.setInstalledModules(['platform', 'warehouse', 'accounting']);
+
+    service.selectCompany(mockCompanyA);
+    expect(service.hasWarehouseModuleSignal()).toBe(true);
+
+    const mockCompanyWithoutWh = { ...mockCompanyA, id: 99, has_warehouse_module: false } as Company;
+    service.selectCompany(mockCompanyWithoutWh);
+    expect(service.hasWarehouseModuleSignal()).toBe(false);
   });
 });
