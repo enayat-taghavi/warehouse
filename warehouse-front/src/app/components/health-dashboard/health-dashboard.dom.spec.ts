@@ -138,4 +138,13 @@ describe('HealthDashboard DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () =
     expect(compiled.textContent).toContain('انبار: 40');
     expect(compiled.textContent).not.toContain('مالی: 15');
   });
+
+  it('در نصب کامل روی مسیر انبار، سناریوی پیش‌فرض همان «ترکیبی» می‌ماند (بند ۳-۱: نصب کامل بی‌تغییر)', () => {
+    mockRouter.url = '/app/warehouse/health';
+    mockRegistry.isModuleInstalled.mockReturnValue(true);
+    component.detectScope();
+
+    expect(component.appScope).toBe('warehouse');
+    expect(component.selectedScenario).toBe('combined');
+  });
 });

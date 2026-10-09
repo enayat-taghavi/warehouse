@@ -604,7 +604,6 @@ export class HealthDashboardComponent implements OnInit, OnDestroy {
       this.selectedScenario = 'treasury';
     } else if (path.includes('/app/warehouse') || path.includes('/warehouse')) {
       this.appScope = 'warehouse';
-      this.selectedScenario = 'warehouse';
     } else {
       if (!this.isWarehouseInstalled && this.isAccountingInstalled) {
         this.appScope = 'finance';

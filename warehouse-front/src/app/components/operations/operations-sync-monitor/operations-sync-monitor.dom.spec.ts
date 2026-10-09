@@ -123,4 +123,24 @@ describe('OperationsSyncMonitorComponent DOM & Browser Unit Test (Type 1 Vitest 
     expect(component.showFinanceQueue).toBe(false);
     expect(component.queueSummaryText).toBe('انبارداری: 0');
   });
+
+  it('۵. دکمهٔ شبیه‌سازی تداخل فقط در نصب دارای انبار دیده می‌شود و در نصب فقط مالی چیزی در صف مالی نمی‌نویسد (L16)', async () => {
+    const registry = TestBed.inject(ModuleRegistryService);
+    const hasSimulateButton = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
+        .some(b => (b.textContent || '').includes('شبیه‌سازی تداخل'));
+
+    registry.setInstalledModules(['platform', 'warehouse', 'accounting']);
+    fixture.detectChanges();
+    expect(hasSimulateButton()).toBe(true);
+
+    registry.setInstalledModules(['platform', 'accounting']);
+    fixture.detectChanges();
+    expect(hasSimulateButton()).toBe(false);
+
+    const toast = TestBed.inject(ToastService) as any;
+    toast.show.mockClear();
+    await component.simulateConflictScenario();
+    expect(toast.show).not.toHaveBeenCalled();
+  });
 });

@@ -418,62 +418,37 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * شبیه‌سازی یک تداخل ۴۰۹ واقعی جهت تست موتور حل اختلاف و ۳-Way Merge
+   * شبیه‌سازی یک تداخل ۴۰۹ واقعی جهت تست موتور حل اختلاف و ۳-Way Merge.
+   * فقط در نصب دارای انبار (L16): نمونهٔ مالی به نشانی واقعیِ سرور نمی‌رسد و حل آن
+   * رکورد ساختگی را در صف واقعی مالی می‌چرخاند؛ پس در نبود انبار دکمه پنهان است.
    */
   async simulateConflictScenario(): Promise<void> {
+    if (!this.isWarehouseInstalled) return;
     try {
-      if (this.isWarehouseInstalled) {
-        await warehouseOfflineDb.syncErrors.add({
-          method: 'PATCH',
-          url: '/api/counting/tasks/101/',
-          body: {
-            quantity: 45,
-            reason: 'شمارش ردیف A-04',
-            notes: 'شمارش انجام‌شده توسط انباردار تبلت ۱'
-          },
-          statusCode: 409,
-          serverMessage: 'تداخل نسخه سرور (409 Conflict): رکورد هم‌زمان توسط کاربر دیگری در سرور تغییر یافته است.',
-          failedAt: Date.now(),
-          dismissed: 0,
-          entityType: 'count_task',
-          serverResponse: {
-            error: 'CONFLICT',
-            server_record: {
-              id: 101,
-              quantity: 50,
-              reason: 'ثبت مغایرت توسط سرپرست',
-              notes: 'تطبیق نهایی فیزیکی قفسه',
-              updated_at: new Date().toISOString()
-            }
+      await warehouseOfflineDb.syncErrors.add({
+        method: 'PATCH',
+        url: '/api/counting/tasks/101/',
+        body: {
+          quantity: 45,
+          reason: 'شمارش ردیف A-04',
+          notes: 'شمارش انجام‌شده توسط انباردار تبلت ۱'
+        },
+        statusCode: 409,
+        serverMessage: 'تداخل نسخه سرور (409 Conflict): رکورد هم‌زمان توسط کاربر دیگری در سرور تغییر یافته است.',
+        failedAt: Date.now(),
+        dismissed: 0,
+        entityType: 'count_task',
+        serverResponse: {
+          error: 'CONFLICT',
+          server_record: {
+            id: 101,
+            quantity: 50,
+            reason: 'ثبت مغایرت توسط سرپرست',
+            notes: 'تطبیق نهایی فیزیکی قفسه',
+            updated_at: new Date().toISOString()
           }
-        });
-      } else {
-        await financeOfflineDb.syncErrors.add({
-          method: 'PATCH',
-          url: '/api/personnel/timesheets/201/',
-          body: {
-            work_hours: 8,
-            overtime_hours: 2,
-            notes: 'ثبت کارکرد روزانه'
-          },
-          statusCode: 409,
-          serverMessage: 'تداخل نسخه سرور (409 Conflict): کارکرد هم‌زمان در سرور ویرایش شده است.',
-          failedAt: Date.now(),
-          dismissed: 0,
-          entityType: 'timesheet',
-          appScope: 'finance',
-          serverResponse: {
-            error: 'CONFLICT',
-            server_record: {
-              id: 201,
-              work_hours: 9,
-              overtime_hours: 3,
-              notes: 'تأیید کارکرد توسط سرپرست مالی',
-              updated_at: new Date().toISOString()
-            }
-          }
-        });
-      }
+        }
+      });
       this.toast.show('warning', 'یک تداخل نمونه ۴۰۹ در آزمایشگاه تداخل ثبت گردید.');
       await this.refreshTelemetry();
     } catch (e) {

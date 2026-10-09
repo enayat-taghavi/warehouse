@@ -10,6 +10,7 @@ import { ActiveCompanyService } from '../../../../core/services/active-company.s
 import { ToastService } from '../../../../services/toast.service';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
 
 describe('CompanyGdriveTabComponent', () => {
   let component: CompanyGdriveTabComponent;
@@ -93,7 +94,8 @@ describe('CompanyGdriveTabComponent', () => {
         { provide: ActiveCompanyService, useValue: activeCompanyServiceMock },
         { provide: ToastService, useValue: toastServiceMock },
         { provide: ConfirmDialogService, useValue: confirmDialogMock },
-        { provide: AuthService, useValue: authServiceMock }
+        { provide: AuthService, useValue: authServiceMock },
+        { provide: ModuleRegistryService, useValue: { isModuleInstalled: () => true } }
       ]
     });
 
