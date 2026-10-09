@@ -44,19 +44,21 @@
 
     <!-- پاورقی سایدبار: سوئیچ سریع به ماژول‌های انبارداری و مالی -->
     <div class="p-3 border-t border-slate-800 flex flex-col gap-2 shrink-0">
-      <div *ngIf="!isSidebarCollapsed()" class="bg-slate-950/60 rounded-xl p-2.5 border border-slate-800 flex flex-col gap-2">
+      <div *ngIf="!isSidebarCollapsed() && hasAnyConnectedModule" class="bg-slate-950/60 rounded-xl p-2.5 border border-slate-800 flex flex-col gap-2">
         <div class="text-[11px] font-bold text-slate-400 flex items-center justify-between">
-          <span>سامانه‌های متصل:</span>
-          <span class="text-[10px] text-indigo-400 font-mono">یکپارچه</span>
+          <span>{{ hasMultipleConnectedModules ? 'سامانه‌های متصل:' : 'سامانه متصل:' }}</span>
+          <span *ngIf="hasMultipleConnectedModules" class="text-[10px] text-indigo-400 font-mono">یکپارچه</span>
         </div>
-        <div class="grid grid-cols-2 gap-1.5">
+        <div class="grid gap-1.5" [ngClass]="hasMultipleConnectedModules ? 'grid-cols-2' : 'grid-cols-1'">
           <button
+            *ngIf="showWarehouseLink"
             (click)="goToWarehouse()"
             class="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] font-bold text-indigo-300 transition-colors text-center cursor-pointer"
           >
             📦 انبارداری
           </button>
           <button
+            *ngIf="showAccountingLink"
             (click)="goToFinance()"
             class="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] font-bold text-emerald-300 transition-colors text-center cursor-pointer"
           >
@@ -206,9 +208,9 @@
         </div>
       </div>
 
-      <div class="flex flex-col gap-2 pt-4 border-t border-slate-800">
-        <button (click)="goToWarehouse()" class="w-full py-2 rounded-xl bg-slate-800 text-indigo-300 text-xs font-bold cursor-pointer">ورود به انبارداری</button>
-        <button (click)="goToFinance()" class="w-full py-2 rounded-xl bg-slate-800 text-emerald-300 text-xs font-bold cursor-pointer">ورود به سامانه مالی</button>
+      <div *ngIf="hasAnyConnectedModule" class="flex flex-col gap-2 pt-4 border-t border-slate-800">
+        <button *ngIf="showWarehouseLink" (click)="goToWarehouse()" class="w-full py-2 rounded-xl bg-slate-800 text-indigo-300 text-xs font-bold cursor-pointer">ورود به انبارداری</button>
+        <button *ngIf="showAccountingLink" (click)="goToFinance()" class="w-full py-2 rounded-xl bg-slate-800 text-emerald-300 text-xs font-bold cursor-pointer">ورود به سامانه مالی</button>
       </div>
     </div>
   </div>

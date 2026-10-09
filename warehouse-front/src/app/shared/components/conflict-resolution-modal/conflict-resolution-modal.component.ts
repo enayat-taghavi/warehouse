@@ -6,6 +6,7 @@ import {
   OnChanges,
   SimpleChanges,
   ChangeDetectorRef,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -278,8 +279,9 @@ export class ConflictResolutionModalComponent implements OnChanges {
   saveErrorMsg: string | null = null;
 
   private syncService = OfflineSyncService.getInstance();
+  private cdr = inject(ChangeDetectorRef);
 
-  constructor(private cdr: ChangeDetectorRef) {}
+  constructor() {}
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['isOpen']?.currentValue || changes['errorEntry']) {

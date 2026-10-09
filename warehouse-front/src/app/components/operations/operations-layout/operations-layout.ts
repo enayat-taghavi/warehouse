@@ -14,6 +14,7 @@ import { CompanySwitcherComponent } from '../../organization/company-switcher/co
 import { CompanySelectionModalComponent } from '../../organization/company-selection-modal/company-selection-modal';
 import { FirstBootWizardComponent } from '../first-boot-wizard/first-boot-wizard';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
+import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 import { filter, Subscription } from 'rxjs';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
@@ -52,7 +53,24 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
   public navHistory = inject(NavigationHistoryService);
   public commService = inject(CommunicationService);
   public activeCompanyService = inject(ActiveCompanyService, { optional: true });
+  public moduleRegistry = inject(ModuleRegistryService);
   private router = inject(Router);
+
+  get showWarehouseLink(): boolean {
+    return this.activeCompanyService?.hasWarehouseModuleSignal?.() ?? this.moduleRegistry.isModuleInstalled('warehouse');
+  }
+
+  get showAccountingLink(): boolean {
+    return this.moduleRegistry.isModuleInstalled('accounting');
+  }
+
+  get hasAnyConnectedModule(): boolean {
+    return this.showWarehouseLink || this.showAccountingLink;
+  }
+
+  get hasMultipleConnectedModules(): boolean {
+    return this.showWarehouseLink && this.showAccountingLink;
+  }
 
   public isSidebarCollapsed = signal<boolean>(false);
   public isMobileMenuOpen = signal<boolean>(false);

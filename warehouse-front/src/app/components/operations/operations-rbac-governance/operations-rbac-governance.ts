@@ -8,6 +8,7 @@ import { ToastService } from '../../../services/toast.service';
 import { AccountsHttpService } from '../../../core/http/accounts-http.service';
 import { finalize } from 'rxjs/operators';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
+import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 
 export interface SensitivePermissionItem {
   code: string;
@@ -43,6 +44,16 @@ export class OperationsRbacGovernanceComponent implements OnInit {
   private toast = inject(ToastService);
   private accountsService = inject(AccountsHttpService);
   private cdr = inject(ChangeDetectorRef);
+  public moduleRegistry = inject(ModuleRegistryService);
+
+  public filterInstalledApps(apps: string[]): string[] {
+    return (apps || []).filter(app => {
+      if (app === 'operations' || app === 'platform') return true;
+      const spec = this.moduleRegistry.getSpec(app);
+      const code = spec?.code || app;
+      return this.moduleRegistry.isModuleInstalled(code);
+    });
+  }
 
   public isLoading = signal<boolean>(false);
   public activeTab = signal<'sensitive_vault' | 'superuser_audit' | 'session_claims'>('sensitive_vault');
@@ -88,7 +99,7 @@ export class OperationsRbacGovernanceComponent implements OnInit {
     {
       code: 'perm_sys_emergency_freeze',
       title: 'فریز اضطراری و انجماد سراسری سامانه (System Freeze)',
-      description: 'قفل کردن کلیه ثبت‌های انبار و مالی در بازه‌های معین بدون امکان ویرایش',
+      description: 'قفل کردن کلیه ثبت‌های عملیاتی در بازه‌های معین بدون امکان ویرایش',
       riskLevel: 'high',
       isSuperuserOnly: true,
       assignedCount: 0
@@ -122,7 +133,7 @@ export class OperationsRbacGovernanceComponent implements OnInit {
             fullName: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username,
             isSuperuser: !!u.is_superuser,
             isStaff: !!u.is_staff,
-            allowedApps: u.is_superuser ? ['warehouse', 'finance', 'operations'] : (u.allowed_apps || ['warehouse']),
+            allowedApps: this.filterInstalledApps(u.is_superuser ? ['warehouse', 'finance', 'operations'] : (u.allowed_apps || [])),
             activeRoleTitle: u.role_title || (u.is_superuser ? 'مدیر ارشد کل' : 'کاربر عادی'),
             lastLoginShamsi: u.last_login_shamsi || '—'
           }));
@@ -150,7 +161,7 @@ export class OperationsRbacGovernanceComponent implements OnInit {
               fullName: this.auth.userName() || 'مدیر ارشد سامانه',
               isSuperuser: true,
               isStaff: true,
-              allowedApps: ['warehouse', 'finance', 'operations'],
+              allowedApps: this.filterInstalledApps(['warehouse', 'finance', 'operations']),
               activeRoleTitle: 'فرمانده مرکز عملیات و پدافند',
               lastLoginShamsi: 'امروز'
             }

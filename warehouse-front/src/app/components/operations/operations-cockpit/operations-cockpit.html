@@ -40,6 +40,7 @@
         </button>
 
         <button 
+          *ngIf="isWarehouseInstalled"
           (click)="navigateTo('/app/warehouse/wh-settings')"
           class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-indigo-600 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
           title="مشاهده مستقیم در تنظیمات انبارداری"
@@ -219,7 +220,7 @@
           پایش همگام‌سازی و حل تداخل
         </h3>
         <p class="text-xs text-slate-500 mt-2 leading-relaxed">
-          رصد وضعیت صفوف همگام‌سازی آفلاین تبلت‌های انبارداری و حل تداخل سه‌سویه در زمان وقوع مغایرت‌های کلاینت/سرور.
+          رصد وضعیت صفوف همگام‌سازی آفلاین تبلت‌ها و کلاینت‌ها و حل تداخل سه‌سویه در زمان وقوع مغایرت‌های کلاینت/سرور.
         </p>
       </div>
 

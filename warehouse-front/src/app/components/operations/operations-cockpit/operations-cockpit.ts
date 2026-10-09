@@ -29,6 +29,10 @@ export class OperationsCockpitComponent implements OnInit {
     return this.moduleRegistry.isModuleInstalled('accounting');
   }
 
+  get isWarehouseInstalled(): boolean {
+    return this.moduleRegistry.isModuleInstalled('warehouse');
+  }
+
   public isCreatingSnapshot = signal<boolean>(false);
   public snapshotCount = signal<number>(0);
   public lastSnapshotTime = signal<string>('نامشخص');

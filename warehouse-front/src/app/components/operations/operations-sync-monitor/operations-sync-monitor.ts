@@ -18,6 +18,7 @@ import { ConfirmDialogService } from '../../../shared/components/confirm-dialog/
 import { ConflictResolutionModalComponent } from '../../../shared/components/conflict-resolution-modal/conflict-resolution-modal.component';
 import { Subscription } from 'rxjs';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
+import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 
 export interface TabletDeviceTelemetry {
   tabId: string;
@@ -61,9 +62,37 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
   public clientTelemetry = inject(ClientTelemetryService);
   public offlineSync = inject(OfflineSyncService);
   public ws = inject(WebSocketService);
+  public moduleRegistry = inject(ModuleRegistryService);
   private toast = inject(ToastService);
   private confirmDialog = inject(ConfirmDialogService);
   private cdr = inject(ChangeDetectorRef);
+
+  get isWarehouseInstalled(): boolean {
+    return this.moduleRegistry.isModuleInstalled('warehouse');
+  }
+
+  get isAccountingInstalled(): boolean {
+    return this.moduleRegistry.isModuleInstalled('accounting');
+  }
+
+  get showWarehouseQueue(): boolean {
+    return this.isWarehouseInstalled || this.warehouseQueueCount() > 0;
+  }
+
+  get showFinanceQueue(): boolean {
+    return this.isAccountingInstalled || this.financeQueueCount() > 0;
+  }
+
+  get queueSummaryText(): string {
+    const parts: string[] = [];
+    if (this.showWarehouseQueue) {
+      parts.push(`انبارداری: ${this.warehouseQueueCount()}`);
+    }
+    if (this.showFinanceQueue) {
+      parts.push(`مالی: ${this.financeQueueCount()}`);
+    }
+    return parts.join(' | ');
+  }
 
   public isRefreshing = signal<boolean>(false);
   public isFlushingQueue = signal<boolean>(false);
@@ -393,30 +422,58 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
    */
   async simulateConflictScenario(): Promise<void> {
     try {
-      await warehouseOfflineDb.syncErrors.add({
-        method: 'PATCH',
-        url: '/api/counting/tasks/101/',
-        body: {
-          quantity: 45,
-          reason: 'شمارش ردیف A-04',
-          notes: 'شمارش انجام‌شده توسط انباردار تبلت ۱'
-        },
-        statusCode: 409,
-        serverMessage: 'تداخل نسخه سرور (409 Conflict): رکورد هم‌زمان توسط کاربر دیگری در سرور تغییر یافته است.',
-        failedAt: Date.now(),
-        dismissed: 0,
-        entityType: 'count_task',
-        serverResponse: {
-          error: 'CONFLICT',
-          server_record: {
-            id: 101,
-            quantity: 50,
-            reason: 'ثبت مغایرت توسط سرپرست',
-            notes: 'تطبیق نهایی فیزیکی قفسه',
-            updated_at: new Date().toISOString()
+      if (this.isWarehouseInstalled) {
+        await warehouseOfflineDb.syncErrors.add({
+          method: 'PATCH',
+          url: '/api/counting/tasks/101/',
+          body: {
+            quantity: 45,
+            reason: 'شمارش ردیف A-04',
+            notes: 'شمارش انجام‌شده توسط انباردار تبلت ۱'
+          },
+          statusCode: 409,
+          serverMessage: 'تداخل نسخه سرور (409 Conflict): رکورد هم‌زمان توسط کاربر دیگری در سرور تغییر یافته است.',
+          failedAt: Date.now(),
+          dismissed: 0,
+          entityType: 'count_task',
+          serverResponse: {
+            error: 'CONFLICT',
+            server_record: {
+              id: 101,
+              quantity: 50,
+              reason: 'ثبت مغایرت توسط سرپرست',
+              notes: 'تطبیق نهایی فیزیکی قفسه',
+              updated_at: new Date().toISOString()
+            }
           }
-        }
-      });
+        });
+      } else {
+        await financeOfflineDb.syncErrors.add({
+          method: 'PATCH',
+          url: '/api/personnel/timesheets/201/',
+          body: {
+            work_hours: 8,
+            overtime_hours: 2,
+            notes: 'ثبت کارکرد روزانه'
+          },
+          statusCode: 409,
+          serverMessage: 'تداخل نسخه سرور (409 Conflict): کارکرد هم‌زمان در سرور ویرایش شده است.',
+          failedAt: Date.now(),
+          dismissed: 0,
+          entityType: 'timesheet',
+          appScope: 'finance',
+          serverResponse: {
+            error: 'CONFLICT',
+            server_record: {
+              id: 201,
+              work_hours: 9,
+              overtime_hours: 3,
+              notes: 'تأیید کارکرد توسط سرپرست مالی',
+              updated_at: new Date().toISOString()
+            }
+          }
+        });
+      }
       this.toast.show('warning', 'یک تداخل نمونه ۴۰۹ در آزمایشگاه تداخل ثبت گردید.');
       await this.refreshTelemetry();
     } catch (e) {
