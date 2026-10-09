@@ -18,6 +18,7 @@ import { ToastService } from '../../../shared/components/toast/toast.component';
 import { AccountsHttpService } from '../../../core/http/accounts-http.service';
 import { WebSocketService } from '../../../core/http/websocket.service';
 import { Company } from '../../../core/models/company.model';
+import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -1309,6 +1310,51 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       const offlineBadge = el.querySelector('.bg-amber-50.text-amber-700');
       expect(offlineBadge).not.toBeNull();
       expect(offlineBadge?.textContent).toContain('آفلاین');
+    });
+  });
+
+  describe('۱۳. ایزولاسیون کامل تک‌ماژول (Single-Module Zero-Trace Isolation - T2.5)', () => {
+    it('در حالت فقط مالی (accounting-only): ستون سامانه انبار و چک‌باکس مودال شرکت باید پنهان باشند و tableColspan برابر ۱۰ باشد', () => {
+      const registry = TestBed.inject(ModuleRegistryService);
+      registry.setInstalledModules(['platform', 'accounting']);
+      fixture.detectChanges();
+
+      expect(component.isWarehouseInstalled).toBe(false);
+      expect(component.tableColspan).toBe(10);
+
+      const el: HTMLElement = fixture.nativeElement;
+      const headers = Array.from(el.querySelectorAll('thead th')).map(th => th.textContent?.trim());
+      expect(headers).not.toContain('سامانه انبار');
+
+      // باز کردن مودال ثبت شرکت
+      component.openCreateModal();
+      fixture.detectChanges();
+
+      const whCheckbox = el.querySelector('#co_has_warehouse');
+      expect(whCheckbox).toBeNull();
+      // پیش‌فرض فرم همچنان دست‌نخورده true می‌ماند طبق قاعده ۱
+      expect(component.companyModal.data.has_warehouse_module).toBe(true);
+    });
+
+    it('در حالت فقط انبار یا فول‌سوییت: ستون سامانه انبار و چک‌باکس مودال باید در DOM رندر شوند و tableColspan برابر ۱۱ باشد', () => {
+      const registry = TestBed.inject(ModuleRegistryService);
+      registry.setInstalledModules(['platform', 'warehouse', 'accounting']);
+      fixture.detectChanges();
+
+      expect(component.isWarehouseInstalled).toBe(true);
+      expect(component.tableColspan).toBe(11);
+
+      const el: HTMLElement = fixture.nativeElement;
+      const headers = Array.from(el.querySelectorAll('thead th')).map(th => th.textContent?.trim());
+      expect(headers).toContain('سامانه انبار');
+
+      // باز کردن مودال ثبت شرکت
+      component.openCreateModal();
+      fixture.detectChanges();
+
+      const whCheckbox = el.querySelector('#co_has_warehouse');
+      expect(whCheckbox).not.toBeNull();
+      expect(component.companyModal.data.has_warehouse_module).toBe(true);
     });
   });
 });

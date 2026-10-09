@@ -127,21 +127,21 @@
             <th class="py-3 px-3.5">مدیرعامل</th>
             <th *ngIf="isAccountingInstalled" class="py-3 px-3.5 text-center">پروژه‌ها</th>
             <th *ngIf="isAccountingInstalled" class="py-3 px-3.5 text-center">سلامت مدارک</th>
-            <th class="py-3 px-3.5 text-center">سامانه انبار</th>
+            <th *ngIf="isWarehouseInstalled" class="py-3 px-3.5 text-center">سامانه انبار</th>
             <th class="py-3 px-3.5 text-center">وضعیت</th>
             <th class="py-3 px-3.5 text-center w-28">عملیات</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
           <tr *ngIf="isLoading" class="bg-white">
-            <td [attr.colspan]="isAccountingInstalled ? 11 : 9" class="py-12 text-center text-slate-400">
+            <td [attr.colspan]="tableColspan" class="py-12 text-center text-slate-400">
               <div class="inline-block animate-spin text-indigo-600 text-xl mb-2">⟳</div>
               <div>در حال بارگذاری اطلاعات شرکت‌ها...</div>
             </td>
           </tr>
 
           <tr *ngIf="!isLoading && filteredCompanies.length === 0" class="bg-white">
-            <td [attr.colspan]="isAccountingInstalled ? 11 : 9" class="py-12 text-center text-slate-400 font-bold">
+            <td [attr.colspan]="tableColspan" class="py-12 text-center text-slate-400 font-bold">
               هیچ شرکتی با معیارهای جستجو یافت نشد.
             </td>
           </tr>
@@ -198,7 +198,7 @@
             </td>
 
             <!-- ستون سامانه انبارداری -->
-            <td class="py-3 px-3.5 text-center">
+            <td *ngIf="isWarehouseInstalled" class="py-3 px-3.5 text-center">
               <span 
                 *ngIf="company.has_warehouse_module !== false" 
                 class="inline-flex items-center gap-1 font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-full text-[10px]"
@@ -343,7 +343,7 @@
               {{ company.projects_count || 0 }}
             </span>
           </div>
-          <div class="flex items-center gap-1.5">
+          <div *ngIf="isWarehouseInstalled" class="flex items-center gap-1.5">
             <span class="text-slate-400 text-[10px]">انبارداری:</span>
             <span *ngIf="company.has_warehouse_module !== false" class="text-indigo-700 font-bold text-[10px]">فعال 📦</span>
             <span *ngIf="company.has_warehouse_module === false" class="text-slate-400 font-bold text-[10px]">غیرفعال</span>
@@ -788,7 +788,7 @@
               </label>
             </div>
 
-            <div class="flex items-center gap-2 p-3 bg-indigo-50/60 rounded-xl border border-indigo-100">
+            <div *ngIf="isWarehouseInstalled" class="flex items-center gap-2 p-3 bg-indigo-50/60 rounded-xl border border-indigo-100">
               <input 
                 type="checkbox" 
                 id="co_has_warehouse"
@@ -1879,7 +1879,7 @@
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <div *ngIf="activeModalTab === 'access'" class="space-y-4">
           <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs text-indigo-900 leading-relaxed">
-            👥 در این تب می‌توانید مشخص نمایید کدام کاربران سامانه به اطلاعات، انبارها و پروژه‌های این شرکت دسترسی داشته باشند.
+            👥 در این تب می‌توانید مشخص نمایید کدام کاربران سامانه به اطلاعات، اسناد و فضاهای کاری این شرکت دسترسی داشته باشند.
           </div>
 
           <div *ngIf="!companyModal.data.id" class="py-8 text-center text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-2xl">

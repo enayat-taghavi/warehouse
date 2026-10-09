@@ -502,7 +502,7 @@
               </div>
             </label>
 
-            <label class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-line hover:bg-slate-50/80 dark:hover:bg-slate-800/50 cursor-pointer transition-all">
+            <label *ngIf="isWarehouseInstalled" class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-line hover:bg-slate-50/80 dark:hover:bg-slate-800/50 cursor-pointer transition-all">
               <input 
                 type="checkbox" 
                 [ngModel]="cfg.sync_inventory_photos" 

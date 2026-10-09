@@ -19,6 +19,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { environment } from '../../../../../environments/environment';
 import { ActiveCompanyService } from '../../../../core/services/active-company.service';
+import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
 import { ToastService } from '../../../../services/toast.service';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -105,6 +106,7 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
 
   private http = inject(HttpClient);
   public activeCompanyService = inject(ActiveCompanyService);
+  private moduleRegistry = inject(ModuleRegistryService);
   private toastService = inject(ToastService);
   private auth = inject(AuthService);
   private confirmDialog = inject(ConfirmDialogService);
@@ -113,6 +115,10 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
   private destroyRef = inject(DestroyRef);
 
   public isSuperuser = this.auth.isSuperuser;
+
+  get isWarehouseInstalled(): boolean {
+    return this.moduleRegistry.isModuleInstalled('warehouse');
+  }
 
   // وضعیت‌های داده‌ای
   public config = signal<GDriveConfigResponse | null>(null);

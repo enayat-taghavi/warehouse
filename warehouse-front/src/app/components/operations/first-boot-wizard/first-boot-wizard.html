@@ -25,7 +25,7 @@
       <div class="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-xs text-indigo-900 leading-relaxed font-medium flex items-start gap-2.5">
         <span class="text-lg shrink-0">💡</span>
         <span>
-          هیچ شرکت حقوقی در پایگاه داده یافت نشد. به عنوان مدیر ارشد سیستم، لطفاً مشخصات شرکت اصلی (مادر) را وارد فرمایید تا ساختار کاری و انبارهای مربوطه فعال گردند.
+          هیچ شرکت حقوقی در پایگاه داده یافت نشد. به عنوان مدیر ارشد سیستم، لطفاً مشخصات شرکت اصلی (مادر) را وارد فرمایید تا ساختار کاری و فضاهای مربوطه فعال گردند.
         </span>
       </div>
 
@@ -46,7 +46,7 @@
             type="text"
             [(ngModel)]="formData.name"
             name="name"
-            placeholder="مثال: شرکت توسعه تجارت و انبارداری پارس"
+            placeholder="مثال: شرکت توسعه تجارت و بازرگانی پارس"
             required
             class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 text-xs font-bold text-slate-800 placeholder:text-slate-400 outline-hidden transition-all bg-slate-50/50 focus:bg-white"
           />
@@ -68,7 +68,7 @@
             class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 text-xs font-black font-mono uppercase text-slate-800 placeholder:text-slate-400 outline-hidden transition-all bg-slate-50/50 focus:bg-white text-left"
             dir="ltr"
           />
-          <p class="text-[10px] text-slate-400 font-medium mt-1">این کد در پیشوند شماره اسناد، پرونده‌ها و کدهای انبارداری مورد استفاده قرار می‌گیرد.</p>
+          <p class="text-[10px] text-slate-400 font-medium mt-1">این کد در پیشوند شماره اسناد، پرونده‌ها و کدهای سیستمی مورد استفاده قرار می‌گیرد.</p>
         </div>
 
         <!-- فیلد ۳ و ۴: شناسه ملی و کد اقتصادی -->
@@ -109,7 +109,7 @@
         <!-- فیلد ۵: نشانی -->
         <div>
           <label for="fb-company-address" class="block text-xs font-black text-slate-700 mb-1">
-            نشانی دفتر مرکزی / انبار
+            نشانی دفتر مرکزی
           </label>
           <input
             id="fb-company-address"
@@ -123,6 +123,7 @@
 
         <!-- فیلد ۶: کارت تعاملی فعال‌سازی ماژول انبارداری -->
         <div
+          *ngIf="isWarehouseInstalled"
           (click)="toggleWarehouseModule()"
           [ngClass]="formData.has_warehouse_module ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500/30' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/60'"
           class="p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 group select-none mt-2"
@@ -172,7 +173,7 @@
 
     <!-- پاورقی ویزارد -->
     <div class="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-center text-[10px] text-slate-400 font-mono font-bold">
-      هلدینگ هوشمند انبارداری و حسابداری • نسخه ۴.۶
+      {{ branding.systemName }}
     </div>
 
   </div>

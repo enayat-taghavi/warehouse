@@ -217,7 +217,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     {
       value: 'docs_read',
       label: 'فقط مشاهده مدارک رسمی',
-      desc: 'دسترسی فقط‌خواندنی به اساسنامه، روزنامه‌ها و مدارک شرکت (بدون دسترسی به انبار)'
+      desc: 'دسترسی فقط‌خواندنی به اساسنامه، روزنامه‌ها و مدارک شرکت (بدون دسترسی به فضاهای عملیاتی)'
     },
     {
       value: 'docs_write',
@@ -227,7 +227,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     {
       value: 'workspace_full',
       label: 'عضویت کامل در فضای کاری و ماژول‌ها',
-      desc: 'دسترسی عملیاتی به انبارداری، پروژه‌ها، پرسنل و سوئیچر هدر'
+      desc: 'دسترسی عملیاتی به سامانه‌ها، پروژه‌ها، پرسنل و سوئیچر هدر'
     }
   ];
 
@@ -558,6 +558,16 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   /** در نصب «فقط انبار» تب‌ها و بخش‌های حسابداری شرکت پنهان‌اند */
   get isAccountingInstalled(): boolean {
     return this.moduleRegistry.isModuleInstalled('accounting');
+  }
+
+  /** در نصب «فقط مالی» ستون‌ها، فیلدها و تب‌های انبارداری شرکت پنهان‌اند */
+  get isWarehouseInstalled(): boolean {
+    return this.moduleRegistry.isModuleInstalled('warehouse');
+  }
+
+  /** تعداد ستون‌های پویا: ۸ پایه + ۲ حسابداری + ۱ انبار */
+  get tableColspan(): number {
+    return 8 + (this.isAccountingInstalled ? 2 : 0) + (this.isWarehouseInstalled ? 1 : 0);
   }
 
   private isTabAvailable(tab: string): boolean {

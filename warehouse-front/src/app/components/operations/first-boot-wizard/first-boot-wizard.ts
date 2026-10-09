@@ -3,9 +3,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
+import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 import { CompanyApiService } from '../../../core/api/company-api.service';
 import { ToastService } from '../../../shared/components/toast/toast.component';
 import { Company } from '../../../core/models/company.model';
+import { BRANDING } from '../../../core/branding';
 
 @Component({
   selector: 'app-first-boot-wizard',
@@ -16,9 +18,16 @@ import { Company } from '../../../core/models/company.model';
 })
 export class FirstBootWizardComponent {
   public companyService = inject(ActiveCompanyService);
+  private moduleRegistry = inject(ModuleRegistryService);
   private companyApi = inject(CompanyApiService);
   private toast = inject(ToastService);
   private router = inject(Router);
+
+  readonly branding = BRANDING;
+
+  get isWarehouseInstalled(): boolean {
+    return this.moduleRegistry.isModuleInstalled('warehouse');
+  }
 
   public formData = {
     name: '',

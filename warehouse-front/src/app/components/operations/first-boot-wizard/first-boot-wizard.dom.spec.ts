@@ -13,6 +13,7 @@ import * as path from 'path';
 
 import { FirstBootWizardComponent } from './first-boot-wizard';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
+import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 import { CompanyApiService } from '../../../core/api/company-api.service';
 import { ToastService } from '../../../shared/components/toast/toast.component';
 import { Company } from '../../../core/models/company.model';
@@ -90,6 +91,9 @@ describe('FirstBootWizardComponent DOM & Browser Unit Test (Type 1 Vitest + JSDO
 
   afterEach(() => {
     TestBed.resetTestingModule();
+    try {
+      localStorage.removeItem('wh_installed_modules');
+    } catch {}
   });
 
   it('۱. کامپوننت با موفقیت ایجاد می‌شود', () => {
@@ -205,5 +209,31 @@ describe('FirstBootWizardComponent DOM & Browser Unit Test (Type 1 Vitest + JSDO
     expect(component.isSubmitting).toBe(false);
     expect(component.errorMessage).toBe('کد شرکت تکراری است.');
     expect(mockActiveCompanyService.selectCompany).not.toHaveBeenCalled();
+  });
+
+  it('۱۱. ایزولاسیون تک‌ماژول (فقط مالی): کارت فعال‌سازی انبارداری در DOM نمایش داده نمی‌شود و واژگان انبار نشت نمی‌کنند', () => {
+    const registry = TestBed.inject(ModuleRegistryService);
+    registry.setInstalledModules(['platform', 'accounting']);
+    fixture.detectChanges();
+
+    const whCheckbox = fixture.nativeElement.querySelector('input[name="has_warehouse_module"]');
+    expect(whCheckbox).toBeNull();
+    // پیش‌فرض ذخیره‌سازی همچنان دست‌نخورده true می‌ماند
+    expect(component.formData.has_warehouse_module).toBe(true);
+
+    const cardText = fixture.nativeElement.textContent || '';
+    expect(cardText).not.toContain('انبارداری پارس');
+    expect(cardText).not.toContain('کدهای انبارداری');
+    expect(cardText).not.toContain('دفتر مرکزی / انبار');
+  });
+
+  it('۱۲. ایزولاسیون تک‌ماژول (فقط انبار): کارت فعال‌سازی انبارداری نمایش داده می‌شود و پیش‌فرض true است', () => {
+    const registry = TestBed.inject(ModuleRegistryService);
+    registry.setInstalledModules(['platform', 'warehouse']);
+    fixture.detectChanges();
+
+    const whCheckbox = fixture.nativeElement.querySelector('input[name="has_warehouse_module"]');
+    expect(whCheckbox).not.toBeNull();
+    expect(component.formData.has_warehouse_module).toBe(true);
   });
 });
