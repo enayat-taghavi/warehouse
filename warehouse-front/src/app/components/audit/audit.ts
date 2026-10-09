@@ -17,6 +17,7 @@ import { WarehouseSelectorComponent } from '../../shared/components/warehouse-se
 import { BarcodeScannerComponent } from '../../shared/components/barcode-scanner/barcode-scanner.component';
 import { PersianDatePipe } from '../../shared/pipes/persian-date.pipe';
 import { parseSmartDate, formatToStandardShamsi } from '../../core/utils/date-utils';
+import { BRANDING } from '../../core/branding';
 import {
   AuditLog,
   UserLoginLog,
@@ -141,6 +142,7 @@ export class Audit implements OnInit, OnDestroy {
   private personaService = inject(AppPersonaService);
 
   get isFinanceScope(): boolean {
+    if (!this.isWarehouseInstalled) return true;
     return this.selectedAppScope === 'finance' ||
            this.route.snapshot.data['appScope'] === 'finance' ||
            this.router.url.includes('/app/finance');
@@ -152,6 +154,7 @@ export class Audit implements OnInit, OnDestroy {
   }
 
   get isWarehouseScope(): boolean {
+    if (!this.isAccountingInstalled) return true;
     return this.selectedAppScope === 'warehouse' ||
            this.route.snapshot.data['appScope'] === 'warehouse' ||
            this.router.url.includes('/app/warehouse');
@@ -160,6 +163,12 @@ export class Audit implements OnInit, OnDestroy {
   get isWarehouseInstalled(): boolean {
     return this.personaService.moduleRegistry.isModuleInstalled('warehouse');
   }
+
+  get isAccountingInstalled(): boolean {
+    return this.personaService.moduleRegistry.isModuleInstalled('accounting');
+  }
+
+  public readonly BRANDING = BRANDING;
 
   activeTab: 'audit' | 'security' | 'login' = 'audit';
   selectedAppScope: 'all' | 'warehouse' | 'finance' = 'all';
@@ -500,9 +509,20 @@ export class Audit implements OnInit, OnDestroy {
       this.selectedAppScope = 'warehouse';
     } else if (routeScope === 'security' || this.router.url.includes('/app/operations')) {
       // ممیزی مرکز عملیات جانشین ممیزی منوی مالی است؛ پیش‌فرض همهٔ قلمروها
-      this.selectedAppScope = 'all';
+      if (!this.isWarehouseInstalled && this.isAccountingInstalled) {
+        this.selectedAppScope = 'finance';
+      } else if (this.isWarehouseInstalled && !this.isAccountingInstalled) {
+        this.selectedAppScope = 'warehouse';
+      } else {
+        this.selectedAppScope = 'all';
+      }
     } else if (this.personaService?.activeApp) {
       this.selectedAppScope = this.personaService.activeApp() === 'personnel' ? 'finance' : 'warehouse';
+    }
+    if (!this.isWarehouseInstalled) {
+      this.selectedAppScope = 'finance';
+    } else if (!this.isAccountingInstalled) {
+      this.selectedAppScope = 'warehouse';
     }
 
     // ── وضعیت آنلاین/آفلاین ──

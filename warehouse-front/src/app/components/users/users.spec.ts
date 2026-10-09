@@ -817,5 +817,47 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
       expect(results[0].id).toBe(10);
     });
   });
+
+  describe('Single-Module Isolation Zero-Trace Tests (Phase 4)', () => {
+    beforeEach(() => {
+      component.systemPermissionGroups = [
+        { key: 'WH_AUDIT', title: 'انبار', items: [] },
+        { key: 'ACCOUNTING_FINANCE', title: 'مالی', items: [] }
+      ];
+    });
+
+    afterEach(() => {
+      try {
+        localStorage.removeItem('wh_installed_modules');
+      } catch {}
+    });
+
+    it('در حالت تک‌ماژول بدون مالی (فقط انبارداری)، hasAccountingModule باید false باشد و تب مالی مخفی بماند (L10)', () => {
+      mockRegistry.isModuleInstalled.mockImplementation((c: string) => c === 'warehouse');
+      expect(component.hasAccountingModule()).toBe(false);
+      expect(component.hasInventoryModule()).toBe(true);
+
+      component.openUserModal();
+      component.setUserModalInnerTab('roles');
+      fixture.detectChanges();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.textContent).not.toContain('سامانه مالی و پرسنلی');
+      expect(compiled.textContent).toContain('سامانه انبارداری');
+    });
+
+    it('در حالت تک‌ماژول بدون انبارداری (فقط مالی)، hasInventoryModule باید false باشد و متون به پروژه تغییر یابند (L11)', () => {
+      mockRegistry.isModuleInstalled.mockImplementation((c: string) => c === 'accounting');
+      expect(component.hasInventoryModule()).toBe(false);
+      expect(component.hasAccountingModule()).toBe(true);
+
+      component.openUserModal();
+      component.setUserModalInnerTab('warehouses');
+      fixture.detectChanges();
+      const compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.textContent).toContain('شرکت‌ها و پروژه‌ها');
+      expect(compiled.textContent).not.toContain('شرکت‌ها و انبارها');
+    });
+  });
 });
+
 

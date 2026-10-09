@@ -1859,7 +1859,7 @@
                 </span>
               </button>
 
-              <button type="button" (click)="userRoleModalTab = 'finance'"
+              <button *ngIf="hasAccountingModule()" type="button" (click)="userRoleModalTab = 'finance'"
                 [ngClass]="userRoleModalTab === 'finance' ? 'bg-white text-emerald-700 shadow-xs font-black' : 'text-slate-500 hover:text-slate-800'"
                 class="flex-1 py-1.5 px-2.5 rounded-lg text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer">
                 <span>💳 سامانه مالی و پرسنلی</span>
@@ -1927,7 +1927,7 @@
                 <span class="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">🏢</span>
                 <div>
                   <h3 class="text-xs font-black text-slate-800">{{ hasInventoryModule() ? 'شرکت‌ها و انبارهای مجاز' : 'شرکت‌ها و پروژه‌های مجاز' }}</h3>
-                  <p class="text-[10px] text-slate-400">ابتدا شرکت‌های کاری را انتخاب کرده و سپس انبارهای متناظر آنها را مشخص فرمایید</p>
+                  <p class="text-[10px] text-slate-400">ابتدا شرکت‌های کاری را انتخاب کرده و سپس {{ hasInventoryModule() ? 'انبارهای' : 'پروژه‌های' }} متناظر آنها را مشخص فرمایید</p>
                 </div>
               </div>
               <div class="flex items-center gap-2">
@@ -1935,7 +1935,7 @@
                   {{ userForm.company_ids?.length || 0 }} شرکت
                 </span>
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  {{ userForm.assigned_warehouses?.length || 0 }} انبار
+                  {{ userForm.assigned_warehouses?.length || 0 }} {{ hasInventoryModule() ? 'انبار' : 'پروژه' }}
                 </span>
                 <span class="text-[10px] font-bold text-slate-400">گام ۴ از ۴</span>
               </div>
@@ -1949,7 +1949,7 @@
                   <label class="block text-xs font-black text-slate-800">انتخاب شرکت‌های کاری مجاز (شرکت اصلی / پیش‌فرض را نیز تعیین کنید)</label>
                 </div>
                 <span *ngIf="userForm.company_ids?.length > 0" class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                  ✓ لیست انبارها بر این اساس فیلتر شده است
+                  ✓ لیست {{ hasInventoryModule() ? 'انبارها' : 'پروژه‌ها' }} بر این اساس فیلتر شده است
                 </span>
               </div>
 
@@ -2007,7 +2007,7 @@
                 </div>
                 <div class="flex items-center gap-2" *ngIf="userForm.company_ids?.length > 0 && modalWarehouses.length > 0">
                   <button type="button" (click)="selectAllModalWarehouses()" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-lg border border-indigo-200 transition-all cursor-pointer">
-                    انتخاب همه انبارها
+                    انتخاب همه {{ hasInventoryModule() ? 'انبارها' : 'پروژه‌ها' }}
                   </button>
                   <button type="button" (click)="clearAllModalWarehouses()" class="text-[10px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded-lg border border-slate-200 transition-all cursor-pointer">
                     لغو همه
@@ -2019,13 +2019,13 @@
               <div *ngIf="!userForm.company_ids || userForm.company_ids.length === 0" 
                    class="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-xs flex items-center gap-2.5">
                 <span class="text-base">⚠️</span>
-                <span>برای مشاهده و تخصیص انبارها، لطفاً ابتدا حداقل یک شرکت را در کادر بالا علامت بزنید. انبارها بلافاصله نمایش داده خواهند شد.</span>
+                <span>برای مشاهده و تخصیص {{ hasInventoryModule() ? 'انبارها' : 'پروژه‌ها' }}، لطفاً ابتدا حداقل یک شرکت را در کادر بالا علامت بزنید. {{ hasInventoryModule() ? 'انبارها' : 'پروژه‌ها' }} بلافاصله نمایش داده خواهند شد.</span>
               </div>
 
               <!-- لودینگ بارگذاری انبارها -->
               <div *ngIf="isLoadingModalWarehouses" class="py-6 text-center text-xs text-indigo-700 font-bold flex items-center justify-center gap-2 bg-indigo-50/50 rounded-2xl border border-indigo-100">
                 <span class="animate-spin text-indigo-600">⏳</span>
-                <span>در حال به‌روزرسانی آنی لیست انبارها متناسب با شرکت‌های انتخابی...</span>
+                <span>در حال به‌روزرسانی آنی لیست {{ hasInventoryModule() ? 'انبارها' : 'پروژه‌ها' }} متناسب با شرکت‌های انتخابی...</span>
               </div>
 
               <!-- گرید انبارها متناسب با شرکت‌های انتخابی -->

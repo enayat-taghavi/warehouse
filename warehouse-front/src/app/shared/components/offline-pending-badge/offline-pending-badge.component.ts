@@ -986,7 +986,7 @@ export class OfflinePendingBadgeComponent implements OnInit, OnDestroy {
       }
       return {
         title: `ثبت تردد ${displayVehicle}`,
-        subtitle: driver ? `راننده: ${driver}` : 'ثبت تردد خودرو در انبار',
+        subtitle: driver ? `راننده: ${driver}` : 'ثبت تردد خودرو',
         icon: '🚛',
         badgeClass: 'bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300'
       };

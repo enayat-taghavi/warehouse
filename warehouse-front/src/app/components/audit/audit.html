@@ -345,7 +345,7 @@
     <!-- ردیف فیلدهای فیلتر (یک خطی متوازن در دسکتاپ) -->
     <div class="flex flex-wrap lg:flex-nowrap items-center gap-2">
       <!-- انتخاب قلمرو سامانه (همه / انبارداری / مالی) -->
-      <div class="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold shrink-0" *ngIf="activeTab === 'audit' && !isFinanceRouteLocked && isWarehouseInstalled">
+      <div class="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold shrink-0" *ngIf="activeTab === 'audit' && !isFinanceRouteLocked && isWarehouseInstalled && isAccountingInstalled">
         <button (click)="setAppScope('all')" type="button" [class.bg-white]="selectedAppScope === 'all'" [class.text-indigo-600]="selectedAppScope === 'all'" [class.shadow-xs]="selectedAppScope === 'all'" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold">همه</button>
         <button (click)="setAppScope('warehouse')" type="button" [class.bg-white]="selectedAppScope === 'warehouse'" [class.text-indigo-600]="selectedAppScope === 'warehouse'" [class.shadow-xs]="selectedAppScope === 'warehouse'" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold">انبارداری</button>
         <button (click)="setAppScope('finance')" type="button" [class.bg-white]="selectedAppScope === 'finance'" [class.text-indigo-600]="selectedAppScope === 'finance'" [class.shadow-xs]="selectedAppScope === 'finance'" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold">مالی و اداری</button>
@@ -871,7 +871,7 @@
             <span class="font-bold text-slate-800 font-mono">{{selectedLog.target_repr || selectedLog.target_object_id || '—'}}</span>
           </div>
           <div>
-            <span class="text-slate-400 font-bold block text-[10px]">انبار مرتبط:</span>
+            <span class="text-slate-400 font-bold block text-[10px]">{{ isWarehouseInstalled ? 'انبار مرتبط:' : 'پروژه / بخش:' }}</span>
             <span class="font-bold text-slate-800">{{selectedLog.warehouse_name || 'سراسری / نامشخص'}}</span>
           </div>
           <div>
@@ -1423,7 +1423,7 @@
 
       <!-- فوتر مدال راهنما -->
       <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-        <span class="text-[10px] font-bold text-slate-400">سامانه اتوماسیون جامع انبار و رهگیری ممیزی</span>
+        <span class="text-[10px] font-bold text-slate-400">{{ BRANDING.systemName }}</span>
         <button (click)="closeHelpModal()" type="button" class="px-5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer shadow-xs">
           متوجه شدم و بستن
         </button>

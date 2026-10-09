@@ -108,7 +108,7 @@ export class VerifyCard implements OnInit {
         if (err.status === 404) {
           this.errorType = 'invalid';
           this.errorTitle = 'کارت شناسایی نامعتبر است';
-          this.error = 'کارت شناسایی با این کد یا مشخصات در سامانه انبارداری یافت نشد یا باطل شده است.';
+          this.error = 'کارت شناسایی با این کد یا مشخصات در سامانه یافت نشد یا باطل شده است.';
         } else if (err.status === 429) {
           this.errorType = 'rate_limit';
           this.errorTitle = 'محدودیت تعداد استعلام';

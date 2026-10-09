@@ -253,7 +253,7 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
                   </div>
                   <div>
                     <h3 class="text-xs font-black text-slate-800 dark:text-slate-100">دیتابیس‌های محلی تفکیک‌شده</h3>
-                    <p class="text-[10px] text-slate-400 font-mono">{{ (isWarehouseInstalled && appScope !== 'finance') ? 'Warehouse & Finance DBs' : 'Finance & HR IndexedDB' }}</p>
+                    <p class="text-[10px] text-slate-400 font-mono">{{ (!isWarehouseInstalled) ? 'Finance & HR IndexedDB' : (!isAccountingInstalled) ? 'Warehouse IndexedDB' : (appScope !== 'finance') ? 'Warehouse & Finance DBs' : 'Finance & HR IndexedDB' }}</p>
                   </div>
                 </div>
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shrink-0">
@@ -263,7 +263,7 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
               <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs flex items-center justify-between">
                 <span class="text-slate-400 text-[11px]">رکوردهای کش و صف:</span>
                 <span class="font-mono font-bold text-slate-700 dark:text-slate-200 text-[11px]" dir="ltr">
-                  <ng-container *ngIf="isWarehouseInstalled && appScope !== 'finance'">انبار: {{ storage?.warehouseRecords || 0 }} | </ng-container>مالی: {{ storage?.financeRecords || 0 }}
+                  <ng-container *ngIf="isWarehouseInstalled && (appScope !== 'finance' || !isAccountingInstalled)">انبار: {{ storage?.warehouseRecords || 0 }}<ng-container *ngIf="isAccountingInstalled"> | </ng-container></ng-container><ng-container *ngIf="isAccountingInstalled">مالی: {{ storage?.financeRecords || 0 }}</ng-container>
                 </span>
               </div>
             </div>
@@ -407,9 +407,9 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
               [(ngModel)]="selectedScenario"
               class="w-full py-1.5 px-3 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option *ngIf="isWarehouseInstalled && appScope !== 'finance'" value="combined">ترکیبی (خزانه‌داری + انبارداری)</option>
-              <option value="treasury">فقط خزانه‌داری (جلوگیری از پرداخت دوبل)</option>
-              <option *ngIf="isWarehouseInstalled && appScope !== 'finance'" value="warehouse">فقط انبارداری (کسر اتمیک موجودی)</option>
+              <option *ngIf="isWarehouseInstalled && isAccountingInstalled && appScope !== 'finance'" value="combined">ترکیبی (خزانه‌داری + انبارداری)</option>
+              <option *ngIf="isAccountingInstalled" value="treasury">فقط خزانه‌داری (جلوگیری از پرداخت دوبل)</option>
+              <option *ngIf="isWarehouseInstalled && (appScope !== 'finance' || !isAccountingInstalled)" value="warehouse">فقط انبارداری (کسر اتمیک موجودی)</option>
             </select>
           </div>
 
@@ -537,7 +537,10 @@ export class HealthDashboardComponent implements OnInit, OnDestroy {
   private auth = inject(AuthService);
   private subs: Subscription[] = [];
 
-  constructor(private cdr: ChangeDetectorRef, private router: Router) {}
+  private cdr = inject(ChangeDetectorRef);
+  private router = inject(Router);
+
+  constructor() {}
 
   get canRunStressTest(): boolean {
     const u = this.auth.user();
@@ -546,6 +549,10 @@ export class HealthDashboardComponent implements OnInit, OnDestroy {
 
   get isWarehouseInstalled(): boolean {
     return this.personaService.moduleRegistry.isModuleInstalled('warehouse');
+  }
+
+  get isAccountingInstalled(): boolean {
+    return this.personaService.moduleRegistry.isModuleInstalled('accounting');
   }
 
   ngOnInit(): void {
@@ -597,15 +604,26 @@ export class HealthDashboardComponent implements OnInit, OnDestroy {
       this.selectedScenario = 'treasury';
     } else if (path.includes('/app/warehouse') || path.includes('/warehouse')) {
       this.appScope = 'warehouse';
+      this.selectedScenario = 'warehouse';
     } else {
-      const active = this.personaService.activeApp();
-      this.appScope = active === 'personnel' ? 'finance' : 'warehouse';
-      if (this.appScope === 'finance' || !this.isWarehouseInstalled) {
+      if (!this.isWarehouseInstalled && this.isAccountingInstalled) {
+        this.appScope = 'finance';
         this.selectedScenario = 'treasury';
+      } else if (this.isWarehouseInstalled && !this.isAccountingInstalled) {
+        this.appScope = 'warehouse';
+        this.selectedScenario = 'warehouse';
+      } else {
+        const active = this.personaService.activeApp();
+        this.appScope = (active === 'personnel' || active === 'finance') ? 'finance' : 'warehouse';
+        this.selectedScenario = this.appScope === 'finance' ? 'treasury' : 'combined';
       }
     }
-    if (!this.isWarehouseInstalled && this.selectedScenario !== 'treasury') {
+    if (!this.isWarehouseInstalled) {
+      this.appScope = 'finance';
       this.selectedScenario = 'treasury';
+    } else if (!this.isAccountingInstalled) {
+      this.appScope = 'warehouse';
+      this.selectedScenario = 'warehouse';
     }
   }
 

@@ -23,6 +23,7 @@ import { PersonnelApiService } from '../../../core/api/personnel-api.service';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
 import { Company } from '../../../core/models/company.model';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
+import { BRANDING } from '../../../core/branding';
 
 @Component({
   selector: 'app-user-menu',
@@ -56,6 +57,7 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   private personaService = inject(AppPersonaService, { optional: true });
   private personnelApi = inject(PersonnelApiService, { optional: true });
   public activeCompanyService = inject(ActiveCompanyService, { optional: true });
+  public readonly BRANDING = BRANDING;
 
   public isUserMenuOpen = false;
   public isAvatarModalOpen = false;

@@ -321,4 +321,10 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
     await component.onInstallApp();
     expect(mockPwaInstall.installApp).toHaveBeenCalled();
   });
+
+  it('باید نام عمومی سامانه را از BRANDING.systemName در دسترس قرار دهد (L13)', () => {
+    expect(component.BRANDING.systemName).toBeDefined();
+    expect(component.BRANDING.systemName.length).toBeGreaterThan(0);
+  });
 });
+
