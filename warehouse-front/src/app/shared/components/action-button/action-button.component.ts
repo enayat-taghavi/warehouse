@@ -5,6 +5,7 @@ import {
   inject,
   input,
   booleanAttribute,
+  ElementRef,
 } from '@angular/core';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { ACTION_ICONS, ActionIconKey } from '../../icons/semantic-icons';
@@ -22,6 +23,17 @@ const LABEL_FROM_CLASSES: Record<ActionLabelFrom, string> = {
   sm: 'hidden sm:inline ms-1.5',
   md: 'hidden md:inline ms-1.5',
   lg: 'hidden lg:inline ms-1.5',
+};
+
+const OVERFLOW_LABEL_CLASSES: Record<
+  'icon' | 'label' | 'auto-sm' | 'auto-md' | 'auto-lg',
+  string
+> = {
+  'icon': 'max-sm:inline max-sm:ms-2 max-sm:font-medium sm:hidden',
+  'label': 'max-sm:inline max-sm:ms-2 max-sm:font-medium sm:inline sm:ms-1.5 sm:font-bold',
+  'auto-sm': 'max-sm:inline max-sm:ms-2 max-sm:font-medium sm:inline sm:ms-1.5 sm:font-bold',
+  'auto-md': 'max-sm:inline max-sm:ms-2 max-sm:font-medium sm:hidden md:inline md:ms-1.5 md:font-bold',
+  'auto-lg': 'max-sm:inline max-sm:ms-2 max-sm:font-medium sm:hidden lg:inline lg:ms-1.5 lg:font-bold',
 };
 
 const TONE_CLASSES: Record<ActionTone, string> = {
@@ -73,13 +85,12 @@ const SIZE_CLASSES: Record<ActionSize, { iconOnly: string; withLabel: string; au
       aria-hidden="true"
     ></svg>
     @if (isLabelRendered()) {
-      <span [class]="labelClasses()">
-        <ng-content>{{ resolvedLabel() }}</ng-content>
-      </span>
+      <span [class]="labelClasses()">{{ resolvedLabel() }}</span>
     }
   `,
   host: {
-    '[disabled]': 'isDisabled()',
+    '[disabled]': 'disabled()',
+    '[attr.aria-disabled]': '(busy() || disabled()) ? "true" : null',
     '[attr.aria-busy]': 'busy() ? "true" : null',
     '[attr.aria-label]': 'resolvedLabel()',
     '[attr.title]': 'resolvedLabel()',
@@ -107,20 +118,32 @@ export class ActionButtonComponent {
   /** اندازه دکمه (sm، md، یا lg برای کلیدهای ثبت ۴۴ تا ۴۸px) */
   readonly size = input<ActionSize>('md');
 
-  /** حالت لودینگ / در حال انجام */
+  /** حالت لودینگ / در حال انجام (بدون حذف فوکوس از دکمه) */
   readonly busy = input<boolean, unknown>(false, { transform: booleanAttribute });
 
-  /** غیرفعال بودن دکمه از سوی صفحه */
+  /** غیرفعال بودن دکمه از سوی صفحه (disabled بومی) */
   readonly disabled = input<boolean, unknown>(false, { transform: booleanAttribute });
 
   /** نوع بومی دکمه در HTML (پیش‌فرض button) */
   readonly type = input<string>('button');
 
-  /** آیا هنگام کلیک داخل منوی پاپ‌اوور، منو به‌طور خودکار بسته شود (پیش‌فرض بله) */
-  readonly autoClose = input<boolean, unknown>(true, { transform: booleanAttribute });
-
   /** توکن اختیاری برای تشخیص حضور داخل پاپ‌اوور app-overflow-menu */
   private readonly overflowContext = inject(OVERFLOW_MENU_CONTEXT, { optional: true });
+  private readonly elementRef = inject(ElementRef<HTMLButtonElement>);
+
+  constructor() {
+    // جلوگیری از کلیک و submit در سطح capture هنگام busy بودن بدون حذف فوکوس بومی
+    this.elementRef.nativeElement.addEventListener(
+      'click',
+      (event: MouseEvent) => {
+        if (this.disabled() || this.busy()) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      },
+      { capture: true }
+    );
+  }
 
   readonly catalogEntry = computed<ActionCatalogEntry>(() => ACTION_CATALOG[this.appAction()]);
 
@@ -143,7 +166,6 @@ export class ActionButtonComponent {
 
   readonly isEffectiveIconOnly = computed<boolean>(() => {
     if (this.isSensitive()) return false;
-    if (this.overflowContext != null) return false;
     return this.effectiveDisplay() === 'icon';
   });
 
@@ -159,8 +181,6 @@ export class ActionButtonComponent {
     return this.catalogEntry().icon;
   });
 
-  readonly isDisabled = computed<boolean>(() => Boolean(this.disabled()) || Boolean(this.busy()));
-
   readonly iconClasses = computed<string>(() => {
     if (this.busy()) {
       return 'w-4 h-4 shrink-0 animate-spin';
@@ -173,7 +193,15 @@ export class ActionButtonComponent {
 
   readonly labelClasses = computed<string>(() => {
     if (this.overflowContext != null) {
-      return 'inline ms-2 font-medium';
+      if (this.isSensitive() || this.effectiveDisplay() === 'label') {
+        return OVERFLOW_LABEL_CLASSES['label'];
+      }
+      if (this.effectiveDisplay() === 'icon') {
+        return OVERFLOW_LABEL_CLASSES['icon'];
+      }
+      if (this.labelFrom() === 'md') return OVERFLOW_LABEL_CLASSES['auto-md'];
+      if (this.labelFrom() === 'lg') return OVERFLOW_LABEL_CLASSES['auto-lg'];
+      return OVERFLOW_LABEL_CLASSES['auto-sm'];
     }
     if (this.isSensitive() || this.effectiveDisplay() === 'label') {
       return 'inline ms-1.5 font-bold';
@@ -182,13 +210,20 @@ export class ActionButtonComponent {
   });
 
   readonly hostClasses = computed<string>(() => {
-    const base = 'inline-flex items-center justify-center font-bold whitespace-nowrap shrink-0 transition-all duration-150 select-none cursor-pointer active:scale-95 disabled:active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1';
+    const justifyClass =
+      this.overflowContext != null ? 'max-sm:justify-start sm:justify-center' : 'justify-center';
+    const base = `inline-flex items-center ${justifyClass} font-bold whitespace-nowrap shrink-0 transition-all duration-150 select-none cursor-pointer active:scale-95 disabled:active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1`;
     const toneClass = TONE_CLASSES[this.resolvedTone()];
     const szConfig = SIZE_CLASSES[this.size()];
 
     let sizeClass: string;
     if (this.overflowContext != null) {
-      sizeClass = 'w-full sm:w-auto justify-start sm:justify-center text-start px-3 py-2 rounded-xl text-xs md:text-sm min-h-[40px]';
+      const desktopSizeClass = this.isEffectiveIconOnly()
+        ? szConfig.iconOnly
+        : (this.effectiveDisplay() === 'label' || this.isSensitive())
+          ? szConfig.withLabel
+          : szConfig.auto;
+      sizeClass = `max-sm:w-full max-sm:text-start max-sm:px-3 max-sm:py-2 max-sm:rounded-xl max-sm:text-xs max-sm:min-h-[40px] max-sm:min-w-[40px] ${desktopSizeClass}`;
     } else if (this.isEffectiveIconOnly()) {
       sizeClass = szConfig.iconOnly;
     } else if (this.effectiveDisplay() === 'label' || this.isSensitive()) {
@@ -201,13 +236,14 @@ export class ActionButtonComponent {
   });
 
   onHostClick(event: MouseEvent): void {
-    if (this.isDisabled()) {
+    if (this.disabled() || this.busy()) {
       event.preventDefault();
       event.stopImmediatePropagation();
       return;
     }
-    if (this.overflowContext != null && this.autoClose()) {
+    if (this.overflowContext != null) {
       this.overflowContext.close();
     }
   }
 }
+

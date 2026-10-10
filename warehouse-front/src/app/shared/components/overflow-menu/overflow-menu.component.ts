@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   ElementRef,
   ViewChild,
+  inject,
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -27,26 +28,24 @@ let nextMenuId = 0;
       useExisting: OverflowMenuComponent,
     },
   ],
+  viewProviders: [
+    {
+      provide: OVERFLOW_MENU_CONTEXT,
+      useValue: null,
+    },
+  ],
   template: `
-    <!-- دکمه سه‌نقطه در موبایل -->
+    <!-- دکمه سه‌نقطه در موبایل (فقط‌آیکون ۴۰×۴۰ با aria-label کارهای بیشتر) -->
     <button
       #triggerButton
       type="button"
       appAction="more"
-      [autoClose]="false"
+      display="icon"
       class="sm:hidden"
       [attr.aria-expanded]="isOpen() ? 'true' : 'false'"
       [attr.aria-controls]="menuId"
       (click)="toggleMenu()"
     ></button>
-
-    @if (isOpen()) {
-      <!-- پس‌زمینه شفاف جهت بستن با لمس/کلیک بیرون در موبایل -->
-      <div
-        class="fixed inset-0 z-40 sm:hidden"
-        (click)="closeMenu()"
-      ></div>
-    }
 
     <!-- ظرف گزینه‌ها: در دسکتاپ contents و در موبایل پاپ‌اوور -->
     <div
@@ -62,12 +61,15 @@ let nextMenuId = 0;
   host: {
     class: 'relative sm:contents',
     '(keydown.escape)': 'onEscape($event)',
+    '(document:pointerdown)': 'onDocumentPointerDown($event)',
   },
 })
 export class OverflowMenuComponent implements OverflowMenuContext {
   /** الگوی disclosure: گزینه‌ها دکمه‌های عادی‌اند، نه menuitem؛ پس role="menu" نمی‌گیرد. */
   readonly menuId = `overflow-menu-${nextMenuId++}`;
   readonly isOpen = signal<boolean>(false);
+
+  private readonly elementRef = inject(ElementRef);
 
   @ViewChild('triggerButton', { read: ElementRef })
   private triggerButton?: ElementRef<HTMLButtonElement>;
@@ -98,4 +100,13 @@ export class OverflowMenuComponent implements OverflowMenuContext {
       this.closeMenu();
     }
   }
+
+  onDocumentPointerDown(event: PointerEvent): void {
+    if (!this.isOpen()) return;
+    const target = event.target as Node | null;
+    if (target && !this.elementRef.nativeElement.contains(target)) {
+      this.closeMenu();
+    }
+  }
 }
+

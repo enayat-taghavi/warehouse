@@ -3,9 +3,11 @@ import '@angular/compiler';
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { By } from '@angular/platform-browser';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { OverflowMenuComponent } from './overflow-menu.component';
 import { ActionButtonComponent } from '../action-button/action-button.component';
+import { CommandCenterComponent } from '../command-center/command-center.component';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -13,12 +15,17 @@ try {
 
 @Component({
   standalone: true,
-  imports: [OverflowMenuComponent, ActionButtonComponent],
+  imports: [OverflowMenuComponent, ActionButtonComponent, CommandCenterComponent],
   template: `
-    <app-overflow-menu>
-      <button id="menu-opt-import" type="button" appAction="import-excel"></button>
-      <button id="menu-opt-export" type="button" appAction="export-excel"></button>
-    </app-overflow-menu>
+    <div id="outside-area">محتوای بیرون سربرگ</div>
+    <app-command-center>
+      <div cc-actions>
+        <app-overflow-menu>
+          <button id="menu-opt-import" type="button" appAction="import-excel"></button>
+          <button id="menu-opt-export" type="button" appAction="export-excel"></button>
+        </app-overflow-menu>
+      </div>
+    </app-command-center>
   `,
 })
 class TestHostComponent {}
@@ -33,7 +40,8 @@ describe('OverflowMenuComponent (app-overflow-menu)', () => {
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);
-    menuComponent = fixture.debugElement.children[0].componentInstance as OverflowMenuComponent;
+    const menuDebug = fixture.debugElement.query(By.directive(OverflowMenuComponent));
+    menuComponent = menuDebug.componentInstance as OverflowMenuComponent;
     fixture.detectChanges();
   });
 
@@ -41,11 +49,21 @@ describe('OverflowMenuComponent (app-overflow-menu)', () => {
     TestBed.resetTestingModule();
   });
 
-  it('دکمه trigger باید appAction="more"، aria-expanded و aria-controls (الگوی disclosure، بدون role="menu") داشته باشد', () => {
+  it('دکمه trigger باید فقط‌آیکون ۴۰×۴۰ با aria-label «کارهای بیشتر» باشد و توکن منو را نگیرد', () => {
     const trigger = fixture.nativeElement.querySelector('button[appAction="more"]') as HTMLButtonElement;
     expect(trigger).not.toBeNull();
     expect(trigger.hasAttribute('aria-haspopup')).toBe(false);
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(trigger.getAttribute('aria-label')).toBe('کارهای بیشتر');
+    expect(trigger.getAttribute('title')).toBe('کارهای بیشتر');
+
+    // تریگر نباید عنوان دیده‌شده یا کلاس‌های تمام‌عرض پاپ‌اوور بگیرد
+    const span = trigger.querySelector('span');
+    expect(span).toBeNull();
+    expect(trigger.className).not.toContain('max-sm:w-full');
+    expect(trigger.className).toContain('min-w-[40px]');
+    expect(trigger.className).toContain('min-h-[40px]');
+
     const controlsId = trigger.getAttribute('aria-controls');
     expect(controlsId).toMatch(/^overflow-menu-\d+$/);
     const container = fixture.nativeElement.querySelector(`#${controlsId}`) as HTMLElement;
@@ -88,16 +106,18 @@ describe('OverflowMenuComponent (app-overflow-menu)', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  it('با کلیک روی backdrop خارج از منو، منو باید بسته شود', () => {
+  it('درون app-command-center لمس/کلیک بیرون از سربرگ باید منو را ببندد (document:pointerdown)', () => {
     const trigger = fixture.nativeElement.querySelector('button[appAction="more"]') as HTMLButtonElement;
     trigger.click();
     fixture.detectChanges();
     expect(menuComponent.isOpen()).toBe(true);
 
-    const backdrop = fixture.nativeElement.querySelector('.fixed.inset-0') as HTMLDivElement;
-    expect(backdrop).not.toBeNull();
+    // لمس عنصری کاملاً خارج از سربرگ چسبان command-center
+    const outsideArea = fixture.nativeElement.querySelector('#outside-area') as HTMLDivElement;
+    expect(outsideArea).not.toBeNull();
 
-    backdrop.click();
+    const pointerEvent = new PointerEvent('pointerdown', { bubbles: true, cancelable: true });
+    outsideArea.dispatchEvent(pointerEvent);
     fixture.detectChanges();
 
     expect(menuComponent.isOpen()).toBe(false);
@@ -118,3 +138,4 @@ describe('OverflowMenuComponent (app-overflow-menu)', () => {
     expect(menuComponent.isOpen()).toBe(false);
   });
 });
+

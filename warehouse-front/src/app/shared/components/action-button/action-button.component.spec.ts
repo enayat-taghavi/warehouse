@@ -37,10 +37,13 @@ try {
     <button id="btn-header-export-forced" type="button" appAction="export-excel" display="label"></button>
 
     <!-- نوع submit بومی و کلیک -->
-    <button id="btn-submit" type="submit" appAction="save" (click)="onSaveClicked()"></button>
+    <form (submit)="onFormSubmitted($event)">
+      <button id="btn-submit" type="submit" appAction="save" (click)="onSaveClicked()"></button>
+      <button id="btn-submit-busy" type="submit" appAction="save" [busy]="isBusy()" (click)="onBusySubmitClicked()"></button>
+    </form>
 
     <!-- حالت busy و ترکیب با disabled -->
-    <button id="btn-busy-test" type="button" appAction="save" [busy]="isBusy()" [disabled]="isDisabled()"></button>
+    <button id="btn-busy-test" type="button" appAction="save" [busy]="isBusy()" [disabled]="isDisabled()" (click)="onBusyClicked()"></button>
 
     <!-- دکمه با اندازه lg -->
     <button id="btn-lg" type="button" appAction="save" size="lg"></button>
@@ -50,9 +53,25 @@ class TestHostComponent {
   isBusy = signal(false);
   isDisabled = signal(false);
   saveClicked = false;
+  busyClicked = false;
+  busySubmitClicked = false;
+  formSubmitted = false;
 
   onSaveClicked(): void {
     this.saveClicked = true;
+  }
+
+  onBusyClicked(): void {
+    this.busyClicked = true;
+  }
+
+  onBusySubmitClicked(): void {
+    this.busySubmitClicked = true;
+  }
+
+  onFormSubmitted(event: Event): void {
+    event.preventDefault();
+    this.formSubmitted = true;
   }
 }
 
@@ -131,24 +150,44 @@ describe('ActionButtonComponent (button[appAction])', () => {
 
     btn.click();
     expect(host.saveClicked).toBe(true);
+    expect(host.formSubmitted).toBe(true);
   });
 
-  it('در حالت busy باید aria-busy="true"، دکمه غیرفعال و آیکون spinner باشد', () => {
+  it('در حالت busy باید aria-busy="true"، aria-disabled="true" شود، فوکوس حفظ گردد و کلیک و ارسال فرم مسدود شود', () => {
     const btn = fixture.nativeElement.querySelector('#btn-busy-test') as HTMLButtonElement;
     expect(btn.getAttribute('aria-busy')).toBeNull();
+    expect(btn.getAttribute('aria-disabled')).toBeNull();
     expect(btn.disabled).toBe(false);
+
+    // فوکوس روی دکمه
+    btn.focus();
+    expect(document.activeElement).toBe(btn);
 
     // فعال‌سازی busy
     host.isBusy.set(true);
     fixture.detectChanges();
 
+    // فوکوس نباید از دکمه برداشته شود (نباید disabled بومی بگیرد)
     expect(btn.getAttribute('aria-busy')).toBe('true');
-    expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute('aria-disabled')).toBe('true');
+    expect(btn.disabled).toBe(false);
+    expect(document.activeElement).toBe(btn);
+
     const svg = btn.querySelector('svg');
     expect(svg?.classList.contains('animate-spin')).toBe(true);
+
+    // کلیک صفحه نباید اجرا شود
+    btn.click();
+    expect(host.busyClicked).toBe(false);
+
+    // ارسال فرم با دکمه submit در حالت busy نباید رخ دهد
+    const submitBtn = fixture.nativeElement.querySelector('#btn-submit-busy') as HTMLButtonElement;
+    submitBtn.click();
+    expect(host.busySubmitClicked).toBe(false);
+    expect(host.formSubmitted).toBe(false);
   });
 
-  it('وقتی busy=false است نباید disabled صفحه را بازنویسی کند', () => {
+  it('وقتی busy=false است نباید disabled صفحه را بازنویسی کند و ورودی disabled باید disabled بومی بماند', () => {
     const btn = fixture.nativeElement.querySelector('#btn-busy-test') as HTMLButtonElement;
 
     // صفحه دکمه را disabled کرده است
@@ -157,6 +196,7 @@ describe('ActionButtonComponent (button[appAction])', () => {
     fixture.detectChanges();
 
     expect(btn.disabled).toBe(true);
+    expect(btn.getAttribute('aria-disabled')).toBe('true');
     expect(btn.getAttribute('aria-busy')).toBeNull();
 
     // فعال کردن و سپس غیرفعال کردن busy نباید disabled صفحه را پاک کند
@@ -181,12 +221,13 @@ describe('ActionButtonComponent (button[appAction])', () => {
   imports: [ActionButtonComponent],
   template: `
     <button id="btn-in-overflow" type="button" appAction="export-excel"></button>
+    <button id="btn-in-overflow-labeled" type="button" appAction="create" label="فاکتور جدید"></button>
   `,
 })
 class OverflowHostComponent {}
 
 describe('ActionButtonComponent درون منوی پاپ‌اوور (OVERFLOW_MENU_CONTEXT)', () => {
-  it('درون منوی پاپ‌اوور عنوان باید همیشه رندر شود و کلیک روی دکمه متد close را فراخوانی کند', async () => {
+  it('درون پاپ‌اوور ظاهر فقط زیر ۶۴۰px اعمال می‌شود و از ۶۴۰px به بالا دکمه اندازه خود را حفظ می‌کند', async () => {
     const closeSpy = vi.fn();
     const fakeContext: OverflowMenuContext = {
       close: closeSpy,
@@ -207,11 +248,23 @@ describe('ActionButtonComponent درون منوی پاپ‌اوور (OVERFLOW_ME
     fixture.detectChanges();
 
     const btn = fixture.nativeElement.querySelector('#btn-in-overflow') as HTMLButtonElement;
-    // حتی برای export-excel که پیش‌فرض فقط‌آیکون است، درون پاپ‌اوور باید عنوان نمایش داده شود
     const span = btn.querySelector('span');
+
+    // span عنوان در DOM هست ولی در دسکتاپ مخفی است (sm:hidden) و زیر ۶۴۰px دیده می‌شود (max-sm:inline)
     expect(span).not.toBeNull();
     expect(span?.textContent?.trim()).toBe('خروجی اکسل');
+    expect(span?.className).toContain('max-sm:inline');
+    expect(span?.className).toContain('sm:hidden');
 
+    // کلاس‌های میزبان: در موبایل تمام‌عرض و چپ‌چین، در دسکتاپ فقط‌آیکون و وسط‌چین
+    expect(btn.classList.contains('max-sm:w-full')).toBe(true);
+    expect(btn.classList.contains('max-sm:justify-start')).toBe(true);
+    expect(btn.classList.contains('sm:justify-center')).toBe(true);
+    expect(btn.classList.contains('w-9')).toBe(true); // اندازه دسکتاپ فقط‌آیکون md
+    expect(btn.classList.contains('h-9')).toBe(true);
+    expect(btn.classList.contains('justify-center')).toBe(false); // نبود justify-center نامشروط متناقض
+
+    // کلیک روی دکمه باید close منو را فراخوانی کند
     btn.click();
     expect(closeSpy).toHaveBeenCalledTimes(1);
   });
