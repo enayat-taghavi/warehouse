@@ -2,11 +2,12 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
 import { Company } from '../../../core/models/company.model';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-company-selection-modal',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SvgIconDirective],
   templateUrl: './company-selection-modal.html',
   styleUrls: ['./company-selection-modal.css']
 })

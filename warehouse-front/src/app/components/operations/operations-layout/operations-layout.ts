@@ -17,6 +17,7 @@ import { ActiveCompanyService } from '../../../core/services/active-company.serv
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 import { filter, Subscription } from 'rxjs';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
+import { PLATFORM_ENTITY_ICONS } from '../../../shared/icons/semantic-icons';
 
 interface NavItem {
   id: string;
@@ -103,7 +104,7 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
       id: 'companies',
       label: 'مدیریت شرکت‌ها و هلدینگ',
       route: '/app/operations/companies',
-      icon: '🏢'
+      icon: PLATFORM_ENTITY_ICONS.company
     },
     {
       id: 'health',

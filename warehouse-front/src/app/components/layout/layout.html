@@ -10,7 +10,7 @@
         <h2 class="font-black text-white text-sm">{{ appTitle }}</h2>
         <span class="text-[10px] text-slate-500">نسخه ۱.۰ · شیراز</span>
       </div>
-      <button (click)="closeSidebar()" class="md:hidden p-1.5 text-slate-400 hover:text-white transition-colors cursor-pointer" title="بستن منو" aria-label="بستن منو">
+      <button (click)="closeSidebar()" class="md:hidden p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer tap-target" title="بستن منو" aria-label="بستن منو">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
       </button>
     </div>
@@ -232,7 +232,7 @@
           <!-- Hover Overlay Icon -->
           <div class="absolute inset-0 z-20 bg-slate-900/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
              <div class="flex flex-col items-center gap-2">
-               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" appIcon="edit-2"></svg>
+               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" appIcon="edit"></svg>
                <span class="text-white text-xs font-bold">تغییر انبار</span>
              </div>
           </div>
@@ -258,7 +258,7 @@
       
       <!-- Right Side (RTL Start): Mobile Toggle, User, Notifications, Progress -->
       <div class="flex items-center gap-1.5 sm:gap-3 flex-1 justify-start min-w-0 shrink-0">
-        <button (click)="openSidebar()" class="md:hidden p-2 rounded-lg hover:bg-slate-50 text-slate-600 shrink-0 cursor-pointer" title="نمایش منو" aria-label="نمایش منو">
+        <button (click)="openSidebar()" class="md:hidden p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-600 shrink-0 cursor-pointer tap-target" title="نمایش منو" aria-label="نمایش منو">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="menu"></svg>
         </button>
         <button (click)="toggleDesktopSidebar()" class="hidden md:block p-2 rounded-lg hover:bg-slate-50 text-slate-600 shrink-0 transition-colors cursor-pointer" title="نمایش/مخفی کردن منو" aria-label="نمایش/مخفی کردن منو">
@@ -318,7 +318,7 @@
             class="p-1.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed disabled:active:scale-100 transition-all flex items-center justify-center cursor-pointer shadow-xs disabled:shadow-none"
             title="صفحه قبل (Alt + راست)"
             aria-label="صفحه قبل">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="chevron-right"></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="action-back"></svg>
           </button>
           
           <!-- Subtle Divider -->
@@ -332,7 +332,7 @@
             class="p-1.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed disabled:active:scale-100 transition-all flex items-center justify-center cursor-pointer shadow-xs disabled:shadow-none"
             title="صفحه بعد (Alt + چپ)"
             aria-label="صفحه بعد">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="chevron-left"></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="action-forward"></svg>
           </button>
         </div>
       </div>

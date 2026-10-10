@@ -452,6 +452,8 @@ export class Layout implements OnInit, OnDestroy {
     'grid', 'archive', 'badge', 'users', 'file-text', 'tag', 'folder', 'upload-cloud', 'settings',
     'clipboard', 'printer', 'check-circle', 'download', 'alert-triangle', 'check-square', 'database',
     'activity', 'bar-chart-2', 'truck', 'dollar-sign', 'credit-card', 'briefcase',
+    'calendar', 'user-plus', 'file-check', 'id-card', 'calculator', 'lock', 'clipboard-check',
+    'columns', 'book', 'package', 'barcode', 'globe', 'file-lines', 'server', 'user-circle', 'building',
   ]);
 
   /**

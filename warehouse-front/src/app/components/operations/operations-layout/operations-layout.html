@@ -34,7 +34,13 @@
           : 'text-slate-400 hover:text-white hover:bg-slate-800/80'"
         [title]="item.label"
       >
-        <span class="text-base shrink-0 group-hover:scale-105 transition-transform">{{ item.icon }}</span>
+        <span class="text-base shrink-0 group-hover:scale-105 transition-transform flex items-center justify-center">
+          @if (item.icon === 'building') {
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building"></svg>
+          } @else {
+            {{ item.icon }}
+          }
+        </span>
         <span *ngIf="!isSidebarCollapsed()" class="truncate flex-1">{{ item.label }}</span>
         <span *ngIf="!isSidebarCollapsed() && item.badge" class="px-1.5 py-0.5 rounded text-[9px] font-mono" [ngClass]="activeRoute() === item.id ? 'bg-indigo-700 text-white' : 'bg-slate-800 text-slate-300 border border-slate-700'">
           {{ item.badge }}
@@ -88,7 +94,7 @@
         <!-- دکمه منوی همبرگر موبایل -->
         <button
           (click)="toggleMobileMenu()"
-          class="lg:hidden p-2 rounded-lg hover:bg-slate-50 text-slate-600 shrink-0 cursor-pointer"
+          class="lg:hidden p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-600 shrink-0 cursor-pointer tap-target"
           title="نمایش منو"
           aria-label="نمایش منو"
         >
@@ -153,7 +159,7 @@
             class="p-1.5 rounded-lg text-slate-600 hover:text-cyan-600 hover:bg-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed disabled:active:scale-100 transition-all flex items-center justify-center cursor-pointer shadow-xs disabled:shadow-none"
             title="صفحه قبل (Alt + راست)"
             aria-label="صفحه قبل">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="chevron-right"></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="action-back"></svg>
           </button>
 
           <!-- Subtle Divider -->
@@ -167,7 +173,7 @@
             class="p-1.5 rounded-lg text-slate-600 hover:text-cyan-600 hover:bg-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed disabled:active:scale-100 transition-all flex items-center justify-center cursor-pointer shadow-xs disabled:shadow-none"
             title="صفحه بعد (Alt + چپ)"
             aria-label="صفحه بعد">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="chevron-left"></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="action-forward"></svg>
           </button>
         </div>
       </div>
@@ -187,30 +193,36 @@
     (click)="closeMobileMenu()"
   >
     <div
-      class="w-72 h-full bg-slate-900 border-l border-slate-800 p-4 flex flex-col justify-between"
+      class="w-72 h-full bg-slate-900 border-l border-slate-800 p-4 flex flex-col justify-between overflow-y-auto"
       (click)="$event.stopPropagation()"
     >
-      <div>
-        <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+      <div class="flex-1 flex flex-col min-h-0">
+        <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800 shrink-0">
           <span class="text-sm font-black text-white">منوی مرکز عملیات</span>
-          <button (click)="closeMobileMenu()" class="text-slate-400 hover:text-white cursor-pointer">✕</button>
+          <button (click)="closeMobileMenu()" class="min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-white cursor-pointer tap-target" title="بستن منو" aria-label="بستن منو">✕</button>
         </div>
-        <div class="flex flex-col gap-1">
+        <div class="flex flex-col gap-1 overflow-y-auto flex-1">
           <button
             *ngFor="let item of navItems"
             (click)="navigateTo(item.route)"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-right cursor-pointer"
+            class="flex items-center gap-3 px-3 py-2.5 min-h-[40px] rounded-xl text-xs font-bold text-right cursor-pointer"
             [ngClass]="activeRoute() === item.id ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800'"
           >
-            <span>{{ item.icon }}</span>
+            <span class="shrink-0 flex items-center justify-center">
+              @if (item.icon === 'building') {
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building"></svg>
+              } @else {
+                {{ item.icon }}
+              }
+            </span>
             <span>{{ item.label }}</span>
           </button>
         </div>
       </div>
 
-      <div *ngIf="hasAnyConnectedModule" class="flex flex-col gap-2 pt-4 border-t border-slate-800">
-        <button *ngIf="showWarehouseLink" (click)="goToWarehouse()" class="w-full py-2 rounded-xl bg-slate-800 text-indigo-300 text-xs font-bold cursor-pointer">ورود به انبارداری</button>
-        <button *ngIf="showAccountingLink" (click)="goToFinance()" class="w-full py-2 rounded-xl bg-slate-800 text-emerald-300 text-xs font-bold cursor-pointer">ورود به سامانه مالی</button>
+      <div *ngIf="hasAnyConnectedModule" class="flex flex-col gap-2 pt-4 border-t border-slate-800 shrink-0">
+        <button *ngIf="showWarehouseLink" (click)="goToWarehouse()" class="w-full py-2.5 min-h-[40px] rounded-xl bg-slate-800 text-indigo-300 text-xs font-bold cursor-pointer">ورود به انبارداری</button>
+        <button *ngIf="showAccountingLink" (click)="goToFinance()" class="w-full py-2.5 min-h-[40px] rounded-xl bg-slate-800 text-emerald-300 text-xs font-bold cursor-pointer">ورود به سامانه مالی</button>
       </div>
     </div>
   </div>

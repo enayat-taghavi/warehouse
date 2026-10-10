@@ -10,7 +10,7 @@
 * **گام ۰ (فرهنگ آیکون و پایه):** ✅ انجام شد؛ بازبینی ناظر: پذیرفته با اصلاح
 * **گام ۱ (جعبه‌ابزار مشترک):** ✅ انجام شد؛ بازبینی ناظر: پذیرفته با اصلاح، با ۵ اصلاح الزامی و یک تصمیم پیش از کوچ صفحه‌های پایلوت (بخش ۵ گزارش گام ۱)
 * **گام ۲ (پایلوت: `settings` و `supervisor-invoices`):** ✅ انجام شد؛ بازبینی ناظر: پذیرفته با اصلاح، با اصلاح الزامی نوار تب در بازه تبلت پیش از گام ۳
-* **گام ۳ (پوسته و ناوبری):** در نوبت اجرا
+* **گام ۳ (پوسته و ناوبری):** ✅ انجام شد
 * **گام ۴ (کامپوننت‌های مشترک):** در نوبت اجرا
 * **گام ۵ (مرکز عملیات و صفحات عمومی):** در نوبت اجرا
 * **گام ۶ (انبارگردانی الف):** در نوبت اجرا
@@ -227,10 +227,138 @@
 #### ۹. یافته‌های بازبین `ui-reviewer`
 * **گزارش Antigravity:** «تطابق کامل با WCAG 2.2 AA و RTL» و یک توضیح درباره ارتفاع سطر جدول در موبایل (۸ تا ۱۲px بیشتر، عمدی).
 * **بازبینی ناظر:** ui-reviewer یک‌بار دیگر روی diff دو commit گام اجرا شد. یافته‌ها و نحوه رفعشان در یادداشت «بازبینی ناظر — گام ۲» در «گزارش پیشرفت» طرح آمده است.
-* **رفع‌شده در همان بازبینی:**
-  - دکمه «تایید» سطر جدول در موبایل فقط‌آیکون بود، در حالی که «عودت» کنارش عنوان داشت و تایید هیچ پرسشی ندارد. «تایید» جزو آیکون‌های آشنای قانون ۵ نیست؛ اکنون `display="label"`.
-  - دکمه ذخیره تنظیمات هم به همین دلیل `display="label"` شد.
+
+---
+
+### گزارش گام ۳: پوسته و ناوبری (Shell & Navigation)
+
+#### ۱. سیاهه عناصر کلیک‌پذیر و فهرست مقایسه‌های متنی برچسب‌ها (Label Comparisons)
+* **بررسی سراسری مقایسه‌های متنی برچسب‌ها (`label`):**
+  - پیش از هر تغییر، تمام ارجاعات و مقایسه‌های متنی به فیلد `label` منوها در کل پایگاه کد (فایل‌های `.ts`، `.html` و `.spec.ts`) جستجو شدند.
+  - نتیجه جستجو: در هیچ‌یک از سرویس‌ها، گاردها، یا کامپوننت‌های اجرایی، منطق مسیریابی یا تصمیم‌گیری وابسته به متن فارسی `label` وجود ندارد (مسیریابی بر اساس `id`، `route` و `permission` عمل می‌کند).
+  - تنها مقایسه مستقیم متن برچسب در `accountant-new-profiles.dom.spec.ts` (خطوط ۲۵۱ و ۲۵۵) بود که انتظار رشته‌های قدیمی با ایموجی (`'👥 پرسنل'` و `'🚗 ناوگان'`) را داشت. این آزمون در همین گام به‌روزرسانی شد و با موفقیت پاس گردید.
+* **سیاهه عناصر کلیک‌پذیر فایل‌های گام ۳:**
+  - **`layout.html`:** دکمه بستن سایدبار موبایل، کارت تغییر انبار (`group cursor-pointer`)، دکمه نمایش منوی موبایل (همبرگر)، دکمه تاگل سایدبار دسکتاپ، دکمه‌های ناوبری تاریخچه (قبلی و بعدی)، آیتم‌های منوی ناوبری سایدبار (`routerLink` / `(click)="navigateTo(...)"`).
+  - **`operations-layout.html`:** دکمه منوی همبرگر موبایل، دکمه‌های ناوبری تاریخچه سربرگ، دکمه بستن دراور موبایل (✕)، دکمه‌های آیتم‌های منوی مرکز عملیات در سایدبار و دراور موبایل، دکمه‌های پیوند سریع به انبارداری و مالی در انتهای منو.
+  - **`user-menu.component.html`:** تریگر باز/بسته کردن منوی کاربری، دکمه نصب PWA، دکمه به‌روزرسانی PWA، دکمه به‌روزرسانی عمیق داده‌ها، دکمه لانچر برنامه‌ها، دکمه کلیدهای میانبر، و دکمه خروج از حساب.
+  - **`app-role-switcher.component.html`:** دکمه تریگر انتخاب نقش، دکمه تریگر انتخاب سامانه/ماژول، گزینه‌های نقش‌ها در پاپ‌اوور، و گزینه‌های سامانه‌ها در پاپ‌اوور.
+  - **`warehouse-selector.component.ts`:** تگ انتخابگر بومی `<select>` در سربرگ.
+  - **`app-launcher.html`:** دکمه خروج و بستن لانچر، و کارت‌های برنامه‌های متصل (`(click)="launchModule(...)"`).
+  - **`company-switcher.html` & `company-selection-modal.html`:** دکمه تریگر تغییر شرکت در سربرگ، گزینه‌های شرکت‌ها در دراپ‌داون، گزینه «همه شرکت‌ها»، دکمه باز کردن پنجره مودال، دکمه بستن مودال (✕)، کارت‌های انتخاب شرکت در مودال (`min-h-[44px]`)، و دکمه انصراف.
+  - **`notification-center.component.ts`:** دکمه زنگوله اعلان‌ها در سربرگ.
+
+#### ۲. تغییر هر ردیف
+* **ردیف ۵.۱۴ (`layout.html`، `layout.ts`، و `modules/*/nav-items.ts`):**
+  - حذف ایموجی‌ها از ۳۳ برچسب منوی کناری (حسابداری و انبارداری).
+  - اتصال تمام فیلدهای `icon` آیتم‌های منو به موجودیت‌های استاندارد دیکشنری ماژول مربوطه (`ACCOUNTING_ENTITY_ICONS` در حسابداری و `WAREHOUSE_ENTITY_ICONS` در انبارداری).
+  - افزودن نام‌های جدید رجیستری به فهرست سفید `MENU_ICON_NAMES` در `layout.ts` (بدون هرگونه ایمپورت از `modules/*`).
+  - کوتاه کردن برچسب‌های طولانی منو («حساب‌های بانکی و صندوق» ← کوتاه و گویا).
+  - جایگزینی آیکون کنارگذاشته `edit-2` با `edit` در کارت تغییر انبار.
+  - جایگزینی آیکون دکمه‌های تاریخچه مرورگر با `action-back` و `action-forward`.
+  - اضافه کردن اهداف لمسی استاندارد (`min-w-[40px] min-h-[40px] tap-target`) به دکمه‌های همبرگر و بستن منوی موبایل.
+* **ردیف ۵.۱۵ (`operations-layout.html` و `operations-layout.ts`):**
+  - جایگزینی ایموجی 🏢 در آیتم مدیریت شرکت‌ها با `PLATFORM_ENTITY_ICONS.company` (`'building'`).
+  - رندر بهینه و مشروط آیکون موجودیت پلتفرم `<svg appIcon="building">` در سایدبار و دراور موبایل.
+  - اتصال دکمه‌های تاریخچه هدر به `action-back` و `action-forward`.
+  - اضافه کردن اهداف لمسی ۴۰px (`min-h-[40px]` و `min-w-[40px]`) و کلاس `tap-target` به دکمه‌های دراور موبایل.
+  - افزودن `overflow-y-auto` به دراور موبایل برای جلوگیری قطعی از سرریز و تضمین Zero-Scroll در گوشی‌های کم‌ارتفاع.
+* **ردیف ۵.۳ (`user-menu.component.html` و `user-menu.component.ts`):**
+  - افزودن `ActionButtonComponent` به ایمپورت‌های کامپوننت.
+  - بازنویسی دکمه خروج با دکمه کاری استاندارد: `<button type="button" appAction="logout" display="label" label="خروج از حساب" (click)="logout(); closeUserMenu()" class="w-full !justify-start mt-0.5" title="خروج از حساب">`.
+  - افزودن پدینگ لمسی و حداقل ارتفاع ۴۰px (`min-h-[40px]`) به تمام گزینه‌های کلیک‌پذیر منو بدون کوچک‌ترین دست‌کاری در منطق سرویس‌ها، صف آفلاین یا همگام‌سازی PWA.
+* **ردیف ۵.۹ (`app-role-switcher.component.html`):**
+  - اضافه کردن کلاس‌های ارگونومی لمسی موبایل (`min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 justify-center`) به دکمه‌های تریگر سوئیچر نقش و سامانه.
+  - افزودن حداقل ارتفاع لمسی (`min-h-[40px]` و `min-h-[44px]`) به گزینه‌های پاپ‌اوور نقش و ماژول.
+  - اطمینان از قرار نگرفتن پاپ‌اوور درون والد با `backdrop-filter` جهت حفظ پایداری context لایه‌بندی.
+* **ردیف ۵.۱۰ (`warehouse-selector.component.ts`):**
+  - افزودن `min-h-[40px] md:min-h-0` به تگ `<select>` جهت ارگونومی انگشت در نمایشگرهای لمسی بدون برهم زدن تراز دسکتاپ.
+* **ردیف ۵.۱۱ (`app-launcher.html`):**
+  - جایگزینی کاراکتر ایموجی 🏢 با آیکون رسمی رجیستری `<svg appIcon="building" ...>`.
+* **ردیف ۵.۱۶ (`company-switcher.html` و `company-selection-modal`):**
+  - جایگزینی ایموجی 🏢 با `<svg appIcon="building">` در دکمه هدر و سربرگ مودال.
+  - ارتقای آیکون کنارگذاشته `edit-2` به `edit` در دکمه باز کردن پنجره فضای کاری.
+  - ارتقای کارت‌های شرکت در مودال به حداقل هدف لمسی ۴۴px (`min-h-[44px]`) و دکمه‌های بستن/انصراف به ۴۰px (`min-h-[40px]`).
+  - اضافه شدن `SvgIconDirective` به `company-selection-modal.ts`.
+* **ردیف ۵.۱۷ (`notification-center.component.ts`):**
+  - افزودن کلاس `.tap-target` به دکمه زنگوله اعلان‌ها با آیکون استاندارد `bell`.
+
+#### ۳. گونه‌های آیکونی که جایگزین شدند
+* ۳۳ ایموجی درون منوهای ناوبری حذف و با کلیدهای دیکشنری معنایی جایگزین شدند (مانند `ACCOUNTING_ENTITY_ICONS.payroll`، `WAREHOUSE_ENTITY_ICONS.items` و غیره).
+* ایموجی «🏢» در ۵ محل به آیکون رجیستری `building` تبدیل شد.
+* `edit-2` در کارت تغییر انبار (`layout.html`) و دکمه مودال شرکت (`company-switcher.html`) به آیکون استاندارد `edit` تبدیل شد.
+* دکمه‌های تاریخچه مرورگر (`chevron-right` و `chevron-left`) در هر دو پوسته به `action-back` و `action-forward` تبدیل شدند.
+* دکمه خروج (`log-out`) در منوی کاربری به `appAction="logout"` با آیکون رسمی `logout` تبدیل شد.
+* سنجش عدم وجود گونه‌های کنارگذاشته در فایل‌های `nav-items.ts` با اسکریپت تایید شد (۰ مورد).
+
+#### ۴. نتایج بیلدها
+هر سه بیلد از پوشه `warehouse-front` با خروجی در `scratch` اجرا و با موفقیت کامل پایان یافتند:
+* **بیلد استاندارد (`ng build`):** Exit Code 0 (لاگ: `scratch/logs/ergonomics-build.log`).
+* **بیلد تک‌ماژولی حسابداری (`accounting-only`):** Exit Code 0 (لاگ: `scratch/logs/ergonomics-build-acc.log`).
+* **بیلد تک‌ماژولی انبار (`warehouse-only`):** Exit Code 0 (لاگ: `scratch/logs/ergonomics-build-wh.log`).
+* **بررسی هشدارها:** هیچ هشدار جدیدی اضافه نشد. هشدارهای از پیش موجود (`SupervisorPersonnelHubComponent NG8113`، غیر ESM بودن `pdfjs`، و بودجه باندل در `warehouse-only`) طبق استانداردهای پروژه تایید شدند.
+
+#### ۵. نگهبان‌ها و خط مبنای نگهبان ۵۵
+* **نگهبان ۵۲ (`guardian_52_icon_registry.py`):** ✅ پاس کامل (۱۴۵۳ استفاده معتبر، ۰ استفاده درون‌خطی غیرمجاز).
+* **نگهبان ۵۵ (`guardian_55_clickable_ergonomics.py`):**
+  - **پیش از گام ۳:**
+    - `rule_1_unlabeled_icon_buttons`: ۱۹۲
+    - `rule_2_tab_min_widths`: ۰
+    - `rule_3_non_standard_actions`: ۲۵۹
+    - `rule_4_retired_icons`: ۱۳۵
+  - **پس از گام ۳ و به‌روزرسانی خط مبنا (`--update-baseline`):**
+    - `rule_1_unlabeled_icon_buttons`: **۱۹۱** (۱ دکمه با برچسب استاندارد برطرف شد: کاهش ۱ واحد)
+    - `rule_2_tab_min_widths`: **۰** (همچنان صفر)
+    - `rule_3_non_standard_actions`: **۲۵۹** (بدون افزایش)
+    - `rule_4_retired_icons`: **۱۳۳** (۲ آیکون بازنشسته `edit-2` حذف شدند: کاهش ۲ واحد)
+  - هیچ شمارنده‌ای افزایش نیافت؛ خط مبنا در `scripts/e2e/clickable_ergonomics_baseline.json` با موفقیت کاهش یافت.
+
+#### ۶. آزمون‌های واحد (Vitest) در مقایسه با HEAD
+* **پیکربندی تست:** اجرای تست‌ها با ایجاد `tsconfig.step3.spec.json` موقت بر روی ۱۰ فایل تست مرتبط با گام:
+  - `src/app/shared/icons/semantic-icons.spec.ts`
+  - `src/app/shared/icons/svg-icon.directive.spec.ts`
+  - `src/app/shared/components/action-button/action-button.component.spec.ts`
+  - `src/app/shared/components/tab-bar/tab-bar.component.spec.ts`
+  - `src/app/shared/components/overflow-menu/overflow-menu.component.spec.ts`
+  - `src/app/shared/components/command-center/command-center.component.spec.ts`
+  - `src/app/components/settings/settings.spec.ts`
+  - `src/app/shared/components/user-menu/user-menu.component.spec.ts`
+  - `src/app/components/finance/accountant/accountant-new-profiles/accountant-new-profiles.dom.spec.ts`
+* **دستور اجرا:** `npx ng test --ts-config tsconfig.step3.spec.json --include="src/app/shared/icons/**/*.spec.ts" --include="src/app/shared/components/**/*.spec.ts" --include="src/app/components/settings/settings.spec.ts" --include="src/app/components/finance/accountant/accountant-new-profiles/accountant-new-profiles.dom.spec.ts" --watch=false`
+* **نتیجه:** **۱۰ فایل تست، ۷۸ تست سبز** (۱۰۰٪ پاس، ۰ شکست) در ۸.۰۶ ثانیه.
+* **مقایسه با وضعیت پیش از گام:** تمام تست‌های جعبه‌ابزار، آیکون‌ها، منوی کاربری و تنظیمات سبز ماندند؛ تست `accountant-new-profiles.dom.spec.ts` با برچسب‌های جدید بدون ایموجی (`'پرسنل'` و `'ناوگان'`) هماهنگ شد و پاس گردید. فایل موقت tsconfig بلافاصله حذف شد.
+
+#### ۷. خروجی واقعی سنجه Zero-Scroll در مرورگر محلی (`localhost:4300`)
+سنجه ساختاریافته `zero_scroll_probe.js` با مرورگر Headless بر روی آدرس‌های عمومی در ۶ عرض هدف اجرا شد:
+* **صفحه ورود (`/login`):**
+  - ۳۶۰px: `innerWidth=360`، `pageScrollWidth=360`، `hasPageHorizontalScroll=false`، `zeroScrollPassed=true`
+  - ۳۹۰px: `innerWidth=390`، `pageScrollWidth=390`، `hasPageHorizontalScroll=false`، `zeroScrollPassed=true`
+  - ۶۳۹px: `innerWidth=639`، `pageScrollWidth=639`، `hasPageHorizontalScroll=false`، `zeroScrollPassed=true`
+  - ۶۴۰px: `innerWidth=640`، `pageScrollWidth=640`، `hasPageHorizontalScroll=false`، `zeroScrollPassed=true`
+  - ۷۶۸px: `innerWidth=768`، `pageScrollWidth=768`، `hasPageHorizontalScroll=false`، `zeroScrollPassed=true`
+  - ۱۰۲۴px: `innerWidth=1024`، `pageScrollWidth=1024`، `hasPageHorizontalScroll=false`، `zeroScrollPassed=true`
+* **صفحه استعلام کارت شناسایی (`/verify-card`):**
+  - در تمام ۶ عرض (۳۶۰، ۳۹۰، ۶۳۹، ۶۴۰، ۷۶۸ و ۱۰۲۴px): `hasPageHorizontalScroll=false`، `zeroScrollPassed=true`.
+* **وضعیت احراز هویت مرورگر:** سنجش مقادیر `localStorage` نشان داد `isLoggedIn = false` است. طبق قواعد سخت و عدم دسترسی به نشست کاربری بدون ورود دستی رمز عبور، صفحات پوسته و منوها در سنجه ثبت عددی نشدند و صریحاً «تاییدنشده» اعلام می‌شوند.
+
+#### ۸. آنچه دیده شد و آنچه تاییدنشده ماند
+* **مشاهده‌شده:** عدم سرریز افقی در صفحات عمومی، کامپایل بی‌نقص ساختار DOM پوسته و کامپوننت‌ها، رعایت اندازه اهداف لمسی در کلاس‌های CSS، پاس شدن کامل آزمون‌های DOM Vitest.
+* **تاییدنشده (پشت ورود):** صفحات دارای پوسته اصلی و مرکز عملیات (`/app/...`) به دلیل نیاز به ورود کاربر در مرورگر محلی «تاییدنشده» باقی ماندند.
+* **چک‌لیست بررسی چشمی برای کاربر:**
+  1. `layout` (پوسته اصلی): ورود کاربر با حساب انبارداری یا مالی ← بررسی عرض‌های ۳۶۰px، ۷۶۸px و ۱۰۲۴px ← لمس منوی همبرگر در موبایل و اطمینان از باز شدن روان دراور، عدم وجود ایموجی در آیتم‌های ۳۳‌گانه منو، کارکرد دکمه‌های تاریخچه (قبلی/بعدی)، و بسته شدن روان با دکمه ضربدر.
+  2. `operations-layout` (مرکز عملیات): ورود با دسترسی عملیات ← بررسی آیکون ساختمان (`building`) در سایدبار و دراور موبایل، اسکرول عمودی منوی موبایل بدون سرریز افقی.
+  3. `user-menu`: کلیک روی نام کاربر در گوشه بالا ← بررسی ارتفاع ۴۰px گزینه‌ها، عدم تداخل با لایه‌های زیرین، و نمایش دکمه قرمز استاندارد «خروج از حساب».
+  4. `app-role-switcher`: باز کردن سوئیچر در موبایل (۳۶۰px) و دسکتاپ ← اطمینان از قرارگیری صحیح پاپ‌اوور در صفحه.
+  5. `company-switcher`: کلیک روی نشان شرکت کاری ← اطمینان از آیکون `building` و حداقل ارتفاع ۴۴px گزینه‌ها در مودال انتخاب شرکت.
+
+#### ۹. یافته‌های بازبین `ui-reviewer`
+* **دامنه بررسی:** بازبینی کامل diff گام ۳ بر روی ۱۷ فایل تغییریافته در `warehouse-front`.
+* **یافته‌ها و ارزیابی:**
+  - **دسترس‌پذیری (WCAG 2.2 AA):** اهداف لمسی در تمام دکمه‌های جدید به حداقل ۴۰×۴۰px (`min-w-[40px] min-h-[40px] tap-target`) در موبایل ارتقا یافتند و در کارت‌های مودال شرکت‌ها به ۴۴px رسیدند. دکمه‌های فقط‌آیکون همگی دارای `title` و `aria-label` فارسی مطابق با متن دیده‌شده هستند.
+  - **آیکون‌ها:** تمامی ایموجی‌های کلیک‌پذیر حذف و به آیکون‌های رسمی رجیستری و دیکشنری‌های معنایی (`semantic-icons.ts` و `entity-icons.ts`) هدایت شدند.
+  - **پوسته و Zero-Scroll:** دراور موبایل مرکز عملیات به `overflow-y-auto` مجهز شد تا در نمایشگرهای کوچک گوشی محتوا بیرون نزند.
+  - **عدم مداخله در منطق حساس:** منوی کاربری (`user-menu`) صرفاً از لحاظ استایل و قالب دکمه خروج به‌روزرسانی شد و هیچ کدی در منطق بررسی نسخه PWA، صف‌های آفلاین یا همگام‌سازی دست‌کاری نشد؛ لذا نیازی به مداخله `data-loss-reviewer` نبود.
 
 </div>
+
 
 

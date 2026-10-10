@@ -23,6 +23,7 @@ import { PersonnelApiService } from '../../../core/api/personnel-api.service';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
 import { Company } from '../../../core/models/company.model';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
+import { ActionButtonComponent } from '../action-button/action-button.component';
 import { BRANDING } from '../../../core/branding';
 
 @Component({
@@ -34,7 +35,8 @@ import { BRANDING } from '../../../core/branding';
     FormsModule,
     AvatarCropperModal,
     DeepSyncModalComponent,
-    SvgIconDirective
+    SvgIconDirective,
+    ActionButtonComponent
   ],
   templateUrl: './user-menu.component.html',
   styleUrl: './user-menu.component.css'

@@ -4,12 +4,12 @@
     type="button" 
     (click)="toggleDropdown($event)"
     [title]="isMultiCompanyUser ? (companyService.activeCompany ? 'شرکت کاری فعال: ' + companyService.activeCompany.name + ' (کلیک برای تغییر)' : 'انتخاب شرکت کاری') : (companyService.activeCompany ? 'شرکت کاری: ' + companyService.activeCompany.name : 'شرکت کاری')"
-    class="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl border transition-all shadow-xs group cursor-pointer active:scale-95"
+    class="flex items-center justify-center gap-1.5 sm:gap-2 p-1.5 sm:px-3 sm:py-1.5 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 rounded-xl border transition-all shadow-xs group cursor-pointer active:scale-95"
     [ngClass]="companyService.activeCompany ? 'bg-indigo-50/70 hover:bg-indigo-100/70 border-indigo-200/90 text-indigo-950' : 'bg-slate-100 hover:bg-slate-200/80 border-slate-300 text-slate-700'">
     
     <div class="w-6 h-6 rounded-lg font-black text-xs flex items-center justify-center shrink-0 shadow-2xs relative"
          [ngClass]="companyService.activeCompany ? 'bg-indigo-600 text-white' : 'bg-slate-300 text-slate-700'">
-      🏢
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building"></svg>
       <!-- Status dot on mobile right over the icon -->
       <span class="sm:hidden absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white"
             [ngClass]="companyService.activeCompany ? 'bg-emerald-500' : 'bg-amber-400'"></span>
@@ -51,7 +51,7 @@
         type="button"
         (click)="selectCompany(company)"
         [ngClass]="companyService.activeCompany?.id === company.id ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-700 hover:bg-slate-50'"
-        class="w-full flex items-center justify-between px-3 py-2 text-xs transition-colors cursor-pointer text-right">
+        class="w-full flex items-center justify-between px-3 py-2 min-h-[40px] text-xs transition-colors cursor-pointer text-right">
         <div class="flex items-center gap-2 min-w-0">
           <span class="w-6 h-6 rounded-md bg-slate-100 text-slate-700 font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
             {{ company.code }}
@@ -66,7 +66,7 @@
         type="button"
         (click)="selectCompany(null)"
         [ngClass]="!companyService.activeCompany ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-700 hover:bg-slate-50'"
-        class="w-full flex items-center justify-between px-3 py-2 text-xs transition-colors cursor-pointer text-right border-t border-slate-100">
+        class="w-full flex items-center justify-between px-3 py-2 min-h-[40px] text-xs transition-colors cursor-pointer text-right border-t border-slate-100">
         <div class="flex items-center gap-2">
           <span class="w-6 h-6 rounded-md bg-slate-100 text-slate-700 text-xs flex items-center justify-center shrink-0">🌍</span>
           <span>همه شرکت‌ها (بدون فیلتر)</span>
@@ -79,8 +79,8 @@
       <button 
         type="button"
         (click)="openModal()"
-        class="w-full py-1.5 px-2 rounded-xl text-center text-xs font-bold text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer flex items-center justify-center gap-1.5">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit-2"></svg>
+        class="w-full py-2 px-2 min-h-[40px] rounded-xl text-center text-xs font-bold text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer flex items-center justify-center gap-1.5">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
         <span>پنجره انتخاب فضای کاری...</span>
       </button>
     </div>

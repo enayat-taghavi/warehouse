@@ -58,6 +58,9 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
     section: 3,
     approval_status: 'pending_accountant',
     contract_type: 'daily',
+    marital_status: 'married',
+    job_title: 'کارشناس انبار',
+    is_active: true,
     job_grade: '19',
     base_years_experience: 2,
     daily_base_wage: 6572696,
@@ -77,7 +80,8 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
     id: 45,
     driver_name: 'بهرام رادان',
     plate_number: '21-789-10',
-    model_name: 'کامیونت ایسوزو',
+    vehicle_type: 'pickup',
+    is_active: true,
     approval_status: 'pending_accountant',
     default_service_rate: 2500000,
     driver_phone: '09121234567',
@@ -114,8 +118,8 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
   };
 
   const mockSections: ProjectSection[] = [
-    { id: 3, name: 'دالان کارگاه', project: 1, is_active: true },
-    { id: 4, name: 'انبار مرکزی', project: 1, is_active: true }
+    { id: 3, name: 'دالان کارگاه', code: 'S03', project: 1, is_active: true },
+    { id: 4, name: 'انبار مرکزی', code: 'S04', project: 1, is_active: true }
   ];
 
   beforeAll(async () => {
@@ -244,15 +248,15 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
   // ─────────────────────────────────────────────────────────────────
   // آیتم ۱: بررسی آیتم‌های سایدبار حسابدار در nav-items.ts (تفکیک پرسنل و ناوگان)
   // ─────────────────────────────────────────────────────────────────
-  it('Item 1: Sidebar Navigation contains "👥 پرسنل" and "🚚 ناوگان" for accountant', () => {
+  it('Item 1: Sidebar Navigation contains "پرسنل" and "ناوگان" for accountant', () => {
     const personnelItem = ACCOUNTANT_NAV_ITEMS.find(item => item.id === 'accountant-personnel');
     const fleetItem = ACCOUNTANT_NAV_ITEMS.find(item => item.id === 'accountant-fleet');
     expect(personnelItem).toBeDefined();
-    expect(personnelItem?.label).toBe('👥 پرسنل');
+    expect(personnelItem?.label).toBe('پرسنل');
     expect(personnelItem?.isAccounting).toBe(true);
 
     expect(fleetItem).toBeDefined();
-    expect(fleetItem?.label).toBe('🚚 ناوگان');
+    expect(fleetItem?.label).toBe('ناوگان');
     expect(fleetItem?.isAccounting).toBe(true);
   });
 
@@ -262,7 +266,7 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
   it('Item 2: Routing is registered in accounting.routes.ts and app.routes.ts', () => {
     const routeDef = ACCOUNTING_ROUTES.find(r => r.path === 'accountant-personnel');
     expect(routeDef).toBeDefined();
-    expect(routeDef?.data?.reuse).toBe(true);
+    expect(routeDef?.data?.['reuse']).toBe(true);
 
     const redirectDef = ACCOUNTING_ROUTES.find(r => r.path === 'accountant/personnel');
     expect(redirectDef).toBeDefined();

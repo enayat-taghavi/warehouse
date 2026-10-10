@@ -33,16 +33,16 @@
   - [x] اصلاح API جعبه‌ابزار بر پایه نتیجه و ثبت تصمیم‌ها در «گزارش پیشرفت» طرح
   - [x] معیار پایان گام
 
-- [ ] **گام ۳: پوسته و ناوبری**
-  - [ ] **۵.۱۴ پوسته اصلی و منوی کناری (`layout.html`، `modules/*/nav-items.ts`):** حذف ایموجی از ۳۳ برچسب، فیلد `icon` از `entity-icons.ts`، کوتاه کردن برچسب‌ها؛ به‌روزرسانی `accountant-new-profiles.dom.spec.ts` خط ۲۵۱
-  - [ ] **۵.۱۵ پوسته مرکز عملیات (`operations-layout`)**
-  - [ ] **۵.۳ منوی کاربری (`user-menu.component.html`)**
-  - [ ] **۵.۹ سوئیچر نقش (`app-role-switcher.component.html`)**
-  - [ ] **۵.۱۰ انتخابگر انبار (`warehouse-selector.component.ts`)**
-  - [ ] **۵.۱۱ لانچر برنامه‌ها (`app-launcher.html`)**
-  - [ ] **۵.۱۶ تعویض و انتخاب شرکت (`company-switcher`، `company-selection-modal`)**
-  - [ ] **۵.۱۷ مرکز اعلان‌ها (`notification-center.component.ts`)**
-  - [ ] معیار پایان گام
+- [x] **گام ۳: پوسته و ناوبری**
+  - [x] **۵.۱۴ پوسته اصلی و منوی کناری (`layout.html`، `modules/*/nav-items.ts`):** حذف ایموجی از ۳۳ برچسب، فیلد `icon` از `entity-icons.ts`، کوتاه کردن برچسب‌ها؛ به‌روزرسانی `accountant-new-profiles.dom.spec.ts` خط ۲۵۱
+  - [x] **۵.۱۵ پوسته مرکز عملیات (`operations-layout`)**
+  - [x] **۵.۳ منوی کاربری (`user-menu.component.html`)**
+  - [x] **۵.۹ سوئیچر نقش (`app-role-switcher.component.html`)**
+  - [x] **۵.۱۰ انتخابگر انبار (`warehouse-selector.component.ts`)**
+  - [x] **۵.۱۱ لانچر برنامه‌ها (`app-launcher.html`)**
+  - [x] **۵.۱۶ تعویض و انتخاب شرکت (`company-switcher`، `company-selection-modal`)**
+  - [x] **۵.۱۷ مرکز اعلان‌ها (`notification-center.component.ts`)**
+  - [x] معیار پایان گام
 
 - [ ] **گام ۴: کامپوننت‌های مشترک**
   - [ ] **۵.۱ هدر کارتابل (`cartable-header.component.ts`):** سوئیچر دامنه با `app-tab-bar`

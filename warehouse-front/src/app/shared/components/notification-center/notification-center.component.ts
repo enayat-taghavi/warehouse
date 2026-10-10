@@ -30,7 +30,7 @@ export interface NotificationItem {
       <button
         type="button"
         (click)="toggleDropdown($event)"
-        class="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all active:scale-95 cursor-pointer shrink-0 flex items-center justify-center"
+        class="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-all active:scale-95 cursor-pointer shrink-0 flex items-center justify-center tap-target"
         [ngClass]="{'bg-slate-100 dark:bg-slate-800 text-indigo-600': isOpen()}"
         title="مرکز اعلان‌های سامانه"
         aria-label="مرکز اعلان‌های سامانه"
