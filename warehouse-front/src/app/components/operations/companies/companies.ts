@@ -1,11 +1,11 @@
-import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
-import { Subject } from 'rxjs';
+import { Subject, firstValueFrom } from 'rxjs';
 import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { CompanyApiService } from '../../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
@@ -23,6 +23,7 @@ import {
   CompanyBoardMember,
   CompanyBoardMemberRole,
   CompanyBoardMemberType,
+  CompanyFiscalPeriod,
   UserCompanyAccess,
   CompanyAccessLevel
 } from '../../../core/models/company.model';
@@ -37,6 +38,8 @@ import {
   getBankByName,
   validateAccountNumber
 } from '../../../core/utils/sheba-utils';
+import { normalizeDigits } from '../../../core/utils/date-utils';
+import { ConfirmDialogService } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 import { CompanyGdriveTabComponent } from './company-gdrive-tab/company-gdrive-tab';
 
@@ -56,6 +59,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   public activeCompanyService = inject(ActiveCompanyService);
   private accountsHttp = inject(AccountsHttpService, { optional: true });
   private toast = inject(ToastService);
+  private confirmDialog = inject(ConfirmDialogService, { optional: true });
   private cdr = inject(ChangeDetectorRef);
   private sanitizer = inject(DomSanitizer);
   private ws = inject(WebSocketService, { optional: true });
@@ -65,6 +69,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   private offlineSync = OfflineSyncService.getInstance();
   private network = NetworkStatusService.getInstance();
   private destroy$ = new Subject<void>();
+  private pdfTimeoutId: any = null;
 
   // حالت نمای جاری: 'list' (فهرست شرکت‌ها) یا 'studio' (استودیوی تمام‌صفحه)
   public viewMode: 'list' | 'studio' = 'list';
@@ -93,6 +98,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   isBoardDatePickerOpen = false;
   isDocIssueDatePickerOpen = false;
   isDocExpiryDatePickerOpen = false;
+  isFiscalStartDatePickerOpen = false;
+  isFiscalEndDatePickerOpen = false;
 
   // کنترل‌های فرم تقویم شمسی جلالی (Reactive FormControls برای عملکرد بی‌نقص ng-persian-datepicker)
   regDateControl = new FormControl('');
@@ -100,6 +107,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   docExpiryDateControl = new FormControl('');
   boardTermStartControl = new FormControl('');
   boardTermExpiryControl = new FormControl('');
+  fiscalStartControl = new FormControl('');
+  fiscalEndControl = new FormControl('');
 
   // فهرست انواع اسناد و مدارک رسمی
   readonly documentTypesList: { value: CompanyDocumentType; label: string }[] = [
@@ -178,6 +187,9 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   isEditingAccount = false;
   editingAccountId: number | null = null;
   shebaValidationResult: ShebaValidationResult | null = null;
+  shebaDigitsDisplay = '';
+  isShebaCopied = false;
+  isAccountCopied = false;
   copiedShebaId: number | string | null = null;
   copiedSheba: string | null = null;
   iranianBanksList: IranianBankInfo[] = IRANIAN_BANKS;
@@ -185,6 +197,19 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   isBankDropdownOpen = false;
 
   newAccount = this.getEmptyBankAccountData();
+
+  // مدیریت دوره‌های مالی رسمی شرکت (CompanyFiscalPeriod)
+  companyFiscalPeriods: CompanyFiscalPeriod[] = [];
+  isLoadingFiscalPeriods = false;
+  isSavingFiscalPeriod = false;
+  showFiscalPeriodForm = false;
+  newFiscalPeriod = {
+    fiscal_year: '',
+    title: '',
+    start_date: '',
+    end_date: '',
+    notes: ''
+  };
 
   // مدیریت اعضای هیئت‌مدیره، مدیرعامل و صاحبان امضا (تب سوم استودیو)
   companyBoardMembers: CompanyBoardMember[] = [];
@@ -459,15 +484,56 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.boardTermExpiryControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
       this.newBoardMember.term_expiry = val || '';
     });
+    this.fiscalStartControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
+      this.newFiscalPeriod.start_date = val || '';
+    });
+    this.fiscalEndControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
+      this.newFiscalPeriod.end_date = val || '';
+    });
   }
 
   ngOnDestroy(): void {
+    if (this.pdfTimeoutId) {
+      clearTimeout(this.pdfTimeoutId);
+      this.pdfTimeoutId = null;
+    }
     if (this.previewBlobUrl) {
       URL.revokeObjectURL(this.previewBlobUrl);
       this.previewBlobUrl = null;
     }
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (this.isBankDropdownOpen && !target.closest('.bank-combobox-container')) {
+      this.isBankDropdownOpen = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  @HostListener('window:keydown.escape')
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.previewModal.isOpen) {
+      this.closePreview();
+    }
+  }
+
+  private async askConfirm(title: string, message: string): Promise<boolean> {
+    if (this.confirmDialog) {
+      const res = await this.confirmDialog.open({
+        title,
+        message,
+        type: 'danger',
+        confirmText: 'حذف',
+        cancelText: 'انصراف'
+      });
+      return res === true;
+    }
+    return window.confirm(message);
   }
 
   private setupSearch(): void {
@@ -518,16 +584,31 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
       return;
     }
-    const q = this.searchQuery.trim().toLowerCase();
-    this.filteredCompanies = this.companies.filter(
-      (c) =>
-        (c.name && c.name.toLowerCase().includes(q)) ||
-        (c.code && c.code.toLowerCase().includes(q)) ||
-        (c.national_id && c.national_id.includes(q)) ||
-        (c.economic_code && c.economic_code.includes(q)) ||
-        (c.ceo_name && c.ceo_name.toLowerCase().includes(q)) ||
-        (c.workshop_code && c.workshop_code.includes(q))
-    );
+    const rawQ = this.searchQuery.trim().toLowerCase();
+    const normQ = normalizeDigits(rawQ).toLowerCase();
+    this.filteredCompanies = this.companies.filter((c) => {
+      const name = (c.name || '').toLowerCase();
+      const code = (c.code || '').toLowerCase();
+      const nationalId = (c.national_id || '');
+      const economicCode = (c.economic_code || '');
+      const ceoName = (c.ceo_name || '').toLowerCase();
+      const workshopCode = (c.workshop_code || '');
+
+      return (
+        name.includes(rawQ) ||
+        name.includes(normQ) ||
+        code.includes(rawQ) ||
+        code.includes(normQ) ||
+        nationalId.includes(rawQ) ||
+        nationalId.includes(normQ) ||
+        economicCode.includes(rawQ) ||
+        economicCode.includes(normQ) ||
+        ceoName.includes(rawQ) ||
+        ceoName.includes(normQ) ||
+        workshopCode.includes(rawQ) ||
+        workshopCode.includes(normQ)
+      );
+    });
     this.cdr.markForCheck();
   }
 
@@ -578,7 +659,9 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (!this.isTabAvailable(tab)) tab = 'identity';
     this.activeModalTab = tab;
     if (this.companyModal.data.id) {
-      if (tab === 'treasury') {
+      if (tab === 'fiscal_insurance') {
+        this.loadCompanyFiscalPeriods(this.companyModal.data.id);
+      } else if (tab === 'treasury') {
         this.loadCompanyBankAccounts(this.companyModal.data.id);
       } else if (tab === 'governance') {
         this.loadCompanyBoardMembers(this.companyModal.data.id);
@@ -706,7 +789,10 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.filteredDocuments = [];
     this.companyBankAccounts = [];
     this.companyBoardMembers = [];
+    this.companyFiscalPeriods = [];
     this.studioAccesses = [];
+    this.showFiscalPeriodForm = false;
+    this.newFiscalPeriod = this.getEmptyFiscalPeriodData();
     this.newAccount = this.getEmptyBankAccountData();
     this.newBoardMember = this.getEmptyBoardMemberData();
     this.isEditingAccount = false;
@@ -803,6 +889,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     };
 
     if (company.id) {
+      this.loadCompanyFiscalPeriods(company.id);
       this.loadCompanyDocuments(company.id);
       this.loadCompanyBankAccounts(company.id);
       this.loadCompanyBoardMembers(company.id);
@@ -837,7 +924,11 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.companyDocuments = [];
     this.filteredDocuments = [];
     this.companyBankAccounts = [];
+    this.companyFiscalPeriods = [];
     this.studioAccesses = [];
+    this.showFiscalPeriodForm = false;
+    this.isFiscalStartDatePickerOpen = false;
+    this.isFiscalEndDatePickerOpen = false;
     this.isRegDatePickerOpen = false;
     this.isBoardDatePickerOpen = false;
     this.isDocIssueDatePickerOpen = false;
@@ -847,6 +938,194 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       this.router.navigate(['/app/operations/companies']);
     }
     this.cdr.markForCheck();
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // مدیریت دوره‌های مالی رسمی شرکت (CompanyFiscalPeriod)
+  // ═════════════════════════════════════════════════════════════════════
+  loadCompanyFiscalPeriods(companyId: number): void {
+    if (!this.isAccountingInstalled) return;
+    this.isLoadingFiscalPeriods = true;
+    this.api.getFiscalPeriods(companyId).subscribe({
+      next: (res) => {
+        this.isLoadingFiscalPeriods = false;
+        if (Array.isArray(res)) {
+          this.companyFiscalPeriods = res;
+        } else if (res && Array.isArray((res as any).results)) {
+          this.companyFiscalPeriods = (res as any).results;
+        } else {
+          this.companyFiscalPeriods = [];
+        }
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.isLoadingFiscalPeriods = false;
+        this.toast.error('خطا در دریافت دوره‌های مالی شرکت');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  openCreateFiscalPeriod(): void {
+    this.newFiscalPeriod = this.getEmptyFiscalPeriodData();
+    this.fiscalStartControl.setValue('', { emitEvent: false });
+    this.fiscalEndControl.setValue('', { emitEvent: false });
+    this.showFiscalPeriodForm = true;
+    this.cdr.markForCheck();
+  }
+
+  cancelCreateFiscalPeriod(): void {
+    this.showFiscalPeriodForm = false;
+    this.newFiscalPeriod = this.getEmptyFiscalPeriodData();
+    this.fiscalStartControl.setValue('', { emitEvent: false });
+    this.fiscalEndControl.setValue('', { emitEvent: false });
+    this.cdr.markForCheck();
+  }
+
+  onFiscalStartSelect(event: any): void {
+    const val = typeof event === 'string' ? event : (event?.shamsi || event?.gregorian || '');
+    this.newFiscalPeriod.start_date = val;
+    this.fiscalStartControl.setValue(val, { emitEvent: false });
+    this.isFiscalStartDatePickerOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  onFiscalEndSelect(event: any): void {
+    const val = typeof event === 'string' ? event : (event?.shamsi || event?.gregorian || '');
+    this.newFiscalPeriod.end_date = val;
+    this.fiscalEndControl.setValue(val, { emitEvent: false });
+    this.isFiscalEndDatePickerOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  saveFiscalPeriod(): void {
+    if (!this.companyModal.data.id) return;
+    if (!this.newFiscalPeriod.fiscal_year.trim()) {
+      this.toast.warning('لطفاً سال مالی (مثال: ۱۴۰۳) را وارد فرمایید.');
+      return;
+    }
+    if (!this.newFiscalPeriod.title.trim()) {
+      this.toast.warning('لطفاً عنوان دوره مالی را وارد فرمایید.');
+      return;
+    }
+    if (!this.newFiscalPeriod.start_date || !this.newFiscalPeriod.end_date) {
+      this.toast.warning('لطفاً تاریخ شروع و پایان دوره مالی را تعیین فرمایید.');
+      return;
+    }
+    if (this.newFiscalPeriod.start_date > this.newFiscalPeriod.end_date) {
+      this.toast.warning('تاریخ پایان دوره مالی نمی‌تواند قبل از تاریخ آغاز آن باشد.');
+      return;
+    }
+
+    this.isSavingFiscalPeriod = true;
+    const payload: Partial<CompanyFiscalPeriod> = {
+      company: this.companyModal.data.id,
+      fiscal_year: this.newFiscalPeriod.fiscal_year.trim(),
+      title: this.newFiscalPeriod.title.trim(),
+      start_date: this.newFiscalPeriod.start_date,
+      end_date: this.newFiscalPeriod.end_date,
+      notes: this.newFiscalPeriod.notes.trim() || null
+    };
+
+    this.api.createFiscalPeriod(payload).subscribe({
+      next: (created) => {
+        this.isSavingFiscalPeriod = false;
+        this.toast.success(`دوره مالی «${created.title}» با موفقیت تعریف شد.`);
+        this.cancelCreateFiscalPeriod();
+        this.companyFiscalPeriods = [created, ...this.companyFiscalPeriods.filter(p => p.id !== created.id)];
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.isSavingFiscalPeriod = false;
+        const msg = err.error?.detail || err.error?.fiscal_year?.[0] || 'خطا در تعریف دوره مالی جدید';
+        this.toast.error(msg);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  closeFiscalPeriod(period: CompanyFiscalPeriod): void {
+    if (!period.id) return;
+    this.api.closeFiscalPeriod(period.id).subscribe({
+      next: () => {
+        this.toast.success(`دوره مالی «${period.title}» با موفقیت بسته شد.`);
+        period.status = 'closed';
+        period.status_display = 'بسته شده رسمی';
+        this.companyFiscalPeriods = [...this.companyFiscalPeriods];
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.toast.error(err.error?.detail || 'خطا در بستن دوره مالی');
+      }
+    });
+  }
+
+  freezeFiscalPeriod(period: CompanyFiscalPeriod): void {
+    if (!period.id) return;
+    this.api.freezeFiscalPeriod(period.id).subscribe({
+      next: () => {
+        this.toast.success(`دوره مالی «${period.title}» منجمد شد.`);
+        period.status = 'frozen';
+        period.status_display = 'منجمد شده';
+        this.companyFiscalPeriods = [...this.companyFiscalPeriods];
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.toast.error(err.error?.detail || 'خطا در انجماد دوره مالی');
+      }
+    });
+  }
+
+  reopenFiscalPeriod(period: CompanyFiscalPeriod): void {
+    if (!period.id) return;
+    this.api.reopenFiscalPeriod(period.id).subscribe({
+      next: () => {
+        this.toast.success(`دوره مالی «${period.title}» مجدداً بازگشایی شد.`);
+        period.status = 'open';
+        period.status_display = 'جاری و باز';
+        this.companyFiscalPeriods = [...this.companyFiscalPeriods];
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.toast.error(err.error?.detail || 'خطا در بازگشایی دوره مالی');
+      }
+    });
+  }
+
+  getFiscalPeriodStatusBadge(status?: string): string {
+    switch (status) {
+      case 'open':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'frozen':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'closed':
+        return 'bg-rose-50 text-rose-700 border-rose-200';
+      default:
+        return 'bg-slate-100 text-slate-600 border-slate-200';
+    }
+  }
+
+  getFiscalPeriodStatusLabel(status?: string): string {
+    switch (status) {
+      case 'open':
+        return 'جاری و باز';
+      case 'frozen':
+        return 'منجمد شده';
+      case 'closed':
+        return 'بسته شده رسمی';
+      default:
+        return status || '—';
+    }
+  }
+
+  private getEmptyFiscalPeriodData() {
+    return {
+      fiscal_year: '',
+      title: '',
+      start_date: '',
+      end_date: '',
+      notes: ''
+    };
   }
 
   // بارگذاری اسناد آرشیو شرکت
@@ -946,7 +1225,10 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
 
     if (isPdf) {
-      setTimeout(() => {
+      if (this.pdfTimeoutId) {
+        clearTimeout(this.pdfTimeoutId);
+      }
+      this.pdfTimeoutId = setTimeout(() => {
         this.loadPdfWithPdfJs(cleanUrl);
       }, 50);
     }
@@ -957,10 +1239,15 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       this.isPdfLoading = true;
       this.cdr.markForCheck();
 
-      // دانلود مستقیم باینری بدون فعال‌سازی افزونه دانلود اینترنت دانلود منیجر (IDM)
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-      const buffer = await res.arrayBuffer();
+      // دانلود مستقیم باینری با استفاده از HttpClient و رعایت توکن‌های احراز هویت
+      let buffer: ArrayBuffer;
+      if (this.http) {
+        buffer = await firstValueFrom(this.http.get(url, { responseType: 'arraybuffer' }));
+      } else {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        buffer = await res.arrayBuffer();
+      }
 
       const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.js');
       if (pdfjsLib.GlobalWorkerOptions) {
@@ -1125,6 +1412,10 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   }
 
   closePreview(): void {
+    if (this.pdfTimeoutId) {
+      clearTimeout(this.pdfTimeoutId);
+      this.pdfTimeoutId = null;
+    }
     if (this.pdfRenderTask) {
       try {
         this.pdfRenderTask.cancel();
@@ -1183,14 +1474,18 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   onShebaInput(val: string): void {
     const cleaned = cleanShebaInput(val);
-    this.newAccount.sheba_number = cleaned;
     if (!cleaned) {
       this.shebaValidationResult = null;
+      this.shebaDigitsDisplay = '';
+      this.newAccount.sheba_number = '';
+      this.cdr.markForCheck();
       return;
     }
 
     const digits = extractShebaDigits(cleaned);
     this.shebaValidationResult = validateSheba(digits);
+    this.shebaDigitsDisplay = this.shebaValidationResult?.formattedDigits || digits;
+    this.newAccount.sheba_number = this.shebaValidationResult?.rawSheba || cleaned;
 
     if (this.shebaValidationResult?.bank) {
       this.newAccount.bank_name = this.shebaValidationResult.bank.name;
@@ -1199,6 +1494,12 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       this.newAccount.account_number = this.shebaValidationResult.accountNumber;
     }
     this.cdr.markForCheck();
+  }
+
+  onShebaPaste(event: ClipboardEvent): void {
+    event.preventDefault();
+    const pasted = event.clipboardData?.getData('text') || '';
+    this.onShebaInput(pasted);
   }
 
   selectBankForAccount(bank: IranianBankInfo): void {
@@ -1220,18 +1521,77 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     );
   }
 
-  onAccountNumberInput(): void {
-    if (this.newAccount.bank_name && this.newAccount.account_number) {
+  onAccountNumberInput(event?: any): void {
+    let cleanAcc = this.newAccount.account_number || '';
+    if (event) {
+      const rawVal = typeof event === 'string' ? event : (event?.target?.value || '');
+      cleanAcc = rawVal.replace(/[۰-۹]/g, (d: string) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString())
+                       .replace(/[٠-٩]/g, (d: string) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString())
+                       .replace(/\D/g, '')
+                       .substring(0, 18);
+      this.newAccount.account_number = cleanAcc;
+      if (event?.target) event.target.value = cleanAcc;
+    }
+    const accValidation = validateAccountNumber(cleanAcc);
+    if (accValidation.isValid && this.newAccount.bank_name) {
       const bankInfo = getBankByName(this.newAccount.bank_name);
-      if (bankInfo) {
-        const generated = generateShebaFromAccount(bankInfo.code, this.newAccount.account_number);
-        if (generated) {
-          this.newAccount.sheba_number = generated;
-          this.shebaValidationResult = validateSheba(generated);
-        }
+      const bankCode = bankInfo ? bankInfo.code : this.newAccount.bank_name;
+      const generated = generateShebaFromAccount(bankCode, cleanAcc);
+      if (generated) {
+        const res = validateSheba(generated);
+        this.shebaValidationResult = res;
+        this.newAccount.sheba_number = res.rawSheba || generated;
+        this.shebaDigitsDisplay = res.formattedDigits || '';
       }
     }
     this.cdr.markForCheck();
+  }
+
+  onAccountNumberPaste(event: ClipboardEvent): void {
+    event.preventDefault();
+    const pasted = event.clipboardData?.getData('text') || '';
+    const cleanAcc = pasted.replace(/[۰-۹]/g, (d: string) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString())
+                           .replace(/[٠-٩]/g, (d: string) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString())
+                           .replace(/\D/g, '')
+                           .substring(0, 18);
+    this.newAccount.account_number = cleanAcc;
+    this.onAccountNumberInput();
+  }
+
+  convertAccountToShebaNow(): void {
+    if (!this.newAccount.bank_name) {
+      this.toast.warning('لطفاً ابتدا بانک عامل را انتخاب نمایید.');
+      return;
+    }
+    const accValidation = validateAccountNumber(this.newAccount.account_number);
+    if (!accValidation.isValid) {
+      this.toast.warning(accValidation.errorMessage || 'شماره حساب معتبر نیست.');
+      return;
+    }
+    const bankInfo = getBankByName(this.newAccount.bank_name);
+    const bankCode = bankInfo ? bankInfo.code : this.newAccount.bank_name;
+    const generated = generateShebaFromAccount(bankCode, this.newAccount.account_number);
+    if (generated) {
+      this.onShebaInput(generated);
+      this.toast.success(`شماره شبا با موفقیت بر اساس بانک ${this.newAccount.bank_name} تولید شد.`);
+    } else {
+      this.toast.error('امکان تولید شبا برای این ساختار شماره حساب وجود ندارد.');
+    }
+  }
+
+  copyAccountNumber(acc: string): void {
+    if (!acc) return;
+    navigator.clipboard.writeText(acc).then(() => {
+      this.isAccountCopied = true;
+      this.toast.success(`شماره حساب (${acc}) کپی شد.`);
+      setTimeout(() => {
+        this.isAccountCopied = false;
+        this.cdr.markForCheck();
+      }, 2000);
+      this.cdr.markForCheck();
+    }).catch(() => {
+      this.toast.error('عدم دسترسی به حافظه موقت.');
+    });
   }
 
   copySheba(sheba: string, id?: number | string): void {
@@ -1345,6 +1705,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       is_primary: acc.is_primary
     };
     this.shebaValidationResult = validateSheba(acc.sheba_number);
+    this.shebaDigitsDisplay = this.shebaValidationResult?.formattedDigits || extractShebaDigits(acc.sheba_number);
     this.cdr.markForCheck();
   }
 
@@ -1353,12 +1714,17 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.editingAccountId = null;
     this.newAccount = this.getEmptyBankAccountData();
     this.shebaValidationResult = null;
+    this.shebaDigitsDisplay = '';
     this.cdr.markForCheck();
   }
 
-  deleteBankAccount(acc: CompanyBankAccount): void {
+  async deleteBankAccount(acc: CompanyBankAccount): Promise<void> {
     if (!acc.id) return;
-    if (!confirm(`آیا از حذف حساب بانکی «${acc.bank_name}» با شماره شبای «${acc.sheba_number}» اطمینان دارید؟`)) return;
+    const ok = await this.askConfirm(
+      'حذف حساب بانکی',
+      `آیا از حذف حساب بانکی «${acc.bank_name}» با شماره شبای «${acc.sheba_number}» اطمینان دارید؟`
+    );
+    if (!ok) return;
     this.api.deleteBankAccount(acc.id).subscribe({
       next: () => {
         this.toast.success('حساب بانکی با موفقیت حذف شد.');
@@ -1379,6 +1745,11 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           ...a,
           is_primary: a.id === acc.id
         }));
+        if (this.companyModal.data) {
+          this.companyModal.data.primary_bank_name = acc.bank_name;
+          this.companyModal.data.primary_account_number = acc.account_number || '';
+          this.companyModal.data.primary_iban = acc.sheba_number || '';
+        }
         this.loadCompanies();
         this.cdr.markForCheck();
       },
@@ -1543,6 +1914,10 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       this.toast.warning('کد ملی عضو باید دقیقاً ۱۰ رقم باشد.');
       return;
     }
+    if (!this.validateNationalCode(cleanCode)) {
+      this.toast.warning('کد ملی عضو هیئت‌مدیره با الگوریتم ثبت احوال همخوانی ندارد.');
+      return;
+    }
 
     this.isSavingBoardMember = true;
     const formData = new FormData();
@@ -1618,9 +1993,13 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  deleteBoardMember(member: CompanyBoardMember): void {
+  async deleteBoardMember(member: CompanyBoardMember): Promise<void> {
     if (!member.id) return;
-    if (!confirm(`آیا از حذف عضو «${member.first_name} ${member.last_name}» اطمینان دارید؟`)) return;
+    const ok = await this.askConfirm(
+      'حذف عضو هیئت‌مدیره',
+      `آیا از حذف عضو «${member.first_name} ${member.last_name}» اطمینان دارید؟`
+    );
+    if (!ok) return;
     this.api.deleteBoardMember(member.id).subscribe({
       next: () => {
         this.toast.success('عضو هیئت‌مدیره با موفقیت حذف گردید.');
@@ -1670,6 +2049,22 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     return calculated === checkDigit;
   }
 
+  validateNationalCode(code?: string | null): boolean {
+    if (!code) return true;
+    let clean = code.replace(/[^0-9]/g, '');
+    if (clean.length > 0 && clean.length < 10) {
+      clean = clean.padStart(10, '0');
+    }
+    if (clean.length !== 10) return false;
+    if (/^(\d)\1{9}$/.test(clean)) return false;
+    const digits = clean.split('').map(Number);
+    const checksum = digits[9];
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += digits[i] * (10 - i);
+    const remainder = sum % 11;
+    return (remainder < 2 && checksum === remainder) || (remainder >= 2 && checksum === 11 - remainder);
+  }
+
   // ═════════════════════════════════════════════════════════════════════
 
   onDocFileSelected(event: any): void {
@@ -1690,6 +2085,10 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     }
     if (!this.newDoc.title.trim()) {
       this.toast.warning('لطفاً عنوان مدرک را وارد فرمایید.');
+      return;
+    }
+    if (this.newDoc.issue_date && this.newDoc.expiry_date && this.newDoc.issue_date > this.newDoc.expiry_date) {
+      this.toast.warning('تاریخ انقضای مدرک نمی‌تواند قبل از تاریخ صدور آن باشد.');
       return;
     }
 
@@ -1725,8 +2124,12 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  deleteCompanyDocument(doc: CompanyDocument): void {
-    if (!confirm(`آیا از حذف مدرک «${doc.title}» اطمینان دارید؟`)) return;
+  async deleteCompanyDocument(doc: CompanyDocument): Promise<void> {
+    const ok = await this.askConfirm(
+      'حذف مدرک رسمی',
+      `آیا از حذف مدرک «${doc.title}» اطمینان دارید؟`
+    );
+    if (!ok) return;
     this.api.deleteDocument(doc.id).subscribe({
       next: () => {
         this.toast.success('مدرک با موفقیت حذف شد.');
@@ -1801,6 +2204,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         errors['national_id'] = 'شناسه ملی باید فقط شامل ارقام عددی باشد.';
       } else if (nid.length !== 11) {
         errors['national_id'] = 'شناسه ملی اشخاص حقوقی باید دقیقاً ۱۱ رقم باشد.';
+      } else if (!this.isNationalIdChecksumValid(nid)) {
+        errors['national_id'] = 'شناسه ملی واردشده با الگوریتم کنترلی ثبت شرکت‌ها همخوانی ندارد.';
       }
     }
 
@@ -1866,11 +2271,20 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           this.toast.success(`اطلاعات شرکت «${updated.name}» با موفقیت ویرایش شد.`);
           if (this.selectedLogoFile) {
             this.api.uploadLogo(companyId, this.selectedLogoFile).subscribe({
-              next: () => this.loadCompanies()
+              next: () => this.loadCompanies(),
+              error: (err) => {
+                const msg = err.error?.detail || err.error?.logo?.[0] || 'خطا در بارگذاری لوگوی شرکت';
+                this.toast.warning(msg);
+                this.loadCompanies();
+              }
             });
           } else if (this.isLogoCleared) {
             this.api.deleteLogo(companyId).subscribe({
-              next: () => this.loadCompanies()
+              next: () => this.loadCompanies(),
+              error: () => {
+                this.toast.warning('خطا در حذف لوگوی شرکت');
+                this.loadCompanies();
+              }
             });
           } else {
             this.loadCompanies();
@@ -1893,7 +2307,12 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           this.toast.success(`شرکت «${created.name}» با موفقیت ثبت شد.`);
           if (this.selectedLogoFile && created.id) {
             this.api.uploadLogo(created.id, this.selectedLogoFile).subscribe({
-              next: () => this.loadCompanies()
+              next: () => this.loadCompanies(),
+              error: (err) => {
+                const msg = err.error?.detail || err.error?.logo?.[0] || 'خطا در بارگذاری لوگوی شرکت';
+                this.toast.warning(msg);
+                this.loadCompanies();
+              }
             });
           } else {
             this.loadCompanies();
@@ -2090,9 +2509,13 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  removeStudioAccess(accessId?: number): void {
+  async removeStudioAccess(accessId?: number): Promise<void> {
     if (!accessId) return;
-    if (!confirm('آیا از لغو دسترسی این کاربر اطمینان دارید؟')) return;
+    const ok = await this.askConfirm(
+      'لغو دسترسی کاربر',
+      'آیا از لغو دسترسی این کاربر اطمینان دارید؟'
+    );
+    if (!ok) return;
     this.api.deleteUserAccess(accessId).subscribe({
       next: () => {
         this.toast.success('دسترسی کاربر با موفقیت لغو شد.');
@@ -2159,9 +2582,13 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  removeUserAccess(accessId?: number): void {
+  async removeUserAccess(accessId?: number): Promise<void> {
     if (!accessId) return;
-    if (!confirm('آیا از لغو دسترسی این کاربر اطمینان دارید؟')) return;
+    const ok = await this.askConfirm(
+      'لغو دسترسی کاربر',
+      'آیا از لغو دسترسی این کاربر اطمینان دارید؟'
+    );
+    if (!ok) return;
     this.api.deleteUserAccess(accessId).subscribe({
       next: () => {
         this.toast.success('دسترسی کاربر لغو شد.');

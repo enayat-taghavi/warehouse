@@ -5,7 +5,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <div class="bg-white dark:bg-surface p-4 md:p-5 rounded-3xl border border-slate-200/80 dark:border-line shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div class="flex items-center gap-3">
-      <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-2xs shrink-0">
+      <div class="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-2xs shrink-0">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
       </div>
       <div>
@@ -15,15 +15,15 @@
           <!-- نشان وضعیت اتصال -->
           <ng-container *ngIf="!isLoading()">
             <span *ngIf="config()?.is_connected && config()?.auth_status !== 'needs_reauth'"
-                  class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+                  class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
               ● متصل به درایو
             </span>
             <span *ngIf="config()?.is_connected && config()?.auth_status === 'needs_reauth'"
-                  class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800">
+                  class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-50 text-amber-700 border border-amber-200">
               ⚠️ نیازمند احراز مجدد
             </span>
             <span *ngIf="!config()?.is_connected"
-                  class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
+                  class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-slate-100 text-slate-600 border border-slate-200">
               ○ غیرمتصل
             </span>
 
@@ -45,7 +45,7 @@
             </button>
           </ng-container>
         </h2>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+        <p class="text-xs text-slate-500 mt-0.5">
           انتقال امن، مستقل و پس‌زمینه اسناد مالی، مدارک پرسنل و ناوگان با نگاشت پوشه‌ای و راستی‌آزمایی یکپارچگی هش ابری
         </p>
       </div>
@@ -53,12 +53,12 @@
 
     <!-- انتخاب شرکت (در حالت مستقل) -->
     <div *ngIf="!companyId" class="flex items-center gap-2 self-end md:self-center">
-      <label for="company-select-input" class="text-xs font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">شرکت هدف:</label>
+      <label for="company-select-input" class="text-xs font-bold text-slate-500 whitespace-nowrap">شرکت هدف:</label>
       <select 
         id="company-select-input"
         [ngModel]="selectedCompanyId()" 
         (ngModelChange)="onCompanyChange($event)"
-        class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-line text-slate-800 dark:text-fg text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-surface transition-all cursor-pointer">
+        class="bg-slate-50 border border-slate-200 dark:border-line text-slate-800 dark:text-fg text-xs font-bold rounded-xl px-3 py-2 outline-none focus:border-indigo-500 focus:bg-white transition-all cursor-pointer">
         <option *ngFor="let c of (activeCompanyService.availableCompanies$ | async)" [ngValue]="c.id">
           {{ c.name }} ({{ c.code }})
         </option>
@@ -68,21 +68,21 @@
         type="button"
         (click)="loadAll()" 
         title="به‌روزرسانی اطلاعات"
-        class="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-line cursor-pointer active:scale-95 transition-all">
+        class="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 dark:border-line cursor-pointer active:scale-95 transition-all">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-cw"></svg>
       </button>
     </div>
 
     <!-- نشان شرکت در مدال -->
     <div *ngIf="companyId" class="flex items-center gap-2 self-end md:self-center">
-      <span *ngIf="config()" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-100/80 dark:border-indigo-900/50">
+      <span *ngIf="config()" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100/80">
         شرکت: {{ config()?.company_name }}
       </span>
       <button 
         type="button"
         (click)="loadAll()" 
         title="به‌روزرسانی اطلاعات"
-        class="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-line cursor-pointer active:scale-95 transition-all">
+        class="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 dark:border-line cursor-pointer active:scale-95 transition-all">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-cw"></svg>
       </button>
     </div>
@@ -115,12 +115,12 @@
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <!-- ۳. حالت آفلاین و خطای سرور (GD-21)                                     -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="!isLoading() && isOffline()" class="p-6 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-3xl text-center space-y-3">
+  <div *ngIf="!isLoading() && isOffline()" class="p-6 bg-amber-50 border border-amber-200 rounded-3xl text-center space-y-3">
     <div class="w-12 h-12 rounded-2xl bg-white dark:bg-surface border border-amber-200 flex items-center justify-center text-amber-600 mx-auto shadow-2xs">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="wifi-off"></svg>
     </div>
-    <h3 class="text-sm font-black text-amber-900 dark:text-amber-300">عدم برقراری ارتباط با سرور (حالت آفلاین)</h3>
-    <p class="text-xs text-amber-700 dark:text-amber-400 max-w-md mx-auto">
+    <h3 class="text-sm font-black text-amber-900">عدم برقراری ارتباط با سرور (حالت آفلاین)</h3>
+    <p class="text-xs text-amber-700 max-w-md mx-auto">
       پاسخی از سرور دریافت نشد. لطفاً وضعیت اتصال اینترنت یا تونل سرور را بررسی فرمایید.
     </p>
     <button 
@@ -132,12 +132,12 @@
     </button>
   </div>
 
-  <div *ngIf="!isLoading() && !isOffline() && loadError()" class="p-6 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-3xl text-center space-y-3">
+  <div *ngIf="!isLoading() && !isOffline() && loadError()" class="p-6 bg-rose-50 border border-rose-200 rounded-3xl text-center space-y-3">
     <div class="w-12 h-12 rounded-2xl bg-white dark:bg-surface border border-rose-200 flex items-center justify-center text-rose-600 mx-auto shadow-2xs">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-circle"></svg>
     </div>
-    <h3 class="text-sm font-black text-rose-900 dark:text-rose-300">خطا در بارگذاری اطلاعات تب گوگل‌درایو</h3>
-    <p class="text-xs text-rose-700 dark:text-rose-400 max-w-md mx-auto">
+    <h3 class="text-sm font-black text-rose-900">خطا در بارگذاری اطلاعات تب گوگل‌درایو</h3>
+    <p class="text-xs text-rose-700 max-w-md mx-auto">
       {{ loadError() }}
     </p>
     <button 
@@ -156,14 +156,14 @@
     
     <!-- هشدار نیاز به احراز مجدد -->
     <div *ngIf="cfg.is_connected && cfg.auth_status === 'needs_reauth'"
-         class="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+         class="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0">
+        <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle"></svg>
         </div>
         <div>
-          <div class="text-xs font-black text-amber-900 dark:text-amber-200">مجوز دسترسی به حساب گوگل منقضی یا باطل شده است</div>
-          <div class="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
+          <div class="text-xs font-black text-amber-900">مجوز دسترسی به حساب گوگل منقضی یا باطل شده است</div>
+          <div class="text-[11px] text-amber-700 mt-0.5">
             توکن ارتباطی نامعتبر است؛ فایل‌های جدید در صف ارسال متوقف مانده‌اند. لطفاً مجدداً وارد حساب گوگل شوید.
           </div>
         </div>
@@ -180,7 +180,7 @@
 
     <!-- هشدار وضعیت ورکر مرکزی (GD-06, GD-29) -->
     <div *ngIf="cfg.is_connected && cfg.worker_alive === false"
-         class="p-3.5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-2xl flex items-center gap-2.5 text-xs text-rose-800 dark:text-rose-300">
+         class="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-2.5 text-xs text-rose-800">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600 shrink-0" appIcon="alert-triangle"></svg>
       <div>
         <span class="font-black">هشدار ورکر مرکزی:</span>
@@ -190,16 +190,16 @@
 
     <!-- هشدار سوابق همگام‌شده در حساب دیگر (GD-31 / D8) -->
     <div *ngIf="cfg.is_connected && cfg.other_accounts_count && cfg.other_accounts_count > 0"
-         class="p-4 bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+         class="p-4 bg-indigo-50/70 border border-indigo-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center shrink-0">
+        <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="cloud-upload"></svg>
         </div>
         <div>
-          <div class="text-xs font-black text-indigo-950 dark:text-indigo-200">
+          <div class="text-xs font-black text-indigo-950">
             تعداد {{ cfg.other_accounts_count }} فایل قبلاً در حساب گوگل دیگری همگام‌سازی شده‌اند
           </div>
-          <div class="text-[11px] text-indigo-700 dark:text-indigo-400 mt-0.5">
+          <div class="text-[11px] text-indigo-700 mt-0.5">
             این فایل‌ها در حساب فعلی موجود نیستند. در صورت تمایل می‌توانید آن‌ها را با اولویت پایین به حساب کنونی ارسال نمایید.
           </div>
         </div>
@@ -224,8 +224,8 @@
 
         <!-- کارت مشخصات اتصال -->
         <div class="bg-white dark:bg-surface p-5 rounded-3xl border border-slate-200/80 dark:border-line shadow-xs">
-          <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
-            <span class="text-xs font-black text-slate-700 dark:text-slate-300">حساب متصل گوگل</span>
+          <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+            <span class="text-xs font-black text-slate-700">حساب متصل گوگل</span>
             <span *ngIf="cfg.last_sync_at" class="text-[11px] text-slate-400">
               آخرین همگام‌سازی: {{ cfg.last_sync_at | persianDate:'medium' }}
             </span>
@@ -233,14 +233,14 @@
 
           <!-- وضعیت متصل -->
           <div *ngIf="cfg.is_connected; else notConnectedTpl" class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-slate-50/80 dark:bg-slate-800/50 rounded-2xl border border-slate-200/60 dark:border-line">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/60 dark:border-line">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-white dark:bg-surface border border-slate-200 dark:border-line flex items-center justify-center text-slate-700 dark:text-fg shadow-2xs font-bold text-sm">
                   G
                 </div>
                 <div>
                   <div class="text-xs font-black text-slate-800 dark:text-fg">{{ cfg.account_email || 'اکانت تایید شده' }}</div>
-                  <div class="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                  <div class="text-[11px] text-slate-500 font-mono mt-0.5">
                     پوشه ریشه: {{ cfg.root_folder_name || 'سامانه ابری شرکت' }}
                   </div>
                 </div>
@@ -251,7 +251,7 @@
                    [href]="cfg.root_folder_url" 
                    target="_blank" 
                    rel="noopener noreferrer"
-                   class="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 border border-indigo-200 dark:border-indigo-800 text-xs font-bold flex items-center gap-1.5 transition-all">
+                   class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold flex items-center gap-1.5 transition-all">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="external-link"></svg>
                   باز کردن در درایو
                 </a>
@@ -259,14 +259,14 @@
                 <button 
                   type="button"
                   (click)="disconnectGoogleDrive()"
-                  class="px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-800 text-xs font-bold transition-all cursor-pointer">
+                  class="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold transition-all cursor-pointer">
                   قطع اتصال
                 </button>
               </div>
             </div>
 
             <!-- پیام خطای اتصال در صورت وجود (GD-20) -->
-            <div *ngIf="cfg.last_error" class="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2">
+            <div *ngIf="cfg.last_error" class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-start gap-2">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mt-0.5 shrink-0" appIcon="alert-triangle"></svg>
               <div>
                 <div class="font-bold">هشدار در ارتباط با حساب گوگل:</div>
@@ -277,12 +277,12 @@
 
           <!-- وضعیت غیرمتصل -->
           <ng-template #notConnectedTpl>
-            <div class="text-center py-6 px-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-line">
+            <div class="text-center py-6 px-4 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 dark:border-line">
               <div class="w-12 h-12 rounded-2xl bg-white dark:bg-surface border border-slate-200 dark:border-line shadow-2xs flex items-center justify-center mx-auto text-slate-400 mb-3">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="cloud-off"></svg>
               </div>
               <h3 class="text-sm font-black text-slate-800 dark:text-fg">حساب گوگل‌درایو متصل نشده است</h3>
-              <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1 mb-4 leading-relaxed">
+              <p class="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4 leading-relaxed">
                 با اتصال حساب گوگل‌درایو، مدارک و اسناد این شرکت به محض آپلود، به صورت امن با درخت پوشه‌ای اختصاصی در فضای ابری شرکت پشتیبان‌گیری خواهند شد.
               </p>
               <button 
@@ -299,10 +299,10 @@
 
         <!-- کارت سیاست ارسال و کنترل ترافیک شبکه (GD-28) -->
         <div *ngIf="cfg.is_connected" class="bg-white dark:bg-surface p-5 rounded-3xl border border-slate-200/80 dark:border-line shadow-xs">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
             <div class="flex items-center gap-2">
-              <span class="text-xs font-black text-slate-700 dark:text-slate-300">سیاست ارسال و زمان‌بندی ترافیک شبکه</span>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50">
+              <span class="text-xs font-black text-slate-700">سیاست ارسال و زمان‌بندی ترافیک شبکه</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
                 مدیریت پهنای باند
               </span>
             </div>
@@ -326,12 +326,12 @@
                 (keydown.space)="setSyncMode('immediate'); $event.preventDefault()"
                 [class.border-indigo-500]="cfg.sync_mode === 'immediate'"
                 [class.bg-indigo-50/40]="cfg.sync_mode === 'immediate'"
-                [class.dark:bg-indigo-950/20]="cfg.sync_mode === 'immediate'"
+                [class.]="cfg.sync_mode === 'immediate'"
                 [class.border-slate-200]="cfg.sync_mode !== 'immediate'"
                 [class.dark:border-line]="cfg.sync_mode !== 'immediate'"
                 [class.bg-slate-50/50]="cfg.sync_mode !== 'immediate'"
-                [class.dark:bg-slate-800/30]="cfg.sync_mode !== 'immediate'"
-                class="p-3.5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col justify-between outline-none focus:ring-2 focus:ring-indigo-500/40">
+                [class.]="cfg.sync_mode !== 'immediate'"
+                class="p-3.5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 flex flex-col justify-between outline-none focus:ring-2 focus:ring-indigo-500/40">
                 <div>
                   <div class="flex items-center justify-between mb-2">
                     <div class="w-8 h-8 rounded-xl bg-white dark:bg-surface border border-slate-200 dark:border-line flex items-center justify-center text-amber-500 shadow-2xs">
@@ -340,7 +340,7 @@
                     <span *ngIf="cfg.sync_mode === 'immediate'" class="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">✓</span>
                   </div>
                   <div class="text-xs font-black text-slate-800 dark:text-fg">همگام‌سازی آنی</div>
-                  <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  <div class="text-[10px] text-slate-500 mt-1 leading-relaxed">
                     ارسال بلادرنگ فایل‌ها بلافاصله پس از ثبت در سیستم (مناسب اینترنت پرسرعت)
                   </div>
                 </div>
@@ -356,21 +356,21 @@
                 (keydown.space)="setSyncMode('scheduled'); $event.preventDefault()"
                 [class.border-indigo-500]="cfg.sync_mode === 'scheduled'"
                 [class.bg-indigo-50/40]="cfg.sync_mode === 'scheduled'"
-                [class.dark:bg-indigo-950/20]="cfg.sync_mode === 'scheduled'"
+                [class.]="cfg.sync_mode === 'scheduled'"
                 [class.border-slate-200]="cfg.sync_mode !== 'scheduled'"
                 [class.dark:border-line]="cfg.sync_mode !== 'scheduled'"
                 [class.bg-slate-50/50]="cfg.sync_mode !== 'scheduled'"
-                [class.dark:bg-slate-800/30]="cfg.sync_mode !== 'scheduled'"
-                class="p-3.5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col justify-between outline-none focus:ring-2 focus:ring-indigo-500/40">
+                [class.]="cfg.sync_mode !== 'scheduled'"
+                class="p-3.5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 flex flex-col justify-between outline-none focus:ring-2 focus:ring-indigo-500/40">
                 <div>
                   <div class="flex items-center justify-between mb-2">
-                    <div class="w-8 h-8 rounded-xl bg-white dark:bg-surface border border-slate-200 dark:border-line flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-2xs">
+                    <div class="w-8 h-8 rounded-xl bg-white dark:bg-surface border border-slate-200 dark:border-line flex items-center justify-center text-indigo-600 shadow-2xs">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="clock"></svg>
                     </div>
                     <span *ngIf="cfg.sync_mode === 'scheduled'" class="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">✓</span>
                   </div>
                   <div class="text-xs font-black text-slate-800 dark:text-fg">ساعات خلوتی شبکه</div>
-                  <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  <div class="text-[10px] text-slate-500 mt-1 leading-relaxed">
                     توقف ارسال در ساعات اداری؛ ارسال خودکار در ساعات کم‌ترافیک شبانه (توصیه‌شده)
                   </div>
                 </div>
@@ -386,21 +386,21 @@
                 (keydown.space)="setSyncMode('manual'); $event.preventDefault()"
                 [class.border-indigo-500]="cfg.sync_mode === 'manual'"
                 [class.bg-indigo-50/40]="cfg.sync_mode === 'manual'"
-                [class.dark:bg-indigo-950/20]="cfg.sync_mode === 'manual'"
+                [class.]="cfg.sync_mode === 'manual'"
                 [class.border-slate-200]="cfg.sync_mode !== 'manual'"
                 [class.dark:border-line]="cfg.sync_mode !== 'manual'"
                 [class.bg-slate-50/50]="cfg.sync_mode !== 'manual'"
-                [class.dark:bg-slate-800/30]="cfg.sync_mode !== 'manual'"
-                class="p-3.5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col justify-between outline-none focus:ring-2 focus:ring-indigo-500/40">
+                [class.]="cfg.sync_mode !== 'manual'"
+                class="p-3.5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 flex flex-col justify-between outline-none focus:ring-2 focus:ring-indigo-500/40">
                 <div>
                   <div class="flex items-center justify-between mb-2">
-                    <div class="w-8 h-8 rounded-xl bg-white dark:bg-surface border border-slate-200 dark:border-line flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-2xs">
+                    <div class="w-8 h-8 rounded-xl bg-white dark:bg-surface border border-slate-200 dark:border-line flex items-center justify-center text-emerald-600 shadow-2xs">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="send"></svg>
                     </div>
                     <span *ngIf="cfg.sync_mode === 'manual'" class="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">✓</span>
                   </div>
                   <div class="text-xs font-black text-slate-800 dark:text-fg">فقط با دستور دستی</div>
-                  <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                  <div class="text-[10px] text-slate-500 mt-1 leading-relaxed">
                     فایل‌ها در صف ذخیره شده و تنها با کلیک مستقیم مدیر سیستم ارسال می‌شوند
                   </div>
                 </div>
@@ -409,15 +409,15 @@
             </div>
 
             <!-- تنظیم ساعات خلوتی و تاخیر چانک (GD-25) -->
-            <div *ngIf="cfg.sync_mode === 'scheduled'" class="p-4 bg-slate-50/90 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-line space-y-3">
-              <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 dark:text-indigo-400" appIcon="settings"></svg>
+            <div *ngIf="cfg.sync_mode === 'scheduled'" class="p-4 bg-slate-50/90 rounded-2xl border border-slate-200 dark:border-line space-y-3">
+              <div class="flex items-center gap-2 text-xs font-bold text-slate-700">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="settings"></svg>
                 <span>تنظیم بازه ساعات کم‌ترافیک شبانه و کنترل پهنای باند</span>
               </div>
 
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label for="sched-start-time" class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">ساعت شروع ارسال (شب):</label>
+                  <label for="sched-start-time" class="block text-[11px] font-bold text-slate-600 mb-1">ساعت شروع ارسال (شب):</label>
                   <input 
                     id="sched-start-time"
                     type="time" 
@@ -427,7 +427,7 @@
                 </div>
 
                 <div>
-                  <label for="sched-end-time" class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">ساعت پایان ارسال (صبح):</label>
+                  <label for="sched-end-time" class="block text-[11px] font-bold text-slate-600 mb-1">ساعت پایان ارسال (صبح):</label>
                   <input 
                     id="sched-end-time"
                     type="time" 
@@ -437,7 +437,7 @@
                 </div>
 
                 <div>
-                  <label for="chunk-delay-input" class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">مکث بین فایل‌ها (۰ تا ۳۰۰ ثانیه):</label>
+                  <label for="chunk-delay-input" class="block text-[11px] font-bold text-slate-600 mb-1">مکث بین فایل‌ها (۰ تا ۳۰۰ ثانیه):</label>
                   <input 
                     id="chunk-delay-input"
                     type="number" 
@@ -449,7 +449,7 @@
                 </div>
               </div>
 
-              <div class="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-1">
+              <div class="text-[10px] text-slate-500 flex items-center gap-1.5 pt-1">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-emerald-600 shrink-0" appIcon="check"></svg>
                 <span>ورکر پس‌زمینه منحصراً در این بازه فعال شده و پس از هر آپلود جهت جلوگیری از افت سرعت اینترنت مکث می‌کند.</span>
               </div>
@@ -460,13 +460,13 @@
 
         <!-- کارت سوییچ‌های دسته‌بندی فایل‌ها (GD-24, GD-28) -->
         <div *ngIf="cfg.is_connected" class="bg-white dark:bg-surface p-5 rounded-3xl border border-slate-200/80 dark:border-line shadow-xs">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
-            <span class="text-xs font-black text-slate-700 dark:text-slate-300">دسته‌بندی‌های فعال جهت همگام‌سازی</span>
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+            <span class="text-xs font-black text-slate-700">دسته‌بندی‌های فعال جهت همگام‌سازی</span>
             <span class="text-[11px] text-slate-400">تغییرات به صورت خودکار ذخیره می‌گردد</span>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-line hover:bg-slate-50/80 dark:hover:bg-slate-800/50 cursor-pointer transition-all">
+            <label class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-line hover:bg-slate-50/80 cursor-pointer transition-all">
               <input 
                 type="checkbox" 
                 [ngModel]="cfg.sync_accounting_docs" 
@@ -474,11 +474,11 @@
                 class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
               <div>
                 <div class="text-xs font-bold text-slate-800 dark:text-fg">اسناد مالی و فاکتورها</div>
-                <div class="text-[10px] text-slate-500 dark:text-slate-400">فاکتورهای خرید، رسیدهای تنخواه و اسناد شرکت</div>
+                <div class="text-[10px] text-slate-500">فاکتورهای خرید، رسیدهای تنخواه و اسناد شرکت</div>
               </div>
             </label>
 
-            <label class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-line hover:bg-slate-50/80 dark:hover:bg-slate-800/50 cursor-pointer transition-all">
+            <label class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-line hover:bg-slate-50/80 cursor-pointer transition-all">
               <input 
                 type="checkbox" 
                 [ngModel]="cfg.sync_personnel_docs" 
@@ -486,11 +486,11 @@
                 class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
               <div>
                 <div class="text-xs font-bold text-slate-800 dark:text-fg">مدارک هویتی و پرسنلی</div>
-                <div class="text-[10px] text-slate-500 dark:text-slate-400">کارت ملی، شناسنامه و قراردادهای کار</div>
+                <div class="text-[10px] text-slate-500">کارت ملی، شناسنامه و قراردادهای کار</div>
               </div>
             </label>
 
-            <label class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-line hover:bg-slate-50/80 dark:hover:bg-slate-800/50 cursor-pointer transition-all">
+            <label class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-line hover:bg-slate-50/80 cursor-pointer transition-all">
               <input 
                 type="checkbox" 
                 [ngModel]="cfg.sync_fleet_docs" 
@@ -498,11 +498,11 @@
                 class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
               <div>
                 <div class="text-xs font-bold text-slate-800 dark:text-fg">مدارک ناوگان و خودروها</div>
-                <div class="text-[10px] text-slate-500 dark:text-slate-400">بیمه‌نامه‌ها، کارت خودرو و فاکتورهای سرویس</div>
+                <div class="text-[10px] text-slate-500">بیمه‌نامه‌ها، کارت خودرو و فاکتورهای سرویس</div>
               </div>
             </label>
 
-            <label *ngIf="isWarehouseInstalled" class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-line hover:bg-slate-50/80 dark:hover:bg-slate-800/50 cursor-pointer transition-all">
+            <label *ngIf="isWarehouseInstalled" class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-line hover:bg-slate-50/80 cursor-pointer transition-all">
               <input 
                 type="checkbox" 
                 [ngModel]="cfg.sync_inventory_photos" 
@@ -510,12 +510,12 @@
                 class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
               <div>
                 <div class="text-xs font-bold text-slate-800 dark:text-fg">تصاویر کالاهای انبار</div>
-                <div class="text-[10px] text-slate-500 dark:text-slate-400">عکس‌های اقلام ثبت‌شده در انبارگردانی</div>
+                <div class="text-[10px] text-slate-500">عکس‌های اقلام ثبت‌شده در انبارگردانی</div>
               </div>
             </label>
 
             <!-- فایل‌های پشتیبان پایگاه داده: منحصراً برای سوپریوزر (GD-01 / D1) -->
-            <label *ngIf="isSuperuser()" class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-line hover:bg-slate-50/80 dark:hover:bg-slate-800/50 cursor-pointer transition-all sm:col-span-2">
+            <label *ngIf="isSuperuser()" class="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-line hover:bg-slate-50/80 cursor-pointer transition-all sm:col-span-2">
               <input 
                 type="checkbox" 
                 [ngModel]="cfg.sync_backups" 
@@ -523,7 +523,7 @@
                 class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
               <div>
                 <div class="text-xs font-bold text-slate-800 dark:text-fg">فایل‌های پشتیبان پایگاه داده (ویژه مدیر ارشد سامانه)</div>
-                <div class="text-[10px] text-slate-500 dark:text-slate-400">بک‌آپ‌های کامل دیتابیس سرور (حاوی اطلاعات تمامی شرکت‌ها)</div>
+                <div class="text-[10px] text-slate-500">بک‌آپ‌های کامل دیتابیس سرور (حاوی اطلاعات تمامی شرکت‌ها)</div>
               </div>
             </label>
           </div>
@@ -535,31 +535,31 @@
 
         <!-- کارت شمارنده‌ها -->
         <div class="bg-white dark:bg-surface p-5 rounded-3xl border border-slate-200/80 dark:border-line shadow-xs">
-          <h3 class="text-xs font-black text-slate-700 dark:text-slate-300 pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">آمار وظایف همگام‌سازی</h3>
+          <h3 class="text-xs font-black text-slate-700 pb-3 border-b border-slate-100 mb-4">آمار وظایف همگام‌سازی</h3>
 
           <div class="grid grid-cols-2 gap-3" *ngIf="cfg.stats; let st">
-            <div class="p-3 bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl text-center">
-              <div class="text-lg font-black text-indigo-700 dark:text-indigo-400 font-mono">{{ st.completed || 0 }}</div>
-              <div class="text-[11px] font-bold text-slate-600 dark:text-slate-400 mt-0.5">همگام‌شده موفق</div>
+            <div class="p-3 bg-indigo-50/60 border border-indigo-100 rounded-2xl text-center">
+              <div class="text-lg font-black text-indigo-700 font-mono">{{ st.completed || 0 }}</div>
+              <div class="text-[11px] font-bold text-slate-600 mt-0.5">همگام‌شده موفق</div>
             </div>
 
-            <div class="p-3 bg-amber-50/60 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-2xl text-center">
-              <div class="text-lg font-black text-amber-700 dark:text-amber-400 font-mono">{{ (st.pending + st.processing) || 0 }}</div>
-              <div class="text-[11px] font-bold text-slate-600 dark:text-slate-400 mt-0.5">در صف ارسال</div>
+            <div class="p-3 bg-amber-50/60 border border-amber-100 rounded-2xl text-center">
+              <div class="text-lg font-black text-amber-700 font-mono">{{ (st.pending + st.processing) || 0 }}</div>
+              <div class="text-[11px] font-bold text-slate-600 mt-0.5">در صف ارسال</div>
             </div>
 
-            <div class="p-3 bg-rose-50/60 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 rounded-2xl text-center">
-              <div class="text-lg font-black text-rose-700 dark:text-rose-400 font-mono">{{ st.failed || 0 }}</div>
-              <div class="text-[11px] font-bold text-slate-600 dark:text-slate-400 mt-0.5">دارای خطا</div>
+            <div class="p-3 bg-rose-50/60 border border-rose-100 rounded-2xl text-center">
+              <div class="text-lg font-black text-rose-700 font-mono">{{ st.failed || 0 }}</div>
+              <div class="text-[11px] font-bold text-slate-600 mt-0.5">دارای خطا</div>
             </div>
 
-            <div class="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-line rounded-2xl text-center">
+            <div class="p-3 bg-slate-50 border border-slate-200 dark:border-line rounded-2xl text-center">
               <div class="text-lg font-black text-slate-800 dark:text-fg font-mono">{{ st.total || 0 }}</div>
-              <div class="text-[11px] font-bold text-slate-600 dark:text-slate-400 mt-0.5">کل فایل‌ها</div>
+              <div class="text-[11px] font-bold text-slate-600 mt-0.5">کل فایل‌ها</div>
             </div>
           </div>
 
-          <div class="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5" *ngIf="cfg.is_connected">
+          <div class="mt-5 pt-4 border-t border-slate-100 space-y-2.5" *ngIf="cfg.is_connected">
             <!-- دکمه اقدام سریع: ارسال دستی صف فایل‌های معلق -->
             <button 
               type="button"
@@ -575,7 +575,7 @@
               type="button"
               [disabled]="isSyncing()"
               (click)="syncAllFiles()"
-              class="w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 text-slate-700 dark:text-slate-200 text-xs font-bold shadow-2xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all">
+              class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 text-xs font-bold shadow-2xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="cloud-upload"></svg>
               {{ isSyncing() ? 'در حال ثبت فایل‌ها در صف...' : 'پیمایش و ثبت فایل‌های پیشین' }}
             </button>
@@ -594,10 +594,10 @@
     <div class="bg-white dark:bg-surface rounded-3xl border border-slate-200/80 dark:border-line shadow-xs overflow-hidden">
       
       <!-- نوار بالای جدول با فیلترها و شمارنده واقعی سرور (GD-23) -->
-      <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div class="flex items-center gap-2">
           <span class="text-xs font-black text-slate-800 dark:text-fg">صف لحظه‌ای ارسال فایل‌ها</span>
-          <span class="text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full border border-slate-200/60 dark:border-line">
+          <span class="text-[10px] font-mono font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200/60 dark:border-line">
             {{ totalQueueCount() }} مورد
           </span>
           <span *ngIf="isQueueLoading()" class="text-[10px] text-indigo-600 font-bold flex items-center gap-1">
@@ -607,7 +607,7 @@
         </div>
 
         <!-- فیلترهای وضعیت با ویژگی‌های دسترس‌پذیری aria-pressed (GD-28) -->
-        <div role="group" aria-label="فیلتر وضعیت صف" class="flex flex-wrap items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl text-xs">
+        <div role="group" aria-label="فیلتر وضعیت صف" class="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs">
           <button 
             type="button"
             [attr.aria-pressed]="activeStatusFilter() === 'all'"
@@ -615,9 +615,9 @@
             [class.bg-white]="activeStatusFilter() === 'all'"
             [class.dark:bg-surface]="activeStatusFilter() === 'all'"
             [class.text-indigo-700]="activeStatusFilter() === 'all'"
-            [class.dark:text-indigo-400]="activeStatusFilter() === 'all'"
+            [class.]="activeStatusFilter() === 'all'"
             [class.shadow-2xs]="activeStatusFilter() === 'all'"
-            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition-all cursor-pointer">
+            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
             همه
           </button>
           <button 
@@ -627,9 +627,9 @@
             [class.bg-white]="activeStatusFilter() === 'pending'"
             [class.dark:bg-surface]="activeStatusFilter() === 'pending'"
             [class.text-indigo-700]="activeStatusFilter() === 'pending'"
-            [class.dark:text-indigo-400]="activeStatusFilter() === 'pending'"
+            [class.]="activeStatusFilter() === 'pending'"
             [class.shadow-2xs]="activeStatusFilter() === 'pending'"
-            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition-all cursor-pointer">
+            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
             در انتظار
           </button>
           <button 
@@ -639,9 +639,9 @@
             [class.bg-white]="activeStatusFilter() === 'processing'"
             [class.dark:bg-surface]="activeStatusFilter() === 'processing'"
             [class.text-indigo-700]="activeStatusFilter() === 'processing'"
-            [class.dark:text-indigo-400]="activeStatusFilter() === 'processing'"
+            [class.]="activeStatusFilter() === 'processing'"
             [class.shadow-2xs]="activeStatusFilter() === 'processing'"
-            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition-all cursor-pointer">
+            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
             در حال ارسال
           </button>
           <button 
@@ -651,9 +651,9 @@
             [class.bg-white]="activeStatusFilter() === 'completed'"
             [class.dark:bg-surface]="activeStatusFilter() === 'completed'"
             [class.text-indigo-700]="activeStatusFilter() === 'completed'"
-            [class.dark:text-indigo-400]="activeStatusFilter() === 'completed'"
+            [class.]="activeStatusFilter() === 'completed'"
             [class.shadow-2xs]="activeStatusFilter() === 'completed'"
-            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition-all cursor-pointer">
+            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
             موفق
           </button>
           <button 
@@ -663,9 +663,9 @@
             [class.bg-white]="activeStatusFilter() === 'failed'"
             [class.dark:bg-surface]="activeStatusFilter() === 'failed'"
             [class.text-indigo-700]="activeStatusFilter() === 'failed'"
-            [class.dark:text-indigo-400]="activeStatusFilter() === 'failed'"
+            [class.]="activeStatusFilter() === 'failed'"
             [class.shadow-2xs]="activeStatusFilter() === 'failed'"
-            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition-all cursor-pointer">
+            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
             خطا
           </button>
         </div>
@@ -674,7 +674,7 @@
       <!-- جدول بدون flex مستقیم روی td (GD-28) -->
       <div class="overflow-x-auto">
         <table class="w-full text-right text-xs">
-          <thead class="bg-slate-50/75 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold">
+          <thead class="bg-slate-50/75 border-b border-slate-100 text-slate-500 font-bold">
             <tr>
               <th class="py-3 px-4">نوع سند و نام فایل</th>
               <th class="py-3 px-4">پوشه مقصد در گوگل‌درایو</th>
@@ -684,9 +684,9 @@
               <th class="py-3 px-4 text-center">اقدام</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+          <tbody class="divide-y divide-slate-100 text-slate-700">
             <ng-container *ngFor="let item of queueItems()">
-              <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+              <tr class="hover:bg-slate-50/50 transition-colors">
                 <td class="py-3 px-4">
                   <div class="flex items-center gap-2">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400 shrink-0" appIcon="file-text"></svg>
@@ -694,39 +694,39 @@
                       <div class="font-bold text-slate-900 dark:text-fg truncate" [title]="item.target_filename">
                         {{ item.target_filename }}
                       </div>
-                      <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      <div class="text-[10px] text-slate-500 mt-0.5">
                         {{ getModelNamePersian(item.model_name, item.action) }}
                       </div>
                     </div>
                   </div>
                 </td>
-                <td class="py-3 px-4 text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate max-w-[220px]" [title]="item.target_folder_path">
+                <td class="py-3 px-4 text-[11px] text-slate-500 font-mono truncate max-w-[220px]" [title]="item.target_folder_path">
                   {{ item.target_folder_path }}
                 </td>
                 <td class="py-3 px-4 text-[11px]">
-                  <span *ngIf="item.action === 'upload'" class="text-indigo-600 dark:text-indigo-400 font-bold">آپلود</span>
-                  <span *ngIf="item.action === 'archive_delete'" class="text-amber-600 dark:text-amber-400 font-bold">انتقال به بایگانی</span>
+                  <span *ngIf="item.action === 'upload'" class="text-indigo-600 font-bold">آپلود</span>
+                  <span *ngIf="item.action === 'archive_delete'" class="text-amber-600 font-bold">انتقال به بایگانی</span>
                 </td>
                 <td class="py-3 px-4">
-                  <span *ngIf="item.status === 'completed'" class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                  <span *ngIf="item.status === 'completed'" class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                     ✓ موفق
                   </span>
-                  <span *ngIf="item.status === 'pending'" class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                  <span *ngIf="item.status === 'pending'" class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
                     ⌛ در انتظار
                   </span>
-                  <span *ngIf="item.status === 'processing'" class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+                  <span *ngIf="item.status === 'processing'" class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                     ⟳ در حال ارسال
                   </span>
                   <button 
                     *ngIf="item.status === 'failed'" 
                     type="button"
                     (click)="toggleTaskExpand(item.id)"
-                    class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-800 cursor-pointer hover:bg-rose-100 transition-all">
+                    class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200 cursor-pointer hover:bg-rose-100 transition-all">
                     ✕ خطا ({{ item.retry_count }} تلاش)
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="isTaskExpanded(item.id) ? 'chevron-up' : 'chevron-down'"></svg>
                   </button>
                 </td>
-                <td class="py-3 px-4 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                <td class="py-3 px-4 text-[11px] text-slate-500 font-mono">
                   {{ item.created_at | persianDate:'short-time' }}
                 </td>
                 <td class="py-3 px-4 text-center">
@@ -734,21 +734,21 @@
                     *ngIf="item.status === 'failed'"
                     type="button"
                     (click)="retryTask(item.id)"
-                    class="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 border border-indigo-200 dark:border-indigo-800 text-[11px] font-bold transition-all cursor-pointer"
+                    class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-[11px] font-bold transition-all cursor-pointer"
                     title="تلاش مجدد برای ارسال این فایل">
                     تلاش مجدد
                   </button>
-                  <span *ngIf="item.status !== 'failed'" class="text-slate-300 dark:text-slate-600">-</span>
+                  <span *ngIf="item.status !== 'failed'" class="text-slate-300">-</span>
                 </td>
               </tr>
 
               <!-- ردیف بازشو آکاردئونی برای نمایش کامل خطا و اطلاعات فنی (GD-23) -->
-              <tr *ngIf="isTaskExpanded(item.id)" class="bg-rose-50/50 dark:bg-rose-950/20">
-                <td colspan="6" class="p-4 text-xs text-rose-800 dark:text-rose-300">
+              <tr *ngIf="isTaskExpanded(item.id)" class="bg-rose-50/50">
+                <td colspan="6" class="p-4 text-xs text-rose-800">
                   <div class="space-y-1.5 border-r-2 border-rose-500 pr-3">
                     <div class="font-bold flex items-center gap-2">
                       <span>کد خطا:</span>
-                      <span class="font-mono bg-rose-100 dark:bg-rose-900/60 px-1.5 py-0.5 rounded text-[11px]">{{ item.error_code || 'UNSPECIFIED' }}</span>
+                      <span class="font-mono bg-rose-100 px-1.5 py-0.5 rounded text-[11px]">{{ item.error_code || 'UNSPECIFIED' }}</span>
                       <span *ngIf="item.drive_account" class="text-[10px] text-slate-500 mr-2">اکانت: {{ item.drive_account }}</span>
                       <span *ngIf="item.next_retry_at" class="text-[10px] text-amber-600 mr-2">زمان تلاش بعدی: {{ item.next_retry_at | persianDate:'short-time' }}</span>
                     </div>
@@ -771,7 +771,7 @@
       </div>
 
       <!-- کنترل‌های صفحه‌بندی (GD-23) -->
-      <div *ngIf="totalPages() > 1" class="p-3 bg-slate-50/80 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+      <div *ngIf="totalPages() > 1" class="p-3 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
         <div>
           صفحه <span class="font-bold text-slate-900 dark:text-fg">{{ currentPage() }}</span> از <span class="font-bold text-slate-900 dark:text-fg">{{ totalPages() }}</span>
         </div>
@@ -780,14 +780,14 @@
             type="button" 
             [disabled]="currentPage() <= 1"
             (click)="goToPage(currentPage() - 1)"
-            class="px-3 py-1 rounded-lg border border-slate-200 dark:border-line bg-white dark:bg-surface disabled:opacity-40 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-all cursor-pointer">
+            class="px-3 py-1 rounded-lg border border-slate-200 dark:border-line bg-white dark:bg-surface disabled:opacity-40 font-bold hover:bg-slate-100 transition-all cursor-pointer">
             قبلی
           </button>
           <button 
             type="button" 
             [disabled]="currentPage() >= totalPages()"
             (click)="goToPage(currentPage() + 1)"
-            class="px-3 py-1 rounded-lg border border-slate-200 dark:border-line bg-white dark:bg-surface disabled:opacity-40 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-all cursor-pointer">
+            class="px-3 py-1 rounded-lg border border-slate-200 dark:border-line bg-white dark:bg-surface disabled:opacity-40 font-bold hover:bg-slate-100 transition-all cursor-pointer">
             بعدی
           </button>
         </div>

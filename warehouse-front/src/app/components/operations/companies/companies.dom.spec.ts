@@ -7,6 +7,7 @@ import { ɵresolveComponentResources } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { provideRouter, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { of, Subject } from 'rxjs';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -19,6 +20,8 @@ import { AccountsHttpService } from '../../../core/http/accounts-http.service';
 import { WebSocketService } from '../../../core/http/websocket.service';
 import { Company } from '../../../core/models/company.model';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
+import { ConfirmDialogService } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -32,13 +35,14 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
   let mockAccountsHttp: any;
   let mockToast: any;
   let mockWebSocket: any;
+  let mockConfirmDialog: any;
 
   const sampleCompanies: Company[] = [
     {
       id: 1,
       code: 'PTS',
       name: 'پاینده توان ساینا',
-      national_id: '10101234567',
+      national_id: '10101234565',
       economic_code: '4111222333',
       registration_number: '12345',
       phone: '02188889999',
@@ -53,7 +57,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       id: 2,
       code: 'FA',
       name: 'فارس عالیش',
-      national_id: '10207654321',
+      national_id: '10207654320',
       economic_code: '4222333444',
       registration_number: '67890',
       phone: '07133334444',
@@ -144,7 +148,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
           company: 1,
           first_name: 'رضا',
           last_name: 'پاینده',
-          national_code: '1234567890',
+          national_code: '0012345679',
           member_type: 'real',
           role: 'chairman',
           has_signature_right: true,
@@ -156,7 +160,24 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       ])),
       createBoardMember: vi.fn().mockImplementation((data: any) => of({ id: 2, first_name: 'عضو', last_name: 'جدید', is_active: true })),
       updateBoardMember: vi.fn().mockImplementation((id: number, data: any) => of({ id, first_name: 'عضو', last_name: 'ویرایش', is_active: true })),
-      deleteBoardMember: vi.fn().mockReturnValue(of(void 0))
+      deleteBoardMember: vi.fn().mockReturnValue(of(void 0)),
+      getFiscalPeriods: vi.fn().mockReturnValue(of([
+        {
+          id: 1,
+          company: 1,
+          fiscal_year: '1403',
+          title: 'سال مالی ۱۴۰۳',
+          start_date: '1403/01/01',
+          end_date: '1403/12/29',
+          status: 'open',
+          status_display: 'جاری و باز',
+          is_active: true
+        }
+      ])),
+      createFiscalPeriod: vi.fn().mockImplementation((payload: any) => of({ id: 2, ...payload, status: 'open', status_display: 'جاری و باز', is_active: true })),
+      closeFiscalPeriod: vi.fn().mockReturnValue(of({ detail: 'دوره مالی با موفقیت بسته شد.' })),
+      freezeFiscalPeriod: vi.fn().mockReturnValue(of({ detail: 'دوره مالی منجمد شد.' })),
+      reopenFiscalPeriod: vi.fn().mockReturnValue(of({ detail: 'دوره مالی بازگشایی شد.' }))
     };
 
     mockActiveCompanyService = {
@@ -191,8 +212,12 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       tabId: 'test-client-tab-id'
     };
 
+    mockConfirmDialog = {
+      open: vi.fn().mockResolvedValue(true)
+    };
+
     await TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, ReactiveFormsModule, CompaniesManagementComponent],
+      imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, CompaniesManagementComponent],
       providers: [
         provideRouter([
           { path: 'app/operations/companies', component: CompaniesManagementComponent },
@@ -203,7 +228,9 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
         { provide: ActiveCompanyService, useValue: mockActiveCompanyService },
         { provide: AccountsHttpService, useValue: mockAccountsHttp },
         { provide: ToastService, useValue: mockToast },
-        { provide: WebSocketService, useValue: mockWebSocket }
+        { provide: WebSocketService, useValue: mockWebSocket },
+        { provide: ConfirmDialogService, useValue: mockConfirmDialog },
+        { provide: HttpClient, useValue: { get: vi.fn().mockReturnValue(of(new ArrayBuffer(8))) } }
       ]
     }).compileComponents();
 
@@ -288,7 +315,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       const el: HTMLElement = fixture.nativeElement;
       const firstRow = el.querySelectorAll('tbody tr')[0];
 
-      expect(firstRow.textContent).toContain('10101234567');
+      expect(firstRow.textContent).toContain('10101234565');
       expect(firstRow.textContent).toContain('مهندس پاینده');
       expect(firstRow.textContent).toContain('2 پروژه');
     });
@@ -321,6 +348,20 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       component.searchQuery = 'PTS';
       component.applyFilter();
       fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      const rows = el.querySelectorAll('tbody tr');
+      expect(rows.length).toBe(1);
+      expect(rows[0].textContent).toContain('پاینده توان ساینا');
+    });
+
+    it('جستجوی شناسه ملی یا کد با ارقام فارسی باید به کمک normalizeDigits به درستی فیلتر کند', () => {
+      component.searchQuery = '۱۰۱۰۱۲۳۴۵۶۵'; // ارقام فارسی برای 10101234565
+      component.applyFilter();
+      fixture.detectChanges();
+
+      expect(component.filteredCompanies.length).toBe(1);
+      expect(component.filteredCompanies[0].name).toBe('پاینده توان ساینا');
 
       const el: HTMLElement = fixture.nativeElement;
       const rows = el.querySelectorAll('tbody tr');
@@ -409,6 +450,18 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       fixture.detectChanges();
 
       expect(component.companyModal.errors['national_id']).toBe('شناسه ملی باید فقط شامل ارقام عددی باشد.');
+    });
+
+    it('شناسه ملی ۱۱ رقمی با رقم کنترلی نامعتبر باید خطای الگوریتم ثبت شرکت‌ها بدهد', () => {
+      component.openCreateModal();
+      component.companyModal.data.code = 'TST';
+      component.companyModal.data.name = 'شرکت تستی';
+      component.companyModal.data.national_id = '10100000007'; // رقم کنترلی نامعتبر
+
+      component.submitCompanyForm();
+      fixture.detectChanges();
+
+      expect(component.companyModal.errors['national_id']).toBe('شناسه ملی واردشده با الگوریتم کنترلی ثبت شرکت‌ها همخوانی ندارد.');
       expect(mockCompanyApi.create).not.toHaveBeenCalled();
     });
 
@@ -416,7 +469,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       component.openCreateModal();
       component.companyModal.data.code = 'NEW';
       component.companyModal.data.name = 'شرکت جدید آزمایشی';
-      component.companyModal.data.national_id = '10320987654';
+      component.companyModal.data.national_id = '10320987659';
       component.companyModal.data.economic_code = '4999888777';
 
       component.submitCompanyForm();
@@ -425,7 +478,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(mockCompanyApi.create).toHaveBeenCalledWith(expect.objectContaining({
         code: 'NEW',
         name: 'شرکت جدید آزمایشی',
-        national_id: '10320987654',
+        national_id: '10320987659',
         economic_code: '4999888777'
       }));
       expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('شرکت جدید آزمایشی'));
@@ -763,6 +816,22 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       const canvas = previewEl.querySelector('canvas#pdf-render-canvas');
       expect(canvas).not.toBeNull();
     });
+
+    it('فشردن کلید Escape باید لایت‌باکس پیش‌نمایش باز را فوراً ببندد', () => {
+      const doc = {
+        id: 1,
+        company: 1,
+        title: 'اساسنامه رسمی',
+        document_type: 'articles_of_association',
+        file: '/media/documents/sample.pdf',
+        file_url: '/media/documents/sample.pdf'
+      } as any;
+      component.openPreview(doc);
+      expect(component.previewModal.isOpen).toBe(true);
+
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect(component.previewModal.isOpen).toBe(false);
+    });
   });
 
   describe('۱۱. آزمون جامع تعاملی DOM: ثبت شرکت جدید، تمامی دکمه‌ها و انتخابگر تاریخ', () => {
@@ -781,7 +850,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       // ۲. مقداردهی فیلدهای هویتی شرکت
       component.companyModal.data.code = 'SAINA';
       component.companyModal.data.name = 'شرکت ساینا پرداز پیشرو';
-      component.companyModal.data.national_id = '14009876543';
+      component.companyModal.data.national_id = '14009876545';
       component.companyModal.data.economic_code = '4111222333';
       component.companyModal.data.registration_number = '54321';
       component.companyModal.data.company_type = 'private_joint_stock';
@@ -995,7 +1064,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       const rows = boardTable!.querySelectorAll('tbody tr');
       expect(rows.length).toBe(1);
       expect(rows[0].textContent).toContain('رضا پاینده');
-      expect(rows[0].textContent).toContain('1234567890');
+      expect(rows[0].textContent).toContain('0012345679');
       expect(rows[0].textContent).toContain('رئیس هیئت‌مدیره');
       expect(rows[0].textContent).toContain('دارای حق امضا');
     });
@@ -1019,7 +1088,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       // مقداردهی داده‌های عضو
       component.newBoardMember.first_name = 'علیرضا';
       component.newBoardMember.last_name = 'عالیشوندی';
-      component.newBoardMember.national_code = '0012345678';
+      component.newBoardMember.national_code = '0012345679';
       component.newBoardMember.member_type = 'real';
       component.newBoardMember.role = 'managing_director';
       component.newBoardMember.has_signature_right = true;
@@ -1061,9 +1130,9 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('با موفقیت ویرایش شد.'));
     });
 
-    it('باید حذف عضو هیئت‌مدیره پس از تایید کاربر، وب‌سرویس deleteBoardMember را فراخوانی کند', () => {
+    it('باید حذف عضو هیئت‌مدیره پس از تایید کاربر، وب‌سرویس deleteBoardMember را فراخوانی کند', async () => {
       const member = component.companyBoardMembers[0];
-      component.deleteBoardMember(member);
+      await component.deleteBoardMember(member);
 
       expect(mockCompanyApi.deleteBoardMember).toHaveBeenCalledWith(member.id);
       expect(mockToast.success).toHaveBeenCalledWith('عضو هیئت‌مدیره با موفقیت حذف گردید.');
@@ -1119,11 +1188,11 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('افزوده شد'));
     });
 
-    it('حذف حساب بانکی باید بلافاصله از companyBankAccounts حذف شود بدون نیاز به بستن مودال', () => {
+    it('حذف حساب بانکی باید بلافاصله از companyBankAccounts حذف شود بدون نیاز به بستن مودال', async () => {
       const targetAcc = component.companyBankAccounts[0];
       const initialCount = component.companyBankAccounts.length;
 
-      component.deleteBankAccount(targetAcc);
+      await component.deleteBankAccount(targetAcc);
       fixture.detectChanges();
 
       expect(component.companyBankAccounts.some(a => a.id === targetAcc.id)).toBe(false);
@@ -1152,7 +1221,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       component.newBoardMember = {
         first_name: 'علی',
         last_name: 'اکبری',
-        national_code: '0012345678',
+        national_code: '0012345679',
         member_type: 'real',
         represented_legal_name: '',
         role: 'board_member',
@@ -1168,7 +1237,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
         company: 1,
         first_name: 'علی',
         last_name: 'اکبری',
-        national_code: '0012345678',
+        national_code: '0012345679',
         role: 'board_member',
         is_active: true
       }));
@@ -1239,12 +1308,12 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(mockToast.success).toHaveBeenCalledWith('دسترسی کاربر با موفقیت ثبت شد.');
     });
 
-    it('لغو دسترسی کاربر در استودیو باید بلافاصله ردیف را از studioAccesses خارج کند', () => {
+    it('لغو دسترسی کاربر در استودیو باید بلافاصله ردیف را از studioAccesses خارج کند', async () => {
       component.studioAccesses = [
         { id: 55, user: 10, company: 1, access_level: 'docs_write', is_default: false }
       ];
 
-      component.removeStudioAccess(55);
+      await component.removeStudioAccess(55);
       fixture.detectChanges();
 
       expect(component.studioAccesses.some(a => a.id === 55)).toBe(false);
@@ -1355,6 +1424,99 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       const whCheckbox = el.querySelector('#co_has_warehouse');
       expect(whCheckbox).not.toBeNull();
       expect(component.companyModal.data.has_warehouse_module).toBe(true);
+    });
+  });
+
+  describe('۱۴. آزمون‌های فاز ۵: ارزش اسمی سهام، ورودی‌های بیمه کارگاه و مدیریت دوره‌های مالی رسمی', () => {
+    it('ورودی ارزش اسمی هر سهم (share_nominal_value) باید در تب مشخصات هویتی رندر شود و به مدل بایند گردد', () => {
+      component.openCreateModal();
+      component.setModalTab('identity');
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      const nominalInput = el.querySelector('input[placeholder="مثال: ۱۰,۰۰۰"]') as HTMLInputElement;
+      expect(nominalInput).not.toBeNull();
+
+      component.companyModal.data.share_nominal_value = 10000;
+      fixture.detectChanges();
+      expect(component.companyModal.data.share_nominal_value).toBe(10000);
+    });
+
+    it('ورودی‌های تکمیلی تأمین اجتماعی (کد و نام شعبه، ردیف پیمان، نام کارفرما) باید در تب ۲ رندر شوند', () => {
+      component.openCreateModal();
+      component.setModalTab('fiscal_insurance');
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      const branchCodeInput = el.querySelector('input[placeholder="مثال: ۲۲"]') as HTMLInputElement;
+      const branchNameInput = el.querySelector('input[placeholder="مثال: شعبه ۲ شیراز"]') as HTMLInputElement;
+      const contractRowInput = el.querySelector('input[placeholder="مثال: ۰۰۰"]') as HTMLInputElement;
+      const employerNameInput = el.querySelector('input[placeholder="نام مدیرعامل یا شرکت در دیسکت"]') as HTMLInputElement;
+
+      expect(branchCodeInput).not.toBeNull();
+      expect(branchNameInput).not.toBeNull();
+      expect(contractRowInput).not.toBeNull();
+      expect(employerNameInput).not.toBeNull();
+
+      component.companyModal.data.social_security_branch_code = '22';
+      component.companyModal.data.social_security_branch_name = 'شعبه ۲ شیراز';
+      component.companyModal.data.contract_row = '000';
+      component.companyModal.data.employer_name = 'شرکت پاینده توان ساینا';
+      fixture.detectChanges();
+
+      expect(component.companyModal.data.social_security_branch_code).toBe('22');
+      expect(component.companyModal.data.social_security_branch_name).toBe('شعبه ۲ شیراز');
+      expect(component.companyModal.data.contract_row).toBe('000');
+      expect(component.companyModal.data.employer_name).toBe('شرکت پاینده توان ساینا');
+    });
+
+    it('دوره‌های مالی رسمی باید در جدول تب ۲ رندر شده و عملیات ایجاد، انجماد، بستن و بازگشایی سال مالی به درستی فراخوانی شوند', () => {
+      component.openEditModal(sampleCompanies[0]);
+      component.setModalTab('fiscal_insurance');
+      fixture.detectChanges();
+
+      expect(mockCompanyApi.getFiscalPeriods).toHaveBeenCalledWith(1);
+      expect(component.companyFiscalPeriods.length).toBe(1);
+
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.textContent).toContain('دوره‌های مالی رسمی و وضعیت بستن سال‌ها');
+      expect(el.textContent).toContain('سال مالی ۱۴۰۳');
+      expect(el.textContent).toContain('جاری و باز');
+
+      // تست ایجاد دوره مالی جدید
+      component.openCreateFiscalPeriod();
+      fixture.detectChanges();
+      expect(component.showFiscalPeriodForm).toBe(true);
+
+      component.newFiscalPeriod.fiscal_year = '1404';
+      component.newFiscalPeriod.title = 'سال مالی ۱۴۰۴';
+      component.newFiscalPeriod.start_date = '1404/01/01';
+      component.newFiscalPeriod.end_date = '1404/12/29';
+      component.saveFiscalPeriod();
+      fixture.detectChanges();
+
+      expect(mockCompanyApi.createFiscalPeriod).toHaveBeenCalledWith(expect.objectContaining({
+        company: 1,
+        fiscal_year: '1404',
+        title: 'سال مالی ۱۴۰۴'
+      }));
+      expect(component.showFiscalPeriodForm).toBe(false);
+
+      // تست انجماد سال مالی
+      const period = component.companyFiscalPeriods[0];
+      component.freezeFiscalPeriod(period);
+      expect(mockCompanyApi.freezeFiscalPeriod).toHaveBeenCalledWith(period.id);
+      expect(period.status).toBe('frozen');
+
+      // تست بستن سال مالی
+      component.closeFiscalPeriod(period);
+      expect(mockCompanyApi.closeFiscalPeriod).toHaveBeenCalledWith(period.id);
+      expect(period.status).toBe('closed');
+
+      // تست بازگشایی سال مالی
+      component.reopenFiscalPeriod(period);
+      expect(mockCompanyApi.reopenFiscalPeriod).toHaveBeenCalledWith(period.id);
+      expect(period.status).toBe('open');
     });
   });
 });

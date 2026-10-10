@@ -9,8 +9,8 @@
       
       <!-- Right Side (RTL Start): Module Title & Count Badge -->
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-indigo-600/10 text-indigo-600 flex items-center justify-center text-lg font-black shrink-0">
-          🏢
+        <div class="w-10 h-10 rounded-xl bg-indigo-600/10 text-indigo-600 flex items-center justify-center shrink-0">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building"></svg>
         </div>
         <div>
           <div class="flex items-center gap-2">
@@ -96,7 +96,9 @@
 
       <!-- In-place Live Search Box -->
       <div class="relative w-full md:w-80">
-        <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs">🔍</span>
+        <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg>
+        </span>
         <input 
           type="text" 
           [(ngModel)]="searchQuery" 
@@ -108,8 +110,10 @@
           *ngIf="searchQuery" 
           type="button" 
           (click)="clearSearch()" 
-          class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer">
-          ✕
+          title="پاک کردن جستجو"
+          aria-label="پاک کردن جستجو"
+          class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
         </button>
       </div>
     </div>
@@ -135,7 +139,7 @@
         <tbody class="divide-y divide-slate-100">
           <tr *ngIf="isLoading" class="bg-white">
             <td [attr.colspan]="tableColspan" class="py-12 text-center text-slate-400">
-              <div class="inline-block animate-spin text-indigo-600 text-xl mb-2">⟳</div>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="animate-spin inline-block text-indigo-600 mb-2" appIcon="refresh-cw"></svg>
               <div>در حال بارگذاری اطلاعات شرکت‌ها...</div>
             </td>
           </tr>
@@ -156,7 +160,7 @@
             <td class="py-3 px-3.5 font-black text-slate-900">
               <div class="flex items-center gap-2">
                 <span>{{ company.name }}</span>
-                <span *ngIf="activeCompanyService.activeCompany?.id === company.id" class="text-[9px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded-full">
+                <span *ngIf="activeCompanyService.activeCompany?.id === company.id" class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded-full">
                   فعال جاری
                 </span>
               </div>
@@ -175,19 +179,19 @@
               <span *ngIf="company.documents_health_status === 'valid'" 
                     class="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full text-[10px]"
                     title="کلیه مدارک رسمی معتبر هستند">
-                <span>🟢</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-emerald-600" appIcon="check-circle"></svg>
                 <span>{{ company.documents_count || 0 }} مدرک معتبر</span>
               </span>
               <span *ngIf="company.documents_health_status === 'expiring_soon'" 
                     class="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full text-[10px]"
                     title="هشدار: دست‌کم یک مدرک کمتر از ۳۰ روز مانده به انقضا">
-                <span>⚠️</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600" appIcon="alert-triangle"></svg>
                 <span>در آستانه انقضا ({{ company.documents_count }})</span>
               </span>
               <span *ngIf="company.documents_health_status === 'expired'" 
                     class="inline-flex items-center gap-1 font-bold text-rose-700 bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-full text-[10px]"
                     title="اخطار: دست‌کم یک مدرک منقضی شده است!">
-                <span>⛔</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600" appIcon="alert-circle"></svg>
                 <span>منقضی شده ({{ company.documents_count }})</span>
               </span>
               <span *ngIf="!company.documents_health_status || company.documents_health_status === 'no_documents'" 
@@ -203,7 +207,7 @@
                 *ngIf="company.has_warehouse_module !== false" 
                 class="inline-flex items-center gap-1 font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-full text-[10px]"
                 title="سامانه انبارداری و کاردکس کالا فعال است">
-                <span>📦</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="box"></svg>
                 <span>فعال</span>
               </span>
               <span 
@@ -284,13 +288,14 @@
     <div class="block md:hidden divide-y divide-slate-100">
       <!-- لودینگ موبایل -->
       <div *ngIf="isLoading" class="p-8 text-center text-slate-400">
-        <div class="inline-block animate-spin text-indigo-600 text-xl mb-2">⟳</div>
-        <div class="text-xs">در حال بارگذاری اطلاعات شرکت‌ها...</div>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="animate-spin inline-block text-indigo-600 mb-2" appIcon="refresh-cw"></svg>
+        <div class="text-xs font-bold text-slate-500">در حال بارگذاری اطلاعات شرکت‌ها...</div>
       </div>
 
       <!-- وضعیت خالی موبایل -->
       <div *ngIf="!isLoading && filteredCompanies.length === 0" class="p-8 text-center text-slate-400 font-bold text-xs">
-        هیچ شرکتی با معیارهای جستجو یافت نشد.
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-slate-300 mx-auto mb-2" appIcon="building"></svg>
+        <div>هیچ شرکتی با معیارهای جستجو یافت نشد.</div>
       </div>
 
       <!-- کارت‌های شرکت در صفحات موبایل -->
@@ -300,21 +305,23 @@
           <div class="flex items-center gap-2.5 min-w-0">
             <div class="w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden">
               <img *ngIf="company.logo" [ngSrc]="company.logo" width="40" height="40" [alt]="company.name" class="w-full h-full object-contain" />
-              <span *ngIf="!company.logo" class="text-lg">🏢</span>
+              <svg *ngIf="!company.logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="building"></svg>
             </div>
             <div class="min-w-0">
               <div class="flex items-center gap-1.5 flex-wrap">
                 <span class="font-black text-slate-900 text-xs truncate">{{ company.name }}</span>
-                <span *ngIf="activeCompanyService.activeCompany?.id === company.id" class="text-[9px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded-full">
-                  فعال جاری
+                <span *ngIf="activeCompanyService.activeCompany?.id === company.id" class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded-full inline-flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  <span>فعال جاری</span>
                 </span>
               </div>
               <div class="flex items-center gap-2 mt-0.5">
                 <span class="font-mono font-bold bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded text-[10px]">
                   {{ company.code }}
                 </span>
-                <span class="text-[11px] text-slate-500 truncate" *ngIf="company.ceo_name">
-                  مدیرعامل: {{ company.ceo_name }}
+                <span class="text-[11px] text-slate-500 truncate inline-flex items-center gap-1" *ngIf="company.ceo_name">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400 shrink-0" appIcon="user"></svg>
+                  <span>مدیرعامل: {{ company.ceo_name }}</span>
                 </span>
               </div>
             </div>
@@ -339,13 +346,17 @@
           </div>
           <div *ngIf="isAccountingInstalled" class="flex items-center gap-1.5">
             <span class="text-slate-400 text-[10px]">پروژه‌ها:</span>
-            <span class="font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded-full text-[10px]">
-              {{ company.projects_count || 0 }}
+            <span class="font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded-full text-[10px] inline-flex items-center gap-1">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="briefcase"></svg>
+              <span>{{ company.projects_count || 0 }}</span>
             </span>
           </div>
           <div *ngIf="isWarehouseInstalled" class="flex items-center gap-1.5">
             <span class="text-slate-400 text-[10px]">انبارداری:</span>
-            <span *ngIf="company.has_warehouse_module !== false" class="text-indigo-700 font-bold text-[10px]">فعال 📦</span>
+            <span *ngIf="company.has_warehouse_module !== false" class="text-indigo-700 font-bold text-[10px] inline-flex items-center gap-1">
+              <span>فعال</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="box"></svg>
+            </span>
             <span *ngIf="company.has_warehouse_module === false" class="text-slate-400 font-bold text-[10px]">غیرفعال</span>
           </div>
         </div>
@@ -356,22 +367,22 @@
           <div>
             <span *ngIf="company.documents_health_status === 'valid'" 
                   class="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full text-[10px]">
-              <span>🟢</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-emerald-600" appIcon="check-circle"></svg>
               <span>{{ company.documents_count || 0 }} مدرک معتبر</span>
             </span>
             <span *ngIf="company.documents_health_status === 'expiring_soon'" 
                   class="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full text-[10px]">
-              <span>⚠️</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600" appIcon="alert-triangle"></svg>
               <span>در آستانه انقضا ({{ company.documents_count }})</span>
             </span>
             <span *ngIf="company.documents_health_status === 'expired'" 
                   class="inline-flex items-center gap-1 font-bold text-rose-700 bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-full text-[10px]">
-              <span>⛔</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600" appIcon="alert-circle"></svg>
               <span>منقضی شده ({{ company.documents_count }})</span>
             </span>
             <span *ngIf="!company.documents_health_status || company.documents_health_status === 'no_documents'" 
                   class="inline-flex items-center gap-1 font-bold text-slate-400 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full text-[10px]">
-              <span>—</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400" appIcon="file-text"></svg>
               <span>فاقد مدرک</span>
             </span>
           </div>
@@ -385,7 +396,7 @@
             class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-emerald-600 bg-slate-50 hover:bg-emerald-50 border border-slate-200 transition-all cursor-pointer"
             title="مدیریت دسترسی کاربران به این شرکت"
             aria-label="دسترسی‌ها">
-            <span class="text-sm">👥</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
             <span class="sr-only">دسترسی‌ها</span>
           </button>
           <button 
@@ -394,7 +405,7 @@
             class="w-8 h-8 rounded-xl flex items-center justify-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all cursor-pointer"
             title="ویرایش مشخصات و مدارک شرکت (استودیو)"
             aria-label="استودیو">
-            <span class="text-sm">⚙️</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
             <span class="sr-only">استودیو</span>
           </button>
           <button 
@@ -404,7 +415,7 @@
             class="w-8 h-8 rounded-xl flex items-center justify-center text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
             title="همگام‌سازی گوگل‌درایو"
             aria-label="گوگل‌درایو">
-            <span class="text-sm">☁️</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
             <span class="sr-only">گوگل‌درایو</span>
           </button>
           <button 
@@ -413,7 +424,7 @@
             class="w-8 h-8 rounded-xl flex items-center justify-center text-rose-600 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer"
             title="حذف شرکت"
             aria-label="حذف">
-            <span class="text-sm">🗑️</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
             <span class="sr-only">حذف</span>
           </button>
         </div>
@@ -446,7 +457,7 @@
           <div class="flex items-center gap-2.5">
             <div class="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100/80 text-indigo-600 flex items-center justify-center font-bold text-lg overflow-hidden shrink-0">
               <img *ngIf="companyModal.data.logo" [src]="companyModal.data.logo" alt="لوگو" class="w-full h-full object-contain" />
-              <span *ngIf="!companyModal.data.logo">🏢</span>
+              <svg *ngIf="!companyModal.data.logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="building"></svg>
             </div>
             <div>
               <div class="flex items-center gap-2">
@@ -479,7 +490,7 @@
             (click)="closeCompanyModal()" 
             class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
             title="انصراف و بازگشت">
-            <span class="text-xs font-bold">✕</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
           </button>
         </div>
       </div>
@@ -492,7 +503,7 @@
           (click)="setModalTab('identity')" 
           [ngClass]="activeModalTab === 'identity' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
           class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <span>🏛️</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building"></svg>
           <span>مشخصات هویتی و ثبتی</span>
         </button>
 
@@ -502,7 +513,7 @@
           (click)="setModalTab('fiscal_insurance')" 
           [ngClass]="activeModalTab === 'fiscal_insurance' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
           class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <span>⚖️</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calculator"></svg>
           <span>سال مالی، بیمه و مودیان</span>
         </button>
 
@@ -513,7 +524,7 @@
           (click)="setModalTab('treasury')" 
           [ngClass]="activeModalTab === 'treasury' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
           class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <span>💳</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
           <span>بانک و شبا</span>
           <span *ngIf="companyBankAccounts.length > 0" class="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-600 font-bold">
             {{ companyBankAccounts.length }}
@@ -527,7 +538,7 @@
           (click)="setModalTab('governance')" 
           [ngClass]="activeModalTab === 'governance' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
           class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <span>👔</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
           <span>هیئت‌مدیره و امضا</span>
           <span *ngIf="companyBoardMembers.length > 0" class="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-purple-50 text-purple-700 font-bold">
             {{ companyBoardMembers.length }}
@@ -540,7 +551,7 @@
           (click)="setModalTab('documents')" 
           [ngClass]="activeModalTab === 'documents' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
           class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <span>📁</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="folder"></svg>
           <span>بایگانی مدارک</span>
           <span *ngIf="companyDocuments.length > 0" class="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-indigo-50 text-indigo-600 font-bold">
             {{ companyDocuments.length }}
@@ -553,7 +564,7 @@
           (click)="setModalTab('access')" 
           [ngClass]="activeModalTab === 'access' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
           class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <span>👥</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="shield"></svg>
           <span>دسترسی کاربران</span>
           <span *ngIf="studioAccesses.length > 0" class="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-slate-200 text-slate-700 font-bold">
             {{ studioAccesses.length }}
@@ -567,7 +578,7 @@
           (click)="setModalTab('gdrive')" 
           [ngClass]="activeModalTab === 'gdrive' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
           class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <span>☁️</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
           <span>همگام‌سازی گوگل‌درایو</span>
         </button>
       </div>
@@ -580,7 +591,7 @@
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <div *ngIf="activeModalTab === 'identity'" class="space-y-4">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-            <!-- کد یکتای شرکت -->
+            <!-- کد شرکت -->
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">کد شرکت <span class="text-rose-500">*</span></label>
               <input 
@@ -674,7 +685,7 @@
                   (click)="isRegDatePickerOpen = !isRegDatePickerOpen; $event.stopPropagation()"
                   title="انتخاب از تقویم شمسی"
                   class="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
-                  📅
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
                 </button>
               </div>
             </div>
@@ -699,6 +710,18 @@
                 placeholder="مثال: ۱,۰۰۰,۰۰۰" 
                 class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
               />
+            </div>
+
+            <!-- ارزش اسمی هر سهم (ریال) -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">ارزش اسمی هر سهم (ریال)</label>
+              <input 
+                type="number" 
+                [(ngModel)]="companyModal.data.share_nominal_value" 
+                placeholder="مثال: ۱۰,۰۰۰" 
+                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+              />
+              <span class="block text-[10px] text-slate-400 mt-1">ارزش اسمی مصوب هر سهم طبق اساسنامه</span>
             </div>
 
             <!-- تلفن تماس -->
@@ -743,7 +766,7 @@
                 <img [src]="logoPreviewUrl" alt="پیش‌نمایش لوگو" class="w-full h-full object-contain" />
               </div>
               <div *ngIf="!logoPreviewUrl" class="w-12 h-12 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-400 text-lg shrink-0">
-                🏢
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400" appIcon="building"></svg>
               </div>
               <div>
                 <span class="text-xs font-bold text-slate-700 block">لوگوی رسمی شرکت</span>
@@ -759,7 +782,7 @@
                 title="حذف لوگوی شرکت" 
                 class="w-8 h-8 rounded-xl border border-rose-200 hover:border-rose-400 bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center transition-all cursor-pointer"
                 aria-label="حذف لوگو">
-                <span class="text-sm">🗑️</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
                 <span class="sr-only">حذف لوگو</span>
               </button>
 
@@ -767,7 +790,7 @@
                 class="w-8 h-8 rounded-xl border border-slate-200 hover:border-indigo-400 bg-white hover:bg-indigo-50/50 text-slate-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
                 title="انتخاب یا بارگذاری تصویر لوگو"
                 aria-label="انتخاب تصویر">
-                <span class="text-sm">🖼️</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="camera"></svg>
                 <span class="sr-only">انتخاب تصویر</span>
                 <input type="file" accept="image/*" (change)="onLogoFileSelected($event)" class="hidden" />
               </label>
@@ -791,12 +814,12 @@
             <div *ngIf="isWarehouseInstalled" class="flex items-center gap-2 p-3 bg-indigo-50/60 rounded-xl border border-indigo-100">
               <input 
                 type="checkbox" 
-                id="co_has_warehouse"
+                id="co_has_warehouse" 
                 [(ngModel)]="companyModal.data.has_warehouse_module" 
                 class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-indigo-300 cursor-pointer"
               />
               <label for="co_has_warehouse" class="text-xs font-bold text-slate-700 cursor-pointer select-none flex items-center gap-1.5">
-                <span>📦</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="box"></svg>
                 <span>فعال بودن سامانه انبارداری و انبارگردانی برای این شرکت</span>
               </label>
             </div>
@@ -804,391 +827,658 @@
         </div>
 
         <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <!-- تب ۲: بایگانی و آرشیو مدارک حقوقی                                  -->
+        <!-- تب ۲: سال مالی، کارگاه بیمه و سامانه مودیان                           -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <div *ngIf="activeModalTab === 'documents'" class="space-y-5">
-          
-          <div *ngIf="!companyModal.data.id" class="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-            <div class="text-2xl mb-2">📁</div>
-            <h4 class="text-xs font-black text-slate-700">بایگانی اسناد و مجوزهای شرکت</h4>
-            <p class="text-[11px] text-slate-500 mt-1 max-w-md mx-auto">
-              جهت بارگذاری اساسنامه، روزنامه‌های رسمی، گواهی ارزش افزوده و سایر مجوزها، لطفاً ابتدا شرکت را در تب اول ذخیره فرمایید.
-            </p>
+        <div *ngIf="activeModalTab === 'fiscal_insurance'" class="space-y-4">
+          <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs text-indigo-900 leading-relaxed flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="info"></svg>
+            <span>فیلدهای زیر مربوط به کد کارگاه مرکزی شرکت متبوع و اتصالات حافظه مالیاتی و سامانه مودیان هستند. کدهای کارگاه و ردیف‌های پیمان متناظر با پروژه‌های اجرایی منحصراً در بخش تعریف و مدیریت پروژه‌ها تعیین می‌گردند.</span>
           </div>
 
-          <div *ngIf="companyModal.data.id" class="space-y-5">
-            
-            <!-- ۲ کارت دسترسی سریع به دو سند مادر (اساسنامه و روزنامه رسمی) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              
-              <!-- کارت اساسنامه شرکت -->
-              <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 flex flex-col justify-between gap-3">
-                <div class="flex items-start justify-between">
-                  <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold">📜</span>
-                    <div>
-                      <h4 class="text-xs font-black text-slate-800">اساسنامه رسمی شرکت</h4>
-                      <p class="text-[10px] text-slate-500">سند مادر تأسیس، ارکان و حدود اختیارات</p>
-                    </div>
-                  </div>
-                  <span *ngIf="companyModal.data.articles_of_association" class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">
-                    بارگذاری شده
-                  </span>
-                  <span *ngIf="!companyModal.data.articles_of_association" class="text-[10px] bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full">
-                    فاقد فایل
-                  </span>
-                </div>
-
-                <div class="flex items-center justify-between pt-2 border-t border-slate-200/60">
-                  <div *ngIf="companyModal.data.articles_of_association" class="flex items-center gap-1.5">
-                    <button 
-                      type="button" 
-                      (click)="openCoreDocPreview('articles_of_association', 'اساسنامه رسمی شرکت')" 
-                      class="w-7 h-7 rounded-lg flex items-center justify-center text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border border-slate-200 transition-colors cursor-pointer"
-                      title="پیش‌نمایش اساسنامه"
-                      aria-label="پیش‌نمایش اساسنامه">
-                      <span>👁️</span>
-                      <span class="sr-only">پیش‌نمایش اساسنامه</span>
-                    </button>
-                    <a 
-                      [href]="companyModal.data.articles_of_association" 
-                      target="_blank" 
-                      download 
-                      class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors"
-                      title="دانلود اساسنامه"
-                      aria-label="دانلود">
-                      <span>📥</span>
-                      <span class="sr-only">دانلود</span>
-                    </a>
-                  </div>
-                  <span *ngIf="!companyModal.data.articles_of_association" class="text-[11px] text-slate-400">هنوز فایلی ثبت نشده است</span>
-
-                  <label 
-                    class="w-7 h-7 rounded-lg flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 hover:border-indigo-300 text-slate-700 cursor-pointer shadow-2xs transition-all"
-                    [title]="companyModal.data.articles_of_association ? 'جایگزینی فایل اساسنامه' : 'بارگذاری فایل اساسنامه'"
-                    aria-label="بارگذاری فایل اساسنامه">
-                    <span>📤</span>
-                    <span class="sr-only">بارگذاری فایل</span>
-                    <input type="file" (change)="onCoreDocSelected($event, 'articles_of_association')" class="hidden" />
-                  </label>
-                </div>
-              </div>
-
-              <!-- کارت آخرین روزنامه رسمی -->
-              <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 flex flex-col justify-between gap-3">
-                <div class="flex items-start justify-between">
-                  <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold">📰</span>
-                    <div>
-                      <h4 class="text-xs font-black text-slate-800">آخرین روزنامه رسمی</h4>
-                      <p class="text-[10px] text-slate-500">آگهی تغییرات هیئت‌مدیره و صاحبان امضا</p>
-                    </div>
-                  </div>
-                  <span *ngIf="companyModal.data.latest_gazette" class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">
-                    بارگذاری شده
-                  </span>
-                  <span *ngIf="!companyModal.data.latest_gazette" class="text-[10px] bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full">
-                    فاقد فایل
-                  </span>
-                </div>
-
-                <div class="flex items-center justify-between pt-2 border-t border-slate-200/60">
-                  <div *ngIf="companyModal.data.latest_gazette" class="flex items-center gap-1.5">
-                    <button 
-                      type="button" 
-                      (click)="openCoreDocPreview('latest_gazette', 'آخرین روزنامه رسمی')" 
-                      class="w-7 h-7 rounded-lg flex items-center justify-center text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 border border-slate-200 transition-colors cursor-pointer"
-                      title="پیش‌نمایش روزنامه رسمی"
-                      aria-label="پیش‌نمایش روزنامه رسمی">
-                      <span>👁️</span>
-                      <span class="sr-only">پیش‌نمایش روزنامه رسمی</span>
-                    </button>
-                    <a 
-                      [href]="companyModal.data.latest_gazette" 
-                      target="_blank" 
-                      download 
-                      class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors"
-                      title="دانلود روزنامه رسمی"
-                      aria-label="دانلود">
-                      <span>📥</span>
-                      <span class="sr-only">دانلود</span>
-                    </a>
-                  </div>
-                  <span *ngIf="!companyModal.data.latest_gazette" class="text-[11px] text-slate-400">هنوز فایلی ثبت نشده است</span>
-
-                  <label 
-                    class="w-7 h-7 rounded-lg flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 hover:border-emerald-300 text-slate-700 cursor-pointer shadow-2xs transition-all"
-                    [title]="companyModal.data.latest_gazette ? 'جایگزینی فایل روزنامه رسمی' : 'بارگذاری فایل روزنامه رسمی'"
-                    aria-label="بارگذاری فایل روزنامه رسمی">
-                    <span>📤</span>
-                    <span class="sr-only">بارگذاری فایل</span>
-                    <input type="file" (change)="onCoreDocSelected($event, 'latest_gazette')" class="hidden" />
-                  </label>
-                </div>
-              </div>
-
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <!-- کد کارگاه مرکزی تأمین اجتماعی شرکت -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">کد کارگاه بیمه شرکت (۱۰ رقم)</label>
+              <input 
+                type="text" 
+                [(ngModel)]="companyModal.data.workshop_code" 
+                placeholder="مثال: ۲۳۹۸۰۱۲۳۴۵" 
+                maxlength="10"
+                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+              />
+              <span class="block text-[10px] text-slate-400 mt-1">کد ۱۰ رقمی کارگاه دفتر مرکزی شرکت در سازمان تأمین اجتماعی</span>
             </div>
 
-            <!-- بایگانی جامع مدارک در حسابداری است؛ در نصب «فقط انبار» فقط دو سند مادر نمایش داده می‌شوند -->
-            <ng-container *ngIf="isAccountingInstalled">
-            <!-- فرم بارگذاری مدرک جدید به آرشیو جامع -->
-            <div class="p-4 bg-slate-50/60 rounded-2xl border border-slate-200 space-y-3">
+            <!-- کد اقتصادی قدیم -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">کد اقتصادی قدیم (۱۲ رقم)</label>
+              <input 
+                type="text" 
+                [(ngModel)]="companyModal.data.economic_code" 
+                placeholder="کد اقتصادی ۱۲ رقمی" 
+                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+              />
+              <span class="block text-[10px] text-slate-400 mt-1">کد اقتصادی پرونده مالیاتی عملکرد و ارزش افزوده</span>
+            </div>
+
+            <!-- شناسه یکتای حافظه مالیاتی (سامانه مودیان) -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">شناسه یکتای حافظه مالیاتی (۶ کاراکتر)</label>
+              <input 
+                type="text" 
+                [(ngModel)]="companyModal.data.tax_memory_id" 
+                placeholder="مثال: A12B34" 
+                maxlength="6"
+                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono uppercase"
+              />
+              <span class="block text-[10px] text-slate-400 mt-1">شناسه صادر شده توسط کارپوشه سازمان امور مالیاتی</span>
+            </div>
+
+            <!-- کد اقتصادی جدید ۱۶ رقمی سامانه مودیان -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">کد اقتصادی جدید سامانه مودیان (۱۶ رقم)</label>
+              <input 
+                type="text" 
+                [(ngModel)]="companyModal.data.tax_economic_code" 
+                placeholder="شناسه ملی ۱۱ رقمی + ۵ رقم کد شعبه" 
+                maxlength="16"
+                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+              />
+              <span class="block text-[10px] text-slate-400 mt-1">ترکیب شناسه ملی اشخاص حقوقی و کد شعبه اختصاصی</span>
+            </div>
+
+            <!-- کد شعبه تأمین اجتماعی -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">کد شعبه سازمان تأمین اجتماعی</label>
+              <input 
+                type="text" 
+                [(ngModel)]="companyModal.data.social_security_branch_code" 
+                placeholder="مثال: ۲۲" 
+                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+              />
+              <span class="block text-[10px] text-slate-400 mt-1">کد عددی شعبه ناظر بر پرونده دفتر مرکزی</span>
+            </div>
+
+            <!-- نام شعبه تأمین اجتماعی -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">نام شعبه سازمان تأمین اجتماعی</label>
+              <input 
+                type="text" 
+                [(ngModel)]="companyModal.data.social_security_branch_name" 
+                placeholder="مثال: شعبه ۲ شیراز" 
+                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
+              <span class="block text-[10px] text-slate-400 mt-1">عنوان کامل شعبه تأمین اجتماعی صادرکننده مفاصاحساب</span>
+            </div>
+
+            <!-- ردیف پیمان کارگاه مرکزی -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">ردیف پیمان کارگاه مرکزی</label>
+              <input 
+                type="text" 
+                [(ngModel)]="companyModal.data.contract_row" 
+                placeholder="مثال: ۰۰۰" 
+                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+              />
+              <span class="block text-[10px] text-slate-400 mt-1">ردیف پیمان اختصاصی یا ۰۰۰ برای کارگاه مادر</span>
+            </div>
+
+            <!-- نام کارفرما در لیست بیمه -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">نام کارفرما در لیست دیسکت بیمه</label>
+              <input 
+                type="text" 
+                [(ngModel)]="companyModal.data.employer_name" 
+                placeholder="نام مدیرعامل یا شرکت در دیسکت" 
+                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
+              <span class="block text-[10px] text-slate-400 mt-1">نام دقیق کارفرما در ساختار فایل‌های DSKKAR00</span>
+            </div>
+          </div>
+
+          <!-- ماه شروع سال مالی شرکت (مقرر در اساسنامه) -->
+          <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <span class="text-xs font-black text-slate-800 block">دوره و تقویم سال مالی شرکت</span>
+              <span class="text-[11px] text-slate-500">تعیین ماه آغاز سال مالی جهت بستن حساب‌ها و گزارشات قانونی</span>
+            </div>
+            <div class="w-full md:w-64">
+              <select 
+                [(ngModel)]="companyModal.data.fiscal_year_start_month" 
+                class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-bold">
+                <option [ngValue]="1">فروردین (تقویم هجری شمسی عادی)</option>
+                <option [ngValue]="7">مهرماه (سال‌های مالی پاییزه)</option>
+                <option [ngValue]="10">دی‌ماه (منطبق بر سال میلادی ۱ ژانویه)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ═════════════════════════════════════════════════════════════════════ -->
+          <!-- مدیریت دوره‌های مالی رسمی و وضعیت سال‌های مالی (CompanyFiscalPeriod)  -->
+          <!-- ═════════════════════════════════════════════════════════════════════ -->
+          <div class="space-y-3 pt-2 border-t border-slate-200">
+            <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <span class="text-xs font-black text-slate-800">+ بارگذاری و بایگانی مدرک جدید</span>
-                <span class="text-[10px] text-slate-500 font-medium">(ارزش افزوده، کارت بازرگانی، رتبه‌بندی، پروانه‌ها و قراردادها)</span>
+                <span class="text-xs font-black text-slate-800">دوره‌های مالی رسمی و وضعیت بستن سال‌ها</span>
+                <span class="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-100">
+                  {{ companyFiscalPeriods.length }} دوره مالی
+                </span>
+              </div>
+              <div *ngIf="companyModal.data.id && !showFiscalPeriodForm">
+                <button 
+                  type="button" 
+                  (click)="openCreateFiscalPeriod()"
+                  class="px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg>
+                  <span>تعریف دوره مالی جدید</span>
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="!companyModal.data.id" class="p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-2xl text-xs flex items-center gap-2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600 shrink-0" appIcon="alert-triangle"></svg>
+              <span>پس از ثبت اولیه مشخصات شرکت، امکان تعریف دوره‌های مالی و بستن سال‌های مالی فعال می‌گردد.</span>
+            </div>
+
+            <!-- فرم ایجاد دوره مالی جدید -->
+            <div *ngIf="showFiscalPeriodForm && companyModal.data.id" class="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+              <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+                <span class="text-xs font-black text-slate-800">تعریف دوره مالی جدید برای شرکت</span>
+                <button 
+                  type="button" 
+                  (click)="cancelCreateFiscalPeriod()"
+                  class="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 cursor-pointer">
+                  <span>انصراف</span>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+                </button>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <!-- نوع مدرک -->
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <!-- سال مالی -->
                 <div>
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع سند</label>
-                  <select 
-                    [(ngModel)]="newDoc.document_type" 
-                    class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
-                    <option *ngFor="let t of documentTypesList" [value]="t.value">{{ t.label }}</option>
-                  </select>
-                </div>
-
-                <!-- عنوان مدرک -->
-                <div>
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">عنوان مدرک</label>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">سال مالی (۴ رقم)</label>
                   <input 
                     type="text" 
-                    [(ngModel)]="newDoc.title" 
-                    placeholder="مثال: گواهی صلاحیت پیمانکاری رتبه ۳"
-                    class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    [(ngModel)]="newFiscalPeriod.fiscal_year" 
+                    placeholder="مثال: ۱۴۰۳" 
+                    maxlength="4"
+                    class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-mono"
                   />
                 </div>
 
-                <!-- تاریخ صدور (جلالی) -->
-                <!-- تاریخ صدور (جلالی) -->
-                <div class="relative" (click)="$event.stopPropagation()">
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ صدور (جلالی)</label>
+                <!-- عنوان دوره -->
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">عنوان دوره مالی</label>
+                  <input 
+                    type="text" 
+                    [(ngModel)]="newFiscalPeriod.title" 
+                    placeholder="مثال: سال مالی ۱۴۰۳" 
+                    class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white"
+                  />
+                </div>
+
+                <!-- تاریخ شروع دوره (جلالی) -->
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ شروع دوره</label>
                   <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
                     <ng-persian-datepicker 
-                      [(uiIsVisible)]="isDocIssueDatePickerOpen"
+                      [(uiIsVisible)]="isFiscalStartDatePickerOpen"
                       [dateInitValue]="false" 
-                      (dateOnSelect)="onDocIssueDateSelect($event)"
+                      (dateOnSelect)="onFiscalStartSelect($event)"
                       class="w-full block relative cursor-pointer">
                       <input 
                         type="text" 
-                        [formControl]="docIssueDateControl" 
-                        (click)="isDocIssueDatePickerOpen = !isDocIssueDatePickerOpen"
-                        placeholder="۱۴۰۱/۰۵/۱۰" 
+                        [formControl]="fiscalStartControl" 
+                        (click)="isFiscalStartDatePickerOpen = !isFiscalStartDatePickerOpen"
+                        placeholder="۱۴۰۳/۰۱/۰۱" 
                         class="w-full text-xs font-mono font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
                       />
                     </ng-persian-datepicker>
                     <button 
                       type="button" 
-                      (click)="isDocIssueDatePickerOpen = !isDocIssueDatePickerOpen; $event.stopPropagation()"
+                      (click)="isFiscalStartDatePickerOpen = !isFiscalStartDatePickerOpen; $event.stopPropagation()"
                       title="انتخاب تقویم شمسی"
                       class="text-slate-400 hover:text-indigo-600 p-0.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
-                      📅
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
                     </button>
                   </div>
                 </div>
 
-                <!-- تاریخ انقضا (سررسید جلالی) -->
-                <div class="relative" (click)="$event.stopPropagation()">
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ سررسید (جلالی)</label>
+                <!-- تاریخ پایان دوره (جلالی) -->
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ پایان دوره</label>
                   <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
                     <ng-persian-datepicker 
-                      [(uiIsVisible)]="isDocExpiryDatePickerOpen"
+                      [(uiIsVisible)]="isFiscalEndDatePickerOpen"
                       [dateInitValue]="false" 
-                      (dateOnSelect)="onDocExpiryDateSelect($event)"
-                      class="w-full block relative cursor-pointer to-datepicker">
+                      (dateOnSelect)="onFiscalEndSelect($event)"
+                      class="w-full block relative cursor-pointer datepicker-left to-datepicker">
                       <input 
                         type="text" 
-                        [formControl]="docExpiryDateControl" 
-                        (click)="isDocExpiryDatePickerOpen = !isDocExpiryDatePickerOpen"
-                        placeholder="۱۴۰۳/۰۵/۱۰" 
+                        [formControl]="fiscalEndControl" 
+                        (click)="isFiscalEndDatePickerOpen = !isFiscalEndDatePickerOpen"
+                        placeholder="۱۴۰۳/۱۲/۲۹" 
                         class="w-full text-xs font-mono font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
                       />
                     </ng-persian-datepicker>
                     <button 
                       type="button" 
-                      (click)="isDocExpiryDatePickerOpen = !isDocExpiryDatePickerOpen; $event.stopPropagation()"
+                      (click)="isFiscalEndDatePickerOpen = !isFiscalEndDatePickerOpen; $event.stopPropagation()"
                       title="انتخاب تقویم شمسی"
                       class="text-slate-400 hover:text-indigo-600 p-0.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
-                      📅
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
-                <!-- انتخاب فایل ضمیمه -->
-                <div class="md:col-span-2">
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">فایل مدرک (PDF، تصویر یا فشرده)</label>
-                  <input 
-                    type="file" 
-                    (change)="onDocFileSelected($event)" 
-                    class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
-                  />
-                </div>
+              <!-- یادداشت دوره -->
+              <div>
+                <label class="block text-[11px] font-bold text-slate-700 mb-1">توضیحات یا یادداشت دوره مالی</label>
+                <input 
+                  type="text" 
+                  [(ngModel)]="newFiscalPeriod.notes" 
+                  placeholder="اختیاری: مصوبات مجمع عمومی یا نکات تکمیلی" 
+                  class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white"
+                />
+              </div>
 
-                <!-- پرچم سند محرمانه -->
-                <div class="flex items-center gap-2 pt-4">
-                  <input 
-                    type="checkbox" 
-                    id="new_doc_conf" 
-                    [(ngModel)]="newDoc.is_confidential" 
-                    class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
-                  />
-                  <label for="new_doc_conf" class="text-xs font-bold text-slate-700 cursor-pointer select-none flex items-center gap-1">
-                    <span>🔒</span>
-                    <span>سند محرمانه (صرفاً مدیران ارشد)</span>
-                  </label>
-                </div>
-
-                <!-- دکمه بارگذاری و ثبت در آرشیو -->
-                <div class="pt-3">
-                  <button 
-                    type="button" 
-                    (click)="uploadNewDocument()" 
-                    [disabled]="isUploadingDoc || !newDoc.file"
-                    class="w-full h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                    title="ثبت و بارگذاری مدرک در بایگانی"
-                    aria-label="ثبت در بایگانی">
-                    <span *ngIf="isUploadingDoc" class="animate-spin text-sm">⏳</span>
-                    <span *ngIf="!isUploadingDoc" class="text-sm">📤</span>
-                    <span class="sr-only">ثبت در بایگانی</span>
-                  </button>
-                </div>
+              <div class="flex items-center justify-end gap-2 pt-2">
+                <button 
+                  type="button" 
+                  (click)="cancelCreateFiscalPeriod()"
+                  class="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 cursor-pointer">
+                  انصراف
+                </button>
+                <button 
+                  type="button" 
+                  (click)="saveFiscalPeriod()"
+                  [disabled]="isSavingFiscalPeriod"
+                  class="px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50">
+                  {{ isSavingFiscalPeriod ? 'در حال ثبت...' : 'ثبت و افتتاح دوره مالی' }}
+                </button>
               </div>
             </div>
 
-            <!-- جدول اسناد بایگانی‌شده همراه با فیلتر زنده -->
-            <div>
-              <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-3">
-                <div class="flex items-center gap-2">
-                  <span class="text-xs font-black text-slate-800">فهرست اسناد بایگانی‌شده این شرکت</span>
-                  <span class="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-bold">
-                    {{ filteredDocuments.length }} از {{ companyDocuments.length }} سند
-                  </span>
-                </div>
+            <!-- جدول نمایش دوره‌های مالی ثبت‌شده -->
+            <div *ngIf="companyModal.data.id && companyFiscalPeriods.length > 0" class="overflow-x-auto border border-slate-200 rounded-2xl bg-white shadow-2xs">
+              <table class="w-full text-right text-xs">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                  <tr>
+                    <th class="py-2.5 px-3">سال</th>
+                    <th class="py-2.5 px-3">عنوان دوره مالی</th>
+                    <th class="py-2.5 px-3">بازه زمانی</th>
+                    <th class="py-2.5 px-3">وضعیت</th>
+                    <th class="py-2.5 px-3">توضیحات / کاربر</th>
+                    <th class="py-2.5 px-3 text-left">عملیات قانونی</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr *ngFor="let period of companyFiscalPeriods" class="hover:bg-slate-50/50 transition-colors">
+                    <td class="py-2.5 px-3 font-mono font-bold text-indigo-700">{{ period.fiscal_year }}</td>
+                    <td class="py-2.5 px-3 font-bold text-slate-800">{{ period.title }}</td>
+                    <td class="py-2.5 px-3 font-mono text-[11px] text-slate-600">
+                      {{ period.start_date }} تا {{ period.end_date }}
+                    </td>
+                    <td class="py-2.5 px-3">
+                      <span [ngClass]="getFiscalPeriodStatusBadge(period.status)" class="px-2 py-0.5 rounded-full text-[10px] font-bold border">
+                        {{ getFiscalPeriodStatusLabel(period.status) }}
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-slate-500 text-[11px]">
+                      {{ period.notes || (period.closed_by_name ? ('بسته شده توسط: ' + period.closed_by_name) : '—') }}
+                    </td>
+                    <td class="py-2.5 px-3 text-left">
+                      <div class="flex items-center justify-end gap-1.5">
+                        <button 
+                          *ngIf="period.status === 'open'"
+                          type="button" 
+                          (click)="freezeFiscalPeriod(period)"
+                          class="px-2 py-1 text-[11px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors cursor-pointer"
+                          title="انجماد ثبت اسناد در این دوره مالی">
+                          انجماد
+                        </button>
+                        <button 
+                          *ngIf="period.status === 'open' || period.status === 'frozen'"
+                          type="button" 
+                          (click)="closeFiscalPeriod(period)"
+                          class="px-2 py-1 text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors cursor-pointer"
+                          title="بستن قطعی سال مالی و انتقال تراز">
+                          بستن سال مالی
+                        </button>
+                        <button 
+                          *ngIf="period.status === 'frozen' || period.status === 'closed'"
+                          type="button" 
+                          (click)="reopenFiscalPeriod(period)"
+                          class="px-2 py-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors cursor-pointer"
+                          title="بازگشایی مجدد دوره مالی">
+                          بازگشایی
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
-                <!-- نوار جستجو و فیلتر درجا اسناد -->
-                <div class="flex items-center gap-2">
-                  <div class="relative w-48">
-                    <input 
-                      type="text" 
-                      [(ngModel)]="docSearchQuery" 
-                      (ngModelChange)="onDocFilterChange()" 
-                      placeholder="جستجو در اسناد..." 
-                      class="w-full pr-7 pl-2 py-1 text-[11px] bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    />
-                    <span class="absolute right-2 top-1.5 text-[10px] text-slate-400">🔍</span>
+            <!-- حالت خالی دوره‌های مالی -->
+            <div *ngIf="companyModal.data.id && companyFiscalPeriods.length === 0 && !showFiscalPeriodForm" class="p-6 text-center bg-slate-50/60 border border-slate-200/80 rounded-2xl">
+              <span class="block text-slate-400 text-sm mb-1 font-bold">هیچ دوره مالی برای این شرکت تعریف نشده است.</span>
+              <span class="block text-slate-400 text-xs mb-3">جهت ثبت سال‌های مالی و بستن حساب‌ها، دوره مالی جدید تعریف نمایید.</span>
+              <button 
+                type="button" 
+                (click)="openCreateFiscalPeriod()"
+                class="px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-colors cursor-pointer">
+                <span class="inline-flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg><span>تعریف اولین دوره مالی</span></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═════════════════════════════════════════════════════════════════════ -->
+        <!-- تب ۳: خزانه‌داری، مدیریت چند شماره شبا و حساب‌های بانکی رسمی شرکت         -->
+        <!-- ═════════════════════════════════════════════════════════════════════ -->
+        <div *ngIf="activeModalTab === 'treasury' && isAccountingInstalled" class="space-y-4">
+          <!-- بخش مدیریت چند شماره شبا و کارت‌های حساب‌های بانکی -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-slate-800">حساب‌های بانکی و شماره‌های شبای رسمی شرکت</span>
+                <span class="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-100">
+                  {{ companyBankAccounts.length }} حساب ثبت‌شده
+                </span>
+              </div>
+              <div *ngIf="!companyModal.data.id" class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600 shrink-0" appIcon="alert-triangle"></svg>
+                <span>پس از ثبت اولیه شرکت، امکان تعریف چند شماره شبا فعال می‌گردد.</span>
+              </div>
+            </div>
+
+            <!-- وضعیت در حال بارگذاری حساب‌ها -->
+            <div *ngIf="isLoadingBankAccounts" class="py-6 text-center text-xs text-slate-400">
+              در حال بارگذاری حساب‌های بانکی...
+            </div>
+
+            <!-- فهرست کارت‌های حساب بانکی شرکت -->
+            <div *ngIf="!isLoadingBankAccounts && companyBankAccounts.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div *ngFor="let acc of companyBankAccounts" 
+                   class="bg-white border rounded-2xl p-3.5 flex flex-col justify-between transition-all hover:shadow-xs relative overflow-hidden"
+                   [ngClass]="acc.is_primary ? 'border-amber-300 ring-2 ring-amber-400/20 bg-linear-to-b from-amber-50/30 to-white' : 'border-slate-200'">
+                
+                <!-- برچسب حساب اصلی -->
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="credit-card"></svg>
+                    <span class="text-xs font-black text-slate-800">{{ acc.bank_name }}</span>
+                    <span *ngIf="acc.account_title" class="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md font-medium">
+                      {{ acc.account_title }}
+                    </span>
                   </div>
 
-                  <select 
-                    [(ngModel)]="selectedDocTypeFilter" 
-                    (ngModelChange)="onDocFilterChange()" 
-                    class="text-[11px] bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none">
-                    <option value="">همه انواع اسناد</option>
-                    <option *ngFor="let t of documentTypesList" [value]="t.value">{{ t.label }}</option>
-                  </select>
+                  <div>
+                    <span *ngIf="acc.is_primary" class="text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" class="text-amber-600 shrink-0" appIcon="star"></svg>
+                      <span>حساب اصلی حقوق و تسویه</span>
+                    </span>
+                    <button 
+                      *ngIf="!acc.is_primary" 
+                      type="button" 
+                      (click)="setPrimaryAccount(acc)"
+                      title="تنظیم به عنوان حساب اصلی شرکت"
+                      aria-label="تنظیم به عنوان اصلی"
+                      class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-amber-500 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 transition-all cursor-pointer">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" appIcon="star"></svg>
+                      <span class="sr-only">تنظیم به عنوان اصلی</span>
+                    </button>
+                  </div>
+                </div>
 
+                <!-- نمایش شماره شبا با کپی سریع -->
+                <div class="bg-slate-50 rounded-xl p-2.5 my-1 border border-slate-100 flex items-center justify-between">
+                  <div class="font-mono text-xs font-bold text-slate-800 tracking-wider text-left dir-ltr select-all">
+                    {{ acc.sheba_number }}
+                  </div>
                   <button 
-                    *ngIf="docSearchQuery || selectedDocTypeFilter" 
                     type="button" 
-                    (click)="clearDocFilter()" 
-                    class="text-[10px] text-slate-400 hover:text-slate-700 px-1 py-1 rounded bg-slate-200/60"
-                    title="پاک‌سازی فیلتر">
-                    ✕
+                    (click)="copySheba(acc.sheba_number, acc.id || acc.sheba_number)"
+                    [title]="copiedShebaId === (acc.id || acc.sheba_number) ? 'کپی شد!' : 'کپی شماره شبا'"
+                    aria-label="کپی شماره شبا"
+                    class="w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer shrink-0"
+                    [ngClass]="copiedShebaId === (acc.id || acc.sheba_number) ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-white hover:bg-slate-200 text-slate-600 border border-slate-200'">
+                    <svg *ngIf="copiedShebaId === (acc.id || acc.sheba_number)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+                    <svg *ngIf="copiedShebaId !== (acc.id || acc.sheba_number)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
+                    <span class="sr-only">کپی شماره شبا</span>
                   </button>
+                </div>
+
+                <!-- مشخصات شماره حساب و دکمه‌های عملیات -->
+                <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+                  <div class="flex items-center gap-1.5">
+                    <span>شماره حساب:</span>
+                    <span class="font-mono font-bold text-slate-700">{{ acc.account_number || '—' }}</span>
+                  </div>
+
+                  <div class="flex items-center gap-1">
+                    <button 
+                      type="button" 
+                      (click)="editAccount(acc)" 
+                      class="w-7 h-7 rounded-lg flex items-center justify-center text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition-colors cursor-pointer" 
+                      title="ویرایش این حساب"
+                      aria-label="ویرایش">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
+                      <span class="sr-only">ویرایش</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      (click)="deleteBankAccount(acc)" 
+                      class="w-7 h-7 rounded-lg flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer" 
+                      title="حذف این حساب"
+                      aria-label="حذف">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+                      <span class="sr-only">حذف</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- فرم ثبت یا ویرایش حساب بانکی -->
+            <div *ngIf="companyModal.data.id" class="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3 mt-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-black text-slate-800">
+                  <span class="inline-flex items-center gap-1.5"><svg *ngIf="isEditingAccount" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg><svg *ngIf="!isEditingAccount" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="plus"></svg><span>{{ isEditingAccount ? 'ویرایش اطلاعات حساب بانکی' : 'افزودن حساب بانکی / شبای جدید' }}</span></span>
+                </span>
+                <button 
+                  *ngIf="isEditingAccount" 
+                  type="button" 
+                  (click)="cancelEditAccount()" 
+                  title="انصراف از ویرایش حساب"
+                  aria-label="انصراف از ویرایش"
+                  class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+                  <span class="sr-only">انصراف از ویرایش</span>
+                </button>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- فیلد شماره شبا با اعتبارسنجی زنده -->
+                <div class="md:col-span-2">
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">
+                    شماره شبا (۲۴ رقم بدون نیاز به تایپ IR) <span class="text-rose-500">*</span>
+                  </label>
+                  <div class="flex items-center gap-1.5">
+                    <div class="relative flex-1 flex items-center bg-white border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20"
+                         [ngClass]="shebaValidationResult ? (shebaValidationResult.isValid ? 'border-emerald-300 bg-emerald-50/20' : 'border-rose-300 bg-rose-50/20') : 'border-slate-200'">
+                      <!-- نشان ثابت IR در سمت چپ -->
+                      <span class="font-mono font-black text-slate-500 bg-slate-100 px-3 py-2 text-xs border-r border-slate-200 select-none">
+                        IR
+                      </span>
+                      <input 
+                        type="text" 
+                        [ngModel]="shebaDigitsDisplay || newAccount.sheba_number" 
+                        (ngModelChange)="onShebaInput($event)"
+                        (paste)="onShebaPaste($event)"
+                        placeholder="۱۲ ۰۱۲۰ ۰۰۰۰ ۰۰۰۰ ۱۲۳۴ ۵۶۷۸ ۹۰" 
+                        maxlength="34"
+                        dir="ltr"
+                        class="w-full px-3 py-2 text-xs font-mono font-bold tracking-widest text-slate-800 bg-transparent focus:outline-none"
+                      />
+                      <button 
+                        *ngIf="newAccount.sheba_number" 
+                        type="button" 
+                        (click)="copySheba(newAccount.sheba_number, 'new_sheba')"
+                        class="px-2.5 py-1 ml-1 text-xs text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer flex items-center justify-center shrink-0"
+                        title="کپی شبا">
+                        <svg *ngIf="copiedShebaId === 'new_sheba'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-emerald-600" appIcon="check"></svg>
+                        <svg *ngIf="copiedShebaId !== 'new_sheba'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- فیدبک بصری اعتبارسنجی شبا -->
+                  <div *ngIf="shebaValidationResult" class="mt-1 text-[11px] flex items-center gap-1.5 font-bold">
+                    <span *ngIf="shebaValidationResult.isValid" class="text-emerald-700 flex items-center gap-1">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-emerald-600 shrink-0" appIcon="check-circle"></svg>
+                      <span>شماره شبا معتبر و تایید شد (الگوریتم ISO 7064 Mod 97) - {{ shebaValidationResult.bank?.name || 'بانک معتبر' }}</span>
+                      <span *ngIf="shebaValidationResult.accountNumber" class="text-slate-500 font-mono font-normal">
+                        (شماره حساب استخراج‌شده: {{ shebaValidationResult.accountNumber }})
+                      </span>
+                    </span>
+                    <span *ngIf="!shebaValidationResult.isValid" class="text-rose-600 flex items-center gap-1">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600 shrink-0" appIcon="alert-circle"></svg>
+                      <span>{{ shebaValidationResult.errorMessage }}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- انتخاب نام بانک از لیست ۳۲ بانک کشور با کمبوباکس جستجوپذیر -->
+                <div class="relative bank-combobox-container">
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">بانک عامل <span class="text-rose-500">*</span></label>
+                  <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500">
+                    <input 
+                      type="text" 
+                      [(ngModel)]="newAccount.bank_name" 
+                      (focus)="isBankDropdownOpen = true"
+                      placeholder="انتخاب یا تایپ نام بانک..." 
+                      class="w-full text-xs text-slate-800 bg-transparent focus:outline-none"
+                    />
+                    <button 
+                      type="button" 
+                      (click)="isBankDropdownOpen = !isBankDropdownOpen"
+                      class="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down"></svg>
+                    </button>
+                  </div>
+
+                  <!-- منوی دراپ‌داون بانک‌ها با سرچ -->
+                  <div *ngIf="isBankDropdownOpen" class="absolute top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl w-full p-2 max-h-48 overflow-y-auto">
+                    <input 
+                      type="text" 
+                      [(ngModel)]="bankSearchQuery" 
+                      placeholder="جستجوی سریع بانک..." 
+                      class="w-full px-2 py-1 mb-1 text-xs border border-slate-200 rounded-lg focus:outline-none bg-slate-50"
+                    />
+                    <div class="divide-y divide-slate-100">
+                      <button 
+                        *ngFor="let bank of filterBanks()" 
+                        type="button" 
+                        (click)="selectBankForAccount(bank)"
+                        class="w-full text-right px-2 py-1.5 text-xs hover:bg-indigo-50 hover:text-indigo-700 rounded-lg flex items-center justify-between cursor-pointer transition-colors">
+                        <span class="font-bold">{{ bank.name }}</span>
+                        <span class="text-[10px] text-slate-400 font-mono">{{ bank.code }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- شماره حساب بانکی با دکمه تبدیل فوری به شبا و دکمه کپی -->
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره حساب بانکی</label>
+                  <div class="flex items-center gap-1.5">
+                    <input 
+                      type="text" 
+                      [(ngModel)]="newAccount.account_number" 
+                      (input)="onAccountNumberInput($event)"
+                      (paste)="onAccountNumberPaste($event)"
+                      placeholder="استخراج خودکار از شبا یا تایپ شماره حساب" 
+                      class="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono bg-white"
+                    />
+                    <button
+                      *ngIf="newAccount.account_number"
+                      type="button"
+                      (click)="copyAccountNumber(newAccount.account_number)"
+                      [title]="isAccountCopied ? 'کپی شد!' : 'کپی شماره حساب'"
+                      aria-label="کپی شماره حساب"
+                      class="w-8 h-8 rounded-xl flex items-center justify-center text-xs border transition-all cursor-pointer shrink-0"
+                      [ngClass]="isAccountCopied ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'">
+                      <svg *ngIf="isAccountCopied" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+                      <svg *ngIf="!isAccountCopied" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
+                    </button>
+                    <button
+                      type="button"
+                      (click)="convertAccountToShebaNow()"
+                      title="تبدیل حساب و بانک به شماره شبا (الگوریتم ISO 7064)"
+                      aria-label="تولید شماره شبا"
+                      class="w-8 h-8 rounded-xl bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center text-xs font-black shadow-xs active:scale-95 transition-all cursor-pointer shrink-0">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" appIcon="zap"></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- عنوان و کاربرد حساب -->
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">عنوان / کاربرد حساب</label>
+                  <input 
+                    type="text" 
+                    [(ngModel)]="newAccount.account_title" 
+                    placeholder="مثلاً: تنخواه، واریز حقوق، بازرگانی" 
+                    class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white"
+                  />
+                </div>
+
+                <!-- چک‌باکس حساب اصلی -->
+                <div class="flex items-center gap-2 pt-5">
+                  <input 
+                    type="checkbox" 
+                    id="new_acc_primary" 
+                    [(ngModel)]="newAccount.is_primary" 
+                    class="w-4 h-4 rounded text-amber-500 focus:ring-amber-400 border-slate-300 cursor-pointer"
+                  />
+                  <label for="new_acc_primary" class="text-xs font-bold text-slate-700 cursor-pointer select-none flex items-center gap-1.5">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" class="text-amber-500 shrink-0" appIcon="star"></svg>
+                    <span>حساب پیش‌فرض و اصلی شرکت جهت واریز حقوق و تسویه‌حساب‌ها</span>
+                  </label>
                 </div>
               </div>
 
-              <div *ngIf="isLoadingDocuments" class="py-8 text-center text-xs text-slate-400">
-                در حال بارگذاری اسناد...
-              </div>
-
-              <div *ngIf="!isLoadingDocuments && filteredDocuments.length === 0" class="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-2xl">
-                هیچ سندی با معیارهای انتخابی یافت نشد.
-              </div>
-
-              <div *ngIf="!isLoadingDocuments && filteredDocuments.length > 0" class="overflow-x-auto rounded-2xl border border-slate-200">
-                <table class="w-full text-right text-xs">
-                  <thead class="bg-slate-100/80 text-slate-600 font-bold border-b border-slate-200">
-                    <tr>
-                      <th class="py-2.5 px-3 w-10 text-center">ردیف</th>
-                      <th class="py-2.5 px-3">نوع مدرک</th>
-                      <th class="py-2.5 px-3">عنوان مدرک</th>
-                      <th class="py-2.5 px-3 text-center">تاریخ انقضا</th>
-                      <th class="py-2.5 px-3 text-center">وضعیت اعتبار</th>
-                      <th class="py-2.5 px-3 text-center">سطح</th>
-                      <th class="py-2.5 px-3 text-center">اندازه</th>
-                      <th class="py-2.5 px-3 text-center w-28">عملیات</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-100">
-                    <tr *ngFor="let doc of filteredDocuments; let idx = index" class="hover:bg-slate-50 transition-colors">
-                      <td class="py-2.5 px-3 text-center font-mono text-slate-400">{{ idx + 1 }}</td>
-                      <td class="py-2.5 px-3 font-bold text-slate-800">{{ doc.document_type_display || doc.document_type }}</td>
-                      <td class="py-2.5 px-3 font-medium text-slate-700">{{ doc.title }}</td>
-                      <td class="py-2.5 px-3 text-center font-mono text-slate-600">{{ doc.expiry_date || '—' }}</td>
-                      <td class="py-2.5 px-3 text-center">
-                        <span [ngClass]="getDocStatusClass(doc.expiry_status)" class="border px-2 py-0.5 rounded-full text-[10px] font-bold">
-                          {{ getDocStatusLabel(doc.expiry_status) }}
-                        </span>
-                      </td>
-                      <td class="py-2.5 px-3 text-center">
-                        <span *ngIf="doc.is_confidential" class="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.2 rounded-md font-bold" title="سند محرمانه">
-                          🔒 محرمانه
-                        </span>
-                        <span *ngIf="!doc.is_confidential" class="text-[10px] text-slate-400">
-                          عمومی
-                        </span>
-                      </td>
-                      <td class="py-2.5 px-3 text-center font-mono text-[11px] text-slate-500">{{ formatBytes(doc.file_size) }}</td>
-                      <td class="py-2.5 px-3 text-center">
-                        <div class="flex items-center justify-center gap-1.5">
-                          <!-- پیش‌نمایش درجا -->
-                          <button 
-                            type="button" 
-                            (click)="openPreview(doc)" 
-                            class="text-slate-600 hover:text-indigo-600 font-bold text-[11px] p-1 rounded hover:bg-slate-100 transition-colors cursor-pointer" 
-                            title="پیش‌نمایش درجا">
-                            👁️
-                          </button>
-                          <!-- دانلود فایل -->
-                          <a 
-                            [href]="doc.file_url || doc.file" 
-                            target="_blank" 
-                            class="text-indigo-600 hover:text-indigo-800 font-bold text-[11px] p-1 rounded hover:bg-slate-100 transition-colors" 
-                            title="دانلود فایل">
-                            📥
-                          </a>
-                          <!-- حذف مدرک -->
-                          <button 
-                            type="button" 
-                            (click)="deleteCompanyDocument(doc)" 
-                            class="text-rose-500 hover:text-rose-700 font-bold text-[11px] p-1 rounded hover:bg-rose-50 transition-colors cursor-pointer" 
-                            title="حذف مدرک">
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <!-- دکمه ثبت حساب -->
+              <div class="flex justify-end pt-1">
+                <button 
+                  type="button" 
+                  (click)="saveBankAccount()" 
+                  [disabled]="isSavingBankAccount || !newAccount.sheba_number"
+                  [title]="isEditingAccount ? 'ثبت تغییرات حساب بانکی' : 'افزودن حساب به شرکت'"
+                  aria-label="ثبت حساب بانکی"
+                  class="w-9 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer">
+                  <span *ngIf="isSavingBankAccount" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  <svg *ngIf="!isSavingBankAccount" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+                  <span class="sr-only">{{ isEditingAccount ? 'ثبت تغییرات حساب' : 'افزودن حساب به شرکت' }}</span>
+                </button>
               </div>
             </div>
-            </ng-container>
 
           </div>
 
         </div>
 
         <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <!-- تب ۳: هیئت‌مدیره و صاحبان امضا (ساختار پویا و پرونده هویتی و مدارک) -->
+        <!-- تب ۴: هیئت‌مدیره و صاحبان امضا (ساختار پویا و پرونده هویتی و مدارک) -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <div *ngIf="activeModalTab === 'governance' && isAccountingInstalled" class="space-y-4">
           <!-- هدر آماری و شاخص‌های کلیدی هیئت‌مدیره -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
             <div class="bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80 flex items-center gap-2.5">
-              <span class="text-xl">👔</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-600" appIcon="users"></svg>
               <div>
                 <div class="text-[11px] text-slate-500 font-bold">کل ارکان و اعضا</div>
                 <div class="text-sm font-black text-slate-800 font-mono">{{ companyBoardMembers.length }} نفر</div>
@@ -1196,7 +1486,7 @@
             </div>
 
             <div class="bg-emerald-50/60 p-2.5 rounded-2xl border border-emerald-100 flex items-center gap-2.5">
-              <span class="text-xl">✍️</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-emerald-600" appIcon="edit-3"></svg>
               <div>
                 <div class="text-[11px] text-emerald-700 font-bold">صاحبان حق امضا</div>
                 <div class="text-sm font-black text-emerald-800 font-mono">{{ getSignersCount() }} نفر</div>
@@ -1204,7 +1494,7 @@
             </div>
 
             <div class="bg-indigo-50/60 p-2.5 rounded-2xl border border-indigo-100 flex items-center gap-2.5">
-              <span class="text-xl">👑</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="shield-check"></svg>
               <div>
                 <div class="text-[11px] text-indigo-700 font-bold">رئیس هیئت‌مدیره</div>
                 <div class="text-xs font-black text-indigo-900 truncate max-w-[110px]" [title]="getChairmanMember() ? (getChairmanMember()!.first_name + ' ' + getChairmanMember()!.last_name) : 'تعیین‌نشده'">
@@ -1214,7 +1504,7 @@
             </div>
 
             <div class="bg-purple-50/60 p-2.5 rounded-2xl border border-purple-100 flex items-center gap-2.5">
-              <span class="text-xl">💼</span>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-600" appIcon="briefcase"></svg>
               <div>
                 <div class="text-[11px] text-purple-700 font-bold">مدیرعامل</div>
                 <div class="text-xs font-black text-purple-900 truncate max-w-[110px]" [title]="getCeoMember() ? (getCeoMember()!.first_name + ' ' + getCeoMember()!.last_name) : 'تعیین‌نشده'">
@@ -1226,7 +1516,7 @@
 
           <!-- پیام راهنما در صورت ثبت شرکت جدید بدون شناسه -->
           <div *ngIf="!companyModal.data.id" class="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-800 flex items-center gap-2">
-            <span>⚠️</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600 shrink-0" appIcon="alert-triangle"></svg>
             <span>جهت افزودن اعضای هیئت‌مدیره و الصاق مدارک، لطفاً ابتدا مشخصات پایه شرکت را ثبت و دکمه ذخیره را بزنید.</span>
           </div>
 
@@ -1239,7 +1529,7 @@
               class="w-8 h-8 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-all shadow-xs cursor-pointer active:scale-95"
               title="افزودن عضو جدید به هیئت‌مدیره"
               aria-label="افزودن عضو جدید">
-              <span class="text-base font-black">+</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg>
               <span class="sr-only">افزودن عضو جدید</span>
             </button>
           </div>
@@ -1248,9 +1538,12 @@
           <div *ngIf="showBoardMemberForm" class="bg-slate-50/90 p-3.5 rounded-2xl border border-indigo-200/80 shadow-xs space-y-3 animate-fade-in">
             <div class="flex items-center justify-between border-b border-slate-200/80 pb-2">
               <span class="text-xs font-black text-indigo-900 flex items-center gap-1.5">
-                <span>{{ isEditingBoardMember ? '✏️ ویرایش مشخصات عضو هیئت‌مدیره' : '➕ ثبت عضو جدید هیئت‌مدیره / ارکان قانونی' }}</span>
+                <svg *ngIf="isEditingBoardMember" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg><svg *ngIf="!isEditingBoardMember" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="plus"></svg>
+                <span>{{ isEditingBoardMember ? 'ویرایش مشخصات عضو هیئت‌مدیره' : 'ثبت عضو جدید هیئت‌مدیره / ارکان قانونی' }}</span>
               </span>
-              <button type="button" (click)="cancelBoardMemberForm()" class="text-slate-400 hover:text-slate-600 text-xs cursor-pointer">✕</button>
+              <button type="button" (click)="cancelBoardMemberForm()" class="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer" title="انصراف">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+              </button>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1328,7 +1621,7 @@
                     [(uiIsVisible)]="isBoardTermStartDatePickerOpen"
                     [dateInitValue]="false" 
                     (dateOnSelect)="onBoardTermStartSelect($event)"
-                    class="w-full block relative cursor-pointer">
+                    class="w-full block relative cursor-pointer datepicker-left to-datepicker">
                     <input 
                       type="text" 
                       [formControl]="boardTermStartControl" 
@@ -1342,7 +1635,7 @@
                     (click)="isBoardTermStartDatePickerOpen = !isBoardTermStartDatePickerOpen; $event.stopPropagation()"
                     title="انتخاب تقویم شمسی"
                     class="text-slate-400 hover:text-indigo-600 p-0.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
-                    📅
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
                   </button>
                 </div>
               </div>
@@ -1369,7 +1662,7 @@
                     (click)="isBoardTermExpiryDatePickerOpen = !isBoardTermExpiryDatePickerOpen; $event.stopPropagation()"
                     title="انتخاب تقویم شمسی"
                     class="text-slate-400 hover:text-indigo-600 p-0.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
-                    📅
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
                   </button>
                 </div>
               </div>
@@ -1429,7 +1722,7 @@
                 title="انصراف از ویرایش/افزودن عضو"
                 aria-label="انصراف"
                 class="w-8 h-8 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center transition-all cursor-pointer">
-                <span class="text-sm">✕</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
                 <span class="sr-only">انصراف</span>
               </button>
               <button 
@@ -1439,8 +1732,8 @@
                 [title]="isEditingBoardMember ? 'ثبت ویرایش عضو هیئت‌مدیره' : 'ذخیره عضو در هیئت‌مدیره'"
                 aria-label="ذخیره عضو"
                 class="w-8 h-8 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50">
-                <span *ngIf="isSavingBoardMember" class="animate-spin text-sm">⏳</span>
-                <span *ngIf="!isSavingBoardMember" class="text-sm">✓</span>
+                <span *ngIf="isSavingBoardMember" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                <svg *ngIf="!isSavingBoardMember" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
                 <span class="sr-only">{{ isEditingBoardMember ? 'ثبت ویرایش عضو' : 'ذخیره عضو در هیئت‌مدیره' }}</span>
               </button>
             </div>
@@ -1456,6 +1749,8 @@
               <span>هنوز هیچ عضوی برای هیئت‌مدیره یا ارکان قانونی این شرکت ثبت نشده است.</span>
             </div>
 
+            <!-- جدول نسخه دسکتاپ اعضای هیئت‌مدیره -->
+            <div class="hidden md:block overflow-x-auto">
             <table *ngIf="!isLoadingBoardMembers && companyBoardMembers.length > 0" class="w-full text-right border-collapse text-xs">
               <thead class="bg-slate-50/90 text-slate-600 font-bold border-b border-slate-200">
                 <tr>
@@ -1487,7 +1782,7 @@
                   <td class="p-2.5 text-center">
                     <div *ngIf="m.has_signature_right">
                       <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold" [title]="m.signature_scope || 'دارای حق امضا'">
-                        <span>✍️</span>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit-3"></svg>
                         <span>دارای حق امضا</span>
                       </span>
                       <div *ngIf="m.signature_scope" class="text-[10px] text-slate-400 truncate max-w-[140px] mx-auto mt-0.5" [title]="m.signature_scope">
@@ -1506,369 +1801,501 @@
                   </td>
                   <td class="p-2.5 text-center">
                     <div class="flex items-center justify-center gap-1.5">
-                      <a *ngIf="m.attached_id_doc_url" [href]="m.attached_id_doc_url" target="_blank" title="مشاهده کارت ملی" class="p-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs">
-                        🪪
+                      <a *ngIf="m.attached_id_doc_url" [href]="m.attached_id_doc_url" target="_blank" title="مشاهده کارت ملی" class="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
                       </a>
-                      <a *ngIf="m.attached_appointment_doc_url" [href]="m.attached_appointment_doc_url" target="_blank" title="مشاهده حکم انتصاب" class="p-1 rounded-md bg-purple-50 text-purple-600 hover:bg-purple-100 text-xs">
-                        📜
+                      <a *ngIf="m.attached_appointment_doc_url" [href]="m.attached_appointment_doc_url" target="_blank" title="مشاهده حکم انتصاب" class="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center justify-center">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
                       </a>
                       <span *ngIf="!m.attached_id_doc_url && !m.attached_appointment_doc_url" class="text-slate-300 text-[11px]">—</span>
                     </div>
                   </td>
                   <td class="p-2.5 text-center">
                     <div class="flex items-center justify-center gap-1">
-                      <button type="button" (click)="editBoardMember(m)" title="ویرایش عضو" class="p-1 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer">
-                        ✏️
+                      <button type="button" (click)="editBoardMember(m)" title="ویرایش عضو" class="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
                       </button>
-                      <button type="button" (click)="deleteBoardMember(m)" title="حذف عضو" class="p-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer">
-                        🗑️
+                      <button type="button" (click)="deleteBoardMember(m)" title="حذف عضو" class="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
                       </button>
                     </div>
                   </td>
                 </tr>
               </tbody>
             </table>
-          </div>
-        </div>
-
-        <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <!-- تب ۴: کارگاه بیمه و سامانه مودیان (پالایش‌شده از فیلدهای پروژه‌ای)    -->
-        <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <div *ngIf="activeModalTab === 'fiscal_insurance'" class="space-y-4">
-          <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs text-indigo-900 leading-relaxed">
-            ℹ️ فیلدهای زیر مربوط به کد کارگاه مرکزی شرکت متبوع و اتصالات حافظه مالیاتی و سامانه مودیان هستند. کدهای کارگاه و ردیف‌های پیمان متناظر با پروژه‌های اجرایی منحصراً در بخش تعریف و مدیریت پروژه‌ها تعیین می‌گردند.
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            <!-- کد کارگاه مرکزی تأمین اجتماعی شرکت -->
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">کد کارگاه بیمه شرکت (۱۰ رقم)</label>
-              <input 
-                type="text" 
-                [(ngModel)]="companyModal.data.workshop_code" 
-                placeholder="مثال: ۲۳۹۸۰۱۲۳۴۵" 
-                maxlength="10"
-                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
-              />
-              <span class="block text-[10px] text-slate-400 mt-1">کد ۱۰ رقمی کارگاه دفتر مرکزی شرکت در سازمان تأمین اجتماعی</span>
             </div>
 
-            <!-- کد اقتصادی قدیم -->
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">کد اقتصادی قدیم (۱۲ رقم)</label>
-              <input 
-                type="text" 
-                [(ngModel)]="companyModal.data.economic_code" 
-                placeholder="کد اقتصادی ۱۲ رقمی" 
-                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
-              />
-              <span class="block text-[10px] text-slate-400 mt-1">کد اقتصادی پرونده مالیاتی عملکرد و ارزش افزوده</span>
-            </div>
-
-            <!-- شناسه یکتای حافظه مالیاتی (سامانه مودیان) -->
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">شناسه یکتای حافظه مالیاتی (۶ کاراکتر)</label>
-              <input 
-                type="text" 
-                [(ngModel)]="companyModal.data.tax_memory_id" 
-                placeholder="مثال: A12B34" 
-                maxlength="6"
-                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono uppercase"
-              />
-              <span class="block text-[10px] text-slate-400 mt-1">شناسه صادر شده توسط کارپوشه سازمان امور مالیاتی</span>
-            </div>
-
-            <!-- کد اقتصادی جدید ۱۶ رقمی سامانه مودیان -->
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">کد اقتصادی جدید سامانه مودیان (۱۶ رقم)</label>
-              <input 
-                type="text" 
-                [(ngModel)]="companyModal.data.tax_economic_code" 
-                placeholder="شناسه ملی ۱۱ رقمی + ۵ رقم کد شعبه" 
-                maxlength="16"
-                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
-              />
-              <span class="block text-[10px] text-slate-400 mt-1">ترکیب شناسه ملی اشخاص حقوقی و کد شعبه اختصاصی</span>
-            </div>
-          </div>
-
-          <!-- ماه شروع سال مالی شرکت (مقرر در اساسنامه) -->
-          <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div>
-              <span class="text-xs font-black text-slate-800 block">دوره و تقویم سال مالی شرکت</span>
-              <span class="text-[11px] text-slate-500">تعیین ماه آغاز سال مالی جهت بستن حساب‌ها و گزارشات قانونی</span>
-            </div>
-            <div class="w-full md:w-64">
-              <select 
-                [(ngModel)]="companyModal.data.fiscal_year_start_month" 
-                class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-bold">
-                <option [ngValue]="1">فروردین (تقویم هجری شمسی عادی)</option>
-                <option [ngValue]="7">مهرماه (سال‌های مالی پاییزه)</option>
-                <option [ngValue]="10">دی‌ماه (منطبق بر سال میلادی ۱ ژانویه)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <!-- تب ۵: خزانه‌داری، مدیریت چند شماره شبا و حساب‌های بانکی رسمی شرکت         -->
-        <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <div *ngIf="activeModalTab === 'treasury' && isAccountingInstalled" class="space-y-4">
-          <!-- بخش مدیریت چند شماره شبا و کارت‌های حساب‌های بانکی -->
-          <div class="space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-black text-slate-800">حساب‌های بانکی و شماره‌های شبای رسمی شرکت</span>
-                <span class="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-100">
-                  {{ companyBankAccounts.length }} حساب ثبت‌شده
-                </span>
-              </div>
-              <div *ngIf="!companyModal.data.id" class="text-[11px] text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">
-                ⚠️ پس از ثبت اولیه شرکت، امکان تعریف چند شماره شبا فعال می‌گردد.
-              </div>
-            </div>
-
-            <!-- وضعیت در حال بارگذاری حساب‌ها -->
-            <div *ngIf="isLoadingBankAccounts" class="py-6 text-center text-xs text-slate-400">
-              در حال بارگذاری حساب‌های بانکی...
-            </div>
-
-            <!-- فهرست کارت‌های حساب بانکی شرکت -->
-            <div *ngIf="!isLoadingBankAccounts && companyBankAccounts.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div *ngFor="let acc of companyBankAccounts" 
-                   class="bg-white border rounded-2xl p-3.5 flex flex-col justify-between transition-all hover:shadow-xs relative overflow-hidden"
-                   [ngClass]="acc.is_primary ? 'border-amber-300 ring-2 ring-amber-400/20 bg-linear-to-b from-amber-50/30 to-white' : 'border-slate-200'">
-                
-                <!-- برچسب حساب اصلی -->
-                <div class="flex items-center justify-between mb-2">
-                  <div class="flex items-center gap-2">
-                    <span class="text-base font-bold">🏛️</span>
-                    <span class="text-xs font-black text-slate-800">{{ acc.bank_name }}</span>
-                    <span *ngIf="acc.account_title" class="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md font-medium">
-                      {{ acc.account_title }}
-                    </span>
-                  </div>
-
+            <!-- کارت‌های ارگونومیک موبایل اعضای هیئت‌مدیره -->
+            <div *ngIf="!isLoadingBoardMembers && companyBoardMembers.length > 0" class="block md:hidden divide-y divide-slate-100">
+              <div *ngFor="let m of companyBoardMembers" class="p-3.5 space-y-2.5 bg-white">
+                <div class="flex items-center justify-between">
                   <div>
-                    <span *ngIf="acc.is_primary" class="text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
-                      <span>⭐</span>
-                      <span>حساب اصلی حقوق و تسویه</span>
-                    </span>
-                    <button 
-                      *ngIf="!acc.is_primary" 
-                      type="button" 
-                      (click)="setPrimaryAccount(acc)"
-                      title="تنظیم به عنوان حساب اصلی شرکت"
-                      aria-label="تنظیم به عنوان اصلی"
-                      class="w-6 h-6 rounded-full flex items-center justify-center text-slate-400 hover:text-amber-500 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 transition-all cursor-pointer">
-                      <span class="text-xs">⭐</span>
-                      <span class="sr-only">تنظیم به عنوان اصلی</span>
-                    </button>
+                    <div class="font-bold text-xs text-slate-800">{{ m.first_name }} {{ m.last_name }}</div>
+                    <div *ngIf="m.member_type === 'legal_rep'" class="text-[10px] text-indigo-600 font-medium">
+                      نماینده: {{ m.represented_legal_name || 'شخصیت حقوقی' }}
+                    </div>
+                  </div>
+                  <span class="inline-flex px-2 py-0.5 rounded-lg border text-[10px] font-bold" [ngClass]="getRoleBadgeClass(m.role)">
+                    {{ getRoleLabel(m.role) }}
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2 rounded-xl border border-slate-100">
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">کد ملی:</span>
+                    <span class="font-mono font-bold text-slate-700">{{ m.national_code }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 text-[10px] block">دوره تصدی:</span>
+                    <span class="font-mono text-slate-600 text-[10px]">{{ m.term_start || '—' }} تا {{ m.term_expiry || '—' }}</span>
                   </div>
                 </div>
 
-                <!-- نمایش شماره شبا با کپی سریع -->
-                <div class="bg-slate-50 rounded-xl p-2.5 my-1 border border-slate-100 flex items-center justify-between">
-                  <div class="font-mono text-xs font-bold text-slate-800 tracking-wider text-left dir-ltr select-all">
-                    {{ acc.sheba_number }}
-                  </div>
-                  <button 
-                    type="button" 
-                    (click)="copySheba(acc.sheba_number, acc.id || acc.sheba_number)"
-                    [title]="copiedShebaId === (acc.id || acc.sheba_number) ? 'کپی شد!' : 'کپی شماره شبا'"
-                    aria-label="کپی شماره شبا"
-                    class="w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer shrink-0"
-                    [ngClass]="copiedShebaId === (acc.id || acc.sheba_number) ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-white hover:bg-slate-200 text-slate-600 border border-slate-200'">
-                    <span *ngIf="copiedShebaId === (acc.id || acc.sheba_number)" class="text-xs font-bold">✓</span>
-                    <span *ngIf="copiedShebaId !== (acc.id || acc.sheba_number)" class="text-xs">📋</span>
-                    <span class="sr-only">کپی شماره شبا</span>
-                  </button>
+                <div *ngIf="m.has_signature_right" class="flex items-center gap-1.5 text-[10px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 font-bold">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit-3"></svg>
+                  <span>دارای حق امضا</span>
+                  <span *ngIf="m.signature_scope" class="text-slate-400 font-normal">({{ m.signature_scope }})</span>
                 </div>
 
-                <!-- مشخصات شماره حساب و دکمه‌های عملیات -->
-                <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+                <div class="flex items-center justify-between pt-1 border-t border-slate-100">
                   <div class="flex items-center gap-1.5">
-                    <span>شماره حساب:</span>
-                    <span class="font-mono font-bold text-slate-700">{{ acc.account_number || '—' }}</span>
+                    <a *ngIf="m.attached_id_doc_url" [href]="m.attached_id_doc_url" target="_blank" title="مشاهده کارت ملی" class="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center gap-1 text-[10px] font-bold">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
+                      <span>کارت ملی</span>
+                    </a>
+                    <a *ngIf="m.attached_appointment_doc_url" [href]="m.attached_appointment_doc_url" target="_blank" title="مشاهده حکم انتصاب" class="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center gap-1 text-[10px] font-bold">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
+                      <span>حکم انتصاب</span>
+                    </a>
                   </div>
 
                   <div class="flex items-center gap-1">
-                    <button 
-                      type="button" 
-                      (click)="editAccount(acc)" 
-                      class="w-7 h-7 rounded-lg flex items-center justify-center text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition-colors cursor-pointer" 
-                      title="ویرایش این حساب"
-                      aria-label="ویرایش">
-                      <span class="text-xs">✏️</span>
-                      <span class="sr-only">ویرایش</span>
+                    <button type="button" (click)="editBoardMember(m)" title="ویرایش عضو" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl border border-slate-200 transition-colors cursor-pointer">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
                     </button>
-                    <button 
-                      type="button" 
-                      (click)="deleteBankAccount(acc)" 
-                      class="w-7 h-7 rounded-lg flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer" 
-                      title="حذف این حساب"
-                      aria-label="حذف">
-                      <span class="text-xs">🗑️</span>
-                      <span class="sr-only">حذف</span>
+                    <button type="button" (click)="deleteBoardMember(m)" title="حذف عضو" class="w-8 h-8 flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl border border-rose-200 transition-colors cursor-pointer">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
                     </button>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <!-- فرم ثبت یا ویرایش حساب بانکی -->
-            <div *ngIf="companyModal.data.id" class="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3 mt-3">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-black text-slate-800">
-                  {{ isEditingAccount ? '✏️ ویرایش اطلاعات حساب بانکی' : '➕ افزودن حساب بانکی / شبای جدید' }}
-                </span>
-                <button 
-                  *ngIf="isEditingAccount" 
-                  type="button" 
-                  (click)="cancelEditAccount()" 
-                  title="انصراف از ویرایش حساب"
-                  aria-label="انصراف از ویرایش"
-                  class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer">
-                  <span class="text-xs font-bold">✕</span>
-                  <span class="sr-only">انصراف از ویرایش</span>
-                </button>
+        <!-- ═════════════════════════════════════════════════════════════════════ -->
+        <!-- تب ۵: بایگانی و آرشیو مدارک حقوقی و رسمی                            -->
+        <!-- ═════════════════════════════════════════════════════════════════════ -->
+        <div *ngIf="activeModalTab === 'documents'" class="space-y-5">
+          
+          <div *ngIf="!companyModal.data.id" class="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto text-slate-400 mb-2" appIcon="file-text"></svg>
+            <h4 class="text-xs font-black text-slate-700">بایگانی اسناد و مجوزهای شرکت</h4>
+            <p class="text-[11px] text-slate-500 mt-1 max-w-md mx-auto">
+              جهت بارگذاری اساسنامه، روزنامه‌های رسمی، گواهی ارزش افزوده و سایر مجوزها، لطفاً ابتدا شرکت را در تب اول ذخیره فرمایید.
+            </p>
+          </div>
+
+          <div *ngIf="companyModal.data.id" class="space-y-5">
+            
+            <!-- ۲ کارت دسترسی سریع به دو سند مادر (اساسنامه و روزنامه رسمی) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              
+              <!-- کارت اساسنامه شرکت -->
+              <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 flex flex-col justify-between gap-3">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg></span>
+                    <div>
+                      <h4 class="text-xs font-black text-slate-800">اساسنامه رسمی شرکت</h4>
+                      <p class="text-[10px] text-slate-500">سند مادر تأسیس، ارکان و حدود اختیارات</p>
+                    </div>
+                  </div>
+                  <span *ngIf="companyModal.data.articles_of_association" class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">
+                    بارگذاری شده
+                  </span>
+                  <span *ngIf="!companyModal.data.articles_of_association" class="text-[10px] bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full">
+                    فاقد فایل
+                  </span>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                  <div *ngIf="companyModal.data.articles_of_association" class="flex items-center gap-1.5">
+                    <button 
+                      type="button" 
+                      (click)="openCoreDocPreview('articles_of_association', 'اساسنامه رسمی شرکت')" 
+                      class="w-7 h-7 rounded-lg flex items-center justify-center text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border border-slate-200 transition-colors cursor-pointer"
+                      title="پیش‌نمایش اساسنامه"
+                      aria-label="پیش‌نمایش اساسنامه">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+                      <span class="sr-only">پیش‌نمایش اساسنامه</span>
+                    </button>
+                    <a 
+                      [href]="companyModal.data.articles_of_association" 
+                      target="_blank" 
+                      download 
+                      class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors"
+                      title="دانلود اساسنامه"
+                      aria-label="دانلود">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
+                      <span class="sr-only">دانلود</span>
+                    </a>
+                  </div>
+                  <span *ngIf="!companyModal.data.articles_of_association" class="text-[11px] text-slate-400">هنوز فایلی ثبت نشده است</span>
+
+                  <label 
+                    class="w-7 h-7 rounded-lg flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 hover:border-indigo-300 text-slate-700 cursor-pointer shadow-2xs transition-all"
+                    [title]="companyModal.data.articles_of_association ? 'جایگزینی فایل اساسنامه' : 'بارگذاری فایل اساسنامه'"
+                    aria-label="بارگذاری فایل اساسنامه">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
+                    <span class="sr-only">بارگذاری فایل</span>
+                    <input type="file" (change)="onCoreDocSelected($event, 'articles_of_association')" class="hidden" />
+                  </label>
+                </div>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <!-- فیلد شماره شبا با اعتبارسنجی زنده -->
-                <div class="md:col-span-2">
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">
-                    شماره شبا (۲۴ رقم بدون نیاز به تایپ IR) <span class="text-rose-500">*</span>
-                  </label>
-                  <div class="relative">
-                    <input 
-                      type="text" 
-                      [(ngModel)]="newAccount.sheba_number" 
-                      (ngModelChange)="onShebaInput($event)"
-                      placeholder="IR12 0120 0000 0000 1234 5678 90" 
-                      maxlength="34"
-                      dir="ltr"
-                      class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono tracking-wider text-center"
-                      [ngClass]="shebaValidationResult ? (shebaValidationResult.isValid ? 'border-emerald-300 bg-emerald-50/20' : 'border-rose-300 bg-rose-50/20') : 'border-slate-200 bg-white'"
-                    />
-                    <button 
-                      *ngIf="newAccount.sheba_number" 
-                      type="button" 
-                      (click)="copySheba(newAccount.sheba_number, 'new_sheba')"
-                      class="absolute left-2 top-1.5 text-xs text-slate-400 hover:text-slate-700 px-2 py-0.5 rounded bg-slate-100 cursor-pointer"
-                      title="کپی شبا">
-                      📋
-                    </button>
+              <!-- کارت آخرین روزنامه رسمی -->
+              <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 flex flex-col justify-between gap-3">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg></span>
+                    <div>
+                      <h4 class="text-xs font-black text-slate-800">آخرین روزنامه رسمی</h4>
+                      <p class="text-[10px] text-slate-500">آگهی تغییرات هیئت‌مدیره و صاحبان امضا</p>
+                    </div>
                   </div>
+                  <span *ngIf="companyModal.data.latest_gazette" class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">
+                    بارگذاری شده
+                  </span>
+                  <span *ngIf="!companyModal.data.latest_gazette" class="text-[10px] bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full">
+                    فاقد فایل
+                  </span>
+                </div>
 
-                  <!-- فیدبک بصری اعتبارسنجی شبا -->
-                  <div *ngIf="shebaValidationResult" class="mt-1 text-[11px] flex items-center gap-1.5 font-bold">
-                    <span *ngIf="shebaValidationResult.isValid" class="text-emerald-700 flex items-center gap-1">
-                      <span>✓</span>
-                      <span>{{ shebaValidationResult.bank?.name || 'بانک معتبر' }}</span>
-                      <span *ngIf="shebaValidationResult.accountNumber" class="text-slate-500 font-mono font-normal">
-                        (شماره حساب استخراج‌شده: {{ shebaValidationResult.accountNumber }})
-                      </span>
-                    </span>
-                    <span *ngIf="!shebaValidationResult.isValid" class="text-rose-600 flex items-center gap-1">
-                      <span>✕</span>
-                      <span>{{ shebaValidationResult.errorMessage }}</span>
-                    </span>
+                <div class="flex items-center justify-between pt-2 border-t border-slate-200/60">
+                  <div *ngIf="companyModal.data.latest_gazette" class="flex items-center gap-1.5">
+                    <button 
+                      type="button" 
+                      (click)="openCoreDocPreview('latest_gazette', 'آخرین روزنامه رسمی')" 
+                      class="w-7 h-7 rounded-lg flex items-center justify-center text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 border border-slate-200 transition-colors cursor-pointer"
+                      title="پیش‌نمایش روزنامه رسمی"
+                      aria-label="پیش‌نمایش روزنامه رسمی">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+                      <span class="sr-only">پیش‌نمایش روزنامه رسمی</span>
+                    </button>
+                    <a 
+                      [href]="companyModal.data.latest_gazette" 
+                      target="_blank" 
+                      download 
+                      class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors"
+                      title="دانلود روزنامه رسمی"
+                      aria-label="دانلود">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
+                      <span class="sr-only">دانلود</span>
+                    </a>
+                  </div>
+                  <span *ngIf="!companyModal.data.latest_gazette" class="text-[11px] text-slate-400">هنوز فایلی ثبت نشده است</span>
+
+                  <label 
+                    class="w-7 h-7 rounded-lg flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 hover:border-emerald-300 text-slate-700 cursor-pointer shadow-2xs transition-all"
+                    [title]="companyModal.data.latest_gazette ? 'جایگزینی فایل روزنامه رسمی' : 'بارگذاری فایل روزنامه رسمی'"
+                    aria-label="بارگذاری فایل روزنامه رسمی">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
+                    <span class="sr-only">بارگذاری فایل</span>
+                    <input type="file" (change)="onCoreDocSelected($event, 'latest_gazette')" class="hidden" />
+                  </label>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- بایگانی جامع مدارک در حسابداری است؛ در نصب «فقط انبار» فقط دو سند مادر نمایش داده می‌شوند -->
+            <ng-container *ngIf="isAccountingInstalled">
+            <!-- فرم بارگذاری مدرک جدید به آرشیو جامع -->
+            <div class="p-4 bg-slate-50/60 rounded-2xl border border-slate-200 space-y-3">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-slate-800 flex items-center gap-1.5"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg><span>بارگذاری و بایگانی مدرک جدید</span></span>
+                <span class="text-[10px] text-slate-500 font-medium">(ارزش افزوده، کارت بازرگانی، رتبه‌بندی، پروانه‌ها و قراردادها)</span>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <!-- نوع مدرک -->
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع سند</label>
+                  <select 
+                    [(ngModel)]="newDoc.document_type" 
+                    class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                    <option *ngFor="let t of documentTypesList" [value]="t.value">{{ t.label }}</option>
+                  </select>
+                </div>
+
+                <!-- عنوان مدرک -->
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">عنوان مدرک</label>
+                  <input 
+                    type="text" 
+                    [(ngModel)]="newDoc.title" 
+                    placeholder="مثال: گواهی صلاحیت پیمانکاری رتبه ۳"
+                    class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+
+                <!-- تاریخ صدور (جلالی) -->
+                <!-- تاریخ صدور (جلالی) -->
+                <div class="relative" (click)="$event.stopPropagation()">
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ صدور (جلالی)</label>
+                  <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
+                    <ng-persian-datepicker 
+                      [(uiIsVisible)]="isDocIssueDatePickerOpen"
+                      [dateInitValue]="false" 
+                      (dateOnSelect)="onDocIssueDateSelect($event)"
+                      class="w-full block relative cursor-pointer">
+                      <input 
+                        type="text" 
+                        [formControl]="docIssueDateControl" 
+                        (click)="isDocIssueDatePickerOpen = !isDocIssueDatePickerOpen"
+                        placeholder="۱۴۰۱/۰۵/۱۰" 
+                        class="w-full text-xs font-mono font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+                      />
+                    </ng-persian-datepicker>
+                    <button 
+                      type="button" 
+                      (click)="isDocIssueDatePickerOpen = !isDocIssueDatePickerOpen; $event.stopPropagation()"
+                      title="انتخاب تقویم شمسی"
+                      class="text-slate-400 hover:text-indigo-600 p-0.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
+                    </button>
                   </div>
                 </div>
 
-                <!-- انتخاب نام بانک از لیست ۳۲ بانک کشور با کمبوباکس جستجوپذیر -->
-                <div class="relative">
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">بانک عامل <span class="text-rose-500">*</span></label>
-                  <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500">
-                    <input 
-                      type="text" 
-                      [(ngModel)]="newAccount.bank_name" 
-                      (focus)="isBankDropdownOpen = true"
-                      placeholder="انتخاب یا تایپ نام بانک..." 
-                      class="w-full text-xs text-slate-800 bg-transparent focus:outline-none"
-                    />
+                <!-- تاریخ انقضا (سررسید جلالی) -->
+                <div class="relative" (click)="$event.stopPropagation()">
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ سررسید (جلالی)</label>
+                  <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
+                    <ng-persian-datepicker 
+                      [(uiIsVisible)]="isDocExpiryDatePickerOpen"
+                      [dateInitValue]="false" 
+                      (dateOnSelect)="onDocExpiryDateSelect($event)"
+                      class="w-full block relative cursor-pointer to-datepicker">
+                      <input 
+                        type="text" 
+                        [formControl]="docExpiryDateControl" 
+                        (click)="isDocExpiryDatePickerOpen = !isDocExpiryDatePickerOpen"
+                        placeholder="۱۴۰۳/۰۵/۱۰" 
+                        class="w-full text-xs font-mono font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+                      />
+                    </ng-persian-datepicker>
                     <button 
                       type="button" 
-                      (click)="isBankDropdownOpen = !isBankDropdownOpen"
-                      class="text-slate-400 hover:text-slate-600 text-xs p-0.5 cursor-pointer">
-                      ▼
+                      (click)="isDocExpiryDatePickerOpen = !isDocExpiryDatePickerOpen; $event.stopPropagation()"
+                      title="انتخاب تقویم شمسی"
+                      class="text-slate-400 hover:text-indigo-600 p-0.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
                     </button>
                   </div>
+                </div>
+              </div>
 
-                  <!-- منوی دراپ‌داون بانک‌ها با سرچ -->
-                  <div *ngIf="isBankDropdownOpen" class="absolute top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl w-full p-2 max-h-48 overflow-y-auto">
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
+                <!-- انتخاب فایل ضمیمه -->
+                <div class="md:col-span-2">
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">فایل مدرک (PDF، تصویر یا فشرده)</label>
+                  <input 
+                    type="file" 
+                    (change)="onDocFileSelected($event)" 
+                    class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                  />
+                </div>
+
+                <!-- پرچم سند محرمانه -->
+                <div class="flex items-center gap-2 pt-4">
+                  <input 
+                    type="checkbox" 
+                    id="new_doc_conf" 
+                    [(ngModel)]="newDoc.is_confidential" 
+                    class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
+                  />
+                  <label for="new_doc_conf" class="text-xs font-bold text-slate-700 cursor-pointer select-none flex items-center gap-1.5">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="lock"></svg>
+                    <span>سند محرمانه (صرفاً مدیران ارشد)</span>
+                  </label>
+                </div>
+
+                <!-- دکمه بارگذاری و ثبت در آرشیو -->
+                <div class="pt-3">
+                  <button 
+                    type="button" 
+                    (click)="uploadNewDocument()" 
+                    [disabled]="isUploadingDoc || !newDoc.file"
+                    class="w-full h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    title="ثبت و بارگذاری مدرک در بایگانی"
+                    aria-label="ثبت در بایگانی">
+                    <span *ngIf="isUploadingDoc" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <svg *ngIf="!isUploadingDoc" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
+                    <span class="sr-only">ثبت در بایگانی</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- جدول اسناد بایگانی‌شده همراه با فیلتر زنده -->
+            <div>
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-black text-slate-800">فهرست اسناد بایگانی‌شده این شرکت</span>
+                  <span class="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-bold">
+                    {{ filteredDocuments.length }} از {{ companyDocuments.length }} سند
+                  </span>
+                </div>
+
+                <!-- نوار جستجو و فیلتر درجا اسناد -->
+                <div class="flex items-center gap-2">
+                  <div class="relative w-48">
                     <input 
                       type="text" 
-                      [(ngModel)]="bankSearchQuery" 
-                      placeholder="جستجوی سریع بانک..." 
-                      class="w-full px-2 py-1 mb-1 text-xs border border-slate-200 rounded-lg focus:outline-none bg-slate-50"
+                      [(ngModel)]="docSearchQuery" 
+                      (ngModelChange)="onDocFilterChange()" 
+                      placeholder="جستجو در اسناد..." 
+                      class="w-full pr-7 pl-2 py-1 text-[11px] bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
-                    <div class="divide-y divide-slate-100">
-                      <button 
-                        *ngFor="let bank of filterBanks()" 
-                        type="button" 
-                        (click)="selectBankForAccount(bank)"
-                        class="w-full text-right px-2 py-1.5 text-xs hover:bg-indigo-50 hover:text-indigo-700 rounded-lg flex items-center justify-between cursor-pointer transition-colors">
-                        <span class="font-bold">{{ bank.name }}</span>
-                        <span class="text-[10px] text-slate-400 font-mono">{{ bank.code }}</span>
-                      </button>
+                    <span class="absolute right-2 top-2 text-slate-400"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg></span>
+                  </div>
+
+                  <select 
+                    [(ngModel)]="selectedDocTypeFilter" 
+                    (ngModelChange)="onDocFilterChange()" 
+                    class="text-[11px] bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none">
+                    <option value="">همه انواع اسناد</option>
+                    <option *ngFor="let t of documentTypesList" [value]="t.value">{{ t.label }}</option>
+                  </select>
+
+                  <button 
+                    *ngIf="docSearchQuery || selectedDocTypeFilter" 
+                    type="button" 
+                    (click)="clearDocFilter()" 
+                    class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-lg bg-slate-200/60 transition-colors cursor-pointer"
+                    title="پاک‌سازی فیلتر">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+                  </button>
+                </div>
+              </div>
+
+              <div *ngIf="isLoadingDocuments" class="py-8 text-center text-xs text-slate-400">
+                در حال بارگذاری اسناد...
+              </div>
+
+              <div *ngIf="!isLoadingDocuments && filteredDocuments.length === 0" class="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-2xl">
+                هیچ سندی با معیارهای انتخابی یافت نشد.
+              </div>
+
+              <div *ngIf="!isLoadingDocuments && filteredDocuments.length > 0" class="rounded-2xl border border-slate-200 overflow-hidden bg-white">
+                <!-- جدول اسناد نسخه دسکتاپ -->
+                <div class="hidden md:block overflow-x-auto">
+                <table class="w-full text-right text-xs">
+                  <thead class="bg-slate-100/80 text-slate-600 font-bold border-b border-slate-200">
+                    <tr>
+                      <th class="py-2.5 px-3 w-10 text-center">ردیف</th>
+                      <th class="py-2.5 px-3">نوع مدرک</th>
+                      <th class="py-2.5 px-3">عنوان مدرک</th>
+                      <th class="py-2.5 px-3 text-center">تاریخ انقضا</th>
+                      <th class="py-2.5 px-3 text-center">وضعیت اعتبار</th>
+                      <th class="py-2.5 px-3 text-center">سطح</th>
+                      <th class="py-2.5 px-3 text-center">اندازه</th>
+                      <th class="py-2.5 px-3 text-center w-28">عملیات</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    <tr *ngFor="let doc of filteredDocuments; let idx = index" class="hover:bg-slate-50 transition-colors">
+                      <td class="py-2.5 px-3 text-center font-mono text-slate-400">{{ idx + 1 }}</td>
+                      <td class="py-2.5 px-3 font-bold text-slate-800">{{ doc.document_type_display || doc.document_type }}</td>
+                      <td class="py-2.5 px-3 font-medium text-slate-700">{{ doc.title }}</td>
+                      <td class="py-2.5 px-3 text-center font-mono text-slate-600">{{ doc.expiry_date || '—' }}</td>
+                      <td class="py-2.5 px-3 text-center">
+                        <span [ngClass]="getDocStatusClass(doc.expiry_status)" class="border px-2 py-0.5 rounded-full text-[10px] font-bold">
+                          {{ getDocStatusLabel(doc.expiry_status) }}
+                        </span>
+                      </td>
+                      <td class="py-2.5 px-3 text-center">
+                        <span *ngIf="doc.is_confidential" class="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.2 rounded-md font-bold inline-flex items-center gap-1" title="سند محرمانه">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock"></svg>
+                          <span>محرمانه</span>
+                        </span>
+                        <span *ngIf="!doc.is_confidential" class="text-[10px] text-slate-400">
+                          عمومی
+                        </span>
+                      </td>
+                      <td class="py-2.5 px-3 text-center font-mono text-[11px] text-slate-500">{{ formatBytes(doc.file_size) }}</td>
+                      <td class="py-2.5 px-3 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                          <!-- پیش‌نمایش درجا -->
+                          <button 
+                            type="button" 
+                            (click)="openPreview(doc)" 
+                            class="w-7 h-7 flex items-center justify-center text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition-colors cursor-pointer" 
+                            title="پیش‌نمایش درجا">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+                          </button>
+                          <!-- دانلود فایل -->
+                          <a 
+                            [href]="doc.file_url || doc.file" 
+                            target="_blank" 
+                            class="w-7 h-7 flex items-center justify-center text-indigo-600 hover:text-indigo-800 rounded-lg hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition-colors" 
+                            title="دانلود فایل">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
+                          </a>
+                          <!-- حذف مدرک -->
+                          <button 
+                            type="button" 
+                            (click)="deleteCompanyDocument(doc)" 
+                            class="w-7 h-7 flex items-center justify-center text-rose-500 hover:text-rose-700 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer" 
+                            title="حذف مدرک">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                </div>
+
+                <!-- کارت‌های ارگونومیک اسناد در موبایل -->
+                <div class="block md:hidden divide-y divide-slate-100">
+                  <div *ngFor="let doc of filteredDocuments" class="p-3.5 space-y-2 bg-white">
+                    <div class="flex items-center justify-between">
+                      <span class="font-bold text-xs text-slate-800">{{ doc.title }}</span>
+                      <span [ngClass]="getDocStatusClass(doc.expiry_status)" class="border px-2 py-0.5 rounded-full text-[10px] font-bold">
+                        {{ getDocStatusLabel(doc.expiry_status) }}
+                      </span>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] text-slate-500">
+                      <span>{{ doc.document_type_display || doc.document_type }}</span>
+                      <span class="font-mono text-[10px]">{{ formatBytes(doc.file_size) }}</span>
+                    </div>
+                    <div class="flex items-center justify-between pt-1 border-t border-slate-100">
+                      <div class="flex items-center gap-2">
+                        <span *ngIf="doc.is_confidential" class="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.2 rounded-md font-bold flex items-center gap-1">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock"></svg>
+                          <span>محرمانه</span>
+                        </span>
+                        <span class="text-[10px] font-mono text-slate-400">انقضا: {{ doc.expiry_date || 'نامحدود' }}</span>
+                      </div>
+                      <div class="flex items-center gap-1.5">
+                        <button type="button" (click)="openPreview(doc)" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-indigo-600 rounded-xl border border-slate-200 cursor-pointer" title="پیش‌نمایش">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+                        </button>
+                        <a [href]="doc.file_url || doc.file" target="_blank" class="w-8 h-8 flex items-center justify-center text-indigo-600 hover:text-indigo-800 rounded-xl border border-indigo-200" title="دانلود">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
+                        </a>
+                        <button type="button" (click)="deleteCompanyDocument(doc)" class="w-8 h-8 flex items-center justify-center text-rose-500 hover:text-rose-700 rounded-xl border border-rose-200 cursor-pointer" title="حذف">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                <!-- شماره حساب بانکی -->
-                <div>
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره حساب بانکی</label>
-                  <input 
-                    type="text" 
-                    [(ngModel)]="newAccount.account_number" 
-                    (input)="onAccountNumberInput()"
-                    placeholder="استخراج خودکار از شبا یا تایپ شماره حساب" 
-                    class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono bg-white"
-                  />
-                </div>
-
-                <!-- عنوان و کاربرد حساب -->
-                <div>
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">عنوان / کاربرد حساب</label>
-                  <input 
-                    type="text" 
-                    [(ngModel)]="newAccount.account_title" 
-                    placeholder="مثلاً: تنخواه، واریز حقوق، بازرگانی" 
-                    class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white"
-                  />
-                </div>
-
-                <!-- چک‌باکس حساب اصلی -->
-                <div class="flex items-center gap-2 pt-5">
-                  <input 
-                    type="checkbox" 
-                    id="new_acc_primary" 
-                    [(ngModel)]="newAccount.is_primary" 
-                    class="w-4 h-4 rounded text-amber-500 focus:ring-amber-400 border-slate-300 cursor-pointer"
-                  />
-                  <label for="new_acc_primary" class="text-xs font-bold text-slate-700 cursor-pointer select-none">
-                    ⭐ حساب پیش‌فرض و اصلی شرکت جهت واریز حقوق و تسویه‌حساب‌ها
-                  </label>
-                </div>
-              </div>
-
-              <!-- دکمه ثبت حساب -->
-              <div class="flex justify-end pt-1">
-                <button 
-                  type="button" 
-                  (click)="saveBankAccount()" 
-                  [disabled]="isSavingBankAccount || !newAccount.sheba_number"
-                  [title]="isEditingAccount ? 'ثبت تغییرات حساب بانکی' : 'افزودن حساب به شرکت'"
-                  aria-label="ثبت حساب بانکی"
-                  class="w-9 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer">
-                  <span *ngIf="isSavingBankAccount" class="animate-spin text-sm">⏳</span>
-                  <span *ngIf="!isSavingBankAccount" class="text-sm">✓</span>
-                  <span class="sr-only">{{ isEditingAccount ? 'ثبت تغییرات حساب' : 'افزودن حساب به شرکت' }}</span>
-                </button>
               </div>
             </div>
+            </ng-container>
 
           </div>
 
@@ -1879,11 +2306,11 @@
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <div *ngIf="activeModalTab === 'access'" class="space-y-4">
           <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs text-indigo-900 leading-relaxed">
-            👥 در این تب می‌توانید مشخص نمایید کدام کاربران سامانه به اطلاعات، اسناد و فضاهای کاری این شرکت دسترسی داشته باشند.
+            <span class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="users"></svg><span>در این تب می‌توانید مشخص نمایید کدام کاربران سامانه به اطلاعات، اسناد و فضاهای کاری این شرکت دسترسی داشته باشند.</span></span>
           </div>
 
           <div *ngIf="!companyModal.data.id" class="py-8 text-center text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-2xl">
-            ⚠️ جهت انتساب دسترسی کاربران، لطفاً ابتدا مشخصات اولیه شرکت را ذخیره فرمایید.
+            جهت انتساب دسترسی کاربران، لطفاً ابتدا مشخصات اولیه شرکت را ذخیره فرمایید.
           </div>
 
           <div *ngIf="companyModal.data.id" class="space-y-4">
@@ -1947,7 +2374,7 @@
                     title="تخصیص دسترسی کاربر"
                     aria-label="تخصیص دسترسی"
                     class="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer shrink-0">
-                    <span class="text-base font-black">+</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg>
                     <span class="sr-only">تخصیص دسترسی</span>
                   </button>
                 </div>
@@ -1997,8 +2424,9 @@
                       </td>
                       <td class="py-2.5 px-3 text-slate-600 font-medium">{{ acc.role_in_company || '—' }}</td>
                       <td class="py-2.5 px-3 text-center">
-                        <span *ngIf="acc.is_default" class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
-                          ✓ پیش‌فرض
+                        <span *ngIf="acc.is_default" class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold inline-flex items-center gap-1">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+                          <span>پیش‌فرض</span>
                         </span>
                         <span *ngIf="!acc.is_default" class="text-[10px] text-slate-400">—</span>
                       </td>
@@ -2010,7 +2438,7 @@
                           class="w-7 h-7 rounded-lg flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer" 
                           title="لغو دسترسی کاربر"
                           aria-label="لغو دسترسی">
-                          <span class="text-xs">🗑️</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
                           <span class="sr-only">لغو دسترسی</span>
                         </button>
                       </td>
@@ -2029,7 +2457,7 @@
         <div *ngIf="activeModalTab === 'gdrive' && isAccountingInstalled" class="space-y-4">
           <app-company-gdrive-tab *ngIf="companyModal.data.id" [companyId]="companyModal.data.id"></app-company-gdrive-tab>
           <div *ngIf="!companyModal.data.id" class="py-8 text-center text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-2xl">
-            ⚠️ جهت اتصال گوگل‌درایو، لطفاً ابتدا مشخصات اولیه شرکت را ذخیره فرمایید.
+            جهت اتصال گوگل‌درایو، لطفاً ابتدا مشخصات اولیه شرکت را ذخیره فرمایید.
           </div>
         </div>
 
@@ -2048,7 +2476,7 @@
             title="انصراف و بستن"
             aria-label="انصراف"
             class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer">
-            <span class="text-sm font-bold">✕</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
             <span class="sr-only">انصراف</span>
           </button>
           <button 
@@ -2058,8 +2486,8 @@
             [title]="companyModal.isEdit ? 'ثبت ویرایش شناسنامه' : 'ثبت شرکت'"
             aria-label="ثبت شرکت"
             class="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer">
-            <span *ngIf="companyModal.isSubmitting" class="animate-spin text-sm">⏳</span>
-            <span *ngIf="!companyModal.isSubmitting" class="text-sm font-bold">✓</span>
+            <span *ngIf="companyModal.isSubmitting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            <svg *ngIf="!companyModal.isSubmitting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
             <span class="sr-only">{{ companyModal.isEdit ? 'ثبت ویرایش شناسنامه' : 'ثبت شرکت' }}</span>
           </button>
         </div>
@@ -2073,8 +2501,8 @@
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
   <div *ngIf="deleteModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
     <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden p-5 text-right">
-      <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-black text-xl mb-3">
-        ⚠️
+      <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-3">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600" appIcon="alert-triangle"></svg>
       </div>
       <h3 class="text-base font-black text-slate-800">حذف شرکت «{{ deleteModal.target?.name }}»</h3>
       <p class="text-xs text-slate-600 mt-2 leading-relaxed">
@@ -2087,7 +2515,7 @@
           title="انصراف از حذف"
           aria-label="انصراف"
           class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer">
-          <span class="text-sm font-bold">✕</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
           <span class="sr-only">انصراف</span>
         </button>
         <button 
@@ -2097,8 +2525,8 @@
           title="تایید و حذف قطعی"
           aria-label="حذف"
           class="w-9 h-9 rounded-xl bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-xs cursor-pointer active:scale-95 transition-all disabled:opacity-50">
-          <span *ngIf="deleteModal.isDeleting" class="animate-spin text-sm">⏳</span>
-          <span *ngIf="!deleteModal.isDeleting" class="text-sm">🗑️</span>
+          <svg *ngIf="deleteModal.isDeleting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="animate-spin" appIcon="refresh-cw"></svg>
+          <svg *ngIf="!deleteModal.isDeleting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
           <span class="sr-only">حذف</span>
         </button>
       </div>
@@ -2115,7 +2543,7 @@
       <div class="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
         <div class="flex items-center gap-2.5">
           <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            👥
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
           </div>
           <div>
             <h3 class="text-sm md:text-base font-black text-slate-800">
@@ -2126,8 +2554,10 @@
         </div>
         <button 
           (click)="closeUserAccessModal()" 
+          title="بستن"
+          aria-label="بستن"
           class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer">
-          ✕
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
         </button>
       </div>
 
@@ -2192,8 +2622,8 @@
                 title="ثبت دسترسی کاربر"
                 aria-label="ثبت دسترسی"
                 class="w-9 h-9 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white flex items-center justify-center rounded-xl shrink-0 transition-all cursor-pointer shadow-xs active:scale-95">
-                <span *ngIf="userAccessModal.isSubmitting" class="animate-spin text-sm">⏳</span>
-                <span *ngIf="!userAccessModal.isSubmitting" class="text-base font-black">+</span>
+                <span *ngIf="userAccessModal.isSubmitting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                <svg *ngIf="!userAccessModal.isSubmitting" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg>
                 <span class="sr-only">ثبت دسترسی</span>
               </button>
             </div>
@@ -2217,8 +2647,8 @@
               *ngFor="let acc of userAccessModal.accesses" 
               class="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
               <div class="flex items-center gap-2">
-                <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center text-xs font-bold font-mono">
-                  👤
+                <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="user"></svg>
                 </span>
                 <div>
                   <div class="text-xs font-bold text-slate-800">{{ acc.user_full_name || acc.username }}</div>
@@ -2233,7 +2663,7 @@
                 <span class="text-[10px] px-2 py-0.5 rounded-full border font-bold" [ngClass]="getAccessLevelBadgeClass(acc.access_level)">
                   {{ acc.access_level_display || getAccessLevelLabel(acc.access_level) }}
                 </span>
-                <span *ngIf="acc.is_default" class="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold">
+                <span *ngIf="acc.is_default" class="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold">
                   پیش‌فرض
                 </span>
                 <button 
@@ -2241,7 +2671,8 @@
                   (click)="removeUserAccess(acc.id)"
                   class="text-rose-500 hover:text-rose-700 hover:bg-rose-50 p-1 rounded-lg text-xs transition-colors cursor-pointer"
                   title="لغو دسترسی">
-                  🗑️
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+                  <span class="sr-only">لغو دسترسی</span>
                 </button>
               </div>
             </div>
@@ -2258,7 +2689,7 @@
           title="بستن پنجره مدیریت دسترسی"
           aria-label="بستن"
           class="w-8 h-8 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 flex items-center justify-center transition-colors cursor-pointer">
-          <span class="text-xs font-bold">✕</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
           <span class="sr-only">بستن</span>
         </button>
       </div>
@@ -2282,7 +2713,7 @@
         
         <!-- Right Side (RTL Start): Title & Page Indicator -->
         <div class="flex items-center gap-2.5 min-w-0">
-          <span class="text-lg shrink-0">📄</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-400 shrink-0" appIcon="file-text"></svg>
           <div class="min-w-0">
             <h3 class="text-xs md:text-sm font-black text-white truncate max-w-[200px] md:max-w-md">{{ previewModal.title }}</h3>
             <span *ngIf="previewModal.isPdf && pdfTotalPages > 1" class="text-[10px] text-slate-400 font-mono">
@@ -2297,8 +2728,8 @@
               (click)="prevPdfPage()" 
               [disabled]="pdfCurrentPage <= 1"
               title="صفحه قبلی"
-              class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer">
-              →
+              class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-right"></svg>
             </button>
             <span class="text-[10px] font-mono font-bold px-1.5 text-slate-300">{{ pdfCurrentPage }}/{{ pdfTotalPages }}</span>
             <button 
@@ -2306,8 +2737,8 @@
               (click)="nextPdfPage()" 
               [disabled]="pdfCurrentPage >= pdfTotalPages"
               title="صفحه بعدی"
-              class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer">
-              ←
+              class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
             </button>
           </div>
         </div>
@@ -2320,8 +2751,8 @@
               type="button" 
               (click)="zoomOut()" 
               title="کوچک‌نمایی (-)" 
-              class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-700 transition-all cursor-pointer active:scale-95">
-              −
+              class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-700 transition-all cursor-pointer active:scale-95">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="minus"></svg>
             </button>
             <button 
               type="button" 
@@ -2334,8 +2765,8 @@
               type="button" 
               (click)="zoomIn()" 
               title="بزرگ‌نمایی (+)" 
-              class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-700 transition-all cursor-pointer active:scale-95">
-              +
+              class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-700 transition-all cursor-pointer active:scale-95">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg>
             </button>
           </div>
 
@@ -2344,8 +2775,8 @@
             type="button" 
             (click)="rotatePreview()" 
             title="چرخش ۹۰ درجه" 
-            class="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 flex items-center justify-center text-xs transition-all cursor-pointer active:scale-95">
-            ↻
+            class="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 flex items-center justify-center transition-all cursor-pointer active:scale-95">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-cw"></svg>
           </button>
 
           <!-- دکمه بازنشانی جابجایی و زوم (Reset Pan/Zoom) -->
@@ -2353,8 +2784,8 @@
             type="button" 
             (click)="resetZoom()" 
             title="مرکز کردن سند" 
-            class="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 flex items-center justify-center text-xs transition-all cursor-pointer active:scale-95">
-            🎯
+            class="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 flex items-center justify-center transition-all cursor-pointer active:scale-95">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="crosshair"></svg>
           </button>
 
           <!-- دکمه تمام‌صفحه (Fullscreen) -->
@@ -2362,9 +2793,9 @@
             type="button" 
             (click)="toggleFullscreen()" 
             [title]="isFullscreenPreview ? 'خروج از تمام‌صفحه' : 'نمایش تمام‌صفحه'" 
-            class="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 flex items-center justify-center text-xs transition-all cursor-pointer active:scale-95">
-            <span *ngIf="!isFullscreenPreview">⛶</span>
-            <span *ngIf="isFullscreenPreview">🗗</span>
+            class="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 flex items-center justify-center transition-all cursor-pointer active:scale-95">
+            <svg *ngIf="!isFullscreenPreview" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="maximize-2"></svg>
+            <svg *ngIf="isFullscreenPreview" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="minimize-2"></svg>
           </button>
 
           <!-- دکمه دانلود اصل فایل -->
@@ -2372,7 +2803,7 @@
              title="دانلود نسخه اصلی سند"
              aria-label="دانلود"
              class="w-8 h-8 rounded-xl bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600/50 hover:text-white border border-indigo-500/40 flex items-center justify-center transition-all cursor-pointer">
-            <span class="text-xs">📥</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
             <span class="sr-only">دانلود</span>
           </a>
 
@@ -2382,7 +2813,7 @@
             (click)="closePreview()" 
             title="بستن پیش‌نمایش (Esc)"
             class="w-8 h-8 rounded-xl bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 hover:text-white border border-rose-500/30 flex items-center justify-center transition-all cursor-pointer mr-1">
-            ✕
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
           </button>
         </div>
 
@@ -2429,7 +2860,7 @@
 
         <!-- ۳. فال‌بک برای سایر انواع فایل‌ها -->
         <div *ngIf="!previewModal.isPdf && !previewModal.isImage" class="text-center space-y-3 p-8 bg-slate-900/90 rounded-2xl border border-slate-800">
-          <div class="text-4xl">📄</div>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto text-slate-500 mb-2" appIcon="file-text"></svg>
           <p class="text-xs font-bold text-slate-300">پیش‌نمایش مستقیم این نوع فایل در مرورگر پشتیبانی نمی‌شود.</p>
           <a [href]="previewModal.fileUrl" target="_blank" download class="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs">
             دانلود مستقیم فایل
@@ -2441,7 +2872,7 @@
       <!-- Footer Help Bar -->
       <div class="px-4 py-1.5 bg-slate-950/90 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 shrink-0">
         <div class="flex items-center gap-3">
-          <span>💡 راهنما: سند را با کلیک و کشیدن ماوس (Drag) جابجا کنید.</span>
+          <span class="flex items-center gap-1.5"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-400" appIcon="help-circle"></svg><span>راهنما: سند را با کلیک و کشیدن ماوس (Drag) جابجا کنید.</span></span>
           <span class="hidden md:inline">|</span>
           <span class="hidden md:inline">بزرگ‌نمایی: دکمه‌های + و −</span>
         </div>

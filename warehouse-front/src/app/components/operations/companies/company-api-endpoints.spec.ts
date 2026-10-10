@@ -1,9 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TestBed } from '@angular/core/testing';
+// @vitest-environment jsdom
+import '@angular/compiler';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { TestBed, getTestBed } from '@angular/core/testing';
+import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { HttpClient } from '@angular/common/http';
 import { of } from 'rxjs';
 import { CompanyApiService } from '../../../core/api/company-api.service';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
+
+try {
+  getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
+} catch {}
 
 describe('CompanyApiService: نشانی هسته یا حسابداری بر پایهٔ ماژول نصب‌شده', () => {
   let http: { get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; patch: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn> };
@@ -11,6 +18,7 @@ describe('CompanyApiService: نشانی هسته یا حسابداری بر پا
   let api: CompanyApiService;
 
   beforeEach(() => {
+    TestBed.resetTestingModule();
     accountingInstalled = true;
     http = {
       get: vi.fn().mockReturnValue(of([])),
@@ -26,6 +34,10 @@ describe('CompanyApiService: نشانی هسته یا حسابداری بر پا
       ],
     });
     api = TestBed.inject(CompanyApiService);
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
   });
 
   it('در نصب «فقط انبار» فهرست و دسترس‌پذیری شرکت از /org/companies خوانده می‌شود', () => {
