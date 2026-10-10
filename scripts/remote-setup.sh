@@ -462,9 +462,10 @@ else
 fi
 ufw allow 80/tcp || true
 ufw allow 443/tcp || true
-ufw --force enable || true
 
-systemctl enable --now fail2ban || true
+# Activate UFW and Fail2ban in a detached background subshell so the active SSH session
+# is not abruptly severed by iptables/nftables state reloads before the script exits.
+nohup bash -c 'sleep 2; ufw --force enable; systemctl enable --now fail2ban' >/dev/null 2>&1 &
 
 echo "======================================================================"
 echo " Hardened Server Provisioning Completed Successfully!"

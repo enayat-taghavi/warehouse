@@ -937,6 +937,21 @@ PYEOF
             /var/www/warehouse/current/venv/bin/python manage.py createsuperuser
         ;;
 
+    reset-lockout)
+        # Reset django-axes login attempt lockouts (G-10)
+        if [ $# -ne 0 ]; then
+            echo "[ERROR] reset-lockout takes no arguments." >&2
+            exit 2
+        fi
+        if [[ ! -x /var/www/warehouse/current/venv/bin/python || ! -f /var/www/warehouse/current/warehouse-backend/manage.py ]]; then
+            echo "[ERROR] Active release manage.py or venv not found" >&2
+            exit 1
+        fi
+        cd /var/www/warehouse/current/warehouse-backend
+        exec runuser -u warehouse -- env DJANGO_SETTINGS_MODULE=config.settings DJANGO_ENV=production \
+            /var/www/warehouse/current/venv/bin/python manage.py axes_reset
+        ;;
+
     logs)
         # logs [LINES] [--follow] (G-09)
         LINES=100

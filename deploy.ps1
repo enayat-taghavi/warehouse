@@ -33,6 +33,7 @@ param(
     [switch]$Rollback,
     [switch]$GoLive,
     [switch]$CreateAdmin,
+    [switch]$ResetLockout,
     [string]$SetSecret,
     [switch]$InstallKey,
     [switch]$RegisterPullTask,
@@ -152,7 +153,10 @@ function ConvertTo-ShellLiteral([string]$Value) {
 
 function ConvertTo-ExitCode {
     param([AllowNull()][object]$Value)
-    if ($Value -is [int] -and $Value -ge 0 -and $Value -le 255) { return $Value }
+    if ($Value -is [int]) {
+        if ($Value -ge 0 -and $Value -le 255) { return $Value }
+        return 1
+    }
     $kind = if ($null -eq $Value) { 'nothing' } else { $Value.GetType().Name }
     Write-Err "Internal error: the mode returned '$kind' instead of a single exit code; treating as failure."
     return 1
@@ -766,7 +770,7 @@ function Get-KnownHostsLookup([string]$ServerHost, [int]$Port) {
 function Get-PinnedHostKeyProblem([string]$Lookup, [string]$Fingerprint) {
     # $null when known_hosts holds the host and every entry for it matches the pinned fingerprint.
     $r = Invoke-Process -FilePath $SshKeygenExe -ArgumentList @('-l', '-F', $Lookup, '-f', $KnownHostsFile) -Capture -Quiet
-    $found = @($r.Output | Where-Object { $_ -and -not $_.StartsWith('#') } | ForEach-Object {
+    $found = @($r.Output | Where-Object { $_ -and -not $_.StartsWith('#') -and $_ -match '\bED25519\b' } | ForEach-Object {
             if ($_ -match '(SHA256:[A-Za-z0-9+/]{43})') { $Matches[1] } else { '<unparsed>' }
         })
     if ($found.Count -eq 0) { return "Host $Lookup is not in known_hosts." }
@@ -2407,6 +2411,18 @@ function Invoke-CreateAdminMode {
     return $r.ExitCode
 }
 
+function Invoke-ResetLockoutMode {
+    $config = Connect-Server
+    Write-Step "Resetting login lockouts on $($config.ServerHost)..."
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'reset-lockout'
+    if ($r.ExitCode -ne 0) {
+        Write-Err "Resetting login lockouts failed with exit code $($r.ExitCode)."
+    } else {
+        Write-Success 'Login attempt lockouts cleared successfully.'
+    }
+    return $r.ExitCode
+}
+
 function Test-SecretValue([string]$Value) {
     if (-not $Value) { return 'the value is empty' }
     if ($Value.Length -gt 4096) { return 'the value is longer than 4096 characters' }
@@ -2654,6 +2670,7 @@ $MenuItems = @(
     @('Setup', 'Initial server provisioning and first deployment'),
     @('InstallKey', 'Install SSH public key on the server'),
     @('CreateAdmin', 'Create a Django superuser interactively'),
+    @('ResetLockout', 'Reset login lockouts and failed attempts (django-axes)'),
     @('IssueCert', "Issue the Let's Encrypt certificate (HTTP-01 or DNS-01 by CertMode)"),
     @('InstallCert', 'Install a Cloudflare Origin or Custom TLS certificate'),
     @('SetSecret', 'Set an allowed secret in shared/.env'),
@@ -2711,6 +2728,7 @@ Modes (exactly one):
   -Setup             Provision the server and deploy HEAD (blocked after GO_LIVE)
   -InstallKey        Install the local ED25519 public key on the server (interactive)
   -CreateAdmin       Create a Django superuser over an interactive SSH session
+  -ResetLockout      Reset login attempt lockouts on the server (django-axes)
   -IssueCert         Issue the Let's Encrypt certificate (HTTP-01 or DNS-01 by CertMode)
   -InstallCert       Install a Cloudflare Origin or Custom TLS certificate (-CertFile, -KeyFile)
   -SetSecret <KEY>   Set GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET or OUTBOUND_HTTP_PROXY,
@@ -2767,6 +2785,7 @@ function Invoke-Mode([string]$Name) {
             'Rollback' { Invoke-RollbackMode }
             'GoLive' { Invoke-GoLiveMode }
             'CreateAdmin' { Invoke-CreateAdminMode }
+            'ResetLockout' { Invoke-ResetLockoutMode }
             'SetSecret' { Invoke-SetSecretMode $SetSecret }
             'RegisterPullTask' { Register-PullTask }
             'Logs' { Invoke-LogsMode }
@@ -2797,7 +2816,7 @@ function Invoke-Main {
             InstallKey = [bool]$InstallKey; Setup = [bool]$Setup; Update = [bool]$Update; Backup = [bool]$Backup
             PullBackups = [bool]$PullBackups; PruneBackups = [bool]$PruneBackups; Restore = [bool]$Restore
             RestoreDrill = [bool]$RestoreDrill; Rollback = [bool]$Rollback; GoLive = [bool]$GoLive
-            CreateAdmin = [bool]$CreateAdmin; SetSecret = -not [string]::IsNullOrEmpty($SetSecret)
+            CreateAdmin = [bool]$CreateAdmin; ResetLockout = [bool]$ResetLockout; SetSecret = -not [string]::IsNullOrEmpty($SetSecret)
             RegisterPullTask = [bool]$RegisterPullTask; Logs = [bool]$Logs; Restart = [bool]$Restart
             IssueCert = [bool]$IssueCert; InstallCert = [bool]$InstallCert; Status = [bool]$Status; Help = [bool]$ShowHelp
             AddModule = -not [string]::IsNullOrEmpty($AddModule); ResetServer = [bool]$ResetServer
