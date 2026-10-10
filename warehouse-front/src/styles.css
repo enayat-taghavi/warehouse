@@ -409,18 +409,23 @@ ng-persian-datepicker {
 /* ==========================================================================
    RESPONSIVE CLICKABLE ERGONOMICS (AGENTS §7, WCAG 2.2 TOUCH TARGETS)
    ========================================================================== */
-.tap-target {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+/* در لایه components تا utilityهای Tailwind (hidden، sm:hidden، flex، block و ...) بر آن غلبه کنند. */
+@layer components {
+  .tap-target {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 639.98px) {
+    .tap-target {
+      min-width: 2.5rem;
+      min-height: 2.5rem;
+    }
+  }
 }
 
 @media (max-width: 639.98px) {
-  .tap-target {
-    min-width: 2.5rem;
-    min-height: 2.5rem;
-  }
-
   .btn-icon-square,
   .btn-icon-sm {
     min-width: 2.5rem;

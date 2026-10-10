@@ -18,6 +18,9 @@ try {
     <svg id="action-icon" appIcon="action-create" class="w-4 h-4"></svg>
     <svg id="status-icon" appIcon="status-pending" class="w-4 h-4"></svg>
     <svg id="invalid-icon" appIcon="action-invalid-test" class="w-4 h-4"></svg>
+    <svg id="proto-icon" appIcon="constructor" class="w-4 h-4"></svg>
+    <svg id="ref-plus" appIcon="plus" class="w-4 h-4"></svg>
+    <svg id="ref-clock" appIcon="clock" class="w-4 h-4"></svg>
   `
 })
 class TestHostComponent {}
@@ -45,16 +48,25 @@ describe('SvgIconDirective', () => {
 
   it('باید نام معنایی action-create را به آیکون plus نگاشت و رندر کند', () => {
     const el = fixture.nativeElement.querySelector('#action-icon');
-    expect(el.innerHTML).toContain('line');
+    const ref = fixture.nativeElement.querySelector('#ref-plus');
+    expect(el.innerHTML).not.toBe('');
+    expect(el.innerHTML).toBe(ref.innerHTML);
   });
 
   it('باید نام معنایی status-pending را به آیکون clock نگاشت و رندر کند', () => {
     const el = fixture.nativeElement.querySelector('#status-icon');
-    expect(el.innerHTML).toContain('circle');
+    const ref = fixture.nativeElement.querySelector('#ref-clock');
+    expect(el.innerHTML).not.toBe('');
+    expect(el.innerHTML).toBe(ref.innerHTML);
   });
 
   it('در صورت نام نامعتبر باید محتوای درونی خالی باشد', () => {
     const el = fixture.nativeElement.querySelector('#invalid-icon');
+    expect(el.innerHTML).toBe('');
+  });
+
+  it('کلید prototype (مثل constructor) نباید چیزی رندر کند', () => {
+    const el = fixture.nativeElement.querySelector('#proto-icon');
     expect(el.innerHTML).toBe('');
   });
 });

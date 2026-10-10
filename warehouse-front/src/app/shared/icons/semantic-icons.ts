@@ -90,22 +90,22 @@ export const PLATFORM_ENTITY_ICONS = {
 export type PlatformEntityIconKey = keyof typeof PLATFORM_ENTITY_ICONS;
 
 /**
- * حل نام‌های معنایی (action-* یا status-*) یا نام مستقیم رجیستری به IconName معتبر
+ * حل نام‌های معنایی (action-* یا status-*) یا نام مستقیم رجیستری به IconName معتبر.
+ * فقط کلیدهای خود رجیستری پذیرفته می‌شوند (Object.hasOwn)، نه کلیدهای prototype مثل constructor.
  */
 export function resolveSemanticIcon(name: string | null | undefined): IconName | null {
   if (!name) return null;
 
+  let target: string = name;
   if (name.startsWith('action-')) {
-    const key = name.slice(7) as ActionIconKey;
-    const resolved = ACTION_ICONS[key];
-    return resolved && resolved in ICONS ? (resolved as IconName) : null;
+    const key = name.slice(7);
+    if (!Object.hasOwn(ACTION_ICONS, key)) return null;
+    target = ACTION_ICONS[key as ActionIconKey];
+  } else if (name.startsWith('status-')) {
+    const key = name.slice(7);
+    if (!Object.hasOwn(STATUS_ICONS, key)) return null;
+    target = STATUS_ICONS[key as StatusIconKey];
   }
 
-  if (name.startsWith('status-')) {
-    const key = name.slice(7) as StatusIconKey;
-    const resolved = STATUS_ICONS[key];
-    return resolved && resolved in ICONS ? (resolved as IconName) : null;
-  }
-
-  return name in ICONS ? (name as IconName) : null;
+  return Object.hasOwn(ICONS, target) ? (target as IconName) : null;
 }

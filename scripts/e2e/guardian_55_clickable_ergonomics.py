@@ -13,6 +13,8 @@
 افزایش تعداد نقض‌ها نسبت به خط مبنا شکست می‌خورد.
 برای ثبت پیشرفت پس از هر گام:
   python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline
+به‌روزرسانی خط مبنا فقط کاهش را می‌پذیرد؛ اگر شمارنده‌ای بالا رفته باشد رد می‌شود
+تا نتوان تخلف تازه را با بازنویسی خط مبنا پنهان کرد.
 """
 
 import json
@@ -93,7 +95,8 @@ def check_rule_1_unlabeled_icon_buttons(templates):
             no_tags = re.sub(r'<[^>]+>', '', content)
             no_tags = re.sub(r'\{\{[^}]*\}\}', '', no_tags).strip()
             if not no_tags:
-                has_label = bool(re.search(r'\b(aria-label|\[aria-label\]|\[attr\.aria-label\]|title|\[title\]|\[attr\.title\])\b', attrs))
+                # فقط خود ویژگی پذیرفته است، نه کلمه title درون یک عبارت مثل (click)="open(x.title)"
+                has_label = bool(re.search(r'(?:^|\s)(aria-label|\[aria-label\]|\[attr\.aria-label\]|title|\[title\]|\[attr\.title\])\s*=', attrs))
                 if not has_label:
                     line_no = text[:m.start()].count('\n') + 1
                     violations.append({
@@ -142,7 +145,8 @@ def check_rule_3_non_standard_actions(templates):
                 if act_prefix in method:
                     icon_m = re.search(r'appIcon=["\']([^"\']+)["\']', content)
                     used_icon = icon_m.group(1) if icon_m else None
-                    if used_icon not in valid_icons:
+                    # نام معنایی فرهنگ (action-*) همان آیکون مصوب است
+                    if used_icon not in valid_icons and used_icon != f"action-{canonical_action}":
                         line_no = text[:m.start()].count('\n') + 1
                         violations.append({
                             'file': rel,
@@ -189,6 +193,15 @@ def run_guardian(update_baseline=False):
         "rule_3_non_standard_actions": len(r3),
         "rule_4_retired_icons": len(r4),
     }
+
+    if update_baseline and BASELINE_FILE.exists():
+        old_counters = json.loads(BASELINE_FILE.read_text(encoding="utf-8")).get("counters", {})
+        raised = [f"{k}: {old_counters[k]} → {v}" for k, v in current_counters.items()
+                  if k in old_counters and v > old_counters[k]]
+        if raised:
+            print(f"❌ به‌روزرسانی خط مبنا رد شد؛ این شمارنده‌ها بالا رفته‌اند: {', '.join(raised)}")
+            print("   تخلف تازه را رفع کن؛ خط مبنا فقط پایین می‌آید.")
+            return False
 
     if update_baseline or not BASELINE_FILE.exists():
         data = {

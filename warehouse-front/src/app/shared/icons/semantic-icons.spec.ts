@@ -55,7 +55,7 @@ describe('فرهنگ آیکون یکسان (Semantic Icon Dictionary)', () => {
     }
   });
 
-  it('نباید هیچ اشتراک آیکونی خارج از فهرست سفید بند ۳-۴ بین وضعیت‌ها و موجودیت‌ها وجود داشته باشد', () => {
+  it('نباید هیچ اشتراک آیکونی خارج از فهرست سفید بند ۳-۴ بین کارها، وضعیت‌ها و موجودیت‌ها وجود داشته باشد', () => {
     // نگاشت هر آیکون به مفاهیمی که از آن استفاده کرده‌اند
     const iconUsageMap = new Map<string, string[]>();
 
@@ -69,6 +69,7 @@ describe('فرهنگ آیکون یکسان (Semantic Icon Dictionary)', () => {
       }
     };
 
+    recordUsage(ACTION_ICONS, 'action');
     recordUsage(STATUS_ICONS, 'status');
     recordUsage(PLATFORM_ENTITY_ICONS, 'platform-entity');
     recordUsage(WAREHOUSE_ENTITY_ICONS, 'warehouse-entity');
@@ -107,5 +108,11 @@ describe('فرهنگ آیکون یکسان (Semantic Icon Dictionary)', () => {
     expect(resolveSemanticIcon('nonexistent-icon-xyz')).toBeNull();
     expect(resolveSemanticIcon(null)).toBeNull();
     expect(resolveSemanticIcon(undefined)).toBeNull();
+
+    // کلیدهای prototype نباید نام معتبر حساب شوند
+    expect(resolveSemanticIcon('constructor')).toBeNull();
+    expect(resolveSemanticIcon('toString')).toBeNull();
+    expect(resolveSemanticIcon('action-constructor')).toBeNull();
+    expect(resolveSemanticIcon('status-__proto__')).toBeNull();
   });
 });
