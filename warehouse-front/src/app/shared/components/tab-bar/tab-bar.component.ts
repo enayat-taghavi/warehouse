@@ -11,6 +11,18 @@ import {
 import { CommonModule } from '@angular/common';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
+const TAB_COUNTER_TONE_CLASSES: Record<
+  'primary' | 'indigo' | 'emerald' | 'rose' | 'amber' | 'slate',
+  { active: string; inactive: string }
+> = {
+  primary: { active: 'bg-indigo-100 text-indigo-700', inactive: 'bg-slate-200/80 text-slate-600' },
+  indigo: { active: 'bg-indigo-100 text-indigo-700', inactive: 'bg-slate-200/80 text-slate-600' },
+  emerald: { active: 'bg-emerald-100 text-emerald-800', inactive: 'bg-emerald-50 text-emerald-700' },
+  rose: { active: 'bg-rose-100 text-rose-800', inactive: 'bg-rose-50 text-rose-700' },
+  amber: { active: 'bg-amber-100 text-amber-800', inactive: 'bg-amber-50 text-amber-700' },
+  slate: { active: 'bg-slate-200 text-slate-700', inactive: 'bg-slate-200/80 text-slate-600' },
+};
+
 export interface TabDef {
   /** شناسه یکتای تب */
   id: string;
@@ -22,7 +34,7 @@ export interface TabDef {
   icon?: string;
   /** عدد شمارنده فراداده */
   count?: number;
-  /** رنگ اختیاری */
+  /** رنگ اختیاری شمارنده و تب طبق AGENTS §7 */
   tone?: 'primary' | 'indigo' | 'emerald' | 'rose' | 'amber' | 'slate';
 }
 
@@ -78,9 +90,7 @@ export interface TabDef {
           @if (tab.count !== undefined && tab.count !== null) {
             <span
               class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md tabular-nums transition-colors"
-              [ngClass]="tab.id === active()
-                ? 'bg-indigo-100 text-indigo-700'
-                : 'bg-slate-200/80 text-slate-600'"
+              [ngClass]="counterClasses(tab)"
             >
               {{ tab.count }}
             </span>
@@ -107,6 +117,12 @@ export class TabBarComponent {
   readonly activeChange = output<string>();
 
   @ViewChildren('tabButton') private tabButtons!: QueryList<ElementRef<HTMLButtonElement>>;
+
+  counterClasses(tab: TabDef): string {
+    const tone = tab.tone ?? 'indigo';
+    const cfg = TAB_COUNTER_TONE_CLASSES[tone] ?? TAB_COUNTER_TONE_CLASSES.indigo;
+    return tab.id === this.active() ? cfg.active : cfg.inactive;
+  }
 
   /** تب قابل فوکوس با Tab؛ اگر active با هیچ تبی نخواند، تب اول تا نوار از صفحه‌کلید دور نماند. */
   readonly focusableTabId = computed<string | null>(() => {

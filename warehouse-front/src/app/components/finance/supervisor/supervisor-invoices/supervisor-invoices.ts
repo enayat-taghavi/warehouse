@@ -8,18 +8,57 @@ import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection, ExpenseInvoice } from '../../../../core/models/personnel.model';
-import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { STATUS_ICONS } from '../../../../shared/icons/semantic-icons';
 
 @Component({
   selector: 'app-supervisor-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    CommandCenterComponent,
+    TabBarComponent,
+    ActionButtonComponent,
+  ],
   templateUrl: './supervisor-invoices.html',
   styleUrl: './supervisor-invoices.css'
 })
 export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
   // Subtabs navigation
   activeSubTab: 'pending' | 'approved' | 'all' = 'pending';
+
+  get tabs(): TabDef[] {
+    return [
+      {
+        id: 'pending',
+        label: 'نیازمند بررسی',
+        shortLabel: 'بررسی',
+        icon: STATUS_ICONS.pending,
+        count: this.statusCounters.pending,
+        tone: 'amber',
+      },
+      {
+        id: 'approved',
+        label: 'تایید شده',
+        shortLabel: 'تایید',
+        icon: STATUS_ICONS.approved,
+        count: this.statusCounters.approved,
+        tone: 'emerald',
+      },
+      {
+        id: 'all',
+        label: 'کل فاکتورها',
+        shortLabel: 'همه',
+        icon: STATUS_ICONS.all,
+        count: this.statusCounters.all,
+        tone: 'slate',
+      },
+    ];
+  }
 
   // Section Management (Guardian G1: Section Isolation)
   mySections: ProjectSection[] = [];
@@ -119,10 +158,12 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
     this.fetchInvoices();
   }
 
-  switchSubTab(tab: 'pending' | 'approved' | 'all'): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
-    this.updateViewAndCounters();
+  switchSubTab(tab: string): void {
+    if (tab === 'pending' || tab === 'approved' || tab === 'all') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+      this.updateViewAndCounters();
+    }
   }
 
   syncUrlParams(): void {

@@ -22,6 +22,9 @@ import { SettingsLabelTabComponent } from './tabs/settings-label-tab/settings-la
 import { SettingsBackupTabComponent } from './tabs/settings-backup-tab/settings-backup-tab';
 import { ConfirmDialogService } from '../../shared';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
+import { PLATFORM_ENTITY_ICONS } from '../../shared/icons/semantic-icons';
 
 @Component({
   selector: 'app-settings',
@@ -33,7 +36,9 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
     SettingsDocFieldsTabComponent, 
     SettingsLabelTabComponent, 
     SettingsBackupTabComponent,
-    SvgIconDirective
+    SvgIconDirective,
+    TabBarComponent,
+    ActionButtonComponent
   ],
   templateUrl: './settings.html'
 })
@@ -42,6 +47,14 @@ export class Settings implements OnInit {
   isLoading = true;
   settings = {} as SystemSettingsConfig;
   activeTab: 'operations' | 'label' | 'counter_fields' | 'doc_fields' | 'backup' = 'operations';
+
+  readonly tabs: TabDef[] = [
+    { id: 'operations', label: 'قوانین عملیاتی', shortLabel: 'عملیات', icon: 'shield' },
+    { id: 'counter_fields', label: 'فیلدهای انبارگردان', shortLabel: 'انبارگردان', icon: 'check-square-2' },
+    { id: 'doc_fields', label: 'فیلدهای کارتابل مالی', shortLabel: 'مالی', icon: 'file-text' },
+    { id: 'label', label: 'طراح لیبل', shortLabel: 'لیبل', icon: 'printer' },
+    { id: 'backup', label: 'پشتیبان‌گیری و بازیابی', shortLabel: 'پشتیبان', icon: PLATFORM_ENTITY_ICONS.backup },
+  ];
 
   // ── Field Permissions State ────────────────────────────────────────────────
   fieldConfigs: FieldPermissionConfig[] = [];
@@ -89,13 +102,15 @@ export class Settings implements OnInit {
     this.loadSettings();
   }
 
-  setTab(tab: 'operations' | 'label' | 'counter_fields' | 'doc_fields' | 'backup') {
-    this.activeTab = tab;
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { tab },
-      queryParamsHandling: 'merge'
-    });
+  setTab(tab: string) {
+    if (['operations', 'label', 'counter_fields', 'doc_fields', 'backup'].includes(tab)) {
+      this.activeTab = tab as any;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { tab },
+        queryParamsHandling: 'merge'
+      });
+    }
   }
 
   loadSettings() {

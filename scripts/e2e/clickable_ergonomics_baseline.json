@@ -2,9 +2,9 @@
   "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
   "counters": {
     "rule_1_unlabeled_icon_buttons": 192,
-    "rule_2_tab_min_widths": 5,
-    "rule_3_non_standard_actions": 261,
-    "rule_4_retired_icons": 136
+    "rule_2_tab_min_widths": 0,
+    "rule_3_non_standard_actions": 259,
+    "rule_4_retired_icons": 135
   },
   "violations": {
     "rule_1_unlabeled_icon_buttons": [
@@ -129,33 +129,7 @@
         "line": 1038
       }
     ],
-    "rule_2_tab_min_widths": [
-      {
-        "file": "components/settings/settings.html",
-        "line": 45,
-        "tag": "button"
-      },
-      {
-        "file": "components/settings/settings.html",
-        "line": 58,
-        "tag": "button"
-      },
-      {
-        "file": "components/settings/settings.html",
-        "line": 71,
-        "tag": "button"
-      },
-      {
-        "file": "components/settings/settings.html",
-        "line": 84,
-        "tag": "button"
-      },
-      {
-        "file": "components/settings/settings.html",
-        "line": 98,
-        "tag": "button"
-      }
-    ],
+    "rule_2_tab_min_widths": [],
     "rule_3_non_standard_actions": [
       {
         "file": "components/audit/audit.html",
