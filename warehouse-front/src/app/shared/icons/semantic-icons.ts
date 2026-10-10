@@ -1,0 +1,111 @@
+import { ICONS, IconName } from './icon-registry';
+
+/**
+ * فرهنگ آیکون معنایی کارها (Action Icons)
+ * مرجع: جدول ۳-۱ در طرح جامع ارگونومی واکنش‌گرا
+ * هر کار دقیقاً به یک آیکون واحد در رجیستری متصل است.
+ */
+export const ACTION_ICONS = {
+  'create': 'plus',
+  'edit': 'edit',
+  'delete': 'trash-2',
+  'refresh': 'refresh-cw',
+  'export-excel': 'download',
+  'import-excel': 'upload',
+  'download': 'download',
+  'upload': 'upload',
+  'attach': 'hero-paper-clip',
+  'save': 'save',
+  'approve': 'check-circle',
+  'reject': 'x-circle',
+  'return': 'rotate-ccw',
+  'restore': 'rotate-ccw',
+  'confirm': 'check',
+  'close': 'x',
+  'send': 'send',
+  'print': 'printer',
+  'copy': 'copy',
+  'view': 'eye',
+  'hide': 'eye-off',
+  'search': 'search',
+  'filter': 'filter',
+  'more': 'more-vertical',
+  'camera': 'camera',
+  'scan': 'scan-line',
+  'loading': 'spinner',
+  'lock': 'lock',
+  'unlock': 'unlock',
+  'history': 'file-lines',
+  'sync': 'cloud-upload',
+  'settings': 'settings',
+  'back': 'chevron-right',
+  'forward': 'chevron-left',
+  'expand': 'chevron-down',
+  'collapse': 'chevron-up',
+  'logout': 'log-out',
+} as const satisfies Record<string, IconName>;
+
+export type ActionIconKey = keyof typeof ACTION_ICONS;
+
+/**
+ * فرهنگ آیکون معنایی وضعیت‌ها (Status Icons)
+ * مرجع: جدول ۳-۲ در طرح جامع ارگونومی واکنش‌گرا
+ * جایگزین استاندارد ایموجی‌ها در تب‌ها و برچسب‌های وضعیت.
+ */
+export const STATUS_ICONS = {
+  'pending': 'clock',
+  'approved': 'check-circle',
+  'rejected': 'x-circle',
+  'revision': 'rotate-ccw',
+  'draft': 'file',
+  'archived': 'archive',
+  'all': 'list',
+  'warning': 'alert-triangle',
+  'error': 'alert-circle',
+  'alert': 'bell',
+  'locked': 'lock',
+  'offline': 'wifi-off',
+  'queued': 'cloud-upload',
+} as const satisfies Record<string, IconName>;
+
+export type StatusIconKey = keyof typeof STATUS_ICONS;
+
+/**
+ * فرهنگ آیکون موجودیت‌های عمومی و پلتفرم (Platform Entity Icons)
+ * مرجع: جدول ۳-۳ در طرح جامع ارگونومی واکنش‌گرا
+ */
+export const PLATFORM_ENTITY_ICONS = {
+  'dashboard': 'grid',
+  'reports': 'bar-chart-2',
+  'company': 'building',
+  'users': 'user-circle',
+  'settings': 'settings',
+  'audit': 'file-lines',
+  'health': 'server',
+  'backup': 'cloud',
+  'notifications': 'bell',
+  'chat': 'message-square',
+} as const satisfies Record<string, IconName>;
+
+export type PlatformEntityIconKey = keyof typeof PLATFORM_ENTITY_ICONS;
+
+/**
+ * حل نام‌های معنایی (action-* یا status-*) یا نام مستقیم رجیستری به IconName معتبر
+ */
+export function resolveSemanticIcon(name: string | null | undefined): IconName | null {
+  if (!name) return null;
+
+  if (name.startsWith('action-')) {
+    const key = name.slice(7) as ActionIconKey;
+    const resolved = ACTION_ICONS[key];
+    return resolved && resolved in ICONS ? (resolved as IconName) : null;
+  }
+
+  if (name.startsWith('status-')) {
+    const key = name.slice(7) as StatusIconKey;
+    const resolved = STATUS_ICONS[key];
+    return resolved && resolved in ICONS ? (resolved as IconName) : null;
+  }
+
+  return name in ICONS ? (name as IconName) : null;
+}

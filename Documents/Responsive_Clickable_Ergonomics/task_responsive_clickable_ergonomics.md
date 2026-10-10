@@ -3,93 +3,155 @@
 
 <div dir="rtl" align="right">
 
-- [ ] **فاز ۱: مرکز عملیات، مدیریت و حاکمیت سازمان (`/app/operations/*`)**
-  - [ ] **۱.۱ شرکت‌ها و هلدینگ (`companies.html`):** دکمه ثبت شرکت جدید (متن کوتاه در دسکتاپ، فقط‌آیکون ۴۰px در موبایل)، تب‌های شیت اسناد بدون اسکرول افقی
-  - [ ] **۱.۲ تب گوگل‌درایو شرکت (`company-gdrive-tab.html`):** دکمه‌های همگام‌سازی ابری و اتصال به الگوهای ریسپانسیو
-  - [ ] **۱.۳ کاربران و نقش‌ها (`users.html`):** دکمه‌های ثبت کاربر جدید و ثبت نقش جدید به الگوی ریسپانسیو، خلاصه کردن عنوان تب ۳ («کارت پرسنلی»)
-  - [ ] **۱.۴ کوکپیت عملیات (`operations-cockpit.html`):** ارگونومی دکمه‌های کارت‌های دسترسی سریع
-  - [ ] **۱.۵ حاکمیت نقش‌ها (`operations-rbac-governance.html`):** حداقل مساحت لمسی ۴۰px برای چیپ‌های مجوز و دکمه‌های ذخیره
-  - [ ] **۱.۶ مانیتور همگام‌سازی (`operations-sync-monitor.html`):** دکمه‌های رفرش صف و عملیات رفع مغایرت
-  - [ ] **۱.۷ پشتیبان‌گیری و اسنپ‌شات‌ها (`settings-backup-tab.html`):** دکمه ایجاد نسخه و دکمه‌های جدول با کلاس `.btn-icon-square`
-  - [ ] **۱.۸ داشبورد سلامت سیستم (`health-dashboard.html`):** دکمه‌های تست پینگ و پاک‌سازی کش
-  - [ ] **۱.۹ ممیزی و لاگ‌های امنیتی (`audit.html`):** دکمه‌های فیلتر و اکشن‌بار بالای جدول
-  - [ ] *بررسی سلامت بیلد پس از فاز ۱:* `npx tsc --noEmit -p tsconfig.app.json`
+> [!NOTE]
+> شماره ردیف‌ها همان شماره جدول‌های بخش ۴ طرح است. «کوچ» یعنی جایگزینی نشانه‌گذاری دستی با جعبه‌ابزار بخش ۲ و آیکون‌های فرهنگ بخش ۳. هر گام در یک نشست انجام می‌شود و پیش از تیک خوردن باید «معیار پایان هر گام» (بند ۵ طرح) را کامل بگذراند: سیاهه، بیلد، نگهبان‌های ۵۲ و ۵۵ (با ثبت عدد تازه خط مبنا)، تست‌ها، `zero_scroll_probe.js`، `ui-reviewer`، commit و یادداشت تحویل.
+>
+> **بیلد بررسی** (از پوشه `warehouse-front`): `npx ng build --output-path ../scratch/ng-build-check > ../scratch/logs/ergonomics-build.log 2>&1`؛ در گام‌های ۰، ۱ و ۱۳ همچنین با `--configuration accounting-only` و `--configuration warehouse-only`.
 
-- [ ] **فاز ۲: سامانه جامع انبارگردانی (`/app/warehouse/*`)**
-  - [ ] **۲.۱ داشبورد انبار (`dashboard.html`):** چیپ‌های فیلتر سریع و انتخاب انبار
-  - [ ] **۲.۲ پروژه‌های انبار (`projects.html`):** دکمه ثبت پروژه جدید و دکمه‌های فعال‌سازی
-  - [ ] **۲.۳ هدایت و تخصیص کالا (`dispatch.html`):** ارگونومی دکمه‌های تگ‌گذاری و اکشن‌بار بالای جدول
-  - [ ] **۲.۴ مدارک و پرونده‌ها (`docs.html`):** دکمه‌های آپلود مدرک و فیلترها
-  - [ ] **۲.۵ تغذیه داده اقلام (`feeding.html`):** نوار دکمه‌های پیشرفت ایمپورت
-  - [ ] **۲.۶ کارتابل انبارگردان (`counter-dashboard.html`):** کلید بزرگ لمسی ثبت شمارش و دکمه دوربین ۴۴px
-  - [ ] **۲.۷ کارتابل سرپرست انبار (`supervisor-dashboard.html`):** تب‌های حوزه‌ها و دکمه‌های بازشماری/تایید
-  - [ ] **۲.۸ بازبینی مدیر انبار (`manager-review.html`):** دکمه‌های صورتجلسه و تایید مغایرت
-  - [ ] **۲.۹ رهگیری شمارش (`count-tracking.html`):** نوار ابزار نقشه و فیلترهای راهرو
-  - [ ] **۲.۱۰ گزارش‌های انبار (`reports.html`):** تب‌های گزارشات و دکمه‌های اکسل/چاپ
-  - [ ] **۲.۱۱ کارتابل مالی و گمرک (`customs.html`):** تب‌ها و دکمه‌های اسکن و اکسل
-  - [ ] **۲.۱۲ تنظیمات سراسری (`settings.html`):** حذف `min-w-[150px]`، نمایش ۵ تب در یک خط بدون اسکرول در موبایل، عناوین کوتاه در دسکتاپ
-  - [ ] **۲.۱۳ تنظیمات اختصاصی انبار (`wh-settings.html`):** نوار دکمه‌های فرم تنظیمات
-  - [ ] *بررسی سلامت بیلد پس از فاز ۲:* `npx tsc --noEmit -p tsconfig.app.json`
+- [x] **گام ۰: فرهنگ آیکون و پایه**
+  - [x] `shared/icons/semantic-icons.ts`: `ACTION_ICONS`، `STATUS_ICONS`، `PLATFORM_ENTITY_ICONS` با `satisfies Record<string, IconName>`
+  - [x] `modules/warehouse/entity-icons.ts` و `modules/accounting/entity-icons.ts` (نهایی کردن جدول بند ۳-۳)
+  - [x] `SvgIconDirective`: شناختن نام‌های `action-*` و `status-*`؛ نگهبان ۵۲: پذیرفتن همین نام‌ها
+  - [x] **۵.۱۳ استایل‌های سراسری (`src/styles.css`):** `.tap-target`، حداقل `2.5rem` برای `.btn-icon-square` و `.btn-icon-sm` زیر ۶۴۰px، `.btn-icon-primary`
+  - [x] بررسی اثر روی ارتفاع سطرهای جدول‌های فشرده (`audit`، `users`، `reports`)
+  - [x] `scripts/e2e/guardian_55_clickable_ergonomics.py` و `clickable_ergonomics_baseline.json` (۴ قاعده بخش ۲)
+  - [x] spec فرهنگ آیکون: نام‌ها در رجیستری، نبود اشتراک خارج از فهرست سفید بند ۳-۴
+  - [x] معیار پایان گام
 
-- [ ] **فاز ۳: هاب‌های پرسنلی و تردد ناوگان در سامانه مالی (`/app/finance/employee/*` & `supervisor/*`)**
-  - [ ] **۳.۱ حضور و غیاب کارمند (`employee-attendance.html`):** دکمه‌های ذخیره کارکرد روزانه و ماهانه (فقط‌آیکون در موبایل، متن در دسکتاپ) و زیرتب‌ها
-  - [ ] **۳.۲ تردد ناوگان کارمند (`employee-fleet.html`):** تبدیل «تعریف راننده» و «ممیزی» به فقط‌آیکون ۴۰px در موبایل، زیرتب‌های «روزانه» و «ماهانه»
-  - [ ] **۳.۳ فاکتورهای کارمند (`employee-invoices.html`):** دکمه فاکتور جدید و تب‌های وضعیت
-  - [ ] **۳.۴ تنخواه‌گردان کارمند (`employee-petty-cash.html`):** دکمه‌های تسویه و آپلود فیش
-  - [ ] **۳.۵ ثبت خودرو/راننده جدید (`employee-new-vehicle.html`):** اکشن‌بارهای مرحله‌ای فرم
-  - [ ] **۳.۶ ثبت پرسنل جدید (`employee-new-personnel.html`):** تب‌های فرم و دکمه استعلام شبا
-  - [ ] **۳.۷ تایید کارکرد سرپرست (`supervisor-attendance.html`):** دکمه تایید گروهی کارکرد و ثبت توضیحات
-  - [ ] **۳.۸ تایید ناوگان سرپرست (`supervisor-fleet.html`):** دکمه‌های تایید پیمایش و سرویس‌ها
-  - [ ] **۳.۹ تایید فاکتورهای سرپرست (`supervisor-invoices.html`):** اکشن‌های بررسی و تایید فاکتور
-  - [ ] **۳.۱۰ تایید تنخواه سرپرست (`supervisor-petty-cash.html`):** دکمه‌های تایید صورت وضعیت
-  - [ ] **۳.۱۱ مدیریت پرسنل سرپرست (`supervisor-personnel.html`):** تب‌های استخدامی و دکمه‌های جدول
-  - [ ] **۳.۱۲ قفل دوره‌های مالی سرپرست (`supervisor-period-lock.html`):** ارگونومی دکمه‌های قفل و بازگشایی دوره
-  - [ ] *بررسی سلامت بیلد پس از فاز ۳:* `npx tsc --noEmit -p tsconfig.app.json`
+- [ ] **گام ۱: جعبه‌ابزار مشترک**
+  - [ ] `shared/components/action-button/` (`button[appAction]`) با کاتالوگ کارها (آیکون، عنوان، رنگ، `sensitive`)
+  - [ ] `shared/components/tab-bar/` (`app-tab-bar`) و نوع `TabDef`
+  - [ ] `shared/components/overflow-menu/` (`app-overflow-menu`)
+  - [ ] `shared/components/command-center/` (`app-command-center`)
+  - [ ] `scripts/e2e/zero_scroll_probe.js`
+  - [ ] specهای Vitest هر جزء (برچسب دسترس‌پذیری، کار حساس، نقش‌های تب، `type="submit"`، Escape منو)
+  - [ ] معیار پایان گام (هنوز هیچ صفحه‌ای کوچ نکرده)
 
-- [ ] **فاز ۴: هاب‌های حسابداری، خزانه و مدیریت ارشد مالی (`/app/finance/accountant/*`, `treasurer/*`, `manager/*`)**
-  - [ ] **۴.۱ حقوق و دستمزد حسابدار (`accountant-payroll.html`):** حذف ایموجی‌ها (`⏳`, `✅`)، اتصال SVG، تب‌های Zero-Scroll («آماده»، «محاسبه»، «تایید»)
-  - [ ] **۴.۲ ناوگان حسابدار (`accountant-fleet.html`):** دکمه‌های تسویه کرایه و صورتحساب
-  - [ ] **۴.۳ پرسنل حسابدار (`accountant-personnel.html`):** هدر و ابزارهای فیلتر پرسنل
-  - [ ] **۴.۴ فاکتورهای حسابدار (`accountant-invoices.html`):** دکمه‌های صدور سند حسابداری
-  - [ ] **۴.۵ رسیدگی تنخواه حسابدار (`accountant-petty-cash.html`):** اکشن‌های شارژ و تایید
-  - [ ] **۴.۶ دیسکت‌های بیمه و مالیات (`accountant-diskettes.html`):** تب‌های بیمه/مالیات و دکمه تولید فایل
-  - [ ] **۴.۷ طرف‌های حساب (`counterparties.html`):** دکمه طرف حساب جدید و تب‌های اشخاص/شرکت‌ها
-  - [ ] **۴.۸ دستور پرداخت‌های خزانه (`treasurer-disbursements.html`):** دکمه ثبت پرداخت و چاپ چک
-  - [ ] **۴.۹ تسویه فاکتورهای خزانه (`treasurer-invoices.html`):** دکمه‌های تسویه نقدی/چکی در جدول
-  - [ ] **۴.۱۰ حساب‌های بانکی (`treasurer-bank-accounts.html`):** دکمه حساب جدید و پوز پیش‌فرض
-  - [ ] **۴.۱۱ مدیریت چک‌ها (`treasurer-cheques.html`):** تب‌های چک‌های دریافتی/پرداختی و دکمه‌های واگذاری
-  - [ ] **۴.۱۲ مغایرت‌گیری بانکی (`treasurer-reconciliation.html`):** نوار انطباق هوشمند صورتحساب
-  - [ ] **۴.۱۳ داشبورد هوش مالی مدیر (`manager-dashboard.html`):** حذف ایموجی‌ها (`📊`, `📉`, `🔔`)، اتصال SVG، تب‌های فشرده («شاخص‌ها»، «انحراف بودجه»، «هشدارها»)
-  - [ ] **۴.۱۴ بودجه مدیر (`manager-budget.html`):** دکمه‌های تغییر و تخصیص سرفصل بودجه
-  - [ ] **۴.۱۵ قراردادهای مدیر (`manager-contracts.html`):** دکمه قرارداد جدید و بارگذاری PDF
-  - [ ] **۴.۱۶ گزارش‌های مدیر (`manager-reports.html`):** تب‌های گزارشات مالی
-  - [ ] **۴.۱۷ کارتابل تاییدات مدیر (`manager-approvals.html`):** دکمه‌های تایید و امضای نهایی
-  - [ ] **۴.۱۸ پروژه‌ها و بخش‌ها (`projects-and-sections.html`):** حذف ایموجی‌ها (`🏛️`, `🏢`, `👥`)، اتصال `appIcon`، کوتاه کردن به «پروژه‌ها»، «بخش‌ها»، «انتساب‌ها» (بدون اسکرول در موبایل)
-  - [ ] **۴.۱۹ بایگانی مدارک شرکت (`company-documents-archive.html`):** تب‌های مدارک و دکمه بارگذاری
-  - [ ] **۴.۲۰ شناسنامه پرسنل (`personnel-profiles.html`):** تب‌های ناوبری پرونده پرسنل
-  - [ ] **۴.۲۱ تنظیمات پایه مالی (`base-settings.html`):** دکمه‌های تنظیم ضرایب و ذخیره فرمول‌ها
-  - [ ] *بررسی سلامت بیلد پس از فاز ۴:* `npx tsc --noEmit -p tsconfig.app.json`
+- [ ] **گام ۲: پایلوت**
+  - [ ] **۲.۱۲ تنظیمات سراسری (`settings.html`):** `app-tab-bar` با ۵ تب و `mobile="icon"`، حذف `min-w-[150px]`، عنوان‌های کوتاه
+  - [ ] **۳.۹ تایید فاکتورهای سرپرست (`supervisor-invoices.html`):** همه اجزای جعبه‌ابزار در یک صفحه
+  - [ ] اصلاح API جعبه‌ابزار بر پایه نتیجه و ثبت تصمیم‌ها در «گزارش پیشرفت» طرح
+  - [ ] معیار پایان گام
 
-- [ ] **فاز ۵: کامپوننت‌های سراسری، هدرها، دراورها، مودال‌ها و CSS**
-  - [ ] **۵.۱ هدر کارتابل مشترک (`cartable-header.component.ts`):** کوتاه کردن سوئیچر دامنه‌ها («شمارش فیزیکی»/«اسناد مالی» در دسکتاپ، «شمارش»/«مالی» در موبایل)، چیپ‌های وضعیت و انتخاب همه
-  - [ ] **۵.۲ جدول داده سراسری (`data-table.component.ts`):** دکمه‌های زوم، ابزارهای بالای جدول، صفحه‌بندی ارگونومیک
-  - [ ] **۵.۳ منوی کاربری (`user-menu.component.html`):** پدینگ لمسی و ارگونومی دکمه‌های منو
-  - [ ] **۵.۴ دراور چت (`chat-drawer.component.html`):** تب‌های گفتگو/مخاطبین و دکمه ارسال پیام
-  - [ ] **۵.۵ گالری عکس اقلام (`item-photo-gallery.component.html`):** کلیدهای زوم، چرخش و دوربین به مساحت لمسی ۴۰px
-  - [ ] **۵.۶ مودال اکسل (`excel-import-modal.html`):** دکمه‌های تمام‌عرض و ارگونومیک در موبایل
-  - [ ] **۵.۷ مودال حذف هوشمند (`smart-delete-modal.html`):** ارگونومی و اندازه لمسی ۴۴px کلیدهای حذف و لغو
-  - [ ] **۵.۸ مودال آواتار (`avatar-cropper-modal.html`):** کلیدهای ابزار و برش
-  - [ ] **۵.۹ سوئیچر نقش (`app-role-switcher.component.html`):** دکمه فشرده و پاپ‌اوور بدون اسکرول افقی
-  - [ ] **۵.۱۰ انتخابگر انبار (`warehouse-selector.component.ts`):** دراپ‌داون ارگونومیک در موبایل
-  - [ ] **۵.۱۱ لانچر برنامه‌ها (`app-launcher.component.html`):** کارت‌ها و دکمه‌های ورود
-  - [ ] **۵.۱۲ ورود و تغییر رمز (`login.html` & `change-password.html`):** ارتفاع لمسی ۴۸px کلیدها
-  - [ ] **۵.۱۳ استایل‌های سراسری (`src/styles.css`):** تضمین `min-width: 2.5rem; min-height: 2.5rem;` برای دکمه‌های آیکونی در موبایل
-  - [ ] *بررسی سلامت بیلد پس از فاز ۵:* `npx tsc --noEmit -p tsconfig.app.json`
+- [ ] **گام ۳: پوسته و ناوبری**
+  - [ ] **۵.۱۴ پوسته اصلی و منوی کناری (`layout.html`، `modules/*/nav-items.ts`):** حذف ایموجی از ۳۳ برچسب، فیلد `icon` از `entity-icons.ts`، کوتاه کردن برچسب‌ها؛ به‌روزرسانی `accountant-new-profiles.dom.spec.ts` خط ۲۵۱
+  - [ ] **۵.۱۵ پوسته مرکز عملیات (`operations-layout`)**
+  - [ ] **۵.۳ منوی کاربری (`user-menu.component.html`)**
+  - [ ] **۵.۹ سوئیچر نقش (`app-role-switcher.component.html`)**
+  - [ ] **۵.۱۰ انتخابگر انبار (`warehouse-selector.component.ts`)**
+  - [ ] **۵.۱۱ لانچر برنامه‌ها (`app-launcher.html`)**
+  - [ ] **۵.۱۶ تعویض و انتخاب شرکت (`company-switcher`، `company-selection-modal`)**
+  - [ ] **۵.۱۷ مرکز اعلان‌ها (`notification-center.component.ts`)**
+  - [ ] معیار پایان گام
 
-- [ ] **فاز ۶: اعتبارسنجی جامع، تست‌های خودکار و نگهبان ۵۲**
-  - [ ] اجرای تست کامپایل کامل: `npx tsc --noEmit -p tsconfig.app.json`
-  - [ ] اجرای نگهبان ۵۲ یکپارچگی آیکون‌ها: `python scripts/e2e/guardian_52_icon_registry.py`
-  - [ ] اجرای تست‌های DOM ماژول‌های اصلاح‌شده با Vitest
-  - [ ] راستی‌آزمایی بصری در ویوپورت‌های ۳۶۰px، ۳۹۰px، ۷۶۸px و ۱۰۲۴px جهت تایید اصل Zero-Scroll
+- [ ] **گام ۴: کامپوننت‌های مشترک**
+  - [ ] **۵.۱ هدر کارتابل (`cartable-header.component.ts`):** سوئیچر دامنه با `app-tab-bar`
+  - [ ] **۵.۲ جدول داده (`data-table.component.ts`):** نوار ابزار و صفحه‌بندی با `appAction`
+  - [ ] **۵.۴ دراور چت (`chat-drawer.component.html`)**
+  - [ ] **۵.۵ گالری عکس (`item-photo-gallery.component.html`)**
+  - [ ] **۵.۶ مودال اکسل (`excel-import-modal.html`)**
+  - [ ] **۵.۷ مودال حذف هوشمند (`smart-delete-modal.html`):** `delete` حساس با `size="lg"`
+  - [ ] **۵.۸ مودال آواتار (`avatar-cropper-modal.html`)**
+  - [ ] **۵.۱۸ مودال‌ها و دیالوگ‌ها (`modal`، `confirm-dialog`، `conflict-resolution-modal`، `deep-sync-modal`):** فقط ظاهر
+  - [ ] **۵.۱۹ اجزای کوچک مشترک و آیکون `status-badge` / `offline-pending-badge` از `STATUS_ICONS`**
+  - [ ] **۵.۲۱ نظرات زمینه‌ای (`contextual-comments.component.html`)**
+  - [ ] معیار پایان گام
+
+- [ ] **گام ۵: مرکز عملیات و صفحات عمومی**
+  - [ ] **۱.۱ شرکت‌ها (`companies.html`)**
+  - [ ] **۱.۲ تب گوگل‌درایو (`company-gdrive-tab.html`)**
+  - [ ] **۱.۳ کاربران و نقش‌ها (`users.html`)**
+  - [ ] **۱.۴ کوکپیت عملیات (`operations-cockpit.html`)**
+  - [ ] **۱.۵ حاکمیت نقش‌ها (`operations-rbac-governance.html`)**
+  - [ ] **۱.۶ مانیتور همگام‌سازی (`operations-sync-monitor.html`):** پاک‌سازی خطاها و لغو نشست حساس
+  - [ ] **۱.۷ پشتیبان‌گیری (`settings-backup-tab.html`):** بازیابی و بازگشت `restore` حساس
+  - [ ] **۱.۸ سلامت سیستم (`health-dashboard.ts`)**
+  - [ ] **۱.۹ ممیزی و لاگ‌ها (`audit.html`)**
+  - [ ] **۱.۱۰ راه‌انداز نخستین (`first-boot-wizard.html`)**
+  - [ ] **۵.۱۲ ورود و تغییر رمز (`login.html`، `change-password.html`)**
+  - [ ] **۵.۲۲ استعلام کارت (`verify-card.html`)**
+  - [ ] معیار پایان گام
+
+- [ ] **گام ۶: انبارگردانی (الف)**
+  - [ ] **۲.۱ داشبورد انبار (`dashboard.html`)**
+  - [ ] **۲.۲ مدیریت انبارها (`projects.html`)**
+  - [ ] **۲.۳ هدایت و تخصیص کالا (`dispatch.html`)**
+  - [ ] **۲.۴ مدارک و پرونده‌ها (`docs.html`)**
+  - [ ] **۲.۵ تغذیه داده اقلام (`feeding.html`)**
+  - [ ] **۲.۶ کارتابل انبارگردان (`counter-dashboard.html`)**
+  - [ ] **۲.۷ کارتابل سرپرست انبار (`supervisor-dashboard.html`)**
+  - [ ] **۲.۸ بازبینی مدیر انبار (`manager-review.html`)**
+  - [ ] **۲.۹ رهگیری شمارش (`count-tracking.html`)**
+  - [ ] معیار پایان گام
+
+- [ ] **گام ۷: انبارگردانی (ب)**
+  - [ ] **۲.۱۰ گزارش‌های انبار (`reports.html`)**
+  - [ ] **۲.۱۱ کارتابل مالی و گمرک (`customs.html`)**
+  - [ ] **۲.۱۳ تنظیمات اختصاصی انبار (`wh-settings.html`)**
+  - [ ] **۲.۱۴ زیرتب‌های تنظیمات (operations، counter-fields، doc-fields، label)**
+  - [ ] **۲.۱۵ طراح لیبل (`label-designer.html`)**
+  - [ ] **۲.۱۶ کارت‌های شناسایی (`id-cards.html`):** قالب چاپ دست نخورد
+  - [ ] **۲.۱۷ فیلدهای پویا و شمارش فیلد (`dynamic-fields.html`، `field.html`)**
+  - [ ] **۵.۲۰ اجزای گزارش‌ساز (`saved-reports`، `filter-group`، `filter-value`، `export-progress`، `report-chart`)**
+  - [ ] معیار پایان گام
+
+- [ ] **گام ۸: هاب کارمند**
+  - [ ] **۳.۱ حضور و غیاب کارمند (`employee-attendance.html`)**
+  - [ ] **۳.۲ تردد ناوگان کارمند (`employee-fleet.html`):** مودال شبا دست نخورد
+  - [ ] **۳.۳ فاکتورهای کارمند (`employee-invoices.html`)**
+  - [ ] **۳.۴ تنخواه‌گردان کارمند (`employee-petty-cash.html`)**
+  - [ ] **۳.۵ ثبت خودرو/راننده (`employee-new-vehicle.html`)**
+  - [ ] **۳.۶ ثبت پرسنل جدید (`employee-new-personnel.html`):** ساختار شبا دست نخورد
+  - [ ] معیار پایان گام
+
+- [ ] **گام ۹: هاب سرپرست**
+  - [ ] **۳.۷ تایید کارکرد (`supervisor-attendance.html`)**
+  - [ ] **۳.۸ تایید ناوگان (`supervisor-fleet.html`)**
+  - [ ] **۳.۱۰ تایید تنخواه (`supervisor-petty-cash.html`)**
+  - [ ] **۳.۱۱ مدیریت پرسنل (`supervisor-personnel.html`)**
+  - [ ] **۳.۱۲ بستن دوره کارکرد (`supervisor-period-lock.html`):** `lock` حساس
+  - [ ] **۳.۱۳ پرسنل و خودروهای جدید (`supervisor-new-profiles.html`)**
+  - [ ] معیار پایان گام
+
+- [ ] **گام ۱۰: حسابداری**
+  - [ ] **۴.۱ حقوق و دستمزد (`accountant-payroll.html`)**
+  - [ ] **۴.۲ ناوگان حسابدار (`accountant-fleet.html`)**
+  - [ ] **۴.۳ پرسنل حسابدار (`accountant-personnel.html`)**
+  - [ ] **۴.۴ فاکتورهای حسابدار (`accountant-invoices.html`)**
+  - [ ] **۴.۵ رسیدگی تنخواه (`accountant-petty-cash.html`)**
+  - [ ] **۴.۶ دیسکت‌های بیمه و مالیات (`accountant-diskettes.html`)**
+  - [ ] **۴.۷ طرف‌های حساب (`counterparties.html`):** ساختار شبا دست نخورد
+  - [ ] **۴.۲۲ پرونده‌های جدید حسابدار (`accountant-new-profiles.html`)**
+  - [ ] معیار پایان گام
+
+- [ ] **گام ۱۱: خزانه و سازمان**
+  - [ ] **۴.۸ پرداخت حقوق و ناوگان (`treasurer-disbursements.html`)**
+  - [ ] **۴.۹ تسویه فاکتورها (`treasurer-invoices.html`)**
+  - [ ] **۴.۱۰ حساب‌های بانکی (`treasurer-bank-accounts.html`)**
+  - [ ] **۴.۱۱ مدیریت چک‌ها (`treasurer-cheques.html`)**
+  - [ ] **۴.۱۲ مغایرت‌گیری بانکی (`treasurer-reconciliation.html`)**
+  - [ ] **۴.۱۸ پروژه‌ها و بخش‌ها (`projects-and-sections.html`)**
+  - [ ] **۴.۱۹ بایگانی مدارک شرکت (`company-documents-archive.html`)**
+  - [ ] **۴.۲۰ شناسنامه پرسنل (`personnel-profiles.html`)**
+  - [ ] **۴.۲۱ تنظیمات پایه مالی (`base-settings.html`)**
+  - [ ] معیار پایان گام
+
+- [ ] **گام ۱۲: مدیریت ارشد**
+  - [ ] **۴.۱۳ داشبورد هوش مالی (`manager-dashboard.html`)**
+  - [ ] **۴.۱۴ کنترل بودجه (`manager-budget.html`)**
+  - [ ] **۴.۱۵ قراردادها و احکام (`manager-contracts.html`)**
+  - [ ] **۴.۱۶ گزارش‌های مدیر (`manager-reports.html`)**
+  - [ ] **۴.۱۷ کارتابل تاییدات (`manager-approvals.html`):** `unlock` و `send` دوره حساس
+  - [ ] **۴.۲۳ ناوگان مدیر (`manager-fleet.html`):** حذف و پایان همکاری حساس
+  - [ ] **۴.۲۴ پرسنل مدیر (`manager-personnel.html`):** حذف و پایان همکاری حساس
+  - [ ] معیار پایان گام
+
+- [ ] **گام ۱۳: پاک‌سازی، مستندات و اعتبارسنجی نهایی**
+  - [ ] حذف گونه‌های بی‌استفاده از `icon-registry.ts` (بند ۳-۵)
+  - [ ] به‌روزرسانی AGENTS §7 و §9 و مهارت `design-system` (جعبه‌ابزار و فرهنگ آیکون راه پیش‌فرض)
+  - [ ] بیلد هر سه پروفایل (پیش‌فرض، `accounting-only`، `warehouse-only`)
+  - [ ] نگهبان‌های ۵۲ و ۵۵ (خط مبنا به صفر یا کمترین مقدار رسیده باشد)
+  - [ ] `ng test` کامل و مقایسه با HEAD پیش از گام ۰
+  - [ ] بازبینی چشمی سراسری با `zero_scroll_probe.js` در ۳۶۰، ۳۹۰، ۶۳۹، ۶۴۰، ۷۶۸ و ۱۰۲۴px؛ صفحه‌های پشت ورود اگر مرورگر داخلی وارد نشده باشد، با فهرست بررسی به کاربر سپرده و «تاییدنشده» گزارش شوند
 
 </div>

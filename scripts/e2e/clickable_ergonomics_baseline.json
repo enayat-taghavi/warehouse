@@ -1,0 +1,494 @@
+{
+  "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
+  "counters": {
+    "rule_1_unlabeled_icon_buttons": 192,
+    "rule_2_tab_min_widths": 5,
+    "rule_3_non_standard_actions": 261,
+    "rule_4_retired_icons": 136
+  },
+  "violations": {
+    "rule_1_unlabeled_icon_buttons": [
+      {
+        "file": "components/audit/audit.html",
+        "line": 859
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 998
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1112
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1115
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1140
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1216
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1241
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1327
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1352
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1450
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1586
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1761
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1786
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1822
+      },
+      {
+        "file": "components/change-password/change-password.html",
+        "line": 35
+      },
+      {
+        "file": "components/change-password/change-password.html",
+        "line": 46
+      },
+      {
+        "file": "components/change-password/change-password.html",
+        "line": 57
+      },
+      {
+        "file": "components/communications/chat-drawer/chat-drawer.component.html",
+        "line": 17
+      },
+      {
+        "file": "components/communications/chat-drawer/chat-drawer.component.html",
+        "line": 67
+      },
+      {
+        "file": "components/communications/chat-drawer/chat-drawer.component.html",
+        "line": 289
+      },
+      {
+        "file": "components/count-tracking/count-tracking.html",
+        "line": 318
+      },
+      {
+        "file": "components/count-tracking/count-tracking.html",
+        "line": 402
+      },
+      {
+        "file": "components/count-tracking/count-tracking.html",
+        "line": 634
+      },
+      {
+        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "line": 119
+      },
+      {
+        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "line": 241
+      },
+      {
+        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "line": 544
+      },
+      {
+        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "line": 651
+      },
+      {
+        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "line": 900
+      },
+      {
+        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "line": 964
+      },
+      {
+        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "line": 1038
+      }
+    ],
+    "rule_2_tab_min_widths": [
+      {
+        "file": "components/settings/settings.html",
+        "line": 45,
+        "tag": "button"
+      },
+      {
+        "file": "components/settings/settings.html",
+        "line": 58,
+        "tag": "button"
+      },
+      {
+        "file": "components/settings/settings.html",
+        "line": 71,
+        "tag": "button"
+      },
+      {
+        "file": "components/settings/settings.html",
+        "line": 84,
+        "tag": "button"
+      },
+      {
+        "file": "components/settings/settings.html",
+        "line": 98,
+        "tag": "button"
+      }
+    ],
+    "rule_3_non_standard_actions": [
+      {
+        "file": "components/audit/audit.html",
+        "line": 1586,
+        "method": "closeExportModal",
+        "icon": "x"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1758,
+        "method": "closeExportModal",
+        "icon": null
+      },
+      {
+        "file": "components/count-tracking/count-tracking.html",
+        "line": 318,
+        "method": "closeExportModal",
+        "icon": "x"
+      },
+      {
+        "file": "components/count-tracking/count-tracking.html",
+        "line": 408,
+        "method": "closeExportModal",
+        "icon": null
+      },
+      {
+        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "line": 964,
+        "method": "closeExportModal",
+        "icon": "x"
+      },
+      {
+        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "line": 1037,
+        "method": "closeExportModal",
+        "icon": null
+      },
+      {
+        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "line": 1038,
+        "method": "executeExport",
+        "icon": "spinner"
+      },
+      {
+        "file": "components/customs/customs.html",
+        "line": 992,
+        "method": "closeExportModal",
+        "icon": "x"
+      },
+      {
+        "file": "components/customs/customs.html",
+        "line": 1080,
+        "method": "closeExportModal",
+        "icon": null
+      },
+      {
+        "file": "components/customs/customs.html",
+        "line": 1083,
+        "method": "executeExport",
+        "icon": null
+      },
+      {
+        "file": "components/dispatch/dispatch.html",
+        "line": 446,
+        "method": "openDeleteModal",
+        "icon": "trash-lucide"
+      },
+      {
+        "file": "components/dispatch/dispatch.html",
+        "line": 465,
+        "method": "closeExportModal",
+        "icon": "x"
+      },
+      {
+        "file": "components/dispatch/dispatch.html",
+        "line": 516,
+        "method": "closeExportModal",
+        "icon": null
+      },
+      {
+        "file": "components/dispatch/dispatch.html",
+        "line": 517,
+        "method": "executeExport",
+        "icon": "spinner"
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 47,
+        "method": "importService.currentState.importTag = tag",
+        "icon": null
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 174,
+        "method": "simulateImportProcess",
+        "icon": "upload-cloud"
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 186,
+        "method": "openDeleteModal",
+        "icon": "trash-2-soft"
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 191,
+        "method": "openDeleteModal",
+        "icon": "trash"
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 220,
+        "method": "importService.revertOperation",
+        "icon": null
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 455,
+        "method": "closeDeleteModal",
+        "icon": null
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 459,
+        "method": "confirmDelete",
+        "icon": "trash"
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 491,
+        "method": "confirmEmptyTagImport",
+        "icon": null
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 518,
+        "method": "executeImport",
+        "icon": null
+      },
+      {
+        "file": "components/dynamic-fields/dynamic-fields.html",
+        "line": 89,
+        "method": "deleteField",
+        "icon": "trash-2-lucide"
+      },
+      {
+        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
+        "line": 284,
+        "method": "openRejectModal",
+        "icon": "rotate-ccw"
+      },
+      {
+        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
+        "line": 292,
+        "method": "openRejectModal",
+        "icon": "x"
+      },
+      {
+        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
+        "line": 373,
+        "method": "openRejectModal",
+        "icon": "rotate-ccw"
+      },
+      {
+        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
+        "line": 523,
+        "method": "openRejectModal",
+        "icon": "x"
+      },
+      {
+        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
+        "line": 791,
+        "method": "closeRejectModal",
+        "icon": "x"
+      },
+      {
+        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
+        "line": 833,
+        "method": "closeRejectModal",
+        "icon": null
+      }
+    ],
+    "rule_4_retired_icons": [
+      {
+        "file": "components/audit/audit.html",
+        "line": 8,
+        "icon": "edit-3"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 37,
+        "icon": "scan-text"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 224,
+        "icon": "rotate-ccw-lucide"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 339,
+        "icon": "rotate-ccw-lucide"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 598,
+        "icon": "rotate-ccw-lucide"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 623,
+        "icon": "rotate-ccw-lucide"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 638,
+        "icon": "rotate-cw-legacy"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 792,
+        "icon": "rotate-cw-legacy"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 889,
+        "icon": "spinner-arc"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 971,
+        "icon": "rotate-ccw-lucide"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 991,
+        "icon": "rotate-ccw-lucide"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1008,
+        "icon": "spinner-arc"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1116,
+        "icon": "spinner-arc"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1117,
+        "icon": "rotate-ccw-lucide"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1133,
+        "icon": "trash"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1217,
+        "icon": "spinner-arc"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1218,
+        "icon": "trash"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1271,
+        "icon": "spinner-arc"
+      },
+      {
+        "file": "components/audit/audit.html",
+        "line": 1328,
+        "icon": "spinner-arc"
+      },
+      {
+        "file": "components/communications/chat-drawer/chat-drawer.component.html",
+        "line": 18,
+        "icon": "hero-arrow-left"
+      },
+      {
+        "file": "components/communications/chat-drawer/chat-drawer.component.html",
+        "line": 68,
+        "icon": "hero-x"
+      },
+      {
+        "file": "components/communications/chat-drawer/chat-drawer.component.html",
+        "line": 103,
+        "icon": "hero-search"
+      },
+      {
+        "file": "components/communications/chat-drawer/chat-drawer.component.html",
+        "line": 292,
+        "icon": "hero-paper-airplane"
+      },
+      {
+        "file": "components/communications/contextual-comments/contextual-comments.component.html",
+        "line": 12,
+        "icon": "hero-refresh"
+      },
+      {
+        "file": "components/count-tracking/count-tracking.html",
+        "line": 153,
+        "icon": "trash"
+      },
+      {
+        "file": "components/count-tracking/count-tracking.html",
+        "line": 405,
+        "icon": "loader-6-rays"
+      },
+      {
+        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "line": 746,
+        "icon": "edit-3"
+      },
+      {
+        "file": "components/customs/customs.html",
+        "line": 1103,
+        "icon": "scan-square"
+      },
+      {
+        "file": "components/dashboard/dashboard.html",
+        "line": 76,
+        "icon": "hero-chevron-up"
+      },
+      {
+        "file": "components/dashboard/dashboard.html",
+        "line": 77,
+        "icon": "hero-chevron-down"
+      }
+    ]
+  }
+}

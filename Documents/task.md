@@ -22,6 +22,6 @@
 ## سازگاری عناصر کلیک‌پذیر با قوانین جدید واکنش‌گرایی و ارگونومی (Responsive Clickable Ergonomics)
 - **پوشه مستندات:** [Documents/Responsive_Clickable_Ergonomics/](file:///e:/warehouse%20project/Documents/Responsive_Clickable_Ergonomics/)
 - **فایل وظایف اجرایی:** [task_responsive_clickable_ergonomics.md](file:///e:/warehouse%20project/Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md)
-- **وضعیت وظایف:** فراگیر شد؛ شامل ۶ فاز و ۵۶ وظیفه تفصیلی پوشش‌دهنده ۱۰۰٪ صفحات، زیرصفحات، دراورها و مودال‌های پروژه
+- **وضعیت وظایف:** بازبینی دوم ۱۴۰۵/۰۷/۱۸: ۱۴ گام (۰ تا ۱۳) و ۸۶ ردیف هم‌شماره با جدول‌های طرح؛ هیچ گامی آغاز نشده
 
 

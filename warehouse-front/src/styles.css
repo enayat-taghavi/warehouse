@@ -386,6 +386,16 @@ ng-persian-datepicker {
   color: rgb(146 64 14);
 }
 
+.btn-icon-primary {
+  background-color: rgb(79 70 229);
+  color: rgb(255 255 255);
+  border-color: rgb(67 56 202);
+}
+.btn-icon-primary:hover:not(:disabled) {
+  background-color: rgb(67 56 202);
+  color: rgb(255 255 255);
+}
+
 .btn-icon-slate {
   background-color: rgb(248 250 252);
   color: rgb(71 85 105);
@@ -394,6 +404,28 @@ ng-persian-datepicker {
 .btn-icon-slate:hover:not(:disabled) {
   background-color: rgb(241 245 249);
   color: rgb(30 41 59);
+}
+
+/* ==========================================================================
+   RESPONSIVE CLICKABLE ERGONOMICS (AGENTS §7, WCAG 2.2 TOUCH TARGETS)
+   ========================================================================== */
+.tap-target {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 639.98px) {
+  .tap-target {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+
+  .btn-icon-square,
+  .btn-icon-sm {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
 }
 
 /* Custom Sleek Scrollbar */

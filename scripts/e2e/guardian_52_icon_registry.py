@@ -29,6 +29,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 APP_DIR = REPO_ROOT / "warehouse-front" / "src" / "app"
 REGISTRY = APP_DIR / "shared" / "icons" / "icon-registry.ts"
 DIRECTIVE = APP_DIR / "shared" / "icons" / "svg-icon.directive.ts"
+SEMANTIC = APP_DIR / "shared" / "icons" / "semantic-icons.ts"
 
 SVG = re.compile(r'<svg\b((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>(.*?)</svg>', re.S)
 NG_SYNTAX = re.compile(
@@ -95,13 +96,30 @@ def test_icon_registry():
     else:
         print(f"✅ بند ۱: {len(entries)} آیکن در رجیستری؛ همه SVG معتبر با نام یکتا.")
 
+    action_icons = {}
+    status_icons = {}
+    if SEMANTIC.exists():
+        sem_txt = SEMANTIC.read_text(encoding="utf-8")
+        act_m = re.search(r"export const ACTION_ICONS = \{([^}]+)\}", sem_txt)
+        if act_m:
+            action_icons = dict(re.findall(r"'([^']+)':\s*'([^']+)'", act_m.group(1)))
+        stat_m = re.search(r"export const STATUS_ICONS = \{([^}]+)\}", sem_txt)
+        if stat_m:
+            status_icons = dict(re.findall(r"'([^']+)':\s*'([^']+)'", stat_m.group(1)))
+
     unknown, missing_import, inline_left = [], [], []
     used = 0
     for path, text, owner in templates():
         rel = path.relative_to(APP_DIR).as_posix()
         for name in STATIC_ICON.findall(text):
             used += 1
-            if name not in icons:
+            if name in icons:
+                pass
+            elif name.startswith("action-") and name[7:] in action_icons and action_icons[name[7:]] in icons:
+                pass
+            elif name.startswith("status-") and name[7:] in status_icons and status_icons[name[7:]] in icons:
+                pass
+            else:
                 unknown.append(f"{rel}: {name}")
         if ANY_ICON.search(text) and (owner is None or not component_imports_directive(owner)):
             missing_import.append(rel)
