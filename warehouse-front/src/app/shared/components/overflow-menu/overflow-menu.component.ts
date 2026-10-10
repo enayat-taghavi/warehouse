@@ -9,6 +9,8 @@ import { CommonModule } from '@angular/common';
 import { ActionButtonComponent } from '../action-button/action-button.component';
 import { OVERFLOW_MENU_CONTEXT, OverflowMenuContext } from './overflow-menu.token';
 
+let nextMenuId = 0;
+
 /**
  * منوی «بیشتر» واکنش‌گرا برای تجمیع گزینه‌های اضافی در موبایل.
  * از ۶۴۰px به بالا گزینه‌ها را به‌صورت ردیفی (display: contents) نشان می‌دهد.
@@ -34,7 +36,7 @@ import { OVERFLOW_MENU_CONTEXT, OverflowMenuContext } from './overflow-menu.toke
       [autoClose]="false"
       class="sm:hidden"
       [attr.aria-expanded]="isOpen() ? 'true' : 'false'"
-      aria-haspopup="menu"
+      [attr.aria-controls]="menuId"
       (click)="toggleMenu()"
     ></button>
 
@@ -49,7 +51,7 @@ import { OVERFLOW_MENU_CONTEXT, OverflowMenuContext } from './overflow-menu.toke
     <!-- ظرف گزینه‌ها: در دسکتاپ contents و در موبایل پاپ‌اوور -->
     <div
       #menuContainer
-      role="menu"
+      [id]="menuId"
       [class]="isOpen()
         ? 'absolute start-auto end-0 top-full mt-1.5 z-50 min-w-[11rem] bg-white rounded-2xl border border-slate-200 shadow-xl p-1.5 flex flex-col gap-1 sm:contents'
         : 'hidden sm:contents'"
@@ -63,6 +65,8 @@ import { OVERFLOW_MENU_CONTEXT, OverflowMenuContext } from './overflow-menu.toke
   },
 })
 export class OverflowMenuComponent implements OverflowMenuContext {
+  /** الگوی disclosure: گزینه‌ها دکمه‌های عادی‌اند، نه menuitem؛ پس role="menu" نمی‌گیرد. */
+  readonly menuId = `overflow-menu-${nextMenuId++}`;
   readonly isOpen = signal<boolean>(false);
 
   @ViewChild('triggerButton', { read: ElementRef })

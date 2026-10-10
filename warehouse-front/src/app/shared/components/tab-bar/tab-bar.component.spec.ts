@@ -101,15 +101,22 @@ describe('TabBarComponent (app-tab-bar)', () => {
     }
   });
 
-  it('در حالت mobile="icon" باید aria-label و title برابر با label تب باشند', () => {
+  it('در حالت mobile="icon" باید title برابر label و aria-label برابر label به‌همراه شمارنده دیده‌شده باشد', () => {
     host.mobileMode.set('icon');
     fixture.detectChanges();
 
     const tabs = fixture.nativeElement.querySelectorAll('[role="tab"]');
-    expect(tabs[0].getAttribute('aria-label')).toBe('نیازمند بررسی');
+    expect(tabs[0].getAttribute('aria-label')).toBe('نیازمند بررسی 12');
     expect(tabs[0].getAttribute('title')).toBe('نیازمند بررسی');
-    expect(tabs[1].getAttribute('aria-label')).toBe('تایید شده');
+    expect(tabs[1].getAttribute('aria-label')).toBe('تایید شده 5');
     expect(tabs[2].getAttribute('aria-label')).toBe('رد شده');
+  });
+
+  it('تب‌ها نباید id ثابت بگیرند (چند نوار تب در یک صفحه id تکراری نسازند)', () => {
+    const tabs = fixture.nativeElement.querySelectorAll('[role="tab"]');
+    for (let i = 0; i < tabs.length; i++) {
+      expect(tabs[i].hasAttribute('id')).toBe(false);
+    }
   });
 
   it('با کلیک روی تب، خروجی activeChange باید صادر شود', () => {
@@ -156,6 +163,24 @@ describe('TabBarComponent (app-tab-bar)', () => {
     fixture.detectChanges();
 
     expect(host.lastEmittedTab).toBe('pending');
+  });
+
+  it('Alt یا Ctrl همراه کلید جهت‌دار نباید تب را عوض کند یا رویداد را ببلعد', () => {
+    const tabs = fixture.nativeElement.querySelectorAll('[role="tab"]');
+    const altLeft = new KeyboardEvent('keydown', { key: 'ArrowLeft', altKey: true, cancelable: true });
+    tabs[0].dispatchEvent(altLeft);
+    fixture.detectChanges();
+    expect(host.lastEmittedTab).toBeNull();
+    expect(altLeft.defaultPrevented).toBe(false);
+  });
+
+  it('اگر active با هیچ تبی نخواند، تب اول باید با Tab در دسترس بماند', () => {
+    host.activeTab.set('unknown');
+    fixture.detectChanges();
+    const tabs = fixture.nativeElement.querySelectorAll('[role="tab"]');
+    expect(tabs[0].getAttribute('tabindex')).toBe('0');
+    expect(tabs[0].getAttribute('aria-selected')).toBe('false');
+    expect(tabs[1].getAttribute('tabindex')).toBe('-1');
   });
 
   it('شمارنده عددی باید با کلاس tabular-nums رندر شود', () => {

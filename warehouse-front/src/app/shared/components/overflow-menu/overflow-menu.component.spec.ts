@@ -41,11 +41,17 @@ describe('OverflowMenuComponent (app-overflow-menu)', () => {
     TestBed.resetTestingModule();
   });
 
-  it('دکمه trigger باید دارای appAction="more"، aria-haspopup="menu" و وضعیت aria-expanded باشد', () => {
+  it('دکمه trigger باید appAction="more"، aria-expanded و aria-controls (الگوی disclosure، بدون role="menu") داشته باشد', () => {
     const trigger = fixture.nativeElement.querySelector('button[appAction="more"]') as HTMLButtonElement;
     expect(trigger).not.toBeNull();
-    expect(trigger.getAttribute('aria-haspopup')).toBe('menu');
+    expect(trigger.hasAttribute('aria-haspopup')).toBe(false);
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    const controlsId = trigger.getAttribute('aria-controls');
+    expect(controlsId).toMatch(/^overflow-menu-\d+$/);
+    const container = fixture.nativeElement.querySelector(`#${controlsId}`) as HTMLElement;
+    expect(container).not.toBeNull();
+    expect(container.hasAttribute('role')).toBe(false);
+    expect(container.querySelector('#menu-opt-import')).not.toBeNull();
   });
 
   it('با کلیک روی دکمه بیشتر، منو باید باز و بسته شود و aria-expanded به‌روز گردد', () => {
@@ -57,7 +63,7 @@ describe('OverflowMenuComponent (app-overflow-menu)', () => {
 
     expect(menuComponent.isOpen()).toBe(true);
     expect(trigger.getAttribute('aria-expanded')).toBe('true');
-    const container = fixture.nativeElement.querySelector('[role="menu"]');
+    const container = fixture.nativeElement.querySelector(`#${trigger.getAttribute('aria-controls')}`);
     expect(container.className).toContain('absolute');
 
     // بستن منو با کلیک دوباره

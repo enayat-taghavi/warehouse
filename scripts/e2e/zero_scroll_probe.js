@@ -56,15 +56,37 @@
 
     const queriedElements = new Set();
     const matchingBars = [];
+    // ظرف اسکرول جدول‌ها نوار تب یا اکشن نیست و اسکرولش مجاز است؛ جدا شمرده می‌شود.
+    let skippedTableScrollers = 0;
 
     for (const sel of TARGET_SELECTORS) {
       const found = document.querySelectorAll(sel);
       found.forEach((el) => {
-        if (!queriedElements.has(el)) {
-          queriedElements.add(el);
-          matchingBars.push({ el, matchedBy: sel });
+        if (queriedElements.has(el)) return;
+        queriedElements.add(el);
+        if (sel === '.overflow-x-auto' && el.querySelector('table')) {
+          skippedTableScrollers++;
+          return;
         }
+        matchingBars.push({ el, matchedBy: sel });
       });
+    }
+
+    // فرزندان display: contents (مثل app-overflow-menu در دسکتاپ) جعبه ندارند؛ فرزندان خودشان سنجیده می‌شوند.
+    function visibleChildren(parent) {
+      const out = [];
+      for (const child of Array.from(parent.children)) {
+        if (!(child instanceof HTMLElement)) continue;
+        const style = window.getComputedStyle(child);
+        if (style.display === 'contents') {
+          out.push(...visibleChildren(child));
+          continue;
+        }
+        if (style.display === 'none' || style.visibility === 'hidden' || child.offsetWidth === 0) continue;
+        if (style.position === 'absolute' || style.position === 'fixed') continue;
+        out.push(child);
+      }
+      return out;
     }
 
     const barsReport = matchingBars.map(({ el, matchedBy }) => {
@@ -74,18 +96,16 @@
       const fitsWithoutScroll = scrollWidth <= clientWidth + 1;
 
       // بررسی فرزندان دیدنی نوار
-      const children = Array.from(el.children).filter((child) => {
-        if (!(child instanceof HTMLElement)) return false;
-        const style = window.getComputedStyle(child);
-        return style.display !== 'none' && style.visibility !== 'hidden' && child.offsetWidth > 0;
-      });
+      const children = visibleChildren(el);
 
+      // سطر نشکسته یعنی همه فرزندان با فرزند اول هم‌پوشانی عمودی دارند؛
+      // برابری دقیق offsetTop با items-center و ارتفاع‌های متفاوت (۴۰px و ۳۲px) شکست کاذب می‌سازد.
+      const rects = children.map((c) => c.getBoundingClientRect());
+      const offsetTops = rects.map((r) => Math.round(r.top));
       let isSingleRow = true;
-      const offsetTops = children.map((c) => c.offsetTop);
-      if (children.length > 1) {
-        const firstOffset = offsetTops[0];
-        // تولرانس ۲ پیکسل برای خطاهای تراز ساب‌پیکسل
-        isSingleRow = offsetTops.every((top) => Math.abs(top - firstOffset) <= 2);
+      if (rects.length > 1) {
+        const first = rects[0];
+        isSingleRow = rects.every((r) => r.top < first.bottom - 1 && r.bottom > first.top + 1);
       }
 
       return {
@@ -111,6 +131,7 @@
       pageClientWidth,
       hasPageHorizontalScroll,
       barsCount: barsReport.length,
+      skippedTableScrollers,
       allBarsFit,
       allBarsSingleRow,
       zeroScrollPassed,

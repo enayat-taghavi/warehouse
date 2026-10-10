@@ -25,14 +25,14 @@ const LABEL_FROM_CLASSES: Record<ActionLabelFrom, string> = {
 };
 
 const TONE_CLASSES: Record<ActionTone, string> = {
-  primary: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs border border-transparent focus-visible:ring-indigo-500',
-  indigo: 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 focus-visible:ring-indigo-500',
-  emerald: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 focus-visible:ring-emerald-500',
-  rose: 'bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-100/80 focus-visible:ring-rose-500',
-  amber: 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/80 focus-visible:ring-amber-500',
-  slate: 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 focus-visible:ring-slate-400',
-  purple: 'bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-100/80 focus-visible:ring-purple-500',
-  blue: 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100/80 focus-visible:ring-blue-500',
+  primary: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs border border-transparent',
+  indigo: 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80',
+  emerald: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-100/80',
+  rose: 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-100/80',
+  amber: 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/80',
+  slate: 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200',
+  purple: 'bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-100/80',
+  blue: 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100/80',
 };
 
 const SIZE_CLASSES: Record<ActionSize, { iconOnly: string; withLabel: string; auto: string }> = {
@@ -80,7 +80,6 @@ const SIZE_CLASSES: Record<ActionSize, { iconOnly: string; withLabel: string; au
   `,
   host: {
     '[disabled]': 'isDisabled()',
-    '[attr.disabled]': 'isDisabled() ? "" : null',
     '[attr.aria-busy]': 'busy() ? "true" : null',
     '[attr.aria-label]': 'resolvedLabel()',
     '[attr.title]': 'resolvedLabel()',
@@ -183,7 +182,7 @@ export class ActionButtonComponent {
   });
 
   readonly hostClasses = computed<string>(() => {
-    const base = 'inline-flex items-center justify-center font-bold transition-all duration-150 select-none cursor-pointer active:scale-95 disabled:active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1';
+    const base = 'inline-flex items-center justify-center font-bold whitespace-nowrap shrink-0 transition-all duration-150 select-none cursor-pointer active:scale-95 disabled:active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1';
     const toneClass = TONE_CLASSES[this.resolvedTone()];
     const szConfig = SIZE_CLASSES[this.size()];
 

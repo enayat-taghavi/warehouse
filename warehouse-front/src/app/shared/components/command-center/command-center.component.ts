@@ -17,7 +17,7 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
         <div class="flex items-center overflow-x-auto w-full md:w-auto">
           <ng-content select="[cc-tabs]" />
         </div>
-        <div class="flex items-center gap-2 justify-end w-full md:w-auto">
+        <div class="flex flex-wrap items-center gap-2 justify-end w-full md:w-auto">
           <ng-content select="[cc-actions]" />
         </div>
       </div>

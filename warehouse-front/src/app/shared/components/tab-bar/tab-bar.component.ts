@@ -4,6 +4,7 @@ import {
   ElementRef,
   ViewChildren,
   QueryList,
+  computed,
   input,
   output,
 } from '@angular/core';
@@ -17,7 +18,7 @@ export interface TabDef {
   label: string;
   /** عنوان کوتاه یک‌کلمه‌ای برای موبایل */
   shortLabel?: string;
-  /** آیکون معنایی از فرهنگ آیکون */
+  /** آیکون معنایی از فرهنگ آیکون (در mobile="icon" برای هر تب لازم است؛ وگرنه تب در موبایل خالی می‌ماند) */
   icon?: string;
   /** عدد شمارنده فراداده */
   count?: number;
@@ -37,17 +38,16 @@ export interface TabDef {
   template: `
     <div
       role="tablist"
-      class="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto scrollbar-none"
+      class="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto"
     >
       @for (tab of tabs(); track tab.id; let idx = $index) {
         <button
           #tabButton
           type="button"
           role="tab"
-          [attr.id]="'tab-' + tab.id"
           [attr.aria-selected]="tab.id === active() ? 'true' : 'false'"
-          [attr.tabindex]="tab.id === active() ? 0 : -1"
-          [attr.aria-label]="mobile() === 'icon' ? tab.label : null"
+          [attr.tabindex]="tab.id === focusableTabId() ? 0 : -1"
+          [attr.aria-label]="mobile() === 'icon' ? iconModeAriaLabel(tab) : null"
           [attr.title]="mobile() === 'icon' ? tab.label : null"
           (click)="selectTab(tab.id)"
           (keydown)="onKeydown($event, idx)"
@@ -108,6 +108,17 @@ export class TabBarComponent {
 
   @ViewChildren('tabButton') private tabButtons!: QueryList<ElementRef<HTMLButtonElement>>;
 
+  /** تب قابل فوکوس با Tab؛ اگر active با هیچ تبی نخواند، تب اول تا نوار از صفحه‌کلید دور نماند. */
+  readonly focusableTabId = computed<string | null>(() => {
+    const list = this.tabs();
+    return list.some((t) => t.id === this.active()) ? this.active() : (list[0]?.id ?? null);
+  });
+
+  /** در حالت فقط‌آیکون، شمارنده دیده‌شده هم در نام دسترس‌پذیر می‌آید (WCAG 2.5.3). */
+  iconModeAriaLabel(tab: TabDef): string {
+    return tab.count !== undefined && tab.count !== null ? `${tab.label} ${tab.count}` : tab.label;
+  }
+
   selectTab(id: string): void {
     if (id !== this.active()) {
       this.activeChange.emit(id);
@@ -119,6 +130,8 @@ export class TabBarComponent {
    * در راست‌به‌چپ، کلید راست به تب قبلی و کلید چپ به تب بعدی می‌رود.
    */
   onKeydown(event: KeyboardEvent, currentIndex: number): void {
+    // Alt+ArrowLeft و میان‌برهای مرورگر را نبلع
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
     const tabList = this.tabs();
     const count = tabList.length;
     if (count === 0) return;
