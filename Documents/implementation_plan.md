@@ -24,3 +24,11 @@
 - **فایل گزارش و سناریوها:** [walkthrough_companies_hardening.md](file:///e:/warehouse%20project/Documents/Companies_Audit_And_Hardening/walkthrough_companies_hardening.md)
 - **وضعیت:** طرح جامع و کالبدشکافی کامل تدوین شد؛ آماده بررسی و تایید شروع فازهای اجرایی
 
+## سازگاری عناصر کلیک‌پذیر با قوانین جدید واکنش‌گرایی و ارگونومی (Responsive Clickable Ergonomics)
+- **پوشه مستندات:** [Documents/Responsive_Clickable_Ergonomics/](file:///e:/warehouse%20project/Documents/Responsive_Clickable_Ergonomics/)
+- **فایل طرح اجرایی:** [implementation_plan_responsive_clickable_ergonomics.md](file:///e:/warehouse%20project/Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md)
+- **فایل وظایف:** [task_responsive_clickable_ergonomics.md](file:///e:/warehouse%20project/Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md)
+- **فایل گزارش و سناریوها:** [walkthrough_responsive_clickable_ergonomics.md](file:///e:/warehouse%20project/Documents/Responsive_Clickable_Ergonomics/walkthrough_responsive_clickable_ergonomics.md)
+- **وضعیت:** طرح فراگیر گسترش یافت؛ تمامی ۵۰ صفحه، زیرصفحه و کامپوننت پروژه در ۶ فاز دقیق پوشش داده شدند؛ آماده تایید شروع فازها
+
+

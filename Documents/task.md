@@ -19,3 +19,9 @@
 - **فایل وظایف اجرایی:** [task_companies_hardening.md](file:///e:/warehouse%20project/Documents/Companies_Audit_And_Hardening/task_companies_hardening.md)
 - **وضعیت وظایف:** تدوین شده و آماده اجرا (شامل فازهای ۱ تا ۶، ۲۲ وظیفه ریزدانه)
 
+## سازگاری عناصر کلیک‌پذیر با قوانین جدید واکنش‌گرایی و ارگونومی (Responsive Clickable Ergonomics)
+- **پوشه مستندات:** [Documents/Responsive_Clickable_Ergonomics/](file:///e:/warehouse%20project/Documents/Responsive_Clickable_Ergonomics/)
+- **فایل وظایف اجرایی:** [task_responsive_clickable_ergonomics.md](file:///e:/warehouse%20project/Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md)
+- **وضعیت وظایف:** فراگیر شد؛ شامل ۶ فاز و ۵۶ وظیفه تفصیلی پوشش‌دهنده ۱۰۰٪ صفحات، زیرصفحات، دراورها و مودال‌های پروژه
+
+

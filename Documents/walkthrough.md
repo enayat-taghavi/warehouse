@@ -14,3 +14,8 @@
 - **فایل گزارش و سناریوها:** [walkthrough_companies_hardening.md](file:///e:/warehouse%20project/Documents/Companies_Audit_And_Hardening/walkthrough_companies_hardening.md)
 - **وضعیت نهایی:** سناریوهای تست و راستی‌آزمایی مستندسازی شد؛ آماده شروع فازهای اجرایی
 
+## سازگاری عناصر کلیک‌پذیر با قوانین جدید واکنش‌گرایی و ارگونومی (Responsive Clickable Ergonomics)
+- **پوشه مستندات:** [Documents/Responsive_Clickable_Ergonomics/](file:///e:/warehouse%20project/Documents/Responsive_Clickable_Ergonomics/)
+- **فایل گزارش و سناریوها:** [walkthrough_responsive_clickable_ergonomics.md](file:///e:/warehouse%20project/Documents/Responsive_Clickable_Ergonomics/walkthrough_responsive_clickable_ergonomics.md)
+- **وضعیت نهایی:** اسناد تدوین شد؛ در انتظار تایید انسانی برای شروع فازها
+
