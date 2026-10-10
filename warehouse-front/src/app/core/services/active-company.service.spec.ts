@@ -54,8 +54,8 @@ describe('ActiveCompanyService (Tab Isolation & Multi-Tenant State)', () => {
 
     Object.defineProperty(window, 'sessionStorage', { value: mockSessionStorage, writable: true, configurable: true });
     Object.defineProperty(window, 'localStorage', { value: mockLocalStorage, writable: true, configurable: true });
-    (global as any).sessionStorage = mockSessionStorage;
-    (global as any).localStorage = mockLocalStorage;
+    (globalThis as any).sessionStorage = mockSessionStorage;
+    (globalThis as any).localStorage = mockLocalStorage;
 
     mockHttpClient = {
       get: vi.fn().mockReturnValue(of({ companies: [mockCompanyA, mockCompanyB], is_superuser: false, count: 2 })),
