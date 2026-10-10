@@ -13,3 +13,9 @@
 - **پوشه مستندات:** [Documents/Companies_Studio_Fullscreen_URL/](file:///e:/warehouse%20project/Documents/Companies_Studio_Fullscreen_URL/)
 - **فایل وظایف اجرایی:** [task_companies_studio.md](file:///e:/warehouse%20project/Documents/Companies_Studio_Fullscreen_URL/task_companies_studio.md)
 - **وضعیت وظایف:** تدوین شده و آماده اجرا پس از تایید (شامل فازهای ۱ تا ۵)
+
+## ممیزی، بازرسی عمیق و مقاوم‌سازی صفحه مدیریت شرکت‌ها (Companies Audit & Hardening)
+- **پوشه مستندات:** [Documents/Companies_Audit_And_Hardening/](file:///e:/warehouse%20project/Documents/Companies_Audit_And_Hardening/)
+- **فایل وظایف اجرایی:** [task_companies_hardening.md](file:///e:/warehouse%20project/Documents/Companies_Audit_And_Hardening/task_companies_hardening.md)
+- **وضعیت وظایف:** تدوین شده و آماده اجرا (شامل فازهای ۱ تا ۶، ۲۲ وظیفه ریزدانه)
+

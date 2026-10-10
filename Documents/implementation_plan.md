@@ -16,3 +16,11 @@
 - **فایل طرح اجرایی:** [implementation_plan_companies_studio.md](file:///e:/warehouse%20project/Documents/Companies_Studio_Fullscreen_URL/implementation_plan_companies_studio.md)
 - **فایل وظایف:** [task_companies_studio.md](file:///e:/warehouse%20project/Documents/Companies_Studio_Fullscreen_URL/task_companies_studio.md)
 - **وضعیت:** آماده برای بررسی و تایید شروع پیاده‌سازی
+
+## ممیزی، بازرسی عمیق و مقاوم‌سازی صفحه مدیریت شرکت‌ها (Companies Audit & Hardening)
+- **پوشه مستندات:** [Documents/Companies_Audit_And_Hardening/](file:///e:/warehouse%20project/Documents/Companies_Audit_And_Hardening/)
+- **فایل طرح اجرایی:** [implementation_plan_companies_hardening.md](file:///e:/warehouse%20project/Documents/Companies_Audit_And_Hardening/implementation_plan_companies_hardening.md)
+- **فایل وظایف:** [task_companies_hardening.md](file:///e:/warehouse%20project/Documents/Companies_Audit_And_Hardening/task_companies_hardening.md)
+- **فایل گزارش و سناریوها:** [walkthrough_companies_hardening.md](file:///e:/warehouse%20project/Documents/Companies_Audit_And_Hardening/walkthrough_companies_hardening.md)
+- **وضعیت:** طرح جامع و کالبدشکافی کامل تدوین شد؛ آماده بررسی و تایید شروع فازهای اجرایی
+
