@@ -7,8 +7,8 @@ model: sonnet
 
 You review this project's hardest rule: **no user data may ever be lost.**
 - The warehouse-counting system is offline-first.
-- Real users reach this machine through Cloudflare Tunnel.
-- The local database is the production database.
+- This machine (`app.farsalish.ir`, behind Cloudflare Tunnel) is the test/staging environment with no real users, but its data is still never deleted.
+- Real users work on `soft.farsalish.ir`; the same code and migrations later run there on real data, so judge every change as if it ran on real data.
 
 ## Scope
 - Current changes: `git diff`, `git diff --cached` and related untracked files (`git status --porcelain`).

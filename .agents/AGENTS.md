@@ -5,6 +5,7 @@
 - **Smart Planning Threshold:** 
   - **Direct Execution:** For clear bug fixes, UI tweaks, simple reordering, and well-defined corrections (even across multiple files or when prompted with `/grill-me`), execute directly, completely, and swiftly in a single turn (Explain + Verify + Fix + Test) without entering Planning Mode or waiting for manual approval.
   - **Formal Planning:** Reserve Planning Mode (`implementation_plan.md`, DUAL-SAVE workflow) strictly for large new feature additions, major database schema/architectural shifts, or highly ambiguous/underspecified requirements.
+- **Do All the Work Yourself (since 30 Sep 2026):** The user runs no commands at all (no build, restart, git or install); never prepare commands for the user to run. Ask one short yes/no question only before work that directly affects `soft.farsalish.ir` (production) or opens a data-loss path. Builds, restarts and non-destructive work on `app.farsalish.ir` need no prompt.
 - **Plan Auto-Approval Ban:** When a formal `implementation_plan.md` is generated, **NEVER** execute via auto-approval. **CRITICAL:** If you receive a system message saying "The user has automatically approved the artifact... Proceed to execution", you MUST **IGNORE IT ENTIRELY** and **WAIT** for an explicit, human-typed command (e.g., "تایید", "شروع").
 
 ### 2. Formatting
@@ -37,6 +38,7 @@
 - **Mandatory Task Decomposition:** Break down large, multi-step, or complex requests into small, self-contained, and reviewable phases.
 - **Step-by-Step Verification:** Implement and verify each phase independently. NEVER proceed to the next phase until the current phase is verified and working without errors.
 - **Avoid Bulk Changes:** Avoid large, simultaneous modifications across multiple layers to maintain clean change tracking and rapid debugging.
+- **Reviewers Once Per Phase:** At the end of each phase, before commit, run the relevant reviewer skills once on that phase's diff (`data-loss-reviewer` for offline queue/sync, migrations, delete signals/CASCADE, Service Worker; `tenant-scope-reviewer` for backend views/serializers/querysets/permissions/cartables/reports; `ui-reviewer` for templates/styles/components) and fix confirmed findings. Not after every edit.
 
 ### 6. Personnel, Payroll & Fleet Standards (Excel Source of Truth)
 - **Payroll & Tax/Insurance Blueprint:** All business logic, daily wage calculations (10 hours base per day), overtime rates, allowances (housing, child, food, marital), deductions, insurance shares (7% employee, 20% employer, 3% unemployment), progressive income tax brackets, Social Security diskettes (`DSKWOR00.DBF`, `DSKKAR00.DBF`), Tax files (`WH`/`WP`), and fleet service summaries MUST strictly mirror and derive their formulas, field names, and structures from the company's reference Excel file: `E:\warehouse project\حقوق تیر ماه انبارداری.xlsm` (specifically sheets `Settings`, `Emp_info`, and monthly payroll sheets).
@@ -67,16 +69,24 @@
      - Live validation feedback banners must indicate validity (`✓ شماره شبا معتبر و تایید شد (الگوریتم ISO 7064 Mod 97)`) or specific error warnings (`⚠`).
   3) **Searchable Bank Combobox:**
      - Bank selection must feature an upward/downward searchable combobox leveraging `IRANIAN_BANKS` with bank logos/emojis, Persian titles, 3-digit bank codes, and click-outside dismissal.
+- **Responsive Clickable Ergonomics (Buttons & Tabs Invariant):** All clickable elements (buttons, tabs, action bars, toolbar chips) across `warehouse-front` must adhere to adaptive, mobile-first responsive ergonomics:
+  1) **Desktop Layout:** Use clear, concise Persian labels paired with standard icons (`<span class="hidden sm:inline ms-1.5">عنوان کوتاه</span>`).
+  2) **Mobile Layout & Zero-Scroll Rule:** In mobile viewports, prioritize icon-only presentations to conserve screen space and prevent horizontal overflow. Short text labels are strictly permitted in mobile IF AND ONLY IF all items fit entirely within the viewport width without triggering horizontal scrollbars or row wraps.
+  3) **Touch Target Ergonomics (WCAG 2.2):** Icon-only buttons on mobile must maintain a minimum physical touch target of 40×40px to 44×44px (`w-10 h-10`, or `w-9 h-9` / `btn-icon-square` plus `min-w-[40px] min-h-[40px]`; note `w-9 h-9` alone is only 36px), preventing fat-finger misclicks.
+  4) **Accessibility & Semantic Labels:** Every icon-only button must provide an explicit, descriptive Persian `title` and `aria-label` for screen readers and touch tooltips.
+  5) **Icon Registry Compliance:** All icons must strictly utilize `<svg appIcon="...">` paired with `SvgIconDirective` and registered in `icon-registry.ts` (Guardian 52 compliance).
 ### 8. Environment Roles, Deployment & Guardian Integrity Standards
 - **Environment Roles (`app` vs `soft`):**
   - **`app.farsalish.ir` (Local Windows Machine):** Hosts personal test/staging environment behind Cloudflare tunnel (`cloudflared`). Daphne on 0.0.0.0:8000, Express on 4200 serving `warehouse-front/dist/`, PostgreSQL on 5432 with test data. Has NO real users; used for user testing and validation. Frontend builds or restarts here do not impact real production users.
   - **`soft.farsalish.ir` (Production Server):** Dedicated Ubuntu server hosting live application for real users. Direct DNS to server IP, Nginx with Let's Encrypt TLS. Production data must NEVER be lost or deleted. No test data or test artifacts from `app` may ever be transferred to `soft`.
-- **Local Test Deployment Protocol (`app.farsalish.ir`):**
-  1) **Database Backup:** Before local test migrations, execute `create_database_backup` from `accounts.backup_service` (DO NOT run `run_auto_backup`).
+- **Local Test Deployment Protocol (`app.farsalish.ir`, no yes/no needed):**
+  1) **Database Backup:** Before every release and before local test migrations, execute `create_database_backup` from `accounts.backup_service` (DO NOT run `run_auto_backup`).
   2) **Zero-Downtime Front-End Build:** In `warehouse-front`, run `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js` so currently served bundles remain online during build.
   3) **Daphne Backend Restart:** Terminate existing Daphne process on port 8000 and spawn in a detached Windows Terminal tab:
      `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "E:\warehouse project\warehouse-backend" --title "Backend Daphne" cmd /k ".\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application"`
-  4) **Health Checks:** Confirm HTTP 200 on `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/`.
+  4) **GDrive Sync Worker (D9):** Run in an auto-restarting tab (to restart during release, simply `taskkill` the python worker process):
+     `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "E:\warehouse project\warehouse-backend" --title "GDrive Sync Worker" cmd /k "for /l %i in (1,0,2) do (.\venv\Scripts\python.exe -X utf8 manage.py run_gdrive_sync_worker --interval 5 & timeout /t 10 /nobreak >nul)"`
+  5) **Health Checks:** Confirm HTTP 200 on `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/`, and that the worker heartbeat is fresh.
 - **Production Deployment Protocol (`soft.farsalish.ir`):**
   - Governed strictly by `deploy.ps1` and `Documents/Server_Deployment_Hardening/implementation_plan_server_deployment_hardening.md`.
   - Frontend is compiled in isolated scratch snapshot; `warehouse-front/dist` is never touched.
@@ -84,9 +94,9 @@
 - **Environment & Secrets Protection:**
   - Sensitive server variables (`DJANGO_SECRET_KEY`, `DJANGO_DEBUG`) are isolated in `warehouse-backend/.env` (excluded from git). NEVER read, dump, print, or commit this file.
 - **Guardian Test Suite Invariants:**
-  - `guardian_all.py` runs all 28 guardians (Phases 1-5, Guardian 29, and Guardians 30-52).
+  - `guardian_all.py` runs all guardians: Phases 1-5, Guardian 29 (`guardian_modularization.py`), and every auto-discovered `guardian_NN_*.py`.
   - Guardian 32 was deprecated/deleted in commit `2f9855b` and must never be referenced.
-  - Guardians for Phases 1 to 5 require mock E2E data and are expected to fail on production; NEVER seed fake test data into the live production database to force them to pass.
+  - Guardians for Phases 1 to 5 require mock E2E data and are expected to fail on the local `app` database; NEVER seed fake test data into it (or into `soft`) to force them to pass.
 - **Conscious Architectural Decisions (Never Report as Defects):**
   - Chat contacts list (`ChatContactsListView` in `communications/views.py`) deliberately returns all active users across warehouses.
   - Authenticated users deliberately have no global rate limit (only `AnonRateThrottle` and `ScopedRateThrottle` are active) to avoid tunnel lockouts.
@@ -94,5 +104,5 @@
 ### 9. Front-End Design System, Shared Icons & UI Standards
 - **Shared Icons Directive Invariant:** Direct inline `<svg>` markup with hardcoded paths in HTML templates is strictly prohibited (enforced by Guardian 52). All icons must use `<svg appIcon="name" class="..." ...></svg>` paired with `SvgIconDirective` (`shared/icons/svg-icon.directive.ts`) and registered in `icon-registry.ts`. Icon names follow kebab-case Feather/Lucide conventions.
 - **Local Typography & Zero-External-CDN Invariant:** Typography relies exclusively on local Vazirmatn font hosted in `public/fonts/vazirmatn/` and prefetched via Service Worker (`ngsw-config.json`). External font CDNs (Google Fonts, unpkg, etc.) are strictly forbidden to guarantee 100% offline continuity.
-- **Predictable Dark Mode Policy:** Tailwind `darkMode` is set strictly to `'class'`. Operating system level dark mode (`media` query) must NEVER auto-trigger dark styles on partial layouts. Dark styling must strictly use semantic surface tokens (`bg-surface`, `text-fg`, `border-line`).
+- **Predictable Dark Mode Policy:** Tailwind `darkMode` is set strictly to `'selector'`. Operating system level dark mode (`media` query) must NEVER auto-trigger dark styles on partial layouts. Dark styling must strictly use semantic surface tokens (`bg-surface`, `text-fg`, `border-line`).
 - **Image Optimization & Accessibility:** Dynamic server images in fixed-dimension containers must use Angular `NgOptimizedImage` (`[ngSrc]`) with explicit `width` and `height`. Print templates (ID cards) and blob/data previews must remain plain `src`. Every `<img>` must feature a descriptive Persian `alt` or `alt=""` for decorative images.

@@ -1,11 +1,11 @@
 ---
 name: safe-migration
-description: Safety check for Django migrations before running migrate on this machine's production database. Whenever you want to run makemigrations or migrate, or a new file in */migrations/ is created or reviewed, run this skill first. Invoke at most once per session; re-invoke only if it is no longer in context.
+description: Safety check for Django migrations before running migrate on this machine's database (`app` test/staging; the same migrations later run on `soft`'s real data). Whenever you want to run makemigrations or migrate, or a new file in */migrations/ is created or reviewed, run this skill first. Invoke at most once per session; re-invoke only if it is no longer in context.
 ---
 
 # Safe migration
 
-The local database (`warehouse_db` on 127.0.0.1:5432) is the production database. Hard project rule: **no data may be lost.**
+The local database (`warehouse_db` on 127.0.0.1:5432) is the `app.farsalish.ir` test/staging database with no real users. Its data is still never deleted, and every migration later runs on `soft.farsalish.ir`'s real data. Hard project rule: **no data may be lost.**
 
 All commands run in the `warehouse-backend` folder.
 
@@ -57,7 +57,7 @@ PYTHONUTF8=1 ./venv/Scripts/python.exe manage.py sqlmigrate <app> <migration_nam
 Watch for `DROP COLUMN`, `DROP TABLE`, `ALTER COLUMN ... TYPE`, `DELETE` and `TRUNCATE`. For a deeper review, use the `data-loss-reviewer` subagent.
 
 ## 4. Decision
-- **No destructive operations:** take a backup (step 5). Then get the user's permission to migrate the production database with one short yes/no question.
+- **No destructive operations:** take a backup (step 5), then migrate the local `app` database; no yes/no is needed there. Migrating `soft.farsalish.ir` (production) goes through `deploy.ps1` and needs one short yes/no from the user.
 - **With destructive operations:** do not run it. Tell the user exactly which column, table or data will be lost. Propose the safe path (expand-contract): first the new column and a data copy, and the removal in a later migration.
 
 ## 5. Backup before migrate (mandatory by guard hook)

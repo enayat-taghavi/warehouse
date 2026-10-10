@@ -12,6 +12,11 @@
 - NEVER commit secrets, credentials, or .env files
 - NEVER add a `Co-Authored-By` trailer to user commits
 - Validate input at system boundaries
+- NEVER discard uncommitted changes (`git restore`, `git reset --hard`, `git checkout -- <file>`) without the user's explicit approval; check `git status` first
+- **"?" rule:** a prompt containing "?" or "؟" is investigatory: only explain or answer; change nothing, write no code, no plan. "??" or "؟؟" means an ultra-short, direct answer.
+- **Direct vs. planned work:** clear fixes and well-defined changes (even multi-file) are done directly and completely in one turn. Large features, schema/architecture shifts or ambiguous requests get a formal plan first, executed only after the user's explicit typed approval (e.g. «تایید»، «شروع»).
+- **Shared standards with Antigravity:** `.agents/AGENTS.md` holds domain standards that apply to me too (§3 exports, cartable concurrency, WebSocket, Shamsi dates, sensitive RBAC, `ng-persian-datepicker`; §6 payroll/fleet per the Excel blueprint; §7 grid ergonomics, sticky command center, subtabs, Sheba/bank). Read the relevant section before touching those areas.
+- Persian markdown docs under `Documents/` wrap their content in `<div dir="rtl" align="right">…</div>`, like the existing plan docs.
 
 ## Permissions and working mode
 
@@ -50,6 +55,8 @@
   - **`darkMode: 'selector'`:** dark mode no longer turns on automatically from the OS.
   - **`NgOptimizedImage`:** only for server images in a fixed-size box; never for `data:`/`blob:` or print templates.
   - **`@defer` for `chart.js`, `withViewTransitions` for page transitions, and global reduced motion.**
+  - **Responsive clickable elements:** icon + short label on desktop; icon-only on mobile unless the whole row fits with no horizontal scroll or wrap; icon-only touch targets at least 40×40px; Persian `title` and `aria-label` (details in the skill).
+- **"Browser test" / «تست مرورگر» / «تست دام»** from the user means fast component/DOM unit tests (`ng test`, Vitest + jsdom) by default; real-browser E2E only when explicitly asked («با مرورگر واقعی»، «E2E»). My own visual checks in the built-in browser are separate and still required.
 
 ## Hard rules and accepted decisions
 
@@ -92,7 +99,7 @@ Plan: warehouse counting and accounting as two independently installable modules
 ## Commands and tools
 
 - `lint-imports` needs `PYTHONUTF8=1` (Persian in config files). Its exit is intentionally report-only with code 1; the real gate is guardian 29, which compares the violation count with the baseline and fails only on an *increase*.
-- Guardians: `python scripts/e2e/guardian_all.py` runs them all: phases 1–5, guardian 29 (`guardian_modularization.py`) and every auto-discovered `guardian_NN_*.py`. Guardian 32 was removed in commit `2f9855b`. Phase 1–5 guardians need E2E data (e.g. `E2E-ITEM-01`) and fail on the production database; never create test data in the production database to make them pass.
+- Guardians: `python scripts/e2e/guardian_all.py` runs them all: phases 1–5, guardian 29 (`guardian_modularization.py`) and every auto-discovered `guardian_NN_*.py`. Guardian 32 was removed in commit `2f9855b`. Phase 1–5 guardians need E2E data (e.g. `E2E-ITEM-01`) and fail on the local `app` database (it has no E2E data); never seed test data into it (or into `soft`) to make them pass.
 - Tests: `./venv/Scripts/python.exe manage.py test ...`. The postgres test database is not available; if a test didn't run, report it explicitly.
 - Check: `./venv/Scripts/python.exe manage.py check`.
 - **Frontend tests (`ng test`)**, status as of 30 Sep 2026, identical on HEAD and before the UI changes:
@@ -102,7 +109,7 @@ Plan: warehouse counting and accounting as two independently installable modules
 - Backend secrets (`DJANGO_SECRET_KEY`, `DJANGO_DEBUG`) live in `warehouse-backend/.env`, outside git; `settings.py` reads it and system environment variables override it. Don't read it.
 - Backend errors at ERROR level and above (Django and project apps) go to `warehouse-backend/logs/django-errors.log`. The folder is outside git; the file is created on the first error.
 - Code searches skip the tracked chat archives `chat_history_data.json` and `chat_history_dashboard.html` (listed in `.gitignore`); pass the path explicitly to search them.
-- **Release on this machine** (get a yes/no from the user first):
+- **Release on this machine** (`app`, no real users: no yes/no needed; releases to `soft` follow `deploy.ps1` and need explicit approval):
   1. Back up with `create_database_backup` from `accounts/backup_service.py`. Don't run `run_auto_backup`: it deletes old backups.
   2. Frontend build in `warehouse-front`: `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js`. The flag keeps files that are being served from being deleted mid-build.
   3. Backend restart: close the daphne process on port 8000 and its venv launcher with `taskkill`. Then relaunch it in a Windows Terminal tab so it doesn't depend on the Claude session:

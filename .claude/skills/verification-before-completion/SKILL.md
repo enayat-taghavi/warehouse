@@ -32,7 +32,7 @@ description: Verification before declaring completion. Use this before saying "d
 ## What I cannot verify; say so explicitly
 - **Pages behind login** (dashboard, warehouses, counting): I do not log in with a password. Verify server-side or on the login page as far as possible. Then say what remained "unverified" and how the user can see it.
 - **Django tests:** the test database is not available. If a test did not run, say "did not run", not "passed".
-- **Phase 1 to 5 guardians:** always fail on the production database, because they have no E2E data. Report them separately and do not hide them.
+- **Phase 1 to 5 guardians:** always fail on the local `app` database, because they have no E2E data. Report them separately and do not hide them.
 
 ## Red flags
 - "Should work", "probably" or "looks right", before running the command.

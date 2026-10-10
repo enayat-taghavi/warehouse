@@ -36,7 +36,7 @@ You review the look, accessibility and UX of this project's Angular frontend. Th
 8. **Dark mode:** `darkMode: 'selector'`, and the `dark` class is never activated anywhere. A new `dark:` class makes sense only as part of a full token-based theme.
 
 ## Visual review (if browser tools are available)
-- Review changes on `http://localhost:4300` (`ng serve` of the working tree). `http://localhost:4200` is **real production**; only observe it.
+- Review changes on `http://localhost:4300` (`ng serve` of the working tree). `http://localhost:4200` is the built `app.farsalish.ir` test stack; only observe it.
 - Never enter a password and never click submit, save, delete or confirm.
 - Pages behind login are visible only if the user has logged in to the built-in browser themselves; otherwise review statically and say explicitly that it was not visually verified.
 - Prefer `read_page`/`get_page_text`; take screenshots only as final visual proof.

@@ -54,6 +54,12 @@ Semantic tokens (new code should use these):
   - `smart-delete-modal`, `barcode-scanner`, `cartable-header`, `cartable-card-base`, `warehouse-selector`
 - **Pipes:** `PersianDatePipe` and `StatusLabelPipe` in `src/app/shared/pipes/`; date utilities in `core/utils/date-utils.ts`
 
+## Responsive buttons, tabs and clickable elements (mobile and desktop)
+- **Desktop:** icon plus a short, clear label (`<span class="hidden sm:inline ms-1.5">عنوان</span>`).
+- **Mobile:** icon-only has absolute priority. A short label is allowed on mobile only if the whole row fits with no horizontal scroll and no wrapping (Zero-Scroll).
+- **Touch size on mobile:** icon-only buttons must not shrink; at least 40×40 to 44×44 px (`w-10 h-10`, or `w-9 h-9` / `btn-icon-square` plus `min-w-[40px] min-h-[40px]`; `w-9 h-9` alone is only 36px).
+- **Icon-button accessibility:** every button without text needs a Persian `aria-label` and `title`.
+
 ## Icons
 - Only from the shared registry: `<svg appIcon="trash-2" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>`
 - Directive: `shared/icons/svg-icon.directive.ts` (`SvgIconDirective` in the component's `imports`). Registry: `shared/icons/icon-registry.ts`.

@@ -33,7 +33,7 @@ You review data-isolation security in a multi-company warehouse and accounting s
 - Authenticated users intentionally have no global rate limit; only `AnonRateThrottle` and `ScopedRateThrottle` are active.
 
 ## Constraints
-- Read-only: edit no files and send no write requests to the server or database. The local database is the production database.
+- Read-only: edit no files and send no write requests to the server or database. The local database is the `app` test/staging database, but its data is still never changed or deleted by a review.
 - Search Persian text with the Grep tool, not `grep` in Bash. Don't read `.env`.
 
 ## Output
