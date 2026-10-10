@@ -86,10 +86,13 @@ export class OverflowMenuComponent implements OverflowMenuContext {
     this.closeMenu();
   }
 
-  closeMenu(): void {
+  /** restoreFocus=false برای لمس بیرون: فوکوس جایی می‌رود که کاربر لمس کرده، نه به تریگر (و صفحه به عقب نمی‌پرد). */
+  closeMenu(restoreFocus = true): void {
     if (this.isOpen()) {
       this.isOpen.set(false);
-      this.triggerButton?.nativeElement.focus();
+      if (restoreFocus) {
+        this.triggerButton?.nativeElement.focus({ preventScroll: true });
+      }
     }
   }
 
@@ -105,7 +108,7 @@ export class OverflowMenuComponent implements OverflowMenuContext {
     if (!this.isOpen()) return;
     const target = event.target as Node | null;
     if (target && !this.elementRef.nativeElement.contains(target)) {
-      this.closeMenu();
+      this.closeMenu(false);
     }
   }
 }

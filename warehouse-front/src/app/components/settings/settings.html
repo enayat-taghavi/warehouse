@@ -21,6 +21,7 @@
           type="button"
           appAction="save"
           label="ذخیره و اعمال تنظیمات"
+          display="label"
           [busy]="isLoading"
           [disabled]="dynamicFieldsLoadFailed || !canEditSettings()"
           (click)="saveGlobalSettings()"

@@ -212,7 +212,7 @@ export class ActionButtonComponent {
   readonly hostClasses = computed<string>(() => {
     const justifyClass =
       this.overflowContext != null ? 'max-sm:justify-start sm:justify-center' : 'justify-center';
-    const base = `inline-flex items-center ${justifyClass} font-bold whitespace-nowrap shrink-0 transition-all duration-150 select-none cursor-pointer active:scale-95 disabled:active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1`;
+    const base = `inline-flex items-center ${justifyClass} font-bold whitespace-nowrap shrink-0 transition-all duration-150 select-none cursor-pointer active:scale-95 disabled:active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed aria-disabled:active:scale-100 aria-disabled:opacity-50 aria-disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1`;
     const toneClass = TONE_CLASSES[this.resolvedTone()];
     const szConfig = SIZE_CLASSES[this.size()];
 

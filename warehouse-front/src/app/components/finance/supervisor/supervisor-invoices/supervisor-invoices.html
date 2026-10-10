@@ -31,18 +31,21 @@
       <button
         type="button"
         appAction="export-excel"
+        label="خروجی گزارش فاکتورها"
         (click)="exportExcel()"
       ></button>
 
       <button
         type="button"
         appAction="import-excel"
+        label="قالب اکسل فاکتورها"
         (click)="importExcel()"
       ></button>
 
       <button
         type="button"
         appAction="refresh"
+        label="تازه‌سازی فاکتورها"
         [busy]="isLoading"
         (click)="fetchInvoices()"
       ></button>
@@ -139,6 +142,7 @@
                   type="button"
                   appAction="approve"
                   size="sm"
+                  display="label"
                   (click)="approveSingle(item)"
                 ></button>
                 <button

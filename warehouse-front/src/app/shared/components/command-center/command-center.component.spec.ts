@@ -44,6 +44,9 @@ describe('CommandCenterComponent (app-command-center)', () => {
     expect(header.className).toContain('sticky');
     expect(header.className).toContain('top-0');
     expect(header.className).toContain('backdrop-blur-md');
+    // میزبان باید display: contents باشد تا والد header ظرف بلند صفحه شود و sticky کار کند
+    const host = fixture.nativeElement.querySelector('app-command-center') as HTMLElement;
+    expect(host.classList.contains('contents')).toBe(true);
   });
 
   it('باید هر دو جایگاه [cc-tabs] و [cc-actions] را در موقعیت صحیح رندر کند', () => {

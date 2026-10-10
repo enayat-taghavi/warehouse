@@ -100,7 +100,8 @@ export interface TabDef {
     </div>
   `,
   host: {
-    class: 'inline-block w-full md:w-auto',
+    // max-w-full و min-w-0: نوار از ظرف بزرگ‌تر نشود تا overflow-x-auto درونی کار کند، نه اسکرول کل صفحه.
+    class: 'inline-block w-full md:w-auto max-w-full min-w-0',
   },
 })
 export class TabBarComponent {

@@ -4,7 +4,7 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { By } from '@angular/platform-browser';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { OverflowMenuComponent } from './overflow-menu.component';
 import { ActionButtonComponent } from '../action-button/action-button.component';
 import { CommandCenterComponent } from '../command-center/command-center.component';
@@ -116,11 +116,14 @@ describe('OverflowMenuComponent (app-overflow-menu)', () => {
     const outsideArea = fixture.nativeElement.querySelector('#outside-area') as HTMLDivElement;
     expect(outsideArea).not.toBeNull();
 
+    const focusSpy = vi.spyOn(trigger, 'focus');
     const pointerEvent = new PointerEvent('pointerdown', { bubbles: true, cancelable: true });
     outsideArea.dispatchEvent(pointerEvent);
     fixture.detectChanges();
 
     expect(menuComponent.isOpen()).toBe(false);
+    // لمس بیرون فوکوس را به تریگر برنمی‌گرداند (صفحه به عقب نمی‌پرد)
+    expect(focusSpy).not.toHaveBeenCalled();
   });
 
   it('با کلیک روی یکی از دکمه‌های درون منو، منو باید به‌طور خودکار بسته شود', () => {

@@ -24,7 +24,8 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
     </header>
   `,
   host: {
-    class: 'block',
+    // contents: والد واقعی header باید ظرف بلند صفحه باشد؛ با host بلوکی هم‌قد header، sticky هرگز نمی‌چسبد.
+    class: 'contents',
   },
 })
 export class CommandCenterComponent {}
