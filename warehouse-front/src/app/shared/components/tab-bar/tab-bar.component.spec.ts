@@ -18,6 +18,7 @@ try {
       [tabs]="tabs"
       [active]="activeTab()"
       [mobile]="mobileMode()"
+      [fullLabelFrom]="fullLabelFrom()"
       (activeChange)="onTabChange($event)"
     />
   `,
@@ -31,6 +32,7 @@ class TestHostComponent {
 
   activeTab = signal('pending');
   mobileMode = signal<'short' | 'icon'>('short');
+  fullLabelFrom = signal<'sm' | 'md' | 'lg' | 'xl'>('sm');
   lastEmittedTab: string | null = null;
 
   onTabChange(tabId: string): void {
@@ -188,5 +190,59 @@ describe('TabBarComponent (app-tab-bar)', () => {
     const badge = tabWithCount.querySelector('.tabular-nums');
     expect(badge).not.toBeNull();
     expect(badge.textContent.trim()).toBe('12');
+  });
+
+  it('باید کلاس‌های پاسخگوی مناسب برای نقاط شکست مختلف fullLabelFrom را اعمال کند', () => {
+    const tabs = fixture.nativeElement.querySelectorAll('[role="tab"]');
+    const firstTab = tabs[0];
+
+    // پیش‌فرض: fullLabelFrom = 'sm'
+    expect(host.fullLabelFrom()).toBe('sm');
+    let desktopSpan = firstTab.querySelector('.hidden.sm\\:inline');
+    let mobileSpan = firstTab.querySelector('.sm\\:hidden');
+    expect(desktopSpan).not.toBeNull();
+    expect(mobileSpan).not.toBeNull();
+
+    // نقطه شکست md
+    host.fullLabelFrom.set('md');
+    fixture.detectChanges();
+    desktopSpan = firstTab.querySelector('.hidden.md\\:inline');
+    mobileSpan = firstTab.querySelector('.md\\:hidden');
+    expect(desktopSpan).not.toBeNull();
+    expect(mobileSpan).not.toBeNull();
+
+    // نقطه شکست lg
+    host.fullLabelFrom.set('lg');
+    fixture.detectChanges();
+    desktopSpan = firstTab.querySelector('.hidden.lg\\:inline');
+    mobileSpan = firstTab.querySelector('.lg\\:hidden');
+    expect(desktopSpan).not.toBeNull();
+    expect(mobileSpan).not.toBeNull();
+
+    // نقطه شکست xl
+    host.fullLabelFrom.set('xl');
+    fixture.detectChanges();
+    desktopSpan = firstTab.querySelector('.hidden.xl\\:inline');
+    mobileSpan = firstTab.querySelector('.xl\\:hidden');
+    expect(desktopSpan).not.toBeNull();
+    expect(mobileSpan).not.toBeNull();
+  });
+
+  it('در حالت mobile="icon" با fullLabelFrom="xl" باید کلاس hidden xl:inline اعمال شده و aria-label و title درست بمانند', () => {
+    host.mobileMode.set('icon');
+    host.fullLabelFrom.set('xl');
+    fixture.detectChanges();
+
+    const tabs = fixture.nativeElement.querySelectorAll('[role="tab"]');
+    const firstTab = tabs[0];
+
+    // در حالت icon فقط اسپن برچسب دسکتاپ با کلاس xl وجود دارد و اسپن برچسب کوتاه وجود ندارد
+    const desktopSpan = firstTab.querySelector('.hidden.xl\\:inline');
+    expect(desktopSpan).not.toBeNull();
+    expect(firstTab.querySelector('.xl\\:hidden')).toBeNull();
+
+    // نام دسترس‌پذیر و title
+    expect(firstTab.getAttribute('aria-label')).toBe('نیازمند بررسی 12');
+    expect(firstTab.getAttribute('title')).toBe('نیازمند بررسی');
   });
 });

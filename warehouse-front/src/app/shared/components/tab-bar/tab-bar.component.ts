@@ -23,6 +23,20 @@ const TAB_COUNTER_TONE_CLASSES: Record<
   slate: { active: 'bg-slate-200 text-slate-700', inactive: 'bg-slate-200/80 text-slate-600' },
 };
 
+const FULL_LABEL_CLASSES: Record<'sm' | 'md' | 'lg' | 'xl', string> = {
+  sm: 'hidden sm:inline',
+  md: 'hidden md:inline',
+  lg: 'hidden lg:inline',
+  xl: 'hidden xl:inline',
+};
+
+const SHORT_LABEL_CLASSES: Record<'sm' | 'md' | 'lg' | 'xl', string> = {
+  sm: 'sm:hidden',
+  md: 'md:hidden',
+  lg: 'lg:hidden',
+  xl: 'xl:hidden',
+};
+
 export interface TabDef {
   /** شناسه یکتای تب */
   id: string;
@@ -81,10 +95,10 @@ export interface TabDef {
           }
 
           @if (mobile() === 'short') {
-            <span class="hidden sm:inline">{{ tab.label }}</span>
-            <span class="sm:hidden">{{ tab.shortLabel || tab.label }}</span>
+            <span [class]="fullLabelClass()">{{ tab.label }}</span>
+            <span [class]="shortLabelClass()">{{ tab.shortLabel || tab.label }}</span>
           } @else {
-            <span class="hidden sm:inline">{{ tab.label }}</span>
+            <span [class]="fullLabelClass()">{{ tab.label }}</span>
           }
 
           @if (tab.count !== undefined && tab.count !== null) {
@@ -113,6 +127,12 @@ export class TabBarComponent {
 
   /** رفتار در موبایل: عنوان کوتاه (پیش‌فرض) یا فقط‌آیکون */
   readonly mobile = input<'short' | 'icon'>('short');
+
+  /** نقطه شکست برای نمایش برچسب کامل (پیش‌فرض sm؛ در تبلت یا صفحه‌های با سایدبار md یا lg یا xl) */
+  readonly fullLabelFrom = input<'sm' | 'md' | 'lg' | 'xl'>('sm');
+
+  readonly fullLabelClass = computed(() => FULL_LABEL_CLASSES[this.fullLabelFrom()] ?? FULL_LABEL_CLASSES.sm);
+  readonly shortLabelClass = computed(() => SHORT_LABEL_CLASSES[this.fullLabelFrom()] ?? SHORT_LABEL_CLASSES.sm);
 
   /** تغییر تب فعال */
   readonly activeChange = output<string>();

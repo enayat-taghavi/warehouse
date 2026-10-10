@@ -67,4 +67,20 @@ describe('CommandCenterComponent (app-command-center)', () => {
     expect(container.className).toContain('md:flex-row');
     expect(container.className).toContain('rounded-2xl');
   });
+
+  it('با تنظیم rowFrom="lg" باید کلاس lg:flex-row و lg:w-auto را اعمال کند', () => {
+    const hostFixture = TestBed.createComponent(CommandCenterComponent);
+    hostFixture.componentRef.setInput('rowFrom', 'lg');
+    hostFixture.detectChanges();
+
+    const container = hostFixture.nativeElement.querySelector('header > div');
+    expect(container).not.toBeNull();
+    expect(container.className).toContain('flex-col');
+    expect(container.className).toContain('lg:flex-row');
+
+    const slotContainers = hostFixture.nativeElement.querySelectorAll('header > div > div');
+    expect(slotContainers.length).toBe(2);
+    expect(slotContainers[0].className).toContain('lg:w-auto');
+    expect(slotContainers[1].className).toContain('lg:w-auto');
+  });
 });

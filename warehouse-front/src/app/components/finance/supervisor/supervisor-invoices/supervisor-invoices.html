@@ -1,7 +1,7 @@
 <div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
-  <app-command-center>
+  <app-command-center rowFrom="lg">
     <!-- سمت راست: دراپ‌داون انتخاب بخش و تب‌های فیلتر وضعیت -->
     <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
       <!-- انتخابگر بخش فعال (Guardian G1: Section Isolation) -->
@@ -23,6 +23,7 @@
         [active]="activeSubTab"
         (activeChange)="switchSubTab($event)"
         mobile="short"
+        fullLabelFrom="lg"
       />
     </div>
 
