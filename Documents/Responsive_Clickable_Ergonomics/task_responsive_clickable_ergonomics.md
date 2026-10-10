@@ -18,14 +18,14 @@
   - [x] spec فرهنگ آیکون: نام‌ها در رجیستری، نبود اشتراک خارج از فهرست سفید بند ۳-۴
   - [x] معیار پایان گام
 
-- [ ] **گام ۱: جعبه‌ابزار مشترک**
-  - [ ] `shared/components/action-button/` (`button[appAction]`) با کاتالوگ کارها (آیکون، عنوان، رنگ، `sensitive`)
-  - [ ] `shared/components/tab-bar/` (`app-tab-bar`) و نوع `TabDef`
-  - [ ] `shared/components/overflow-menu/` (`app-overflow-menu`)
-  - [ ] `shared/components/command-center/` (`app-command-center`)
-  - [ ] `scripts/e2e/zero_scroll_probe.js`
-  - [ ] specهای Vitest هر جزء (برچسب دسترس‌پذیری، کار حساس، نقش‌های تب، `type="submit"`، Escape منو)
-  - [ ] معیار پایان گام (هنوز هیچ صفحه‌ای کوچ نکرده)
+- [x] **گام ۱: جعبه‌ابزار مشترک**
+  - [x] `shared/components/action-button/` (`button[appAction]`) با کاتالوگ کارها (آیکون، عنوان، رنگ، `sensitive`)
+  - [x] `shared/components/tab-bar/` (`app-tab-bar`) و نوع `TabDef`
+  - [x] `shared/components/overflow-menu/` (`app-overflow-menu`)
+  - [x] `shared/components/command-center/` (`app-command-center`)
+  - [x] `scripts/e2e/zero_scroll_probe.js`
+  - [x] specهای Vitest هر جزء (برچسب دسترس‌پذیری، کار حساس، نقش‌های تب، `type="submit"`، Escape منو)
+  - [x] معیار پایان گام (هنوز هیچ صفحه‌ای کوچ نکرده)
 
 - [ ] **گام ۲: پایلوت**
   - [ ] **۲.۱۲ تنظیمات سراسری (`settings.html`):** `app-tab-bar` با ۵ تب و `mobile="icon"`، حذف `min-w-[150px]`، عنوان‌های کوتاه

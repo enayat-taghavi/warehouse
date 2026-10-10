@@ -483,4 +483,31 @@ graph TD
 * **تاییدنشده (پشت ورود):** اثر حداقل ۴۰px در موبایل روی نوار ابزار `reports.html` (۷ دکمه، حدود ۳۲۸px؛ در ۳۶۰px ممکن است سطر بشکند)، سربرگ چسبان `users.html` (حدود ۴px بلندتر) و دکمه‌های بستن مودال در `accountant-payroll`، `accountant-personnel` و `treasurer-disbursements` (۳۰ ← ۴۰px). کاربر در عرض موبایل این سه را ببیند؛ ردیف‌های همین صفحه‌ها در گام‌های ۵، ۱۰ و ۱۱ دوباره سنجیده می‌شوند.
 * **اقدام بعدی:** اجرای گام ۱ توسط Antigravity.
 
+### ۱۴۰۵/۰۷/۱۸ — اجرای گام ۱ (جعبه‌ابزار مشترک و سنجه Zero-Scroll)
+* **وضعیت:** گام ۱ به‌طور کامل اجرا و تایید شد.
+* **وضعیت هر زیرگام:**
+  - `action-button`: ایجاد `action-catalog.ts` (۳۷ کار، کارهای حساس و دکمه‌های ۳گانه سربرگ) و `action-button.component.ts` با گزینشگر `button[appAction]`، ورودی‌های Signal، برچسب‌های WCAG 2.5.3، سطح لمسی موبایل ۴۰px و ۴۴px برای lg، و `action-button.component.spec.ts` (۹ تست سبز).
+  - `tab-bar`: ایجاد `tab-bar.component.ts` با گزینشگر `app-tab-bar`، اینترفیس `TabDef`، استایل قرصی AGENTS §7، تور ایمنی `overflow-x-auto`، `role="tablist"`، `aria-selected`، `tabindex` چرخان، ناوبری جهت‌دار RTL و `tab-bar.component.spec.ts` (۷ تست سبز).
+  - `overflow-menu`: ایجاد `overflow-menu.token.ts`، کامپوننت `overflow-menu.component.ts` با دکمه تریگر `more`، پاپ‌اوور عمودی زیر ۶۴۰px، چیدمان ردیفی `display: contents` در دسکتاپ، بستن با کلیک بیرون، Escape و کلیک گزینه، و `overflow-menu.component.spec.ts` (۵ تست سبز).
+  - `command-center`: ایجاد `command-center.component.ts` با گزینشگر `app-command-center`، هدر چسبان، جایگاه‌های `[cc-tabs]` و `[cc-actions]` و `command-center.component.spec.ts` (۳ تست سبز).
+  - `scripts/e2e/zero_scroll_probe.js`: اسکریپت فقط‌خواندنی JSON برای سنجش اسکرول افقی صفحه و تراز سطر نوارها در مرورگر.
+* **تصمیم‌ها و انحراف‌ها:**
+  - افزودن ورودی `disabled = input<boolean, unknown>(false, { transform: booleanAttribute })` به `action-button` تا مقدار `[disabled]` صفحه بومی بماند و با غیرفعال شدن `busy` بازنویسی نشود (طبق پیش‌بینی صریح بند ۲ و قواعد گام ۱).
+  - افزودن ورودی `autoClose = input<boolean, unknown>(true, { transform: booleanAttribute })` به `action-button` تا دکمه تریگر سه‌نقطه در `overflow-menu` با `[autoClose]="false"` هنگام کلیک باز و بسته شود و تداخلی با بسته‌شدن خودکار گزینه‌های محتوایی منو نداشته باشد.
+  - هیچ انحراف دیگری از API بخش ۲ رخ نداد؛ همه اجزا standalone، OnPush و بدون اتصال به ماژول‌های خارج از `shared/` پیاده‌سازی شدند.
+* **تست‌ها و بازبین‌ها:**
+  - هر سه بیلد (`ng build`، `accounting-only`، `warehouse-only`) با خروجی در scratch موفق با Exit Code 0 و بدون هشدار تازه.
+  - نگهبان ۵۲: تایید ۱۰۰٪ (همه ۱۴۵۹ استفاده معتبر).
+  - نگهبان ۵۵: تایید ۱۰۰٪ (بدون کوچک‌ترین تخلف تازه).
+  - تست‌های ویتست (`ng test` با tsconfig موقت): ۶ فایل، ۳۶ تست سبز (۱۲ تست گام ۰ + ۲۴ تست گام ۱).
+  - سنجه Zero-Scroll در مرورگر داخلی روی `http://localhost:4300`: عرض‌های ۳۶۰، ۳۹۰، ۶۳۹، ۶۴۰، ۷۶۸ و ۱۰۲۴px همگی بدون اسکرول افقی (`zeroScrollPassed=true`)؛ تست با عنصر ۲۰۰۰px موقت سرریز را به درستی گزارش کرد (`zeroScrollPassed=false`).
+  - بازبین `ui-reviewer`: تمام معیارها منطبق؛ رفتار باز/بستن تریگر در پاپ‌اوور اصلاح شد؛ تمام رشته‌های کلاس‌های واکنش‌گرا کامل و بدون الحاق پویا ثبت شدند.
+* **عدد نگهبان ۵۵:**
+  - `rule_1_unlabeled_icon_buttons`: ۱۹۲ (برابر خط مبنا)
+  - `rule_2_tab_min_widths`: ۵ (برابر خط مبنا)
+  - `rule_3_non_standard_actions`: ۲۶۱ (برابر خط مبنا)
+  - `rule_4_retired_icons`: ۱۳۶ (برابر خط مبنا)
+* **موارد باز:** هیچ مورد بازی در دامنه گام ۱ وجود ندارد. هنوز هیچ صفحه‌ای از این اجزا استفاده نکرده است.
+* **اقدام بعدی دقیق:** اجرای گام ۲ (پایلوت در دو صفحه `settings.html` و `supervisor-invoices.html`).
+
 </div>
