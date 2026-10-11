@@ -55,41 +55,58 @@
         <div *ngIf="mode === 'settings'" class="flex items-center gap-1 shrink-0 flex-wrap">
           
           <!-- دکمه جدید (همیشه فعال) -->
-          <button (click)="startCreateNew()" title="تمپلیت جدید"
-            class="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-[10px] font-bold hover:bg-emerald-100 transition-colors">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="plus"></svg>
-            جدید
+          <button 
+            appAction="create" 
+            tone="emerald" 
+            size="sm" 
+            label="جدید" 
+            title="تمپلیت جدید" 
+            (actionClick)="startCreateNew()">
           </button>
 
           <!-- دکمه کپی به این انبار (فقط برای لیبل‌های فقط‌خواندنی) -->
           <ng-container *ngIf="warehouseId && isCurrentTemplateReadOnly">
-            <button (click)="copyToThisWarehouse(template)" title="کپی این لیبل Global برای این انبار"
-              class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-colors shadow-sm ml-1">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="copy-2"></svg>
-              کپی به این انبار
+            <button 
+              appAction="copy" 
+              tone="primary" 
+              size="sm" 
+              label="کپی به این انبار" 
+              title="کپی این لیبل Global برای این انبار" 
+              (actionClick)="copyToThisWarehouse(template)">
             </button>
           </ng-container>
 
           <!-- دکمه‌های ویرایش (برای لیبل‌های قابل ویرایش) -->
           <ng-container *ngIf="!(warehouseId && isCurrentTemplateReadOnly)">
             <!-- Rename -->
-            <button (click)="startRename()" [disabled]="!template.id" title="تغییر نام"
-              class="flex items-center gap-1 px-2.5 py-1.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-[10px] font-bold hover:bg-amber-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="edit"></svg>
-              نام
+            <button 
+              appAction="edit" 
+              tone="amber" 
+              size="sm" 
+              [disabled]="!template.id" 
+              label="نام" 
+              title="تغییر نام" 
+              (actionClick)="startRename()">
             </button>
             <!-- Clone -->
-            <button *ngIf="template.id && !isCopying" (click)="startCopy()" title="کپی گرفتن از این تمپلیت"
-              class="flex items-center gap-1 px-2.5 py-1.5 bg-sky-50 border border-sky-200 text-sky-700 rounded-lg text-[10px] font-bold hover:bg-sky-100 transition-colors">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="copy-2"></svg>
-              کپی
+            <button 
+              *ngIf="template.id && !isCopying" 
+              appAction="copy" 
+              tone="blue" 
+              size="sm" 
+              label="کپی" 
+              title="کپی گرفتن از این تمپلیت" 
+              (actionClick)="startCopy()">
             </button>
             <!-- Delete -->
-            <button *ngIf="template.id && deleteConfirmId !== template.id"
-              (click)="askDeleteConfirm(template.id!)" title="حذف تمپلیت"
-              class="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-[10px] font-bold hover:bg-rose-100 transition-colors">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="trash-lucide"></svg>
-              حذف
+            <button 
+              *ngIf="template.id && deleteConfirmId !== template.id"
+              appAction="delete" 
+              tone="rose" 
+              size="sm" 
+              label="حذف" 
+              title="حذف تمپلیت" 
+              (actionClick)="askDeleteConfirm(template.id!)">
             </button>
             <!-- Delete confirm inline -->
             <div *ngIf="template.id && deleteConfirmId === template.id"
@@ -99,11 +116,17 @@
               <button (click)="cancelDelete()" class="px-2 py-0.5 bg-slate-200 text-slate-600 rounded text-[10px] font-bold hover:bg-slate-300">خیر</button>
             </div>
             <!-- Save Top Button -->
-            <button *ngIf="template.id" (click)="saveTemplate()" [disabled]="isSaving" title="ذخیره تمپلیت"
-              class="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[11px] font-bold hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed mr-2">
-              <span *ngIf="isSaving" class="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span>
-              <svg *ngIf="!isSaving" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
-              ذخیره
+            <button 
+              *ngIf="template.id" 
+              appAction="save" 
+              tone="primary" 
+              size="sm" 
+              [busy]="isSaving" 
+              [disabled]="!template.id" 
+              label="ذخیره" 
+              title="ذخیره تمپلیت" 
+              (actionClick)="saveTemplate()" 
+              class="mr-2">
             </button>
           </ng-container>
         </div>
@@ -248,12 +271,15 @@
       </div>
 
       <!-- Save Button -->
-      <button *ngIf="mode === 'settings'" (click)="saveTemplate()" [disabled]="isSaving"
-        class="w-full py-3.5 rounded-xl text-sm font-black text-white shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-        style="background: linear-gradient(135deg, #4f46e5, #7c3aed)">
-        <span *ngIf="isSaving" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-        <svg *ngIf="!isSaving" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
-        ذخیره ساختار لیبل
+      <button *ngIf="mode === 'settings'" 
+        appAction="save" 
+        tone="primary" 
+        size="lg" 
+        [busy]="isSaving" 
+        label="ذخیره ساختار لیبل" 
+        title="ذخیره ساختار لیبل" 
+        (actionClick)="saveTemplate()" 
+        class="w-full">
       </button>
 
     </div>
@@ -340,11 +366,15 @@
 
             <!-- دکمه چاپ -->
             <div class="pt-3 border-t border-slate-200 mt-4">
-              <button (click)="directPrint()" [disabled]="isPrinting"
-                class="w-full py-2.5 rounded-xl text-xs font-black text-white shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700">
-                <span *ngIf="isPrinting" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-                <svg *ngIf="!isPrinting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="printer"></svg>
-                <span>چاپ لیبل ({{itemsConfig.length}} آیتم)</span>
+              <button 
+                appAction="print" 
+                tone="emerald" 
+                size="md" 
+                [busy]="isPrinting" 
+                [label]="'چاپ لیبل (' + itemsConfig.length + ' آیتم)'" 
+                title="چاپ لیبل" 
+                (actionClick)="directPrint()" 
+                class="w-full">
               </button>
             </div>
 
@@ -401,8 +431,14 @@
           </div>
           
           <!-- Delete Action -->
-          <button (click)="removeElement(selectedElement)" class="p-1.5 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 border border-rose-100 transition-colors" title="حذف المان">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-lucide"></svg>
+          <button 
+            appAction="delete" 
+            tone="rose" 
+            size="sm" 
+            display="icon" 
+            title="حذف المان" 
+            aria-label="حذف المان" 
+            (actionClick)="removeElement(selectedElement)">
           </button>
         </div>
 
@@ -542,7 +578,7 @@
             <!-- Empty state -->
             <div *ngIf="template.elements.length === 0" class="absolute inset-0 flex items-center justify-center">
               <div class="text-center">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" class="mx-auto mb-2" appIcon="plus-square"></svg>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" class="mx-auto mb-2" appIcon="action-create"></svg>
                 <p class="text-sm font-bold text-slate-400">فیلدها را از پنل سمت راست به بوم اضافه کنید</p>
                 <p class="text-[10px] text-slate-400 mt-1">یا روی هر فیلد کلیک کنید</p>
               </div>

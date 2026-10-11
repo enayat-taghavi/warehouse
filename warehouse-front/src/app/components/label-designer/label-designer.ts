@@ -7,10 +7,11 @@ import { LabelApiService, LabelTemplate, LabelElement, AvailableField } from '..
 import { ToastService } from '../../services/toast.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
 
 @Component({
   selector: 'app-label-designer',
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent],
   templateUrl: './label-designer.html',
   styleUrl: './label-designer.css'
 })
