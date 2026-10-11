@@ -901,7 +901,79 @@ graph TD
   - مودال حذف هوشمند و گالری عکس کالا؛
   - صفحه‌بندی یک جدول؛
   - کلیدهای تنظیمات عملیات، که باید همان ظاهر ۴۴×۲۴ را داشته باشند.
-* **اقدام بعدی:** Antigravity گام ۵ را اجرا کند: باقی‌مانده‌های بالا، مرکز عملیات (۱.۱ تا ۱.۱۰) و صفحات عمومی (۵.۱۲ و ۵.۲۲).
+### ۱۴۰۵/۰۷/۱۹ — اجرای گام ۵ (باقی‌مانده‌های گام ۴، مرکز عملیات و صفحات عمومی)
+* **وضعیت تفکیک و دو کامیت مستقل:**
+  - **بخش الف (کامیت `d3ff461`):** باقی‌مانده‌های گام ۴:
+    1. کوچ دکمه‌های گام ۴ به `button[appAction]` (ارسال چت و ثبت نظر `send` با `size="lg"`، حذف قطعی `delete` با `size="lg"` حساس و عنوان‌دار، مودال آواتار `save` با `size="lg"` و `camera`، تایید و بستن مودال‌ها با `confirm` و `close`).
+    2. قانون ۱۱: جایگزینی نام‌های خام رجیستری با آیکون‌های استاندارد و معنایی (`action-*` و `status-*`).
+    3. نوار ابزار `data-table` (۵.۲): دکمه‌های زوم، انتخاب ستون، بازگشت/تکرار، فیلتر ستون‌ها و اصلاح دکمه حذف نما به ابعاد لمسی قابل مشاهده در صفحه لمسی.
+    4. پاپ‌اوور `offline-pending-badge` (۵.۱۹): بازطراحی ارگونومیک دکمه‌ها، آیکون‌های وضعیت از `STATUS_ICONS` بدون تغییر در منطق صف، دکمه حساس و عنوان‌دار «پاک‌سازی خطاها».
+    5. اصلاح ۱۴ مورد `tap-target` خنثی‌شده در گالری، کامنت‌ها و کارت پایه؛ نوار شناور گالری با آزمون هندسی در ۳۶۰px تنظیم شد.
+    6. ایجاد نقشه `ROLE_ICONS` در `semantic-icons.ts` همراه با آزمون‌های اختصاصی جهت برطرف کردن تداخل آیکون‌های پرسونای نقش‌ها با فرهنگ آیکون.
+    7. ورودی `label` برای هر ۹ کلید `toggle-switch` در تب تنظیمات عملیات مطابق با عنوان اختصاصی هر کارت.
+  - **بخش ب (کامیت `4375f77`):** مرکز عملیات و صفحات عمومی:
+    1. ردیف ۱.۱ (`companies`): دکمه ثبت شرکت با `appAction="create"`، دکمه‌های اکسل/رفرش سربرگ، تب‌های شیت با `app-tab-bar` و `mobile="icon"`.
+    2. ردیف ۱.۲ (`company-gdrive-tab`): دکمه‌های همگام‌سازی، اتصال و نشانگر وضعیت با ابعاد لمسی و آیکون‌های استاندارد.
+    3. ردیف ۱.۳ (`users`): دکمه‌های «کاربر جدید» و «نقش جدید» با `appAction="create"`، فشرده‌سازی برچسب تب ۳ به «کارت پرسنلی»، اصلاح اهداف لمسی و ترازبندی جدول.
+    4. ردیف ۱.۴ (`operations-cockpit`): دکمه اسنپ‌شات فوری با `appAction="save"` و `[busy]="isCreatingSnapshot()"` بدون ایموجی‌های ⚡ و ⏳، دکمه‌های پشتیبان محلی (`download`) و تنظیمات منبع (انبار) با `appAction="settings"`.
+    5. ردیف ۱.۵ (`operations-rbac-governance`): دکمه‌های تازه‌سازی تله‌متری و ممیزی SoD با `appAction="refresh"`، اهداف لمسی ۴۰px برای تب‌ها، پاک‌سازی کامل ایموجی‌ها از جداول.
+    6. ردیف ۱.۶ (`operations-sync-monitor`): دکمه‌های تخلیه صف (`appAction="sync"` با `[busy]`)، تازه‌سازی تله‌متری (`refresh`)، لغو نشست حساس با عنوان، پاک‌سازی خطاها با `appAction="delete"` و بررسی تداخل با `appAction="view"`.
+    7. ردیف ۱.۷ (`settings-backup-tab`): پشتیبان جدید با `appAction="create"`، پشتیبان تبلت با `download`، بازگشت سریع با `appAction="restore"` حساس و عنوان‌دار، دانلود و بازیابی با `size="lg"`، جایگزینی آیکون کنارگذاشته `rotate-ccw-alt` با `rotate-ccw`.
+    8. ردیف ۱.۸ (`health-dashboard`): عیب‌یابی خودکار با `appAction="refresh"` و `[busy]`، تست فشار با `appAction="confirm"` و `size="lg"`، ابعاد لمسی ۴۰px برای چیپ‌های همروندی و سلکتور سناریو.
+    9. ردیف ۱.۹ (`audit`): خروجی اکسل با `appAction="export-excel"`، بروزرسانی با `appAction="refresh"`، اهداف لمسی ۴۰px چیپ‌های فیلتر فعال.
+    10. ردیف ۱.۱۰ (`first-boot-wizard`): ابعاد لمسی ۴۴px برای کارت فعال‌سازی انبار و دکمه ثبت نهایی، آیکون‌های استاندارد رجیستری.
+    11. ردیف ۵.۱۲ (`login` و `change-password`): دکمه ورود با `min-h-[48px]` و آیکون چرخشی `action-loading` در وضعیت لودینگ، کلیدهای چشم نمایش/پنهان رمز با `action-view`/`action-hide`، `[title]`، `[aria-label]` هم‌متن با وضعیت و ابعاد لمسی ۴۰px، دکمه ثبت تغییر رمز با `min-h-[48px]`.
+    12. ردیف ۵.۲۲ (`verify-card`): دکمه‌های استعلام مجدد با `min-h-[48px]` و آیکون `action-refresh`، جایگزینی متون گرافیکی خطا با آیکون‌های استاندارد رجیستری.
+* **تست‌ها، نگهبان‌ها و بیلدها:**
+  - **بیلدها در `scratch`:** هر سه بیلد با خروجی مستقل در پوشه scratch با کد خروج ۰ به پایان رسیدند:
+    1. بیلد اصلی: `ng build --output-path ../scratch/ng-build-check` (کد ۰).
+    2. بیلد حسابداری: `ng build --configuration accounting-only --output-path ../scratch/ng-build-accounting` (کد ۰).
+    3. بیلد انبار: `ng build --configuration warehouse-only --output-path ../scratch/ng-build-warehouse` (کد ۰).
+  - **نگهبان ۵۲ (یکپارچگی سامانه آیکون):** ۱۰۰٪ سبز (۱۴۷۸ استفاده معتبر از `appIcon`، ۲۰۲ آیکون یکتا در رجیستری، ۰ خطای درون‌خطی یا نامعتبر).
+  - **نگهبان ۵۵ (ارگونومی عناصر کلیک‌پذیر):** ۱۰۰٪ سبز با کاهش تخلف‌ها در تمام قواعد و تثبیت مقادیر جدید خط مبنا در `scripts/e2e/clickable_ergonomics_baseline.json`:
+    - `rule_1_unlabeled_icon_buttons`: ۱۶۶ (کاهش -۱۰ نسبت به ۱۷۶)
+    - `rule_2_tab_min_widths`: ۰ (برابر ۰)
+    - `rule_3_non_standard_actions`: ۲۵۲ (کاهش -۳ نسبت به ۲۵۵)
+    - `rule_4_retired_icons`: ۱۱۱ (کاهش -۸ نسبت به ۱۱۹)
+    - `rule_5_conflicting_tap_targets`: ۰ (برابر ۰)
+  - **آزمون‌های واحد (Vitest):** ۲۲ فایل تست و ۲۰۷ تست واحد با موفقیت کامل پاس شدند (۲۰۷ سبز، ۰ شکست):
+    - `command-center.component.spec.ts` (۴ تست)
+    - `svg-icon.directive.spec.ts` (۵ تست)
+    - `overflow-menu.component.spec.ts` (۵ تست)
+    - `action-button.component.spec.ts` (۹ تست)
+    - `semantic-icons.spec.ts` (۸ تست)
+    - `company-api-endpoints.spec.ts` (۳ تست)
+    - `excel-import-modal.spec.ts` (۴ تست)
+    - `confirm-dialog.component.spec.ts` (۵ تست)
+    - `tab-bar.component.spec.ts` (۱۲ تست)
+    - `toggle-switch.component.spec.ts` (۴ تست)
+    - `operations-cockpit.dom.spec.ts` (۳ تست)
+    - `deep-sync-modal.component.spec.ts` (۱۴ تست)
+    - `settings-backup-tab.spec.ts` (۱۱ تست)
+    - `user-menu.component.spec.ts` (۱۲ تست)
+    - `first-boot-wizard.dom.spec.ts` (۱۲ تست)
+    - `company-gdrive-tab.spec.ts` (۱۳ تست)
+    - `operations-rbac-governance.dom.spec.ts` (۳ تست)
+    - `operations-sync-monitor.dom.spec.ts` (۵ تست)
+    - `settings.spec.ts` (۶ تست)
+    - `health-dashboard.dom.spec.ts` (۴ تست)
+    - `audit.spec.ts` (۱ تست)
+    - `companies.dom.spec.ts` (۶۴ تست)
+  - **سنجه Zero-Scroll (`zero_scroll_probe.js`):** روی مرورگر بدون سر در ۶ عرض هدف (۳۶۰، ۳۹۰، ۶۳۹، ۶۴۰، ۷۶۸ و ۱۰۲۴px) اجرا شد:
+    - `/login`: در هر ۶ عرض `hasPageHorizontalScroll: false`، `zeroScrollPassed: true`، `pageScrollWidth == innerWidth`.
+    - `/verify-card`: در هر ۶ عرض `hasPageHorizontalScroll: false`، `zeroScrollPassed: true`، `pageScrollWidth == innerWidth`.
+  - **بازبین `ui-reviewer`:** رعایت کامل ابعاد لمسی دست‌کم ۴۰×۴۰px در موبایل و ۴۴/۴۸px در فرم‌های اصلی و عمومی، انطباق نام دسترس‌پذیر با برچسب دیده‌شده (WCAG 2.5.3)، جهت‌گیری درست RTL، استایل‌های مناسب فوکوس و وضعیت‌های لودینگ/غیرفعال بدون تداخل با منطق کاری را تایید کرد.
+* **ایمنی داده و تفکیک تننت:**
+  - در صفحات مانیتورینگ همگام‌سازی، حاکمیت مجوزها و پشتیبان‌گیری، کلیه کنترل‌های امنیتی و تاییدهای تایپی (`RESTORE_DATABASE_CONFIRM`, `ROLLBACK_CONFIRM`)، کوئری‌های IndexedDB و منطق تله‌متری کاملاً دست‌نخورده باقی ماندند.
+* **موارد تاییدنشده (پشت ورود) و چک‌لیست بازبینی چشمی برای کاربر:**
+  - به دلیل عدم ورود نشست کاربری در مرورگر محلی برای صفحات پشت احراز هویت، این صفحات رسماً «تاییدنشده (پشت ورود)» ثبت می‌شوند:
+    1. `/app/operations/companies`: بررسی تب‌های سند شرکت‌ها در عرض‌های موبایل (۳۶۰px و ۳۹۰px) و اطمینان از عملکرد دکمه «ثبت شرکت جدید».
+    2. `/app/operations/operations-cockpit`: بررسی دکمه اسنپ‌شات و دکمه تنظیمات انبار در موبایل و اطمینان از عدم شکست سطرها.
+    3. `/app/operations/operations-sync-monitor`: بررسی دکمه‌های تخلیه صف، بروزرسانی و شبیه‌سازی تداخل در حالت موبایل و تبلت.
+    4. `/app/operations/users`: بررسی دکمه‌های «کاربر جدید» و «نقش جدید» و خلاصه نام تب ۳ («کارت پرسنلی»).
+    5. `/app/settings` (تب پشتیبان): بررسی دکمه‌های ایجاد پشتیبان و دکمه بازگشت سریع با سایز بزرگ.
+* **اقدام بعدی:** توقف در پایان گام ۵ و ارائه گزارش به کاربر جهت بازبینی ناظر.
 
 </div>
+
 
