@@ -9,6 +9,8 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { QRCodeWriter, BarcodeFormat, EncodeHintType } from '@zxing/library';
 import { ModuleRegistryService } from '../../core/modules/module-registry.service';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../shared/components/tab-bar/tab-bar.component';
 
 export interface CardCustomTexts {
   companyName: string;
@@ -64,7 +66,7 @@ export interface IdCardSettings {
 
 @Component({
   selector: 'app-id-cards',
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, TabBarComponent],
   templateUrl: './id-cards.html',
   styleUrl: './id-cards.css'
 })
@@ -127,6 +129,11 @@ export class IdCards implements OnInit {
   
   // Settings Tab in Control Panel
   settingsActiveTab: 'presets-layout' | 'texts-info' | 'fields-visibility' = 'presets-layout';
+  readonly settingsTabs: TabDef[] = [
+    { id: 'presets-layout', label: 'چیدمان و رنگ', icon: 'grid' },
+    { id: 'texts-info', label: 'متن‌ها و پروژه', icon: 'edit' },
+    { id: 'fields-visibility', label: 'فیلدهای کارت', icon: 'eye' }
+  ];
 
   // Digital Export Modal
   isExportModalOpen: boolean = false;
@@ -134,9 +141,51 @@ export class IdCards implements OnInit {
   exportScale: number = 2; // 1x, 2x, 3x
   isExportingImage: boolean = false;
 
+  readonly exportSideTabs: TabDef[] = [
+    { id: 'both', label: 'دورو (رو و پشت)', icon: 'id-card' },
+    { id: 'front', label: 'فقط روی کارت', icon: 'file-text' },
+    { id: 'back', label: 'فقط پشت کارت', icon: 'copy' }
+  ];
+
+  readonly exportScaleTabs: TabDef[] = [
+    { id: '1', label: '۱× استاندارد (72 DPI)' },
+    { id: '2', label: '۲× باکیفیت HD (150 DPI)' },
+    { id: '3', label: '۳× فوق‌العاده Ultra (300 DPI)' }
+  ];
+
   // Sheet Live Preview Modal (A4 Print Preview)
   isPreviewSheetModalOpen: boolean = false;
   previewSheetActiveTab: 'front' | 'back' = 'front';
+
+  readonly previewSheetTabs: TabDef[] = [
+    { id: 'front', label: 'صفحه ۱: روی کارت‌ها (Front)', icon: 'file-text' },
+    { id: 'back', label: 'صفحه ۲: پشت کارت‌ها (Back)', icon: 'copy' }
+  ];
+
+  onSettingsTabChange(tabId: string): void {
+    if (tabId === 'presets-layout' || tabId === 'texts-info' || tabId === 'fields-visibility') {
+      this.settingsActiveTab = tabId;
+    }
+  }
+
+  onExportSideChange(tabId: string): void {
+    if (tabId === 'both' || tabId === 'front' || tabId === 'back') {
+      this.exportSide = tabId;
+    }
+  }
+
+  onExportScaleChange(tabId: string): void {
+    const scale = Number(tabId);
+    if (scale === 1 || scale === 2 || scale === 3) {
+      this.exportScale = scale;
+    }
+  }
+
+  onPreviewSheetTabChange(tabId: string): void {
+    if (tabId === 'front' || tabId === 'back') {
+      this.previewSheetActiveTab = tabId;
+    }
+  }
 
   private barcodeCache: Map<string, SafeHtml> = new Map();
 
