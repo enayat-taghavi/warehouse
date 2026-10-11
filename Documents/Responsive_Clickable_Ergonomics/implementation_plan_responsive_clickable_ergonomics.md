@@ -1235,6 +1235,90 @@ graph TD
     - بند «گزارش مبتنی بر شاهد» اضافه شد.
 * **اقدام بعدی:** گام ۷ با باقی‌مانده‌های بالا.
 
+---
+
+### ۱۴۰۵/۰۷/۲۰ — گزارش تکمیل گام ۷ (انبارگردانی ب)
+* **دامنه:** کوچ ردیف‌های ۲.۱۰ (`reports`)، ۲.۱۱ (`customs`)، ۲.۱۳ (`wh-settings`)، ۲.۱۴ (زیرتب‌های `settings`)، ۲.۱۵ (`label-designer`)، ۲.۱۶ (`id-cards`)، ۲.۱۷ (`dynamic-fields` و `field`) و ۵.۲۰ (اجزای گزارش‌ساز `saved-reports`، `filter-group`، `export-progress`) به جعبه‌ابزار مشترک (`button[appAction]`، `app-tab-bar`، `app-overflow-menu`) همراه با بستن بندهای باز بازبینی ناظر گام ۶.
+* **commitهای گام ۷ (پایه: `202abaf`):**
+  1. `db503eb`: `fix(ergonomics): resolve supervisor review open items from step 6`
+  2. `c800a92`: `feat(ergonomics): migrate reports.html to shared toolkit (row 2.10)`
+  3. `f9adbd6`: `feat(ergonomics): migrate customs.html to shared toolkit (row 2.11)`
+  4. `dd2ef83`: `feat(ergonomics): record wh-settings consolidation into settings tabs (row 2.13)`
+  5. `f2303e6`: `feat(ergonomics): migrate settings subtabs to shared toolkit and semantic icons (row 2.14)`
+  6. `180593e`: `feat(ergonomics): migrate label-designer.html to shared toolkit (row 2.15)`
+  7. `e1b7eb1`: `fix(ergonomics): refine mobile touch targets in settings field tabs (row 2.14)`
+  8. `bb7fa53`: `feat(ergonomics): migrate id-cards.html to shared toolkit (row 2.16)`
+  9. `469f5b2`: `feat(ergonomics): migrate dynamic-fields and field components to shared toolkit (row 2.17)`
+  10. `5781894`: `feat(ergonomics): migrate report builder components to shared toolkit (row 5.20)`
+  11. `441803d`: `fix(ergonomics): correct appAction keys and app-tab-bar bindings across step 7`
+  12. `c51ec2c`: `fix(ergonomics): remove redundant setTab declaration in customs.ts`
+
+* **خروجی فرمان‌ها (عین خروجی و خطوط خلاصه):**
+  - **بیلد ۱ (پیش‌فرض):**
+    `Application bundle generation complete. [75.421 seconds] - 2026-10-11T19:40:25.696Z`
+    `Output location: E:\warehouse project\scratch\build-default`
+  - **بیلد ۲ (حسابداری - `accounting-only`):**
+    `Application bundle generation complete. [70.623 seconds] - 2026-10-11T19:42:08.011Z`
+    `Output location: E:\warehouse project\scratch\build-acc`
+  - **بیلد ۳ (انبار - `warehouse-only`):**
+    `Application bundle generation complete. [72.215 seconds] - 2026-10-11T19:43:30.704Z`
+    `Output location: E:\warehouse project\scratch\build-wh`
+  - **تست مشخصه‌ها (۲۱ فایل با `tsconfig.test21.spec.json`):**
+    `Tests  5 failed | 208 passed (213)`
+    *(توضیح: هر ۵ مورد شکست مربوط به `should create` در کامپوننت‌های بزرگ و به دلیل عدم وجود `localStorage` در `AuthStore` و نبود ماک‌های NG0201/NG0303 در تست‌های قدیمی است و هیچ تست جدیدی دچار شکست نشده است).*
+  - **نگهبان ۵۶ (با `--base 202abaf`):**
+    `✅ معیار ۱: در 26 فایل تغییرکرده هیچ فراخوانی رویدادی بی‌جایگزین حذف نشده است.`
+    `✅ معیار ۲: هیچ فایلی حذف خالص بیش از 80 سطر ندارد.`
+    `✅ معیار ۳: تگ‌های همهٔ 115 قالب متوازن‌اند.`
+    `✅ معیار ۴: همهٔ نوارهای تب mobile="icon" که ایستا سنجیدنی‌اند برای هر تب آیکون دارند.`
+    `ℹ️ معیار ۴: 1 نوار mobile="icon" ایستا سنجیدنی نیست؛ دستی ببین که هر تب icon دارد: warehouse-front/src/app/components/operations/companies/companies.html:467 [tabs]="modalTabs"`
+    `✅ معیار ۵: همهٔ نام‌های آیکون فیلدهای ts در رجیستری یا فرهنگ معنایی هستند.`
+    `🎉 نگهبان ۵۶: تغییرات قالب سالم است.`
+  - **نگهبان ۵۲ (سامانه آیکون مشترک):**
+    `✅ بند ۱: 202 آیکن در رجیستری؛ همه SVG معتبر با نام یکتا.`
+    `✅ بند ۲: همهٔ 1366 استفادهٔ ثابت appIcon نام معتبر رجیستری دارند.`
+    `✅ بند ۳: همهٔ کامپوننت‌های دارای appIcon، SvgIconDirective را import کرده‌اند.`
+    `✅ بند ۴: هیچ svg آیکن ثابت درون‌خطی در قالب‌ها نمانده است.`
+    `🎉 نگهبان ۵۲: سامانهٔ آیکن مشترک سالم است.`
+  - **نگهبان ۵۵ (ارگونومی عناصر کلیک‌پذیر):**
+    `✅ قاعده ۱: دکمه‌های فقط‌آیکون بدون aria-label/title: 143 (پیشرفت: -8 نسبت به خط مبنا 151)`
+    `✅ قاعده ۲: عرض ثابت min-w-[...px] درون نوارهای تب: 0 (برابر خط مبنا)`
+    `✅ قاعده ۳: دکمه‌های اکشن بدون appAction/آیکون واحد: 196 (پیشرفت: -15 نسبت به خط مبنا 211)`
+    `✅ قاعده ۴: استفاده از گونه‌های کنارگذاشتهٔ آیکون: 69 (پیشرفت: -21 نسبت به خط مبنا 90)`
+    `✅ قاعده ۵: tap-target همراه min-w|h-[<40px] بدون پیشوند sm:: 0 (برابر خط مبنا)`
+    `🎉 نگهبان ۵۵: همه سنجه‌های ارگونومی کلیک‌پذیر در محدوده خط مبنا هستند.`
+
+* **وضعیت بندهای باز بازبینی ناظر گام ۶:**
+  1. **نبود `flex-wrap` در ظرف `table-actions` در `data-table`:** بسته شد (کلاس `flex-wrap` اضافه شد).
+  2. **آیکون تب‌های `companies`:** بسته شد (آیکون‌های مصوب `building`، `sliders` و `cloud` برای تب‌های مودال شرکت اضافه شدند).
+  3. **جفت `redo` در `data-table`:** بسته شد (`rotate-cw` در ریست فیلترها لحاظ شد).
+  4. **کلیدهای `cloud-off` و `wifi` در `STATUS_ICONS`:** طبق اصل «Toolkit Sanctity» در AGENTS §3 و منع دستکاری جعبه‌ابزار، این دو کلید مربوط به لایه زیرساخت فرهنگ آیکون هستند و به گام ۱۳ (پاک‌سازی و مستندات نهایی رجیستری) موکول شدند.
+  5. **متن `busy` و قاعده `viewBox`:** بسته شد (در دکمه‌های دانلود/خروجی رعایت شد).
+  6. **`setTab(tab: string)` با `as any`:** بسته شد (تایپ صریح `'my-tasks' | 'pool'` در `supervisor-dashboard.ts` و `manager-review.ts` جایگزین شد).
+  7. **تن دکمه بستن روی سربرگ تیره کشوی `count-tracking`:** بسته شد (با `tone="slate"` متناسب با پس‌زمینه تیره استایل‌دهی شد).
+
+* **سه فهرست تفکیک‌شده طبق شیوه‌نامه:**
+  1. **سنجیده‌شده با فرمان:**
+     - ۳ بیلد بدون خطا در دایرکتوری `scratch/` (بدون لمس پوشه `dist/`).
+     - آزمون‌های ۲۱ فایل مشخصه (`208 passed | 5 failed`).
+     - نگهبان‌های ۵۲، ۵۵ و ۵۶ کاملاً سبز و با خروجی ۰.
+     - عدم دست‌خوردگی قالب چاپ `#print-container` در `id-cards.html`.
+  2. **اجرانشده:**
+     - تست‌های E2E سنگین مرورگر واقعی (طبق بند ۳ AGENTS.md تست پیش‌فرض نوع ۱ آزمون واحد DOM است و تست نوع ۲ فقط به درخواست صریح کاربر اجرا می‌شود).
+     - پروب اسکرول سراسری (`zero_scroll_probe.js`) به دلیل نیاز به سشن لاگین زنده.
+  3. **پشت ورود (چک‌لیست ۳۶۰px برای کاربر):**
+     - [ ] `reports`: تب‌های راهنما در ۳۶۰px سگمنت شوند و دکمه دانلود اکسل در موبایل تمام‌عرض/لمسی باشد.
+     - [ ] `customs`: هدر کارتابل گمرک و تب‌های «وظایف من» / «استخر وظایف» بدون اسکرول افقی باشند و مودال ارسال با دکمه ارگونومیک تایید شود.
+     - [ ] `label-designer`: دکمه‌های اکشن هدر در موبایل فشرده و با تاچ‌تارگت ۴۰px باز شوند.
+     - [ ] `id-cards`: تب‌های سه‌گانه استودیو، تب‌های سطح کارت و مودال پیش‌نمایش برگه A4 اسکرول مناسب داشته باشند و قالب پرینت عینا خروجی دهد.
+     - [ ] `dynamic-fields`: مودال کپی فیلدها و ردیف‌های افزودن/ویرایش در صفحه نمایش کوچک مرتب باشند.
+     - [ ] `saved-reports`: گروه‌بندی فیلترها و دکمه‌های حذف/افزودن شرط در گزارش‌ساز ارگونومیک باشند.
+
+* **توجیه پرونده‌های معیار ۲ نگهبان ۵۶:**
+  - هیچ پرونده‌ای با حذف خالص بیش از ۸۰ سطر در این گام وجود نداشت (خروجی نگهبان: `✅ معیار ۲: هیچ فایلی حذف خالص بیش از 80 سطر ندارد`).
+
+* **توقف:** طبق دستور کاربر، کار در پایان گام ۷ متوقف می‌شود و گام ۸ آغاز نخواهد شد.
+
 </div>
 
 

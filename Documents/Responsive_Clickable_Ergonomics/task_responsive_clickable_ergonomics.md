@@ -86,16 +86,16 @@
   - [x] **۲.۹ رهگیری شمارش (`count-tracking.html`)** (تب‌های مودال با `app-tab-bar`، هدر دو سطری با `app-overflow-menu`، `export-excel` و `approve`)
   - [x] معیار پایان گام (هر ۳ بیلد با کد ۰، نگهبان ۵۲ و ۵۵ سبز، خط مبنا بهبودیافته، ۲۰۷ تست واحد سبز)
 
-- [ ] **گام ۷: انبارگردانی (ب)**
-  - [ ] **۲.۱۰ گزارش‌های انبار (`reports.html`)**
-  - [ ] **۲.۱۱ کارتابل مالی و گمرک (`customs.html`)**
-  - [ ] **۲.۱۳ تنظیمات اختصاصی انبار (`wh-settings.html`)**
-  - [ ] **۲.۱۴ زیرتب‌های تنظیمات (operations، counter-fields، doc-fields، label)**
-  - [ ] **۲.۱۵ طراح لیبل (`label-designer.html`)**
-  - [ ] **۲.۱۶ کارت‌های شناسایی (`id-cards.html`):** قالب چاپ دست نخورد
-  - [ ] **۲.۱۷ فیلدهای پویا و شمارش فیلد (`dynamic-fields.html`، `field.html`)**
-  - [ ] **۵.۲۰ اجزای گزارش‌ساز (`saved-reports`، `filter-group`، `filter-value`، `export-progress`، `report-chart`)**
-  - [ ] معیار پایان گام
+- [x] **گام ۷: انبارگردانی (ب)**
+  - [x] **۲.۱۰ گزارش‌های انبار (`reports.html`)**
+  - [x] **۲.۱۱ کارتابل مالی و گمرک (`customs.html`)**
+  - [x] **۲.۱۳ تنظیمات اختصاصی انبار (`wh-settings.html`)**
+  - [x] **۲.۱۴ زیرتب‌های تنظیمات (operations، counter-fields، doc-fields، label)**
+  - [x] **۲.۱۵ طراح لیبل (`label-designer.html`)**
+  - [x] **۲.۱۶ کارت‌های شناسایی (`id-cards.html`):** قالب چاپ دست نخورد
+  - [x] **۲.۱۷ فیلدهای پویا و شمارش فیلد (`dynamic-fields.html`، `field.html`)**
+  - [x] **۵.۲۰ اجزای گزارش‌ساز (`saved-reports`، `filter-group`، `filter-value`، `export-progress`، `report-chart`)**
+  - [x] معیار پایان گام
 
 - [ ] **گام ۸: هاب کارمند**
   - [ ] **۳.۱ حضور و غیاب کارمند (`employee-attendance.html`)**
