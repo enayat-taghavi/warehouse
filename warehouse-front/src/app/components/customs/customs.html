@@ -51,8 +51,8 @@
       <app-tab-bar
         class="mb-4 block"
         [tabs]="customsTabs"
-        [activeId]="currentTab"
-        (tabChange)="setTab($event)"
+        [active]="currentTab"
+        (activeChange)="setTab($event)"
       ></app-tab-bar>
 
       <ng-container *ngIf="currentTab === 'my-tasks'">

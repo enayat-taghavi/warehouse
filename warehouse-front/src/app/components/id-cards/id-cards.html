@@ -387,9 +387,8 @@
       <div class="p-2.5 bg-slate-50 border-b border-slate-200 shrink-0">
         <app-tab-bar
           [tabs]="settingsTabs"
-          [activeTab]="settingsActiveTab"
-          (tabChange)="onSettingsTabChange($event)"
-          mobile="auto"
+          [active]="settingsActiveTab"
+          (activeChange)="onSettingsTabChange($event)"
           ariaLabel="تب‌های تنظیمات کارت شناسایی"
         ></app-tab-bar>
       </div>
@@ -700,7 +699,7 @@
       </div>
       <button
         type="button"
-        appAction="cancel"
+        appAction="close"
         display="icon"
         tone="slate"
         [label]="'بستن'"
@@ -717,9 +716,8 @@
         <label class="block text-xs font-black text-slate-700 mb-2">۱. سطح کارت برای دانلود</label>
         <app-tab-bar
           [tabs]="exportSideTabs"
-          [activeTab]="exportSide"
-          (tabChange)="onExportSideChange($event)"
-          mobile="auto"
+          [active]="exportSide"
+          (activeChange)="onExportSideChange($event)"
           ariaLabel="سطح کارت برای دانلود"
         ></app-tab-bar>
       </div>
@@ -729,9 +727,8 @@
         <label class="block text-xs font-black text-slate-700 mb-2">۲. وضوح و رزولوشن تصویر خروجی</label>
         <app-tab-bar
           [tabs]="exportScaleTabs"
-          [activeTab]="exportScale.toString()"
-          (tabChange)="onExportScaleChange($event)"
-          mobile="auto"
+          [active]="'' + exportScale"
+          (activeChange)="onExportScaleChange($event)"
           ariaLabel="کیفیت تصویر خروجی"
         ></app-tab-bar>
       </div>
@@ -742,7 +739,7 @@
     <div class="p-5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3 rounded-b-3xl">
       <button
         type="button"
-        appAction="cancel"
+        appAction="close"
         size="md"
         display="label"
         tone="slate"
@@ -751,7 +748,7 @@
       ></button>
       <button
         type="button"
-        appAction="export"
+        appAction="download"
         size="md"
         display="label"
         tone="primary"
@@ -787,15 +784,14 @@
         <app-tab-bar
           *ngIf="idCardSettings.printLayout === 'a4-grid' && (idCardSettings.printSide === 'both')"
           [tabs]="previewSheetTabs"
-          [activeTab]="previewSheetActiveTab"
-          (tabChange)="onPreviewSheetTabChange($event)"
-          mobile="auto"
+          [active]="previewSheetActiveTab"
+          (activeChange)="onPreviewSheetTabChange($event)"
           ariaLabel="انتخاب صفحه پیش‌نمایش شیت"
         ></app-tab-bar>
 
         <button
           type="button"
-          appAction="cancel"
+          appAction="close"
           display="icon"
           tone="slate"
           [label]="'بستن'"
@@ -1245,7 +1241,7 @@
       <div class="flex items-center gap-3">
         <button
           type="button"
-          appAction="cancel"
+          appAction="close"
           size="md"
           display="label"
           tone="slate"

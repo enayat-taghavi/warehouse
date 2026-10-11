@@ -162,8 +162,10 @@ export class Reports implements OnInit, OnDestroy {
     }
   }
 
-  setHelpTab(tab: 'scenarios' | 'steps' | 'joins' | 'export'): void {
-    this.activeHelpTab.set(tab);
+  setHelpTab(tab: string): void {
+    if (tab === 'scenarios' || tab === 'steps' || tab === 'joins' || tab === 'export') {
+      this.activeHelpTab.set(tab);
+    }
   }
 
   // ─── job خروجی بزرگ ───

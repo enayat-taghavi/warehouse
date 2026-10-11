@@ -14,7 +14,7 @@ import { ActionButtonComponent } from '../../shared/components/action-button/act
 @Component({
   selector: 'app-export-progress',
   standalone: true,
-  imports: [CommonModule, SvgIconDirective, ActionButtonComponent],
+  imports: [CommonModule, ActionButtonComponent],
   template: `
     <div class="bg-white rounded-xl border border-slate-200 p-3 space-y-2 shadow-sm">
       <div class="flex items-center justify-between gap-2">
@@ -23,7 +23,7 @@ import { ActionButtonComponent } from '../../shared/components/action-button/act
         </div>
         <button
           type="button"
-          appAction="cancel"
+          appAction="close"
           display="icon"
           tone="slate"
           [label]="'بستن'"

@@ -90,6 +90,16 @@ export class Customs implements OnInit, OnDestroy {
   selectedTasks = new Set<number>();
   selectedPoolTasks = new Set<number>();
   currentTab: 'my-tasks' | 'pool' = 'my-tasks';
+
+  setTab(tab: string): void {
+    if (tab === 'my-tasks' || tab === 'pool') {
+      this.currentTab = tab;
+      this.selectedTasks.clear();
+      this.selectedPoolTasks.clear();
+      this.updateUrlParams();
+    }
+  }
+
   isSaving = false;
   isSubmitting = false;
 
