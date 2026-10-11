@@ -668,13 +668,13 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this._modalTabsKey = key;
     const tabs: TabDef[] = [
       { id: 'identity', label: 'مشخصات هویتی و ثبتی', shortLabel: 'هویتی', icon: 'building' },
-      { id: 'fiscal_insurance', label: 'سال مالی، بیمه و مودیان', shortLabel: 'بیمه و مالی', icon: 'calculator' },
+      { id: 'fiscal_insurance', label: 'سال مالی، بیمه و مودیان', shortLabel: 'بیمه و مالی', icon: 'file-check' },
     ];
     if (this.isAccountingInstalled) {
-      tabs.push({ id: 'treasury', label: 'بانک و شبا', shortLabel: 'بانک', icon: 'credit-card', count: this.companyBankAccounts.length || undefined });
+      tabs.push({ id: 'treasury', label: 'بانک و شبا', shortLabel: 'بانک', icon: 'database', count: this.companyBankAccounts.length || undefined });
       tabs.push({ id: 'governance', label: 'هیئت‌مدیره و امضا', shortLabel: 'هیئت‌مدیره', icon: 'users', count: this.companyBoardMembers.length || undefined });
     }
-    tabs.push({ id: 'documents', label: 'بایگانی مدارک', shortLabel: 'مدارک', icon: 'folder', count: this.companyDocuments.length || undefined });
+    tabs.push({ id: 'documents', label: 'بایگانی مدارک', shortLabel: 'مدارک', icon: 'book', count: this.companyDocuments.length || undefined });
     tabs.push({ id: 'access', label: 'دسترسی کاربران', shortLabel: 'دسترسی', icon: 'shield', count: this.studioAccesses.length || undefined });
     if (this.companyModal.isEdit && this.isAccountingInstalled) {
       tabs.push({ id: 'gdrive', label: 'همگام‌سازی گوگل‌درایو', shortLabel: 'گوگل‌درایو', icon: 'google-drive' });

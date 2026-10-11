@@ -1371,15 +1371,17 @@ export class ManagerReview implements OnInit, OnDestroy {
   }
 
   setTab(tab: string) {
-    this.currentTab = tab as any;
-    if (tab === 'my-tasks' || tab === 'pool') {
-      this.lastCountTab = tab as any;
-    } else {
-      this.lastDocTab = tab as any;
+    if (tab === 'my-tasks' || tab === 'pool' || tab === 'doc' || tab === 'doc-pool') {
+      this.currentTab = tab;
+      if (tab === 'my-tasks' || tab === 'pool') {
+        this.lastCountTab = tab;
+      } else {
+        this.lastDocTab = tab;
+      }
+      this.clearAllSelections();
+      this.updateUrlState();
+      this.refreshCurrentTab();
     }
-    this.clearAllSelections();
-    this.updateUrlState();
-    this.refreshCurrentTab();
   }
 
   // ─── Touch / Long Press Handling for Counting Tasks ───

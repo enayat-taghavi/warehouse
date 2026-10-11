@@ -73,7 +73,7 @@ export interface PageEvent {
       <!-- Header Actions -->
       @if (showHeader) {
         <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-4 flex-wrap">
             <!-- Global Search -->
             <div class="relative flex items-center">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2.5 text-slate-400" appIcon="action-search"></svg>
