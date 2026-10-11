@@ -44,20 +44,21 @@
   - [x] **۵.۱۷ مرکز اعلان‌ها (`notification-center.component.ts`)**
   - [x] معیار پایان گام
 
-- [x] **گام ۴: کامپوننت‌های مشترک**
+- [ ] **گام ۴: کامپوننت‌های مشترک** (ظاهر انجام شد؛ کوچ به `appAction` و بندهای باز به گام ۵ رفت)
   - [x] **۵.۱ هدر کارتابل (`cartable-header.component.ts`):** سوئیچر دامنه با `app-tab-bar`
-  - [x] **۵.۲ جدول داده (`data-table.component.ts`):** نوار ابزار و صفحه‌بندی با `appAction`
+  - [ ] **۵.۲ جدول داده (`data-table.component.ts`):** نوار ابزار و صفحه‌بندی با `appAction` (نوار ابزار دست نخورده است)
   - [x] **۵.۴ دراور چت (`chat-drawer.component.html`)**
   - [x] **۵.۵ گالری عکس (`item-photo-gallery.component.html`)**
   - [x] **۵.۶ مودال اکسل (`excel-import-modal.html`)**
   - [x] **۵.۷ مودال حذف هوشمند (`smart-delete-modal.html`):** `delete` حساس با `size="lg"`
   - [x] **۵.۸ مودال آواتار (`avatar-cropper-modal.html`)**
   - [x] **۵.۱۸ مودال‌ها و دیالوگ‌ها (`modal`، `confirm-dialog`، `conflict-resolution-modal`، `deep-sync-modal`):** فقط ظاهر
-  - [x] **۵.۱۹ اجزای کوچک مشترک و آیکون `status-badge` / `offline-pending-badge` از `STATUS_ICONS`**
+  - [ ] **۵.۱۹ اجزای کوچک مشترک و آیکون `status-badge` / `offline-pending-badge` از `STATUS_ICONS`** (پاپ‌اوور `offline-pending-badge` باز است)
   - [x] **۵.۲۱ نظرات زمینه‌ای (`contextual-comments.component.html`)**
   - [x] معیار پایان گام
 
 - [ ] **گام ۵: مرکز عملیات و صفحات عمومی**
+  - [ ] **باقی‌مانده‌های گام ۴:** کوچ اجزای گام ۴ به `button[appAction]` و نام‌های `action-*`، نوار ابزار `data-table`، پاپ‌اوور `offline-pending-badge`، `tap-target` خنثی‌شده، آیکون نقش‌ها (فهرست در «بازبینی ناظر — گام ۴»)
   - [ ] **۱.۱ شرکت‌ها (`companies.html`)**
   - [ ] **۱.۲ تب گوگل‌درایو (`company-gdrive-tab.html`)**
   - [ ] **۱.۳ کاربران و نقش‌ها (`users.html`)**
