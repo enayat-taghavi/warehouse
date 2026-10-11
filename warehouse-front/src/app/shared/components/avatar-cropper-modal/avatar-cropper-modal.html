@@ -14,21 +14,23 @@
         <span class="header-subtitle">برش و بهینه‌سازی استاندارد تصویر پرسنلی</span>
       </div>
     </div>
-    <button class="close-btn" (click)="close()" title="بستن">✕</button>
+    <button class="close-btn tap-target" (click)="close()" title="بستن" aria-label="بستن" style="min-width: 36px; min-height: 36px; display: flex; items-center; justify-content: center;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+    </button>
   </div>
 
   <!-- Body -->
   <div class="modal-body">
     <!-- Top Action Toolbar -->
     <div class="toolbar-section">
-      <div class="source-buttons">
-        <button type="button" class="tool-btn primary" (click)="fileInput.click()">
+      <div class="source-buttons flex-wrap sm:flex-nowrap gap-2">
+        <button type="button" class="tool-btn primary min-h-[40px] tap-target cursor-pointer" (click)="fileInput.click()" title="انتخاب فایل عکس" aria-label="انتخاب فایل عکس">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="upload"></svg>
           <span>انتخاب فایل عکس</span>
         </button>
         <input #fileInput type="file" accept="image/png,image/jpeg,image/webp,image/gif" (change)="onFileSelected($event)" style="display: none" />
 
-        <button *ngIf="cameraAvailable" type="button" class="tool-btn camera" (click)="startCamera()">
+        <button *ngIf="cameraAvailable" type="button" class="tool-btn camera min-h-[40px] tap-target cursor-pointer" (click)="startCamera()" title="ثبت با دوربین یا وب‌کم" aria-label="ثبت با دوربین یا وب‌کم">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="camera"></svg>
           <span>ثبت با دوربین / وب‌کم</span>
         </button>
@@ -50,8 +52,8 @@
         </div>
 
         <div class="camera-controls">
-          <button type="button" class="cam-btn cancel" (click)="cancelCamera()">انصراف</button>
-          <button type="button" class="cam-btn snap" (click)="captureFromCamera()" [disabled]="!isCameraReady">
+          <button type="button" class="cam-btn cancel min-h-[44px] cursor-pointer" (click)="cancelCamera()" title="انصراف" aria-label="انصراف">انصراف</button>
+          <button type="button" class="cam-btn snap min-h-[44px] cursor-pointer" (click)="captureFromCamera()" [disabled]="!isCameraReady" title="ثبت عکس" aria-label="ثبت عکس">
             <div class="shutter-circle"></div>
             <span>{{ isCameraReady ? 'ثبت عکس' : 'در حال آماده‌سازی...' }}</span>
           </button>
@@ -62,7 +64,9 @@
       <div *ngIf="activeMode === 'crop'" class="canvas-container" (drop)="onDrop($event)" (dragover)="onDragOver($event)">
         <!-- Placeholder if no image is loaded yet -->
         <div *ngIf="!imageLoaded" class="empty-dropzone" (click)="fileInput.click()">
-          <div class="drop-icon">📸</div>
+          <div class="drop-icon">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="camera"></svg>
+          </div>
           <p class="drop-main-text">تصویر پرسنلی را اینجا رها کنید</p>
           <p class="drop-sub-text">یا بر روی «انتخاب فایل عکس» کلیک نمایید</p>
           <span class="drop-pill">JPG, PNG, WebP</span>
@@ -83,13 +87,14 @@
           <!-- Floating Rotate Button in Top Right Corner -->
           <button
             type="button"
-            class="floating-rotate-btn"
+            class="floating-rotate-btn min-w-[40px] min-h-[40px] flex items-center justify-center cursor-pointer tap-target"
             (click)="rotateRight(); $event.stopPropagation()"
             (pointerdown)="$event.stopPropagation()"
             (touchstart)="$event.stopPropagation()"
             title="چرخش ۹۰ درجه تصویر"
+            aria-label="چرخش ۹۰ درجه تصویر"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-cw"></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-cw"></svg>
           </button>
 
           <canvas
@@ -111,21 +116,23 @@
   </div>
 
   <!-- Footer Actions -->
-  <div class="modal-footer">
-    <div class="footer-left">
-      <button *ngIf="currentAvatarUrl" type="button" class="btn btn-danger-outline" (click)="removeAvatar()" [disabled]="isSaving">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash"></svg>
+  <div class="modal-footer flex-col sm:flex-row gap-2">
+    <div class="footer-left w-full sm:w-auto">
+      <button *ngIf="currentAvatarUrl" type="button" class="btn btn-danger-outline min-h-[44px] w-full sm:w-auto cursor-pointer flex items-center justify-center gap-1.5" (click)="removeAvatar()" [disabled]="isSaving" title="حذف عکس فعلی" aria-label="حذف عکس فعلی">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
         <span>حذف عکس فعلی</span>
       </button>
     </div>
 
-    <div class="footer-right">
-      <button type="button" class="btn btn-secondary" (click)="close()" [disabled]="isSaving">انصراف</button>
+    <div class="footer-right w-full sm:w-auto flex-col sm:flex-row gap-2">
+      <button type="button" class="btn btn-secondary min-h-[44px] w-full sm:w-auto cursor-pointer" (click)="close()" [disabled]="isSaving" title="انصراف" aria-label="انصراف">انصراف</button>
       <button
         type="button"
-        class="btn btn-primary"
+        class="btn btn-primary min-h-[44px] w-full sm:w-auto cursor-pointer"
         [disabled]="!imageLoaded || isSaving"
         (click)="saveCroppedImage()"
+        title="ذخیره و اعمال تصویر"
+        aria-label="ذخیره و اعمال تصویر"
       >
         <span *ngIf="!isSaving">ذخیره و اعمال تصویر</span>
         <span *ngIf="isSaving" class="btn-loading-content">

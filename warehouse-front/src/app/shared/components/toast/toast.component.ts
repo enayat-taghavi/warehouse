@@ -77,9 +77,10 @@ export class ToastService {
           }
 
           <button
-            class="shrink-0 opacity-60 hover:opacity-100 hover:bg-white/10 p-1 rounded-lg transition-all"
+            type="button"
+            class="shrink-0 opacity-60 hover:opacity-100 hover:bg-white/10 p-1 rounded-lg transition-all min-w-[32px] min-h-[32px] flex items-center justify-center tap-target"
             (click)="dismissToast($event, toast.id)"
-            aria-label="بستن"
+            aria-label="بستن پیام"
             title="بستن پیام"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>

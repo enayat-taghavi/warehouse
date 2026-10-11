@@ -60,9 +60,11 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
             <p class="text-[10px] text-slate-400">{{ formatSize(selectedFile.size) }}</p>
           </div>
           <button
+            type="button"
             (click)="removeFile($event)"
-            class="p-1.5 rounded-lg hover:bg-rose-100 text-slate-400 hover:text-rose-500 transition-colors shrink-0"
+            class="p-1.5 min-w-[36px] min-h-[36px] rounded-xl hover:bg-rose-100 text-slate-400 hover:text-rose-500 transition-colors shrink-0 flex items-center justify-center tap-target"
             title="حذف فایل"
+            aria-label="حذف فایل"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
           </button>

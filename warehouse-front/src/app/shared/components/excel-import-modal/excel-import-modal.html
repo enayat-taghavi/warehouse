@@ -11,7 +11,9 @@
         پیش‌نمایش و اعتبارسنجی
       </span>
     </div>
-    <button class="close-btn" (click)="close()" title="بستن">✕</button>
+    <button class="close-btn tap-target" (click)="close()" title="بستن" aria-label="بستن" style="min-width: 36px; min-height: 36px; display: flex; items-center; justify-content: center;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+    </button>
   </div>
 
   <!-- Body -->
@@ -39,7 +41,9 @@
         />
 
         <div *ngIf="!selectedFile && !isAnalyzing" class="drop-placeholder">
-          <div class="drop-icon">📥</div>
+          <div class="drop-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="upload"></svg>
+          </div>
           <p class="drop-text">فایل اکسل را اینجا رها کنید</p>
           <p class="drop-subtext">یا برای انتخاب فایل کلیک کنید</p>
           <span class="drop-badge">.xlsx</span>
@@ -92,8 +96,9 @@
             <span style="font-size: 10px; color: #64748b;">{{ formatFileSize(selectedFile?.size || 0) }}</span>
           </div>
         </div>
-        <button (click)="removeFile()" style="background: none; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px 10px; font-size: 11px; color: #64748b; cursor: pointer;" title="انتخاب فایل دیگر">
-          ✕ تعویض فایل
+        <button (click)="removeFile()" class="tap-target" style="background: none; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 12px; font-size: 11px; color: #64748b; cursor: pointer; display: flex; align-items: center; gap: 6px; min-height: 36px;" title="انتخاب فایل دیگر" aria-label="تعویض فایل">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
+          <span>تعویض فایل</span>
         </button>
       </div>
 
@@ -199,7 +204,9 @@
 
       <!-- Success Summary -->
       <div *ngIf="result.success" class="result-summary success">
-        <div class="summary-icon">✅</div>
+        <div class="summary-icon">
+          <svg class="w-8 h-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="check-circle"></svg>
+        </div>
         <div class="summary-details">
           <h3>پردازش و ثبت با موفقیت به پایان رسید</h3>
           <div class="summary-stats">
@@ -225,7 +232,9 @@
 
       <!-- Error Summary (when file-level error or all failed) -->
       <div *ngIf="!result.success" class="result-summary error">
-        <div class="summary-icon">❌</div>
+        <div class="summary-icon">
+          <svg class="w-8 h-8 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="x-circle"></svg>
+        </div>
         <div class="summary-details">
           <h3>خطا در پردازش فایل</h3>
         </div>
@@ -234,7 +243,7 @@
       <!-- Error Details Table -->
       <div *ngIf="result.errors && result.errors.length > 0" class="errors-section">
         <h4 class="errors-title">
-          <span class="errors-icon">📋</span>
+          <svg class="w-4 h-4 inline-block ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
           سطرهای دارای خطا و رد شده ({{ result.errors.length }} مورد)
         </h4>
         <div class="errors-table-wrapper">
@@ -258,25 +267,27 @@
       </div>
 
       <!-- Upload Another -->
-      <button class="upload-another-btn" (click)="removeFile()">
+      <button class="upload-another-btn min-h-[44px] cursor-pointer" (click)="removeFile()" title="آپلود فایل دیگر" aria-label="آپلود فایل دیگر">
         آپلود فایل دیگر
       </button>
     </div>
   </div>
 
   <!-- Footer -->
-  <div class="modal-footer" *ngIf="step === 'select'">
-    <button class="btn btn-secondary" (click)="close()">انصراف</button>
+  <div class="modal-footer flex-col sm:flex-row gap-2" *ngIf="step === 'select'">
+    <button class="btn btn-secondary w-full sm:w-auto min-h-[44px] cursor-pointer" (click)="close()" title="انصراف" aria-label="انصراف">انصراف</button>
   </div>
 
-  <div class="modal-footer" *ngIf="step === 'preview' && previewResult">
-    <button class="btn btn-secondary" (click)="removeFile()" [disabled]="isUploading">
+  <div class="modal-footer flex-col sm:flex-row gap-2" *ngIf="step === 'preview' && previewResult">
+    <button class="btn btn-secondary w-full sm:w-auto min-h-[44px] cursor-pointer" (click)="removeFile()" [disabled]="isUploading" title="انصراف و انتخاب فایل دیگر" aria-label="انصراف و انتخاب فایل دیگر">
       انصراف و انتخاب فایل دیگر
     </button>
     <button
-      class="btn btn-primary"
+      class="btn btn-primary w-full sm:w-auto min-h-[44px] cursor-pointer"
       [disabled]="((previewResult.summary.valid_count ?? ((previewResult.summary.created || 0) + (previewResult.summary.updated || 0))) === 0) || isUploading"
       (click)="commitUpload()"
+      title="تایید و ثبت نهایی"
+      aria-label="تایید و ثبت نهایی"
       style="background: linear-gradient(135deg, #4f46e5, #059669); border: none;"
     >
       <span *ngIf="!isUploading">تایید و ثبت نهایی ({{ previewResult.summary.valid_count ?? ((previewResult.summary.created || 0) + (previewResult.summary.updated || 0)) }} رکورد)</span>
@@ -284,7 +295,7 @@
     </button>
   </div>
 
-  <div class="modal-footer" *ngIf="step === 'result'">
-    <button class="btn btn-primary" (click)="close()">بستن</button>
+  <div class="modal-footer flex-col sm:flex-row gap-2" *ngIf="step === 'result'">
+    <button class="btn btn-primary w-full sm:w-auto min-h-[44px] cursor-pointer" (click)="close()" title="بستن پنجره" aria-label="بستن پنجره">بستن</button>
   </div>
 </div>

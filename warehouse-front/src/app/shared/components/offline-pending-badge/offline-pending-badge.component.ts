@@ -40,7 +40,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
       <button
         type="button"
         (click)="togglePopover($event)"
-        class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border text-[11px] font-bold transition-all shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/20 active:scale-95 whitespace-nowrap"
+        class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border text-[11px] font-bold transition-all shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/20 active:scale-95 whitespace-nowrap min-h-[36px]"
         [ngClass]="pillClasses"
         [title]="tooltipText"
       >
@@ -55,7 +55,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
         <!-- 2. Syncing in progress -->
         <ng-container *ngIf="isSyncing">
-          <svg class="animate-spin text-sky-600" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="loader-arc"></svg>
+          <svg class="animate-spin text-sky-600" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="spinner"></svg>
           <span class="text-sky-800 font-extrabold hidden sm:inline">در حال ارسال ({{ pendingCount }})</span>
           <span class="text-sky-800 text-[10px] sm:hidden font-mono font-black">({{ pendingCount }})</span>
         </ng-container>

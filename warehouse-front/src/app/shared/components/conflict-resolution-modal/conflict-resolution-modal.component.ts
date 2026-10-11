@@ -237,11 +237,13 @@ const IGNORED_COMPARE_KEYS = new Set([
       </div>
 
       <!-- Footer Actions -->
-      <div class="px-5 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3" dir="rtl">
+      <div class="px-5 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row items-center justify-between gap-2.5" dir="rtl">
         <button
           type="button"
           (click)="close()"
-          class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+          title="انصراف"
+          aria-label="انصراف"
+          class="w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer tap-target flex items-center justify-center"
         >
           انصراف
         </button>
@@ -250,12 +252,14 @@ const IGNORED_COMPARE_KEYS = new Set([
           type="button"
           (click)="resolveAndSave()"
           [disabled]="isSodRestricted || isSaving"
-          class="px-5 py-2 rounded-xl text-xs font-black text-white transition-all flex items-center gap-2 shadow-sm cursor-pointer active:scale-95"
+          title="تایید و نهایی‌سازی ادغام"
+          aria-label="تایید و نهایی‌سازی ادغام"
+          class="w-full sm:w-auto px-5 py-2.5 min-h-[44px] rounded-xl text-xs font-black text-white transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-95 tap-target"
           [ngClass]="isSodRestricted || isSaving 
             ? 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed opacity-60' 
             : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'"
         >
-          <svg *ngIf="isSaving" class="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="loader-arc"></svg>
+          <svg *ngIf="isSaving" class="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="spinner"></svg>
           <svg *ngIf="!isSaving" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
           <span>{{ isSaving ? 'در حال اعمال ادغام...' : 'تایید و نهایی‌سازی ادغام' }}</span>
         </button>

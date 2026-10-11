@@ -13,7 +13,7 @@
       [style.color]="persona.currentPersona().badgeColor"
       [title]="persona.isMultiRole() ? 'کلیک برای تغییر نقش فعال در سامانه مالی: ' + persona.currentPersona().title : 'نقش فعال شما: ' + persona.currentPersona().title"
     >
-      <span class="text-sm shrink-0">{{ persona.currentPersona().icon }}</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" [appIcon]="persona.currentPersona().icon" aria-hidden="true"></svg>
       <span class="hidden sm:inline max-w-[85px] sm:max-w-[130px] truncate font-extrabold text-[11px]">{{ persona.currentPersona().title }}</span>
 
       <!-- نشانگر چندنقشه‌ای و دراپ‌داون -->
@@ -51,16 +51,16 @@
             class="w-full text-right flex items-center justify-between px-3 py-2 min-h-[40px] rounded-xl text-xs font-bold transition-all hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer group"
           >
             <div class="flex items-center gap-2 min-w-0">
-              <span class="text-sm shrink-0">{{ role.icon }}</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" [appIcon]="role.icon" aria-hidden="true"></svg>
               <span class="truncate text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 font-extrabold">{{ role.title }}</span>
             </div>
 
             <div class="flex items-center gap-1.5 shrink-0">
               <span
                 *ngIf="persona.activeRole() === role.code"
-                class="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px]"
+                class="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0"
               >
-                ✓
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-confirm" aria-hidden="true"></svg>
               </span>
             </div>
           </button>
@@ -87,7 +87,7 @@
         ? (persona.activeApp() === 'warehouse' ? 'شما صرفاً به ماژول انبارگردانی دسترسی دارید' : (persona.activeApp() === 'operations' ? 'مرکز عملیات و زیرساخت سازمان' : 'شما صرفاً به سامانه مالی و کارکرد دسترسی دارید')) 
         : 'سامانه فعال: ' + (persona.activeApp() === 'warehouse' ? 'انبارگردانی' : (persona.activeApp() === 'operations' ? 'مرکز عملیات' : 'مالی و کارکرد')) + ' (کلیک برای باز کردن لیست سامانه‌ها)'"
     >
-      <span class="text-sm">{{ persona.activeApp() === 'warehouse' ? '📦' : (persona.activeApp() === 'operations' ? '🛡️' : '💳') }}</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" [appIcon]="persona.activeApp() === 'warehouse' ? 'package' : (persona.activeApp() === 'operations' ? 'shield' : 'credit-card')" aria-hidden="true"></svg>
       <span class="hidden sm:inline font-black text-[11px]">{{ persona.activeApp() === 'warehouse' ? 'انبارگردانی' : (persona.activeApp() === 'operations' ? 'مرکز عملیات' : 'مالی و کارکرد') }}</span>
       <svg *ngIf="persona.canSwitchApps()" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="opacity-60 hidden sm:inline shrink-0 transition-transform duration-200" [class.rotate-180]="isAppDropdownOpen()" appIcon="chevron-down"></svg>
     </button>
@@ -115,13 +115,17 @@
           class="w-full text-right flex items-center justify-between px-3 py-2 min-h-[44px] rounded-xl text-xs font-bold transition-all hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer group"
         >
           <div class="flex items-center gap-2 min-w-0">
-            <span class="text-base shrink-0 p-1 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">📦</span>
+            <span class="shrink-0 p-1 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="package" aria-hidden="true"></svg>
+            </span>
             <div class="flex flex-col min-w-0">
               <span class="truncate text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 font-extrabold">انبارگردانی</span>
               <span class="text-[10px] text-slate-400 font-normal">مدیریت و شمارش موجودی انبار</span>
             </div>
           </div>
-          <span *ngIf="persona.activeApp() === 'warehouse'" class="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] shrink-0">✓</span>
+          <span *ngIf="persona.activeApp() === 'warehouse'" class="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-confirm" aria-hidden="true"></svg>
+          </span>
         </button>
 
         <!-- ۲. سامانه مالی و کارکرد -->
@@ -134,13 +138,17 @@
           class="w-full text-right flex items-center justify-between px-3 py-2 min-h-[44px] rounded-xl text-xs font-bold transition-all hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer group"
         >
           <div class="flex items-center gap-2 min-w-0">
-            <span class="text-base shrink-0 p-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">💳</span>
+            <span class="shrink-0 p-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card" aria-hidden="true"></svg>
+            </span>
             <div class="flex flex-col min-w-0">
               <span class="truncate text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-300 font-extrabold">مالی و کارکرد</span>
               <span class="text-[10px] text-slate-400 font-normal">حقوق، دستمزد و کارکرد پرسنل</span>
             </div>
           </div>
-          <span *ngIf="persona.activeApp() === 'personnel'" class="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] shrink-0">✓</span>
+          <span *ngIf="persona.activeApp() === 'personnel'" class="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-confirm" aria-hidden="true"></svg>
+          </span>
         </button>
 
         <!-- ۳. مرکز عملیات و پدافند سازمان (SOC) -->
@@ -153,7 +161,9 @@
           class="w-full text-right flex items-center justify-between px-3 py-2 min-h-[44px] rounded-xl text-xs font-bold transition-all hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer group"
         >
           <div class="flex items-center gap-2 min-w-0">
-            <span class="text-base shrink-0 p-1 rounded-lg bg-cyan-100 dark:bg-cyan-900/60 text-cyan-700 dark:text-cyan-300">🛡️</span>
+            <span class="shrink-0 p-1 rounded-lg bg-cyan-100 dark:bg-cyan-900/60 text-cyan-700 dark:text-cyan-300 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="shield" aria-hidden="true"></svg>
+            </span>
             <div class="flex flex-col min-w-0">
               <div class="flex items-center gap-1.5">
                 <span class="truncate text-slate-800 dark:text-slate-200 group-hover:text-cyan-600 dark:group-hover:text-cyan-300 font-extrabold">مرکز عملیات</span>
@@ -162,7 +172,9 @@
               <span class="text-[10px] text-slate-400 font-normal">پدافند، سلامت سرور و زیرساخت</span>
             </div>
           </div>
-          <span *ngIf="persona.activeApp() === 'operations'" class="w-4 h-4 rounded-full bg-cyan-600 text-white flex items-center justify-center text-[10px] shrink-0">✓</span>
+          <span *ngIf="persona.activeApp() === 'operations'" class="w-4 h-4 rounded-full bg-cyan-600 text-white flex items-center justify-center shrink-0">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-confirm" aria-hidden="true"></svg>
+          </span>
         </button>
       </div>
     </div>

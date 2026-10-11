@@ -179,7 +179,7 @@ export interface PageEvent {
                             } @else {
                               <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button (click)="viewToDelete = v.id!; $event.stopPropagation()" class="text-rose-500 hover:text-rose-700 p-0.5 rounded hover:bg-rose-50" title="حذف نما">
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="trash-compact"></svg>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="trash-2"></svg>
                                 </button>
                               </div>
                             }
@@ -474,12 +474,12 @@ export interface PageEvent {
                 <td [attr.colspan]="totalColumns" class="px-6 py-12 text-center">
                   @if (isLoading) {
                     <div class="text-slate-400 flex flex-col items-center justify-center">
-                      <svg class="animate-spin mb-3 text-indigo-500" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="loader"></svg>
+                      <svg class="animate-spin mb-3 text-indigo-500" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="spinner"></svg>
                       <p class="text-xs font-bold">در حال بارگذاری...</p>
                     </div>
                   } @else {
                     <div class="text-slate-400">
-                      <svg class="mx-auto mb-3" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="hero-search-plain"></svg>
+                      <svg class="mx-auto mb-3" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="search"></svg>
                       <p class="text-xs font-bold">{{ emptyMessage }}</p>
                     </div>
                   }
@@ -492,22 +492,26 @@ export interface PageEvent {
 
       <!-- Pagination -->
       @if (showPagination && totalCount > pageSize) {
-        <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
-          <div class="text-[10px] text-slate-500">
+        <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
+          <div class="text-[10px] sm:text-xs text-slate-500 font-medium">
             نمایش {{ startIndex }}–{{ endIndex }} از {{ totalCount }}
           </div>
           <div class="flex items-center gap-1">
             <button
               (click)="goToPage(currentPage - 1)"
               [disabled]="currentPage === 1"
-              class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="صفحه قبل"
+              aria-label="صفحه قبل"
+              class="min-w-[36px] min-h-[36px] p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center cursor-pointer"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-back"></svg>
             </button>
             @for (p of visiblePages; track p) {
               <button
                 (click)="goToPage(p)"
-                class="w-7 h-7 rounded-lg text-[10px] font-bold transition-colors"
+                class="min-w-[32px] min-h-[32px] w-8 h-8 rounded-lg text-[10px] sm:text-xs font-bold transition-colors flex items-center justify-center cursor-pointer"
+                [attr.title]="'صفحه ' + p"
+                [attr.aria-label]="'صفحه ' + p"
                 [ngClass]="p === currentPage ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'"
               >
                 {{ p }}
@@ -516,9 +520,11 @@ export interface PageEvent {
             <button
               (click)="goToPage(currentPage + 1)"
               [disabled]="currentPage === totalPages"
-              class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="صفحه بعد"
+              aria-label="صفحه بعد"
+              class="min-w-[36px] min-h-[36px] p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center cursor-pointer"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-forward"></svg>
             </button>
           </div>
         </div>
@@ -561,7 +567,7 @@ export interface PageEvent {
           <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-[90%] max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div class="p-5 text-center">
               <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="trash-lucide"></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="trash-2"></svg>
               </div>
               <h3 class="text-base font-black text-slate-800 mb-2">لغو تغییرات؟</h3>
               <p class="text-xs text-slate-500 leading-relaxed font-medium">آیا از لغو تمام تغییرات خود مطمئن هستید؟ این کار غیرقابل بازگشت است.</p>

@@ -14,35 +14,24 @@ import {
   CARTABLE_DATE_LABELS,
   CARTABLE_TAB_LABELS 
 } from '../../../core/models/cartable.model';
+import { TabBarComponent, TabDef } from '../tab-bar/tab-bar.component';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 @Component({
   selector: 'app-cartable-header',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, TabBarComponent],
   template: `
     <div class="w-full" dir="rtl">
       <!-- Domain Switcher (Optional for Supervisor & Manager) -->
-      <div *ngIf="showDomainSwitcher" class="flex items-center justify-center p-1 bg-slate-100/90 rounded-2xl mb-4 border border-slate-200/60 max-w-md mx-auto shadow-inner">
-        <button
-          type="button"
-          (click)="onDomainChange('counting')"
-          [ngClass]="activeDomain === 'counting' ? 'bg-white text-indigo-700 shadow-sm font-black' : 'text-slate-500 font-bold hover:text-slate-800'"
-          class="flex-1 py-2 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="box"></svg>
-          <span>شمارش فیزیکی (انبار)</span>
-        </button>
-
-        <button
-          type="button"
-          (click)="onDomainChange('financial')"
-          [ngClass]="activeDomain === 'financial' ? 'bg-white text-indigo-700 shadow-sm font-black' : 'text-slate-500 font-bold hover:text-slate-800'"
-          class="flex-1 py-2 text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
-          <span>اسناد مالی و گمرک</span>
-        </button>
+      <div *ngIf="showDomainSwitcher" class="flex items-center justify-center mb-4 max-w-md mx-auto">
+        <app-tab-bar
+          [tabs]="domainTabs"
+          [active]="activeDomain"
+          mobile="short"
+          fullLabelFrom="sm"
+          (activeChange)="onDomainChange($any($event))"
+        />
       </div>
 
       <!-- Primary Tabs (My Tasks / Pool) -->
@@ -276,6 +265,11 @@ export class CartableHeaderComponent {
   readonly tabLabels = CARTABLE_TAB_LABELS;
   readonly dateLabels = CARTABLE_DATE_LABELS;
   readonly dateKeys: CartableDateFilter[] = ['all', 'today', 'yesterday', 'week'];
+
+  readonly domainTabs: TabDef[] = [
+    { id: 'counting', label: 'شمارش فیزیکی (انبار)', shortLabel: 'شمارش', icon: 'box' },
+    { id: 'financial', label: 'اسناد مالی و گمرک', shortLabel: 'مالی', icon: 'file-text' },
+  ];
 
   getStatusLabel(status: CartableStatusFilter): string {
     if (this.role === 'supervisor' || this.role === 'manager') {

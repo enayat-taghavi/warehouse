@@ -97,9 +97,10 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
         type="button"
         (click)="toggleManualKeyboard()"
         [disabled]="disabled"
-        class="p-2.5 rounded-xl transition-colors shadow-sm shrink-0"
+        class="p-2.5 rounded-xl transition-colors shadow-sm shrink-0 min-w-[40px] min-h-[40px] flex items-center justify-center tap-target"
         [ngClass]="manualKeyboard ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
         title="ورود دستی کد (باز شدن کیبورد)"
+        aria-label="ورود دستی کد (باز شدن کیبورد)"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="keyboard-2"></svg>
       </button>
@@ -109,8 +110,9 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
         type="button"
         (click)="openCamera()"
         [disabled]="disabled || cameraOpen"
-        class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors shadow-sm shrink-0"
+        class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-colors shadow-sm shrink-0 min-w-[40px] min-h-[40px] flex items-center justify-center tap-target"
         title="اسکن با دوربین"
+        aria-label="اسکن با دوربین"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="camera"></svg>
       </button>
@@ -134,9 +136,10 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
             *ngIf="torchAvailable"
             type="button"
             (click)="toggleTorch()"
-            class="p-2 sm:p-2.5 rounded-full transition-all flex items-center justify-center shadow-md backdrop-blur-md"
+            class="p-2 sm:p-2.5 rounded-full transition-all flex items-center justify-center shadow-md backdrop-blur-md min-w-[40px] min-h-[40px] tap-target"
             [ngClass]="torchActive ? 'bg-amber-400 text-slate-900 shadow-amber-400/30' : 'bg-white/20 text-white hover:bg-white/30'"
             title="روشن/خاموش کردن چراغ‌قوه"
+            aria-label="روشن/خاموش کردن چراغ‌قوه"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="zap"></svg>
           </button>
@@ -146,16 +149,20 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
             <button
               type="button"
               (click)="setZoom(1)"
-              class="px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-full transition-colors"
+              class="px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-full transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
               [ngClass]="currentZoom <= 1.2 ? 'bg-white text-slate-900 shadow-sm' : 'text-white/80 hover:text-white'"
+              title="بزرگنمایی 1X"
+              aria-label="بزرگنمایی 1X"
             >
               1X
             </button>
             <button
               type="button"
               (click)="setZoom(2)"
-              class="px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-full transition-colors"
+              class="px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-full transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
               [ngClass]="currentZoom > 1.2 ? 'bg-white text-slate-900 shadow-sm' : 'text-white/80 hover:text-white'"
+              title="بزرگنمایی 2X"
+              aria-label="بزرگنمایی 2X"
             >
               2X
             </button>
@@ -166,9 +173,10 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
             <button
               type="button"
               (click)="toggleQualityMenu()"
-              class="px-2.5 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all backdrop-blur-md border shadow-md flex items-center gap-1"
+              class="px-2.5 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all backdrop-blur-md border shadow-md flex items-center gap-1 min-h-[36px]"
               [ngClass]="hasLocalOverride ? 'bg-indigo-600/90 text-white border-indigo-400 shadow-indigo-500/30' : 'bg-white/20 text-white/95 border-white/20 hover:bg-white/30'"
               title="تنظیم کیفیت اسکنر"
+              aria-label="تنظیم کیفیت اسکنر"
             >
               <span>{{ activePresetBadge }}</span>
               <svg class="w-3 h-3 transition-transform" [ngClass]="showQualityMenu ? 'rotate-180' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-down-path"></svg>
@@ -192,12 +200,12 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                 <button
                   type="button"
                   (click)="selectPreset('adaptive')"
-                  class="w-full px-2.5 py-2 rounded-xl text-right flex items-center justify-between transition-colors"
+                  class="w-full px-2.5 py-2 rounded-xl text-right flex items-center justify-between transition-colors min-h-[40px]"
                   [ngClass]="activePreset === 'adaptive' ? 'bg-indigo-600 text-white' : 'hover:bg-white/10 text-slate-300'"
                 >
                   <div class="flex flex-col">
                     <span class="text-xs font-bold flex items-center gap-1">
-                      <span>⚡ هوشمند خودکار (Adaptive)</span>
+                      <span>هوشمند خودکار (Adaptive)</span>
                     </span>
                     <span class="text-[10px] opacity-80">شروع از 2K با تنظیم خودکار در صورت لگ</span>
                   </div>
@@ -208,12 +216,12 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                 <button
                   type="button"
                   (click)="selectPreset('ultra')"
-                  class="w-full px-2.5 py-2 rounded-xl text-right flex items-center justify-between transition-colors"
+                  class="w-full px-2.5 py-2 rounded-xl text-right flex items-center justify-between transition-colors min-h-[40px]"
                   [ngClass]="activePreset === 'ultra' ? 'bg-indigo-600 text-white' : 'hover:bg-white/10 text-slate-300'"
                 >
                   <div class="flex flex-col">
                     <span class="text-xs font-bold flex items-center gap-1">
-                      <span>🎯 فوق‌العاده / حداکثر دقت (Ultra 2K)</span>
+                      <span>فوق‌العاده / حداکثر دقت (Ultra 2K)</span>
                     </span>
                     <span class="text-[10px] opacity-80">1440p/2K + کدهای فوق‌العاده ریز و متراکم</span>
                   </div>
@@ -224,11 +232,11 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                 <button
                   type="button"
                   (click)="selectPreset('high')"
-                  class="w-full px-2.5 py-2 rounded-xl text-right flex items-center justify-between transition-colors"
+                  class="w-full px-2.5 py-2 rounded-xl text-right flex items-center justify-between transition-colors min-h-[40px]"
                   [ngClass]="activePreset === 'high' ? 'bg-indigo-600 text-white' : 'hover:bg-white/10 text-slate-300'"
                 >
                   <div class="flex flex-col">
-                    <span class="text-xs font-bold">💎 کیفیت بالا (High 1080p)</span>
+                    <span class="text-xs font-bold">کیفیت بالا (High 1080p)</span>
                     <span class="text-[10px] opacity-80">رزولوشن 1080p برای گوشی‌های مدرن</span>
                   </div>
                   <svg *ngIf="activePreset === 'high'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
@@ -238,11 +246,11 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                 <button
                   type="button"
                   (click)="selectPreset('balanced')"
-                  class="w-full px-2.5 py-2 rounded-xl text-right flex items-center justify-between transition-colors"
+                  class="w-full px-2.5 py-2 rounded-xl text-right flex items-center justify-between transition-colors min-h-[40px]"
                   [ngClass]="activePreset === 'balanced' ? 'bg-indigo-600 text-white' : 'hover:bg-white/10 text-slate-300'"
                 >
                   <div class="flex flex-col">
-                    <span class="text-xs font-bold">⚖️ متعادل و روان (Balanced 720p)</span>
+                    <span class="text-xs font-bold">متعادل و روان (Balanced 720p)</span>
                     <span class="text-[10px] opacity-80">رزولوشن 720p سریع و سبک</span>
                   </div>
                   <svg *ngIf="activePreset === 'balanced'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
@@ -252,11 +260,11 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                 <button
                   type="button"
                   (click)="selectPreset('lite')"
-                  class="w-full px-2.5 py-2 rounded-xl text-right flex items-center justify-between transition-colors"
+                  class="w-full px-2.5 py-2 rounded-xl text-right flex items-center justify-between transition-colors min-h-[40px]"
                   [ngClass]="activePreset === 'lite' ? 'bg-indigo-600 text-white' : 'hover:bg-white/10 text-slate-300'"
                 >
                   <div class="flex flex-col">
-                    <span class="text-xs font-bold">🔋 سبک و اقتصادی (Lite 480p)</span>
+                    <span class="text-xs font-bold">سبک و اقتصادی (Lite 480p)</span>
                     <span class="text-[10px] opacity-80">مصرف حداقلی باتری برای گوشی‌های ضعیف</span>
                   </div>
                   <svg *ngIf="activePreset === 'lite'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
@@ -268,9 +276,11 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                 <button
                   type="button"
                   (click)="resetToSystemDefault()"
-                  class="w-full py-1.5 px-2 bg-white/10 hover:bg-white/20 text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                  class="w-full py-1.5 px-2 bg-white/10 hover:bg-white/20 text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors min-h-[36px]"
+                  title="بازگشت به پیش‌فرض انبار/سیستم"
+                  aria-label="بازگشت به پیش‌فرض انبار/سیستم"
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-ccw-lucide"></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-ccw"></svg>
                   <span>بازگشت به پیش‌فرض انبار/سیستم</span>
                 </button>
               </div>
@@ -281,8 +291,10 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
           <button
             type="button"
             (click)="toggleDebugHud()"
-            class="px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-mono font-bold transition-all backdrop-blur-md border shadow-md flex items-center gap-1"
+            class="px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-mono font-bold transition-all backdrop-blur-md border shadow-md flex items-center gap-1 min-h-[36px]"
             [ngClass]="showDebugHud ? 'bg-emerald-500/90 text-white border-emerald-400 shadow-emerald-500/30' : 'bg-white/20 text-white/90 border-white/20 hover:bg-white/30'"
+            title="نمایش/پنهان‌سازی HUD"
+            aria-label="نمایش/پنهان‌سازی HUD"
           >
             <span class="w-1.5 h-1.5 rounded-full" [ngClass]="showDebugHud ? 'bg-white animate-ping' : 'bg-emerald-400'"></span>
             HUD
@@ -293,8 +305,9 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
         <button
           type="button"
           (click)="closeCamera()"
-          class="p-2 sm:p-2.5 bg-white/20 text-white hover:bg-white/30 rounded-full transition-all backdrop-blur-md shadow-md shrink-0 mr-2"
+          class="p-2 sm:p-2.5 bg-white/20 text-white hover:bg-white/30 rounded-full transition-all backdrop-blur-md shadow-md shrink-0 mr-2 min-w-[40px] min-h-[40px] flex items-center justify-center tap-target"
           title="بستن"
+          aria-label="بستن دوربین"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="x"></svg>
         </button>
@@ -335,9 +348,11 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
         <button
           type="button"
           (click)="adaptiveNotification = null"
-          class="text-white/60 hover:text-white p-1"
+          class="text-white/60 hover:text-white p-1 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg tap-target"
+          title="بستن پیام"
+          aria-label="بستن پیام"
         >
-          ✕
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
         </button>
       </div>
 
@@ -354,7 +369,9 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
           <button
             type="button"
             (click)="copyDiagnosticReport()"
-            class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg text-xs font-bold shadow transition-all active:scale-95 flex items-center gap-1"
+            class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg text-xs font-bold shadow transition-all active:scale-95 flex items-center gap-1 min-h-[36px]"
+            title="کپی گزارش دیباگ"
+            aria-label="کپی گزارش دیباگ"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
             <span>کپی گزارش</span>
@@ -389,7 +406,9 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
         <button
           type="button"
           (click)="closeCamera()"
-          class="bg-white hover:bg-slate-100 text-slate-900 px-8 py-3 rounded-2xl text-sm font-bold shadow-xl transition-all active:scale-95"
+          class="bg-white hover:bg-slate-100 text-slate-900 px-8 py-3 rounded-2xl text-sm font-bold shadow-xl transition-all active:scale-95 min-h-[44px]"
+          title="بستن دوربین"
+          aria-label="بستن دوربین"
         >
           بستن دوربین
         </button>

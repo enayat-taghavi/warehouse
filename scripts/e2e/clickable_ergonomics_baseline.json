@@ -1,10 +1,10 @@
 {
   "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
   "counters": {
-    "rule_1_unlabeled_icon_buttons": 191,
+    "rule_1_unlabeled_icon_buttons": 176,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 259,
-    "rule_4_retired_icons": 133
+    "rule_3_non_standard_actions": 255,
+    "rule_4_retired_icons": 120
   },
   "violations": {
     "rule_1_unlabeled_icon_buttons": [
@@ -77,18 +77,6 @@
         "line": 57
       },
       {
-        "file": "components/communications/chat-drawer/chat-drawer.component.html",
-        "line": 17
-      },
-      {
-        "file": "components/communications/chat-drawer/chat-drawer.component.html",
-        "line": 67
-      },
-      {
-        "file": "components/communications/chat-drawer/chat-drawer.component.html",
-        "line": 289
-      },
-      {
         "file": "components/count-tracking/count-tracking.html",
         "line": 318
       },
@@ -127,6 +115,18 @@
       {
         "file": "components/counter/counter-dashboard/counter-dashboard.html",
         "line": 1038
+      },
+      {
+        "file": "components/customs/customs.html",
+        "line": 118
+      },
+      {
+        "file": "components/customs/customs.html",
+        "line": 239
+      },
+      {
+        "file": "components/customs/customs.html",
+        "line": 554
       }
     ],
     "rule_2_tab_min_widths": [],
@@ -410,28 +410,13 @@
       },
       {
         "file": "components/communications/chat-drawer/chat-drawer.component.html",
-        "line": 18,
-        "icon": "hero-arrow-left"
-      },
-      {
-        "file": "components/communications/chat-drawer/chat-drawer.component.html",
-        "line": 68,
-        "icon": "hero-x"
-      },
-      {
-        "file": "components/communications/chat-drawer/chat-drawer.component.html",
-        "line": 103,
+        "line": 91,
         "icon": "hero-search"
       },
       {
         "file": "components/communications/chat-drawer/chat-drawer.component.html",
-        "line": 292,
+        "line": 289,
         "icon": "hero-paper-airplane"
-      },
-      {
-        "file": "components/communications/contextual-comments/contextual-comments.component.html",
-        "line": 12,
-        "icon": "hero-refresh"
       },
       {
         "file": "components/count-tracking/count-tracking.html",
@@ -462,6 +447,21 @@
         "file": "components/dashboard/dashboard.html",
         "line": 77,
         "icon": "hero-chevron-down"
+      },
+      {
+        "file": "components/dashboard/dashboard.html",
+        "line": 90,
+        "icon": "hero-clock"
+      },
+      {
+        "file": "components/dashboard/dashboard.html",
+        "line": 232,
+        "icon": "hero-chevron-left"
+      },
+      {
+        "file": "components/dashboard/dashboard.html",
+        "line": 241,
+        "icon": "hero-save"
       }
     ]
   }

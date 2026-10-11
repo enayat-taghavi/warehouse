@@ -7,15 +7,26 @@ import { StateService } from '../../../services/state.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../services/toast.service';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../shared/components/tab-bar/tab-bar.component';
 
 @Component({
   selector: 'app-chat-drawer',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, TabBarComponent],
   templateUrl: './chat-drawer.component.html',
   styleUrls: ['./chat-drawer.component.css']
 })
 export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked {
+  readonly drawerTabs: TabDef[] = [
+    { id: 'conversations', label: 'گفتگوها', shortLabel: 'گفتگوها', icon: 'message-square' },
+    { id: 'contacts', label: 'همکاران و پرسنل', shortLabel: 'همکاران', icon: 'users' },
+  ];
+
+  onTabSelect(tabId: string): void {
+    if (tabId === 'conversations' || tabId === 'contacts') {
+      this.activeTab.set(tabId);
+    }
+  }
   public commService = inject(CommunicationService);
   private state = inject(StateService);
   private auth = inject(AuthService);

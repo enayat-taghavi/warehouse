@@ -6,8 +6,8 @@
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" appIcon="hero-exclamation-solid"></svg>
         <h3 class="text-base font-bold text-slate-800">{{ title || 'حذف موجودیت' }}</h3>
       </div>
-      <button (click)="onCancel()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-x"></svg>
+      <button (click)="onCancel()" class="text-slate-400 hover:text-slate-600 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors cursor-pointer tap-target" title="بستن پنجره" aria-label="بستن پنجره">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
       </button>
     </div>
 
@@ -55,15 +55,18 @@
       </div>
 
       <!-- Actions -->
-      <div class="flex justify-end gap-3 mt-6">
-        <button (click)="onCancel()" class="px-5 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors" [disabled]="isSubmitting">
+      <div class="flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-3 mt-6">
+        <button (click)="onCancel()" class="w-full sm:w-auto px-5 py-2.5 min-h-[44px] text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer tap-target flex items-center justify-center" [disabled]="isSubmitting" title="انصراف از عملیات" aria-label="انصراف">
           انصراف
         </button>
         <button (click)="onHardDelete()" 
                 [disabled]="!isHardDeleteEnabled || isSubmitting"
                 [class.opacity-50]="!isHardDeleteEnabled"
                 [class.cursor-not-allowed]="!isHardDeleteEnabled"
-                class="px-6 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors flex items-center justify-center min-w-[140px] gap-2 shadow-sm">
+                title="حذف قطعی و غیرقابل بازگشت"
+                aria-label="حذف قطعی و غیرقابل بازگشت"
+                class="w-full sm:w-auto px-6 py-2.5 min-h-[44px] text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors flex items-center justify-center min-w-[140px] gap-2 shadow-sm cursor-pointer tap-target">
+          <svg *ngIf="!isSubmitting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
           <span *ngIf="isSubmitting" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
           <span *ngIf="countdown > 0 && !isSubmitting">({{ countdown }} ثانیه)</span>
           <span *ngIf="countdown <= 0 && !isSubmitting">حذف برای همیشه</span>

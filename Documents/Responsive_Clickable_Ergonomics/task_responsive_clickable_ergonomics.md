@@ -44,18 +44,18 @@
   - [x] **۵.۱۷ مرکز اعلان‌ها (`notification-center.component.ts`)**
   - [x] معیار پایان گام
 
-- [ ] **گام ۴: کامپوننت‌های مشترک**
-  - [ ] **۵.۱ هدر کارتابل (`cartable-header.component.ts`):** سوئیچر دامنه با `app-tab-bar`
-  - [ ] **۵.۲ جدول داده (`data-table.component.ts`):** نوار ابزار و صفحه‌بندی با `appAction`
-  - [ ] **۵.۴ دراور چت (`chat-drawer.component.html`)**
-  - [ ] **۵.۵ گالری عکس (`item-photo-gallery.component.html`)**
-  - [ ] **۵.۶ مودال اکسل (`excel-import-modal.html`)**
-  - [ ] **۵.۷ مودال حذف هوشمند (`smart-delete-modal.html`):** `delete` حساس با `size="lg"`
-  - [ ] **۵.۸ مودال آواتار (`avatar-cropper-modal.html`)**
-  - [ ] **۵.۱۸ مودال‌ها و دیالوگ‌ها (`modal`، `confirm-dialog`، `conflict-resolution-modal`، `deep-sync-modal`):** فقط ظاهر
-  - [ ] **۵.۱۹ اجزای کوچک مشترک و آیکون `status-badge` / `offline-pending-badge` از `STATUS_ICONS`**
-  - [ ] **۵.۲۱ نظرات زمینه‌ای (`contextual-comments.component.html`)**
-  - [ ] معیار پایان گام
+- [x] **گام ۴: کامپوننت‌های مشترک**
+  - [x] **۵.۱ هدر کارتابل (`cartable-header.component.ts`):** سوئیچر دامنه با `app-tab-bar`
+  - [x] **۵.۲ جدول داده (`data-table.component.ts`):** نوار ابزار و صفحه‌بندی با `appAction`
+  - [x] **۵.۴ دراور چت (`chat-drawer.component.html`)**
+  - [x] **۵.۵ گالری عکس (`item-photo-gallery.component.html`)**
+  - [x] **۵.۶ مودال اکسل (`excel-import-modal.html`)**
+  - [x] **۵.۷ مودال حذف هوشمند (`smart-delete-modal.html`):** `delete` حساس با `size="lg"`
+  - [x] **۵.۸ مودال آواتار (`avatar-cropper-modal.html`)**
+  - [x] **۵.۱۸ مودال‌ها و دیالوگ‌ها (`modal`، `confirm-dialog`، `conflict-resolution-modal`، `deep-sync-modal`):** فقط ظاهر
+  - [x] **۵.۱۹ اجزای کوچک مشترک و آیکون `status-badge` / `offline-pending-badge` از `STATUS_ICONS`**
+  - [x] **۵.۲۱ نظرات زمینه‌ای (`contextual-comments.component.html`)**
+  - [x] معیار پایان گام
 
 - [ ] **گام ۵: مرکز عملیات و صفحات عمومی**
   - [ ] **۱.۱ شرکت‌ها (`companies.html`)**

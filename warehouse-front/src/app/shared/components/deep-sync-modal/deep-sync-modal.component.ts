@@ -16,7 +16,7 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
         <!-- Header Banner & Info -->
         <div class="flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-l from-indigo-50/80 to-blue-50/40 border border-indigo-100 shadow-xs">
           <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-200">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="hero-refresh"></svg>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="refresh-cw"></svg>
           </div>
           <div class="flex-1">
             <h3 class="text-sm font-black text-indigo-950 mb-1">{{ bannerTitle }}</h3>
@@ -31,7 +31,7 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
           <button
             type="button"
             (click)="activeOpsTab.set('all')"
-            class="flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            class="flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer min-h-[36px]"
             [ngClass]="activeOpsTab() === 'all' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
           >
             <span>کل سازمان</span>
@@ -43,10 +43,11 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
             *ngIf="warehouses.length > 0"
             type="button"
             (click)="activeOpsTab.set('warehouse')"
-            class="flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            class="flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer min-h-[36px]"
             [ngClass]="activeOpsTab() === 'warehouse' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
           >
-            <span>📦 انبارداری</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="package"></svg>
+            <span>انبارداری</span>
             <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black" [ngClass]="activeOpsTab() === 'warehouse' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'">
               {{ selectedWarehouseIds().length }}/{{ warehouses.length }}
             </span>
@@ -55,10 +56,11 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
             *ngIf="projects.length > 0"
             type="button"
             (click)="activeOpsTab.set('finance')"
-            class="flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            class="flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer min-h-[36px]"
             [ngClass]="activeOpsTab() === 'finance' ? 'bg-white text-emerald-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
           >
-            <span>💳 مالی و پرسنلی</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="credit-card"></svg>
+            <span>مالی و پرسنلی</span>
             <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black" [ngClass]="activeOpsTab() === 'finance' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'">
               {{ selectedProjectIds().length }}/{{ projects.length }}
             </span>
@@ -69,7 +71,8 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
         <div *ngIf="showWarehouseSection" class="flex flex-col gap-2.5">
           <div class="flex items-center justify-between">
             <span class="text-xs font-black text-slate-800 flex items-center gap-1.5">
-              <span>📦 {{ effectiveContext === 'operations' ? 'انبارهای فعال سازمان' : 'لیست انبارها' }}</span>
+              <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="package"></svg>
+              <span>{{ effectiveContext === 'operations' ? 'انبارهای فعال سازمان' : 'لیست انبارها' }}</span>
               <span class="text-slate-500 font-mono text-[11px]">({{ selectedWarehouseIds().length }} از {{ warehouses.length }})</span>
             </span>
             <button 
@@ -110,7 +113,8 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
         <div *ngIf="showFinanceSection" class="flex flex-col gap-2.5">
           <div class="flex items-center justify-between">
             <span class="text-xs font-black text-slate-800 flex items-center gap-1.5">
-              <span>💳 {{ effectiveContext === 'operations' ? 'پروژه‌ها و کارگاه‌های مالی' : 'لیست پروژه‌ها / کارگاه‌ها' }}</span>
+              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="credit-card"></svg>
+              <span>{{ effectiveContext === 'operations' ? 'پروژه‌ها و کارگاه‌های مالی' : 'لیست پروژه‌ها / کارگاه‌ها' }}</span>
               <span class="text-slate-500 font-mono text-[11px]">({{ selectedProjectIds().length }} از {{ projects.length }})</span>
             </span>
             <button 
@@ -150,23 +154,28 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
       </div>
 
       <!-- Footer Actions -->
-      <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3" dir="rtl">
+      <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3" dir="rtl">
         <div>
           <button
             *ngIf="effectiveContext === 'operations'"
             type="button"
             (click)="toggleSelectEntireOrganization()"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer border border-indigo-200"
+            title="انتخاب یا لغو انتخاب کل سازمان"
+            aria-label="انتخاب یا لغو انتخاب کل سازمان"
+            class="px-3 py-2 min-h-[40px] rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer border border-indigo-200 flex items-center gap-1.5 tap-target"
           >
-            {{ allOrganizationSelected() ? 'لغو انتخاب کل سازمان' : '⚡ انتخاب کل سامانه‌های سازمان' }}
+            <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="zap"></svg>
+            <span>{{ allOrganizationSelected() ? 'لغو انتخاب کل سازمان' : 'انتخاب کل سامانه‌های سازمان' }}</span>
           </button>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 w-full sm:w-auto">
           <button 
             type="button"
             (click)="close()"
-            class="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+            title="انصراف"
+            aria-label="انصراف"
+            class="w-full sm:w-auto px-5 py-2.5 min-h-[44px] rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer tap-target flex items-center justify-center"
           >
             انصراف
           </button>
@@ -174,10 +183,12 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
             type="button"
             (click)="confirm()"
             [disabled]="totalSelectedCount() === 0"
-            class="px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
+            title="شروع به‌روزرسانی"
+            aria-label="شروع به‌روزرسانی"
+            class="w-full sm:w-auto px-5 py-2.5 min-h-[44px] rounded-xl text-xs font-bold text-white transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer tap-target"
             [ngClass]="totalSelectedCount() === 0 ? 'bg-slate-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="hero-refresh"></svg>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="refresh-cw"></svg>
             <span>شروع بروزرسانی ({{ totalSelectedCount() }})</span>
           </button>
         </div>

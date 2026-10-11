@@ -250,7 +250,7 @@ describe('DeepSyncModalComponent DOM & Behavior Tests', () => {
     expect(component.selectedWarehouseIds()).toEqual([]);
     expect(component.selectedProjectIds()).toEqual([]);
     expect(component.totalSelectedCount()).toBe(0);
-    expect(orgBtn.textContent?.trim()).toBe('⚡ انتخاب کل سامانه‌های سازمان');
+    expect(orgBtn.textContent?.trim()).toBe('انتخاب کل سامانه‌های سازمان');
   });
 
   it('should automatically select preselectWarehouseId when opened in warehouse mode', () => {

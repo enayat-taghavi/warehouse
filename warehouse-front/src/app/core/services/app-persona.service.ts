@@ -27,7 +27,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'operations',
     badgeColor: '#06b6d4',
     bgClass: 'bg-cyan-600',
-    icon: '🛡️',
+    icon: 'shield',
     tierLevel: 6
   },
   // --- Personnel / Payroll / Treasury Roles ---
@@ -37,7 +37,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#64748b',
     bgClass: 'bg-slate-600',
-    icon: '👤',
+    icon: 'user',
     tierLevel: 1
   },
   {
@@ -46,7 +46,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#2563eb',
     bgClass: 'bg-blue-600',
-    icon: '📋',
+    icon: 'clipboard',
     tierLevel: 2
   },
   {
@@ -55,7 +55,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#059669',
     bgClass: 'bg-emerald-600',
-    icon: '💳',
+    icon: 'credit-card',
     tierLevel: 3
   },
   {
@@ -64,7 +64,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#7c3aed',
     bgClass: 'bg-purple-600',
-    icon: '👑',
+    icon: 'crown',
     tierLevel: 4
   },
   {
@@ -73,7 +73,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#d97706',
     bgClass: 'bg-amber-600',
-    icon: '🏦',
+    icon: 'database',
     tierLevel: 5
   },
   {
@@ -82,7 +82,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#0284c7',
     bgClass: 'bg-sky-600',
-    icon: '🏢',
+    icon: 'building',
     tierLevel: 4
   },
   // --- Warehouse / Inventory Roles ---
@@ -92,7 +92,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'warehouse',
     badgeColor: '#0284c7',
     bgClass: 'bg-sky-600',
-    icon: '🔢',
+    icon: 'barcode',
     tierLevel: 1
   },
   {
@@ -101,7 +101,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'warehouse',
     badgeColor: '#4f46e5',
     bgClass: 'bg-indigo-600',
-    icon: '📦',
+    icon: 'package',
     tierLevel: 2
   },
   {
@@ -110,7 +110,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'warehouse',
     badgeColor: '#0d9488',
     bgClass: 'bg-teal-600',
-    icon: '📑',
+    icon: 'file-text',
     tierLevel: 3
   },
   {
@@ -119,7 +119,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'warehouse',
     badgeColor: '#9333ea',
     bgClass: 'bg-purple-600',
-    icon: '🔍',
+    icon: 'search',
     tierLevel: 4
   },
   // --- Global Superuser ---
@@ -129,7 +129,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#e11d48',
     bgClass: 'bg-rose-600',
-    icon: '⚡',
+    icon: 'zap',
     tierLevel: 6
   }
 ];

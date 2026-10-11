@@ -6,11 +6,12 @@ import { ItemPhoto } from '../../../core/models/item.model';
 import { ItemPhotoService, PhotoUploadResult } from '../../../core/services/item-photo.service';
 import { PhotoQueueEntry } from '../../../core/services/offline-db';
 import { ToastService } from '../../../services/toast.service';
+import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 @Component({
   selector: 'app-item-photo-gallery',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './item-photo-gallery.component.html',
   styleUrls: ['./item-photo-gallery.component.css']
 })

@@ -10,8 +10,10 @@ import { CommonModule } from '@angular/common';
       type="button" 
       role="switch" 
       [attr.aria-checked]="checked"
+      [attr.aria-label]="label || 'سوئیچ تغییر وضعیت'"
+      [title]="title || label || 'سوئیچ تغییر وضعیت'"
       (click)="toggle($event)"
-      class="toggle-switch-btn"
+      class="toggle-switch-btn tap-target"
       [class.checked]="checked">
       <span class="toggle-slider"></span>
     </button>
@@ -62,6 +64,8 @@ import { CommonModule } from '@angular/common';
 })
 export class ToggleSwitchComponent {
   @Input() checked: boolean = false;
+  @Input() label?: string;
+  @Input() title?: string;
   @Output() checkedChange = new EventEmitter<boolean>();
 
   toggle(event?: Event) {

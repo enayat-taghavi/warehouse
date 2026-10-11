@@ -123,7 +123,9 @@ export class ConfirmDialogService {
             @if (config()?.showCancel) {
               <button
                 (click)="cancel()"
-                class="w-full sm:flex-1 py-2.5 px-4 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                [attr.title]="config()?.cancelText"
+                [attr.aria-label]="config()?.cancelText"
+                class="w-full sm:flex-1 py-2.5 px-4 min-h-[44px] rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer tap-target flex items-center justify-center"
               >
                 {{ config()?.cancelText }}
               </button>
@@ -132,7 +134,9 @@ export class ConfirmDialogService {
             @if (config()?.extraText) {
               <button
                 (click)="dialog.extra()"
-                class="w-full sm:flex-1 py-2.5 px-4 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                [attr.title]="config()?.extraText"
+                [attr.aria-label]="config()?.extraText"
+                class="w-full sm:flex-1 py-2.5 px-4 min-h-[44px] rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer tap-target flex items-center justify-center"
               >
                 {{ config()?.extraText }}
               </button>
@@ -141,7 +145,9 @@ export class ConfirmDialogService {
             <button
               (click)="confirm()"
               [disabled]="isConfirmDisabled"
-              class="w-full sm:flex-1 py-2.5 px-4 rounded-xl text-xs font-bold text-white transition-all"
+              [attr.title]="config()?.confirmText"
+              [attr.aria-label]="config()?.confirmText"
+              class="w-full sm:flex-1 py-2.5 px-4 min-h-[44px] rounded-xl text-xs font-bold text-white transition-all cursor-pointer tap-target flex items-center justify-center"
               [class.opacity-40]="isConfirmDisabled"
               [class.cursor-not-allowed]="isConfirmDisabled"
               [ngClass]="confirmBtnClass"

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 export type PhotoThumbSize = 'xs' | 'sm' | 'md' | 'lg';
 export type PhotoThumbAccent = 'indigo' | 'blue';
@@ -56,13 +57,18 @@ const ACCENT_BADGE_CLASSES: Record<PhotoThumbAccent, string> = {
 @Component({
   selector: 'app-item-photo-thumb',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SvgIconDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
       [class]="containerClass"
       [title]="hintText"
+      [attr.aria-label]="hintText"
+      role="button"
+      tabindex="0"
       (click)="onClick($event)"
+      (keydown.enter)="onClick($any($event))"
+      (keydown.space)="onClick($any($event))"
     >
       <img
         *ngIf="thumbUrl"
@@ -75,7 +81,7 @@ const ACCENT_BADGE_CLASSES: Record<PhotoThumbAccent, string> = {
         *ngIf="!thumbUrl"
         [class]="placeholderClass"
       >
-        <span class="leading-none" [class]="iconSizeClass">📷</span>
+        <svg class="shrink-0" [ngClass]="size === 'xs' ? 'w-3 h-3' : 'w-3.5 h-3.5'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="camera"></svg>
         <span *ngIf="size !== 'xs'" class="text-[8px] font-bold mt-0.5 leading-none">+</span>
       </div>
       <span *ngIf="photoCount" [class]="badgeClass">{{ photoCount }}</span>
@@ -102,7 +108,7 @@ export class ItemPhotoThumbComponent {
       ? 'border-indigo-200 bg-white'
       : 'border-slate-200 bg-slate-100';
     return [
-      'relative overflow-hidden cursor-pointer border flex items-center justify-center',
+      'relative overflow-hidden cursor-pointer border flex items-center justify-center tap-target',
       'shrink-0 transition-all active:scale-95 group',
       frame,
       SIZE_CLASSES[this.size],
