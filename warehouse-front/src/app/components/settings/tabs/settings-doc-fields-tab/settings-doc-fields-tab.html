@@ -164,7 +164,7 @@
                       [class.shadow-md]="f.visible"
                       [class.bg-slate-100]="!f.visible"
                       [class.text-slate-400]="!f.visible"
-                      class="w-8 h-8 rounded-xl inline-flex items-center justify-center transition-all active:scale-90 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0"
+                      class="w-10 h-10 sm:w-8 sm:h-8 rounded-xl inline-flex items-center justify-center transition-all active:scale-90"
                       [title]="f.visible ? 'فیلد در کارتابل مالی نمایش داده می‌شود' : 'فیلد مخفی است'"
                       [attr.aria-label]="f.visible ? 'فیلد در کارتابل مالی نمایش داده می‌شود' : 'فیلد مخفی است'">
                       <svg *ngIf="f.visible" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
@@ -185,7 +185,7 @@
                       [class.text-slate-400]="!f.editable"
                       [class.opacity-40]="!f.visible"
                       [class.cursor-not-allowed]="!f.visible"
-                      class="w-8 h-8 rounded-xl inline-flex items-center justify-center transition-all active:scale-90 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0"
+                      class="w-10 h-10 sm:w-8 sm:h-8 rounded-xl inline-flex items-center justify-center transition-all active:scale-90"
                       [title]="!f.visible ? 'فیلد مخفی قابل ویرایش نیست' : (f.editable ? 'کارشناس مالی می‌تواند این فیلد را ویرایش کند' : 'فیلد فقط خواندنی است')"
                       [attr.aria-label]="!f.visible ? 'فیلد مخفی قابل ویرایش نیست' : (f.editable ? 'کارشناس مالی می‌تواند این فیلد را ویرایش کند' : 'فیلد فقط خواندنی است')">
                       <svg *ngIf="f.editable" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-edit"></svg>
