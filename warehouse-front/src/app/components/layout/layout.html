@@ -257,7 +257,7 @@
     <header class="bg-white border-b border-slate-200 px-2 sm:px-4 py-2 sm:py-4 h-[64px] sm:h-[70px] flex items-center justify-between shadow-sm relative z-[45] transition-all" [style.borderTop]="store.isWarehouseContext() ? '4px solid ' + (currentWarehouse?.color || '#4f46e5') : ''">
       
       <!-- Right Side (RTL Start): Mobile Toggle, User, Notifications, Progress -->
-      <div class="flex items-center gap-1 sm:gap-3 flex-1 justify-start min-w-0 shrink-0">
+      <div class="flex items-center gap-0.5 sm:gap-3 flex-1 justify-start min-w-0 shrink-0">
         <button (click)="openSidebar()" class="md:hidden p-2 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-600 shrink-0 cursor-pointer tap-target" title="نمایش منو" aria-label="نمایش منو">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="menu"></svg>
         </button>

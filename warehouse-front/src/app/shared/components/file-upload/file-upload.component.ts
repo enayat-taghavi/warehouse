@@ -62,7 +62,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           <button
             type="button"
             (click)="removeFile($event)"
-            class="p-1.5 min-w-[36px] min-h-[36px] rounded-xl hover:bg-rose-100 text-slate-400 hover:text-rose-500 transition-colors shrink-0 flex items-center justify-center tap-target"
+            class="p-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded-xl hover:bg-rose-100 text-slate-400 hover:text-rose-500 transition-colors shrink-0 flex items-center justify-center"
             title="حذف فایل"
             aria-label="حذف فایل"
           >

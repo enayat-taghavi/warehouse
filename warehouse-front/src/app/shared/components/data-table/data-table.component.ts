@@ -502,7 +502,7 @@ export interface PageEvent {
               [disabled]="currentPage === 1"
               title="صفحه قبل"
               aria-label="صفحه قبل"
-              class="min-w-[36px] min-h-[36px] p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center cursor-pointer"
+              class="min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center cursor-pointer"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-back"></svg>
             </button>
@@ -522,7 +522,7 @@ export interface PageEvent {
               [disabled]="currentPage === totalPages"
               title="صفحه بعد"
               aria-label="صفحه بعد"
-              class="min-w-[36px] min-h-[36px] p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center cursor-pointer"
+              class="min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center cursor-pointer"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-forward"></svg>
             </button>

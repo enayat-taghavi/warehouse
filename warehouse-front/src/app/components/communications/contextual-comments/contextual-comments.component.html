@@ -76,7 +76,7 @@
       <span class="font-bold">{{ replyToComment.author_details?.full_name }}</span>
       <span class="text-slate-500 text-[10px] truncate max-w-[150px]">«{{ replyToComment.text }}»</span>
     </div>
-    <button (click)="cancelReply()" class="text-blue-500 hover:text-blue-700 p-1 min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg tap-target" title="لغو پاسخ" aria-label="لغو پاسخ">
+    <button (click)="cancelReply()" class="text-blue-500 hover:text-blue-700 p-1 min-w-[40px] sm:min-w-[32px] min-h-[40px] sm:min-h-[32px] flex items-center justify-center rounded-lg" title="لغو پاسخ" aria-label="لغو پاسخ">
       <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
     </button>
   </div>
@@ -95,8 +95,7 @@
                 [class.bg-blue-50]="idx === selectedMentionIndex()"
                 [class.dark:bg-blue-950/60]="idx === selectedMentionIndex()"
                 class="w-full text-right px-3 py-2 min-h-[40px] text-xs flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors"
-                [title]="user.full_name"
-                [attr.aria-label]="user.full_name">
+                [title]="user.full_name">
           <span class="font-bold text-slate-700 dark:text-slate-200">{{ user.full_name }}</span>
           <span class="text-[10px] text-slate-400 font-mono">@{{ user.username }}</span>
         </button>

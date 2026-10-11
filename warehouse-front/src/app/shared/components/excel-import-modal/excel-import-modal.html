@@ -11,7 +11,7 @@
         پیش‌نمایش و اعتبارسنجی
       </span>
     </div>
-    <button class="close-btn tap-target" (click)="close()" title="بستن" aria-label="بستن" style="min-width: 36px; min-height: 36px; display: flex; items-center; justify-content: center;">
+    <button type="button" class="close-btn flex items-center justify-center min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px]" (click)="close()" title="بستن" aria-label="بستن">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
     </button>
   </div>
@@ -286,8 +286,6 @@
       class="btn btn-primary w-full sm:w-auto min-h-[44px] cursor-pointer"
       [disabled]="((previewResult.summary.valid_count ?? ((previewResult.summary.created || 0) + (previewResult.summary.updated || 0))) === 0) || isUploading"
       (click)="commitUpload()"
-      title="تایید و ثبت نهایی"
-      aria-label="تایید و ثبت نهایی"
       style="background: linear-gradient(135deg, #4f46e5, #059669); border: none;"
     >
       <span *ngIf="!isUploading">تایید و ثبت نهایی ({{ previewResult.summary.valid_count ?? ((previewResult.summary.created || 0) + (previewResult.summary.updated || 0)) }} رکورد)</span>

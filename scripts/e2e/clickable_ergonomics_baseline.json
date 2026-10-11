@@ -4,7 +4,7 @@
     "rule_1_unlabeled_icon_buttons": 176,
     "rule_2_tab_min_widths": 0,
     "rule_3_non_standard_actions": 255,
-    "rule_4_retired_icons": 120
+    "rule_4_retired_icons": 119
   },
   "violations": {
     "rule_1_unlabeled_icon_buttons": [
@@ -414,11 +414,6 @@
         "icon": "hero-search"
       },
       {
-        "file": "components/communications/chat-drawer/chat-drawer.component.html",
-        "line": 289,
-        "icon": "hero-paper-airplane"
-      },
-      {
         "file": "components/count-tracking/count-tracking.html",
         "line": 153,
         "icon": "trash"
@@ -462,6 +457,11 @@
         "file": "components/dashboard/dashboard.html",
         "line": 241,
         "icon": "hero-save"
+      },
+      {
+        "file": "components/dashboard/dashboard.html",
+        "line": 253,
+        "icon": "hero-chevron-left"
       }
     ]
   }

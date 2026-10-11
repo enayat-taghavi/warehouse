@@ -253,7 +253,6 @@ const IGNORED_COMPARE_KEYS = new Set([
           (click)="resolveAndSave()"
           [disabled]="isSodRestricted || isSaving"
           title="تایید و نهایی‌سازی ادغام"
-          aria-label="تایید و نهایی‌سازی ادغام"
           class="w-full sm:w-auto px-5 py-2.5 min-h-[44px] rounded-xl text-xs font-black text-white transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-95 tap-target"
           [ngClass]="isSodRestricted || isSaving 
             ? 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed opacity-60' 

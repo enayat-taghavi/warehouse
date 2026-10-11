@@ -13,7 +13,7 @@ import { CommonModule } from '@angular/common';
       [attr.aria-label]="label || 'سوئیچ تغییر وضعیت'"
       [title]="title || label || 'سوئیچ تغییر وضعیت'"
       (click)="toggle($event)"
-      class="toggle-switch-btn tap-target"
+      class="toggle-switch-btn"
       [class.checked]="checked">
       <span class="toggle-slider"></span>
     </button>
@@ -29,6 +29,12 @@ import { CommonModule } from '@angular/common';
       border: none;
       outline: none;
       cursor: pointer;
+    }
+    /* سطح لمسی ۴۸×۴۰ بدون تغییر ظاهر کلید؛ .tap-target ارتفاع خود کلید را ۴۰px می‌کرد */
+    .toggle-switch-btn::after {
+      content: "";
+      position: absolute;
+      inset: -8px -2px;
     }
     .toggle-slider {
       position: absolute;

@@ -46,7 +46,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
               <h2 class="text-sm font-black text-slate-800">{{ title }}</h2>
               <button
                 (click)="close()"
-                class="p-2 min-w-[36px] min-h-[36px] rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center cursor-pointer tap-target"
+                class="p-2 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center cursor-pointer"
                 title="بستن"
                 aria-label="بستن"
               >

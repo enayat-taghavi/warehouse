@@ -6,7 +6,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" appIcon="hero-exclamation-solid"></svg>
         <h3 class="text-base font-bold text-slate-800">{{ title || 'حذف موجودیت' }}</h3>
       </div>
-      <button (click)="onCancel()" class="text-slate-400 hover:text-slate-600 p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors cursor-pointer tap-target" title="بستن پنجره" aria-label="بستن پنجره">
+      <button (click)="onCancel()" class="text-slate-400 hover:text-slate-600 p-2 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors cursor-pointer" title="بستن پنجره" aria-label="بستن پنجره">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
       </button>
     </div>
@@ -64,7 +64,7 @@
                 [class.opacity-50]="!isHardDeleteEnabled"
                 [class.cursor-not-allowed]="!isHardDeleteEnabled"
                 title="حذف قطعی و غیرقابل بازگشت"
-                aria-label="حذف قطعی و غیرقابل بازگشت"
+                [attr.aria-label]="countdown > 0 && !isSubmitting ? 'حذف برای همیشه (' + countdown + ' ثانیه)' : null"
                 class="w-full sm:w-auto px-6 py-2.5 min-h-[44px] text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors flex items-center justify-center min-w-[140px] gap-2 shadow-sm cursor-pointer tap-target">
           <svg *ngIf="!isSubmitting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
           <span *ngIf="isSubmitting" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>

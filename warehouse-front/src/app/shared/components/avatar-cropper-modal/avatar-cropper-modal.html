@@ -14,7 +14,7 @@
         <span class="header-subtitle">برش و بهینه‌سازی استاندارد تصویر پرسنلی</span>
       </div>
     </div>
-    <button class="close-btn tap-target" (click)="close()" title="بستن" aria-label="بستن" style="min-width: 36px; min-height: 36px; display: flex; items-center; justify-content: center;">
+    <button type="button" class="close-btn min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px]" (click)="close()" title="بستن" aria-label="بستن">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
     </button>
   </div>
@@ -30,7 +30,7 @@
         </button>
         <input #fileInput type="file" accept="image/png,image/jpeg,image/webp,image/gif" (change)="onFileSelected($event)" style="display: none" />
 
-        <button *ngIf="cameraAvailable" type="button" class="tool-btn camera min-h-[40px] tap-target cursor-pointer" (click)="startCamera()" title="ثبت با دوربین یا وب‌کم" aria-label="ثبت با دوربین یا وب‌کم">
+        <button *ngIf="cameraAvailable" type="button" class="tool-btn camera min-h-[40px] tap-target cursor-pointer" (click)="startCamera()" title="ثبت با دوربین / وب‌کم">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="camera"></svg>
           <span>ثبت با دوربین / وب‌کم</span>
         </button>
@@ -53,7 +53,7 @@
 
         <div class="camera-controls">
           <button type="button" class="cam-btn cancel min-h-[44px] cursor-pointer" (click)="cancelCamera()" title="انصراف" aria-label="انصراف">انصراف</button>
-          <button type="button" class="cam-btn snap min-h-[44px] cursor-pointer" (click)="captureFromCamera()" [disabled]="!isCameraReady" title="ثبت عکس" aria-label="ثبت عکس">
+          <button type="button" class="cam-btn snap min-h-[44px] cursor-pointer" (click)="captureFromCamera()" [disabled]="!isCameraReady" title="ثبت عکس">
             <div class="shutter-circle"></div>
             <span>{{ isCameraReady ? 'ثبت عکس' : 'در حال آماده‌سازی...' }}</span>
           </button>
@@ -131,8 +131,6 @@
         class="btn btn-primary min-h-[44px] w-full sm:w-auto cursor-pointer"
         [disabled]="!imageLoaded || isSaving"
         (click)="saveCroppedImage()"
-        title="ذخیره و اعمال تصویر"
-        aria-label="ذخیره و اعمال تصویر"
       >
         <span *ngIf="!isSaving">ذخیره و اعمال تصویر</span>
         <span *ngIf="isSaving" class="btn-loading-content">

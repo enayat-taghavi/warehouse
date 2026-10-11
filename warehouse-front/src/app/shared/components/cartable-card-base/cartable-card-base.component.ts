@@ -37,6 +37,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
               [ngClass]="isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-slate-50 hover:border-slate-400'"
               title="انتخاب کارت"
               aria-label="انتخاب کارت"
+              [attr.aria-pressed]="isSelected"
             >
               <svg *ngIf="isSelected" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
             </button>

@@ -78,7 +78,7 @@ export class ToastService {
 
           <button
             type="button"
-            class="shrink-0 opacity-60 hover:opacity-100 hover:bg-white/10 p-1 rounded-lg transition-all min-w-[32px] min-h-[32px] flex items-center justify-center tap-target"
+            class="shrink-0 opacity-60 hover:opacity-100 hover:bg-white/10 p-1 rounded-lg transition-all min-w-[40px] sm:min-w-[32px] min-h-[40px] sm:min-h-[32px] flex items-center justify-center"
             (click)="dismissToast($event, toast.id)"
             aria-label="بستن پیام"
             title="بستن پیام"

@@ -68,7 +68,7 @@ const ACCENT_BADGE_CLASSES: Record<PhotoThumbAccent, string> = {
       tabindex="0"
       (click)="onClick($event)"
       (keydown.enter)="onClick($any($event))"
-      (keydown.space)="onClick($any($event))"
+      (keydown.space)="$event.preventDefault(); onClick($any($event))"
     >
       <img
         *ngIf="thumbUrl"

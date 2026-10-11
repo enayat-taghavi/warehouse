@@ -15,7 +15,7 @@
     <!-- Title or Back Button -->
     <div class="flex items-center gap-2">
       <button *ngIf="activeTab() === 'chat'" (click)="backToList()" class="p-2 w-10 h-10 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors flex items-center justify-center cursor-pointer tap-target" title="بازگشت به فهرست گفتگوها" aria-label="بازگشت به فهرست گفتگوها">
-        <svg class="w-5 h-5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="action-back"></svg>
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-back"></svg>
       </button>
 
       <div *ngIf="activeTab() === 'chat' && activeConv()" class="flex items-center gap-2.5">
@@ -286,7 +286,7 @@
               title="ارسال پیام"
               aria-label="ارسال پیام"
               class="min-w-[44px] min-h-[44px] p-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl shadow-sm transition-all flex items-center justify-center cursor-pointer tap-target">
-        <svg class="w-5 h-5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-airplane"></svg>
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-send"></svg>
       </button>
     </div>
   </div>

@@ -176,7 +176,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
               class="px-2.5 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all backdrop-blur-md border shadow-md flex items-center gap-1 min-h-[36px]"
               [ngClass]="hasLocalOverride ? 'bg-indigo-600/90 text-white border-indigo-400 shadow-indigo-500/30' : 'bg-white/20 text-white/95 border-white/20 hover:bg-white/30'"
               title="تنظیم کیفیت اسکنر"
-              aria-label="تنظیم کیفیت اسکنر"
+              [attr.aria-label]="'تنظیم کیفیت اسکنر: ' + activePresetBadge"
             >
               <span>{{ activePresetBadge }}</span>
               <svg class="w-3 h-3 transition-transform" [ngClass]="showQualityMenu ? 'rotate-180' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-down-path"></svg>
@@ -348,7 +348,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
         <button
           type="button"
           (click)="adaptiveNotification = null"
-          class="text-white/60 hover:text-white p-1 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg tap-target"
+          class="text-white/60 hover:text-white p-1 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center rounded-lg"
           title="بستن پیام"
           aria-label="بستن پیام"
         >

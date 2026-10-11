@@ -161,7 +161,6 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
             type="button"
             (click)="toggleSelectEntireOrganization()"
             title="انتخاب یا لغو انتخاب کل سازمان"
-            aria-label="انتخاب یا لغو انتخاب کل سازمان"
             class="px-3 py-2 min-h-[40px] rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors cursor-pointer border border-indigo-200 flex items-center gap-1.5 tap-target"
           >
             <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="zap"></svg>
@@ -183,8 +182,6 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
             type="button"
             (click)="confirm()"
             [disabled]="totalSelectedCount() === 0"
-            title="شروع به‌روزرسانی"
-            aria-label="شروع به‌روزرسانی"
             class="w-full sm:w-auto px-5 py-2.5 min-h-[44px] rounded-xl text-xs font-bold text-white transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer tap-target"
             [ngClass]="totalSelectedCount() === 0 ? 'bg-slate-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'"
           >

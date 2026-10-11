@@ -40,7 +40,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
       <button
         type="button"
         (click)="togglePopover($event)"
-        class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border text-[11px] font-bold transition-all shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/20 active:scale-95 whitespace-nowrap min-h-[36px]"
+        class="relative inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border text-[11px] font-bold transition-all shadow-xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 active:scale-95 whitespace-nowrap tap-target sm:min-h-[36px]"
         [ngClass]="pillClasses"
         [title]="tooltipText"
       >
@@ -57,7 +57,8 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
         <ng-container *ngIf="isSyncing">
           <svg class="animate-spin text-sky-600" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="spinner"></svg>
           <span class="text-sky-800 font-extrabold hidden sm:inline">در حال ارسال ({{ pendingCount }})</span>
-          <span class="text-sky-800 text-[10px] sm:hidden font-mono font-black">({{ pendingCount }})</span>
+          <!-- موبایل: شمارنده در حباب گوشه تا قرص ثابت ۴۰×۴۰ بماند و سربرگ ۳۶۰px نشکند -->
+          <span class="sm:hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-sky-700 text-white text-[10px] font-mono font-black leading-none flex items-center justify-center border-2 border-white">{{ pendingCount }}</span>
         </ng-container>
 
         <!-- 3. Offline or Pending in queue -->
@@ -65,18 +66,23 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [ngClass]="networkState === 'online' ? 'text-amber-600' : 'text-rose-600'" appIcon="cloud-off"></svg>
           <span *ngIf="networkState !== 'online' && pendingCount === 0" class="text-rose-800 font-extrabold hidden sm:inline">آفلاین</span>
           <span *ngIf="pendingCount > 0" class="text-amber-800 font-extrabold hidden sm:inline">صف ارسال ({{ pendingCount }})</span>
-          <span *ngIf="pendingCount > 0" class="text-amber-800 text-[10px] sm:hidden font-mono font-black">({{ pendingCount }})</span>
+          <span *ngIf="pendingCount > 0" class="sm:hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-700 text-white text-[10px] font-mono font-black leading-none flex items-center justify-center border-2 border-white">{{ pendingCount }}</span>
         </ng-container>
 
         <!-- 4. ادغام زنگوله/هشدار خطای همگام‌سازی (Integrated Sync Error Chip) -->
         <span
           *ngIf="errorCount > 0"
-          class="inline-flex items-center gap-1 mr-0.5 px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[9px] font-black shadow-xs animate-pulse"
+          class="hidden sm:inline-flex items-center gap-1 mr-0.5 px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[9px] font-black shadow-xs animate-pulse"
           title="{{ errorCount }} خطای ارسال نیازمند بررسی"
         >
           <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" appIcon="bell"></svg>
           <span>{{ errorCount }}</span>
         </span>
+        <span
+          *ngIf="errorCount > 0"
+          class="sm:hidden absolute -bottom-1 -left-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-mono font-black leading-none flex items-center justify-center border-2 border-white animate-pulse"
+          title="{{ errorCount }} خطای ارسال نیازمند بررسی"
+        >{{ errorCount }}</span>
       </button>
 
       <!-- Backdrop to close on click outside -->
@@ -97,8 +103,9 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           <button
             type="button"
             (click)="closePopover()"
-            class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200/50 transition-all cursor-pointer"
+            class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200/50 transition-all cursor-pointer tap-target sm:min-w-[28px] sm:min-h-[28px]"
             title="بستن"
+            aria-label="بستن"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
           </button>
