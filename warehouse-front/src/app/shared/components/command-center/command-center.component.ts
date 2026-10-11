@@ -45,8 +45,3 @@ export class CommandCenterComponent {
   readonly containerClasses = computed(() => ROW_CONTAINER_CLASSES[this.rowFrom()] ?? ROW_CONTAINER_CLASSES.md);
   readonly slotClasses = computed(() => ROW_SLOT_CLASSES[this.rowFrom()] ?? ROW_SLOT_CLASSES.md);
 }
-
-// سازگاری با JIT در محیط تست‌های بدون AOT (Vitest)
-(CommandCenterComponent as any).propMetadata = {
-  rowFrom: [{ ngMetadataName: 'Input', isSignal: true }],
-};
