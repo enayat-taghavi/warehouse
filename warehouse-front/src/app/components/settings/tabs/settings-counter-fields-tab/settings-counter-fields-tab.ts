@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { FieldPermissionConfig, CATEGORY_LABELS } from '../../../../core/models/field-config.model';
 import { SystemSettingsConfig } from '../../../../core/models/system-settings.model';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 
 @Component({
   selector: 'app-settings-counter-fields-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent],
   templateUrl: './settings-counter-fields-tab.html'
 })
 export class SettingsCounterFieldsTabComponent {

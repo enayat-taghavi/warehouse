@@ -13,15 +13,29 @@
 
             <!-- Quick Action Buttons -->
             <div class="flex flex-wrap items-center gap-2">
-              <button type="button" (click)="resetAllFieldsToDefault()" class="px-3 py-2 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1.5 border border-amber-200 shadow-sm" title="بازنشانی همه فیلدها به مقادیر اولیه کارخانه">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-ccw-lucide"></svg>
-                بازنشانی به پیش‌فرض‌ها
+              <button 
+                appAction="restore" 
+                tone="amber" 
+                size="sm" 
+                label="بازنشانی به پیش‌فرض‌ها" 
+                title="بازنشانی همه فیلدها به مقادیر اولیه کارخانه" 
+                (actionClick)="resetAllFieldsToDefault()">
               </button>
-              <button type="button" (click)="selectAllVisible(true)" class="px-2.5 py-2 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 rounded-xl text-[11px] font-bold transition-all">
-                نمایش همه
+              <button 
+                appAction="view" 
+                tone="slate" 
+                size="sm" 
+                label="نمایش همه" 
+                title="نمایش همه فیلدها" 
+                (actionClick)="selectAllVisible(true)">
               </button>
-              <button type="button" (click)="selectAllVisible(false)" class="px-2.5 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-700 rounded-xl text-[11px] font-bold transition-all">
-                مخفی‌سازی همه
+              <button 
+                appAction="hide" 
+                tone="slate" 
+                size="sm" 
+                label="مخفی‌سازی همه" 
+                title="مخفی‌سازی همه فیلدها" 
+                (actionClick)="selectAllVisible(false)">
               </button>
             </div>
           </div>
@@ -150,8 +164,9 @@
                       [class.shadow-md]="f.visible"
                       [class.bg-slate-100]="!f.visible"
                       [class.text-slate-400]="!f.visible"
-                      class="w-8 h-8 rounded-xl inline-flex items-center justify-center transition-all active:scale-90"
-                      [title]="f.visible ? 'فیلد در کارتابل انبارگردان نمایش داده می‌شود' : 'فیلد مخفی است'">
+                      class="w-8 h-8 rounded-xl inline-flex items-center justify-center transition-all active:scale-90 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0"
+                      [title]="f.visible ? 'فیلد در کارتابل انبارگردان نمایش داده می‌شود' : 'فیلد مخفی است'"
+                      [attr.aria-label]="f.visible ? 'فیلد در کارتابل انبارگردان نمایش داده می‌شود' : 'فیلد مخفی است'">
                       <svg *ngIf="f.visible" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
                       <svg *ngIf="!f.visible" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
                     </button>
@@ -170,9 +185,10 @@
                       [class.text-slate-400]="!f.editable"
                       [class.opacity-40]="!f.visible"
                       [class.cursor-not-allowed]="!f.visible"
-                      class="w-8 h-8 rounded-xl inline-flex items-center justify-center transition-all active:scale-90"
-                      [title]="!f.visible ? 'فیلد مخفی قابل ویرایش نیست' : (f.editable ? 'انبارگردان می‌تواند این فیلد را ویرایش کند' : 'فیلد فقط خواندنی است')">
-                      <svg *ngIf="f.editable" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="edit-3"></svg>
+                      class="w-8 h-8 rounded-xl inline-flex items-center justify-center transition-all active:scale-90 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0"
+                      [title]="!f.visible ? 'فیلد مخفی قابل ویرایش نیست' : (f.editable ? 'انبارگردان می‌تواند این فیلد را ویرایش کند' : 'فیلد فقط خواندنی است')"
+                      [attr.aria-label]="!f.visible ? 'فیلد مخفی قابل ویرایش نیست' : (f.editable ? 'انبارگردان می‌تواند این فیلد را ویرایش کند' : 'فیلد فقط خواندنی است')">
+                      <svg *ngIf="f.editable" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-edit"></svg>
                       <svg *ngIf="!f.editable" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock"></svg>
                     </button>
                   </td>
