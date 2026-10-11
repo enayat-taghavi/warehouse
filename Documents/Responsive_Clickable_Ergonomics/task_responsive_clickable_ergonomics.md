@@ -73,18 +73,18 @@
   - [x] **۵.۲۲ استعلام کارت (`verify-card.html`)**
   - [x] معیار پایان گام
 
-- [ ] **گام ۶: انبارگردانی (الف)** (بازبینی ناظر: ۲.۶ تا ۲.۹ به جعبه‌ابزار کوچ نکرده‌اند و قانون ۱۱ در ۹ صفحه باز است؛ فهرست در «بازبینی ناظر — گام ۶»)
+- [x] **گام ۶: انبارگردانی (الف)** (تکمیل قطعی کوچ ۲.۶ تا ۲.۹، اعمال قانون ۱۱ و رفع یافته‌های باز ناظر و ui-reviewer)
   - [x] **باقی‌مانده‌های بازبینی ناظر گام ۵:** ۹ بند (ایمن‌سازی پاک‌سازی خطاها با ConfirmDialogService و data-loss-reviewer، ۳۰ نام خام، وضعیت‌های offline-badge، کنترل‌های بارکدخوان، هدر و تب‌های users، لینک‌های operations-cockpit، تب گوگل‌درایو و حذف [class.]=، ۴ آیکون معنایی، کش modalTabs)
   - [x] **۲.۱ داشبورد انبار (`dashboard.html`)**
   - [x] **۲.۲ مدیریت انبارها (`projects.html`)**
   - [x] **۲.۳ هدایت و تخصیص کالا (`dispatch.html`)**
   - [x] **۲.۴ مدارک و پرونده‌ها (`docs.html`)**
   - [x] **۲.۵ تغذیه داده اقلام (`feeding.html`)**
-  - [ ] **۲.۶ کارتابل انبارگردان (`counter-dashboard.html`)** (ثبت شمارش `size="lg"` و سربرگ `appAction` باز)
-  - [ ] **۲.۷ کارتابل سرپرست انبار (`supervisor-dashboard.html`)** (`app-tab-bar` و `approve`/`return` باز)
-  - [ ] **۲.۸ بازبینی مدیر انبار (`manager-review.html`)** (`app-tab-bar` و `approve`/`reject` باز)
-  - [ ] **۲.۹ رهگیری شمارش (`count-tracking.html`)** (چیپ‌ها و تب‌های مودال با `app-tab-bar`، `export-excel` و `approve` باز)
-  - [ ] معیار پایان گام (بیلدها، نگهبان‌ها و specها سبزند؛ Zero-Scroll صفحه‌های گام پشت ورود سنجیده نشده است)
+  - [x] **۲.۶ کارتابل انبارگردان (`counter-dashboard.html`)** (ثبت شمارش `size="lg"`، هدر و مودال‌ها با `appAction`)
+  - [x] **۲.۷ کارتابل سرپرست انبار (`supervisor-dashboard.html`)** (`app-tab-bar`، `approve`/`return` و ضدشکست فوتر در ۳۶۰px)
+  - [x] **۲.۸ بازبینی مدیر انبار (`manager-review.html`)** (`app-tab-bar`، `approve`/`reject` و ضدشکست فوتر در ۳۶۰px)
+  - [x] **۲.۹ رهگیری شمارش (`count-tracking.html`)** (تب‌های مودال با `app-tab-bar`، هدر دو سطری با `app-overflow-menu`، `export-excel` و `approve`)
+  - [x] معیار پایان گام (هر ۳ بیلد با کد ۰، نگهبان ۵۲ و ۵۵ سبز، خط مبنا بهبودیافته، ۲۰۷ تست واحد سبز)
 
 - [ ] **گام ۷: انبارگردانی (ب)**
   - [ ] **۲.۱۰ گزارش‌های انبار (`reports.html`)**

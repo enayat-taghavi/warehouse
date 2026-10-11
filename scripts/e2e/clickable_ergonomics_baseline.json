@@ -1,10 +1,10 @@
 {
   "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
   "counters": {
-    "rule_1_unlabeled_icon_buttons": 160,
+    "rule_1_unlabeled_icon_buttons": 151,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 240,
-    "rule_4_retired_icons": 95,
+    "rule_3_non_standard_actions": 211,
+    "rule_4_retired_icons": 90,
     "rule_5_neutralized_tap_targets": 0
   },
   "violations": {
@@ -66,40 +66,12 @@
         "line": 1824
       },
       {
-        "file": "components/count-tracking/count-tracking.html",
-        "line": 318
-      },
-      {
-        "file": "components/count-tracking/count-tracking.html",
-        "line": 402
+        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "line": 234
       },
       {
         "file": "components/counter/counter-dashboard/counter-dashboard.html",
-        "line": 119
-      },
-      {
-        "file": "components/counter/counter-dashboard/counter-dashboard.html",
-        "line": 241
-      },
-      {
-        "file": "components/counter/counter-dashboard/counter-dashboard.html",
-        "line": 544
-      },
-      {
-        "file": "components/counter/counter-dashboard/counter-dashboard.html",
-        "line": 651
-      },
-      {
-        "file": "components/counter/counter-dashboard/counter-dashboard.html",
-        "line": 900
-      },
-      {
-        "file": "components/counter/counter-dashboard/counter-dashboard.html",
-        "line": 964
-      },
-      {
-        "file": "components/counter/counter-dashboard/counter-dashboard.html",
-        "line": 1038
+        "line": 538
       },
       {
         "file": "components/customs/customs.html",
@@ -128,6 +100,34 @@
       {
         "file": "components/dispatch/dispatch.html",
         "line": 465
+      },
+      {
+        "file": "components/dispatch/dispatch.html",
+        "line": 517
+      },
+      {
+        "file": "components/dispatch/dispatch.html",
+        "line": 541
+      },
+      {
+        "file": "components/dispatch/dispatch.html",
+        "line": 583
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 44
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 175
+      },
+      {
+        "file": "components/dynamic-fields/dynamic-fields.html",
+        "line": 141
+      },
+      {
+        "file": "components/finance/accountant/accountant-diskettes/accountant-diskettes.html",
+        "line": 139
       }
     ],
     "rule_2_tab_min_widths": [],
@@ -145,34 +145,10 @@
         "icon": null
       },
       {
-        "file": "components/count-tracking/count-tracking.html",
-        "line": 318,
-        "method": "closeExportModal",
-        "icon": "x"
-      },
-      {
-        "file": "components/count-tracking/count-tracking.html",
-        "line": 408,
-        "method": "closeExportModal",
-        "icon": null
-      },
-      {
         "file": "components/counter/counter-dashboard/counter-dashboard.html",
-        "line": 964,
+        "line": 973,
         "method": "closeExportModal",
-        "icon": "x"
-      },
-      {
-        "file": "components/counter/counter-dashboard/counter-dashboard.html",
-        "line": 1037,
-        "method": "closeExportModal",
-        "icon": null
-      },
-      {
-        "file": "components/counter/counter-dashboard/counter-dashboard.html",
-        "line": 1038,
-        "method": "executeExport",
-        "icon": "spinner"
+        "icon": "action-close"
       },
       {
         "file": "components/customs/customs.html",
@@ -194,6 +170,12 @@
       },
       {
         "file": "components/dispatch/dispatch.html",
+        "line": 186,
+        "method": "openExportModal",
+        "icon": "action-download"
+      },
+      {
+        "file": "components/dispatch/dispatch.html",
         "line": 446,
         "method": "openDeleteModal",
         "icon": "trash-lucide"
@@ -202,7 +184,7 @@
         "file": "components/dispatch/dispatch.html",
         "line": 465,
         "method": "closeExportModal",
-        "icon": "x"
+        "icon": "action-close"
       },
       {
         "file": "components/dispatch/dispatch.html",
@@ -239,12 +221,6 @@
         "line": 452,
         "method": "closeDeleteModal",
         "icon": null
-      },
-      {
-        "file": "components/docs/docs.html",
-        "line": 456,
-        "method": "confirmDelete",
-        "icon": "trash"
       },
       {
         "file": "components/docs/docs.html",
@@ -310,6 +286,30 @@
         "file": "components/finance/accountant/accountant-invoices/accountant-invoices.html",
         "line": 167,
         "method": "rejectDocument",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
+        "line": 182,
+        "method": "approvePersonnelFinance",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
+        "line": 188,
+        "method": "openRejectModal",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
+        "line": 195,
+        "method": "openRejectModal",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
+        "line": 277,
+        "method": "approveVehicleFinance",
         "icon": null
       }
     ],
@@ -410,16 +410,6 @@
         "icon": "spinner-arc"
       },
       {
-        "file": "components/count-tracking/count-tracking.html",
-        "line": 405,
-        "icon": "loader-6-rays"
-      },
-      {
-        "file": "components/counter/counter-dashboard/counter-dashboard.html",
-        "line": 746,
-        "icon": "edit-3"
-      },
-      {
         "file": "components/customs/customs.html",
         "line": 1103,
         "icon": "scan-square"
@@ -445,16 +435,6 @@
         "icon": "loader-arc"
       },
       {
-        "file": "components/docs/docs.html",
-        "line": 273,
-        "icon": "trash"
-      },
-      {
-        "file": "components/docs/docs.html",
-        "line": 461,
-        "icon": "trash"
-      },
-      {
         "file": "components/dynamic-fields/dynamic-fields.html",
         "line": 13,
         "icon": "copy-alt"
@@ -463,6 +443,26 @@
         "file": "components/dynamic-fields/dynamic-fields.html",
         "line": 90,
         "icon": "trash-2-lucide"
+      },
+      {
+        "file": "components/dynamic-fields/dynamic-fields.html",
+        "line": 159,
+        "icon": "loader-arc"
+      },
+      {
+        "file": "components/field/field.html",
+        "line": 78,
+        "icon": "eye-slash"
+      },
+      {
+        "file": "components/field/field.html",
+        "line": 82,
+        "icon": "eye-slash"
+      },
+      {
+        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
+        "line": 272,
+        "icon": "edit-2"
       }
     ],
     "rule_5_neutralized_tap_targets": []
