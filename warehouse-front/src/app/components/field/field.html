@@ -158,19 +158,28 @@
 
         <!-- Action Buttons -->
         <div class="flex gap-2 pt-2">
-          <button 
+          <button
+            type="button"
+            appAction="confirm"
+            size="lg"
+            display="label"
+            tone="emerald"
+            [label]="'ارسال به سرپرست'"
+            [busy]="isSubmitting"
             [disabled]="isSubmitting"
-            (click)="submitCount()" 
-            class="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-xs py-3.5 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 hover:shadow-emerald-200 disabled:opacity-50">
-            <span *ngIf="isSubmitting" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-            <span>ارسال به سرپرست</span>
-          </button>
-          <button 
+            (click)="submitCount()"
+            class="flex-1 justify-center shadow-lg hover:shadow-emerald-200"
+          ></button>
+          <button
+            type="button"
+            appAction="back"
+            size="lg"
+            display="label"
+            tone="slate"
+            [label]="'بازگشت'"
             [disabled]="isSubmitting"
-            (click)="cancelCount()" 
-            class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-4 py-3.5 rounded-xl transition-all text-xs">
-            بازگشت
-          </button>
+            (click)="cancelCount()"
+          ></button>
         </div>
 
       </div>

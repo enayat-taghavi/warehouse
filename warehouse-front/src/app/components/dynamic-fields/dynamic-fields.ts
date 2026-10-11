@@ -8,10 +8,11 @@ import { DynamicFieldApiService } from '../../core/api';
 import { DynamicFieldDefinition } from '../../core/models';
 import { AuthStore } from '../../core/stores/auth.store';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
 
 @Component({
   selector: 'app-dynamic-fields',
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent],
   templateUrl: './dynamic-fields.html'
 })
 export class DynamicFields implements OnInit {

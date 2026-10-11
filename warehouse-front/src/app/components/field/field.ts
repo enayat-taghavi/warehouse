@@ -13,10 +13,11 @@ import {
   mergeFieldPermissions 
 } from '../../core/models/field-config.model';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
 
 @Component({
   selector: 'app-field',
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent],
   templateUrl: './field.html',
   styleUrl: './field.css'
 })
