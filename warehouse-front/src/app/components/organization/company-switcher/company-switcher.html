@@ -50,6 +50,7 @@
         *ngFor="let company of companyService.availableCompanies$ | async"
         type="button"
         (click)="selectCompany(company)"
+        [title]="company.name"
         [ngClass]="companyService.activeCompany?.id === company.id ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-700 hover:bg-slate-50'"
         class="w-full flex items-center justify-between px-3 py-2 min-h-[40px] text-xs transition-colors cursor-pointer text-right">
         <div class="flex items-center gap-2 min-w-0">
@@ -58,7 +59,7 @@
           </span>
           <span class="truncate">{{ company.name }}</span>
         </div>
-        <span *ngIf="companyService.activeCompany?.id === company.id" class="text-indigo-600 text-xs">✔</span>
+        <span *ngIf="companyService.activeCompany?.id === company.id" class="text-indigo-600 shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" appIcon="action-confirm"></svg></span>
       </button>
 
       <button 
@@ -68,10 +69,10 @@
         [ngClass]="!companyService.activeCompany ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-700 hover:bg-slate-50'"
         class="w-full flex items-center justify-between px-3 py-2 min-h-[40px] text-xs transition-colors cursor-pointer text-right border-t border-slate-100">
         <div class="flex items-center gap-2">
-          <span class="w-6 h-6 rounded-md bg-slate-100 text-slate-700 text-xs flex items-center justify-center shrink-0">🌍</span>
+          <span class="w-6 h-6 rounded-md bg-slate-100 text-slate-700 text-xs flex items-center justify-center shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" appIcon="status-all"></svg></span>
           <span>همه شرکت‌ها (بدون فیلتر)</span>
         </div>
-        <span *ngIf="!companyService.activeCompany" class="text-indigo-600 text-xs">✔</span>
+        <span *ngIf="!companyService.activeCompany" class="text-indigo-600 shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" appIcon="action-confirm"></svg></span>
       </button>
     </div>
 

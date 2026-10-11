@@ -103,15 +103,20 @@ describe('TabBarComponent (app-tab-bar)', () => {
     }
   });
 
-  it('در حالت mobile="icon" باید title برابر label و aria-label برابر label به‌همراه شمارنده دیده‌شده باشد', () => {
+  it('در حالت mobile="icon" نام دسترس‌پذیر از عنوان کامل sr-only و شمارنده بیاید، نه aria-label؛ title برابر label', () => {
     host.mobileMode.set('icon');
     fixture.detectChanges();
 
     const tabs = fixture.nativeElement.querySelectorAll('[role="tab"]');
-    expect(tabs[0].getAttribute('aria-label')).toBe('نیازمند بررسی 12');
+    for (let i = 0; i < tabs.length; i++) {
+      expect(tabs[i].getAttribute('aria-label')).toBeNull();
+      const srLabel = tabs[i].querySelector('.sr-only.sm\\:not-sr-only');
+      expect(srLabel?.textContent.trim()).toBe(host.tabs[i].label);
+      // با fullLabelFrom="sm" عنوان کوتاهی رندر نمی‌شود
+      expect(tabs[i].querySelectorAll('span:not(.tabular-nums)').length).toBe(1);
+    }
     expect(tabs[0].getAttribute('title')).toBe('نیازمند بررسی');
-    expect(tabs[1].getAttribute('aria-label')).toBe('تایید شده 5');
-    expect(tabs[2].getAttribute('aria-label')).toBe('رد شده');
+    expect(tabs[0].querySelector('.tabular-nums').textContent.trim()).toBe('12');
   });
 
   it('تب‌ها نباید id ثابت بگیرند (چند نوار تب در یک صفحه id تکراری نسازند)', () => {
@@ -228,21 +233,23 @@ describe('TabBarComponent (app-tab-bar)', () => {
     expect(mobileSpan).not.toBeNull();
   });
 
-  it('در حالت mobile="icon" با fullLabelFrom="xl" باید کلاس hidden xl:inline اعمال شده و aria-label و title درست بمانند', () => {
+  it('در حالت mobile="icon" با fullLabelFrom="xl" از sm تا xl عنوان کوتاه دیده شود، نه فقط آیکون', () => {
     host.mobileMode.set('icon');
     host.fullLabelFrom.set('xl');
     fixture.detectChanges();
 
-    const tabs = fixture.nativeElement.querySelectorAll('[role="tab"]');
-    const firstTab = tabs[0];
+    const firstTab = fixture.nativeElement.querySelectorAll('[role="tab"]')[0];
 
-    // در حالت icon فقط اسپن برچسب دسکتاپ با کلاس xl وجود دارد و اسپن برچسب کوتاه وجود ندارد
-    const desktopSpan = firstTab.querySelector('.hidden.xl\\:inline');
-    expect(desktopSpan).not.toBeNull();
-    expect(firstTab.querySelector('.xl\\:hidden')).toBeNull();
+    // زیر sm: عنوان کامل sr-only؛ sm تا xl: پنهان؛ از xl: دیده‌شده
+    const fullSpan = firstTab.querySelector('.sr-only.sm\\:hidden.xl\\:not-sr-only.xl\\:inline');
+    expect(fullSpan?.textContent.trim()).toBe('نیازمند بررسی');
 
-    // نام دسترس‌پذیر و title
-    expect(firstTab.getAttribute('aria-label')).toBe('نیازمند بررسی 12');
+    // زیر sm: پنهان؛ sm تا xl: عنوان کوتاه دیده‌شده (در نام دسترس‌پذیر هم هست)
+    const shortSpan = firstTab.querySelector('.hidden.sm\\:inline.xl\\:hidden');
+    expect(shortSpan?.textContent.trim()).toBe('بررسی');
+    expect(shortSpan?.getAttribute('aria-hidden')).toBeNull();
+
+    expect(firstTab.getAttribute('aria-label')).toBeNull();
     expect(firstTab.getAttribute('title')).toBe('نیازمند بررسی');
   });
 });

@@ -17,7 +17,7 @@ import { ActiveCompanyService } from '../../../core/services/active-company.serv
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 import { filter, Subscription } from 'rxjs';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
-import { PLATFORM_ENTITY_ICONS } from '../../../shared/icons/semantic-icons';
+import { ACTION_ICONS, PLATFORM_ENTITY_ICONS } from '../../../shared/icons/semantic-icons';
 
 interface NavItem {
   id: string;
@@ -84,7 +84,7 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
       id: 'cockpit',
       label: 'اتاق فرماندهی کل',
       route: '/app/operations/cockpit',
-      icon: '🚀',
+      icon: PLATFORM_ENTITY_ICONS.dashboard,
       badge: 'زنده',
       badgeClass: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
     },
@@ -92,13 +92,13 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
       id: 'snapshots',
       label: 'پشتیبان‌گیری و اسنپ‌شات‌های سرور',
       route: '/app/operations/snapshots',
-      icon: '💾'
+      icon: PLATFORM_ENTITY_ICONS.backup
     },
     {
       id: 'users',
       label: 'مدیریت کاربران و نقش‌ها',
       route: '/app/operations/users',
-      icon: '👤'
+      icon: PLATFORM_ENTITY_ICONS.users
     },
     {
       id: 'companies',
@@ -110,25 +110,25 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
       id: 'health',
       label: 'ماتریس سلامت و تست همروندی',
       route: '/app/operations/health',
-      icon: '🩺'
+      icon: PLATFORM_ENTITY_ICONS.health
     },
     {
       id: 'audit',
       label: 'ممیزی امنیتی و ثبت رویدادها',
       route: '/app/operations/audit',
-      icon: '🛡️'
+      icon: PLATFORM_ENTITY_ICONS.audit
     },
     {
       id: 'sync-monitor',
       label: 'مانیتورینگ کلاینت‌ها و تداخل',
       route: '/app/operations/sync-monitor',
-      icon: '🔄'
+      icon: ACTION_ICONS.sync
     },
     {
       id: 'rbac-governance',
       label: 'گاوصندوق و حاکمیت مجوزهای حساس',
       route: '/app/operations/rbac-governance',
-      icon: '🔐'
+      icon: PLATFORM_ENTITY_ICONS.permissions
     }
   ];
 

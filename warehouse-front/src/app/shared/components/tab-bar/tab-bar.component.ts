@@ -37,6 +37,23 @@ const SHORT_LABEL_CLASSES: Record<'sm' | 'md' | 'lg' | 'xl', string> = {
   xl: 'xl:hidden',
 };
 
+// حالت mobile="icon": زیر sm فقط آیکون دیده می‌شود و عنوان کامل sr-only نام دسترس‌پذیر را می‌سازد؛
+// از sm تا fullLabelFrom عنوان کوتاه دیده می‌شود (تب فقط‌آیکون در دسکتاپ و تبلت ممنوع است، قاعده ۲ و ۵).
+// not-sr-only فاصله‌گذاری را normal می‌کند؛ whitespace-nowrap هم‌نقطه آن را برمی‌گرداند تا عنوان نشکند.
+const ICON_MODE_FULL_LABEL_CLASSES: Record<'sm' | 'md' | 'lg' | 'xl', string> = {
+  sm: 'sr-only sm:not-sr-only sm:whitespace-nowrap',
+  md: 'sr-only sm:hidden md:not-sr-only md:inline md:whitespace-nowrap',
+  lg: 'sr-only sm:hidden lg:not-sr-only lg:inline lg:whitespace-nowrap',
+  xl: 'sr-only sm:hidden xl:not-sr-only xl:inline xl:whitespace-nowrap',
+};
+
+const ICON_MODE_SHORT_LABEL_CLASSES: Record<'sm' | 'md' | 'lg' | 'xl', string> = {
+  sm: 'hidden',
+  md: 'hidden sm:inline md:hidden',
+  lg: 'hidden sm:inline lg:hidden',
+  xl: 'hidden sm:inline xl:hidden',
+};
+
 export interface TabDef {
   /** شناسه یکتای تب */
   id: string;
@@ -73,7 +90,6 @@ export interface TabDef {
           role="tab"
           [attr.aria-selected]="tab.id === active() ? 'true' : 'false'"
           [attr.tabindex]="tab.id === focusableTabId() ? 0 : -1"
-          [attr.aria-label]="mobile() === 'icon' ? iconModeAriaLabel(tab) : null"
           [attr.title]="mobile() === 'icon' ? tab.label : null"
           (click)="selectTab(tab.id)"
           (keydown)="onKeydown($event, idx)"
@@ -98,7 +114,10 @@ export interface TabDef {
             <span [class]="fullLabelClass()">{{ tab.label }}</span>
             <span [class]="shortLabelClass()">{{ tab.shortLabel || tab.label }}</span>
           } @else {
-            <span [class]="fullLabelClass()">{{ tab.label }}</span>
+            <span [class]="iconModeFullLabelClass()">{{ tab.label }}</span>
+            @if (fullLabelFrom() !== 'sm') {
+              <span [class]="iconModeShortLabelClass()">{{ tab.shortLabel || tab.label }}</span>
+            }
           }
 
           @if (tab.count !== undefined && tab.count !== null) {
@@ -125,7 +144,10 @@ export class TabBarComponent {
   /** شناسه تب فعال */
   readonly active = input.required<string>();
 
-  /** رفتار در موبایل: عنوان کوتاه (پیش‌فرض) یا فقط‌آیکون */
+  /**
+   * رفتار زیر sm: عنوان کوتاه (پیش‌فرض) یا فقط‌آیکون. در حالت icon نام دسترس‌پذیر از عنوان کامل sr-only
+   * و شمارنده دیده‌شده ساخته می‌شود، پس aria-label لازم نیست و با متن دیده‌شده ناهماهنگ نمی‌شود (WCAG 2.5.3).
+   */
   readonly mobile = input<'short' | 'icon'>('short');
 
   /** نقطه شکست برای نمایش برچسب کامل (پیش‌فرض sm؛ در تبلت یا صفحه‌های با سایدبار md یا lg یا xl) */
@@ -133,6 +155,12 @@ export class TabBarComponent {
 
   readonly fullLabelClass = computed(() => FULL_LABEL_CLASSES[this.fullLabelFrom()] ?? FULL_LABEL_CLASSES.sm);
   readonly shortLabelClass = computed(() => SHORT_LABEL_CLASSES[this.fullLabelFrom()] ?? SHORT_LABEL_CLASSES.sm);
+  readonly iconModeFullLabelClass = computed(
+    () => ICON_MODE_FULL_LABEL_CLASSES[this.fullLabelFrom()] ?? ICON_MODE_FULL_LABEL_CLASSES.sm,
+  );
+  readonly iconModeShortLabelClass = computed(
+    () => ICON_MODE_SHORT_LABEL_CLASSES[this.fullLabelFrom()] ?? ICON_MODE_SHORT_LABEL_CLASSES.sm,
+  );
 
   /** تغییر تب فعال */
   readonly activeChange = output<string>();
@@ -150,11 +178,6 @@ export class TabBarComponent {
     const list = this.tabs();
     return list.some((t) => t.id === this.active()) ? this.active() : (list[0]?.id ?? null);
   });
-
-  /** در حالت فقط‌آیکون، شمارنده دیده‌شده هم در نام دسترس‌پذیر می‌آید (WCAG 2.5.3). */
-  iconModeAriaLabel(tab: TabDef): string {
-    return tab.count !== undefined && tab.count !== null ? `${tab.label} ${tab.count}` : tab.label;
-  }
 
   selectTab(id: string): void {
     if (id !== this.active()) {

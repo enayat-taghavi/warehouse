@@ -1,3 +1,4 @@
+import { PLATFORM_ENTITY_ICONS } from '../../shared/icons/semantic-icons';
 import { ACCOUNTING_ENTITY_ICONS } from './entity-icons';
 
 export interface NavItem {
@@ -42,17 +43,17 @@ export const ACCOUNTANT_NAV_ITEMS: NavItem[] = [
   { id: 'accountant-diskettes', label: 'دیسکت‌های بیمه و مالیات', icon: ACCOUNTING_ENTITY_ICONS.diskettes, permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
   { id: 'accountant-counterparties', label: 'طرف‌حساب‌های مالی', icon: ACCOUNTING_ENTITY_ICONS.counterparties, permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
   { id: 'profiles', label: 'بانک پرونده‌ها', icon: ACCOUNTING_ENTITY_ICONS.profilesArchive, permission: 'view_sys_personnel', module: 'accounting', isAccounting: true },
-  { id: 'base-settings', label: 'تنظیمات پایه حقوق', icon: 'settings', permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
+  { id: 'base-settings', label: 'تنظیمات پایه حقوق', icon: PLATFORM_ENTITY_ICONS.settings, permission: 'view_sys_payroll', module: 'accounting', isAccounting: true },
 ];
 
 export const MANAGER_NAV_ITEMS: NavItem[] = [
-  { id: 'manager-dashboard', label: 'داشبورد هوش مالی', icon: 'bar-chart-2', permission: 'can_act_as_company_manager', module: 'accounting', isAccounting: true },
+  { id: 'manager-dashboard', label: 'داشبورد مدیریتی', icon: PLATFORM_ENTITY_ICONS.dashboard, permission: 'can_act_as_company_manager', module: 'accounting', isAccounting: true },
   { id: 'manager-personnel', label: 'پرسنل', icon: ACCOUNTING_ENTITY_ICONS.personnel, permission: 'perm_approve_personnel_manager', module: 'accounting', isAccounting: true },
   { id: 'manager-fleet', label: 'ناوگان', icon: ACCOUNTING_ENTITY_ICONS.fleet, permission: 'perm_approve_fleet_manager', module: 'accounting', isAccounting: true },
   { id: 'manager-approvals', label: 'کارتابل تاییدات', icon: ACCOUNTING_ENTITY_ICONS.approvals, permission: 'perm_approve_personnel_manager', module: 'accounting', isAccounting: true },
   { id: 'manager-budget', label: 'کنترل بودجه', icon: ACCOUNTING_ENTITY_ICONS.budget, permission: 'can_act_as_company_manager', module: 'accounting', isAccounting: true },
-  { id: 'manager-reports', label: 'گزارش‌های مدیریتی', icon: 'bar-chart-2', permission: 'can_act_as_company_manager', module: 'accounting', isAccounting: true },
-  { id: 'base-settings', label: 'تنظیمات پایه حقوق', icon: 'settings', permission: 'can_act_as_company_manager', module: 'accounting', isAccounting: true },
+  { id: 'manager-reports', label: 'گزارش‌های مدیریتی', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'can_act_as_company_manager', module: 'accounting', isAccounting: true },
+  { id: 'base-settings', label: 'تنظیمات پایه حقوق', icon: PLATFORM_ENTITY_ICONS.settings, permission: 'can_act_as_company_manager', module: 'accounting', isAccounting: true },
 ];
 
 export const TREASURER_NAV_ITEMS: NavItem[] = [

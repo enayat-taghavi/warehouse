@@ -85,6 +85,7 @@ export const PLATFORM_ENTITY_ICONS = {
   'backup': 'cloud',
   'notifications': 'bell',
   'chat': 'message-square',
+  'permissions': 'key',
 } as const satisfies Record<string, IconName>;
 
 export type PlatformEntityIconKey = keyof typeof PLATFORM_ENTITY_ICONS;
