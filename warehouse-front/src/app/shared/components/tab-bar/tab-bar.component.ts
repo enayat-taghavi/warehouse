@@ -5,11 +5,8 @@ import {
   ViewChildren,
   QueryList,
   computed,
-  Input,
-  Output,
-  EventEmitter,
-  signal,
-  Signal,
+  input,
+  output,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
@@ -143,41 +140,20 @@ export interface TabDef {
   },
 })
 export class TabBarComponent {
-  private readonly _tabs = signal<TabDef[]>([]);
-  @Input()
-  set tabs(value: TabDef[] | undefined | null) {
-    this._tabs.set(value ?? []);
-  }
-  get tabs(): Signal<TabDef[]> {
-    return this._tabs;
-  }
+  /** آرایه تب‌ها */
+  readonly tabs = input.required<TabDef[]>();
 
-  private readonly _active = signal<string>('');
-  @Input()
-  set active(value: string | undefined | null) {
-    this._active.set(value ?? '');
-  }
-  get active(): Signal<string> {
-    return this._active;
-  }
+  /** شناسه تب فعال */
+  readonly active = input.required<string>();
 
-  private readonly _mobile = signal<'short' | 'icon'>('short');
-  @Input()
-  set mobile(value: 'short' | 'icon' | undefined | null) {
-    this._mobile.set(value ?? 'short');
-  }
-  get mobile(): Signal<'short' | 'icon'> {
-    return this._mobile;
-  }
+  /**
+   * رفتار زیر sm: عنوان کوتاه (پیش‌فرض) یا فقط‌آیکون. در حالت icon نام دسترس‌پذیر از عنوان کامل sr-only
+   * و شمارنده دیده‌شده ساخته می‌شود، پس aria-label لازم نیست و با متن دیده‌شده ناهماهنگ نمی‌شود (WCAG 2.5.3).
+   */
+  readonly mobile = input<'short' | 'icon'>('short');
 
-  private readonly _fullLabelFrom = signal<'sm' | 'md' | 'lg' | 'xl'>('sm');
-  @Input()
-  set fullLabelFrom(value: 'sm' | 'md' | 'lg' | 'xl' | undefined | null) {
-    this._fullLabelFrom.set(value ?? 'sm');
-  }
-  get fullLabelFrom(): Signal<'sm' | 'md' | 'lg' | 'xl'> {
-    return this._fullLabelFrom;
-  }
+  /** نقطه شکست برای نمایش برچسب کامل (پیش‌فرض sm؛ در تبلت یا صفحه‌های با سایدبار md یا lg یا xl) */
+  readonly fullLabelFrom = input<'sm' | 'md' | 'lg' | 'xl'>('sm');
 
   readonly fullLabelClass = computed(() => FULL_LABEL_CLASSES[this.fullLabelFrom()] ?? FULL_LABEL_CLASSES.sm);
   readonly shortLabelClass = computed(() => SHORT_LABEL_CLASSES[this.fullLabelFrom()] ?? SHORT_LABEL_CLASSES.sm);
@@ -189,7 +165,7 @@ export class TabBarComponent {
   );
 
   /** تغییر تب فعال */
-  @Output() readonly activeChange = new EventEmitter<string>();
+  readonly activeChange = output<string>();
 
   @ViewChildren('tabButton') private tabButtons!: QueryList<ElementRef<HTMLButtonElement>>;
 
@@ -202,7 +178,7 @@ export class TabBarComponent {
   /** تب قابل فوکوس با Tab؛ اگر active با هیچ تبی نخواند، تب اول تا نوار از صفحه‌کلید دور نماند. */
   readonly focusableTabId = computed<string | null>(() => {
     const list = this.tabs();
-    return list.some((t: TabDef) => t.id === this.active()) ? this.active() : (list[0]?.id ?? null);
+    return list.some((t) => t.id === this.active()) ? this.active() : (list[0]?.id ?? null);
   });
 
   selectTab(id: string): void {

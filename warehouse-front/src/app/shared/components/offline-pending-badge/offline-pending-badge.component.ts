@@ -1152,7 +1152,19 @@ export class OfflinePendingBadgeComponent implements OnInit, OnDestroy {
     return this.formatTime(this.lastSyncTime);
   }
 
+  /**
+   * نام دسترس‌پذیر قرص با همان متنی آغاز می‌شود که از sm به بالا دیده می‌شود (WCAG 2.5.3)؛
+   * زیر sm که متن پنهان است، توضیح کامل وضعیت هم در نام می‌ماند.
+   */
   get pillAriaLabel(): string {
-    return this.tooltipText;
+    return `${this.pillVisibleLabel}، ${this.tooltipText}`;
+  }
+
+  /** همان متن دیده‌شده قرص در sm به بالا (هم‌راستا با شاخه‌های قالب) */
+  private get pillVisibleLabel(): string {
+    if (this.isSyncing) return `در حال ارسال (${this.pendingCount})`;
+    if (this.networkState === 'online' && this.pendingCount === 0) return 'متصل';
+    if (this.pendingCount > 0) return `صف ارسال (${this.pendingCount})`;
+    return 'آفلاین';
   }
 }

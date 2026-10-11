@@ -166,7 +166,7 @@
             (click)="selectMatchedTasks()" 
             type="button"
             title="انتخاب اقلام منطبق بدون مغایرت"
-            class="px-2.5 py-2 min-h-[40px] text-emerald-400 hover:text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1">
+            class="px-2.5 py-2 min-w-[40px] min-h-[40px] justify-center text-emerald-400 hover:text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
             <span class="hidden sm:inline">انتخاب منطبق‌ها</span>
           </button>
@@ -478,14 +478,14 @@
           
           <!-- Quick Actions -->
           <div class="flex items-center gap-1.5">
-            <button (click)="$event.stopPropagation(); openCountingDetail(task, $event)" class="p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors" title="مشاهده جزئیات کامل">
+            <button (click)="$event.stopPropagation(); openCountingDetail(task, $event)" class="p-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors" title="مشاهده جزئیات کامل">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
             </button>
-            <button (click)="$event.stopPropagation(); rejectSingle(task)" class="min-h-[36px] flex items-center gap-1 px-2.5 py-1 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl text-xs font-bold transition-colors border border-rose-100" title="رد و دستور بازشماری">
+            <button (click)="$event.stopPropagation(); rejectSingle(task)" class="min-h-[40px] sm:min-h-[36px] flex items-center gap-1 px-2.5 py-1 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl text-xs font-bold transition-colors border border-rose-100" title="رد و دستور بازشماری">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-ccw"></svg>
               <span>رد / بازشماری</span>
             </button>
-            <button (click)="$event.stopPropagation(); approveSingle(task)" class="min-h-[36px] flex items-center gap-1 px-3.5 py-1 text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-bold transition-colors shadow-sm" title="تایید نهایی کالا">
+            <button (click)="$event.stopPropagation(); approveSingle(task)" class="min-h-[40px] sm:min-h-[36px] flex items-center gap-1 px-3.5 py-1 text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-bold transition-colors shadow-sm" title="تایید نهایی کالا">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
               <span>تایید نهایی</span>
             </button>
@@ -647,7 +647,7 @@
             (click)="toggleAllDoc($event)" 
             type="button"
             title="انتخاب همه اسناد فیلتر شده"
-            class="px-2.5 py-2 min-h-[40px] text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1">
+            class="px-2.5 py-2 min-w-[40px] min-h-[40px] justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square"></svg>
             <span class="hidden sm:inline">انتخاب همه</span>
           </button>
@@ -952,14 +952,14 @@
           </div>
 
           <div class="flex items-center gap-1.5 mr-auto">
-            <button (click)="$event.stopPropagation(); openDocDetail(task)" class="p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors" title="مشاهده جزئیات کامل">
+            <button (click)="$event.stopPropagation(); openDocDetail(task)" class="p-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors" title="مشاهده جزئیات کامل">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
             </button>
-            <button (click)="$event.stopPropagation(); rejectSingleDoc(task, $event)" class="min-h-[36px] flex items-center gap-1 px-2.5 py-1 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl text-xs font-bold transition-colors border border-rose-100" title="رد سند">
+            <button (click)="$event.stopPropagation(); rejectSingleDoc(task, $event)" class="min-h-[40px] sm:min-h-[36px] flex items-center gap-1 px-2.5 py-1 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl text-xs font-bold transition-colors border border-rose-100" title="رد سند">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x-circle"></svg>
               <span>رد</span>
             </button>
-            <button (click)="$event.stopPropagation(); approveSingleDoc(task, $event)" class="min-h-[36px] flex items-center gap-1 px-3.5 py-1 text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-bold transition-colors shadow-sm" title="تایید نهایی سند">
+            <button (click)="$event.stopPropagation(); approveSingleDoc(task, $event)" class="min-h-[40px] sm:min-h-[36px] flex items-center gap-1 px-3.5 py-1 text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-bold transition-colors shadow-sm" title="تایید نهایی سند">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
               <span>تایید نهایی</span>
             </button>

@@ -408,10 +408,10 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
 
   async clearAllResolvedErrors(): Promise<void> {
     const confirmed = await this.confirmDialog.open({
-      title: 'پاک‌سازی خطاهای همگام‌سازی',
-      message: 'آیا از پاک‌سازی خطاهای همگام‌سازی رفع‌شده یا ردشده اطمینان دارید؟ توجه: تداخل‌های ۴۰۹ حل‌نشده جهت جلوگیری از اتلاف داده حفظ خواهند شد.',
-      type: 'danger',
-      confirmText: 'بله، پاک‌سازی شود',
+      title: 'پاک‌سازی فهرست خطاهای همگام‌سازی',
+      message: 'خطاهای غیر تداخلی از این فهرست پنهان می‌شوند، ولی داده آن‌ها روی دستگاه حذف نمی‌شود. تداخل‌های ۴۰۹ حل‌نشده در فهرست می‌مانند.',
+      type: 'warning',
+      confirmText: 'بله، پنهان شود',
       cancelText: 'انصراف'
     });
 
@@ -420,21 +420,16 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const clearSafeErrors = async (db: typeof warehouseOfflineDb) => {
-        const toDelete = await db.syncErrors
-          .filter(e => e.statusCode !== 409 || e.dismissed === 1)
-          .toArray();
-        const ids = toDelete.map(e => e.id).filter((id): id is number => id !== undefined);
-        if (ids.length > 0) {
-          await db.syncErrors.bulkDelete(ids);
-        }
-      };
+      // هیچ رکوردی حذف نمی‌شود: syncErrors تنها نسخه بدنه ردشده است و retryError هر کد 4xx را دوباره به صف می‌برد.
+      // پس فقط خطاهای غیر ۴۰۹ دیده‌نشده پنهان (dismissed) می‌شوند؛ شکست هر پایگاه به catch بیرونی می‌رسد.
+      const dismissNonConflicts = (db: typeof warehouseOfflineDb) =>
+        db.syncErrors.where('dismissed').equals(0).filter(e => e.statusCode !== 409).modify({ dismissed: 1 });
 
       await Promise.all([
-        clearSafeErrors(warehouseOfflineDb).catch(() => {}),
-        clearSafeErrors(financeOfflineDb).catch(() => {})
+        dismissNonConflicts(warehouseOfflineDb),
+        dismissNonConflicts(financeOfflineDb),
       ]);
-      this.toast.show('success', 'خطاهای همگام‌سازی رفع‌شده پاکسازی شدند.');
+      this.toast.show('success', 'خطاهای غیر تداخلی از فهرست پنهان شدند؛ داده آن‌ها روی دستگاه محفوظ است.');
       await this.refreshTelemetry();
     } catch {
       this.toast.show('error', 'خطا در پاکسازی خطاهای همگام‌سازی.');

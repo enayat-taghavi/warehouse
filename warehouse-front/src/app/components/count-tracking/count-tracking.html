@@ -284,7 +284,7 @@
           <div class="flex items-center justify-center gap-1.5">
             <!-- دکمه مشاهده تایم‌لاین و گردش کالا -->
             <button (click)="openDrawer(row); $event.stopPropagation()" 
-                    class="text-indigo-600 hover:bg-indigo-50 px-2.5 py-1.5 min-h-[36px] rounded-lg transition-all border border-indigo-100 hover:border-indigo-200 flex items-center gap-1 shadow-2xs text-[11px] font-bold" 
+                    class="text-indigo-600 hover:bg-indigo-50 px-2.5 py-1.5 min-h-[40px] sm:min-h-[36px] rounded-lg transition-all border border-indigo-100 hover:border-indigo-200 flex items-center gap-1 shadow-2xs text-[11px] font-bold" 
                     title="مشاهده تایم‌لاین و گردش کالا">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
               <span>گردش</span>
@@ -293,7 +293,7 @@
             <!-- دکمه لغو تخصیص (برای وضعیت‌های در انتظار و اولیه) -->
             <button *ngIf="(row.status === 'PENDING_COUNT' || row.status === 'INITIAL_COUNT') && canCancelAllocation" 
                     (click)="cancelSingleAllocation(row); $event.stopPropagation()" 
-                    class="text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 min-h-[36px] rounded-lg transition-all border border-rose-100 hover:border-rose-200 flex items-center gap-1 shadow-2xs text-[11px] font-bold" 
+                    class="text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 min-h-[40px] sm:min-h-[36px] rounded-lg transition-all border border-rose-100 hover:border-rose-200 flex items-center gap-1 shadow-2xs text-[11px] font-bold" 
                     title="لغو تخصیص این کالا">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x-circle"></svg>
               <span>لغو</span>
@@ -637,17 +637,17 @@
       </div>
 
       <!-- Tab Navigation -->
-      <div class="px-6 pt-3 bg-slate-50/50 border-b border-slate-200 flex items-center gap-2 flex-none">
+      <div class="px-6 pt-3 bg-slate-50/50 border-b border-slate-200 flex items-center gap-2 flex-none overflow-x-auto">
         <button (click)="performanceActiveTab = 'overview'"
                 [class]="performanceActiveTab === 'overview' ? 'text-indigo-600 border-indigo-600 bg-white shadow-2xs font-black' : 'text-slate-500 hover:text-slate-700 border-transparent font-bold'"
-                class="px-4 py-2 min-h-[40px] border-b-2 rounded-t-lg text-xs transition-all flex items-center gap-1.5">
+                class="px-4 py-2 min-h-[40px] shrink-0 whitespace-nowrap border-b-2 rounded-t-lg text-xs transition-all flex items-center gap-1.5">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="grid"></svg>
           <span>نمای کلی و شاخص‌ها</span>
         </button>
 
         <button (click)="performanceActiveTab = 'counters'"
                 [class]="performanceActiveTab === 'counters' ? 'text-indigo-600 border-indigo-600 bg-white shadow-2xs font-black' : 'text-slate-500 hover:text-slate-700 border-transparent font-bold'"
-                class="px-4 py-2 min-h-[40px] border-b-2 rounded-t-lg text-xs transition-all flex items-center gap-1.5">
+                class="px-4 py-2 min-h-[40px] shrink-0 whitespace-nowrap border-b-2 rounded-t-lg text-xs transition-all flex items-center gap-1.5">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
           <span>انبارگردان‌ها (سرعت و دقت)</span>
           <span class="bg-indigo-50 text-indigo-700 text-[10px] px-1.5 py-0.2 rounded-full font-black">{{ counterStats.length }}</span>
@@ -655,7 +655,7 @@
 
         <button (click)="performanceActiveTab = 'supervisors'"
                 [class]="performanceActiveTab === 'supervisors' ? 'text-indigo-600 border-indigo-600 bg-white shadow-2xs font-black' : 'text-slate-500 hover:text-slate-700 border-transparent font-bold'"
-                class="px-4 py-2 min-h-[40px] border-b-2 rounded-t-lg text-xs transition-all flex items-center gap-1.5">
+                class="px-4 py-2 min-h-[40px] shrink-0 whitespace-nowrap border-b-2 rounded-t-lg text-xs transition-all flex items-center gap-1.5">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user-check"></svg>
           <span>سرپرستان (سرعت تایید)</span>
           <span class="bg-indigo-50 text-indigo-700 text-[10px] px-1.5 py-0.2 rounded-full font-black">{{ supervisorStats.length }}</span>

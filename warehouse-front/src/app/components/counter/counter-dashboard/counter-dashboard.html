@@ -96,7 +96,7 @@
                 (click)="clearAllSelections()" 
                 type="button"
                 title="لغو انتخاب‌ها"
-                class="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors">
+                class="p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
               </button>
               <div class="flex items-center gap-1.5 font-bold text-xs">
@@ -111,7 +111,7 @@
                 (click)="toggleAll()" 
                 type="button"
                 title="انتخاب همه اقلام فیلتر شده"
-                class="px-2.5 py-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1">
+                class="px-2.5 py-2 min-w-[40px] min-h-[40px] justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square"></svg>
                 <span class="hidden sm:inline">انتخاب همه</span>
               </button>
@@ -120,7 +120,7 @@
                 (click)="submitSelected()" 
                 [disabled]="isSubmitting"
                 type="button"
-                class="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:opacity-50 text-white rounded-xl text-xs font-black shadow-md transition-all">
+                class="flex items-center gap-1.5 px-3.5 py-2 min-h-[40px] bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:opacity-50 text-white rounded-xl text-xs font-black shadow-md transition-all">
                 <svg *ngIf="!isSubmitting" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check-circle"></svg>
                 <div *ngIf="isSubmitting" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 <span>{{ isSubmitting ? 'در حال ارسال...' : 'ارسال به سرپرست' }}</span>
@@ -530,7 +530,7 @@
                 (click)="clearAllSelections()" 
                 type="button"
                 title="لغو انتخاب‌ها"
-                class="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors">
+                class="p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
               </button>
               <div class="flex items-center gap-1.5 font-bold text-xs">

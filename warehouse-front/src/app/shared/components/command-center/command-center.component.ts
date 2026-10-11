@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, input } from '@angular/core';
 
 const ROW_CONTAINER_CLASSES: Record<'md' | 'lg', string> = {
   md: 'bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3',
@@ -23,11 +23,11 @@ const ROW_SLOT_CLASSES: Record<'md' | 'lg', string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-      <div [class]="containerClasses">
-        <div class="flex items-center overflow-x-auto" [class]="slotClasses">
+      <div [class]="containerClasses()">
+        <div class="flex items-center overflow-x-auto" [class]="slotClasses()">
           <ng-content select="[cc-tabs]" />
         </div>
-        <div class="flex flex-wrap items-center gap-2 justify-end" [class]="slotClasses">
+        <div class="flex flex-wrap items-center gap-2 justify-end" [class]="slotClasses()">
           <ng-content select="[cc-actions]" />
         </div>
       </div>
@@ -40,12 +40,8 @@ const ROW_SLOT_CLASSES: Record<'md' | 'lg', string> = {
 })
 export class CommandCenterComponent {
   /** نقطه شکست تبدیل به تک‌سطری (پیش‌فرض md؛ برای صفحات با فیلتر پهن یا اکشن‌های متعدد lg) */
-  @Input() rowFrom: 'md' | 'lg' = 'md';
+  readonly rowFrom = input<'md' | 'lg'>('md');
 
-  get containerClasses(): string {
-    return ROW_CONTAINER_CLASSES[this.rowFrom] ?? ROW_CONTAINER_CLASSES.md;
-  }
-  get slotClasses(): string {
-    return ROW_SLOT_CLASSES[this.rowFrom] ?? ROW_SLOT_CLASSES.md;
-  }
+  readonly containerClasses = computed(() => ROW_CONTAINER_CLASSES[this.rowFrom()] ?? ROW_CONTAINER_CLASSES.md);
+  readonly slotClasses = computed(() => ROW_SLOT_CLASSES[this.rowFrom()] ?? ROW_SLOT_CLASSES.md);
 }

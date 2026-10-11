@@ -5,7 +5,7 @@ import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { ɵresolveComponentResources } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -24,7 +24,6 @@ try {
 describe('OperationsCockpitComponent DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () => {
   let fixture: ComponentFixture<OperationsCockpitComponent>;
   let component: OperationsCockpitComponent;
-  let mockRouter: any;
   let mockHealth: any;
   let mockSettings: any;
   let mockCompanyApi: any;
@@ -55,7 +54,6 @@ describe('OperationsCockpitComponent DOM & Browser Unit Test (Type 1 Vitest + JS
   });
 
   beforeEach(async () => {
-    mockRouter = { navigate: vi.fn() };
     mockHealth = { runFullDiagnostic: vi.fn().mockResolvedValue({}) };
     mockSettings = {
       getSnapshotSummary: vi.fn().mockReturnValue(of({
@@ -77,7 +75,8 @@ describe('OperationsCockpitComponent DOM & Browser Unit Test (Type 1 Vitest + JS
     await TestBed.configureTestingModule({
       imports: [CommonModule, OperationsCockpitComponent],
       providers: [
-        { provide: Router, useValue: mockRouter },
+        // کارت‌های ناوبری <a [routerLink]> هستند و Router واقعی و ActivatedRoute می‌خواهند
+        provideRouter([]),
         { provide: SystemHealthService, useValue: mockHealth },
         { provide: SettingsService, useValue: mockSettings },
         { provide: CompanyApiService, useValue: mockCompanyApi },

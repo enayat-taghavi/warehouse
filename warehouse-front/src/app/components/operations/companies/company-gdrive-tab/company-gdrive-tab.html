@@ -173,7 +173,7 @@
       </div>
       <button 
         type="button"
-        appAction="sync"
+        appAction="sync" display="label"
         label="اتصال"
         [busy]="isConnecting()"
         (click)="connectGoogleDrive()">
@@ -208,7 +208,7 @@
       </div>
       <button 
         type="button"
-        appAction="sync"
+        appAction="sync" display="label"
         label="ارسال سوابق به حساب تازه"
         [busy]="isSyncing()"
         (click)="syncAllFiles()">
@@ -288,7 +288,7 @@
               </p>
               <button 
                 type="button"
-                appAction="sync"
+                appAction="sync" display="label" tone="primary"
                 label="اتصال"
                 [busy]="isConnecting()"
                 (click)="connectGoogleDrive()">
@@ -557,7 +557,7 @@
             <!-- دکمه اقدام سریع: ارسال دستی صف فایل‌های معلق -->
             <button 
               type="button"
-              appAction="sync"
+              appAction="sync" display="label"
               class="w-full"
               [label]="'ارسال دستی صف فایل‌های معلق (' + (cfg.stats?.pending || 0) + ')'"
               [busy]="isTriggeringSync()"
@@ -568,7 +568,7 @@
             <!-- دکمه پیمایش و همگام‌سازی کلیه فایل‌های موجود -->
             <button 
               type="button"
-              appAction="sync"
+              appAction="sync" display="label"
               class="w-full"
               label="پیمایش و ثبت فایل‌های پیشین"
               [busy]="isSyncing()"
