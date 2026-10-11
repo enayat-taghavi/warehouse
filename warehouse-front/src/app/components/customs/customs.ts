@@ -35,6 +35,9 @@ import { ParsedScanRow, ParsedScanRowStatus, ParsedScanFieldChange, ScanBatchSum
 import { CustomsScannerParser } from './customs-scanner-parser';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../shared/components/tab-bar/tab-bar.component';
+
 const DOC_TASK_DIRECT_KEYS = new Set([
   'added_rti_no',
   'inv_rti_number',
@@ -56,11 +59,18 @@ const DOC_TASK_DIRECT_KEYS = new Set([
 @Component({
   selector: 'app-customs',
   standalone: true,
-  imports: [CommonModule, FormsModule, PersianDatePipe, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, SvgIconDirective],
+  imports: [CommonModule, FormsModule, PersianDatePipe, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent],
   templateUrl: './customs.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Customs implements OnInit, OnDestroy {
+  get customsTabs(): TabDef[] {
+    return [
+      { id: 'my-tasks', label: 'تسک‌های من', shortLabel: 'تسک‌ها', icon: 'clipboard' },
+      { id: 'pool', label: 'مخزن اسناد', shortLabel: 'مخزن', icon: 'folder', count: this.poolTasks.length || undefined },
+    ];
+  }
+
   tasks: DocTask[] = [];
   poolTasks: DocTask[] = [];
 
@@ -935,10 +945,12 @@ export class Customs implements OnInit, OnDestroy {
     }
   }
 
-  setTab(tab: 'my-tasks' | 'pool') {
-    this.selectedTasks.clear();
-    this.selectedPoolTasks.clear();
-    this.router.navigate([], { queryParams: { tab }, queryParamsHandling: 'merge' });
+  setTab(tab: string) {
+    if (tab === 'my-tasks' || tab === 'pool') {
+      this.selectedTasks.clear();
+      this.selectedPoolTasks.clear();
+      this.router.navigate([], { queryParams: { tab }, queryParamsHandling: 'merge' });
+    }
   }
 
   // ════════════════════════════════════════════

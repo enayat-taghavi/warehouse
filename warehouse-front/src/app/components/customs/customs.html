@@ -31,17 +31,11 @@
             ></app-warehouse-selector>
           </div>
           <!-- Barcode Scanner Trigger Button -->
-          <button (click)="scanner.openCamera()" class="btn-icon-square btn-icon-indigo" title="اسکن بارکد با دوربین" aria-label="اسکن دوربین">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="scan-line"></svg>
-          </button>
+          <button appAction="scan" tone="indigo" display="icon" title="اسکن بارکد با دوربین" aria-label="اسکن دوربین" (actionClick)="scanner.openCamera()"></button>
           <!-- Export Excel Button -->
-          <button (click)="openExportModal()" class="btn-icon-square btn-icon-emerald" title="خروجی و دانلود اکسل کارتابل مالی" aria-label="خروجی اکسل">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
-          </button>
+          <button appAction="export-excel" tone="emerald" display="icon" title="خروجی و دانلود اکسل کارتابل مالی" aria-label="خروجی اکسل" (actionClick)="openExportModal()"></button>
           <!-- Refresh Button -->
-          <button (click)="refreshCurrentTab()" class="btn-icon-square btn-icon-indigo" title="بروزرسانی کارتابل مالی و گمرک" aria-label="بروزرسانی">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.animate-spin]="isLoading" appIcon="refresh-cw"></svg>
-          </button>
+          <button appAction="refresh" tone="indigo" display="icon" [busy]="isLoading" title="بروزرسانی کارتابل مالی و گمرک" aria-label="بروزرسانی" (actionClick)="refreshCurrentTab()"></button>
         </div>
       </header>
 
@@ -54,15 +48,12 @@
       />
 
       <!-- Tabs -->
-      <div class="flex border-b border-slate-200 mb-4 px-2">
-        <button (click)="setTab('my-tasks')" [class.border-indigo-600]="currentTab === 'my-tasks'" [class.text-indigo-600]="currentTab === 'my-tasks'" class="px-4 py-3 border-b-2 border-transparent font-bold text-sm transition-colors text-slate-500 hover:text-slate-800">
-          تسک‌های من
-        </button>
-        <button (click)="setTab('pool')" [class.border-indigo-600]="currentTab === 'pool'" [class.text-indigo-600]="currentTab === 'pool'" class="px-4 py-3 border-b-2 border-transparent font-bold text-sm transition-colors text-slate-500 hover:text-slate-800 flex items-center gap-1">
-          <span>مخزن اسناد</span>
-          <span *ngIf="poolTasks.length > 0" class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold">{{poolTasks.length}}</span>
-        </button>
-      </div>
+      <app-tab-bar
+        class="mb-4 block"
+        [tabs]="customsTabs"
+        [activeId]="currentTab"
+        (tabChange)="setTab($event)"
+      ></app-tab-bar>
 
       <ng-container *ngIf="currentTab === 'my-tasks'">
         <!-- Performance Metrics -->
@@ -92,11 +83,12 @@
             <!-- Right: Cancel Button + Counter -->
             <div class="flex items-center gap-2 pr-1">
               <button 
-                (click)="clearAllSelections()" 
-                type="button"
+                appAction="close"
+                display="icon"
                 title="لغو انتخاب‌ها"
-                class="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+                aria-label="لغو انتخاب‌ها"
+                (actionClick)="clearAllSelections()"
+                class="!bg-transparent hover:!bg-slate-800 !text-slate-400 hover:!text-white !border-transparent">
               </button>
               <div class="flex items-center gap-1.5 font-bold text-xs">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -110,19 +102,18 @@
                 (click)="toggleAll()" 
                 type="button"
                 title="انتخاب همه اقلام فیلتر شده"
-                class="px-2.5 py-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1">
+                class="px-2.5 py-1.5 min-h-[40px] text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square"></svg>
                 <span class="hidden sm:inline">انتخاب همه</span>
               </button>
 
               <button 
-                (click)="submitSelected()" 
-                [disabled]="isSaving"
-                type="button"
-                class="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:opacity-50 text-white rounded-xl text-xs font-black shadow-md transition-all">
-                <svg *ngIf="!isSaving" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
-                <div *ngIf="isSaving" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>{{ isSaving ? 'در حال ارسال...' : 'ارسال به سرپرست' }}</span>
+                appAction="send"
+                tone="emerald"
+                [busy]="isSaving"
+                label="ارسال به سرپرست"
+                title="ارسال به سرپرست"
+                (actionClick)="submitSelected()">
               </button>
             </div>
           </div>
@@ -678,9 +669,7 @@
       
       <!-- Detail Header (Identical to Counter) -->
       <header class="bg-white px-4 py-3 border-b border-slate-200 flex items-center justify-between shadow-sm sticky top-0 z-20">
-        <button (click)="closeDetail()" class="p-2 -mr-2 rounded-full hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer" title="بازگشت به لیست">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
-        </button>
+        <button appAction="back" display="icon" title="بازگشت به لیست" aria-label="بازگشت به لیست" (actionClick)="closeDetail()"></button>
         <div class="font-bold text-sm text-slate-800 flex items-center gap-2">
           <span>ثبت اطلاعات مالی</span>
           <span *ngIf="isReadOnly(selectedTask)" class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
@@ -917,53 +906,66 @@
         <div *ngIf="!isReadOnly(selectedTask)" class="mt-8 pt-5 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           <!-- Primary Direct Submit Button (Emerald Green - Full Width on Mobile, Flexible on Desktop) -->
           <button 
-            type="button"
-            (click)="submitCurrentTask()" 
-            [disabled]="isSaving"
-            class="w-full sm:flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white rounded-2xl py-3.5 px-4 font-black text-xs sm:text-sm shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer order-1">
-            <svg *ngIf="!isSaving" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check-circle"></svg>
-            <div *ngIf="isSaving" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            <span>{{ isSaving ? 'در حال ارسال...' : 'ثبت و ارسال به سرپرست' }}</span>
+            appAction="send"
+            tone="emerald"
+            size="lg"
+            [busy]="isSaving"
+            label="ثبت و ارسال به سرپرست"
+            title="ثبت و ارسال به سرپرست"
+            (actionClick)="submitCurrentTask()"
+            class="w-full sm:flex-1 order-1">
           </button>
 
           <!-- Secondary Actions Container (Side-by-side 50/50 on Mobile, Inline on Desktop) -->
           <div class="flex items-center gap-2.5 w-full sm:w-auto order-2">
             <!-- Save Draft Button (Indigo) -->
             <button 
-              type="button"
-              (click)="saveDraft(true)" 
-              [disabled]="isSaving"
-              class="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 text-white rounded-2xl py-3.5 px-4 font-bold text-xs sm:text-sm shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="save"></svg>
-              <span>ذخیره پیش‌نویس</span>
+              appAction="save"
+              tone="primary"
+              size="lg"
+              [busy]="isSaving"
+              label="ذخیره پیش‌نویس"
+              title="ذخیره پیش‌نویس"
+              (actionClick)="saveDraft(true)"
+              class="flex-1 sm:flex-none">
             </button>
 
             <!-- Cancel / Close Detail Button (انصراف) -->
             <button 
-              type="button"
-              (click)="closeDetail()" 
+              appAction="close"
+              tone="slate"
+              size="lg"
               [disabled]="isSaving"
-              class="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-2xl py-3.5 px-4 font-bold text-xs sm:text-sm transition-all whitespace-nowrap cursor-pointer text-center">
-              انصراف
+              label="انصراف"
+              title="انصراف"
+              (actionClick)="closeDetail()"
+              class="flex-1 sm:flex-none">
             </button>
           </div>
 
           <!-- Revert Button (Rose - Secondary Action on Mobile/Desktop if Draft Exists) -->
           <button 
             *ngIf="selectedTask.status === 'PENDING_DOC' && hasDocData(selectedTask)"
-            type="button"
-            (click)="revertTaskStatus(selectedTask)" 
-            [disabled]="isSaving"
-            class="w-full sm:w-auto bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 disabled:opacity-50 rounded-2xl py-3 px-4 font-bold text-xs sm:text-sm border border-rose-200 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer order-3"
-            title="حذف پیش‌نویس و بازگرداندن کالا به وضعیت پیشین">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-ccw"></svg>
-            <span>بازگشت به وضعیت قبل</span>
+            appAction="return"
+            tone="rose"
+            size="lg"
+            [busy]="isSaving"
+            label="بازگشت به وضعیت قبل"
+            title="حذف پیش‌نویس و بازگرداندن کالا به وضعیت پیشین"
+            (actionClick)="revertTaskStatus(selectedTask)"
+            class="w-full sm:w-auto order-3">
           </button>
         </div>
 
         <div *ngIf="isReadOnly(selectedTask)" class="mt-8 pt-5 border-t border-slate-200">
-          <button type="button" (click)="closeDetail(true)" class="w-full bg-slate-700 hover:bg-slate-800 text-white rounded-2xl py-3.5 px-4 font-bold text-sm shadow-md transition-transform active:scale-95 cursor-pointer">
-            بازگشت به لیست
+          <button 
+            appAction="back"
+            tone="slate"
+            size="lg"
+            label="بازگشت به لیست"
+            title="بازگشت به لیست"
+            (actionClick)="closeDetail(true)"
+            class="w-full">
           </button>
         </div>
 
@@ -989,9 +991,7 @@
             <p class="text-[11px] text-slate-400 mt-0.5">انتخاب ردیف‌ها و ستون‌های مورد نیاز</p>
           </div>
         </div>
-        <button (click)="closeExportModal()" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
-        </button>
+        <button appAction="close" display="icon" title="بستن" aria-label="بستن" (actionClick)="closeExportModal()"></button>
       </div>
 
       <!-- Modal Body -->
@@ -1067,23 +1067,24 @@
               <span class="text-[10px] text-indigo-600 block truncate">شامل ستون‌های فعال، فرمت‌های مجاز و سلول‌های کشویی</span>
             </div>
           </div>
-          <button type="button" (click)="downloadSampleTemplate()" [disabled]="isDownloadingTemplate" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 shadow-sm shadow-indigo-200 disabled:opacity-50 cursor-pointer">
-            <span *ngIf="isDownloadingTemplate" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            <span *ngIf="!isDownloadingTemplate">دانلود قالب</span>
-          </button>
+          <button appAction="download" tone="indigo" size="sm" [busy]="isDownloadingTemplate" label="دانلود قالب" title="دانلود قالب اکسل نمونه" (actionClick)="downloadSampleTemplate()"></button>
         </div>
 
       </div>
 
       <!-- Modal Footer -->
       <div class="pt-4 border-t border-slate-100 flex items-center gap-2">
-        <button (click)="closeExportModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors">
-          انصراف
-        </button>
-        <button (click)="executeExport()" [disabled]="isExporting || (exportColumnScope === 'custom' && selectedExportColumns.size === 0)" class="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 disabled:opacity-50">
-          <span *ngIf="isExporting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-          <span *ngIf="!isExporting">دانلود فایل اکسل</span>
-          <span *ngIf="isExporting">در حال آماده‌سازی...</span>
+        <button appAction="close" tone="slate" size="md" label="انصراف" title="انصراف" (actionClick)="closeExportModal()" class="flex-1"></button>
+        <button 
+          appAction="export-excel" 
+          tone="emerald" 
+          size="md" 
+          [busy]="isExporting" 
+          [disabled]="exportColumnScope === 'custom' && selectedExportColumns.size === 0" 
+          label="دانلود فایل اکسل" 
+          title="دانلود فایل اکسل" 
+          (actionClick)="executeExport()" 
+          class="flex-1">
         </button>
       </div>
 
@@ -1100,7 +1101,7 @@
       <div class="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="scan-square"></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-scan"></svg>
           </div>
           <div>
             <div class="flex items-center gap-2">
@@ -1114,9 +1115,7 @@
             </p>
           </div>
         </div>
-        <button (click)="closeScanBatchModal()" [disabled]="isApplyingBatchUpdate" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
-        </button>
+        <button appAction="close" display="icon" [disabled]="isApplyingBatchUpdate" title="بستن" aria-label="بستن" (actionClick)="closeScanBatchModal()"></button>
       </div>
 
       <!-- Stat Cards Filter -->
@@ -1250,17 +1249,17 @@
 
       <!-- Modal Footer -->
       <div class="pt-4 border-t border-slate-100 flex items-center gap-2 shrink-0 mt-3">
-        <button type="button" (click)="closeScanBatchModal()" [disabled]="isApplyingBatchUpdate" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors text-xs cursor-pointer">
-          انصراف
-        </button>
-        <button type="button" (click)="applyBulkScanUpdate()" 
-                [disabled]="isApplyingBatchUpdate || ((scanBatchSummary?.readyCount || 0) + (scanBatchSummary?.poolCount || 0) === 0)" 
-                class="flex-[2] py-2.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 disabled:opacity-50 text-xs cursor-pointer">
-          <span *ngIf="isApplyingBatchUpdate" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-          <span *ngIf="!isApplyingBatchUpdate">
-            تایید و اعمال روی {{ (scanBatchSummary?.readyCount || 0) + (scanBatchSummary?.poolCount || 0) }} کالا
-          </span>
-          <span *ngIf="isApplyingBatchUpdate">در حال ذخیره و به‌روزرسانی...</span>
+        <button appAction="close" tone="slate" size="md" [disabled]="isApplyingBatchUpdate" label="انصراف" title="انصراف" (actionClick)="closeScanBatchModal()" class="flex-1"></button>
+        <button 
+          appAction="confirm" 
+          tone="primary" 
+          size="md" 
+          [busy]="isApplyingBatchUpdate" 
+          [disabled]="((scanBatchSummary?.readyCount || 0) + (scanBatchSummary?.poolCount || 0) === 0)" 
+          [label]="'تایید و اعمال روی ' + ((scanBatchSummary?.readyCount || 0) + (scanBatchSummary?.poolCount || 0)) + ' کالا'" 
+          title="تایید و اعمال دسته‌ای" 
+          (actionClick)="applyBulkScanUpdate()" 
+          class="flex-[2]">
         </button>
       </div>
 
