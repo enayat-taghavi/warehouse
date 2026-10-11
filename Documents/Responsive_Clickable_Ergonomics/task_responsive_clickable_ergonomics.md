@@ -57,33 +57,34 @@
   - [x] **۵.۲۱ نظرات زمینه‌ای (`contextual-comments.component.html`)**
   - [x] معیار پایان گام
 
-- [ ] **گام ۵: مرکز عملیات و صفحات عمومی**
-  - [ ] **باقی‌مانده‌های گام ۴:** کوچ اجزای گام ۴ به `button[appAction]` و نام‌های `action-*`، نوار ابزار `data-table`، پاپ‌اوور `offline-pending-badge`، `tap-target` خنثی‌شده، آیکون نقش‌ها (فهرست در «بازبینی ناظر — گام ۴»)
-  - [ ] **۱.۱ شرکت‌ها (`companies.html`)**
-  - [ ] **۱.۲ تب گوگل‌درایو (`company-gdrive-tab.html`)**
-  - [ ] **۱.۳ کاربران و نقش‌ها (`users.html`)**
-  - [ ] **۱.۴ کوکپیت عملیات (`operations-cockpit.html`)**
-  - [ ] **۱.۵ حاکمیت نقش‌ها (`operations-rbac-governance.html`)**
-  - [ ] **۱.۶ مانیتور همگام‌سازی (`operations-sync-monitor.html`):** پاک‌سازی خطاها و لغو نشست حساس
-  - [ ] **۱.۷ پشتیبان‌گیری (`settings-backup-tab.html`):** بازیابی و بازگشت `restore` حساس
-  - [ ] **۱.۸ سلامت سیستم (`health-dashboard.ts`)**
-  - [ ] **۱.۹ ممیزی و لاگ‌ها (`audit.html`)**
-  - [ ] **۱.۱۰ راه‌انداز نخستین (`first-boot-wizard.html`)**
-  - [ ] **۵.۱۲ ورود و تغییر رمز (`login.html`، `change-password.html`)**
-  - [ ] **۵.۲۲ استعلام کارت (`verify-card.html`)**
-  - [ ] معیار پایان گام
+- [x] **گام ۵: مرکز عملیات و صفحات عمومی**
+  - [x] **باقی‌مانده‌های گام ۴:** کوچ اجزای گام ۴ به `button[appAction]` و نام‌های `action-*`، نوار ابزار `data-table`، پاپ‌اوور `offline-pending-badge`، `tap-target` خنثی‌شده، آیکون نقش‌ها (فهرست در «بازبینی ناظر — گام ۴»)
+  - [x] **۱.۱ شرکت‌ها (`companies.html`)**
+  - [x] **۱.۲ تب گوگل‌درایو (`company-gdrive-tab.html`)**
+  - [x] **۱.۳ کاربران و نقش‌ها (`users.html`)**
+  - [x] **۱.۴ کوکپیت عملیات (`operations-cockpit.html`)**
+  - [x] **۱.۵ حاکمیت نقش‌ها (`operations-rbac-governance.html`)**
+  - [x] **۱.۶ مانیتور همگام‌سازی (`operations-sync-monitor.html`):** پاک‌سازی خطاها و لغو نشست حساس
+  - [x] **۱.۷ پشتیبان‌گیری (`settings-backup-tab.html`):** بازیابی و بازگشت `restore` حساس
+  - [x] **۱.۸ سلامت سیستم (`health-dashboard.ts`)**
+  - [x] **۱.۹ ممیزی و لاگ‌ها (`audit.html`)**
+  - [x] **۱.۱۰ راه‌انداز نخستین (`first-boot-wizard.html`)**
+  - [x] **۵.۱۲ ورود و تغییر رمز (`login.html`، `change-password.html`)**
+  - [x] **۵.۲۲ استعلام کارت (`verify-card.html`)**
+  - [x] معیار پایان گام
 
-- [ ] **گام ۶: انبارگردانی (الف)**
-  - [ ] **۲.۱ داشبورد انبار (`dashboard.html`)**
-  - [ ] **۲.۲ مدیریت انبارها (`projects.html`)**
-  - [ ] **۲.۳ هدایت و تخصیص کالا (`dispatch.html`)**
-  - [ ] **۲.۴ مدارک و پرونده‌ها (`docs.html`)**
-  - [ ] **۲.۵ تغذیه داده اقلام (`feeding.html`)**
-  - [ ] **۲.۶ کارتابل انبارگردان (`counter-dashboard.html`)**
-  - [ ] **۲.۷ کارتابل سرپرست انبار (`supervisor-dashboard.html`)**
-  - [ ] **۲.۸ بازبینی مدیر انبار (`manager-review.html`)**
-  - [ ] **۲.۹ رهگیری شمارش (`count-tracking.html`)**
-  - [ ] معیار پایان گام
+- [x] **گام ۶: انبارگردانی (الف)**
+  - [x] **باقی‌مانده‌های بازبینی ناظر گام ۵:** ۹ بند (ایمن‌سازی پاک‌سازی خطاها با ConfirmDialogService و data-loss-reviewer، ۳۰ نام خام، وضعیت‌های offline-badge، کنترل‌های بارکدخوان، هدر و تب‌های users، لینک‌های operations-cockpit، تب گوگل‌درایو و حذف [class.]=، ۴ آیکون معنایی، کش modalTabs)
+  - [x] **۲.۱ داشبورد انبار (`dashboard.html`)**
+  - [x] **۲.۲ مدیریت انبارها (`projects.html`)**
+  - [x] **۲.۳ هدایت و تخصیص کالا (`dispatch.html`)**
+  - [x] **۲.۴ مدارک و پرونده‌ها (`docs.html`)**
+  - [x] **۲.۵ تغذیه داده اقلام (`feeding.html`)**
+  - [x] **۲.۶ کارتابل انبارگردان (`counter-dashboard.html`)**
+  - [x] **۲.۷ کارتابل سرپرست انبار (`supervisor-dashboard.html`)**
+  - [x] **۲.۸ بازبینی مدیر انبار (`manager-review.html`)**
+  - [x] **۲.۹ رهگیری شمارش (`count-tracking.html`)**
+  - [x] معیار پایان گام (۳ بیلد با کد ۰، نگهبان ۵۲ و ۵۵ با به‌روزرسانی خط مبنا، تست‌های Vitest، پروب Zero-Scroll در ۶ عرض، ui-reviewer)
 
 - [ ] **گام ۷: انبارگردانی (ب)**
   - [ ] **۲.۱۰ گزارش‌های انبار (`reports.html`)**
