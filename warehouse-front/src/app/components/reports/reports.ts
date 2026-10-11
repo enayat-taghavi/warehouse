@@ -35,6 +35,9 @@ import { SavedReportsComponent } from './saved-reports.component';
 import { ExportProgressComponent } from './export-progress.component';
 import { ReportChartComponent } from './report-chart.component';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../shared/components/tab-bar/tab-bar.component';
+import { OverflowMenuComponent } from '../../shared/components/overflow-menu/overflow-menu.component';
 
 /**
  * صفحه گزارش‌ساز پویا — پوسته اصلی
@@ -47,12 +50,22 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
     CommonModule, FormsModule, DataTableComponent, TableColumnDirective,
     FilterGroupComponent, SavedReportsComponent, ExportProgressComponent,
     ReportChartComponent,
-    SvgIconDirective
+    SvgIconDirective,
+    ActionButtonComponent,
+    TabBarComponent,
+    OverflowMenuComponent
   ],
   providers: [ReportStore],
   templateUrl: './reports.html',
 })
 export class Reports implements OnInit, OnDestroy {
+  readonly helpTabs: TabDef[] = [
+    { id: 'scenarios', label: 'سناریوهای آماده انبار', shortLabel: 'سناریوها', icon: 'clipboard' },
+    { id: 'steps', label: 'مراحل ساخت گزارش', shortLabel: 'مراحل', icon: 'file-text' },
+    { id: 'joins', label: 'ترکیب جداول و تجمیع', shortLabel: 'ترکیب', icon: 'columns' },
+    { id: 'export', label: 'قالب‌ها و خروجی اکسل/PDF', shortLabel: 'خروجی', icon: 'download' },
+  ];
+
   readonly store = inject(ReportStore);
   private reportApi = inject(ReportApiService);
   private warehouseHttp = inject(WarehouseHttpService);
