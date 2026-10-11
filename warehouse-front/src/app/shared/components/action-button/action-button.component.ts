@@ -249,3 +249,16 @@ export class ActionButtonComponent {
   }
 }
 
+// سازگاری با JIT در محیط تست‌های بدون AOT (Vitest)
+(ActionButtonComponent as any).propMetadata = {
+  appAction: [{ ngMetadataName: 'Input', isSignal: true, required: true }],
+  label: [{ ngMetadataName: 'Input', isSignal: true }],
+  display: [{ ngMetadataName: 'Input', isSignal: true }],
+  labelFrom: [{ ngMetadataName: 'Input', isSignal: true }],
+  tone: [{ ngMetadataName: 'Input', isSignal: true }],
+  size: [{ ngMetadataName: 'Input', isSignal: true }],
+  busy: [{ ngMetadataName: 'Input', isSignal: true }],
+  disabled: [{ ngMetadataName: 'Input', isSignal: true }],
+  type: [{ ngMetadataName: 'Input', isSignal: true }],
+};
+

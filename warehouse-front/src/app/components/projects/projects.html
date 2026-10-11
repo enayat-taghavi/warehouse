@@ -106,7 +106,7 @@
           <ng-container *ngIf="p.is_active">
             <button (click)="$event.stopPropagation(); goToWarehouseWorkspace(p.id)" class="flex-1 py-2 text-[11px] font-bold rounded-xl text-white shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] min-h-[40px]" [style.background]="'linear-gradient(135deg, ' + (p.color || '#6366f1') + ', #4f46e5)'">
               ورود به محیط انبار
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-left"></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-forward"></svg>
             </button>
           </ng-container>
           
@@ -118,18 +118,18 @@
             <div *ngIf="openDropdownId == p.id" class="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 z-[99] py-1 text-right">
               <ng-container *ngIf="!p.is_active">
                 <button *appHasPermission="'perm_wh_freeze'" (click)="restoreWarehouse(p.id)" class="w-full text-right px-4 py-2.5 text-xs text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 font-bold transition-colors min-h-[40px]">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-ccw"></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-restore"></svg>
                   <span>بازیابی و فعال‌سازی مجدد</span>
                 </button>
               </ng-container>
               <ng-container *ngIf="p.is_active">
                 <button *appHasPermission="'perm_wh_edit'" (click)="openEditModal(p.id)" class="w-full text-right px-4 py-2 text-xs text-slate-800 hover:bg-slate-50 flex items-center gap-2 font-semibold min-h-[40px]">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit"></svg>
                   <span>ویرایش مشخصات انبار</span>
                 </button>
                 <div class="border-t border-slate-100 my-1" *appHasPermission="'perm_wh_freeze'"></div>
                 <button *appHasPermission="'perm_wh_freeze'" (click)="openDeleteModal(p.id)" class="w-full text-right px-4 py-2 text-xs text-amber-600 hover:bg-amber-50 flex items-center gap-2 font-bold min-h-[40px]">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete"></svg>
                   <span>بایگانی یا حذف انبار</span>
                 </button>
               </ng-container>

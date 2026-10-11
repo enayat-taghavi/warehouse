@@ -89,7 +89,7 @@
             <div class="flex items-start gap-3">
               <div class="mt-1 p-2 rounded-xl transition-colors"
                    [ngClass]="importService.currentState.isPreCounted ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="check-circle"></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="status-approved"></svg>
               </div>
               <div class="flex-1">
                 <div class="flex items-center gap-2 flex-wrap">
@@ -173,7 +173,7 @@
             شروع فرآیند پردازش و تزریق به دیتابیس
           </button>
           <button *ngIf="importService.currentState.isSimulating" (click)="cancelProcess()" [disabled]="importService.currentState.isCanceling" class="px-6 py-4 rounded-xl text-sm font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all flex items-center justify-center gap-2" [ngClass]="importService.currentState.isCanceling ? 'opacity-50 cursor-not-allowed' : 'active:scale-[0.98]'">
-            <svg *ngIf="!importService.currentState.isCanceling" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x-circle"></svg>
+            <svg *ngIf="!importService.currentState.isCanceling" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-rejected"></svg>
             <svg *ngIf="importService.currentState.isCanceling" class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="loader-arc"></svg>
             {{ importService.currentState.isCanceling ? 'در حال لغو...' : 'لغو فرآیند' }}
           </button>
@@ -181,12 +181,12 @@
           
           <div class="flex flex-col sm:flex-row gap-3 mt-3">
             <button *ngIf="hasWarehouse && importService.currentState.fileToUpload && (importService.currentState.foundFields.includes('fa_unic_code') || importService.currentState.foundFields.includes('id'))" (click)="openDeleteModal('excel')" class="flex-1 px-4 py-3 min-h-[40px] rounded-xl text-[11px] sm:text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all flex items-center justify-center gap-2 fade-in active:scale-95">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete"></svg>
               <span>حذف رکوردهای این فایل از انبار</span>
             </button>
 
             <button *ngIf="hasWarehouse" (click)="openDeleteModal('all')" class="flex-1 px-4 py-3 min-h-[40px] rounded-xl text-[11px] sm:text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all flex items-center justify-center gap-2 fade-in active:scale-95">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete"></svg>
               <span>حذف اطلاعات انبار فعلی</span>
             </button>
           </div>
@@ -204,7 +204,7 @@
                 <div class="flex items-center gap-3">
                   <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" 
                        [ngClass]="i === 0 ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-500'">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-ccw"></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-return"></svg>
                   </div>
                   <div>
                     <p class="font-bold text-xs text-slate-800">{{ op.file_name }} <span *ngIf="op.records_affected" class="text-slate-500 font-normal mr-1">({{ op.records_affected | number }} رکورد)</span></p>
@@ -270,11 +270,11 @@
           <div class="flex items-center gap-3">
             <button (click)="clearLogs()" class="text-[11px] font-bold text-slate-400 hover:text-rose-400 transition-colors flex items-center gap-1.5">
               پاکسازی لاگ
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="trash"></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-delete"></svg>
             </button>
             <button (click)="downloadLog()" class="text-[11px] font-bold text-slate-400 hover:text-white transition-colors flex items-center gap-1.5">
               دانلود لاگ
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="download"></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-download"></svg>
             </button>
           </div>
         </div>
@@ -407,7 +407,7 @@
         
         <!-- 2. لغو فرآیند و خروج -->
         <button (click)="resolveLeave('cancel')" class="w-full py-3.5 rounded-xl text-sm font-bold text-rose-600 bg-white border-2 border-rose-100 hover:border-rose-200 hover:bg-rose-50 transition-all flex items-center justify-center gap-2 active:scale-[0.98]">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x-circle"></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-reject"></svg>
           توقف فرآیند و خروج
         </button>
         
@@ -458,7 +458,7 @@
         [disabled]="deleteCountdown > 0"
         [ngClass]="deleteCountdown > 0 ? 'bg-slate-300 text-slate-500 cursor-not-allowed border-slate-300' : 'bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/30 border-rose-600'"
         class="flex-1 py-3.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-sm border">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="trash"></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-delete"></svg>
         بله، حذف کن
       </button>
     </div>

@@ -21,17 +21,26 @@ import { ItemPhotoGalleryComponent } from '../../shared/components/item-photo-ga
 import { ItemPhotoThumbComponent } from '../../shared/components/item-photo-gallery/item-photo-thumb.component';
 import { PhotoGalleryHost } from '../../shared/components/item-photo-gallery/photo-gallery-host';
 import { ContextualCommentsComponent } from '../communications/contextual-comments/contextual-comments.component';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../shared/components/tab-bar/tab-bar.component';
+import { OverflowMenuComponent } from '../../shared/components/overflow-menu/overflow-menu.component';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-count-tracking',
   standalone: true,
-  imports: [CommonModule, FormsModule, DataTableComponent, TableColumnDirective, PersianDatePipe, WarehouseSelectorComponent, BarcodeScannerComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, ContextualCommentsComponent, SvgIconDirective],
+  imports: [CommonModule, FormsModule, DataTableComponent, TableColumnDirective, PersianDatePipe, WarehouseSelectorComponent, BarcodeScannerComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, ContextualCommentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent, OverflowMenuComponent],
   templateUrl: './count-tracking.html',
   styleUrl: './count-tracking.css'
 })
 export class CountTracking implements OnInit, OnDestroy {
   @ViewChild(BarcodeScannerComponent) scanner?: BarcodeScannerComponent;
+
+  readonly performanceTabs: TabDef[] = [
+    { id: 'overview', label: 'نمای کلی و شاخص‌ها', shortLabel: 'نمای کلی', icon: 'action-view' },
+    { id: 'counters', label: 'انبارگردان‌ها (سرعت و دقت)', shortLabel: 'انبارگردان‌ها', icon: 'action-users' },
+    { id: 'supervisors', label: 'سرپرستان (سرعت تایید)', shortLabel: 'سرپرستان', icon: 'action-user-check' }
+  ];
 
   tasks: any[] = [];
   filteredTasks: any[] = [];
@@ -1278,6 +1287,13 @@ export class CountTracking implements OnInit, OnDestroy {
       topCounterName: topCounter?.name || '-',
       topCounterSpeed: topCounter?.itemsPerHour || 0
     };
+
+    this.performanceTabs[1].count = this.counterStats.length;
+    this.performanceTabs[2].count = this.supervisorStats.length;
+  }
+
+  onPerformanceTabChange(tabId: string) {
+    this.performanceActiveTab = tabId as 'overview' | 'counters' | 'supervisors';
   }
 }
 

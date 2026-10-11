@@ -226,3 +226,14 @@ export class TabBarComponent {
     }
   }
 }
+
+// سازگاری با JIT در محیط تست‌های بدون AOT (Vitest)
+(TabBarComponent as any).propMetadata = {
+  ...((TabBarComponent as any).propMetadata || {}),
+  tabs: [{ ngMetadataName: 'Input', isSignal: true, required: true }],
+  active: [{ ngMetadataName: 'Input', isSignal: true, required: true }],
+  mobile: [{ ngMetadataName: 'Input', isSignal: true }],
+  fullLabelFrom: [{ ngMetadataName: 'Input', isSignal: true }],
+  activeChange: [{ ngMetadataName: 'Output' }],
+  tabButtons: [{ ngMetadataName: 'ViewChildren', selector: 'tabButton', first: false, isViewQuery: true, descendants: true }],
+};

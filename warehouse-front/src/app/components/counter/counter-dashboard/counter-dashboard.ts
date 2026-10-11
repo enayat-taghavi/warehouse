@@ -31,12 +31,14 @@ import {
   FieldPermissionConfig, 
   mergeFieldPermissions 
 } from '../../../core/models/field-config.model';
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../shared/components/tab-bar/tab-bar.component';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-counter-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, PersianDatePipe, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, SvgIconDirective],
+  imports: [CommonModule, FormsModule, PersianDatePipe, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent],
   templateUrl: './counter-dashboard.html',
   styleUrl: './counter-dashboard.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -51,6 +53,18 @@ export class CounterDashboard implements OnInit {
   selectedPoolTasks = new Set<number>();
   currentTab: 'my-tasks' | 'pool' = 'my-tasks';
   isSubmitting = false;
+
+  counterTabs: TabDef[] = [
+    { id: 'my-tasks', label: 'تسک‌های من', shortLabel: 'تسک‌ها' },
+    { id: 'pool', label: 'مخزن کالاها', shortLabel: 'مخزن' }
+  ];
+
+  updateCounterTabs(): void {
+    this.counterTabs = [
+      { id: 'my-tasks', label: 'تسک‌های من', shortLabel: 'تسک‌ها' },
+      { id: 'pool', label: 'مخزن کالاها', shortLabel: 'مخزن', count: this.poolTasks.length > 0 ? this.poolTasks.length : undefined }
+    ];
+  }
 
   // ── Photo Gallery State ───────────────────────────────────────────────────
   readonly photoGallery = new PhotoGalleryHost(msg => this.toast.warning(msg));
@@ -716,6 +730,7 @@ export class CounterDashboard implements OnInit {
         const newPoolTasks = Array.isArray(res) ? res : (res.results || []);
         this.trackUpdates(this.poolTasks, newPoolTasks);
         this.poolTasks = newPoolTasks;
+        this.updateCounterTabs();
         this.applyFilters();
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -799,8 +814,8 @@ export class CounterDashboard implements OnInit {
     }
   }
 
-  setTab(tab: 'my-tasks' | 'pool') {
-    this.currentTab = tab;
+  setTab(tab: string) {
+    this.currentTab = (tab === 'pool' ? 'pool' : 'my-tasks');
     this.updateUrlState();
     this.refreshCurrentTab();
   }

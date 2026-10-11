@@ -32,3 +32,8 @@ export class SvgIconDirective {
     return this.sanitizer.bypassSecurityTrustHtml(inner);
   });
 }
+
+// سازگاری با JIT در محیط تست‌های بدون AOT (Vitest)
+(SvgIconDirective as any).propMetadata = {
+  appIcon: [{ ngMetadataName: 'Input', isSignal: true }],
+};

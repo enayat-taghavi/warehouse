@@ -5,7 +5,7 @@
     <!-- Title & Icon -->
     <div class="flex items-center gap-2.5">
       <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm shadow-indigo-600/30">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="status-approved"></svg>
       </div>
       <div>
         <h1 class="text-sm font-black text-slate-800 leading-tight">کارتابل مالی و بررسی نهایی مدیر</h1>
@@ -26,17 +26,11 @@
       </div>
       
       <!-- Barcode Scanner Trigger Button -->
-      <button (click)="scanner?.openCamera()" class="btn-icon-square btn-icon-indigo min-w-[44px] min-h-[44px]" title="اسکن بارکد با دوربین" aria-label="اسکن دوربین">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="scan-line"></svg>
-      </button>
+      <button type="button" appAction="scan" size="lg" (click)="scanner?.openCamera()" title="اسکن بارکد با دوربین"></button>
       <!-- Export Excel Button -->
-      <button (click)="openExportModal()" class="btn-icon-square btn-icon-emerald min-w-[40px] min-h-[40px]" title="خروجی و دانلود اکسل مدیر" aria-label="خروجی اکسل">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
-      </button>
+      <button type="button" appAction="export-excel" (click)="openExportModal()" title="خروجی و دانلود اکسل مدیر"></button>
       <!-- Refresh Button -->
-      <button (click)="refreshCurrentTab()" class="btn-icon-square btn-icon-indigo" title="بروزرسانی کارتابل مدیر" aria-label="بروزرسانی">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.animate-spin]="isLoading || isDocLoading" appIcon="refresh-cw"></svg>
-      </button>
+      <button type="button" appAction="refresh" (click)="refreshCurrentTab()" [busy]="isLoading || isDocLoading" title="بروزرسانی کارتابل مدیر"></button>
     </div>
   </header>
 
@@ -44,58 +38,13 @@
   <app-barcode-scanner [headless]="true" (scanned)="onBarcodeScanned($event)"></app-barcode-scanner>
 
   <!-- Navigation: Section Selector + Sub-tabs -->
-  <div class="mb-4 px-2">
+  <div class="mb-4 px-2 space-y-2">
     <!-- Section Pills -->
-    <div class="flex gap-2 mb-2">
-      <button (click)="switchSection('counting')"
-        class="flex-1 py-2 min-h-[40px] text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5"
-        [class]="activeSection === 'counting' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="package"></svg>
-        <span>انبارگردانی (میدانی)</span>
-        <span *ngIf="tasks.length > 0 && activeSection !== 'counting'" class="bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-full px-1.5 py-0.2">{{tasks.length}}</span>
-      </button>
-      <button (click)="switchSection('financial')"
-        class="flex-1 py-2 min-h-[40px] text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5"
-        [class]="activeSection === 'financial' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
-        <span>مالی / اسناد</span>
-        <span *ngIf="docTasks.length > 0 && activeSection !== 'financial'"
-          class="bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-full px-1.5 py-0.2">{{docTasks.length}}</span>
-      </button>
-    </div>
+    <app-tab-bar [tabs]="sectionTabs" [active]="activeSection" (activeChange)="switchSection($event)" />
     
     <!-- Sub-tabs -->
-    <div class="flex border-b border-slate-200">
-      <ng-container *ngIf="activeSection === 'counting'">
-        <button (click)="setTab('my-tasks')"
-          class="px-4 py-2.5 min-h-[40px] border-b-2 font-bold text-sm transition-colors flex items-center gap-1"
-          [class]="currentTab === 'my-tasks' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'">
-          <span>تسک‌های من</span>
-          <span *ngIf="tasks.length > 0" class="bg-indigo-50 text-indigo-600 text-xs px-2 py-0.5 rounded-full font-bold mr-1">{{tasks.length}}</span>
-        </button>
-        <button (click)="setTab('pool')"
-          class="px-4 py-2.5 min-h-[40px] border-b-2 font-bold text-sm transition-colors flex items-center gap-1"
-          [class]="currentTab === 'pool' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'">
-          <span>مخزن کالاها</span>
-          <span *ngIf="poolTasks.length > 0" class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold">{{poolTasks.length}}</span>
-        </button>
-      </ng-container>
-      
-      <ng-container *ngIf="activeSection === 'financial'">
-        <button (click)="setTab('doc')"
-          class="px-4 py-2.5 min-h-[40px] border-b-2 font-bold text-sm transition-colors flex items-center gap-1"
-          [class]="currentTab === 'doc' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'">
-          <span>تسک‌های من</span>
-          <span *ngIf="docTasks.length > 0" class="bg-indigo-50 text-indigo-600 text-xs px-2 py-0.5 rounded-full font-bold mr-1">{{docTasks.length}}</span>
-        </button>
-        <button (click)="setTab('doc-pool')"
-          class="px-4 py-2.5 min-h-[40px] border-b-2 font-bold text-sm transition-colors flex items-center gap-1"
-          [class]="currentTab === 'doc-pool' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'">
-          <span>مخزن اسناد</span>
-          <span *ngIf="docPoolTasks.length > 0" class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold">{{docPoolTasks.length}}</span>
-        </button>
-      </ng-container>
-    </div>
+    <app-tab-bar *ngIf="activeSection === 'counting'" [tabs]="countingSubTabs" [active]="currentTab" (activeChange)="setTab($event)" mobile="icon" />
+    <app-tab-bar *ngIf="activeSection === 'financial'" [tabs]="financialSubTabs" [active]="currentTab" (activeChange)="setTab($event)" mobile="icon" />
   </div>
 
   <!-- ══════════════════════════════════════════════ -->
@@ -123,7 +72,7 @@
     <div *ngIf="!isLoading && statusFilter === 'pending' && statusCounts.pending === 0 && tasks.length > 0" 
          class="p-4 bg-emerald-50/90 border border-emerald-200 rounded-2xl mb-3 mx-2 flex items-start gap-3 shadow-sm animate-in fade-in duration-200">
       <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-approved"></svg>
       </div>
       <div class="flex-1 min-w-0">
         <h4 class="text-xs font-black text-emerald-900 mb-0.5">تمامی اقلام در انتظار بررسی مدیر به پایان رسیدند!</h4>
@@ -151,47 +100,46 @@
           <button 
             (click)="clearAllSelections()" 
             type="button"
-            title="لغو انتخاب‌ها"
-            class="p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+            appAction="close"
+            title="لغو انتخاب‌ها">
           </button>
-          <div class="flex items-center gap-1.5 font-bold text-xs">
+          <div class="flex items-center gap-1.5 font-bold text-xs whitespace-nowrap">
             <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-            <span>{{ selectedTasks.size }} کالا انتخاب شد</span>
+            <span>{{ selectedTasks.size }} کالا</span>
           </div>
         </div>
 
-        <div class="flex items-center gap-1.5 pl-1">
+        <div class="flex items-center gap-1.5 pl-1 shrink-0">
           <button 
             (click)="selectMatchedTasks()" 
             type="button"
             title="انتخاب اقلام منطبق بدون مغایرت"
             class="px-2.5 py-2 min-w-[40px] min-h-[40px] justify-center text-emerald-400 hover:text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-confirm"></svg>
             <span class="hidden sm:inline">انتخاب منطبق‌ها</span>
           </button>
 
           <button 
-            (click)="openBulkRejectDialog()"
             type="button"
-            class="flex items-center gap-1.5 px-3 py-2 min-h-[40px] bg-rose-600 hover:bg-rose-500 active:scale-95 text-white rounded-xl text-xs font-black shadow-md transition-all">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-ccw"></svg>
-            <span>رد و دستور بازشماری</span>
+            appAction="reject"
+            label="رد"
+            (click)="openBulkRejectDialog()"
+            title="رد و دستور بازشماری">
           </button>
 
           <button 
-            (click)="openApproveDialog()"
             type="button"
-            class="flex items-center gap-1.5 px-3.5 py-2 min-h-[40px] bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-black shadow-md transition-all">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
-            <span>تایید نهایی مدیر</span>
+            appAction="approve"
+            label="تایید"
+            (click)="openApproveDialog()"
+            title="تایید نهایی مدیر">
           </button>
         </div>
       </div>
 
       <!-- Case 2: Omni-Search Bar (When NO items selected) -->
       <div *ngIf="selectedTasks.size === 0" class="relative mb-3">
-        <svg class="absolute right-3.5 top-3.5 text-slate-400 pointer-events-none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="search"></svg>
+        <svg class="absolute right-3.5 top-3.5 text-slate-400 pointer-events-none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-search"></svg>
 
         <input 
           type="text" 
@@ -206,14 +154,14 @@
           (click)="clearSearch()" 
           class="absolute left-11 top-2.5 p-1 text-slate-400 hover:text-slate-600 rounded-lg transition-colors"
           title="پاک کردن جستجو">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="x"></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="action-close"></svg>
         </button>
 
         <button 
           (click)="scanner?.openCamera()" 
           class="absolute left-2 top-2 p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl transition-colors shadow-sm flex items-center gap-1"
           title="اسکن با دوربین">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="camera"></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-camera"></svg>
         </button>
       </div>
 
@@ -278,8 +226,8 @@
                 type="button"
                 class="p-1.5 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
                 [title]="sortDirection === 'asc' ? 'صعودی (کلیک برای تغییر)' : 'نزولی (کلیک برای تغییر)'">
-                <svg *ngIf="sortDirection === 'asc'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-up"></svg>
-                <svg *ngIf="sortDirection === 'desc'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-down"></svg>
+                <svg *ngIf="sortDirection === 'asc'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-collapse"></svg>
+                <svg *ngIf="sortDirection === 'desc'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-expand"></svg>
               </button>
             </div>
 
@@ -329,7 +277,7 @@
 
     <!-- Empty State -->
     <div *ngIf="!isLoading && tasks.length === 0" class="text-center py-16 bg-white rounded-2xl border border-slate-200 flex-1 mx-2">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto text-slate-300 mb-4" appIcon="check-circle"></svg>
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto text-slate-300 mb-4" appIcon="status-approved"></svg>
       <p class="text-slate-600 font-bold">موردی برای بررسی نهایی وجود ندارد.</p>
       <p class="text-xs text-slate-400 mt-2">تسک‌های تاییدشده توسط سرپرست در این بخش نمایش داده می‌شوند.</p>
     </div>
@@ -478,17 +426,9 @@
           
           <!-- Quick Actions -->
           <div class="flex items-center gap-1.5">
-            <button (click)="$event.stopPropagation(); openCountingDetail(task, $event)" class="p-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors" title="مشاهده جزئیات کامل">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
-            </button>
-            <button (click)="$event.stopPropagation(); rejectSingle(task)" class="min-h-[40px] sm:min-h-[36px] flex items-center gap-1 px-2.5 py-1 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl text-xs font-bold transition-colors border border-rose-100" title="رد و دستور بازشماری">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-ccw"></svg>
-              <span>رد / بازشماری</span>
-            </button>
-            <button (click)="$event.stopPropagation(); approveSingle(task)" class="min-h-[40px] sm:min-h-[36px] flex items-center gap-1 px-3.5 py-1 text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-bold transition-colors shadow-sm" title="تایید نهایی کالا">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
-              <span>تایید نهایی</span>
-            </button>
+            <button type="button" appAction="view" (click)="$event.stopPropagation(); openCountingDetail(task, $event)" title="مشاهده جزئیات کامل"></button>
+            <button type="button" appAction="reject" display="label" label="رد" (click)="$event.stopPropagation(); rejectSingle(task)" title="رد و دستور بازشماری"></button>
+            <button type="button" appAction="approve" display="label" label="تایید" (click)="$event.stopPropagation(); approveSingle(task)" title="تایید نهایی کالا"></button>
           </div>
         </div>
       </div>
@@ -604,7 +544,7 @@
     <div *ngIf="!isDocLoading && statusFilter === 'pending' && docStatusCounts.pending === 0 && docTasks.length > 0" 
          class="p-4 bg-emerald-50/90 border border-emerald-200 rounded-2xl mb-3 mx-2 flex items-start gap-3 shadow-sm animate-in fade-in duration-200">
       <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-approved"></svg>
       </div>
       <div class="flex-1 min-w-0">
         <h4 class="text-xs font-black text-emerald-900 mb-0.5">تمامی اسناد در انتظار تایید مدیر به پایان رسیدند!</h4>
@@ -632,9 +572,8 @@
           <button 
             (click)="clearAllSelections()" 
             type="button"
-            title="لغو انتخاب‌ها"
-            class="p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+            appAction="close"
+            title="لغو انتخاب‌ها">
           </button>
           <div class="flex items-center gap-1.5 font-bold text-xs">
             <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
@@ -648,31 +587,33 @@
             type="button"
             title="انتخاب همه اسناد فیلتر شده"
             class="px-2.5 py-2 min-w-[40px] min-h-[40px] justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square"></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-confirm"></svg>
             <span class="hidden sm:inline">انتخاب همه</span>
           </button>
 
           <button 
-            (click)="openDocRejectDialog()"
             type="button"
-            class="flex items-center gap-1.5 px-3 py-2 min-h-[40px] bg-rose-600 hover:bg-rose-500 active:scale-95 text-white rounded-xl text-xs font-black shadow-md transition-all">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x-circle"></svg>
-            <span>رد اسناد مالی</span>
+            appAction="reject"
+            display="label"
+            label="رد"
+            (click)="openDocRejectDialog()"
+            title="رد اسناد مالی">
           </button>
 
           <button 
-            (click)="openDocApproveDialog()"
             type="button"
-            class="flex items-center gap-1.5 px-3.5 py-2 min-h-[40px] bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-black shadow-md transition-all">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
-            <span>تایید نهایی مالی</span>
+            appAction="approve"
+            display="label"
+            label="تایید"
+            (click)="openDocApproveDialog()"
+            title="تایید نهایی مالی">
           </button>
         </div>
       </div>
 
       <!-- Case 2: Omni-Search Bar (When NO items selected) -->
       <div *ngIf="selectedDocTasks.size === 0" class="relative mb-3">
-        <svg class="absolute right-3.5 top-3.5 text-slate-400 pointer-events-none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="search"></svg>
+        <svg class="absolute right-3.5 top-3.5 text-slate-400 pointer-events-none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-search"></svg>
 
         <input 
           type="text" 
@@ -687,14 +628,14 @@
           (click)="clearSearch()" 
           class="absolute left-11 top-2.5 p-1 text-slate-400 hover:text-slate-600 rounded-lg transition-colors"
           title="پاک کردن جستجو">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="x"></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="action-close"></svg>
         </button>
 
         <button 
           (click)="scanner?.openCamera()" 
           class="absolute left-2 top-2 p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl transition-colors shadow-sm flex items-center gap-1"
           title="اسکن با دوربین">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="camera"></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-camera"></svg>
         </button>
       </div>
 
@@ -756,8 +697,8 @@
                 type="button"
                 class="p-1.5 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
                 [title]="sortDirection === 'asc' ? 'صعودی (کلیک برای تغییر)' : 'نزولی (کلیک برای تغییر)'">
-                <svg *ngIf="sortDirection === 'asc'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-up"></svg>
-                <svg *ngIf="sortDirection === 'desc'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-down"></svg>
+                <svg *ngIf="sortDirection === 'asc'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-collapse"></svg>
+                <svg *ngIf="sortDirection === 'desc'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-expand"></svg>
               </button>
             </div>
 
@@ -952,17 +893,9 @@
           </div>
 
           <div class="flex items-center gap-1.5 mr-auto">
-            <button (click)="$event.stopPropagation(); openDocDetail(task)" class="p-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors" title="مشاهده جزئیات کامل">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
-            </button>
-            <button (click)="$event.stopPropagation(); rejectSingleDoc(task, $event)" class="min-h-[40px] sm:min-h-[36px] flex items-center gap-1 px-2.5 py-1 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl text-xs font-bold transition-colors border border-rose-100" title="رد سند">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x-circle"></svg>
-              <span>رد</span>
-            </button>
-            <button (click)="$event.stopPropagation(); approveSingleDoc(task, $event)" class="min-h-[40px] sm:min-h-[36px] flex items-center gap-1 px-3.5 py-1 text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-bold transition-colors shadow-sm" title="تایید نهایی سند">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
-              <span>تایید نهایی</span>
-            </button>
+            <button type="button" appAction="view" (click)="$event.stopPropagation(); openDocDetail(task)" title="مشاهده جزئیات کامل"></button>
+            <button type="button" appAction="reject" display="label" label="رد" (click)="$event.stopPropagation(); rejectSingleDoc(task, $event)" title="رد سند"></button>
+            <button type="button" appAction="approve" display="label" label="تایید" (click)="$event.stopPropagation(); approveSingleDoc(task, $event)" title="تایید نهایی سند"></button>
           </div>
         </div>
       </div>
@@ -1080,7 +1013,7 @@
           </div>
         </div>
         <button (click)="closeCountingDetail()" class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close"></svg>
         </button>
       </div>
 
@@ -1186,17 +1119,11 @@
       </div>
 
       <!-- Footer Actions -->
-      <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-2">
-        <button (click)="closeCountingDetail()" class="px-5 py-2.5 min-h-[40px] bg-slate-200 hover:bg-slate-300 font-bold rounded-xl text-slate-700 transition-colors">بستن</button>
+      <div class="p-3 sm:p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-2">
+        <button type="button" appAction="close" label="بستن" (click)="closeCountingDetail()"></button>
         <div class="flex items-center gap-2">
-          <button (click)="rejectDetailTask()" class="px-4 py-2.5 min-h-[40px] text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl font-bold text-xs transition-colors border border-rose-100 flex items-center gap-1.5">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-ccw"></svg>
-            <span>رد و دستور بازشماری</span>
-          </button>
-          <button (click)="approveDetailTask()" class="px-4 py-2.5 min-h-[40px] text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-xs transition-colors shadow-sm flex items-center gap-1.5">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
-            <span>تایید نهایی مدیر</span>
-          </button>
+          <button type="button" appAction="return" label="رد" (click)="rejectDetailTask()"></button>
+          <button type="button" appAction="approve" label="تایید" (click)="approveDetailTask()"></button>
         </div>
       </div>
     </div>
@@ -1229,13 +1156,8 @@
       </div>
 
       <div class="flex justify-end gap-3">
-        <button (click)="cancelBulkReject()" class="px-5 py-2.5 rounded-xl font-bold text-sm text-slate-500 hover:bg-slate-50 transition-colors">
-          انصراف
-        </button>
-        <button (click)="confirmBulkReject()" class="px-5 py-2.5 rounded-xl font-bold text-sm text-white bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/30 transition-transform active:scale-95 flex items-center gap-1.5">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
-          ثبت رد و ارجاع
-        </button>
+        <button type="button" appAction="close" label="انصراف" (click)="cancelBulkReject()"></button>
+        <button type="button" appAction="reject" label="ثبت رد و ارجاع" (click)="confirmBulkReject()"></button>
       </div>
 
     </div>
@@ -1248,7 +1170,7 @@
       <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
         <h3 class="font-black text-slate-800 text-sm">تایید نهایی کالاها</h3>
         <button (click)="cancelApprove()" class="text-slate-400 hover:text-slate-600 transition-colors">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-close"></svg>
         </button>
       </div>
       
@@ -1267,15 +1189,20 @@
       </div>
       
       <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+      <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
         <button 
+          type="button"
+          appAction="close"
+          label="انصراف"
           (click)="cancelApprove()"
-          class="flex-1 py-2.5 px-4 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-50 transition-colors">
-          انصراف
+          class="flex-1">
         </button>
         <button 
+          type="button"
+          appAction="approve"
+          label="تایید نهایی و بستن کالا"
           (click)="confirmApprove()"
-          class="flex-1 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-500/20 transition-transform active:scale-95">
-          تایید نهایی و بستن کالا
+          class="flex-1">
         </button>
       </div>
     </div>
@@ -1288,7 +1215,7 @@
       <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
         <h3 class="font-black text-slate-800 text-sm">تایید نهایی اسناد مالی</h3>
         <button (click)="cancelDocApprove()" class="text-slate-400 hover:text-slate-600 transition-colors">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-close"></svg>
         </button>
       </div>
       <div class="p-6">
@@ -1301,8 +1228,8 @@
           placeholder="یادداشت مدیر مالی..."></textarea>
       </div>
       <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
-        <button (click)="cancelDocApprove()" class="flex-1 py-2.5 px-4 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-50 transition-colors">انصراف</button>
-        <button (click)="confirmDocApprove()" class="flex-1 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-500/20 transition-transform active:scale-95">تایید نهایی اسناد</button>
+        <button type="button" appAction="close" label="انصراف" (click)="cancelDocApprove()" class="flex-1"></button>
+        <button type="button" appAction="approve" label="تایید نهایی اسناد" (click)="confirmDocApprove()" class="flex-1"></button>
       </div>
     </div>
   </div>
@@ -1321,8 +1248,8 @@
         class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl p-3 text-sm focus:border-rose-500 focus:ring-4 focus:ring-rose-500/20 outline-none resize-none"
         placeholder="مشکل یا علت رد سند را توضیح دهید..."></textarea>
       <div class="flex justify-end gap-3 mt-6">
-        <button (click)="closeDocRejectDialog()" class="px-5 py-2.5 rounded-xl font-bold text-sm text-slate-500 hover:bg-slate-50 transition-colors">انصراف</button>
-        <button (click)="confirmDocReject()" class="px-5 py-2.5 rounded-xl font-bold text-sm text-white bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/30 transition-transform active:scale-95">ثبت رد</button>
+        <button type="button" appAction="close" label="انصراف" (click)="closeDocRejectDialog()"></button>
+        <button type="button" appAction="reject" label="ثبت رد" (click)="confirmDocReject()"></button>
       </div>
     </div>
   </div>
@@ -1332,11 +1259,11 @@
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh] overflow-hidden" dir="rtl">
       <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
         <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-500" appIcon="download"></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-500" appIcon="action-download"></svg>
           دریافت خروجی اکسل مدیر
         </h3>
         <button (click)="closeExportModal()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="x"></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-close"></svg>
         </button>
       </div>
       <div class="p-4 overflow-y-auto flex-1">
@@ -1375,7 +1302,7 @@
             <label *ngFor="let col of availableExportColumns" class="flex items-center gap-2 cursor-pointer group">
               <div class="relative flex items-center justify-center w-5 h-5">
                 <input type="checkbox" [checked]="selectedExportColumns.has(col.key)" (change)="selectedExportColumns.has(col.key) ? selectedExportColumns.delete(col.key) : selectedExportColumns.add(col.key)" class="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded-md checked:bg-emerald-500 checked:border-emerald-500 cursor-pointer transition-all">
-                <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" appIcon="check"></svg>
+                <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" appIcon="action-confirm"></svg>
               </div>
               <span class="text-xs font-bold text-slate-600 group-hover:text-slate-900 transition-colors">{{ col.label }}</span>
             </label>
@@ -1384,11 +1311,8 @@
       </div>
 
       <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-        <button (click)="closeExportModal()" class="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors" [disabled]="isExporting">انصراف</button>
-        <button (click)="executeExport()" [disabled]="isExporting || (exportColumnScope === 'custom' && selectedExportColumns.size === 0)" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2">
-          <svg *ngIf="isExporting" class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" appIcon="spinner"></svg>
-          <span>{{ isExporting ? 'در حال آماده‌سازی...' : 'دانلود فایل اکسل' }}</span>
-        </button>
+        <button type="button" appAction="close" label="انصراف" (click)="closeExportModal()" [disabled]="isExporting"></button>
+        <button type="button" appAction="download" label="دانلود فایل اکسل" (click)="executeExport()" [disabled]="isExporting || (exportColumnScope === 'custom' && selectedExportColumns.size === 0)" [busy]="isExporting"></button>
       </div>
     </div>
   </div>
@@ -1409,7 +1333,7 @@
           </div>
         </div>
         <button (click)="closeDocDetail()" class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close"></svg>
         </button>
       </div>
 
@@ -1484,16 +1408,10 @@
 
       <!-- Footer -->
       <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-2">
-        <button (click)="closeDocDetail()" class="px-5 py-2.5 min-h-[40px] bg-slate-200 hover:bg-slate-300 font-bold rounded-xl text-slate-700 transition-colors">بستن</button>
+        <button type="button" appAction="close" label="بستن" (click)="closeDocDetail()"></button>
         <div class="flex items-center gap-2">
-          <button (click)="closeDocDetail(); rejectSingleDoc(selectedDocDetailTask)" class="px-4 py-2.5 min-h-[40px] text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl font-bold text-xs transition-colors border border-rose-100 flex items-center gap-1.5">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x-circle"></svg>
-            <span>رد سند مالی</span>
-          </button>
-          <button (click)="closeDocDetail(); approveSingleDoc(selectedDocDetailTask)" class="px-4 py-2.5 min-h-[40px] text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-xs transition-colors shadow-sm flex items-center gap-1.5">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
-            <span>تایید نهایی سند</span>
-          </button>
+          <button type="button" appAction="reject" display="label" label="رد" (click)="closeDocDetail(); rejectSingleDoc(selectedDocDetailTask)"></button>
+          <button type="button" appAction="approve" display="label" label="تایید" (click)="closeDocDetail(); approveSingleDoc(selectedDocDetailTask)"></button>
         </div>
       </div>
     </div>

@@ -31,18 +31,12 @@
           </div>
           
           <!-- Barcode Scanner Trigger Button -->
-          <button (click)="scanner.openCamera()" class="btn-icon-square btn-icon-indigo min-w-[44px] min-h-[44px]" title="اسکن بارکد با دوربین" aria-label="اسکن دوربین">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="scan-line"></svg>
-          </button>
+          <button type="button" appAction="scan" size="lg" tone="indigo" (click)="scanner.openCamera()" title="اسکن بارکد با دوربین"></button>
 
           <!-- Export Excel Button -->
-          <button (click)="openExportModal()" class="btn-icon-square btn-icon-emerald min-w-[40px] min-h-[40px]" title="خروجی و دانلود اکسل کارتابل" aria-label="خروجی اکسل">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
-          </button>
+          <button type="button" appAction="export-excel" (click)="openExportModal()" title="خروجی و دانلود اکسل کارتابل"></button>
           <!-- Refresh Button -->
-          <button (click)="refreshCurrentTab()" class="btn-icon-square btn-icon-indigo" title="بروزرسانی کارتابل انبارگردان" aria-label="بروزرسانی">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.animate-spin]="isLoading" appIcon="refresh-cw"></svg>
-          </button>
+          <button type="button" appAction="refresh" [busy]="isLoading" (click)="refreshCurrentTab()" title="بروزرسانی کارتابل انبارگردان"></button>
         </div>
       </header>
 
@@ -55,14 +49,8 @@
       />
 
       <!-- Tabs -->
-      <div class="flex border-b border-slate-200 mb-4 px-2">
-        <button (click)="setTab('my-tasks')" [class.border-indigo-600]="currentTab === 'my-tasks'" [class.text-indigo-600]="currentTab === 'my-tasks'" class="px-4 py-3 border-b-2 border-transparent font-bold text-sm transition-colors text-slate-500 hover:text-slate-800">
-          تسک‌های من
-        </button>
-        <button (click)="setTab('pool')" [class.border-indigo-600]="currentTab === 'pool'" [class.text-indigo-600]="currentTab === 'pool'" class="px-4 py-3 border-b-2 border-transparent font-bold text-sm transition-colors text-slate-500 hover:text-slate-800 flex items-center gap-1">
-          <span>مخزن کالاها</span>
-          <span *ngIf="poolTasks.length > 0" class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-bold">{{poolTasks.length}}</span>
-        </button>
+      <div class="mb-4">
+        <app-tab-bar [tabs]="counterTabs" [active]="currentTab" (activeChange)="setTab($event)" mobile="icon" />
       </div>
 
       <ng-container *ngIf="currentTab === 'my-tasks'">
@@ -96,8 +84,9 @@
                 (click)="clearAllSelections()" 
                 type="button"
                 title="لغو انتخاب‌ها"
+                aria-label="لغو انتخاب‌ها"
                 class="p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close"></svg>
               </button>
               <div class="flex items-center gap-1.5 font-bold text-xs">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -111,19 +100,19 @@
                 (click)="toggleAll()" 
                 type="button"
                 title="انتخاب همه اقلام فیلتر شده"
+                aria-label="انتخاب همه اقلام فیلتر شده"
                 class="px-2.5 py-2 min-w-[40px] min-h-[40px] justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square"></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-confirm"></svg>
                 <span class="hidden sm:inline">انتخاب همه</span>
               </button>
 
               <button 
-                (click)="submitSelected()" 
-                [disabled]="isSubmitting"
                 type="button"
-                class="flex items-center gap-1.5 px-3.5 py-2 min-h-[40px] bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:opacity-50 text-white rounded-xl text-xs font-black shadow-md transition-all">
-                <svg *ngIf="!isSubmitting" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check-circle"></svg>
-                <div *ngIf="isSubmitting" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>{{ isSubmitting ? 'در حال ارسال...' : 'ارسال به سرپرست' }}</span>
+                appAction="approve"
+                display="label"
+                label="ارسال به سرپرست"
+                [busy]="isSubmitting"
+                (click)="submitSelected()">
               </button>
             </div>
           </div>
@@ -131,7 +120,7 @@
           <!-- Case 2: Omni-Search Bar (When NO items selected) -->
           <div *ngIf="selectedTasks.size === 0" class="relative mb-3">
             <!-- Search Icon -->
-            <svg class="absolute right-3.5 top-3.5 text-slate-400 pointer-events-none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="search"></svg>
+            <svg class="absolute right-3.5 top-3.5 text-slate-400 pointer-events-none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-search"></svg>
 
             <!-- Search Input -->
             <input 
@@ -147,17 +136,21 @@
             <button 
               *ngIf="searchQuery" 
               (click)="clearSearch()" 
-              class="absolute left-11 top-2.5 p-1 text-slate-400 hover:text-slate-600 rounded-lg transition-colors"
-              title="پاک کردن جستجو">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="x"></svg>
+              type="button"
+              class="absolute left-12 top-2 p-1 text-slate-400 hover:text-slate-600 rounded-lg transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
+              title="پاک کردن جستجو"
+              aria-label="پاک کردن جستجو">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="action-close"></svg>
             </button>
 
             <!-- Camera Scan Button -->
             <button 
               (click)="triggerCameraScan()" 
-              class="absolute left-2 top-2 p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl transition-colors shadow-sm flex items-center gap-1"
-              title="اسکن با دوربین">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="camera"></svg>
+              type="button"
+              class="absolute left-1.5 top-1.5 p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl transition-colors shadow-sm flex items-center justify-center min-w-[40px] min-h-[40px]"
+              title="اسکن با دوربین"
+              aria-label="اسکن با دوربین">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-camera"></svg>
             </button>
           </div>
 
@@ -254,8 +247,8 @@
                     type="button"
                     class="p-1.5 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
                     [title]="sortDirection === 'asc' ? 'صعودی (کلیک برای تغییر)' : 'نزولی (کلیک برای تغییر)'">
-                    <svg *ngIf="sortDirection === 'asc'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-up"></svg>
-                    <svg *ngIf="sortDirection === 'desc'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-down"></svg>
+                    <svg *ngIf="sortDirection === 'asc'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-collapse"></svg>
+                    <svg *ngIf="sortDirection === 'desc'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-expand"></svg>
                   </button>
                 </div>
 
@@ -278,8 +271,8 @@
                     <span>آخرین زمان تغییر</span>
                     <div *ngIf="sortField === 'updated_at'" class="flex items-center gap-1 text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">
                       <span>{{ sortDirection === 'asc' ? 'قدیمی‌ترین' : 'جدیدترین' }}</span>
-                      <svg *ngIf="sortDirection === 'asc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="chevron-up"></svg>
-                      <svg *ngIf="sortDirection === 'desc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="chevron-down"></svg>
+                      <svg *ngIf="sortDirection === 'asc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-collapse"></svg>
+                      <svg *ngIf="sortDirection === 'desc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-expand"></svg>
                     </div>
                   </button>
 
@@ -293,8 +286,8 @@
                     <span>زمان تخصیص</span>
                     <div *ngIf="sortField === 'created_at'" class="flex items-center gap-1 text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">
                       <span>{{ sortDirection === 'asc' ? 'قدیمی‌ترین' : 'جدیدترین' }}</span>
-                      <svg *ngIf="sortDirection === 'asc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="chevron-up"></svg>
-                      <svg *ngIf="sortDirection === 'desc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="chevron-down"></svg>
+                      <svg *ngIf="sortDirection === 'asc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-collapse"></svg>
+                      <svg *ngIf="sortDirection === 'desc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-expand"></svg>
                     </div>
                   </button>
 
@@ -308,8 +301,8 @@
                     <span>مسیر لوکیشن</span>
                     <div *ngIf="sortField === 'location'" class="flex items-center gap-1 text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">
                       <span>{{ sortDirection === 'asc' ? 'صعودی' : 'نزولی' }}</span>
-                      <svg *ngIf="sortDirection === 'asc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="chevron-up"></svg>
-                      <svg *ngIf="sortDirection === 'desc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="chevron-down"></svg>
+                      <svg *ngIf="sortDirection === 'asc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-collapse"></svg>
+                      <svg *ngIf="sortDirection === 'desc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-expand"></svg>
                     </div>
                   </button>
 
@@ -322,7 +315,7 @@
                     [class.bg-indigo-50/50]="sortField === 'recount_first'">
                     <span>اولویت با بازشماری‌ها</span>
                     <div *ngIf="sortField === 'recount_first'" class="flex items-center gap-1 text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-confirm"></svg>
                     </div>
                   </button>
 
@@ -336,8 +329,8 @@
                     <span>کد کالا (کد فنی)</span>
                     <div *ngIf="sortField === 'code'" class="flex items-center gap-1 text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">
                       <span>{{ sortDirection === 'asc' ? 'صعودی' : 'نزولی' }}</span>
-                      <svg *ngIf="sortDirection === 'asc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="chevron-up"></svg>
-                      <svg *ngIf="sortDirection === 'desc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="chevron-down"></svg>
+                      <svg *ngIf="sortDirection === 'asc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-collapse"></svg>
+                      <svg *ngIf="sortDirection === 'desc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-expand"></svg>
                     </div>
                   </button>
 
@@ -351,8 +344,8 @@
                     <span>شرح کالا (الفبا)</span>
                     <div *ngIf="sortField === 'title'" class="flex items-center gap-1 text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">
                       <span>{{ sortDirection === 'asc' ? 'الف تا ی' : 'ی تا الف' }}</span>
-                      <svg *ngIf="sortDirection === 'asc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="chevron-up"></svg>
-                      <svg *ngIf="sortDirection === 'desc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="chevron-down"></svg>
+                      <svg *ngIf="sortDirection === 'asc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-collapse"></svg>
+                      <svg *ngIf="sortDirection === 'desc'" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-expand"></svg>
                     </div>
                   </button>
                 </div>
@@ -368,7 +361,7 @@
 
         <!-- Empty State -->
         <div *ngIf="!isLoading && tasks.length === 0" class="text-center py-16 bg-white rounded-2xl border border-slate-200">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto text-slate-300 mb-4" appIcon="check-circle"></svg>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto text-slate-300 mb-4" appIcon="box-outline"></svg>
           <p class="text-slate-600 font-bold">هیچ کالایی برای شمارش وجود ندارد.</p>
           <p class="text-xs text-slate-400 mt-2">وظایف جدید توسط مدیر سیستم تخصیص داده می‌شوند.</p>
         </div>
@@ -377,7 +370,7 @@
           <!-- Special Smart Guidance: When in 'pending' and all items counted -->
           <div *ngIf="statusFilter === 'pending' && statusCounts.pending === 0" class="max-w-md mx-auto">
             <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-emerald-100 shadow-sm">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check-circle"></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-approved"></svg>
             </div>
             <h4 class="text-slate-800 font-black text-sm mb-1">تمامی اقلام در انتظار شمرده شدند!</h4>
             <p class="text-xs text-slate-500 mb-4 leading-relaxed">
@@ -400,7 +393,7 @@
 
           <!-- Standard Empty State with Active Search or other filter -->
           <div *ngIf="statusFilter !== 'pending' || statusCounts.pending > 0">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto text-slate-300 mb-2" appIcon="search"></svg>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto text-slate-300 mb-2" appIcon="action-search"></svg>
             <p class="text-slate-600 font-bold text-sm">هیچ کالایی با فیلترهای انتخابی یافت نشد.</p>
             <button (click)="clearSearch(); setStatusFilter('pending'); setDateFilter('all')" class="mt-2 text-xs text-indigo-600 font-bold hover:underline">
               پاک کردن جستجو و بازگشت به در انتظار
@@ -477,21 +470,22 @@
                     <button 
                       *ngIf="(task.status === 'INITIAL_COUNT' || (task.status === 'PENDING_COUNT' && task.counted_balance !== null && task.counted_balance !== undefined)) && !isReadOnly(task)"
                       type="button"
+                      appAction="approve"
+                      display="label"
+                      label="ارسال"
+                      size="sm"
                       (click)="quickSubmitTask(task, $event)"
-                      title="ارسال سریع مستقیم به سرپرست"
-                      class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 border border-emerald-200 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check-circle"></svg>
-                      <span>ارسال</span>
+                      title="ارسال سریع مستقیم به سرپرست">
                     </button>
 
                    <!-- دکمه سریع بازگشت به وضعیت قبل در لیست -->
                    <button 
                      *ngIf="task.status === 'INITIAL_COUNT' && !isReadOnly(task)"
                      type="button"
+                     appAction="return"
+                     size="sm"
                      (click)="revertTaskStatus(task, $event)"
-                     title="لغو پیش‌نویس و بازگرداندن به وضعیت قبل"
-                     class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors flex items-center justify-center cursor-pointer">
-                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-ccw"></svg>
+                     title="لغو پیش‌نویس و بازگرداندن به وضعیت قبل">
                    </button>
                  </div>
                </div>
@@ -531,7 +525,7 @@
                 type="button"
                 title="لغو انتخاب‌ها"
                 class="p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close"></svg>
               </button>
               <div class="flex items-center gap-1.5 font-bold text-xs">
                 <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
@@ -566,12 +560,12 @@
         <!-- Pool Search Empty State -->
         <div *ngIf="!isLoading && poolTasks.length > 0 && filteredPoolTasks.length === 0" class="text-center py-12 bg-white rounded-2xl border border-slate-200">
           <div class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400" appIcon="search"></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400" appIcon="action-search"></svg>
           </div>
           <h3 class="text-slate-800 font-bold text-sm mb-1">موردی یافت نشد</h3>
           <p class="text-slate-500 text-xs">هیچ کالایی در مخزن با عبارت «{{searchQuery}}» مطابقت ندارد.</p>
-          <button (click)="clearSearch()" class="mt-2.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1 cursor-pointer">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+          <button (click)="clearSearch()" type="button" aria-label="پاک کردن جستجو" class="mt-2.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1 cursor-pointer min-h-[40px] sm:min-h-0">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close"></svg>
             <span>پاک کردن جستجو</span>
           </button>
         </div>
@@ -603,7 +597,7 @@
               <div class="flex items-center" (click)="togglePoolSelection(task.id)">
                 <div class="w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors cursor-pointer"
                      [ngClass]="selectedPoolTasks.has(task.id) ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300'">
-                  <svg *ngIf="selectedPoolTasks.has(task.id)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" appIcon="check"></svg>
+                  <svg *ngIf="selectedPoolTasks.has(task.id)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" appIcon="action-confirm"></svg>
                 </div>
               </div>
 
@@ -648,8 +642,8 @@
       
       <!-- Detail Header -->
       <header class="bg-white px-4 py-3 border-b border-slate-200 flex items-center justify-between shadow-sm sticky top-0 z-20">
-        <button (click)="closeDetailWithGuard()" class="p-2 -mr-2 rounded-full hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+        <button (click)="closeDetailWithGuard()" type="button" title="بازگشت به لیست" aria-label="بازگشت به لیست" class="p-2 -mr-2 rounded-full hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer min-w-[40px] min-h-[40px] flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-back"></svg>
         </button>
         <div class="font-bold text-sm text-slate-800 flex items-center gap-2">
           <span>ثبت شمارش</span>
@@ -743,9 +737,9 @@
                      'bg-emerald-100 text-emerald-600': record.action_type.includes('APPROVE') || record.action_type === 'COUNTED',
                      'bg-rose-100 text-rose-600': record.action_type.includes('REJECT')
                    }">
-                <svg *ngIf="record.action_type === 'COUNTED'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit-3"></svg>
-                <svg *ngIf="record.action_type.includes('APPROVE')" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
-                <svg *ngIf="record.action_type.includes('REJECT')" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+                <svg *ngIf="record.action_type === 'COUNTED'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit"></svg>
+                <svg *ngIf="record.action_type.includes('APPROVE')" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="status-approved"></svg>
+                <svg *ngIf="record.action_type.includes('REJECT')" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="status-rejected"></svg>
               </div>
               <!-- Content -->
               <div class="w-[calc(100%-2.5rem)] md:w-[calc(50%-2.5rem)] p-3 rounded-xl border border-slate-200 bg-slate-50 shadow-sm"
@@ -899,12 +893,13 @@
           <!-- Primary Direct Submit Button (Green - Full Width on Mobile, Flexible on Desktop) -->
           <button 
             type="button"
-            (click)="submitDirectlyToSupervisor()" 
-            [disabled]="isSubmitting"
-            class="w-full sm:flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:opacity-50 text-white rounded-2xl min-h-[48px] py-3.5 px-4 font-black text-xs sm:text-sm shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer order-1">
-            <svg *ngIf="!isSubmitting" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check-circle"></svg>
-            <div *ngIf="isSubmitting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            <span>{{ isSubmitting ? 'در حال ارسال...' : 'ثبت و ارسال به سرپرست' }}</span>
+            appAction="approve"
+            size="lg"
+            display="label"
+            label="ثبت و ارسال به سرپرست"
+            [busy]="isSubmitting"
+            (click)="submitDirectlyToSupervisor()"
+            class="w-full sm:flex-1 order-1">
           </button>
 
           <!-- Secondary Actions Container (Side-by-side 50/50 on Mobile, Inline on Desktop) -->
@@ -912,20 +907,26 @@
             <!-- Save Draft Button (Indigo) -->
             <button 
               type="button"
-              (click)="saveDraft()" 
-              [disabled]="isSubmitting"
-              class="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 active:scale-95 disabled:opacity-50 text-white rounded-2xl min-h-[48px] py-3.5 px-4 font-bold text-xs sm:text-sm shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="save"></svg>
-              <span>ثبت موقت</span>
+              appAction="save"
+              size="lg"
+              tone="indigo"
+              display="label"
+              label="ثبت موقت"
+              [busy]="isSubmitting"
+              (click)="saveDraft()"
+              class="flex-1 sm:flex-none">
             </button>
 
             <!-- Cancel / Back Button (Slate) -->
             <button 
               type="button"
-              (click)="closeDetailWithGuard()" 
+              appAction="close"
+              size="lg"
+              display="label"
+              label="انصراف"
               [disabled]="isSubmitting"
-              class="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-2xl min-h-[48px] py-3.5 px-4 font-bold text-xs sm:text-sm transition-all whitespace-nowrap cursor-pointer text-center">
-              انصراف
+              (click)="closeDetailWithGuard()"
+              class="flex-1 sm:flex-none">
             </button>
           </div>
 
@@ -933,18 +934,26 @@
           <button 
             *ngIf="selectedTask.status === 'INITIAL_COUNT' || selectedTask.counted_balance !== null"
             type="button"
-            (click)="revertTaskStatus(selectedTask)" 
-            [disabled]="isSubmitting"
-            class="w-full sm:w-auto bg-rose-50 hover:bg-rose-100 text-rose-700 active:scale-95 disabled:opacity-50 rounded-2xl min-h-[48px] py-3 px-4 font-bold text-xs sm:text-sm border border-rose-200 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer order-3"
+            appAction="return"
+            size="lg"
+            display="label"
+            label="بازگشت به وضعیت قبل"
+            [busy]="isSubmitting"
+            (click)="revertTaskStatus(selectedTask)"
+            class="w-full sm:w-auto order-3"
             title="حذف پیش‌نویس و بازگرداندن کالا به وضعیت پیشین">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-ccw"></svg>
-            <span>بازگشت به وضعیت قبل</span>
           </button>
         </div>
 
         <div *ngIf="isReadOnly(selectedTask)" class="mt-8 pt-5 border-t border-slate-200">
-          <button type="button" (click)="closeDetail()" class="w-full bg-slate-700 hover:bg-slate-800 text-white rounded-2xl min-h-[48px] py-3.5 px-4 font-bold text-sm shadow-md transition-transform active:scale-95 cursor-pointer">
-            بازگشت به لیست
+          <button 
+            type="button"
+            appAction="back"
+            size="lg"
+            display="label"
+            label="بازگشت به لیست"
+            (click)="closeDetail()"
+            class="w-full">
           </button>
         </div>
 
@@ -958,11 +967,11 @@
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh] overflow-hidden" dir="rtl">
       <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
         <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-500" appIcon="download"></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-500" appIcon="action-download"></svg>
           دریافت خروجی اکسل
         </h3>
-        <button (click)="closeExportModal()" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="x"></svg>
+        <button (click)="closeExportModal()" type="button" title="بستن" aria-label="بستن" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-xl transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-close"></svg>
         </button>
       </div>
       <div class="p-4 overflow-y-auto flex-1">
@@ -1008,7 +1017,7 @@
             <label *ngFor="let col of availableExportColumns; trackBy: trackByColKey" class="flex items-center gap-2 cursor-pointer group">
               <div class="relative flex items-center justify-center w-5 h-5">
                 <input type="checkbox" [checked]="selectedExportColumns.has(col.key)" (change)="selectedExportColumns.has(col.key) ? selectedExportColumns.delete(col.key) : selectedExportColumns.add(col.key)" class="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded-md checked:bg-emerald-500 checked:border-emerald-500 cursor-pointer transition-all">
-                <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" appIcon="check"></svg>
+                <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" appIcon="action-confirm"></svg>
               </div>
               <span class="text-xs font-bold text-slate-600 group-hover:text-slate-900 transition-colors">{{ col.label }}</span>
             </label>
@@ -1026,7 +1035,7 @@
               <span class="text-[10px] text-indigo-600 block truncate">شامل ستون‌های فعال و فرمت‌های استاندارد انبار</span>
             </div>
           </div>
-          <button type="button" (click)="downloadSampleTemplate()" [disabled]="isDownloadingTemplate" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 shadow-sm shadow-indigo-200 disabled:opacity-50 cursor-pointer">
+          <button type="button" (click)="downloadSampleTemplate()" [disabled]="isDownloadingTemplate" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 shadow-sm shadow-indigo-200 disabled:opacity-50 cursor-pointer min-h-[40px] sm:min-h-0">
             <span *ngIf="isDownloadingTemplate" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
             <span *ngIf="!isDownloadingTemplate">دانلود قالب</span>
           </button>
@@ -1034,11 +1043,8 @@
       </div>
 
       <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-        <button (click)="closeExportModal()" class="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors" [disabled]="isExporting">انصراف</button>
-        <button (click)="executeExport()" [disabled]="isExporting || (exportColumnScope === 'custom' && selectedExportColumns.size === 0)" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2">
-          <svg *ngIf="isExporting" class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" appIcon="spinner"></svg>
-          <span>{{ isExporting ? 'در حال آماده‌سازی...' : 'دانلود فایل اکسل' }}</span>
-        </button>
+        <button type="button" appAction="close" display="label" label="انصراف" [disabled]="isExporting" (click)="closeExportModal()"></button>
+        <button type="button" appAction="download" display="label" label="دانلود فایل اکسل" [busy]="isExporting" [disabled]="isExporting || (exportColumnScope === 'custom' && selectedExportColumns.size === 0)" (click)="executeExport()"></button>
       </div>
     </div>
   </div>

@@ -22,9 +22,9 @@
 
         <!-- اکشن‌های تب کارت پرسنلی / گیت‌پاس -->
         <ng-container *ngIf="activeTab === 'id-cards'">
-          <button type="button" appAction="download" label="دانلود تصویر کارت" [disabled]="isIdCardsExporting" (click)="openIdCardsExportModal()"></button>
-          <button type="button" appAction="view" label="پیش‌نمایش شیت چاپی" (click)="openIdCardsSheetPreview()"></button>
-          <button type="button" appAction="print" [label]="'چاپ شیت A4 (' + idCardsPrintableCount + ')'" (click)="printIdCards()"></button>
+          <button type="button" appAction="download" label="دانلود تصویر کارت" labelFrom="lg" [disabled]="isIdCardsExporting" (click)="openIdCardsExportModal()"></button>
+          <button type="button" appAction="view" label="پیش‌نمایش شیت چاپی" labelFrom="lg" (click)="openIdCardsSheetPreview()"></button>
+          <button type="button" appAction="print" [label]="'چاپ شیت A4 (' + idCardsPrintableCount + ')'" labelFrom="lg" (click)="printIdCards()"></button>
         </ng-container>
 
         <!-- بروزرسانی سراسری -->

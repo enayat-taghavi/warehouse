@@ -25,17 +25,50 @@ import { PersianDatePipe } from '../../../shared/pipes/persian-date.pipe';
 import { ItemPhotoGalleryComponent } from '../../../shared/components/item-photo-gallery/item-photo-gallery.component';
 import { ItemPhotoThumbComponent } from '../../../shared/components/item-photo-gallery/item-photo-thumb.component';
 import { PhotoGalleryHost } from '../../../shared/components/item-photo-gallery/photo-gallery-host';
-import { ContextualCommentsComponent } from '../../communications/contextual-comments/contextual-comments.component';
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../shared/components/tab-bar/tab-bar.component';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
+import { ContextualCommentsComponent } from '../../communications/contextual-comments/contextual-comments.component';
 
 @Component({
   selector: 'app-supervisor-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, PersianDatePipe, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, ContextualCommentsComponent, SvgIconDirective],
+  imports: [CommonModule, FormsModule, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, PersianDatePipe, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, ContextualCommentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent],
   templateUrl: './supervisor-dashboard.html',
   styleUrl: './supervisor-dashboard.css'
 })
 export class SupervisorDashboard implements OnInit, OnDestroy {
+  sectionTabs: TabDef[] = [
+    { id: 'counting', label: 'انبارگردانی (میدانی)', shortLabel: 'میدانی', icon: 'package' },
+    { id: 'financial', label: 'مالی / اسناد', shortLabel: 'مالی', icon: 'file' }
+  ];
+
+  countingSubTabs: TabDef[] = [
+    { id: 'my-tasks', label: 'تسک‌های من', shortLabel: 'تسک‌ها' },
+    { id: 'pool', label: 'مخزن کالاها', shortLabel: 'مخزن' }
+  ];
+
+  financialSubTabs: TabDef[] = [
+    { id: 'doc', label: 'تسک‌های من', shortLabel: 'تسک‌ها' },
+    { id: 'doc-pool', label: 'مخزن اسناد', shortLabel: 'مخزن' }
+  ];
+
+  updateSupervisorTabs(): void {
+    this.sectionTabs = [
+      { id: 'counting', label: 'انبارگردانی (میدانی)', shortLabel: 'میدانی', icon: 'package', count: (this.activeSection !== 'counting' && this.tasks.length > 0) ? this.tasks.length : undefined },
+      { id: 'financial', label: 'مالی / اسناد', shortLabel: 'مالی', icon: 'file', count: (this.activeSection !== 'financial' && this.docTasks.length > 0) ? this.docTasks.length : undefined }
+    ];
+
+    this.countingSubTabs = [
+      { id: 'my-tasks', label: 'تسک‌های من', shortLabel: 'تسک‌ها', count: this.tasks.length > 0 ? this.tasks.length : undefined },
+      { id: 'pool', label: 'مخزن کالاها', shortLabel: 'مخزن', count: this.poolTasks.length > 0 ? this.poolTasks.length : undefined }
+    ];
+
+    this.financialSubTabs = [
+      { id: 'doc', label: 'تسک‌های من', shortLabel: 'تسک‌ها', count: this.docTasks.length > 0 ? this.docTasks.length : undefined },
+      { id: 'doc-pool', label: 'مخزن اسناد', shortLabel: 'مخزن', count: this.docPoolTasks.length > 0 ? this.docPoolTasks.length : undefined }
+    ];
+  }
   private wsSub?: Subscription;
   private swrSub?: Subscription;
   private wsUpdateSubject = new Subject<any>();
@@ -224,7 +257,7 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
     };
   }
 
-  switchSection(section: 'counting' | 'financial') {
+  switchSection(section: string) {
     if (section === 'counting') {
       const target = this.lastCountTab || 'my-tasks';
       this.setTab(target);
@@ -1368,14 +1401,15 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
     }
   }
 
-  setTab(tab: 'my-tasks' | 'pool' | 'doc' | 'doc-pool') {
-    this.currentTab = tab;
+  setTab(tab: string) {
+    this.currentTab = tab as any;
     if (tab === 'my-tasks' || tab === 'pool') {
-      this.lastCountTab = tab;
+      this.lastCountTab = tab as any;
     } else {
-      this.lastDocTab = tab;
+      this.lastDocTab = tab as any;
     }
     this.clearAllSelections();
+    this.updateSupervisorTabs();
     this.updateUrlState();
     this.refreshCurrentTab();
   }
