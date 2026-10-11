@@ -32,7 +32,7 @@
     <header class="flex items-center justify-between px-5 py-3.5 bg-slate-800/80 border-b border-slate-700/60 shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 text-lg shadow-inner">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="camera"></svg>
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-camera"></svg>
         </div>
         <div>
           <div class="flex items-center gap-2">
@@ -55,7 +55,7 @@
         title="بستن پنجره"
         aria-label="بستن پنجره"
       >
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="action-close"></svg>
       </button>
     </header>
 
@@ -72,7 +72,7 @@
           aria-label="عکاسی با دوربین"
           class="flex items-center gap-2 px-3.5 py-2 min-h-[40px] rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-900/30 active:scale-95 transition-all disabled:opacity-50 cursor-pointer tap-target"
         >
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="camera"></svg>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-camera"></svg>
           <span>عکاسی با دوربین</span>
         </button>
 
@@ -85,7 +85,7 @@
           aria-label="انتخاب از گالری"
           class="flex items-center gap-2 px-3.5 py-2 min-h-[40px] rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-900/30 active:scale-95 transition-all disabled:opacity-50 cursor-pointer tap-target"
         >
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-upload"></svg>
           <span>انتخاب از گالری</span>
         </button>
       </div>
@@ -125,7 +125,7 @@
       <!-- وضعیت خالی (No Photos) -->
       <div *ngIf="!isLoading() && photos().length === 0" class="flex flex-col items-center justify-center p-8 text-center max-w-sm">
         <div class="w-20 h-20 rounded-2xl bg-slate-800/80 border border-dashed border-slate-700 flex items-center justify-center text-3xl text-slate-500 mb-4 shadow-inner">
-          <svg class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" appIcon="camera"></svg>
+          <svg class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" appIcon="action-camera"></svg>
         </div>
         <h3 class="text-sm font-bold text-slate-200 mb-1">هنوز تصویری برای این کالا ثبت نشده است</h3>
         <p class="text-xs text-slate-400 mb-5 leading-relaxed">
@@ -133,11 +133,11 @@
         </p>
         <div *ngIf="!readOnly" class="flex items-center gap-2">
           <button (click)="triggerCamera()" title="باز کردن دوربین" aria-label="باز کردن دوربین" class="px-4 py-2 min-h-[40px] bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow flex items-center gap-2 cursor-pointer tap-target">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="camera"></svg>
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-camera"></svg>
             <span>باز کردن دوربین</span>
           </button>
           <button (click)="triggerGallery()" title="انتخاب از گالری" aria-label="انتخاب از گالری" class="px-4 py-2 min-h-[40px] bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 flex items-center gap-2 cursor-pointer tap-target">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-upload"></svg>
             <span>انتخاب از گالری</span>
           </button>
         </div>
@@ -172,7 +172,7 @@
           title="عکس قبلی"
           aria-label="عکس قبلی"
         >
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="chevron-right"></svg>
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="action-back"></svg>
         </button>
         <button 
           *ngIf="photos().length > 1" 
@@ -181,7 +181,7 @@
           title="عکس بعدی"
           aria-label="عکس بعدی"
         >
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="action-forward"></svg>
         </button>
 
         <!-- عکسی که سرور رد کرده — فایل حذف نشده و تصمیم با کاربر است -->
@@ -259,7 +259,7 @@
           </button>
           <span class="w-px h-4 bg-slate-700"></span>
           <button (click)="rotate()" class="p-2 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white cursor-pointer tap-target" title="چرخش ۹۰ درجه" aria-label="چرخش ۹۰ درجه">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="rotate-cw"></svg>
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-refresh"></svg>
           </button>
           
           <!-- اقدامات اختصاصی عکس -->
@@ -312,8 +312,8 @@
           </span>
           <!-- نشان منبع -->
           <span class="px-2 py-0.5 bg-slate-900/80 backdrop-blur-xs text-slate-300 border border-slate-700 rounded-md text-[10px] flex items-center gap-1">
-            <svg *ngIf="currentPhoto.source_type === 'camera'" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="camera"></svg>
-            <svg *ngIf="currentPhoto.source_type !== 'camera'" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
+            <svg *ngIf="currentPhoto.source_type === 'camera'" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-camera"></svg>
+            <svg *ngIf="currentPhoto.source_type !== 'camera'" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-upload"></svg>
             <span>{{ currentPhoto.source_type === 'camera' ? 'دوربین' : 'گالری' }}</span>
           </span>
           <!-- مشخصات فنی و حجم -->

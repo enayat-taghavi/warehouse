@@ -1,10 +1,10 @@
 {
   "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
   "counters": {
-    "rule_1_unlabeled_icon_buttons": 166,
+    "rule_1_unlabeled_icon_buttons": 160,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 251,
-    "rule_4_retired_icons": 111,
+    "rule_3_non_standard_actions": 240,
+    "rule_4_retired_icons": 95,
     "rule_5_neutralized_tap_targets": 0
   },
   "violations": {
@@ -74,10 +74,6 @@
         "line": 402
       },
       {
-        "file": "components/count-tracking/count-tracking.html",
-        "line": 634
-      },
-      {
         "file": "components/counter/counter-dashboard/counter-dashboard.html",
         "line": 119
       },
@@ -128,6 +124,10 @@
       {
         "file": "components/customs/customs.html",
         "line": 1117
+      },
+      {
+        "file": "components/dispatch/dispatch.html",
+        "line": 465
       }
     ],
     "rule_2_tab_min_widths": [],
@@ -218,55 +218,43 @@
       },
       {
         "file": "components/docs/docs.html",
-        "line": 47,
+        "line": 44,
         "method": "importService.currentState.importTag = tag",
         "icon": null
       },
       {
         "file": "components/docs/docs.html",
-        "line": 174,
+        "line": 171,
         "method": "simulateImportProcess",
         "icon": "upload-cloud"
       },
       {
         "file": "components/docs/docs.html",
-        "line": 186,
-        "method": "openDeleteModal",
-        "icon": "trash-2-soft"
-      },
-      {
-        "file": "components/docs/docs.html",
-        "line": 191,
-        "method": "openDeleteModal",
-        "icon": "trash"
-      },
-      {
-        "file": "components/docs/docs.html",
-        "line": 220,
+        "line": 217,
         "method": "importService.revertOperation",
         "icon": null
       },
       {
         "file": "components/docs/docs.html",
-        "line": 455,
+        "line": 452,
         "method": "closeDeleteModal",
         "icon": null
       },
       {
         "file": "components/docs/docs.html",
-        "line": 459,
+        "line": 456,
         "method": "confirmDelete",
         "icon": "trash"
       },
       {
         "file": "components/docs/docs.html",
-        "line": 491,
+        "line": 488,
         "method": "confirmEmptyTagImport",
         "icon": null
       },
       {
         "file": "components/docs/docs.html",
-        "line": 518,
+        "line": 515,
         "method": "executeImport",
         "icon": null
       },
@@ -310,6 +298,18 @@
         "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
         "line": 833,
         "method": "closeRejectModal",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
+        "line": 838,
+        "method": "submitRejectModal",
+        "icon": "refresh-cw"
+      },
+      {
+        "file": "components/finance/accountant/accountant-invoices/accountant-invoices.html",
+        "line": 167,
+        "method": "rejectDocument",
         "icon": null
       }
     ],
@@ -411,11 +411,6 @@
       },
       {
         "file": "components/count-tracking/count-tracking.html",
-        "line": 153,
-        "icon": "trash"
-      },
-      {
-        "file": "components/count-tracking/count-tracking.html",
         "line": 405,
         "icon": "loader-6-rays"
       },
@@ -430,39 +425,44 @@
         "icon": "scan-square"
       },
       {
-        "file": "components/dashboard/dashboard.html",
-        "line": 76,
-        "icon": "hero-chevron-up"
-      },
-      {
-        "file": "components/dashboard/dashboard.html",
-        "line": 77,
-        "icon": "hero-chevron-down"
-      },
-      {
-        "file": "components/dashboard/dashboard.html",
-        "line": 90,
-        "icon": "hero-clock"
-      },
-      {
-        "file": "components/dashboard/dashboard.html",
-        "line": 232,
-        "icon": "hero-chevron-left"
-      },
-      {
-        "file": "components/dashboard/dashboard.html",
-        "line": 241,
-        "icon": "hero-save"
-      },
-      {
-        "file": "components/dashboard/dashboard.html",
-        "line": 253,
-        "icon": "hero-chevron-left"
+        "file": "components/dispatch/dispatch.html",
+        "line": 447,
+        "icon": "trash-lucide"
       },
       {
         "file": "components/dispatch/dispatch.html",
-        "line": 70,
-        "icon": "trash-lucide"
+        "line": 584,
+        "icon": "x-path"
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 177,
+        "icon": "loader-arc"
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 233,
+        "icon": "loader-arc"
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 273,
+        "icon": "trash"
+      },
+      {
+        "file": "components/docs/docs.html",
+        "line": 461,
+        "icon": "trash"
+      },
+      {
+        "file": "components/dynamic-fields/dynamic-fields.html",
+        "line": 13,
+        "icon": "copy-alt"
+      },
+      {
+        "file": "components/dynamic-fields/dynamic-fields.html",
+        "line": 90,
+        "icon": "trash-2-lucide"
       }
     ],
     "rule_5_neutralized_tap_targets": []

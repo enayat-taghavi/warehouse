@@ -12,10 +12,11 @@ import { ExcelImportModal } from '../../shared/components/excel-import-modal/exc
 import { Observable, Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
 
 @Component({
   selector: 'app-projects',
-  imports: [CommonModule, FormsModule, ModalComponent, HasPermissionDirective, ExcelImportModal, SmartDeleteModalComponent, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ModalComponent, HasPermissionDirective, ExcelImportModal, SmartDeleteModalComponent, SvgIconDirective, ActionButtonComponent],
   templateUrl: './projects.html',
   styleUrl: './projects.css'
 })

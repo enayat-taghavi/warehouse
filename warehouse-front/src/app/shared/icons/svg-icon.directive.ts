@@ -1,4 +1,4 @@
-import { Directive, computed, inject, input } from '@angular/core';
+import { Directive, ElementRef, computed, inject, input } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ICONS, IconName } from './icon-registry';
 import { resolveSemanticIcon } from './semantic-icons';
@@ -18,16 +18,19 @@ import { resolveSemanticIcon } from './semantic-icons';
  */
 @Directive({
   selector: 'svg[appIcon]',
+  standalone: true,
   host: { '[innerHTML]': 'markup()' },
 })
 export class SvgIconDirective {
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly el = inject(ElementRef<SVGElement>, { optional: true });
 
   /** نام آیکن در رجیستری یا نام معنایی (action-* / status-*)؛ نام‌های ثابت در قالب‌ها با نگهبان ۵۲ بررسی می‌شوند. */
   readonly appIcon = input<IconName | string | null | undefined>();
 
   protected readonly markup = computed(() => {
-    const resolved = resolveSemanticIcon(this.appIcon());
+    const raw = this.appIcon() ?? this.el?.nativeElement?.getAttribute('appIcon') ?? this.el?.nativeElement?.getAttribute('appicon');
+    const resolved = resolveSemanticIcon(raw);
     const inner = resolved ? ((ICONS as Record<string, string>)[resolved] ?? '') : '';
     return this.sanitizer.bypassSecurityTrustHtml(inner);
   });

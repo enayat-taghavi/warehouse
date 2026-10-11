@@ -29,7 +29,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
         class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-sky-200 bg-sky-50 text-sky-700 text-[9px] font-bold whitespace-nowrap align-middle"
         title="این مورد هنوز به سرور ارسال نشده است. به‌محض برقراری اتصال، خودکار همگام‌سازی می‌شود."
       >
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="cloud-off"></svg>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-cloud-off"></svg>
         در انتظار ارسال
       </span>
     </ng-container>
@@ -43,6 +43,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
         class="relative inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border text-[11px] font-bold transition-all shadow-xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 active:scale-95 whitespace-nowrap tap-target sm:min-h-[36px]"
         [ngClass]="pillClasses"
         [title]="tooltipText"
+        [attr.aria-label]="pillAriaLabel"
       >
         <!-- 1. Connected / Synced -->
         <ng-container *ngIf="networkState === 'online' && !isSyncing && pendingCount === 0">
@@ -55,7 +56,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
         <!-- 2. Syncing in progress -->
         <ng-container *ngIf="isSyncing">
-          <svg class="animate-spin text-sky-600" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="spinner"></svg>
+          <svg class="animate-spin text-sky-600" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-loading"></svg>
           <span class="text-sky-800 font-extrabold hidden sm:inline">در حال ارسال ({{ pendingCount }})</span>
           <!-- موبایل: شمارنده در حباب گوشه تا قرص ثابت ۴۰×۴۰ بماند و سربرگ ۳۶۰px نشکند -->
           <span class="sm:hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-sky-700 text-white text-[10px] font-mono font-black leading-none flex items-center justify-center border-2 border-white">{{ pendingCount }}</span>
@@ -63,7 +64,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
         <!-- 3. Offline or Pending in queue -->
         <ng-container *ngIf="!isSyncing && (networkState !== 'online' || pendingCount > 0)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [ngClass]="networkState === 'online' ? 'text-amber-600' : 'text-rose-600'" appIcon="cloud-off"></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [ngClass]="networkState === 'online' ? 'text-amber-600' : 'text-rose-600'" [appIcon]="networkState === 'server-unreachable' ? 'status-warning' : 'status-cloud-off'"></svg>
           <span *ngIf="networkState !== 'online' && pendingCount === 0" class="text-rose-800 font-extrabold hidden sm:inline">آفلاین</span>
           <span *ngIf="pendingCount > 0" class="text-amber-800 font-extrabold hidden sm:inline">صف ارسال ({{ pendingCount }})</span>
           <span *ngIf="pendingCount > 0" class="sm:hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-700 text-white text-[10px] font-mono font-black leading-none flex items-center justify-center border-2 border-white">{{ pendingCount }}</span>
@@ -182,7 +183,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
             <!-- Network Ping & Latency -->
             <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[11px]">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="wifi"></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-wifi"></svg>
                 <span>تاخیر شبکه (Ping):</span>
               </div>
               <span dir="ltr" class="font-bold font-mono text-[11px]" [ngClass]="networkPingMs && networkPingMs <= 300 ? 'text-emerald-600 dark:text-emerald-400' : networkPingMs && networkPingMs <= 700 ? 'text-amber-600' : 'text-rose-600'">
@@ -272,7 +273,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
                 class="w-full py-2 px-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer tap-target"
               >
                 <span>مشاهده داشبورد کامل مانیتورینگ</span>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-forward"></svg>
               </button>
             </div>
           </div>
@@ -1149,5 +1150,9 @@ export class OfflinePendingBadgeComponent implements OnInit, OnDestroy {
   get formattedLastSync(): string {
     if (!this.lastSyncTime) return 'هنوز ثبت نشده';
     return this.formatTime(this.lastSyncTime);
+  }
+
+  get pillAriaLabel(): string {
+    return this.tooltipText;
   }
 }

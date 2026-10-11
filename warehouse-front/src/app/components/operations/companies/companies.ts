@@ -657,7 +657,15 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     return this.isAccountingInstalled || !CompaniesManagementComponent.ACCOUNTING_TABS.includes(tab);
   }
 
+  private _cachedModalTabs: TabDef[] = [];
+  private _modalTabsKey = '';
+
   get modalTabs(): TabDef[] {
+    const key = `${this.isAccountingInstalled}_${this.companyBankAccounts.length}_${this.companyBoardMembers.length}_${this.companyDocuments.length}_${this.studioAccesses.length}_${this.companyModal.isEdit}`;
+    if (this._modalTabsKey === key && this._cachedModalTabs.length > 0) {
+      return this._cachedModalTabs;
+    }
+    this._modalTabsKey = key;
     const tabs: TabDef[] = [
       { id: 'identity', label: 'مشخصات هویتی و ثبتی', shortLabel: 'هویتی', icon: 'building' },
       { id: 'fiscal_insurance', label: 'سال مالی، بیمه و مودیان', shortLabel: 'بیمه و مالی', icon: 'calculator' },
@@ -671,6 +679,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (this.companyModal.isEdit && this.isAccountingInstalled) {
       tabs.push({ id: 'gdrive', label: 'همگام‌سازی گوگل‌درایو', shortLabel: 'گوگل‌درایو', icon: 'google-drive' });
     }
+    this._cachedModalTabs = tabs;
     return tabs;
   }
 

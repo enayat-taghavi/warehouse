@@ -21,10 +21,11 @@ import { ItemPhotoGalleryComponent } from '../../shared/components/item-photo-ga
 import { ItemPhotoThumbComponent } from '../../shared/components/item-photo-gallery/item-photo-thumb.component';
 import { PhotoGalleryHost } from '../../shared/components/item-photo-gallery/photo-gallery-host';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
 
 @Component({
   selector: 'app-dispatch',
-  imports: [CommonModule, FormsModule, DataTableComponent, TableColumnDirective, PersianDatePipe, DraggableDirective, LabelDesigner, SmartDeleteModalComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, SvgIconDirective],
+  imports: [CommonModule, FormsModule, DataTableComponent, TableColumnDirective, PersianDatePipe, DraggableDirective, LabelDesigner, SmartDeleteModalComponent, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, SvgIconDirective, ActionButtonComponent],
   templateUrl: './dispatch.html',
   styleUrl: './dispatch.css'
 })

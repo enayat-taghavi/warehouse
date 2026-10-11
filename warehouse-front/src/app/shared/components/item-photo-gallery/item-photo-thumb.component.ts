@@ -81,7 +81,7 @@ const ACCENT_BADGE_CLASSES: Record<PhotoThumbAccent, string> = {
         *ngIf="!thumbUrl"
         [class]="placeholderClass"
       >
-        <svg class="shrink-0" [ngClass]="size === 'xs' ? 'w-3 h-3' : 'w-3.5 h-3.5'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="camera"></svg>
+        <svg class="shrink-0" [ngClass]="size === 'xs' ? 'w-3 h-3' : 'w-3.5 h-3.5'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-camera"></svg>
         <span *ngIf="size !== 'xs'" class="text-[8px] font-bold mt-0.5 leading-none">+</span>
       </div>
       <span *ngIf="photoCount" [class]="badgeClass">{{ photoCount }}</span>

@@ -146,7 +146,7 @@
     <button 
       type="button" 
       (click)="loadAll()" 
-      class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1.5 shadow-xs">
+      class="px-4 py-2 min-h-[40px] sm:min-h-[36px] bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1.5 shadow-xs tap-target">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-cw"></svg>
       تلاش مجدد
     </button>
@@ -173,11 +173,10 @@
       </div>
       <button 
         type="button"
-        [disabled]="isConnecting()"
-        (click)="connectGoogleDrive()"
-        class="px-4 py-2 min-h-[40px] sm:min-h-[36px] rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shrink-0 cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1.5 shadow-xs tap-target">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
-        {{ isConnecting() ? 'در حال اتصال...' : 'اتصال مجدد با گوگل' }}
+        appAction="sync"
+        label="اتصال"
+        [busy]="isConnecting()"
+        (click)="connectGoogleDrive()">
       </button>
     </div>
 
@@ -209,11 +208,10 @@
       </div>
       <button 
         type="button"
-        [disabled]="isSyncing()"
-        (click)="syncAllFiles()"
-        class="px-4 py-2 min-h-[40px] sm:min-h-[36px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shrink-0 cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1.5 shadow-xs tap-target">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-sync"></svg>
-        {{ isSyncing() ? 'در حال ثبت در صف...' : 'ارسال سوابق به حساب تازه' }}
+        appAction="sync"
+        label="ارسال سوابق به حساب تازه"
+        [busy]="isSyncing()"
+        (click)="syncAllFiles()">
       </button>
     </div>
 
@@ -254,7 +252,7 @@
                    [href]="cfg.root_folder_url" 
                    target="_blank" 
                    rel="noopener noreferrer"
-                   class="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold flex items-center gap-1.5 transition-all">
+                   class="px-3 py-1.5 min-h-[40px] sm:min-h-[32px] rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all tap-target">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="external-link"></svg>
                   باز کردن در درایو
                 </a>
@@ -290,11 +288,10 @@
               </p>
               <button 
                 type="button"
-                [disabled]="isConnecting()"
-                (click)="connectGoogleDrive()"
-                class="px-5 py-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold shadow-sm inline-flex items-center gap-2 cursor-pointer active:scale-95 transition-all tap-target">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
-                {{ isConnecting() ? 'در حال برقراری ارتباط...' : 'ورود و اتصال با حساب گوگل' }}
+                appAction="sync"
+                label="اتصال"
+                [busy]="isConnecting()"
+                (click)="connectGoogleDrive()">
               </button>
             </div>
           </ng-template>
@@ -329,11 +326,9 @@
                 (keydown.space)="setSyncMode('immediate'); $event.preventDefault()"
                 [class.border-indigo-500]="cfg.sync_mode === 'immediate'"
                 [class.bg-indigo-50/40]="cfg.sync_mode === 'immediate'"
-                [class.]="cfg.sync_mode === 'immediate'"
                 [class.border-slate-200]="cfg.sync_mode !== 'immediate'"
                 [class.dark:border-line]="cfg.sync_mode !== 'immediate'"
                 [class.bg-slate-50/50]="cfg.sync_mode !== 'immediate'"
-                [class.]="cfg.sync_mode !== 'immediate'"
                 class="p-3.5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 flex flex-col justify-between outline-none focus:ring-2 focus:ring-indigo-500/40">
                 <div>
                   <div class="flex items-center justify-between mb-2">
@@ -359,11 +354,9 @@
                 (keydown.space)="setSyncMode('scheduled'); $event.preventDefault()"
                 [class.border-indigo-500]="cfg.sync_mode === 'scheduled'"
                 [class.bg-indigo-50/40]="cfg.sync_mode === 'scheduled'"
-                [class.]="cfg.sync_mode === 'scheduled'"
                 [class.border-slate-200]="cfg.sync_mode !== 'scheduled'"
                 [class.dark:border-line]="cfg.sync_mode !== 'scheduled'"
                 [class.bg-slate-50/50]="cfg.sync_mode !== 'scheduled'"
-                [class.]="cfg.sync_mode !== 'scheduled'"
                 class="p-3.5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 flex flex-col justify-between outline-none focus:ring-2 focus:ring-indigo-500/40">
                 <div>
                   <div class="flex items-center justify-between mb-2">
@@ -389,11 +382,9 @@
                 (keydown.space)="setSyncMode('manual'); $event.preventDefault()"
                 [class.border-indigo-500]="cfg.sync_mode === 'manual'"
                 [class.bg-indigo-50/40]="cfg.sync_mode === 'manual'"
-                [class.]="cfg.sync_mode === 'manual'"
                 [class.border-slate-200]="cfg.sync_mode !== 'manual'"
                 [class.dark:border-line]="cfg.sync_mode !== 'manual'"
                 [class.bg-slate-50/50]="cfg.sync_mode !== 'manual'"
-                [class.]="cfg.sync_mode !== 'manual'"
                 class="p-3.5 rounded-2xl border-2 cursor-pointer transition-all hover:bg-slate-50 flex flex-col justify-between outline-none focus:ring-2 focus:ring-indigo-500/40">
                 <div>
                   <div class="flex items-center justify-between mb-2">
@@ -566,21 +557,22 @@
             <!-- دکمه اقدام سریع: ارسال دستی صف فایل‌های معلق -->
             <button 
               type="button"
-              [disabled]="isTriggeringSync() || !cfg.stats?.pending"
-              (click)="triggerManualSync()"
-              class="w-full py-2.5 px-4 min-h-[40px] sm:min-h-[36px] rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all tap-target">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-sync"></svg>
-              {{ isTriggeringSync() ? 'در حال ارسال صف در پس‌زمینه...' : 'ارسال دستی صف فایل‌های معلق (' + (cfg.stats?.pending || 0) + ')' }}
+              appAction="sync"
+              class="w-full"
+              [label]="'ارسال دستی صف فایل‌های معلق (' + (cfg.stats?.pending || 0) + ')'"
+              [busy]="isTriggeringSync()"
+              [disabled]="!cfg.stats?.pending"
+              (click)="triggerManualSync()">
             </button>
 
             <!-- دکمه پیمایش و همگام‌سازی کلیه فایل‌های موجود -->
             <button 
               type="button"
-              [disabled]="isSyncing()"
-              (click)="syncAllFiles()"
-              class="w-full py-2.5 px-4 min-h-[40px] sm:min-h-[36px] rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 text-xs font-bold shadow-2xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all tap-target">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-sync"></svg>
-              {{ isSyncing() ? 'در حال ثبت فایل‌ها در صف...' : 'پیمایش و ثبت فایل‌های پیشین' }}
+              appAction="sync"
+              class="w-full"
+              label="پیمایش و ثبت فایل‌های پیشین"
+              [busy]="isSyncing()"
+              (click)="syncAllFiles()">
             </button>
             <p class="text-[10px] text-slate-400 text-center mt-1">
               اسناد قبلی ثبت‌شده بررسی و در صورت عدم ارسال به درایو، به صف افزوده می‌شوند.
@@ -732,7 +724,7 @@
                     *ngIf="item.status === 'failed'"
                     type="button"
                     (click)="retryTask(item.id)"
-                    class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-[11px] font-bold transition-all cursor-pointer"
+                    class="px-2.5 py-1 min-h-[40px] sm:min-h-0 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-[11px] font-bold transition-all cursor-pointer inline-flex items-center justify-center tap-target"
                     title="تلاش مجدد برای ارسال این فایل">
                     تلاش مجدد
                   </button>

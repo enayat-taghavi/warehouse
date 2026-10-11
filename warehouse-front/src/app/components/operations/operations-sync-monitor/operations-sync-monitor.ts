@@ -407,12 +407,34 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
   }
 
   async clearAllResolvedErrors(): Promise<void> {
+    const confirmed = await this.confirmDialog.open({
+      title: 'پاک‌سازی خطاهای همگام‌سازی',
+      message: 'آیا از پاک‌سازی خطاهای همگام‌سازی رفع‌شده یا ردشده اطمینان دارید؟ توجه: تداخل‌های ۴۰۹ حل‌نشده جهت جلوگیری از اتلاف داده حفظ خواهند شد.',
+      type: 'danger',
+      confirmText: 'بله، پاک‌سازی شود',
+      cancelText: 'انصراف'
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     try {
+      const clearSafeErrors = async (db: typeof warehouseOfflineDb) => {
+        const toDelete = await db.syncErrors
+          .filter(e => e.statusCode !== 409 || e.dismissed === 1)
+          .toArray();
+        const ids = toDelete.map(e => e.id).filter((id): id is number => id !== undefined);
+        if (ids.length > 0) {
+          await db.syncErrors.bulkDelete(ids);
+        }
+      };
+
       await Promise.all([
-        warehouseOfflineDb.syncErrors.clear().catch(() => {}),
-        financeOfflineDb.syncErrors.clear().catch(() => {})
+        clearSafeErrors(warehouseOfflineDb).catch(() => {}),
+        clearSafeErrors(financeOfflineDb).catch(() => {})
       ]);
-      this.toast.show('success', 'کلیه خطاهای همگام‌سازی پاکسازی شدند.');
+      this.toast.show('success', 'خطاهای همگام‌سازی رفع‌شده پاکسازی شدند.');
       await this.refreshTelemetry();
     } catch {
       this.toast.show('error', 'خطا در پاکسازی خطاهای همگام‌سازی.');

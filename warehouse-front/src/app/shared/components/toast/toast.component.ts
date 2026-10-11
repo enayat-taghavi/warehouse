@@ -62,7 +62,7 @@ export class ToastService {
         >
           @if (copiedToastIds().has(toast.id)) {
             <span class="shrink-0 text-emerald-400 animate-bounce">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-approved"></svg>
             </span>
           } @else {
             <span class="shrink-0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="toastIcons[toast.type]"></svg></span>
@@ -83,7 +83,7 @@ export class ToastService {
             aria-label="بستن پیام"
             title="بستن پیام"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-close"></svg>
           </button>
         </div>
       }

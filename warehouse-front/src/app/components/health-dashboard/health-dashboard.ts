@@ -416,7 +416,7 @@ import { ActionButtonComponent } from '../../shared/components/action-button/act
           <div class="flex items-end">
             <button
               type="button"
-              appAction="confirm"
+              appAction="refresh"
               size="lg"
               label="شروع آزمون همروندی"
               display="label"

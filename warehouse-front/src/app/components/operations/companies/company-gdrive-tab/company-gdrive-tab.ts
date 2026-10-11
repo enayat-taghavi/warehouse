@@ -27,6 +27,7 @@ import { ConfirmDialogService } from '../../../../shared/components/confirm-dial
 import { isServerUnreachable } from '../../../../core/services/server-reachability';
 import { PersianDatePipe } from '../../../../shared/pipes/persian-date.pipe';
 import { LoadingSkeletonComponent } from '../../../../shared/components/loading-skeleton/loading-skeleton.component';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 
 export interface GDriveConfigResponse {
   company_id: number;
@@ -98,7 +99,7 @@ export const MODEL_NAME_PERSIAN_MAP: Record<string, string> = {
 @Component({
   selector: 'app-company-gdrive-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, PersianDatePipe, LoadingSkeletonComponent],
+  imports: [CommonModule, FormsModule, SvgIconDirective, PersianDatePipe, LoadingSkeletonComponent, ActionButtonComponent],
   templateUrl: './company-gdrive-tab.html'
 })
 export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {

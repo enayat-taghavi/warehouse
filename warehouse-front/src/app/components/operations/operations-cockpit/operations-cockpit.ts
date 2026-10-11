@@ -1,6 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { SystemHealthService } from '../../../core/services/system-health.service';
 import { SettingsService } from '../../../services/settings';
 import { CompanyApiService } from '../../../core/api/company-api.service';
@@ -8,13 +8,14 @@ import { CompanyDocument } from '../../../core/models/company.model';
 import { ToastService } from '../../../shared/components/toast/toast.component';
 import { downloadLocalDatabaseSnapshotFile } from '../../../core/services/offline-db';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
 
 @Component({
   selector: 'app-operations-cockpit',
   standalone: true,
-  imports: [CommonModule, ActionButtonComponent],
+  imports: [CommonModule, RouterLink, SvgIconDirective, ActionButtonComponent],
   templateUrl: './operations-cockpit.html',
   styleUrl: './operations-cockpit.css'
 })

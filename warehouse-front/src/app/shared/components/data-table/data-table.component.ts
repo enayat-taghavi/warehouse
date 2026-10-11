@@ -79,7 +79,7 @@ export interface PageEvent {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2.5 text-slate-400" appIcon="action-search"></svg>
               <input type="text" [value]="globalSearch" (input)="onGlobalSearch($event)" placeholder="جستجو (کد، شرح، PO، PL، PK، تگ)..." title="جستجو در فیلدهای: کد یکتا، کد ترکیبی، شرح کالا، سفارش خرید (PO)، پکینگ لیست (PL)، پکیج (PK) و تگ" class="w-72 text-xs py-1.5 pl-2 pr-8 rounded-lg border border-slate-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none placeholder:text-slate-400 transition-shadow">
               @if (isLoading) {
-                <svg class="animate-spin absolute left-2.5 w-3.5 h-3.5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" appIcon="spinner"></svg>
+                <svg class="animate-spin absolute left-2.5 w-3.5 h-3.5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" appIcon="action-loading"></svg>
               }
             </div>
 
@@ -146,7 +146,7 @@ export interface PageEvent {
               @if (tableName) {
                 <div class="relative ml-1">
                   <button (click)="isViewManagerOpen = !isViewManagerOpen" title="مدیریت نماها" aria-label="مدیریت نماها" class="text-[10px] font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1 transition-colors bg-white border border-slate-200 px-2.5 py-1.5 min-h-[40px] sm:min-h-[36px] rounded-lg shadow-sm cursor-pointer tap-target">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view"></svg>
                     مدیریت نماها
                   </button>
                   @if (isViewManagerOpen) {
@@ -209,7 +209,7 @@ export interface PageEvent {
             @if (editHistory.length > 0) {
               <div class="relative flex items-center gap-1 bg-indigo-50 border border-indigo-100 rounded-lg overflow-hidden ml-2 transition-all p-1">
                 <button (click)="undo()" [disabled]="historyIndex < 0" title="بازگشت تغییرات (Ctrl+Z)" aria-label="بازگشت تغییرات (Ctrl+Z)" class="flex items-center justify-center p-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-indigo-100 text-indigo-700 transition-colors cursor-pointer tap-target">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="undo"></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="action-return"></svg>
                 </button>
                 <button (click)="redo()" [disabled]="historyIndex >= editHistory.length - 1" title="اعمال مجدد (Ctrl+Y)" aria-label="اعمال مجدد (Ctrl+Y)" class="flex items-center justify-center p-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-indigo-100 text-indigo-700 transition-colors cursor-pointer tap-target">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="redo"></svg>
@@ -220,7 +220,7 @@ export interface PageEvent {
                   ذخیره تغییرات ({{pendingChanges.size}})
                 </button>
                 <button (click)="showRevertConfirm()" title="لغو تغییرات" class="flex items-center gap-1.5 px-3 py-1.5 min-h-[40px] sm:min-h-[36px] text-[10px] font-bold text-rose-700 bg-white rounded-md shadow-sm border border-rose-100 hover:bg-rose-50 transition-colors cursor-pointer tap-target">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="undo-2"></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-return"></svg>
                   لغو تغییرات
                 </button>
               </div>
@@ -476,12 +476,12 @@ export interface PageEvent {
                 <td [attr.colspan]="totalColumns" class="px-6 py-12 text-center">
                   @if (isLoading) {
                     <div class="text-slate-400 flex flex-col items-center justify-center">
-                      <svg class="animate-spin mb-3 text-indigo-500" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="spinner"></svg>
+                      <svg class="animate-spin mb-3 text-indigo-500" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-loading"></svg>
                       <p class="text-xs font-bold">در حال بارگذاری...</p>
                     </div>
                   } @else {
                     <div class="text-slate-400">
-                      <svg class="mx-auto mb-3" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="search"></svg>
+                      <svg class="mx-auto mb-3" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="action-search"></svg>
                       <p class="text-xs font-bold">{{ emptyMessage }}</p>
                     </div>
                   }
@@ -542,7 +542,7 @@ export interface PageEvent {
           <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-[90%] max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div class="p-5 text-center">
               <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-4">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-save"></svg>
               </div>
               <h3 class="text-base font-black text-slate-800 mb-2">ذخیره تغییرات؟</h3>
               <p class="text-xs text-slate-500 leading-relaxed font-medium">شما تغییراتی در {{pendingChanges.size}} رکورد ایجاد کرده‌اید. آیا مایل به ذخیره این تغییرات در سیستم هستید؟</p>
@@ -550,7 +550,7 @@ export interface PageEvent {
             
             <div class="p-3 bg-slate-50 border-t border-slate-100 flex gap-2">
               <button (click)="confirmUpdate()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors flex justify-center items-center gap-2">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-confirm"></svg>
                 تایید
               </button>
               <button (click)="cancelUpdate()" class="flex-1 py-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors">
@@ -569,7 +569,7 @@ export interface PageEvent {
           <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-[90%] max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div class="p-5 text-center">
               <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="trash-2"></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-delete"></svg>
               </div>
               <h3 class="text-base font-black text-slate-800 mb-2">لغو تغییرات؟</h3>
               <p class="text-xs text-slate-500 leading-relaxed font-medium">آیا از لغو تمام تغییرات خود مطمئن هستید؟ این کار غیرقابل بازگشت است.</p>

@@ -24,16 +24,33 @@ import { ActiveCompanyService } from '../../core/services/active-company.service
 import { Company } from '../../core/models/company.model';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../shared/components/tab-bar/tab-bar.component';
 
 @Component({
   selector: 'app-users',
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent, TabBarComponent],
   templateUrl: './users.html',
   styleUrl: './users.css'
 })
 export class Users implements OnInit, OnDestroy {
   @ViewChild(IdCards) idCardsComponent?: IdCards;
   activeTab = 'users';
+
+  get userTabs(): TabDef[] {
+    return [
+      { id: 'users', label: 'کاربران', shortLabel: 'کاربران', count: this.userCounts.all, icon: 'users', tone: 'indigo' },
+      { id: 'roles', label: 'نقش‌ها', shortLabel: 'نقش‌ها', count: this.allRoles?.length || 0, icon: 'shield', tone: 'indigo' },
+      { id: 'id-cards', label: 'کارت پرسنلی', shortLabel: 'کارت', icon: 'id-card', tone: 'indigo' },
+    ];
+  }
+
+  switchTab(tabId: string): void {
+    this.activeTab = tabId;
+    this.router.navigate([], { queryParams: { tab: tabId }, queryParamsHandling: 'merge', replaceUrl: true });
+    this.openMenuId = null;
+    this.cdr.detectChanges();
+  }
+
   activePermTab = 'MAIN_MENU';
   userRoleModalTab: 'all' | 'warehouse' | 'finance' | 'global' = 'finance';
   userModalInnerTab: 'identity' | 'security' | 'roles' | 'warehouses' = 'identity';
@@ -1271,11 +1288,6 @@ export class Users implements OnInit, OnDestroy {
       return [{ name: u.company, is_default: true }];
     }
     return [];
-  }
-
-  switchTab(tab: string) {
-    this.router.navigate([], { queryParams: { tab }, queryParamsHandling: 'merge' });
-    this.openMenuId = null;
   }
 
   switchPermTab(tab: string) {

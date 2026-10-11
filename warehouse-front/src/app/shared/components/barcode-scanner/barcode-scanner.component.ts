@@ -149,7 +149,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
             <button
               type="button"
               (click)="setZoom(1)"
-              class="px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-full transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
+              class="px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-full transition-colors min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center tap-target"
               [ngClass]="currentZoom <= 1.2 ? 'bg-white text-slate-900 shadow-sm' : 'text-white/80 hover:text-white'"
               title="بزرگنمایی 1X"
               aria-label="بزرگنمایی 1X"
@@ -159,7 +159,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
             <button
               type="button"
               (click)="setZoom(2)"
-              class="px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-full transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
+              class="px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-full transition-colors min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center tap-target"
               [ngClass]="currentZoom > 1.2 ? 'bg-white text-slate-900 shadow-sm' : 'text-white/80 hover:text-white'"
               title="بزرگنمایی 2X"
               aria-label="بزرگنمایی 2X"
@@ -173,7 +173,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
             <button
               type="button"
               (click)="toggleQualityMenu()"
-              class="px-2.5 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all backdrop-blur-md border shadow-md flex items-center gap-1 min-h-[36px]"
+              class="px-2.5 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all backdrop-blur-md border shadow-md flex items-center gap-1 min-h-[40px] sm:min-h-[36px] tap-target"
               [ngClass]="hasLocalOverride ? 'bg-indigo-600/90 text-white border-indigo-400 shadow-indigo-500/30' : 'bg-white/20 text-white/95 border-white/20 hover:bg-white/30'"
               title="تنظیم کیفیت اسکنر"
               [attr.aria-label]="'تنظیم کیفیت اسکنر: ' + activePresetBadge"
@@ -276,7 +276,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                 <button
                   type="button"
                   (click)="resetToSystemDefault()"
-                  class="w-full py-1.5 px-2 bg-white/10 hover:bg-white/20 text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors min-h-[36px]"
+                  class="w-full py-1.5 px-2 bg-white/10 hover:bg-white/20 text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors min-h-[40px] sm:min-h-[36px] tap-target"
                   title="بازگشت به پیش‌فرض انبار/سیستم"
                   aria-label="بازگشت به پیش‌فرض انبار/سیستم"
                 >
@@ -291,7 +291,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
           <button
             type="button"
             (click)="toggleDebugHud()"
-            class="px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-mono font-bold transition-all backdrop-blur-md border shadow-md flex items-center gap-1 min-h-[36px]"
+            class="px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-mono font-bold transition-all backdrop-blur-md border shadow-md flex items-center gap-1 min-h-[40px] sm:min-h-[36px] tap-target"
             [ngClass]="showDebugHud ? 'bg-emerald-500/90 text-white border-emerald-400 shadow-emerald-500/30' : 'bg-white/20 text-white/90 border-white/20 hover:bg-white/30'"
             title="نمایش/پنهان‌سازی HUD"
             aria-label="نمایش/پنهان‌سازی HUD"
@@ -369,7 +369,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
           <button
             type="button"
             (click)="copyDiagnosticReport()"
-            class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg text-xs font-bold shadow transition-all active:scale-95 flex items-center gap-1 min-h-[36px]"
+            class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded-lg text-xs font-bold shadow transition-all active:scale-95 flex items-center gap-1 min-h-[40px] sm:min-h-[36px] tap-target"
             title="کپی گزارش دیباگ"
             aria-label="کپی گزارش دیباگ"
           >

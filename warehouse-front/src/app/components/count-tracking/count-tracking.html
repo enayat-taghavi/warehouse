@@ -12,7 +12,7 @@
       <div class="flex items-center gap-2 flex-wrap">
         <!-- Team Performance Dashboard Button (Square Icon) -->
         <button (click)="openPerformanceModal()" 
-                class="btn-icon-square btn-icon-indigo" 
+                class="btn-icon-square btn-icon-indigo min-w-[40px] min-h-[40px]" 
                 title="مشاهده خلاصه عملکرد و راندمان تیم انبارگردانی" 
                 aria-label="عملکرد تیم">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="bar-chart-2"></svg>
@@ -20,7 +20,7 @@
 
         <!-- Toggle Final Approved Tasks Visibility Button (Square Icon) -->
         <button (click)="toggleCompleted()" 
-                class="btn-icon-square"
+                class="btn-icon-square min-w-[40px] min-h-[40px]"
                 [ngClass]="showCompleted ? 'btn-icon-indigo' : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'"
                 [title]="showCompleted ? 'مخفی کردن اقلام تأیید نهایی' : 'نمایش اقلام تأیید نهایی'">
           <svg *ngIf="showCompleted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="eye"></svg>
@@ -28,17 +28,17 @@
         </button>
 
         <!-- Barcode Scanner Trigger Button -->
-        <button (click)="scanner?.openCamera()" class="btn-icon-square btn-icon-indigo" title="اسکن بارکد با دوربین" aria-label="اسکن دوربین">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="scan-line"></svg>
+        <button (click)="scanner?.openCamera()" class="btn-icon-square btn-icon-indigo min-w-[44px] min-h-[44px]" title="اسکن بارکد با دوربین" aria-label="اسکن دوربین">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="scan-line"></svg>
         </button>
 
         <!-- Export Excel Button (Square Icon-Only) -->
-        <button (click)="openExportModal()" class="btn-icon-square btn-icon-emerald" title="خروجی و دانلود اکسل پیگیری شمارش" aria-label="خروجی اکسل">
+        <button (click)="openExportModal()" class="btn-icon-square btn-icon-emerald min-w-[40px] min-h-[40px]" title="خروجی و دانلود اکسل پیگیری شمارش" aria-label="خروجی اکسل">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
         </button>
 
         <!-- Refresh Button -->
-        <button type="button" [disabled]="isLoading" (click)="loadTasks()" class="btn-icon-square btn-icon-indigo" title="بروزرسانی پیگیری وضعیت شمارش" aria-label="بروزرسانی">
+        <button type="button" [disabled]="isLoading" (click)="loadTasks()" class="btn-icon-square btn-icon-indigo min-w-[40px] min-h-[40px]" title="بروزرسانی پیگیری وضعیت شمارش" aria-label="بروزرسانی">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.animate-spin]="isLoading" appIcon="refresh-cw"></svg>
         </button>
       </div>
@@ -52,7 +52,7 @@
       <!-- Total Tasks Card -->
       <button type="button" 
               (click)="setDiscrepancyFilter('all')" 
-              class="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-all cursor-pointer select-none shadow-sm"
+              class="flex items-center gap-2 rounded-xl px-3 py-1.5 min-h-[40px] tap-target border transition-all cursor-pointer select-none shadow-sm"
               [ngClass]="discrepancyFilter === 'all' && !showOnlyDiscrepancies ? 'bg-indigo-600 text-white border-indigo-700 ring-2 ring-indigo-500/30' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class]="discrepancyFilter === 'all' && !showOnlyDiscrepancies ? 'text-white' : 'text-slate-500'" appIcon="clipboard"></svg>
         <span class="text-[11px] font-bold" [class]="discrepancyFilter === 'all' && !showOnlyDiscrepancies ? 'text-indigo-100' : 'text-slate-600'">کل اقلام:</span>
@@ -62,7 +62,7 @@
       <!-- Counted Tasks Card -->
       <button type="button" 
               (click)="setDiscrepancyFilter('counted')" 
-              class="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-all cursor-pointer select-none shadow-sm"
+              class="flex items-center gap-2 rounded-xl px-3 py-1.5 min-h-[40px] tap-target border transition-all cursor-pointer select-none shadow-sm"
               [ngClass]="discrepancyFilter === 'counted' ? 'bg-blue-600 text-white border-blue-700 ring-2 ring-blue-500/30' : 'bg-blue-50 border-blue-200 text-blue-900 hover:bg-blue-100'">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class]="discrepancyFilter === 'counted' ? 'text-white' : 'text-blue-500'" appIcon="check-square"></svg>
         <span class="text-[11px] font-bold" [class]="discrepancyFilter === 'counted' ? 'text-blue-100' : 'text-blue-600'">شمرده شده:</span>
@@ -72,7 +72,7 @@
       <!-- Total Discrepancies Card -->
       <button type="button" 
               (click)="setDiscrepancyFilter('discrepancy')" 
-              class="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-all cursor-pointer select-none shadow-sm"
+              class="flex items-center gap-2 rounded-xl px-3 py-1.5 min-h-[40px] tap-target border transition-all cursor-pointer select-none shadow-sm"
               [ngClass]="discrepancyFilter === 'discrepancy' ? 'bg-amber-600 text-white border-amber-700 ring-2 ring-amber-500/30' : 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100'">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class]="discrepancyFilter === 'discrepancy' ? 'text-white' : 'text-amber-600'" appIcon="alert-triangle"></svg>
         <span class="text-[11px] font-bold" [class]="discrepancyFilter === 'discrepancy' ? 'text-amber-100' : 'text-amber-700'">کل مغایرت‌ها:</span>
@@ -82,7 +82,7 @@
       <!-- Shortage Card (کسری موجودی) -->
       <button type="button" 
               (click)="setDiscrepancyFilter('shortage')" 
-              class="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-all cursor-pointer select-none shadow-sm"
+              class="flex items-center gap-2 rounded-xl px-3 py-1.5 min-h-[40px] tap-target border transition-all cursor-pointer select-none shadow-sm"
               [ngClass]="discrepancyFilter === 'shortage' ? 'bg-rose-600 text-white border-rose-700 ring-2 ring-rose-500/30' : 'bg-rose-50 border-rose-200 text-rose-900 hover:bg-rose-100'">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class]="discrepancyFilter === 'shortage' ? 'text-white' : 'text-rose-600'" appIcon="arrow-down"></svg>
         <span class="text-[11px] font-bold" [class]="discrepancyFilter === 'shortage' ? 'text-rose-100' : 'text-rose-700'">کسری موجودی:</span>
@@ -92,7 +92,7 @@
       <!-- Surplus Card (مازاد موجودی) -->
       <button type="button" 
               (click)="setDiscrepancyFilter('surplus')" 
-              class="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-all cursor-pointer select-none shadow-sm"
+              class="flex items-center gap-2 rounded-xl px-3 py-1.5 min-h-[40px] tap-target border transition-all cursor-pointer select-none shadow-sm"
               [ngClass]="discrepancyFilter === 'surplus' ? 'bg-purple-600 text-white border-purple-700 ring-2 ring-purple-500/30' : 'bg-purple-50 border-purple-200 text-purple-900 hover:bg-purple-100'">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class]="discrepancyFilter === 'surplus' ? 'text-white' : 'text-purple-600'" appIcon="arrow-up"></svg>
         <span class="text-[11px] font-bold" [class]="discrepancyFilter === 'surplus' ? 'text-purple-100' : 'text-purple-700'">مازاد موجودی:</span>
@@ -102,7 +102,7 @@
       <!-- Final Approved Card -->
       <button type="button" 
               (click)="setDiscrepancyFilter('approved')" 
-              class="flex items-center gap-2 rounded-xl px-3 py-1.5 border transition-all cursor-pointer select-none shadow-sm"
+              class="flex items-center gap-2 rounded-xl px-3 py-1.5 min-h-[40px] tap-target border transition-all cursor-pointer select-none shadow-sm"
               [ngClass]="discrepancyFilter === 'approved' ? 'bg-emerald-600 text-white border-emerald-700 ring-2 ring-emerald-500/30' : 'bg-emerald-50 border-emerald-200 text-emerald-900 hover:bg-emerald-100'">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class]="discrepancyFilter === 'approved' ? 'text-white' : 'text-emerald-600'" appIcon="check-circle"></svg>
         <span class="text-[11px] font-bold" [class]="discrepancyFilter === 'approved' ? 'text-emerald-100' : 'text-emerald-700'">تأیید نهایی:</span>
@@ -149,8 +149,8 @@
 
           <button *ngIf="selectedTaskIds.size > 0 && canCancelAllocation" 
                   (click)="cancelAllocation()" 
-                  class="bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash"></svg>
+                  class="bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
             <span>لغو تخصیص ({{ selectedTaskIds.size }} مورد)</span>
           </button>
           <button *ngIf="canFinalizeOrManage"
@@ -158,8 +158,8 @@
                   [disabled]="eligibleGreenTasksCount === 0"
                   [class.opacity-50]="eligibleGreenTasksCount === 0"
                   [class.cursor-not-allowed]="eligibleGreenTasksCount === 0"
-                  class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:hover:bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check-circle"></svg>
+                  class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:hover:bg-emerald-50 border border-emerald-200 min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-circle"></svg>
             <span>تأیید گروهی بدون مغایرت</span>
             <span *ngIf="eligibleGreenTasksCount > 0" class="bg-emerald-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full mr-0.5">{{ eligibleGreenTasksCount }}</span>
           </button>
@@ -284,18 +284,18 @@
           <div class="flex items-center justify-center gap-1.5">
             <!-- دکمه مشاهده تایم‌لاین و گردش کالا -->
             <button (click)="openDrawer(row); $event.stopPropagation()" 
-                    class="text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded-lg transition-all border border-indigo-100 hover:border-indigo-200 flex items-center gap-1 shadow-2xs text-[11px] font-bold" 
+                    class="text-indigo-600 hover:bg-indigo-50 px-2.5 py-1.5 min-h-[36px] rounded-lg transition-all border border-indigo-100 hover:border-indigo-200 flex items-center gap-1 shadow-2xs text-[11px] font-bold" 
                     title="مشاهده تایم‌لاین و گردش کالا">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="clock"></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
               <span>گردش</span>
             </button>
 
             <!-- دکمه لغو تخصیص (برای وضعیت‌های در انتظار و اولیه) -->
             <button *ngIf="(row.status === 'PENDING_COUNT' || row.status === 'INITIAL_COUNT') && canCancelAllocation" 
                     (click)="cancelSingleAllocation(row); $event.stopPropagation()" 
-                    class="text-rose-600 hover:bg-rose-50 px-2 py-1 rounded-lg transition-all border border-rose-100 hover:border-rose-200 flex items-center gap-1 shadow-2xs text-[11px] font-bold" 
+                    class="text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 min-h-[36px] rounded-lg transition-all border border-rose-100 hover:border-rose-200 flex items-center gap-1 shadow-2xs text-[11px] font-bold" 
                     title="لغو تخصیص این کالا">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x-circle"></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x-circle"></svg>
               <span>لغو</span>
             </button>
           </div>
@@ -631,7 +631,7 @@
           </div>
         </div>
 
-        <button (click)="closePerformanceModal()" class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-colors">
+        <button (click)="closePerformanceModal()" class="p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 transition-colors" title="بستن">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
         </button>
       </div>
@@ -640,23 +640,23 @@
       <div class="px-6 pt-3 bg-slate-50/50 border-b border-slate-200 flex items-center gap-2 flex-none">
         <button (click)="performanceActiveTab = 'overview'"
                 [class]="performanceActiveTab === 'overview' ? 'text-indigo-600 border-indigo-600 bg-white shadow-2xs font-black' : 'text-slate-500 hover:text-slate-700 border-transparent font-bold'"
-                class="px-4 py-2 border-b-2 rounded-t-lg text-xs transition-all flex items-center gap-1.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="grid"></svg>
+                class="px-4 py-2 min-h-[40px] border-b-2 rounded-t-lg text-xs transition-all flex items-center gap-1.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="grid"></svg>
           <span>نمای کلی و شاخص‌ها</span>
         </button>
 
         <button (click)="performanceActiveTab = 'counters'"
                 [class]="performanceActiveTab === 'counters' ? 'text-indigo-600 border-indigo-600 bg-white shadow-2xs font-black' : 'text-slate-500 hover:text-slate-700 border-transparent font-bold'"
-                class="px-4 py-2 border-b-2 rounded-t-lg text-xs transition-all flex items-center gap-1.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="users"></svg>
+                class="px-4 py-2 min-h-[40px] border-b-2 rounded-t-lg text-xs transition-all flex items-center gap-1.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
           <span>انبارگردان‌ها (سرعت و دقت)</span>
           <span class="bg-indigo-50 text-indigo-700 text-[10px] px-1.5 py-0.2 rounded-full font-black">{{ counterStats.length }}</span>
         </button>
 
         <button (click)="performanceActiveTab = 'supervisors'"
                 [class]="performanceActiveTab === 'supervisors' ? 'text-indigo-600 border-indigo-600 bg-white shadow-2xs font-black' : 'text-slate-500 hover:text-slate-700 border-transparent font-bold'"
-                class="px-4 py-2 border-b-2 rounded-t-lg text-xs transition-all flex items-center gap-1.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="user-check"></svg>
+                class="px-4 py-2 min-h-[40px] border-b-2 rounded-t-lg text-xs transition-all flex items-center gap-1.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user-check"></svg>
           <span>سرپرستان (سرعت تایید)</span>
           <span class="bg-indigo-50 text-indigo-700 text-[10px] px-1.5 py-0.2 rounded-full font-black">{{ supervisorStats.length }}</span>
         </button>

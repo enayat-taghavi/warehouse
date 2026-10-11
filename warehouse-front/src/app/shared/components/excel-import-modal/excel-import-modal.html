@@ -12,7 +12,7 @@
       </span>
     </div>
     <button type="button" class="close-btn flex items-center justify-center min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px]" (click)="close()" title="بستن" aria-label="بستن">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close"></svg>
     </button>
   </div>
 
@@ -42,7 +42,7 @@
 
         <div *ngIf="!selectedFile && !isAnalyzing" class="drop-placeholder">
           <div class="drop-icon">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="upload"></svg>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="action-upload"></svg>
           </div>
           <p class="drop-text">فایل اکسل را اینجا رها کنید</p>
           <p class="drop-subtext">یا برای انتخاب فایل کلیک کنید</p>
@@ -96,8 +96,8 @@
             <span style="font-size: 10px; color: #64748b;">{{ formatFileSize(selectedFile?.size || 0) }}</span>
           </div>
         </div>
-        <button (click)="removeFile()" class="tap-target" style="background: none; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 12px; font-size: 11px; color: #64748b; cursor: pointer; display: flex; align-items: center; gap: 6px; min-height: 36px;" title="انتخاب فایل دیگر" aria-label="تعویض فایل">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
+        <button (click)="removeFile()" class="tap-target" style="background: none; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 12px; font-size: 11px; color: #64748b; cursor: pointer; display: flex; align-items: center; gap: 6px; min-height: 40px;" title="انتخاب فایل دیگر" aria-label="تعویض فایل">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-refresh"></svg>
           <span>تعویض فایل</span>
         </button>
       </div>

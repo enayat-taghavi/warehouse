@@ -66,6 +66,8 @@ export const STATUS_ICONS = {
   'locked': 'lock',
   'offline': 'wifi-off',
   'queued': 'cloud-upload',
+  'cloud-off': 'cloud-off',
+  'wifi': 'wifi',
 } as const satisfies Record<string, IconName>;
 
 export type StatusIconKey = keyof typeof STATUS_ICONS;

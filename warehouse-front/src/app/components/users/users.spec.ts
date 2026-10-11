@@ -275,7 +275,8 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
       component.switchTab('roles');
       expect(mockRouter.navigate).toHaveBeenCalledWith([], {
         queryParams: { tab: 'roles' },
-        queryParamsHandling: 'merge'
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
       });
     });
 
@@ -283,7 +284,8 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
       component.switchTab('id-cards');
       expect(mockRouter.navigate).toHaveBeenCalledWith([], {
         queryParams: { tab: 'id-cards' },
-        queryParamsHandling: 'merge'
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
       });
     });
 

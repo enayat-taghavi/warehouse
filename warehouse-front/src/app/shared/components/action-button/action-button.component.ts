@@ -3,7 +3,9 @@ import {
   ChangeDetectionStrategy,
   computed,
   inject,
-  input,
+  Input,
+  signal,
+  Signal,
   booleanAttribute,
   ElementRef,
 } from '@angular/core';
@@ -94,42 +96,111 @@ const SIZE_CLASSES: Record<ActionSize, { iconOnly: string; withLabel: string; au
     '[attr.aria-busy]': 'busy() ? "true" : null',
     '[attr.aria-label]': 'resolvedLabel()',
     '[attr.title]': 'resolvedLabel()',
-    '[attr.type]': 'type()',
+    '[attr.type]': 'resolvedType()',
     '[class]': 'hostClasses()',
     '(click)': 'onHostClick($event)',
   },
 })
 export class ActionButtonComponent {
-  /** کلید کار در فرهنگ و کاتالوگ (الزامی) */
-  readonly appAction = input.required<ActionIconKey>();
-
-  /** عنوان دکمه (پیش‌فرض از کاتالوگ) */
-  readonly label = input<string>();
-
-  /** شیوه نمایش: خودکار، فقط‌آیکون، یا همیشه عنوان‌دار */
-  readonly display = input<ActionDisplay>('auto');
-
-  /** در حالت auto، عنوان از چه نقطه‌ای ظاهر شود */
-  readonly labelFrom = input<ActionLabelFrom>('sm');
-
-  /** رنگ و تون دکمه (پیش‌فرض از کاتالوگ) */
-  readonly tone = input<ActionTone>();
-
-  /** اندازه دکمه (sm، md، یا lg برای کلیدهای ثبت ۴۴ تا ۴۸px) */
-  readonly size = input<ActionSize>('md');
-
-  /** حالت لودینگ / در حال انجام (بدون حذف فوکوس از دکمه) */
-  readonly busy = input<boolean, unknown>(false, { transform: booleanAttribute });
-
-  /** غیرفعال بودن دکمه از سوی صفحه (disabled بومی) */
-  readonly disabled = input<boolean, unknown>(false, { transform: booleanAttribute });
-
-  /** نوع بومی دکمه در HTML (پیش‌فرض button) */
-  readonly type = input<string>('button');
-
-  /** توکن اختیاری برای تشخیص حضور داخل پاپ‌اوور app-overflow-menu */
-  private readonly overflowContext = inject(OVERFLOW_MENU_CONTEXT, { optional: true });
   private readonly elementRef = inject(ElementRef<HTMLButtonElement>);
+  private readonly overflowContext = inject(OVERFLOW_MENU_CONTEXT, { optional: true });
+
+  private readonly _appAction = signal<ActionIconKey>('refresh');
+  @Input('appAction')
+  set appAction(value: ActionIconKey | string | null | undefined) {
+    if (value && value in ACTION_CATALOG) {
+      this._appAction.set(value as ActionIconKey);
+    }
+  }
+  get appAction(): Signal<ActionIconKey> {
+    return this.computedAppAction;
+  }
+
+  readonly computedAppAction = computed<ActionIconKey>(() => {
+    const fromSignal = this._appAction();
+    if (fromSignal && fromSignal in ACTION_CATALOG && fromSignal !== 'refresh') {
+      return fromSignal;
+    }
+    const fromAttr = this.elementRef?.nativeElement?.getAttribute('appAction');
+    if (fromAttr && fromAttr in ACTION_CATALOG) {
+      return fromAttr as ActionIconKey;
+    }
+    return fromSignal;
+  });
+
+  private readonly _label = signal<string | undefined>(undefined);
+  @Input()
+  set label(value: string | undefined | null) {
+    this._label.set(value ?? undefined);
+  }
+  get label(): Signal<string | undefined> {
+    return this._label;
+  }
+
+  private readonly _display = signal<ActionDisplay>('auto');
+  @Input()
+  set display(value: ActionDisplay | undefined | null) {
+    if (value) this._display.set(value);
+  }
+  get display(): Signal<ActionDisplay> {
+    return this._display;
+  }
+
+  private readonly _labelFrom = signal<ActionLabelFrom>('sm');
+  @Input()
+  set labelFrom(value: ActionLabelFrom | undefined | null) {
+    if (value) this._labelFrom.set(value);
+  }
+  get labelFrom(): Signal<ActionLabelFrom> {
+    return this._labelFrom;
+  }
+
+  private readonly _tone = signal<ActionTone | undefined>(undefined);
+  @Input()
+  set tone(value: ActionTone | undefined | null) {
+    this._tone.set(value ?? undefined);
+  }
+  get tone(): Signal<ActionTone | undefined> {
+    return this._tone;
+  }
+
+  private readonly _size = signal<ActionSize>('md');
+  @Input()
+  set size(value: ActionSize | undefined | null) {
+    if (value && value in SIZE_CLASSES) {
+      this._size.set(value);
+    }
+  }
+  get size(): Signal<ActionSize> {
+    return this._size;
+  }
+
+  private readonly _busy = signal<boolean>(false);
+  @Input()
+  set busy(value: unknown) {
+    this._busy.set(booleanAttribute(value));
+  }
+  get busy(): Signal<boolean> {
+    return this._busy;
+  }
+
+  private readonly _disabled = signal<boolean>(false);
+  @Input()
+  set disabled(value: unknown) {
+    this._disabled.set(booleanAttribute(value));
+  }
+  get disabled(): Signal<boolean> {
+    return this._disabled;
+  }
+
+  private readonly _type = signal<string>('button');
+  @Input()
+  set type(value: string | undefined | null) {
+    if (value) this._type.set(value);
+  }
+  get type(): Signal<string> {
+    return this._type;
+  }
 
   constructor() {
     // جلوگیری از کلیک و submit در سطح capture هنگام busy بودن بدون حذف فوکوس بومی
@@ -149,7 +220,29 @@ export class ActionButtonComponent {
 
   readonly isSensitive = computed<boolean>(() => this.catalogEntry().sensitive);
 
-  readonly resolvedLabel = computed<string>(() => this.label() ?? this.catalogEntry().defaultLabel);
+  readonly resolvedLabel = computed<string>(() => {
+    return this._label() ?? this.elementRef?.nativeElement?.getAttribute('label') ?? this.catalogEntry().defaultLabel;
+  });
+
+  readonly resolvedSize = computed<ActionSize>(() => {
+    const fromSignal = this._size();
+    if (fromSignal !== 'md') return fromSignal;
+    const fromAttr = this.elementRef?.nativeElement?.getAttribute('size') as ActionSize;
+    return (fromAttr && fromAttr in SIZE_CLASSES) ? fromAttr : fromSignal;
+  });
+
+  readonly userDisplay = computed<ActionDisplay>(() => {
+    const fromSignal = this._display();
+    if (fromSignal !== 'auto') return fromSignal;
+    const fromAttr = this.elementRef?.nativeElement?.getAttribute('display') as ActionDisplay;
+    return fromAttr ?? fromSignal;
+  });
+
+  readonly resolvedType = computed<string>(() => {
+    const fromSignal = this._type();
+    if (fromSignal !== 'button') return fromSignal;
+    return this.elementRef?.nativeElement?.getAttribute('type') ?? fromSignal;
+  });
 
   readonly resolvedTone = computed<ActionTone>(() => this.tone() ?? this.catalogEntry().tone);
 
@@ -160,8 +253,8 @@ export class ActionButtonComponent {
    */
   readonly effectiveDisplay = computed<ActionDisplay>(() => {
     if (this.isSensitive()) return 'label';
-    if (this.display() === 'auto' && this.catalogEntry().defaultIconOnly) return 'icon';
-    return this.display();
+    if (this.userDisplay() === 'auto' && this.catalogEntry().defaultIconOnly) return 'icon';
+    return this.userDisplay();
   });
 
   readonly isEffectiveIconOnly = computed<boolean>(() => {
@@ -185,7 +278,7 @@ export class ActionButtonComponent {
     if (this.busy()) {
       return 'w-4 h-4 shrink-0 animate-spin';
     }
-    const sz = this.size();
+    const sz = this.resolvedSize();
     if (sz === 'lg') return 'w-5 h-5 shrink-0';
     if (sz === 'sm') return 'w-3.5 h-3.5 shrink-0';
     return 'w-4 h-4 shrink-0';
@@ -216,7 +309,7 @@ export class ActionButtonComponent {
       this.disabled() || this.busy() ? 'cursor-not-allowed opacity-50' : 'cursor-pointer active:scale-95';
     const base = `inline-flex items-center ${justifyClass} font-bold whitespace-nowrap shrink-0 transition-all duration-150 select-none ${cursorClass} disabled:active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed aria-disabled:active:scale-100 aria-disabled:opacity-50 aria-disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1`;
     const toneClass = TONE_CLASSES[this.resolvedTone()];
-    const szConfig = SIZE_CLASSES[this.size()];
+    const szConfig = SIZE_CLASSES[this.resolvedSize()];
 
     let sizeClass: string;
     if (this.overflowContext != null) {

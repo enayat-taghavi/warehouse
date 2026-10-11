@@ -179,7 +179,7 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
             class="w-full sm:w-auto"
           ></button>
           <button
-            appAction="confirm"
+            appAction="sync"
             size="lg"
             display="label"
             [label]="'شروع بروزرسانی (' + totalSelectedCount() + ')'"

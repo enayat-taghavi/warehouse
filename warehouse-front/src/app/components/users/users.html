@@ -4,85 +4,31 @@
       <!-- نوار اصلی هدر: تب‌ها در راست و دکمه‌های اکشن استاندارد در چپ -->
       <div class="bg-white p-3 md:p-3.5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
       <!-- لیست تب‌ها (سمت راست در RTL) -->
-      <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 w-full md:w-auto">
-        <button type="button" (click)="switchTab('users')"
-          [ngClass]="activeTab === 'users' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="flex-1 md:flex-none px-4 md:px-5 py-2 text-xs rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="users"></svg>
-          <span>کاربران</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-            [ngClass]="activeTab === 'users' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'">
-            {{ userCounts.all }}
-          </span>
-        </button>
-
-        <button type="button" (click)="switchTab('roles')"
-          [ngClass]="activeTab === 'roles' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="flex-1 md:flex-none px-4 md:px-5 py-2 text-xs rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="shield"></svg>
-          <span>نقش‌ها</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-            [ngClass]="activeTab === 'roles' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'">
-            {{ allRoles?.length || 0 }}
-          </span>
-        </button>
-
-        <button type="button" (click)="switchTab('id-cards')"
-          [ngClass]="activeTab === 'id-cards' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="flex-1 md:flex-none px-4 md:px-5 py-2 text-xs rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="id-card"></svg>
-          <span>کارت پرسنلی</span>
-        </button>
-      </div>
+      <app-tab-bar [tabs]="userTabs" [active]="activeTab" (activeChange)="switchTab($event)" />
 
       <!-- دکمه‌های اکشن استاندارد کاملاً آیکونی با تولتیپ (سمت چپ در RTL) -->
       <div class="flex items-center gap-2 justify-end">
         <!-- اکشن‌های تب کاربران -->
         <ng-container *ngIf="activeTab === 'users'">
-          <button (click)="exportUsersExcel()" class="btn-icon-square btn-icon-emerald" title="دانلود خروجی اکسل کاربران" aria-label="دانلود اکسل">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-export-excel"></svg>
-          </button>
-
-          <button (click)="openUsersImportModal()" class="btn-icon-square btn-icon-blue" title="ورودی / آپلود دسته‌جمعی اکسل کاربران" aria-label="آپلود اکسل">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-import-excel"></svg>
-          </button>
+          <button type="button" appAction="export-excel" label="خروجی اکسل کاربران" (click)="exportUsersExcel()"></button>
+          <button type="button" appAction="import-excel" label="ورود اکسل کاربران" (click)="openUsersImportModal()"></button>
         </ng-container>
 
         <!-- اکشن‌های تب نقش‌ها -->
         <ng-container *ngIf="activeTab === 'roles'">
-          <button (click)="exportRolesExcel()" class="btn-icon-square btn-icon-emerald" title="دانلود خروجی اکسل نقش‌ها" aria-label="دانلود اکسل">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-export-excel"></svg>
-          </button>
-
-          <button (click)="openRolesImportModal()" class="btn-icon-square btn-icon-blue" title="ورودی / آپلود اکسل نقش‌ها" aria-label="آپلود اکسل">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-import-excel"></svg>
-          </button>
+          <button type="button" appAction="export-excel" label="خروجی اکسل نقش‌ها" (click)="exportRolesExcel()"></button>
+          <button type="button" appAction="import-excel" label="ورود اکسل نقش‌ها" (click)="openRolesImportModal()"></button>
         </ng-container>
 
         <!-- اکشن‌های تب کارت پرسنلی / گیت‌پاس -->
         <ng-container *ngIf="activeTab === 'id-cards'">
-          <button type="button" (click)="openIdCardsExportModal()" [disabled]="isIdCardsExporting" class="btn-icon-square bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200" title="دانلود تصویر دیجیتال کارت (PNG)" aria-label="دانلود PNG">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-download"></svg>
-          </button>
-
-          <button type="button" (click)="openIdCardsSheetPreview()" class="btn-icon-square btn-icon-indigo" title="پیش‌نمایش شیت چاپی A4" aria-label="پیش‌نمایش شیت">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-view"></svg>
-          </button>
-
-          <!-- دکمه چاپ کاملاً آیکونی با نشانگر شمارنده پرسنل -->
-          <button type="button" (click)="printIdCards()" class="btn-icon-square text-white shadow-md shadow-indigo-200 relative border-0" style="background:linear-gradient(135deg,#4f46e5,#6366f1)" [title]="'ارسال به پرینتر (' + idCardsPrintableCount + ' پرسنل آماده چاپ)'" aria-label="چاپ شیت A4">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-print"></svg>
-            <span *ngIf="idCardsPrintableCount > 0" class="absolute -top-1.5 -left-1.5 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-mono font-black flex items-center justify-center border-2 border-white shadow-xs">
-              {{ idCardsPrintableCount }}
-            </span>
-          </button>
+          <button type="button" appAction="download" label="دانلود تصویر کارت" [disabled]="isIdCardsExporting" (click)="openIdCardsExportModal()"></button>
+          <button type="button" appAction="view" label="پیش‌نمایش شیت چاپی" (click)="openIdCardsSheetPreview()"></button>
+          <button type="button" appAction="print" label="چاپ شیت A4" (click)="printIdCards()"></button>
         </ng-container>
 
         <!-- بروزرسانی سراسری -->
-        <button type="button" [disabled]="isLoading" (click)="loadData()" class="btn-icon-square btn-icon-indigo" title="بروزرسانی داده‌ها" aria-label="بروزرسانی">
-          <svg *ngIf="!isLoading" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-refresh"></svg>
-          <span *ngIf="isLoading" class="animate-spin block w-[18px] h-[18px] border-2 border-indigo-600 border-t-transparent rounded-full"></span>
-        </button>
+        <button type="button" appAction="refresh" label="بروزرسانی داده‌ها" [busy]="isLoading" (click)="loadData()"></button>
 
         <!-- دکمه‌های اصلی ایجاد (کاربر / نقش) -->
         <button *ngIf="activeTab === 'users'" type="button" appAction="create" label="کاربر جدید" (click)="openUserModal()">
@@ -291,7 +237,7 @@
 
                       <!-- اکشن‌های سریع هدر: دکمه ویرایش + منوی سه‌نقطه -->
                       <div class="flex items-center gap-0.5 shrink-0">
-                        <button type="button" (click)="openUserModal(u.id)" class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="ویرایش پرونده">
+                        <button type="button" (click)="openUserModal(u.id)" class="p-1 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 flex items-center justify-center tap-target text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="ویرایش پرونده">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="edit"></svg>
                         </button>
 
@@ -558,7 +504,7 @@
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="unlock"></svg>
                           </button>
                           <!-- Edit Button -->
-                          <button type="button" (click)="openUserModal(u.id)" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="ویرایش پرونده">
+                          <button type="button" (click)="openUserModal(u.id)" class="p-1.5 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 flex items-center justify-center tap-target text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" title="ویرایش پرونده">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="edit"></svg>
                           </button>
 
@@ -1087,26 +1033,26 @@
             <!-- فیلتر دسته‌بندی قالب‌های آماده (منطبق بر ماژول‌های فعال) -->
             <div class="flex items-center gap-1 bg-white/90 p-1 rounded-xl border border-indigo-100/80 shadow-2xs overflow-x-auto">
               <button type="button" (click)="activePresetCategory = 'all'"
-                class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap"
+                class="px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap min-h-[40px] sm:min-h-0 flex items-center justify-center tap-target"
                 [ngClass]="activePresetCategory === 'all' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-100/70'">
                 همه ({{ availableRolePresets.length }})
               </button>
               <button *ngIf="hasInventoryModule()" type="button" (click)="activePresetCategory = 'inventory'"
-                class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1"
+                class="px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 min-h-[40px] sm:min-h-0 tap-target"
                 [ngClass]="activePresetCategory === 'inventory' ? 'bg-sky-600 text-white shadow-2xs' : 'text-slate-600 hover:text-sky-600 hover:bg-slate-100/70'">
-                <span>📦</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="package"></svg>
                 <span>انبارگردانی (۶)</span>
               </button>
               <button *ngIf="hasAccountingModule()" type="button" (click)="activePresetCategory = 'accounting'"
-                class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1"
+                class="px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 min-h-[40px] sm:min-h-0 tap-target"
                 [ngClass]="activePresetCategory === 'accounting' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-slate-600 hover:text-emerald-600 hover:bg-slate-100/70'">
-                <span>💳</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
                 <span>حسابداری (۵)</span>
               </button>
               <button type="button" (click)="activePresetCategory = 'system'"
-                class="px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1"
+                class="px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 min-h-[40px] sm:min-h-0 tap-target"
                 [ngClass]="activePresetCategory === 'system' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-100/70'">
-                <span>⚡</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap"></svg>
                 <span>سیستم (۱)</span>
               </button>
             </div>

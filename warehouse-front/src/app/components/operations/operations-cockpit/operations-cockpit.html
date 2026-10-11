@@ -5,8 +5,8 @@
     <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
       
       <div class="flex items-start gap-4">
-        <div class="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-2xl text-indigo-600 shadow-xs shrink-0">
-          🚀
+        <div class="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-xs shrink-0">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="server"></svg>
         </div>
         <div>
           <div class="flex items-center gap-2.5">
@@ -58,9 +58,10 @@
   <div *ngIf="isAccountingInstalled" class="rounded-2xl p-5 bg-white border border-slate-200 shadow-xs" [class.border-amber-300]="expiringDocs().length > 0">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold"
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold"
              [ngClass]="expiringDocs().length > 0 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'">
-          {{ expiringDocs().length > 0 ? '⚠️' : '🛡️' }}
+          <svg *ngIf="expiringDocs().length > 0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle"></svg>
+          <svg *ngIf="expiringDocs().length === 0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="shield"></svg>
         </div>
         <div>
           <h3 class="text-sm font-black text-slate-800">دیده‌بان پایش سررسید مدارک و روزنامه‌های رسمی هلدینگ</h3>
@@ -88,7 +89,10 @@
     <div *ngIf="expiringDocs().length > 0" class="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden mt-3">
       <div *ngFor="let doc of expiringDocs()" class="p-3 bg-slate-50/50 hover:bg-slate-50 flex items-center justify-between gap-3 transition-colors">
         <div class="flex items-center gap-3">
-          <span class="text-base">{{ doc.expiry_status === 'expired' ? '⛔' : '⏳' }}</span>
+          <span class="shrink-0 flex items-center">
+            <svg *ngIf="doc.expiry_status === 'expired'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600" appIcon="alert-circle"></svg>
+            <svg *ngIf="doc.expiry_status !== 'expired'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600" appIcon="clock"></svg>
+          </span>
           <div>
             <div class="flex items-center gap-2">
               <span class="text-xs font-black text-slate-800">{{ doc.company_name }}</span>
@@ -121,14 +125,14 @@
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
 
     <!-- کارت ۱: اسنپ‌شات‌ها و بازیابی اضطراری -->
-    <div 
-      (click)="navigateTo('/app/operations/snapshots')"
+    <a 
+      [routerLink]="['/app/operations/snapshots']"
       class="group relative rounded-2xl p-6 bg-white hover:border-indigo-300 border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between"
     >
       <div>
         <div class="flex items-start justify-between mb-4">
-          <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-xl text-indigo-600 group-hover:scale-105 transition-transform">
-            💾
+          <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:scale-105 transition-transform">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="database"></svg>
           </div>
           <span class="text-xs font-black text-indigo-600 font-mono bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
             {{ snapshotCount() }} از ۷ نسخه
@@ -146,17 +150,17 @@
         <span>آخرین نسخه: <strong class="text-slate-800 font-mono">{{ lastSnapshotTime() }}</strong></span>
         <span class="text-indigo-600 font-bold group-hover:translate-x-[-3px] transition-transform">مدیریت اسنپ‌شات‌ها ←</span>
       </div>
-    </div>
+    </a>
 
     <!-- کارت ۲: ماتریس پایش سلامت زنده -->
-    <div 
-      (click)="navigateTo('/app/operations/health')"
+    <a 
+      [routerLink]="['/app/operations/health']"
       class="group relative rounded-2xl p-6 bg-white hover:border-emerald-300 border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between"
     >
       <div>
         <div class="flex items-start justify-between mb-4">
-          <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-xl text-emerald-600 group-hover:scale-105 transition-transform">
-            🩺
+          <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:scale-105 transition-transform">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="activity"></svg>
           </div>
           <span class="inline-flex items-center gap-1 text-xs font-black text-emerald-700 font-mono bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
             نمره سلامت: ۱۰۰٪
@@ -174,17 +178,17 @@
         <span>وضعیت سرویس‌ها: <strong class="text-emerald-600 font-bold">سبز و پایدار</strong></span>
         <span class="text-emerald-600 font-bold group-hover:translate-x-[-3px] transition-transform">رصد عمیق ←</span>
       </div>
-    </div>
+    </a>
 
     <!-- کارت ۳: ممیزی امنیتی و سد رویدادها -->
-    <div 
-      (click)="navigateTo('/app/operations/audit')"
+    <a 
+      [routerLink]="['/app/operations/audit']"
       class="group relative rounded-2xl p-6 bg-white hover:border-rose-300 border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between"
     >
       <div>
         <div class="flex items-start justify-between mb-4">
-          <div class="w-12 h-12 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-xl text-rose-600 group-hover:scale-105 transition-transform">
-            🛡️
+          <div class="w-12 h-12 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 group-hover:scale-105 transition-transform">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="shield"></svg>
           </div>
           <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200">
             سد حفاظتی فعال
@@ -202,17 +206,17 @@
         <span>سطح حفاظت: <strong class="text-slate-800">سازمانی (SoD)</strong></span>
         <span class="text-rose-600 font-bold group-hover:translate-x-[-3px] transition-transform">بررسی وقایع ←</span>
       </div>
-    </div>
+    </a>
 
     <!-- کارت ۴: مانیتورینگ کلاینت‌های آفلاین و تداخل -->
-    <div 
-      (click)="navigateTo('/app/operations/sync-monitor')"
+    <a 
+      [routerLink]="['/app/operations/sync-monitor']"
       class="group relative rounded-2xl p-6 bg-white hover:border-amber-300 border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between"
     >
       <div>
         <div class="flex items-start justify-between mb-4">
-          <div class="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-xl text-amber-600 group-hover:scale-105 transition-transform">
-            🔄
+          <div class="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 group-hover:scale-105 transition-transform">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="cloud-upload"></svg>
           </div>
           <span class="text-xs font-black text-amber-700 font-mono bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
             3-Way Merge
@@ -230,17 +234,17 @@
         <span>صف همگام‌سازی: <strong class="text-emerald-600">تخلیه‌شده</strong></span>
         <span class="text-amber-600 font-bold group-hover:translate-x-[-3px] transition-transform">مدیریت صف ←</span>
       </div>
-    </div>
+    </a>
 
     <!-- کارت ۵: حاکمیت کاربران و مجوزهای حساس -->
-    <div 
-      (click)="navigateTo('/app/operations/rbac-governance')"
+    <a 
+      [routerLink]="['/app/operations/rbac-governance']"
       class="group relative rounded-2xl p-6 bg-white hover:border-purple-300 border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between"
     >
       <div>
         <div class="flex items-start justify-between mb-4">
-          <div class="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-xl text-purple-600 group-hover:scale-105 transition-transform">
-            👥
+          <div class="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-105 transition-transform">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="key"></svg>
           </div>
           <span class="text-xs font-black text-purple-700 font-mono bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">
             ۶ مجوز حساس
@@ -258,17 +262,17 @@
         <span>سطح حاکمیت: <strong class="text-purple-700 font-bold">Superuser-Only</strong></span>
         <span class="text-purple-600 font-bold group-hover:translate-x-[-3px] transition-transform">کنترل نقش‌ها ←</span>
       </div>
-    </div>
+    </a>
 
     <!-- کارت ۶: مدیریت کاربران و نقش‌ها (سورس واحد) -->
-    <div 
-      (click)="navigateTo('/app/operations/users')"
+    <a 
+      [routerLink]="['/app/operations/users']"
       class="group relative rounded-2xl p-6 bg-white hover:border-indigo-300 border border-slate-200 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between"
     >
       <div>
         <div class="flex items-start justify-between mb-4">
-          <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-xl text-indigo-600 group-hover:scale-105 transition-transform">
-            👤
+          <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:scale-105 transition-transform">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
           </div>
           <span class="text-xs font-black text-indigo-700 font-mono bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
             سورس واحد
@@ -286,7 +290,7 @@
         <span>مدیریت: <strong class="text-slate-800">حساب‌ها و مجوزها</strong></span>
         <span class="text-indigo-600 font-bold group-hover:translate-x-[-3px] transition-transform">ورود به کاربران ←</span>
       </div>
-    </div>
+    </a>
 
   </div>
 
