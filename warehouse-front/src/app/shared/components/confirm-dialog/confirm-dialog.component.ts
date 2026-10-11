@@ -2,6 +2,8 @@ import { Component, Injectable, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { IconName } from '../../icons/icon-registry';
+import { ActionButtonComponent } from '../action-button/action-button.component';
+import { ActionTone } from '../action-button/action-catalog';
 
 // ══════════════════════════════════════════════════
 //  ConfirmDialog Service — جایگزین confirm() مرورگر
@@ -77,7 +79,7 @@ export class ConfirmDialogService {
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
-  imports: [CommonModule, SvgIconDirective],
+  imports: [CommonModule, SvgIconDirective, ActionButtonComponent],
   template: `
     @if (dialog.isOpen()) {
       <div class="fixed inset-0 z-[110] flex items-center justify-center p-4">
@@ -122,13 +124,13 @@ export class ConfirmDialogService {
           <div class="px-6 pb-6 pt-4 flex flex-col sm:flex-row items-center gap-2">
             @if (config()?.showCancel) {
               <button
+                appAction="close"
+                size="lg"
+                display="label"
+                [label]="config()?.cancelText || 'انصراف'"
                 (click)="cancel()"
-                [attr.title]="config()?.cancelText"
-                [attr.aria-label]="config()?.cancelText"
-                class="w-full sm:flex-1 py-2.5 px-4 min-h-[44px] rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer tap-target flex items-center justify-center"
-              >
-                {{ config()?.cancelText }}
-              </button>
+                class="w-full sm:flex-1"
+              ></button>
             }
             
             @if (config()?.extraText) {
@@ -143,17 +145,15 @@ export class ConfirmDialogService {
             }
 
             <button
-              (click)="confirm()"
+              appAction="confirm"
+              size="lg"
+              display="label"
+              [label]="config()?.confirmText || 'تایید'"
+              [tone]="confirmTone"
               [disabled]="isConfirmDisabled"
-              [attr.title]="config()?.confirmText"
-              [attr.aria-label]="config()?.confirmText"
-              class="w-full sm:flex-1 py-2.5 px-4 min-h-[44px] rounded-xl text-xs font-bold text-white transition-all cursor-pointer tap-target flex items-center justify-center"
-              [class.opacity-40]="isConfirmDisabled"
-              [class.cursor-not-allowed]="isConfirmDisabled"
-              [ngClass]="confirmBtnClass"
-            >
-              {{ config()?.confirmText }}
-            </button>
+              (click)="confirm()"
+              class="w-full sm:flex-1"
+            ></button>
           </div>
         </div>
       </div>
@@ -228,6 +228,13 @@ export class ConfirmDialogComponent {
       warning: 'bg-amber-500 hover:bg-amber-600',
       info: 'bg-blue-500 hover:bg-blue-600',
     }[type];
+  }
+
+  get confirmTone(): ActionTone {
+    const type = this.config()?.type ?? 'warning';
+    if (type === 'danger') return 'rose';
+    if (type === 'warning') return 'amber';
+    return 'primary';
   }
 
   /** آیکن هر نوع دیالوگ از رجیستری مشترک (پیش‌تر رشتهٔ svg بود که sanitizer آن را حذف می‌کرد). */

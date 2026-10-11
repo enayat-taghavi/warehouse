@@ -4,7 +4,8 @@
     "rule_1_unlabeled_icon_buttons": 176,
     "rule_2_tab_min_widths": 0,
     "rule_3_non_standard_actions": 255,
-    "rule_4_retired_icons": 119
+    "rule_4_retired_icons": 117,
+    "rule_5_neutralized_tap_targets": 0
   },
   "violations": {
     "rule_1_unlabeled_icon_buttons": [
@@ -409,11 +410,6 @@
         "icon": "spinner-arc"
       },
       {
-        "file": "components/communications/chat-drawer/chat-drawer.component.html",
-        "line": 91,
-        "icon": "hero-search"
-      },
-      {
         "file": "components/count-tracking/count-tracking.html",
         "line": 153,
         "icon": "trash"
@@ -462,7 +458,13 @@
         "file": "components/dashboard/dashboard.html",
         "line": 253,
         "icon": "hero-chevron-left"
+      },
+      {
+        "file": "components/dispatch/dispatch.html",
+        "line": 70,
+        "icon": "trash-lucide"
       }
-    ]
+    ],
+    "rule_5_neutralized_tap_targets": []
   }
 }

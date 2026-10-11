@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "include": [
+    "src/app/shared/icons/**/*.spec.ts",
+    "src/app/shared/components/action-button/**/*.spec.ts",
+    "src/app/shared/components/tab-bar/**/*.spec.ts",
+    "src/app/shared/components/overflow-menu/**/*.spec.ts",
+    "src/app/shared/components/command-center/**/*.spec.ts",
+    "src/app/shared/components/modal/**/*.spec.ts",
+    "src/app/shared/components/confirm-dialog/**/*.spec.ts",
+    "src/app/shared/components/smart-delete-modal/**/*.spec.ts",
+    "src/app/shared/components/avatar-cropper-modal/**/*.spec.ts",
+    "src/app/shared/components/toggle-switch/**/*.spec.ts",
+    "src/app/shared/components/user-menu/**/*.spec.ts"
+  ]
+}

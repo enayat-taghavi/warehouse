@@ -340,7 +340,7 @@
 
     <!-- ─── Offline Banner ─── -->
     <div *ngIf="isOffline" class="bg-amber-500 text-white px-4 py-2.5 flex items-center justify-center gap-3 text-xs font-bold shadow-sm z-10 relative">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="wifi-off"></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [appIcon]="connectionState === 'server-unreachable' ? 'status-warning' : 'status-offline'"></svg>
       <span *ngIf="connectionState === 'offline'">حالت آفلاین — اینترنت شما وصل نیست. تغییرات شما ذخیره شده و به محض اتصال مجدد، خودکار همگام‌سازی می‌شوند.</span>
       <span *ngIf="connectionState === 'server-unreachable'">سرور در دسترس نیست — تغییرات شما ذخیره شده و به محض بازگشت سرور، خودکار همگام‌سازی می‌شوند.</span>
       <span *ngIf="pendingCount > 0" class="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">{{pendingCount}} مورد در صف</span>
@@ -349,7 +349,7 @@
     <!-- ─── Syncing Banner ─── -->
     <div *ngIf="(isSyncing || isPulling) && !isOffline" class="bg-indigo-500 text-white px-4 py-2 flex flex-col items-center justify-center gap-2 text-xs font-bold shadow-sm z-10 relative">
       <div class="flex items-center gap-3 w-full justify-center">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin shrink-0" appIcon="refresh-cw"></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin shrink-0" appIcon="action-refresh"></svg>
         <span *ngIf="isSyncing && !isPulling">در حال ارسال تغییرات به سرور...</span>
         <span *ngIf="isPulling">
           <ng-container *ngIf="deepUpdateState">

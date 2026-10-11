@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { CommunicationService, GenericComment, UserShort } from '../../../core/services/communication.service';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
 
 @Component({
   selector: 'app-contextual-comments',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent],
   templateUrl: './contextual-comments.component.html',
   styleUrls: ['./contextual-comments.component.css']
 })

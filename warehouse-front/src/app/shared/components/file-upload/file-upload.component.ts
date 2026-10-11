@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
+import { ActionButtonComponent } from '../action-button/action-button.component';
 
 /**
  * آپلود فایل با Drag & Drop و Progress Bar
@@ -23,7 +24,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
 @Component({
   selector: 'app-file-upload',
   standalone: true,
-  imports: [CommonModule, SvgIconDirective],
+  imports: [CommonModule, SvgIconDirective, ActionButtonComponent],
   template: `
     <div
       #dropZone
@@ -37,7 +38,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
       @if (!selectedFile) {
         <!-- Empty State -->
         <div class="text-slate-400">
-          <svg class="mx-auto mb-3" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="upload-cloud"></svg>
+          <svg class="mx-auto mb-3" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="action-upload"></svg>
           <p class="text-xs font-bold text-slate-600 mb-1">{{ label }}</p>
           <p class="text-[10px] text-slate-400">
             فایل را اینجا بکشید یا <span class="text-indigo-500 font-bold">کلیک</span> کنید
@@ -60,14 +61,12 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
             <p class="text-[10px] text-slate-400">{{ formatSize(selectedFile.size) }}</p>
           </div>
           <button
-            type="button"
+            appAction="close"
+            size="sm"
+            display="icon"
+            tone="rose"
             (click)="removeFile($event)"
-            class="p-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded-xl hover:bg-rose-100 text-slate-400 hover:text-rose-500 transition-colors shrink-0 flex items-center justify-center"
-            title="حذف فایل"
-            aria-label="حذف فایل"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
-          </button>
+          ></button>
         </div>
       }
 

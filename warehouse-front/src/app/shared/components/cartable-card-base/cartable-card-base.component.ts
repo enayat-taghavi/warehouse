@@ -118,11 +118,10 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
               *ngIf="showHistoryButton"
               type="button"
               (click)="historyClick.emit()"
-              class="p-2 min-h-[36px] text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors flex items-center gap-1 text-xs font-bold tap-target"
+              class="p-2 min-h-[40px] sm:min-h-[36px] text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors flex items-center gap-1 text-xs font-bold tap-target"
               title="تاریخچه گردش کار"
-              aria-label="تاریخچه گردش کار"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock"></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="status-pending"></svg>
               <span class="hidden sm:inline">تاریخچه</span>
             </button>
 

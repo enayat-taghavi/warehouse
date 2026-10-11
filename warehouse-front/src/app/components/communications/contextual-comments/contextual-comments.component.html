@@ -8,8 +8,8 @@
         {{ comments().length }}
       </span>
     </div>
-    <button (click)="loadComments()" [disabled]="isLoading()" class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex items-center gap-1 min-h-[36px] px-2 rounded-lg tap-target" title="بروزرسانی نظرات" aria-label="بروزرسانی نظرات">
-      <svg class="w-3.5 h-3.5" [class.animate-spin]="isLoading()" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
+    <button (click)="loadComments()" [disabled]="isLoading()" class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex items-center gap-1 min-h-[40px] sm:min-h-[36px] px-2 rounded-lg tap-target" title="بروزرسانی">
+      <svg class="w-3.5 h-3.5" [class.animate-spin]="isLoading()" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-refresh"></svg>
       <span>بروزرسانی</span>
     </button>
   </div>
@@ -61,7 +61,7 @@
 
       <!-- Actions -->
       <div class="flex items-center justify-end gap-2 mt-2 pt-1 border-t border-slate-200/40 dark:border-slate-700/40">
-        <button (click)="setReplyTo(c)" class="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 min-h-[32px] px-2 rounded-lg tap-target" title="پاسخ به این نظر" aria-label="پاسخ به این نظر">
+        <button (click)="setReplyTo(c)" class="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 min-h-[40px] sm:min-h-[32px] px-2 rounded-lg tap-target" title="پاسخ">
           <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-reply"></svg>
           <span>پاسخ</span>
         </button>
@@ -77,7 +77,7 @@
       <span class="text-slate-500 text-[10px] truncate max-w-[150px]">«{{ replyToComment.text }}»</span>
     </div>
     <button (click)="cancelReply()" class="text-blue-500 hover:text-blue-700 p-1 min-w-[40px] sm:min-w-[32px] min-h-[40px] sm:min-h-[32px] flex items-center justify-center rounded-lg" title="لغو پاسخ" aria-label="لغو پاسخ">
-      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-close"></svg>
     </button>
   </div>
 
@@ -115,14 +115,13 @@
       </div>
       <button 
         type="button"
+        appAction="send"
+        size="lg"
+        [busy]="isSubmitting()"
         (click)="submitComment()"
         [disabled]="!newCommentText.trim() || isSubmitting()"
-        class="h-[52px] min-h-[44px] px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all"
-        title="ثبت نظر"
-        aria-label="ثبت نظر">
-        <svg *ngIf="!isSubmitting()" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="send"></svg>
-        <span *ngIf="!isSubmitting()">ثبت</span>
-        <svg *ngIf="isSubmitting()" class="w-4 h-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24" appIcon="spinner"></svg>
+        class="h-[52px]"
+        title="ثبت نظر">
       </button>
     </div>
   </div>

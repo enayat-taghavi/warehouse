@@ -2,11 +2,12 @@ import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, OnInit, 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
+import { ActionButtonComponent } from '../action-button/action-button.component';
 
 @Component({
   selector: 'app-avatar-cropper-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent],
   templateUrl: './avatar-cropper-modal.html',
   styleUrl: './avatar-cropper-modal.css'
 })

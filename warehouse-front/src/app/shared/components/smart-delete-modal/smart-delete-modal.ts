@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
+import { ActionButtonComponent } from '../action-button/action-button.component';
 
 @Component({
   selector: 'app-smart-delete-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent],
   templateUrl: './smart-delete-modal.html',
   styleUrl: './smart-delete-modal.css'
 })

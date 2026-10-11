@@ -13,7 +13,7 @@
                 <h5 class="text-[13px] font-black text-slate-800">تایید اجباری سرپرست</h5>
                 <p class="text-[11px] text-slate-500 mt-2 leading-relaxed font-medium">آیا کارهای شمارش شده قبل از رسیدن به دست مدیر باید توسط سرپرست نیز تایید شوند؟</p>
               </div>
-              <app-toggle-switch [(checked)]="settings.require_supervisor_approval"></app-toggle-switch>
+              <app-toggle-switch [(checked)]="settings.require_supervisor_approval" label="تایید اجباری سرپرست"></app-toggle-switch>
             </div>
 
             <div class="flex items-center justify-between p-5 bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 transition-colors shadow-sm cursor-pointer" (click)="settings.require_doc_supervisor_approval = !settings.require_doc_supervisor_approval">
@@ -21,7 +21,7 @@
                 <h5 class="text-[13px] font-black text-slate-800">تایید سرپرست اسناد</h5>
                 <p class="text-[11px] text-slate-500 mt-2 leading-relaxed font-medium">عدم تایید اسناد نیاز به بررسی مدیر دارد یا سرپرست اسناد بررسی کند؟</p>
               </div>
-              <app-toggle-switch [(checked)]="settings.require_doc_supervisor_approval"></app-toggle-switch>
+              <app-toggle-switch [(checked)]="settings.require_doc_supervisor_approval" label="تایید سرپرست اسناد"></app-toggle-switch>
             </div>
 
             <div>
@@ -38,7 +38,7 @@
                 <h5 class="text-[13px] font-black text-slate-800">امکان مشاهده تاریخچه توسط انبارگردان</h5>
                 <p class="text-[11px] text-slate-500 mt-2 leading-relaxed font-medium">آیا انبارگردان در پنجره ثبت شمارش می‌تواند تاریخچه و گردش اقدامات قبلی کالا را ببیند؟</p>
               </div>
-              <app-toggle-switch [(checked)]="settings.counter_can_view_history"></app-toggle-switch>
+              <app-toggle-switch [(checked)]="settings.counter_can_view_history" label="امکان مشاهده تاریخچه توسط انبارگردان"></app-toggle-switch>
             </div>
 
             <!-- امکان مشاهده یادداشت‌های قبلی در تاریخچه (انبارگردان) -->
@@ -47,7 +47,7 @@
                 <h5 class="text-[13px] font-black text-slate-800">امکان مشاهده یادداشت‌های قبلی در تاریخچه (انبارگردان)</h5>
                 <p class="text-[11px] text-slate-500 mt-2 leading-relaxed font-medium">در صورت فعال بودن تاریخچه، آیا انبارگردان تمام یادداشت‌های قبلی را ببیند یا فقط آخرین پیام/یادداشت ارجاع را؟</p>
               </div>
-              <app-toggle-switch [(checked)]="settings.counter_can_view_previous_notes"></app-toggle-switch>
+              <app-toggle-switch [(checked)]="settings.counter_can_view_previous_notes" label="امکان مشاهده یادداشت‌های قبلی در تاریخچه (انبارگردان)"></app-toggle-switch>
             </div>
 
             <!-- امکان مشاهده تاریخچه توسط کارشناس مالی -->
@@ -56,7 +56,7 @@
                 <h5 class="text-[13px] font-black text-slate-800">امکان مشاهده تاریخچه توسط کارشناس مالی</h5>
                 <p class="text-[11px] text-slate-500 mt-2 leading-relaxed font-medium">آیا کارشناس مالی در پنجره ثبت اسناد و مدارک می‌تواند تاریخچه و گردش اقدامات قبلی کالا را ببیند؟</p>
               </div>
-              <app-toggle-switch [(checked)]="settings.financial_can_view_history"></app-toggle-switch>
+              <app-toggle-switch [(checked)]="settings.financial_can_view_history" label="امکان مشاهده تاریخچه توسط کارشناس مالی"></app-toggle-switch>
             </div>
 
             <!-- امکان مشاهده یادداشت‌های قبلی در تاریخچه (کارشناس مالی) -->
@@ -65,7 +65,7 @@
                 <h5 class="text-[13px] font-black text-slate-800">امکان مشاهده یادداشت‌های قبلی در تاریخچه (کارشناس مالی)</h5>
                 <p class="text-[11px] text-slate-500 mt-2 leading-relaxed font-medium">در صورت فعال بودن تاریخچه، آیا کارشناس مالی تمام یادداشت‌های قبلی سرپرست و مدیر را ببیند یا فقط آخرین پیام/یادداشت ارجاع را؟</p>
               </div>
-              <app-toggle-switch [(checked)]="settings.financial_can_view_previous_notes"></app-toggle-switch>
+              <app-toggle-switch [(checked)]="settings.financial_can_view_previous_notes" label="امکان مشاهده یادداشت‌های قبلی در تاریخچه (کارشناس مالی)"></app-toggle-switch>
             </div>
 
             <div class="h-px bg-slate-200 w-full my-6"></div>
@@ -173,7 +173,7 @@
                 </div>
                 <div class="flex items-center justify-between pt-5 sm:pt-6">
                   <span class="text-[11px] font-bold text-slate-700">موتور جستجوی عمیق (TRY_HARDER)</span>
-                  <app-toggle-switch [(checked)]="settings.scanner_custom_try_harder"></app-toggle-switch>
+                  <app-toggle-switch [(checked)]="settings.scanner_custom_try_harder" label="موتور جستجوی عمیق (TRY_HARDER)"></app-toggle-switch>
                 </div>
               </div>
             </div>
@@ -237,7 +237,7 @@
                     <h6 class="text-xs font-bold text-slate-800">فعال‌سازی سیستم پیام‌رسان و چت</h6>
                     <p class="text-[11px] text-slate-500 mt-0.5">امکان ارسال پیام‌های مستقیم و گروه‌های کاری برای هماهنگی پرسنل</p>
                   </div>
-                  <app-toggle-switch [(checked)]="settings.chat_enabled"></app-toggle-switch>
+                  <app-toggle-switch [(checked)]="settings.chat_enabled" label="فعال‌سازی سیستم پیام‌رسان و چت"></app-toggle-switch>
                 </div>
 
                 <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200 hover:border-indigo-300 transition-colors cursor-pointer" (click)="settings.chat_file_sharing = !settings.chat_file_sharing">
@@ -245,7 +245,7 @@
                     <h6 class="text-xs font-bold text-slate-800">امکان ارسال تصویر و فایل در پیام‌ها</h6>
                     <p class="text-[11px] text-slate-500 mt-0.5">ارسال عکس‌های ثبت‌شده از کالا، کارتن‌های آسیب‌دیده و اسناد بارنامه</p>
                   </div>
-                  <app-toggle-switch [(checked)]="settings.chat_file_sharing"></app-toggle-switch>
+                  <app-toggle-switch [(checked)]="settings.chat_file_sharing" label="امکان ارسال تصویر و فایل در پیام‌ها"></app-toggle-switch>
                 </div>
               </div>
             </div>

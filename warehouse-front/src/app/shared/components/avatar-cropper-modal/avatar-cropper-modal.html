@@ -14,9 +14,7 @@
         <span class="header-subtitle">برش و بهینه‌سازی استاندارد تصویر پرسنلی</span>
       </div>
     </div>
-    <button type="button" class="close-btn min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px]" (click)="close()" title="بستن" aria-label="بستن">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
-    </button>
+    <button appAction="close" display="icon" (click)="close()"></button>
   </div>
 
   <!-- Body -->
@@ -25,15 +23,12 @@
     <div class="toolbar-section">
       <div class="source-buttons flex-wrap sm:flex-nowrap gap-2">
         <button type="button" class="tool-btn primary min-h-[40px] tap-target cursor-pointer" (click)="fileInput.click()" title="انتخاب فایل عکس" aria-label="انتخاب فایل عکس">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="upload"></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-upload"></svg>
           <span>انتخاب فایل عکس</span>
         </button>
         <input #fileInput type="file" accept="image/png,image/jpeg,image/webp,image/gif" (change)="onFileSelected($event)" style="display: none" />
 
-        <button *ngIf="cameraAvailable" type="button" class="tool-btn camera min-h-[40px] tap-target cursor-pointer" (click)="startCamera()" title="ثبت با دوربین / وب‌کم">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="camera"></svg>
-          <span>ثبت با دوربین / وب‌کم</span>
-        </button>
+        <button *ngIf="cameraAvailable" appAction="camera" (click)="startCamera()" label="ثبت با دوربین / وب‌کم"></button>
       </div>
     </div>
 
@@ -65,7 +60,7 @@
         <!-- Placeholder if no image is loaded yet -->
         <div *ngIf="!imageLoaded" class="empty-dropzone" (click)="fileInput.click()">
           <div class="drop-icon">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="camera"></svg>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="action-camera"></svg>
           </div>
           <p class="drop-main-text">تصویر پرسنلی را اینجا رها کنید</p>
           <p class="drop-sub-text">یا بر روی «انتخاب فایل عکس» کلیک نمایید</p>
@@ -118,25 +113,35 @@
   <!-- Footer Actions -->
   <div class="modal-footer flex-col sm:flex-row gap-2">
     <div class="footer-left w-full sm:w-auto">
-      <button *ngIf="currentAvatarUrl" type="button" class="btn btn-danger-outline min-h-[44px] w-full sm:w-auto cursor-pointer flex items-center justify-center gap-1.5" (click)="removeAvatar()" [disabled]="isSaving" title="حذف عکس فعلی" aria-label="حذف عکس فعلی">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
-        <span>حذف عکس فعلی</span>
+      <button *ngIf="currentAvatarUrl"
+              appAction="delete"
+              tone="rose"
+              size="md"
+              display="label"
+              label="حذف عکس فعلی"
+              (click)="removeAvatar()"
+              [disabled]="isSaving"
+              class="w-full sm:w-auto">
       </button>
     </div>
 
     <div class="footer-right w-full sm:w-auto flex-col sm:flex-row gap-2">
-      <button type="button" class="btn btn-secondary min-h-[44px] w-full sm:w-auto cursor-pointer" (click)="close()" [disabled]="isSaving" title="انصراف" aria-label="انصراف">انصراف</button>
-      <button
-        type="button"
-        class="btn btn-primary min-h-[44px] w-full sm:w-auto cursor-pointer"
-        [disabled]="!imageLoaded || isSaving"
-        (click)="saveCroppedImage()"
-      >
-        <span *ngIf="!isSaving">ذخیره و اعمال تصویر</span>
-        <span *ngIf="isSaving" class="btn-loading-content">
-          <span class="btn-spinner"></span>
-          <span>در حال بهینه‌سازی...</span>
-        </span>
+      <button appAction="close"
+              size="lg"
+              display="label"
+              label="انصراف"
+              (click)="close()"
+              [disabled]="isSaving"
+              class="w-full sm:w-auto">
+      </button>
+      <button appAction="save"
+              size="lg"
+              display="label"
+              label="ذخیره و اعمال تصویر"
+              [disabled]="!imageLoaded || isSaving"
+              [busy]="isSaving"
+              (click)="saveCroppedImage()"
+              class="w-full sm:w-auto">
       </button>
     </div>
   </div>

@@ -175,6 +175,30 @@ def check_rule_4_retired_icons(templates):
     return violations
 
 
+def check_rule_5_neutralized_tap_targets(templates):
+    """قاعده ۵: tap-target همراه min-w|h-[<40px] بدون پیشوند sm:."""
+    violations = []
+    elem_re = re.compile(r'<(\w+)\b([^>]*)>', re.DOTALL)
+    dim_re = re.compile(r'(?<![\w:-])min-(?:w|h)-\[(\d+)px\]')
+    for path, text in templates:
+        rel = path.relative_to(APP_DIR).as_posix()
+        for m in elem_re.finditer(text):
+            tag, attrs = m.group(1), m.group(2)
+            if 'tap-target' in attrs:
+                for dim_m in dim_re.finditer(attrs):
+                    val = int(dim_m.group(1))
+                    if val < 40:
+                        line_no = text[:m.start()].count('\n') + 1
+                        violations.append({
+                            'file': rel,
+                            'line': line_no,
+                            'dimension': dim_m.group(0),
+                            'tag': tag
+                        })
+                        break
+    return violations
+
+
 def run_guardian(update_baseline=False):
     print("=" * 74)
     print("🛡️ ایجنت نگهبان ۵۵: ارگونومی عناصر کلیک‌پذیر (Guardian 55 — Clickable Ergonomics)")
@@ -186,12 +210,14 @@ def run_guardian(update_baseline=False):
     r2 = check_rule_2_tab_min_widths(templates_list)
     r3 = check_rule_3_non_standard_actions(templates_list)
     r4 = check_rule_4_retired_icons(templates_list)
+    r5 = check_rule_5_neutralized_tap_targets(templates_list)
 
     current_counters = {
         "rule_1_unlabeled_icon_buttons": len(r1),
         "rule_2_tab_min_widths": len(r2),
         "rule_3_non_standard_actions": len(r3),
         "rule_4_retired_icons": len(r4),
+        "rule_5_neutralized_tap_targets": len(r5),
     }
 
     if update_baseline and BASELINE_FILE.exists():
@@ -212,6 +238,7 @@ def run_guardian(update_baseline=False):
                 "rule_2_tab_min_widths": r2,
                 "rule_3_non_standard_actions": r3[:30],
                 "rule_4_retired_icons": r4[:30],
+                "rule_5_neutralized_tap_targets": r5[:30],
             }
         }
         BASELINE_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -228,6 +255,7 @@ def run_guardian(update_baseline=False):
         "rule_2_tab_min_widths": "قاعده ۲: عرض ثابت min-w-[...px] درون نوارهای تب",
         "rule_3_non_standard_actions": "قاعده ۳: دکمه‌های اکشن بدون appAction/آیکون واحد",
         "rule_4_retired_icons": "قاعده ۴: استفاده از گونه‌های کنارگذاشتهٔ آیکون",
+        "rule_5_neutralized_tap_targets": "قاعده ۵: tap-target همراه min-w|h-[<40px] بدون پیشوند sm:",
     }
 
     for key, label in rule_names.items():

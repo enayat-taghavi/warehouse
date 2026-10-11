@@ -7,6 +7,9 @@ import { ModuleRegistryService } from '../modules/module-registry.service';
 import { ActiveCompanyService } from './active-company.service';
 import { filter } from 'rxjs';
 
+import { IconName } from '../../shared/icons/icon-registry';
+import { ROLE_ICONS } from '../../shared/icons/semantic-icons';
+
 export type AppModuleType = 'warehouse' | 'personnel' | 'operations' | string;
 
 export interface RolePersona {
@@ -15,7 +18,7 @@ export interface RolePersona {
   app: AppModuleType;
   badgeColor: string;
   bgClass: string;
-  icon: string;
+  icon: IconName;
   tierLevel: number;
 }
 
@@ -27,7 +30,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'operations',
     badgeColor: '#06b6d4',
     bgClass: 'bg-cyan-600',
-    icon: 'shield',
+    icon: ROLE_ICONS.ops_commander,
     tierLevel: 6
   },
   // --- Personnel / Payroll / Treasury Roles ---
@@ -37,7 +40,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#64748b',
     bgClass: 'bg-slate-600',
-    icon: 'user',
+    icon: ROLE_ICONS.operator,
     tierLevel: 1
   },
   {
@@ -46,7 +49,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#2563eb',
     bgClass: 'bg-blue-600',
-    icon: 'clipboard',
+    icon: ROLE_ICONS.supervisor,
     tierLevel: 2
   },
   {
@@ -55,7 +58,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#059669',
     bgClass: 'bg-emerald-600',
-    icon: 'credit-card',
+    icon: ROLE_ICONS.accountant,
     tierLevel: 3
   },
   {
@@ -64,7 +67,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#7c3aed',
     bgClass: 'bg-purple-600',
-    icon: 'crown',
+    icon: ROLE_ICONS.manager,
     tierLevel: 4
   },
   {
@@ -73,7 +76,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#d97706',
     bgClass: 'bg-amber-600',
-    icon: 'database',
+    icon: ROLE_ICONS.treasury,
     tierLevel: 5
   },
   {
@@ -82,7 +85,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#0284c7',
     bgClass: 'bg-sky-600',
-    icon: 'building',
+    icon: ROLE_ICONS.org_admin,
     tierLevel: 4
   },
   // --- Warehouse / Inventory Roles ---
@@ -92,7 +95,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'warehouse',
     badgeColor: '#0284c7',
     bgClass: 'bg-sky-600',
-    icon: 'barcode',
+    icon: ROLE_ICONS.counter,
     tierLevel: 1
   },
   {
@@ -101,7 +104,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'warehouse',
     badgeColor: '#4f46e5',
     bgClass: 'bg-indigo-600',
-    icon: 'package',
+    icon: ROLE_ICONS.warehouse_supervisor,
     tierLevel: 2
   },
   {
@@ -110,7 +113,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'warehouse',
     badgeColor: '#0d9488',
     bgClass: 'bg-teal-600',
-    icon: 'file-text',
+    icon: ROLE_ICONS.docs_specialist,
     tierLevel: 3
   },
   {
@@ -119,7 +122,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'warehouse',
     badgeColor: '#9333ea',
     bgClass: 'bg-purple-600',
-    icon: 'search',
+    icon: ROLE_ICONS.manager_review,
     tierLevel: 4
   },
   // --- Global Superuser ---
@@ -129,7 +132,7 @@ export const ALL_APP_ROLES: RolePersona[] = [
     app: 'personnel',
     badgeColor: '#e11d48',
     bgClass: 'bg-rose-600',
-    icon: 'zap',
+    icon: ROLE_ICONS.superuser,
     tierLevel: 6
   }
 ];

@@ -76,7 +76,7 @@ export interface PageEvent {
           <div class="flex items-center gap-4">
             <!-- Global Search -->
             <div class="relative flex items-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2.5 text-slate-400" appIcon="search"></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2.5 text-slate-400" appIcon="action-search"></svg>
               <input type="text" [value]="globalSearch" (input)="onGlobalSearch($event)" placeholder="جستجو (کد، شرح، PO، PL، PK، تگ)..." title="جستجو در فیلدهای: کد یکتا، کد ترکیبی، شرح کالا، سفارش خرید (PO)، پکینگ لیست (PL)، پکیج (PK) و تگ" class="w-72 text-xs py-1.5 pl-2 pr-8 rounded-lg border border-slate-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none placeholder:text-slate-400 transition-shadow">
               @if (isLoading) {
                 <svg class="animate-spin absolute left-2.5 w-3.5 h-3.5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" appIcon="spinner"></svg>
@@ -104,20 +104,20 @@ export interface PageEvent {
           <div class="flex items-center gap-2">
             <!-- Zoom Controls -->
             <div class="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-              <button (click)="zoomOut()" title="کوچک‌نمایی (Zoom Out)" class="px-2 py-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+              <button (click)="zoomOut()" title="کوچک‌نمایی (Zoom Out)" aria-label="کوچک‌نمایی (Zoom Out)" class="px-2 py-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center justify-center cursor-pointer tap-target">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zoom-out"></svg>
               </button>
-              <button (click)="resetZoom()" title="اندازه اصلی (100%)" class="px-2 py-1.5 text-[10px] font-bold text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors border-x border-slate-100 min-w-[36px] text-center">
+              <button (click)="resetZoom()" title="اندازه اصلی (100%)" aria-label="اندازه اصلی (100%)" class="px-2 py-1.5 text-[10px] font-bold text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors border-x border-slate-100 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] text-center flex items-center justify-center cursor-pointer tap-target">
                 {{ (zoomScale * 100) | number:'1.0-0' }}%
               </button>
-              <button (click)="zoomIn()" title="بزرگ‌نمایی (Zoom In)" class="px-2 py-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+              <button (click)="zoomIn()" title="بزرگ‌نمایی (Zoom In)" aria-label="بزرگ‌نمایی (Zoom In)" class="px-2 py-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center justify-center cursor-pointer tap-target">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zoom-in"></svg>
               </button>
             </div>
 
             @if (showColumnToggle) {
               <div class="relative">
-                <button (click)="isColumnToggleOpen = !isColumnToggleOpen" class="text-[10px] font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1 transition-colors bg-white border border-slate-200 px-2 py-1.5 rounded-lg shadow-sm">
+                <button (click)="isColumnToggleOpen = !isColumnToggleOpen" title="انتخاب ستون‌ها" aria-label="انتخاب ستون‌ها" class="text-[10px] font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1 transition-colors bg-white border border-slate-200 px-2.5 py-1.5 min-h-[40px] sm:min-h-[36px] rounded-lg shadow-sm cursor-pointer tap-target">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="list"></svg>
                   انتخاب ستون‌ها
                 </button>
@@ -145,7 +145,7 @@ export interface PageEvent {
               <!-- View Manager Popup -->
               @if (tableName) {
                 <div class="relative ml-1">
-                  <button (click)="isViewManagerOpen = !isViewManagerOpen" class="text-[10px] font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1 transition-colors bg-white border border-slate-200 px-2 py-1.5 rounded-lg shadow-sm">
+                  <button (click)="isViewManagerOpen = !isViewManagerOpen" title="مدیریت نماها" aria-label="مدیریت نماها" class="text-[10px] font-bold text-slate-500 hover:text-slate-700 flex items-center gap-1 transition-colors bg-white border border-slate-200 px-2.5 py-1.5 min-h-[40px] sm:min-h-[36px] rounded-lg shadow-sm cursor-pointer tap-target">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
                     مدیریت نماها
                   </button>
@@ -177,9 +177,9 @@ export interface PageEvent {
                                 <button (click)="viewToDelete = null; $event.stopPropagation()" class="text-[9px] font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">خیر</button>
                               </div>
                             } @else {
-                              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button (click)="viewToDelete = v.id!; $event.stopPropagation()" class="text-rose-500 hover:text-rose-700 p-0.5 rounded hover:bg-rose-50" title="حذف نما">
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="trash-2"></svg>
+                              <div class="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                <button (click)="viewToDelete = v.id!; $event.stopPropagation()" class="text-rose-500 hover:text-rose-700 p-1 min-w-[40px] sm:min-w-[32px] min-h-[40px] sm:min-h-[32px] rounded-lg hover:bg-rose-50 flex items-center justify-center cursor-pointer tap-target" title="حذف نما" aria-label="حذف نما">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-delete"></svg>
                                 </button>
                               </div>
                             }
@@ -197,9 +197,10 @@ export interface PageEvent {
             @if (showClearFilters && hasActiveFilters) {
               <button
                 (click)="clearAllFilters()"
-                class="text-[10px] font-bold text-rose-500 hover:text-rose-600 flex items-center gap-1 transition-colors bg-rose-50 px-2 py-1.5 rounded-lg"
+                title="پاک کردن فیلترها"
+                class="text-[10px] font-bold text-rose-500 hover:text-rose-600 flex items-center gap-1 transition-colors bg-rose-50 px-2.5 py-1.5 min-h-[40px] sm:min-h-[36px] rounded-lg cursor-pointer tap-target"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-close"></svg>
                 پاک کردن فیلترها
               </button>
             }
@@ -207,18 +208,18 @@ export interface PageEvent {
             <!-- Update Button -->
             @if (editHistory.length > 0) {
               <div class="relative flex items-center gap-1 bg-indigo-50 border border-indigo-100 rounded-lg overflow-hidden ml-2 transition-all p-1">
-                <button (click)="undo()" [disabled]="historyIndex < 0" title="بازگشت تغییرات (Ctrl+Z)" class="flex items-center justify-center p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-indigo-100 text-indigo-700 transition-colors">
+                <button (click)="undo()" [disabled]="historyIndex < 0" title="بازگشت تغییرات (Ctrl+Z)" aria-label="بازگشت تغییرات (Ctrl+Z)" class="flex items-center justify-center p-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-indigo-100 text-indigo-700 transition-colors cursor-pointer tap-target">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="undo"></svg>
                 </button>
-                <button (click)="redo()" [disabled]="historyIndex >= editHistory.length - 1" title="اعمال مجدد (Ctrl+Y)" class="flex items-center justify-center p-1.5 rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-indigo-100 text-indigo-700 transition-colors">
+                <button (click)="redo()" [disabled]="historyIndex >= editHistory.length - 1" title="اعمال مجدد (Ctrl+Y)" aria-label="اعمال مجدد (Ctrl+Y)" class="flex items-center justify-center p-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded disabled:opacity-30 disabled:cursor-not-allowed hover:bg-indigo-100 text-indigo-700 transition-colors cursor-pointer tap-target">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" appIcon="redo"></svg>
                 </button>
                 <div class="w-px h-5 bg-indigo-200 mx-0.5"></div>
-                <button (click)="showConfirm()" [disabled]="pendingChanges.size === 0" class="flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold text-indigo-700 bg-white rounded-md shadow-sm border border-indigo-100 hover:bg-indigo-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="save"></svg>
+                <button (click)="showConfirm()" [disabled]="pendingChanges.size === 0" title="ذخیره تغییرات" class="flex items-center gap-1.5 px-3 py-1.5 min-h-[40px] sm:min-h-[36px] text-[10px] font-bold text-indigo-700 bg-white rounded-md shadow-sm border border-indigo-100 hover:bg-indigo-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer tap-target">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-save"></svg>
                   ذخیره تغییرات ({{pendingChanges.size}})
                 </button>
-                <button (click)="showRevertConfirm()" title="لغو تغییرات" class="flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold text-rose-700 bg-white rounded-md shadow-sm border border-rose-100 hover:bg-rose-50 transition-colors">
+                <button (click)="showRevertConfirm()" title="لغو تغییرات" class="flex items-center gap-1.5 px-3 py-1.5 min-h-[40px] sm:min-h-[36px] text-[10px] font-bold text-rose-700 bg-white rounded-md shadow-sm border border-rose-100 hover:bg-rose-50 transition-colors cursor-pointer tap-target">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="undo-2"></svg>
                   لغو تغییرات
                 </button>
@@ -274,8 +275,9 @@ export interface PageEvent {
                         (click)="toggleColumnVisibility(col.key); $event.stopPropagation()"
                         class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-slate-400 hover:text-rose-500 hover:bg-rose-50 mr-auto pointer-events-auto"
                         title="مخفی کردن ستون"
+                        aria-label="مخفی کردن ستون"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-close"></svg>
                       </button>
                     }
                     @if (col.sortable) {

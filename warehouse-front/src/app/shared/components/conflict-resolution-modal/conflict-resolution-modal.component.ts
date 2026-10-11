@@ -11,6 +11,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../modal/modal.component';
+import { ActionButtonComponent } from '../action-button/action-button.component';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
 import { SyncErrorEntry } from '../../../core/services/offline-db';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
@@ -67,7 +68,7 @@ const IGNORED_COMPARE_KEYS = new Set([
 @Component({
   selector: 'app-conflict-resolution-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ModalComponent, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ModalComponent, SvgIconDirective, ActionButtonComponent],
   template: `
     <app-modal [isOpen]="isOpen" (closed)="close()" title="مرکز حل تداخل همگام‌سازی (۳-Way Merge)" sizeClass="max-w-2xl">
       <div class="px-5 py-4 flex flex-col gap-4 text-right" dir="rtl">
@@ -214,7 +215,7 @@ const IGNORED_COMPARE_KEYS = new Set([
             class="w-full flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer"
           >
             <div class="flex items-center gap-1.5">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-emerald-600" appIcon="check"></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-emerald-600" appIcon="action-confirm"></svg>
               <span>{{ autoMergedCount }} فیلد بدون مغایرت به شکل خودکار تلفیق گردیدند</span>
             </div>
             <span class="text-[10px] text-indigo-600 dark:text-indigo-400">{{ showAutoMerged ? 'بستن' : 'مشاهده' }}</span>
@@ -239,29 +240,25 @@ const IGNORED_COMPARE_KEYS = new Set([
       <!-- Footer Actions -->
       <div class="px-5 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row items-center justify-between gap-2.5" dir="rtl">
         <button
-          type="button"
+          appAction="close"
+          size="lg"
+          display="label"
+          label="انصراف"
           (click)="close()"
-          title="انصراف"
-          aria-label="انصراف"
-          class="w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer tap-target flex items-center justify-center"
-        >
-          انصراف
-        </button>
+          class="w-full sm:w-auto"
+        ></button>
 
         <button
-          type="button"
-          (click)="resolveAndSave()"
+          appAction="confirm"
+          size="lg"
+          display="label"
+          label="تایید و نهایی‌سازی ادغام"
+          tone="emerald"
           [disabled]="isSodRestricted || isSaving"
-          title="تایید و نهایی‌سازی ادغام"
-          class="w-full sm:w-auto px-5 py-2.5 min-h-[44px] rounded-xl text-xs font-black text-white transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-95 tap-target"
-          [ngClass]="isSodRestricted || isSaving 
-            ? 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed opacity-60' 
-            : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'"
-        >
-          <svg *ngIf="isSaving" class="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="spinner"></svg>
-          <svg *ngIf="!isSaving" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
-          <span>{{ isSaving ? 'در حال اعمال ادغام...' : 'تایید و نهایی‌سازی ادغام' }}</span>
-        </button>
+          [busy]="isSaving"
+          (click)="resolveAndSave()"
+          class="w-full sm:w-auto"
+        ></button>
       </div>
     </app-modal>
   `

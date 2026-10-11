@@ -8,11 +8,12 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../services/toast.service';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 import { TabBarComponent, TabDef } from '../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
 
 @Component({
   selector: 'app-chat-drawer',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, TabBarComponent],
+  imports: [CommonModule, FormsModule, SvgIconDirective, TabBarComponent, ActionButtonComponent],
   templateUrl: './chat-drawer.component.html',
   styleUrls: ['./chat-drawer.component.css']
 })

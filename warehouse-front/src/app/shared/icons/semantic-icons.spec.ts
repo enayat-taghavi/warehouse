@@ -4,6 +4,7 @@ import {
   ACTION_ICONS,
   STATUS_ICONS,
   PLATFORM_ENTITY_ICONS,
+  ROLE_ICONS,
   resolveSemanticIcon,
 } from './semantic-icons';
 import { WAREHOUSE_ENTITY_ICONS } from '../../modules/warehouse/entity-icons';
@@ -85,7 +86,25 @@ describe('فرهنگ آیکون یکسان (Semantic Icon Dictionary)', () => {
     expect(unauthorizedSharing, unauthorizedSharing.join('\n')).toEqual([]);
   });
 
-  it('resolveSemanticIcon باید نام‌های action-* و status-* و رجیستری را حل کند', () => {
+  it('همه مقادیر ROLE_ICONS باید در رجیستری ICONS معتبر باشند و با ۸ مفهوم حساس تداخل نداشته باشند', () => {
+    const FORBIDDEN_COLLISIONS = new Set([
+      'search',       // کار جستجو
+      'credit-card',  // تنخواه
+      'database',     // حساب بانکی
+      'clipboard',    // کارتابل انبارگردان
+      'barcode',      // کالا
+      'package',      // انبارها
+      'file-text',    // فاکتور
+      'building',     // شرکت
+    ]);
+
+    for (const [roleKey, iconName] of Object.entries(ROLE_ICONS)) {
+      expect(iconName in ICONS, `آیکون '${iconName}' برای نقش '${roleKey}' در ICONS نیست`).toBe(true);
+      expect(FORBIDDEN_COLLISIONS.has(iconName), `آیکون نقش '${roleKey}' (${iconName}) با مفاهیم حساس تداخل دارد`).toBe(false);
+    }
+  });
+
+  it('resolveSemanticIcon باید نام‌های action-* و status-* و role-* و رجیستری را حل کند', () => {
     expect(resolveSemanticIcon('action-create')).toBe('plus');
     expect(resolveSemanticIcon('action-edit')).toBe('edit');
     expect(resolveSemanticIcon('action-delete')).toBe('trash-2');
@@ -98,6 +117,17 @@ describe('فرهنگ آیکون یکسان (Semantic Icon Dictionary)', () => {
     expect(resolveSemanticIcon('status-rejected')).toBe('x-circle');
     expect(resolveSemanticIcon('status-draft')).toBe('file');
 
+    expect(resolveSemanticIcon('role-operator')).toBe('user');
+    expect(resolveSemanticIcon('role-supervisor')).toBe('user-check');
+    expect(resolveSemanticIcon('role-accountant')).toBe('calculator');
+    expect(resolveSemanticIcon('role-manager')).toBe('crown');
+    expect(resolveSemanticIcon('role-treasury')).toBe('briefcase-2');
+    expect(resolveSemanticIcon('role-org_admin')).toBe('shield-check');
+    expect(resolveSemanticIcon('role-counter')).toBe('check-square');
+    expect(resolveSemanticIcon('role-warehouse_supervisor')).toBe('box');
+    expect(resolveSemanticIcon('role-docs_specialist')).toBe('file-check');
+    expect(resolveSemanticIcon('role-manager_review')).toBe('check-check');
+
     // نام‌های مستقیم رجیستری
     expect(resolveSemanticIcon('trash-2')).toBe('trash-2');
     expect(resolveSemanticIcon('plus')).toBe('plus');
@@ -105,6 +135,7 @@ describe('فرهنگ آیکون یکسان (Semantic Icon Dictionary)', () => {
     // مقادیر نامعتبر یا خالی
     expect(resolveSemanticIcon('action-nonexistent-key')).toBeNull();
     expect(resolveSemanticIcon('status-unknown-status')).toBeNull();
+    expect(resolveSemanticIcon('role-unknown-role')).toBeNull();
     expect(resolveSemanticIcon('nonexistent-icon-xyz')).toBeNull();
     expect(resolveSemanticIcon(null)).toBeNull();
     expect(resolveSemanticIcon(undefined)).toBeNull();
@@ -114,5 +145,6 @@ describe('فرهنگ آیکون یکسان (Semantic Icon Dictionary)', () => {
     expect(resolveSemanticIcon('toString')).toBeNull();
     expect(resolveSemanticIcon('action-constructor')).toBeNull();
     expect(resolveSemanticIcon('status-__proto__')).toBeNull();
+    expect(resolveSemanticIcon('role-constructor')).toBeNull();
   });
 });

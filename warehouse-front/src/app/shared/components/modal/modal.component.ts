@@ -7,7 +7,7 @@ import {
   ElementRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { SvgIconDirective } from '../../icons/svg-icon.directive';
+import { ActionButtonComponent } from '../action-button/action-button.component';
 
 /**
  * مودال عمومی — overlay + animation + close on escape/backdrop
@@ -20,7 +20,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
 @Component({
   selector: 'app-modal',
   standalone: true,
-  imports: [CommonModule, SvgIconDirective],
+  imports: [CommonModule, ActionButtonComponent],
   template: `
     @if (isOpen) {
       <div
@@ -44,14 +44,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           @if (title) {
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
               <h2 class="text-sm font-black text-slate-800">{{ title }}</h2>
-              <button
-                (click)="close()"
-                class="p-2 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center cursor-pointer"
-                title="بستن"
-                aria-label="بستن"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
-              </button>
+              <button appAction="close" display="icon" (click)="close()"></button>
             </div>
           }
 

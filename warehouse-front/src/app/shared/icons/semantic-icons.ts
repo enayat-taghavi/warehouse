@@ -91,7 +91,29 @@ export const PLATFORM_ENTITY_ICONS = {
 export type PlatformEntityIconKey = keyof typeof PLATFORM_ENTITY_ICONS;
 
 /**
- * حل نام‌های معنایی (action-* یا status-*) یا نام مستقیم رجیستری به IconName معتبر.
+ * فرهنگ آیکون معنایی نقش‌های سازمانی (Role Icons)
+ * تفکیک‌شده و بدون تداخل با ۸ مفهوم حساس کارها و موجودیت‌ها:
+ * (search, credit-card, database, clipboard, barcode, package, file-text, building)
+ */
+export const ROLE_ICONS = {
+  'ops_commander': 'shield',
+  'operator': 'user',
+  'supervisor': 'user-check',
+  'accountant': 'calculator',
+  'manager': 'crown',
+  'treasury': 'briefcase-2',
+  'org_admin': 'shield-check',
+  'counter': 'check-square',
+  'warehouse_supervisor': 'box',
+  'docs_specialist': 'file-check',
+  'manager_review': 'check-check',
+  'superuser': 'zap',
+} as const satisfies Record<string, IconName>;
+
+export type RoleIconKey = keyof typeof ROLE_ICONS;
+
+/**
+ * حل نام‌های معنایی (action-* یا status-* یا role-*) یا نام مستقیم رجیستری به IconName معتبر.
  * فقط کلیدهای خود رجیستری پذیرفته می‌شوند (Object.hasOwn)، نه کلیدهای prototype مثل constructor.
  */
 export function resolveSemanticIcon(name: string | null | undefined): IconName | null {
@@ -106,6 +128,10 @@ export function resolveSemanticIcon(name: string | null | undefined): IconName |
     const key = name.slice(7);
     if (!Object.hasOwn(STATUS_ICONS, key)) return null;
     target = STATUS_ICONS[key as StatusIconKey];
+  } else if (name.startsWith('role-')) {
+    const key = name.slice(5);
+    if (!Object.hasOwn(ROLE_ICONS, key)) return null;
+    target = ROLE_ICONS[key as RoleIconKey];
   }
 
   return Object.hasOwn(ICONS, target) ? (target as IconName) : null;

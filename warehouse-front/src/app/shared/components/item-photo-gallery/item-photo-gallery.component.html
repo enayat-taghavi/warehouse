@@ -199,18 +199,16 @@
               type="button"
               (click)="retryQueued(currentPhoto, $event)"
               title="تلاش مجدد برای ارسال"
-              aria-label="تلاش مجدد برای ارسال"
-              class="px-3 py-1.5 min-h-[36px] rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow cursor-pointer active:scale-95 transition-all flex items-center gap-1 tap-target"
+              class="px-3 py-1.5 min-h-[40px] sm:min-h-[36px] rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow cursor-pointer active:scale-95 transition-all flex items-center gap-1 tap-target"
             >
               <span>تلاش مجدد</span>
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-refresh"></svg>
             </button>
             <button
               type="button"
               (click)="requestDelete(currentPhoto, $event)"
               title="حذف عکس رد شده"
-              aria-label="حذف عکس رد شده"
-              class="px-3 py-1.5 min-h-[36px] rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold border border-slate-700 cursor-pointer tap-target"
+              class="px-3 py-1.5 min-h-[40px] sm:min-h-[36px] rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold border border-slate-700 cursor-pointer tap-target flex items-center justify-center"
             >
               حذف
             </button>
@@ -231,8 +229,7 @@
               (click)="cancelDelete($event)" 
               [disabled]="isDeleting()"
               title="انصراف از حذف"
-              aria-label="انصراف از حذف"
-              class="px-3 py-2 min-h-[36px] rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer tap-target"
+              class="px-3 py-2 min-h-[40px] sm:min-h-[36px] rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer tap-target flex items-center justify-center"
             >
               انصراف
             </button>
@@ -241,7 +238,7 @@
               (click)="confirmDelete($event)" 
               [disabled]="isDeleting()"
               title="تایید حذف قطعی تصویر"
-              class="px-3.5 py-2 min-h-[36px] rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-xs font-black shadow-lg shadow-rose-900/50 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer tap-target"
+              class="px-3.5 py-2 min-h-[40px] sm:min-h-[36px] rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-xs font-black shadow-lg shadow-rose-900/50 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer tap-target"
             >
               <span *ngIf="isDeleting()" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
               <span>{{ isDeleting() ? 'در حال حذف...' : 'بله، حذف شود' }}</span>
@@ -251,17 +248,17 @@
 
         <!-- نوار ابزار زوم و چرخش (کنترل‌های شناور پایین کادر تصویر) -->
         <div *ngIf="pendingDeletePhotoId() !== currentPhoto.id" class="absolute bottom-3 flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/85 backdrop-blur-md rounded-xl border border-slate-700/70 shadow-2xl z-20 text-xs">
-          <button (click)="zoomIn()" class="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white cursor-pointer tap-target" title="بزرگ‌نمایی" aria-label="بزرگ‌نمایی">
+          <button (click)="zoomIn()" class="p-2 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white cursor-pointer tap-target" title="بزرگ‌نمایی" aria-label="بزرگ‌نمایی">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="zoom-in"></svg>
           </button>
-          <button (click)="zoomOut()" class="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white cursor-pointer tap-target" title="کوچک‌نمایی" aria-label="کوچک‌نمایی">
+          <button (click)="zoomOut()" class="p-2 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white cursor-pointer tap-target" title="کوچک‌نمایی" aria-label="کوچک‌نمایی">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="zoom-out"></svg>
           </button>
-          <button (click)="resetZoom()" class="px-2.5 py-1 min-h-[36px] hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white text-[11px] font-mono flex items-center justify-center cursor-pointer tap-target" title="اندازه اصلی">
+          <button (click)="resetZoom()" class="px-2.5 py-1 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white text-[11px] font-mono flex items-center justify-center cursor-pointer tap-target" title="اندازه اصلی">
             {{ (zoomLevel() * 100).toFixed(0) }}%
           </button>
           <span class="w-px h-4 bg-slate-700"></span>
-          <button (click)="rotate()" class="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white cursor-pointer tap-target" title="چرخش ۹۰ درجه" aria-label="چرخش ۹۰ درجه">
+          <button (click)="rotate()" class="p-2 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white cursor-pointer tap-target" title="چرخش ۹۰ درجه" aria-label="چرخش ۹۰ درجه">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="rotate-cw"></svg>
           </button>
           
@@ -275,22 +272,21 @@
               <button
                 *ngIf="!currentPhoto.is_primary"
                 (click)="setPrimary(currentPhoto, $event)"
-                class="px-2.5 py-1 min-h-[36px] bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40 rounded-lg text-[11px] font-medium flex items-center gap-1 cursor-pointer tap-target"
+                class="px-2.5 py-1 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40 rounded-lg text-[11px] font-medium flex items-center justify-center gap-1 cursor-pointer tap-target"
                 title="تنظیم به عنوان عکس شاخص کالا"
-                aria-label="تنظیم به عنوان عکس شاخص کالا"
               >
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="star"></svg>
-                <span>شاخص</span>
+                <span class="hidden sm:inline">شاخص</span>
               </button>
 
               <!-- دکمه حذف عکس -->
               <button
                 (click)="requestDelete(currentPhoto, $event)"
-                class="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-rose-950 text-rose-400 hover:text-rose-300 rounded-lg cursor-pointer transition-colors tap-target"
+                class="p-2 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center hover:bg-rose-950 text-rose-400 hover:text-rose-300 rounded-lg cursor-pointer transition-colors tap-target"
                 title="حذف تصویر"
                 aria-label="حذف تصویر"
               >
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-delete"></svg>
               </button>
             </ng-container>
 
@@ -298,11 +294,11 @@
             <button
               *ngIf="currentPhoto.id < 0"
               (click)="requestDelete(currentPhoto, $event)"
-              class="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center hover:bg-rose-950 text-rose-400 hover:text-rose-300 rounded-lg cursor-pointer transition-colors tap-target"
+              class="p-2 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] flex items-center justify-center hover:bg-rose-950 text-rose-400 hover:text-rose-300 rounded-lg cursor-pointer transition-colors tap-target"
               title="حذف این عکس از صف ارسال"
               aria-label="حذف این عکس از صف ارسال"
             >
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-delete"></svg>
             </button>
           </ng-container>
         </div>

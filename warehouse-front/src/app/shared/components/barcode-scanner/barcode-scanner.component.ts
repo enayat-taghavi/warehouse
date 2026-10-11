@@ -114,7 +114,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
         title="اسکن با دوربین"
         aria-label="اسکن با دوربین"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="camera"></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-camera"></svg>
       </button>
     </div>
 
@@ -209,7 +209,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                     </span>
                     <span class="text-[10px] opacity-80">شروع از 2K با تنظیم خودکار در صورت لگ</span>
                   </div>
-                  <svg *ngIf="activePreset === 'adaptive'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
+                  <svg *ngIf="activePreset === 'adaptive'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-confirm"></svg>
                 </button>
 
                 <!-- گزینه ۲: فوق‌العاده Ultra 2K -->
@@ -225,7 +225,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                     </span>
                     <span class="text-[10px] opacity-80">1440p/2K + کدهای فوق‌العاده ریز و متراکم</span>
                   </div>
-                  <svg *ngIf="activePreset === 'ultra'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
+                  <svg *ngIf="activePreset === 'ultra'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-confirm"></svg>
                 </button>
 
                 <!-- گزینه ۳: کیفیت بالا High 1080p -->
@@ -239,7 +239,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                     <span class="text-xs font-bold">کیفیت بالا (High 1080p)</span>
                     <span class="text-[10px] opacity-80">رزولوشن 1080p برای گوشی‌های مدرن</span>
                   </div>
-                  <svg *ngIf="activePreset === 'high'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
+                  <svg *ngIf="activePreset === 'high'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-confirm"></svg>
                 </button>
 
                 <!-- گزینه ۴: متعادل Balanced 720p -->
@@ -253,7 +253,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                     <span class="text-xs font-bold">متعادل و روان (Balanced 720p)</span>
                     <span class="text-[10px] opacity-80">رزولوشن 720p سریع و سبک</span>
                   </div>
-                  <svg *ngIf="activePreset === 'balanced'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
+                  <svg *ngIf="activePreset === 'balanced'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-confirm"></svg>
                 </button>
 
                 <!-- گزینه ۵: اقتصادی Lite 480p -->
@@ -267,7 +267,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                     <span class="text-xs font-bold">سبک و اقتصادی (Lite 480p)</span>
                     <span class="text-[10px] opacity-80">مصرف حداقلی باتری برای گوشی‌های ضعیف</span>
                   </div>
-                  <svg *ngIf="activePreset === 'lite'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
+                  <svg *ngIf="activePreset === 'lite'" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-confirm"></svg>
                 </button>
               </div>
 
@@ -280,7 +280,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
                   title="بازگشت به پیش‌فرض انبار/سیستم"
                   aria-label="بازگشت به پیش‌فرض انبار/سیستم"
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-ccw"></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-restore"></svg>
                   <span>بازگشت به پیش‌فرض انبار/سیستم</span>
                 </button>
               </div>
@@ -309,7 +309,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
           title="بستن"
           aria-label="بستن دوربین"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="x"></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-close"></svg>
         </button>
       </div>
 
@@ -352,7 +352,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
           title="بستن پیام"
           aria-label="بستن پیام"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-close"></svg>
         </button>
       </div>
 
@@ -373,7 +373,7 @@ export const SCANNER_PRESET_CONFIGS: Record<Exclude<ScannerCameraPreset, 'custom
             title="کپی گزارش دیباگ"
             aria-label="کپی گزارش دیباگ"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-copy"></svg>
             <span>کپی گزارش</span>
           </button>
         </div>

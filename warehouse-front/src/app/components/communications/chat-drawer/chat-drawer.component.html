@@ -14,9 +14,7 @@
     
     <!-- Title or Back Button -->
     <div class="flex items-center gap-2">
-      <button *ngIf="activeTab() === 'chat'" (click)="backToList()" class="p-2 w-10 h-10 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors flex items-center justify-center cursor-pointer tap-target" title="بازگشت به فهرست گفتگوها" aria-label="بازگشت به فهرست گفتگوها">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-back"></svg>
-      </button>
+      <button *ngIf="activeTab() === 'chat'" appAction="back" display="icon" (click)="backToList()"></button>
 
       <div *ngIf="activeTab() === 'chat' && activeConv()" class="flex items-center gap-2.5">
         <div class="relative">
@@ -65,9 +63,7 @@
         <svg *ngIf="commService.isMuted()" class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-volume-off"></svg>
       </button>
 
-      <button (click)="closeDrawer()" class="p-2 min-w-[40px] min-h-[40px] rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-center cursor-pointer tap-target" title="بستن پیام‌رسان" aria-label="بستن پیام‌رسان">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
-      </button>
+      <button appAction="close" display="icon" (click)="closeDrawer()"></button>
     </div>
   </div>
 
@@ -88,7 +84,7 @@
              (ngModelChange)="searchQuery.set($event)"
              [placeholder]="activeTab() === 'conversations' ? 'جستجو در گفتگوها...' : 'جستجوی نام همکار...'"
              class="w-full bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-800 dark:text-slate-100 pl-3 pr-8 py-2 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
-      <svg class="w-4 h-4 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-search"></svg>
+      <svg class="w-4 h-4 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="action-search"></svg>
     </div>
   </div>
 
@@ -204,7 +200,7 @@
                   </div>
                   <span class="text-[10px] bg-black/10 dark:bg-white/10 px-2 py-0.5 rounded font-bold shrink-0 flex items-center gap-1">
                     <span>دانلود</span>
-                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-download"></svg>
                   </span>
                 </div>
               </a>
@@ -243,7 +239,7 @@
                         aria-label="تلاش مجدد برای ارسال"
                         class="underline hover:text-white font-bold ml-0.5 transition-colors flex items-center gap-1 cursor-pointer">
                   <span>تلاش مجدد</span>
-                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="refresh-cw"></svg>
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="action-refresh"></svg>
                 </button>
               </div>
             </ng-container>
@@ -262,9 +258,7 @@
         <img *ngIf="filePreviewUrl" [src]="filePreviewUrl" class="w-8 h-8 rounded object-cover" />
         <span class="truncate text-slate-700 dark:text-slate-200">{{ selectedFile.name }}</span>
       </div>
-      <button (click)="removeSelectedFile()" class="min-w-[32px] min-h-[32px] p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors flex items-center justify-center cursor-pointer" title="حذف فایل پیوست" aria-label="حذف فایل پیوست">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
-      </button>
+      <button appAction="close" size="sm" display="icon" tone="rose" (click)="removeSelectedFile()"></button>
     </div>
 
     <!-- Input Form -->
@@ -281,12 +275,13 @@
              placeholder="پیام خود را بنویسید..."
              class="flex-1 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 min-h-[44px] text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
 
-      <button (click)="sendMessage()"
+      <button appAction="send"
+              size="lg"
+              display="icon"
+              tone="primary"
               [disabled]="(!messageInputText.trim() && !selectedFile) || isSending()"
-              title="ارسال پیام"
-              aria-label="ارسال پیام"
-              class="min-w-[44px] min-h-[44px] p-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl shadow-sm transition-all flex items-center justify-center cursor-pointer tap-target">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-send"></svg>
+              [busy]="isSending()"
+              (click)="sendMessage()">
       </button>
     </div>
   </div>

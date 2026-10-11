@@ -103,11 +103,11 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           <button
             type="button"
             (click)="closePopover()"
-            class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200/50 transition-all cursor-pointer tap-target sm:min-w-[28px] sm:min-h-[28px]"
+            class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-200/50 transition-all cursor-pointer tap-target min-w-[40px] sm:min-w-[28px] min-h-[40px] sm:min-h-[28px] flex items-center justify-center"
             title="بستن"
             aria-label="بستن"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close"></svg>
           </button>
         </div>
 
@@ -116,7 +116,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           <button
             type="button"
             (click)="activeTab = 'queue'"
-            class="flex-1 py-1.5 px-2 rounded-xl text-center transition-all cursor-pointer flex items-center justify-center gap-1 text-[11px]"
+            class="flex-1 py-2 px-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl text-center transition-all cursor-pointer flex items-center justify-center gap-1 text-[11px] tap-target"
             [ngClass]="activeTab === 'queue' 
               ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-black' 
               : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
@@ -133,7 +133,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           <button
             type="button"
             (click)="activeTab = 'status'"
-            class="flex-1 py-1.5 px-2 rounded-xl text-center transition-all cursor-pointer text-[11px]"
+            class="flex-1 py-2 px-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl text-center transition-all cursor-pointer text-[11px] flex items-center justify-center tap-target"
             [ngClass]="activeTab === 'status' 
               ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-black' 
               : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
@@ -143,7 +143,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
           <button
             type="button"
             (click)="activeTab = 'errors'"
-            class="flex-1 py-1.5 px-2 rounded-xl text-center transition-all cursor-pointer flex items-center justify-center gap-1 text-[11px]"
+            class="flex-1 py-2 px-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl text-center transition-all cursor-pointer flex items-center justify-center gap-1 text-[11px] tap-target"
             [ngClass]="activeTab === 'errors' 
               ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-xs font-black' 
               : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
@@ -233,7 +233,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
                   *ngIf="pendingCount > 0"
                   type="button"
                   (click)="activeTab = 'queue'"
-                  class="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-bold cursor-pointer"
+                  class="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-bold cursor-pointer min-h-[40px] sm:min-h-[32px] px-2 py-1 inline-flex items-center tap-target"
                 >
                   مشاهده
                 </button>
@@ -246,9 +246,9 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
                 type="button"
                 (click)="onRunQuickDiagnostic()"
                 [disabled]="isDiagnosing"
-                class="py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                class="py-2 px-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50 tap-target"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isDiagnosing" appIcon="refresh-cw"></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isDiagnosing" appIcon="action-refresh"></svg>
                 <span>{{ isDiagnosing ? 'در حال تست...' : 'تست عیب‌یابی' }}</span>
               </button>
 
@@ -256,10 +256,10 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
                 type="button"
                 (click)="onManualSync()"
                 [disabled]="isSyncing || networkState !== 'online'"
-                class="py-1.5 px-2 rounded-xl text-[10px] font-bold text-white transition-all flex items-center justify-center gap-1 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                class="py-2 px-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl text-[10px] font-bold text-white transition-all flex items-center justify-center gap-1 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer tap-target"
                 [ngClass]="networkState === 'online' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-400'"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isSyncing" appIcon="refresh-cw"></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isSyncing" appIcon="action-refresh"></svg>
                 <span>{{ isSyncing ? 'در حال ارسال...' : 'ارسال دستی' }}</span>
               </button>
             </div>
@@ -269,7 +269,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
               <button
                 type="button"
                 (click)="navigateToFullHealthDashboard()"
-                class="w-full py-1.5 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer"
+                class="w-full py-2 px-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer tap-target"
               >
                 <span>مشاهده داشبورد کامل مانیتورینگ</span>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
@@ -287,7 +287,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
                 *ngIf="queueEntries.length > 1"
                 type="button"
                 (click)="onClearAllQueue()"
-                class="text-[10px] text-rose-600 hover:text-rose-700 dark:text-rose-400 font-bold hover:underline cursor-pointer"
+                class="min-h-[40px] sm:min-h-[32px] px-2 py-1 inline-flex items-center text-[10px] text-rose-600 hover:text-rose-700 dark:text-rose-400 font-bold hover:underline cursor-pointer tap-target"
               >
                 لغو همه موارد
               </button>
@@ -296,7 +296,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
             <!-- Empty Queue State -->
             <div *ngIf="queueEntries.length === 0" class="py-8 text-center">
               <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mx-auto mb-2">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-approved"></svg>
               </div>
               <p class="text-xs font-bold text-slate-700 dark:text-slate-300">صف انتظار خالی است</p>
               <p class="text-[10px] text-slate-400 mt-1">کلیه تغییرات شما با سرور همگام شده‌اند.</p>
@@ -333,10 +333,10 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
                 <button
                   type="button"
                   (click)="onCancelQueueItem(item.id!)"
-                  class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-[11px] font-bold transition-all active:scale-95 shrink-0 cursor-pointer shadow-2xs flex items-center gap-1"
+                  class="min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-[11px] font-bold transition-all active:scale-95 shrink-0 cursor-pointer shadow-2xs flex items-center justify-center gap-1 tap-target"
                   title="لغو این عملیات و جلوگیری از ارسال آن به سرور"
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close"></svg>
                   <span>لغو</span>
                 </button>
               </div>
@@ -353,7 +353,8 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
                 *ngIf="syncErrors.length > 0"
                 type="button"
                 (click)="onDismissAllErrors()"
-                class="text-[10px] text-rose-600 hover:text-rose-700 dark:text-rose-400 font-bold hover:underline cursor-pointer"
+                class="min-h-[40px] sm:min-h-[32px] px-2.5 py-1 inline-flex items-center text-[10px] text-rose-600 hover:text-rose-700 dark:text-rose-400 font-bold hover:underline cursor-pointer tap-target"
+                title="پاکسازی خطاها"
               >
                 پاک کردن همه
               </button>
@@ -362,7 +363,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
             <!-- Empty Errors State -->
             <div *ngIf="syncErrors.length === 0" class="py-8 text-center">
               <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mx-auto mb-2">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-approved"></svg>
               </div>
               <p class="text-xs font-bold text-slate-700 dark:text-slate-300">هیچ خطایی وجود ندارد</p>
               <p class="text-[10px] text-slate-400 mt-1">تمام درخواست‌های ارسالی با موفقیت پردازش شده‌اند.</p>
@@ -388,10 +389,11 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
                 <button
                   type="button"
                   (click)="onDismissError(err.id!)"
-                  class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-100 transition-colors shrink-0 cursor-pointer"
+                  class="min-w-[40px] sm:min-w-[32px] min-h-[40px] sm:min-h-[32px] p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-100 transition-colors shrink-0 cursor-pointer flex items-center justify-center tap-target"
                   title="حذف خطا"
+                  aria-label="حذف خطا"
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close"></svg>
                 </button>
               </div>
 
@@ -402,7 +404,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
                   *ngIf="isConflictError(err)"
                   type="button"
                   (click)="openConflictResolver(err)"
-                  class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 animate-pulse"
+                  class="min-h-[40px] sm:min-h-[32px] px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 animate-pulse tap-target"
                   title="مقایسه بصری نسخه‌ها و حل تداخل خوش‌بینانه"
                 >
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="git-pull-request"></svg>
@@ -412,16 +414,16 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
                 <button
                   type="button"
                   (click)="onRetryError(err.id!)"
-                  class="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  class="min-h-[40px] sm:min-h-[32px] px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer tap-target"
                 >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-cw"></svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-restore"></svg>
                   تلاش مجدد
                 </button>
                 <button
                   *ngIf="hasPayload(err.body)"
                   type="button"
                   (click)="togglePayload(err.id!)"
-                  class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold transition-all cursor-pointer"
+                  class="min-h-[40px] sm:min-h-[32px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold transition-all cursor-pointer tap-target"
                 >
                   {{ expandedPayloadId === err.id ? 'بستن داده' : 'نمایش داده' }}
                 </button>
