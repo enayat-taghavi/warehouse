@@ -244,7 +244,7 @@
                    'bg-amber-50 border-amber-200 text-amber-700': importService.currentState.foundFields.length > 0 && !importService.currentState.foundFields.includes(field.id)
                  }">
               <div class="flex items-center gap-2">
-                <svg *ngIf="importService.currentState.foundFields.includes(field.id) || importService.currentState.foundFields.length === 0" width="14" height="14" viewBox="0 0 24 24" fill="none" [attr.stroke]="importService.currentState.foundFields.includes(field.id) ? '#10b981' : '#4f46e5'" stroke-width="2.5" appIcon="check"></svg>
+                <svg *ngIf="importService.currentState.foundFields.includes(field.id) || importService.currentState.foundFields.length === 0" width="14" height="14" viewBox="0 0 24 24" fill="none" [attr.stroke]="importService.currentState.foundFields.includes(field.id) ? '#10b981' : '#4f46e5'" stroke-width="2.5" appIcon="action-confirm"></svg>
                 <svg *ngIf="importService.currentState.foundFields.length > 0 && !importService.currentState.foundFields.includes(field.id)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" appIcon="alert-circle"></svg>
                 <div class="flex flex-col">
                   <span>{{field.name}}</span>
@@ -289,7 +289,7 @@
                 <div class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div>
                 <span class="text-[11px] font-bold text-rose-400">خطاهای ساختاری و سیستمی</span>
               </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="2.5" [ngClass]="{'rotate-180': expandedSection === 'errorDetails'}" class="transition-transform" appIcon="chevron-down"></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="2.5" [ngClass]="{'rotate-180': expandedSection === 'errorDetails'}" class="transition-transform" appIcon="action-expand"></svg>
             </div>
             <div *ngIf="expandedSection === 'errorDetails'" class="p-3 pt-0 border-t border-rose-900/30 font-mono text-[10px] space-y-1.5">
               <div *ngFor="let err of importService.currentState.errorDetailsList" class="text-rose-300">
@@ -306,7 +306,7 @@
                 <div class="w-6 h-6 rounded-md bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-black text-[11px]">{{importService.currentState.createdCount}}</div>
                 <span class="text-[11px] font-bold text-slate-300">دیتای جدید (ثبت شده)</span>
               </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" [ngClass]="{'rotate-180': expandedSection === 'created'}" class="transition-transform" appIcon="chevron-down"></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" [ngClass]="{'rotate-180': expandedSection === 'created'}" class="transition-transform" appIcon="action-expand"></svg>
             </div>
             <div *ngIf="expandedSection === 'created'" class="p-3 pt-0 border-t border-slate-700/50 font-mono text-[10px] space-y-1.5">
               <p *ngFor="let log of importService.currentState.latestCreatedLogs" class="text-emerald-400/80">{{log.msg}}</p>
@@ -321,7 +321,7 @@
                 <div class="w-6 h-6 rounded-md bg-blue-500/20 flex items-center justify-center text-blue-400 font-black text-[11px]">{{importService.currentState.updatedCount}}</div>
                 <span class="text-[11px] font-bold text-slate-300">دیتای ویرایش شده</span>
               </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" [ngClass]="{'rotate-180': expandedSection === 'updated'}" class="transition-transform" appIcon="chevron-down"></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" [ngClass]="{'rotate-180': expandedSection === 'updated'}" class="transition-transform" appIcon="action-expand"></svg>
             </div>
             <div *ngIf="expandedSection === 'updated'" class="p-3 pt-0 border-t border-slate-700/50 font-mono text-[10px] space-y-1.5">
               <p *ngFor="let log of importService.currentState.latestUpdatedLogs" class="text-blue-400/80">{{log.msg}}</p>
@@ -336,7 +336,7 @@
                 <div class="w-6 h-6 rounded-md bg-amber-500/20 flex items-center justify-center text-amber-400 font-black text-[11px]">{{importService.currentState.warnCount}}</div>
                 <span class="text-[11px] font-bold text-slate-300">دیتای نادیده گرفته شده (تداخل)</span>
               </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" [ngClass]="{'rotate-180': expandedSection === 'warn'}" class="transition-transform" appIcon="chevron-down"></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" [ngClass]="{'rotate-180': expandedSection === 'warn'}" class="transition-transform" appIcon="action-expand"></svg>
             </div>
             <div *ngIf="expandedSection === 'warn'" class="p-3 pt-0 border-t border-slate-700/50 font-mono text-[10px] space-y-1.5">
               <p *ngFor="let log of importService.currentState.latestWarnLogs" class="text-amber-400/80">{{log.msg}}</p>
@@ -351,7 +351,7 @@
                 <div class="w-6 h-6 rounded-md bg-rose-500/20 flex items-center justify-center text-rose-400 font-black text-[11px]">{{importService.currentState.errCount}}</div>
                 <span class="text-[11px] font-bold text-slate-300">خطا در ثبت ردیف‌ها</span>
               </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" [ngClass]="{'rotate-180': expandedSection === 'err'}" class="transition-transform" appIcon="chevron-down"></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" [ngClass]="{'rotate-180': expandedSection === 'err'}" class="transition-transform" appIcon="action-expand"></svg>
             </div>
             <div *ngIf="expandedSection === 'err'" class="p-3 pt-0 border-t border-slate-700/50 font-mono text-[10px] space-y-1.5">
               <p *ngFor="let log of importService.currentState.latestErrLogs" class="text-rose-400/80">{{log.msg}}</p>

@@ -50,7 +50,7 @@
 
       <!-- Tabs -->
       <div class="mb-4">
-        <app-tab-bar [tabs]="counterTabs" [active]="currentTab" (activeChange)="setTab($event)" mobile="icon" />
+        <app-tab-bar [tabs]="counterTabs" [active]="currentTab" (activeChange)="setTab($event)" />
       </div>
 
       <ng-container *ngIf="currentTab === 'my-tasks'">
@@ -724,7 +724,7 @@
                 stroke="currentColor" 
                 stroke-width="2"
                 class="transition-transform duration-200"
-                [class.rotate-180]="isHistoryOpen" appIcon="chevron-down"
+                [class.rotate-180]="isHistoryOpen" appIcon="action-expand"
               ></svg>
             </div>
           </button>

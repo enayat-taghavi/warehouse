@@ -68,8 +68,8 @@
             <span *ngIf="todayTrend.dir !== 'neutral'" class="px-2 py-1 rounded-md text-[10px] font-black flex items-center gap-1"
                   [ngClass]="todayTrend.dir === 'up' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'">
               {{todayTrend.val}}٪
-              <svg *ngIf="todayTrend.dir === 'up'" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="chevron-up"></svg>
-              <svg *ngIf="todayTrend.dir === 'down'" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="chevron-down"></svg>
+              <svg *ngIf="todayTrend.dir === 'up'" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-collapse"></svg>
+              <svg *ngIf="todayTrend.dir === 'down'" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-expand"></svg>
             </span>
             <span *ngIf="todayTrend.dir === 'neutral'" class="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 text-slate-500">
               بدون تغییر

@@ -43,8 +43,8 @@
     <app-tab-bar [tabs]="sectionTabs" [active]="activeSection" (activeChange)="switchSection($event)" />
     
     <!-- Sub-tabs -->
-    <app-tab-bar *ngIf="activeSection === 'counting'" [tabs]="countingSubTabs" [active]="currentTab" (activeChange)="setTab($event)" mobile="icon" />
-    <app-tab-bar *ngIf="activeSection === 'financial'" [tabs]="financialSubTabs" [active]="currentTab" (activeChange)="setTab($event)" mobile="icon" />
+    <app-tab-bar *ngIf="activeSection === 'counting'" [tabs]="countingSubTabs" [active]="currentTab" (activeChange)="setTab($event)" />
+    <app-tab-bar *ngIf="activeSection === 'financial'" [tabs]="financialSubTabs" [active]="currentTab" (activeChange)="setTab($event)" />
   </div>
 
   <!-- ══════════════════════════════════════════════ -->

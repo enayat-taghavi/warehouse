@@ -38,37 +38,37 @@ import { ContextualCommentsComponent } from '../../communications/contextual-com
   styleUrl: './supervisor-dashboard.css'
 })
 export class SupervisorDashboard implements OnInit, OnDestroy {
-  sectionTabs: TabDef[] = [
-    { id: 'counting', label: 'انبارگردانی (میدانی)', shortLabel: 'میدانی', icon: 'package' },
-    { id: 'financial', label: 'مالی / اسناد', shortLabel: 'مالی', icon: 'file' }
-  ];
+  // تب‌ها از شمار زنده فهرست‌ها ساخته می‌شوند (مثل بایندینگ مستقیم پیشین)؛ آرایه فقط با تغییر شمارها عوض می‌شود
+  // تا app-tab-bar (OnPush) بی‌دلیل بازرسم نشود.
+  private tabsKey = '';
+  private tabsCache: { section: TabDef[]; counting: TabDef[]; financial: TabDef[] } = { section: [], counting: [], financial: [] };
 
-  countingSubTabs: TabDef[] = [
-    { id: 'my-tasks', label: 'تسک‌های من', shortLabel: 'تسک‌ها' },
-    { id: 'pool', label: 'مخزن کالاها', shortLabel: 'مخزن' }
-  ];
-
-  financialSubTabs: TabDef[] = [
-    { id: 'doc', label: 'تسک‌های من', shortLabel: 'تسک‌ها' },
-    { id: 'doc-pool', label: 'مخزن اسناد', shortLabel: 'مخزن' }
-  ];
-
-  updateSupervisorTabs(): void {
-    this.sectionTabs = [
-      { id: 'counting', label: 'انبارگردانی (میدانی)', shortLabel: 'میدانی', icon: 'package', count: (this.activeSection !== 'counting' && this.tasks.length > 0) ? this.tasks.length : undefined },
-      { id: 'financial', label: 'مالی / اسناد', shortLabel: 'مالی', icon: 'file', count: (this.activeSection !== 'financial' && this.docTasks.length > 0) ? this.docTasks.length : undefined }
-    ];
-
-    this.countingSubTabs = [
-      { id: 'my-tasks', label: 'تسک‌های من', shortLabel: 'تسک‌ها', count: this.tasks.length > 0 ? this.tasks.length : undefined },
-      { id: 'pool', label: 'مخزن کالاها', shortLabel: 'مخزن', count: this.poolTasks.length > 0 ? this.poolTasks.length : undefined }
-    ];
-
-    this.financialSubTabs = [
-      { id: 'doc', label: 'تسک‌های من', shortLabel: 'تسک‌ها', count: this.docTasks.length > 0 ? this.docTasks.length : undefined },
-      { id: 'doc-pool', label: 'مخزن اسناد', shortLabel: 'مخزن', count: this.docPoolTasks.length > 0 ? this.docPoolTasks.length : undefined }
-    ];
+  private syncTabs() {
+    const key = `${this.activeSection}|${this.tasks.length}|${this.poolTasks.length}|${this.docTasks.length}|${this.docPoolTasks.length}`;
+    if (key === this.tabsKey) return this.tabsCache;
+    this.tabsKey = key;
+    const n = (len: number) => (len > 0 ? len : undefined);
+    this.tabsCache = {
+      section: [
+        { id: 'counting', label: 'انبارگردانی (میدانی)', shortLabel: 'میدانی', icon: 'package', count: this.activeSection !== 'counting' ? n(this.tasks.length) : undefined },
+        { id: 'financial', label: 'مالی / اسناد', shortLabel: 'مالی', icon: 'file', count: this.activeSection !== 'financial' ? n(this.docTasks.length) : undefined }
+      ],
+      counting: [
+        { id: 'my-tasks', label: 'تسک‌های من', shortLabel: 'تسک‌ها', count: n(this.tasks.length) },
+        { id: 'pool', label: 'مخزن کالاها', shortLabel: 'مخزن', count: n(this.poolTasks.length) }
+      ],
+      financial: [
+        { id: 'doc', label: 'تسک‌های من', shortLabel: 'تسک‌ها', count: n(this.docTasks.length) },
+        { id: 'doc-pool', label: 'مخزن اسناد', shortLabel: 'مخزن', count: n(this.docPoolTasks.length) }
+      ]
+    };
+    return this.tabsCache;
   }
+
+  get sectionTabs(): TabDef[] { return this.syncTabs().section; }
+  get countingSubTabs(): TabDef[] { return this.syncTabs().counting; }
+  get financialSubTabs(): TabDef[] { return this.syncTabs().financial; }
+
   private wsSub?: Subscription;
   private swrSub?: Subscription;
   private wsUpdateSubject = new Subject<any>();
@@ -1409,7 +1409,6 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
       this.lastDocTab = tab as any;
     }
     this.clearAllSelections();
-    this.updateSupervisorTabs();
     this.updateUrlState();
     this.refreshCurrentTab();
   }

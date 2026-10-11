@@ -36,11 +36,16 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 export class CountTracking implements OnInit, OnDestroy {
   @ViewChild(BarcodeScannerComponent) scanner?: BarcodeScannerComponent;
 
-  readonly performanceTabs: TabDef[] = [
-    { id: 'overview', label: 'نمای کلی و شاخص‌ها', shortLabel: 'نمای کلی', icon: 'action-view' },
-    { id: 'counters', label: 'انبارگردان‌ها (سرعت و دقت)', shortLabel: 'انبارگردان‌ها', icon: 'action-users' },
-    { id: 'supervisors', label: 'سرپرستان (سرعت تایید)', shortLabel: 'سرپرستان', icon: 'action-user-check' }
-  ];
+  performanceTabs: TabDef[] = this.buildPerformanceTabs();
+
+  // آرایه تازه می‌سازد تا app-tab-bar (OnPush، ورودی سیگنال) شمارنده‌های تازه را ببیند
+  private buildPerformanceTabs(counters?: number, supervisors?: number): TabDef[] {
+    return [
+      { id: 'overview', label: 'نمای کلی و شاخص‌ها', shortLabel: 'نمای کلی', icon: 'grid' },
+      { id: 'counters', label: 'انبارگردان‌ها (سرعت و دقت)', shortLabel: 'انبارگردان‌ها', icon: 'users', count: counters },
+      { id: 'supervisors', label: 'سرپرستان (سرعت تایید)', shortLabel: 'سرپرستان', icon: 'user-check', count: supervisors }
+    ];
+  }
 
   tasks: any[] = [];
   filteredTasks: any[] = [];
@@ -1288,8 +1293,7 @@ export class CountTracking implements OnInit, OnDestroy {
       topCounterSpeed: topCounter?.itemsPerHour || 0
     };
 
-    this.performanceTabs[1].count = this.counterStats.length;
-    this.performanceTabs[2].count = this.supervisorStats.length;
+    this.performanceTabs = this.buildPerformanceTabs(this.counterStats.length, this.supervisorStats.length);
   }
 
   onPerformanceTabChange(tabId: string) {

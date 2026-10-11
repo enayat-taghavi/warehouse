@@ -54,16 +54,21 @@ export class CounterDashboard implements OnInit {
   currentTab: 'my-tasks' | 'pool' = 'my-tasks';
   isSubmitting = false;
 
-  counterTabs: TabDef[] = [
-    { id: 'my-tasks', label: 'تسک‌های من', shortLabel: 'تسک‌ها' },
-    { id: 'pool', label: 'مخزن کالاها', shortLabel: 'مخزن' }
-  ];
+  // شمارنده مخزن از طول زنده فهرست ساخته می‌شود (حذف و افزودن WebSocket هم دیده شود)؛
+  // آرایه فقط با تغییر شمار عوض می‌شود تا app-tab-bar (OnPush) بی‌دلیل بازرسم نشود.
+  private counterTabsPoolCount = -1;
+  private counterTabsCache: TabDef[] = [];
 
-  updateCounterTabs(): void {
-    this.counterTabs = [
-      { id: 'my-tasks', label: 'تسک‌های من', shortLabel: 'تسک‌ها' },
-      { id: 'pool', label: 'مخزن کالاها', shortLabel: 'مخزن', count: this.poolTasks.length > 0 ? this.poolTasks.length : undefined }
-    ];
+  get counterTabs(): TabDef[] {
+    const poolCount = this.poolTasks.length;
+    if (poolCount !== this.counterTabsPoolCount) {
+      this.counterTabsPoolCount = poolCount;
+      this.counterTabsCache = [
+        { id: 'my-tasks', label: 'تسک‌های من', shortLabel: 'تسک‌ها' },
+        { id: 'pool', label: 'مخزن کالاها', shortLabel: 'مخزن', count: poolCount > 0 ? poolCount : undefined }
+      ];
+    }
+    return this.counterTabsCache;
   }
 
   // ── Photo Gallery State ───────────────────────────────────────────────────
@@ -730,7 +735,6 @@ export class CounterDashboard implements OnInit {
         const newPoolTasks = Array.isArray(res) ? res : (res.results || []);
         this.trackUpdates(this.poolTasks, newPoolTasks);
         this.poolTasks = newPoolTasks;
-        this.updateCounterTabs();
         this.applyFilters();
         this.isLoading = false;
         this.cdr.detectChanges();
