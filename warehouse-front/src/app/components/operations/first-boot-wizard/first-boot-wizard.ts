@@ -8,11 +8,12 @@ import { CompanyApiService } from '../../../core/api/company-api.service';
 import { ToastService } from '../../../shared/components/toast/toast.component';
 import { Company } from '../../../core/models/company.model';
 import { BRANDING } from '../../../core/branding';
+import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-first-boot-wizard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SvgIconDirective],
   templateUrl: './first-boot-wizard.html',
   styleUrls: ['./first-boot-wizard.css']
 })

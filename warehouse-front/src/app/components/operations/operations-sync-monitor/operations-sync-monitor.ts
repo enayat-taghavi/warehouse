@@ -20,6 +20,8 @@ import { Subscription } from 'rxjs';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
+
 export interface TabletDeviceTelemetry {
   tabId: string;
   isCurrentTab: boolean;
@@ -52,7 +54,7 @@ export interface ConflictItem {
 @Component({
   selector: 'app-operations-sync-monitor',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConflictResolutionModalComponent, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ConflictResolutionModalComponent, SvgIconDirective, ActionButtonComponent],
   templateUrl: './operations-sync-monitor.html',
   styleUrl: './operations-sync-monitor.css'
 })

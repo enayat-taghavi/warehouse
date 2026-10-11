@@ -25,28 +25,30 @@
       <!-- دکمه‌های عملیات سریع -->
       <div class="flex flex-wrap items-center gap-2.5">
         <button 
-          (click)="createInstantSnapshot()" 
-          [disabled]="isCreatingSnapshot()"
-          class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
-        >
-          <span>{{ isCreatingSnapshot() ? '⏳ در حال ایجاد...' : '⚡ ثبت اسنپ‌شات فوری سرور' }}</span>
-        </button>
+          type="button"
+          appAction="save"
+          label="اسنپ‌شات فوری"
+          display="label"
+          [busy]="isCreatingSnapshot()"
+          (click)="createInstantSnapshot()"
+        ></button>
 
         <button 
+          type="button"
+          appAction="download"
+          label="پشتیبان محلی"
+          display="label"
           (click)="exportIndexedDB()"
-          class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
-        >
-          <span>📥 پشتیبان محلی (IndexedDB)</span>
-        </button>
+        ></button>
 
         <button 
           *ngIf="isWarehouseInstalled"
+          type="button"
+          appAction="settings"
+          label="تنظیمات منبع (انبار)"
+          display="label"
           (click)="navigateTo('/app/warehouse/wh-settings')"
-          class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-indigo-600 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
-          title="مشاهده مستقیم در تنظیمات انبارداری"
-        >
-          <span>⚙️ تنظیمات منبع (انبار)</span>
-        </button>
+        ></button>
       </div>
 
     </div>
@@ -76,7 +78,7 @@
         <button 
           type="button" 
           (click)="navigateTo('/app/operations/companies')" 
-          class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all cursor-pointer">
+          class="min-h-[40px] sm:min-h-[32px] px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all cursor-pointer flex items-center">
           مدیریت شرکت‌ها ←
         </button>
       </div>
@@ -107,7 +109,7 @@
           <button 
             type="button" 
             (click)="navigateTo('/app/operations/companies')" 
-            class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:bg-indigo-50 text-[11px] font-bold text-indigo-700 shadow-2xs transition-colors cursor-pointer">
+            class="min-h-[40px] sm:min-h-[28px] px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:bg-indigo-50 text-[11px] font-bold text-indigo-700 shadow-2xs transition-colors cursor-pointer flex items-center">
             اقدام سریع
           </button>
         </div>

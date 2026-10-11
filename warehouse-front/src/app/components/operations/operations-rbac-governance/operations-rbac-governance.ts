@@ -10,6 +10,8 @@ import { finalize } from 'rxjs/operators';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
+
 export interface SensitivePermissionItem {
   code: string;
   title: string;
@@ -33,7 +35,7 @@ export interface GovernanceUserItem {
 @Component({
   selector: 'app-operations-rbac-governance',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent],
   templateUrl: './operations-rbac-governance.html',
   styleUrl: './operations-rbac-governance.css'
 })

@@ -41,12 +41,14 @@ import {
 import { normalizeDigits } from '../../../core/utils/date-utils';
 import { ConfirmDialogService } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../shared/components/tab-bar/tab-bar.component';
 import { CompanyGdriveTabComponent } from './company-gdrive-tab/company-gdrive-tab';
 
 @Component({
   selector: 'app-companies-management',
   standalone: true,
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, CompanyGdriveTabComponent],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, CompanyGdriveTabComponent],
   templateUrl: './companies.html',
   styleUrls: ['./companies.css']
 })
@@ -655,9 +657,26 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     return this.isAccountingInstalled || !CompaniesManagementComponent.ACCOUNTING_TABS.includes(tab);
   }
 
-  setModalTab(tab: 'identity' | 'fiscal_insurance' | 'treasury' | 'governance' | 'documents' | 'access' | 'gdrive'): void {
-    if (!this.isTabAvailable(tab)) tab = 'identity';
-    this.activeModalTab = tab;
+  get modalTabs(): TabDef[] {
+    const tabs: TabDef[] = [
+      { id: 'identity', label: 'مشخصات هویتی و ثبتی', shortLabel: 'هویتی', icon: 'building' },
+      { id: 'fiscal_insurance', label: 'سال مالی، بیمه و مودیان', shortLabel: 'بیمه و مالی', icon: 'calculator' },
+    ];
+    if (this.isAccountingInstalled) {
+      tabs.push({ id: 'treasury', label: 'بانک و شبا', shortLabel: 'بانک', icon: 'credit-card', count: this.companyBankAccounts.length });
+      tabs.push({ id: 'governance', label: 'هیئت‌مدیره و امضا', shortLabel: 'هیئت‌مدیره', icon: 'users', count: this.companyBoardMembers.length });
+    }
+    tabs.push({ id: 'documents', label: 'بایگانی مدارک', shortLabel: 'مدارک', icon: 'folder', count: this.companyDocuments.length });
+    tabs.push({ id: 'access', label: 'دسترسی کاربران', shortLabel: 'دسترسی', icon: 'shield', count: this.studioAccesses.length });
+    if (this.companyModal.isEdit && this.isAccountingInstalled) {
+      tabs.push({ id: 'gdrive', label: 'همگام‌سازی گوگل‌درایو', shortLabel: 'گوگل‌درایو', icon: 'google-drive' });
+    }
+    return tabs;
+  }
+
+  setModalTab(tab: any): void {
+    const targetTab = this.isTabAvailable(tab) ? tab : 'identity';
+    this.activeModalTab = targetTab;
     if (this.companyModal.data.id) {
       if (tab === 'fiscal_insurance') {
         this.loadCompanyFiscalPeriods(this.companyModal.data.id);

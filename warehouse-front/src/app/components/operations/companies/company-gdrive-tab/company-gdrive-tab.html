@@ -19,8 +19,9 @@
               ● متصل به درایو
             </span>
             <span *ngIf="config()?.is_connected && config()?.auth_status === 'needs_reauth'"
-                  class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-50 text-amber-700 border border-amber-200">
-              ⚠️ نیازمند احراز مجدد
+                  class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="status-warning"></svg>
+              <span>نیازمند احراز مجدد</span>
             </span>
             <span *ngIf="!config()?.is_connected"
                   class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-slate-100 text-slate-600 border border-slate-200">
@@ -33,7 +34,7 @@
               type="button"
               (click)="toggleIsEnabled()"
               [title]="config()?.is_enabled ? 'کلیک جهت توقف موقت همگام‌سازی این شرکت' : 'کلیک جهت فعال‌سازی مجدد همگام‌سازی'"
-              class="text-xs px-2.5 py-0.5 rounded-full font-bold cursor-pointer transition-all border inline-flex items-center gap-1 active:scale-95"
+              class="text-xs px-2.5 py-1 min-h-[40px] sm:min-h-[28px] rounded-full font-bold cursor-pointer transition-all border inline-flex items-center gap-1 active:scale-95 tap-target"
               [class.bg-emerald-50]="config()?.is_enabled"
               [class.text-emerald-700]="config()?.is_enabled"
               [class.border-emerald-200]="config()?.is_enabled"
@@ -68,8 +69,9 @@
         type="button"
         (click)="loadAll()" 
         title="به‌روزرسانی اطلاعات"
-        class="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 dark:border-line cursor-pointer active:scale-95 transition-all">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-cw"></svg>
+        aria-label="به‌روزرسانی اطلاعات"
+        class="w-9 h-9 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 dark:border-line cursor-pointer active:scale-95 transition-all tap-target">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-refresh"></svg>
       </button>
     </div>
 
@@ -82,8 +84,9 @@
         type="button"
         (click)="loadAll()" 
         title="به‌روزرسانی اطلاعات"
-        class="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 dark:border-line cursor-pointer active:scale-95 transition-all">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-cw"></svg>
+        aria-label="به‌روزرسانی اطلاعات"
+        class="w-9 h-9 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded-xl flex items-center justify-center bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 dark:border-line cursor-pointer active:scale-95 transition-all tap-target">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-refresh"></svg>
       </button>
     </div>
   </div>
@@ -172,7 +175,7 @@
         type="button"
         [disabled]="isConnecting()"
         (click)="connectGoogleDrive()"
-        class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shrink-0 cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1.5 shadow-xs">
+        class="px-4 py-2 min-h-[40px] sm:min-h-[36px] rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shrink-0 cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1.5 shadow-xs tap-target">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
         {{ isConnecting() ? 'در حال اتصال...' : 'اتصال مجدد با گوگل' }}
       </button>
@@ -208,8 +211,8 @@
         type="button"
         [disabled]="isSyncing()"
         (click)="syncAllFiles()"
-        class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shrink-0 cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1.5 shadow-xs">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="send"></svg>
+        class="px-4 py-2 min-h-[40px] sm:min-h-[36px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shrink-0 cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1.5 shadow-xs tap-target">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-send"></svg>
         {{ isSyncing() ? 'در حال ثبت در صف...' : 'ارسال سوابق به حساب تازه' }}
       </button>
     </div>
@@ -259,7 +262,7 @@
                 <button 
                   type="button"
                   (click)="disconnectGoogleDrive()"
-                  class="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold transition-all cursor-pointer">
+                  class="px-3 py-1.5 min-h-[40px] sm:min-h-[32px] rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center tap-target">
                   قطع اتصال
                 </button>
               </div>
@@ -289,7 +292,7 @@
                 type="button"
                 [disabled]="isConnecting()"
                 (click)="connectGoogleDrive()"
-                class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold shadow-sm inline-flex items-center gap-2 cursor-pointer active:scale-95 transition-all">
+                class="px-5 py-2.5 min-h-[40px] sm:min-h-[36px] rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold shadow-sm inline-flex items-center gap-2 cursor-pointer active:scale-95 transition-all tap-target">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
                 {{ isConnecting() ? 'در حال برقراری ارتباط...' : 'ورود و اتصال با حساب گوگل' }}
               </button>
@@ -565,8 +568,8 @@
               type="button"
               [disabled]="isTriggeringSync() || !cfg.stats?.pending"
               (click)="triggerManualSync()"
-              class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="send"></svg>
+              class="w-full py-2.5 px-4 min-h-[40px] sm:min-h-[36px] rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all tap-target">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-send"></svg>
               {{ isTriggeringSync() ? 'در حال ارسال صف در پس‌زمینه...' : 'ارسال دستی صف فایل‌های معلق (' + (cfg.stats?.pending || 0) + ')' }}
             </button>
 
@@ -575,8 +578,8 @@
               type="button"
               [disabled]="isSyncing()"
               (click)="syncAllFiles()"
-              class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 text-xs font-bold shadow-2xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="cloud-upload"></svg>
+              class="w-full py-2.5 px-4 min-h-[40px] sm:min-h-[36px] rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 text-xs font-bold shadow-2xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all tap-target">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-sync"></svg>
               {{ isSyncing() ? 'در حال ثبت فایل‌ها در صف...' : 'پیمایش و ثبت فایل‌های پیشین' }}
             </button>
             <p class="text-[10px] text-slate-400 text-center mt-1">
@@ -601,7 +604,7 @@
             {{ totalQueueCount() }} مورد
           </span>
           <span *ngIf="isQueueLoading()" class="text-[10px] text-indigo-600 font-bold flex items-center gap-1">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="animate-spin" appIcon="rotate-cw"></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="animate-spin" appIcon="action-refresh"></svg>
             در حال دریافت...
           </span>
         </div>
@@ -615,9 +618,8 @@
             [class.bg-white]="activeStatusFilter() === 'all'"
             [class.dark:bg-surface]="activeStatusFilter() === 'all'"
             [class.text-indigo-700]="activeStatusFilter() === 'all'"
-            [class.]="activeStatusFilter() === 'all'"
             [class.shadow-2xs]="activeStatusFilter() === 'all'"
-            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
+            class="px-2.5 py-1 min-h-[40px] sm:min-h-[32px] inline-flex items-center justify-center rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer tap-target">
             همه
           </button>
           <button 
@@ -627,9 +629,8 @@
             [class.bg-white]="activeStatusFilter() === 'pending'"
             [class.dark:bg-surface]="activeStatusFilter() === 'pending'"
             [class.text-indigo-700]="activeStatusFilter() === 'pending'"
-            [class.]="activeStatusFilter() === 'pending'"
             [class.shadow-2xs]="activeStatusFilter() === 'pending'"
-            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
+            class="px-2.5 py-1 min-h-[40px] sm:min-h-[32px] inline-flex items-center justify-center rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer tap-target">
             در انتظار
           </button>
           <button 
@@ -639,9 +640,8 @@
             [class.bg-white]="activeStatusFilter() === 'processing'"
             [class.dark:bg-surface]="activeStatusFilter() === 'processing'"
             [class.text-indigo-700]="activeStatusFilter() === 'processing'"
-            [class.]="activeStatusFilter() === 'processing'"
             [class.shadow-2xs]="activeStatusFilter() === 'processing'"
-            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
+            class="px-2.5 py-1 min-h-[40px] sm:min-h-[32px] inline-flex items-center justify-center rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer tap-target">
             در حال ارسال
           </button>
           <button 
@@ -651,9 +651,8 @@
             [class.bg-white]="activeStatusFilter() === 'completed'"
             [class.dark:bg-surface]="activeStatusFilter() === 'completed'"
             [class.text-indigo-700]="activeStatusFilter() === 'completed'"
-            [class.]="activeStatusFilter() === 'completed'"
             [class.shadow-2xs]="activeStatusFilter() === 'completed'"
-            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
+            class="px-2.5 py-1 min-h-[40px] sm:min-h-[32px] inline-flex items-center justify-center rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer tap-target">
             موفق
           </button>
           <button 
@@ -663,9 +662,8 @@
             [class.bg-white]="activeStatusFilter() === 'failed'"
             [class.dark:bg-surface]="activeStatusFilter() === 'failed'"
             [class.text-indigo-700]="activeStatusFilter() === 'failed'"
-            [class.]="activeStatusFilter() === 'failed'"
             [class.shadow-2xs]="activeStatusFilter() === 'failed'"
-            class="px-2.5 py-1 rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
+            class="px-2.5 py-1 min-h-[40px] sm:min-h-[32px] inline-flex items-center justify-center rounded-lg font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer tap-target">
             خطا
           </button>
         </div>
@@ -780,14 +778,14 @@
             type="button" 
             [disabled]="currentPage() <= 1"
             (click)="goToPage(currentPage() - 1)"
-            class="px-3 py-1 rounded-lg border border-slate-200 dark:border-line bg-white dark:bg-surface disabled:opacity-40 font-bold hover:bg-slate-100 transition-all cursor-pointer">
+            class="px-3 py-1 min-h-[40px] sm:min-h-[32px] rounded-lg border border-slate-200 dark:border-line bg-white dark:bg-surface disabled:opacity-40 font-bold hover:bg-slate-100 transition-all cursor-pointer inline-flex items-center justify-center tap-target">
             قبلی
           </button>
           <button 
             type="button" 
             [disabled]="currentPage() >= totalPages()"
             (click)="goToPage(currentPage() + 1)"
-            class="px-3 py-1 rounded-lg border border-slate-200 dark:border-line bg-white dark:bg-surface disabled:opacity-40 font-bold hover:bg-slate-100 transition-all cursor-pointer">
+            class="px-3 py-1 min-h-[40px] sm:min-h-[32px] rounded-lg border border-slate-200 dark:border-line bg-white dark:bg-surface disabled:opacity-40 font-bold hover:bg-slate-100 transition-all cursor-pointer inline-flex items-center justify-center tap-target">
             بعدی
           </button>
         </div>

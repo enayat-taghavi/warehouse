@@ -41,6 +41,7 @@ import {
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { formatDeviceModelName } from '../../core/utils/device-detector';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
 
 export interface DiffItem {
   key: string;
@@ -134,7 +135,7 @@ export const AUDIT_FIELD_LABELS_MAP: Record<string, string> = {
 @Component({
   selector: 'app-audit',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, WarehouseSelectorComponent, PersianDatePipe, NgPersianDatepickerModule, BarcodeScannerComponent, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, WarehouseSelectorComponent, PersianDatePipe, NgPersianDatepickerModule, BarcodeScannerComponent, SvgIconDirective, ActionButtonComponent],
   templateUrl: './audit.html',
   styleUrl: './audit.css'
 })

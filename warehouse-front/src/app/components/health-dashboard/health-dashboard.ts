@@ -15,11 +15,12 @@ import { AppPersonaService } from '../../core/services/app-persona.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { Router, NavigationEnd } from '@angular/router';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
 
 @Component({
   selector: 'app-health-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent],
   template: `
     <div class="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 text-right" dir="rtl">
       
@@ -49,13 +50,12 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
           </span>
           <button
             type="button"
+            appAction="refresh"
+            label="عیب‌یابی خودکار"
+            display="label"
+            [busy]="isDiagnosing"
             (click)="triggerDiagnostic()"
-            [disabled]="isDiagnosing"
-            class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold transition-all flex items-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isDiagnosing" appIcon="refresh-cw"></svg>
-            <span>{{ isDiagnosing ? 'در حال عیب‌یابی...' : 'عیب‌یابی و تست خودکار' }}</span>
-          </button>
+          ></button>
         </div>
       </div>
 
@@ -355,7 +355,7 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
           <button
             type="button"
             (click)="navigateToBackupSettings()"
-            class="px-4 py-2 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-slate-700 active:scale-95 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+            class="min-h-[40px] px-4 py-2 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-slate-700 active:scale-95 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
           >
             <span>مدیریت اسنپ‌شات‌ها و بازگشت</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
@@ -393,7 +393,7 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
                 type="button"
                 *ngFor="let lvl of [20, 30, 50, 100]"
                 (click)="selectedConcurrency = lvl"
-                class="py-1.5 px-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border"
+                class="min-h-[40px] sm:min-h-[32px] py-1.5 px-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-center"
                 [ngClass]="selectedConcurrency === lvl ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'"
               >
                 {{ lvl }}
@@ -405,7 +405,7 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
             <label class="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1.5">سناریوی عملیاتی شبیه‌سازی:</label>
             <select
               [(ngModel)]="selectedScenario"
-              class="w-full py-1.5 px-3 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              class="w-full min-h-[40px] sm:min-h-[32px] py-1.5 px-3 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option *ngIf="isWarehouseInstalled && isAccountingInstalled && appScope !== 'finance'" value="combined">ترکیبی (خزانه‌داری + انبارداری)</option>
               <option *ngIf="isAccountingInstalled" value="treasury">فقط خزانه‌داری (جلوگیری از پرداخت دوبل)</option>
@@ -416,13 +416,14 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
           <div class="flex items-end">
             <button
               type="button"
+              appAction="confirm"
+              size="lg"
+              label="شروع آزمون همروندی"
+              display="label"
+              [busy]="isStressTesting"
               (click)="runStressTest()"
-              [disabled]="isStressTesting"
-              class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 active:scale-98 text-white text-xs font-black transition-all flex items-center justify-center gap-2 shadow-md shadow-indigo-500/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isStressTesting" appIcon="zap"></svg>
-              <span>{{ isStressTesting ? 'در حال شبیه‌سازی همروندی...' : 'شروع آزمون همروندی و پایش بن‌بست' }}</span>
-            </button>
+              class="w-full"
+            ></button>
           </div>
         </div>
 

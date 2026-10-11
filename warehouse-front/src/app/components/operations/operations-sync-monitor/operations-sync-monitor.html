@@ -33,33 +33,31 @@
         *ngIf="isWarehouseInstalled"
         type="button"
         (click)="simulateConflictScenario()"
-        class="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-2xs"
+        class="min-h-[40px] px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-2xs"
         title="شبیه‌سازی یک تداخل برای تست موتور حل اختلاف"
       >
-        <span>⚡ شبیه‌سازی تداخل ۴۰۹</span>
+        <svg appIcon="alert-triangle" class="w-4 h-4"></svg>
+        <span>شبیه‌سازی تداخل ۴۰۹</span>
       </button>
 
       <button
         type="button"
+        appAction="sync"
+        label="تخلیه صف آفلاین"
+        display="label"
+        [busy]="isFlushingQueue()"
+        [disabled]="queueItems().length === 0"
         (click)="flushOfflineQueue()"
-        [disabled]="isFlushingQueue() || queueItems().length === 0"
-        class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
-        title="ارسال دستی کلیه تراکنش‌های معلق صف آفلاین به سرور"
-      >
-        <svg *ngIf="isFlushingQueue()" class="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" appIcon="spinner-quarter"></svg>
-        <span *ngIf="!isFlushingQueue()">🚀 تخلیه صف آفلاین</span>
-        <span *ngIf="isFlushingQueue()">در حال ارسال...</span>
-      </button>
+      ></button>
 
       <button
         type="button"
+        appAction="refresh"
+        label="بروزرسانی تله‌متری"
+        display="label"
+        [busy]="isRefreshing()"
         (click)="refreshTelemetry()"
-        [disabled]="isRefreshing()"
-        class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" [class.animate-spin]="isRefreshing()" appIcon="refresh-cw"></svg>
-        <span>بروزرسانی تله‌متری</span>
-      </button>
+      ></button>
     </div>
   </div>
 
@@ -215,17 +213,19 @@
             <!-- ۱۰. عملیات ابطال -->
             <td class="py-3 px-4 text-center">
               <span *ngIf="isSupervisorSession(t)" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs" title="نشست سرپرستان و مدیران مصون از ابطال نظارتی است">
-                🛡️ مصون از ابطال
+                <svg appIcon="shield" class="w-3.5 h-3.5 text-amber-700"></svg>
+                <span>مصون از ابطال</span>
               </span>
               <button
                 *ngIf="!isSupervisorSession(t) && !t.isCurrentTab && t.sessionId && !t.isRevoked"
                 type="button"
                 (click)="revokeDeviceSession(t.sessionId, t.deviceModel)"
                 [disabled]="isRevoking() === t.sessionId"
-                class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[10px] font-bold transition-all cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
+                class="min-h-[40px] sm:min-h-[28px] px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[10px] font-bold transition-all cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50 inline-flex items-center justify-center gap-1"
                 title="ابطال این نشست و خروج اجباری دستگاه از حساب کاربری"
               >
-                <span *ngIf="isRevoking() !== t.sessionId">🚫 ابطال نشست</span>
+                <svg appIcon="x-circle" class="w-3.5 h-3.5 text-rose-600"></svg>
+                <span *ngIf="isRevoking() !== t.sessionId">ابطال نشست</span>
                 <span *ngIf="isRevoking() === t.sessionId">در حال ابطال...</span>
               </button>
               <span *ngIf="!isSupervisorSession(t) && t.isCurrentTab" class="text-[10px] text-slate-400">نشست فعال شما</span>
@@ -250,11 +250,11 @@
       <button
         *ngIf="conflictErrors().length > 0"
         type="button"
+        appAction="delete"
+        label="پاکسازی همه"
+        display="label"
         (click)="clearAllResolvedErrors()"
-        class="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition-all cursor-pointer shadow-2xs"
-      >
-        پاکسازی همه
-      </button>
+      ></button>
     </div>
 
     <!-- جدول تداخل‌ها -->
@@ -278,11 +278,11 @@
             <td class="py-3 px-4 text-center">
               <button
                 type="button"
+                appAction="view"
+                label="بررسی ادغام سه‌سویه"
+                display="label"
                 (click)="openConflictDetails(err)"
-                class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-xs"
-              >
-                🔍 بررسی ادغام سه‌سویه
-              </button>
+              ></button>
             </td>
           </tr>
         </tbody>

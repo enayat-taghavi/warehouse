@@ -1,81 +1,69 @@
 {
   "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
   "counters": {
-    "rule_1_unlabeled_icon_buttons": 176,
+    "rule_1_unlabeled_icon_buttons": 166,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 255,
-    "rule_4_retired_icons": 117,
+    "rule_3_non_standard_actions": 252,
+    "rule_4_retired_icons": 111,
     "rule_5_neutralized_tap_targets": 0
   },
   "violations": {
     "rule_1_unlabeled_icon_buttons": [
       {
         "file": "components/audit/audit.html",
-        "line": 859
+        "line": 863
       },
       {
         "file": "components/audit/audit.html",
-        "line": 998
+        "line": 1002
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1112
+        "line": 1116
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1115
+        "line": 1119
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1140
+        "line": 1144
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1216
+        "line": 1220
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1241
+        "line": 1245
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1327
+        "line": 1331
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1352
+        "line": 1356
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1450
+        "line": 1454
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1586
+        "line": 1590
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1761
+        "line": 1765
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1786
+        "line": 1790
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1822
-      },
-      {
-        "file": "components/change-password/change-password.html",
-        "line": 35
-      },
-      {
-        "file": "components/change-password/change-password.html",
-        "line": 46
-      },
-      {
-        "file": "components/change-password/change-password.html",
-        "line": 57
+        "line": 1826
       },
       {
         "file": "components/count-tracking/count-tracking.html",
@@ -128,19 +116,31 @@
       {
         "file": "components/customs/customs.html",
         "line": 554
+      },
+      {
+        "file": "components/customs/customs.html",
+        "line": 919
+      },
+      {
+        "file": "components/customs/customs.html",
+        "line": 992
+      },
+      {
+        "file": "components/customs/customs.html",
+        "line": 1117
       }
     ],
     "rule_2_tab_min_widths": [],
     "rule_3_non_standard_actions": [
       {
         "file": "components/audit/audit.html",
-        "line": 1586,
+        "line": 1590,
         "method": "closeExportModal",
         "icon": "x"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1758,
+        "line": 1762,
         "method": "closeExportModal",
         "icon": null
       },
@@ -326,87 +326,87 @@
       },
       {
         "file": "components/audit/audit.html",
-        "line": 224,
+        "line": 228,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 339,
+        "line": 343,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 598,
+        "line": 602,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 623,
+        "line": 627,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 638,
+        "line": 642,
         "icon": "rotate-cw-legacy"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 792,
+        "line": 796,
         "icon": "rotate-cw-legacy"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 889,
+        "line": 893,
         "icon": "spinner-arc"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 971,
+        "line": 975,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 991,
+        "line": 995,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1008,
+        "line": 1012,
         "icon": "spinner-arc"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1116,
+        "line": 1120,
         "icon": "spinner-arc"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1117,
+        "line": 1121,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1133,
+        "line": 1137,
         "icon": "trash"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1217,
+        "line": 1221,
         "icon": "spinner-arc"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1218,
+        "line": 1222,
         "icon": "trash"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1271,
+        "line": 1275,
         "icon": "spinner-arc"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1328,
+        "line": 1332,
         "icon": "spinner-arc"
       },
       {

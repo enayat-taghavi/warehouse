@@ -9,10 +9,12 @@ import { ToastService } from '../../../shared/components/toast/toast.component';
 import { downloadLocalDatabaseSnapshotFile } from '../../../core/services/offline-db';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
+
 @Component({
   selector: 'app-operations-cockpit',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ActionButtonComponent],
   templateUrl: './operations-cockpit.html',
   styleUrl: './operations-cockpit.css'
 })

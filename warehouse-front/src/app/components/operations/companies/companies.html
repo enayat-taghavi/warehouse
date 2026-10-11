@@ -37,43 +37,40 @@
         <button 
           type="button"
           (click)="exportExcel()"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-all"
+          class="w-9 h-9 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-all tap-target"
           title="خروجی اکسل شرکت‌ها"
-          aria-label="خروجی اکسل">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="file-text"></svg>
+          aria-label="خروجی اکسل شرکت‌ها">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-export-excel"></svg>
         </button>
 
         <!-- ورودی اکسل -->
         <button 
           type="button"
           (click)="importExcel()"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 transition-all"
+          class="w-9 h-9 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 transition-all tap-target"
           title="ورود اطلاعات از اکسل"
-          aria-label="ورود اکسل">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="upload"></svg>
+          aria-label="ورود اطلاعات از اکسل">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-import-excel"></svg>
         </button>
 
         <!-- رفرش / همگام‌سازی -->
         <button 
           type="button"
           (click)="loadCompanies()"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all"
+          class="w-9 h-9 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all tap-target"
           title="به‌روزرسانی داده‌ها"
-          aria-label="رفرش">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" [class.animate-spin]="isLoading" appIcon="refresh-cw"></svg>
+          aria-label="به‌روزرسانی داده‌ها">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" [class.animate-spin]="isLoading" appIcon="action-refresh"></svg>
         </button>
 
         <div class="h-6 w-px bg-slate-200 mx-1"></div>
 
-        <!-- دکمه ثبت شرکت جدید (آیکونی با تولتیپ و متن دسترس‌پذیری) -->
+        <!-- دکمه ثبت شرکت جدید -->
         <button 
           type="button"
-          (click)="openCreateModal()"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-indigo-600 hover:bg-indigo-700 text-white transition-all"
-          title="ثبت شرکت جدید"
-          aria-label="ثبت شرکت جدید">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg>
-          <span class="sr-only">ثبت شرکت جدید</span>
+          appAction="create"
+          label="ثبت شرکت جدید"
+          (click)="openCreateModal()">
         </button>
       </div>
 
@@ -487,101 +484,21 @@
           </button>
           <button 
             type="button" 
+            appAction="close" 
+            display="icon" 
             (click)="closeCompanyModal()" 
-            class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
             title="انصراف و بازگشت">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
           </button>
         </div>
       </div>
 
-      <!-- Subtab Navigation Bar (6 Standard Tabs - Legal & Financial Order) -->
-      <div class="bg-slate-100/90 p-1.5 border-b border-slate-200/80 overflow-x-auto flex items-center gap-1.5 shrink-0 scrollbar-none">
-        <!-- ۱. مشخصات هویتی و ثبتی -->
-        <button 
-          type="button" 
-          (click)="setModalTab('identity')" 
-          [ngClass]="activeModalTab === 'identity' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building"></svg>
-          <span>مشخصات هویتی و ثبتی</span>
-        </button>
-
-        <!-- ۲. سال مالی، کارگاه بیمه و سامانه مودیان -->
-        <button 
-          type="button" 
-          (click)="setModalTab('fiscal_insurance')" 
-          [ngClass]="activeModalTab === 'fiscal_insurance' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calculator"></svg>
-          <span>سال مالی، بیمه و مودیان</span>
-        </button>
-
-        <!-- ۳. خزانه‌داری، بانک و شبا -->
-        <button 
-          *ngIf="isAccountingInstalled"
-          type="button" 
-          (click)="setModalTab('treasury')" 
-          [ngClass]="activeModalTab === 'treasury' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
-          <span>بانک و شبا</span>
-          <span *ngIf="companyBankAccounts.length > 0" class="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-600 font-bold">
-            {{ companyBankAccounts.length }}
-          </span>
-        </button>
-
-        <!-- ۴. ارکان، هیئت‌مدیره و صاحبان امضا -->
-        <button 
-          *ngIf="isAccountingInstalled"
-          type="button" 
-          (click)="setModalTab('governance')" 
-          [ngClass]="activeModalTab === 'governance' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
-          <span>هیئت‌مدیره و امضا</span>
-          <span *ngIf="companyBoardMembers.length > 0" class="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-purple-50 text-purple-700 font-bold">
-            {{ companyBoardMembers.length }}
-          </span>
-        </button>
-
-        <!-- ۵. بایگانی مدارک و اسناد قانونی -->
-        <button 
-          type="button" 
-          (click)="setModalTab('documents')" 
-          [ngClass]="activeModalTab === 'documents' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="folder"></svg>
-          <span>بایگانی مدارک</span>
-          <span *ngIf="companyDocuments.length > 0" class="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-indigo-50 text-indigo-600 font-bold">
-            {{ companyDocuments.length }}
-          </span>
-        </button>
-
-        <!-- ۶. دسترسی کاربران -->
-        <button 
-          type="button" 
-          (click)="setModalTab('access')" 
-          [ngClass]="activeModalTab === 'access' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="shield"></svg>
-          <span>دسترسی کاربران</span>
-          <span *ngIf="studioAccesses.length > 0" class="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-slate-200 text-slate-700 font-bold">
-            {{ studioAccesses.length }}
-          </span>
-        </button>
-
-        <!-- ۷. همگام‌سازی گوگل‌درایو -->
-        <button 
-          *ngIf="companyModal.isEdit && isAccountingInstalled"
-          type="button" 
-          (click)="setModalTab('gdrive')" 
-          [ngClass]="activeModalTab === 'gdrive' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
-          <span>همگام‌سازی گوگل‌درایو</span>
-        </button>
-      </div>
+      <!-- Subtab Navigation Bar (Standard Tab Bar - Mobile Icon Mode) -->
+      <app-tab-bar
+        [tabs]="modalTabs"
+        [active]="activeModalTab"
+        mobile="icon"
+        (activeChange)="setModalTab($event)">
+      </app-tab-bar>
 
       <!-- Modal Body (Content per Tab) -->
       <div class="p-4 md:p-6 overflow-y-auto flex-1 space-y-4">
@@ -2472,23 +2389,16 @@
         <div class="flex items-center gap-2">
           <button 
             type="button" 
-            (click)="closeCompanyModal()" 
-            title="انصراف و بستن"
-            aria-label="انصراف"
-            class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
-            <span class="sr-only">انصراف</span>
+            appAction="close"
+            (click)="closeCompanyModal()">
           </button>
           <button 
             type="button" 
-            (click)="submitCompanyForm()" 
-            [disabled]="companyModal.isSubmitting"
-            [title]="companyModal.isEdit ? 'ثبت ویرایش شناسنامه' : 'ثبت شرکت'"
-            aria-label="ثبت شرکت"
-            class="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer">
-            <span *ngIf="companyModal.isSubmitting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            <svg *ngIf="!companyModal.isSubmitting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
-            <span class="sr-only">{{ companyModal.isEdit ? 'ثبت ویرایش شناسنامه' : 'ثبت شرکت' }}</span>
+            appAction="save"
+            size="lg"
+            [busy]="companyModal.isSubmitting"
+            [label]="companyModal.isEdit ? 'ثبت ویرایش شناسنامه' : 'ثبت شرکت'"
+            (click)="submitCompanyForm()">
           </button>
         </div>
       </div>
@@ -2511,23 +2421,15 @@
       <div class="mt-6 flex items-center justify-end gap-2">
         <button 
           type="button" 
-          (click)="closeDeleteModal()" 
-          title="انصراف از حذف"
-          aria-label="انصراف"
-          class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
-          <span class="sr-only">انصراف</span>
+          appAction="close"
+          (click)="closeDeleteModal()">
         </button>
         <button 
           type="button" 
-          (click)="executeDelete()" 
-          [disabled]="deleteModal.isDeleting"
-          title="تایید و حذف قطعی"
-          aria-label="حذف"
-          class="w-9 h-9 rounded-xl bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-xs cursor-pointer active:scale-95 transition-all disabled:opacity-50">
-          <svg *ngIf="deleteModal.isDeleting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="animate-spin" appIcon="refresh-cw"></svg>
-          <svg *ngIf="!deleteModal.isDeleting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
-          <span class="sr-only">حذف</span>
+          appAction="delete"
+          size="lg"
+          [busy]="deleteModal.isDeleting"
+          (click)="executeDelete()">
         </button>
       </div>
     </div>

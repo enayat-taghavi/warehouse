@@ -5,7 +5,7 @@
     <div class="p-6 bg-gradient-to-r from-indigo-700 via-indigo-600 to-violet-700 text-white relative shrink-0">
       <div class="flex items-center gap-4">
         <div class="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-3xl shadow-inner shrink-0">
-          🏢
+          <svg appIcon="building" class="w-7 h-7 text-white"></svg>
         </div>
         <div class="min-w-0">
           <div class="flex items-center gap-2">
@@ -23,7 +23,7 @@
     <div class="p-6 overflow-y-auto space-y-4 flex-1">
       <!-- راهنمای اولیه -->
       <div class="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-xs text-indigo-900 leading-relaxed font-medium flex items-start gap-2.5">
-        <span class="text-lg shrink-0">💡</span>
+        <svg appIcon="info" class="w-5 h-5 text-indigo-600 shrink-0 mt-0.5"></svg>
         <span>
           هیچ شرکت حقوقی در پایگاه داده یافت نشد. به عنوان مدیر ارشد سیستم، لطفاً مشخصات شرکت اصلی (مادر) را وارد فرمایید تا ساختار کاری و فضاهای مربوطه فعال گردند.
         </span>
@@ -31,7 +31,7 @@
 
       <!-- پیام خطا در صورت وجود -->
       <div *ngIf="errorMessage" class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-bold flex items-center gap-2 animate-in fade-in">
-        <span>⚠️</span>
+        <svg appIcon="alert-triangle" class="w-4 h-4 text-rose-600 shrink-0"></svg>
         <span class="flex-1">{{ errorMessage }}</span>
       </div>
 
@@ -126,14 +126,14 @@
           *ngIf="isWarehouseInstalled"
           (click)="toggleWarehouseModule()"
           [ngClass]="formData.has_warehouse_module ? 'border-indigo-500 bg-indigo-50/40 ring-1 ring-indigo-500/30' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/60'"
-          class="p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 group select-none mt-2"
+          class="p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 group select-none mt-2 min-h-[44px]"
         >
           <div class="flex items-center gap-3 min-w-0">
             <div
               [ngClass]="formData.has_warehouse_module ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'"
               class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 transition-colors shadow-2xs"
             >
-              📦
+              <svg appIcon="package" class="w-5 h-5"></svg>
             </div>
             <div class="min-w-0">
               <span class="block text-xs font-black text-slate-900 group-hover:text-indigo-600 transition-colors">
@@ -151,7 +151,7 @@
               [(ngModel)]="formData.has_warehouse_module"
               name="has_warehouse_module"
               (click)="$event.stopPropagation()"
-              class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              class="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
             />
           </div>
         </div>
@@ -161,11 +161,10 @@
           <button
             type="submit"
             [disabled]="isSubmitting || !formData.name || !formData.code"
-            class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 active:scale-98 disabled:opacity-50 disabled:pointer-events-none text-white text-xs font-black shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+            class="w-full min-h-[44px] py-3 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 active:scale-98 disabled:opacity-50 disabled:pointer-events-none text-white text-xs font-black shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <span *ngIf="isSubmitting" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
             <span>{{ isSubmitting ? 'در حال ثبت و راه‌اندازی...' : 'ثبت و راه‌اندازی اولین شرکت سازمان' }}</span>
-            <span *ngIf="!isSubmitting">➔</span>
           </button>
         </div>
       </form>

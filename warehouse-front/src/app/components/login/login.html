@@ -50,21 +50,33 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock"></svg>
               </div>
               <input id="login-password" [type]="passwordFieldType" name="password" [(ngModel)]="password" (ngModelChange)="clearError()" autocomplete="current-password" placeholder="••••••••" class="w-full pr-10 pl-10 py-2.5 rounded-xl text-sm bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all dir-ltr text-left">
-              <button type="button" (click)="togglePassword()" aria-label="نمایش یا پنهان کردن رمز عبور" class="absolute inset-y-0 left-0 flex items-center pl-3.5 pr-1 cursor-pointer text-slate-400 hover:text-white transition-colors focus:outline-none z-10">
-                <svg *ngIf="passwordFieldType === 'password'" class="pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
-                <svg *ngIf="passwordFieldType === 'text'" class="pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye-off"></svg>
+              <button
+                type="button"
+                (click)="togglePassword()"
+                [title]="passwordFieldType === 'password' ? 'نمایش رمز عبور' : 'پنهان کردن رمز عبور'"
+                [attr.aria-label]="passwordFieldType === 'password' ? 'نمایش رمز عبور' : 'پنهان کردن رمز عبور'"
+                class="absolute inset-y-0 left-0 flex items-center justify-center w-10 h-10 my-auto cursor-pointer text-slate-400 hover:text-white transition-colors focus:outline-none z-10"
+              >
+                <svg *ngIf="passwordFieldType === 'password'" class="pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view"></svg>
+                <svg *ngIf="passwordFieldType === 'text'" class="pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-hide"></svg>
               </button>
             </div>
           </div>
           <div class="flex items-center justify-end text-xs text-slate-400 pt-1">
-            <a href="#" (click)="showForgotPasswordDialog($event)" class="text-indigo-400 hover:text-indigo-300 transition-colors">فراموشی رمز عبور</a>
+            <a href="#" (click)="showForgotPasswordDialog($event)" class="min-h-[36px] flex items-center text-indigo-400 hover:text-indigo-300 transition-colors">فراموشی رمز عبور</a>
           </div>
 
-          <button type="submit" [disabled]="isLoggingIn" class="w-full py-3 rounded-xl text-sm font-bold text-white transition-all active:scale-[.98] mt-1 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);box-shadow:0 8px 25px rgba(99,102,241,.4)" [style.opacity]="isLoggingIn ? '0.85' : '1'">
+          <button
+            type="submit"
+            [disabled]="isLoggingIn"
+            class="w-full min-h-[48px] py-3 rounded-xl text-sm font-bold text-white transition-all active:scale-[.98] mt-1 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+            style="background:linear-gradient(135deg,#4f46e5,#7c3aed);box-shadow:0 8px 25px rgba(99,102,241,.4)"
+            [style.opacity]="isLoggingIn ? '0.85' : '1'"
+          >
             <span *ngIf="!isLoggingIn">ورود به سامانه</span>
             <span *ngIf="isLoggingIn">در حال ارتباط با سرور...</span>
             <svg *ngIf="!isLoggingIn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
-            <svg *ngIf="isLoggingIn" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" appIcon="spinner"></svg>
+            <svg *ngIf="isLoggingIn" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" appIcon="action-loading"></svg>
           </button>
         </form>
 

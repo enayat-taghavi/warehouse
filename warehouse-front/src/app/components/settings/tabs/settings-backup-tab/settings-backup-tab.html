@@ -37,27 +37,22 @@
             <div class="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
+                appAction="download"
+                label="پشتیبان تبلت"
+                display="label"
+                [busy]="isExportingLocalDb"
                 (click)="downloadLocalIndexedDb()"
-                [disabled]="isExportingLocalDb"
-                class="px-3.5 py-2 rounded-xl text-xs font-bold text-teal-800 bg-teal-50 border border-teal-200 hover:bg-teal-100 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-                title="دانلود نسخه پشتیبان از پایگاه‌داده محلی مرورگر/تبلت"
-              >
-                <svg *ngIf="!isExportingLocalDb" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="download"></svg>
-                <span *ngIf="isExportingLocalDb" class="animate-spin w-3.5 h-3.5 border-2 border-teal-700 border-t-transparent rounded-full"></span>
-                <span>{{ isExportingLocalDb ? 'در حال خروجی...' : 'پشتیبان تبلت (IndexedDB)' }}</span>
-              </button>
+              ></button>
 
               <button
                 type="button"
+                appAction="create"
+                label="پشتیبان جدید"
+                display="label"
+                [busy]="isCreatingSnapshot"
+                [disabled]="!canManageBackup()"
                 (click)="createManualSnapshot()"
-                [disabled]="isCreatingSnapshot || !canManageBackup()"
-                class="px-4 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-2 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
-                style="background: linear-gradient(135deg, #059669, #047857)"
-              >
-                <span *ngIf="isCreatingSnapshot" class="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span>
-                <svg *ngIf="!isCreatingSnapshot" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="zap"></svg>
-                <span>{{ isCreatingSnapshot ? 'در حال ساخت اسنپ‌شات...' : '+ اسنپ‌شات دستی فوری' }}</span>
-              </button>
+              ></button>
             </div>
           </div>
 
@@ -130,13 +125,13 @@
                     <td class="p-3 text-center">
                       <button
                         type="button"
-                        (click)="openRollbackConfirm(snap)"
+                        appAction="restore"
+                        label="بازگشت سریع"
+                        display="label"
+                        size="sm"
                         [disabled]="isRollingBack || !canRestoreDatabase()"
-                        class="px-3 py-1.5 rounded-lg text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 active:scale-95 transition-all cursor-pointer disabled:opacity-40"
-                        title="بازگردانی دیتابیس به این اسنپ‌شات"
-                      >
-                        بازگشت سریع
-                      </button>
+                        (click)="openRollbackConfirm(snap)"
+                      ></button>
                     </td>
                   </tr>
                 </tbody>
@@ -175,7 +170,7 @@
                 type="button"
                 (click)="connectSystemGDrive()"
                 [disabled]="isConnectingGDrive"
-                class="px-4 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-2 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                class="min-h-[40px] px-4 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-2 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
                 style="background: linear-gradient(135deg, #4f46e5, #3730a3)"
               >
                 <span *ngIf="isConnectingGDrive" class="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full"></span>
@@ -187,7 +182,7 @@
                 *ngIf="systemGDrive?.is_connected"
                 type="button"
                 (click)="toggleSystemGDriveEnabled()"
-                class="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border"
+                class="min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border"
                 [ngClass]="systemGDrive.is_enabled ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'"
               >
                 <span>{{ systemGDrive.is_enabled ? 'توقف موقت ارسال' : 'فعال‌سازی ارسال' }}</span>
@@ -198,7 +193,7 @@
                 type="button"
                 (click)="disconnectSystemGDrive()"
                 [disabled]="isDisconnectingGDrive"
-                class="px-3.5 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                class="min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
               >
                 <span *ngIf="isDisconnectingGDrive" class="animate-spin w-3.5 h-3.5 border-2 border-rose-700 border-t-transparent rounded-full"></span>
                 <span *ngIf="!isDisconnectingGDrive">قطع اتصال</span>
@@ -341,7 +336,8 @@
                   dir="ltr"
                 />
                 <button type="button" (click)="backupShowPassword = !backupShowPassword"
-                  class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                  [title]="backupShowPassword ? 'پنهان کردن رمز' : 'نمایش رمز'"
+                  class="absolute left-1 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors w-10 h-10 flex items-center justify-center">
                   <svg *ngIf="!backupShowPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
                   <svg *ngIf="backupShowPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye-off"></svg>
                 </button>
@@ -351,14 +347,16 @@
             <!-- دکمه دانلود -->
             <button
               id="download-backup-btn"
+              type="button"
+              appAction="download"
+              size="lg"
+              label="دانلود نسخه پشتیبان"
+              display="label"
+              [busy]="isBackupLoading"
+              [disabled]="!backupPassword"
               (click)="downloadBackup()"
-              [disabled]="isBackupLoading || !backupPassword"
-              class="w-full py-3.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2.5 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              style="background: linear-gradient(135deg, #4f46e5, #7c3aed)">
-              <span *ngIf="isBackupLoading" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-              <svg *ngIf="!isBackupLoading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="download"></svg>
-              {{ isBackupLoading ? 'در حال آماده‌سازی فایل پشتیبان...' : 'دانلود نسخه پشتیبان' }}
-            </button>
+              class="w-full"
+            ></button>
 
           </div>
         </div>
@@ -367,7 +365,7 @@
         <div class="bg-white rounded-3xl border border-red-100 shadow-sm overflow-hidden" [class.opacity-60]="!canRestoreDatabase()" [class.pointer-events-none]="!canRestoreDatabase()">
           <div class="bg-red-50 border-b border-red-100 p-5 flex items-center gap-3">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-red-100">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" appIcon="rotate-ccw-alt"></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" appIcon="rotate-ccw"></svg>
             </div>
             <div>
               <h4 class="font-black text-red-800 text-[13px]">بازیابی اطلاعات (Restore)</h4>
@@ -421,7 +419,8 @@
                   dir="ltr"
                 />
                 <button type="button" (click)="restoreShowPassword = !restoreShowPassword"
-                  class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                  [title]="restoreShowPassword ? 'پنهان کردن رمز' : 'نمایش رمز'"
+                  class="absolute left-1 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors w-10 h-10 flex items-center justify-center">
                   <svg *ngIf="!restoreShowPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
                   <svg *ngIf="restoreShowPassword" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye-off"></svg>
                 </button>
@@ -431,14 +430,16 @@
             <!-- دکمه بازیابی -->
             <button
               id="restore-backup-btn"
+              type="button"
+              appAction="restore"
+              size="lg"
+              label="بازیابی اطلاعات"
+              display="label"
+              [busy]="isRestoreLoading"
+              [disabled]="!restoreFile || !restorePassword"
               (click)="openRestoreConfirm()"
-              [disabled]="isRestoreLoading || !restoreFile || !restorePassword"
-              class="w-full py-3.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2.5 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              style="background: linear-gradient(135deg, #dc2626, #b91c1c)">
-              <span *ngIf="isRestoreLoading" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
-              <svg *ngIf="!isRestoreLoading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-ccw-alt"></svg>
-              {{ isRestoreLoading ? 'در حال بازیابی اطلاعات...' : 'بازیابی اطلاعات' }}
-            </button>
+              class="w-full"
+            ></button>
 
           </div>
         </div>

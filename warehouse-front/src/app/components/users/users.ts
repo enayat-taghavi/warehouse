@@ -23,10 +23,11 @@ import { CompanyApiService } from '../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../core/services/active-company.service';
 import { Company } from '../../core/models/company.model';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
 
 @Component({
   selector: 'app-users',
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent],
   templateUrl: './users.html',
   styleUrl: './users.css'
 })

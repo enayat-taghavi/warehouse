@@ -5,6 +5,7 @@ import { HttpClient, HttpContext } from '@angular/common/http';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../../core/error/error.interceptor';
 import { environment } from '../../../environments/environment';
 import { BRANDING } from '../../core/branding';
+import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 
 export interface VerifiedPersonnel {
   valid: boolean;
@@ -28,7 +29,7 @@ export interface VerifiedPersonnel {
 @Component({
   selector: 'app-verify-card',
   standalone: true,
-  imports: [CommonModule, NgOptimizedImage, RouterModule],
+  imports: [CommonModule, NgOptimizedImage, RouterModule, SvgIconDirective],
   templateUrl: './verify-card.html',
   styleUrl: './verify-card.css'
 })

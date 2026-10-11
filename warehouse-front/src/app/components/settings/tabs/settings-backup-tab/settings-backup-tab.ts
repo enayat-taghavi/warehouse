@@ -13,11 +13,12 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { PersianDatePipe } from '../../../../shared/pipes/persian-date.pipe';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { environment } from '../../../../../environments/environment';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 
 @Component({
   selector: 'app-settings-backup-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, PersianDatePipe],
+  imports: [CommonModule, FormsModule, SvgIconDirective, PersianDatePipe, ActionButtonComponent],
   templateUrl: './settings-backup-tab.html'
 })
 export class SettingsBackupTabComponent implements OnInit, OnDestroy {

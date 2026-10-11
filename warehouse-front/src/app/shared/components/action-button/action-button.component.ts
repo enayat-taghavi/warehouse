@@ -100,8 +100,8 @@ const SIZE_CLASSES: Record<ActionSize, { iconOnly: string; withLabel: string; au
   },
 })
 export class ActionButtonComponent {
-  /** کلید کار در فرهنگ و کاتالوگ (الزامی) */
-  readonly appAction = input.required<ActionIconKey>();
+  /** کلید کار در فرهنگ و کاتالوگ */
+  readonly appAction = input<ActionIconKey>('refresh');
 
   /** عنوان دکمه (پیش‌فرض از کاتالوگ) */
   readonly label = input<string>();
@@ -145,7 +145,10 @@ export class ActionButtonComponent {
     );
   }
 
-  readonly catalogEntry = computed<ActionCatalogEntry>(() => ACTION_CATALOG[this.appAction()]);
+  readonly catalogEntry = computed<ActionCatalogEntry>(() => {
+    const key = this.appAction();
+    return (key && ACTION_CATALOG[key]) ? ACTION_CATALOG[key] : ACTION_CATALOG['refresh'];
+  });
 
   readonly isSensitive = computed<boolean>(() => this.catalogEntry().sensitive);
 
@@ -212,7 +215,9 @@ export class ActionButtonComponent {
   readonly hostClasses = computed<string>(() => {
     const justifyClass =
       this.overflowContext != null ? 'max-sm:justify-start sm:justify-center' : 'justify-center';
-    const base = `inline-flex items-center ${justifyClass} font-bold whitespace-nowrap shrink-0 transition-all duration-150 select-none cursor-pointer active:scale-95 disabled:active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed aria-disabled:active:scale-100 aria-disabled:opacity-50 aria-disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1`;
+    const cursorClass =
+      this.disabled() || this.busy() ? 'cursor-not-allowed opacity-50' : 'cursor-pointer active:scale-95';
+    const base = `inline-flex items-center ${justifyClass} font-bold whitespace-nowrap shrink-0 transition-all duration-150 select-none ${cursorClass} disabled:active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed aria-disabled:active:scale-100 aria-disabled:opacity-50 aria-disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1`;
     const toneClass = TONE_CLASSES[this.resolvedTone()];
     const szConfig = SIZE_CLASSES[this.size()];
 
