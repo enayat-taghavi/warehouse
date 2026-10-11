@@ -5,6 +5,7 @@ import { ReportApiService } from '../../core/api/report-api.service';
 import { ReportExportJob } from '../../core/models/report.model';
 import { ToastService } from '../../shared/components/toast/toast.component';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
 
 /**
  * نوار پیشرفت خروجی Excel بزرگ — poll هر ۲ ثانیه از /exports/<id>/
@@ -13,14 +14,22 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 @Component({
   selector: 'app-export-progress',
   standalone: true,
-  imports: [CommonModule, SvgIconDirective],
+  imports: [CommonModule, SvgIconDirective, ActionButtonComponent],
   template: `
     <div class="bg-white rounded-xl border border-slate-200 p-3 space-y-2 shadow-sm">
       <div class="flex items-center justify-between gap-2">
         <div class="text-xs font-bold text-slate-800">
           خروجی Excel ({{ job?.total_rows ?? totalRows }} ردیف)
         </div>
-        <button type="button" (click)="close.emit()" class="text-slate-400 hover:text-slate-600 text-xs">✕</button>
+        <button
+          type="button"
+          appAction="cancel"
+          display="icon"
+          tone="slate"
+          [label]="'بستن'"
+          (click)="close.emit()"
+          class="min-w-[40px] min-h-[40px] sm:min-w-[32px] sm:min-h-[32px]"
+        ></button>
       </div>
 
       @if (job?.status === 'failed') {
@@ -28,13 +37,17 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
       } @else if (job?.status === 'done') {
         <div class="flex items-center gap-2">
           <span class="text-xs text-emerald-600 font-bold">فایل آماده است ✓</span>
-          <button type="button" (click)="download()" [disabled]="downloading"
-                  class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
-            @if (downloading) {
-              <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24" appIcon="spinner-wedge"></svg>
-            }
-            دانلود فایل
-          </button>
+          <button
+            type="button"
+            appAction="download"
+            size="sm"
+            display="label"
+            tone="emerald"
+            [label]="'دانلود فایل'"
+            [busy]="downloading"
+            [disabled]="downloading"
+            (click)="download()"
+          ></button>
         </div>
       } @else {
         <div class="w-full bg-slate-50 rounded-full h-2 overflow-hidden">

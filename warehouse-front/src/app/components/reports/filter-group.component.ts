@@ -9,6 +9,7 @@ import {
   isFilterGroup,
 } from '../../core/models/report.model';
 import { FilterValueComponent } from './filter-value.component';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
 
 /**
  * گروه بازگشتی AND/OR درخت فیلتر
@@ -20,7 +21,7 @@ import { FilterValueComponent } from './filter-value.component';
 @Component({
   selector: 'app-filter-group',
   standalone: true,
-  imports: [CommonModule, FormsModule, FilterValueComponent],
+  imports: [CommonModule, FormsModule, FilterValueComponent, ActionButtonComponent],
   template: `
     <div class="rounded-2xl border p-3 space-y-2.5 shadow-2xs transition-all"
          [class.border-rose-300]="group.not"
@@ -32,42 +33,58 @@ import { FilterValueComponent } from './filter-value.component';
       <div class="flex items-center gap-2 flex-wrap">
         <div class="flex rounded-xl overflow-hidden border border-slate-200 bg-white shadow-2xs">
           <button type="button" (click)="setOp('AND')"
-                  class="px-3 py-1 text-[11px] font-black transition-colors cursor-pointer"
+                  class="px-3 py-1 text-[11px] font-black transition-colors cursor-pointer min-h-[40px] sm:min-h-0 flex items-center"
                   [class.bg-indigo-600]="group.op === 'AND'" [class.text-white]="group.op === 'AND'"
                   [class.text-slate-600]="group.op !== 'AND'">و (AND)</button>
           <button type="button" (click)="setOp('OR')"
-                  class="px-3 py-1 text-[11px] font-black transition-colors cursor-pointer"
+                  class="px-3 py-1 text-[11px] font-black transition-colors cursor-pointer min-h-[40px] sm:min-h-0 flex items-center"
                   [class.bg-amber-500]="group.op === 'OR'" [class.text-white]="group.op === 'OR'"
                   [class.text-slate-600]="group.op !== 'OR'">یا (OR)</button>
         </div>
 
         <button type="button" (click)="toggleNot(group)"
                 title="نقیض کل گروه — ردیف‌هایی که این شرایط را ندارند"
-                class="px-2.5 py-1 text-[11px] font-black rounded-xl border transition-all cursor-pointer"
+                class="px-2.5 py-1 text-[11px] font-black rounded-xl border transition-all cursor-pointer min-h-[40px] sm:min-h-0 flex items-center"
                 [class.bg-rose-600]="group.not" [class.text-white]="group.not"
                 [class.border-rose-600]="group.not"
                 [class.bg-white]="!group.not" [class.text-slate-600]="!group.not"
                 [class.border-slate-200]="!group.not">نقیض گروه (NOT)</button>
 
-        <button type="button" (click)="addCondition()" [disabled]="totalConditions >= 60"
-                title="{{ totalConditions >= 60 ? 'حداکثر ۶۰ شرط مجاز است' : 'افزودن یک شرط جدید' }}"
-                class="text-[11px] font-bold text-indigo-600 bg-white border border-indigo-200 rounded-xl px-2.5 py-1 transition-all cursor-pointer shadow-2xs hover:bg-indigo-50"
-                [class.opacity-40]="totalConditions >= 60" [class.cursor-not-allowed]="totalConditions >= 60">
-          + شرط
-        </button>
+        <button
+          type="button"
+          appAction="create"
+          size="sm"
+          display="label"
+          tone="indigo"
+          [label]="'+ شرط'"
+          [disabled]="totalConditions >= 60"
+          (click)="addCondition()"
+          title="{{ totalConditions >= 60 ? 'حداکثر ۶۰ شرط مجاز است' : 'افزودن یک شرط جدید' }}"
+        ></button>
         @if (depth < maxDepth) {
-          <button type="button" (click)="addGroup()"
-                  title="افزودن زیرمجموعه شروط با منطق جداگانه"
-                  class="text-[11px] font-bold text-slate-600 hover:text-slate-800 bg-white border border-slate-200 rounded-xl px-2.5 py-1 transition-all cursor-pointer shadow-2xs hover:bg-slate-50">
-            + گروه تودرتو
-          </button>
+          <button
+            type="button"
+            appAction="create"
+            size="sm"
+            display="label"
+            tone="slate"
+            [label]="'+ گروه تودرتو'"
+            (click)="addGroup()"
+            title="افزودن زیرمجموعه شروط با منطق جداگانه"
+          ></button>
         }
         @if (depth > 0) {
-          <button type="button" (click)="removeSelf.emit()"
-                  title="حذف این گروه و تمام شروط درون آن"
-                  class="text-[11px] font-bold text-rose-500 hover:text-rose-700 mr-auto transition-colors cursor-pointer">
-            حذف گروه ✕
-          </button>
+          <button
+            type="button"
+            appAction="delete"
+            size="sm"
+            display="label"
+            tone="rose"
+            [label]="'حذف گروه'"
+            (click)="removeSelf.emit()"
+            title="حذف این گروه و تمام شروط درون آن"
+            class="mr-auto"
+          ></button>
         }
       </div>
 
@@ -88,7 +105,7 @@ import { FilterValueComponent } from './filter-value.component';
             <!-- نقیض شرط -->
             <button type="button" (click)="toggleNot(asCond(child))"
                     title="نقیض این شرط (NOT)"
-                    class="h-7 px-2 shrink-0 text-xs font-black rounded-lg border transition-all cursor-pointer"
+                    class="h-7 px-2 shrink-0 text-xs font-black rounded-lg border transition-all cursor-pointer min-h-[40px] sm:min-h-0 flex items-center"
                     [class.bg-rose-600]="asCond(child).not" [class.text-white]="asCond(child).not"
                     [class.border-rose-600]="asCond(child).not"
                     [class.bg-slate-50]="!asCond(child).not" [class.text-slate-400]="!asCond(child).not"
@@ -118,9 +135,17 @@ import { FilterValueComponent } from './filter-value.component';
               [value]="asCond(child).value"
               (valueChange)="setValue(asCond(child), $event)" />
 
-            <button type="button" (click)="removeChild($index)"
-                    title="حذف این شرط"
-                    class="text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md p-1 mr-auto text-xs font-bold transition-colors cursor-pointer">✕</button>
+            <button
+              type="button"
+              appAction="delete"
+              size="sm"
+              display="icon"
+              tone="slate"
+              [label]="'حذف شرط'"
+              (click)="removeChild($index)"
+              title="حذف این شرط"
+              class="mr-auto min-w-[40px] min-h-[40px] sm:min-w-[32px] sm:min-h-[32px]"
+            ></button>
           </div>
         }
       }

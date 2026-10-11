@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReportTemplate } from '../../core/models/report.model';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
 
 /**
  * فهرست قالب‌های گزارش ذخیره‌شده (شخصی + عمومی)
@@ -8,7 +9,7 @@ import { ReportTemplate } from '../../core/models/report.model';
 @Component({
   selector: 'app-saved-reports',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ActionButtonComponent],
   template: `
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div class="px-3.5 py-2.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -38,12 +39,12 @@ import { ReportTemplate } from '../../core/models/report.model';
               <span class="text-[10px] text-slate-400">{{ t.owner_username }}</span>
               @if (t.is_owner) {
                 <button type="button" (click)="$event.stopPropagation(); togglePublic.emit(t)"
-                        class="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold transition-all sm:opacity-0 sm:group-hover:opacity-100 px-1 py-0.5 rounded hover:bg-indigo-100/50">
+                        class="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold transition-all sm:opacity-0 sm:group-hover:opacity-100 px-1.5 py-1 rounded hover:bg-indigo-100/50 min-h-[40px] sm:min-h-0 flex items-center">
                   {{ t.is_public ? 'خصوصی‌سازی' : 'عمومی‌سازی' }}
                 </button>
-                <button type="button" (click)="$event.stopPropagation(); remove.emit(t)"
-                        class="text-[10px] text-rose-500 hover:text-rose-700 font-bold transition-all sm:opacity-0 sm:group-hover:opacity-100 mr-auto px-1 py-0.5 rounded hover:bg-rose-50">
-                  حذف
+                <button type="button" appAction="delete" size="sm" display="label" tone="rose" [label]="'حذف'"
+                        (click)="$event.stopPropagation(); remove.emit(t)"
+                        class="text-[10px] sm:opacity-0 sm:group-hover:opacity-100 mr-auto">
                 </button>
               }
             </div>
