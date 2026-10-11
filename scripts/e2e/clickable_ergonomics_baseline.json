@@ -3,7 +3,7 @@
   "counters": {
     "rule_1_unlabeled_icon_buttons": 166,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 252,
+    "rule_3_non_standard_actions": 251,
     "rule_4_retired_icons": 111,
     "rule_5_neutralized_tap_targets": 0
   },
@@ -11,59 +11,59 @@
     "rule_1_unlabeled_icon_buttons": [
       {
         "file": "components/audit/audit.html",
-        "line": 863
+        "line": 861
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1002
+        "line": 1000
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1116
+        "line": 1114
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1119
+        "line": 1117
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1144
+        "line": 1142
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1220
+        "line": 1218
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1245
+        "line": 1243
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1331
+        "line": 1329
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1356
+        "line": 1354
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1454
+        "line": 1452
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1590
+        "line": 1588
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1765
+        "line": 1763
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1790
+        "line": 1788
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1826
+        "line": 1824
       },
       {
         "file": "components/count-tracking/count-tracking.html",
@@ -134,13 +134,13 @@
     "rule_3_non_standard_actions": [
       {
         "file": "components/audit/audit.html",
-        "line": 1590,
+        "line": 1588,
         "method": "closeExportModal",
         "icon": "x"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1762,
+        "line": 1760,
         "method": "closeExportModal",
         "icon": null
       },
@@ -326,87 +326,87 @@
       },
       {
         "file": "components/audit/audit.html",
-        "line": 228,
+        "line": 226,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 343,
+        "line": 341,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 602,
+        "line": 600,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 627,
+        "line": 625,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 642,
+        "line": 640,
         "icon": "rotate-cw-legacy"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 796,
+        "line": 794,
         "icon": "rotate-cw-legacy"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 893,
+        "line": 891,
         "icon": "spinner-arc"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 975,
+        "line": 973,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 995,
+        "line": 993,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1012,
+        "line": 1010,
         "icon": "spinner-arc"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1120,
+        "line": 1118,
         "icon": "spinner-arc"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1121,
+        "line": 1119,
         "icon": "rotate-ccw-lucide"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1137,
+        "line": 1135,
         "icon": "trash"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1221,
+        "line": 1219,
         "icon": "spinner-arc"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1222,
+        "line": 1220,
         "icon": "trash"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1275,
+        "line": 1273,
         "icon": "spinner-arc"
       },
       {
         "file": "components/audit/audit.html",
-        "line": 1332,
+        "line": 1330,
         "icon": "spinner-arc"
       },
       {

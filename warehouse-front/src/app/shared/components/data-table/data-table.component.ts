@@ -101,13 +101,13 @@ export interface PageEvent {
             </div>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <!-- Zoom Controls -->
             <div class="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
               <button (click)="zoomOut()" title="کوچک‌نمایی (Zoom Out)" aria-label="کوچک‌نمایی (Zoom Out)" class="px-2 py-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center justify-center cursor-pointer tap-target">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zoom-out"></svg>
               </button>
-              <button (click)="resetZoom()" title="اندازه اصلی (100%)" aria-label="اندازه اصلی (100%)" class="px-2 py-1.5 text-[10px] font-bold text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors border-x border-slate-100 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] text-center flex items-center justify-center cursor-pointer tap-target">
+              <button (click)="resetZoom()" title="اندازه اصلی (100%)" class="px-2 py-1.5 text-[10px] font-bold text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors border-x border-slate-100 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] text-center flex items-center justify-center cursor-pointer tap-target">
                 {{ (zoomScale * 100) | number:'1.0-0' }}%
               </button>
               <button (click)="zoomIn()" title="بزرگ‌نمایی (Zoom In)" aria-label="بزرگ‌نمایی (Zoom In)" class="px-2 py-1.5 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center justify-center cursor-pointer tap-target">

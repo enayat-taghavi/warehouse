@@ -31,9 +31,9 @@
          [ngClass]="errorType === 'network' ? 'bg-amber-950/40 border-amber-800/60' : (errorType === 'rate_limit' ? 'bg-indigo-950/40 border-indigo-800/60' : 'bg-rose-950/40 border-rose-800/60')">
       <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-3xl shadow-inner border"
            [ngClass]="errorType === 'network' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : (errorType === 'rate_limit' ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 'bg-rose-500/20 text-rose-400 border-rose-500/30')">
-        <svg *ngIf="errorType === 'network'" appIcon="wifi-off" class="w-8 h-8"></svg>
-        <svg *ngIf="errorType === 'rate_limit'" appIcon="status-pending" class="w-8 h-8"></svg>
-        <svg *ngIf="errorType === 'invalid' || !errorType" appIcon="action-close" class="w-8 h-8"></svg>
+        <svg *ngIf="errorType === 'network'" appIcon="status-offline" class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+        <svg *ngIf="errorType === 'rate_limit'" appIcon="status-pending" class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+        <svg *ngIf="errorType === 'invalid' || !errorType" appIcon="status-rejected" class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
       </div>
       <div class="space-y-1">
         <h2 class="text-base font-black"
@@ -167,7 +167,7 @@
       <!-- دکمه‌های اقدام -->
       <div class="pt-1">
         <button (click)="verifyCode(code)" class="w-full min-h-[48px] py-3.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-200 transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer">
-          <svg appIcon="action-refresh" class="w-4 h-4"></svg>
+          <svg appIcon="action-refresh" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
           <span>استعلام مجدد وضعیت</span>
         </button>
       </div>

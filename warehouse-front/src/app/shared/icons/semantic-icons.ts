@@ -92,20 +92,19 @@ export type PlatformEntityIconKey = keyof typeof PLATFORM_ENTITY_ICONS;
 
 /**
  * فرهنگ آیکون معنایی نقش‌های سازمانی (Role Icons)
- * تفکیک‌شده و بدون تداخل با ۸ مفهوم حساس کارها و موجودیت‌ها:
- * (search, credit-card, database, clipboard, barcode, package, file-text, building)
+ * هیچ آیکونی با کارها، وضعیت‌ها یا موجودیت‌ها (و نقش دیگر) مشترک نیست؛ spec فرهنگ آیکون این را می‌سنجد.
  */
 export const ROLE_ICONS = {
   'ops_commander': 'shield',
   'operator': 'user',
   'supervisor': 'user-check',
-  'accountant': 'calculator',
+  'accountant': 'layout',
   'manager': 'crown',
   'treasury': 'briefcase-2',
   'org_admin': 'shield-check',
-  'counter': 'check-square',
+  'counter': 'crosshair',
   'warehouse_supervisor': 'box',
-  'docs_specialist': 'file-check',
+  'docs_specialist': 'file-plus',
   'manager_review': 'check-check',
   'superuser': 'zap',
 } as const satisfies Record<string, IconName>;

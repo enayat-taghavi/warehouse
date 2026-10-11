@@ -53,7 +53,6 @@
         type="button"
         appAction="export-excel"
         (click)="openExportModal()"
-        title="تنظیم فیلترها و دریافت فایل اکسل/CSV لاگ‌ها"
       ></button>
 
       <!-- دکمه بروزرسانی -->
@@ -62,7 +61,6 @@
         appAction="refresh"
         [busy]="isLoading"
         (click)="refreshAll()"
-        title="بروزرسانی بلادرنگ داده‌های ممیزی و امنیت"
       ></button>
 
       <!-- دکمه راهنمای جامع رهگیری و امنیت (Square Purple/Indigo Icon) -->
@@ -493,52 +491,52 @@
       <!-- چیپ جستجو -->
       <span *ngIf="searchTerm.trim()" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs min-h-[32px] sm:min-h-0">
         <span>جستجو: «{{searchTerm}}»</span>
-        <button (click)="clearSearch()" type="button" title="حذف فیلتر جستجو" class="hover:bg-indigo-200/60 rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer">✕</button>
+        <button (click)="clearSearch()" type="button" title="حذف فیلتر جستجو" aria-label="حذف فیلتر جستجو" class="hover:bg-indigo-200/60 rounded-full w-5 h-5 tap-target flex items-center justify-center transition-colors cursor-pointer">✕</button>
       </span>
 
       <!-- چیپ ماژول -->
       <span *ngIf="activeTab === 'audit' && selectedModule" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-xs min-h-[32px] sm:min-h-0">
         <span>ماژول: {{getModuleLabel(selectedModule)}}</span>
-        <button (click)="clearModuleFilter()" type="button" title="حذف فیلتر ماژول" class="hover:bg-blue-200/60 rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer">✕</button>
+        <button (click)="clearModuleFilter()" type="button" title="حذف فیلتر ماژول" aria-label="حذف فیلتر ماژول" class="hover:bg-blue-200/60 rounded-full w-5 h-5 tap-target flex items-center justify-center transition-colors cursor-pointer">✕</button>
       </span>
 
       <!-- چیپ عملیات -->
       <span *ngIf="activeTab === 'audit' && selectedAction" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-xs min-h-[32px] sm:min-h-0">
         <span>عملیات: {{getActionLabel(selectedAction)}}</span>
-        <button (click)="clearActionFilter()" type="button" title="حذف فیلتر عملیات" class="hover:bg-purple-200/60 rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer">✕</button>
+        <button (click)="clearActionFilter()" type="button" title="حذف فیلتر عملیات" aria-label="حذف فیلتر عملیات" class="hover:bg-purple-200/60 rounded-full w-5 h-5 tap-target flex items-center justify-center transition-colors cursor-pointer">✕</button>
       </span>
 
       <!-- چیپ قلمرو -->
       <span *ngIf="activeTab === 'audit' && selectedAppScope !== 'all'" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs min-h-[32px] sm:min-h-0">
         <span>قلمرو: {{selectedAppScope === 'warehouse' ? 'سامانه انبارداری' : 'مالی و اداری'}}</span>
-        <button (click)="clearAppScopeFilter()" type="button" title="حذف فیلتر قلمرو" class="hover:bg-indigo-200/60 rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer">✕</button>
+        <button (click)="clearAppScopeFilter()" type="button" title="حذف فیلتر قلمرو" aria-label="حذف فیلتر قلمرو" class="hover:bg-indigo-200/60 rounded-full w-5 h-5 tap-target flex items-center justify-center transition-colors cursor-pointer">✕</button>
       </span>
 
       <!-- چیپ رویداد امنیتی -->
       <span *ngIf="activeTab === 'security' && selectedEvent" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shadow-xs min-h-[32px] sm:min-h-0">
         <span>رویداد: {{selectedEvent === 'CROSS_APP_DENIED' ? 'انسداد نقض قلمرو' : (selectedEvent === 'APP_SCOPE_SWITCH' ? 'سوئیچ قلمرو' : selectedEvent)}}</span>
-        <button (click)="clearEventFilter()" type="button" title="حذف فیلتر رویداد" class="hover:bg-rose-200/60 rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer">✕</button>
+        <button (click)="clearEventFilter()" type="button" title="حذف فیلتر رویداد" aria-label="حذف فیلتر رویداد" class="hover:bg-rose-200/60 rounded-full w-5 h-5 tap-target flex items-center justify-center transition-colors cursor-pointer">✕</button>
       </span>
 
       <!-- چیپ سطح اهمیت -->
       <span *ngIf="(activeTab === 'audit' || activeTab === 'security') && selectedSeverity" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold min-h-[32px] sm:min-h-0" [ngClass]="selectedSeverity === 'critical' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-amber-50 text-amber-700 border border-amber-200'">
         <span>اهمیت: {{getSeverityLabel(selectedSeverity)}}</span>
-        <button (click)="clearSeverityFilter()" type="button" title="حذف فیلتر اهمیت" class="rounded-full w-5 h-5 flex items-center justify-center transition-colors hover:bg-black/10 cursor-pointer">✕</button>
+        <button (click)="clearSeverityFilter()" type="button" title="حذف فیلتر اهمیت" aria-label="حذف فیلتر اهمیت" class="rounded-full w-5 h-5 tap-target flex items-center justify-center transition-colors hover:bg-black/10 cursor-pointer">✕</button>
       </span>
 
       <!-- چیپ وضعیت ورود -->
       <span *ngIf="activeTab === 'login' && selectedLoginStatus" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs min-h-[32px] sm:min-h-0">
         <span>وضعیت: {{getLoginStatusLabel(selectedLoginStatus)}}</span>
-        <button (click)="clearLoginStatusFilter()" type="button" title="حذف فیلتر وضعیت" class="hover:bg-emerald-200/60 rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer">✕</button>
+        <button (click)="clearLoginStatusFilter()" type="button" title="حذف فیلتر وضعیت" aria-label="حذف فیلتر وضعیت" class="hover:bg-emerald-200/60 rounded-full w-5 h-5 tap-target flex items-center justify-center transition-colors cursor-pointer">✕</button>
       </span>
 
       <!-- چیپ تاریخ -->
       <span *ngIf="fromDate || toDate" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200 shadow-xs min-h-[32px] sm:min-h-0">
         <span>بازه زمانی فیلترشده</span>
-        <button (click)="clearDateFilter()" type="button" title="حذف فیلتر تاریخ" class="hover:bg-slate-200 rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer">✕</button>
+        <button (click)="clearDateFilter()" type="button" title="حذف فیلتر تاریخ" aria-label="حذف فیلتر تاریخ" class="hover:bg-slate-200 rounded-full w-5 h-5 tap-target flex items-center justify-center transition-colors cursor-pointer">✕</button>
       </span>
 
-      <button (click)="resetFilters()" type="button" class="min-h-[36px] flex items-center text-[10px] font-bold text-rose-600 hover:text-rose-800 transition-colors mr-1 underline cursor-pointer">
+      <button (click)="resetFilters()" type="button" class="min-h-[40px] sm:min-h-[36px] flex items-center text-[10px] font-bold text-rose-600 hover:text-rose-800 transition-colors mr-1 underline cursor-pointer">
         حذف همه
       </button>
     </div>

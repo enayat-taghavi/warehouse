@@ -121,8 +121,10 @@ export interface TabDef {
           }
 
           @if (tab.count !== undefined && tab.count !== null) {
+            <!-- در حالت icon زیر sm فقط آیکون می‌ماند تا نوار بدون اسکرول جا شود -->
             <span
-              class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md tabular-nums transition-colors"
+              class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md tabular-nums transition-colors sm:inline"
+              [class.hidden]="mobile() === 'icon'"
               [ngClass]="counterClasses(tab)"
             >
               {{ tab.count }}

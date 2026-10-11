@@ -169,7 +169,7 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
           </button>
         </div>
 
-        <div class="flex items-center gap-3 w-full sm:w-auto">
+        <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <button
             appAction="close"
             size="lg"

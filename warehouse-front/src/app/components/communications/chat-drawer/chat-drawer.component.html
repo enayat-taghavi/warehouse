@@ -258,7 +258,7 @@
         <img *ngIf="filePreviewUrl" [src]="filePreviewUrl" class="w-8 h-8 rounded object-cover" />
         <span class="truncate text-slate-700 dark:text-slate-200">{{ selectedFile.name }}</span>
       </div>
-      <button appAction="close" size="sm" display="icon" tone="rose" (click)="removeSelectedFile()"></button>
+      <button appAction="close" size="sm" display="icon" tone="rose" label="حذف فایل پیوست" (click)="removeSelectedFile()"></button>
     </div>
 
     <!-- Input Form -->

@@ -663,20 +663,20 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       { id: 'fiscal_insurance', label: 'سال مالی، بیمه و مودیان', shortLabel: 'بیمه و مالی', icon: 'calculator' },
     ];
     if (this.isAccountingInstalled) {
-      tabs.push({ id: 'treasury', label: 'بانک و شبا', shortLabel: 'بانک', icon: 'credit-card', count: this.companyBankAccounts.length });
-      tabs.push({ id: 'governance', label: 'هیئت‌مدیره و امضا', shortLabel: 'هیئت‌مدیره', icon: 'users', count: this.companyBoardMembers.length });
+      tabs.push({ id: 'treasury', label: 'بانک و شبا', shortLabel: 'بانک', icon: 'credit-card', count: this.companyBankAccounts.length || undefined });
+      tabs.push({ id: 'governance', label: 'هیئت‌مدیره و امضا', shortLabel: 'هیئت‌مدیره', icon: 'users', count: this.companyBoardMembers.length || undefined });
     }
-    tabs.push({ id: 'documents', label: 'بایگانی مدارک', shortLabel: 'مدارک', icon: 'folder', count: this.companyDocuments.length });
-    tabs.push({ id: 'access', label: 'دسترسی کاربران', shortLabel: 'دسترسی', icon: 'shield', count: this.studioAccesses.length });
+    tabs.push({ id: 'documents', label: 'بایگانی مدارک', shortLabel: 'مدارک', icon: 'folder', count: this.companyDocuments.length || undefined });
+    tabs.push({ id: 'access', label: 'دسترسی کاربران', shortLabel: 'دسترسی', icon: 'shield', count: this.studioAccesses.length || undefined });
     if (this.companyModal.isEdit && this.isAccountingInstalled) {
       tabs.push({ id: 'gdrive', label: 'همگام‌سازی گوگل‌درایو', shortLabel: 'گوگل‌درایو', icon: 'google-drive' });
     }
     return tabs;
   }
 
-  setModalTab(tab: any): void {
-    const targetTab = this.isTabAvailable(tab) ? tab : 'identity';
-    this.activeModalTab = targetTab;
+  setModalTab(tab: string): void {
+    if (!this.isTabAvailable(tab)) tab = 'identity';
+    this.activeModalTab = tab as typeof this.activeModalTab;
     if (this.companyModal.data.id) {
       if (tab === 'fiscal_insurance') {
         this.loadCompanyFiscalPeriods(this.companyModal.data.id);

@@ -34,34 +34,13 @@
       <!-- Left Side (RTL End): 3 Action Buttons + Create Button -->
       <div class="flex items-center gap-2">
         <!-- خروجی اکسل -->
-        <button 
-          type="button"
-          (click)="exportExcel()"
-          class="w-9 h-9 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-all tap-target"
-          title="خروجی اکسل شرکت‌ها"
-          aria-label="خروجی اکسل شرکت‌ها">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-export-excel"></svg>
-        </button>
+        <button type="button" appAction="export-excel" label="خروجی اکسل شرکت‌ها" (click)="exportExcel()"></button>
 
         <!-- ورودی اکسل -->
-        <button 
-          type="button"
-          (click)="importExcel()"
-          class="w-9 h-9 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 transition-all tap-target"
-          title="ورود اطلاعات از اکسل"
-          aria-label="ورود اطلاعات از اکسل">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-import-excel"></svg>
-        </button>
+        <button type="button" appAction="import-excel" label="ورود اطلاعات از اکسل" (click)="importExcel()"></button>
 
         <!-- رفرش / همگام‌سازی -->
-        <button 
-          type="button"
-          (click)="loadCompanies()"
-          class="w-9 h-9 min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all tap-target"
-          title="به‌روزرسانی داده‌ها"
-          aria-label="به‌روزرسانی داده‌ها">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" [class.animate-spin]="isLoading" appIcon="action-refresh"></svg>
-        </button>
+        <button type="button" appAction="refresh" label="به‌روزرسانی داده‌ها" [busy]="isLoading" (click)="loadCompanies()"></button>
 
         <div class="h-6 w-px bg-slate-200 mx-1"></div>
 
@@ -390,7 +369,7 @@
           <button 
             type="button"
             (click)="openUserAccessModal(company)"
-            class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 hover:text-emerald-600 bg-slate-50 hover:bg-emerald-50 border border-slate-200 transition-all cursor-pointer"
+            class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 hover:text-emerald-600 bg-slate-50 hover:bg-emerald-50 border border-slate-200 transition-all cursor-pointer"
             title="مدیریت دسترسی کاربران به این شرکت"
             aria-label="دسترسی‌ها">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
@@ -399,31 +378,23 @@
           <button 
             type="button"
             (click)="openEditModal(company)"
-            class="w-8 h-8 rounded-xl flex items-center justify-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all cursor-pointer"
+            class="w-10 h-10 rounded-xl flex items-center justify-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all cursor-pointer"
             title="ویرایش مشخصات و مدارک شرکت (استودیو)"
             aria-label="استودیو">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit"></svg>
             <span class="sr-only">استودیو</span>
           </button>
           <button 
             *ngIf="isAccountingInstalled"
             type="button"
             (click)="openGoogleDriveModal(company)"
-            class="w-8 h-8 rounded-xl flex items-center justify-center text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
+            class="w-10 h-10 rounded-xl flex items-center justify-center text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
             title="همگام‌سازی گوگل‌درایو"
             aria-label="گوگل‌درایو">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
             <span class="sr-only">گوگل‌درایو</span>
           </button>
-          <button 
-            type="button"
-            (click)="confirmDelete(company)"
-            class="w-8 h-8 rounded-xl flex items-center justify-center text-rose-600 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer"
-            title="حذف شرکت"
-            aria-label="حذف">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
-            <span class="sr-only">حذف</span>
-          </button>
+          <button type="button" appAction="delete" size="sm" (click)="confirmDelete(company)"></button>
         </div>
       </div>
     </div>
@@ -443,7 +414,7 @@
           <button 
             type="button" 
             (click)="closeCompanyModal()" 
-            class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 transition-all cursor-pointer font-bold text-xs active:scale-95 shadow-2xs"
+            class="flex items-center gap-1.5 min-h-[40px] sm:min-h-[36px] px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 transition-all cursor-pointer font-bold text-xs active:scale-95 shadow-2xs"
             title="بازگشت به فهرست شرکت‌ها">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-right"></svg>
             <span>بازگشت به فهرست</span>
@@ -476,7 +447,7 @@
             type="button" 
             (click)="submitCompanyForm()" 
             [disabled]="companyModal.isSubmitting"
-            class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            class="flex items-center gap-1.5 min-h-[40px] sm:min-h-[36px] px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
             [title]="companyModal.isEdit ? 'ذخیره مشخصات شرکت' : 'ثبت قطعی شرکت'">
             <span *ngIf="companyModal.isSubmitting" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
             <svg *ngIf="!companyModal.isSubmitting" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
@@ -486,8 +457,8 @@
             type="button" 
             appAction="close" 
             display="icon" 
-            (click)="closeCompanyModal()" 
-            title="انصراف و بازگشت">
+            label="انصراف و بازگشت"
+            (click)="closeCompanyModal()">
           </button>
         </div>
       </div>
@@ -497,6 +468,7 @@
         [tabs]="modalTabs"
         [active]="activeModalTab"
         mobile="icon"
+        fullLabelFrom="xl"
         (activeChange)="setModalTab($event)">
       </app-tab-bar>
 

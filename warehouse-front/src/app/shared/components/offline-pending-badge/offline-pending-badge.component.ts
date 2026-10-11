@@ -416,7 +416,7 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
                   (click)="onRetryError(err.id!)"
                   class="min-h-[40px] sm:min-h-[32px] px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer tap-target"
                 >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-restore"></svg>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-refresh"></svg>
                   تلاش مجدد
                 </button>
                 <button

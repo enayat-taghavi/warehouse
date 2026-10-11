@@ -75,6 +75,7 @@ describe('فرهنگ آیکون یکسان (Semantic Icon Dictionary)', () => {
     recordUsage(PLATFORM_ENTITY_ICONS, 'platform-entity');
     recordUsage(WAREHOUSE_ENTITY_ICONS, 'warehouse-entity');
     recordUsage(ACCOUNTING_ENTITY_ICONS, 'accounting-entity');
+    recordUsage(ROLE_ICONS, 'role');
 
     const unauthorizedSharing: string[] = [];
     for (const [icon, usages] of iconUsageMap.entries()) {
@@ -119,13 +120,13 @@ describe('فرهنگ آیکون یکسان (Semantic Icon Dictionary)', () => {
 
     expect(resolveSemanticIcon('role-operator')).toBe('user');
     expect(resolveSemanticIcon('role-supervisor')).toBe('user-check');
-    expect(resolveSemanticIcon('role-accountant')).toBe('calculator');
+    expect(resolveSemanticIcon('role-accountant')).toBe('layout');
     expect(resolveSemanticIcon('role-manager')).toBe('crown');
     expect(resolveSemanticIcon('role-treasury')).toBe('briefcase-2');
     expect(resolveSemanticIcon('role-org_admin')).toBe('shield-check');
-    expect(resolveSemanticIcon('role-counter')).toBe('check-square');
+    expect(resolveSemanticIcon('role-counter')).toBe('crosshair');
     expect(resolveSemanticIcon('role-warehouse_supervisor')).toBe('box');
-    expect(resolveSemanticIcon('role-docs_specialist')).toBe('file-check');
+    expect(resolveSemanticIcon('role-docs_specialist')).toBe('file-plus');
     expect(resolveSemanticIcon('role-manager_review')).toBe('check-check');
 
     // نام‌های مستقیم رجیستری

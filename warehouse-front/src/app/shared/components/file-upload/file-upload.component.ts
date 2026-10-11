@@ -65,6 +65,7 @@ import { ActionButtonComponent } from '../action-button/action-button.component'
             size="sm"
             display="icon"
             tone="rose"
+            label="حذف فایل"
             (click)="removeFile($event)"
           ></button>
         </div>

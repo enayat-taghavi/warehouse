@@ -55,7 +55,7 @@
                 (click)="togglePassword()"
                 [title]="passwordFieldType === 'password' ? 'نمایش رمز عبور' : 'پنهان کردن رمز عبور'"
                 [attr.aria-label]="passwordFieldType === 'password' ? 'نمایش رمز عبور' : 'پنهان کردن رمز عبور'"
-                class="absolute inset-y-0 left-0 flex items-center justify-center w-10 h-10 my-auto cursor-pointer text-slate-400 hover:text-white transition-colors focus:outline-none z-10"
+                class="absolute inset-y-0 left-0 flex items-center justify-center w-10 h-10 my-auto rounded-lg cursor-pointer text-slate-400 hover:text-white transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 z-10"
               >
                 <svg *ngIf="passwordFieldType === 'password'" class="pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view"></svg>
                 <svg *ngIf="passwordFieldType === 'text'" class="pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-hide"></svg>
@@ -63,7 +63,7 @@
             </div>
           </div>
           <div class="flex items-center justify-end text-xs text-slate-400 pt-1">
-            <a href="#" (click)="showForgotPasswordDialog($event)" class="min-h-[36px] flex items-center text-indigo-400 hover:text-indigo-300 transition-colors">فراموشی رمز عبور</a>
+            <a href="#" (click)="showForgotPasswordDialog($event)" class="min-h-[40px] sm:min-h-[36px] flex items-center text-indigo-400 hover:text-indigo-300 transition-colors">فراموشی رمز عبور</a>
           </div>
 
           <button

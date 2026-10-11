@@ -11,6 +11,7 @@ import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 
 import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../shared/components/tab-bar/tab-bar.component';
 
 export interface SensitivePermissionItem {
   code: string;
@@ -35,7 +36,7 @@ export interface GovernanceUserItem {
 @Component({
   selector: 'app-operations-rbac-governance',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, TabBarComponent],
   templateUrl: './operations-rbac-governance.html',
   styleUrl: './operations-rbac-governance.css'
 })
@@ -59,6 +60,11 @@ export class OperationsRbacGovernanceComponent implements OnInit {
 
   public isLoading = signal<boolean>(false);
   public activeTab = signal<'sensitive_vault' | 'superuser_audit' | 'session_claims'>('sensitive_vault');
+  readonly governanceTabs: TabDef[] = [
+    { id: 'sensitive_vault', label: 'گاوصندوق ۶ مجوز حساس', shortLabel: 'گاوصندوق', icon: 'lock' },
+    { id: 'superuser_audit', label: 'ممیزی کاربران و دسترسی‌ها', shortLabel: 'کاربران', icon: 'user-circle' },
+    { id: 'session_claims', label: 'توکن‌ها و ادعاهای قلمرو', shortLabel: 'توکن‌ها', icon: 'key' },
+  ];
   public users = signal<GovernanceUserItem[]>([]);
   public superuserCount = signal<number>(0);
   public regularUserCount = signal<number>(0);

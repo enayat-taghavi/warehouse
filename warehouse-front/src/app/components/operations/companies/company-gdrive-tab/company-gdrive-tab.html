@@ -212,7 +212,7 @@
         [disabled]="isSyncing()"
         (click)="syncAllFiles()"
         class="px-4 py-2 min-h-[40px] sm:min-h-[36px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shrink-0 cursor-pointer active:scale-95 transition-all inline-flex items-center gap-1.5 shadow-xs tap-target">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-send"></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-sync"></svg>
         {{ isSyncing() ? 'در حال ثبت در صف...' : 'ارسال سوابق به حساب تازه' }}
       </button>
     </div>
@@ -569,7 +569,7 @@
               [disabled]="isTriggeringSync() || !cfg.stats?.pending"
               (click)="triggerManualSync()"
               class="w-full py-2.5 px-4 min-h-[40px] sm:min-h-[36px] rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all tap-target">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-send"></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-sync"></svg>
               {{ isTriggeringSync() ? 'در حال ارسال صف در پس‌زمینه...' : 'ارسال دستی صف فایل‌های معلق (' + (cfg.stats?.pending || 0) + ')' }}
             </button>
 

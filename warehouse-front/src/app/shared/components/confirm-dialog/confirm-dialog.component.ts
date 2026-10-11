@@ -221,15 +221,6 @@ export class ConfirmDialogComponent {
     }[type];
   }
 
-  get confirmBtnClass(): string {
-    const type = this.config()?.type ?? 'warning';
-    return {
-      danger: 'bg-rose-500 hover:bg-rose-600',
-      warning: 'bg-amber-500 hover:bg-amber-600',
-      info: 'bg-blue-500 hover:bg-blue-600',
-    }[type];
-  }
-
   get confirmTone(): ActionTone {
     const type = this.config()?.type ?? 'warning';
     if (type === 'danger') return 'rose';

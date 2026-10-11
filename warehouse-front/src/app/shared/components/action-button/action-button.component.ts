@@ -100,8 +100,8 @@ const SIZE_CLASSES: Record<ActionSize, { iconOnly: string; withLabel: string; au
   },
 })
 export class ActionButtonComponent {
-  /** کلید کار در فرهنگ و کاتالوگ */
-  readonly appAction = input<ActionIconKey>('refresh');
+  /** کلید کار در فرهنگ و کاتالوگ (الزامی) */
+  readonly appAction = input.required<ActionIconKey>();
 
   /** عنوان دکمه (پیش‌فرض از کاتالوگ) */
   readonly label = input<string>();
@@ -145,10 +145,7 @@ export class ActionButtonComponent {
     );
   }
 
-  readonly catalogEntry = computed<ActionCatalogEntry>(() => {
-    const key = this.appAction();
-    return (key && ACTION_CATALOG[key]) ? ACTION_CATALOG[key] : ACTION_CATALOG['refresh'];
-  });
+  readonly catalogEntry = computed<ActionCatalogEntry>(() => ACTION_CATALOG[this.appAction()]);
 
   readonly isSensitive = computed<boolean>(() => this.catalogEntry().sensitive);
 
