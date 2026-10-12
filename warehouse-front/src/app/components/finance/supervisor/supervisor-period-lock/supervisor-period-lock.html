@@ -1,111 +1,83 @@
 <div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-      
-      <!-- سمت راست: دراپ‌داون انتخاب بخش و تب‌های فرعی -->
-      <div class="flex flex-wrap items-center gap-2 md:gap-3">
-        <!-- انتخابگر بخش فعال -->
-        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
-          <select
-            [(ngModel)]="selectedSectionId"
-            (change)="onSectionChanged()"
-            class="bg-transparent text-xs font-black text-emerald-700 focus:outline-none cursor-pointer">
-            <option *ngFor="let sec of mySections" [value]="sec.id">
-              {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- انتخابگر ماه و سال -->
-        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">ماه:</span>
-          <select
-            [(ngModel)]="selectedMonth"
-            (change)="onMonthChanged()"
-            class="bg-transparent text-xs font-black text-indigo-700 focus:outline-none cursor-pointer">
-            <option *ngFor="let m of monthsList" [value]="m">{{ m }}</option>
-          </select>
-          <span class="text-[11px] font-mono text-slate-400">/</span>
-          <input
-            type="text"
-            [(ngModel)]="fiscalYear"
-            (change)="onMonthChanged()"
-            class="w-12 bg-transparent text-xs font-mono font-bold text-slate-700 focus:outline-none" />
-        </div>
-
-        <!-- تب‌های فرعی در کپسول محصور -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
-          <button
-            type="button"
-            (click)="switchSubTab('active_period')"
-            [ngClass]="activeSubTab === 'active_period' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>📅 دوره جاری کارگاه</span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('locked_periods')"
-            [ngClass]="activeSubTab === 'locked_periods' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>🔒 دوره‌های قفل‌شده</span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('anomalies')"
-            [ngClass]="activeSubTab === 'anomalies' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>⚠️ مغایرت‌ها و هشدارها</span>
-          </button>
-        </div>
+  <app-command-center rowFrom="lg">
+    <!-- سمت راست: دراپ‌داون انتخاب بخش، سال/ماه و تب‌های فرعی -->
+    <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
+      <!-- انتخابگر بخش فعال -->
+      <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
+        <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
+        <select
+          [(ngModel)]="selectedSectionId"
+          (change)="onSectionChanged()"
+          class="bg-transparent text-xs font-black text-emerald-700 focus:outline-none cursor-pointer">
+          <option *ngFor="let sec of mySections" [value]="sec.id">
+            {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
+          </option>
+        </select>
       </div>
 
-      <!-- سمت چپ: دکمه‌های اکشن ۳گانه و دکمه قفل دوره -->
-      <div class="flex items-center gap-2 justify-end">
-        <button
-          type="button"
-          (click)="lockAndSubmitPeriod()"
-          [disabled]="isLocking || currentPeriodSummary.is_locked || currentPeriodSummary.pending_approvals > 0"
-          [title]="currentPeriodSummary.pending_approvals > 0 ? 'ابتدا باید تمام کارکردهای در انتظار تایید شوند' : ''"
-          class="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
-          <span>🔒</span>
-          <span>{{ currentPeriodSummary.is_locked ? 'دوره قفل و به حسابداری ارسال شده' : 'قفل دوره و ارسال به حسابداری' }}</span>
-        </button>
-
-        <button
-          type="button"
-          (click)="exportExcel()"
-          class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="خروجی گزارش تجمیعی ماهانه"
-          aria-label="خروجی اکسل">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
-        </button>
-
-        <button
-          type="button"
-          (click)="importExcel()"
-          class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="قالب گزارش تجمیعی"
-          aria-label="ایمپورت اکسل">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="upload"></svg>
-        </button>
-
-        <button
-          type="button"
-          (click)="fetchPeriodData()"
-          class="w-9 h-9 rounded-xl bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="تازه‌سازی اطلاعات دوره"
-          aria-label="رفرش">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.animate-spin]="isLoading" appIcon="refresh-cw"></svg>
-        </button>
+      <!-- انتخابگر ماه و سال -->
+      <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
+        <span class="text-[11px] font-bold text-slate-500">ماه:</span>
+        <select
+          [(ngModel)]="selectedMonth"
+          (change)="onMonthChanged()"
+          class="bg-transparent text-xs font-black text-indigo-700 focus:outline-none cursor-pointer">
+          <option *ngFor="let m of monthsList" [value]="m">{{ m }}</option>
+        </select>
+        <span class="text-[11px] font-mono text-slate-400">/</span>
+        <input
+          type="text"
+          [(ngModel)]="fiscalYear"
+          (change)="onMonthChanged()"
+          class="w-12 bg-transparent text-xs font-mono font-bold text-slate-700 focus:outline-none" />
       </div>
 
+      <!-- تب‌های فرعی با جعبه‌ابزار مشترک -->
+      <app-tab-bar
+        [tabs]="periodSubTabs"
+        [active]="activeSubTab"
+        (activeChange)="switchSubTab($event)" />
     </div>
-  </div>
+
+    <!-- سمت چپ: دکمه‌های اکشن ۳گانه و دکمه قفل دوره -->
+    <div cc-actions class="flex items-center gap-2 justify-end">
+      <button
+        type="button"
+        appAction="lock"
+        display="label"
+        [label]="currentPeriodSummary.is_locked ? 'دوره قفل و به حسابداری ارسال شده' : 'قفل دوره و ارسال به حسابداری'"
+        [busy]="isLocking"
+        [disabled]="isLocking || currentPeriodSummary.is_locked || currentPeriodSummary.pending_approvals > 0"
+        [title]="currentPeriodSummary.pending_approvals > 0 ? 'ابتدا باید تمام کارکردهای در انتظار تایید شوند' : ''"
+        (click)="lockAndSubmitPeriod()">
+      </button>
+
+      <button
+        type="button"
+        appAction="export-excel"
+        (click)="exportExcel()"
+        title="خروجی گزارش تجمیعی ماهانه">
+      </button>
+
+      <button
+        type="button"
+        appAction="import-excel"
+        (click)="importExcel()"
+        title="قالب گزارش تجمیعی">
+      </button>
+
+      <button
+        type="button"
+        appAction="refresh"
+        [busy]="isLoading"
+        [disabled]="isLoading"
+        (click)="fetchPeriodData()"
+        title="تازه‌سازی اطلاعات دوره">
+      </button>
+    </div>
+  </app-command-center>
 
   <!-- ── ۲. بنر هشدار سد سروری قفل دوره در صورت وجود کارکرد معلق ── -->
   <div *ngIf="!currentPeriodSummary.is_locked && currentPeriodSummary.pending_approvals > 0" class="p-4 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-900 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
@@ -120,10 +92,10 @@
     </div>
     <button
       type="button"
-      (click)="goToAttendance()"
-      class="px-3 py-1.5 bg-amber-600 text-white hover:bg-amber-700 text-xs font-black rounded-xl shadow-xs transition-all whitespace-nowrap cursor-pointer active:scale-95 flex items-center gap-1.5 self-start md:self-auto">
-      <span>بررسی و تایید کارکردها</span>
-      <span>◀</span>
+      appAction="forward"
+      display="label"
+      label="بررسی و تایید کارکردها"
+      (click)="goToAttendance()">
     </button>
   </div>
 

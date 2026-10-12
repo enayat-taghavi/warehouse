@@ -9,16 +9,29 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection } from '../../../../core/models/personnel.model';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+
+export type SupervisorPeriodLockSubTab = 'active_period' | 'locked_periods' | 'anomalies';
 
 @Component({
   selector: 'app-supervisor-period-lock-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    SvgIconDirective,
+    CommandCenterComponent,
+    TabBarComponent,
+    ActionButtonComponent,
+  ],
   templateUrl: './supervisor-period-lock.html',
   styleUrl: './supervisor-period-lock.css'
 })
 export class SupervisorPeriodLockHubComponent implements OnInit, OnDestroy {
-  activeSubTab: 'active_period' | 'locked_periods' | 'anomalies' = 'active_period';
+  activeSubTab: SupervisorPeriodLockSubTab = 'active_period';
 
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
@@ -147,10 +160,43 @@ export class SupervisorPeriodLockHubComponent implements OnInit, OnDestroy {
     this.fetchPeriodData();
   }
 
-  switchSubTab(tab: 'active_period' | 'locked_periods' | 'anomalies'): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
-    this.fetchPeriodData();
+  get periodSubTabs(): TabDef[] {
+    const p = this.currentPeriodSummary;
+    return [
+      {
+        id: 'active_period',
+        label: 'دوره جاری کارگاه',
+        shortLabel: 'جاری',
+        icon: 'calendar',
+        tone: 'indigo',
+      },
+      {
+        id: 'locked_periods',
+        label: 'دوره‌های قفل‌شده',
+        shortLabel: 'قفل‌شده',
+        icon: 'lock',
+        tone: 'slate',
+      },
+      {
+        id: 'anomalies',
+        label: 'مغایرت‌ها و هشدارها',
+        shortLabel: 'مغایرت',
+        icon: 'alert-triangle',
+        tone: 'amber',
+        count: p.pending_approvals,
+        indicator: p.pending_approvals > 0
+          ? { tone: 'amber', label: 'کارکرد تاییدنشده', pulse: true }
+          : undefined,
+      },
+    ];
+  }
+
+  switchSubTab(tab: string): void {
+    if (tab === 'active_period' || tab === 'locked_periods' || tab === 'anomalies') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+      this.fetchPeriodData();
+    }
   }
 
   syncUrlParams(): void {
