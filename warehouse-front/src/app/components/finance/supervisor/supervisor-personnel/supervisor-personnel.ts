@@ -12,6 +12,7 @@ import { WebSocketService } from '../../../../core/http/websocket.service';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export type SupervisorPersonnelSubTab = 'new' | 'attendance' | 'changes' | 'all';
 
@@ -186,44 +187,52 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
     this.fetchData();
   }
 
+  // Memoized tabs for app-tab-bar (getter با آرایه تازه در هر چرخه، در dev mode خطای NG0100 می‌دهد)
+  private personnelSubTabsKey = '';
+  private personnelSubTabsCache: TabDef[] = [];
   get personnelSubTabs(): TabDef[] {
     const sc = this.statusCounters;
-    return [
-      {
-        id: 'new',
-        label: 'پرونده‌های جدید',
-        shortLabel: 'جدید',
-        icon: 'user-plus',
-        count: sc.newCount,
-        tone: 'amber',
-        indicator: sc.newCount > 0 ? { tone: 'amber', label: 'پرونده جدید نیازمند بررسی', pulse: true } : undefined,
-      },
-      {
-        id: 'attendance',
-        label: 'کارکرد و حضورغیاب',
-        shortLabel: 'کارکرد',
-        icon: 'clock',
-        count: sc.attendanceCount,
-        tone: 'indigo',
-      },
-      {
-        id: 'changes',
-        label: 'درخواست‌های تغییرات',
-        shortLabel: 'تغییرات',
-        icon: 'refresh-cw',
-        count: sc.changesCount,
-        tone: 'amber',
-        indicator: sc.changesCount > 0 ? { tone: 'amber', label: 'درخواست تغییرات جدید', pulse: true } : undefined,
-      },
-      {
-        id: 'all',
-        label: 'همه پرسنل',
-        shortLabel: 'همه',
-        icon: 'users',
-        count: sc.allCount,
-        tone: 'slate',
-      },
-    ];
+    const key = `${sc.newCount}:${sc.attendanceCount}:${sc.changesCount}:${sc.allCount}`;
+    if (key !== this.personnelSubTabsKey) {
+      this.personnelSubTabsKey = key;
+      this.personnelSubTabsCache = [
+        {
+          id: 'new',
+          label: 'پرونده‌های جدید',
+          shortLabel: 'جدید',
+          icon: ACCOUNTING_ENTITY_ICONS.newPersonnel,
+          count: sc.newCount,
+          tone: 'amber',
+          indicator: sc.newCount > 0 ? { tone: 'amber', label: 'پرونده جدید نیازمند بررسی', pulse: true } : undefined,
+        },
+        {
+          id: 'attendance',
+          label: 'کارکرد و حضورغیاب',
+          shortLabel: 'کارکرد',
+          icon: ACCOUNTING_ENTITY_ICONS.attendance,
+          count: sc.attendanceCount,
+          tone: 'indigo',
+        },
+        {
+          id: 'changes',
+          label: 'درخواست‌های تغییرات',
+          shortLabel: 'تغییرات',
+          icon: 'action-edit',
+          count: sc.changesCount,
+          tone: 'amber',
+          indicator: sc.changesCount > 0 ? { tone: 'amber', label: 'درخواست تغییرات جدید', pulse: true } : undefined,
+        },
+        {
+          id: 'all',
+          label: 'همه پرسنل',
+          shortLabel: 'همه',
+          icon: ACCOUNTING_ENTITY_ICONS.personnel,
+          count: sc.allCount,
+          tone: 'slate',
+        },
+      ];
+    }
+    return this.personnelSubTabsCache;
   }
 
   switchSubTab(tab: string): void {

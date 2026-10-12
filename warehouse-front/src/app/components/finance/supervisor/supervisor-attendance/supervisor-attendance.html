@@ -21,6 +21,8 @@
       <app-tab-bar
         [tabs]="attendanceSubTabs"
         [active]="activeSubTab"
+        mobile="icon"
+        fullLabelFrom="lg"
         (activeChange)="switchSubTab($event)"
       ></app-tab-bar>
     </div>
@@ -31,7 +33,8 @@
         *ngIf="statusCounters.pending > 0"
         type="button"
         appAction="approve"
-        label="تایید کارکرد"
+        display="label"
+        label="تایید دسته‌ای"
         (click)="approveBatch()"
       ></button>
 
@@ -174,8 +177,9 @@
                 ></button>
                 <button
                   type="button"
-                  appAction="reject"
+                  appAction="return"
                   size="sm"
+                  display="label"
                   label="عودت"
                   (click)="openRevisionModal(item)"
                 ></button>
@@ -220,12 +224,14 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           label="انصراف"
           (click)="closeRevisionModal()"
         ></button>
         <button
           type="button"
-          appAction="reject"
+          appAction="return"
+          display="label"
           label="ثبت عودت و ارجاع"
           [busy]="isSubmittingRevision"
           [disabled]="isSubmittingRevision || !revisionReasonText.trim()"

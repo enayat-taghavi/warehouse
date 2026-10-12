@@ -13,6 +13,7 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export type InvoiceStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'pending_accountant' | 'ready_to_pay' | 'paid' | 'rejected';
 
@@ -38,9 +39,9 @@ export class EmployeeInvoicesHubComponent implements OnInit {
         { id: 'all', label: 'همه', icon: 'status-all', count: sc.all },
         { id: 'draft', label: 'پیش‌نویس', icon: 'status-draft', count: sc.draft },
         { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', icon: 'status-pending', count: sc.pending_supervisor },
-        { id: 'pending_accountant', label: 'در انتظار حسابدار', shortLabel: 'حسابدار', icon: 'status-revision', count: sc.pending_accountant },
+        { id: 'pending_accountant', label: 'در انتظار حسابدار', shortLabel: 'حسابدار', icon: 'role-accountant', count: sc.pending_accountant },
         { id: 'ready_to_pay', label: 'آماده پرداخت', shortLabel: 'آماده', icon: 'status-approved', count: sc.ready_to_pay },
-        { id: 'paid', label: 'پرداخت‌شده', icon: 'status-approved', count: sc.paid },
+        { id: 'paid', label: 'پرداخت‌شده', icon: ACCOUNTING_ENTITY_ICONS.payroll, count: sc.paid },
       ];
     }
     return this.invoiceStatusTabsCache;

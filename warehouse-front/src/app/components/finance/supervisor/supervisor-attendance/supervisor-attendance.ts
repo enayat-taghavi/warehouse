@@ -11,6 +11,7 @@ import { ProjectSection } from '../../../../core/models/personnel.model';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { PLATFORM_ENTITY_ICONS } from '../../../../shared/icons/semantic-icons';
 
 @Component({
   selector: 'app-supervisor-attendance-hub',
@@ -39,11 +40,15 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
     if (key !== this.attendanceSubTabsKey) {
       this.attendanceSubTabsKey = key;
       this.attendanceSubTabsCache = [
-        { id: 'pending', label: 'نیازمند بررسی', shortLabel: 'بررسی', icon: 'status-pending', count: sc.pending },
+        {
+          id: 'pending', label: 'نیازمند بررسی', shortLabel: 'بررسی', icon: 'status-pending', count: sc.pending,
+          // در mobile="icon" شمارنده زیر sm پنهان است؛ نقطه نشان می‌دهد کار در انتظار هست
+          indicator: sc.pending > 0 ? { tone: 'amber', label: 'کارکرد در انتظار بررسی' } : undefined,
+        },
         { id: 'approved', label: 'تایید شده', shortLabel: 'تایید', icon: 'status-approved', count: sc.approved },
         { id: 'revision', label: 'عودت داده‌شده', shortLabel: 'عودت', icon: 'status-revision', count: sc.revision, tone: 'rose' },
         { id: 'all', label: 'کل کارکردها', shortLabel: 'همه', icon: 'status-all', count: sc.all },
-        { id: 'daily_summary', label: 'خلاصه روزانه کارگاه', shortLabel: 'خلاصه', icon: 'bar-chart-2' },
+        { id: 'daily_summary', label: 'خلاصه روزانه کارگاه', shortLabel: 'خلاصه', icon: PLATFORM_ENTITY_ICONS.reports },
       ];
     }
     return this.attendanceSubTabsCache;

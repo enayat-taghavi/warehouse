@@ -14,6 +14,7 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export type SupervisorFleetSubTab = 'new' | 'work_logs' | 'changes' | 'all';
 
@@ -48,7 +49,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
           id: 'new',
           label: 'خودروهای جدید',
           shortLabel: 'جدید',
-          icon: 'truck',
+          icon: ACCOUNTING_ENTITY_ICONS.fleet,
           count: sc.newCount,
           tone: 'amber',
           indicator: sc.newCount > 0 ? { tone: 'amber', label: 'خودروی جدید نیازمند بررسی', pulse: true } : undefined
@@ -57,7 +58,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
           id: 'work_logs',
           label: 'کارکرد ماشین‌آلات',
           shortLabel: 'کارکرد',
-          icon: 'clock',
+          icon: ACCOUNTING_ENTITY_ICONS.attendance,
           count: sc.workLogsCount,
           tone: 'indigo'
         },
@@ -65,7 +66,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
           id: 'changes',
           label: 'درخواست‌های تغییرات',
           shortLabel: 'تغییرات',
-          icon: 'refresh-cw',
+          icon: 'action-edit',
           count: sc.changesCount,
           tone: 'amber',
           indicator: sc.changesCount > 0 ? { tone: 'amber', label: 'درخواست تغییرات جدید', pulse: true } : undefined
@@ -74,7 +75,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
           id: 'all',
           label: 'همه ناوگان',
           shortLabel: 'همه',
-          icon: 'folder',
+          icon: 'status-all',
           count: sc.allCount,
           tone: 'slate'
         },

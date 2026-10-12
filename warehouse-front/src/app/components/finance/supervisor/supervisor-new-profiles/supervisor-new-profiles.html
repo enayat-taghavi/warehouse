@@ -21,6 +21,7 @@
       <app-tab-bar
         [tabs]="profileSubTabs"
         [active]="activeSubTab"
+        mobile="icon"
         fullLabelFrom="lg"
         (activeChange)="switchSubTab($event)" />
     </div>
@@ -124,13 +125,15 @@
                     type="button"
                     appAction="approve"
                     size="sm"
+                    display="label"
                     label="تایید پرونده"
                     (click)="openApprovalModal('personnel', item)">
                   </button>
                   <button
                     type="button"
-                    appAction="reject"
+                    appAction="return"
                     size="sm"
+                    display="label"
                     label="عودت"
                     (click)="rejectPersonnel(item)">
                   </button>
@@ -179,13 +182,15 @@
                     type="button"
                     appAction="approve"
                     size="sm"
+                    display="label"
                     label="تایید ناوگان"
                     (click)="openApprovalModal('vehicle', item)">
                   </button>
                   <button
                     type="button"
-                    appAction="reject"
+                    appAction="return"
                     size="sm"
+                    display="label"
                     label="عودت"
                     (click)="rejectVehicle(item)">
                   </button>
@@ -259,6 +264,7 @@
                     type="button"
                     appAction="view"
                     size="sm"
+                    display="label"
                     label="مقایسه Diff"
                     title="مشاهده مقایسه تفصیلی تغییرات"
                     (click)="openDiffModal(cr, 'personnel')">
@@ -267,6 +273,7 @@
                     type="button"
                     appAction="approve"
                     size="sm"
+                    display="label"
                     label="تایید سرپرست"
                     title="تایید مرحله اول سرپرست و ارسال به حسابداری"
                     (click)="openApprovalModal('personnel_cr', cr)">
@@ -336,6 +343,7 @@
                     type="button"
                     appAction="view"
                     size="sm"
+                    display="label"
                     label="مقایسه Diff"
                     title="مشاهده مقایسه تفصیلی تغییرات خودرو"
                     (click)="openDiffModal(cr, 'vehicle')">
@@ -344,6 +352,7 @@
                     type="button"
                     appAction="approve"
                     size="sm"
+                    display="label"
                     label="تایید سرپرست"
                     title="تایید مرحله اول سرپرست و ارسال به حسابداری"
                     (click)="openApprovalModal('vehicle_cr', cr)">
@@ -391,7 +400,7 @@
             مقایسه تغییرات درخواستی: {{ selectedDiffCR.personnel_name || selectedDiffCR.driver_name || selectedDiffCR.plate_number }}
           </h3>
         </div>
-        <button type="button" appAction="close" (click)="isDiffModalOpen = false"></button>
+        <button type="button" appAction="close" display="icon" (click)="isDiffModalOpen = false"></button>
       </div>
 
       <div class="overflow-x-auto max-h-[60vh] overflow-y-auto">
@@ -442,6 +451,7 @@
         <button
           type="button"
           appAction="close"
+          display="icon"
           label="بستن"
           (click)="isDiffModalOpen = false">
         </button>
@@ -454,7 +464,8 @@
         <button
           type="button"
           appAction="approve"
-          label="تایید سرپرست (ارسال به حسابداری)"
+          display="label"
+          label="تایید"
           (click)="openApprovalModal(diffTargetType === 'personnel' ? 'personnel_cr' : 'vehicle_cr', selectedDiffCR)">
         </button>
       </div>
@@ -471,7 +482,7 @@
           <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm font-black">✓</span>
           <h3 class="text-sm font-black text-slate-800">{{ approvalTarget.title }}</h3>
         </div>
-        <button type="button" appAction="close" (click)="closeApprovalModal()"></button>
+        <button type="button" appAction="close" display="icon" (click)="closeApprovalModal()"></button>
       </div>
 
       <div class="space-y-3">
@@ -496,6 +507,7 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           label="انصراف"
           (click)="closeApprovalModal()">
         </button>
@@ -504,6 +516,7 @@
           appAction="approve"
           [busy]="isApproving"
           [disabled]="isApproving"
+          display="label"
           label="تایید و ارسال به حسابداری"
           (click)="confirmApproval()">
         </button>

@@ -1,10 +1,10 @@
 {
   "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
   "counters": {
-    "rule_1_unlabeled_icon_buttons": 151,
+    "rule_1_unlabeled_icon_buttons": 134,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 211,
-    "rule_4_retired_icons": 90,
+    "rule_3_non_standard_actions": 148,
+    "rule_4_retired_icons": 64,
     "rule_5_neutralized_tap_targets": 0
   },
   "violations": {
@@ -75,27 +75,11 @@
       },
       {
         "file": "components/customs/customs.html",
-        "line": 118
+        "line": 230
       },
       {
         "file": "components/customs/customs.html",
-        "line": 239
-      },
-      {
-        "file": "components/customs/customs.html",
-        "line": 554
-      },
-      {
-        "file": "components/customs/customs.html",
-        "line": 919
-      },
-      {
-        "file": "components/customs/customs.html",
-        "line": 992
-      },
-      {
-        "file": "components/customs/customs.html",
-        "line": 1117
+        "line": 545
       },
       {
         "file": "components/dispatch/dispatch.html",
@@ -122,12 +106,28 @@
         "line": 175
       },
       {
-        "file": "components/dynamic-fields/dynamic-fields.html",
-        "line": 141
+        "file": "components/finance/accountant/accountant-diskettes/accountant-diskettes.html",
+        "line": 139
       },
       {
         "file": "components/finance/accountant/accountant-diskettes/accountant-diskettes.html",
-        "line": 139
+        "line": 172
+      },
+      {
+        "file": "components/finance/accountant/accountant-diskettes/accountant-diskettes.html",
+        "line": 206
+      },
+      {
+        "file": "components/finance/accountant/accountant-diskettes/accountant-diskettes.html",
+        "line": 222
+      },
+      {
+        "file": "components/finance/accountant/accountant-diskettes/accountant-diskettes.html",
+        "line": 238
+      },
+      {
+        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
+        "line": 771
       }
     ],
     "rule_2_tab_min_widths": [],
@@ -149,24 +149,6 @@
         "line": 973,
         "method": "closeExportModal",
         "icon": "action-close"
-      },
-      {
-        "file": "components/customs/customs.html",
-        "line": 992,
-        "method": "closeExportModal",
-        "icon": "x"
-      },
-      {
-        "file": "components/customs/customs.html",
-        "line": 1080,
-        "method": "closeExportModal",
-        "icon": null
-      },
-      {
-        "file": "components/customs/customs.html",
-        "line": 1083,
-        "method": "executeExport",
-        "icon": null
       },
       {
         "file": "components/dispatch/dispatch.html",
@@ -196,7 +178,7 @@
         "file": "components/dispatch/dispatch.html",
         "line": 517,
         "method": "executeExport",
-        "icon": "spinner"
+        "icon": "action-loading"
       },
       {
         "file": "components/docs/docs.html",
@@ -233,12 +215,6 @@
         "line": 515,
         "method": "executeImport",
         "icon": null
-      },
-      {
-        "file": "components/dynamic-fields/dynamic-fields.html",
-        "line": 89,
-        "method": "deleteField",
-        "icon": "trash-2-lucide"
       },
       {
         "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
@@ -310,6 +286,30 @@
         "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
         "line": 277,
         "method": "approveVehicleFinance",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
+        "line": 284,
+        "method": "openRejectModal",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
+        "line": 292,
+        "method": "openRejectModal",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
+        "line": 340,
+        "method": "approveChangeRequestFinance",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
+        "line": 361,
+        "method": "approveChangeRequestFinance",
         "icon": null
       }
     ],
@@ -410,11 +410,6 @@
         "icon": "spinner-arc"
       },
       {
-        "file": "components/customs/customs.html",
-        "line": 1103,
-        "icon": "scan-square"
-      },
-      {
         "file": "components/dispatch/dispatch.html",
         "line": 447,
         "icon": "trash-lucide"
@@ -435,21 +430,6 @@
         "icon": "loader-arc"
       },
       {
-        "file": "components/dynamic-fields/dynamic-fields.html",
-        "line": 13,
-        "icon": "copy-alt"
-      },
-      {
-        "file": "components/dynamic-fields/dynamic-fields.html",
-        "line": 90,
-        "icon": "trash-2-lucide"
-      },
-      {
-        "file": "components/dynamic-fields/dynamic-fields.html",
-        "line": 159,
-        "icon": "loader-arc"
-      },
-      {
         "file": "components/field/field.html",
         "line": 78,
         "icon": "eye-slash"
@@ -462,6 +442,26 @@
       {
         "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
         "line": 272,
+        "icon": "edit-2"
+      },
+      {
+        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
+        "line": 362,
+        "icon": "edit-2"
+      },
+      {
+        "file": "components/finance/accountant/accountant-personnel/accountant-personnel.html",
+        "line": 254,
+        "icon": "edit-2"
+      },
+      {
+        "file": "components/finance/accountant/accountant-personnel/accountant-personnel.html",
+        "line": 272,
+        "icon": "undo-2"
+      },
+      {
+        "file": "components/finance/accountant/accountant-personnel/accountant-personnel.html",
+        "line": 370,
         "icon": "edit-2"
       }
     ],

@@ -21,6 +21,8 @@
       <app-tab-bar
         [tabs]="fleetSubTabs"
         [active]="activeSubTab"
+        mobile="icon"
+        fullLabelFrom="lg"
         (activeChange)="switchSubTab($event)"
       ></app-tab-bar>
     </div>
@@ -71,12 +73,14 @@
       <button
         type="button"
         appAction="approve"
+        display="label"
         label="تایید گروهی سرپرست"
         (click)="openBatchApproveModal()"
       ></button>
       <button
         type="button"
         appAction="close"
+        display="label"
         label="انصراف"
         (click)="selectedVehicleIds.clear()"
       ></button>
@@ -150,6 +154,7 @@
                     type="button"
                     appAction="view"
                     size="sm"
+                    display="label"
                     label="پرونده"
                     (click)="openViewVehicleModal(item)"
                   ></button>
@@ -157,6 +162,7 @@
                     type="button"
                     appAction="approve"
                     size="sm"
+                    display="label"
                     label="تایید"
                     (click)="openApproveModal('new', item)"
                   ></button>
@@ -164,6 +170,7 @@
                     type="button"
                     appAction="return"
                     size="sm"
+                    display="label"
                     label="عودت"
                     (click)="openRejectModal('new', item, 'revision')"
                   ></button>
@@ -220,11 +227,13 @@
           </div>
         </div>
 
+        <!-- در ۳۶۰px هر چهار عنوان در ستون ۷۱px جا می‌شوند؛ پس عنوان‌دار می‌مانند (قاعده ۳ و ۵) -->
         <div class="pt-2 border-t border-line grid grid-cols-4 gap-1.5">
           <button
             type="button"
             appAction="view"
             size="sm"
+            display="label"
             label="پرونده"
             (click)="openViewVehicleModal(item)"
           ></button>
@@ -232,6 +241,7 @@
             type="button"
             appAction="approve"
             size="sm"
+            display="label"
             label="تایید"
             (click)="openApproveModal('new', item)"
           ></button>
@@ -239,6 +249,7 @@
             type="button"
             appAction="return"
             size="sm"
+            display="label"
             label="عودت"
             (click)="openRejectModal('new', item, 'revision')"
           ></button>
@@ -293,6 +304,7 @@
                     type="button"
                     appAction="approve"
                     size="sm"
+                    display="label"
                     label="تایید کارکرد"
                     (click)="openApproveModal('work_logs', item)"
                   ></button>
@@ -300,6 +312,7 @@
                     type="button"
                     appAction="return"
                     size="sm"
+                    display="label"
                     label="عودت"
                     (click)="openRejectModal('work_logs', item, 'revision')"
                   ></button>
@@ -342,6 +355,7 @@
                   type="button"
                   appAction="view"
                   size="sm"
+                  display="label"
                   label="مشاهده مغایرت‌ها"
                   (click)="openDiffModal(cr)"
                 ></button>
@@ -358,6 +372,7 @@
                   type="button"
                   appAction="approve"
                   size="sm"
+                  display="label"
                   label="تایید تغییرات"
                   (click)="openApproveModal('changes', cr)"
                 ></button>
@@ -405,6 +420,7 @@
                   type="button"
                   appAction="view"
                   size="sm"
+                  display="label"
                   label="مشاهده پرونده"
                   (click)="openViewVehicleModal(v)"
                 ></button>
@@ -441,12 +457,14 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           label="انصراف"
           (click)="closeApproveModal()"
         ></button>
         <button
           type="button"
           appAction="approve"
+          display="label"
           label="ثبت تایید سرپرست"
           [busy]="isApproving"
           (click)="submitApproval()"
@@ -483,12 +501,14 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           label="انصراف"
           (click)="closeBatchApproveModal()"
         ></button>
         <button
           type="button"
           appAction="approve"
+          display="label"
           label="تایید و ارسال به حسابداری"
           [busy]="isBatchApproving"
           (click)="submitBatchApprove()"
@@ -577,12 +597,14 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           label="انصراف"
           (click)="closeRejectModal()"
         ></button>
         <button
           type="button"
           [appAction]="rejectTarget?.action === 'revision' ? 'return' : 'reject'"
+          display="label"
           [label]="rejectTarget?.action === 'revision' ? 'ثبت عودت' : 'ثبت قطعی'"
           [busy]="isRejecting"
           (click)="submitReject()"
@@ -794,6 +816,7 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           label="بستن پنجره پرونده"
           (click)="closeViewVehicleModal()"
         ></button>
@@ -855,6 +878,7 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           label="بستن پنجره"
           (click)="closeDiffModal()"
         ></button>

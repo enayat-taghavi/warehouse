@@ -47,7 +47,7 @@
         type="button"
         appAction="lock"
         display="label"
-        [label]="currentPeriodSummary.is_locked ? 'دوره قفل و به حسابداری ارسال شده' : 'قفل دوره و ارسال به حسابداری'"
+        [label]="currentPeriodSummary.is_locked ? 'دوره قفل و ارسال شده' : 'قفل و ارسال دوره'"
         [busy]="isLocking"
         [disabled]="isLocking || currentPeriodSummary.is_locked || currentPeriodSummary.pending_approvals > 0"
         [title]="currentPeriodSummary.pending_approvals > 0 ? 'ابتدا باید تمام کارکردهای در انتظار تایید شوند' : ''"

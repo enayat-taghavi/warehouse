@@ -21,6 +21,7 @@
       <app-tab-bar
         [tabs]="personnelSubTabs"
         [active]="activeSubTab"
+        mobile="icon"
         fullLabelFrom="lg"
         (activeChange)="switchSubTab($event)" />
     </div>
@@ -35,7 +36,7 @@
           placeholder="جستجوی نام، کد ملی، تلفن..."
           class="w-full bg-slate-100/90 text-xs py-1.5 pr-8 pl-6 rounded-xl border border-slate-200/80 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500" />
         <span class="absolute right-2.5 top-1.5 text-slate-400 text-xs">🔍</span>
-        <button *ngIf="searchQuery" (click)="searchQuery = ''; fetchData()" class="absolute left-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer">✕</button>
+        <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer">✕</button>
       </div>
 
       <!-- دکمه رفرش -->
@@ -65,7 +66,7 @@
           type="button"
           appAction="approve"
           display="label"
-          [label]="'تایید گروهی ' + getSelectedCount() + ' پرونده و ارسال به حسابداری'"
+          label="تایید گروهی"
           (click)="openBatchApproveModal()"
           class="flex-1 sm:flex-none">
         </button>
@@ -245,36 +246,38 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-2 pt-1 border-t border-slate-100">
+        <!-- در ۳۶۰px هر چهار عنوان در ستون ۷۰px جا می‌شوند (سنجیده‌شده) -->
+        <div class="grid grid-cols-4 gap-1.5 pt-1 border-t border-slate-100">
           <button
             type="button"
             appAction="view"
+            size="sm"
             display="label"
-            label="مشاهده پرونده"
-            (click)="openViewProfileModal(item)"
-            class="flex-1">
+            label="پرونده"
+            (click)="openViewProfileModal(item)">
           </button>
           <button
             type="button"
             appAction="approve"
+            size="sm"
             display="label"
-            label="تایید سرپرست"
-            (click)="openApproveModal('new', item)"
-            class="flex-1">
+            label="تایید"
+            (click)="openApproveModal('new', item)">
           </button>
           <button
             type="button"
             appAction="return"
-            display="icon"
-            (click)="openRejectModal('new', item, 'revision')"
-            title="عودت به بازنگری">
+            size="sm"
+            display="label"
+            label="بازنگری"
+            (click)="openRejectModal('new', item, 'revision')">
           </button>
           <button
             type="button"
             appAction="reject"
-            display="icon"
-            (click)="openRejectModal('new', item, 'reject')"
-            title="رد پرونده">
+            size="sm"
+            label="رد"
+            (click)="openRejectModal('new', item, 'reject')">
           </button>
         </div>
       </div>
@@ -946,7 +949,7 @@
         <button
           type="button"
           appAction="close"
-          display="label"
+          display="icon"
           label="بستن"
           (click)="closeViewProfileModal()">
         </button>
@@ -956,22 +959,24 @@
             type="button"
             appAction="approve"
             size="sm"
-            label="تایید سرپرست"
-            (click)="closeViewProfileModal(); openApproveModal('new', selectedViewProfile)">
+            display="label"
+            label="تایید"
+            (click)="openApproveModal('new', selectedViewProfile); closeViewProfileModal()">
           </button>
           <button
             type="button"
             appAction="return"
             size="sm"
+            display="label"
             label="بازنگری"
-            (click)="closeViewProfileModal(); openRejectModal('new', selectedViewProfile, 'revision')">
+            (click)="openRejectModal('new', selectedViewProfile, 'revision'); closeViewProfileModal()">
           </button>
           <button
             type="button"
             appAction="reject"
             size="sm"
             label="رد"
-            (click)="closeViewProfileModal(); openRejectModal('new', selectedViewProfile, 'reject')">
+            (click)="openRejectModal('new', selectedViewProfile, 'reject'); closeViewProfileModal()">
           </button>
         </div>
       </div>

@@ -11,6 +11,7 @@ import { ProjectSection } from '../../../../core/models/personnel.model';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export type SupervisorPeriodLockSubTab = 'active_period' | 'locked_periods' | 'anomalies';
 
@@ -158,36 +159,12 @@ export class SupervisorPeriodLockHubComponent implements OnInit, OnDestroy {
     this.fetchPeriodData();
   }
 
-  get periodSubTabs(): TabDef[] {
-    const p = this.currentPeriodSummary;
-    return [
-      {
-        id: 'active_period',
-        label: 'دوره جاری کارگاه',
-        shortLabel: 'جاری',
-        icon: 'calendar',
-        tone: 'indigo',
-      },
-      {
-        id: 'locked_periods',
-        label: 'دوره‌های قفل‌شده',
-        shortLabel: 'قفل‌شده',
-        icon: 'lock',
-        tone: 'slate',
-      },
-      {
-        id: 'anomalies',
-        label: 'مغایرت‌ها و هشدارها',
-        shortLabel: 'مغایرت',
-        icon: 'alert-triangle',
-        tone: 'amber',
-        count: p.pending_approvals,
-        indicator: p.pending_approvals > 0
-          ? { tone: 'amber', label: 'کارکرد تاییدنشده', pulse: true }
-          : undefined,
-      },
-    ];
-  }
+  // ثابت است؛ یک آرایه برای همه چرخه‌های تشخیص تغییر (getter با آرایه تازه در dev mode خطای NG0100 می‌دهد)
+  readonly periodSubTabs: TabDef[] = [
+    { id: 'active_period', label: 'دوره جاری کارگاه', shortLabel: 'جاری', icon: ACCOUNTING_ENTITY_ICONS.attendance },
+    { id: 'locked_periods', label: 'دوره‌های قفل‌شده', shortLabel: 'قفل‌شده', icon: 'status-locked' },
+    { id: 'anomalies', label: 'مغایرت‌ها و هشدارها', shortLabel: 'مغایرت', icon: 'status-warning' },
+  ];
 
   switchSubTab(tab: string): void {
     if (tab === 'active_period' || tab === 'locked_periods' || tab === 'anomalies') {

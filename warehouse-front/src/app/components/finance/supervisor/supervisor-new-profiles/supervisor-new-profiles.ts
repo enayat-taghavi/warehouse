@@ -13,6 +13,7 @@ import { WebSocketService } from '../../../../core/http/websocket.service';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export type SupervisorNewProfilesSubTab = 'personnel' | 'vehicles' | 'change_requests' | 'all';
 
@@ -159,45 +160,31 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
     this.fetchProfiles();
   }
 
+  // Memoized tabs for app-tab-bar (getter با آرایه تازه در هر چرخه، در dev mode خطای NG0100 می‌دهد)
+  private profileSubTabsKey = '';
+  private profileSubTabsCache: TabDef[] = [];
   get profileSubTabs(): TabDef[] {
     const sc = this.statusCounters;
-    return [
-      {
-        id: 'personnel',
-        label: 'پرسنل جدید',
-        shortLabel: 'پرسنل',
-        icon: 'user-plus',
-        count: sc.personnel,
-        tone: 'indigo',
-        indicator: sc.personnel > 0 ? { tone: 'amber', label: 'پرسنل جدید در انتظار تایید', pulse: true } : undefined,
-      },
-      {
-        id: 'vehicles',
-        label: 'خودروهای جدید',
-        shortLabel: 'خودرو',
-        icon: 'truck',
-        count: sc.vehicles,
-        tone: 'indigo',
-        indicator: sc.vehicles > 0 ? { tone: 'amber', label: 'خودرو جدید در انتظار تایید', pulse: true } : undefined,
-      },
-      {
-        id: 'change_requests',
-        label: 'درخواست‌های تغییرات',
-        shortLabel: 'تغییرات',
-        icon: 'refresh-cw',
-        count: sc.change_requests,
-        tone: 'amber',
-        indicator: sc.change_requests > 0 ? { tone: 'amber', label: 'درخواست تغییرات در انتظار تایید', pulse: true } : undefined,
-      },
-      {
-        id: 'all',
-        label: 'کل پیش‌نویس‌ها',
-        shortLabel: 'همه',
-        icon: 'users',
-        count: sc.all,
-        tone: 'slate',
-      },
-    ];
+    const key = `${sc.personnel}:${sc.vehicles}:${sc.change_requests}:${sc.all}`;
+    if (key !== this.profileSubTabsKey) {
+      this.profileSubTabsKey = key;
+      this.profileSubTabsCache = [
+        { id: 'personnel', label: 'پرسنل جدید', shortLabel: 'پرسنل', icon: ACCOUNTING_ENTITY_ICONS.newPersonnel, count: sc.personnel },
+        { id: 'vehicles', label: 'خودروهای جدید', shortLabel: 'خودرو', icon: ACCOUNTING_ENTITY_ICONS.fleet, count: sc.vehicles },
+        {
+          id: 'change_requests',
+          label: 'درخواست‌های تغییرات',
+          shortLabel: 'تغییرات',
+          icon: 'action-edit',
+          count: sc.change_requests,
+          tone: 'amber',
+          // مثل پیش از کوچ فقط این تب نشانه چشمک‌زن دارد
+          indicator: sc.change_requests > 0 ? { tone: 'amber', label: 'درخواست تغییرات در انتظار تایید', pulse: true } : undefined,
+        },
+        { id: 'all', label: 'کل پیش‌نویس‌ها', shortLabel: 'همه', icon: 'status-all', count: sc.all, tone: 'slate' },
+      ];
+    }
+    return this.profileSubTabsCache;
   }
 
   switchSubTab(tab: string): void {

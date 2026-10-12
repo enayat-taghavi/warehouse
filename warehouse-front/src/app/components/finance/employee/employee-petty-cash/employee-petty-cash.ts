@@ -17,6 +17,7 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export type PettyCashStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'approved' | 'allocation' | 'rejected';
 
@@ -43,7 +44,7 @@ export class EmployeePettyCashHubComponent implements OnInit {
         { id: 'draft', label: 'پیش‌نویس', icon: 'status-draft', count: sc.draft },
         { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', icon: 'status-pending', count: sc.pending_supervisor },
         { id: 'approved', label: 'تایید و تسویه‌شده', shortLabel: 'تسویه', icon: 'status-approved', count: sc.approved },
-        { id: 'allocation', label: 'شارژهای دریافتی', shortLabel: 'شارژ', icon: 'status-revision', count: sc.allocation },
+        { id: 'allocation', label: 'شارژهای دریافتی', shortLabel: 'شارژ', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, count: sc.allocation },
         { id: 'rejected', label: 'رد شده', shortLabel: 'رد', icon: 'status-rejected', count: sc.rejected },
       ];
     }
