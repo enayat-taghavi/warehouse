@@ -10,15 +10,43 @@ import { PersonnelApiService } from '../../../../core/api/personnel-api.service'
 import { ProjectSection, PettyCashTransaction } from '../../../../core/models/personnel.model';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+
 @Component({
   selector: 'app-supervisor-petty-cash-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    SvgIconDirective,
+    ActionButtonComponent,
+    TabBarComponent,
+    CommandCenterComponent,
+  ],
   templateUrl: './supervisor-petty-cash.html',
   styleUrl: './supervisor-petty-cash.css'
 })
 export class SupervisorPettyCashHubComponent implements OnInit, OnDestroy {
   activeSubTab: 'pending' | 'approved' | 'all' = 'pending';
+
+  private pettyCashSubTabsKey = '';
+  private pettyCashSubTabsCache: TabDef[] = [];
+  get pettyCashSubTabs(): TabDef[] {
+    const sc = this.statusCounters;
+    const key = `${sc.pending}:${sc.approved}:${sc.all}`;
+    if (key !== this.pettyCashSubTabsKey) {
+      this.pettyCashSubTabsKey = key;
+      this.pettyCashSubTabsCache = [
+        { id: 'pending', label: 'نیازمند بررسی', shortLabel: 'بررسی', icon: 'status-pending', count: sc.pending },
+        { id: 'approved', label: 'تایید شده', shortLabel: 'تایید', icon: 'status-approved', count: sc.approved },
+        { id: 'all', label: 'کل اسناد تن‌خواه', shortLabel: 'همه', icon: 'status-all', count: sc.all },
+      ];
+    }
+    return this.pettyCashSubTabsCache;
+  }
 
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
@@ -112,10 +140,12 @@ export class SupervisorPettyCashHubComponent implements OnInit, OnDestroy {
     this.fetchPettyCash();
   }
 
-  switchSubTab(tab: 'pending' | 'approved' | 'all'): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
-    this.updateViewAndCounters();
+  switchSubTab(tab: string): void {
+    if (tab === 'pending' || tab === 'approved' || tab === 'all') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+      this.updateViewAndCounters();
+    }
   }
 
   syncUrlParams(): void {
