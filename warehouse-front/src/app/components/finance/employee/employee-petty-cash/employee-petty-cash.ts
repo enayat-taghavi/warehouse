@@ -39,12 +39,12 @@ export class EmployeePettyCashHubComponent implements OnInit {
     if (key !== this.pettyCashStatusTabsKey) {
       this.pettyCashStatusTabsKey = key;
       this.pettyCashStatusTabsCache = [
-        { id: 'all', label: 'همه اسناد', shortLabel: 'همه', count: sc.all },
-        { id: 'draft', label: 'پیش‌نویس', count: sc.draft },
-        { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', count: sc.pending_supervisor },
-        { id: 'approved', label: 'تایید و تسویه‌شده', shortLabel: 'تسویه', count: sc.approved },
-        { id: 'allocation', label: 'شارژهای دریافتی', shortLabel: 'شارژ', count: sc.allocation },
-        { id: 'rejected', label: 'رد شده', shortLabel: 'رد', count: sc.rejected },
+        { id: 'all', label: 'همه اسناد', shortLabel: 'همه', icon: 'status-all', count: sc.all },
+        { id: 'draft', label: 'پیش‌نویس', icon: 'status-draft', count: sc.draft },
+        { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', icon: 'status-pending', count: sc.pending_supervisor },
+        { id: 'approved', label: 'تایید و تسویه‌شده', shortLabel: 'تسویه', icon: 'status-approved', count: sc.approved },
+        { id: 'allocation', label: 'شارژهای دریافتی', shortLabel: 'شارژ', icon: 'status-revision', count: sc.allocation },
+        { id: 'rejected', label: 'رد شده', shortLabel: 'رد', icon: 'status-rejected', count: sc.rejected },
       ];
     }
     return this.pettyCashStatusTabsCache;
@@ -318,8 +318,17 @@ export class EmployeePettyCashHubComponent implements OnInit {
     };
   }
 
-  setStatusFilter(tab: PettyCashStatusTab | string): void {
-    this.statusFilter = tab as PettyCashStatusTab;
+  setStatusFilter(tab: string): void {
+    if (
+      tab === 'all' ||
+      tab === 'draft' ||
+      tab === 'pending_supervisor' ||
+      tab === 'approved' ||
+      tab === 'allocation' ||
+      tab === 'rejected'
+    ) {
+      this.statusFilter = tab;
+    }
   }
 
   // ─── مودال ثبت هزینه از محل تنخواه (Guardian G2: Force draft) ───

@@ -622,12 +622,12 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
     if (key !== this.statusFilterTabsKey) {
       this.statusFilterTabsKey = key;
       this.statusFilterTabsCache = [
-        { id: 'all', label: 'همه', count: vm.total },
-        { id: 'draft', label: 'پیش‌نویس', count: vm.drafts },
-        { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', count: vm.pending },
-        { id: 'revision_required', label: 'نیازمند اصلاح', shortLabel: 'اصلاح', count: vm.revision, tone: 'amber' },
-        { id: 'approved', label: 'مصوب', count: vm.approved, tone: 'emerald' },
-        { id: 'rejected', label: 'رد شده', shortLabel: 'رد', count: vm.rejected, tone: 'rose' },
+        { id: 'all', label: 'همه', icon: 'status-all', count: vm.total },
+        { id: 'draft', label: 'پیش‌نویس', icon: 'status-draft', count: vm.drafts },
+        { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', icon: 'status-pending', count: vm.pending },
+        { id: 'revision_required', label: 'نیازمند اصلاح', shortLabel: 'اصلاح', icon: 'status-revision', count: vm.revision, tone: 'amber' },
+        { id: 'approved', label: 'مصوب', icon: 'status-approved', count: vm.approved, tone: 'emerald' },
+        { id: 'rejected', label: 'رد شده', shortLabel: 'رد', icon: 'status-rejected', count: vm.rejected, tone: 'rose' },
       ];
     }
     return this.statusFilterTabsCache;
@@ -658,14 +658,23 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   }
 
   // ─── رفتار دوحالته (Toggle) تب‌های وضعیت طبق Rule 7 ───
-  setStatusFilter(filter: VehicleStatusFilter): void {
-    const nextFilter: VehicleStatusFilter = (this.statusFilter === filter && filter !== 'all') ? 'all' : filter;
-    this.statusFilter = nextFilter;
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { status_filter: nextFilter === 'all' ? null : nextFilter },
-      queryParamsHandling: 'merge'
-    });
+  setStatusFilter(filter: string): void {
+    if (
+      filter === 'all' ||
+      filter === 'draft' ||
+      filter === 'pending_supervisor' ||
+      filter === 'revision_required' ||
+      filter === 'approved' ||
+      filter === 'rejected'
+    ) {
+      const nextFilter: VehicleStatusFilter = (this.statusFilter === filter && filter !== 'all') ? 'all' : filter;
+      this.statusFilter = nextFilter;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { status_filter: nextFilter === 'all' ? null : nextFilter },
+        queryParamsHandling: 'merge'
+      });
+    }
   }
 
   onSearchChange(): void {

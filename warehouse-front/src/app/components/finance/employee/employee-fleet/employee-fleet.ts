@@ -309,14 +309,16 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
     this.onFilterChange();
   }
 
-  setMode(mode: 'daily' | 'monthly_grid' | string): void {
-    this.activeMode = mode as 'daily' | 'monthly_grid';
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { mode: this.activeMode },
-      queryParamsHandling: 'merge'
-    });
-    this.onFilterChange();
+  setMode(mode: string): void {
+    if (mode === 'daily' || mode === 'monthly_grid') {
+      this.activeMode = mode;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { mode: this.activeMode },
+        queryParamsHandling: 'merge'
+      });
+      this.onFilterChange();
+    }
   }
 
   onFilterChange(): void {
@@ -333,12 +335,14 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
     }
   }
 
-  setFleetStatusFilter(status: 'active' | 'inactive' | 'all' | string): void {
-    this.fleetStatusFilter = status as 'active' | 'inactive' | 'all';
-    if (this.activeMode === 'daily') {
-      this.loadVehicleMatrix();
-    } else {
-      this.loadFleetMonthlyGrid();
+  setFleetStatusFilter(status: string): void {
+    if (status === 'active' || status === 'inactive' || status === 'all') {
+      this.fleetStatusFilter = status;
+      if (this.activeMode === 'daily') {
+        this.loadVehicleMatrix();
+      } else {
+        this.loadFleetMonthlyGrid();
+      }
     }
   }
 

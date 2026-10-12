@@ -35,6 +35,7 @@
       <app-tab-bar
         [tabs]="pettyCashStatusTabs"
         [active]="statusFilter"
+        mobile="icon"
         (activeChange)="setStatusFilter($event)"
       ></app-tab-bar>
     </div>

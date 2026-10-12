@@ -1204,7 +1204,8 @@
         <app-tab-bar
           [tabs]="statusFilterTabs"
           [active]="statusFilter"
-          (activeChange)="setStatusFilter($any($event))" />
+          mobile="icon"
+          (activeChange)="setStatusFilter($event)" />
 
         <!-- شمارنده نمایش تعداد رکوردها -->
         <div class="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">

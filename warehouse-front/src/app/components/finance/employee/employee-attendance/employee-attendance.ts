@@ -362,9 +362,11 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   }
 
   // --- تغییر مد نمایش ---
-  setMode(mode: 'daily' | 'monthly_grid' | string): void {
-    this.activeMode = mode as 'daily' | 'monthly_grid';
-    this.onFilterChange();
+  setMode(mode: string): void {
+    if (mode === 'daily' || mode === 'monthly_grid') {
+      this.activeMode = mode;
+      this.onFilterChange();
+    }
   }
 
   onFilterChange(): void {

@@ -622,12 +622,12 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
     if (key !== this.statusFilterTabsKey) {
       this.statusFilterTabsKey = key;
       this.statusFilterTabsCache = [
-        { id: 'all', label: 'همه', count: pm.total },
-        { id: 'draft', label: 'پیش‌نویس', count: this.unreviewedDraftCount, tone: this.unreviewedDraftCount > 0 ? 'amber' : undefined },
-        { id: 'pending', label: 'معلق', count: pm.pending },
-        { id: 'revision_required', label: 'عودت', count: pm.revision_required, tone: pm.revision_required > 0 ? 'amber' : undefined },
-        { id: 'approved', label: 'مصوب', count: pm.approved, tone: 'emerald' },
-        { id: 'rejected', label: 'رد شده', shortLabel: 'رد', count: pm.rejected, tone: 'rose' },
+        { id: 'all', label: 'همه', icon: 'status-all', count: pm.total },
+        { id: 'draft', label: 'پیش‌نویس', icon: 'status-draft', count: this.unreviewedDraftCount, tone: this.unreviewedDraftCount > 0 ? 'amber' : undefined },
+        { id: 'pending', label: 'معلق', icon: 'status-pending', count: pm.pending },
+        { id: 'revision_required', label: 'عودت', icon: 'status-revision', count: pm.revision_required, tone: pm.revision_required > 0 ? 'amber' : undefined },
+        { id: 'approved', label: 'مصوب', icon: 'status-approved', count: pm.approved, tone: 'emerald' },
+        { id: 'rejected', label: 'رد شده', shortLabel: 'رد', icon: 'status-rejected', count: pm.rejected, tone: 'rose' },
       ];
     }
     return this.statusFilterTabsCache;
@@ -657,13 +657,24 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
     return this.personnelModalTabsCache;
   }
 
-  setStatusFilter(filter: PersonnelStatusFilter): void {
-    this.statusFilter = filter;
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { status_filter: filter === 'all' ? null : filter },
-      queryParamsHandling: 'merge'
-    });
+  setStatusFilter(filter: string): void {
+    if (
+      filter === 'all' ||
+      filter === 'draft' ||
+      filter === 'pending' ||
+      filter === 'pending_supervisor' ||
+      filter === 'manager_approved' ||
+      filter === 'approved' ||
+      filter === 'revision_required' ||
+      filter === 'rejected'
+    ) {
+      this.statusFilter = filter;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { status_filter: filter === 'all' ? null : filter },
+        queryParamsHandling: 'merge'
+      });
+    }
   }
 
   onSearchChange(): void {

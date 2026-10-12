@@ -41,7 +41,8 @@
         <app-tab-bar
           [tabs]="statusFilterTabs"
           [active]="statusFilter"
-          (activeChange)="setStatusFilter($any($event))" />
+          mobile="icon"
+          (activeChange)="setStatusFilter($event)" />
       </div>
 
       <!-- سمت چپ: دکمه‌های استاندارد آیکونی و دکمه افزودن خودرو جدید -->

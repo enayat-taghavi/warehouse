@@ -21,6 +21,7 @@
       <app-tab-bar
         [tabs]="invoiceStatusTabs"
         [active]="statusFilter"
+        mobile="icon"
         (activeChange)="setStatusFilter($event)"
       ></app-tab-bar>
     </div>

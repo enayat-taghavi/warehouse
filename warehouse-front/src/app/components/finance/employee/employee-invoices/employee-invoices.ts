@@ -35,12 +35,12 @@ export class EmployeeInvoicesHubComponent implements OnInit {
     if (key !== this.invoiceStatusTabsKey) {
       this.invoiceStatusTabsKey = key;
       this.invoiceStatusTabsCache = [
-        { id: 'all', label: 'همه', count: sc.all },
-        { id: 'draft', label: 'پیش‌نویس', count: sc.draft },
-        { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', count: sc.pending_supervisor },
-        { id: 'pending_accountant', label: 'در انتظار حسابدار', shortLabel: 'حسابدار', count: sc.pending_accountant },
-        { id: 'ready_to_pay', label: 'آماده پرداخت', shortLabel: 'آماده', count: sc.ready_to_pay },
-        { id: 'paid', label: 'پرداخت‌شده', count: sc.paid },
+        { id: 'all', label: 'همه', icon: 'status-all', count: sc.all },
+        { id: 'draft', label: 'پیش‌نویس', icon: 'status-draft', count: sc.draft },
+        { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', icon: 'status-pending', count: sc.pending_supervisor },
+        { id: 'pending_accountant', label: 'در انتظار حسابدار', shortLabel: 'حسابدار', icon: 'status-revision', count: sc.pending_accountant },
+        { id: 'ready_to_pay', label: 'آماده پرداخت', shortLabel: 'آماده', icon: 'status-approved', count: sc.ready_to_pay },
+        { id: 'paid', label: 'پرداخت‌شده', icon: 'status-approved', count: sc.paid },
       ];
     }
     return this.invoiceStatusTabsCache;
@@ -294,8 +294,18 @@ export class EmployeeInvoicesHubComponent implements OnInit {
   }
 
   // ─── سوییچ تب وضعیت ───
-  setStatusFilter(tab: InvoiceStatusTab | string): void {
-    this.statusFilter = tab as InvoiceStatusTab;
+  setStatusFilter(tab: string): void {
+    if (
+      tab === 'all' ||
+      tab === 'draft' ||
+      tab === 'pending_supervisor' ||
+      tab === 'pending_accountant' ||
+      tab === 'ready_to_pay' ||
+      tab === 'paid' ||
+      tab === 'rejected'
+    ) {
+      this.statusFilter = tab;
+    }
   }
 
   // ─── تبدیل ریال به تومان برای فرم ثبت ───
