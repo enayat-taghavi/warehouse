@@ -94,17 +94,17 @@
   - [x] **۲.۱۵ طراح لیبل (`label-designer.html`)**
   - [x] **۲.۱۶ کارت‌های شناسایی (`id-cards.html`):** قالب چاپ دست نخورد
   - [x] **۲.۱۷ فیلدهای پویا و شمارش فیلد (`dynamic-fields.html`، `field.html`)**
-  - [ ] **۵.۲۰ اجزای گزارش‌ساز (`saved-reports`، `filter-group`، `filter-value`، `export-progress`، `report-chart`)** (بازبینی ناظر: `filter-value` دست نخورده است؛ بقیه انجام شد)
+  - [x] **۵.۲۰ اجزای گزارش‌ساز (`saved-reports`، `filter-group`، `filter-value`، `export-progress`، `report-chart`)**
   - [x] معیار پایان گام
 
-- [ ] **گام ۸: هاب کارمند**
-  - [ ] **۳.۱ حضور و غیاب کارمند (`employee-attendance.html`)**
-  - [ ] **۳.۲ تردد ناوگان کارمند (`employee-fleet.html`):** مودال شبا دست نخورد
-  - [ ] **۳.۳ فاکتورهای کارمند (`employee-invoices.html`)**
-  - [ ] **۳.۴ تنخواه‌گردان کارمند (`employee-petty-cash.html`)**
-  - [ ] **۳.۵ ثبت خودرو/راننده (`employee-new-vehicle.html`)**
-  - [ ] **۳.۶ ثبت پرسنل جدید (`employee-new-personnel.html`):** ساختار شبا دست نخورد
-  - [ ] معیار پایان گام
+- [x] **گام ۸: هاب کارمند**
+  - [x] **۳.۱ حضور و غیاب کارمند (`employee-attendance.html`)**
+  - [x] **۳.۲ تردد ناوگان کارمند (`employee-fleet.html`):** مودال شبا دست نخورد
+  - [x] **۳.۳ فاکتورهای کارمند (`employee-invoices.html`)**
+  - [x] **۳.۴ تنخواه‌گردان کارمند (`employee-petty-cash.html`)**
+  - [x] **۳.۵ ثبت خودرو/راننده (`employee-new-vehicle.html`)**
+  - [x] **۳.۶ ثبت پرسنل جدید (`employee-new-personnel.html`):** ساختار شبا دست نخورد
+  - [x] معیار پایان گام
 
 - [ ] **گام ۹: هاب سرپرست**
   - [ ] **۳.۷ تایید کارکرد (`supervisor-attendance.html`)**

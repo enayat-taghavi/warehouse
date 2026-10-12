@@ -14,18 +14,41 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { gregorianToJalali } from '../../../../core/utils/date-utils';
 import { validateSheba, ShebaValidationResult } from '../../../../core/utils/sheba-utils';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
 
 export type PettyCashStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'approved' | 'allocation' | 'rejected';
 
 @Component({
   selector: 'app-employee-petty-cash-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ActionButtonComponent, TabBarComponent, CommandCenterComponent],
   templateUrl: './employee-petty-cash.html',
   styleUrl: './employee-petty-cash.css'
 })
 export class EmployeePettyCashHubComponent implements OnInit {
   readonly Math = Math;
+
+  // Memoized tabs for app-tab-bar
+  private pettyCashStatusTabsKey = '';
+  private pettyCashStatusTabsCache: TabDef[] = [];
+  get pettyCashStatusTabs(): TabDef[] {
+    const sc = this.statusCounters;
+    const key = `${sc.all}:${sc.draft}:${sc.pending_supervisor}:${sc.approved}:${sc.allocation}:${sc.rejected}`;
+    if (key !== this.pettyCashStatusTabsKey) {
+      this.pettyCashStatusTabsKey = key;
+      this.pettyCashStatusTabsCache = [
+        { id: 'all', label: 'همه اسناد', shortLabel: 'همه', count: sc.all },
+        { id: 'draft', label: 'پیش‌نویس', count: sc.draft },
+        { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', count: sc.pending_supervisor },
+        { id: 'approved', label: 'تایید و تسویه‌شده', shortLabel: 'تسویه', count: sc.approved },
+        { id: 'allocation', label: 'شارژهای دریافتی', shortLabel: 'شارژ', count: sc.allocation },
+        { id: 'rejected', label: 'رد شده', shortLabel: 'رد', count: sc.rejected },
+      ];
+    }
+    return this.pettyCashStatusTabsCache;
+  }
 
   // ─── مدیریت بخش و ایزولاسیون داده‌ها (Guardian G1: Section Isolation) ───
   mySections: ProjectSection[] = [];
@@ -295,8 +318,8 @@ export class EmployeePettyCashHubComponent implements OnInit {
     };
   }
 
-  setStatusFilter(tab: PettyCashStatusTab): void {
-    this.statusFilter = tab;
+  setStatusFilter(tab: PettyCashStatusTab | string): void {
+    this.statusFilter = tab as PettyCashStatusTab;
   }
 
   // ─── مودال ثبت هزینه از محل تنخواه (Guardian G2: Force draft) ───

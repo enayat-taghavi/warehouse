@@ -35,6 +35,8 @@ import {
   IranianBankInfo
 } from '../../../../core/utils/sheba-utils';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 
 export type PersonnelStatusFilter = 'all' | 'draft' | 'pending' | 'pending_supervisor' | 'manager_approved' | 'approved' | 'revision_required' | 'rejected';
 export type PersonnelModalTab = 'identity' | 'job' | 'banking' | 'address' | 'documents';
@@ -42,7 +44,7 @@ export type PersonnelModalTab = 'identity' | 'job' | 'banking' | 'address' | 'do
 @Component({
   selector: 'app-employee-new-personnel-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective, PersianDatePipe],
+  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective, PersianDatePipe, ActionButtonComponent, TabBarComponent],
   templateUrl: './employee-new-personnel.html',
   styleUrl: './employee-new-personnel.css'
 })
@@ -609,6 +611,50 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
       return { label: 'پیش‌نویس کارمند', class: 'bg-slate-100 text-slate-700 border-slate-300' };
     }
     return { label: 'جدید', class: 'bg-white/20 text-white border-white/30' };
+  }
+
+  // ─── تب‌های حافظه‌دار وضعیت و مراحل ثبت برای app-tab-bar ───
+  private statusFilterTabsKey = '';
+  private statusFilterTabsCache: TabDef[] = [];
+  get statusFilterTabs(): TabDef[] {
+    const pm = this.personnelMetrics;
+    const key = `${pm.total}:${this.unreviewedDraftCount}:${pm.pending}:${pm.revision_required}:${pm.approved}:${pm.rejected}`;
+    if (key !== this.statusFilterTabsKey) {
+      this.statusFilterTabsKey = key;
+      this.statusFilterTabsCache = [
+        { id: 'all', label: 'همه', count: pm.total },
+        { id: 'draft', label: 'پیش‌نویس', count: this.unreviewedDraftCount, tone: this.unreviewedDraftCount > 0 ? 'amber' : undefined },
+        { id: 'pending', label: 'معلق', count: pm.pending },
+        { id: 'revision_required', label: 'عودت', count: pm.revision_required, tone: pm.revision_required > 0 ? 'amber' : undefined },
+        { id: 'approved', label: 'مصوب', count: pm.approved, tone: 'emerald' },
+        { id: 'rejected', label: 'رد شده', shortLabel: 'رد', count: pm.rejected, tone: 'rose' },
+      ];
+    }
+    return this.statusFilterTabsCache;
+  }
+
+  private personnelModalTabsKey = '';
+  private personnelModalTabsCache: TabDef[] = [];
+  get personnelModalTabs(): TabDef[] {
+    const docCount = this.existingDocuments.length + this.pendingUploadDocuments.length;
+    const bankCount = this.bankAccounts.length;
+    const key = `${this.isTabComplete('identity')}:${this.isTabComplete('job')}:${this.isTabComplete('banking')}:${bankCount}:${this.isTabComplete('address')}:${this.isTabComplete('documents')}:${docCount}`;
+    if (key !== this.personnelModalTabsKey) {
+      this.personnelModalTabsKey = key;
+      // نشانگر ✓/! قالب پیشین: کدام مرحله فیلد الزامی خالی دارد
+      const step = (tab: 'identity' | 'job' | 'banking' | 'address'): TabDef['indicator'] =>
+        this.isTabComplete(tab)
+          ? { tone: 'emerald', label: 'تکمیل شده' }
+          : { tone: 'rose', label: 'دارای فیلد الزامی' };
+      this.personnelModalTabsCache = [
+        { id: 'identity', label: 'اطلاعات هویتی', shortLabel: 'هویتی', icon: 'user', indicator: step('identity') },
+        { id: 'job', label: 'مشخصات شغلی', shortLabel: 'شغلی', icon: 'briefcase', indicator: step('job') },
+        { id: 'banking', label: 'حساب‌های بانکی', shortLabel: 'بانکی', icon: 'credit-card', count: bankCount > 0 ? bankCount : undefined, indicator: step('banking') },
+        { id: 'address', label: 'نشانی و تماس', shortLabel: 'نشانی', icon: 'map-pin', indicator: step('address') },
+        { id: 'documents', label: 'مدارک و یادداشت', shortLabel: 'مدارک', icon: 'file-text', count: docCount > 0 ? docCount : undefined },
+      ];
+    }
+    return this.personnelModalTabsCache;
   }
 
   setStatusFilter(filter: PersonnelStatusFilter): void {

@@ -1,132 +1,56 @@
 <div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-      
-      <!-- سمت راست: دراپ‌داون انتخاب بخش و تب‌های فیلتر وضعیت -->
-      <div class="flex flex-wrap items-center gap-2 md:gap-3">
-        <!-- انتخابگر بخش فعال (Guardian G1: Section Isolation) -->
-        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
-          <select
-            [(ngModel)]="selectedSectionId"
-            (change)="onSectionChanged()"
-            class="bg-transparent text-xs font-black text-emerald-700 focus:outline-none cursor-pointer">
-            <option *ngFor="let sec of mySections" [value]="sec.id">
-              {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- تب‌های فیلتر وضعیت در کپسول محصور (Subtabs Navigation) -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
-        <button
-          type="button"
-          (click)="setStatusFilter('all')"
-          [ngClass]="statusFilter === 'all' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-          <span>همه</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                [ngClass]="statusFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
-            {{ statusCounters.all }}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          (click)="setStatusFilter('draft')"
-          [ngClass]="statusFilter === 'draft' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-          <span>پیش‌نویس</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                [ngClass]="statusFilter === 'draft' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
-            {{ statusCounters.draft }}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          (click)="setStatusFilter('pending_supervisor')"
-          [ngClass]="statusFilter === 'pending_supervisor' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-          <span>در انتظار سرپرست</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                [ngClass]="statusFilter === 'pending_supervisor' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
-            {{ statusCounters.pending_supervisor }}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          (click)="setStatusFilter('pending_accountant')"
-          [ngClass]="statusFilter === 'pending_accountant' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-          <span>در انتظار حسابدار</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                [ngClass]="statusFilter === 'pending_accountant' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
-            {{ statusCounters.pending_accountant }}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          (click)="setStatusFilter('ready_to_pay')"
-          [ngClass]="statusFilter === 'ready_to_pay' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-          <span>آماده پرداخت</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                [ngClass]="statusFilter === 'ready_to_pay' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
-            {{ statusCounters.ready_to_pay }}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          (click)="setStatusFilter('paid')"
-          [ngClass]="statusFilter === 'paid' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-          <span>پرداخت‌شده</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                [ngClass]="statusFilter === 'paid' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
-            {{ statusCounters.paid }}
-          </span>
-        </button>
-      </div>
+  <app-command-center rowFrom="lg">
+    <!-- سمت راست: دراپ‌داون انتخاب بخش و تب‌های فیلتر وضعیت -->
+    <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
+      <!-- انتخابگر بخش فعال (Guardian G1: Section Isolation) -->
+      <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
+        <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
+        <select
+          [(ngModel)]="selectedSectionId"
+          (change)="onSectionChanged()"
+          class="bg-transparent text-xs font-black text-emerald-700 focus:outline-none cursor-pointer">
+          <option *ngFor="let sec of mySections" [value]="sec.id">
+            {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
+          </option>
+        </select>
       </div>
 
-      <!-- سمت چپ: دکمه‌های عملیاتی استاندارد ۳‌گانه (Action Buttons) -->
-      <div class="flex items-center gap-2 justify-end">
-        <!-- دکمه ثبت فاکتور جدید (Indigo Button) -->
-        <button
-          type="button"
-          (click)="openNewInvoiceModal()"
-          class="px-3 h-9 rounded-xl flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition-all">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="hero-plus-bold"></svg>
-          <span>ثبت فاکتور هزینه</span>
-        </button>
-
-        <!-- دکمه خروجی اکسل استاندارد (Emerald Icon-only Button) -->
-        <button
-          type="button"
-          (click)="exportExcel()"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-colors"
-          title="خروجی اکسل ۲ ردیفه فاکتورها">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="hero-document-download"></svg>
-        </button>
-
-        <!-- دکمه بازخوانی داده‌ها (Slate Icon-only Button) -->
-        <button
-          type="button"
-          (click)="loadInvoices()"
-          [disabled]="isLoading"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
-          title="بروزرسانی داده‌ها">
-          <svg class="w-4 h-4" [class.animate-spin]="isLoading" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="refresh-cw"></svg>
-        </button>
-      </div>
+      <!-- تب‌های فیلتر وضعیت در کپسول محصور (Subtabs Navigation) -->
+      <app-tab-bar
+        [tabs]="invoiceStatusTabs"
+        [active]="statusFilter"
+        (activeChange)="setStatusFilter($event)"
+      ></app-tab-bar>
     </div>
-  </div>
+
+    <!-- سمت چپ: دکمه‌های عملیاتی استاندارد ۳‌گانه (Action Buttons) -->
+    <div cc-actions class="flex items-center gap-2 justify-end">
+      <!-- دکمه ثبت فاکتور جدید -->
+      <button
+        type="button"
+        appAction="create"
+        label="فاکتور جدید"
+        (click)="openNewInvoiceModal()"
+      ></button>
+
+      <!-- دکمه خروجی اکسل استاندارد -->
+      <button
+        type="button"
+        appAction="export-excel"
+        (click)="exportExcel()"
+      ></button>
+
+      <!-- دکمه بازخوانی داده‌ها -->
+      <button
+        type="button"
+        appAction="refresh"
+        [busy]="isLoading"
+        (click)="loadInvoices()"
+      ></button>
+    </div>
+  </app-command-center>
 
   <!-- ── ۲. جدول کارتابل فاکتورهای هزینه (Data Table Card) ── -->
   <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
@@ -235,10 +159,11 @@
               <button
                 *ngIf="inv.attachment"
                 type="button"
+                appAction="view"
+                label="تصویر"
+                size="sm"
                 (click)="openAttachmentPreview(inv)"
-                class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200/60 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
                 title="مشاهده تصویر فاکتور">
-                <span>📎 تصویر</span>
               </button>
               <span *ngIf="!inv.attachment" class="text-slate-300 text-[11px]">-</span>
             </td>
@@ -264,22 +189,24 @@
                 <button
                   *ngIf="inv.status === 'draft'"
                   type="button"
+                  appAction="send"
+                  label="ارسال"
+                  size="sm"
                   (click)="sendToSupervisor(inv)"
                   [disabled]="isSaving"
-                  class="px-2 py-1 text-indigo-600 hover:bg-indigo-50 rounded-lg text-[11px] font-bold transition-colors cursor-pointer active:scale-95"
                   title="ارسال فاکتور به کارتابل سرپرست کارگاه">
-                  📤 ارسال
                 </button>
 
                 <!-- حذف فاکتور (فقط برای پیش‌نویس) -->
                 <button
                   *ngIf="inv.status === 'draft'"
                   type="button"
+                  appAction="delete"
+                  label="حذف"
+                  size="sm"
                   (click)="deleteDraftInvoice(inv)"
                   [disabled]="isSaving"
-                  class="px-2 py-1 text-rose-600 hover:bg-rose-50 rounded-lg text-[11px] font-bold transition-colors cursor-pointer active:scale-95"
                   title="حذف فاکتور پیش‌نویس">
-                  🗑️
                 </button>
 
                 <!-- وضعیت قفل‌شده برای مراحل بعد -->
@@ -334,9 +261,10 @@
         </div>
         <button
           type="button"
-          (click)="closeNewInvoiceModal()"
-          class="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">
-          ✕
+          appAction="close"
+          display="icon"
+          size="sm"
+          (click)="closeNewInvoiceModal()">
         </button>
       </div>
 
@@ -464,17 +392,18 @@
       <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
         <button
           type="button"
-          (click)="closeNewInvoiceModal()"
-          class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 cursor-pointer">
-          انصراف
+          appAction="close"
+          display="label"
+          label="انصراف"
+          (click)="closeNewInvoiceModal()">
         </button>
         <button
           type="button"
-          (click)="saveInvoice()"
-          [disabled]="isSaving"
-          class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs active:scale-95 cursor-pointer flex items-center gap-1.5">
-          <span *ngIf="isSaving" class="animate-spin">⏳</span>
-          <span>ذخیره فاکتور پیش‌نویس</span>
+          appAction="save"
+          display="label"
+          label="ذخیره فاکتور پیش‌نویس"
+          [busy]="isSaving"
+          (click)="saveInvoice()">
         </button>
       </div>
 
@@ -500,9 +429,10 @@
         </div>
         <button
           type="button"
-          (click)="closeQuickCounterpartyModal()"
-          class="text-slate-400 hover:text-slate-600 text-base cursor-pointer">
-          ✕
+          appAction="close"
+          display="icon"
+          size="sm"
+          (click)="closeQuickCounterpartyModal()">
         </button>
       </div>
 
@@ -601,17 +531,18 @@
       <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
         <button
           type="button"
-          (click)="closeQuickCounterpartyModal()"
-          class="px-3 py-1.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 cursor-pointer">
-          انصراف
+          appAction="close"
+          display="label"
+          label="انصراف"
+          (click)="closeQuickCounterpartyModal()">
         </button>
         <button
           type="button"
-          (click)="saveQuickCounterparty()"
-          [disabled]="isSaving"
-          class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1">
-          <span *ngIf="isSaving" class="animate-spin">⏳</span>
-          <span>ثبت و انتخاب طرف‌حساب</span>
+          appAction="save"
+          display="label"
+          label="ثبت و انتخاب طرف‌حساب"
+          [busy]="isSaving"
+          (click)="saveQuickCounterparty()">
         </button>
       </div>
 
@@ -627,9 +558,10 @@
         <h4 class="text-xs font-black text-slate-800">{{ previewInvoiceTitle }}</h4>
         <button
           type="button"
-          (click)="closeAttachmentPreview()"
-          class="text-slate-400 hover:text-slate-700 text-lg cursor-pointer">
-          ✕
+          appAction="close"
+          display="icon"
+          size="sm"
+          (click)="closeAttachmentPreview()">
         </button>
       </div>
       <div class="p-4 overflow-auto flex items-center justify-center bg-slate-100 flex-1 min-h-[300px]">
@@ -650,9 +582,10 @@
         </a>
         <button
           type="button"
-          (click)="closeAttachmentPreview()"
-          class="px-3 py-1 bg-slate-200 text-slate-700 rounded-lg font-bold">
-          بستن
+          appAction="close"
+          label="بستن"
+          size="sm"
+          (click)="closeAttachmentPreview()">
         </button>
       </div>
     </div>

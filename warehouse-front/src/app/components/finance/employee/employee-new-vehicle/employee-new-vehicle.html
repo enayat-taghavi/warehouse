@@ -38,78 +38,10 @@
         </div>
 
         <!-- ناوبری زیرتب‌ها در کپسول محصور (Subtabs Pill Container) -->
-        <div class="flex bg-surface-muted p-1 rounded-xl border border-line overflow-x-auto w-full md:w-auto">
-          <button
-            type="button"
-            (click)="setStatusFilter('all')"
-            [ngClass]="statusFilter === 'all' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
-            <span>همه</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-line/70 text-fg-muted'">
-              {{ formatNumber(vehicleMetrics.total) }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="setStatusFilter('draft')"
-            [ngClass]="statusFilter === 'draft' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
-            <span>پیش‌نویس</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'draft' ? 'bg-indigo-50 text-indigo-700' : 'bg-line/70 text-fg-muted'">
-              {{ formatNumber(vehicleMetrics.drafts) }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="setStatusFilter('pending_supervisor')"
-            [ngClass]="statusFilter === 'pending_supervisor' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
-            <span>در انتظار سرپرست</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'pending_supervisor' ? 'bg-indigo-50 text-indigo-700' : 'bg-line/70 text-fg-muted'">
-              {{ formatNumber(vehicleMetrics.pending) }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="setStatusFilter('revision_required')"
-            [ngClass]="statusFilter === 'revision_required' ? 'bg-surface text-orange-700 shadow-xs font-black' : 'text-orange-600 hover:text-orange-900 font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
-            <span>نیازمند اصلاح</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-orange-100 text-orange-800">
-              {{ formatNumber(vehicleMetrics.revision) }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="setStatusFilter('approved')"
-            [ngClass]="statusFilter === 'approved' ? 'bg-surface text-emerald-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
-            <span>مصوب</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-line/70 text-fg-muted'">
-              {{ formatNumber(vehicleMetrics.approved) }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="setStatusFilter('rejected')"
-            [ngClass]="statusFilter === 'rejected' ? 'bg-surface text-rose-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
-            <span>رد شده</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusFilter === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-line/70 text-fg-muted'">
-              {{ formatNumber(vehicleMetrics.rejected) }}
-            </span>
-          </button>
-        </div>
+        <app-tab-bar
+          [tabs]="statusFilterTabs"
+          [active]="statusFilter"
+          (activeChange)="setStatusFilter($any($event))" />
       </div>
 
       <!-- سمت چپ: دکمه‌های استاندارد آیکونی و دکمه افزودن خودرو جدید -->
@@ -117,42 +49,47 @@
         <!-- دکمه خروجی اکسل ۲ ردیفه -->
         <button
           type="button"
+          appAction="export-excel"
+          display="icon"
+          size="sm"
           (click)="exportExcel()"
           [disabled]="isExportingExcel || !selectedSectionId"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-colors disabled:opacity-50"
+          [busy]="isExportingExcel"
           title="خروجی رسمی اکسل ناوگان">
-          <svg *ngIf="!isExportingExcel" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
-          <span *ngIf="isExportingExcel" class="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></span>
         </button>
 
         <!-- دکمه ورود دسته‌جمعی از اکسل (Modal) -->
         <button
           type="button"
+          appAction="import-excel"
+          display="icon"
+          size="sm"
           (click)="openImportModal()"
           [disabled]="!selectedSectionId"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 transition-colors disabled:opacity-50"
           title="ورود اطلاعات دسته‌جمعی از اکسل">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
         </button>
 
         <!-- دکمه بازخوانی داده‌ها -->
         <button
           type="button"
+          appAction="refresh"
+          display="icon"
+          size="sm"
           (click)="loadRecentVehicles()"
           [disabled]="isLoadingVehicles"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-surface-muted text-fg-muted hover:bg-surface-muted border border-line transition-colors"
+          [busy]="isLoadingVehicles"
           title="بروزرسانی داده‌ها">
-          <svg class="w-4 h-4" [class.animate-spin]="isLoadingVehicles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="refresh-cw"></svg>
         </button>
 
         <!-- دکمه باز کردن مودال ثبت خودرو جدید (پیش‌نویس) -->
         <button
           type="button"
+          appAction="create"
+          display="icon"
+          size="sm"
           (click)="openNewVehicleModal()"
           [disabled]="!selectedSectionId"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50"
           title="معرفی خودرو جدید (پیش‌نویس ۵ مرحله‌ای)">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg>
         </button>
       </div>
 
@@ -633,81 +570,18 @@
         </div>
         <button
           type="button"
-          (click)="closeNewVehicleModal()"
-          class="w-8 h-8 rounded-full bg-surface-muted text-fg-muted hover:bg-surface hover:text-fg flex items-center justify-center text-sm font-bold cursor-pointer transition-colors">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+          appAction="close"
+          display="icon"
+          size="sm"
+          (click)="closeNewVehicleModal()">
         </button>
       </div>
 
       <!-- نوار ناوبری ۵ تب استاندارد مودال ثبت خودرو (تسک ۶.۱) -->
-      <div class="bg-surface-muted p-1.5 border-b border-line flex items-center gap-1 overflow-x-auto">
-        
-        <!-- تب ۱: مشخصات فنی و پلاک -->
-        <button
-          type="button"
-          (click)="setActiveTab('technical')"
-          [ngClass]="activeModalTab === 'technical' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer transition-all">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck"></svg>
-          <span>۱. مشخصات فنی و پلاک</span>
-          <span *ngIf="hasServerMissingForTab('technical')" class="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="دارای نقص سروری"></span>
-          <span *ngIf="!hasServerMissingForTab('technical') && isTabComplete('technical')" class="w-2 h-2 rounded-full bg-emerald-500" title="تکمیل شده"></span>
-          <span *ngIf="!hasServerMissingForTab('technical') && !isTabComplete('technical')" class="w-2 h-2 rounded-full bg-amber-400" title="ناقص"></span>
-        </button>
-
-        <!-- تب ۲: مشخصات راننده -->
-        <button
-          type="button"
-          (click)="setActiveTab('driver')"
-          [ngClass]="activeModalTab === 'driver' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer transition-all">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user"></svg>
-          <span>۲. مشخصات راننده</span>
-          <span *ngIf="hasServerMissingForTab('driver')" class="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="دارای نقص سروری"></span>
-          <span *ngIf="!hasServerMissingForTab('driver') && isTabComplete('driver')" class="w-2 h-2 rounded-full bg-emerald-500" title="تکمیل شده"></span>
-          <span *ngIf="!hasServerMissingForTab('driver') && !isTabComplete('driver')" class="w-2 h-2 rounded-full bg-amber-400" title="ناقص"></span>
-        </button>
-
-        <!-- تب ۳: مشخصات مالک -->
-        <button
-          type="button"
-          (click)="setActiveTab('owner')"
-          [ngClass]="activeModalTab === 'owner' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer transition-all">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="key"></svg>
-          <span>۳. مشخصات مالک</span>
-          <span *ngIf="hasServerMissingForTab('owner')" class="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="دارای نقص سروری"></span>
-          <span *ngIf="!hasServerMissingForTab('owner') && isTabComplete('owner')" class="w-2 h-2 rounded-full bg-emerald-500" title="تکمیل شده"></span>
-          <span *ngIf="!hasServerMissingForTab('owner') && !isTabComplete('owner')" class="w-2 h-2 rounded-full bg-amber-400" title="ناقص"></span>
-        </button>
-
-        <!-- تب ۴: حساب‌های بانکی -->
-        <button
-          type="button"
-          (click)="setActiveTab('banking')"
-          [ngClass]="activeModalTab === 'banking' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer transition-all">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
-          <span>۴. حساب‌های بانکی</span>
-          <span *ngIf="hasServerMissingForTab('banking')" class="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="دارای نقص سروری"></span>
-          <span *ngIf="!hasServerMissingForTab('banking') && isTabComplete('banking')" class="w-2 h-2 rounded-full bg-emerald-500" title="حساب اصلی ثبت شده"></span>
-          <span *ngIf="!hasServerMissingForTab('banking') && !isTabComplete('banking')" class="w-2 h-2 rounded-full bg-amber-400" title="بدون حساب اصلی"></span>
-        </button>
-
-        <!-- تب ۵: مدارک و انقضا -->
-        <button
-          type="button"
-          (click)="setActiveTab('documents_expiry')"
-          [ngClass]="activeModalTab === 'documents_expiry' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap cursor-pointer transition-all">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
-          <span>۵. مدارک و انقضا</span>
-          <span *ngIf="hasServerMissingForTab('documents_expiry')" class="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="دارای نقص سروری"></span>
-          <span *ngIf="!hasServerMissingForTab('documents_expiry') && isTabComplete('documents_expiry')" class="w-2 h-2 rounded-full bg-emerald-500" title="تکمیل شده"></span>
-          <span *ngIf="!hasServerMissingForTab('documents_expiry') && !isTabComplete('documents_expiry')" class="w-2 h-2 rounded-full bg-amber-400" title="ناقص"></span>
-        </button>
-
-      </div>
+      <app-tab-bar
+        [tabs]="vehicleModalTabs"
+        [active]="activeModalTab"
+        (activeChange)="setActiveTab($any($event))" />
 
       <!-- بدنه فرم مودال -->
       <div class="p-4 md:p-6 space-y-4 max-h-[72vh] overflow-y-auto">
@@ -1401,9 +1275,10 @@
       <div class="p-3.5 md:p-4 border-t border-line-subtle bg-surface-muted flex items-center justify-between gap-2">
         <button
           type="button"
-          (click)="closeNewVehicleModal()"
-          class="px-4 py-2 rounded-xl border border-line bg-surface text-fg-muted text-xs font-bold hover:bg-line cursor-pointer transition-colors">
-          {{ isReadOnlyMode ? 'بستن پرونده' : 'انصراف' }}
+          appAction="close"
+          display="label"
+          [label]="isReadOnlyMode ? 'بستن پرونده' : 'انصراف'"
+          (click)="closeNewVehicleModal()">
         </button>
 
         <div *ngIf="!isReadOnlyMode" class="flex items-center gap-2">
@@ -1412,36 +1287,42 @@
           <button
             *ngIf="isApprovedRecord"
             type="button"
-            (click)="saveVehicle('approved')"
-            [disabled]="isSaving"
-            class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-xs active:scale-95 cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50">
-            <span *ngIf="isSaving" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            <span>ثبت پیشنهاد تغییرات</span>
+            appAction="save"
+            display="label"
+            label="ثبت پیشنهاد تغییرات"
+            size="lg"
+            tone="amber"
+            [busy]="isSaving"
+            (click)="saveVehicle('approved')">
           </button>
 
           <!-- دکمه ذخیره در پیش‌نویس (بدون ارسال به کارتابل سرپرست) -->
           <button
             *ngIf="!isApprovedRecord"
             type="button"
+            appAction="save"
+            display="label"
+            label="ذخیره در پیش‌نویس"
+            size="lg"
+            tone="slate"
+            [busy]="isSaving"
             (click)="saveVehicle('draft')"
-            [disabled]="isSaving"
-            class="px-4 py-2 rounded-xl bg-surface-muted hover:bg-surface text-fg/80 text-xs font-bold shadow-2xs active:scale-95 cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50"
             title="ذخیره اطلاعات بدون ارسال به کارتابل سرپرست">
-            <span *ngIf="isSaving" class="w-3.5 h-3.5 border-2 border-fg/80 border-t-transparent rounded-full animate-spin"></span>
-            <span>ذخیره در پیش‌نویس</span>
           </button>
 
           <!-- دکمه صریح ارسال به سرپرست (فراخوانی POST /submit/ - تسک ۶.۷) -->
           <button
             *ngIf="!isApprovedRecord"
             type="button"
-            (click)="submitDraftVehicle()"
+            appAction="send"
+            display="label"
+            [label]="isRevisionMode ? 'اصلاح و ارسال مجدد به سرپرست' : 'ارسال به سرپرست کارگاه'"
+            size="lg"
+            [tone]="isRevisionMode ? 'amber' : 'primary'"
+            [busy]="isSaving"
             [disabled]="isSaving || isSubmitDisabled"
-            [ngClass]="isRevisionMode ? 'bg-orange-600 hover:bg-orange-700' : 'bg-indigo-600 hover:bg-indigo-700'"
-            class="px-5 py-2 rounded-xl text-white text-xs font-black shadow-xs active:scale-95 cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50"
+            (click)="submitDraftVehicle()"
             [title]="isSubmitDisabled ? ('تکمیل نواقص الزامی است: ' + missingFieldsList.join('، ')) : 'ارسال پرونده به کارتابل سرپرست کارگاه'">
-            <span *ngIf="isSaving" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            <span>{{ isRevisionMode ? 'اصلاح و ارسال مجدد به سرپرست' : 'ارسال به سرپرست کارگاه' }}</span>
           </button>
 
         </div>

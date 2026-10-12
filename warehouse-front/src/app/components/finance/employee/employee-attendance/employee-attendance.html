@@ -22,112 +22,85 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- ۱. نوار فرماندهی چسبنده هدر (Unified Sticky Command Center) -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-      
-      <!-- Right: Section Picker & Subtabs -->
-      <div class="flex flex-wrap items-center gap-2 md:gap-3">
-        <!-- Section Selector (Guardian G1: Section Isolation) -->
-        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
-          <select
-            [(ngModel)]="selectedSectionId"
-            (change)="onSectionChanged()"
-            class="bg-transparent text-xs font-black text-indigo-700 focus:outline-none cursor-pointer">
-            <option *ngFor="let sec of mySections" [value]="sec.id">
-              {{ sec.project_name }} ◀ {{ sec.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Subtabs: ثبت روزانه | تقویم ۳۱ روزه -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto shadow-inner">
-          <button
-            type="button"
-            (click)="setMode('daily')"
-            [ngClass]="activeMode === 'daily' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer">
-            <span>ثبت روزانه</span>
-            <span [ngClass]="activeMode === 'daily' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/80 text-slate-600'" class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md">
-              {{ attendanceRows.length }}
-            </span>
-          </button>
-          <button
-            type="button"
-            (click)="setMode('monthly_grid')"
-            [ngClass]="activeMode === 'monthly_grid' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer">
-            <span>تقویم ماهانه ۳۱ روزه</span>
-            <span [ngClass]="activeMode === 'monthly_grid' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/80 text-slate-600'" class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md">
-              {{ monthlyGridRows.length }}
-            </span>
-          </button>
-        </div>
+  <app-command-center rowFrom="md">
+    <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
+      <!-- Section Selector (Guardian G1: Section Isolation) -->
+      <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
+        <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
+        <select
+          [(ngModel)]="selectedSectionId"
+          (change)="onSectionChanged()"
+          class="bg-transparent text-xs font-black text-indigo-700 focus:outline-none cursor-pointer">
+          <option *ngFor="let sec of mySections" [value]="sec.id">
+            {{ sec.project_name }} ◀ {{ sec.name }}
+          </option>
+        </select>
       </div>
 
-      <!-- Left: Standard Action Buttons & Save -->
-      <div class="flex items-center gap-2 justify-end flex-wrap">
-        <!-- Excel Export -->
-        <button
-          type="button"
-          (click)="exportMonthlyExcel()"
-          [disabled]="isExportingMonthlyExcel || !selectedSectionId"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 disabled:opacity-50"
-          title="خروجی فایل اکسل کارکرد پرسنل">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
-        </button>
-
-        <!-- Excel Smart Import Modal Trigger -->
-        <button
-          type="button"
-          (click)="openExcelPasteModal()"
-          [disabled]="isPeriodLocked || !selectedSectionId"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 disabled:opacity-50"
-          title="پیست متنی هوشمند از اکسل">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard"></svg>
-        </button>
-
-        <!-- Refresh / Sync -->
-        <button
-          type="button"
-          (click)="onFilterChange()"
-          [disabled]="isAttendanceLoading || isMonthlyGridLoading"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 disabled:opacity-50"
-          title="بروزرسانی داده‌ها">
-          <svg class="w-4 h-4" [class.animate-spin]="isAttendanceLoading || isMonthlyGridLoading" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="refresh-cw"></svg>
-        </button>
-
-        <!-- Save Button for Daily Attendance -->
-        <button
-          *ngIf="activeMode === 'daily'"
-          type="button"
-          (click)="saveAttendanceMatrix()"
-          [disabled]="!hasUnsavedChanges || isSavingAttendance || isPeriodLocked || !selectedSectionId"
-          [ngClass]="!hasUnsavedChanges ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60' : (hasExistingAttendance ? 'bg-blue-600 hover:bg-blue-700 text-white ring-2 ring-blue-400/50 shadow-md shadow-blue-500/20' : 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-400/50 shadow-md shadow-emerald-500/20')"
-          class="px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer">
-          <svg *ngIf="!isSavingAttendance" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
-          <span *ngIf="!isSavingAttendance">{{ hasExistingAttendance ? 'به‌روزرسانی کارکرد' : 'ثبت کارکرد روزانه' }}</span>
-          <span *ngIf="isSavingAttendance">در حال ثبت...</span>
-          <span *ngIf="hasUnsavedChanges" class="w-2 h-2 rounded-full bg-amber-300 animate-ping"></span>
-        </button>
-
-        <!-- Save Button for Monthly Grid -->
-        <button
-          *ngIf="activeMode === 'monthly_grid'"
-          type="button"
-          (click)="saveMonthlyGrid()"
-          [disabled]="!hasUnsavedMonthlyGrid || isSavingMonthlyGrid || isPeriodLocked || !selectedSectionId"
-          [ngClass]="!hasUnsavedMonthlyGrid ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60' : 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-400/50 shadow-md shadow-emerald-500/20'"
-          class="px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer">
-          <svg *ngIf="!isSavingMonthlyGrid" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
-          <span *ngIf="!isSavingMonthlyGrid">ذخیره تغییرات ماهانه</span>
-          <span *ngIf="isSavingMonthlyGrid">در حال ذخیره...</span>
-          <span *ngIf="hasUnsavedMonthlyGrid" class="w-2 h-2 rounded-full bg-amber-300 animate-ping"></span>
-        </button>
-      </div>
-
+      <!-- Subtabs: ثبت روزانه | تقویم ۳۱ روزه -->
+      <app-tab-bar
+        [tabs]="attendanceModeTabs"
+        [active]="activeMode"
+        (activeChange)="setMode($event)"
+      ></app-tab-bar>
     </div>
-  </div>
+
+    <!-- Left: Standard Action Buttons & Save -->
+    <div cc-actions class="flex items-center gap-2 justify-end flex-wrap">
+      <!-- Excel Export -->
+      <button
+        type="button"
+        appAction="export-excel"
+        (click)="exportMonthlyExcel()"
+        [disabled]="isExportingMonthlyExcel || !selectedSectionId"
+        [busy]="isExportingMonthlyExcel"
+      ></button>
+
+      <!-- Excel Smart Import Modal Trigger -->
+      <button
+        type="button"
+        appAction="import-excel"
+        label="پیست هوشمند"
+        (click)="openExcelPasteModal()"
+        [disabled]="isPeriodLocked || !selectedSectionId"
+      ></button>
+
+      <!-- Refresh / Sync -->
+      <button
+        type="button"
+        appAction="refresh"
+        (click)="onFilterChange()"
+        [disabled]="isAttendanceLoading || isMonthlyGridLoading"
+        [busy]="isAttendanceLoading || isMonthlyGridLoading"
+      ></button>
+
+      <!-- Save Button for Daily Attendance -->
+      <button
+        *ngIf="activeMode === 'daily'"
+        type="button"
+        appAction="save"
+        [label]="hasExistingAttendance ? 'به‌روزرسانی' : 'ثبت کارکرد'"
+        [tone]="hasExistingAttendance ? 'blue' : 'emerald'"
+        size="md"
+        [busy]="isSavingAttendance"
+        [disabled]="!hasUnsavedChanges || isSavingAttendance || isPeriodLocked || !selectedSectionId"
+        (click)="saveAttendanceMatrix()"
+      ></button>
+
+      <!-- Save Button for Monthly Grid -->
+      <button
+        *ngIf="activeMode === 'monthly_grid'"
+        type="button"
+        appAction="save"
+        label="ذخیره ماهانه"
+        tone="emerald"
+        size="md"
+        [busy]="isSavingMonthlyGrid"
+        [disabled]="!hasUnsavedMonthlyGrid || isSavingMonthlyGrid || isPeriodLocked || !selectedSectionId"
+        (click)="saveMonthlyGrid()"
+      ></button>
+    </div>
+  </app-command-center>
 
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- ۲. حالت ثبت کارکرد روزانه (Daily Attendance View) -->
@@ -514,10 +487,16 @@
           <span>تغییرات ذخیره‌نشده</span>
         </div>
       </div>
-      <button (click)="saveAttendanceMatrix()" [disabled]="!hasUnsavedChanges || isSavingAttendance || isPeriodLocked" [ngClass]="!hasUnsavedChanges ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60' : (hasExistingAttendance ? 'bg-blue-600 hover:bg-blue-700 text-white ring-2 ring-blue-400/50 shadow-md shadow-blue-500/20' : 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-400/50 shadow-md shadow-emerald-500/20')" class="px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0">
-        <svg *ngIf="!isSavingAttendance" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
-        <span>{{ isSavingAttendance ? 'در حال ثبت...' : (hasExistingAttendance ? 'به‌روزرسانی' : 'ثبت کارکرد') }}</span>
-      </button>
+      <button
+        type="button"
+        appAction="save"
+        [label]="hasExistingAttendance ? 'به‌روزرسانی' : 'ثبت کارکرد'"
+        [tone]="hasExistingAttendance ? 'blue' : 'emerald'"
+        size="sm"
+        [busy]="isSavingAttendance"
+        [disabled]="!hasUnsavedChanges || isSavingAttendance || isPeriodLocked"
+        (click)="saveAttendanceMatrix()"
+      ></button>
     </div>
 
     <!-- In-Flow Bottom Summary Footer -->
@@ -556,11 +535,16 @@
       </div>
 
       <!-- Save Button -->
-      <button (click)="saveAttendanceMatrix()" [disabled]="!hasUnsavedChanges || isSavingAttendance || isPeriodLocked" [ngClass]="!hasUnsavedChanges ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60' : (hasExistingAttendance ? 'bg-blue-600 hover:bg-blue-700 text-white ring-2 ring-blue-400/50 shadow-md shadow-blue-500/20' : 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-400/50 shadow-md shadow-emerald-500/20')" class="px-5 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-2 cursor-pointer">
-        <svg *ngIf="!isSavingAttendance" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
-        <span *ngIf="!isSavingAttendance">{{ hasExistingAttendance ? 'به‌روزرسانی کارکرد' : 'ثبت کارکرد روزانه' }}</span>
-        <span *ngIf="isSavingAttendance">در حال ثبت...</span>
-      </button>
+      <button
+        type="button"
+        appAction="save"
+        [label]="hasExistingAttendance ? 'به‌روزرسانی' : 'ثبت کارکرد'"
+        [tone]="hasExistingAttendance ? 'blue' : 'emerald'"
+        size="md"
+        [busy]="isSavingAttendance"
+        [disabled]="!hasUnsavedChanges || isSavingAttendance || isPeriodLocked"
+        (click)="saveAttendanceMatrix()"
+      ></button>
     </div>
 
   </div>
@@ -621,31 +605,46 @@
         </button>
 
         <!-- بارگذاری اکسل شیت ماهانه -->
-        <button (click)="openExcelImportModal()" [disabled]="isPeriodLocked || isImportingMonthlyExcel" class="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50" title="بارگذاری اکسل کارکرد پرسنل">
-          <svg *ngIf="!isImportingMonthlyExcel" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
-          <span *ngIf="!isImportingMonthlyExcel">📥 بارگذاری اکسل</span>
-          <span *ngIf="isImportingMonthlyExcel">در حال بارگذاری...</span>
-        </button>
+        <button
+          type="button"
+          appAction="upload"
+          label="بارگذاری اکسل"
+          tone="emerald"
+          [busy]="isImportingMonthlyExcel"
+          [disabled]="isPeriodLocked || isImportingMonthlyExcel"
+          (click)="openExcelImportModal()"
+        ></button>
 
         <!-- چاپ رسمی شیت ماهانه -->
-        <button (click)="openPrintTimesheetModal()" class="px-3.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer" title="پیش‌نمایش چاپ رسمی شیت ماهانه بخش همراه با کادر اثر انگشت و امضا">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="printer"></svg>
-          <span>🖨️ چاپ شیت رسمی</span>
-        </button>
+        <button
+          type="button"
+          appAction="print"
+          label="چاپ شیت"
+          tone="purple"
+          (click)="openPrintTimesheetModal()"
+        ></button>
 
         <!-- ارسال کارکرد به واحد مالی -->
-        <button *ngIf="periodStatus === 'OPEN'" (click)="openSubmitModal()" [disabled]="isPeriodLocked" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer" title="ارسال کارکرد ماهانه جهت بررسی و تایید مالی">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="send"></svg>
-          <span>ارسال جهت بررسی مالی</span>
-        </button>
+        <button
+          *ngIf="periodStatus === 'OPEN'"
+          type="button"
+          appAction="send"
+          label="ارسال به مالی"
+          tone="primary"
+          [disabled]="isPeriodLocked"
+          (click)="openSubmitModal()"
+        ></button>
 
         <!-- ذخیره تغییرات ماهانه -->
-        <button (click)="saveMonthlyGrid()" [disabled]="!hasUnsavedMonthlyGrid || isSavingMonthlyGrid || isPeriodLocked" [ngClass]="!hasUnsavedMonthlyGrid ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60' : 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-400/50 shadow-md shadow-emerald-500/20'" class="px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer">
-          <svg *ngIf="!isSavingMonthlyGrid" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
-          <span *ngIf="!isSavingMonthlyGrid">ذخیره تغییرات ماهانه</span>
-          <span *ngIf="isSavingMonthlyGrid">در حال ذخیره‌سازی...</span>
-          <span *ngIf="hasUnsavedMonthlyGrid" class="w-2 h-2 rounded-full bg-amber-300 animate-ping"></span>
-        </button>
+        <button
+          type="button"
+          appAction="save"
+          label="ذخیره ماهانه"
+          tone="emerald"
+          [busy]="isSavingMonthlyGrid"
+          [disabled]="!hasUnsavedMonthlyGrid || isSavingMonthlyGrid || isPeriodLocked"
+          (click)="saveMonthlyGrid()"
+        ></button>
       </div>
 
     </div>
@@ -750,7 +749,7 @@
     <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="text-sm font-black text-slate-800">تنظیم گروهی ساعات کارکرد</h3>
-        <button (click)="isBulkHoursModalOpen = false" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" size="sm" (click)="isBulkHoursModalOpen = false"></button>
       </div>
 
       <div class="space-y-3 text-xs">
@@ -786,8 +785,8 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-        <button (click)="isBulkHoursModalOpen = false" class="px-4 py-2 text-slate-600 text-xs font-bold hover:bg-slate-100 rounded-xl cursor-pointer">انصراف (Esc)</button>
-        <button (click)="applyBulkHours()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl cursor-pointer">اعمال تغییرات</button>
+        <button type="button" appAction="close" display="label" label="انصراف" (click)="isBulkHoursModalOpen = false"></button>
+        <button type="button" appAction="confirm" display="label" label="اعمال تغییرات" (click)="applyBulkHours()"></button>
       </div>
     </div>
   </div>
@@ -802,7 +801,7 @@
           <h3 class="text-sm font-black text-slate-800">پیست هوشمند کارکرد روزانه از اکسل</h3>
           <p class="text-[11px] text-slate-500">ستون‌ها به ترتیب: [کد ملی / نام] [وضعیت] [ساعت موثر] [اضافه‌کار] [مساعده] [توضیحات]</p>
         </div>
-        <button (click)="isExcelPasteModalOpen = false" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" size="sm" (click)="isExcelPasteModalOpen = false"></button>
       </div>
 
       <textarea [(ngModel)]="excelPasteText" (input)="parseExcelPasteText()" rows="5" placeholder="داده‌های ردیف‌های اکسل را اینجا Paste نمایید..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
@@ -818,8 +817,8 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-        <button (click)="isExcelPasteModalOpen = false" class="px-4 py-2 text-slate-600 text-xs font-bold hover:bg-slate-100 rounded-xl cursor-pointer">انصراف (Esc)</button>
-        <button (click)="applyExcelPaste()" [disabled]="excelParsedRows.length === 0" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl cursor-pointer disabled:opacity-50">اعمال در جدول</button>
+        <button type="button" appAction="close" display="label" label="انصراف" (click)="isExcelPasteModalOpen = false"></button>
+        <button type="button" appAction="confirm" display="label" label="اعمال در جدول" [disabled]="excelParsedRows.length === 0" (click)="applyExcelPaste()"></button>
       </div>
     </div>
   </div>
@@ -834,7 +833,7 @@
           <h3 class="text-sm font-black text-slate-800">{{ selectedDayDetailRow?.full_name }}</h3>
           <p class="text-[11px] text-slate-500">روز {{ selectedDayDetailItem?.day }} {{ monthName }} ({{ selectedYearMonth }}/{{ selectedDayDetailItem?.day }})</p>
         </div>
-        <button (click)="isDayDetailModalOpen = false" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" size="sm" (click)="isDayDetailModalOpen = false"></button>
       </div>
 
       <div class="space-y-3 text-xs">
@@ -868,8 +867,8 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-        <button (click)="isDayDetailModalOpen = false" class="px-4 py-2 text-slate-600 text-xs font-bold hover:bg-slate-100 rounded-xl cursor-pointer">انصراف (Esc)</button>
-        <button (click)="saveDayDetail()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl cursor-pointer">ذخیره روز</button>
+        <button type="button" appAction="close" display="label" label="انصراف" (click)="isDayDetailModalOpen = false"></button>
+        <button type="button" appAction="save" display="label" label="ذخیره روز" (click)="saveDayDetail()"></button>
       </div>
     </div>
   </div>
@@ -887,7 +886,7 @@
             <p class="text-[11px] text-slate-500">ماه: {{ selectedYearMonth }} ({{ monthName }})</p>
           </div>
         </div>
-        <button (click)="isRangeModalOpen = false" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" size="sm" (click)="isRangeModalOpen = false"></button>
       </div>
 
       <div class="space-y-4 text-xs">
@@ -950,8 +949,8 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-        <button (click)="isRangeModalOpen = false" class="px-4 py-2 text-slate-600 text-xs font-bold hover:bg-slate-100 rounded-xl cursor-pointer">انصراف (Esc)</button>
-        <button (click)="applyDateRangeAttendance()" class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-black rounded-xl shadow-md cursor-pointer">⚡ اعمال در تقویم</button>
+        <button type="button" appAction="close" display="label" label="انصراف" (click)="isRangeModalOpen = false"></button>
+        <button type="button" appAction="confirm" display="label" label="اعمال در تقویم" (click)="applyDateRangeAttendance()"></button>
       </div>
     </div>
   </div>
@@ -977,7 +976,7 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="printer"></svg>
             <span>ارسال به چاپگر (Print)</span>
           </button>
-          <button (click)="closePrintTimesheetModal()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer">بستن</button>
+          <button type="button" appAction="close" label="بستن" size="sm" (click)="closePrintTimesheetModal()"></button>
         </div>
       </div>
 
@@ -1082,7 +1081,7 @@
     <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="text-sm font-black text-slate-800">بارگذاری فایل اکسل تقویم کارکرد</h3>
-        <button (click)="closeExcelImportModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" size="sm" (click)="closeExcelImportModal()"></button>
       </div>
 
       <div class="space-y-3 text-xs">
@@ -1110,7 +1109,7 @@
     <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="text-sm font-black text-slate-800">ارسال کارکرد به واحد مالی</h3>
-        <button (click)="isSubmitModalOpen = false" class="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" size="sm" (click)="isSubmitModalOpen = false"></button>
       </div>
 
       <p class="text-xs text-slate-600 leading-relaxed">
@@ -1127,10 +1126,15 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-        <button (click)="isSubmitModalOpen = false" class="px-4 py-2 text-slate-600 text-xs font-bold hover:bg-slate-100 rounded-xl cursor-pointer">انصراف (Esc)</button>
-        <button (click)="submitPeriodForReview()" [disabled]="isSubmittingWorkflow" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl cursor-pointer disabled:opacity-50">
-          <span *ngIf="!isSubmittingWorkflow">ارسال نهایی (Enter)</span>
-          <span *ngIf="isSubmittingWorkflow">در حال ارسال...</span>
+        <button type="button" appAction="close" display="label" label="انصراف" (click)="isSubmitModalOpen = false"></button>
+        <button
+          type="button"
+          appAction="send"
+          display="label"
+          label="ارسال نهایی"
+          [busy]="isSubmittingWorkflow"
+          [disabled]="isSubmittingWorkflow"
+          (click)="submitPeriodForReview()">
         </button>
       </div>
     </div>

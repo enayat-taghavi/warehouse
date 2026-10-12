@@ -2,136 +2,77 @@
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   <!-- ۱. هدر استیکی فرماندهی یکپارچه (Unified Sticky Command Center Standard) -->
   <!-- ══════════════════════════════════════════════════════════════════════ -->
-  <header class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-2 pb-2 px-3 md:px-6 border-b border-slate-200/80 shadow-2xs">
-    <div class="bg-white p-2.5 md:p-3.5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-      
-      <!-- سمت راست: دراپ‌داون انتخاب بخش و تب‌های وضعیت اسناد تنخواه -->
-      <div class="flex flex-wrap items-center gap-2 md:gap-3">
-        <!-- سلکتور بخش پروژه (Guardian G1: Section Isolation) -->
-        <div class="flex items-center gap-1.5 bg-slate-100/90 py-1 px-2.5 rounded-xl border border-slate-200">
-          <label for="sectionSelect" class="text-[11px] font-bold text-slate-600 whitespace-nowrap">بخش فعال:</label>
-          <select
-            id="sectionSelect"
-            [(ngModel)]="selectedSectionId"
-            (change)="onSectionChanged()"
-            class="bg-transparent border-none text-xs font-bold text-indigo-900 focus:outline-hidden cursor-pointer"
-            [disabled]="isLoadingSections">
-            @for (sec of mySections; track sec.id) {
-              <option [value]="sec.id">{{ sec.project_name }} - {{ sec.name }} ({{ sec.code }})</option>
-            }
-          </select>
-          @if (isLoadingSections) {
-            <span class="w-3.5 h-3.5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
+  <app-command-center rowFrom="lg">
+    <!-- سمت راست: دراپ‌داون انتخاب بخش و تب‌های وضعیت اسناد تنخواه -->
+    <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
+      <!-- سلکتور بخش پروژه (Guardian G1: Section Isolation) -->
+      <div class="flex items-center gap-1.5 bg-slate-100/90 py-1 px-2.5 rounded-xl border border-slate-200">
+        <label for="sectionSelect" class="text-[11px] font-bold text-slate-600 whitespace-nowrap">بخش فعال:</label>
+        <select
+          id="sectionSelect"
+          [(ngModel)]="selectedSectionId"
+          (change)="onSectionChanged()"
+          class="bg-transparent border-none text-xs font-bold text-indigo-900 focus:outline-hidden cursor-pointer"
+          [disabled]="isLoadingSections">
+          @for (sec of mySections; track sec.id) {
+            <option [value]="sec.id">{{ sec.project_name }} - {{ sec.name }} ({{ sec.code }})</option>
           }
-        </div>
-
-        <!-- مانده فعال تنخواه (Compact Balance Badge) -->
-        <div *ngIf="balanceSummary" class="flex items-center gap-1.5 bg-amber-50/90 border border-amber-200/80 py-1 px-2.5 rounded-xl text-xs shadow-2xs" title="مانده فعال تنخواه در دست شما">
-          <span class="text-amber-800 font-bold text-[11px]">مانده:</span>
-          <span class="font-mono font-black text-amber-950">{{ (balanceSummary?.current_balance || 0) | number }}</span>
-          <span class="text-[10px] text-amber-700 font-medium">ریال</span>
-          <span class="text-[10px] text-amber-600 font-mono hidden sm:inline">({{ (balanceSummary?.current_balance_tomans || 0) | number }} تومان)</span>
-        </div>
-
-        <!-- تب‌های وضعیت اسناد تنخواه (Subtab Navigation Consistency) -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full lg:w-auto self-stretch lg:self-auto scrollbar-none">
-        <button
-          (click)="setStatusFilter('all')"
-          [class]="statusFilter === 'all' ? 'bg-white text-amber-800 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap">
-          <span>همه اسناد</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" [class]="statusFilter === 'all' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'">
-            {{ statusCounters.all }}
-          </span>
-        </button>
-
-        <button
-          (click)="setStatusFilter('draft')"
-          [class]="statusFilter === 'draft' ? 'bg-white text-slate-800 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap">
-          <span>پیش‌نویس</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" [class]="statusFilter === 'draft' ? 'bg-slate-200 text-slate-800' : 'bg-slate-200 text-slate-600'">
-            {{ statusCounters.draft }}
-          </span>
-        </button>
-
-        <button
-          (click)="setStatusFilter('pending_supervisor')"
-          [class]="statusFilter === 'pending_supervisor' ? 'bg-white text-amber-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap">
-          <span>در انتظار سرپرست</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" [class]="statusFilter === 'pending_supervisor' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'">
-            {{ statusCounters.pending_supervisor }}
-          </span>
-        </button>
-
-        <button
-          (click)="setStatusFilter('approved')"
-          [class]="statusFilter === 'approved' ? 'bg-white text-emerald-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap">
-          <span>تایید و تسویه‌شده</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" [class]="statusFilter === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'">
-            {{ statusCounters.approved }}
-          </span>
-        </button>
-
-        <button
-          (click)="setStatusFilter('allocation')"
-          [class]="statusFilter === 'allocation' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap">
-          <span>شارژهای دریافتی</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" [class]="statusFilter === 'allocation' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200 text-slate-600'">
-            {{ statusCounters.allocation }}
-          </span>
-        </button>
-
-        <button
-          (click)="setStatusFilter('rejected')"
-          [class]="statusFilter === 'rejected' ? 'bg-white text-rose-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap">
-          <span>رد شده</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md" [class]="statusFilter === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-slate-200 text-slate-600'">
-            {{ statusCounters.rejected }}
-          </span>
-        </button>
-      </div>
+        </select>
+        @if (isLoadingSections) {
+          <span class="w-3.5 h-3.5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></span>
+        }
       </div>
 
-      <!-- سمت چپ: دکمه‌های ۳گانه آیکونی و اکشن‌های ثبت سند و شارژ -->
-      <div class="flex items-center gap-2">
-        <!-- خروجی اکسل استاندارد -->
-        <button
-          (click)="exportExcel()"
-          title="خروجی اکسل رسمی گردش تنخواه"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-all">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="hero-document-download"></svg>
-        </button>
-
-        <!-- تازه‌سازی -->
-        <button
-          (click)="refreshData()"
-          title="بروزرسانی اطلاعات و مانده تنخواه"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all">
-          <svg class="w-4 h-4" [class.animate-spin]="isLoading || isLoadingBalance" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="hero-refresh"></svg>
-        </button>
-
-        <!-- دکمه درخواست شارژ مجدد -->
-        <button
-          (click)="openReplenishModal()"
-          class="px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95">
-          <span>⚡ درخواست شارژ</span>
-        </button>
-
-        <!-- دکمه ثبت هزینه از تنخواه -->
-        <button
-          (click)="openNewExpenseModal()"
-          class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white text-xs font-black flex items-center gap-1.5 transition-all shadow-xs shadow-amber-600/30 cursor-pointer active:scale-95">
-          <span>+ ثبت هزینه از تنخواه</span>
-        </button>
+      <!-- مانده فعال تنخواه (Compact Balance Badge) -->
+      <div *ngIf="balanceSummary" class="flex items-center gap-1.5 bg-amber-50/90 border border-amber-200/80 py-1 px-2.5 rounded-xl text-xs shadow-2xs" title="مانده فعال تنخواه در دست شما">
+        <span class="text-amber-800 font-bold text-[11px]">مانده:</span>
+        <span class="font-mono font-black text-amber-950">{{ (balanceSummary?.current_balance || 0) | number }}</span>
+        <span class="text-[10px] text-amber-700 font-medium">ریال</span>
+        <span class="text-[10px] text-amber-600 font-mono hidden sm:inline">({{ (balanceSummary?.current_balance_tomans || 0) | number }} تومان)</span>
       </div>
 
+      <!-- تب‌های وضعیت اسناد تنخواه (Subtab Navigation Consistency) -->
+      <app-tab-bar
+        [tabs]="pettyCashStatusTabs"
+        [active]="statusFilter"
+        (activeChange)="setStatusFilter($event)"
+      ></app-tab-bar>
     </div>
-  </header>
+
+    <!-- سمت چپ: دکمه‌های عملیاتی استاندارد ۳‌گانه و اکشن‌ها -->
+    <div cc-actions class="flex items-center gap-2">
+      <!-- خروجی اکسل استاندارد -->
+      <button
+        type="button"
+        appAction="export-excel"
+        (click)="exportExcel()"
+      ></button>
+
+      <!-- تازه‌سازی -->
+      <button
+        type="button"
+        appAction="refresh"
+        [busy]="isLoading || isLoadingBalance"
+        (click)="refreshData()"
+      ></button>
+
+      <!-- دکمه درخواست شارژ مجدد -->
+      <button
+        type="button"
+        appAction="send"
+        label="درخواست شارژ"
+        (click)="openReplenishModal()"
+      ></button>
+
+      <!-- دکمه ثبت هزینه از تنخواه -->
+      <button
+        type="button"
+        appAction="create"
+        label="ثبت هزینه"
+        (click)="openNewExpenseModal()"
+      ></button>
+    </div>
+  </app-command-center>
 
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   <!-- ۲. جدول داده‌های گردش اسناد تنخواه (Data Table Card & Action Ergonomics) -->
@@ -300,26 +241,32 @@
                       <!-- مشاهده پیوست -->
                       @if (tx.attachment) {
                         <button
+                          type="button"
+                          appAction="view"
+                          display="icon"
+                          size="sm"
                           (click)="openAttachmentPreview(tx)"
-                          title="مشاهده تصویر فاکتور/رسید"
-                          class="p-1 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="hero-paper-clip"></svg>
+                          title="مشاهده تصویر فاکتور/رسید">
                         </button>
                       }
 
                       <!-- ارسال به سرپرست در صورت پیش‌نویس -->
                       @if (tx.status === 'draft') {
                         <button
+                          type="button"
+                          appAction="send"
+                          label="ارسال"
+                          size="sm"
                           (click)="sendToSupervisor(tx)"
-                          title="ارسال به سرپرست جهت بررسی و تایید"
-                          class="px-2 py-1 text-slate-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg text-[11px] font-bold transition-all">
-                          ارسال
+                          title="ارسال به سرپرست جهت بررسی و تایید">
                         </button>
                         <button
+                          type="button"
+                          appAction="delete"
+                          display="icon"
+                          size="sm"
                           (click)="deleteDraftTransaction(tx)"
-                          title="حذف پیش‌نویس"
-                          class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="hero-trash"></svg>
+                          title="حذف پیش‌نویس">
                         </button>
                       }
                     </div>
@@ -350,7 +297,7 @@
               <p class="text-[11px] text-amber-100">پرداخت‌شده از مانده نقدی تنخواه‌دار (پیش‌نویس اولیه)</p>
             </div>
           </div>
-          <button (click)="closeNewExpenseModal()" class="text-amber-200 hover:text-white text-lg">✕</button>
+          <button type="button" appAction="close" display="icon" size="sm" (click)="closeNewExpenseModal()" class="text-amber-100 hover:text-white"></button>
         </div>
 
         <!-- محتوای فرم -->
@@ -448,8 +395,10 @@
               @if (attachmentFileName) {
                 <button
                   type="button"
+                  appAction="close"
+                  size="sm"
                   (click)="removeSelectedAttachment()"
-                  class="text-xs text-rose-500 hover:text-rose-700">حذف پیوست</button>
+                  class="text-rose-500 hover:text-rose-700">حذف پیوست</button>
               }
             </div>
           </div>
@@ -470,19 +419,19 @@
         <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
           <button
             type="button"
-            (click)="closeNewExpenseModal()"
-            class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-all">
-            انصراف
+            appAction="close"
+            label="انصراف"
+            size="sm"
+            (click)="closeNewExpenseModal()">
           </button>
           <button
             type="button"
-            (click)="saveExpense()"
-            [disabled]="isSaving"
-            class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black transition-all shadow-xs flex items-center gap-2">
-            @if (isSaving) {
-              <span class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            }
-            <span>ثبت هزینه (پیش‌نویس)</span>
+            appAction="save"
+            display="label"
+            label="ثبت هزینه (پیش‌نویس)"
+            tone="amber"
+            [busy]="isSaving"
+            (click)="saveExpense()">
           </button>
         </div>
 
@@ -505,7 +454,7 @@
               <p class="text-[11px] text-indigo-100">ارسال درخواست واریز وجه تنخواه به کارتابل مدیریت</p>
             </div>
           </div>
-          <button (click)="closeReplenishModal()" class="text-indigo-200 hover:text-white text-lg">✕</button>
+          <button type="button" appAction="close" display="icon" size="sm" (click)="closeReplenishModal()" class="text-indigo-100 hover:text-white"></button>
         </div>
 
         <div class="p-5 space-y-4">
@@ -547,19 +496,20 @@
         <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
           <button
             type="button"
-            (click)="closeReplenishModal()"
-            class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100">
-            انصراف
+            appAction="close"
+            display="label"
+            label="انصراف"
+            size="sm"
+            (click)="closeReplenishModal()">
           </button>
           <button
             type="button"
-            (click)="submitReplenishment()"
-            [disabled]="isSaving"
-            class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black flex items-center gap-2 shadow-xs">
-            @if (isSaving) {
-              <span class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            }
-            <span>ارسال درخواست شارژ</span>
+            appAction="send"
+            display="label"
+            label="ارسال درخواست شارژ"
+            tone="primary"
+            [busy]="isSaving"
+            (click)="submitReplenishment()">
           </button>
         </div>
 
@@ -579,7 +529,7 @@
             <span class="text-xl">🤝</span>
             <h3 class="font-black text-sm md:text-base">تعریف سریع طرف‌حساب / فروشنده</h3>
           </div>
-          <button (click)="closeQuickCounterpartyModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+          <button type="button" appAction="close" display="icon" size="sm" (click)="closeQuickCounterpartyModal()"></button>
         </div>
 
         <div class="p-5 space-y-3 max-h-[80vh] overflow-y-auto">
@@ -620,19 +570,20 @@
         <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
           <button
             type="button"
-            (click)="closeQuickCounterpartyModal()"
-            class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100">
-            انصراف
+            appAction="close"
+            display="label"
+            label="انصراف"
+            size="sm"
+            (click)="closeQuickCounterpartyModal()">
           </button>
           <button
             type="button"
-            (click)="saveQuickCounterparty()"
-            [disabled]="isSaving"
-            class="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black flex items-center gap-2">
-            @if (isSaving) {
-              <span class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            }
-            <span>ذخیره طرف‌حساب</span>
+            appAction="save"
+            display="label"
+            label="ذخیره طرف‌حساب"
+            tone="slate"
+            [busy]="isSaving"
+            (click)="saveQuickCounterparty()">
           </button>
         </div>
 
@@ -648,7 +599,7 @@
       <div class="bg-white rounded-3xl max-w-2xl w-full border border-slate-200 shadow-2xl overflow-hidden" (click)="$event.stopPropagation()">
         <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between">
           <h4 class="font-bold text-xs truncate">{{ previewTxTitle }}</h4>
-          <button (click)="closeAttachmentPreview()" class="text-slate-400 hover:text-white text-lg">✕</button>
+          <button type="button" appAction="close" display="icon" size="sm" (click)="closeAttachmentPreview()"></button>
         </div>
         <div class="p-4 flex items-center justify-center max-h-[75vh] overflow-auto bg-slate-100">
           <img [src]="previewAttachmentUrl" alt="پیوست سند تنخواه" class="max-h-full max-w-full rounded-xl object-contain shadow-sm"/>

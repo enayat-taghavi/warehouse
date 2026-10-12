@@ -23,130 +23,99 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- ۱. نوار فرماندهی چسبنده هدر (Unified Sticky Command Center) -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-      
-      <!-- Right: Section Picker & Subtabs -->
-      <div class="flex flex-wrap items-center gap-2 md:gap-3">
-        <!-- Section Selector (Guardian G1: Section Isolation) -->
-        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
-          <select
-            [(ngModel)]="selectedSectionId"
-            (change)="onSectionChanged()"
-            class="bg-transparent text-xs font-black text-blue-700 focus:outline-none cursor-pointer">
-            <option *ngFor="let sec of mySections" [value]="sec.id">
-              {{ sec.project_name }} ◀ {{ sec.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Subtabs: ثبت روزانه | تقویم ۳۱ روزه -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto shadow-inner">
-          <button
-            type="button"
-            (click)="setMode('daily')"
-            [ngClass]="activeMode === 'daily' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer">
-            <span>ثبت روزانه</span>
-            <span [ngClass]="activeMode === 'daily' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/80 text-slate-600'" class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md">
-              {{ vehicleRows.length }}
-            </span>
-          </button>
-          <button
-            type="button"
-            (click)="setMode('monthly_grid')"
-            [ngClass]="activeMode === 'monthly_grid' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer">
-            <span>تقویم ماهانه ۳۱ روزه</span>
-            <span [ngClass]="activeMode === 'monthly_grid' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/80 text-slate-600'" class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md">
-              {{ fleetMonthlyGridRows.length }}
-            </span>
-          </button>
-        </div>
+  <app-command-center rowFrom="md">
+    <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
+      <!-- Section Selector (Guardian G1: Section Isolation) -->
+      <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
+        <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
+        <select
+          [(ngModel)]="selectedSectionId"
+          (change)="onSectionChanged()"
+          class="bg-transparent text-xs font-black text-blue-700 focus:outline-none cursor-pointer">
+          <option *ngFor="let sec of mySections" [value]="sec.id">
+            {{ sec.project_name }} ◀ {{ sec.name }}
+          </option>
+        </select>
       </div>
 
-      <!-- Left: Standard Action Buttons & Save -->
-      <div class="flex items-center gap-2 justify-end flex-wrap">
-        <!-- Excel Export -->
-        <button
-          type="button"
-          (click)="downloadFleetMonthlyExcel()"
-          [disabled]="!selectedSectionId"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 disabled:opacity-50"
-          title="خروجی فایل اکسل تردد ناوگان">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
-        </button>
+      <!-- Subtabs: ثبت روزانه | تقویم ۳۱ روزه -->
+      <app-tab-bar
+        [tabs]="fleetModeTabs"
+        [active]="activeMode"
+        (activeChange)="setMode($event)"
+      ></app-tab-bar>
+    </div>
 
-        <!-- Excel Smart Paste Modal Trigger -->
-        <button
-          type="button"
-          (click)="openFleetExcelPasteModal()"
-          [disabled]="isPeriodLocked || !selectedSectionId || activeMode !== 'daily'"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 disabled:opacity-50"
-          title="چسباندن هوشمند اطلاعات از اکسل">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard"></svg>
-        </button>
+    <!-- Actions -->
+    <div cc-actions class="flex items-center gap-2 justify-end flex-wrap">
+      <!-- Excel Export -->
+      <button
+        type="button"
+        appAction="export-excel"
+        [disabled]="!selectedSectionId"
+        (click)="downloadFleetMonthlyExcel()"
+      ></button>
 
-        <!-- Refresh / Sync -->
-        <button
-          type="button"
-          (click)="onFilterChange()"
-          [disabled]="isVehicleLoading || isFleetMonthlyGridLoading"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 disabled:opacity-50"
-          title="بروزرسانی داده‌ها">
-          <svg class="w-4 h-4" [class.animate-spin]="isVehicleLoading || isFleetMonthlyGridLoading" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="refresh-cw"></svg>
-        </button>
+      <!-- Excel Smart Paste Modal Trigger -->
+      <button
+        type="button"
+        appAction="import-excel"
+        [disabled]="isPeriodLocked || !selectedSectionId || activeMode !== 'daily'"
+        (click)="openFleetExcelPasteModal()"
+      ></button>
 
+      <!-- Refresh / Sync -->
+      <button
+        type="button"
+        appAction="refresh"
+        [busy]="isVehicleLoading || isFleetMonthlyGridLoading"
+        (click)="onFilterChange()"
+      ></button>
+
+      <!-- Overflow Menu for Secondary Actions in Mobile (Prevents wrapping) -->
+      <app-overflow-menu>
         <!-- New Driver & Vehicle Modal Button -->
         <button
           type="button"
-          (click)="openNewVehicleProfileModal()"
+          appAction="create"
+          label="تعریف راننده/خودرو"
           [disabled]="!selectedSectionId"
-          class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="plus"></svg>
-          <span>تعریف راننده/خودرو</span>
-        </button>
+          (click)="openNewVehicleProfileModal()"
+        ></button>
 
         <!-- Audit Logs Modal Button -->
         <button
           type="button"
-          (click)="openFleetAuditLogs()"
+          appAction="history"
+          label="ممیزی تردد"
           [disabled]="!selectedSectionId"
-          class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
-          <span>ممیزی</span>
-        </button>
+          (click)="openFleetAuditLogs()"
+        ></button>
+      </app-overflow-menu>
 
-        <!-- Save Button for Daily Fleet -->
-        <button
-          *ngIf="activeMode === 'daily'"
-          type="button"
-          (click)="saveVehicleMatrix()"
-          [disabled]="!hasUnsavedChanges || isSavingVehicles || !selectedSectionId"
-          [ngClass]="!hasUnsavedChanges ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60' : 'bg-emerald-600 hover:bg-emerald-700 text-white ring-2 ring-emerald-400/50 shadow-md shadow-emerald-500/20'"
-          class="px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer">
-          <svg *ngIf="!isSavingVehicles" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
-          <span *ngIf="!isSavingVehicles">ذخیره تردد روزانه</span>
-          <span *ngIf="isSavingVehicles">در حال ثبت...</span>
-          <span *ngIf="hasUnsavedChanges" class="w-2 h-2 rounded-full bg-amber-300 animate-ping"></span>
-        </button>
+      <!-- Save Button for Daily Fleet -->
+      <button
+        *ngIf="activeMode === 'daily'"
+        type="button"
+        appAction="save"
+        label="ذخیره تردد روزانه"
+        [busy]="isSavingVehicles"
+        [disabled]="!hasUnsavedChanges || isSavingVehicles || !selectedSectionId"
+        (click)="saveVehicleMatrix()"
+      ></button>
 
-        <!-- Save Button for Monthly Grid -->
-        <button
-          *ngIf="activeMode === 'monthly_grid'"
-          type="button"
-          (click)="saveFleetMonthlyGrid()"
-          [disabled]="isSavingFleetMonthlyGrid || isPeriodLocked || !selectedSectionId"
-          class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
-          <svg *ngIf="!isSavingFleetMonthlyGrid" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="save"></svg>
-          <span *ngIf="!isSavingFleetMonthlyGrid">ذخیره تقویم ماهانه</span>
-          <span *ngIf="isSavingFleetMonthlyGrid">در حال ذخیره...</span>
-        </button>
-      </div>
-
+      <!-- Save Button for Monthly Grid -->
+      <button
+        *ngIf="activeMode === 'monthly_grid'"
+        type="button"
+        appAction="save"
+        label="ذخیره تقویم ماهانه"
+        [busy]="isSavingFleetMonthlyGrid"
+        [disabled]="isSavingFleetMonthlyGrid || isPeriodLocked || !selectedSectionId"
+        (click)="saveFleetMonthlyGrid()"
+      ></button>
     </div>
-  </div>
+  </app-command-center>
 
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- ۲. حالت ثبت ماتریسی روزانه ناوگان (Daily Fleet Matrix View)  -->
@@ -211,17 +180,11 @@
     <div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3 flex-wrap">
         <!-- Status Filter Tabs: Active / Inactive / All -->
-        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-          <button (click)="setFleetStatusFilter('active')" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold" [ngClass]="fleetStatusFilter === 'active' ? 'bg-white text-emerald-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'">
-            <span>🟢 فعال‌ها</span>
-          </button>
-          <button (click)="setFleetStatusFilter('inactive')" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold" [ngClass]="fleetStatusFilter === 'inactive' ? 'bg-white text-rose-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'">
-            <span>⚪ غیرفعال‌ها</span>
-          </button>
-          <button (click)="setFleetStatusFilter('all')" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold" [ngClass]="fleetStatusFilter === 'all' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'">
-            <span>🌐 همه</span>
-          </button>
-        </div>
+        <app-tab-bar
+          [tabs]="fleetStatusFilterTabs"
+          [active]="fleetStatusFilter"
+          (activeChange)="setFleetStatusFilter($event)"
+        ></app-tab-bar>
 
         <!-- Live Search Input -->
         <div class="relative">
@@ -515,17 +478,11 @@
     <div class="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3 flex-wrap">
         <!-- Status Tabs -->
-        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-          <button (click)="setFleetStatusFilter('active')" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold" [ngClass]="fleetStatusFilter === 'active' ? 'bg-white text-emerald-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'">
-            <span>🟢 فعال‌ها</span>
-          </button>
-          <button (click)="setFleetStatusFilter('inactive')" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold" [ngClass]="fleetStatusFilter === 'inactive' ? 'bg-white text-rose-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'">
-            <span>⚪ غیرفعال‌ها</span>
-          </button>
-          <button (click)="setFleetStatusFilter('all')" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold" [ngClass]="fleetStatusFilter === 'all' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'">
-            <span>🌐 همه</span>
-          </button>
-        </div>
+        <app-tab-bar
+          [tabs]="fleetStatusFilterTabs"
+          [active]="fleetStatusFilter"
+          (activeChange)="setFleetStatusFilter($event)"
+        ></app-tab-bar>
 
         <!-- Search -->
         <div class="relative">
@@ -641,7 +598,7 @@
           <h3 class="text-sm font-black text-slate-800">{{ selectedFleetDayDetailRow?.driver_name }} ({{ selectedFleetDayDetailRow?.plate_number }})</h3>
           <p class="text-[11px] text-slate-500">روز {{ selectedFleetDayDetailItem?.day }} از ماه {{ selectedYearMonth }}</p>
         </div>
-        <button (click)="isFleetDayDetailModalOpen = false" class="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" size="sm" (click)="isFleetDayDetailModalOpen = false"></button>
       </div>
 
       <div class="space-y-3 text-xs">
@@ -680,8 +637,8 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-        <button (click)="isFleetDayDetailModalOpen = false" class="px-4 py-2 text-slate-600 text-xs font-bold hover:bg-slate-100 rounded-xl cursor-pointer">انصراف (Esc)</button>
-        <button (click)="saveFleetDayDetail()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl cursor-pointer">ثبت و ذخیره (Enter)</button>
+        <button type="button" appAction="close" display="label" label="انصراف (Esc)" (click)="isFleetDayDetailModalOpen = false"></button>
+        <button type="button" appAction="save" display="label" tone="emerald" label="ثبت و ذخیره (Enter)" (click)="saveFleetDayDetail()"></button>
       </div>
     </div>
   </div>
@@ -693,7 +650,7 @@
     <div class="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-2xl border border-slate-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="text-sm font-black text-slate-800">📋 چسباندن اطلاعات سرویس‌های ناوگان از اکسل (Smart Paste)</h3>
-        <button (click)="isFleetExcelPasteModalOpen = false" class="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" size="sm" (click)="isFleetExcelPasteModalOpen = false"></button>
       </div>
 
       <p class="text-xs text-slate-600 leading-relaxed">
@@ -714,8 +671,8 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-        <button (click)="isFleetExcelPasteModalOpen = false" class="px-4 py-2 text-slate-600 text-xs font-bold hover:bg-slate-100 rounded-xl cursor-pointer">انصراف (Esc)</button>
-        <button (click)="applyFleetExcelPaste()" [disabled]="fleetExcelParsedRows.length === 0" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl disabled:opacity-50 cursor-pointer">اعمال در جدول</button>
+        <button type="button" appAction="close" display="label" label="انصراف (Esc)" (click)="isFleetExcelPasteModalOpen = false"></button>
+        <button type="button" appAction="confirm" display="label" tone="emerald" label="اعمال در جدول" [disabled]="fleetExcelParsedRows.length === 0" (click)="applyFleetExcelPaste()"></button>
       </div>
     </div>
   </div>
@@ -733,11 +690,8 @@
           <span class="text-xs text-slate-500 font-mono">({{ selectedYearMonth }})</span>
         </div>
         <div class="flex items-center gap-2">
-          <button (click)="closeFleetPrintModal()" class="px-4 py-2 text-slate-600 text-xs font-bold hover:bg-slate-100 rounded-xl cursor-pointer">بستن (Esc)</button>
-          <button (click)="printFleetSheet()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-500/20 cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="printer"></svg>
-            <span>چاپ برگه (Print)</span>
-          </button>
+          <button type="button" appAction="close" display="label" label="بستن (Esc)" (click)="closeFleetPrintModal()"></button>
+          <button type="button" appAction="print" display="label" label="چاپ برگه (Print)" (click)="printFleetSheet()"></button>
         </div>
       </div>
 
@@ -845,7 +799,7 @@
           <h3 class="text-sm font-black text-slate-800">📜 تاریخچه و لاگ‌های ممیزی تردد ناوگان</h3>
           <span class="text-xs text-slate-500 font-mono">({{ selectedYearMonth }})</span>
         </div>
-        <button (click)="closeFleetAuditLogs()" class="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" size="sm" (click)="closeFleetAuditLogs()"></button>
       </div>
 
       <div class="overflow-y-auto flex-1 text-xs">
@@ -897,7 +851,7 @@
       </div>
 
       <div class="flex items-center justify-end pt-3 border-t border-slate-100 shrink-0">
-        <button (click)="closeFleetAuditLogs()" class="px-4 py-2 text-slate-600 text-xs font-bold hover:bg-slate-100 rounded-xl cursor-pointer">بستن (Esc)</button>
+        <button type="button" appAction="close" display="label" label="بستن (Esc)" (click)="closeFleetAuditLogs()"></button>
       </div>
     </div>
   </div>

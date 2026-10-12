@@ -67,7 +67,18 @@ export interface TabDef {
   count?: number;
   /** رنگ اختیاری شمارنده و تب طبق AGENTS §7 */
   tone?: 'primary' | 'indigo' | 'emerald' | 'rose' | 'amber' | 'slate';
+  /**
+   * نقطه وضعیت مرحله (مثلاً «تکمیل شده» یا «دارای فیلد الزامی» در مودال‌های چندمرحله‌ای).
+   * برخلاف شمارنده در همه عرض‌ها، حتی mobile="icon"، دیده می‌شود؛ label نام دسترس‌پذیر آن است.
+   */
+  indicator?: { tone: 'emerald' | 'amber' | 'rose'; label: string; pulse?: boolean };
 }
+
+const TAB_INDICATOR_CLASSES: Record<'emerald' | 'amber' | 'rose', string> = {
+  emerald: 'bg-emerald-500',
+  amber: 'bg-amber-400',
+  rose: 'bg-rose-500',
+};
 
 /**
  * نوار تب استاندارد پروژه با ظرف قرصی و ارگونومی واکنش‌گرا (AGENTS §7).
@@ -120,6 +131,16 @@ export interface TabDef {
             }
           }
 
+          @if (tab.indicator; as ind) {
+            <span
+              class="w-2 h-2 rounded-full shrink-0"
+              [ngClass]="indicatorClasses(ind)"
+              [attr.title]="ind.label"
+              aria-hidden="true"
+            ></span>
+            <span class="sr-only">{{ ind.label }}</span>
+          }
+
           @if (tab.count !== undefined && tab.count !== null) {
             <!-- در حالت icon زیر sm فقط آیکون می‌ماند تا نوار بدون اسکرول جا شود -->
             <span
@@ -168,6 +189,11 @@ export class TabBarComponent {
   readonly activeChange = output<string>();
 
   @ViewChildren('tabButton') private tabButtons!: QueryList<ElementRef<HTMLButtonElement>>;
+
+  indicatorClasses(ind: NonNullable<TabDef['indicator']>): string {
+    const color = TAB_INDICATOR_CLASSES[ind.tone] ?? TAB_INDICATOR_CLASSES.amber;
+    return ind.pulse ? `${color} animate-pulse` : color;
+  }
 
   counterClasses(tab: TabDef): string {
     const tone = tab.tone ?? 'indigo';

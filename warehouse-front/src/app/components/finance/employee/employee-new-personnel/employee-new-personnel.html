@@ -42,41 +42,46 @@
         <!-- ۱. دکمه خروجی اکسل پرسنل (Emerald Icon) -->
         <button
           type="button"
+          appAction="export-excel"
+          display="icon"
+          size="sm"
           (click)="exportExcel()"
           [disabled]="isExportingExcel || !selectedSectionId"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-colors disabled:opacity-50"
+          [busy]="isExportingExcel"
           title="خروجی رسمی اکسل پرسنل">
-          <svg *ngIf="!isExportingExcel" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
-          <span *ngIf="isExportingExcel" class="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></span>
         </button>
 
         <!-- ۲. دکمه ورود اطلاعات از طریق اکسل (Indigo Icon - مشابه projects-and-sections) -->
         <button
           type="button"
+          appAction="import-excel"
+          display="icon"
+          size="sm"
           (click)="openImportModal()"
           [disabled]="!selectedSectionId"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 transition-colors disabled:opacity-50"
           title="ورود اطلاعات از طریق فایل اکسل">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
         </button>
 
         <!-- ۳. دکمه بازخوانی داده‌ها (Slate Icon) -->
         <button
           type="button"
+          appAction="refresh"
+          display="icon"
+          size="sm"
           (click)="loadRecentPersonnel()"
           [disabled]="isLoadingPersonnel"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors"
+          [busy]="isLoadingPersonnel"
           title="بروزرسانی داده‌ها">
-          <svg class="w-4 h-4" [class.animate-spin]="isLoadingPersonnel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="refresh-cw"></svg>
         </button>
 
         <!-- ۴. دکمه معرفی پرسنل جدید به صورت آیکونی شاخص (Purple Icon) -->
         <button
           type="button"
+          appAction="create"
+          display="icon"
+          size="sm"
           (click)="openNewPersonnelModal()"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-xs bg-purple-600 text-white hover:bg-purple-700 border border-purple-600 transition-all"
           title="معرفی پرسنل جدید (پیش‌نویس)">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="user-plus"></svg>
         </button>
       </div>
 
@@ -114,10 +119,11 @@
         </div>
         <button
           type="button"
+          appAction="close"
+          display="icon"
+          size="sm"
           (click)="closeNewPersonnelModal()"
-          class="text-purple-200 hover:text-white text-lg p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer active:scale-95"
           title="بستن (Esc)">
-          ✕
         </button>
       </div>
 
@@ -170,71 +176,10 @@
 
       <!-- ── نوار ساب‌تب‌های ۵گانه ارگونومیک (تسک ۶.۱) ── -->
       <div class="px-4 sm:px-5 pt-3 pb-2 shrink-0 bg-white border-b border-slate-100">
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full gap-1">
-          <!-- تب ۱: اطلاعات هویتی -->
-          <button
-            type="button"
-            (click)="setActiveTab('identity')"
-            [ngClass]="activeModalTab === 'identity' ? 'bg-white text-purple-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer flex-1 justify-center">
-            <span>👤</span>
-            <span>هویتی</span>
-            <span *ngIf="isTabComplete('identity')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800" title="تکمیل شده">✓</span>
-            <span *ngIf="!isTabComplete('identity')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-rose-100 text-rose-700" title="دارای فیلد الزامی">!</span>
-          </button>
-
-          <!-- تب ۲: مشخصات شغلی -->
-          <button
-            type="button"
-            (click)="setActiveTab('job')"
-            [ngClass]="activeModalTab === 'job' ? 'bg-white text-purple-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer flex-1 justify-center">
-            <span>💼</span>
-            <span>شغلی</span>
-            <span *ngIf="isTabComplete('job')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800" title="تکمیل شده">✓</span>
-            <span *ngIf="!isTabComplete('job')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-rose-100 text-rose-700" title="دارای فیلد الزامی">!</span>
-          </button>
-
-          <!-- تب ۳: حساب‌های بانکی -->
-          <button
-            type="button"
-            (click)="setActiveTab('banking')"
-            [ngClass]="activeModalTab === 'banking' ? 'bg-white text-purple-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer flex-1 justify-center">
-            <span>💳</span>
-            <span>بانکی</span>
-            <span *ngIf="isTabComplete('banking')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800" title="تکمیل شده">✓</span>
-            <span *ngIf="!isTabComplete('banking')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-rose-100 text-rose-700" title="دارای فیلد الزامی">!</span>
-            <span *ngIf="bankAccounts.length > 0" class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-purple-50 text-purple-700">
-              {{ bankAccounts.length }}
-            </span>
-          </button>
-
-          <!-- تب ۴: نشانی و تماس -->
-          <button
-            type="button"
-            (click)="setActiveTab('address')"
-            [ngClass]="activeModalTab === 'address' ? 'bg-white text-purple-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer flex-1 justify-center">
-            <span>📍</span>
-            <span>نشانی و تماس</span>
-            <span *ngIf="isTabComplete('address')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800" title="تکمیل شده">✓</span>
-            <span *ngIf="!isTabComplete('address')" class="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-rose-100 text-rose-700" title="دارای فیلد الزامی">!</span>
-          </button>
-
-          <!-- تب ۵: مدارک و یادداشت -->
-          <button
-            type="button"
-            (click)="setActiveTab('documents')"
-            [ngClass]="activeModalTab === 'documents' ? 'bg-white text-purple-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer flex-1 justify-center">
-            <span>📎</span>
-            <span>مدارک</span>
-            <span *ngIf="existingDocuments.length > 0 || pendingUploadDocuments.length > 0" class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-purple-50 text-purple-700">
-              {{ existingDocuments.length + pendingUploadDocuments.length }}
-            </span>
-          </button>
-        </div>
+        <app-tab-bar
+          [tabs]="personnelModalTabs"
+          [active]="activeModalTab"
+          (activeChange)="setActiveTab($any($event))" />
       </div>
 
       <!-- ── بدنه اسکرول‌پذیر تب‌ها ── -->
@@ -1157,20 +1102,21 @@
             <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
               <button
                 type="button"
-                (click)="closeNewPersonnelModal()"
-                class="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors cursor-pointer">
-                انصراف
+                appAction="close"
+                display="label"
+                label="انصراف"
+                (click)="closeNewPersonnelModal()">
               </button>
 
               <button
                 type="button"
+                appAction="save"
+                display="label"
+                label="ثبت درخواست تغییرات (ارسال به سرپرست)"
+                size="lg"
+                [busy]="isSaving"
                 (click)="savePersonnel('pending_supervisor')"
-                [disabled]="isSaving"
-                class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs active:scale-95 cursor-pointer transition-all flex items-center gap-2 disabled:opacity-50"
                 title="ثبت تغییرات پیشنهادی و ارسال به کارتابل سرپرست">
-                <span *ngIf="isSaving" class="animate-spin">⏳</span>
-                <span *ngIf="!isSaving">📝</span>
-                <span>ثبت درخواست تغییرات (ارسال به سرپرست)</span>
               </button>
             </div>
           </ng-container>
@@ -1180,39 +1126,44 @@
             <button
               type="button"
               (click)="resetForm()"
-              class="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 cursor-pointer transition-colors w-full sm:w-auto">
+              class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-800 text-xs font-bold cursor-pointer transition-colors w-full sm:w-auto">
               پاکسازی فرم
             </button>
 
             <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
               <button
                 type="button"
-                (click)="closeNewPersonnelModal()"
-                class="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors cursor-pointer">
-                انصراف
+                appAction="close"
+                display="label"
+                label="انصراف"
+                (click)="closeNewPersonnelModal()">
               </button>
               
               <!-- دکمه ذخیره پیش‌نویس موقت (همواره فعال حتی با نواقص) -->
               <button
                 type="button"
+                appAction="save"
+                display="label"
+                label="ذخیره پیش‌نویس"
+                size="lg"
+                tone="slate"
+                [busy]="isSaving"
                 (click)="savePersonnel('draft')"
-                [disabled]="isSaving"
-                class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 shadow-2xs active:scale-95 cursor-pointer transition-all flex items-center gap-1.5 disabled:opacity-50"
                 title="ذخیره موقت پیش‌نویس بدون ارسال به کارتابل سرپرست">
-                <span>💾</span>
-                <span>ذخیره پیش‌نویس</span>
               </button>
 
               <!-- دکمه ثبت و ارسال به سرپرست (قفل در صورت وجود نواقص - تسک ۶.۷) -->
               <button
                 type="button"
-                (click)="submitDraftPersonnel()"
+                appAction="send"
+                display="label"
+                [label]="editingPersonnelStatus === 'revision_required' ? 'ارسال مجدد به سرپرست' : 'ارسال به سرپرست'"
+                size="lg"
+                [tone]="editingPersonnelStatus === 'revision_required' ? 'amber' : 'primary'"
+                [busy]="isSaving"
                 [disabled]="isSubmitDisabled || isSaving"
-                class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black shadow-xs active:scale-95 cursor-pointer transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                (click)="submitDraftPersonnel()"
                 [title]="isSubmitDisabled ? 'جهت ارسال به سرپرست تمامی فیلدهای الزامی باید تکمیل شوند' : (editingPersonnelStatus === 'revision_required' ? 'اصلاح پرونده و ارسال مجدد به کارتابل سرپرست' : 'ثبت پرونده و ارسال به کارتابل سرپرست')">
-                <span *ngIf="isSaving" class="animate-spin">⏳</span>
-                <span *ngIf="!isSaving">🚀</span>
-                <span>{{ editingPersonnelStatus === 'revision_required' ? 'ارسال مجدد به سرپرست' : 'ارسال به سرپرست' }}</span>
               </button>
             </div>
           </ng-container>
@@ -1250,97 +1201,10 @@
       <!-- ۲. سمت چپ (RTL End): فیلترهای وضعیت و شمارنده نمایش -->
       <div class="flex flex-wrap items-center gap-2.5 text-xs font-bold text-slate-500 justify-end">
         <!-- کپسول دکمه‌های فیلتر همه، موارد نیازمند بررسی، در انتظار، نیازمند اصلاح، مصوب، رد شده -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden w-full sm:w-auto">
-          <!-- همه -->
-          <button
-            type="button"
-            (click)="setStatusFilter('all')"
-            [ngClass]="statusFilter === 'all' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer"
-            title="نمایش تمامی پرونده‌های پرسنل">
-            <span class="text-xs">📁</span>
-            <span>همه</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md"
-                  [ngClass]="statusFilter === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ formatNumber(personnelMetrics.total) }}
-            </span>
-          </button>
-
-          <!-- پیش‌نویس -->
-          <button
-            type="button"
-            (click)="setStatusFilter('draft')"
-            [ngClass]="statusFilter === 'draft' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer"
-            [title]="'موارد نیازمند بررسی: ' + formatNumber(unreviewedDraftCount) + ' از کل ' + formatNumber(personnelMetrics.drafts) + ' پرونده'">
-            <span class="text-xs">📝</span>
-            <span>پیش‌نویس</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md transition-all"
-                  [ngClass]="unreviewedDraftCount > 0 ? (statusFilter === 'draft' ? 'bg-indigo-100 text-indigo-800 font-black' : 'bg-amber-100 text-amber-900 border border-amber-300 font-black') : (statusFilter === 'draft' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600')">
-              {{ formatNumber(unreviewedDraftCount) }}
-            </span>
-          </button>
-
-          <!-- معلق / در انتظار -->
-          <button
-            type="button"
-            (click)="setStatusFilter('pending')"
-            [ngClass]="(statusFilter === 'pending' || statusFilter === 'pending_supervisor') ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer"
-            title="پرونده‌های معلق در گردش کار (سرپرست، حسابدار، مدیر)">
-            <span class="text-xs">⏳</span>
-            <span>معلق</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md"
-                  [ngClass]="(statusFilter === 'pending' || statusFilter === 'pending_supervisor') ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ formatNumber(personnelMetrics.pending) }}
-            </span>
-          </button>
-
-          <!-- عودت / نیازمند اصلاح -->
-          <button
-            type="button"
-            (click)="setStatusFilter('revision_required')"
-            [ngClass]="statusFilter === 'revision_required' ? 'bg-white text-amber-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer"
-            title="پرونده‌های عودت داده شده توسط سرپرست">
-            <span class="text-xs">↩</span>
-            <span>عودت</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md"
-                  [ngClass]="personnelMetrics.revision_required > 0 ? 'bg-amber-100 text-amber-800' : (statusFilter === 'revision_required' ? 'bg-amber-50 text-amber-700' : 'bg-slate-200/70 text-slate-600')">
-              {{ formatNumber(personnelMetrics.revision_required) }}
-            </span>
-          </button>
-
-          <!-- مصوب -->
-          <button
-            type="button"
-            (click)="setStatusFilter('approved')"
-            [ngClass]="statusFilter === 'approved' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer"
-            title="پرونده‌های تایید نهایی شده و مصوب">
-            <span class="text-xs">✓</span>
-            <span>مصوب</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md"
-                  [ngClass]="statusFilter === 'approved' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ formatNumber(personnelMetrics.approved) }}
-            </span>
-          </button>
-
-          <!-- رد شده -->
-          <button
-            type="button"
-            (click)="setStatusFilter('rejected')"
-            [ngClass]="statusFilter === 'rejected' ? 'bg-white text-rose-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer"
-            title="پرونده‌های ابطال یا رد شده">
-            <span class="text-xs">✕</span>
-            <span>رد شده</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md"
-                  [ngClass]="statusFilter === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ formatNumber(personnelMetrics.rejected) }}
-            </span>
-          </button>
-        </div>
+        <app-tab-bar
+          [tabs]="statusFilterTabs"
+          [active]="statusFilter"
+          (activeChange)="setStatusFilter($any($event))" />
 
         <!-- شمارنده نمایش تعداد رکوردها -->
         <div class="flex items-center gap-1 text-xs font-bold text-slate-500 whitespace-nowrap">

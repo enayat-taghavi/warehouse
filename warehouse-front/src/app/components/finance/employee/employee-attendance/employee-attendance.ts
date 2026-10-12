@@ -22,17 +22,45 @@ import {
 import { jalaliToGregorian, gregorianToJalali } from '../../../../core/utils/date-utils';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
 
 @Component({
   selector: 'app-employee-attendance-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    NgPersianDatepickerModule,
+    SvgIconDirective,
+    ActionButtonComponent,
+    TabBarComponent,
+    CommandCenterComponent,
+  ],
   templateUrl: './employee-attendance.html',
   styleUrl: './employee-attendance.css'
 })
 export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   // Sub-view modes: 'daily' (ثبت ماتریسی روزانه) | 'monthly_grid' (تقویم ۳۱ روزه ماهانه)
   activeMode: 'daily' | 'monthly_grid' = 'daily';
+
+  // Memoized tabs for app-tab-bar (OnPush)
+  private attendanceModeTabsCache: TabDef[] = [];
+  private attendanceModeTabsKey = '';
+
+  get attendanceModeTabs(): TabDef[] {
+    const key = `${this.attendanceRows.length}_${this.monthlyGridRows.length}`;
+    if (key !== this.attendanceModeTabsKey) {
+      this.attendanceModeTabsKey = key;
+      this.attendanceModeTabsCache = [
+        { id: 'daily', label: 'ثبت روزانه', shortLabel: 'روزانه', count: this.attendanceRows.length },
+        { id: 'monthly_grid', label: 'تقویم ماهانه ۳۱ روزه', shortLabel: 'ماهانه', count: this.monthlyGridRows.length },
+      ];
+    }
+    return this.attendanceModeTabsCache;
+  }
 
   // Section & Scope Management (Guardian G1)
   mySections: ProjectSection[] = [];
@@ -334,8 +362,8 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   }
 
   // --- تغییر مد نمایش ---
-  setMode(mode: 'daily' | 'monthly_grid'): void {
-    this.activeMode = mode;
+  setMode(mode: 'daily' | 'monthly_grid' | string): void {
+    this.activeMode = mode as 'daily' | 'monthly_grid';
     this.onFilterChange();
   }
 

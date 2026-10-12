@@ -31,6 +31,10 @@ import {
 } from '../../../../core/utils/sheba-utils';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { OverflowMenuComponent } from '../../../../shared/components/overflow-menu/overflow-menu.component';
 
 export interface FleetMatrixRow extends VehicleMatrixRow {
   _isDirty?: boolean;
@@ -39,13 +43,44 @@ export interface FleetMatrixRow extends VehicleMatrixRow {
 @Component({
   selector: 'app-employee-fleet-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    NgPersianDatepickerModule,
+    SvgIconDirective,
+    ActionButtonComponent,
+    TabBarComponent,
+    CommandCenterComponent,
+    OverflowMenuComponent,
+  ],
   templateUrl: './employee-fleet.html',
   styleUrl: './employee-fleet.css'
 })
 export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
   // حالت فعال: 'daily' (ثبت روزانه) | 'monthly_grid' (تقویم ۳۱ روزه ماهانه)
   activeMode: 'daily' | 'monthly_grid' = 'daily';
+
+  // Memoized tabs for app-tab-bar
+  private fleetModeTabsKey = '';
+  private fleetModeTabsCache: TabDef[] = [];
+  get fleetModeTabs(): TabDef[] {
+    const key = `${this.vehicleRows.length}:${this.fleetMonthlyGridRows.length}`;
+    if (key !== this.fleetModeTabsKey) {
+      this.fleetModeTabsKey = key;
+      this.fleetModeTabsCache = [
+        { id: 'daily', label: 'ثبت روزانه', shortLabel: 'روزانه', count: this.vehicleRows.length },
+        { id: 'monthly_grid', label: 'تقویم ماهانه ۳۱ روزه', shortLabel: 'ماهانه', count: this.fleetMonthlyGridRows.length },
+      ];
+    }
+    return this.fleetModeTabsCache;
+  }
+
+  readonly fleetStatusFilterTabs: TabDef[] = [
+    { id: 'active', label: 'فعال‌ها', tone: 'emerald' },
+    { id: 'inactive', label: 'غیرفعال‌ها', tone: 'rose' },
+    { id: 'all', label: 'همه', tone: 'indigo' },
+  ];
 
   // مدیریت بخش و قرنطینه داده‌ها (Guardian G1: Section Isolation)
   mySections: ProjectSection[] = [];
@@ -274,8 +309,8 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
     this.onFilterChange();
   }
 
-  setMode(mode: 'daily' | 'monthly_grid'): void {
-    this.activeMode = mode;
+  setMode(mode: 'daily' | 'monthly_grid' | string): void {
+    this.activeMode = mode as 'daily' | 'monthly_grid';
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { mode: this.activeMode },
@@ -298,8 +333,8 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
     }
   }
 
-  setFleetStatusFilter(status: 'active' | 'inactive' | 'all'): void {
-    this.fleetStatusFilter = status;
+  setFleetStatusFilter(status: 'active' | 'inactive' | 'all' | string): void {
+    this.fleetStatusFilter = status as 'active' | 'inactive' | 'all';
     if (this.activeMode === 'daily') {
       this.loadVehicleMatrix();
     } else {

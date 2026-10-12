@@ -10,18 +10,41 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { gregorianToJalali } from '../../../../core/utils/date-utils';
 import { validateSheba, ShebaValidationResult } from '../../../../core/utils/sheba-utils';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
 
 export type InvoiceStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'pending_accountant' | 'ready_to_pay' | 'paid' | 'rejected';
 
 @Component({
   selector: 'app-employee-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ActionButtonComponent, TabBarComponent, CommandCenterComponent],
   templateUrl: './employee-invoices.html',
   styleUrl: './employee-invoices.css'
 })
 export class EmployeeInvoicesHubComponent implements OnInit {
   readonly Math = Math;
+
+  // Memoized tabs for app-tab-bar
+  private invoiceStatusTabsKey = '';
+  private invoiceStatusTabsCache: TabDef[] = [];
+  get invoiceStatusTabs(): TabDef[] {
+    const sc = this.statusCounters;
+    const key = `${sc.all}:${sc.draft}:${sc.pending_supervisor}:${sc.pending_accountant}:${sc.ready_to_pay}:${sc.paid}`;
+    if (key !== this.invoiceStatusTabsKey) {
+      this.invoiceStatusTabsKey = key;
+      this.invoiceStatusTabsCache = [
+        { id: 'all', label: 'همه', count: sc.all },
+        { id: 'draft', label: 'پیش‌نویس', count: sc.draft },
+        { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', count: sc.pending_supervisor },
+        { id: 'pending_accountant', label: 'در انتظار حسابدار', shortLabel: 'حسابدار', count: sc.pending_accountant },
+        { id: 'ready_to_pay', label: 'آماده پرداخت', shortLabel: 'آماده', count: sc.ready_to_pay },
+        { id: 'paid', label: 'پرداخت‌شده', count: sc.paid },
+      ];
+    }
+    return this.invoiceStatusTabsCache;
+  }
   // ─── مدیریت بخش و ایزولاسیون داده‌ها (Guardian G1: Section Isolation) ───
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
@@ -271,8 +294,8 @@ export class EmployeeInvoicesHubComponent implements OnInit {
   }
 
   // ─── سوییچ تب وضعیت ───
-  setStatusFilter(tab: InvoiceStatusTab): void {
-    this.statusFilter = tab;
+  setStatusFilter(tab: InvoiceStatusTab | string): void {
+    this.statusFilter = tab as InvoiceStatusTab;
   }
 
   // ─── تبدیل ریال به تومان برای فرم ثبت ───

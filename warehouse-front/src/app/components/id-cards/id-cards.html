@@ -389,7 +389,6 @@
           [tabs]="settingsTabs"
           [active]="settingsActiveTab"
           (activeChange)="onSettingsTabChange($event)"
-          ariaLabel="تب‌های تنظیمات کارت شناسایی"
         ></app-tab-bar>
       </div>
 
@@ -718,7 +717,6 @@
           [tabs]="exportSideTabs"
           [active]="exportSide"
           (activeChange)="onExportSideChange($event)"
-          ariaLabel="سطح کارت برای دانلود"
         ></app-tab-bar>
       </div>
 
@@ -729,7 +727,6 @@
           [tabs]="exportScaleTabs"
           [active]="'' + exportScale"
           (activeChange)="onExportScaleChange($event)"
-          ariaLabel="کیفیت تصویر خروجی"
         ></app-tab-bar>
       </div>
 
@@ -786,7 +783,6 @@
           [tabs]="previewSheetTabs"
           [active]="previewSheetActiveTab"
           (activeChange)="onPreviewSheetTabChange($event)"
-          ariaLabel="انتخاب صفحه پیش‌نمایش شیت"
         ></app-tab-bar>
 
         <button

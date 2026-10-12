@@ -4,6 +4,7 @@ import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { ReportFieldMeta, ReportOperator } from '../../core/models/report.model';
 import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../shared/components/action-button/action-button.component';
 
 /**
  * کنترل مقدار فیلتر بر اساس نوع فیلد + اپراتور
@@ -12,7 +13,7 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
 @Component({
   selector: 'app-filter-value',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent],
   template: `
     @if (operator === 'isnull') {
       <select [ngModel]="value" (ngModelChange)="setValue($event)" class="ctl custom-select">
@@ -24,21 +25,21 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
         @if (isDate) {
           <div class="relative flex items-center">
             <ng-persian-datepicker [dateInitValue]="false" (dateOnSelect)="setPair(0, $event.gregorian)">
-              <input type="text" [formControl]="datePair0Control" class="ctl pr-7 pl-2 w-32 cursor-pointer bg-slate-50/50 hover:bg-white" placeholder="از تاریخ…" readonly>
+              <input type="text" [formControl]="datePair0Control" class="ctl pr-7 pl-8 w-32 cursor-pointer bg-slate-50/50 hover:bg-white" placeholder="از تاریخ…" readonly>
             </ng-persian-datepicker>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2 text-slate-400 pointer-events-none" appIcon="calendar"></svg>
             @if (pair()[0]) {
-              <button type="button" (click)="setPair(0, null)" class="absolute left-1 text-slate-400 hover:text-rose-600 text-xs font-bold" title="پاک‌کردن">✕</button>
+              <button type="button" appAction="close" label="پاک‌کردن" size="sm" display="icon" (click)="setPair(0, null)" class="absolute left-0.5 z-10"></button>
             }
           </div>
           <span class="text-slate-400 text-xs">تا</span>
           <div class="relative flex items-center">
             <ng-persian-datepicker [dateInitValue]="false" (dateOnSelect)="setPair(1, $event.gregorian)">
-              <input type="text" [formControl]="datePair1Control" class="ctl pr-7 pl-2 w-32 cursor-pointer bg-slate-50/50 hover:bg-white" placeholder="تا تاریخ…" readonly>
+              <input type="text" [formControl]="datePair1Control" class="ctl pr-7 pl-8 w-32 cursor-pointer bg-slate-50/50 hover:bg-white" placeholder="تا تاریخ…" readonly>
             </ng-persian-datepicker>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2 text-slate-400 pointer-events-none" appIcon="calendar"></svg>
             @if (pair()[1]) {
-              <button type="button" (click)="setPair(1, null)" class="absolute left-1 text-slate-400 hover:text-rose-600 text-xs font-bold" title="پاک‌کردن">✕</button>
+              <button type="button" appAction="close" label="پاک‌کردن" size="sm" display="icon" (click)="setPair(1, null)" class="absolute left-0.5 z-10"></button>
             }
           </div>
         } @else {
@@ -52,7 +53,7 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
         <div class="flex flex-wrap gap-1 max-w-sm p-1 bg-slate-50/70 border border-slate-200/80 rounded-xl">
           @for (c of field!.choices; track c) {
             <button type="button" (click)="toggleChoice(c)"
-                    class="text-[11px] font-bold px-2 py-0.5 rounded-lg border transition-all active:scale-95 cursor-pointer shadow-2xs"
+                    class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg border transition-all active:scale-95 cursor-pointer shadow-2xs min-h-[40px] min-w-[40px] inline-flex items-center justify-center tap-target"
                     [class.bg-indigo-600]="isChoiceSelected(c)"
                     [class.text-white]="isChoiceSelected(c)"
                     [class.border-indigo-600]="isChoiceSelected(c)"
@@ -82,11 +83,11 @@ import { SvgIconDirective } from '../../shared/icons/svg-icon.directive';
     } @else if (isDate) {
       <div class="relative flex items-center">
         <ng-persian-datepicker [dateInitValue]="false" (dateOnSelect)="setValue($event.gregorian)">
-          <input type="text" [formControl]="singleDateControl" class="ctl pr-7 pl-2 w-36 cursor-pointer bg-slate-50/50 hover:bg-white" placeholder="انتخاب تاریخ…" readonly>
+          <input type="text" [formControl]="singleDateControl" class="ctl pr-7 pl-8 w-36 cursor-pointer bg-slate-50/50 hover:bg-white" placeholder="انتخاب تاریخ…" readonly>
         </ng-persian-datepicker>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute right-2 text-slate-400 pointer-events-none" appIcon="calendar"></svg>
         @if (value) {
-          <button type="button" (click)="setValue(null)" class="absolute left-1 text-slate-400 hover:text-rose-600 text-xs font-bold" title="پاک‌کردن">✕</button>
+          <button type="button" appAction="close" label="پاک‌کردن" size="sm" display="icon" (click)="setValue(null)" class="absolute left-0.5 z-10"></button>
         }
       </div>
     } @else if (field?.type === 'number') {

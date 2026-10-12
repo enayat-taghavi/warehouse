@@ -32,6 +32,8 @@ import {
 } from '../../../../core/utils/sheba-utils';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 
 export type VehicleStatusFilter = 'all' | 'draft' | 'pending_supervisor' | 'revision_required' | 'approved' | 'rejected';
 export type VehicleModalTab = 'technical' | 'driver' | 'owner' | 'banking' | 'documents_expiry';
@@ -52,7 +54,9 @@ export function isRoadVehicleType(type?: string): boolean {
     ReactiveFormsModule,
     NgPersianDatepickerModule,
     ExcelImportModal,
-    SvgIconDirective
+    SvgIconDirective,
+    ActionButtonComponent,
+    TabBarComponent
   ],
   templateUrl: './employee-new-vehicle.html',
   styleUrl: './employee-new-vehicle.css'
@@ -607,6 +611,50 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
       rejected,
       contractCount
     };
+  }
+
+  // ─── تب‌های حافظه‌دار وضعیت و مراحل ثبت برای app-tab-bar ───
+  private statusFilterTabsKey = '';
+  private statusFilterTabsCache: TabDef[] = [];
+  get statusFilterTabs(): TabDef[] {
+    const vm = this.vehicleMetrics;
+    const key = `${vm.total}:${vm.drafts}:${vm.pending}:${vm.revision}:${vm.approved}:${vm.rejected}`;
+    if (key !== this.statusFilterTabsKey) {
+      this.statusFilterTabsKey = key;
+      this.statusFilterTabsCache = [
+        { id: 'all', label: 'همه', count: vm.total },
+        { id: 'draft', label: 'پیش‌نویس', count: vm.drafts },
+        { id: 'pending_supervisor', label: 'در انتظار سرپرست', shortLabel: 'سرپرست', count: vm.pending },
+        { id: 'revision_required', label: 'نیازمند اصلاح', shortLabel: 'اصلاح', count: vm.revision, tone: 'amber' },
+        { id: 'approved', label: 'مصوب', count: vm.approved, tone: 'emerald' },
+        { id: 'rejected', label: 'رد شده', shortLabel: 'رد', count: vm.rejected, tone: 'rose' },
+      ];
+    }
+    return this.statusFilterTabsCache;
+  }
+
+  private vehicleModalTabsKey = '';
+  private vehicleModalTabsCache: TabDef[] = [];
+  get vehicleModalTabs(): TabDef[] {
+    const key = `${this.hasServerMissingForTab('technical')}:${this.isTabComplete('technical')}:${this.hasServerMissingForTab('driver')}:${this.isTabComplete('driver')}:${this.hasServerMissingForTab('owner')}:${this.isTabComplete('owner')}:${this.hasServerMissingForTab('banking')}:${this.isTabComplete('banking')}:${this.hasServerMissingForTab('documents_expiry')}:${this.isTabComplete('documents_expiry')}`;
+    if (key !== this.vehicleModalTabsKey) {
+      this.vehicleModalTabsKey = key;
+      // نقطه وضعیت قالب پیشین: نقص سروری (قرمز چشمک‌زن)، تکمیل (سبز)، ناقص (کهربایی)
+      const step = (tab: 'technical' | 'driver' | 'owner' | 'banking' | 'documents_expiry', done = 'تکمیل شده', todo = 'ناقص'): TabDef['indicator'] =>
+        this.hasServerMissingForTab(tab)
+          ? { tone: 'rose', label: 'دارای نقص سروری', pulse: true }
+          : this.isTabComplete(tab)
+            ? { tone: 'emerald', label: done }
+            : { tone: 'amber', label: todo };
+      this.vehicleModalTabsCache = [
+        { id: 'technical', label: '۱. مشخصات فنی و پلاک', shortLabel: 'فنی', icon: 'truck', indicator: step('technical') },
+        { id: 'driver', label: '۲. مشخصات راننده', shortLabel: 'راننده', icon: 'user', indicator: step('driver') },
+        { id: 'owner', label: '۳. مشخصات مالک', shortLabel: 'مالک', icon: 'key', indicator: step('owner') },
+        { id: 'banking', label: '۴. حساب‌های بانکی', shortLabel: 'بانک', icon: 'credit-card', indicator: step('banking', 'حساب اصلی ثبت شده', 'بدون حساب اصلی') },
+        { id: 'documents_expiry', label: '۵. مدارک و انقضا', shortLabel: 'مدارک', icon: 'file-text', indicator: step('documents_expiry') },
+      ];
+    }
+    return this.vehicleModalTabsCache;
   }
 
   // ─── رفتار دوحالته (Toggle) تب‌های وضعیت طبق Rule 7 ───
