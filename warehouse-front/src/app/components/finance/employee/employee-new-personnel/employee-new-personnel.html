@@ -1376,14 +1376,14 @@
                     (click)="openEditModal(p)"
                     class="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs transition-all"
                     title="ویرایش و بازبینی مشخصات">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="edit"></svg>
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-edit"></svg>
                   </button>
                   <button
                     type="button"
                     (click)="submitDraftToSupervisor(p)"
                     class="w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/70 flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs transition-all"
                     title="ارسال مستقیم به کارتابل سرپرست بخش">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="send"></svg>
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-send"></svg>
                   </button>
                   <button
                     type="button"
@@ -1401,7 +1401,7 @@
                     (click)="openEditModal(p)"
                     class="w-7 h-7 rounded-lg bg-amber-700 hover:bg-amber-800 text-white flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs transition-all"
                     title="اصلاح پرونده و ارسال مجدد به سرپرست">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="edit"></svg>
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-edit"></svg>
                   </button>
                   <button
                     type="button"
@@ -1419,7 +1419,7 @@
                     (click)="openEditModal(p)"
                     class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs transition-all"
                     [title]="'مشاهده پرونده (' + getStatusLabel(p.approval_status) + ')'">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view"></svg>
                   </button>
                 </ng-container>
 
@@ -1430,7 +1430,7 @@
                     (click)="openEditModal(p)"
                     class="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs transition-all"
                     title="ویرایش مشخصات و ثبت پیشنهاد تغییرات">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="edit"></svg>
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-edit"></svg>
                   </button>
                   <button
                     *ngIf="p.has_pending_changes"
@@ -1438,7 +1438,7 @@
                     (click)="openPendingDiffModal(p)"
                     class="w-7 h-7 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/80 flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs transition-all"
                     title="مشاهده جزئیات تغییرات پیشنهادی معلق">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg>
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-search"></svg>
                   </button>
                 </ng-container>
 
@@ -1449,7 +1449,7 @@
                     (click)="openEditModal(p)"
                     class="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs transition-all"
                     title="مشاهده دلیل رد پرونده">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view"></svg>
                   </button>
                 </ng-container>
               </div>
@@ -1626,10 +1626,10 @@
 
           <ng-container *ngIf="p.approval_status === 'draft'">
             <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="ویرایش">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="edit"></svg>
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-edit"></svg>
             </button>
             <button type="button" (click)="submitDraftToSupervisor(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/70 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="ارسال به سرپرست">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="send"></svg>
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-send"></svg>
             </button>
             <button type="button" (click)="deleteDraftPersonnel(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="حذف">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="trash"></svg>
@@ -1638,7 +1638,7 @@
 
           <ng-container *ngIf="p.approval_status === 'revision_required'">
             <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-amber-700 hover:bg-amber-800 text-white flex items-center justify-center shadow-2xs active:scale-90 transition-all cursor-pointer" title="اصلاح و ارسال مجدد">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="edit"></svg>
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-edit"></svg>
             </button>
             <button type="button" (click)="deleteDraftPersonnel(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="حذف">
               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="trash"></svg>
@@ -1647,16 +1647,16 @@
 
           <ng-container *ngIf="p.approval_status === 'approved' || p.approval_status === 'manager_approved'">
             <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="ویرایش مشخصات و پیشنهاد تغییرات">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="edit"></svg>
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" appIcon="action-edit"></svg>
             </button>
             <button *ngIf="p.has_pending_changes" type="button" (click)="openPendingDiffModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/80 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="مشاهده تغییرات معلق">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg>
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-search"></svg>
             </button>
           </ng-container>
 
           <ng-container *ngIf="p.approval_status === 'pending_supervisor' || p.approval_status === 'pending_accountant' || p.approval_status === 'pending_manager' || p.approval_status === 'rejected'">
             <button type="button" (click)="openEditModal(p)" class="w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 flex items-center justify-center active:scale-90 transition-all shadow-2xs cursor-pointer" title="مشاهده مشخصات">
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view"></svg>
             </button>
           </ng-container>
         </div>

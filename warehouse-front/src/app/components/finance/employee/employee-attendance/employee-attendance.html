@@ -99,6 +99,7 @@
         [disabled]="!hasUnsavedMonthlyGrid || isSavingMonthlyGrid || isPeriodLocked || !selectedSectionId"
         (click)="saveMonthlyGrid()"
       ></button>
+      <span *ngIf="hasUnsavedMonthlyGrid" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" title="تغییرات ذخیره‌نشده" role="status" aria-label="تغییرات ذخیره‌نشده"></span>
     </div>
   </app-command-center>
 
@@ -113,7 +114,7 @@
       <!-- Date Navigator (RTL Flow: Right = Prev Day, Left = Next Day) -->
       <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl p-1 relative">
         <button (click)="goToPrevDay()" title="روز قبل" class="p-1.5 hover:bg-slate-200 text-slate-600 rounded-lg transition-all cursor-pointer">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-right"></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-back"></svg>
         </button>
 
         <!-- Persian Datepicker Input -->
@@ -142,7 +143,7 @@
         </div>
 
         <button (click)="goToNextDay()" title="روز بعد" class="p-1.5 hover:bg-slate-200 text-slate-600 rounded-lg transition-all cursor-pointer">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-forward"></svg>
         </button>
 
         <button (click)="goToToday()" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-[11px] font-bold rounded-md transition-all cursor-pointer">امروز</button>
@@ -180,7 +181,7 @@
 
         <!-- حاضر -->
         <button type="button" (click)="setBulkAttendanceStatus('PRESENT_10H')" [disabled]="isPeriodLocked" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50" title="حاضر ۱۰ ساعت (برای انتخاب‌شده‌ها یا همه)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-confirm"></svg>
           <span>حاضر (۱۰س)</span>
         </button>
 
@@ -212,7 +213,7 @@
 
         <!-- کپی دیروز -->
         <button type="button" (click)="copyFromYesterday()" [disabled]="isPeriodLocked || isAttendanceLoading" class="px-2 py-1 bg-slate-100 hover:bg-indigo-50 text-indigo-700 border border-slate-200 hover:border-indigo-300 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50" title="کپی کارکرد روز قبل پرسنل همین بخش">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-copy"></svg>
           <span>کپی دیروز</span>
         </button>
 
@@ -235,7 +236,7 @@
 
         <!-- بارگذاری مستقیم فایل اکسل -->
         <button type="button" (click)="triggerExcelImport()" [disabled]="isPeriodLocked || isImportingExcel" class="px-2 py-1 bg-slate-100 hover:bg-emerald-50 text-emerald-800 border border-slate-200 hover:border-emerald-300 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50" title="بارگذاری مستقیم فایل اکسل کارکرد">
-          <svg *ngIf="!isImportingExcel" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
+          <svg *ngIf="!isImportingExcel" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-upload"></svg>
           <span *ngIf="!isImportingExcel">📥 بارگذاری اکسل</span>
           <span *ngIf="isImportingExcel">در حال پردازش...</span>
         </button>
@@ -565,7 +566,7 @@
           
           <button type="button" (click)="toggleMonthPicker($event)" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer" title="کلیک برای انتخاب سریع ماه">
             <span>{{ monthName || 'انتخاب ماه' }}</span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-down"></svg>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-expand"></svg>
           </button>
 
           <!-- 12-Month Popover Grid -->
@@ -645,6 +646,7 @@
           [disabled]="!hasUnsavedMonthlyGrid || isSavingMonthlyGrid || isPeriodLocked"
           (click)="saveMonthlyGrid()"
         ></button>
+        <span *ngIf="hasUnsavedMonthlyGrid" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" title="تغییرات ذخیره‌نشده" role="status" aria-label="تغییرات ذخیره‌نشده"></span>
       </div>
 
     </div>
@@ -973,7 +975,7 @@
         </div>
         <div class="flex items-center gap-2">
           <button (click)="triggerPrint()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md cursor-pointer flex items-center gap-1.5">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="printer"></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-print"></svg>
             <span>ارسال به چاپگر (Print)</span>
           </button>
           <button type="button" appAction="close" label="بستن" size="sm" (click)="closePrintTimesheetModal()"></button>

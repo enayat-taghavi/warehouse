@@ -105,7 +105,7 @@
       <!-- فیلد جستجو -->
       <div class="relative w-full sm:w-80">
         <span class="absolute right-3 top-1/2 -translate-y-1/2 text-fg-subtle">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg>
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-search"></svg>
         </span>
         <input
           #searchInput
@@ -119,7 +119,7 @@
           type="button"
           (click)="clearSearch()"
           class="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg-muted text-xs cursor-pointer">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-close"></svg>
         </button>
       </div>
 
@@ -169,8 +169,8 @@
                   (click)="copyValue(v.plate_number, 'plate_' + v.id, 'شماره پلاک')"
                   class="p-1 rounded-md text-fg-subtle hover:text-indigo-600 hover:bg-surface-muted transition-colors cursor-pointer"
                   [title]="isKeyCopied('plate_' + v.id) ? 'کپی شد!' : 'کپی شماره پلاک'">
-                  <svg *ngIf="!isKeyCopied('plate_' + v.id)" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
-                  <svg *ngIf="isKeyCopied('plate_' + v.id)" class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
+                  <svg *ngIf="!isKeyCopied('plate_' + v.id)" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-copy"></svg>
+                  <svg *ngIf="isKeyCopied('plate_' + v.id)" class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-confirm"></svg>
                 </button>
               </div>
             </td>
@@ -189,8 +189,8 @@
                     (click)="copyValue(v.driver_national_code, 'dnc_' + v.id, 'کد ملی راننده')"
                     class="text-fg-subtle hover:text-indigo-600 cursor-pointer"
                     title="کپی کد ملی راننده">
-                    <svg *ngIf="!isKeyCopied('dnc_' + v.id)" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
-                    <svg *ngIf="isKeyCopied('dnc_' + v.id)" class="w-3 h-3 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
+                    <svg *ngIf="!isKeyCopied('dnc_' + v.id)" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-copy"></svg>
+                    <svg *ngIf="isKeyCopied('dnc_' + v.id)" class="w-3 h-3 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-confirm"></svg>
                   </button>
                 </span>
                 <a *ngIf="v.driver_phone" [href]="getCleanTelUrl(v.driver_phone)" class="text-indigo-600 hover:underline">
@@ -232,8 +232,8 @@
                   (click)="copyValue(v.sheba_number, 'sheba_' + v.id, 'شماره شبا')"
                   class="p-0.5 rounded hover:bg-indigo-50 text-indigo-600 cursor-pointer"
                   [title]="isKeyCopied('sheba_' + v.id) ? 'کپی شد!' : 'کپی شبا'">
-                  <svg *ngIf="!isKeyCopied('sheba_' + v.id)" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
-                  <svg *ngIf="isKeyCopied('sheba_' + v.id)" class="w-3 h-3 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
+                  <svg *ngIf="!isKeyCopied('sheba_' + v.id)" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-copy"></svg>
+                  <svg *ngIf="isKeyCopied('sheba_' + v.id)" class="w-3 h-3 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-confirm"></svg>
                 </button>
               </div>
               <div *ngIf="!v.bank_name && !v.sheba_number" class="text-fg-subtle">-</div>
@@ -285,7 +285,7 @@
                   (click)="openPendingDiffModal(v)"
                   class="px-2 py-1 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg text-[11px] font-bold transition-colors cursor-pointer inline-flex items-center gap-1"
                   title="مشاهده تغییرات معلق خودرو">
-                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view"></svg>
                   <span>تغییرات</span>
                 </button>
 
@@ -367,7 +367,7 @@
                   (click)="deleteDraftVehicle(v)"
                   class="px-1.5 py-1 text-rose-600 hover:bg-rose-50 rounded-lg text-[11px] font-bold transition-colors cursor-pointer active:scale-95"
                   title="حذف پرونده خودرو">
-                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete"></svg>
                 </button>
 
               </div>
@@ -916,7 +916,7 @@
                     (click)="removeBankAccount(accIdx)"
                     class="p-1 text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
                     title="حذف حساب">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete"></svg>
                   </button>
                 </div>
               </div>
@@ -927,7 +927,7 @@
           <div *ngIf="!isReadOnlyMode" class="p-4 bg-surface-muted/90 rounded-2xl border border-line space-y-3">
             <div class="flex items-center justify-between">
               <label class="text-xs font-bold text-fg flex items-center gap-1.5">
-                <svg class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="plus"></svg>
+                <svg class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-create"></svg>
                 <span>افزودن حساب بانکی جدید</span>
               </label>
               <div class="flex items-center gap-2">
@@ -965,8 +965,8 @@
                   class="w-full bg-transparent border-0 text-left font-mono font-bold tracking-wider text-xs px-3 py-2 pr-12 focus:outline-none text-fg" />
                 <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                   <button *ngIf="newVehicle.sheba_number" type="button" (click)="copyShebaToClipboard()" class="w-7 h-7 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isShebaCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-surface hover:bg-surface-muted text-fg-muted border-line shadow-2xs'" title="کپی شماره شبا">
-                    <svg *ngIf="!isShebaCopied" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
-                    <svg *ngIf="isShebaCopied" class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
+                    <svg *ngIf="!isShebaCopied" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-copy"></svg>
+                    <svg *ngIf="isShebaCopied" class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-confirm"></svg>
                   </button>
                 </div>
               </div>
@@ -998,7 +998,7 @@
                     placeholder="-- انتخاب بانک عامل --" 
                     class="w-full bg-surface border border-line rounded-xl px-3 py-2 text-xs font-bold text-fg focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer placeholder:text-fg-subtle" 
                   />
-                  <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-up"></svg>
+                  <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-collapse"></svg>
 
                   <!-- پوشش کلیک بیرونی جهت بستن کومبوباکس -->
                   <div *ngIf="isBankDropdownOpen" (click)="isBankDropdownOpen = false" class="fixed inset-0 z-40 bg-transparent"></div>
@@ -1035,8 +1035,8 @@
                   />
                   <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                     <button *ngIf="newVehicle.account_number" type="button" (click)="copyAccountNumberToClipboard()" class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isAccountCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-surface hover:bg-surface-muted text-fg-muted border-line shadow-2xs'" title="کپی شماره حساب">
-                      <svg *ngIf="!isAccountCopied" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
-                      <svg *ngIf="isAccountCopied" class="w-3 h-3 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
+                      <svg *ngIf="!isAccountCopied" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-copy"></svg>
+                      <svg *ngIf="isAccountCopied" class="w-3 h-3 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-confirm"></svg>
                     </button>
                     <button *ngIf="newVehicle.account_number && newVehicle.bank_name" type="button" (click)="convertAccountToShebaNow()" class="w-6 h-6 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-all flex items-center justify-center cursor-pointer shadow-2xs text-xs font-bold" title="تولید مجدد شماره شبا بر اساس شماره حساب و بانک عامل">
                       <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap"></svg>
@@ -1053,7 +1053,7 @@
                 (click)="addCurrentAsNewAccount()"
                 [disabled]="!newVehicle.sheba_number || !shebaValidationResult?.isValid"
                 class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-2xs flex items-center gap-1">
-                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="plus"></svg>
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-create"></svg>
                 <span>ثبت و افزودن این حساب به پرونده</span>
               </button>
             </div>
@@ -1152,7 +1152,7 @@
           <div class="space-y-3">
             <div class="flex items-center justify-between">
               <label class="text-xs font-bold text-fg flex items-center gap-1.5">
-                <svg class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
+                <svg class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-upload"></svg>
                 <span>مدارک و ضمائم پرونده (فقط در حالت آنلاین)</span>
               </label>
               <span *ngIf="!isOnline" class="text-[10px] text-rose-600 font-bold">
@@ -1198,7 +1198,7 @@
               <!-- دکمه انتخاب فایل -->
               <div class="flex items-center justify-between pt-1">
                 <label class="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold cursor-pointer transition-colors">
-                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-upload"></svg>
                   <span>انتخاب فایل مدرک (تصویر یا PDF تا ۱۰ مگابایت)</span>
                   <input
                     type="file"
@@ -1225,7 +1225,7 @@
                     type="button"
                     (click)="removePendingUploadDocument(pIdx)"
                     class="text-rose-600 hover:text-rose-800 p-1 cursor-pointer">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-close"></svg>
                   </button>
                 </div>
               </div>
@@ -1250,7 +1250,7 @@
                       (click)="openLightbox(doc.file, doc.title)"
                       class="p-1 text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer"
                       title="پیش‌نمایش مدرک">
-                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view"></svg>
                     </button>
                     <button
                       *ngIf="!isReadOnlyMode"
@@ -1258,7 +1258,7 @@
                       (click)="deleteExistingDocument(doc)"
                       class="p-1 text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
                       title="حذف مدرک">
-                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete"></svg>
                     </button>
                   </div>
                 </div>
@@ -1356,7 +1356,7 @@
           type="button"
           (click)="closePendingDiffModal()"
           class="w-8 h-8 rounded-full bg-surface text-fg-muted hover:bg-surface-muted flex items-center justify-center text-sm font-bold cursor-pointer">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-close"></svg>
         </button>
       </div>
 
@@ -1434,7 +1434,7 @@
           type="button"
           (click)="closeTimelineModal()"
           class="w-8 h-8 rounded-full bg-surface text-fg-muted hover:bg-surface-muted flex items-center justify-center text-sm font-bold cursor-pointer">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-close"></svg>
         </button>
       </div>
 
@@ -1500,7 +1500,7 @@
       <div class="p-3.5 bg-neutral-900 text-white flex items-center justify-between">
         <span class="text-xs font-bold">{{ lightboxTitle }}</span>
         <button (click)="closeLightbox()" class="text-fg-subtle hover:text-white cursor-pointer p-1">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-close"></svg>
         </button>
       </div>
       <div class="p-2 overflow-auto flex items-center justify-center bg-surface-muted">

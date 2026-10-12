@@ -8,7 +8,7 @@
     </div>
     <div class="flex items-center gap-2">
       <button type="button" (click)="reloadWithRemote()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs inline-flex items-center gap-1.5">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-refresh"></svg>
         <span>دریافت آخرین نسخه از سرور</span>
       </button>
       <button type="button" (click)="dismissRemoteConflict()" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold transition-all cursor-pointer">
@@ -103,6 +103,7 @@
         [disabled]="!hasUnsavedChanges || isSavingVehicles || !selectedSectionId"
         (click)="saveVehicleMatrix()"
       ></button>
+      <span *ngIf="activeMode === 'daily' && hasUnsavedChanges" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" title="تغییرات ذخیره‌نشده" role="status" aria-label="تغییرات ذخیره‌نشده"></span>
 
       <!-- Save Button for Monthly Grid -->
       <button
@@ -128,7 +129,7 @@
       <!-- Date Navigator (RTL Flow: Right = Prev Day, Left = Next Day) -->
       <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl p-1 relative">
         <button (click)="goToPrevDay()" title="روز قبل" class="p-1.5 hover:bg-slate-200 text-slate-600 rounded-lg transition-all cursor-pointer">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-right"></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-back"></svg>
         </button>
 
         <div class="relative flex items-center">
@@ -153,7 +154,7 @@
         </div>
 
         <button (click)="goToNextDay()" title="روز بعد" class="p-1.5 hover:bg-slate-200 text-slate-600 rounded-lg transition-all cursor-pointer">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-forward"></svg>
         </button>
 
         <div class="h-4 w-px bg-slate-200 mx-1"></div>
@@ -424,7 +425,7 @@
       <!-- Month Selector (RTL Flow: Right = Prev Month, Left = Next Month) -->
       <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl p-1 relative">
         <button (click)="goToPrevMonth()" title="ماه قبل" class="p-1.5 hover:bg-slate-200 text-slate-600 rounded-lg transition-all cursor-pointer">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-right"></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-back"></svg>
         </button>
 
         <button (click)="toggleMonthPicker($event)" class="px-3 py-1 font-bold text-xs text-slate-800 hover:text-indigo-700 transition-colors flex items-center gap-1.5 cursor-pointer">
@@ -434,7 +435,7 @@
         </button>
 
         <button (click)="goToNextMonth()" title="ماه بعد" class="p-1.5 hover:bg-slate-200 text-slate-600 rounded-lg transition-all cursor-pointer">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-forward"></svg>
         </button>
 
         <!-- Month Dropdown Popover -->
