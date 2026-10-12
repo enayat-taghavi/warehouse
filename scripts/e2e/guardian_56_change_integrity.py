@@ -13,6 +13,8 @@
   ۳) تگ‌های نامتوازن (باز ماندن یا بستن بی‌جفت) در همهٔ قالب‌ها، html و قالب درون‌خطی ts.
   ۴) app-tab-bar با mobile="icon" که تب بی‌آیکون دارد (زیر sm دکمه خالی می‌ماند).
   ۵) نام آیکون در فیلدهای *icon فایل‌های ts که در رجیستری یا فرهنگ معنایی نیست.
+  ۶) رویداد روی کامپوننت یا دایرکتیو خود پروژه که نه output آن است و نه رویداد بومی DOM؛ Angular آن را
+     بی‌خطا شنونده DOM می‌کند و دکمه بی‌صدا کار نمی‌کند (گام ۷: ۳۳ دکمه با (actionClick) ناموجود).
 
 استفاده:
   python scripts/e2e/guardian_56_change_integrity.py                     # تغییرات کامیت‌نشده نسبت به HEAD (پیش از هر commit)
@@ -51,6 +53,20 @@ VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link",
 TAB_BAR_TAG = re.compile(r"<app-tab-bar\b((?:[^>\"']|\"[^\"]*\"|'[^']*')*)>", re.S)
 ICON_FIELD = re.compile(r"\b(\w*[iI]con)\s*:\s*(['\"])([^'\"\n]+)\2")
 KEBAB = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
+START_TAG = re.compile(r"<([a-zA-Z][\w-]*)((?:[^>\"']|\"[^\"]*\"|'[^']*')*)>", re.S)
+ATTR_NAME = re.compile(r"(?:^|\s)([\[(*#@]*[\w.:@$-]+[\])]*)(?=\s*=|\s|/?$)")
+NATIVE_EVENTS = {
+    "click", "dblclick", "contextmenu", "auxclick", "mousedown", "mouseup", "mouseenter", "mouseleave",
+    "mouseover", "mouseout", "mousemove", "pointerdown", "pointerup", "pointermove", "pointerenter",
+    "pointerleave", "pointerover", "pointerout", "pointercancel", "touchstart", "touchend", "touchmove",
+    "touchcancel", "keydown", "keyup", "keypress", "focus", "blur", "focusin", "focusout", "input", "change",
+    "submit", "reset", "scroll", "scrollend", "wheel", "drag", "dragstart", "dragend", "dragenter", "dragleave",
+    "dragover", "drop", "load", "error", "paste", "copy", "cut", "select", "resize", "transitionend",
+    "animationend", "animationstart", "toggle", "close", "cancel", "compositionstart", "compositionend",
+    "beforeinput", "invalid", "play", "pause", "ended", "loadeddata", "loadedmetadata", "timeupdate",
+    # خروجی‌های دایرکتیوهای خود Angular
+    "ngModelChange", "ngSubmit",
+}
 
 
 def git(*args):
@@ -282,6 +298,52 @@ def icon_resolves(name, icons, dicts):
     return name in icons
 
 
+def component_outputs(tree):
+    """(نام تگ ← outputها، نام ویژگی ← outputها) برای کامپوننت‌ها و دایرکتیوهای خود پروژه."""
+    by_tag, by_attr = {}, {}
+    for path in tree.files:
+        if not path.endswith(".ts") or path.endswith(".spec.ts"):
+            continue
+        text = tree.read(path) or ""
+        if "@Component(" not in text and "@Directive(" not in text:
+            continue
+        outs = set(re.findall(r"\b(\w+)\s*=\s*output(?:FromObservable)?\s*[<(]", text))
+        outs |= {alias or name for alias, name in re.findall(r"@Output\(\s*(?:['\"]([^'\"]+)['\"])?\s*\)\s*(\w+)", text)}
+        outs |= {n + "Change" for n in re.findall(r"\b(\w+)\s*=\s*model(?:\.required)?\s*[<(]", text)}
+        for sel in re.findall(r"selector\s*:\s*['\"]([^'\"]+)['\"]", text):
+            for part in sel.split(","):
+                part = part.strip()
+                if re.fullmatch(r"[a-z][\w-]*", part):
+                    by_tag.setdefault(part, set()).update(outs)
+                for attr in re.findall(r"\[([\w-]+)\]", part):
+                    by_attr.setdefault(attr, set()).update(outs)
+    return by_tag, by_attr
+
+
+def unknown_events(tpl, line_offset, by_tag, by_attr):
+    """رویدادهایی روی عنصرِ دارای کامپوننت یا دایرکتیو پروژه که نه output آن‌اند نه رویداد بومی."""
+    found = []
+    for m in START_TAG.finditer(tpl):
+        tag, attrs = m.group(1), m.group(2)
+        names = [a for a in ATTR_NAME.findall(attrs)]
+        plain = {re.sub(r"^[\[(*#@]+|[\])]+$", "", a) for a in names}
+        matched = tag in by_tag or any(p in by_attr for p in plain)
+        if not matched:
+            continue
+        outs = set(by_tag.get(tag, set()))
+        for p in plain:
+            outs |= by_attr.get(p, set())
+        events = re.findall(r"(?:^|\s)\(([\w.:-]+)\)\s*=", attrs)
+        events += [e + "Change" for e in re.findall(r"(?:^|\s)\[\(([\w-]+)\)\]\s*=", attrs)]
+        for ev in events:
+            if ":" in ev:
+                continue
+            base = ev.split(".")[0]
+            if base not in outs and base not in NATIVE_EVENTS:
+                found.append((line_offset + tpl[:m.start()].count("\n"), tag, ev))
+    return found
+
+
 def main():
     ap = argparse.ArgumentParser(description="Guardian 56 — change integrity")
     ap.add_argument("--base", default="HEAD", help="commit پایه برای معیار ۱ و ۲ (پیش‌فرض HEAD)")
@@ -353,8 +415,9 @@ def main():
         print(f"✅ معیار ۲: هیچ فایلی حذف خالص بیش از {NET_DELETION_WARN} سطر ندارد.")
 
     # ── معیار ۳ تا ۵: کل درخت سر ──
-    unbalanced, empty_tabs, unresolved_tabs, bad_icons = [], [], [], []
+    unbalanced, empty_tabs, unresolved_tabs, bad_icons, bad_events = [], [], [], [], []
     icons, dicts = load_icon_names(head)
+    by_tag, by_attr = component_outputs(head)
     templates_checked = 0
     for path in head.files:
         if not path.endswith((".html", ".ts")) or path.endswith(".spec.ts"):
@@ -367,6 +430,8 @@ def main():
             parser.feed(tpl[0])
             for problem in parser.finish():
                 unbalanced.append(f"{path}: {problem}")
+            for line, tag, ev in unknown_events(tpl[0], tpl[1], by_tag, by_attr):
+                bad_events.append(f"{path}:{line} <{tag}> ({ev})")
 
             ts = None
             for m in TAB_BAR_TAG.finditer(tpl[0]):
@@ -418,6 +483,14 @@ def main():
             print(f"     - {item}")
     else:
         print("✅ معیار ۵: همهٔ نام‌های آیکون فیلدهای ts در رجیستری یا فرهنگ معنایی هستند.")
+
+    if bad_events:
+        errors.append("رویداد ناموجود")
+        print(f"❌ معیار ۶: {len(bad_events)} رویداد روی کامپوننت یا دایرکتیو پروژه نه output آن است نه رویداد بومی DOM (هرگز اجرا نمی‌شود):")
+        for item in bad_events[:40]:
+            print(f"     - {item}")
+    else:
+        print("✅ معیار ۶: همهٔ رویدادهای کامپوننت‌ها و دایرکتیوهای پروژه output تعریف‌شده یا رویداد بومی‌اند.")
 
     print("=" * 74)
     if errors:

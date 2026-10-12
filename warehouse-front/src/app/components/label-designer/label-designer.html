@@ -61,7 +61,7 @@
             size="sm" 
             label="جدید" 
             title="تمپلیت جدید" 
-            (actionClick)="startCreateNew()">
+            (click)="startCreateNew()">
           </button>
 
           <!-- دکمه کپی به این انبار (فقط برای لیبل‌های فقط‌خواندنی) -->
@@ -72,7 +72,7 @@
               size="sm" 
               label="کپی به این انبار" 
               title="کپی این لیبل Global برای این انبار" 
-              (actionClick)="copyToThisWarehouse(template)">
+              (click)="copyToThisWarehouse(template)">
             </button>
           </ng-container>
 
@@ -86,7 +86,7 @@
               [disabled]="!template.id" 
               label="نام" 
               title="تغییر نام" 
-              (actionClick)="startRename()">
+              (click)="startRename()">
             </button>
             <!-- Clone -->
             <button 
@@ -96,7 +96,7 @@
               size="sm" 
               label="کپی" 
               title="کپی گرفتن از این تمپلیت" 
-              (actionClick)="startCopy()">
+              (click)="startCopy()">
             </button>
             <!-- Delete -->
             <button 
@@ -106,7 +106,7 @@
               size="sm" 
               label="حذف" 
               title="حذف تمپلیت" 
-              (actionClick)="askDeleteConfirm(template.id!)">
+              (click)="askDeleteConfirm(template.id!)">
             </button>
             <!-- Delete confirm inline -->
             <div *ngIf="template.id && deleteConfirmId === template.id"
@@ -125,7 +125,7 @@
               [disabled]="!template.id" 
               label="ذخیره" 
               title="ذخیره تمپلیت" 
-              (actionClick)="saveTemplate()" 
+              (click)="saveTemplate()" 
               class="mr-2">
             </button>
           </ng-container>
@@ -202,7 +202,7 @@
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="bg-gradient-to-l from-blue-50 to-white border-b border-slate-200 p-3.5 flex items-center gap-2">
           <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="printer"></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-print"></svg>
           </div>
           <h4 class="font-black text-slate-800 text-[12px]">تنظیمات چاپ</h4>
         </div>
@@ -263,8 +263,8 @@
                 ? 'bg-emerald-50 text-emerald-600 cursor-not-allowed opacity-60'
                 : 'bg-white text-slate-800 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200'">
               <span class="truncate">{{f.label}}</span>
-              <svg *ngIf="!isFieldOnCanvas(f.key)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0 opacity-40" appIcon="plus"></svg>
-              <svg *ngIf="isFieldOnCanvas(f.key)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0" appIcon="check"></svg>
+              <svg *ngIf="!isFieldOnCanvas(f.key)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0 opacity-40" appIcon="action-create"></svg>
+              <svg *ngIf="isFieldOnCanvas(f.key)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0" appIcon="action-confirm"></svg>
             </button>
           </div>
         </div>
@@ -278,7 +278,7 @@
         [busy]="isSaving" 
         label="ذخیره ساختار لیبل" 
         title="ذخیره ساختار لیبل" 
-        (actionClick)="saveTemplate()" 
+        (click)="saveTemplate()" 
         class="w-full">
       </button>
 
@@ -290,7 +290,7 @@
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div class="bg-gradient-to-l from-indigo-50 to-white border-b border-slate-200 p-3 flex items-center gap-2">
             <div class="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="printer"></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-print"></svg>
             </div>
             <h4 class="font-black text-slate-800 text-[11px]">تنظیمات چاپ</h4>
           </div>
@@ -373,7 +373,7 @@
                 [busy]="isPrinting" 
                 [label]="'چاپ لیبل (' + itemsConfig.length + ' آیتم)'" 
                 title="چاپ لیبل" 
-                (actionClick)="directPrint()" 
+                (click)="directPrint()" 
                 class="w-full">
               </button>
             </div>
@@ -394,7 +394,7 @@
           <div class="flex items-center gap-3">
             <div class="flex items-center gap-1.5 border-l border-slate-200 pl-4">
               <div class="w-6 h-6 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="edit"></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-edit"></svg>
               </div>
               <span class="font-black text-slate-800 text-xs whitespace-nowrap">{{selectedElement.label}}</span>
             </div>
@@ -438,7 +438,7 @@
             display="icon" 
             title="حذف المان" 
             aria-label="حذف المان" 
-            (actionClick)="removeElement(selectedElement)">
+            (click)="removeElement(selectedElement)">
           </button>
         </div>
 

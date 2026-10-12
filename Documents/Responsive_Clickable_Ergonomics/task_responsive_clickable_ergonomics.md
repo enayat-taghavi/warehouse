@@ -86,7 +86,7 @@
   - [x] **۲.۹ رهگیری شمارش (`count-tracking.html`)** (تب‌های مودال با `app-tab-bar`، هدر دو سطری با `app-overflow-menu`، `export-excel` و `approve`)
   - [x] معیار پایان گام (هر ۳ بیلد با کد ۰، نگهبان ۵۲ و ۵۵ سبز، خط مبنا بهبودیافته، ۲۰۷ تست واحد سبز)
 
-- [x] **گام ۷: انبارگردانی (ب)**
+- [x] **گام ۷: انبارگردانی (ب)** (بازبینی ناظر: پذیرفته با اصلاح؛ ۳۳ دکمه مرده `(actionClick)` اصلاح شد؛ باقی‌مانده‌ها در «بازبینی ناظر — گام ۷»)
   - [x] **۲.۱۰ گزارش‌های انبار (`reports.html`)**
   - [x] **۲.۱۱ کارتابل مالی و گمرک (`customs.html`)**
   - [x] **۲.۱۳ تنظیمات اختصاصی انبار (`wh-settings.html`)**
@@ -94,7 +94,7 @@
   - [x] **۲.۱۵ طراح لیبل (`label-designer.html`)**
   - [x] **۲.۱۶ کارت‌های شناسایی (`id-cards.html`):** قالب چاپ دست نخورد
   - [x] **۲.۱۷ فیلدهای پویا و شمارش فیلد (`dynamic-fields.html`، `field.html`)**
-  - [x] **۵.۲۰ اجزای گزارش‌ساز (`saved-reports`، `filter-group`، `filter-value`، `export-progress`، `report-chart`)**
+  - [ ] **۵.۲۰ اجزای گزارش‌ساز (`saved-reports`، `filter-group`، `filter-value`، `export-progress`، `report-chart`)** (بازبینی ناظر: `filter-value` دست نخورده است؛ بقیه انجام شد)
   - [x] معیار پایان گام
 
 - [ ] **گام ۸: هاب کارمند**

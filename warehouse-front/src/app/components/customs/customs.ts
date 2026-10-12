@@ -64,11 +64,20 @@ const DOC_TASK_DIRECT_KEYS = new Set([
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Customs implements OnInit, OnDestroy {
+  // آرایه فقط با تغییر شمار مخزن عوض می‌شود تا app-tab-bar (OnPush) در هر دور تشخیص تغییر بازرسم نشود.
+  private customsTabsPoolCount = -1;
+  private customsTabsCache: TabDef[] = [];
+
   get customsTabs(): TabDef[] {
-    return [
-      { id: 'my-tasks', label: 'تسک‌های من', shortLabel: 'تسک‌ها', icon: 'clipboard' },
-      { id: 'pool', label: 'مخزن اسناد', shortLabel: 'مخزن', icon: 'folder', count: this.poolTasks.length || undefined },
-    ];
+    const poolCount = this.poolTasks.length;
+    if (poolCount !== this.customsTabsPoolCount) {
+      this.customsTabsPoolCount = poolCount;
+      this.customsTabsCache = [
+        { id: 'my-tasks', label: 'تسک‌های من', shortLabel: 'تسک‌ها', icon: 'clipboard' },
+        { id: 'pool', label: 'مخزن اسناد', shortLabel: 'مخزن', icon: 'folder', count: poolCount || undefined },
+      ];
+    }
+    return this.customsTabsCache;
   }
 
   tasks: DocTask[] = [];

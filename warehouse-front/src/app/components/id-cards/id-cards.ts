@@ -142,15 +142,16 @@ export class IdCards implements OnInit {
   isExportingImage: boolean = false;
 
   readonly exportSideTabs: TabDef[] = [
-    { id: 'both', label: 'دورو (رو و پشت)', icon: 'id-card' },
-    { id: 'front', label: 'فقط روی کارت', icon: 'file-text' },
-    { id: 'back', label: 'فقط پشت کارت', icon: 'copy' }
+    { id: 'both', label: 'دورو (رو و پشت)', shortLabel: 'دورو', icon: 'id-card' },
+    { id: 'front', label: 'فقط روی کارت', shortLabel: 'رو', icon: 'file-text' },
+    { id: 'back', label: 'فقط پشت کارت', shortLabel: 'پشت', icon: 'copy' }
   ];
 
+  // مودال max-w-xl حدود ۵۲۸px و در ۳۶۰px حدود ۲۸۰px جا دارد؛ نوار تب نمی‌شکند، پس عنوان‌ها کوتاه و زیر sm کوتاه‌تر.
   readonly exportScaleTabs: TabDef[] = [
-    { id: '1', label: '۱× استاندارد (72 DPI)' },
-    { id: '2', label: '۲× باکیفیت HD (150 DPI)' },
-    { id: '3', label: '۳× فوق‌العاده Ultra (300 DPI)' }
+    { id: '1', label: '۱× استاندارد (72 DPI)', shortLabel: '۱×' },
+    { id: '2', label: '۲× HD پیشنهادی (150 DPI)', shortLabel: '۲× HD' },
+    { id: '3', label: '۳× Ultra (300 DPI)', shortLabel: '۳× Ultra' }
   ];
 
   // Sheet Live Preview Modal (A4 Print Preview)

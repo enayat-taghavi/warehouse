@@ -56,7 +56,7 @@ import { ActionButtonComponent } from '../../shared/components/action-button/act
           size="sm"
           display="label"
           tone="indigo"
-          [label]="'+ شرط'"
+          label="شرط"
           [disabled]="totalConditions >= 60"
           (click)="addCondition()"
           title="{{ totalConditions >= 60 ? 'حداکثر ۶۰ شرط مجاز است' : 'افزودن یک شرط جدید' }}"
@@ -68,7 +68,7 @@ import { ActionButtonComponent } from '../../shared/components/action-button/act
             size="sm"
             display="label"
             tone="slate"
-            [label]="'+ گروه تودرتو'"
+            label="گروه تودرتو"
             (click)="addGroup()"
             title="افزودن زیرمجموعه شروط با منطق جداگانه"
           ></button>

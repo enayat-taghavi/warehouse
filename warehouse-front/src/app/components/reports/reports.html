@@ -181,7 +181,7 @@
               <input type="text" [ngModel]="fieldSearch()" (ngModelChange)="fieldSearch.set($event)"
                      placeholder="مثلاً: کد یکتا، fa_unic_code، دیسیپلین…"
                      class="text-xs pr-7 pl-6 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-indigo-400 w-56 bg-slate-50/50 focus:bg-white transition-all shadow-2xs">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="absolute right-2 text-slate-400 pointer-events-none" appIcon="search"></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="absolute right-2 text-slate-400 pointer-events-none" appIcon="action-search"></svg>
               @if (fieldSearch()) {
                 <button type="button" (click)="fieldSearch.set('')" class="absolute left-2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer" title="پاک‌کردن جستجو">✕</button>
               }
@@ -541,7 +541,7 @@
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
           <div class="flex items-center gap-2.5">
             <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="save"></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="action-save"></svg>
             </div>
             <div>
               <h3 id="save-modal-title" class="text-sm font-black text-slate-800">ذخیره قالب گزارش</h3>

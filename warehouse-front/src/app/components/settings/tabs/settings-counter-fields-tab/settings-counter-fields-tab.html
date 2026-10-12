@@ -19,7 +19,7 @@
                 size="sm" 
                 label="بازنشانی به پیش‌فرض‌ها" 
                 title="بازنشانی همه فیلدها به مقادیر اولیه کارخانه" 
-                (actionClick)="resetAllFieldsToDefault()">
+                (click)="resetAllFieldsToDefault()">
               </button>
               <button 
                 appAction="view" 
@@ -27,7 +27,7 @@
                 size="sm" 
                 label="نمایش همه" 
                 title="نمایش همه فیلدها" 
-                (actionClick)="selectAllVisible(true)">
+                (click)="selectAllVisible(true)">
               </button>
               <button 
                 appAction="hide" 
@@ -35,7 +35,7 @@
                 size="sm" 
                 label="مخفی‌سازی همه" 
                 title="مخفی‌سازی همه فیلدها" 
-                (actionClick)="selectAllVisible(false)">
+                (click)="selectAllVisible(false)">
               </button>
             </div>
           </div>
@@ -51,7 +51,7 @@
                   [ngModel]="fieldSearchTerm()" (ngModelChange)="fieldSearchTerm.set($event)" 
                   placeholder="جستجوی نام ستون، عنوان یا کد سیستمی فیلد..."
                   class="w-full pr-10 pl-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
-                <svg class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="search"></svg>
+                <svg class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-search"></svg>
                 <button *ngIf="fieldSearchTerm" (click)="fieldSearchTerm.set('')" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">✕</button>
               </div>
 
@@ -167,8 +167,8 @@
                       class="w-10 h-10 sm:w-8 sm:h-8 rounded-xl inline-flex items-center justify-center transition-all active:scale-90"
                       [title]="f.visible ? 'فیلد در کارتابل انبارگردان نمایش داده می‌شود' : 'فیلد مخفی است'"
                       [attr.aria-label]="f.visible ? 'فیلد در کارتابل انبارگردان نمایش داده می‌شود' : 'فیلد مخفی است'">
-                      <svg *ngIf="f.visible" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
-                      <svg *ngIf="!f.visible" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+                      <svg *ngIf="f.visible" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-confirm"></svg>
+                      <svg *ngIf="!f.visible" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-close"></svg>
                     </button>
                   </td>
 
@@ -189,7 +189,7 @@
                       [title]="!f.visible ? 'فیلد مخفی قابل ویرایش نیست' : (f.editable ? 'انبارگردان می‌تواند این فیلد را ویرایش کند' : 'فیلد فقط خواندنی است')"
                       [attr.aria-label]="!f.visible ? 'فیلد مخفی قابل ویرایش نیست' : (f.editable ? 'انبارگردان می‌تواند این فیلد را ویرایش کند' : 'فیلد فقط خواندنی است')">
                       <svg *ngIf="f.editable" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-edit"></svg>
-                      <svg *ngIf="!f.editable" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock"></svg>
+                      <svg *ngIf="!f.editable" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-lock"></svg>
                     </button>
                   </td>
 
@@ -197,7 +197,7 @@
 
                 <tr *ngIf="filteredFieldConfigs().length === 0">
                   <td colspan="7" class="py-12 text-center text-slate-400">
-                    <svg class="mx-auto mb-2 text-slate-300" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="search"></svg>
+                    <svg class="mx-auto mb-2 text-slate-300" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" appIcon="action-search"></svg>
                     فیلدی با مشخصات جستجو شده یافت نشد.
                   </td>
                 </tr>
