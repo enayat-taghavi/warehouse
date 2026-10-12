@@ -9,17 +9,47 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection } from '../../../../core/models/personnel.model';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
 
 @Component({
   selector: 'app-supervisor-attendance-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    SvgIconDirective,
+    ActionButtonComponent,
+    TabBarComponent,
+    CommandCenterComponent,
+  ],
   templateUrl: './supervisor-attendance.html',
   styleUrl: './supervisor-attendance.css'
 })
 export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
   // Subtabs navigation
   activeSubTab: 'pending' | 'approved' | 'revision' | 'all' | 'daily_summary' = 'pending';
+
+  // Memoized tabs for app-tab-bar
+  private attendanceSubTabsKey = '';
+  private attendanceSubTabsCache: TabDef[] = [];
+  get attendanceSubTabs(): TabDef[] {
+    const sc = this.statusCounters;
+    const key = `${sc.pending}:${sc.approved}:${sc.revision}:${sc.all}`;
+    if (key !== this.attendanceSubTabsKey) {
+      this.attendanceSubTabsKey = key;
+      this.attendanceSubTabsCache = [
+        { id: 'pending', label: 'نیازمند بررسی', shortLabel: 'بررسی', icon: 'status-pending', count: sc.pending },
+        { id: 'approved', label: 'تایید شده', shortLabel: 'تایید', icon: 'status-approved', count: sc.approved },
+        { id: 'revision', label: 'عودت داده‌شده', shortLabel: 'عودت', icon: 'status-revision', count: sc.revision, tone: 'rose' },
+        { id: 'all', label: 'کل کارکردها', shortLabel: 'همه', icon: 'status-all', count: sc.all },
+        { id: 'daily_summary', label: 'خلاصه روزانه کارگاه', shortLabel: 'خلاصه', icon: 'bar-chart-2' },
+      ];
+    }
+    return this.attendanceSubTabsCache;
+  }
 
   // Section Management (Guardian G1: Section Isolation)
   mySections: ProjectSection[] = [];
@@ -132,10 +162,12 @@ export class SupervisorAttendanceHubComponent implements OnInit, OnDestroy {
     this.fetchAttendanceData();
   }
 
-  switchSubTab(tab: 'pending' | 'approved' | 'revision' | 'all' | 'daily_summary'): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
-    this.applyFilter();
+  switchSubTab(tab: string): void {
+    if (tab === 'pending' || tab === 'approved' || tab === 'revision' || tab === 'all' || tab === 'daily_summary') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+      this.applyFilter();
+    }
   }
 
   syncUrlParams(): void {
