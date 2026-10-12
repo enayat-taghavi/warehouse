@@ -430,9 +430,12 @@ graph TD
 این بخش را ناظر (Claude) پس از بازبینی گام ۹ نوشته است. هر نشست Antigravity فقط همان ردیف‌هایی را اجرا می‌کند که پرامپت نشست نام برده است. اول همین بخش ۹ را کامل بخوان، بعد بند ۱ (قانون‌های ۱ تا ۱۱)، بند ۲ (جعبه‌ابزار) و بند ۳ (فرهنگ آیکون)، و فقط ردیف‌های نشست را از بند ۴. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» را بخوان.
 
 ### ۹-۱. شروع نشست
-1. `git status` را ببین. اگر تغییر commit‌نشده‌ای هست که مال این نشست نیست، دست نزن و به کاربر بگو.
-2. شناسه commit فعلی را **پایه نشست** بنام و در گزارش بنویس (`git rev-parse --short HEAD`).
+1. `git status` را ببین.
+   - فایل‌های untracked `run_tasks.bat`، `run_tasks.py`، `tasks.md` و `tasks_history.md` مال کاربرند؛ دست نزن و commit نکن.
+   - اگر تغییر commit‌نشده دیگری هست که مال این نشست نیست، دست نزن و به کاربر بگو.
+2. شناسه commit فعلی را **پایه نشست** بنام (`git rev-parse --short HEAD`) و در گزارش بنویس. در همه فرمان‌های بعدی خود این hash را بنویس؛ متغیر PowerShell بین فرمان‌ها نمی‌ماند.
 3. **سیاهه (قانون ۹):** برای هر فایل نشست، همه `(click)`، `routerLink`، `(change)` و `(ngSubmit)` را از خود کد فهرست کن. پس از کار، هیچ‌کدام نباید بی‌جایگزین حذف شده باشد.
+   - ستون «وضعیت فعلی» جدول بند ۴ گاهی دکمه‌ای را نام می‌برد که در کد نیست (مثلاً «الصاق رسید» در ۴.۹). مرجع فقط خود کد است و پرامپت نشست؛ دکمه نساز (قانون ۸).
 4. نمونه درستِ پس از بازبینی: `components/finance/supervisor/supervisor-fleet/`، `supervisor-attendance/` و `supervisor-personnel/` (هم `html` هم `ts`). الگو را از این‌ها بگیر.
 
 ### ۹-۲. خطاهایی که در گام‌های ۸ و ۹ تکرار شد (ممنوع)
@@ -456,13 +459,29 @@ graph TD
 9. **منطق و ساختار:**
    - به منطق §6، ساختار شبا، `IRANIAN_BANKS`، API و سرویس‌ها دست نزن.
    - امضای متد تب `(tab: string)` با شرط صریح روی همه شناسه‌ها باشد، نه `as`.
-10. **نگاشت کارهای مالی به کلید کاتالوگ:**
-    - ثبت، تسویه، پرداخت یا صدور سندی که کاربر خودش نهایی می‌کند ← `confirm` با `display="label"` و عنوان همان کار (مثلاً «ثبت پرداخت»، «تسویه»).
-    - تایید درخواست یا سند فرد دیگر در گردش کار ← `approve`.
-    - انتقال وجه یا ارسال دوره ← `send`.
-    - تولید یا دانلود فایل (پایا، دیسکت) ← `download` عنوان‌دار.
-    - بازگشایی ← `unlock`؛ قفل ← `lock`. هر دو حساس‌اند.
-    - کاری که کلید دقیق ندارد (مثل «محاسبه کرایه» یا «انطباق خودکار»): کلید نزدیک و بی‌ربط انتخاب نکن و کلید تازه نساز. نشانه‌گذاری فعلی بماند و فقط این‌ها بگیرد: `.tap-target`، `type="button"`، `title` و `aria-label` فارسی برابر متن، و آیکون از رجیستری که در هیچ فرهنگی معنای دیگری ندارد. در گزارش زیر عنوان «کارهای بی‌کلید» فهرستش کن تا ناظر تصمیم بگیرد.
+10. **نگاشت کارها به کلید کاتالوگ:** عنوان دکمه همان متن فعلی کد است، کوتاه‌شده تا ۳ کلمه؛ متن تازه نساز.
+    - تایید درخواست یا سند فرد دیگر در گردش کار (تایید مالی، تصویب، صدور سند حسابدار، صدور مجوز پرداخت، اعلام پاس‌شدن چک) ← `approve`.
+    - ثبت، تسویه یا پرداختی که خزانه یا کاربر خودش نهایی می‌کند (ثبت واریز، پرداخت دوره، تسویه ناوگان، واریز شارژ) ← `confirm` با `display="label"`.
+    - انتقال وجه یا ارسال دوره به مرحله بعد ← `send`.
+    - تولید یا دانلود فایل (پایا، دیسکت، فیش) ← `download` عنوان‌دار.
+    - خروجی اکسل دوم در همان صفحه (مثلاً «اکسل بانکی») ← `download` عنوان‌دار، تا با `export-excel` سربرگ یکی نشود.
+    - ارسال فایل در فوتر مودال درون‌ریزی ← `upload`؛ باز کردن مودال درون‌ریزی ← `import-excel`.
+    - قفل ← `lock`؛ بازگشایی یا آزادسازی ← `unlock`. هر دو حساس‌اند. دکمه‌ای که با وضعیت بین این دو جابه‌جا می‌شود: `[appAction]="x ? 'unlock' : 'lock'"` و `[label]` به همان شکل.
+    - قطع یا پایان همکاری ← `terminate` (در نشست ۰ ساخته می‌شود؛ حساس).
+    - بازگشت به تنظیمات سراسری یا حذف نسخه اختصاصی ← `restore` (حساس).
+    - کپی یا تکثیر ساختار (کپی چارت، نسخه اختصاصی) ← `copy`. دکمه‌های کپی شبا و حساب با 📋 و ✓ طبق AGENTS §7 دست نخورند.
+    - «تلاش دوباره» در حالت خطا ← `refresh` با `display="label"`.
+    - «مقایسه» یا «Diff» ← `view`. باز کردن مودال ویرایش ← `edit`.
+    - **کار بی‌کلید:** این‌ها کلید دقیق ندارند: «محاسبه»، «تطبیق هوشمند»، پیش‌تنظیم‌ها، و چیپ وضعیت فعال/غیرفعال که با کلیک عوض می‌شود.
+      - کلید نزدیک و بی‌ربط انتخاب نکن و کلید action تازه نساز.
+      - نشانه‌گذاری فعلی بماند و فقط این‌ها بگیرد: `.tap-target`، `type="button"`، `title` و `aria-label` فارسی برابر متن.
+      - ایموجی درونش برداشته شود (⚡ دکمه شبا استثناست).
+      - در گزارش، زیر عنوان «کارهای بی‌کلید» فهرستش کن تا ناظر تصمیم بگیرد.
+11. **آیکون مفهوم تازه (تب یا دسته):**
+    - اول `modules/accounting/entity-icons.ts` و `shared/icons/semantic-icons.ts` را بخوان؛ اگر کلیدی با همان معنا هست، همان را بردار.
+    - کلیدهایی که نشست ۰ می‌سازد: `sections`، `jobGrades`، `insurance`، `tax`، `licenses`، `identity`، `contractsAndLeases`، `repairShop`، `fuelStation`، `contractor` و `otherCounterparty`.
+    - اگر کلید نبود، به `ACCOUNTING_ENTITY_ICONS` کلید تازه بیفزا، با توضیح فارسی یک‌خطی و آیکونی از این فهرست آزاد که هنوز در هیچ فرهنگی نیست: `external-link`، `monitor`، `smartphone`، `shield-alert`، `qr-code`، `circle`.
+    - spec فرهنگ آیکون باید سبز بماند. هر کلید تازه را در گزارش و در جدول ۳-۳ ثبت کن.
 
 ### ۹-۳. بودجه عرض (سنجیده در ۳۶۰px با فونت Vazirmatn؛ ناظر در بازبینی نهایی دوباره می‌سنجد)
 | جا | عرض در دسترس |
@@ -492,7 +511,7 @@ graph TD
 3. بعد کم‌اهمیت‌ها را به `app-overflow-menu` ببر.
 
 ### ۹-۴. معیار پایان هر نشست (همه را اجرا کن و خروجی واقعی را در گزارش بیاور)
-فرمان‌ها برای PowerShell در ریشه مخزن `E:\warehouse project` است؛ `$base` همان پایه نشست است.
+فرمان‌ها برای PowerShell در ریشه مخزن `E:\warehouse project` است. هر جا `<پایه>` آمده، hash پایه نشست را بنویس.
 
 1. **بیلد:** در `warehouse-front`:
    ```powershell
@@ -502,28 +521,42 @@ graph TD
    - نشست ۰ و نشست ۹ همین بیلد را با `--configuration accounting-only` و `--configuration warehouse-only` هم اجرا می‌کنند.
 2. **نگهبان‌ها:** با `$env:PYTHONUTF8=1`:
    ```powershell
-   python scripts/e2e/guardian_52_icon_registry.py
-   python scripts/e2e/guardian_55_clickable_ergonomics.py
-   python scripts/e2e/guardian_56_change_integrity.py --base $base --head HEAD
+   $env:PYTHONUTF8=1; python scripts/e2e/guardian_52_icon_registry.py
+   $env:PYTHONUTF8=1; python scripts/e2e/guardian_55_clickable_ergonomics.py
+   $env:PYTHONUTF8=1; python scripts/e2e/guardian_56_change_integrity.py --base <پایه>
    ```
+   - نگهبان ۵۶ را **بدون** `--head` اجرا کن تا درخت کاری (commitشده و نشده با هم) سنجیده شود.
    - هر سه باید کد ۰ بدهند.
    - برای هر نوار `mobile="icon"` که نگهبان ۵۶ «ایستا سنجیدنی نیست» گزارش می‌کند، خودت ببین هر تب `icon` دارد.
    - در پایان: `python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline` و عددهای تازه را گزارش کن.
 3. **تست (`ng test`، نه `vitest` خام):**
-   1. در `warehouse-front` فایل موقت `tsconfig.session.spec.json` بساز. باید `./tsconfig.json` را extend کند، `types` آن `["vitest/globals", "node"]` باشد، و `include` آن `src/**/*.d.ts` و specهای جعبه‌ابزار (`src/app/shared/icons/*.spec.ts` و `src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts`) و specهای پوشه کامپوننت‌های نشست باشد.
-   2. اجرا کن:
+   1. در `warehouse-front` فایل موقت `tsconfig.session.spec.json` با این محتوا بساز. خط آخر `include` نمونه است؛ به‌جایش الگوی پوشه‌های همان نشست را بگذار:
+      ```json
+      {
+        "extends": "./tsconfig.json",
+        "compilerOptions": { "outDir": "./out-tsc/spec", "types": ["vitest/globals", "node"] },
+        "include": [
+          "src/**/*.d.ts",
+          "src/app/shared/icons/*.spec.ts",
+          "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts",
+          "src/app/components/finance/accountant/accountant-payroll/**/*.spec.ts"
+        ],
+        "exclude": []
+      }
+      ```
+   2. در `warehouse-front` اجرا کن. هر الگو در **تک‌گیومه** باشد؛ آکولاد بی‌گیومه در PowerShell خطا می‌دهد. برای هر الگوی spec در `include` یک `--include` بگذار:
       ```powershell
-      npx ng test --watch=false --ts-config tsconfig.session.spec.json --include <همان الگوها> *> ../scratch/logs/session-test.log
+      npx ng test --watch=false --ts-config tsconfig.session.spec.json --include 'src/app/shared/icons/*.spec.ts' --include 'src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts' --include 'src/app/components/finance/accountant/accountant-payroll/**/*.spec.ts' *> ../scratch/logs/session-test.log
       ```
    3. **spec کامپایل‌نشدنی:** اگر specی خطای نوع (`TS2xxx`) دارد، آن را با `exclude` در tsconfig و `--exclude` در فرمان کنار بگذار، فهرستش را گزارش کن، و ثابت کن روی پایه هم کامپایل نمی‌شد.
    4. **مقایسه با پایه:**
       ```powershell
-      git archive -o scratch/base-session.tar $base warehouse-front
+      git archive -o scratch/base-session.tar <پایه> warehouse-front
       mkdir scratch/base-session
       tar -xf scratch/base-session.tar -C scratch/base-session
-      cmd /c mklink /J "scratch\base-session\warehouse-front\node_modules" "warehouse-front\node_modules"
+      cmd /c mklink /J "E:\warehouse project\scratch\base-session\warehouse-front\node_modules" "E:\warehouse project\warehouse-front\node_modules"
       ```
-      - همان tsconfig را در `scratch/base-session/warehouse-front` کپی کن و همان فرمان را اجرا کن.
+      - همان tsconfig را در `scratch/base-session/warehouse-front` کپی کن. همان فرمان را در همان پوشه اجرا کن، ولی خروجی را به مسیر مطلق `"E:\warehouse project\scratch\logs\session-test-base.log"` بفرست.
       - **پاک کردن (به همین ترتیب):** اول `cmd /c rmdir "scratch\base-session\warehouse-front\node_modules"`. بعد ببین junction رفته باشد. فقط پس از آن `Remove-Item -Recurse -Force scratch\base-session, scratch\base-session.tar`.
       - **هرگز** پیش از `rmdir` آن پوشه را `Remove-Item -Recurse` نکن؛ `node_modules` اصلی پاک می‌شود.
    5. هر دو خط `Tests  N failed | M passed` را گزارش کن. شکست تازه نسبت به پایه یعنی پسرفت؛ پیش از commit رفعش کن.
@@ -534,7 +567,10 @@ graph TD
    - یک commit برای هر ردیف صفحه، با پیام `feat(ergonomics): migrate <page> to shared toolkit (row 4.x)`.
    - commit پایانی با پیام `docs(ergonomics): record session <N>` برای گزارش.
    - بدون `Co-Authored-By`. **push نکن.**
-7. **گزارش در «گزارش پیشرفت»:** یادداشتی با عنوان `### <تاریخ شمسی امروز> — اجرای نشست <N> (ردیف‌های …؛ پایه <hash>)` بنویس که این‌ها را دارد:
+7. **گزارش در «گزارش پیشرفت»:** یادداشتی با عنوان `### <تاریخ شمسی امروز> — اجرای نشست <N> (ردیف‌های …؛ پایه <hash>) <برچسب>` بنویس.
+   - **برچسب:** فقط اگر همه معیارها سبز و همه commitها انجام شده، برچسب ASCII `[S<N>-DONE]` است (`<N>` شماره لاتین نشست). وگرنه `[S<N>-FAILED]` با علت.
+   - نشست بعد فقط با دیدن برچسب DONE نشست قبل شروع می‌شود. این برچسب را جای دیگری (مثلاً به‌عنوان نمونه) ننویس.
+   - یادداشت این‌ها را دارد:
    - commitها؛
    - جمع عرض ردیف‌های موبایل؛
    - خروجی واقعی فرمان‌ها؛
