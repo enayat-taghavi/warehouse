@@ -40,6 +40,13 @@ BRAIN_BASE_DIR = GEMINI_DIR / "brain"
 CONVERSATIONS_DIR = GEMINI_DIR / "conversations"
 STABILITY_SECONDS = 5  # ثانیه‌های سکوت برای اطمینان از پایان نوبت پردازشگر
 
+# مدل همه نشست‌ها: Gemini 3.8 Flash (High).
+# شناسه داخلی آن (MODEL_PLACEHOLDER_M...) با به‌روزرسانی Antigravity ممکن است عوض شود؛
+# پس در شروع اجرا از روی modelId پیدا می‌شود و FALLBACK_MODEL_ENUM فقط وقتی به کار می‌رود که فهرست مدل‌ها خوانده نشود.
+MODEL_ID = "gemini-3.8-flash-high"
+MODEL_LABEL = "Gemini 3.8 Flash (High)"
+FALLBACK_MODEL_ENUM = "MODEL_PLACEHOLDER_M318"
+
 
 def discover_language_server() -> dict | None:
     """
@@ -126,7 +133,32 @@ def load_tasks(tasks_path: Path) -> list[str]:
     return clean_tasks
 
 
-def start_cascade_conversation(ls_info: dict, task_text: str) -> str:
+def resolve_model_enum(ls_info: dict) -> str | None:
+    """
+    یافتن شناسه داخلی مدل MODEL_ID در فهرست مدل‌های Antigravity (GetUserStatus).
+    خروجی None یعنی فهرست خوانده شد ولی این مدل در آن نیست.
+    """
+    url = f"http://127.0.0.1:{ls_info['port']}/exa.language_server_pb.LanguageServerService/GetUserStatus"
+    try:
+        r = requests.post(
+            url,
+            headers={"x-codeium-csrf-token": ls_info["csrf_token"], "Content-Type": "application/json"},
+            json={},
+            timeout=5,
+        )
+        r.raise_for_status()
+        configs = r.json().get("userStatus", {}).get("cascadeModelConfigData", {}).get("clientModelConfigs", [])
+    except Exception as e:
+        print(f"⚠️ فهرست مدل‌های Antigravity خوانده نشد ({e})؛ شناسه پشتیبان {FALLBACK_MODEL_ENUM} به کار می‌رود.")
+        return FALLBACK_MODEL_ENUM
+
+    for cfg in configs:
+        if cfg.get("modelId") == MODEL_ID:
+            return (cfg.get("modelOrAlias") or {}).get("model") or None
+    return None
+
+
+def start_cascade_conversation(ls_info: dict, task_text: str, model_enum: str) -> str:
     """
     آغاز نشست جدید مستقل در Antigravity و ارسال متن تسک از طریق API رسمی ConnectRPC
     """
@@ -146,7 +178,7 @@ def start_cascade_conversation(ls_info: dict, task_text: str) -> str:
         "cascadeId": cascade_id,
         "source": "CORTEX_TRAJECTORY_SOURCE_CASCADE_CLIENT",
         "workspaceUris": [workspace_uri],
-        "requestedModel": "MODEL_GOOGLE_GEMINI_2_5_FLASH",
+        "requestedModel": model_enum,
     }
 
     r_start = requests.post(f"{base_url}/StartCascade", headers=headers, json=start_payload, timeout=8)
@@ -159,8 +191,8 @@ def start_cascade_conversation(ls_info: dict, task_text: str) -> str:
         "items": [{"text": task_text}],
         "cascadeConfig": {
             "plannerConfig": {
-                "requestedModel": {"model": "MODEL_GOOGLE_GEMINI_2_5_FLASH"},
-                "planModel": "MODEL_GOOGLE_GEMINI_2_5_FLASH",
+                "requestedModel": {"model": model_enum},
+                "planModel": model_enum,
             }
         },
     }
@@ -172,9 +204,10 @@ def start_cascade_conversation(ls_info: dict, task_text: str) -> str:
     return cascade_id
 
 
-def monitor_conversation(conversation_id: str, timeout_seconds: int = 1800) -> tuple[bool, int, str]:
+def monitor_conversation(conversation_id: str, timeout_seconds: int | None = None) -> tuple[bool, int, str]:
     """
     رهگیری و گزارش زنده پیشرفت تسک در نشست تا اتمام کامل آن
+    بی‌سقف زمانی (پیش‌فرض): تا پایان واقعی نشست صبر می‌کند تا نشست بعدی هم‌زمان با آن روی کد کار نکند.
     خروجی: (موفقیت، تعداد گام‌ها، متن خلاصه نهایی)
     """
     transcript_file = BRAIN_BASE_DIR / conversation_id / ".system_generated" / "logs" / "transcript.jsonl"
@@ -196,7 +229,7 @@ def monitor_conversation(conversation_id: str, timeout_seconds: int = 1800) -> t
 
     print(f"👁️ در حال رهگیری زنده نشست (شناسه: {conversation_id})...")
 
-    while time.time() - start_monitor_time < timeout_seconds:
+    while timeout_seconds is None or time.time() - start_monitor_time < timeout_seconds:
         time.sleep(1.2)
 
         if transcript_file.exists():
@@ -344,6 +377,13 @@ def run_tasks_sequence():
 
     print(f"🔧 اتصال برقرار شد: PID={ls_info['pid']} | Port={ls_info['port']}")
 
+    # مدل نشست‌ها؛ اگر در فهرست Antigravity نبود، به‌جای اجرا با مدل دیگر متوقف می‌شویم
+    model_enum = resolve_model_enum(ls_info)
+    if not model_enum:
+        print(f"❌ مدل {MODEL_LABEL} ({MODEL_ID}) در فهرست مدل‌های Antigravity یافت نشد؛ اجرا متوقف شد.")
+        return
+    print(f"🧠 مدل نشست‌ها: {MODEL_LABEL} ({model_enum}) | بدون سقف زمانی")
+
     # ۲. بارگذاری تسک‌ها
     try:
         tasks = load_tasks(TASKS_FILE)
@@ -371,7 +411,7 @@ def run_tasks_sequence():
 
         try:
             print("📤 در حال راه‌اندازی نشست اختصاصی در Antigravity...")
-            conv_id = start_cascade_conversation(ls_info, task_content)
+            conv_id = start_cascade_conversation(ls_info, task_content, model_enum)
             print(f"🆔 شناسه نشست ثبت شد: {conv_id}")
         except Exception as e:
             print(f"❌ خطا در ارسال دستور به Antigravity: {e}")
