@@ -106,14 +106,14 @@
   - [x] **۳.۶ ثبت پرسنل جدید (`employee-new-personnel.html`):** ساختار شبا دست نخورد
   - [x] معیار پایان گام
 
-- [ ] **گام ۹: هاب سرپرست**
-  - [ ] **۳.۷ تایید کارکرد (`supervisor-attendance.html`)**
-  - [ ] **۳.۸ تایید ناوگان (`supervisor-fleet.html`)**
-  - [ ] **۳.۱۰ تایید تنخواه (`supervisor-petty-cash.html`)**
-  - [ ] **۳.۱۱ مدیریت پرسنل (`supervisor-personnel.html`)**
-  - [ ] **۳.۱۲ بستن دوره کارکرد (`supervisor-period-lock.html`):** `lock` حساس
-  - [ ] **۳.۱۳ پرسنل و خودروهای جدید (`supervisor-new-profiles.html`)**
-  - [ ] معیار پایان گام
+- [x] **گام ۹: هاب سرپرست**
+  - [x] **۳.۷ تایید کارکرد (`supervisor-attendance.html`)**
+  - [x] **۳.۸ تایید ناوگان (`supervisor-fleet.html`)**
+  - [x] **۳.۱۰ تایید تنخواه (`supervisor-petty-cash.html`)**
+  - [x] **۳.۱۱ مدیریت پرسنل (`supervisor-personnel.html`)**
+  - [x] **۳.۱۲ بستن دوره کارکرد (`supervisor-period-lock.html`):** `lock` حساس
+  - [x] **۳.۱۳ پرسنل و خودروهای جدید (`supervisor-new-profiles.html`)**
+  - [x] معیار پایان گام
 
 - [ ] **گام ۱۰: حسابداری**
   - [ ] **۴.۱ حقوق و دستمزد (`accountant-payroll.html`)**
