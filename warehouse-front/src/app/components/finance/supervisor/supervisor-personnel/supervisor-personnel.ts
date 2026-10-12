@@ -9,7 +9,6 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection, PersonnelProfile, PersonnelChangeRequest } from '../../../../core/models/personnel.model';
 import { WebSocketService } from '../../../../core/http/websocket.service';
-import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
@@ -23,7 +22,6 @@ export type SupervisorPersonnelSubTab = 'new' | 'attendance' | 'changes' | 'all'
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    SvgIconDirective,
     CommandCenterComponent,
     TabBarComponent,
     ActionButtonComponent,
