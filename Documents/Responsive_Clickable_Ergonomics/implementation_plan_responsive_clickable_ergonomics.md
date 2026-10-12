@@ -425,6 +425,118 @@ graph TD
 
 ---
 
+## ۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)
+
+این بخش را ناظر (Claude) پس از بازبینی گام ۹ نوشته است. هر نشست Antigravity فقط همان ردیف‌هایی را اجرا می‌کند که پرامپت نشست نام برده است. اول همین بخش ۹ را کامل بخوان، بعد بند ۱ (قانون‌های ۱ تا ۱۱)، بند ۲ (جعبه‌ابزار) و بند ۳ (فرهنگ آیکون)، و فقط ردیف‌های نشست را از بند ۴. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» را بخوان.
+
+### ۹-۱. شروع نشست
+1. `git status` را ببین. اگر تغییر commit‌نشده‌ای هست که مال این نشست نیست، دست نزن و به کاربر بگو.
+2. شناسه commit فعلی را **پایه نشست** بنام و در گزارش بنویس (`git rev-parse --short HEAD`).
+3. **سیاهه (قانون ۹):** برای هر فایل نشست، همه `(click)`، `routerLink`، `(change)` و `(ngSubmit)` را از خود کد فهرست کن. پس از کار، هیچ‌کدام نباید بی‌جایگزین حذف شده باشد.
+4. نمونه درستِ پس از بازبینی: `components/finance/supervisor/supervisor-fleet/`، `supervisor-attendance/` و `supervisor-personnel/` (هم `html` هم `ts`). الگو را از این‌ها بگیر.
+
+### ۹-۲. خطاهایی که در گام‌های ۸ و ۹ تکرار شد (ممنوع)
+1. **getter تب با آرایه تازه:** `get tabs(): TabDef[] { return [...] }` در dev mode خطای NG0100 می‌دهد. یا فیلد `readonly` ثابت، یا الگوی کش کلیددار (`private xKey = ''; private xCache: TabDef[] = [];` مثل `supervisor-personnel.ts`).
+2. **`reject` به‌جای `return`:** پیش از انتخاب، تابع و API را بخوان. اگر وضعیت «revision/عودت برای اصلاح» است ← `appAction="return"`؛ اگر رد یا ابطال قطعی است ← `appAction="reject"`.
+3. **عنوان گم‌شده در موبایل:** `display` پیش‌فرض (`auto`) عنوان را زیر ۶۴۰px پنهان می‌کند. پس در این جاها `display="label"` با عنوان کوتاه بگذار:
+   - دکمه‌های فوتر مودال؛
+   - دکمه‌های سطر کارت موبایل؛
+   - جدول‌هایی که نسخه کارت موبایل ندارند؛
+   - هر کار غیرآشنا (تایید، عودت، مشاهده، ارسال، قفل، پرداخت و…).
+
+   فقط آیکون‌های آشنای قانون ۵ (افزودن، تازه‌سازی، جستجو، اکسل، ویرایش، حذف، بستن) می‌توانند فقط‌آیکون شوند. دکمه X سربرگ مودال `display="icon"` بگیرد.
+4. **قابلیت تازه (قانون ۸):** شمارنده، `indicator` یا دکمه‌ای که در نسخه پایه نبود اضافه نکن. تنها استثنا: وقتی `mobile="icon"` شمارنده یک تب «در انتظار» را زیر ۶۴۰px پنهان می‌کند، `indicator` بدون `pulse` برای `count > 0` مجاز است.
+5. **آیکون (قانون ۱۱):**
+   - آیکون فقط از فرهنگ می‌آید: `status-*`، `action-*`، `role-*`، `ACCOUNTING_ENTITY_ICONS.*` (از `modules/accounting/entity-icons.ts`) و `PLATFORM_ENTITY_ICONS.*` (از `shared/icons/semantic-icons.ts`).
+   - نام خام رجیستری برای کاری که کلید دارد ممنوع است. همچنین آیکونی که در فرهنگ معنای دیگری دارد ممنوع است، مثلاً `clock` (= در انتظار) برای کارکرد، `refresh-cw` (= تازه‌سازی) برای درخواست تغییر، یا `folder` (= پروژه‌ها) برای «همه».
+   - دو تب یک نوار هرگز آیکون یکسان ندارند؛ در `mobile="icon"` تب‌ها را فقط آیکون از هم جدا می‌کند.
+6. **`title` ایستا روی `button[appAction]`:** بی‌اثر است، چون میزبان `title` را از `label` می‌سازد. متن را در `label` بگذار.
+7. **ترتیب فراخوانی:** اگر کلیکی هم مودالی را می‌بندد (و وضعیت انتخاب‌شده را `null` می‌کند) و هم مودال دیگری را با همان وضعیت باز می‌کند، اول بازکننده را صدا بزن.
+8. **عنوان بلند `whitespace-nowrap`:** دکمه‌های جعبه‌ابزار نمی‌شکنند. عنوان پویا (مثلاً با شمارنده) یا بیش از ۳ کلمه، ردیف موبایل را بیرون می‌زند؛ عنوان را کوتاه کن.
+9. **منطق و ساختار:**
+   - به منطق §6، ساختار شبا، `IRANIAN_BANKS`، API و سرویس‌ها دست نزن.
+   - امضای متد تب `(tab: string)` با شرط صریح روی همه شناسه‌ها باشد، نه `as`.
+
+### ۹-۳. بودجه عرض (سنجیده در ۳۶۰px با فونت Vazirmatn؛ ناظر در بازبینی نهایی دوباره می‌سنجد)
+| جا | عرض در دسترس |
+|---|---|
+| اسلات تب سربرگ (`cc-tabs`) | ۳۰۹px |
+| ردیف اکشن سربرگ (`cc-actions`) | ۳۰۹px |
+| ردیف کارت موبایل (`p-3.5` یا `p-4`) | ۳۰۲ تا ۳۰۶px؛ شبکه ۴ستونی `gap-1.5`: ۷۰px هر ستون |
+| فوتر مودال با `p-4` بیرونی و `p-3` فوتر | ۳۰۲px |
+| فوتر مودال با `p-4` بیرونی و `p-6` مودال | ۲۸۰px |
+
+| جزء | عرض تقریبی |
+|---|---|
+| دکمه فقط‌آیکون | ۴۰px |
+| دکمه عنوان‌دار `md` | ۴۶px + حدود ۵٫۵px برای هر حرف فارسی |
+| دکمه عنوان‌دار `size="sm"` | ۴۰px + حدود ۵٫۵px برای هر حرف |
+| فاصله `gap-2` | ۸px |
+
+**قاعده‌های نوار تب** (از سنجه گام ۹):
+- ۱ تا ۳ تب: `mobile="short"` (پیش‌فرض) با `shortLabel` یک‌کلمه‌ای جا می‌شود.
+- ۴ تب یا بیشتر، یا ۳ تب با شمارنده و عنوان کوتاه بلند: `mobile="icon"`. هر تب `icon` یکتا و `shortLabel` یک‌کلمه‌ای داشته باشد.
+- `fullLabelFrom`: برای ۴ تب یا بیشتر `"xl"`؛ برای ۳ تب `"lg"`؛ برای ۲ تب پیش‌فرض.
+- **سایدبار:** از ۷۶۸px سایدبار ۲۸۸px جا می‌گیرد. سرریز درونی نوار تب در ۷۶۸ تا ۱۰۲۳px با سایدبار باز پذیرفته است (تور ایمنی `overflow-x-auto`؛ کاربر می‌تواند سایدبار را جمع کند). در سایر عرض‌ها نباید باشد.
+
+**جمع ردیف را حساب کن:** پیش از انتخاب عنوان، جمع عرض دکمه‌های هر ردیف موبایل را با جدول بالا حساب کن و در گزارش نشست بنویس. اگر بیشتر از عرض در دسترس شد:
+1. اول عنوان‌ها را کوتاه کن.
+2. بعد کارهای آشنا را فقط‌آیکون کن.
+3. بعد کم‌اهمیت‌ها را به `app-overflow-menu` ببر.
+
+### ۹-۴. معیار پایان هر نشست (همه را اجرا کن و خروجی واقعی را در گزارش بیاور)
+فرمان‌ها برای PowerShell در ریشه مخزن `E:\warehouse project` است؛ `$base` همان پایه نشست است.
+
+1. **بیلد:** در `warehouse-front`:
+   ```powershell
+   npx ng build --output-path ../scratch/ng-build-check *> ../scratch/logs/ergonomics-build.log
+   ```
+   - خط `Application bundle generation complete` و نبود `ERROR` و `NG8` را گزارش کن.
+   - نشست ۰ و نشست ۹ همین بیلد را با `--configuration accounting-only` و `--configuration warehouse-only` هم اجرا می‌کنند.
+2. **نگهبان‌ها:** با `$env:PYTHONUTF8=1`:
+   ```powershell
+   python scripts/e2e/guardian_52_icon_registry.py
+   python scripts/e2e/guardian_55_clickable_ergonomics.py
+   python scripts/e2e/guardian_56_change_integrity.py --base $base --head HEAD
+   ```
+   - هر سه باید کد ۰ بدهند.
+   - برای هر نوار `mobile="icon"` که نگهبان ۵۶ «ایستا سنجیدنی نیست» گزارش می‌کند، خودت ببین هر تب `icon` دارد.
+   - در پایان: `python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline` و عددهای تازه را گزارش کن.
+3. **تست (`ng test`، نه `vitest` خام):**
+   1. در `warehouse-front` فایل موقت `tsconfig.session.spec.json` بساز. باید `./tsconfig.json` را extend کند، `types` آن `["vitest/globals", "node"]` باشد، و `include` آن `src/**/*.d.ts` و specهای جعبه‌ابزار (`src/app/shared/icons/*.spec.ts` و `src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts`) و specهای پوشه کامپوننت‌های نشست باشد.
+   2. اجرا کن:
+      ```powershell
+      npx ng test --watch=false --ts-config tsconfig.session.spec.json --include <همان الگوها> *> ../scratch/logs/session-test.log
+      ```
+   3. **spec کامپایل‌نشدنی:** اگر specی خطای نوع (`TS2xxx`) دارد، آن را با `exclude` در tsconfig و `--exclude` در فرمان کنار بگذار، فهرستش را گزارش کن، و ثابت کن روی پایه هم کامپایل نمی‌شد.
+   4. **مقایسه با پایه:**
+      ```powershell
+      git archive -o scratch/base-session.tar $base warehouse-front
+      mkdir scratch/base-session
+      tar -xf scratch/base-session.tar -C scratch/base-session
+      cmd /c mklink /J "scratch\base-session\warehouse-front\node_modules" "warehouse-front\node_modules"
+      ```
+      - همان tsconfig را در `scratch/base-session/warehouse-front` کپی کن و همان فرمان را اجرا کن.
+      - **پاک کردن (به همین ترتیب):** اول `cmd /c rmdir "scratch\base-session\warehouse-front\node_modules"`. بعد ببین junction رفته باشد. فقط پس از آن `Remove-Item -Recurse -Force scratch\base-session, scratch\base-session.tar`.
+      - **هرگز** پیش از `rmdir` آن پوشه را `Remove-Item -Recurse` نکن؛ `node_modules` اصلی پاک می‌شود.
+   5. هر دو خط `Tests  N failed | M passed` را گزارش کن. شکست تازه نسبت به پایه یعنی پسرفت؛ پیش از commit رفعش کن.
+   6. `tsconfig.session.spec.json` را در پایان پاک کن.
+4. **متن‌های تغییرکرده:** متن‌های تغییرکرده را در `*.spec.ts` جستجو کن (با ابزار جستجو، نه `grep` در Git Bash) و همان‌جا به‌روز کن.
+5. **بازبینی خودت:** هر فایل را یک‌بار دیگر با فهرست ۹-۲ و جمع عرض ۹-۳ مرور کن.
+6. **commit و گزارش:**
+   - یک commit برای هر ردیف صفحه، با پیام `feat(ergonomics): migrate <page> to shared toolkit (row 4.x)`.
+   - commit پایانی با پیام `docs(ergonomics): record session <N>` برای گزارش.
+   - بدون `Co-Authored-By`. **push نکن.**
+7. **گزارش در «گزارش پیشرفت»:** یادداشتی با عنوان `### <تاریخ شمسی امروز> — اجرای نشست <N> (ردیف‌های …؛ پایه <hash>)` بنویس که این‌ها را دارد:
+   - commitها؛
+   - جمع عرض ردیف‌های موبایل؛
+   - خروجی واقعی فرمان‌ها؛
+   - سه فهرست «سنجیده‌شده با فرمان»، «اجرانشده» و «پشت ورود (چک‌لیست ۳۶۰px برای کاربر)».
+
+   بعد در `task_responsive_clickable_ergonomics.md` ردیف‌ها را تیک بزن. سپس توقف کن و نشست بعد را شروع نکن.
+
+---
+
 ## گزارش پیشرفت
 
 ### ۱۴۰۵/۰۷/۱۸ — بازبینی اول طرح (پیش از اجرا)
