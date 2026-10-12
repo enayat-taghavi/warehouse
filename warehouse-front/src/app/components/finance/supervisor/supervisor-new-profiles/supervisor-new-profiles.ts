@@ -11,16 +11,29 @@ import { ProjectSection, PersonnelChangeRequest, VehicleChangeRequest } from '..
 
 import { WebSocketService } from '../../../../core/http/websocket.service';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+
+export type SupervisorNewProfilesSubTab = 'personnel' | 'vehicles' | 'change_requests' | 'all';
 
 @Component({
   selector: 'app-supervisor-new-profiles-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    SvgIconDirective,
+    CommandCenterComponent,
+    TabBarComponent,
+    ActionButtonComponent,
+  ],
   templateUrl: './supervisor-new-profiles.html',
   styleUrl: './supervisor-new-profiles.css'
 })
 export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
-  activeSubTab: 'personnel' | 'vehicles' | 'change_requests' | 'all' = 'personnel';
+  activeSubTab: SupervisorNewProfilesSubTab = 'personnel';
 
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
@@ -148,10 +161,53 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
     this.fetchProfiles();
   }
 
-  switchSubTab(tab: 'personnel' | 'vehicles' | 'change_requests' | 'all'): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
-    this.fetchProfiles();
+  get profileSubTabs(): TabDef[] {
+    const sc = this.statusCounters;
+    return [
+      {
+        id: 'personnel',
+        label: 'پرسنل جدید',
+        shortLabel: 'پرسنل',
+        icon: 'user-plus',
+        count: sc.personnel,
+        tone: 'indigo',
+        indicator: sc.personnel > 0 ? { tone: 'amber', label: 'پرسنل جدید در انتظار تایید', pulse: true } : undefined,
+      },
+      {
+        id: 'vehicles',
+        label: 'خودروهای جدید',
+        shortLabel: 'خودرو',
+        icon: 'truck',
+        count: sc.vehicles,
+        tone: 'indigo',
+        indicator: sc.vehicles > 0 ? { tone: 'amber', label: 'خودرو جدید در انتظار تایید', pulse: true } : undefined,
+      },
+      {
+        id: 'change_requests',
+        label: 'درخواست‌های تغییرات',
+        shortLabel: 'تغییرات',
+        icon: 'refresh-cw',
+        count: sc.change_requests,
+        tone: 'amber',
+        indicator: sc.change_requests > 0 ? { tone: 'amber', label: 'درخواست تغییرات در انتظار تایید', pulse: true } : undefined,
+      },
+      {
+        id: 'all',
+        label: 'کل پیش‌نویس‌ها',
+        shortLabel: 'همه',
+        icon: 'users',
+        count: sc.all,
+        tone: 'slate',
+      },
+    ];
+  }
+
+  switchSubTab(tab: string): void {
+    if (tab === 'personnel' || tab === 'vehicles' || tab === 'change_requests' || tab === 'all') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+      this.fetchProfiles();
+    }
   }
 
   syncUrlParams(): void {

@@ -1,109 +1,56 @@
 <div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-      
-      <!-- سمت راست: دراپ‌داون انتخاب بخش و تب‌های فیلتر وضعیت -->
-      <div class="flex flex-wrap items-center gap-2 md:gap-3">
-        <!-- انتخابگر بخش فعال -->
-        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
-          <select
-            [(ngModel)]="selectedSectionId"
-            (change)="onSectionChanged()"
-            class="bg-transparent text-xs font-black text-emerald-700 focus:outline-none cursor-pointer">
-            <option *ngFor="let sec of mySections" [value]="sec.id">
-              {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- تب‌های فرعی در کپسول محصور -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
-          <button
-            type="button"
-            (click)="switchSubTab('personnel')"
-            [ngClass]="activeSubTab === 'personnel' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>👥 پرسنل جدید</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="activeSubTab === 'personnel' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.personnel }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('vehicles')"
-            [ngClass]="activeSubTab === 'vehicles' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>🚗 خودروهای جدید</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="activeSubTab === 'vehicles' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.vehicles }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('change_requests')"
-            [ngClass]="activeSubTab === 'change_requests' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer relative">
-            <span>🔄 درخواست‌های تغییرات</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.change_requests > 0 && activeSubTab !== 'change_requests' ? 'bg-amber-500 text-white animate-pulse' : (activeSubTab === 'change_requests' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600')">
-              {{ statusCounters.change_requests }}
-            </span>
-            <span *ngIf="statusCounters.change_requests > 0 && activeSubTab !== 'change_requests'" class="w-2 h-2 rounded-full bg-amber-500 inline-block animate-ping"></span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('all')"
-            [ngClass]="activeSubTab === 'all' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>📁 کل پیش‌نویس‌ها</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="activeSubTab === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.all }}
-            </span>
-          </button>
-        </div>
+  <app-command-center rowFrom="lg">
+    <!-- سمت راست: دراپ‌داون انتخاب بخش و تب‌های فیلتر وضعیت -->
+    <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
+      <!-- انتخابگر بخش فعال -->
+      <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
+        <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
+        <select
+          [(ngModel)]="selectedSectionId"
+          (change)="onSectionChanged()"
+          class="bg-transparent text-xs font-black text-emerald-700 focus:outline-none cursor-pointer">
+          <option *ngFor="let sec of mySections" [value]="sec.id">
+            {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
+          </option>
+        </select>
       </div>
 
-      <!-- سمت چپ: دکمه‌های اکشن ۳گانه -->
-      <div class="flex items-center gap-2 justify-end">
-        <button
-          type="button"
-          (click)="exportExcel()"
-          class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="خروجی گزارش پیش‌نویس‌ها"
-          aria-label="خروجی اکسل">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
-        </button>
-
-        <button
-          type="button"
-          (click)="importExcel()"
-          class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="قالب اکسل پرونده‌ها"
-          aria-label="ایمپورت اکسل">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="upload"></svg>
-        </button>
-
-        <button
-          type="button"
-          (click)="fetchProfiles()"
-          class="w-9 h-9 rounded-xl bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="تازه‌سازی پیش‌نویس‌ها"
-          aria-label="رفرش">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.animate-spin]="isLoading" appIcon="refresh-cw"></svg>
-        </button>
-      </div>
-
+      <!-- تب‌های فرعی با جعبه‌ابزار مشترک -->
+      <app-tab-bar
+        [tabs]="profileSubTabs"
+        [active]="activeSubTab"
+        fullLabelFrom="lg"
+        (activeChange)="switchSubTab($event)" />
     </div>
-  </div>
+
+    <!-- سمت چپ: دکمه‌های اکشن ۳گانه -->
+    <div cc-actions class="flex items-center gap-2 justify-end">
+      <button
+        type="button"
+        appAction="export-excel"
+        (click)="exportExcel()"
+        title="خروجی گزارش پیش‌نویس‌ها">
+      </button>
+
+      <button
+        type="button"
+        appAction="import-excel"
+        (click)="importExcel()"
+        title="قالب اکسل پرونده‌ها">
+      </button>
+
+      <button
+        type="button"
+        appAction="refresh"
+        [busy]="isLoading"
+        [disabled]="isLoading"
+        (click)="fetchProfiles()"
+        title="تازه‌سازی پیش‌نویس‌ها">
+      </button>
+    </div>
+  </app-command-center>
 
   <!-- ── ۲. جدول و کارت داده‌ها (Data Card Container) ── -->
   <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
@@ -173,11 +120,19 @@
               <td class="p-3 font-mono text-[11px]">{{ item.sheba_number }}</td>
               <td class="p-3 text-center">
                 <div class="flex items-center justify-center gap-1.5">
-                  <button (click)="openApprovalModal('personnel', item)" class="px-2 py-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer">
-                    ✓ تایید پرونده
+                  <button
+                    type="button"
+                    appAction="approve"
+                    size="sm"
+                    label="تایید پرونده"
+                    (click)="openApprovalModal('personnel', item)">
                   </button>
-                  <button (click)="rejectPersonnel(item)" class="px-2 py-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer">
-                    ✕ عودت
+                  <button
+                    type="button"
+                    appAction="reject"
+                    size="sm"
+                    label="عودت"
+                    (click)="rejectPersonnel(item)">
                   </button>
                 </div>
               </td>
@@ -220,11 +175,19 @@
               <td class="p-3 font-mono">{{ item.owner_national_code }}</td>
               <td class="p-3 text-center">
                 <div class="flex items-center justify-center gap-1.5">
-                  <button (click)="openApprovalModal('vehicle', item)" class="px-2 py-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer">
-                    ✓ تایید ناوگان
+                  <button
+                    type="button"
+                    appAction="approve"
+                    size="sm"
+                    label="تایید ناوگان"
+                    (click)="openApprovalModal('vehicle', item)">
                   </button>
-                  <button (click)="rejectVehicle(item)" class="px-2 py-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer">
-                    ✕ عودت
+                  <button
+                    type="button"
+                    appAction="reject"
+                    size="sm"
+                    label="عودت"
+                    (click)="rejectVehicle(item)">
                   </button>
                 </div>
               </td>
@@ -294,25 +257,27 @@
                 <div class="flex items-center justify-center gap-1.5">
                   <button
                     type="button"
-                    (click)="openDiffModal(cr, 'personnel')"
-                    class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95"
-                    title="مشاهده مقایسه تفصیلی تغییرات">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
-                    <span>مقایسه Diff</span>
+                    appAction="view"
+                    size="sm"
+                    label="مقایسه Diff"
+                    title="مشاهده مقایسه تفصیلی تغییرات"
+                    (click)="openDiffModal(cr, 'personnel')">
                   </button>
                   <button
                     type="button"
-                    (click)="openApprovalModal('personnel_cr', cr)"
-                    class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-black transition-all cursor-pointer shadow-2xs active:scale-95"
-                    title="تایید مرحله اول سرپرست و ارسال به حسابداری">
-                    ✓ تایید سرپرست
+                    appAction="approve"
+                    size="sm"
+                    label="تایید سرپرست"
+                    title="تایید مرحله اول سرپرست و ارسال به حسابداری"
+                    (click)="openApprovalModal('personnel_cr', cr)">
                   </button>
                   <button
                     type="button"
-                    (click)="rejectPersonnelChange(cr)"
-                    class="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
-                    title="رد درخواست تغییرات">
-                    ✕ عودت
+                    appAction="reject"
+                    size="sm"
+                    label="عودت"
+                    title="رد درخواست تغییرات"
+                    (click)="rejectPersonnelChange(cr)">
                   </button>
                 </div>
               </td>
@@ -369,25 +334,27 @@
                 <div class="flex items-center justify-center gap-1.5">
                   <button
                     type="button"
-                    (click)="openDiffModal(cr, 'vehicle')"
-                    class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95"
-                    title="مشاهده مقایسه تفصیلی تغییرات خودرو">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
-                    <span>مقایسه Diff</span>
+                    appAction="view"
+                    size="sm"
+                    label="مقایسه Diff"
+                    title="مشاهده مقایسه تفصیلی تغییرات خودرو"
+                    (click)="openDiffModal(cr, 'vehicle')">
                   </button>
                   <button
                     type="button"
-                    (click)="openApprovalModal('vehicle_cr', cr)"
-                    class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-black transition-all cursor-pointer shadow-2xs active:scale-95"
-                    title="تایید مرحله اول سرپرست و ارسال به حسابداری">
-                    ✓ تایید سرپرست
+                    appAction="approve"
+                    size="sm"
+                    label="تایید سرپرست"
+                    title="تایید مرحله اول سرپرست و ارسال به حسابداری"
+                    (click)="openApprovalModal('vehicle_cr', cr)">
                   </button>
                   <button
                     type="button"
-                    (click)="rejectVehicleChange(cr)"
-                    class="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
-                    title="رد تغییرات ناوگان">
-                    ✕ عودت
+                    appAction="reject"
+                    size="sm"
+                    label="عودت"
+                    title="رد تغییرات ناوگان"
+                    (click)="rejectVehicleChange(cr)">
                   </button>
                 </div>
               </td>
@@ -424,7 +391,7 @@
             مقایسه تغییرات درخواستی: {{ selectedDiffCR.personnel_name || selectedDiffCR.driver_name || selectedDiffCR.plate_number }}
           </h3>
         </div>
-        <button (click)="isDiffModalOpen = false" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
+        <button type="button" appAction="close" (click)="isDiffModalOpen = false"></button>
       </div>
 
       <div class="overflow-x-auto max-h-[60vh] overflow-y-auto">
@@ -472,20 +439,23 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-        <button (click)="isDiffModalOpen = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer">
-          بستن
+        <button
+          type="button"
+          appAction="close"
+          label="بستن"
+          (click)="isDiffModalOpen = false">
         </button>
         <button
           type="button"
-          (click)="diffTargetType === 'personnel' ? rejectPersonnelChange(selectedDiffCR) : rejectVehicleChange(selectedDiffCR)"
-          class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl border border-rose-200 cursor-pointer transition-all active:scale-95 shadow-2xs">
-          ✕ عودت تغییرات
+          appAction="reject"
+          label="عودت تغییرات"
+          (click)="diffTargetType === 'personnel' ? rejectPersonnelChange(selectedDiffCR) : rejectVehicleChange(selectedDiffCR)">
         </button>
         <button
           type="button"
-          (click)="openApprovalModal(diffTargetType === 'personnel' ? 'personnel_cr' : 'vehicle_cr', selectedDiffCR)"
-          class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-xs cursor-pointer transition-all active:scale-95">
-          ✓ تایید سرپرست (ارسال به حسابداری)
+          appAction="approve"
+          label="تایید سرپرست (ارسال به حسابداری)"
+          (click)="openApprovalModal(diffTargetType === 'personnel' ? 'personnel_cr' : 'vehicle_cr', selectedDiffCR)">
         </button>
       </div>
     </div>
@@ -501,7 +471,7 @@
           <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm font-black">✓</span>
           <h3 class="text-sm font-black text-slate-800">{{ approvalTarget.title }}</h3>
         </div>
-        <button (click)="closeApprovalModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold cursor-pointer">&times;</button>
+        <button type="button" appAction="close" (click)="closeApprovalModal()"></button>
       </div>
 
       <div class="space-y-3">
@@ -525,17 +495,17 @@
       <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
         <button
           type="button"
-          (click)="closeApprovalModal()"
-          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer transition-all">
-          انصراف
+          appAction="close"
+          label="انصراف"
+          (click)="closeApprovalModal()">
         </button>
         <button
           type="button"
-          (click)="confirmApproval()"
+          appAction="approve"
+          [busy]="isApproving"
           [disabled]="isApproving"
-          class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-xl shadow-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1.5">
-          <span *ngIf="isApproving" class="animate-spin text-xs">⏳</span>
-          <span>✓ تایید و ارسال به حسابداری</span>
+          label="تایید و ارسال به حسابداری"
+          (click)="confirmApproval()">
         </button>
       </div>
     </div>
