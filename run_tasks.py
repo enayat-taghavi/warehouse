@@ -38,7 +38,7 @@ HISTORY_FILE = PROJECT_DIR / "tasks_history.md"
 GEMINI_DIR = Path(os.path.expanduser("~")) / ".gemini" / "antigravity-ide"
 BRAIN_BASE_DIR = GEMINI_DIR / "brain"
 CONVERSATIONS_DIR = GEMINI_DIR / "conversations"
-STABILITY_SECONDS = 180  # ثانیه‌های سکوت برای اطمینان از پایان نوبت پردازشگر (۳ دقیقه، تا فکر طولانی مدل پایان شمرده نشود)
+STABILITY_SECONDS = 5  # ثانیه‌های سکوت برای اطمینان از پایان نوبت پردازشگر
 
 # مدل همه نشست‌ها: Gemini 3.8 Flash (High).
 # شناسه داخلی آن (MODEL_PLACEHOLDER_M...) با به‌روزرسانی Antigravity ممکن است عوض شود؛
