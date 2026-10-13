@@ -32,11 +32,21 @@ import {
 import { AppPersonaService } from '../../../core/services/app-persona.service';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../modules/accounting/entity-icons';
 
 @Component({
   selector: 'app-personnel-profiles',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    SvgIconDirective,
+    TabBarComponent,
+    ActionButtonComponent,
+  ],
   templateUrl: './personnel-profiles.html',
   styleUrl: './personnel-profiles.css'
 })
@@ -50,6 +60,100 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
   profileApprovalFilter: string = 'ALL';
   changeRequestSubTab: 'personnel' | 'vehicles' = 'personnel';
   profileSearch = '';
+
+  // ── نوار تب‌های اصلی هدر (Main Tabs) ─────────────────────────
+  private mainTabsKey = '';
+  private cachedMainTabs: TabDef[] = [];
+  get mainTabs(): TabDef[] {
+    const key = `${this.personnelList.length}_${this.vehiclesList.length}`;
+    if (key !== this.mainTabsKey) {
+      this.mainTabsKey = key;
+      this.cachedMainTabs = [
+        {
+          id: 'personnel',
+          label: 'پرونده‌های پرسنل',
+          shortLabel: 'پرسنل',
+          icon: ACCOUNTING_ENTITY_ICONS.personnel,
+          count: this.personnelList.length,
+        },
+        {
+          id: 'vehicles',
+          label: 'پرونده‌های ناوگان و ماشین‌آلات',
+          shortLabel: 'ناوگان',
+          icon: ACCOUNTING_ENTITY_ICONS.fleet,
+          count: this.vehiclesList.length,
+        },
+        {
+          id: 'change_requests',
+          label: 'تاریخچه درخواست‌های تغییر',
+          shortLabel: 'تغییرات',
+          icon: 'action-edit',
+        },
+      ];
+    }
+    return this.cachedMainTabs;
+  }
+
+  // ── زیرتب‌های درخواست تغییر (Change Request SubTabs) ───────────
+  private crSubTabsKey = '';
+  private cachedCrSubTabs: TabDef[] = [];
+  get changeRequestSubTabs(): TabDef[] {
+    const key = `${this.personnelChangeRequests.length}_${this.vehicleChangeRequests.length}`;
+    if (key !== this.crSubTabsKey) {
+      this.crSubTabsKey = key;
+      this.cachedCrSubTabs = [
+        {
+          id: 'personnel',
+          label: 'درخواست‌های تغییرات پرسنل',
+          shortLabel: 'پرسنل',
+          icon: ACCOUNTING_ENTITY_ICONS.personnel,
+          count: this.personnelChangeRequests.length,
+        },
+        {
+          id: 'vehicles',
+          label: 'درخواست‌های تغییرات ناوگان',
+          shortLabel: 'ناوگان',
+          icon: ACCOUNTING_ENTITY_ICONS.fleet,
+          count: this.vehicleChangeRequests.length,
+        },
+      ];
+    }
+    return this.cachedCrSubTabs;
+  }
+
+  // ── تب‌های مودال ۵گانه پرسنل (Personnel Modal Tabs) ───────────
+  readonly personnelModalTabs: readonly TabDef[] = [
+    {
+      id: 'identity',
+      label: 'اطلاعات شناسنامه‌ای',
+      shortLabel: 'هویتی',
+      icon: ACCOUNTING_ENTITY_ICONS.identity,
+    },
+    {
+      id: 'contract',
+      label: 'قرارداد و گروه شغلی',
+      shortLabel: 'قرارداد',
+      icon: ACCOUNTING_ENTITY_ICONS.jobGrades,
+    },
+    {
+      id: 'insurance',
+      label: 'بیمه و مالیات',
+      shortLabel: 'بیمه',
+      icon: ACCOUNTING_ENTITY_ICONS.insurance,
+    },
+    {
+      id: 'allowances',
+      label: 'مزایا و فوق‌العاده‌ها',
+      shortLabel: 'مزایا',
+      icon: ACCOUNTING_ENTITY_ICONS.payroll,
+    },
+    {
+      id: 'contact',
+      label: 'بانکی و تماس',
+      shortLabel: 'بانکی',
+      icon: ACCOUNTING_ENTITY_ICONS.bankAccounts,
+    },
+  ];
   selectedWarehouseId: number | null = null;
   warehouses: any[] = [];
   fiscalYear = '1405';
@@ -278,16 +382,20 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
     });
   }
 
-  setTab(tab: 'personnel' | 'vehicles' | 'change_requests'): void {
-    this.activeTab = tab;
-    this.updateUrlParams();
-    this.loadProfiles();
+  setTab(tab: string): void {
+    if (tab === 'personnel' || tab === 'vehicles' || tab === 'change_requests') {
+      this.activeTab = tab;
+      this.updateUrlParams();
+      this.loadProfiles();
+    }
   }
 
-  setChangeRequestSubTab(subTab: 'personnel' | 'vehicles'): void {
-    this.changeRequestSubTab = subTab;
-    this.updateUrlParams();
-    this.loadChangeRequests();
+  setChangeRequestSubTab(subTab: string): void {
+    if (subTab === 'personnel' || subTab === 'vehicles') {
+      this.changeRequestSubTab = subTab;
+      this.updateUrlParams();
+      this.loadChangeRequests();
+    }
   }
 
   loadWarehouses(): void {
@@ -797,8 +905,10 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
     this.editingPersonnel = null;
   }
 
-  setPersonnelTab(tab: 'identity' | 'contract' | 'insurance' | 'allowances' | 'contact'): void {
-    this.personnelModalTab = tab;
+  setPersonnelTab(tab: string): void {
+    if (tab === 'identity' || tab === 'contract' || tab === 'insurance' || tab === 'allowances' || tab === 'contact') {
+      this.personnelModalTab = tab;
+    }
   }
 
   savePersonnel(): void {

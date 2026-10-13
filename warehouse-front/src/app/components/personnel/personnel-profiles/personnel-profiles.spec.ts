@@ -173,6 +173,40 @@ describe('PersonnelProfilesHub Unit Tests', () => {
     expect(component.diffRows[0].isDiff).toBe(true);
   });
 
+  it('5b. should configure responsive toolkit TabDefs for main, change request, and modal tabs', () => {
+    component.personnelList = [{ id: 1 } as any];
+    component.vehiclesList = [{ id: 1 } as any, { id: 2 } as any];
+    component.personnelChangeRequests = [{ id: 10 } as any];
+    component.vehicleChangeRequests = [];
+
+    // Main tabs
+    const mTabs = component.mainTabs;
+    expect(mTabs.length).toBe(3);
+    expect(mTabs[0].id).toBe('personnel');
+    expect(mTabs[0].count).toBe(1);
+    expect(mTabs[1].id).toBe('vehicles');
+    expect(mTabs[1].count).toBe(2);
+    expect(mTabs[2].id).toBe('change_requests');
+
+    // Change request subtabs
+    const crTabs = component.changeRequestSubTabs;
+    expect(crTabs.length).toBe(2);
+    expect(crTabs[0].id).toBe('personnel');
+    expect(crTabs[0].count).toBe(1);
+    expect(crTabs[1].id).toBe('vehicles');
+    expect(crTabs[1].count).toBe(0);
+
+    // Modal tabs
+    expect(component.personnelModalTabs.length).toBe(5);
+    expect(component.personnelModalTabs.map(t => t.id)).toEqual([
+      'identity',
+      'contract',
+      'insurance',
+      'allowances',
+      'contact'
+    ]);
+  });
+
   describe('6. WebSocket Live Sync & Performance TrackBy', () => {
     let wsSubject: Subject<any>;
     let mockWs: any;
