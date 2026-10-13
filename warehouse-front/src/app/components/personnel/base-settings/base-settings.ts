@@ -9,15 +9,26 @@ import { ToastService } from '../../../services/toast.service';
 import { PersonnelApiService } from '../../../core/api/personnel-api.service';
 import { PayrollYearlySettings, FinancialProject } from '../../../core/models/personnel.model';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../modules/accounting/entity-icons';
 
 @Component({
   selector: 'app-base-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, TabBarComponent, ActionButtonComponent],
   templateUrl: './base-settings.html',
   styleUrl: './base-settings.css'
 })
 export class BaseSettings implements OnInit, OnDestroy {
+  readonly settingsTabs: readonly TabDef[] = [
+    { id: 'grades', label: 'جدول گروه‌های شغلی', shortLabel: 'گروه‌ها', icon: ACCOUNTING_ENTITY_ICONS.jobGrades },
+    { id: 'labor', label: 'مزایای قانون کار', shortLabel: 'مزایا', icon: ACCOUNTING_ENTITY_ICONS.payroll },
+    { id: 'attendance_window', label: 'بازه ویرایش تقویم', shortLabel: 'تقویم', icon: ACCOUNTING_ENTITY_ICONS.attendance },
+    { id: 'dsk', label: 'اطلاعات کارگاه بیمه', shortLabel: 'بیمه', icon: ACCOUNTING_ENTITY_ICONS.insurance },
+    { id: 'tax', label: 'سازمان مالیاتی', shortLabel: 'مالیات', icon: ACCOUNTING_ENTITY_ICONS.tax },
+    { id: 'bank', label: 'تنظیمات بانک ملی', shortLabel: 'بانک', icon: ACCOUNTING_ENTITY_ICONS.bankAccounts },
+  ];
   // 6 Dedicated Top Tabs:
   // 'grades' | 'labor' | 'attendance_window' | 'dsk' | 'tax' | 'bank'
   activeTab: 'grades' | 'labor' | 'attendance_window' | 'dsk' | 'tax' | 'bank' = 'grades';
@@ -159,6 +170,12 @@ export class BaseSettings implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.querySub) {
       this.querySub.unsubscribe();
+    }
+  }
+
+  onTabChange(tabId: string): void {
+    if (tabId === 'grades' || tabId === 'labor' || tabId === 'attendance_window' || tabId === 'dsk' || tabId === 'tax' || tabId === 'bank') {
+      this.setTab(tabId);
     }
   }
 

@@ -29,10 +29,7 @@
         <select [ngModel]="fiscalYear" (ngModelChange)="onYearChange($event)" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500 cursor-pointer">
           <option *ngFor="let y of availableYears" [value]="y">سال {{ y }}</option>
         </select>
-        <button *ngIf="canManageSettings" (click)="openCreateYearModal()" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1 active:scale-95 shadow-2xs" title="ایجاد و تعریف سال مالی جدید با تایید نهایی">
-          <span>➕</span>
-          <span>سال جدید</span>
-        </button>
+        <button *ngIf="canManageSettings" type="button" appAction="create" [label]="'سال جدید'" (click)="openCreateYearModal()"></button>
       </div>
 
       <!-- سلکتور نسخه‌های احکام در طول سال -->
@@ -54,29 +51,16 @@
       </span>
 
       <!-- دکمه ثبت اصلاحیه میانه سال -->
-      <button *ngIf="canManageSettings" (click)="openCreateVersionModal()" class="px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95" title="ثبت نسخه و مبالغ جدید احکام از یک ماه مشخص">
-        <span>➕</span>
-        <span>ثبت اصلاحیه میانه سال</span>
-      </button>
+      <button *ngIf="canManageSettings" type="button" appAction="create" [label]="'اصلاحیه'" (click)="openCreateVersionModal()"></button>
 
       <!-- دکمه کپی برای پروژه در صورت ارث‌بری -->
-      <button *ngIf="selectedProjectId && !isCurrentSettingSpecificToProject" (click)="cloneForSelectedProject()" class="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95" title="کپی اطلاعات تنظیمات عمومی برای این پروژه">
-        <span>📋</span>
-        <span>ایجاد نسخه اختصاصی پروژه</span>
-      </button>
+      <button *ngIf="selectedProjectId && !isCurrentSettingSpecificToProject" type="button" appAction="copy" [label]="'نسخه اختصاصی'" (click)="cloneForSelectedProject()"></button>
 
       <!-- دکمه بازگشت به تنظیمات سراسری سازمان برای پروژه اختصاصی -->
-      <button *ngIf="isCurrentSettingSpecificToProject && canManageSettings" (click)="revertToGlobal()" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95" title="حذف تنظیمات اختصاصی این پروژه و بازگشت به ارث‌بری از سراسری">
-        <span>↩️</span>
-        <span>بازگشت به سراسری</span>
-      </button>
+      <button *ngIf="isCurrentSettingSpecificToProject && canManageSettings" type="button" appAction="restore" [label]="'بازگشت به سراسری'" (click)="revertToGlobal()"></button>
 
       <!-- دکمه ذخیره تنظیمات -->
-      <button (click)="saveYearlySettings()" [disabled]="isSaving || !canManageSettings" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-emerald-500/20 flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="save"></svg>
-        <span *ngIf="!isSaving">ذخیره تنظیمات</span>
-        <span *ngIf="isSaving">در حال ذخیره...</span>
-      </button>
+      <button type="button" appAction="save" [busy]="isSaving" [disabled]="!canManageSettings" (click)="saveYearlySettings()"></button>
     </div>
   </div>
 
@@ -86,9 +70,7 @@
       <span class="text-base">ℹ️</span>
       <span>برای این پروژه هنوز تنظیمات اختصاصی ثبت نشده است و مقادیر فعلی از <strong>«تنظیمات عمومی سازمان»</strong> خوانده می‌شوند.</span>
     </div>
-    <button (click)="cloneForSelectedProject()" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl transition-all cursor-pointer whitespace-nowrap shadow-xs">
-      کپی و ایجاد تنظیمات اختصاصی پروژه
-    </button>
+    <button type="button" appAction="copy" [label]="'نسخه اختصاصی'" (click)="cloneForSelectedProject()"></button>
   </div>
 
   <!-- بنر تایید تنظیمات اختصاصی فعال -->
@@ -100,45 +82,21 @@
     </div>
     <div class="flex items-center gap-2">
       <span class="px-2.5 py-1 bg-white rounded-lg border border-indigo-200 text-indigo-700 font-mono text-[11px]">پروژه‌محور</span>
-      <button *ngIf="canManageSettings" (click)="revertToGlobal()" class="px-2.5 py-1 bg-white hover:bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-[11px] font-bold cursor-pointer transition-all">
-        لغو اختصاصی و بازگشت به سراسری
-      </button>
+      <button *ngIf="canManageSettings" type="button" appAction="restore" [label]="'بازگشت به سراسری'" size="sm" (click)="revertToGlobal()"></button>
     </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- ۲. تب‌های بالای صفحه (۶ تب تفکیک‌شده و استاندارد) -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div class="bg-white rounded-2xl p-2 border border-slate-200/80 shadow-sm flex items-center gap-1 overflow-x-auto">
-    <button (click)="setTab('grades')" [class.active-tab]="activeTab === 'grades'" class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-slate-600 flex items-center gap-2 cursor-pointer whitespace-nowrap">
-      <span>🏢</span>
-      <span>۱. جدول ۲۰ گروه شغلی</span>
-    </button>
-
-    <button (click)="setTab('labor')" [class.active-tab]="activeTab === 'labor'" class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-slate-600 flex items-center gap-2 cursor-pointer whitespace-nowrap">
-      <span>💰</span>
-      <span>۲. مزایای قانون کار</span>
-    </button>
-
-    <button (click)="setTab('attendance_window')" [class.active-tab]="activeTab === 'attendance_window'" class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-slate-600 flex items-center gap-2 cursor-pointer whitespace-nowrap">
-      <span>⏱️</span>
-      <span>۳. بازه مجاز ویرایش تقویم</span>
-    </button>
-
-    <button (click)="setTab('dsk')" [class.active-tab]="activeTab === 'dsk'" class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-slate-600 flex items-center gap-2 cursor-pointer whitespace-nowrap">
-      <span>📑</span>
-      <span>۴. اطلاعات کارگاه بیمه</span>
-    </button>
-
-    <button (click)="setTab('tax')" [class.active-tab]="activeTab === 'tax'" class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-slate-600 flex items-center gap-2 cursor-pointer whitespace-nowrap">
-      <span>🏛️</span>
-      <span>۵. اطلاعات سازمان مالیاتی</span>
-    </button>
-
-    <button (click)="setTab('bank')" [class.active-tab]="activeTab === 'bank'" class="tab-btn px-4 py-2.5 rounded-xl text-xs font-bold transition-all text-slate-600 flex items-center gap-2 cursor-pointer whitespace-nowrap">
-      <span>🏦</span>
-      <span>۶. تنظیمات بانک ملی</span>
-    </button>
+  <div class="bg-white rounded-2xl p-2 border border-slate-200/80 shadow-sm overflow-x-auto">
+    <app-tab-bar 
+      [tabs]="settingsTabs" 
+      [active]="activeTab" 
+      mobile="icon" 
+      fullLabelFrom="xl" 
+      (tabChange)="onTabChange($event)">
+    </app-tab-bar>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -153,15 +111,9 @@
         </div>
         <!-- نوار ابزار اکسل برای جدول ۲۰ گروه -->
         <div class="flex items-center gap-2">
-          <button type="button" (click)="exportJobGradesCsv()" class="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs">
-            <span>📥</span>
-            <span>خروجی اکسل / CSV</span>
-          </button>
-          <label *ngIf="canManageSettings" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs">
-            <span>📤</span>
-            <span>ورود از اکسل / CSV</span>
-            <input type="file" (change)="importJobGradesCsv($event)" accept=".csv" class="hidden" />
-          </label>
+          <button type="button" appAction="export-excel" [label]="'خروجی اکسل / CSV'" (click)="exportJobGradesCsv()"></button>
+          <button *ngIf="canManageSettings" type="button" appAction="import-excel" [label]="'ورود از اکسل / CSV'" (click)="csvFileInput.click()"></button>
+          <input #csvFileInput type="file" (change)="importJobGradesCsv($event)" accept=".csv" class="hidden" />
         </div>
       </div>
       <div class="overflow-x-auto max-h-[550px] overflow-y-auto">
@@ -289,20 +241,20 @@
     <div class="space-y-2">
       <label class="block text-xs font-bold text-slate-700">الگوهای آماده و پیشنهادی:</label>
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <button type="button" (click)="setAttendanceWindowPreset(0, 0)" class="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-2xl text-right transition-all cursor-pointer group">
-          <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-700">🔒 فوق‌العاده دقیق</div>
+        <button type="button" (click)="setAttendanceWindowPreset(0, 0)" title="فوق‌العاده دقیق" aria-label="فوق‌العاده دقیق" class="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-2xl text-right transition-all cursor-pointer group tap-target">
+          <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-700">فوق‌العاده دقیق</div>
           <div class="text-[10px] text-slate-500 mt-0.5">فقط تاریخ امروز مجاز</div>
         </button>
-        <button type="button" (click)="setAttendanceWindowPreset(3, 0)" class="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-2xl text-right transition-all cursor-pointer group">
-          <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-700">⚡ استاندارد شرکتی</div>
+        <button type="button" (click)="setAttendanceWindowPreset(3, 0)" title="استاندارد شرکتی" aria-label="استاندارد شرکتی" class="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-2xl text-right transition-all cursor-pointer group tap-target">
+          <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-700">استاندارد شرکتی</div>
           <div class="text-[10px] text-slate-500 mt-0.5">تا ۳ روز قبل مجاز، آینده ممنوع</div>
         </button>
-        <button type="button" (click)="setAttendanceWindowPreset(7, 7)" class="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-2xl text-right transition-all cursor-pointer group">
-          <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-700">🗓️ هفتگی انعطاف‌پذیر</div>
+        <button type="button" (click)="setAttendanceWindowPreset(7, 7)" title="هفتگی انعطاف‌پذیر" aria-label="هفتگی انعطاف‌پذیر" class="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-2xl text-right transition-all cursor-pointer group tap-target">
+          <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-700">هفتگی انعطاف‌پذیر</div>
           <div class="text-[10px] text-slate-500 mt-0.5">۷ روز قبل + ۷ روز بعد</div>
         </button>
-        <button type="button" (click)="setAttendanceWindowPreset(-1, -1)" class="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-2xl text-right transition-all cursor-pointer group">
-          <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-700">🔓 بدون محدودیت</div>
+        <button type="button" (click)="setAttendanceWindowPreset(-1, -1)" title="بدون محدودیت" aria-label="بدون محدودیت" class="p-3 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-2xl text-right transition-all cursor-pointer group tap-target">
+          <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-700">بدون محدودیت</div>
           <div class="text-[10px] text-slate-500 mt-0.5">تمام تاریخ‌ها مجاز</div>
         </button>
       </div>
@@ -513,7 +465,7 @@
           <span class="text-lg">➕</span>
           <h3 class="text-sm font-black text-slate-800">ثبت نسخه جدید احکام در میانه سال</h3>
         </div>
-        <button (click)="closeCreateVersionModal()" class="text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" (click)="closeCreateVersionModal()"></button>
       </div>
 
       <p class="text-xs text-slate-500 leading-relaxed">
@@ -541,13 +493,8 @@
       </div>
 
       <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-        <button (click)="closeCreateVersionModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer">
-          انصراف
-        </button>
-        <button (click)="submitCreateVersion()" [disabled]="isCreatingVersion" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-purple-500/20 flex items-center gap-2 cursor-pointer disabled:opacity-50">
-          <span *ngIf="!isCreatingVersion">ایجاد و فعال‌سازی نسخه</span>
-          <span *ngIf="isCreatingVersion">در حال ایجاد...</span>
-        </button>
+        <button type="button" appAction="close" [label]="'انصراف'" (click)="closeCreateVersionModal()"></button>
+        <button type="button" appAction="save" [busy]="isCreatingVersion" [label]="'ایجاد و فعال‌سازی نسخه'" (click)="submitCreateVersion()"></button>
       </div>
     </div>
   </div>
@@ -562,7 +509,7 @@
           <span class="text-lg">➕</span>
           <h3 class="text-sm font-black text-slate-800">ایجاد و تعریف سال مالی جدید</h3>
         </div>
-        <button (click)="closeCreateYearModal()" class="text-slate-400 hover:text-slate-600 font-bold text-sm cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" (click)="closeCreateYearModal()"></button>
       </div>
 
       <p class="text-xs text-slate-500 leading-relaxed">
@@ -592,13 +539,8 @@
       </div>
 
       <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-        <button (click)="closeCreateYearModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer">
-          انصراف
-        </button>
-        <button (click)="submitCreateYear()" [disabled]="isCreatingYear" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-indigo-500/20 flex items-center gap-2 cursor-pointer disabled:opacity-50">
-          <span *ngIf="!isCreatingYear">ایجاد و ثبت سال مالی</span>
-          <span *ngIf="isCreatingYear">در حال ایجاد...</span>
-        </button>
+        <button type="button" appAction="close" [label]="'انصراف'" (click)="closeCreateYearModal()"></button>
+        <button type="button" appAction="save" [busy]="isCreatingYear" [label]="'ایجاد و ثبت سال مالی'" (click)="submitCreateYear()"></button>
       </div>
     </div>
   </div>
