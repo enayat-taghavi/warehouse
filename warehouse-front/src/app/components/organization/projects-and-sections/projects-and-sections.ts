@@ -19,6 +19,11 @@ import {
   UserSectionAssignment
 } from '../../../core/models/personnel.model';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
+import { CommandCenterComponent } from '../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../modules/accounting/entity-icons';
+import { PLATFORM_ENTITY_ICONS } from '../../../shared/icons/semantic-icons';
 
 export interface RoleDefinition {
   key: 'manager' | 'accountant' | 'supervisor' | 'treasury' | 'employee';
@@ -44,12 +49,58 @@ export interface SectionGroupedAssignments {
 @Component({
   selector: 'app-projects-and-sections',
   standalone: true,
-  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ExcelImportModal,
+    SvgIconDirective,
+    TabBarComponent,
+    ActionButtonComponent,
+    CommandCenterComponent
+  ],
   templateUrl: './projects-and-sections.html',
   styleUrl: './projects-and-sections.css'
 })
 export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
   activeSubTab: 'projects' | 'sections' | 'assignments' = 'projects';
+
+  readonly assignmentViewTabs: TabDef[] = [
+    { id: 'matrix', label: 'ماتریس', shortLabel: 'ماتریس' },
+    { id: 'table', label: 'جدول', shortLabel: 'جدول' }
+  ];
+
+  private mainTabsCacheKey = '';
+  private mainTabsCache: TabDef[] = [];
+  get mainTabs(): TabDef[] {
+    const key = `${this.financialProjects.length}:${this.projectSections.length}:${this.userAssignments.length}`;
+    if (key !== this.mainTabsCacheKey) {
+      this.mainTabsCacheKey = key;
+      this.mainTabsCache = [
+        {
+          id: 'projects',
+          label: 'پروژه‌های مالی',
+          shortLabel: 'پروژه‌ها',
+          icon: ACCOUNTING_ENTITY_ICONS.projectsAndSections,
+          count: this.financialProjects.length
+        },
+        {
+          id: 'sections',
+          label: 'بخش‌ها و دپارتمان‌ها',
+          shortLabel: 'بخش‌ها',
+          icon: ACCOUNTING_ENTITY_ICONS.sections,
+          count: this.projectSections.length
+        },
+        {
+          id: 'assignments',
+          label: 'انتساب کاربران و نقش‌ها',
+          shortLabel: 'انتساب‌ها',
+          icon: PLATFORM_ENTITY_ICONS.users,
+          count: this.userAssignments.length
+        }
+      ];
+    }
+    return this.mainTabsCache;
+  }
 
   financialProjects: FinancialProject[] = [];
   projectSections: ProjectSection[] = [];
@@ -322,7 +373,10 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
     });
   }
 
-  switchSubTab(tab: 'projects' | 'sections' | 'assignments'): void {
+  switchSubTab(tab: string): void {
+    if (tab !== 'projects' && tab !== 'sections' && tab !== 'assignments') {
+      return;
+    }
     this.activeSubTab = tab;
     const queryParams: any = { tab };
     if (tab === 'projects') {
@@ -373,7 +427,10 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  onAssignmentViewModeChange(mode: 'matrix' | 'table'): void {
+  onAssignmentViewModeChange(mode: string): void {
+    if (mode !== 'matrix' && mode !== 'table') {
+      return;
+    }
     this.assignmentViewMode = mode;
     this.updateQueryParams({ view: mode === 'table' ? 'table' : null });
     this.cdr.detectChanges();

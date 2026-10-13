@@ -1,85 +1,47 @@
 <div class="p-4 md:p-6 space-y-4 bg-slate-50 min-h-screen dir-rtl text-right font-sans">
 
   <!-- کانتینر چسبان هدر، تب‌ها و ابزارهای اکشن (Unified Sticky Command Center) -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2 transition-all">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-      <!-- لیست تب‌ها (سمت راست در RTL) -->
-      <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
-        <button type="button" (click)="switchSubTab('projects')"
-          [ngClass]="activeSubTab === 'projects' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="flex-1 md:flex-none px-3.5 md:px-4 py-1.5 md:py-2 text-xs rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">
-          <span>🏛️</span>
-          <span>پروژه‌های مالی</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-            [ngClass]="activeSubTab === 'projects' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'">
-            {{ financialProjects.length }}
-          </span>
-        </button>
+  <app-command-center>
+    <!-- لیست تب‌ها (سمت راست در RTL) -->
+    <app-tab-bar
+      cc-tabs
+      [tabs]="mainTabs"
+      [active]="activeSubTab"
+      mobile="short"
+      fullLabelFrom="lg"
+      (activeChange)="switchSubTab($event)"
+    />
 
-        <button type="button" (click)="switchSubTab('sections')"
-          [ngClass]="activeSubTab === 'sections' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="flex-1 md:flex-none px-3.5 md:px-4 py-1.5 md:py-2 text-xs rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">
-          <span>🏢</span>
-          <span>بخش‌ها و دپارتمان‌ها</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-            [ngClass]="activeSubTab === 'sections' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'">
-            {{ projectSections.length }}
-          </span>
-        </button>
+    <!-- دکمه‌های اکشن ۳گانه استاندارد (سمت چپ در RTL) -->
+    <div cc-actions class="flex items-center gap-1.5 md:gap-2 justify-end">
+      <!-- ۱. خروجی و دانلود اکسل (زمردی) -->
+      <button 
+        type="button" 
+        appAction="export-excel" 
+        [label]="getExportTooltip()" 
+        [disabled]="isLoading" 
+        (click)="exportExcel()"
+      ></button>
 
-        <button type="button" (click)="switchSubTab('assignments')"
-          [ngClass]="activeSubTab === 'assignments' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-          class="flex-1 md:flex-none px-3.5 md:px-4 py-1.5 md:py-2 text-xs rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap">
-          <span>👥</span>
-          <span>انتساب کاربران و نقش‌ها</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-            [ngClass]="activeSubTab === 'assignments' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'">
-            {{ userAssignments.length }}
-          </span>
-        </button>
-      </div>
+      <!-- ۲. ورودی و آپلود اکسل (نیلی) -->
+      @if (canImportExcel) {
+      <button
+        type="button"
+        appAction="import-excel"
+        [label]="getImportTooltip()"
+        (click)="openImportModal()"
+      ></button>
+      }
 
-      <!-- دکمه‌های اکشن ۳گانه (فقط آیکون با تولتیپ، سمت چپ در RTL) -->
-      <div class="flex items-center gap-1.5 md:gap-2 justify-end">
-        <!-- ۱. خروجی و دانلود اکسل (سبز) -->
-        <button 
-          type="button" 
-          (click)="exportExcel()" 
-          class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95" 
-          [title]="getExportTooltip()" 
-          aria-label="خروجی اکسل"
-        >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
-        </button>
-
-        <!-- ۲. ورودی و آپلود اکسل (آبی) -->
-        @if (canImportExcel) {
-        <button
-          type="button"
-          (click)="openImportModal()"
-          class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          [title]="getImportTooltip()"
-          aria-label="ورودی اکسل"
-        >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="upload"></svg>
-        </button>
-        }
-
-        <!-- ۳. بروزرسانی اطلاعات (بنفش/ایندیگو) -->
-        <button 
-          type="button" 
-          [disabled]="isLoading" 
-          (click)="loadAllData()" 
-          class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95" 
-          title="بروزرسانی اطلاعات" 
-          aria-label="بروزرسانی"
-        >
-          <svg *ngIf="!isLoading" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="refresh-cw"></svg>
-          <span *ngIf="isLoading" class="animate-spin block w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full"></span>
-        </button>
-      </div>
+      <!-- ۳. بروزرسانی اطلاعات (سنگی) -->
+      <button 
+        type="button" 
+        appAction="refresh" 
+        [busy]="isLoading" 
+        (click)="loadAllData()"
+      ></button>
     </div>
-  </div>
+  </app-command-center>
 
   <!-- ── زیرتب ۱: پروژه‌های مالی ── -->
   <div *ngIf="activeSubTab === 'projects'" class="space-y-5">
@@ -87,9 +49,9 @@
     <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h4 class="text-xs font-black text-slate-800 flex items-center gap-2">
-          <span>{{ editingProject ? '✏️ ویرایش پروژه مالی' : '➕ تعریف پروژه مالی جدید' }}</span>
+          <span>{{ editingProject ? 'ویرایش پروژه مالی' : 'تعریف پروژه مالی جدید' }}</span>
         </h4>
-        <button *ngIf="editingProject" (click)="cancelEditProject()" class="text-xs text-slate-400 hover:text-rose-500 transition-colors cursor-pointer">انصراف از ویرایش</button>
+        <button *ngIf="editingProject" type="button" appAction="close" label="انصراف" (click)="cancelEditProject()"></button>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-5 gap-3.5">
@@ -119,9 +81,7 @@
             <input type="checkbox" [(ngModel)]="newProject.is_active" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
             <span>فعال</span>
           </label>
-          <button (click)="saveProject()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-3 rounded-xl shadow-xs transition-all cursor-pointer">
-            {{ editingProject ? 'بروزرسانی' : 'ثبت پروژه' }}
-          </button>
+          <button type="button" appAction="save" class="flex-1 w-full" [label]="editingProject ? 'بروزرسانی' : 'ثبت پروژه'" (click)="saveProject()"></button>
         </div>
       </div>
     </div>
@@ -142,7 +102,7 @@
             placeholder="🔍 جستجو در نام یا کد پروژه..." 
             class="w-full bg-white border border-slate-200 rounded-xl pr-3 pl-8 py-1.5 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-400"
           />
-          <button *ngIf="projectSearchQuery" (click)="onSearchQueryChange('projects', '')" class="absolute left-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer">✕</button>
+          <button *ngIf="projectSearchQuery" type="button" (click)="onSearchQueryChange('projects', '')" class="tap-target absolute left-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer" title="پاک کردن جستجو" aria-label="پاک کردن جستجو">✕</button>
         </div>
       </div>
       <div class="overflow-x-auto">
@@ -180,12 +140,8 @@
               </td>
               <td class="p-3 text-center">
                 <div class="flex items-center justify-center gap-1.5">
-                  <button (click)="editProject(proj)" class="px-2.5 py-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer text-[11px] font-bold">
-                    ویرایش
-                  </button>
-                  <button (click)="deleteProject(proj.id!, proj.name)" class="px-2.5 py-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer text-[11px] font-bold">
-                    حذف
-                  </button>
+                  <button type="button" appAction="edit" size="sm" (click)="editProject(proj)"></button>
+                  <button type="button" appAction="delete" size="sm" (click)="deleteProject(proj.id!, proj.name)"></button>
                 </div>
               </td>
             </tr>
@@ -206,9 +162,9 @@
     <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h4 class="text-xs font-black text-slate-800 flex items-center gap-2">
-          <span>{{ editingSection ? '✏️ ویرایش بخش' : '➕ تعریف بخش جدید' }}</span>
+          <span>{{ editingSection ? 'ویرایش بخش' : 'تعریف بخش جدید' }}</span>
         </h4>
-        <button *ngIf="editingSection" (click)="cancelEditSection()" class="text-xs text-slate-400 hover:text-rose-500 transition-colors cursor-pointer">انصراف از ویرایش</button>
+        <button *ngIf="editingSection" type="button" appAction="close" label="انصراف" (click)="cancelEditSection()"></button>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-5 gap-3.5">
@@ -239,12 +195,8 @@
         </div>
         <!-- ۵. دکمه ثبت -->
         <div class="flex items-end gap-2">
-          <button (click)="saveSection()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-4 rounded-xl shadow-xs transition-all cursor-pointer">
-            {{ editingSection ? 'بروزرسانی بخش' : 'ثبت بخش' }}
-          </button>
-          <button *ngIf="editingSection" (click)="cancelEditSection()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold cursor-pointer">
-            انصراف
-          </button>
+          <button type="button" appAction="save" class="w-full" [label]="editingSection ? 'بروزرسانی بخش' : 'ثبت بخش'" (click)="saveSection()"></button>
+          <button *ngIf="editingSection" type="button" appAction="close" label="انصراف" (click)="cancelEditSection()"></button>
         </div>
       </div>
     </div>
@@ -273,7 +225,7 @@
             placeholder="🔍 جستجو در نام یا کد بخش..." 
             class="w-full bg-white border border-slate-200 rounded-xl pr-3 pl-8 py-1.5 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-400"
           />
-          <button *ngIf="sectionSearchQuery" (click)="onSearchQueryChange('sections', '')" class="absolute left-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer">✕</button>
+          <button *ngIf="sectionSearchQuery" type="button" (click)="onSearchQueryChange('sections', '')" class="tap-target absolute left-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer" title="پاک کردن جستجو" aria-label="پاک کردن جستجو">✕</button>
         </div>
       </div>
 
@@ -299,12 +251,8 @@
               </td>
               <td class="p-3 text-center">
                 <div class="flex items-center justify-center gap-1.5">
-                  <button (click)="editSection(sec)" class="px-2.5 py-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer text-[11px] font-bold">
-                    ویرایش
-                  </button>
-                  <button (click)="deleteSection(sec.id!, sec.name)" class="px-2.5 py-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer text-[11px] font-bold">
-                    حذف
-                  </button>
+                  <button type="button" appAction="edit" size="sm" (click)="editSection(sec)"></button>
+                  <button type="button" appAction="delete" size="sm" (click)="deleteSection(sec.id!, sec.name)"></button>
                 </div>
               </td>
             </tr>
@@ -338,9 +286,11 @@
           <span *ngIf="!assignmentSearchQuery" class="absolute left-2.5 top-2 text-slate-400 text-xs pointer-events-none">🔍</span>
           <button
             *ngIf="assignmentSearchQuery"
+            type="button"
             (click)="onSearchQueryChange('assignments', '')"
-            class="absolute left-2 top-1.5 text-slate-400 hover:text-rose-500 text-xs font-bold cursor-pointer"
+            class="tap-target absolute left-2 top-1.5 text-slate-400 hover:text-rose-500 text-xs font-bold cursor-pointer"
             title="پاک کردن جستجو"
+            aria-label="پاک کردن جستجو"
           >
             ✕
           </button>
@@ -373,45 +323,25 @@
         <div *ngIf="assignmentViewMode === 'matrix'" class="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
           <button
             type="button"
+            appAction="expand"
+            label="باز کردن همه"
             (click)="expandAllSections()"
-            class="px-2.5 py-1 rounded-lg text-xs text-slate-600 hover:text-indigo-700 hover:bg-white font-bold transition-all cursor-pointer flex items-center gap-1"
-            title="باز کردن تمامی بخش‌ها"
-          >
-            <span>⊞</span>
-            <span>باز کردن همه</span>
-          </button>
+          ></button>
           <button
             type="button"
+            appAction="collapse"
+            label="بستن همه"
             (click)="collapseAllSections()"
-            class="px-2.5 py-1 rounded-lg text-xs text-slate-600 hover:text-indigo-700 hover:bg-white font-bold transition-all cursor-pointer flex items-center gap-1"
-            title="جمع کردن تمامی بخش‌ها"
-          >
-            <span>⊟</span>
-            <span>بستن همه</span>
-          </button>
+          ></button>
         </div>
 
         <!-- سوییچر نما بین کارتی (ماتریسی) و جدولی -->
-        <div class="inline-flex bg-slate-100 p-1 rounded-xl border border-slate-200/80">
-          <button
-            type="button"
-            (click)="onAssignmentViewModeChange('matrix')"
-            [ngClass]="assignmentViewMode === 'matrix' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5"
-          >
-            <span>🗂️</span>
-            <span>نمای ماتریس سازمانی</span>
-          </button>
-          <button
-            type="button"
-            (click)="onAssignmentViewModeChange('table')"
-            [ngClass]="assignmentViewMode === 'table' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-3 py-1 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5"
-          >
-            <span>📋</span>
-            <span>نمای جدول تفصیلی</span>
-          </button>
-        </div>
+        <app-tab-bar
+          [tabs]="assignmentViewTabs"
+          [active]="assignmentViewMode"
+          mobile="short"
+          (activeChange)="onAssignmentViewModeChange($event)"
+        />
       </div>
     </div>
 
@@ -465,18 +395,19 @@
             <!-- دکمه تکثیر/کپی چارت پرسنل -->
             <button
               type="button"
+              appAction="copy"
+              label="کپی چارت"
               (click)="openCloneModal(sGroup.section, $event)"
-              class="px-2.5 py-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-all cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95 mr-1"
-              title="کپی و تکثیر چارت پرسنلی از یک بخش دیگر به این بخش"
-            >
-              <span>📋</span>
-              <span>کپی چارت</span>
-            </button>
+            ></button>
 
-            <span class="text-[11px] font-bold text-slate-400 mr-1 flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-              <span class="text-xs transition-transform duration-200" [ngClass]="isSectionCollapsed(sGroup.section.id!) ? '' : 'rotate-180'">▼</span>
-              <span>{{ isSectionCollapsed(sGroup.section.id!) ? 'نمایش اعضا' : 'بستن' }}</span>
-            </span>
+            <!-- دکمه جمع‌شدگی/بازشدن بخش -->
+            <button
+              type="button"
+              [appAction]="isSectionCollapsed(sGroup.section.id!) ? 'expand' : 'collapse'"
+              display="icon"
+              [label]="isSectionCollapsed(sGroup.section.id!) ? 'نمایش اعضا' : 'بستن'"
+              (click)="toggleSectionCollapse(sGroup.section.id!); $event.stopPropagation()"
+            ></button>
           </div>
         </div>
 
@@ -510,28 +441,29 @@
                   <button
                     type="button"
                     (click)="toggleAssignmentStatus(a)"
-                    class="p-1 rounded hover:bg-slate-100 text-[10px] cursor-pointer"
+                    class="tap-target p-1 rounded hover:bg-slate-100 text-[10px] cursor-pointer"
                     [ngClass]="a.is_active ? 'text-emerald-600' : 'text-slate-400'"
                     [title]="a.is_active ? 'غیرفعال‌سازی موقت' : 'فعال‌سازی مجدد'"
+                    [attr.aria-label]="a.is_active ? 'غیرفعال‌سازی موقت' : 'فعال‌سازی مجدد'"
                   >
                     {{ a.is_active ? '●' : '○' }}
                   </button>
                   <button
                     type="button"
-                    (click)="openEditAssignmentModal(a, $event)"
-                    class="text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg p-1 transition-colors cursor-pointer text-[10px]"
+                    appAction="edit"
+                    display="icon"
+                    size="sm"
                     title="ویرایش سمت یا وضعیت"
-                  >
-                    ✏️
-                  </button>
+                    (click)="openEditAssignmentModal(a, $event)"
+                  ></button>
                   <button
                     type="button"
-                    (click)="deleteAssignment(a.id!, (a.user_full_name || a.username))"
-                    class="text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg p-1 transition-colors cursor-pointer text-[10px]"
+                    appAction="delete"
+                    display="icon"
+                    size="sm"
                     title="لغو انتساب این کاربر"
-                  >
-                    ✕
-                  </button>
+                    (click)="deleteAssignment(a.id!, (a.user_full_name || a.username))"
+                  ></button>
                 </div>
               </div>
 
@@ -544,12 +476,11 @@
             <!-- دکمه انتساب سریع برای این سمت خاص -->
             <button
               type="button"
+              appAction="create"
+              class="w-full"
+              [label]="'افزودن ' + r.roleDef.shortLabel"
               (click)="openQuickAssignModal(sGroup.section, r.roleDef.key)"
-              class="w-full py-1.5 px-2.5 rounded-xl bg-white/90 hover:bg-white text-indigo-700 hover:text-indigo-800 border border-slate-200 hover:border-indigo-300 text-[11px] font-black transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
-            >
-              <span>+</span>
-              <span>افزودن {{ r.roleDef.shortLabel }}</span>
-            </button>
+            ></button>
           </div>
         </div>
       </div>
@@ -558,7 +489,13 @@
       <div *ngIf="groupedAssignmentsBySection.length === 0" class="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-sm space-y-3">
         <span class="text-3xl block">🔍</span>
         <p class="text-xs font-bold text-slate-600">بخشی منطبق با جستجو یا فیلتر انتخابی یافت نشد.</p>
-        <button (click)="assignmentSearchQuery = ''; assignmentProjectFilter = null; assignmentRoleFilter = 'all'" class="text-xs text-indigo-600 hover:underline font-bold cursor-pointer">
+        <button
+          type="button"
+          (click)="assignmentSearchQuery = ''; assignmentProjectFilter = null; assignmentRoleFilter = 'all'"
+          class="tap-target text-xs text-indigo-600 hover:underline font-bold cursor-pointer"
+          title="پاکسازی فیلترها"
+          aria-label="پاکسازی فیلترها"
+        >
           پاکسازی فیلترها
         </button>
       </div>
@@ -612,15 +549,28 @@
               </td>
               <td class="p-3 text-center">
                 <div class="flex items-center justify-center gap-1.5">
-                  <button (click)="toggleAssignmentStatus(a)" class="px-2 py-1 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer text-[11px] font-bold" [title]="a.is_active ? 'غیرفعال‌سازی' : 'فعال‌سازی'">
+                  <button
+                    type="button"
+                    (click)="toggleAssignmentStatus(a)"
+                    class="tap-target px-2 py-1 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer text-[11px] font-bold"
+                    [title]="a.is_active ? 'غیرفعال‌سازی' : 'فعال‌سازی'"
+                    [attr.aria-label]="a.is_active ? 'غیرفعال‌سازی' : 'فعال‌سازی'"
+                  >
                     {{ a.is_active ? 'غیرفعال' : 'فعال' }}
                   </button>
-                  <button (click)="openEditAssignmentModal(a, $event)" class="px-2 py-1 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer text-[11px] font-bold">
-                    ویرایش
-                  </button>
-                  <button (click)="deleteAssignment(a.id!, (a.user_full_name || a.username))" class="px-2 py-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer text-[11px] font-bold">
-                    لغو
-                  </button>
+                  <button
+                    type="button"
+                    appAction="edit"
+                    size="sm"
+                    (click)="openEditAssignmentModal(a, $event)"
+                  ></button>
+                  <button
+                    type="button"
+                    appAction="delete"
+                    size="sm"
+                    label="لغو"
+                    (click)="deleteAssignment(a.id!, (a.user_full_name || a.username))"
+                  ></button>
                 </div>
               </td>
             </tr>
@@ -654,11 +604,10 @@
         </div>
         <button
           type="button"
+          appAction="close"
+          display="icon"
           (click)="closeQuickAssignModal()"
-          class="text-slate-400 hover:text-slate-700 w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-sm font-bold cursor-pointer"
-        >
-          ✕
-        </button>
+        ></button>
       </div>
 
       <!-- پیام راهنمای موازی -->
@@ -701,7 +650,9 @@
               type="button"
               id="select-all-users-btn"
               (click)="selectAllAvailableUsers()"
-              class="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+              class="tap-target text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+              title="انتخاب همه کاربران"
+              aria-label="انتخاب همه کاربران"
             >
               انتخاب همه
             </button>
@@ -711,7 +662,9 @@
               id="deselect-all-users-btn"
               (click)="deselectAllUsers()"
               [disabled]="quickAssignState.selectedUserIds.length === 0"
-              class="text-slate-500 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-40 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+              class="tap-target text-slate-500 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-40 px-2 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+              title="لغو انتخاب کاربران"
+              aria-label="لغو انتخاب کاربران"
             >
               لغو انتخاب
             </button>
@@ -771,30 +724,23 @@
           <button
             type="button"
             id="close-quick-assign-btn"
+            appAction="close"
+            label="انصراف"
             (click)="closeQuickAssignModal()"
-            class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors cursor-pointer"
-          >
-            انصراف
-          </button>
+          ></button>
           <button
             type="button"
             id="submit-quick-assign-btn"
-            (click)="submitQuickAssign()"
+            appAction="save"
+            [label]="quickAssignState.selectedUserIds.length > 1
+                     ? ('تایید و انتساب ' + quickAssignState.selectedUserIds.length + ' کاربر به عنوان ' + (quickAssignState.roleDef?.shortLabel || ''))
+                     : (quickAssignState.selectedUserIds.length === 1
+                        ? ('تایید و انتساب ۱ کاربر به عنوان ' + (quickAssignState.roleDef?.shortLabel || ''))
+                        : 'لطفاً کاربر(ان) را انتخاب کنید')"
+            [busy]="quickAssignState.isSubmitting"
             [disabled]="quickAssignState.selectedUserIds.length === 0 || quickAssignState.isSubmitting"
-            class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-black shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-          >
-            <span *ngIf="quickAssignState.isSubmitting" class="flex items-center gap-1.5">
-              <span class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              <span>در حال ثبت انتساب...</span>
-            </span>
-            <span *ngIf="!quickAssignState.isSubmitting">
-              {{ quickAssignState.selectedUserIds.length > 1
-                 ? ('تایید و انتساب ' + quickAssignState.selectedUserIds.length + ' کاربر به عنوان ' + (quickAssignState.roleDef?.shortLabel || ''))
-                 : (quickAssignState.selectedUserIds.length === 1
-                    ? ('تایید و انتساب ۱ کاربر به عنوان ' + (quickAssignState.roleDef?.shortLabel || ''))
-                    : 'لطفاً کاربر(ان) را انتخاب کنید') }}
-            </span>
-          </button>
+            (click)="submitQuickAssign()"
+          ></button>
         </div>
       </div>
     </div>
@@ -832,19 +778,16 @@
       <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
         <button
           type="button"
+          appAction="close"
+          [label]="confirmModal.cancelText"
           (click)="closeConfirmDialog()"
-          class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors cursor-pointer"
-        >
-          {{ confirmModal.cancelText }}
-        </button>
+        ></button>
         <button
           type="button"
+          appAction="delete"
+          [label]="confirmModal.confirmText"
           (click)="executeConfirmDialog()"
-          [ngClass]="confirmModal.isDanger ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20'"
-          class="px-5 py-2 rounded-xl text-xs font-black shadow-md transition-all cursor-pointer flex items-center gap-1.5"
-        >
-          <span>{{ confirmModal.confirmText }}</span>
-        </button>
+        ></button>
       </div>
     </div>
   </div>
@@ -863,9 +806,12 @@
             <p class="text-xs text-slate-500 font-medium">کپی پرسنل و نقش‌های یک بخش دیگر به این بخش</p>
           </div>
         </div>
-        <button type="button" (click)="closeCloneModal()" class="text-slate-400 hover:text-slate-600 rounded-xl p-1.5 hover:bg-slate-100 transition-colors cursor-pointer">
-          ✕
-        </button>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeCloneModal()"
+        ></button>
       </div>
 
       <!-- کادر معرفی بخش مقصد -->
@@ -941,20 +887,18 @@
       <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
         <button
           type="button"
+          appAction="close"
+          label="انصراف"
           (click)="closeCloneModal()"
-          class="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
-        >
-          انصراف
-        </button>
+        ></button>
         <button
           type="button"
+          appAction="copy"
+          label="کپی ساختار"
+          [busy]="cloneModal.isSubmitting"
           [disabled]="cloneModal.isSubmitting || !cloneModal.sourceSectionId || cloneModal.sourceStats.total === 0"
           (click)="executeCloneAssignments()"
-          class="px-5 py-2 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-        >
-          <span *ngIf="cloneModal.isSubmitting" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-          <span>تایید و کپی ساختار پرسنل</span>
-        </button>
+        ></button>
       </div>
     </div>
   </div>
@@ -967,9 +911,12 @@
           <span>✏️</span>
           <span>ویرایش انتساب نقش سازمانی</span>
         </h3>
-        <button type="button" (click)="closeEditAssignmentModal()" class="text-slate-400 hover:text-slate-600 rounded-lg p-1 text-sm font-bold cursor-pointer">
-          ✕
-        </button>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeEditAssignmentModal()"
+        ></button>
       </div>
 
       <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs space-y-1">
@@ -1006,20 +953,18 @@
       <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
         <button
           type="button"
+          appAction="close"
+          label="انصراف"
           (click)="closeEditAssignmentModal()"
-          class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xs font-bold transition-colors cursor-pointer"
-        >
-          انصراف
-        </button>
+        ></button>
         <button
           type="button"
+          appAction="save"
+          label="ثبت تغییرات"
+          [busy]="editAssignmentModal.isSubmitting"
           [disabled]="editAssignmentModal.isSubmitting"
           (click)="submitEditAssignment()"
-          class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-black shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-        >
-          <span *ngIf="editAssignmentModal.isSubmitting" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-          <span>ثبت تغییرات</span>
-        </button>
+        ></button>
       </div>
     </div>
   </div>
