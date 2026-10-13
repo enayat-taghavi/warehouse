@@ -23,6 +23,10 @@ import {
   validateAccountNumber
 } from '../../../core/utils/sheba-utils';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
+import { CommandCenterComponent } from '../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../modules/accounting/entity-icons';
 
 export interface CounterpartyTypeOption {
   key: 'driver' | 'repair_shop' | 'fuel_station' | 'contractor' | 'other';
@@ -35,7 +39,7 @@ export interface CounterpartyTypeOption {
 @Component({
   selector: 'app-counterparties',
   standalone: true,
-  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective, TabBarComponent, ActionButtonComponent, CommandCenterComponent],
   templateUrl: './counterparties.html',
   styleUrl: './counterparties.css'
 })
@@ -49,6 +53,73 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
   typeFilter: string = 'all';
   statusFilter: string = 'all';
   viewMode: 'table' | 'cards' = 'table';
+
+  // سوییچر نمای جدولی و کارتی با دو تب بدون آیکون
+  readonly viewModeTabs: TabDef[] = [
+    { id: 'table', label: 'جدول', shortLabel: 'جدول' },
+    { id: 'cards', label: 'کارت', shortLabel: 'کارت' }
+  ];
+
+  // تب‌های نوار دسته‌بندی با الگوی memoized (جلوگیری از خطای NG0100)
+  private typeFilterTabsKey = '';
+  private typeFilterTabsCache: TabDef[] = [];
+  get typeFilterTabs(): TabDef[] {
+    const key = `${this.totalCount}:${this.driversCount}:${this.repairShopsCount}:${this.fuelStationsCount}:${this.contractorsCount}:${this.othersCount}`;
+    if (key !== this.typeFilterTabsKey) {
+      this.typeFilterTabsKey = key;
+      this.typeFilterTabsCache = [
+        {
+          id: 'all',
+          label: 'همه',
+          shortLabel: 'همه',
+          icon: 'status-all',
+          count: this.totalCount,
+          tone: 'indigo'
+        },
+        {
+          id: 'driver',
+          label: 'راننده',
+          shortLabel: 'راننده',
+          icon: ACCOUNTING_ENTITY_ICONS.fleet,
+          count: this.driversCount,
+          tone: 'indigo'
+        },
+        {
+          id: 'repair_shop',
+          label: 'تعمیرگاه',
+          shortLabel: 'تعمیرگاه',
+          icon: ACCOUNTING_ENTITY_ICONS.repairShop,
+          count: this.repairShopsCount,
+          tone: 'indigo'
+        },
+        {
+          id: 'fuel_station',
+          label: 'جایگاه سوخت',
+          shortLabel: 'سوخت',
+          icon: ACCOUNTING_ENTITY_ICONS.fuelStation,
+          count: this.fuelStationsCount,
+          tone: 'indigo'
+        },
+        {
+          id: 'contractor',
+          label: 'پیمانکار',
+          shortLabel: 'پیمانکار',
+          icon: ACCOUNTING_ENTITY_ICONS.contractor,
+          count: this.contractorsCount,
+          tone: 'indigo'
+        },
+        {
+          id: 'other',
+          label: 'سایر',
+          shortLabel: 'سایر',
+          icon: ACCOUNTING_ENTITY_ICONS.otherCounterparty,
+          count: this.othersCount,
+          tone: 'indigo'
+        }
+      ];
+    }
+    return this.typeFilterTabsCache;
+  }
 
   // تعاریف ۵ گانه انواع طرف‌حساب
   readonly typeOptions: CounterpartyTypeOption[] = [
@@ -159,9 +230,10 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
     this.updateQueryParams({ status: val !== 'all' ? val : null });
   }
 
-  onViewModeChange(mode: 'table' | 'cards'): void {
-    this.viewMode = mode;
-    this.updateQueryParams({ view: mode !== 'table' ? mode : null });
+  onViewModeChange(mode: string): void {
+    const cleanMode: 'table' | 'cards' = mode === 'cards' ? 'cards' : 'table';
+    this.viewMode = cleanMode;
+    this.updateQueryParams({ view: cleanMode !== 'table' ? cleanMode : null });
   }
 
   private setupRealtimeListeners(): void {
