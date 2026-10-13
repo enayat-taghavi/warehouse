@@ -115,7 +115,7 @@
   - [x] **۳.۱۳ پرسنل و خودروهای جدید (`supervisor-new-profiles.html`)**
   - [x] معیار پایان گام
 
-- [ ] **گام ۱۰: حسابداری**
+- [x] **گام ۱۰: حسابداری**
   - [x] **۴.۱ حقوق و دستمزد (`accountant-payroll.html`)**
   - [x] **۴.۲ ناوگان حسابدار (`accountant-fleet.html`)**
   - [x] **۴.۳ پرسنل حسابدار (`accountant-personnel.html`)**
@@ -123,8 +123,8 @@
   - [x] **۴.۵ رسیدگی تنخواه (`accountant-petty-cash.html`)**
   - [x] **۴.۶ دیسکت‌های بیمه و مالیات (`accountant-diskettes.html`)**
   - [x] **۴.۷ طرف‌های حساب (`counterparties.html`):** ساختار شبا دست نخورد
-  - [ ] **۴.۲۲ پرونده‌های جدید حسابدار (`accountant-new-profiles.html`)**
-  - [ ] معیار پایان گام
+  - [x] **۴.۲۲ پرونده‌های جدید حسابدار (`accountant-new-profiles.html`)**
+  - [x] معیار پایان گام
 
 - [ ] **گام ۱۱: خزانه و سازمان**
   - [ ] **۴.۸ پرداخت حقوق و ناوگان (`treasurer-disbursements.html`)**
