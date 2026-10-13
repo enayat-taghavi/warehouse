@@ -117,7 +117,7 @@
 
 - [ ] **گام ۱۰: حسابداری**
   - [x] **۴.۱ حقوق و دستمزد (`accountant-payroll.html`)**
-  - [ ] **۴.۲ ناوگان حسابدار (`accountant-fleet.html`)**
+  - [x] **۴.۲ ناوگان حسابدار (`accountant-fleet.html`)**
   - [x] **۴.۳ پرسنل حسابدار (`accountant-personnel.html`)**
   - [x] **۴.۴ فاکتورهای حسابدار (`accountant-invoices.html`)**
   - [ ] **۴.۵ رسیدگی تنخواه (`accountant-petty-cash.html`)**
