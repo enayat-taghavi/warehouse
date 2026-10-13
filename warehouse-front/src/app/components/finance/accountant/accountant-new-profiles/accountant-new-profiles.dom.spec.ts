@@ -421,10 +421,9 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
   it('Item 8: Clicking "تایید مالی (ارسال به مدیر)" invokes approvePersonnelFinance in DOM', () => {
     const hostElem: HTMLElement = fixture.nativeElement;
 
-    const approveBtn: HTMLButtonElement | null = Array.from(hostElem.querySelectorAll('button'))
-      .find(b => b.textContent?.includes('تایید مالی')) as HTMLButtonElement || null;
+    const approveBtn: HTMLButtonElement | null = hostElem.querySelector('button[appAction="approve"]');
     expect(approveBtn).toBeTruthy();
-    approveBtn.click();
+    approveBtn?.click();
     fixture.detectChanges();
 
     expect(mockPersonnelApi.approvePersonnelFinance).toHaveBeenCalledWith(938);
@@ -480,10 +479,9 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
     expect(hostElem.textContent).toContain('در انتظار تایید حسابدار');
 
     // Click approve vehicle button
-    const approveVehBtn: HTMLButtonElement | null = Array.from(hostElem.querySelectorAll('button'))
-      .find(b => b.textContent?.includes('تایید مالی')) as HTMLButtonElement || null;
+    const approveVehBtn: HTMLButtonElement | null = hostElem.querySelector('button[appAction="approve"]');
     expect(approveVehBtn).toBeTruthy();
-    approveVehBtn.click();
+    approveVehBtn?.click();
     fixture.detectChanges();
 
     expect(mockPersonnelApi.approveVehicleFinance).toHaveBeenCalledWith(45);
