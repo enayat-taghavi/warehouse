@@ -122,7 +122,7 @@
   - [x] **۴.۴ فاکتورهای حسابدار (`accountant-invoices.html`)**
   - [x] **۴.۵ رسیدگی تنخواه (`accountant-petty-cash.html`)**
   - [x] **۴.۶ دیسکت‌های بیمه و مالیات (`accountant-diskettes.html`)**
-  - [ ] **۴.۷ طرف‌های حساب (`counterparties.html`):** ساختار شبا دست نخورد
+  - [x] **۴.۷ طرف‌های حساب (`counterparties.html`):** ساختار شبا دست نخورد
   - [ ] **۴.۲۲ پرونده‌های جدید حسابدار (`accountant-new-profiles.html`)**
   - [ ] معیار پایان گام
 

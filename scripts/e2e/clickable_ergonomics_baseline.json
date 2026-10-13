@@ -1,9 +1,9 @@
 {
   "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
   "counters": {
-    "rule_1_unlabeled_icon_buttons": 119,
+    "rule_1_unlabeled_icon_buttons": 115,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 128,
+    "rule_3_non_standard_actions": 126,
     "rule_4_retired_icons": 58,
     "rule_5_neutralized_tap_targets": 0
   },
@@ -126,8 +126,8 @@
         "line": 498
       },
       {
-        "file": "components/finance/counterparties/counterparties.html",
-        "line": 389
+        "file": "components/finance/employee/employee-attendance/employee-attendance.html",
+        "line": 579
       }
     ],
     "rule_2_tab_min_widths": [],
@@ -295,22 +295,22 @@
         "icon": null
       },
       {
-        "file": "components/finance/counterparties/counterparties.html",
-        "line": 556,
-        "method": "deleteCounterparty",
-        "icon": null
-      },
-      {
-        "file": "components/finance/counterparties/counterparties.html",
-        "line": 608,
-        "method": "deleteCounterparty",
-        "icon": null
-      },
-      {
         "file": "components/finance/employee/employee-attendance/employee-attendance.html",
         "line": 238,
         "method": "triggerExcelImport",
         "icon": "action-upload"
+      },
+      {
+        "file": "components/finance/employee/employee-attendance/employee-attendance.html",
+        "line": 1099,
+        "method": "closeExcelImportModal",
+        "icon": null
+      },
+      {
+        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "line": 239,
+        "method": "reopenRejectedPersonnel",
+        "icon": null
       }
     ],
     "rule_4_retired_icons": [
