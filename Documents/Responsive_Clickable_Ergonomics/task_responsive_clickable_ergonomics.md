@@ -127,8 +127,8 @@
   - [x] معیار پایان گام
 
 - [ ] **گام ۱۱: خزانه و سازمان**
-  - [ ] **۴.۸ پرداخت حقوق و ناوگان (`treasurer-disbursements.html`)**
-  - [ ] **۴.۹ تسویه فاکتورها (`treasurer-invoices.html`)**
+  - [x] **۴.۸ پرداخت حقوق و ناوگان (`treasurer-disbursements.html`)**
+  - [x] **۴.۹ تسویه فاکتورها (`treasurer-invoices.html`)**
   - [ ] **۴.۱۰ حساب‌های بانکی (`treasurer-bank-accounts.html`)**
   - [ ] **۴.۱۱ مدیریت چک‌ها (`treasurer-cheques.html`)**
   - [ ] **۴.۱۲ مغایرت‌گیری بانکی (`treasurer-reconciliation.html`)**
