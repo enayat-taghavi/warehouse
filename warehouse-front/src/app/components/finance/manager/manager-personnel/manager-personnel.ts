@@ -10,18 +10,77 @@ import { PersonnelApiService } from '../../../../core/api/personnel-api.service'
 import { ProjectSection, PersonnelProfile, PersonnelChangeRequest, PayrollYearlySettings, PersonnelCostEstimate } from '../../../../core/models/personnel.model';
 import { WebSocketService } from '../../../../core/http/websocket.service';
 import { SmartDeleteModalComponent } from '../../../../shared/components/smart-delete-modal/smart-delete-modal';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export type ManagerPersonnelSubTab = 'new' | 'contracts' | 'changes' | 'all';
 
 @Component({
   selector: 'app-manager-personnel-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SmartDeleteModalComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    SmartDeleteModalComponent,
+    SvgIconDirective,
+    ActionButtonComponent,
+    TabBarComponent
+  ],
   templateUrl: './manager-personnel.html',
   styleUrl: './manager-personnel.css'
 })
 export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
   activeSubTab: ManagerPersonnelSubTab = 'new';
+
+  private personnelSubTabsKey = '';
+  private personnelSubTabsCache: TabDef[] = [];
+  get personnelSubTabs(): TabDef[] {
+    const sc = this.statusCounters;
+    const key = `${sc.newPending}:${sc.contractsPending}:${sc.changesPending}:${sc.allTotal}`;
+    if (key !== this.personnelSubTabsKey) {
+      this.personnelSubTabsKey = key;
+      this.personnelSubTabsCache = [
+        {
+          id: 'new',
+          label: 'تصویب پرونده‌های جدید',
+          shortLabel: 'جدید',
+          icon: ACCOUNTING_ENTITY_ICONS.newPersonnel,
+          count: sc.newPending,
+          tone: 'amber',
+          indicator: sc.newPending > 0 ? { tone: 'amber', label: 'پرونده‌های جدید معلق', pulse: true } : undefined
+        },
+        {
+          id: 'contracts',
+          label: 'احکام و قراردادها',
+          shortLabel: 'احکام',
+          icon: ACCOUNTING_ENTITY_ICONS.jobGrades,
+          count: sc.contractsPending,
+          tone: 'slate'
+        },
+        {
+          id: 'changes',
+          label: 'تصویب تغییرات',
+          shortLabel: 'تغییرات',
+          icon: 'action-edit',
+          count: sc.changesPending,
+          tone: 'amber',
+          indicator: sc.changesPending > 0 ? { tone: 'amber', label: 'درخواست‌های تغییرات', pulse: true } : undefined
+        },
+        {
+          id: 'all',
+          label: 'پرسنل فعال',
+          shortLabel: 'همه',
+          icon: 'status-all',
+          count: sc.allTotal,
+          tone: 'slate'
+        }
+      ];
+    }
+    return this.personnelSubTabsCache;
+  }
 
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
@@ -172,10 +231,12 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
     this.fetchData();
   }
 
-  switchSubTab(tab: ManagerPersonnelSubTab): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
-    this.fetchData();
+  switchSubTab(tab: string): void {
+    if (tab === 'new' || tab === 'contracts' || tab === 'changes' || tab === 'all') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+      this.fetchData();
+    }
   }
 
   syncUrlParams(): void {

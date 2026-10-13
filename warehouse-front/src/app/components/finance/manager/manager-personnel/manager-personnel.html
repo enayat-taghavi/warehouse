@@ -19,54 +19,13 @@
           </select>
         </div>
 
-        <!-- ناوبری زیرتب‌ها در کپسول محصور (Subtabs Pill Container) -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
-          <button
-            type="button"
-            (click)="switchSubTab('new')"
-            [ngClass]="activeSubTab === 'new' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>🆕 تصویب پرونده‌های جدید</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.newPending > 0 ? 'bg-amber-100 text-amber-900 font-black animate-pulse' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.newPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('contracts')"
-            [ngClass]="activeSubTab === 'contracts' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>📜 احکام و قراردادها</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-slate-200/70 text-slate-600">
-              {{ statusCounters.contractsPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('changes')"
-            [ngClass]="activeSubTab === 'changes' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer relative">
-            <span>🔄 تصویب تغییرات</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.changesPending > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.changesPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('all')"
-            [ngClass]="activeSubTab === 'all' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>📁 پرسنل فعال</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-slate-200/70 text-slate-600">
-              {{ statusCounters.allTotal }}
-            </span>
-          </button>
-        </div>
+        <!-- ناوبری زیرتب‌ها با app-tab-bar -->
+        <app-tab-bar
+          [tabs]="personnelSubTabs"
+          [active]="activeSubTab"
+          (activeChange)="switchSubTab($event)"
+          mobile="icon"
+          fullLabelFrom="xl" />
       </div>
 
       <!-- سمت چپ: جستجو و رفرش -->
@@ -79,17 +38,14 @@
             placeholder="جستجوی نام، کد ملی، سمت..."
             class="w-full bg-slate-100/90 text-xs py-1.5 pr-8 pl-6 rounded-xl border border-slate-200/80 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500" />
           <span class="absolute right-2.5 top-1.5 text-slate-400 text-xs">🔍</span>
-          <button *ngIf="searchQuery" (click)="searchQuery = ''; fetchData()" class="absolute left-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs">✕</button>
+          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer flex items-center justify-center tap-target">✕</button>
         </div>
 
         <button
           type="button"
+          appAction="refresh"
           (click)="fetchData()"
-          [disabled]="isLoading"
-          title="همگام‌سازی و بارگذاری مجدد"
-          class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200/80 text-slate-600 flex items-center justify-center transition-all cursor-pointer">
-          <span [class.animate-spin]="isLoading">🔄</span>
-        </button>
+          [busy]="isLoading"></button>
       </div>
 
     </div>
@@ -141,17 +97,19 @@
                 <div class="flex items-center justify-center gap-1.5">
                   <button
                     type="button"
-                    (click)="openApproveModal('new', item)"
-                    class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-xs cursor-pointer transition-all">
-                    👑 تصویب نهایی استخدام
-                  </button>
+                    appAction="approve"
+                    size="sm"
+                    display="label"
+                    label="تصویب استخدام"
+                    (click)="openApproveModal('new', item)"></button>
                   <button
                     *ngIf="item.id"
                     type="button"
-                    (click)="openRejectModal(item.id, item.first_name + ' ' + item.last_name, 'personnel')"
-                    class="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold cursor-pointer transition-all">
-                    ✕ عدم تصویب / رد
-                  </button>
+                    appAction="reject"
+                    size="sm"
+                    display="label"
+                    label="عدم تصویب / رد"
+                    (click)="openRejectModal(item.id, item.first_name + ' ' + item.last_name, 'personnel')"></button>
                 </div>
               </td>
             </tr>
@@ -224,26 +182,28 @@
               <td class="p-3">
                 <button
                   type="button"
-                  (click)="openDiffModal(cr)"
-                  class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 cursor-pointer">
-                  🔍 مشاهده مغایرت‌ها (Diff)
-                </button>
+                  appAction="view"
+                  label="مقایسه"
+                  size="sm"
+                  display="label"
+                  (click)="openDiffModal(cr)"></button>
               </td>
               <td class="p-3 font-mono text-slate-500">{{ cr.created_at | slice:0:10 }}</td>
               <td class="p-3 text-center">
                 <div class="flex items-center justify-center gap-1.5">
                   <button
                     type="button"
-                    (click)="openApproveModal('changes', cr)"
-                    class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-black shadow-xs cursor-pointer">
-                    ✓ تصویب تغییرات
-                  </button>
+                    appAction="approve"
+                    label="تصویب تغییرات"
+                    size="sm"
+                    display="label"
+                    (click)="openApproveModal('changes', cr)"></button>
                   <button
                     type="button"
-                    (click)="openRejectModal(cr.id, cr.personnel_name || '', 'changes')"
-                    class="px-2 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold cursor-pointer">
-                    ✕ رد
-                  </button>
+                    appAction="reject"
+                    size="sm"
+                    display="label"
+                    (click)="openRejectModal(cr.id, cr.personnel_name || '', 'changes')"></button>
                 </div>
               </td>
             </tr>
@@ -287,22 +247,23 @@
                 </ng-template>
               </td>
               <td class="p-3 text-center whitespace-nowrap">
-                <button
-                  *ngIf="canEndCollaboration && p.approval_status === 'approved' && p.is_active !== false"
-                  type="button"
-                  (click)="openEndCollaborationModal(p)"
-                  title="ثبت تاریخ پایان کار و غیرفعال‌سازی پرونده دارای سابقه"
-                  class="min-h-[32px] px-2.5 py-1 text-slate-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg text-xs font-bold transition-all cursor-pointer">
-                  ⏹ قطع همکاری
-                </button>
-                <button
-                  *ngIf="canDeletePersonnel"
-                  type="button"
-                  (click)="openDeleteModal(p)"
-                  title="حذف پرونده بدون سابقه (با استعلام اثرات حذف)"
-                  class="px-2.5 py-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition-all cursor-pointer">
-                  🗑️ حذف
-                </button>
+                <div class="flex items-center justify-center gap-1.5">
+                  <button
+                    *ngIf="canEndCollaboration && p.approval_status === 'approved' && p.is_active !== false"
+                    type="button"
+                    appAction="terminate"
+                    label="قطع همکاری"
+                    size="sm"
+                    display="label"
+                    (click)="openEndCollaborationModal(p)"></button>
+                  <button
+                    *ngIf="canDeletePersonnel"
+                    type="button"
+                    appAction="delete"
+                    size="sm"
+                    display="label"
+                    (click)="openDeleteModal(p)"></button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -318,7 +279,7 @@
         <h3 class="text-sm font-black text-emerald-950 flex items-center gap-1.5">
           <span>👑</span> {{ approvalTarget?.title }}
         </h3>
-        <button (click)="closeApproveModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" (click)="closeApproveModal()"></button>
       </div>
 
       <div class="p-4 space-y-3.5 max-h-[80vh] overflow-y-auto">
@@ -388,16 +349,18 @@
 
       <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
         <button
-          (click)="closeApproveModal()"
-          class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">
-          انصراف
-        </button>
+          type="button"
+          appAction="close"
+          label="انصراف"
+          display="label"
+          (click)="closeApproveModal()"></button>
         <button
-          (click)="submitApproval()"
-          [disabled]="isApproving"
-          class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-xs cursor-pointer">
-          {{ isApproving ? 'در حال ثبت...' : '👑 تصویب نهایی' }}
-        </button>
+          type="button"
+          appAction="approve"
+          label="تصویب نهایی"
+          [busy]="isApproving"
+          display="label"
+          (click)="submitApproval()"></button>
       </div>
     </div>
   </div>
@@ -409,7 +372,7 @@
         <h3 class="text-sm font-black text-rose-950 flex items-center gap-1.5">
           <span>⚠️</span> تصمیم‌گیری عدم تصویب: {{ rejectTarget?.title }}
         </h3>
-        <button (click)="closeRejectModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" (click)="closeRejectModal()"></button>
       </div>
 
       <div class="p-4 space-y-3">
@@ -420,12 +383,12 @@
             <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
               [ngClass]="rejectActionType === 'return_to_accountant' ? 'bg-amber-50 border-amber-300 text-amber-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'">
               <input type="radio" [(ngModel)]="rejectActionType" value="return_to_accountant" class="text-amber-600" />
-              <span>🔄 عودت به حسابدار</span>
+              <svg appIcon="rotate-ccw" class="w-3.5 h-3.5"></svg><span>عودت به حسابدار</span>
             </label>
             <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
               [ngClass]="rejectActionType === 'reject_final' ? 'bg-rose-50 border-rose-300 text-rose-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'">
               <input type="radio" [(ngModel)]="rejectActionType" value="reject_final" class="text-rose-600" />
-              <span>⛔ رد قطعی پرونده</span>
+              <svg appIcon="x-circle" class="w-3.5 h-3.5"></svg><span>رد قطعی پرونده</span>
             </label>
           </div>
         </div>
@@ -442,17 +405,19 @@
 
       <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
         <button
-          (click)="closeRejectModal()"
-          class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">
-          انصراف
-        </button>
+          type="button"
+          appAction="close"
+          label="انصراف"
+          display="label"
+          (click)="closeRejectModal()"></button>
         <button
-          (click)="submitReject()"
+          type="button"
+          [appAction]="rejectActionType === 'reject_final' ? 'reject' : 'return'"
+          [label]="rejectActionType === 'reject_final' ? 'رد قطعی' : 'عودت به حسابدار'"
+          [busy]="isRejecting"
           [disabled]="isRejecting || !rejectReason.trim()"
-          class="px-4 py-1.5 rounded-xl text-white text-xs font-black shadow-xs cursor-pointer transition-all"
-          [ngClass]="rejectActionType === 'return_to_accountant' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-rose-600 hover:bg-rose-700'">
-          {{ isRejecting ? 'در حال ثبت...' : (rejectActionType === 'return_to_accountant' ? '🔄 ثبت عودت به حسابدار' : '⛔ ثبت رد قطعی') }}
-        </button>
+          display="label"
+          (click)="submitReject()"></button>
       </div>
     </div>
   </div>
@@ -464,7 +429,7 @@
         <h3 class="text-sm font-black text-indigo-900">
           مقایسه تفاوت‌ها (Diff): {{ selectedDiffCR?.personnel_name }}
         </h3>
-        <button (click)="closeDiffModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+        <button type="button" appAction="close" display="icon" (click)="closeDiffModal()"></button>
       </div>
       <div class="p-4 max-h-96 overflow-y-auto">
         <table class="w-full text-right text-xs">
@@ -491,10 +456,11 @@
       </div>
       <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end">
         <button
-          (click)="closeDiffModal()"
-          class="px-4 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold cursor-pointer">
-          بستن پنجره
-        </button>
+          type="button"
+          appAction="close"
+          label="بستن"
+          display="label"
+          (click)="closeDiffModal()"></button>
       </div>
     </div>
   </div>
@@ -507,7 +473,7 @@
         <h3 id="end-collab-title" class="text-sm font-black text-amber-950">
           قطع همکاری: {{ endCollaborationTarget?.first_name }} {{ endCollaborationTarget?.last_name }}
         </h3>
-        <button type="button" (click)="closeEndCollaborationModal()" class="min-w-[32px] min-h-[32px] text-slate-400 hover:text-slate-600 cursor-pointer" aria-label="بستن">✕</button>
+        <button type="button" appAction="close" display="icon" (click)="closeEndCollaborationModal()"></button>
       </div>
       <div class="p-4 space-y-3">
         <p class="text-[11px] text-slate-600 leading-relaxed">
@@ -525,11 +491,8 @@
         </div>
       </div>
       <div class="p-4 border-t border-slate-100 flex items-center justify-end gap-2">
-        <button type="button" (click)="closeEndCollaborationModal()" class="min-h-[40px] px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer">انصراف</button>
-        <button type="button" (click)="submitEndCollaboration()" [disabled]="isEndingCollaboration"
-                class="min-h-[40px] px-4 py-2 text-xs font-black text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-60 rounded-xl cursor-pointer">
-          {{ isEndingCollaboration ? 'در حال ثبت…' : 'ثبت قطع همکاری' }}
-        </button>
+        <button type="button" appAction="close" label="انصراف" display="label" (click)="closeEndCollaborationModal()"></button>
+        <button type="button" appAction="terminate" label="ثبت قطع همکاری" [busy]="isEndingCollaboration" display="label" (click)="submitEndCollaboration()"></button>
       </div>
     </div>
   </div>
@@ -550,21 +513,24 @@
     <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-rose-950 flex items-center gap-1.5">
-          <span>🗑️</span> حذف پرونده پرسنل: {{ deleteTargetPersonnel?.first_name }} {{ deleteTargetPersonnel?.last_name }}
+          <svg appIcon="trash-2" class="w-4 h-4 text-rose-600 inline-block"></svg>
+          حذف پرونده پرسنل: {{ deleteTargetPersonnel?.first_name }} {{ deleteTargetPersonnel?.last_name }}
         </h3>
-        <button (click)="closeDeleteModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
+        <button type="button" appAction="close" display="icon" (click)="closeDeleteModal()"></button>
       </div>
 
       <div class="p-4 space-y-3">
         <div *ngIf="deleteImpactLoading" class="py-6 text-center text-slate-500 text-xs">
-          <span class="animate-spin inline-block mr-1">🔄</span> در حال استعلام اثرات حذف و سوابق کارکرد پرسنل از پایگاه داده...
+          <svg appIcon="spinner" class="animate-spin w-3.5 h-3.5 inline-block mr-1"></svg>
+          در حال استعلام اثرات حذف و سوابق کارکرد پرسنل از پایگاه داده...
         </div>
 
         <div *ngIf="!deleteImpactLoading && deleteImpactHistory">
           <!-- در صورت داشتن سابقه (حذف غیرمجاز) -->
           <div *ngIf="!deleteImpactHistory.can_delete" class="p-3 bg-rose-50 rounded-xl border border-rose-200 text-xs space-y-2">
             <div class="font-black text-rose-900 flex items-center gap-1.5">
-              <span>🚫</span> حذف فیزیکی این پرونده مجاز نمی‌باشد!
+              <svg appIcon="slash" class="w-4 h-4 text-rose-600 inline-block"></svg>
+              حذف فیزیکی این پرونده مجاز نمی‌باشد!
             </div>
             <p class="text-rose-800 leading-relaxed">
               این پرسنل دارای سوابق در سامانه می‌باشد:
@@ -576,16 +542,19 @@
             <button
               *ngIf="deleteImpactHistory.has_history && canEndCollaboration && deleteTargetPersonnel?.approval_status === 'approved' && deleteTargetPersonnel?.is_active !== false"
               type="button"
-              (click)="openEndCollaborationModal(deleteTargetPersonnel!); closeDeleteModal()"
-              class="min-h-[40px] px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black cursor-pointer">
-              ثبت قطع همکاری
+              appAction="terminate"
+              label="ثبت قطع همکاری"
+              size="sm"
+              display="label"
+              (click)="openEndCollaborationModal(deleteTargetPersonnel!); closeDeleteModal()">
             </button>
           </div>
 
           <!-- در صورت عدم وجود هرگونه سابقه (حذف مجاز) -->
           <div *ngIf="deleteImpactHistory.can_delete" class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs space-y-2">
             <div class="font-black text-emerald-900 flex items-center gap-1.5">
-              <span>✓</span> حذف ایمن بلامانع است
+              <svg appIcon="check" class="w-4 h-4 text-emerald-600 inline-block"></svg>
+              حذف ایمن بلامانع است
             </div>
             <p class="text-emerald-800 leading-relaxed">
               این پرونده فاقد هرگونه کارکرد ثبت‌شده، فیش حقوقی یا تراکنش مالی است و حذف فیزیکی آن بلامانع می‌باشد.
@@ -599,15 +568,20 @@
 
       <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
         <button
-          (click)="closeDeleteModal()"
-          class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">
-          انصراف
+          type="button"
+          appAction="close"
+          label="انصراف"
+          display="label"
+          (click)="closeDeleteModal()">
         </button>
         <button
-          (click)="confirmDeletePersonnel()"
+          type="button"
+          appAction="delete"
+          label="حذف دائم پرونده"
+          [busy]="isDeletingPersonnel"
           [disabled]="deleteImpactLoading || !deleteImpactHistory?.can_delete || isDeletingPersonnel"
-          class="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-black shadow-xs cursor-pointer">
-          {{ isDeletingPersonnel ? 'در حال حذف...' : 'حذف دائم پرونده' }}
+          display="label"
+          (click)="confirmDeletePersonnel()">
         </button>
       </div>
     </div>

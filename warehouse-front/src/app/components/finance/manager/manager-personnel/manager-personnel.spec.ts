@@ -154,6 +154,20 @@ describe('ManagerPersonnelHubComponent Unit Tests', () => {
     expect(mockRouter.navigate).toHaveBeenCalled();
   });
 
+  it('2b. should expose ergonomic personnelSubTabs with required icons and counters', () => {
+    component.ngOnInit();
+    const tabs = component.personnelSubTabs;
+    expect(tabs.length).toBe(4);
+    expect(tabs.map(t => t.id)).toEqual(['new', 'contracts', 'changes', 'all']);
+    expect(tabs[0].count).toBe(component.statusCounters.newPending);
+    expect(tabs[2].count).toBe(component.statusCounters.changesPending);
+    expect(tabs[3].count).toBe(component.statusCounters.allTotal);
+    expect(tabs[0].icon).toBeDefined();
+    expect(tabs[1].icon).toBeDefined();
+    expect(tabs[2].icon).toBeDefined();
+    expect(tabs[3].icon).toBeDefined();
+  });
+
   it('3. should open and submit approval for pending personnel', () => {
     component.ngOnInit();
     const candidate = component.pendingManagerList[0];
