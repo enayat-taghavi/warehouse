@@ -265,7 +265,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
           shortLabel: 'ناوگان',
           icon: ACCOUNTING_ENTITY_ICONS.fleet,
           count: this.pendingFleetCount,
-          tone: 'blue'
+          tone: 'indigo'
         },
         {
           id: 'change_requests',
@@ -297,7 +297,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
           shortLabel: 'تنخواه',
           icon: ACCOUNTING_ENTITY_ICONS.pettyCash,
           count: this.pendingPettyCashCount,
-          tone: 'purple'
+          tone: 'slate'
         }
       ];
     }
