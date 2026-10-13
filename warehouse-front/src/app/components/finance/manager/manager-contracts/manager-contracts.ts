@@ -9,6 +9,9 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection } from '../../../../core/models/personnel.model';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonDirective } from '../../../../shared/components/action-button/action-button.directive';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export interface PersonnelContractItem {
   id: number;
@@ -41,12 +44,17 @@ export interface FleetContractItem {
 @Component({
   selector: 'app-manager-contracts-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, TabBarComponent, ActionButtonDirective],
   templateUrl: './manager-contracts.html',
   styleUrl: './manager-contracts.css'
 })
 export class ManagerContractsComponent implements OnInit, OnDestroy {
   activeSubTab: 'personnel_decrees' | 'fleet_contracts' | 'bonus_penalties' = 'personnel_decrees';
+
+  contractTabs: TabDef[] = [
+    { id: 'personnel_decrees', label: 'احکام حقوقی پرسنل', shortLabel: 'احکام', icon: ACCOUNTING_ENTITY_ICONS.personnel },
+    { id: 'fleet_contracts', label: 'قراردادهای ناوگان و ماشین‌آلات', shortLabel: 'ناوگان', icon: ACCOUNTING_ENTITY_ICONS.fleet }
+  ];
 
   // Section Isolation
   mySections: ProjectSection[] = [];
@@ -207,9 +215,11 @@ export class ManagerContractsComponent implements OnInit, OnDestroy {
     this.syncUrlParams();
   }
 
-  switchSubTab(tab: 'personnel_decrees' | 'fleet_contracts' | 'bonus_penalties'): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
+  switchSubTab(tab: string): void {
+    if (tab === 'personnel_decrees' || tab === 'fleet_contracts') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+    }
   }
 
   syncUrlParams(): void {
