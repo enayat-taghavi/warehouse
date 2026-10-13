@@ -11,18 +11,76 @@ import { ProjectSection, VehicleDriverProfile, VehicleChangeRequest } from '../.
 import { WebSocketService } from '../../../../core/http/websocket.service';
 import { SmartDeleteModalComponent } from '../../../../shared/components/smart-delete-modal/smart-delete-modal';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export type ManagerFleetSubTab = 'new' | 'settlement' | 'changes' | 'all';
 
 @Component({
   selector: 'app-manager-fleet-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SmartDeleteModalComponent, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    SmartDeleteModalComponent,
+    SvgIconDirective,
+    ActionButtonComponent,
+    TabBarComponent
+  ],
   templateUrl: './manager-fleet.html',
   styleUrl: './manager-fleet.css'
 })
 export class ManagerFleetHubComponent implements OnInit, OnDestroy {
   activeSubTab: ManagerFleetSubTab = 'new';
+
+  private fleetSubTabsKey = '';
+  private fleetSubTabsCache: TabDef[] = [];
+  get fleetSubTabs(): TabDef[] {
+    const sc = this.statusCounters;
+    const key = `${sc.newPending}:${sc.settlementPending}:${sc.changesPending}:${sc.allTotal}`;
+    if (key !== this.fleetSubTabsKey) {
+      this.fleetSubTabsKey = key;
+      this.fleetSubTabsCache = [
+        {
+          id: 'new',
+          label: 'ناوگان در انتظار تایید',
+          shortLabel: 'جدید',
+          icon: ACCOUNTING_ENTITY_ICONS.fleet,
+          count: sc.newPending,
+          tone: 'amber',
+          indicator: sc.newPending > 0 ? { tone: 'amber', label: 'ناوگان در انتظار تایید', pulse: true } : undefined
+        },
+        {
+          id: 'settlement',
+          label: 'تسویه‌حساب و کارکرد',
+          shortLabel: 'تسویه',
+          icon: ACCOUNTING_ENTITY_ICONS.payroll,
+          count: sc.settlementPending,
+          tone: 'indigo'
+        },
+        {
+          id: 'changes',
+          label: 'درخواست‌های تغییرات',
+          shortLabel: 'تغییرات',
+          icon: 'action-edit',
+          count: sc.changesPending,
+          tone: 'amber',
+          indicator: sc.changesPending > 0 ? { tone: 'amber', label: 'درخواست‌های تغییرات', pulse: true } : undefined
+        },
+        {
+          id: 'all',
+          label: 'همه ناوگان فعال',
+          shortLabel: 'همه',
+          icon: 'status-all',
+          count: sc.allTotal,
+          tone: 'slate'
+        }
+      ];
+    }
+    return this.fleetSubTabsCache;
+  }
 
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
@@ -187,10 +245,12 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
     this.fetchFleetData();
   }
 
-  switchSubTab(tab: ManagerFleetSubTab): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
-    this.fetchFleetData();
+  switchSubTab(tab: string): void {
+    if (tab === 'new' || tab === 'settlement' || tab === 'changes' || tab === 'all') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+      this.fetchFleetData();
+    }
   }
 
   syncUrlParams(): void {

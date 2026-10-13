@@ -19,55 +19,13 @@
           </select>
         </div>
 
-        <!-- ناوبری زیرتب‌ها در کپسول محصور (Subtabs Pill Container) -->
-        <div class="flex bg-surface-muted p-1 rounded-xl border border-line overflow-x-auto w-full md:w-auto">
-          <button
-            type="button"
-            (click)="switchSubTab('new')"
-            [ngClass]="activeSubTab === 'new' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <svg appIcon="clock" class="w-3.5 h-3.5"></svg><span>ناوگان در انتظار تایید</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.newPending > 0 ? 'bg-amber-100 text-amber-900 font-black animate-pulse' : 'bg-line/70 text-fg-muted'">
-              {{ statusCounters.newPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('settlement')"
-            [ngClass]="activeSubTab === 'settlement' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <svg appIcon="truck" class="w-3.5 h-3.5"></svg><span>تسویه‌حساب و کارکرد</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.settlementPending > 0 ? 'bg-blue-100 text-blue-800 font-black' : 'bg-line/70 text-fg-muted'">
-              {{ statusCounters.settlementPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('changes')"
-            [ngClass]="activeSubTab === 'changes' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer relative">
-            <svg appIcon="refresh-cw" class="w-3.5 h-3.5"></svg><span>درخواست‌های تغییرات</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.changesPending > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-line/70 text-fg-muted'">
-              {{ statusCounters.changesPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('all')"
-            [ngClass]="activeSubTab === 'all' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-fg-muted hover:text-fg font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <svg appIcon="folder" class="w-3.5 h-3.5"></svg><span>همه ناوگان فعال</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-line/70 text-fg-muted">
-              {{ statusCounters.allTotal }}
-            </span>
-          </button>
-        </div>
+        <!-- ناوبری زیرتب‌ها با app-tab-bar -->
+        <app-tab-bar
+          [tabs]="fleetSubTabs"
+          [active]="activeSubTab"
+          (activeChange)="switchSubTab($event)"
+          mobile="icon"
+          fullLabelFrom="xl" />
       </div>
 
       <!-- سمت چپ: انتخاب ماه (برای تسویه)، جستجو و رفرش -->
@@ -90,17 +48,14 @@
             placeholder="جستجوی پلاک، مدل، راننده..."
             class="w-full bg-surface-muted text-xs py-1.5 pr-8 pl-6 rounded-xl border border-line focus:bg-surface focus:outline-none focus:ring-1 focus:ring-indigo-500" />
           <span class="absolute right-2.5 top-2 text-fg-subtle"><svg appIcon="search" class="w-3.5 h-3.5"></svg></span>
-          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchFleetData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-2 text-fg-subtle hover:text-fg text-xs cursor-pointer flex items-center justify-center"><svg appIcon="x" class="w-3.5 h-3.5"></svg></button>
+          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchFleetData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-2 text-fg-subtle hover:text-fg text-xs cursor-pointer flex items-center justify-center tap-target"><svg appIcon="x" class="w-3.5 h-3.5"></svg></button>
         </div>
 
         <button
           type="button"
+          appAction="refresh"
           (click)="fetchFleetData()"
-          [disabled]="isLoading"
-          title="همگام‌سازی و بارگذاری مجدد"
-          class="w-8 h-8 rounded-xl bg-surface-muted hover:bg-surface border border-line text-fg-muted flex items-center justify-center transition-all cursor-pointer">
-          <svg appIcon="refresh-cw" class="w-4 h-4" [class.animate-spin]="isLoading"></svg>
-        </button>
+          [busy]="isLoading"></button>
       </div>
 
     </div>
@@ -163,24 +118,27 @@
                 <div class="flex items-center justify-center gap-1.5">
                   <button
                     type="button"
-                    (click)="openApproveModal('vehicle', v)"
-                    class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer">
-                    <svg appIcon="check" class="w-3.5 h-3.5"></svg><span>تصویب نهایی مدیر</span>
-                  </button>
+                    appAction="approve"
+                    size="sm"
+                    display="label"
+                    label="تصویب نهایی"
+                    (click)="openApproveModal('vehicle', v)"></button>
                   <button
                     *ngIf="v.id"
                     type="button"
-                    (click)="openRejectModal(v.id, v.plate_number, 'vehicle', 'revision')"
-                    class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-xs font-bold transition-all cursor-pointer">
-                    <svg appIcon="rotate-ccw" class="w-3.5 h-3.5"></svg><span>اصلاح</span>
-                  </button>
+                    appAction="return"
+                    size="sm"
+                    display="label"
+                    label="اصلاح"
+                    (click)="openRejectModal(v.id, v.plate_number, 'vehicle', 'revision')"></button>
                   <button
                     *ngIf="v.id"
                     type="button"
-                    (click)="openRejectModal(v.id, v.plate_number, 'vehicle', 'reject')"
-                    class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition-all cursor-pointer">
-                    <svg appIcon="x" class="w-3.5 h-3.5"></svg><span>رد</span>
-                  </button>
+                    appAction="reject"
+                    size="sm"
+                    display="label"
+                    label="رد"
+                    (click)="openRejectModal(v.id, v.plate_number, 'vehicle', 'reject')"></button>
                 </div>
               </td>
             </tr>
@@ -278,26 +236,29 @@
               <td class="p-3">
                 <button
                   type="button"
-                  (click)="openDiffModal(cr)"
-                  class="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md font-bold text-[11px] cursor-pointer">
-                  <span class="inline-flex items-center gap-1"><svg appIcon="search" class="w-3 h-3"></svg><span>مشاهده مغایرت و تفاوت‌ها</span></span>
-                </button>
+                  appAction="view"
+                  size="sm"
+                  display="label"
+                  label="مقایسه"
+                  (click)="openDiffModal(cr)"></button>
               </td>
               <td class="p-3 font-mono text-fg-muted">{{ cr.created_at | date:'yyyy/MM/dd' }}</td>
               <td class="p-3">
                 <div class="flex items-center justify-center gap-1.5">
                   <button
                     type="button"
-                    (click)="openApproveModal('changes', cr)"
-                    class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold transition-all cursor-pointer">
-                    <svg appIcon="check" class="w-3.5 h-3.5"></svg><span>تصویب تغییرات</span>
-                  </button>
+                    appAction="approve"
+                    size="sm"
+                    display="label"
+                    label="تصویب تغییرات"
+                    (click)="openApproveModal('changes', cr)"></button>
                   <button
                     type="button"
-                    (click)="openRejectModal(cr.id, cr.plate_number || 'درخواست', 'vehicle_cr', 'reject')"
-                    class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition-all cursor-pointer">
-                    <svg appIcon="x" class="w-3.5 h-3.5"></svg><span>رد</span>
-                  </button>
+                    appAction="reject"
+                    size="sm"
+                    display="label"
+                    label="رد"
+                    (click)="openRejectModal(cr.id, cr.plate_number || 'درخواست', 'vehicle_cr', 'reject')"></button>
                 </div>
               </td>
             </tr>
@@ -359,23 +320,21 @@
                   <button
                     *ngIf="v.approval_status === 'approved' && v.is_active && canEndCollaboration"
                     type="button"
-                    (click)="openEndCollaborationModal(v)"
-                    class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                    title="ثبت قطع همکاری و تاریخ پایان تردد">
-                    <svg appIcon="clock" class="w-3.5 h-3.5"></svg>
-                    <span>قطع همکاری</span>
-                  </button>
+                    appAction="terminate"
+                    size="sm"
+                    display="label"
+                    label="قطع همکاری"
+                    (click)="openEndCollaborationModal(v)"></button>
 
                   <!-- دکمه حذف بی‌سابقه برای کاربران دارای مجوز اختصاصی -->
                   <button
                     *ngIf="canDeleteVehicle"
                     type="button"
-                    (click)="openDeleteModal(v)"
-                    class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                    title="حذف پرونده خودروی فاقد سابقه">
-                    <svg appIcon="trash-2" class="w-3.5 h-3.5"></svg>
-                    <span>حذف بی‌سابقه</span>
-                  </button>
+                    appAction="delete"
+                    size="sm"
+                    display="label"
+                    label="حذف بی‌سابقه"
+                    (click)="openDeleteModal(v)"></button>
                 </div>
               </td>
             </tr>
@@ -390,7 +349,11 @@
     <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-line-subtle pb-3">
         <h3 class="text-sm font-black text-fg">{{ approvalTarget?.title }}</h3>
-        <button (click)="closeApproveModal()" class="text-fg-subtle hover:text-fg cursor-pointer p-1" title="بستن" aria-label="بستن"><svg appIcon="x" class="w-4 h-4"></svg></button>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeApproveModal()"></button>
       </div>
 
       <!-- ویجت تحلیل بار مالی ماهانه سروری خودرو (تسک ۱۰.۱) -->
@@ -469,18 +432,18 @@
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-line-subtle">
         <button
           type="button"
-          (click)="closeApproveModal()"
-          class="px-4 py-2 bg-surface-muted hover:bg-surface text-fg/80 rounded-xl text-xs font-bold transition-all cursor-pointer">
-          انصراف
-        </button>
+          appAction="close"
+          label="انصراف"
+          display="label"
+          (click)="closeApproveModal()"></button>
         <button
           type="button"
-          (click)="submitApproval()"
+          appAction="approve"
+          label="تایید و تصویب نهایی"
+          [busy]="isApproving"
           [disabled]="isApproving"
-          class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer">
-          <svg *ngIf="isApproving" appIcon="refresh-cw" class="w-4 h-4 animate-spin"></svg>
-          <span>تایید و تصویب نهایی</span>
-        </button>
+          display="label"
+          (click)="submitApproval()"></button>
       </div>
     </div>
   </div>
@@ -492,7 +455,11 @@
         <h3 class="text-sm font-black text-rose-700">
           تصمیم‌گیری عدم تصویب: {{ rejectTarget?.title }}
         </h3>
-        <button (click)="closeRejectModal()" class="text-fg-subtle hover:text-fg cursor-pointer p-1" title="بستن" aria-label="بستن"><svg appIcon="x" class="w-4 h-4"></svg></button>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeRejectModal()"></button>
       </div>
 
       <div class="space-y-3">
@@ -526,18 +493,18 @@
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-line-subtle">
         <button
           type="button"
-          (click)="closeRejectModal()"
-          class="px-4 py-2 bg-surface-muted hover:bg-surface text-fg/80 rounded-xl text-xs font-bold transition-all cursor-pointer">
-          انصراف
-        </button>
+          appAction="close"
+          label="انصراف"
+          display="label"
+          (click)="closeRejectModal()"></button>
         <button
           type="button"
-          (click)="submitReject()"
+          [appAction]="rejectActionType === 'reject_final' ? 'reject' : 'return'"
+          [label]="rejectActionType === 'reject_final' ? 'رد قطعی' : 'عودت به حسابدار'"
+          [busy]="isSubmittingReject"
           [disabled]="isSubmittingReject || !rejectReason.trim()"
-          class="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-500/20 transition-all flex items-center gap-1.5 cursor-pointer">
-          <svg *ngIf="isSubmittingReject" appIcon="refresh-cw" class="w-4 h-4 animate-spin"></svg>
-          <span>ثبت اقدام مدیریت</span>
-        </button>
+          display="label"
+          (click)="submitReject()"></button>
       </div>
     </div>
   </div>
@@ -549,7 +516,11 @@
         <h3 class="text-sm font-black text-fg">
           مقایسه تفاوت‌های درخواست خودرو: {{ selectedDiffCR?.plate_number }}
         </h3>
-        <button (click)="closeDiffModal()" class="text-fg-subtle hover:text-fg cursor-pointer p-1" title="بستن" aria-label="بستن"><svg appIcon="x" class="w-4 h-4"></svg></button>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeDiffModal()"></button>
       </div>
 
       <div class="max-h-80 overflow-y-auto">
@@ -574,10 +545,10 @@
       <div class="flex justify-end pt-2 border-t border-line-subtle">
         <button
           type="button"
-          (click)="closeDiffModal()"
-          class="px-5 py-2 bg-surface-muted hover:bg-surface text-fg/80 rounded-xl text-xs font-bold transition-all cursor-pointer">
-          بستن
-        </button>
+          appAction="close"
+          label="بستن"
+          display="label"
+          (click)="closeDiffModal()"></button>
       </div>
     </div>
   </div>
@@ -590,7 +561,11 @@
           <svg appIcon="clock" class="w-4 h-4"></svg>
           قطع همکاری ناوگان: {{ endCollaborationTarget?.plate_number }}
         </h3>
-        <button (click)="closeEndCollaborationModal()" class="text-fg-subtle hover:text-fg cursor-pointer p-1" title="بستن" aria-label="بستن"><svg appIcon="x" class="w-4 h-4"></svg></button>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeEndCollaborationModal()"></button>
       </div>
 
       <div class="space-y-3">
@@ -621,18 +596,18 @@
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-line-subtle">
         <button
           type="button"
-          (click)="closeEndCollaborationModal()"
-          class="px-4 py-2 bg-surface-muted hover:bg-surface text-fg/80 rounded-xl text-xs font-bold transition-all cursor-pointer">
-          انصراف
-        </button>
+          appAction="close"
+          label="انصراف"
+          display="label"
+          (click)="closeEndCollaborationModal()"></button>
         <button
           type="button"
-          (click)="submitEndCollaboration()"
+          appAction="terminate"
+          label="ثبت قطع همکاری"
+          [busy]="isEndingCollaboration"
           [disabled]="isEndingCollaboration || !endCollaborationDate.trim() || !endCollaborationReason.trim()"
-          class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 transition-all flex items-center gap-1.5 cursor-pointer">
-          <svg *ngIf="isEndingCollaboration" appIcon="refresh-cw" class="w-4 h-4 animate-spin"></svg>
-          <span>ثبت قطع همکاری</span>
-        </button>
+          display="label"
+          (click)="submitEndCollaboration()"></button>
       </div>
     </div>
   </div>
@@ -655,7 +630,11 @@
         <h3 class="text-sm font-black text-rose-950 flex items-center gap-1.5">
           <svg appIcon="trash-2" class="w-4 h-4 text-rose-600"></svg> حذف پرونده خودرو: {{ deleteTargetVehicle?.plate_number }} ({{ deleteTargetVehicle?.driver_name || 'بدون راننده' }})
         </h3>
-        <button (click)="closeDeleteModal()" class="text-fg-subtle hover:text-fg cursor-pointer p-1" title="بستن" aria-label="بستن"><svg appIcon="x" class="w-4 h-4"></svg></button>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeDeleteModal()"></button>
       </div>
 
       <div class="p-4 space-y-3">
@@ -679,10 +658,11 @@
             <button
               *ngIf="deleteImpactHistory.has_history && canEndCollaboration && deleteTargetVehicle?.approval_status === 'approved' && deleteTargetVehicle?.is_active !== false"
               type="button"
-              (click)="openEndCollaborationModal(deleteTargetVehicle!); closeDeleteModal()"
-              class="min-h-[40px] px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black cursor-pointer">
-              ثبت قطع همکاری
-            </button>
+              appAction="terminate"
+              size="sm"
+              display="label"
+              label="ثبت قطع همکاری"
+              (click)="openEndCollaborationModal(deleteTargetVehicle!); closeDeleteModal()"></button>
           </div>
 
           <!-- در صورت عدم وجود هرگونه سابقه (حذف مجاز) -->
@@ -702,16 +682,19 @@
 
       <div class="p-3 bg-surface-alt border-t border-line flex justify-end gap-2">
         <button
-          (click)="closeDeleteModal()"
-          class="px-3 py-1.5 rounded-xl border border-line text-xs font-bold text-muted hover:bg-surface cursor-pointer">
-          انصراف
-        </button>
+          type="button"
+          appAction="close"
+          label="انصراف"
+          display="label"
+          (click)="closeDeleteModal()"></button>
         <button
-          (click)="confirmDeleteVehicle()"
+          type="button"
+          appAction="delete"
+          label="حذف دائم پرونده"
+          [busy]="isDeletingVehicle"
           [disabled]="deleteImpactLoading || !deleteImpactHistory?.can_delete || isDeletingVehicle"
-          class="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-black shadow-xs cursor-pointer">
-          {{ isDeletingVehicle ? 'در حال حذف...' : 'حذف دائم پرونده' }}
-        </button>
+          display="label"
+          (click)="confirmDeleteVehicle()"></button>
       </div>
     </div>
   </div>
