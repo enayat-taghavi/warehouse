@@ -9,6 +9,9 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection } from '../../../../core/models/personnel.model';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonDirective } from '../../../../shared/components/action-button/action-button.directive';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export interface LaborCostReportRow {
   section_name: string;
@@ -34,12 +37,17 @@ export interface FleetReportRow {
 @Component({
   selector: 'app-manager-reports-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, TabBarComponent, ActionButtonDirective],
   templateUrl: './manager-reports.html',
   styleUrl: './manager-reports.css'
 })
 export class ManagerReportsComponent implements OnInit, OnDestroy {
   activeSubTab: 'labor_costs' | 'fleet_efficiency' | 'quarterly_trends' = 'labor_costs';
+
+  reportTabs: TabDef[] = [
+    { id: 'labor_costs', label: 'بهای تمام‌شده نیروی انسانی', shortLabel: 'پرسنل', icon: ACCOUNTING_ENTITY_ICONS.personnel },
+    { id: 'fleet_efficiency', label: 'بهره‌وری و مصارف ناوگان', shortLabel: 'ناوگان', icon: ACCOUNTING_ENTITY_ICONS.fleet }
+  ];
 
   // Section Isolation
   mySections: ProjectSection[] = [];
@@ -197,9 +205,11 @@ export class ManagerReportsComponent implements OnInit, OnDestroy {
     this.syncUrlParams();
   }
 
-  switchSubTab(tab: 'labor_costs' | 'fleet_efficiency' | 'quarterly_trends'): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
+  switchSubTab(tab: string): void {
+    if (tab === 'labor_costs' || tab === 'fleet_efficiency') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+    }
   }
 
   syncUrlParams(): void {
