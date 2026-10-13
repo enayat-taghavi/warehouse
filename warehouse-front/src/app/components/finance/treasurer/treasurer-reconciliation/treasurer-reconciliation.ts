@@ -6,7 +6,11 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
-import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
+import { PLATFORM_ENTITY_ICONS } from '../../../../shared/icons/semantic-icons';
 
 export interface ReconciliationItem {
   id: number;
@@ -31,12 +35,46 @@ export interface CashFlowDay {
 @Component({
   selector: 'app-treasurer-reconciliation-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    TabBarComponent,
+    ActionButtonComponent,
+    CommandCenterComponent
+  ],
   templateUrl: './treasurer-reconciliation.html',
   styleUrl: './treasurer-reconciliation.css'
 })
 export class TreasurerReconciliationComponent implements OnInit, OnDestroy {
   activeSubTab: 'bank_reconciliation' | 'cash_flow_forecast' = 'bank_reconciliation';
+
+  private tabsKey = '';
+  private tabsCache: TabDef[] = [];
+
+  get tabs(): TabDef[] {
+    const key = `${this.unmatchedCount}`;
+    if (key === this.tabsKey) {
+      return this.tabsCache;
+    }
+    this.tabsKey = key;
+    this.tabsCache = [
+      {
+        id: 'bank_reconciliation',
+        label: 'مغایرت‌گیری صورتحساب',
+        shortLabel: 'مغایرت',
+        icon: ACCOUNTING_ENTITY_ICONS.reconciliation,
+        count: this.unmatchedCount
+      },
+      {
+        id: 'cash_flow_forecast',
+        label: 'تقویم جریان نقدینگی',
+        shortLabel: 'نقدینگی',
+        icon: PLATFORM_ENTITY_ICONS.reports
+      }
+    ];
+    return this.tabsCache;
+  }
 
   isLoading = false;
   selectedBank = 'ملت';
@@ -106,8 +144,10 @@ export class TreasurerReconciliationComponent implements OnInit, OnDestroy {
   ngOnInit(): void {}
   ngOnDestroy(): void {}
 
-  switchSubTab(tab: 'bank_reconciliation' | 'cash_flow_forecast'): void {
-    this.activeSubTab = tab;
+  switchSubTab(tab: string): void {
+    if (tab === 'bank_reconciliation' || tab === 'cash_flow_forecast') {
+      this.activeSubTab = tab;
+    }
   }
 
   autoMatch(): void {
