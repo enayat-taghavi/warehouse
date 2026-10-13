@@ -116,10 +116,10 @@
   - [x] معیار پایان گام
 
 - [ ] **گام ۱۰: حسابداری**
-  - [ ] **۴.۱ حقوق و دستمزد (`accountant-payroll.html`)**
+  - [x] **۴.۱ حقوق و دستمزد (`accountant-payroll.html`)**
   - [ ] **۴.۲ ناوگان حسابدار (`accountant-fleet.html`)**
   - [ ] **۴.۳ پرسنل حسابدار (`accountant-personnel.html`)**
-  - [ ] **۴.۴ فاکتورهای حسابدار (`accountant-invoices.html`)**
+  - [x] **۴.۴ فاکتورهای حسابدار (`accountant-invoices.html`)**
   - [ ] **۴.۵ رسیدگی تنخواه (`accountant-petty-cash.html`)**
   - [ ] **۴.۶ دیسکت‌های بیمه و مالیات (`accountant-diskettes.html`)**
   - [ ] **۴.۷ طرف‌های حساب (`counterparties.html`):** ساختار شبا دست نخورد

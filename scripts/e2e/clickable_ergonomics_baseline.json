@@ -1,9 +1,9 @@
 {
   "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
   "counters": {
-    "rule_1_unlabeled_icon_buttons": 134,
+    "rule_1_unlabeled_icon_buttons": 132,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 148,
+    "rule_3_non_standard_actions": 145,
     "rule_4_retired_icons": 64,
     "rule_5_neutralized_tap_targets": 0
   },
@@ -259,12 +259,6 @@
         "icon": "refresh-cw"
       },
       {
-        "file": "components/finance/accountant/accountant-invoices/accountant-invoices.html",
-        "line": 167,
-        "method": "rejectDocument",
-        "icon": null
-      },
-      {
         "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
         "line": 182,
         "method": "approvePersonnelFinance",
@@ -310,6 +304,12 @@
         "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
         "line": 361,
         "method": "approveChangeRequestFinance",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
+        "line": 678,
+        "method": "closeRejectModal",
         "icon": null
       }
     ],
