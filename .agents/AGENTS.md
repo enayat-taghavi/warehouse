@@ -85,6 +85,13 @@
   3) **Touch Target Ergonomics (WCAG 2.2):** Icon-only buttons on mobile must maintain a minimum physical touch target of 40×40px to 44×44px (`w-10 h-10`, or `w-9 h-9` / `btn-icon-square` plus `min-w-[40px] min-h-[40px]`; note `w-9 h-9` alone is only 36px), preventing fat-finger misclicks.
   4) **Accessibility & Semantic Labels:** Every icon-only button must provide an explicit, descriptive Persian `title` and `aria-label` for screen readers and touch tooltips.
   5) **Icon Registry Compliance:** All icons must strictly utilize `<svg appIcon="...">` paired with `SvgIconDirective` and registered in `icon-registry.ts` (Guardian 52 compliance).
+- **Shared Ergonomics Toolkit Defaults (Default Standard):** All clickable UI and navigation across `warehouse-front` must strictly use the modular shared toolkit as the primary and default pattern:
+  1) **Button Directive (`button[appAction]`):** Uses catalog action keys (`create`, `edit`, `delete`, `refresh`, `export-excel`, `import-excel`, `save`, `approve`, `reject`, `return`, `restore`, `confirm`, `close`, `send`, `print`, `copy`, `view`, `hide`, `search`, `filter`, `more`, `camera`, `scan`, `loading`, `lock`, `unlock`, `history`, `sync`, `settings`, `back`, `forward`, `expand`, `collapse`, `logout`, and `terminate` for ending collaboration/employment). Destructive/sensitive actions (`terminate`, `delete`, `reject`, `restore`, `lock`, `unlock`) MUST stay labeled. Unfamiliar actions in mobile must explicitly specify `display="label"`.
+  2) **Tab Bar Component (`app-tab-bar`):** Handles `role="tablist"`, RTL keyboard navigation, and `(activeChange)`. Dynamic getter returning a fresh array (`get tabs(): TabDef[]`) is strictly forbidden (causes NG0100 in dev mode); use `readonly tabs: TabDef[]` or keyed caching. 1–3 tabs use `mobile="short"`; 4+ tabs use `mobile="icon"`.
+  3) **Overflow Menu (`app-overflow-menu`):** Wraps actions that exceed 360px mobile width budget; displays inline on desktop (`display: contents`) and renders an ergonomic popover with full Persian labels on mobile (`more-vertical` icon).
+  4) **Sticky Command Center (`app-command-center`):** Unified header with `[cc-tabs]` (right) and `[cc-actions]` (left) utilizing `flex-wrap gap-2` to guarantee Zero-Scroll on 360px mobile viewports.
+  5) **Semantic Icon Dictionaries:** All icons must originate from semantic dictionaries (`ACTION_ICONS`, `STATUS_ICONS`, `ROLE_ICONS`, `PLATFORM_ENTITY_ICONS`, `ACCOUNTING_ENTITY_ICONS`, `WAREHOUSE_ENTITY_ICONS`). Raw registry names are forbidden for concepts with dictionary keys.
+  6) **Mobile Width Budget Invariants (Plan §9-3):** Available width in 360px viewports: `cc-tabs` and `cc-actions` each max 309px; mobile cards (`p-3.5` or `p-4`) 302–306px; modal footers 280–302px. Button dimensions: icon-only = 40px, labeled button `md` = 46px + ~5.5px/char, `size="sm"` = 40px + ~5.5px/char, `gap-2` = 8px. Button titles must not exceed 3 words. Keyless actions (calculation, presets) remain native `<button type="button">` with `.tap-target` and Persian `aria-label`/`title` without inventing dummy action keys.
 ### 8. Environment Roles, Deployment & Guardian Integrity Standards
 - **Environment Roles (`app` vs `soft`):**
   - **`app.farsalish.ir` (Local Windows Machine):** Hosts personal test/staging environment behind Cloudflare tunnel (`cloudflared`). Daphne on 0.0.0.0:8000, Express on 4200 serving `warehouse-front/dist/`, PostgreSQL on 5432 with test data. Has NO real users; used for user testing and validation. Frontend builds or restarts here do not impact real production users.
@@ -117,6 +124,15 @@
 - **Local Typography & Zero-External-CDN Invariant:** Typography relies exclusively on local Vazirmatn font hosted in `public/fonts/vazirmatn/` and prefetched via Service Worker (`ngsw-config.json`). External font CDNs (Google Fonts, unpkg, etc.) are strictly forbidden to guarantee 100% offline continuity.
 - **Predictable Dark Mode Policy:** Tailwind `darkMode` is set strictly to `'selector'`. Operating system level dark mode (`media` query) must NEVER auto-trigger dark styles on partial layouts. Dark styling must strictly use semantic surface tokens (`bg-surface`, `text-fg`, `border-line`).
 - **Image Optimization & Accessibility:** Dynamic server images in fixed-dimension containers must use Angular `NgOptimizedImage` (`[ngSrc]`) with explicit `width` and `height`. Print templates (ID cards) and blob/data previews must remain plain `src`. Every `<img>` must feature a descriptive Persian `alt` or `alt=""` for decorative images.
+- **Semantic Icon Dictionaries & Anti-Patterns (Plan §9-2 & §9-3 Defaults):**
+  1) **Semantic Dictionaries as Default:** All icons must use semantic dictionaries: `STATUS_ICONS` (`status-*`), `ACTION_ICONS` (`action-*`), `ROLE_ICONS` (`role-*`), `PLATFORM_ENTITY_ICONS`, and `ACCOUNTING_ENTITY_ICONS` / `WAREHOUSE_ENTITY_ICONS`. Direct use of retired variants or ad-hoc registry names for mapped concepts is prohibited (Guardian 55).
+  2) **Anti-Patterns & Enforcement Rules (Plan §9-2):**
+     - *No dynamic tab getters:* `get tabs(): TabDef[]` returning fresh arrays triggers Angular NG0100. Always use `readonly` properties or keyed cache.
+     - *Return vs Reject:* Use `appAction="return"` for workflow revision / return for correction (عودت برای اصلاح); use `appAction="reject"` strictly for permanent rejection or revocation.
+     - *Visible labels on mobile:* Unfamiliar actions (approve, return, view, send, lock, pay) and modal footers must use `display="label"`.
+     - *No static `title` on `button[appAction]`:* The directive automatically derives `title` and `aria-label` from `label`.
+     - *Modal invocation order:* When closing a modal and opening another with the same state, invoke the opener first before resetting selected items to `null`.
+
 
 ### 10. Runner Sessions & Lessons (`run_tasks.py`)
 A runner session is a conversation started by `run_tasks.py` with one task from `tasks.md`.

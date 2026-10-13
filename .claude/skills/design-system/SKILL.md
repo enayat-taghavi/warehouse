@@ -60,6 +60,20 @@ Semantic tokens (new code should use these):
 - **Touch size on mobile:** icon-only buttons must not shrink; at least 40×40 to 44×44 px (`w-10 h-10`, or `w-9 h-9` / `btn-icon-square` plus `min-w-[40px] min-h-[40px]`; `w-9 h-9` alone is only 36px).
 - **Icon-button accessibility:** every button without text needs a Persian `aria-label` and `title`.
 
+## Shared Ergonomics Toolkit (Default UI Standard)
+All clickable UI and navigation across `warehouse-front` must strictly use the modular shared toolkit as the primary and default pattern:
+- **`button[appAction]`:** Default button directive. Uses catalog action keys (`create`, `edit`, `delete`, `refresh`, `export-excel`, `import-excel`, `save`, `approve`, `reject`, `return`, `restore`, `confirm`, `close`, `send`, `print`, `copy`, `view`, `hide`, `search`, `filter`, `more`, `camera`, `scan`, `loading`, `lock`, `unlock`, `history`, `sync`, `settings`, `back`, `forward`, `expand`, `collapse`, `logout`, and `terminate` for ending collaboration/employment). Sensitive actions (`terminate`, `delete`, `reject`, `restore`, `lock`, `unlock`) always stay labeled. Unfamiliar actions in mobile use `display="label"`. Do not add static `title="..."` (the directive creates it from `label`).
+- **`app-tab-bar`:** Default tab bar component (`role="tablist"`, RTL arrow keys, `activeChange` output). Never use a getter returning a new array `get tabs(): TabDef[]` (NG0100 in dev mode); use `readonly tabs: TabDef[]` or a keyed cache (`xKey` / `xCache`). 1–3 tabs use `mobile="short"`; 4+ tabs use `mobile="icon"`.
+- **`app-overflow-menu`:** Default overflow wrapper for actions exceeding mobile width budget. Renders inline on desktop (`display: contents`) and in an ergonomic popover with `more-vertical` icon on mobile.
+- **`app-command-center`:** Default sticky page command center header with `[cc-tabs]` (right) and `[cc-actions]` (left), utilizing `flex-wrap` and Zero-Scroll in mobile.
+- **Semantic Icon Dictionaries:** Default icon sources (`ACTION_ICONS`, `STATUS_ICONS`, `ROLE_ICONS`, `PLATFORM_ENTITY_ICONS`, `ACCOUNTING_ENTITY_ICONS`, `WAREHOUSE_ENTITY_ICONS`). Raw registry names are forbidden for mapped concepts.
+- **Rules & Width Budget (Plan §9-2 & §9-3):**
+  - Distinguish `return` (عودت برای اصلاح) vs `reject` (رد قطعی).
+  - Max 3 words for button titles.
+  - Keyless actions (e.g. calculation, presets) remain native `<button type="button">` with `.tap-target` and Persian `aria-label`/`title`.
+  - 360px budget: mobile tabs/actions max 309px, cards 302–306px, modal footers 280–302px.
+
+
 ## Icons
 - Only from the shared registry: `<svg appIcon="trash-2" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>`
 - Directive: `shared/icons/svg-icon.directive.ts` (`SvgIconDirective` in the component's `imports`). Registry: `shared/icons/icon-registry.ts`.
