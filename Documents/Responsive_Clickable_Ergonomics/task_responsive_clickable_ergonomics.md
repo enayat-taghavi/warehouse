@@ -144,7 +144,7 @@
   - [x] **۴.۱۵ قراردادها و احکام (`manager-contracts.html`)**
   - [x] **۴.۱۶ گزارش‌های مدیر (`manager-reports.html`)**
   - [x] **۴.۱۷ کارتابل تاییدات (`manager-approvals.html`):** `unlock` و `send` دوره حساس
-  - [ ] **۴.۲۳ ناوگان مدیر (`manager-fleet.html`):** حذف و پایان همکاری حساس
+  - [x] **۴.۲۳ ناوگان مدیر (`manager-fleet.html`):** حذف و پایان همکاری حساس
   - [ ] **۴.۲۴ پرسنل مدیر (`manager-personnel.html`):** حذف و پایان همکاری حساس
   - [ ] معیار پایان گام
 
