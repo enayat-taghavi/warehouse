@@ -4,7 +4,7 @@
 اجراکننده عمومی و ترتیبی تسک‌ها در نشست‌های مستقل Antigravity
 Generic sequential Antigravity task runner.
 
-صف (پیش‌فرض):   python run_tasks.py [--tasks FILE] [--resume CONVERSATION_ID --base HASH]
+صف (پیش‌فرض):   python run_tasks.py [--tasks FILE] [--resume CONVERSATION_ID --base HASH [--nudge [FILE]]]
 گفتگو:          python run_tasks.py ask (--new | --conversation ID) --message-file FILE [--model ID] [--out FILE]
 
 تسک‌ها با خطی از === جدا می‌شوند. هر تسک می‌تواند دستورهای اجراکننده را در یک کامنت HTML داشته باشد
@@ -17,6 +17,7 @@ Generic sequential Antigravity task runner.
 
 {base} در فرمان‌ها با hash کوتاه HEAD درست پیش از شروع تسک جای‌گذاری می‌شود.
 اگر verify شکست خورد، خروجی‌اش در همان نشست برای ایجنت فرستاده می‌شود (حداکثر MAX_FIX_ROUNDS بار) و بعد صف می‌ایستد.
+اگر خطای سرویس مدل یا راه‌اندازی دوباره سرور زبانی Antigravity نوبت ایجنت را برید، پیام ادامه در همان نشست فرستاده می‌شود.
 برچسب [DONE] را فقط خود اجراکننده روی خط عنوان تسک می‌گذارد.
 """
 
@@ -75,9 +76,23 @@ DB_FINISHED_STATUSES = (3, 6, 7)
 # رها می‌کند (چت توافق ۱۴۰۵/۰۷/۲۱: سه خطا پشت هم و پاسخ نهایی ساخته نشد). اگر پس از این مقدار سکوت آخرین گام ایجنت
 # خطا یا پاسخ خالی بود، نوبت با خطا تمام شده است و اجراکننده با RESUME_MESSAGE آن را در همان چت از سر می‌گیرد.
 ERROR_QUIET_SECONDS = 90
-MAX_ERROR_RESUMES = 3
 RESUME_MESSAGE = ("[RUNNER] Your previous turn stopped because of a model service error, not because of your work. "
                   "Continue exactly where you stopped, finish the same task or answer, and end your turn.")
+
+# راه‌اندازی دوباره سرور زبانی (نشست ۱۳ صف ارگونومی، ۱۴۰۵/۰۷/۲۱): سرور تازه چند ثانیه تا چند دقیقه بعد پاسخ‌گو می‌شود،
+# نوبت ایجنت وسط کار (پس از یک گام ابزار) بریده می‌ماند و فرمان‌های پس‌زمینه متوقف می‌شوند و پایانشان هرگز نمی‌آید.
+# Antigravity خودش ادامه نداد؛ اگر تا RESTART_QUIET_SECONDS پس از وصل شدن دوباره ایجنت گامی ننوشت، نوبت بریده است
+# و اجراکننده با RESTART_RESUME_MESSAGE آن را در همان چت از سر می‌گیرد.
+LS_RESTART_WAIT_SECONDS = 5 * 60
+LS_RESTART_POLL_SECONDS = 5
+RESTART_QUIET_SECONDS = 60
+RESTART_RESUME_MESSAGE = (
+    "[RUNNER] Antigravity restarted its language server and cut your previous turn, not because of your work. "
+    "Your edits so far are still in the working tree, but background commands you started were stopped. "
+    "Check git status, re-read the files you were editing, re-run any command whose result you still need, "
+    "continue exactly where you stopped, finish the same task or answer, and end your turn.")
+# سقف پیام‌های ادامه در یک تسک یا گفتگو (خطای سرویس و راه‌اندازی دوباره با هم).
+MAX_RESUMES = 3
 
 MAX_FIX_ROUNDS = 2
 COMMAND_TIMEOUT_SECONDS = 30 * 60
@@ -380,6 +395,16 @@ def discover_language_server() -> dict | None:
     return None
 
 
+def wait_for_language_server(timeout: float) -> dict | None:
+    """پس از ایستادن سرور زبانی، تا timeout ثانیه منتظر سرور تازه می‌ماند؛ None یعنی برنگشت."""
+    deadline = time.time() + timeout
+    while True:
+        time.sleep(LS_RESTART_POLL_SECONDS)
+        ls_info = discover_language_server()
+        if ls_info or time.time() >= deadline:
+            return ls_info
+
+
 def ls_post(ls_info: dict, method: str, payload: dict, timeout: float = 8):
     return requests.post(
         f"http://127.0.0.1:{ls_info['port']}/{LS_SERVICE}/{method}",
@@ -579,12 +604,14 @@ def report_step(idx: int, step_type: str, status: str, tool_calls: list, content
 
 
 def monitor_conversation(ls_info: dict, conv_id: str, after_index: int = -1,
-                         stability: int | None = None) -> tuple[bool, int, str, str, bool]:
+                         stability: int | None = None) -> tuple[bool, int, str, str, str]:
     """
     رهگیری زنده نشست تا پایان نوبت ایجنت. فقط گام‌هایی با step_index بزرگ‌تر از after_index شمرده می‌شوند،
     پس پس از پیام اصلاحی، پاسخ قبلی ایجنت پایان حساب نمی‌شود.
-    خروجی: (پایان‌یافته، تعداد گام‌ها، آخرین پاسخ ایجنت، علت رها کردن، نوبت با خطای سرویس تمام شد)
-    پایان‌نیافته یعنی رهگیری رها شد (خطای سرویس، گیر کردن یا از دست رفتن سرور زبانی) و نشست شاید هنوز در حال اجراست.
+    خروجی: (پایان‌یافته، تعداد گام‌ها، آخرین پاسخ ایجنت، علت رها کردن، پیام ادامه)
+    پایان‌نیافته یعنی رهگیری رها شد (خطای سرویس، راه‌اندازی دوباره یا از دست رفتن سرور زبانی، گیر کردن)
+    و نشست شاید هنوز در حال اجراست. پیام ادامه ناتهی یعنی نوبت بریده شد و با فرستادن همین پیام در همان چت
+    از سر گرفته می‌شود.
     پاسخ خالی پایان نوبت نیست؛ Antigravity پس از خطای سرویس پاسخ خالی می‌نویسد.
     """
     if stability is None:
@@ -606,6 +633,9 @@ def monitor_conversation(ls_info: dict, conv_id: str, after_index: int = -1,
     last_type, last_status, last_tools, last_text, last_reply, last_error = "", "", False, False, "", ""
     last_reply_idx = -1
     background = set()
+    # max_idx هنگام وصل شدن به سرور زبانیِ دوباره راه‌افتاده؛ None یعنی راه‌اندازی دوباره‌ای نبوده
+    # یا ایجنت پس از آن خودش گام تازه نوشته است.
+    restart_idx, restart_background = None, False
     signature = None
     waiting_logged = False
     db_warning_logged = False
@@ -614,21 +644,6 @@ def monitor_conversation(ls_info: dict, conv_id: str, after_index: int = -1,
 
     while True:
         time.sleep(1.2)
-
-        # پایش سلامت پروسه سرور زبانی (تشخیص ریستارت یا کرش)
-        if ls_proc and not ls_proc.is_running():
-            log(f"Language server PID={ls_info.get('pid')} stopped or restarted.")
-            time.sleep(3)
-            new_ls = discover_language_server()
-            if not new_ls:
-                return False, max_idx + 1, last_reply, "the Antigravity language server stopped", False
-            log(f"Reconnected to language server PID={new_ls['pid']} port={new_ls['port']}.")
-            ls_info.clear()
-            ls_info.update(new_ls)
-            try:
-                ls_proc = psutil.Process(new_ls["pid"])
-            except Exception:
-                ls_proc = None
 
         try:
             st = path.stat()
@@ -660,6 +675,7 @@ def monitor_conversation(ls_info: dict, conv_id: str, after_index: int = -1,
                         background.discard(task_id)
                 if step_type in SYSTEM_STEP_TYPES:
                     continue
+                restart_idx = None
                 last_type, last_status, last_tools = step_type, step_status, bool(tool_calls)
                 last_text = bool(content.strip())
                 if step_type == "PLANNER_RESPONSE" and content:
@@ -669,12 +685,39 @@ def monitor_conversation(ls_info: dict, conv_id: str, after_index: int = -1,
                 elif step_type == "PLANNER_RESPONSE" and (last_text or last_tools):
                     last_error = ""
 
+        # پایش سلامت پروسه سرور زبانی (تشخیص ریستارت یا کرش)؛ پس از خواندن گام‌ها، تا گام‌های نوشته‌شده پیش از
+        # ایستادن آن، کار ایجنت پس از راه‌اندازی دوباره شمرده نشوند.
+        if ls_proc and not ls_proc.is_running():
+            log(f"Language server PID={ls_info.get('pid')} stopped or restarted; "
+                f"waiting up to {LS_RESTART_WAIT_SECONDS // 60} min for it to come back...")
+            new_ls = wait_for_language_server(LS_RESTART_WAIT_SECONDS)
+            if not new_ls:
+                return False, max_idx + 1, last_reply, "the Antigravity language server stopped", ""
+            log(f"Reconnected to language server PID={new_ls['pid']} port={new_ls['port']}.")
+            ls_info.clear()
+            ls_info.update(new_ls)
+            try:
+                ls_proc = psutil.Process(new_ls["pid"])
+            except Exception:
+                ls_proc = None
+            restart_idx, restart_background = max_idx, bool(background)
+            background.clear()
+            last_change = time.time()
+            waiting_logged = False
+            continue
+
         quiet = time.time() - last_change
         replied = last_type == "PLANNER_RESPONSE" and last_status == "DONE" and not last_tools and last_text
         # نوبتی که با خطای سرویس یا پاسخ خالی تمام شد؛ Antigravity گاهی تا چند ثانیه بعد خودش دوباره تلاش می‌کند.
         dead = last_type == "ERROR_MESSAGE" or (
             last_type == "PLANNER_RESPONSE" and last_status == "DONE" and not last_tools and not last_text)
-        if (replied and quiet >= stability) or (dead and quiet >= ERROR_QUIET_SECONDS):
+        # نوبتی که راه‌اندازی دوباره برید: پاسخ نهایی ندارد، یا پاسخش منتظر فرمان پس‌زمینه‌ای است که متوقف شد.
+        if restart_idx is not None and (restart_background or not replied):
+            if quiet >= RESTART_QUIET_SECONDS:
+                reason = "the Antigravity language server restarted and cut the agent's turn"
+                log(f"{reason}.")
+                return False, max_idx + 1, last_reply, reason, RESTART_RESUME_MESSAGE
+        elif (replied and quiet >= stability) or (dead and quiet >= ERROR_QUIET_SECONDS):
             unfinished = unfinished_db_steps(conv_id)
             if unfinished is None and not db_warning_logged:
                 log("WARNING: conversation database not readable; database running-step check skipped.")
@@ -684,16 +727,16 @@ def monitor_conversation(ls_info: dict, conv_id: str, after_index: int = -1,
                 if dead:
                     reason = f"agent turn ended with a model service error ({last_error or 'empty reply'})"
                     log(f"{reason}.")
-                    return False, max_idx + 1, last_reply, reason, True
+                    return False, max_idx + 1, last_reply, reason, RESUME_MESSAGE
                 log(f"Agent turn finished ({max_idx + 1} steps).")
-                return True, max_idx + 1, last_reply, "", False
+                return True, max_idx + 1, last_reply, "", ""
             if not waiting_logged:
                 log(f"Agent turn ended but {len(background)} background command(s) and "
                     f"{len(unfinished or [])} step(s) are still running; waiting...")
                 waiting_logged = True
 
         if quiet >= STALL_TIMEOUT_SECONDS:
-            return False, max_idx + 1, last_reply, f"no new step for {STALL_TIMEOUT_SECONDS // 60} minutes", False
+            return False, max_idx + 1, last_reply, f"no new step for {STALL_TIMEOUT_SECONDS // 60} minutes", ""
 
 
 # ---------------------------------------------------------------- queue
@@ -706,8 +749,9 @@ def open_run_log():
 
 def run_one_task(ls_info: dict, model_enum: str, tasks_path: Path, history: Path,
                  task_no: int, total: int, task: Task, resume: tuple | None = None) -> bool:
-    """resume=(شناسه چت، hash پایه): تسکِ صفِ ایستاده در همان چت ادامه می‌یابد؛ require و ساخت چت رد می‌شوند
-    و ترانسکریپت از آغاز بازخوانده می‌شود، پس اگر نوبت ایجنت تمام شده، مستقیم سراغ verify می‌رود."""
+    """resume=(شناسه چت، hash پایه، پیام ادامه): تسکِ صفِ ایستاده در همان چت ادامه می‌یابد؛ require و ساخت چت
+    رد می‌شوند. بی پیام ادامه، ترانسکریپت از آغاز بازخوانده می‌شود، پس اگر نوبت ایجنت تمام شده، مستقیم سراغ verify
+    می‌رود. با پیام ادامه (نوبت بریده‌ای که اجراکننده هنگامش در کار نبود)، نخست همان پیام در چت فرستاده می‌شود."""
     log("=" * 70)
     log(f"[Task {task_no}/{total}] {task.title[:100]}")
     log("=" * 70)
@@ -721,10 +765,10 @@ def run_one_task(ls_info: dict, model_enum: str, tasks_path: Path, history: Path
     record.checks = checks
 
     if resume:
-        conv_id, base = resume
+        conv_id, base, nudge = resume
         log(f"Resuming conversation {conv_id} with base commit {base}.")
         write_status("running", task=task_no, total=total, title=task.title, conversation=conv_id)
-        return continue_task(ls_info, model_enum, tasks_path, task_no, task, conv_id, base, record, started)
+        return continue_task(ls_info, model_enum, tasks_path, task_no, task, conv_id, base, record, started, nudge)
 
     if task.requires:
         log(f"Running {len(task.requires)} require command(s)...")
@@ -749,18 +793,26 @@ def run_one_task(ls_info: dict, model_enum: str, tasks_path: Path, history: Path
 
 
 def continue_task(ls_info: dict, model_enum: str, tasks_path: Path, task_no: int, task: Task,
-                  conv_id: str, base: str, record, started: float) -> bool:
-    """پایش نوبت ایجنت، از سرگیری پس از خطای سرویس، verify، دورهای اصلاح و گذاشتن [DONE]."""
+                  conv_id: str, base: str, record, started: float, nudge: str = "") -> bool:
+    """پایش نوبت ایجنت، از سرگیری نوبت بریده، verify، دورهای اصلاح و گذاشتن [DONE]."""
     checks = record.checks
     after_index, fix_round, resumes = -1, 0, 0
+    if nudge:
+        after_index = last_step_index(conv_id)
+        log("Sending the continue message to the resumed conversation...")
+        try:
+            send_message(ls_info, conv_id, nudge, model_enum)
+        except Exception as e:
+            record("STOPPED (could not send continue message)", conv_id, 0, "")
+            return stop_queue(f"task {task_no}: could not send the continue message: {e}", conversation=conv_id)
     while True:
-        finished, steps, reply, reason, errored = monitor_conversation(ls_info, conv_id, after_index)
-        if errored and resumes < MAX_ERROR_RESUMES:
+        finished, steps, reply, reason, resume_message = monitor_conversation(ls_info, conv_id, after_index)
+        if resume_message and resumes < MAX_RESUMES:
             resumes += 1
             after_index = last_step_index(conv_id)
-            log(f"Asking the agent to continue after the service error ({resumes}/{MAX_ERROR_RESUMES})...")
+            log(f"Asking the agent to continue ({reason}; {resumes}/{MAX_RESUMES})...")
             try:
-                send_message(ls_info, conv_id, RESUME_MESSAGE, model_enum)
+                send_message(ls_info, conv_id, resume_message, model_enum)
             except Exception as e:
                 record("STOPPED (could not send resume request)", conv_id, steps, reply)
                 return stop_queue(f"task {task_no}: could not send the resume request: {e}", conversation=conv_id)
@@ -879,14 +931,14 @@ def run_ask(args) -> int:
 
     resumes = 0
     while True:
-        finished, steps, reply, reason, errored = monitor_conversation(ls_info, conv_id, after_index,
-                                                                       CHAT_STABILITY_SECONDS)
-        if not errored or resumes >= MAX_ERROR_RESUMES:
+        finished, steps, reply, reason, resume_message = monitor_conversation(ls_info, conv_id, after_index,
+                                                                              CHAT_STABILITY_SECONDS)
+        if not resume_message or resumes >= MAX_RESUMES:
             break
         resumes += 1
         after_index = last_step_index(conv_id)
-        log(f"Asking the agent to continue after the service error ({resumes}/{MAX_ERROR_RESUMES})...")
-        send_message(ls_info, conv_id, RESUME_MESSAGE, model_enum)
+        log(f"Asking the agent to continue ({reason}; {resumes}/{MAX_RESUMES})...")
+        send_message(ls_info, conv_id, resume_message, model_enum)
     changed = git_snapshot() != before
 
     header = [f"CONVERSATION: {conv_id}", f"STATUS: {'finished' if finished else 'gave up: ' + reason}"]
@@ -906,6 +958,10 @@ def main(argv=None) -> int:
     parser.add_argument("--resume", metavar="CONVERSATION_ID",
                         help="continue the first pending task in this conversation (skips require; checks the turn, then verifies)")
     parser.add_argument("--base", help="base commit of the resumed task (required with --resume)")
+    parser.add_argument("--nudge", nargs="?", const="", metavar="FILE",
+                        help="with --resume: first send a continue message to the conversation, for a turn cut while "
+                             "the runner was not watching (default: the language-server restart message; "
+                             "FILE: a UTF-8 file with the message)")
     sub = parser.add_subparsers(dest="command")
     ask = sub.add_parser("ask", help="send one message to an Antigravity conversation and print the reply")
     target = ask.add_mutually_exclusive_group(required=True)
@@ -920,7 +976,16 @@ def main(argv=None) -> int:
         return run_ask(args)
     if args.resume and not args.base:
         parser.error("--resume needs --base (the commit the task started from)")
-    resume = (args.resume, args.base) if args.resume else None
+    if args.nudge is not None and not args.resume:
+        parser.error("--nudge works only with --resume")
+    nudge = ""
+    if args.nudge is not None:
+        nudge = RESTART_RESUME_MESSAGE
+        if args.nudge:
+            nudge = no_question_marks(Path(args.nudge).read_text(encoding="utf-8").strip())
+            if not nudge:
+                parser.error(f"--nudge file is empty: {args.nudge}")
+    resume = (args.resume, args.base, nudge) if args.resume else None
     return 0 if run_queue(Path(args.tasks).resolve(), resume) else 1
 
 
