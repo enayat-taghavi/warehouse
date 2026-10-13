@@ -9,16 +9,26 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection } from '../../../../core/models/personnel.model';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonDirective } from '../../../../shared/components/action-button/action-button.directive';
+import { PLATFORM_ENTITY_ICONS } from '../../../../shared/icons/semantic-icons';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 @Component({
   selector: 'app-manager-dashboard-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, TabBarComponent, ActionButtonDirective],
   templateUrl: './manager-dashboard.html',
   styleUrl: './manager-dashboard.css'
 })
 export class ManagerDashboardComponent implements OnInit, OnDestroy {
   activeSubTab: 'kpi_overview' | 'section_variance' | 'urgent_alerts' = 'kpi_overview';
+
+  dashboardTabs: TabDef[] = [
+    { id: 'kpi_overview', label: 'شاخص‌های کلان', shortLabel: 'شاخص‌ها', icon: PLATFORM_ENTITY_ICONS.reports },
+    { id: 'section_variance', label: 'انحراف بودجه بخش‌ها', shortLabel: 'انحراف', icon: ACCOUNTING_ENTITY_ICONS.budget },
+    { id: 'urgent_alerts', label: 'هشدارهای نیازمند اقدام', shortLabel: 'هشدارها', icon: 'status-alert', count: 3 }
+  ];
 
   // Section Isolation
   mySections: ProjectSection[] = [];
@@ -138,9 +148,11 @@ export class ManagerDashboardComponent implements OnInit, OnDestroy {
     this.syncUrlParams();
   }
 
-  switchSubTab(tab: 'kpi_overview' | 'section_variance' | 'urgent_alerts'): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
+  switchSubTab(tab: string): void {
+    if (tab === 'kpi_overview' || tab === 'section_variance' || tab === 'urgent_alerts') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+    }
   }
 
   syncUrlParams(): void {
