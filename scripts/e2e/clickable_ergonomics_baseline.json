@@ -3,8 +3,8 @@
   "counters": {
     "rule_1_unlabeled_icon_buttons": 112,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 112,
-    "rule_4_retired_icons": 56,
+    "rule_3_non_standard_actions": 109,
+    "rule_4_retired_icons": 53,
     "rule_5_neutralized_tap_targets": 0
   },
   "violations": {

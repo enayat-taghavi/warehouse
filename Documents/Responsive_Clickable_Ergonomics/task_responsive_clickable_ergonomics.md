@@ -129,9 +129,9 @@
 - [ ] **گام ۱۱: خزانه و سازمان**
   - [x] **۴.۸ پرداخت حقوق و ناوگان (`treasurer-disbursements.html`)**
   - [x] **۴.۹ تسویه فاکتورها (`treasurer-invoices.html`)**
-  - [ ] **۴.۱۰ حساب‌های بانکی (`treasurer-bank-accounts.html`)**
-  - [ ] **۴.۱۱ مدیریت چک‌ها (`treasurer-cheques.html`)**
-  - [ ] **۴.۱۲ مغایرت‌گیری بانکی (`treasurer-reconciliation.html`)**
+  - [x] **۴.۱۰ حساب‌های بانکی (`treasurer-bank-accounts.html`)**
+  - [x] **۴.۱۱ مدیریت چک‌ها (`treasurer-cheques.html`)**
+  - [x] **۴.۱۲ مغایرت‌گیری بانکی (`treasurer-reconciliation.html`)**
   - [ ] **۴.۱۸ پروژه‌ها و بخش‌ها (`projects-and-sections.html`)**
   - [ ] **۴.۱۹ بایگانی مدارک شرکت (`company-documents-archive.html`)**
   - [ ] **۴.۲۰ شناسنامه پرسنل (`personnel-profiles.html`)**
