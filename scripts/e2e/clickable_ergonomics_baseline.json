@@ -1,9 +1,9 @@
 {
   "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
   "counters": {
-    "rule_1_unlabeled_icon_buttons": 105,
+    "rule_1_unlabeled_icon_buttons": 101,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 56,
+    "rule_3_non_standard_actions": 43,
     "rule_4_retired_icons": 47,
     "rule_5_neutralized_tap_targets": 0
   },
@@ -295,22 +295,22 @@
         "icon": null
       },
       {
-        "file": "components/finance/manager/manager-personnel/manager-personnel.html",
-        "line": 142,
-        "method": "openApproveModal",
+        "file": "components/label-designer/label-designer.html",
+        "line": 115,
+        "method": "confirmDelete",
         "icon": null
       },
       {
-        "file": "components/finance/manager/manager-personnel/manager-personnel.html",
-        "line": 148,
-        "method": "openRejectModal",
+        "file": "components/label-designer/label-designer.html",
+        "line": 116,
+        "method": "cancelDelete",
         "icon": null
       },
       {
-        "file": "components/finance/manager/manager-personnel/manager-personnel.html",
-        "line": 235,
-        "method": "openApproveModal",
-        "icon": null
+        "file": "components/manager-review/manager-review.html",
+        "line": 1172,
+        "method": "cancelApprove",
+        "icon": "action-close"
       }
     ],
     "rule_4_retired_icons": [
