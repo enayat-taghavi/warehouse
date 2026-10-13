@@ -1,18 +1,35 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-سیستم اجرای سری و خودکار تسک‌ها در نشست‌های مستقل Antigravity
-Warehouse Project - Automated Antigravity Task Runner
+اجراکننده عمومی و ترتیبی تسک‌ها در نشست‌های مستقل Antigravity
+Generic sequential Antigravity task runner.
+
+صف (پیش‌فرض):   python run_tasks.py [--tasks FILE]
+گفتگو:          python run_tasks.py ask (--new | --conversation ID) --message-file FILE [--model ID] [--out FILE]
+
+تسک‌ها با خطی از === جدا می‌شوند. هر تسک می‌تواند دستورهای اجراکننده را در یک کامنت HTML داشته باشد
+که هرگز برای ایجنت فرستاده نمی‌شود:
+
+    <!-- runner
+    require: <فرمان>   پیش از شروع نشست؛ اگر کد ۰ نداد، صف می‌ایستد
+    verify: <فرمان>    پس از پایان نشست؛ همه باید کد ۰ بدهند تا تسک [DONE] شود
+    -->
+
+{base} در فرمان‌ها با hash کوتاه HEAD درست پیش از شروع تسک جای‌گذاری می‌شود.
+اگر verify شکست خورد، خروجی‌اش در همان نشست برای ایجنت فرستاده می‌شود (حداکثر MAX_FIX_ROUNDS بار) و بعد صف می‌ایستد.
+برچسب [DONE] را فقط خود اجراکننده روی خط عنوان تسک می‌گذارد.
 """
 
-import os
-import sys
-import time
+import argparse
 import json
-import uuid
+import os
 import re
 import sqlite3
-import shutil
+import subprocess
+import sys
+import time
+import uuid
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
@@ -28,17 +45,34 @@ try:
     import psutil
     import requests
 except ImportError:
-    print("❌ خطای ماژول‌های پایتون: لطفاً بسته‌های requests و psutil را نصب کنید:")
-    print("   pip install requests psutil")
+    print("Missing Python packages. Install them with: pip install requests psutil")
     sys.exit(1)
 
 PROJECT_DIR = Path(__file__).resolve().parent
-TASKS_FILE = PROJECT_DIR / "tasks.md"
-HISTORY_FILE = PROJECT_DIR / "tasks_history.md"
+DEFAULT_TASKS_FILE = PROJECT_DIR / "tasks.md"
 GEMINI_DIR = Path(os.path.expanduser("~")) / ".gemini" / "antigravity-ide"
 BRAIN_BASE_DIR = GEMINI_DIR / "brain"
 CONVERSATIONS_DIR = GEMINI_DIR / "conversations"
-STABILITY_SECONDS = 180  # ثانیه‌های سکوت برای اطمینان از پایان نوبت پردازشگر (۳ دقیقه، تا فکر طولانی مدل پایان شمرده نشود)
+LOG_DIR = PROJECT_DIR / "scratch" / "logs" / "runner"
+STATUS_FILE = LOG_DIR / "status.json"
+
+# پایان نوبت ایجنت: آخرین گام ایجنت پاسخ بی‌ابزار DONE باشد، هیچ گامی در پایگاه‌داده نشست در حال اجرا نباشد
+# و این مقدار ثانیه گام تازه‌ای نیاید.
+STABILITY_SECONDS = 20
+CHAT_STABILITY_SECONDS = 60
+# سکوتی که نشست را گیرکرده نشان می‌دهد. فرمان‌ها در پس‌زمینه اجرا می‌شوند و ایجنت وضعیتشان را مرتب می‌پرسد؛
+# بیشترین سکوت ایجنت در گام‌های ۷ تا ۹ حدود ۹۰ ثانیه بود.
+STALL_TIMEOUT_SECONDS = 20 * 60
+# گام‌هایی که سیستم Antigravity می‌نویسد، نه ایجنت (فشرده‌سازی، پیام سیستم). گاهی پس از پاسخ نهایی هم می‌آیند،
+# پس وضعیت «آخرین گام ایجنت» را عوض نمی‌کنند تا پایان نشست گم نشود.
+SYSTEM_STEP_TYPES = {"CHECKPOINT", "SYSTEM_MESSAGE", "EPHEMERAL_MESSAGE"}
+# وضعیت‌های پایانی گام در جدول steps پایگاه‌داده نشست؛ هر وضعیت دیگر یعنی گام (مثلاً فرمان پس‌زمینه) هنوز تمام نشده.
+DB_FINISHED_STATUSES = (3, 6, 7)
+
+MAX_FIX_ROUNDS = 2
+COMMAND_TIMEOUT_SECONDS = 30 * 60
+FEEDBACK_TAIL_LINES = 40
+FEEDBACK_MAX_CHARS = 6000
 
 # مدل همه نشست‌ها: Gemini 3.8 Flash (High).
 # شناسه داخلی آن (MODEL_PLACEHOLDER_M...) با به‌روزرسانی Antigravity ممکن است عوض شود؛
@@ -47,6 +81,245 @@ MODEL_ID = "gemini-3.8-flash-high"
 MODEL_LABEL = "Gemini 3.8 Flash (High)"
 FALLBACK_MODEL_ENUM = "MODEL_PLACEHOLDER_M318"
 
+# فرمان پس‌زمینه: Antigravity به ایجنت می‌گوید فرمان را راه بینداز و نوبت را ببند؛ پایان فرمان بعداً با
+# SYSTEM_MESSAGE «Task id "…" finished» یا گام GENERIC «Task: … Status: …» می‌آید. تا آن موقع نوبت تمام نیست.
+# (نشست ۵ صف ارگونومی همین‌جا ۱۲ دقیقه زودتر «پایان‌یافته» شمرده شد و نشست ۶ هم‌زمان با آن شروع شد.)
+BACKGROUND_START_RE = re.compile(r"running as a background task with task id:\s*(\S+)")
+BACKGROUND_FINISHED_RE = re.compile(r'Task id "([^"]+)" finished')
+BACKGROUND_STATUS_RE = re.compile(r"Task:\s*(\S+)\s+Status:\s*(\w+)")
+
+LS_SERVICE = "exa.language_server_pb.LanguageServerService"
+RUNNER_BLOCK_RE = re.compile(r"<!--\s*runner\b([\s\S]*?)-->", re.IGNORECASE)
+ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+DONE_PREFIXES = ("[x]", "[DONE]", "[SKIP]")
+
+_log_stream = sys.stdout
+_log_file = None
+_queue_mode = False
+
+
+def log(message: str = ""):
+    _log_stream.write(message + "\n")
+    _log_stream.flush()
+    if _log_file:
+        _log_file.write(f"{datetime.now():%H:%M:%S} {message}\n")
+        _log_file.flush()
+
+
+def write_status(state: str, **extra):
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    data = {"state": state, "updated": datetime.now().isoformat(timespec="seconds"), **extra}
+    STATUS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def stop_queue(reason: str, **extra) -> bool:
+    log(f"QUEUE STOPPED: {reason}")
+    write_status("stopped", reason=reason, **extra)
+    return False
+
+
+# ---------------------------------------------------------------- tasks file
+
+@dataclass
+class Task:
+    title: str
+    text: str
+    requires: list = field(default_factory=list)
+    verifies: list = field(default_factory=list)
+
+
+def parse_directives(block: str) -> tuple[list, list]:
+    requires, verifies = [], []
+    for body in RUNNER_BLOCK_RE.findall(block):
+        for raw in body.splitlines():
+            key, sep, value = raw.strip().partition(":")
+            if not sep or not value.strip():
+                continue
+            key = key.strip().lower()
+            if key == "require":
+                requires.append(value.strip())
+            elif key == "verify":
+                verifies.append(value.strip())
+    return requires, verifies
+
+
+def load_tasks(tasks_path: Path) -> list[Task]:
+    """خواندن و تفکیک تسک‌ها با جداکننده ===؛ دستورهای runner پیش از حذف کامنت‌ها خوانده می‌شوند."""
+    if not tasks_path.exists():
+        raise FileNotFoundError(f"tasks file not found: {tasks_path}")
+
+    content = tasks_path.read_text(encoding="utf-8")
+    tasks = []
+    for block in re.split(r"(?m)^\s*={3,}\s*$", content):
+        block = block.strip()
+        if not block:
+            continue
+        requires, verifies = parse_directives(block)
+        text = re.sub(r"<!--[\s\S]*?-->", "", block).strip()
+        if not text:
+            continue
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        if len(lines) == 1 and lines[0].startswith("# "):
+            continue
+        title = lines[0]
+        if title.startswith(DONE_PREFIXES) or block.startswith("<!-- DISABLED -->"):
+            log(f"Skipped (done/disabled): {title[:80]}")
+            continue
+        tasks.append(Task(title=title, text=text, requires=requires, verifies=verifies))
+    return tasks
+
+
+def mark_task_done(tasks_path: Path, title: str) -> bool:
+    """فقط خط عنوان همان تسک را با [DONE] پیشوند می‌دهد؛ بقیه فایل و پایان خط‌ها دست نمی‌خورد."""
+    lines = tasks_path.read_bytes().decode("utf-8").splitlines(keepends=True)
+    for i, line in enumerate(lines):
+        body = line.rstrip("\r\n")
+        if body.strip() == title:
+            indent = body[: len(body) - len(body.lstrip())]
+            lines[i] = f"{indent}[DONE] {body.strip()}{line[len(body):]}"
+            tasks_path.write_bytes("".join(lines).encode("utf-8"))
+            return True
+    return False
+
+
+def history_path(tasks_path: Path) -> Path:
+    return tasks_path.with_name(f"{tasks_path.stem}_history.md")
+
+
+def append_history(path: Path, task_no: int, total: int, task: Task, conv_id: str, status: str,
+                   steps: int, elapsed_sec: int, reply: str, checks: list):
+    minutes, seconds = divmod(elapsed_sec, 60)
+    reply = reply.strip().replace("\r\n", "\n")
+    if len(reply) > 700:
+        reply = reply[:700] + "..."
+    checks_text = "\n".join(checks) if checks else "  - (none)"
+    entry = f"""
+### Task {task_no} of {total} — {datetime.now():%Y-%m-%d %H:%M:%S}
+- **Status:** {status}
+- **Conversation:** `{conv_id}`
+- **Steps:** {steps}
+- **Duration:** {minutes}m {seconds}s
+- **Checks:**
+{checks_text}
+- **Task:**
+```
+{task.text}
+```
+- **Agent's last reply:**
+{reply}
+
+---
+"""
+    try:
+        if not path.exists():
+            path.write_text("# Antigravity task runner history\n", encoding="utf-8")
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(entry)
+    except Exception as e:
+        log(f"WARNING: could not write history: {e}")
+
+
+# ---------------------------------------------------------------- git and commands
+
+def git(*args) -> str | None:
+    try:
+        r = subprocess.run(["git", *args], cwd=PROJECT_DIR, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=60)
+    except Exception:
+        return None
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def git_head() -> str:
+    return git("rev-parse", "--short", "HEAD") or ""
+
+
+def git_snapshot() -> tuple:
+    return git("rev-parse", "HEAD"), git("status", "--porcelain")
+
+
+def kill_tree(pid: int):
+    if sys.platform == "win32":
+        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True)
+    else:
+        try:
+            os.kill(pid, 9)
+        except OSError:
+            pass
+
+
+def run_command(cmd: str, log_path: Path) -> tuple[int, str]:
+    """اجرای فرمان در ریشه پروژه با سقف زمانی؛ خروجی کامل در log_path می‌ماند."""
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
+    timed_out = False
+    with open(log_path, "wb") as out:
+        out.write(f"$ {cmd}\n\n".encode("utf-8"))
+        out.flush()
+        proc = subprocess.Popen(cmd, shell=True, cwd=PROJECT_DIR, env=env, stdout=out, stderr=subprocess.STDOUT)
+        try:
+            rc = proc.wait(timeout=COMMAND_TIMEOUT_SECONDS)
+        except subprocess.TimeoutExpired:
+            kill_tree(proc.pid)
+            proc.wait()
+            rc, timed_out = -1, True
+        except KeyboardInterrupt:
+            kill_tree(proc.pid)
+            raise
+    output = log_path.read_bytes().decode("utf-8", errors="replace")
+    if timed_out:
+        output += f"\n[runner] command killed after {COMMAND_TIMEOUT_SECONDS // 60} minutes\n"
+    return rc, output
+
+
+def run_checks(kind: str, commands: list, base: str, task_no: int, round_no: int) -> list[dict]:
+    failures = []
+    for n, template in enumerate(commands, 1):
+        cmd = template.replace("{base}", base)
+        log_path = LOG_DIR / f"task{task_no:02d}-r{round_no}-{kind}{n}.log"
+        log(f"  {kind} {n}/{len(commands)}: {cmd}")
+        started = time.time()
+        rc, output = run_command(cmd, log_path)
+        verdict = "OK" if rc == 0 else f"FAILED (exit {rc})"
+        log(f"    -> {verdict} in {int(time.time() - started)}s; log: {log_path}")
+        if rc != 0:
+            failures.append({"cmd": cmd, "rc": rc, "output": output, "log": str(log_path)})
+    return failures
+
+
+def checks_summary(label: str, commands: list, failures: list) -> str:
+    line = f"  - {label}: {len(commands) - len(failures)}/{len(commands)} passed"
+    for f in failures:
+        line += f"\n    - FAILED (exit {f['rc']}): `{f['cmd']}`"
+    return line
+
+
+def no_question_marks(text: str) -> str:
+    # قانون «?» در .agents/AGENTS.md پیام دارای علامت سؤال را پرسشی می‌کند؛ پیام اصلاحی نباید پرسشی خوانده شود.
+    return text.replace("?", " ").replace("؟", " ")
+
+
+def feedback_message(failures: list, round_no: int) -> str:
+    parts = [
+        f"[RUNNER] Verification failed after your last turn (fix round {round_no} of {MAX_FIX_ROUNDS}).",
+        "Fix the causes within the original task scope, commit the fix, and end your turn.",
+        "You may re-run a failed command to confirm your fix; the runner re-runs all checks afterwards.",
+    ]
+    budget = FEEDBACK_MAX_CHARS
+    for f in failures:
+        lines = [ln for ln in ANSI_RE.sub("", f["output"]).splitlines() if ln.strip()]
+        tail = "\n".join(lines[-FEEDBACK_TAIL_LINES:])
+        block = f"\nFAILED (exit {f['rc']}): {f['cmd']}\nFull log: {f['log']}\n```\n{tail}\n```"
+        if len(block) > budget:
+            block = block[:budget] + "\n...(truncated)"
+        parts.append(block)
+        budget -= len(block)
+        if budget <= 0:
+            break
+    return no_question_marks("\n".join(parts))
+
+
+# ---------------------------------------------------------------- Antigravity language server
 
 def discover_language_server() -> dict | None:
     """
@@ -71,7 +344,7 @@ def discover_language_server() -> dict | None:
                     # بررسی پورت پاسخ‌گو به پروتکل ConnectRPC
                     for p in ports:
                         try:
-                            url = f"http://127.0.0.1:{p}/exa.language_server_pb.LanguageServerService/GetCascadeModelConfigs"
+                            url = f"http://127.0.0.1:{p}/{LS_SERVICE}/GetCascadeModelConfigs"
                             r = requests.post(
                                 url,
                                 headers={"x-codeium-csrf-token": csrf, "Content-Type": "application/json"},
@@ -91,104 +364,41 @@ def discover_language_server() -> dict | None:
     return None
 
 
-def load_tasks(tasks_path: Path) -> list[str]:
-    """خواندن و تفکیک تسک‌ها از فایل tasks.md با جداکننده ==="""
-    if not tasks_path.exists():
-        raise FileNotFoundError(f"فایل تسک‌ها در مسیر {tasks_path} یافت نشد.")
-
-    content = tasks_path.read_text(encoding="utf-8")
-
-    # تفکیک بخش‌ها با جداکننده سه مساوی یا بیشتر در یک خط مجزا
-    raw_blocks = re.split(r"(?m)^\s*={3,}\s*$", content)
-    clean_tasks = []
-
-    for block in raw_blocks:
-        text = block.strip()
-        if not text:
-            continue
-
-        # حذف کامنت‌های HTML برای ارزیابی محتوای متنی
-        text_content = re.sub(r"<!--[\s\S]*?-->", "", text).strip()
-        if not text_content:
-            continue
-
-        # نادیده گرفتن بلوک‌هایی که صرفاً تیتر سربرگ هستند
-        lines = [ln.strip() for ln in text_content.splitlines() if ln.strip()]
-        if len(lines) == 1 and lines[0].startswith("# "):
-            continue
-
-        # بررسی علامت انجام یا غیرفعال در خط اول
-        first_line = lines[0] if lines else ""
-        if (
-            first_line.startswith("[x]")
-            or first_line.startswith("[DONE]")
-            or first_line.startswith("[SKIP]")
-            or text.startswith("<!-- DISABLED -->")
-        ):
-            print(f"⏩ تسک نادیده گرفته شد (انجام‌شده/غیرفعال): {first_line[:60]}...")
-            continue
-
-        clean_tasks.append(text_content)
-
-    return clean_tasks
+def ls_post(ls_info: dict, method: str, payload: dict, timeout: float = 8):
+    return requests.post(
+        f"http://127.0.0.1:{ls_info['port']}/{LS_SERVICE}/{method}",
+        headers={"x-codeium-csrf-token": ls_info["csrf_token"], "Content-Type": "application/json"},
+        json=payload,
+        timeout=timeout,
+    )
 
 
-def resolve_model_enum(ls_info: dict) -> str | None:
+def resolve_model_enum(ls_info: dict, model_id: str) -> str | None:
     """
-    یافتن شناسه داخلی مدل MODEL_ID در فهرست مدل‌های Antigravity (GetUserStatus).
+    یافتن شناسه داخلی مدل model_id در فهرست مدل‌های Antigravity (GetUserStatus).
     خروجی None یعنی فهرست خوانده شد ولی این مدل در آن نیست.
     """
-    url = f"http://127.0.0.1:{ls_info['port']}/exa.language_server_pb.LanguageServerService/GetUserStatus"
     try:
-        r = requests.post(
-            url,
-            headers={"x-codeium-csrf-token": ls_info["csrf_token"], "Content-Type": "application/json"},
-            json={},
-            timeout=5,
-        )
+        r = ls_post(ls_info, "GetUserStatus", {}, timeout=5)
         r.raise_for_status()
         configs = r.json().get("userStatus", {}).get("cascadeModelConfigData", {}).get("clientModelConfigs", [])
     except Exception as e:
-        print(f"⚠️ فهرست مدل‌های Antigravity خوانده نشد ({e})؛ شناسه پشتیبان {FALLBACK_MODEL_ENUM} به کار می‌رود.")
+        if model_id != MODEL_ID:
+            log(f"Could not read Antigravity's model list ({e}).")
+            return None
+        log(f"Could not read Antigravity's model list ({e}); using fallback id {FALLBACK_MODEL_ENUM}.")
         return FALLBACK_MODEL_ENUM
 
     for cfg in configs:
-        if cfg.get("modelId") == MODEL_ID:
+        if cfg.get("modelId") == model_id:
             return (cfg.get("modelOrAlias") or {}).get("model") or None
     return None
 
 
-def start_cascade_conversation(ls_info: dict, task_text: str, model_enum: str) -> str:
-    """
-    آغاز نشست جدید مستقل در Antigravity و ارسال متن تسک از طریق API رسمی ConnectRPC
-    """
-    cascade_id = str(uuid.uuid4())
-    headers = {
-        "Content-Type": "application/json",
-        "x-codeium-csrf-token": ls_info["csrf_token"],
-    }
-    base_url = f"http://127.0.0.1:{ls_info['port']}/exa.language_server_pb.LanguageServerService"
-
-    # تبدیل مسیر پروژه به فرمت URI استاندارد
-    proj_path_str = str(PROJECT_DIR).replace("\\", "/")
-    workspace_uri = f"file:///{proj_path_str}" if not proj_path_str.startswith("/") else f"file://{proj_path_str}"
-
-    # ۱. گام نخست: راه‌اندازی شجره نشست (StartCascade)
-    start_payload = {
+def send_message(ls_info: dict, cascade_id: str, text: str, model_enum: str):
+    payload = {
         "cascadeId": cascade_id,
-        "source": "CORTEX_TRAJECTORY_SOURCE_CASCADE_CLIENT",
-        "workspaceUris": [workspace_uri],
-        "requestedModel": model_enum,
-    }
-
-    r_start = requests.post(f"{base_url}/StartCascade", headers=headers, json=start_payload, timeout=8)
-    if r_start.status_code != 200:
-        raise RuntimeError(f"خطا در ایجاد نشست ({r_start.status_code}): {r_start.text}")
-
-    # ۲. گام دوم: ارسال پرامپت دستور به همراه پیکربندی مجری (SendUserCascadeMessage)
-    send_payload = {
-        "cascadeId": cascade_id,
-        "items": [{"text": task_text}],
+        "items": [{"text": text}],
         "cascadeConfig": {
             "plannerConfig": {
                 "requestedModel": {"model": model_enum},
@@ -196,263 +406,409 @@ def start_cascade_conversation(ls_info: dict, task_text: str, model_enum: str) -
             }
         },
     }
+    r = ls_post(ls_info, "SendUserCascadeMessage", payload)
+    if r.status_code != 200:
+        raise RuntimeError(f"SendUserCascadeMessage failed ({r.status_code}): {r.text[:300]}")
 
-    r_send = requests.post(f"{base_url}/SendUserCascadeMessage", headers=headers, json=send_payload, timeout=8)
-    if r_send.status_code != 200:
-        raise RuntimeError(f"خطا در ارسال دستور به نشست ({r_send.status_code}): {r_send.text}")
 
+def start_conversation(ls_info: dict, text: str, model_enum: str) -> str:
+    """آغاز نشست تازه و مستقل در Antigravity و فرستادن نخستین پیام از طریق ConnectRPC"""
+    cascade_id = str(uuid.uuid4())
+    proj_path_str = str(PROJECT_DIR).replace("\\", "/")
+    workspace_uri = f"file:///{proj_path_str}" if not proj_path_str.startswith("/") else f"file://{proj_path_str}"
+    r = ls_post(ls_info, "StartCascade", {
+        "cascadeId": cascade_id,
+        "source": "CORTEX_TRAJECTORY_SOURCE_CASCADE_CLIENT",
+        "workspaceUris": [workspace_uri],
+        "requestedModel": model_enum,
+    })
+    if r.status_code != 200:
+        raise RuntimeError(f"StartCascade failed ({r.status_code}): {r.text[:300]}")
+    send_message(ls_info, cascade_id, text, model_enum)
     return cascade_id
 
 
-def monitor_conversation(conversation_id: str, timeout_seconds: int | None = None) -> tuple[bool, int, str]:
-    """
-    رهگیری و گزارش زنده پیشرفت تسک در نشست تا اتمام کامل آن
-    بی‌سقف زمانی (پیش‌فرض): تا پایان واقعی نشست صبر می‌کند تا نشست بعدی هم‌زمان با آن روی کد کار نکند.
-    خروجی: (موفقیت، تعداد گام‌ها، متن خلاصه نهایی)
-    """
-    transcript_file = BRAIN_BASE_DIR / conversation_id / ".system_generated" / "logs" / "transcript.jsonl"
-    db_file = CONVERSATIONS_DIR / f"{conversation_id}.db"
+# ---------------------------------------------------------------- conversation monitoring
 
-    # انتظار برای ساخته شدن فایل ترانسکریپت یا پایگاه‌داده نشست
+def transcript_path(conv_id: str) -> Path:
+    return BRAIN_BASE_DIR / conv_id / ".system_generated" / "logs" / "transcript.jsonl"
+
+
+def db_path(conv_id: str) -> Path:
+    return CONVERSATIONS_DIR / f"{conv_id}.db"
+
+
+def read_steps(conv_id: str) -> list[dict]:
+    try:
+        text = transcript_path(conv_id).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    steps = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            step = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(step.get("step_index"), int):
+            steps.append(step)
+    return steps
+
+
+def db_query(conv_id: str, sql: str) -> list | None:
+    path = db_path(conv_id)
+    if not path.exists():
+        return None
+    try:
+        con = sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True, timeout=2)
+        try:
+            return con.execute(sql).fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return None
+
+
+def unfinished_db_steps(conv_id: str) -> list | None:
+    """گام‌هایی که در پایگاه‌داده نشست هنوز وضعیت پایانی ندارند (مثلاً فرمان پس‌زمینه)؛ None یعنی خوانده نشد."""
+    statuses = ",".join(str(s) for s in DB_FINISHED_STATUSES)
+    return db_query(conv_id, f"SELECT idx, step_type, status FROM steps WHERE status NOT IN ({statuses})")
+
+
+def last_step_index(conv_id: str) -> int:
+    idx = max((s["step_index"] for s in read_steps(conv_id)), default=-1)
+    rows = db_query(conv_id, "SELECT MAX(idx) FROM steps")
+    if rows and rows[0][0] is not None:
+        idx = max(idx, rows[0][0])
+    return idx
+
+
+def report_step(idx: int, step_type: str, status: str, tool_calls: list, content: str):
+    if tool_calls:
+        names = []
+        for tc in tool_calls:
+            args = tc.get("args") or {}
+            names.append(str(args.get("toolSummary") or args.get("toolAction") or tc.get("name", "tool")).strip('"'))
+        log(f"  [#{idx}] running: {', '.join(names)}")
+    elif step_type == "PLANNER_RESPONSE" and status == "DONE":
+        text = re.sub(r"<[^>]+>", "", content).strip()
+        log(f"  [#{idx}] agent: {(text.splitlines()[0] if text else '(empty reply)')[:120]}")
+    elif step_type == "RUN_COMMAND" and status == "DONE":
+        log(f"  [#{idx}] command finished")
+    elif step_type == "VIEW_FILE" and status == "DONE":
+        log(f"  [#{idx}] viewed a file")
+    elif step_type in ("REPLACE_FILE_CONTENT", "WRITE_TO_FILE", "CODE_ACTION") and status == "DONE":
+        log(f"  [#{idx}] edited a file")
+    elif step_type == "ERROR_MESSAGE":
+        log(f"  [#{idx}] error: {content.strip().splitlines()[-1][:120] if content.strip() else ''}")
+    elif step_type == "CHECKPOINT":
+        log(f"  [#{idx}] context compacted")
+
+
+def monitor_conversation(ls_info: dict, conv_id: str, after_index: int = -1,
+                         stability: int | None = None) -> tuple[bool, int, str, str]:
+    """
+    رهگیری زنده نشست تا پایان نوبت ایجنت. فقط گام‌هایی با step_index بزرگ‌تر از after_index شمرده می‌شوند،
+    پس پس از پیام اصلاحی، پاسخ قبلی ایجنت پایان حساب نمی‌شود.
+    خروجی: (پایان‌یافته، تعداد گام‌ها، آخرین پاسخ ایجنت، علت رها کردن)
+    پایان‌نیافته یعنی رهگیری رها شد (گیر کردن یا از دست رفتن سرور زبانی) و نشست شاید هنوز در حال اجراست.
+    """
+    if stability is None:
+        stability = STABILITY_SECONDS
+    path = transcript_path(conv_id)
+    ls_proc = None
+    if ls_info and ls_info.get("pid"):
+        try:
+            ls_proc = psutil.Process(ls_info["pid"])
+        except Exception:
+            pass
+
     wait_start = time.time()
-    while not transcript_file.exists() and time.time() - wait_start < 25:
+    while not path.exists() and time.time() - wait_start < 25:
         time.sleep(0.5)
 
-    seen_lines = 0
-    last_mod_time = time.time()
-    last_step_type = ""
-    last_step_status = ""
-    last_has_tools = False
-    last_content = ""
-    total_steps = 0
-    start_monitor_time = time.time()
+    max_idx = after_index
+    last_change = time.time()
+    last_type, last_status, last_tools, last_reply = "", "", False, ""
+    background = set()
+    signature = None
+    waiting_logged = False
+    db_warning_logged = False
 
-    print(f"👁️ در حال رهگیری زنده نشست (شناسه: {conversation_id})...")
+    log(f"Watching conversation {conv_id} (steps after #{after_index})...")
 
-    while timeout_seconds is None or time.time() - start_monitor_time < timeout_seconds:
+    while True:
         time.sleep(1.2)
 
-        if transcript_file.exists():
+        # پایش سلامت پروسه سرور زبانی (تشخیص ریستارت یا کرش)
+        if ls_proc and not ls_proc.is_running():
+            log(f"Language server PID={ls_info.get('pid')} stopped or restarted.")
+            time.sleep(3)
+            new_ls = discover_language_server()
+            if not new_ls:
+                return False, max_idx + 1, last_reply, "the Antigravity language server stopped"
+            log(f"Reconnected to language server PID={new_ls['pid']} port={new_ls['port']}.")
+            ls_info.clear()
+            ls_info.update(new_ls)
             try:
-                with open(transcript_file, "r", encoding="utf-8", errors="replace") as f:
-                    lines = f.readlines()
+                ls_proc = psutil.Process(new_ls["pid"])
             except Exception:
-                lines = []
-
-            if len(lines) > seen_lines:
-                last_mod_time = time.time()
-                for line_idx in range(seen_lines, len(lines)):
-                    raw_line = lines[line_idx].strip()
-                    if not raw_line:
-                        continue
-                    try:
-                        step = json.loads(raw_line)
-                        step_idx = step.get("step_index", line_idx)
-                        step_type = step.get("type", "")
-                        step_status = step.get("status", "")
-                        tool_calls = step.get("tool_calls") or []
-                        content = step.get("content") or ""
-
-                        last_step_type = step_type
-                        last_step_status = step_status
-                        last_has_tools = bool(tool_calls)
-                        if content and step_type == "PLANNER_RESPONSE":
-                            last_content = content
-                        total_steps = max(total_steps, step_idx + 1)
-
-                        # نمایش اعلان گام‌ها در ترمینال
-                        if tool_calls:
-                            tool_desc = []
-                            for tc in tool_calls:
-                                name = tc.get("name", "tool")
-                                args = tc.get("args") or {}
-                                summary = args.get("toolSummary") or args.get("toolAction") or name
-                                tool_desc.append(str(summary).strip('"'))
-                            print(f"   ⚙️ [گام {step_idx}] در حال اجرای: {', '.join(tool_desc)}")
-                        elif step_type == "RUN_COMMAND" and step_status == "DONE":
-                            print(f"   ✅ [گام {step_idx}] اجرای دستور در ترمینال پایان یافت.")
-                        elif step_type == "VIEW_FILE" and step_status == "DONE":
-                            print(f"   🔍 [گام {step_idx}] بررسی محتوای فایل.")
-                        elif step_type in ("REPLACE_FILE_CONTENT", "WRITE_TO_FILE") and step_status == "DONE":
-                            print(f"   ✏️ [گام {step_idx}] ویرایش فایل.")
-                        elif step_type == "PLANNER_RESPONSE" and step_status == "DONE" and not tool_calls:
-                            # نمایش پاسخ متنی ایجنت
-                            preview_text = re.sub(r"<[^>]+>", "", content).strip()
-                            clean_preview = preview_text.splitlines()[0] if preview_text else "پاسخ دریافت شد."
-                            print(f"   💬 [پاسخ ایجنت]: {clean_preview[:100]}")
-
-                    except Exception:
-                        pass
-
-                seen_lines = len(lines)
-
-            # بررسی اتمام نوبت
-            seconds_since_mod = time.time() - last_mod_time
-            if (
-                last_step_type in ("PLANNER_RESPONSE", "CHECKPOINT")
-                and last_step_status == "DONE"
-                and not last_has_tools
-                and seconds_since_mod >= STABILITY_SECONDS
-            ):
-                print(f"🏁 نشست با موفقیت به کار خود پایان داد ({total_steps} گام).")
-                return True, total_steps, last_content
-
-        # اگر فایل ترانسکریپت هنوز نبود، بررسی پایگاه‌داده
-        elif db_file.exists():
-            try:
-                conn = sqlite3.connect(f"file:{db_file}?mode=ro", uri=True)
-                cur = conn.cursor()
-                rows = cur.execute("SELECT idx, step_type, status FROM steps ORDER BY idx DESC LIMIT 1").fetchall()
-                conn.close()
-                if rows:
-                    total_steps = rows[0][0] + 1
-                    if rows[0][2] == 3 and (time.time() - last_mod_time >= STABILITY_SECONDS):
-                        return True, total_steps, "تسک در پایگاه‌داده نشست پایان یافت."
-            except Exception:
-                pass
-
-    return False, total_steps, "زمان مجاز اجرای نشست به پایان رسید (Timeout)."
-
-
-def append_history(
-    task_num: int,
-    total_tasks: int,
-    task_text: str,
-    conv_id: str,
-    success: bool,
-    steps: int,
-    elapsed_sec: int,
-    summary: str,
-):
-    """ثبت خلاصه نشست در فایل تاریخچه tasks_history.md"""
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    status_icon = "✅ موفق" if success else "❌ ناموفق / ناقص"
-    minutes = elapsed_sec // 60
-    seconds = elapsed_sec % 60
-    duration_str = f"{minutes} دقیقه و {seconds} ثانیه" if minutes > 0 else f"{seconds} ثانیه"
-
-    clean_summary = summary.strip().replace("\r\n", "\n")
-    if len(clean_summary) > 700:
-        clean_summary = clean_summary[:700] + "..."
-
-    entry = f"""
-### تسک {task_num} از {total_tasks} — {now_str}
-- **وضعیت:** {status_icon}
-- **شناسه نشست (Conversation ID):** `{conv_id}`
-- **تعداد گام‌ها:** {steps} گام
-- **مدت زمان اجرا:** {duration_str}
-- **دستور تسک:**
-```
-{task_text}
-```
-- **خلاصه نتیجه نشست:**
-{clean_summary}
-
----
-"""
-    try:
-        if not HISTORY_FILE.exists():
-            HISTORY_FILE.write_text("# تاریخچه اجرای تسک‌های خودکار Antigravity\n", encoding="utf-8")
-        with open(HISTORY_FILE, "a", encoding="utf-8") as f:
-            f.write(entry)
-    except Exception as e:
-        print(f"⚠️ خطا در ذخیره تاریخچه: {e}")
-
-
-def run_tasks_sequence():
-    """حلقه اصلی اجرای سری تسک‌ها"""
-    print("=" * 70)
-    print("🤖 شروع سیستم اجرای سری تسک‌های خودکار Antigravity")
-    print(f"📂 ریشه پروژه: {PROJECT_DIR}")
-    print(f"📄 فایل تسک‌ها: {TASKS_FILE}")
-    print("=" * 70)
-
-    # ۱. شناسایی خودکار سرویس فعال Antigravity
-    print("🔍 در حال شناسایی سرور زبانی فعال Antigravity...")
-    ls_info = discover_language_server()
-    if not ls_info:
-        print("❌ سرور زبانی فعال Antigravity یافت نشد!")
-        print("💡 لطفاً ابتدا نرم‌افزار Antigravity IDE را باز کنید و سپس این اسکریپت را اجرا نمایید.")
-        return
-
-    print(f"🔧 اتصال برقرار شد: PID={ls_info['pid']} | Port={ls_info['port']}")
-
-    # مدل نشست‌ها؛ اگر در فهرست Antigravity نبود، به‌جای اجرا با مدل دیگر متوقف می‌شویم
-    model_enum = resolve_model_enum(ls_info)
-    if not model_enum:
-        print(f"❌ مدل {MODEL_LABEL} ({MODEL_ID}) در فهرست مدل‌های Antigravity یافت نشد؛ اجرا متوقف شد.")
-        return
-    print(f"🧠 مدل نشست‌ها: {MODEL_LABEL} ({model_enum}) | بدون سقف زمانی")
-
-    # ۲. بارگذاری تسک‌ها
-    try:
-        tasks = load_tasks(TASKS_FILE)
-    except Exception as e:
-        print(f"❌ خطا در خواندن فایل تسک‌ها: {e}")
-        return
-
-    if not tasks:
-        print("⚠️ هیچ تسک آماده‌ای در فایل tasks.md یافت نشد.")
-        print("لطفاً تسک‌های مورد نظر را با جداکننده === در فایل tasks.md بنویسید.")
-        return
-
-    total_tasks = len(tasks)
-    print(f"📋 تعداد {total_tasks} تسک در صف اجرا شناسایی شد.\n")
-
-    # ۳. اجرای ترتیبی و مستقل تک‌تک تسک‌ها
-    for idx, task_content in enumerate(tasks, start=1):
-        task_preview = task_content.splitlines()[0] if task_content.splitlines() else "تسک"
-        print("=" * 70)
-        print(f"🚀 [تسک {idx}/{total_tasks}] شروع اجرای تسک:")
-        print(f"   عنوان: {task_preview[:80]}")
-        print("=" * 70)
-
-        start_time = time.time()
+                ls_proc = None
 
         try:
-            print("📤 در حال راه‌اندازی نشست اختصاصی در Antigravity...")
-            conv_id = start_cascade_conversation(ls_info, task_content, model_enum)
-            print(f"🆔 شناسه نشست ثبت شد: {conv_id}")
+            st = path.stat()
+            new_signature = (st.st_size, st.st_mtime_ns)
+        except OSError:
+            new_signature = None
+
+        if new_signature and new_signature != signature:
+            signature = new_signature
+            for step in read_steps(conv_id):
+                idx = step["step_index"]
+                if idx <= max_idx:
+                    continue
+                max_idx = idx
+                last_change = time.time()
+                waiting_logged = False
+                step_type = step.get("type", "")
+                step_status = step.get("status", "")
+                tool_calls = step.get("tool_calls") or []
+                content = step.get("content") or ""
+                report_step(idx, step_type, step_status, tool_calls, content)
+                background.update(BACKGROUND_START_RE.findall(content))
+                for task_id in BACKGROUND_FINISHED_RE.findall(content):
+                    background.discard(task_id)
+                    log(f"  [#{idx}] background command finished")
+                for task_id, task_status in BACKGROUND_STATUS_RE.findall(content):
+                    if task_status.upper() != "RUNNING":
+                        background.discard(task_id)
+                if step_type in SYSTEM_STEP_TYPES:
+                    continue
+                last_type, last_status, last_tools = step_type, step_status, bool(tool_calls)
+                if step_type == "PLANNER_RESPONSE" and content:
+                    last_reply = content
+
+        quiet = time.time() - last_change
+        if (
+            last_type == "PLANNER_RESPONSE"
+            and last_status == "DONE"
+            and not last_tools
+            and quiet >= stability
+        ):
+            unfinished = unfinished_db_steps(conv_id)
+            if unfinished is None and not db_warning_logged:
+                log("WARNING: conversation database not readable; database running-step check skipped.")
+                db_warning_logged = True
+            if not unfinished and not background:
+                log(f"Agent turn finished ({max_idx + 1} steps).")
+                return True, max_idx + 1, last_reply, ""
+            if not waiting_logged:
+                log(f"Agent replied but {len(background)} background command(s) and "
+                    f"{len(unfinished or [])} step(s) are still running; waiting...")
+                waiting_logged = True
+
+        if quiet >= STALL_TIMEOUT_SECONDS:
+            return False, max_idx + 1, last_reply, f"no new step for {STALL_TIMEOUT_SECONDS // 60} minutes"
+
+
+# ---------------------------------------------------------------- queue
+
+def open_run_log():
+    global _log_file
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    _log_file = open(LOG_DIR / f"run-{datetime.now():%Y%m%d-%H%M%S}.log", "a", encoding="utf-8")
+
+
+def run_one_task(ls_info: dict, model_enum: str, tasks_path: Path, history: Path,
+                 task_no: int, total: int, task: Task) -> bool:
+    log("=" * 70)
+    log(f"[Task {task_no}/{total}] {task.title[:100]}")
+    log("=" * 70)
+    write_status("running", task=task_no, total=total, title=task.title)
+    started = time.time()
+    checks = []
+
+    def record(status: str, conv_id: str, steps: int, reply: str):
+        append_history(history, task_no, total, task, conv_id, status, steps,
+                       int(time.time() - started), reply, checks)
+
+    if task.requires:
+        log(f"Running {len(task.requires)} require command(s)...")
+        failures = run_checks("require", task.requires, git_head(), task_no, 0)
+        checks.append(checks_summary("require", task.requires, failures))
+        if failures:
+            record("STOPPED (require failed)", "-", 0, "")
+            return stop_queue(f"task {task_no}: require failed: {failures[0]['cmd']}")
+
+    base = git_head()
+    if base:
+        log(f"Base commit: {base}")
+    try:
+        conv_id = start_conversation(ls_info, task.text, model_enum)
+    except Exception as e:
+        record("STOPPED (could not start conversation)", "-", 0, str(e))
+        return stop_queue(f"task {task_no}: could not start a conversation: {e}")
+    log(f"Conversation: {conv_id}")
+    write_status("running", task=task_no, total=total, title=task.title, conversation=conv_id)
+
+    after_index, fix_round = -1, 0
+    while True:
+        finished, steps, reply, reason = monitor_conversation(ls_info, conv_id, after_index)
+        if not finished:
+            record(f"STOPPED ({reason})", conv_id, steps, reply)
+            return stop_queue(f"task {task_no}: {reason}; the conversation may still be running in Antigravity",
+                              conversation=conv_id)
+        if not task.verifies:
+            break
+
+        log(f"Running {len(task.verifies)} verify command(s), round {fix_round}...")
+        failures = run_checks("verify", task.verifies, base, task_no, fix_round)
+        checks.append(checks_summary(f"verify round {fix_round}", task.verifies, failures))
+        if not failures:
+            break
+        if fix_round >= MAX_FIX_ROUNDS:
+            record("FAILED (verify still failing)", conv_id, steps, reply)
+            return stop_queue(f"task {task_no}: verify still failing after {MAX_FIX_ROUNDS} fix round(s)",
+                              conversation=conv_id)
+
+        fix_round += 1
+        after_index = last_step_index(conv_id)
+        log(f"Sending {len(failures)} failure(s) back to the agent (fix round {fix_round}/{MAX_FIX_ROUNDS})...")
+        try:
+            send_message(ls_info, conv_id, feedback_message(failures, fix_round), model_enum)
         except Exception as e:
-            print(f"❌ خطا در ارسال دستور به Antigravity: {e}")
-            append_history(idx, total_tasks, task_content, "error", False, 0, 0, str(e))
-            continue
+            record("STOPPED (could not send fix request)", conv_id, steps, reply)
+            return stop_queue(f"task {task_no}: could not send the fix request: {e}", conversation=conv_id)
 
-        # پایش آنلاین تا اتمام کامل تسک
-        success, steps, final_summary = monitor_conversation(conv_id)
-        elapsed = int(time.time() - start_time)
-        minutes = elapsed // 60
-        seconds = elapsed % 60
-        duration_fmt = f"{minutes} دقیقه و {seconds} ثانیه" if minutes > 0 else f"{seconds} ثانیه"
+    if mark_task_done(tasks_path, task.title):
+        log("Marked [DONE] in the tasks file.")
+    else:
+        log("WARNING: title line not found in the tasks file; [DONE] not written.")
+    record("DONE", conv_id, steps, reply)
+    log(f"[Task {task_no}/{total}] DONE in {int(time.time() - started) // 60} min.")
+    return True
 
-        # چاپ نتیجه تسک
-        print("-" * 70)
-        if success:
-            print(f"✅ [تسک {idx}/{total_tasks}] با موفقیت پایان یافت!")
-        else:
-            print(f"⚠️ [تسک {idx}/{total_tasks}] با خطا یا اتمام مهلت مواجه شد.")
-        print(f"🆔 شناسه نشست: {conv_id}")
-        print(f"⏱️ مدت زمان: {duration_fmt} | تعداد گام‌ها: {steps}")
-        print("-" * 70)
 
-        # ذخیره در تاریخچه
-        append_history(idx, total_tasks, task_content, conv_id, success, steps, elapsed, final_summary)
+def run_queue(tasks_path: Path):
+    global _queue_mode
+    _queue_mode = True
+    open_run_log()
+    log("=" * 70)
+    log("Antigravity task runner")
+    log(f"Project: {PROJECT_DIR}")
+    log(f"Tasks:   {tasks_path}")
+    log("=" * 70)
+    write_status("running", tasks=str(tasks_path))
 
-        # وقفه کوتاه بین نشست‌ها برای ثبات حافظه
-        if idx < total_tasks:
-            print("⏳ ۴ ثانیه انتظار پیش از شروع تسک بعدی...")
+    ls_info = discover_language_server()
+    if not ls_info:
+        return stop_queue("Antigravity language server not found; open Antigravity and run again")
+    log(f"Language server: PID={ls_info['pid']} port={ls_info['port']}")
+
+    model_enum = resolve_model_enum(ls_info, MODEL_ID)
+    if not model_enum:
+        return stop_queue(f"model {MODEL_LABEL} ({MODEL_ID}) is not in Antigravity's model list")
+    log(f"Model: {MODEL_LABEL} ({model_enum})")
+    log(f"Turn end: agent reply, no running step, {STABILITY_SECONDS}s quiet. "
+        f"Stall limit: {STALL_TIMEOUT_SECONDS // 60} min. Fix rounds: {MAX_FIX_ROUNDS}.")
+
+    try:
+        tasks = load_tasks(tasks_path)
+    except Exception as e:
+        return stop_queue(f"cannot read the tasks file: {e}")
+    if not tasks:
+        log("No pending tasks.")
+        write_status("finished", done=0)
+        return True
+
+    total = len(tasks)
+    log(f"{total} pending task(s).")
+    history = history_path(tasks_path)
+    for task_no, task in enumerate(tasks, start=1):
+        if not run_one_task(ls_info, model_enum, tasks_path, history, task_no, total, task):
+            return False
+        if task_no < total:
             time.sleep(4)
 
-    print("\n" + "=" * 70)
-    print("🎉 تمام تسک‌های صف با موفقیت اجرا و ثبت شدند!")
-    print(f"📑 گزارش کامل نشست‌ها در فایل {HISTORY_FILE.name} ذخیره شد.")
-    print("=" * 70)
+    log("=" * 70)
+    log(f"All {total} task(s) done. History: {history}")
+    write_status("finished", done=total)
+    return True
+
+
+# ---------------------------------------------------------------- dialogue
+
+def run_ask(args) -> int:
+    global _log_stream
+    _log_stream = sys.stderr
+    message = Path(args.message_file).read_text(encoding="utf-8").strip()
+    if not message:
+        log("The message file is empty.")
+        return 2
+
+    ls_info = discover_language_server()
+    if not ls_info:
+        log("Antigravity language server not found; open Antigravity first.")
+        return 2
+    model_enum = resolve_model_enum(ls_info, args.model)
+    if not model_enum:
+        log(f"Model {args.model} is not in Antigravity's model list.")
+        return 2
+
+    before = git_snapshot()
+    if args.new:
+        conv_id = start_conversation(ls_info, message, model_enum)
+        after_index = -1
+    else:
+        conv_id = args.conversation
+        after_index = last_step_index(conv_id)
+        send_message(ls_info, conv_id, message, model_enum)
+    log(f"Conversation: {conv_id}")
+
+    finished, steps, reply, reason = monitor_conversation(ls_info, conv_id, after_index, CHAT_STABILITY_SECONDS)
+    changed = git_snapshot() != before
+
+    header = [f"CONVERSATION: {conv_id}", f"STATUS: {'finished' if finished else 'gave up: ' + reason}"]
+    if changed:
+        header.append("WARNING: the repository changed during this conversation (HEAD or git status differ).")
+    output = "\n".join(header) + "\n\n" + reply.strip() + "\n"
+    sys.stdout.write(output)
+    sys.stdout.flush()
+    if args.out:
+        Path(args.out).write_text(output, encoding="utf-8")
+    return 0 if finished and not changed else 1
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description="Sequential Antigravity task runner")
+    parser.add_argument("--tasks", default=str(DEFAULT_TASKS_FILE), help="tasks file (default: tasks.md)")
+    sub = parser.add_subparsers(dest="command")
+    ask = sub.add_parser("ask", help="send one message to an Antigravity conversation and print the reply")
+    target = ask.add_mutually_exclusive_group(required=True)
+    target.add_argument("--new", action="store_true", help="start a new conversation")
+    target.add_argument("--conversation", help="continue this conversation id")
+    ask.add_argument("--message-file", required=True, help="UTF-8 file with the message")
+    ask.add_argument("--model", default=MODEL_ID, help=f"Antigravity model id (default: {MODEL_ID})")
+    ask.add_argument("--out", help="also write the reply to this file")
+    args = parser.parse_args(argv)
+
+    if args.command == "ask":
+        return run_ask(args)
+    return 0 if run_queue(Path(args.tasks).resolve()) else 1
 
 
 if __name__ == "__main__":
     try:
-        run_tasks_sequence()
+        sys.exit(main())
     except KeyboardInterrupt:
-        print("\n\n🛑 اجرای تسک‌ها توسط کاربر متوقف شد.")
+        log("\nInterrupted by user.")
+        if _queue_mode:
+            write_status("stopped", reason="interrupted by user")
+        sys.exit(130)
     except Exception as err:
-        print(f"\n❌ خطای پیش‌بینی‌نشده: {err}")
+        log(f"\nUnexpected error: {err!r}")
+        if _queue_mode:
+            write_status("stopped", reason=f"unexpected error: {err!r}")
+        sys.exit(1)

@@ -2,6 +2,9 @@
 setlocal
 cd /d "%~dp0"
 title Antigravity Task Runner
+chcp 65001 >nul 2>nul
+set PYTHONIOENCODING=utf-8
+set PYTHONUTF8=1
 
 where python >nul 2>nul
 if %ERRORLEVEL% EQU 0 (
@@ -14,6 +17,6 @@ if %ERRORLEVEL% EQU 0 (
     )
 )
 
-%PY_CMD% -X utf8 run_tasks.py
+%PY_CMD% -X utf8 run_tasks.py %*
 echo.
 pause
