@@ -284,7 +284,7 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       expect(component.canUpload).toBe(true);
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const uploadBtn = Array.from(compiled.querySelectorAll('button')).find(b => b.textContent?.includes('بارگذاری مدرک جدید')) as HTMLButtonElement;
+      const uploadBtn = Array.from(compiled.querySelectorAll('button')).find(b => b.textContent?.includes('بارگذاری مدرک')) as HTMLButtonElement;
       expect(uploadBtn).not.toBeNull();
 
       // ۳. کلیک روی دکمه باز کردن مودال در DOM
@@ -383,7 +383,7 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       const compiled = fixture.nativeElement as HTMLElement;
 
       // ۱. تست دکمه «پیش‌نمایش» سند PDF
-      const previewButtons = Array.from(compiled.querySelectorAll('button')).filter(b => b.textContent?.includes('مشاهده'));
+      const previewButtons = Array.from(compiled.querySelectorAll('button')).filter(b => b.textContent?.includes('مشاهده') || b.textContent?.includes('پیش‌نمایش') || b.getAttribute('appaction') === 'view');
       expect(previewButtons.length).toBeGreaterThan(0);
 
       // کلیک روی پیش‌نمایش سند اول (PDF)
@@ -402,7 +402,7 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       expect(externalLink).not.toBeNull();
 
       // بستن پیش‌نمایش با دکمه ✕
-      const closePreviewBtn = Array.from(compiled.querySelectorAll('.fixed.inset-0 button')).find(b => b.textContent?.trim() === '✕') as HTMLButtonElement;
+      const closePreviewBtn = Array.from(compiled.querySelectorAll('.fixed.inset-0 button')).find(b => b.textContent?.trim() === '✕' || b.getAttribute('appaction') === 'close' || b.title === 'بستن') as HTMLButtonElement;
       expect(closePreviewBtn).not.toBeNull();
       closePreviewBtn.click();
       fixture.detectChanges();
@@ -438,7 +438,7 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       expect(component.previewModal.isOpen).toBe(false);
 
       // ۳. تست دکمه «دانلود امن سند» در جدول
-      const downloadButtons = Array.from(compiled.querySelectorAll('button')).filter(b => b.textContent?.includes('دانلود'));
+      const downloadButtons = Array.from(compiled.querySelectorAll('button')).filter(b => b.textContent?.includes('دانلود') || b.getAttribute('appaction') === 'download' || b.title === 'دانلود');
       expect(downloadButtons.length).toBeGreaterThan(0);
 
       downloadButtons[0].click();
@@ -447,7 +447,7 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       expect(mockToast.success).toHaveBeenCalledWith('سند با موفقیت دریافت شد.');
 
       // ۴. تست دکمه «حذف سند» در جدول
-      const deleteButtons = Array.from(compiled.querySelectorAll('button')).filter(b => b.title === 'حذف مدرک');
+      const deleteButtons = Array.from(compiled.querySelectorAll('button')).filter(b => b.title === 'حذف مدرک' || b.title === 'حذف' || b.getAttribute('appaction') === 'delete');
       expect(deleteButtons.length).toBeGreaterThan(0);
 
       deleteButtons[0].click();
@@ -462,8 +462,8 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       const compiled = fixture.nativeElement as HTMLElement;
 
       // ۱. تست کلیک روی تک‌تک دکمه‌های رسته
-      const categoryButtons = Array.from(compiled.querySelectorAll('.sticky button, div button')).filter(b => 
-        ['همه اسناد', 'اسناد هویتی و ثبتی', 'مجوزها و پروانه‌ها', 'مالیات و بیمه', 'قراردادها و اجاره‌نامه'].some(t => b.textContent?.includes(t))
+      const categoryButtons = Array.from(compiled.querySelectorAll('app-tab-bar button, .sticky button, div button')).filter(b => 
+        ['همه اسناد', 'اساسنامه و روزنامه', 'اسناد هویتی و ثبتی', 'مجوزها و پروانه‌ها', 'مالیات و بیمه', 'قراردادها و اجاره‌نامه'].some(t => b.textContent?.includes(t))
       );
       expect(categoryButtons.length).toBeGreaterThanOrEqual(4);
 
@@ -493,8 +493,8 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       expect(component.searchQuery).toBe('');
       expect(component.filteredDocuments.length).toBe(2);
 
-      // ۳. تست دکمه به‌روزرسانی بایگانی (🔄)
-      const refreshBtn = compiled.querySelector('button[title="بروزرسانی بایگانی"]') as HTMLButtonElement;
+      // ۳. تست دکمه به‌روزرسانی بایگانی
+      const refreshBtn = (compiled.querySelector('button[title="بروزرسانی بایگانی"]') || compiled.querySelector('button[appaction="refresh"]')) as HTMLButtonElement;
       expect(refreshBtn).not.toBeNull();
       refreshBtn.click();
       expect(mockCompanyApi.getDocuments).toHaveBeenCalled();

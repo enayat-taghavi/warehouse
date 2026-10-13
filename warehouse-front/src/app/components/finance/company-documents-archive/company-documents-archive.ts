@@ -11,11 +11,15 @@ import { ActiveCompanyService } from '../../../core/services/active-company.serv
 import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../shared/components/toast/toast.component';
 import { Company, CompanyDocument, CompanyDocumentType, CompanyAccessLevel } from '../../../core/models/company.model';
+import { TabBarComponent, TabDef } from '../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../modules/accounting/entity-icons';
+import { PLATFORM_ENTITY_ICONS } from '../../../shared/icons/semantic-icons';
 
 @Component({
   selector: 'app-company-documents-archive',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, TabBarComponent, ActionButtonComponent],
   templateUrl: './company-documents-archive.html',
   styleUrls: ['./company-documents-archive.css']
 })
@@ -203,6 +207,40 @@ export class CompanyDocumentsArchiveComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  private categoryTabsKey = '';
+  private categoryTabsCache: TabDef[] = [];
+
+  get categoryTabs(): TabDef[] {
+    const counts = [
+      this.getCountByCategory('ALL'),
+      this.getCountByCategory('CORPORATE'),
+      this.getCountByCategory('LICENSES'),
+      this.getCountByCategory('FISCAL'),
+      this.getCountByCategory('CONTRACTS'),
+      this.getCountByCategory('EXPIRING')
+    ];
+    const key = `${this.activeCategory}:${counts.join(',')}`;
+    if (key === this.categoryTabsKey && this.categoryTabsCache.length > 0) {
+      return this.categoryTabsCache;
+    }
+    this.categoryTabsKey = key;
+    this.categoryTabsCache = [
+      { id: 'ALL', label: 'همه اسناد', shortLabel: 'همه', icon: 'status-all', count: counts[0] },
+      { id: 'CORPORATE', label: 'اساسنامه و روزنامه', shortLabel: 'اساسنامه', icon: PLATFORM_ENTITY_ICONS.company, count: counts[1] },
+      { id: 'LICENSES', label: 'مجوزها و پروانه‌ها', shortLabel: 'مجوزها', icon: ACCOUNTING_ENTITY_ICONS.licenses, count: counts[2] },
+      { id: 'FISCAL', label: 'مالیات و بیمه', shortLabel: 'مالیات', icon: ACCOUNTING_ENTITY_ICONS.tax, count: counts[3] },
+      { id: 'CONTRACTS', label: 'قراردادها و اجاره‌نامه', shortLabel: 'قراردادها', icon: ACCOUNTING_ENTITY_ICONS.contractsAndLeases, count: counts[4] },
+      { id: 'EXPIRING', label: 'نیازمند تمدید', shortLabel: 'تمدید', icon: 'status-warning', count: counts[5] > 0 ? counts[5] : undefined, tone: 'rose' }
+    ];
+    return this.categoryTabsCache;
+  }
+
+  onCategoryTabChange(tabId: string): void {
+    if (tabId === 'ALL' || tabId === 'CORPORATE' || tabId === 'LICENSES' || tabId === 'FISCAL' || tabId === 'CONTRACTS' || tabId === 'EXPIRING') {
+      this.setCategory(tabId);
+    }
   }
 
   setCategory(category: 'ALL' | 'CORPORATE' | 'LICENSES' | 'FISCAL' | 'CONTRACTS' | 'EXPIRING'): void {

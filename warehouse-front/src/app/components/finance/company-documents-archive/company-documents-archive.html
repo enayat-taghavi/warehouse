@@ -33,19 +33,18 @@
         <button 
           *ngIf="canUpload"
           type="button" 
-          (click)="openUploadModal()"
-          class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer">
-          <span>+</span>
-          <span>بارگذاری مدرک جدید</span>
+          appAction="upload"
+          [label]="'بارگذاری مدرک'"
+          (click)="openUploadModal()">
         </button>
 
         <!-- دکمه رفرش / همگام‌سازی -->
         <button 
           type="button"
-          (click)="selectedCompanyId ? loadDocuments(selectedCompanyId) : loadAccessibleCompanies()"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all"
-          title="بروزرسانی بایگانی">
-          🔄
+          appAction="refresh"
+          display="icon"
+          [busy]="isLoading || isLoadingCompanies"
+          (click)="selectedCompanyId ? loadDocuments(selectedCompanyId) : loadAccessibleCompanies()">
         </button>
       </div>
 
@@ -69,7 +68,7 @@
         *ngFor="let c of companies"
         type="button"
         (click)="selectCompany(c)"
-        class="flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer whitespace-nowrap"
+        class="flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer whitespace-nowrap tap-target"
         [ngClass]="selectedCompanyId === c.id ? 'bg-indigo-50 border-indigo-300 text-indigo-700 shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'">
         <span class="w-2 h-2 rounded-full" [ngClass]="selectedCompanyId === c.id ? 'bg-indigo-600' : 'bg-slate-400'"></span>
         <span>{{ c.name }}</span>
@@ -97,79 +96,14 @@
   <div *ngIf="selectedCompany" class="space-y-4">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
       
-      <!-- ساب‌تب‌های موضوعی مدارک داخل پیل محصور -->
-      <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
-        <button 
-          type="button"
-          (click)="setCategory('ALL')"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer"
-          [ngClass]="activeCategory === 'ALL' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'">
-          <span>همه اسناد</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-            [ngClass]="activeCategory === 'ALL' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200 text-slate-600'">
-            {{ getCountByCategory('ALL') }}
-          </span>
-        </button>
-
-        <button 
-          type="button"
-          (click)="setCategory('CORPORATE')"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer"
-          [ngClass]="activeCategory === 'CORPORATE' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'">
-          <span>اساسنامه و روزنامه</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-            [ngClass]="activeCategory === 'CORPORATE' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200 text-slate-600'">
-            {{ getCountByCategory('CORPORATE') }}
-          </span>
-        </button>
-
-        <button 
-          type="button"
-          (click)="setCategory('LICENSES')"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer"
-          [ngClass]="activeCategory === 'LICENSES' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'">
-          <span>مجوزها و پروانه‌ها</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-            [ngClass]="activeCategory === 'LICENSES' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200 text-slate-600'">
-            {{ getCountByCategory('LICENSES') }}
-          </span>
-        </button>
-
-        <button 
-          type="button"
-          (click)="setCategory('FISCAL')"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer"
-          [ngClass]="activeCategory === 'FISCAL' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'">
-          <span>مالیات و بیمه</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-            [ngClass]="activeCategory === 'FISCAL' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200 text-slate-600'">
-            {{ getCountByCategory('FISCAL') }}
-          </span>
-        </button>
-
-        <button 
-          type="button"
-          (click)="setCategory('CONTRACTS')"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer"
-          [ngClass]="activeCategory === 'CONTRACTS' ? 'bg-white text-indigo-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'">
-          <span>قراردادها و اجاره‌نامه</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-            [ngClass]="activeCategory === 'CONTRACTS' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200 text-slate-600'">
-            {{ getCountByCategory('CONTRACTS') }}
-          </span>
-        </button>
-
-        <button 
-          type="button"
-          (click)="setCategory('EXPIRING')"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer"
-          [ngClass]="activeCategory === 'EXPIRING' ? 'bg-white text-rose-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'">
-          <span>نیازمند تمدید</span>
-          <span *ngIf="getCountByCategory('EXPIRING') > 0" class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-rose-100 text-rose-800">
-            {{ getCountByCategory('EXPIRING') }}
-          </span>
-        </button>
-      </div>
+      <!-- ساب‌تب‌های موضوعی مدارک داخل نوار تب مشترک -->
+      <app-tab-bar 
+        [tabs]="categoryTabs" 
+        [active]="activeCategory" 
+        mobile="icon" 
+        fullLabelFrom="xl" 
+        (tabChange)="onCategoryTabChange($event)">
+      </app-tab-bar>
 
       <!-- جستجوی زنده درجا در هدر جدول -->
       <div class="relative w-full md:w-72">
@@ -185,8 +119,11 @@
         />
         <button 
           *ngIf="searchQuery" 
+          type="button"
           (click)="clearSearch()" 
-          class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer">
+          title="پاک‌سازی جستجو"
+          aria-label="پاک‌سازی جستجو"
+          class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer tap-target">
           ✕
         </button>
       </div>
@@ -290,29 +227,27 @@
                   <!-- پیش‌نمایش درجا -->
                   <button 
                     type="button" 
-                    (click)="openPreview(doc)"
-                    class="px-2 py-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
-                    title="پیش‌نمایش سند">
-                    👁️ مشاهده
+                    appAction="view"
+                    [label]="'پیش‌نمایش'"
+                    size="sm"
+                    (click)="openPreview(doc)">
                   </button>
 
                   <!-- دانلود امن -->
                   <button 
                     type="button" 
-                    (click)="downloadDocument(doc)"
-                    class="px-2 py-1 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
-                    title="دانلود امن سند">
-                    📥 دانلود
+                    appAction="download"
+                    size="sm"
+                    (click)="downloadDocument(doc)">
                   </button>
 
                   <!-- حذف سند (فقط کاربرانی که مجوز ویرایش دارند) -->
                   <button 
                     *ngIf="canUpload"
                     type="button" 
-                    (click)="deleteDocument(doc)"
-                    class="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg text-xs transition-all cursor-pointer"
-                    title="حذف مدرک">
-                    🗑️
+                    appAction="delete"
+                    size="sm"
+                    (click)="deleteDocument(doc)">
                   </button>
                 </div>
               </td>
@@ -345,9 +280,10 @@
           </div>
         </div>
         <button 
-          (click)="closeUploadModal()" 
-          class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer">
-          ✕
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeUploadModal()">
         </button>
       </div>
 
@@ -491,16 +427,16 @@
       <div class="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
         <button 
           type="button" 
-          (click)="closeUploadModal()" 
-          class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-200 text-xs font-bold transition-colors cursor-pointer">
-          انصراف
+          appAction="close"
+          [label]="'انصراف'"
+          (click)="closeUploadModal()">
         </button>
         <button 
           type="button" 
-          (click)="submitUpload()" 
-          [disabled]="uploadModal.isSubmitting"
-          class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer">
-          {{ uploadModal.isSubmitting ? 'در حال بارگذاری...' : 'ثبت و ذخیره سند' }}
+          appAction="upload"
+          [busy]="uploadModal.isSubmitting"
+          [label]="'ثبت و ذخیره سند'"
+          (click)="submitUpload()">
         </button>
       </div>
 
@@ -529,9 +465,10 @@
             🔗 باز کردن در تب مجزا
           </a>
           <button 
-            (click)="closePreview()" 
-            class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer">
-            ✕
+            type="button"
+            appAction="close"
+            display="icon"
+            (click)="closePreview()">
           </button>
         </div>
       </div>
