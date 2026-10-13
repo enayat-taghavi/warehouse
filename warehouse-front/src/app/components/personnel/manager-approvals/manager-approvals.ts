@@ -17,11 +17,14 @@ import {
   PayrollYearlySettings
 } from '../../../core/models/personnel.model';
 import { SvgIconDirective } from '../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../shared/components/action-button/action-button.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../modules/accounting/entity-icons';
 
 @Component({
   selector: 'app-manager-approvals',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, TabBarComponent, ActionButtonComponent],
   templateUrl: './manager-approvals.html',
   styleUrl: './manager-approvals.css'
 })
@@ -226,9 +229,119 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     }
   }
 
-  setTab(tab: 'new_personnel' | 'new_fleet' | 'change_requests' | 'work_periods' | 'invoices' | 'petty_cash'): void {
-    this.activeTab = tab;
-    this.updateQueryParams();
+  // ─── Responsive Tab Definitions (AGENTS §7 & Shared Toolkit) ───────
+  readonly statusFilterTabs: TabDef[] = [
+    { id: 'pending_manager', label: 'در انتظار تصویب مدیر', shortLabel: 'در انتظار', icon: 'status-pending' },
+    { id: 'revision_required', label: 'نیازمند بازنگری', shortLabel: 'بازنگری', icon: 'status-revision' },
+    { id: 'approved', label: 'مصوب نهایی و فعال', shortLabel: 'مصوب', icon: 'status-approved' },
+    { id: 'ALL', label: 'همه', shortLabel: 'همه', icon: 'status-all' }
+  ];
+
+  readonly crStatusFilterTabs: TabDef[] = [
+    { id: 'pending_manager', label: 'در انتظار تصویب مدیر', shortLabel: 'در انتظار', icon: 'status-pending' },
+    { id: 'approved', label: 'تصویب شده', shortLabel: 'تصویب', icon: 'status-approved' },
+    { id: 'rejected', label: 'رد شده', shortLabel: 'رد', icon: 'status-rejected' },
+    { id: 'ALL', label: 'همه', shortLabel: 'همه', icon: 'status-all' }
+  ];
+
+  private mainTabsKey = '';
+  private mainTabsCache: TabDef[] = [];
+  get mainTabs(): TabDef[] {
+    const key = `${this.pendingPersonnelCount}:${this.pendingFleetCount}:${this.pendingCRCount}:${this.pendingWorkPeriodCount}:${this.pendingInvoicesCount}:${this.pendingPettyCashCount}`;
+    if (key !== this.mainTabsKey) {
+      this.mainTabsKey = key;
+      this.mainTabsCache = [
+        {
+          id: 'new_personnel',
+          label: 'پرسنل جدید',
+          shortLabel: 'پرسنل',
+          icon: ACCOUNTING_ENTITY_ICONS.newPersonnel,
+          count: this.pendingPersonnelCount,
+          tone: 'amber'
+        },
+        {
+          id: 'new_fleet',
+          label: 'ناوگان جدید',
+          shortLabel: 'ناوگان',
+          icon: ACCOUNTING_ENTITY_ICONS.fleet,
+          count: this.pendingFleetCount,
+          tone: 'blue'
+        },
+        {
+          id: 'change_requests',
+          label: 'کارتابل ویرایش‌ها',
+          shortLabel: 'ویرایش‌ها',
+          icon: 'action-edit',
+          count: this.pendingCRCount,
+          tone: 'rose'
+        },
+        {
+          id: 'work_periods',
+          label: 'دوره‌های کارکرد ماهانه',
+          shortLabel: 'دوره‌ها',
+          icon: ACCOUNTING_ENTITY_ICONS.attendance,
+          count: this.pendingWorkPeriodCount,
+          tone: 'indigo'
+        },
+        {
+          id: 'invoices',
+          label: 'فاکتورهای هزینه',
+          shortLabel: 'فاکتور',
+          icon: ACCOUNTING_ENTITY_ICONS.invoices,
+          count: this.pendingInvoicesCount,
+          tone: 'emerald'
+        },
+        {
+          id: 'petty_cash',
+          label: 'اسناد تنخواه‌گردان',
+          shortLabel: 'تنخواه',
+          icon: ACCOUNTING_ENTITY_ICONS.pettyCash,
+          count: this.pendingPettyCashCount,
+          tone: 'purple'
+        }
+      ];
+    }
+    return this.mainTabsCache;
+  }
+
+  private crSubTabsKey = '';
+  private crSubTabsCache: TabDef[] = [];
+  get crSubTabs(): TabDef[] {
+    const key = `${this.personnelChangeRequests.length}:${this.vehicleChangeRequests.length}`;
+    if (key !== this.crSubTabsKey) {
+      this.crSubTabsKey = key;
+      this.crSubTabsCache = [
+        {
+          id: 'personnel',
+          label: 'پرسنل',
+          shortLabel: 'پرسنل',
+          icon: ACCOUNTING_ENTITY_ICONS.personnel,
+          count: this.personnelChangeRequests.length
+        },
+        {
+          id: 'vehicles',
+          label: 'ناوگان',
+          shortLabel: 'ناوگان',
+          icon: ACCOUNTING_ENTITY_ICONS.fleet,
+          count: this.vehicleChangeRequests.length
+        }
+      ];
+    }
+    return this.crSubTabsCache;
+  }
+
+  setTab(tab: string): void {
+    if (
+      tab === 'new_personnel' ||
+      tab === 'new_fleet' ||
+      tab === 'change_requests' ||
+      tab === 'work_periods' ||
+      tab === 'invoices' ||
+      tab === 'petty_cash'
+    ) {
+      this.activeTab = tab;
+      this.updateQueryParams();
+    }
   }
 
   setStatusFilter(status: string): void {
@@ -236,9 +349,11 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     this.updateQueryParams();
   }
 
-  setCRSubTab(subTab: 'personnel' | 'vehicles'): void {
-    this.changeRequestSubTab = subTab;
-    this.updateQueryParams();
+  setCRSubTab(subTab: string): void {
+    if (subTab === 'personnel' || subTab === 'vehicles') {
+      this.changeRequestSubTab = subTab;
+      this.updateQueryParams();
+    }
   }
 
   setCRStatusFilter(status: string): void {
