@@ -1,10 +1,10 @@
 {
   "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
   "counters": {
-    "rule_1_unlabeled_icon_buttons": 128,
+    "rule_1_unlabeled_icon_buttons": 124,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 137,
-    "rule_4_retired_icons": 60,
+    "rule_3_non_standard_actions": 130,
+    "rule_4_retired_icons": 58,
     "rule_5_neutralized_tap_targets": 0
   },
   "violations": {
@@ -126,8 +126,8 @@
         "line": 238
       },
       {
-        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
-        "line": 771
+        "file": "components/finance/accountant/accountant-personnel/accountant-personnel.html",
+        "line": 265
       }
     ],
     "rule_2_tab_min_widths": [],
@@ -217,48 +217,6 @@
         "icon": null
       },
       {
-        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
-        "line": 284,
-        "method": "openRejectModal",
-        "icon": "rotate-ccw"
-      },
-      {
-        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
-        "line": 292,
-        "method": "openRejectModal",
-        "icon": "x"
-      },
-      {
-        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
-        "line": 373,
-        "method": "openRejectModal",
-        "icon": "rotate-ccw"
-      },
-      {
-        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
-        "line": 523,
-        "method": "openRejectModal",
-        "icon": "x"
-      },
-      {
-        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
-        "line": 791,
-        "method": "closeRejectModal",
-        "icon": "x"
-      },
-      {
-        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
-        "line": 833,
-        "method": "closeRejectModal",
-        "icon": null
-      },
-      {
-        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
-        "line": 838,
-        "method": "submitRejectModal",
-        "icon": "refresh-cw"
-      },
-      {
         "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
         "line": 182,
         "method": "approvePersonnelFinance",
@@ -310,6 +268,48 @@
         "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
         "line": 678,
         "method": "closeRejectModal",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
+        "line": 692,
+        "method": "closeRejectModal",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
+        "line": 695,
+        "method": "submitRejectModal",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-payroll/accountant-payroll.html",
+        "line": 271,
+        "method": "refreshCurrentTab",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-petty-cash/accountant-petty-cash.html",
+        "line": 178,
+        "method": "approveReplenishment",
+        "icon": null
+      },
+      {
+        "file": "components/finance/accountant/accountant-petty-cash/accountant-petty-cash.html",
+        "line": 184,
+        "method": "rejectReplenishment",
+        "icon": null
+      },
+      {
+        "file": "components/finance/company-documents-archive/company-documents-archive.html",
+        "line": 309,
+        "method": "deleteDocument",
+        "icon": null
+      },
+      {
+        "file": "components/finance/counterparties/counterparties.html",
+        "line": 556,
+        "method": "deleteCounterparty",
         "icon": null
       }
     ],
@@ -440,16 +440,6 @@
         "icon": "eye-slash"
       },
       {
-        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
-        "line": 272,
-        "icon": "edit-2"
-      },
-      {
-        "file": "components/finance/accountant/accountant-fleet/accountant-fleet.html",
-        "line": 362,
-        "icon": "edit-2"
-      },
-      {
         "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
         "line": 1395,
         "icon": "trash"
@@ -463,6 +453,16 @@
         "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
         "line": 1637,
         "icon": "trash"
+      },
+      {
+        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "line": 1646,
+        "icon": "trash"
+      },
+      {
+        "file": "components/finance/employee/employee-new-vehicle/employee-new-vehicle.html",
+        "line": 332,
+        "icon": "edit-2"
       }
     ],
     "rule_5_neutralized_tap_targets": []

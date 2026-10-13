@@ -60,58 +60,13 @@
         }
 
         <!-- ناوبری زیرتب‌ها در کپسول محصور (Subtabs Pill Container) -->
-        <div class="flex bg-surface-alt p-1 rounded-xl border border-line/80 overflow-x-auto w-full md:w-auto">
-          <button
-            type="button"
-            (click)="switchSubTab('new')"
-            [ngClass]="activeSubTab === 'new' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-muted hover:text-fg font-bold'"
-            class="px-2.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <svg appIcon="truck" class="w-4 h-4"></svg>
-            <span>خودروها و نرخ کرایه</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.newPending > 0 ? 'bg-amber-100 text-amber-900 font-black animate-pulse' : 'bg-line/70 text-muted'">
-              {{ statusCounters.newPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('settlement')"
-            [ngClass]="activeSubTab === 'settlement' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-muted hover:text-fg font-bold'"
-            class="px-2.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <svg appIcon="clock" class="w-4 h-4"></svg>
-            <span>تسویه‌حساب و کارکرد</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.settlementPending > 0 ? 'bg-indigo-100 text-indigo-800 font-black' : 'bg-line/70 text-muted'">
-              {{ statusCounters.settlementPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('changes')"
-            [ngClass]="activeSubTab === 'changes' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-muted hover:text-fg font-bold'"
-            class="px-2.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer relative">
-            <svg appIcon="refresh-cw" class="w-4 h-4"></svg>
-            <span>درخواست‌های تغییرات</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.changesPending > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-line/70 text-muted'">
-              {{ statusCounters.changesPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('all')"
-            [ngClass]="activeSubTab === 'all' ? 'bg-surface text-indigo-700 shadow-xs font-black' : 'text-muted hover:text-fg font-bold'"
-            class="px-2.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <svg appIcon="folder" class="w-4 h-4"></svg>
-            <span>همه ناوگان</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-line/70 text-muted">
-              {{ statusCounters.allTotal }}
-            </span>
-          </button>
-        </div>
+        <app-tab-bar
+          [tabs]="fleetSubTabs"
+          [active]="activeSubTab"
+          (activeChange)="switchSubTab($event)"
+          mobile="icon"
+          fullLabelFrom="xl">
+        </app-tab-bar>
       </div>
 
       <!-- سمت چپ: جستجو، خروجی اکسل و رفرش -->
@@ -133,22 +88,18 @@
 
         <button
           type="button"
-          (click)="exportExcel()"
+          appAction="export-excel"
+          [busy]="isExportingExcel"
           [disabled]="isExportingExcel"
-          title="خروجی اکسل ناوگان"
-          aria-label="خروجی اکسل ناوگان"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-all">
-          <svg appIcon="download" class="w-4 h-4"></svg>
+          (click)="exportExcel()">
         </button>
 
         <button
           type="button"
-          (click)="fetchFleetData()"
+          appAction="refresh"
+          [busy]="isLoading"
           [disabled]="isLoading"
-          title="همگام‌سازی و بارگذاری مجدد"
-          aria-label="همگام‌سازی و بارگذاری مجدد"
-          class="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs bg-surface-alt text-muted hover:text-fg hover:bg-surface border border-line transition-all">
-          <svg appIcon="refresh-cw" class="w-4 h-4" [class.animate-spin]="isLoading"></svg>
+          (click)="fetchFleetData()">
         </button>
       </div>
 
@@ -165,16 +116,15 @@
     <div class="flex items-center gap-2">
       <button
         type="button"
-        (click)="openBatchApprovalModal()"
-        class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs cursor-pointer">
-        <svg appIcon="check" class="w-4 h-4"></svg>
-        <span>تایید مالی گروهی (ارسال به مدیر)</span>
+        appAction="approve"
+        label="تایید گروهی"
+        (click)="openBatchApprovalModal()">
       </button>
       <button
         type="button"
-        (click)="selectedVehicleIds.clear()"
-        class="px-3 py-1.5 bg-surface text-muted hover:text-fg border border-line rounded-xl text-xs font-bold cursor-pointer">
-        انصراف
+        appAction="close"
+        label="لغو انتخاب"
+        (click)="selectedVehicleIds.clear()">
       </button>
     </div>
   </div>
@@ -267,35 +217,31 @@
                 <div class="flex items-center justify-center gap-1.5">
                   <button
                     type="button"
-                    (click)="openEditVehicleModal(item)"
-                    class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-black cursor-pointer flex items-center gap-1">
-                    <svg appIcon="edit-2" class="w-3.5 h-3.5"></svg>
-                    <span>نرخ و شبا</span>
+                    appAction="edit"
+                    label="نرخ و شبا"
+                    (click)="openEditVehicleModal(item)">
                   </button>
                   <button
                     type="button"
+                    appAction="approve"
+                    label="تایید مالی"
                     [disabled]="!canSendToManager(item)"
-                    (click)="openApprovalModal(item.id, item.plate_number || '', 'vehicle')"
-                    [title]="!canSendToManager(item) ? getMissingFieldsSummary(item).join('، ') : 'تایید مالی و ارسال به مدیر'"
-                    class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1">
-                    <svg appIcon="check" class="w-3.5 h-3.5"></svg>
-                    <span>تایید مالی</span>
+                    [attr.title]="!canSendToManager(item) ? getMissingFieldsSummary(item).join('، ') : 'تایید مالی و ارسال به مدیر'"
+                    (click)="openApprovalModal(item.id, item.plate_number || '', 'vehicle')">
                   </button>
                   <button
                     *ngIf="item.id"
                     type="button"
-                    (click)="openRejectModal(item.id, item.plate_number || '', 'vehicle', 'revision')"
-                    class="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 text-xs font-bold cursor-pointer flex items-center gap-1">
-                    <svg appIcon="rotate-ccw" class="w-3.5 h-3.5"></svg>
-                    <span>عودت</span>
+                    appAction="return"
+                    label="عودت"
+                    (click)="openRejectModal(item.id, item.plate_number || '', 'vehicle', 'revision')">
                   </button>
                   <button
                     *ngIf="item.id"
                     type="button"
-                    (click)="openRejectModal(item.id, item.plate_number || '', 'vehicle', 'reject')"
-                    class="px-2 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold cursor-pointer flex items-center gap-1">
-                    <svg appIcon="x" class="w-3.5 h-3.5"></svg>
-                    <span>رد</span>
+                    appAction="reject"
+                    label="رد"
+                    (click)="openRejectModal(item.id, item.plate_number || '', 'vehicle', 'reject')">
                   </button>
                 </div>
               </td>
@@ -357,26 +303,26 @@
         <div class="pt-2 border-t border-line grid grid-cols-3 gap-1.5">
           <button
             type="button"
-            (click)="openEditVehicleModal(item)"
-            class="min-h-[44px] rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-black flex items-center justify-center gap-1 active:scale-95 cursor-pointer">
-            <svg appIcon="edit-2" class="w-4 h-4"></svg>
-            <span>نرخ و شبا</span>
+            appAction="edit"
+            display="label"
+            label="نرخ و شبا"
+            (click)="openEditVehicleModal(item)">
           </button>
           <button
             type="button"
+            appAction="approve"
+            display="label"
+            label="تایید مالی"
             [disabled]="!canSendToManager(item)"
-            (click)="openApprovalModal(item.id, item.plate_number || '', 'vehicle')"
-            class="min-h-[44px] rounded-xl bg-emerald-600 disabled:opacity-40 text-white text-xs font-black flex items-center justify-center gap-1 active:scale-95 shadow-xs cursor-pointer">
-            <svg appIcon="check" class="w-4 h-4"></svg>
-            <span>تایید مالی</span>
+            (click)="openApprovalModal(item.id, item.plate_number || '', 'vehicle')">
           </button>
           <button
             *ngIf="item.id"
             type="button"
-            (click)="openRejectModal(item.id, item.plate_number || '', 'vehicle', 'revision')"
-            class="min-h-[44px] rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold flex items-center justify-center gap-1 active:scale-95 cursor-pointer">
-            <svg appIcon="rotate-ccw" class="w-4 h-4"></svg>
-            <span>عودت</span>
+            appAction="return"
+            display="label"
+            label="عودت"
+            (click)="openRejectModal(item.id, item.plate_number || '', 'vehicle', 'revision')">
           </button>
         </div>
       </div>
@@ -407,12 +353,12 @@
     <div class="flex justify-end">
       <button
         type="button"
-        (click)="exportFleetBankExcel()"
+        appAction="download"
+        label="اکسل بانکی"
+        [busy]="isExportingFleetBank"
         [disabled]="isExportingFleetBank || isSettlementLoading || settlementError || settlementItems.length === 0"
-        [title]="settlementItems.length === 0 ? 'برای این دوره ردیف تسویه‌ای وجود ندارد' : 'فایل پرداخت بانکی کرایهٔ رانندگان این دوره و دامنه'"
-        class="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-black shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-        <svg appIcon="download" class="w-4 h-4"></svg>
-        <span>{{ isExportingFleetBank ? 'در حال صدور...' : 'فایل پرداخت بانکی تسویه ناوگان' }}</span>
+        [attr.title]="settlementItems.length === 0 ? 'برای این دوره ردیف تسویه‌ای وجود ندارد' : 'فایل پرداخت بانکی کرایهٔ رانندگان این دوره و دامنه'"
+        (click)="exportFleetBankExcel()">
       </button>
     </div>
 
@@ -425,7 +371,13 @@
 
     <div *ngIf="settlementError" class="bg-surface rounded-2xl border border-rose-200 p-6 text-center space-y-3">
       <p class="font-bold text-sm text-rose-700">محاسبه تسویه ناوگان برای این دوره ممکن نشد.</p>
-      <button type="button" (click)="loadSettlement()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer">تلاش دوباره</button>
+      <button
+        type="button"
+        appAction="refresh"
+        display="label"
+        label="تلاش دوباره"
+        (click)="loadSettlement()">
+      </button>
     </div>
 
     <div *ngIf="settlementItems.length === 0 && !isSettlementLoading && !settlementError" class="bg-surface rounded-2xl border border-line p-8 text-center text-muted">
@@ -499,10 +451,9 @@
               <td class="p-3">
                 <button
                   type="button"
-                  (click)="openDiffModal(cr)"
-                  class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 cursor-pointer flex items-center gap-1">
-                  <svg appIcon="search" class="w-3.5 h-3.5"></svg>
-                  <span>مشاهده مغایرت‌ها (Diff)</span>
+                  appAction="view"
+                  label="مقایسه"
+                  (click)="openDiffModal(cr)">
                 </button>
               </td>
               <td class="p-3 font-mono text-muted">{{ cr.created_at | slice:0:10 }}</td>
@@ -515,17 +466,15 @@
                 <div class="flex items-center justify-center gap-1.5">
                   <button
                     type="button"
-                    (click)="openApprovalModal(cr.id, cr.plate_number || ('درخواست #' + cr.id), 'vehicle_cr')"
-                    class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-black shadow-xs cursor-pointer flex items-center gap-1">
-                    <svg appIcon="check" class="w-3.5 h-3.5"></svg>
-                    <span>تایید مالی (مدیر)</span>
+                    appAction="approve"
+                    label="تایید مالی"
+                    (click)="openApprovalModal(cr.id, cr.plate_number || ('درخواست #' + cr.id), 'vehicle_cr')">
                   </button>
                   <button
                     type="button"
-                    (click)="openRejectModal(cr.id, cr.plate_number || '', 'vehicle_cr', 'reject')"
-                    class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold cursor-pointer flex items-center gap-1">
-                    <svg appIcon="x" class="w-3.5 h-3.5"></svg>
-                    <span>رد</span>
+                    appAction="reject"
+                    label="رد"
+                    (click)="openRejectModal(cr.id, cr.plate_number || '', 'vehicle_cr', 'reject')">
                   </button>
                 </div>
               </td>
@@ -582,8 +531,11 @@
           </h3>
           <span class="text-xs text-muted font-bold">{{ editingVehicle.vehicle_type_display || editingVehicle.vehicle_type }}</span>
         </div>
-        <button (click)="closeVehicleModal()" class="text-muted hover:text-fg cursor-pointer p-1" title="بستن" aria-label="بستن">
-          <svg appIcon="x" class="w-4 h-4"></svg>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeVehicleModal()">
         </button>
       </div>
 
@@ -764,18 +716,16 @@
       <div class="p-4 bg-surface-alt border-t border-line flex justify-end gap-2">
         <button
           type="button"
-          (click)="closeVehicleModal()"
-          class="px-4 py-2 rounded-xl border border-line text-xs font-bold text-muted hover:bg-surface cursor-pointer">
-          انصراف
+          appAction="close"
+          (click)="closeVehicleModal()">
         </button>
         <button
           type="button"
-          (click)="saveVehicleFinancialChanges()"
+          appAction="save"
+          [busy]="isSavingVehicle"
           [disabled]="isSavingVehicle"
-          class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5">
-          <svg *ngIf="!isSavingVehicle" appIcon="save" class="w-4 h-4"></svg>
-          <svg *ngIf="isSavingVehicle" appIcon="refresh-cw" class="w-4 h-4 animate-spin"></svg>
-          <span>{{ isSavingVehicle ? 'در حال ذخیره‌سازی...' : 'ذخیره نرخ و مشخصات' }}</span>
+          label="ذخیره نرخ و مشخصات"
+          (click)="saveVehicleFinancialChanges()">
         </button>
       </div>
 
@@ -788,8 +738,11 @@
       <div class="p-4 border-b flex items-center justify-between"
            [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-50 text-amber-900 border-amber-100' : 'bg-rose-50 text-rose-900 border-rose-100'">
         <h3 class="text-sm font-black">{{ rejectTarget?.action === 'revision' ? 'عودت پرونده خودرو' : 'رد قطعی پرونده' }}</h3>
-        <button (click)="closeRejectModal()" class="text-muted hover:text-fg cursor-pointer p-1" title="بستن" aria-label="بستن">
-          <svg appIcon="x" class="w-4 h-4"></svg>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeRejectModal()">
         </button>
       </div>
       <div class="p-4 space-y-3 text-xs">
@@ -831,18 +784,17 @@
       </div>
       <div class="p-3 bg-surface-alt border-t border-line flex justify-end gap-2">
         <button
-          (click)="closeRejectModal()"
-          class="px-3 py-1.5 rounded-xl border border-line text-xs font-bold text-muted hover:bg-surface cursor-pointer">
-          انصراف
+          type="button"
+          appAction="close"
+          (click)="closeRejectModal()">
         </button>
         <button
-          (click)="submitRejectModal()"
+          type="button"
+          [appAction]="rejectTarget?.action === 'revision' ? 'return' : 'reject'"
+          [busy]="isSubmittingReject"
           [disabled]="isSubmittingReject"
-          class="px-4 py-1.5 rounded-xl text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5"
-          [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-rose-600 hover:bg-rose-700'">
-          <svg *ngIf="!isSubmittingReject" [appIcon]="rejectTarget?.action === 'revision' ? 'rotate-ccw' : 'x'" class="w-4 h-4"></svg>
-          <svg *ngIf="isSubmittingReject" appIcon="refresh-cw" class="w-4 h-4 animate-spin"></svg>
-          <span>{{ isSubmittingReject ? 'در حال ثبت...' : 'ثبت قطعی' }}</span>
+          [label]="rejectTarget?.action === 'revision' ? 'عودت برای اصلاح' : 'رد قطعی'"
+          (click)="submitRejectModal()">
         </button>
       </div>
     </div>
@@ -853,8 +805,11 @@
     <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-indigo-950">تایید مالی گروهی {{ selectedVehicleIds.size }} خودرو</h3>
-        <button (click)="closeBatchApprovalModal()" class="text-muted hover:text-fg cursor-pointer p-1" title="بستن" aria-label="بستن">
-          <svg appIcon="x" class="w-4 h-4"></svg>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeBatchApprovalModal()">
         </button>
       </div>
       <div class="p-4 space-y-3">
@@ -870,17 +825,17 @@
       </div>
       <div class="p-3 bg-surface-alt border-t border-line flex justify-end gap-2">
         <button
-          (click)="closeBatchApprovalModal()"
-          class="px-3 py-1.5 rounded-xl border border-line text-xs font-bold text-muted hover:bg-surface cursor-pointer">
-          انصراف
+          type="button"
+          appAction="close"
+          (click)="closeBatchApprovalModal()">
         </button>
         <button
-          (click)="confirmBatchApproval()"
+          type="button"
+          appAction="approve"
+          [busy]="isBatchApproving"
           [disabled]="isBatchApproving"
-          class="px-4 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-black hover:bg-indigo-700 shadow-xs cursor-pointer flex items-center gap-1.5">
-          <svg *ngIf="!isBatchApproving" appIcon="check" class="w-4 h-4"></svg>
-          <svg *ngIf="isBatchApproving" appIcon="refresh-cw" class="w-4 h-4 animate-spin"></svg>
-          <span>{{ isBatchApproving ? 'در حال ثبت...' : 'تایید مالی و ارسال به مدیر' }}</span>
+          label="تایید مالی و ارسال به مدیر"
+          (click)="confirmBatchApproval()">
         </button>
       </div>
     </div>
@@ -893,8 +848,11 @@
         <h3 class="text-sm font-black text-indigo-900">
           مقایسه تفاوت‌های ناوگان (Diff): {{ selectedDiffCR?.plate_number }}
         </h3>
-        <button (click)="closeDiffModal()" class="text-muted hover:text-fg cursor-pointer p-1" title="بستن" aria-label="بستن">
-          <svg appIcon="x" class="w-4 h-4"></svg>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeDiffModal()">
         </button>
       </div>
       <div class="p-4 max-h-96 overflow-y-auto">
@@ -923,17 +881,15 @@
       <div class="p-3 bg-surface-alt border-t border-line flex justify-end gap-2">
         <button
           type="button"
-          (click)="closeDiffModal()"
-          class="px-4 py-1.5 rounded-xl bg-surface hover:bg-line text-fg text-xs font-bold border border-line cursor-pointer">
-          بستن پنجره
+          appAction="close"
+          (click)="closeDiffModal()">
         </button>
         @if (selectedDiffCR?.id) {
           <button
             type="button"
-            (click)="openApprovalModal(selectedDiffCR?.id, selectedDiffCR?.plate_number || '', 'vehicle_cr')"
-            class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1">
-            <svg appIcon="check" class="w-3.5 h-3.5"></svg>
-            <span>تایید مالی (ارسال به مدیر)</span>
+            appAction="approve"
+            label="تایید مالی"
+            (click)="openApprovalModal(selectedDiffCR?.id, selectedDiffCR?.plate_number || '', 'vehicle_cr')">
           </button>
         }
       </div>
@@ -949,8 +905,11 @@
           <h3 id="acc-fleet-approve-title" class="text-sm font-black text-fg">
             تایید مالی {{ approvalTarget.type === 'vehicle' ? 'خودرو' : 'درخواست تغییرات ناوگان' }}: {{ approvalTarget.title }}
           </h3>
-          <button type="button" (click)="closeApprovalModal()" class="text-muted hover:text-fg" title="بستن" aria-label="بستن">
-            <svg appIcon="x" class="w-4 h-4"></svg>
+          <button
+            type="button"
+            appAction="close"
+            display="icon"
+            (click)="closeApprovalModal()">
           </button>
         </div>
         <label for="acc-fleet-approve-note" class="text-xs text-muted leading-relaxed">
@@ -963,11 +922,18 @@
           class="w-full bg-surface-alt border border-line rounded-xl p-3 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 text-fg"
           placeholder="یادداشت نرخ کرایه، حساب مقصد یا تسویه..."></textarea>
         <div class="flex items-center justify-end gap-2">
-          <button type="button" (click)="closeApprovalModal()" class="px-4 py-2 bg-surface hover:bg-line text-fg text-xs font-bold rounded-xl border border-line cursor-pointer">انصراف</button>
-          <button type="button" (click)="confirmApproval()" [disabled]="isApproving" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5">
-            <svg *ngIf="!isApproving" appIcon="check" class="w-4 h-4"></svg>
-            <svg *ngIf="isApproving" appIcon="refresh-cw" class="w-4 h-4 animate-spin"></svg>
-            <span>{{ isApproving ? 'در حال ثبت...' : 'تایید مالی و ارسال به مدیر' }}</span>
+          <button
+            type="button"
+            appAction="close"
+            (click)="closeApprovalModal()">
+          </button>
+          <button
+            type="button"
+            appAction="approve"
+            [busy]="isApproving"
+            [disabled]="isApproving"
+            label="تایید مالی و ارسال به مدیر"
+            (click)="confirmApproval()">
           </button>
         </div>
       </div>

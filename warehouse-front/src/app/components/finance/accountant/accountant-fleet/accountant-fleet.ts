@@ -29,19 +29,70 @@ import {
   mergeFiscalYears,
   payrollMonthCode
 } from '../payroll-period';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export type AccountantFleetSubTab = 'new' | 'settlement' | 'changes' | 'all';
 
 @Component({
   selector: 'app-accountant-fleet-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, LoadingSkeletonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, LoadingSkeletonComponent, TabBarComponent, ActionButtonComponent],
   templateUrl: './accountant-fleet.html',
   styleUrl: './accountant-fleet.css',
   host: { '(document:keydown.escape)': 'onApprovalEscape()', '(document:keydown)': 'onDocumentKeydown($event)' }
 })
 export class AccountantFleetHubComponent implements OnInit, OnDestroy {
   activeSubTab: AccountantFleetSubTab = 'new';
+
+  // Memoized tabs for app-tab-bar (getter با آرایه تازه در هر چرخه، در dev mode خطای NG0100 می‌دهد)
+  private fleetSubTabsKey = '';
+  private fleetSubTabsCache: TabDef[] = [];
+  get fleetSubTabs(): TabDef[] {
+    const sc = this.statusCounters;
+    const key = `${sc.newPending}:${sc.settlementPending}:${sc.changesPending}:${sc.allTotal}`;
+    if (key !== this.fleetSubTabsKey) {
+      this.fleetSubTabsKey = key;
+      this.fleetSubTabsCache = [
+        {
+          id: 'new',
+          label: 'خودروها و نرخ کرایه',
+          shortLabel: 'خودروها',
+          icon: ACCOUNTING_ENTITY_ICONS.fleet,
+          count: sc.newPending,
+          tone: 'amber',
+          indicator: sc.newPending > 0 ? { tone: 'amber', label: 'نیازمند اقدام', pulse: true } : undefined
+        },
+        {
+          id: 'settlement',
+          label: 'تسویه‌حساب و کارکرد',
+          shortLabel: 'تسویه',
+          icon: ACCOUNTING_ENTITY_ICONS.payroll,
+          count: sc.settlementPending,
+          tone: 'indigo'
+        },
+        {
+          id: 'changes',
+          label: 'درخواست‌های تغییرات',
+          shortLabel: 'تغییرات',
+          icon: 'action-edit',
+          count: sc.changesPending,
+          tone: 'amber',
+          indicator: sc.changesPending > 0 ? { tone: 'amber', label: 'نیازمند اقدام', pulse: true } : undefined
+        },
+        {
+          id: 'all',
+          label: 'همه ناوگان',
+          shortLabel: 'همه',
+          icon: 'status-all',
+          count: sc.allTotal,
+          tone: 'slate'
+        }
+      ];
+    }
+    return this.fleetSubTabsCache;
+  }
 
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
@@ -260,10 +311,12 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     this.fetchFleetData();
   }
 
-  switchSubTab(tab: AccountantFleetSubTab): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
-    this.fetchFleetData();
+  switchSubTab(tab: string): void {
+    if (tab === 'new' || tab === 'settlement' || tab === 'changes' || tab === 'all') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+      this.fetchFleetData();
+    }
   }
 
   syncUrlParams(): void {
