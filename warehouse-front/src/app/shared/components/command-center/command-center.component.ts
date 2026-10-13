@@ -1,8 +1,8 @@
 import { Component, ChangeDetectionStrategy, computed, input } from '@angular/core';
 
 const ROW_CONTAINER_CLASSES: Record<'md' | 'lg', string> = {
-  md: 'bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3',
-  lg: 'bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3',
+  md: 'bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:flex-wrap md:items-center justify-between gap-3',
+  lg: 'bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:flex-wrap lg:items-center justify-between gap-3',
 };
 
 const ROW_SLOT_CLASSES: Record<'md' | 'lg', string> = {
@@ -16,6 +16,7 @@ const ROW_SLOT_CLASSES: Record<'md' | 'lg', string> = {
  * - [cc-tabs]: تب‌ها یا فیلترهای زیرمجموعه در سمت راست (RTL)
  * - [cc-actions]: دکمه‌های اقدام و ابزارها در سمت چپ (RTL)
  * در موبایل به دو سطر مجزا بدون اسکرول افقی (Zero-Scroll) تبدیل می‌شود.
+ * اگر تب‌ها و اکشن‌ها در یک سطر جا نشوند، اکشن‌ها به سطر دوم (سمت چپ) می‌روند.
  */
 @Component({
   selector: 'app-command-center',
@@ -24,10 +25,10 @@ const ROW_SLOT_CLASSES: Record<'md' | 'lg', string> = {
   template: `
     <header class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
       <div [class]="containerClasses()">
-        <div class="flex items-center overflow-x-auto" [class]="slotClasses()">
+        <div class="flex items-center overflow-x-auto min-w-0 max-w-full" [class]="slotClasses()">
           <ng-content select="[cc-tabs]" />
         </div>
-        <div class="flex flex-wrap items-center gap-2 justify-end" [class]="slotClasses()">
+        <div class="flex flex-wrap items-center gap-2 justify-end ms-auto" [class]="slotClasses()">
           <ng-content select="[cc-actions]" />
         </div>
       </div>

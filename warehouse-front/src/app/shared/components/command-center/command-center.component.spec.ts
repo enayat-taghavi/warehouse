@@ -83,4 +83,19 @@ describe('CommandCenterComponent (app-command-center)', () => {
     expect(slotContainers[0].className).toContain('lg:w-auto');
     expect(slotContainers[1].className).toContain('lg:w-auto');
   });
+
+  it('باید کلاس‌های md:flex-wrap روی ظرف و ms-auto روی اسلات اکشن‌ها را برای شکستن سطر داشته باشد', () => {
+    const container = fixture.nativeElement.querySelector('header > div');
+    expect(container).not.toBeNull();
+    expect(container.className).toContain('md:flex-wrap');
+
+    const actionsSlotContainer = fixture.nativeElement.querySelector('#projected-actions')?.parentElement;
+    expect(actionsSlotContainer).not.toBeNull();
+    expect(actionsSlotContainer.className).toContain('ms-auto');
+
+    const tabsSlotContainer = fixture.nativeElement.querySelector('#projected-tabs')?.parentElement;
+    expect(tabsSlotContainer).not.toBeNull();
+    expect(tabsSlotContainer.className).toContain('min-w-0');
+    expect(tabsSlotContainer.className).toContain('max-w-full');
+  });
 });
