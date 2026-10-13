@@ -78,6 +78,7 @@
               <button
                 type="button"
                 appAction="send"
+                display="label"
                 label="انتقال وجه"
                 size="sm"
                 (click)="openTransferModal(item)">
@@ -160,7 +161,7 @@
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
         <button type="button" appAction="close" display="label" (click)="closeTransferModal()"></button>
-        <button type="button" appAction="send" label="ثبت انتقال" [busy]="isSubmittingTransfer" (click)="executeTransfer()"></button>
+        <button type="button" appAction="send" display="label" label="ثبت انتقال" [busy]="isSubmittingTransfer" (click)="executeTransfer()"></button>
       </div>
     </div>
   </div>

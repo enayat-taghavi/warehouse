@@ -47,8 +47,8 @@
             (input)="fetchFleetData()"
             placeholder="جستجوی پلاک، مدل، راننده..."
             class="w-full bg-surface-muted text-xs py-1.5 pr-8 pl-6 rounded-xl border border-line focus:bg-surface focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-          <span class="absolute right-2.5 top-2 text-fg-subtle"><svg appIcon="search" class="w-3.5 h-3.5"></svg></span>
-          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchFleetData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-2 text-fg-subtle hover:text-fg text-xs cursor-pointer flex items-center justify-center tap-target"><svg appIcon="x" class="w-3.5 h-3.5"></svg></button>
+          <span class="absolute right-2.5 top-2 text-fg-subtle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search" class="w-3.5 h-3.5"></svg></span>
+          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchFleetData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg text-xs cursor-pointer flex items-center justify-center tap-target"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x" class="w-3.5 h-3.5"></svg></button>
         </div>
 
         <button
@@ -77,7 +77,7 @@
       </div>
 
       <div *ngIf="newVehiclesList.length === 0" class="p-12 text-center text-fg-subtle">
-        <svg appIcon="truck" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2"></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2"></svg>
         هیچ پرونده خودرویی در انتظار تصویب مدیر وجود ندارد.
       </div>
 
@@ -162,7 +162,7 @@
       </div>
 
       <div *ngIf="settlementItems.length === 0" class="p-12 text-center text-fg-subtle">
-        <svg appIcon="file-text" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2"></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2"></svg>
         هیچ صورت‌حسابی برای ماه انتخابی یافت نشد.
       </div>
 
@@ -214,7 +214,7 @@
       </div>
 
       <div *ngIf="changeRequests.length === 0" class="p-12 text-center text-fg-subtle">
-        <svg appIcon="refresh-cw" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2"></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2"></svg>
         هیچ درخواست تغییری در انتظار تایید وجود ندارد.
       </div>
 
@@ -282,7 +282,7 @@
       </div>
 
       <div *ngIf="allVehiclesList.length === 0" class="p-12 text-center text-fg-subtle">
-        <svg appIcon="folder" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2"></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="folder" class="w-10 h-10 mx-auto text-fg-subtle/40 mb-2"></svg>
         هیچ ناوگانی در این بخش ثبت نشده است.
       </div>
 
@@ -360,7 +360,7 @@
       <div *ngIf="approvalTarget?.type === 'vehicle'" class="bg-surface-muted p-3.5 rounded-2xl border border-line space-y-2.5" aria-live="polite" [attr.aria-busy]="isLoadingCostAnalysis">
         <div class="flex flex-wrap items-center justify-between gap-1.5">
           <span class="text-xs font-black text-fg flex items-center gap-1.5">
-            <svg appIcon="bar-chart-2" class="w-4 h-4 text-indigo-600"></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="bar-chart-2" class="w-4 h-4 text-indigo-600"></svg>
             تحلیل بار مالی و تعهدات کارفرما
           </span>
           <!-- نشانگر وضعیت انحراف هزینه -->
@@ -470,12 +470,12 @@
             <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
                    [ngClass]="rejectActionType === 'return_to_accountant' ? 'bg-amber-50 border-amber-300 text-amber-900 font-bold' : 'bg-surface-muted border-line text-fg-muted'">
               <input type="radio" [(ngModel)]="rejectActionType" value="return_to_accountant" class="text-amber-600" />
-              <svg appIcon="rotate-ccw" class="w-3.5 h-3.5"></svg><span>عودت به حسابدار</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-return" class="w-3.5 h-3.5"></svg><span>عودت به حسابدار</span>
             </label>
             <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
                    [ngClass]="rejectActionType === 'reject_final' ? 'bg-rose-50 border-rose-300 text-rose-900 font-bold' : 'bg-surface-muted border-line text-fg-muted'">
               <input type="radio" [(ngModel)]="rejectActionType" value="reject_final" class="text-rose-600" />
-              <svg appIcon="slash" class="w-3.5 h-3.5"></svg><span>رد قطعی پرونده</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-reject" class="w-3.5 h-3.5"></svg><span>رد قطعی پرونده</span>
             </label>
           </div>
         </div>
@@ -558,7 +558,7 @@
     <div class="bg-surface rounded-3xl border border-line shadow-xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in duration-150">
       <div class="flex items-center justify-between border-b border-line-subtle pb-3">
         <h3 class="text-sm font-black text-amber-800 flex items-center gap-1.5">
-          <svg appIcon="clock" class="w-4 h-4"></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock" class="w-4 h-4"></svg>
           قطع همکاری ناوگان: {{ endCollaborationTarget?.plate_number }}
         </h3>
         <button
@@ -628,7 +628,7 @@
     <div class="bg-surface w-full max-w-md rounded-2xl shadow-xl border border-line overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-rose-950 flex items-center gap-1.5">
-          <svg appIcon="trash-2" class="w-4 h-4 text-rose-600"></svg> حذف پرونده خودرو: {{ deleteTargetVehicle?.plate_number }} ({{ deleteTargetVehicle?.driver_name || 'بدون راننده' }})
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2" class="w-4 h-4 text-rose-600"></svg> حذف پرونده خودرو: {{ deleteTargetVehicle?.plate_number }} ({{ deleteTargetVehicle?.driver_name || 'بدون راننده' }})
         </h3>
         <button
           type="button"
@@ -639,21 +639,21 @@
 
       <div class="p-4 space-y-3">
         <div *ngIf="deleteImpactLoading" class="py-6 text-center text-muted text-xs">
-          <svg appIcon="refresh-cw" class="w-4 h-4 animate-spin inline-block mr-1"></svg> در حال استعلام اثرات حذف و سوابق تردد خودرو از پایگاه داده...
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw" class="w-4 h-4 animate-spin inline-block mr-1"></svg> در حال استعلام اثرات حذف و سوابق تردد خودرو از پایگاه داده...
         </div>
 
         <div *ngIf="!deleteImpactLoading && deleteImpactHistory">
           <!-- در صورت داشتن سابقه (حذف غیرمجاز) -->
           <div *ngIf="!deleteImpactHistory.can_delete" class="p-3 bg-rose-50 rounded-xl border border-rose-200 text-xs space-y-2">
             <div class="font-black text-rose-900 flex items-center gap-1.5">
-              <svg appIcon="slash" class="w-4 h-4 text-rose-600"></svg> حذف فیزیکی این پرونده مجاز نمی‌باشد!
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="slash" class="w-4 h-4 text-rose-600"></svg> حذف فیزیکی این پرونده مجاز نمی‌باشد!
             </div>
             <p class="text-rose-800 leading-relaxed">
               این خودرو دارای سوابق در سامانه می‌باشد:
               <strong>{{ deleteImpactHistory.reasons?.join('، ') }}</strong>.
             </p>
             <p class="text-muted text-[11px]">
-              <span class="inline-flex items-center gap-1 font-bold text-amber-900"><svg appIcon="info" class="w-3.5 h-3.5 text-amber-600"></svg><span>راهکار قانونی:</span></span> جهت جلوگیری از تخصیص و تردد مجدد، وضعیت خودرو را به «قطع همکاری» تغییر دهید.
+              <span class="inline-flex items-center gap-1 font-bold text-amber-900"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="info" class="w-3.5 h-3.5 text-amber-600"></svg><span>راهکار قانونی:</span></span> جهت جلوگیری از تخصیص و تردد مجدد، وضعیت خودرو را به «قطع همکاری» تغییر دهید.
             </p>
             <button
               *ngIf="deleteImpactHistory.has_history && canEndCollaboration && deleteTargetVehicle?.approval_status === 'approved' && deleteTargetVehicle?.is_active !== false"
@@ -668,13 +668,13 @@
           <!-- در صورت عدم وجود هرگونه سابقه (حذف مجاز) -->
           <div *ngIf="deleteImpactHistory.can_delete" class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs space-y-2">
             <div class="font-black text-emerald-900 flex items-center gap-1.5">
-              <svg appIcon="check" class="w-4 h-4 text-emerald-600"></svg><span>حذف ایمن بلامانع است</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check" class="w-4 h-4 text-emerald-600"></svg><span>حذف ایمن بلامانع است</span>
             </div>
             <p class="text-emerald-800 leading-relaxed">
               این پرونده فاقد هرگونه تردد ثبت‌شده یا تراکنش مالی است و حذف فیزیکی آن بلامانع می‌باشد.
             </p>
             <p class="text-rose-700 font-bold text-[11px]">
-              <span class="inline-flex items-center gap-1.5 text-rose-700 font-bold text-[11px]"><svg appIcon="alert-triangle" class="w-4 h-4 text-rose-600 shrink-0"></svg><span>با انجام این عملیات، رکورد خودرو به همراه عکس کامل در لاگ ممیزی، برای همیشه از پایگاه داده حذف می‌گردد.</span></span>
+              <span class="inline-flex items-center gap-1.5 text-rose-700 font-bold text-[11px]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" class="w-4 h-4 text-rose-600 shrink-0"></svg><span>با انجام این عملیات، رکورد خودرو به همراه عکس کامل در لاگ ممیزی، برای همیشه از پایگاه داده حذف می‌گردد.</span></span>
             </p>
           </div>
         </div>

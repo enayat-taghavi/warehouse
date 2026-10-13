@@ -23,12 +23,6 @@ import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-i
 export class ManagerDashboardComponent implements OnInit, OnDestroy {
   activeSubTab: 'kpi_overview' | 'section_variance' | 'urgent_alerts' = 'kpi_overview';
 
-  dashboardTabs: TabDef[] = [
-    { id: 'kpi_overview', label: 'شاخص‌های کلان', shortLabel: 'شاخص‌ها', icon: PLATFORM_ENTITY_ICONS.reports },
-    { id: 'section_variance', label: 'انحراف بودجه بخش‌ها', shortLabel: 'انحراف', icon: ACCOUNTING_ENTITY_ICONS.budget },
-    { id: 'urgent_alerts', label: 'هشدارهای نیازمند اقدام', shortLabel: 'هشدارها', icon: 'status-alert', count: 3 }
-  ];
-
   // Section Isolation
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
@@ -70,6 +64,13 @@ export class ManagerDashboardComponent implements OnInit, OnDestroy {
     { id: 101, type: 'danger', title: 'انحراف بودجه در بخش ترابری سنگین', description: 'هزینه ناوگان و اضافه‌کاری ۵٪ از سقف مصوب ماه تیر فراتر رفته است.', time: '۲ ساعت پیش', linkTab: 'manager-budget' },
     { id: 102, type: 'warning', title: 'فاکتورهای نیازمند تایید ویژه مدیر', description: '۲ فقره فاکتور هزینه تعمیرات به مبلغ ۴۵ میلیون تومان بالای سقف مجاز ثبت شده است.', time: '۴ ساعت پیش', linkTab: 'manager-approvals' },
     { id: 103, type: 'info', title: 'درخواست تغییر احکام کارگزینی', description: '۳ فقره پیشنهاد ارتقای پایه حقوقی کارشناسان انبار آماده بررسی و تایید است.', time: 'امروز', linkTab: 'manager-contracts' }
+  ];
+
+  // شمارنده هشدارها از خود فهرست می‌آید (پس از urgentAlerts تعریف شود)
+  readonly dashboardTabs: TabDef[] = [
+    { id: 'kpi_overview', label: 'شاخص‌های کلان', shortLabel: 'شاخص‌ها', icon: PLATFORM_ENTITY_ICONS.reports },
+    { id: 'section_variance', label: 'انحراف بودجه بخش‌ها', shortLabel: 'انحراف', icon: ACCOUNTING_ENTITY_ICONS.budget },
+    { id: 'urgent_alerts', label: 'هشدارهای نیازمند اقدام', shortLabel: 'هشدارها', icon: 'status-alert', count: this.urgentAlerts.length, tone: 'rose' }
   ];
 
   private routeSub?: Subscription;

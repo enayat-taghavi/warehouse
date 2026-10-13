@@ -21,6 +21,9 @@ try {
     <!-- دکمه با عنوان سفارشی -->
     <button id="btn-custom-label" type="button" appAction="create" label="کاربر جدید"></button>
 
+    <!-- راهنمای title جدا از عنوان (مثلاً علت غیرفعال بودن) -->
+    <button id="btn-hint" type="button" appAction="approve" label="تایید مالی" [hint]="hint()" [disabled]="!!hint()"></button>
+
     <!-- کار حساس با display="icon" (باید عنوان‌دار بماند) -->
     <button id="btn-sensitive-delete" type="button" appAction="delete" display="icon"></button>
     <button id="btn-sensitive-reject" type="button" appAction="reject" display="icon"></button>
@@ -52,6 +55,7 @@ try {
 class TestHostComponent {
   isBusy = signal(false);
   isDisabled = signal(false);
+  hint = signal<string | undefined>('شماره شبا ثبت نشده است');
   saveClicked = false;
   busyClicked = false;
   busySubmitClicked = false;
@@ -107,6 +111,17 @@ describe('ActionButtonComponent (button[appAction])', () => {
     expect(btn.getAttribute('title')).toBe('کاربر جدید');
     const span = btn.querySelector('span');
     expect(span?.textContent?.trim()).toBe('کاربر جدید');
+  });
+
+  it('ورودی hint فقط title را عوض می‌کند و aria-label همان عنوان می‌ماند؛ بی hint به عنوان برمی‌گردد', () => {
+    const btn = fixture.nativeElement.querySelector('#btn-hint') as HTMLButtonElement;
+    expect(btn.getAttribute('title')).toBe('شماره شبا ثبت نشده است');
+    expect(btn.getAttribute('aria-label')).toBe('تایید مالی');
+
+    host.hint.set(undefined);
+    fixture.detectChanges();
+    expect(btn.getAttribute('title')).toBe('تایید مالی');
+    expect(btn.getAttribute('aria-label')).toBe('تایید مالی');
   });
 
   it('کارهای حساس (delete, reject, restore, lock, unlock) باید با display="icon" هم عنوان‌دار بمانند', () => {

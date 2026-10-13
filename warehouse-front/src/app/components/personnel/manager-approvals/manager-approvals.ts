@@ -273,7 +273,11 @@ export class ManagerApprovals implements OnInit, OnDestroy {
           shortLabel: 'ویرایش‌ها',
           icon: 'action-edit',
           count: this.pendingCRCount,
-          tone: 'rose'
+          tone: 'rose',
+          // نقطه چشمک‌زن نسخه پایه؛ در mobile="icon" شمارنده زیر ۶۴۰px پنهان است
+          indicator: this.pendingCRCount > 0
+            ? { tone: 'amber', label: `${this.pendingCRCount} درخواست ویرایش در انتظار`, pulse: true }
+            : undefined
         },
         {
           id: 'work_periods',

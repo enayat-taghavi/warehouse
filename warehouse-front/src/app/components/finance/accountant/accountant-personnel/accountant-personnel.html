@@ -47,6 +47,7 @@
         <button
           type="button"
           appAction="download"
+          display="label"
           label="گزارش فاقد شبا"
           labelFrom="md"
           tone="emerald"
@@ -80,12 +81,14 @@
         <button
           type="button"
           appAction="approve"
+          display="label"
           label="تایید گروهی"
           (click)="openBatchApprovalModal()">
         </button>
         <button
           type="button"
           appAction="close"
+          display="label"
           label="لغو انتخاب"
           (click)="selectedPersonnelIds.clear()">
         </button>
@@ -413,6 +416,7 @@
                 <button
                   type="button"
                   appAction="view"
+                  display="label"
                   label="مقایسه"
                   (click)="openDiffModal(cr)">
                 </button>
@@ -428,6 +432,7 @@
                   <button
                     type="button"
                     appAction="approve"
+                    display="label"
                     label="تایید مالی"
                     (click)="openApprovalModal(cr.id, cr.personnel_name || ('درخواست #' + cr.id), 'personnel_cr')">
                   </button>
@@ -836,12 +841,14 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           label="انصراف"
           (click)="closePersonnelModal()">
         </button>
         <button
           type="button"
           appAction="save"
+          display="label"
           label="ذخیره تغییرات احکام"
           [busy]="isSavingPersonnel"
           (click)="savePersonnelFinancialChanges()">
@@ -897,6 +904,7 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           label="انصراف"
           (click)="closeRejectModal()">
         </button>
@@ -956,6 +964,7 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           label="بستن پنجره"
           (click)="closeDiffModal()">
         </button>
@@ -963,6 +972,7 @@
           <button
             type="button"
             appAction="approve"
+            display="label"
             label="تایید مالی"
             (click)="openApprovalModal(selectedDiffCR?.id, selectedDiffCR?.personnel_name || '', 'personnel_cr')">
           </button>
@@ -1002,13 +1012,15 @@
           <button
             type="button"
             appAction="close"
+            display="label"
             label="انصراف"
             (click)="closeApprovalModal()">
           </button>
           <button
             type="button"
             appAction="approve"
-            label="تایید مالی و ارسال به مدیر"
+            display="label"
+            label="تایید و ارسال"
             [busy]="isApproving"
             (click)="confirmApproval()">
           </button>
@@ -1048,12 +1060,14 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           label="انصراف"
           (click)="closeBatchApprovalModal()">
         </button>
         <button
           type="button"
           appAction="approve"
+          display="label"
           label="تایید گروهی و ارسال"
           [busy]="isBatchApproving"
           (click)="confirmBatchApproval()">

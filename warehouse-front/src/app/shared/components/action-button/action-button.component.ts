@@ -93,7 +93,7 @@ const SIZE_CLASSES: Record<ActionSize, { iconOnly: string; withLabel: string; au
     '[attr.aria-disabled]': '(busy() || disabled()) ? "true" : null',
     '[attr.aria-busy]': 'busy() ? "true" : null',
     '[attr.aria-label]': 'resolvedLabel()',
-    '[attr.title]': 'resolvedLabel()',
+    '[attr.title]': 'hint() || resolvedLabel()',
     '[attr.type]': 'type()',
     '[class]': 'hostClasses()',
     '(click)': 'onHostClick($event)',
@@ -105,6 +105,12 @@ export class ActionButtonComponent {
 
   /** عنوان دکمه (پیش‌فرض از کاتالوگ) */
   readonly label = input<string>();
+
+  /**
+   * راهنمای اختیاری title وقتی با عنوان فرق دارد (مثلاً علت غیرفعال بودن).
+   * title ایستا روی میزبان بی‌اثر است؛ aria-label همان عنوان می‌ماند.
+   */
+  readonly hint = input<string>();
 
   /** شیوه نمایش: خودکار، فقط‌آیکون، یا همیشه عنوان‌دار */
   readonly display = input<ActionDisplay>('auto');

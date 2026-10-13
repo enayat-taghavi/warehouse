@@ -38,7 +38,7 @@
             placeholder="جستجوی نام، کد ملی، سمت..."
             class="w-full bg-slate-100/90 text-xs py-1.5 pr-8 pl-6 rounded-xl border border-slate-200/80 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500" />
           <span class="absolute right-2.5 top-1.5 text-slate-400 text-xs">🔍</span>
-          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-1.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer flex items-center justify-center tap-target">✕</button>
+          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer flex items-center justify-center tap-target">✕</button>
         </div>
 
         <button
@@ -383,12 +383,12 @@
             <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
               [ngClass]="rejectActionType === 'return_to_accountant' ? 'bg-amber-50 border-amber-300 text-amber-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'">
               <input type="radio" [(ngModel)]="rejectActionType" value="return_to_accountant" class="text-amber-600" />
-              <svg appIcon="rotate-ccw" class="w-3.5 h-3.5"></svg><span>عودت به حسابدار</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-return" class="w-3.5 h-3.5"></svg><span>عودت به حسابدار</span>
             </label>
             <label class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs transition-all"
               [ngClass]="rejectActionType === 'reject_final' ? 'bg-rose-50 border-rose-300 text-rose-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'">
               <input type="radio" [(ngModel)]="rejectActionType" value="reject_final" class="text-rose-600" />
-              <svg appIcon="x-circle" class="w-3.5 h-3.5"></svg><span>رد قطعی پرونده</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-reject" class="w-3.5 h-3.5"></svg><span>رد قطعی پرونده</span>
             </label>
           </div>
         </div>
@@ -513,7 +513,7 @@
     <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
         <h3 class="text-sm font-black text-rose-950 flex items-center gap-1.5">
-          <svg appIcon="trash-2" class="w-4 h-4 text-rose-600 inline-block"></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2" class="w-4 h-4 text-rose-600 inline-block"></svg>
           حذف پرونده پرسنل: {{ deleteTargetPersonnel?.first_name }} {{ deleteTargetPersonnel?.last_name }}
         </h3>
         <button type="button" appAction="close" display="icon" (click)="closeDeleteModal()"></button>
@@ -521,7 +521,7 @@
 
       <div class="p-4 space-y-3">
         <div *ngIf="deleteImpactLoading" class="py-6 text-center text-slate-500 text-xs">
-          <svg appIcon="spinner" class="animate-spin w-3.5 h-3.5 inline-block mr-1"></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="spinner" class="animate-spin w-3.5 h-3.5 inline-block mr-1"></svg>
           در حال استعلام اثرات حذف و سوابق کارکرد پرسنل از پایگاه داده...
         </div>
 
@@ -529,7 +529,7 @@
           <!-- در صورت داشتن سابقه (حذف غیرمجاز) -->
           <div *ngIf="!deleteImpactHistory.can_delete" class="p-3 bg-rose-50 rounded-xl border border-rose-200 text-xs space-y-2">
             <div class="font-black text-rose-900 flex items-center gap-1.5">
-              <svg appIcon="slash" class="w-4 h-4 text-rose-600 inline-block"></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="slash" class="w-4 h-4 text-rose-600 inline-block"></svg>
               حذف فیزیکی این پرونده مجاز نمی‌باشد!
             </div>
             <p class="text-rose-800 leading-relaxed">
@@ -553,7 +553,7 @@
           <!-- در صورت عدم وجود هرگونه سابقه (حذف مجاز) -->
           <div *ngIf="deleteImpactHistory.can_delete" class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs space-y-2">
             <div class="font-black text-emerald-900 flex items-center gap-1.5">
-              <svg appIcon="check" class="w-4 h-4 text-emerald-600 inline-block"></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check" class="w-4 h-4 text-emerald-600 inline-block"></svg>
               حذف ایمن بلامانع است
             </div>
             <p class="text-emerald-800 leading-relaxed">

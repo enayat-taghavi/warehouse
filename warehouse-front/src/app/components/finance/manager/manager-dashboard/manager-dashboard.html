@@ -177,6 +177,7 @@
               <button
                 type="button"
                 appAction="forward"
+                display="label"
                 size="sm"
                 label="تنظیم سقف بودجه"
                 (click)="navigateToBudget()">
@@ -208,6 +209,7 @@
         <button
           type="button"
           appAction="forward"
+          display="label"
           label="بررسی و اقدام"
           (click)="alert.linkTab === 'manager-approvals' ? navigateToApprovals() : navigateToBudget()">
         </button>

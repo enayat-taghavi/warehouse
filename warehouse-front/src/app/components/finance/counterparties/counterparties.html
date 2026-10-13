@@ -53,6 +53,7 @@
       <button
         type="button"
         appAction="close"
+        display="label"
         label="انصراف"
         size="sm"
         (click)="cancelEdit()"
@@ -263,6 +264,7 @@
             *ngIf="editingCounterparty"
             type="button"
             appAction="close"
+            display="label"
             label="انصراف"
             (click)="cancelEdit()"
           ></button>
@@ -270,6 +272,7 @@
           <button
             type="submit"
             appAction="save"
+            display="label"
             class="w-full sm:w-auto"
             [label]="editingCounterparty ? 'بروزرسانی طرف‌حساب' : 'ثبت طرف‌حساب'"
           ></button>

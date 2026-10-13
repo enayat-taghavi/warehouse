@@ -37,10 +37,10 @@
           placeholder="جستجوی پلاک، مدل، راننده..."
           class="w-full bg-surface-alt text-xs py-1.5 pr-8 pl-6 rounded-xl border border-line focus:bg-surface focus:outline-none focus:ring-1 focus:ring-indigo-500" />
         <span class="absolute right-2.5 top-2 text-muted">
-          <svg appIcon="search" class="w-3.5 h-3.5"></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search" class="w-3.5 h-3.5"></svg>
         </span>
         <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchFleetData()" title="پاک کردن جستجو" aria-label="پاک کردن جستجو" class="absolute left-2.5 top-2 text-muted hover:text-fg text-xs cursor-pointer flex items-center justify-center">
-          <svg appIcon="x" class="w-3.5 h-3.5"></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x" class="w-3.5 h-3.5"></svg>
         </button>
       </div>
 
@@ -66,7 +66,7 @@
   <div *ngIf="activeSubTab === 'new' && selectedVehicleIds.size > 0"
        class="sticky top-16 z-20 bg-indigo-50/95 border border-indigo-200 rounded-2xl p-3 shadow-md flex items-center justify-between gap-3 animate-in fade-in duration-150">
     <div class="flex items-center gap-2 text-indigo-900 font-bold text-xs">
-      <svg appIcon="check-square" class="w-4 h-4 text-indigo-600"></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-square" class="w-4 h-4 text-indigo-600"></svg>
       <span>{{ selectedVehicleIds.size }} پرونده خودرو جهت تایید گروهی انتخاب شده است.</span>
     </div>
     <div class="flex items-center gap-2">
@@ -92,7 +92,7 @@
   <!-- تب ۱: خودروهای جدید در انتظار تایید سرپرست -->
   <div *ngIf="activeSubTab === 'new'" class="space-y-3">
     <div *ngIf="newVehiclesList.length === 0 && !isLoading" class="bg-surface rounded-2xl border border-line p-8 text-center text-muted">
-      <svg appIcon="truck" class="w-12 h-12 mx-auto text-muted/50 mb-2"></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck" class="w-12 h-12 mx-auto text-muted/50 mb-2"></svg>
       <p class="font-bold text-sm">هیچ پرونده خودروی معلقی برای تایید سرپرست در این بخش وجود ندارد.</p>
     </div>
 
@@ -135,7 +135,7 @@
                     (click)="copyToClipboard(item.plate_number || '', item.id)"
                     class="text-muted hover:text-indigo-600 cursor-pointer"
                     title="کپی پلاک">
-                    <svg appIcon="copy" class="w-3.5 h-3.5"></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy" class="w-3.5 h-3.5"></svg>
                   </button>
                 </div>
               </td>
@@ -268,7 +268,7 @@
   <!-- تب ۲: کارکرد ماشین‌آلات -->
   <div *ngIf="activeSubTab === 'work_logs'" class="space-y-3">
     <div *ngIf="workLogsList.length === 0 && !isLoading" class="bg-surface rounded-2xl border border-line p-8 text-center text-muted">
-      <svg appIcon="clock" class="w-12 h-12 mx-auto text-muted/50 mb-2"></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock" class="w-12 h-12 mx-auto text-muted/50 mb-2"></svg>
       <p class="font-bold text-sm">هیچ رکورد کارکرد ماشین‌آلاتی در این تاریخ ثبت نشده است.</p>
     </div>
 
@@ -294,7 +294,7 @@
               <td class="p-3">
                 <span class="px-2 py-0.5 rounded-md text-[11px] font-black inline-flex items-center gap-1"
                       [ngClass]="item.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'">
-                  <svg *ngIf="item.status === 'approved'" appIcon="check" class="w-3 h-3"></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" *ngIf="item.status === 'approved'" appIcon="check" class="w-3 h-3"></svg>
                   <span>{{ item.status === 'approved' ? 'تایید شده' : 'در انتظار تایید' }}</span>
                 </span>
               </td>
@@ -329,7 +329,7 @@
   <!-- تب ۳: درخواست‌های تغییرات ناوگان -->
   <div *ngIf="activeSubTab === 'changes'" class="space-y-3">
     <div *ngIf="changeRequestsList.length === 0 && !isLoading" class="bg-surface rounded-2xl border border-line p-8 text-center text-muted">
-      <svg appIcon="refresh-cw" class="w-12 h-12 mx-auto text-muted/50 mb-2"></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw" class="w-12 h-12 mx-auto text-muted/50 mb-2"></svg>
       <p class="font-bold text-sm">هیچ درخواست تغییراتی برای ناوگان وجود ندارد.</p>
     </div>
 
@@ -537,7 +537,7 @@
         <div *ngIf="!isLoadingImpact && isPurgeCandidate && rejectTarget?.action === 'reject'"
              class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 space-y-1">
           <div class="flex items-center gap-1.5 font-bold text-rose-900">
-            <svg appIcon="alert-triangle" class="w-4 h-4 text-rose-600"></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" class="w-4 h-4 text-rose-600"></svg>
             <span>هشدار پاک‌سازی دائم (Purge):</span>
           </div>
           <p class="text-[11px] leading-relaxed">
@@ -549,7 +549,7 @@
         <div *ngIf="!isLoadingImpact && !isPurgeCandidate && rejectTarget?.action === 'reject'"
              class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1.5">
           <div class="flex items-center gap-1.5 font-bold text-amber-800">
-            <svg appIcon="info" class="w-4 h-4 text-amber-600"></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="info" class="w-4 h-4 text-amber-600"></svg>
             <span>سوابق موجود در سیستم (بایگانی پرونده):</span>
           </div>
           <p class="text-[11px] leading-relaxed">
@@ -621,7 +621,7 @@
       <!-- هدر مودال پرونده -->
       <div class="p-4 bg-surface-alt border-b border-line flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <svg appIcon="truck" class="w-5 h-5 text-indigo-600"></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck" class="w-5 h-5 text-indigo-600"></svg>
           <h3 class="text-sm font-black text-fg">
             شناسنامه و پرونده خودرو: {{ selectedViewVehicle.plate_number }}
           </h3>
@@ -644,7 +644,7 @@
         <!-- کارت ۱: مشخصات فنی و هویتی -->
         <div class="bg-surface-alt/70 p-4 rounded-2xl border border-line space-y-3">
           <h4 class="font-black text-fg flex items-center gap-1.5 text-xs">
-            <svg appIcon="shield" class="w-4 h-4 text-emerald-600"></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="shield" class="w-4 h-4 text-emerald-600"></svg>
             <span>مشخصات فنی و مالکیت خودرو</span>
           </h4>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -671,7 +671,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div class="bg-surface-alt/70 p-4 rounded-2xl border border-line space-y-2">
             <h4 class="font-black text-fg flex items-center gap-1.5 text-xs">
-              <svg appIcon="user" class="w-4 h-4 text-indigo-600"></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user" class="w-4 h-4 text-indigo-600"></svg>
               <span>مشخصات راننده</span>
             </h4>
             <div class="space-y-1.5">
@@ -692,7 +692,7 @@
 
           <div class="bg-surface-alt/70 p-4 rounded-2xl border border-line space-y-2">
             <h4 class="font-black text-fg flex items-center gap-1.5 text-xs">
-              <svg appIcon="user-check" class="w-4 h-4 text-amber-600"></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user-check" class="w-4 h-4 text-amber-600"></svg>
               <span>مشخصات مالک خودرو</span>
             </h4>
             <div class="space-y-1.5">
@@ -717,7 +717,7 @@
         <!-- کارت ۳: تاریخ‌های انقضا و مدارک قانونی -->
         <div class="bg-surface-alt/70 p-4 rounded-2xl border border-line space-y-3">
           <h4 class="font-black text-fg flex items-center gap-1.5 text-xs">
-            <svg appIcon="calendar" class="w-4 h-4 text-rose-600"></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar" class="w-4 h-4 text-rose-600"></svg>
             <span>تاریخ‌های انقضا و اعتبار قانونی</span>
           </h4>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -751,7 +751,7 @@
         <!-- کارت ۴: حساب‌های بانکی متصل -->
         <div class="bg-surface-alt/70 p-4 rounded-2xl border border-line space-y-3">
           <h4 class="font-black text-fg flex items-center gap-1.5 text-xs">
-            <svg appIcon="credit-card" class="w-4 h-4 text-emerald-600"></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card" class="w-4 h-4 text-emerald-600"></svg>
             <span>حساب‌های بانکی متصل</span>
           </h4>
           <div *ngIf="vehicleBankAccounts.length === 0" class="text-muted text-center py-2">
@@ -774,7 +774,7 @@
                     class="text-muted hover:text-indigo-600 cursor-pointer"
                     title="کپی شماره شبا"
                     aria-label="کپی شماره شبا">
-                    <svg appIcon="copy" class="w-3 h-3"></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy" class="w-3 h-3"></svg>
                   </button>
                 </div>
               </div>
@@ -788,7 +788,7 @@
         <!-- کارت ۵: مدارک بارگذاری شده -->
         <div class="bg-surface-alt/70 p-4 rounded-2xl border border-line space-y-3">
           <h4 class="font-black text-fg flex items-center gap-1.5 text-xs">
-            <svg appIcon="file-text" class="w-4 h-4 text-indigo-600"></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text" class="w-4 h-4 text-indigo-600"></svg>
             <span>مدارک بارگذاری شده</span>
           </h4>
           <div *ngIf="vehicleDocuments.length === 0" class="text-muted text-center py-2">
@@ -802,7 +802,7 @@
               </div>
               <a *ngIf="doc.file" [href]="doc.file" target="_blank"
                  class="px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold flex items-center gap-1">
-                <svg appIcon="download" class="w-3.5 h-3.5"></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download" class="w-3.5 h-3.5"></svg>
                 <span>مشاهده</span>
               </a>
             </div>

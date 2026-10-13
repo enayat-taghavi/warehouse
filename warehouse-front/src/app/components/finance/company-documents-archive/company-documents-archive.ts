@@ -232,7 +232,9 @@ export class CompanyDocumentsArchiveComponent implements OnInit, OnDestroy {
       { id: 'LICENSES', label: 'مجوزها و پروانه‌ها', shortLabel: 'مجوزها', icon: ACCOUNTING_ENTITY_ICONS.licenses, count: counts[2] },
       { id: 'FISCAL', label: 'مالیات و بیمه', shortLabel: 'مالیات', icon: ACCOUNTING_ENTITY_ICONS.tax, count: counts[3] },
       { id: 'CONTRACTS', label: 'قراردادها و اجاره‌نامه', shortLabel: 'قراردادها', icon: ACCOUNTING_ENTITY_ICONS.contractsAndLeases, count: counts[4] },
-      { id: 'EXPIRING', label: 'نیازمند تمدید', shortLabel: 'تمدید', icon: 'status-warning', count: counts[5] > 0 ? counts[5] : undefined, tone: 'rose' }
+      { id: 'EXPIRING', label: 'نیازمند تمدید', shortLabel: 'تمدید', icon: 'status-warning', count: counts[5] > 0 ? counts[5] : undefined, tone: 'rose',
+        // در mobile="icon" شمارنده زیر ۶۴۰px پنهان است؛ نقطه نشان می‌دهد سندی نیازمند تمدید هست
+        indicator: counts[5] > 0 ? { tone: 'rose', label: `${counts[5]} سند نیازمند تمدید` } : undefined }
     ];
     return this.categoryTabsCache;
   }

@@ -149,7 +149,7 @@
 
           <!-- Edit & View -->
           <div class="flex items-center justify-between gap-2 pt-1">
-            <button type="button" appAction="edit" label="مشاهده و ویرایش پرونده کامل" display="label" class="w-full" (click)="openEditPersonnelModal(p)"></button>
+            <button type="button" appAction="edit" label="ویرایش پرونده" display="label" class="w-full" (click)="openEditPersonnelModal(p)"></button>
           </div>
         </div>
       </div>
@@ -327,8 +327,8 @@
               <td class="p-3.5 font-mono text-slate-500">{{ cr.created_at | date:'yyyy/MM/dd HH:mm' }}</td>
               <td class="p-3.5 text-center">
                 <div class="flex items-center justify-center gap-1.5">
-                  <button type="button" appAction="view" label="مقایسه" size="sm" (click)="openDiffModal(cr, 'personnel')"></button>
-                  <button *ngIf="(cr.status === 'pending_manager' || cr.status === 'accountant_approved') && canApprovePersonnelManager" type="button" appAction="approve" label="تصویب نهایی" size="sm" (click)="approveChangeRequestManager(cr, 'personnel')"></button>
+                  <button type="button" appAction="view" display="label" label="مقایسه" size="sm" (click)="openDiffModal(cr, 'personnel')"></button>
+                  <button *ngIf="(cr.status === 'pending_manager' || cr.status === 'accountant_approved') && canApprovePersonnelManager" type="button" appAction="approve" display="label" label="تصویب نهایی" size="sm" (click)="approveChangeRequestManager(cr, 'personnel')"></button>
                   <button *ngIf="cr.status !== 'approved' && cr.status !== 'rejected'" type="button" appAction="reject" label="رد" size="sm" (click)="openProfileRejectModal(cr.id, cr.personnel_name || '', 'personnel_cr', 'reject')"></button>
                 </div>
               </td>
@@ -370,8 +370,8 @@
               <td class="p-3.5 font-mono text-slate-500">{{ cr.created_at | date:'yyyy/MM/dd HH:mm' }}</td>
               <td class="p-3.5 text-center">
                 <div class="flex items-center justify-center gap-1.5">
-                  <button type="button" appAction="view" label="مقایسه" size="sm" (click)="openDiffModal(cr, 'vehicle')"></button>
-                  <button *ngIf="(cr.status === 'pending_manager' || cr.status === 'accountant_approved') && canApproveFleetManager" type="button" appAction="approve" label="تصویب نهایی" size="sm" (click)="approveChangeRequestManager(cr, 'vehicle')"></button>
+                  <button type="button" appAction="view" display="label" label="مقایسه" size="sm" (click)="openDiffModal(cr, 'vehicle')"></button>
+                  <button *ngIf="(cr.status === 'pending_manager' || cr.status === 'accountant_approved') && canApproveFleetManager" type="button" appAction="approve" display="label" label="تصویب نهایی" size="sm" (click)="approveChangeRequestManager(cr, 'vehicle')"></button>
                   <button *ngIf="cr.status !== 'approved' && cr.status !== 'rejected'" type="button" appAction="reject" label="رد" size="sm" (click)="openProfileRejectModal(cr.id, cr.driver_name || '', 'vehicle_cr', 'reject')"></button>
                 </div>
               </td>
@@ -421,7 +421,7 @@
               <td class="p-3.5 text-center font-mono text-slate-500">{{ (wp.submitted_at | date:'yyyy/MM/dd') || '—' }}</td>
               <td class="p-3.5 text-center">
                 <div class="flex items-center justify-center gap-2">
-                  <button *ngIf="wp.status === 'OPEN' || wp.status === 'REJECTED'" type="button" appAction="send" label="ارسال به مالی" size="sm" (click)="submitPeriodForFinance(wp)"></button>
+                  <button *ngIf="wp.status === 'OPEN' || wp.status === 'REJECTED'" type="button" appAction="send" display="label" label="ارسال به مالی" size="sm" (click)="submitPeriodForFinance(wp)"></button>
                   <button *ngIf="wp.status === 'SUBMITTED' || wp.status === 'LOCKED'" type="button" appAction="unlock" label="بازگشایی دوره" size="sm" (click)="reopenPeriod(wp)"></button>
                 </div>
               </td>
@@ -475,8 +475,8 @@
               </td>
               <td class="p-3 text-center">
                 <div class="flex items-center justify-center gap-1.5">
-                  <button type="button" appAction="approve" label="مجوز پرداخت" size="sm" (click)="approveInvoiceManager(inv)"></button>
-                  <button type="button" appAction="return" label="بازنگری" size="sm" (click)="rejectInvoiceManager(inv)"></button>
+                  <button type="button" appAction="approve" display="label" label="مجوز پرداخت" size="sm" (click)="approveInvoiceManager(inv)"></button>
+                  <button type="button" appAction="return" display="label" label="بازنگری" size="sm" (click)="rejectInvoiceManager(inv)"></button>
                 </div>
               </td>
             </tr>
@@ -529,8 +529,8 @@
               </td>
               <td class="p-3 text-center">
                 <div class="flex items-center justify-center gap-1.5">
-                  <button type="button" appAction="approve" label="تایید پرداخت" size="sm" (click)="approvePettyCashManager(pc)"></button>
-                  <button type="button" appAction="return" label="بازنگری" size="sm" (click)="rejectPettyCashManager(pc)"></button>
+                  <button type="button" appAction="approve" display="label" label="تایید پرداخت" size="sm" (click)="approvePettyCashManager(pc)"></button>
+                  <button type="button" appAction="return" display="label" label="بازنگری" size="sm" (click)="rejectPettyCashManager(pc)"></button>
                 </div>
               </td>
             </tr>

@@ -130,7 +130,8 @@
      - *No dynamic tab getters:* `get tabs(): TabDef[]` returning fresh arrays triggers Angular NG0100. Always use `readonly` properties or keyed cache.
      - *Return vs Reject:* Use `appAction="return"` for workflow revision / return for correction (عودت برای اصلاح); use `appAction="reject"` strictly for permanent rejection or revocation.
      - *Visible labels on mobile:* Unfamiliar actions (approve, return, view, send, lock, pay) and modal footers must use `display="label"`.
-     - *No static `title` on `button[appAction]`:* The directive automatically derives `title` and `aria-label` from `label`.
+     - *No static `title` on `button[appAction]`:* The directive automatically derives `title` and `aria-label` from `label`. A `title`, `[title]` or `[attr.title]` on it is overwritten. For a different tooltip (e.g. why the button is disabled) use `[hint]`; `aria-label` stays the label.
+     - *`<svg appIcon>` always carries `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"`:* the directive only fills the inner paths; without these the icon renders cropped and filled black.
      - *Modal invocation order:* When closing a modal and opening another with the same state, invoke the opener first before resetting selected items to `null`.
 
 

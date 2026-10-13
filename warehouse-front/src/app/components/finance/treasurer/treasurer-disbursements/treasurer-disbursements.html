@@ -38,6 +38,13 @@
         fullLabelFrom="lg"
         (activeChange)="switchSubTab($event)"
       />
+
+      <!-- جمع صف پرداخت به میلیون ریال (پیش از کوچ شمارنده تب صف بود) -->
+      <span
+        class="text-[11px] font-bold tabular-nums px-2 py-1 rounded-lg bg-teal-50 text-teal-800 border border-teal-100 whitespace-nowrap"
+        title="جمع صف پرداخت به میلیون ریال">
+        جمع صف: {{ pendingTotalAmount > 0 ? ((pendingTotalAmount / 1000000) | number:'1.0-0') + ' م.ر' : '۰' }}
+      </span>
     </div>
 
     <!-- سمت چپ: دکمه‌های اکشن استاندارد و خروجی دیسکت پایا -->
@@ -45,6 +52,7 @@
       <button
         type="button"
         appAction="download"
+        display="label"
         label="فایل پایا"
         (click)="generateBatchPayaFile()"
       ></button>

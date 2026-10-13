@@ -29,7 +29,7 @@
         <select [ngModel]="fiscalYear" (ngModelChange)="onYearChange($event)" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500 cursor-pointer">
           <option *ngFor="let y of availableYears" [value]="y">سال {{ y }}</option>
         </select>
-        <button *ngIf="canManageSettings" type="button" appAction="create" [label]="'سال جدید'" (click)="openCreateYearModal()"></button>
+        <button *ngIf="canManageSettings" type="button" appAction="create" display="label" [label]="'سال جدید'" (click)="openCreateYearModal()"></button>
       </div>
 
       <!-- سلکتور نسخه‌های احکام در طول سال -->
@@ -51,16 +51,16 @@
       </span>
 
       <!-- دکمه ثبت اصلاحیه میانه سال -->
-      <button *ngIf="canManageSettings" type="button" appAction="create" [label]="'اصلاحیه'" (click)="openCreateVersionModal()"></button>
+      <button *ngIf="canManageSettings" type="button" appAction="create" display="label" [label]="'اصلاحیه'" (click)="openCreateVersionModal()"></button>
 
       <!-- دکمه کپی برای پروژه در صورت ارث‌بری -->
-      <button *ngIf="selectedProjectId && !isCurrentSettingSpecificToProject" type="button" appAction="copy" [label]="'نسخه اختصاصی'" (click)="cloneForSelectedProject()"></button>
+      <button *ngIf="selectedProjectId && !isCurrentSettingSpecificToProject" type="button" appAction="copy" display="label" [label]="'نسخه اختصاصی'" (click)="cloneForSelectedProject()"></button>
 
       <!-- دکمه بازگشت به تنظیمات سراسری سازمان برای پروژه اختصاصی -->
       <button *ngIf="isCurrentSettingSpecificToProject && canManageSettings" type="button" appAction="restore" [label]="'بازگشت به سراسری'" (click)="revertToGlobal()"></button>
 
       <!-- دکمه ذخیره تنظیمات -->
-      <button type="button" appAction="save" [busy]="isSaving" [disabled]="!canManageSettings" (click)="saveYearlySettings()"></button>
+      <button type="button" appAction="save" display="label" [busy]="isSaving" [disabled]="!canManageSettings" (click)="saveYearlySettings()"></button>
     </div>
   </div>
 
@@ -70,7 +70,7 @@
       <span class="text-base">ℹ️</span>
       <span>برای این پروژه هنوز تنظیمات اختصاصی ثبت نشده است و مقادیر فعلی از <strong>«تنظیمات عمومی سازمان»</strong> خوانده می‌شوند.</span>
     </div>
-    <button type="button" appAction="copy" [label]="'نسخه اختصاصی'" (click)="cloneForSelectedProject()"></button>
+    <button type="button" appAction="copy" display="label" [label]="'نسخه اختصاصی'" (click)="cloneForSelectedProject()"></button>
   </div>
 
   <!-- بنر تایید تنظیمات اختصاصی فعال -->
@@ -493,8 +493,8 @@
       </div>
 
       <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-        <button type="button" appAction="close" [label]="'انصراف'" (click)="closeCreateVersionModal()"></button>
-        <button type="button" appAction="save" [busy]="isCreatingVersion" [label]="'ایجاد و فعال‌سازی نسخه'" (click)="submitCreateVersion()"></button>
+        <button type="button" appAction="close" display="label" [label]="'انصراف'" (click)="closeCreateVersionModal()"></button>
+        <button type="button" appAction="save" display="label" [busy]="isCreatingVersion" [label]="'ایجاد و فعال‌سازی نسخه'" (click)="submitCreateVersion()"></button>
       </div>
     </div>
   </div>
@@ -539,8 +539,8 @@
       </div>
 
       <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-        <button type="button" appAction="close" [label]="'انصراف'" (click)="closeCreateYearModal()"></button>
-        <button type="button" appAction="save" [busy]="isCreatingYear" [label]="'ایجاد و ثبت سال مالی'" (click)="submitCreateYear()"></button>
+        <button type="button" appAction="close" display="label" [label]="'انصراف'" (click)="closeCreateYearModal()"></button>
+        <button type="button" appAction="save" display="label" [busy]="isCreatingYear" [label]="'ثبت سال مالی'" (click)="submitCreateYear()"></button>
       </div>
     </div>
   </div>

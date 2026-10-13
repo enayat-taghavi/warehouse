@@ -1163,7 +1163,7 @@
                 [busy]="isSaving"
                 [disabled]="isSubmitDisabled || isSaving"
                 (click)="submitDraftPersonnel()"
-                [title]="isSubmitDisabled ? 'جهت ارسال به سرپرست تمامی فیلدهای الزامی باید تکمیل شوند' : (editingPersonnelStatus === 'revision_required' ? 'اصلاح پرونده و ارسال مجدد به کارتابل سرپرست' : 'ثبت پرونده و ارسال به کارتابل سرپرست')">
+                [hint]="isSubmitDisabled ? 'جهت ارسال به سرپرست تمامی فیلدهای الزامی باید تکمیل شوند' : (editingPersonnelStatus === 'revision_required' ? 'اصلاح پرونده و ارسال مجدد به کارتابل سرپرست' : 'ثبت پرونده و ارسال به کارتابل سرپرست')">
               </button>
             </div>
           </ng-container>

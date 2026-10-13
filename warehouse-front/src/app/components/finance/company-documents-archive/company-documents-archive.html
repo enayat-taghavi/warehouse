@@ -34,6 +34,7 @@
           *ngIf="canUpload"
           type="button" 
           appAction="upload"
+          display="label"
           [label]="'بارگذاری مدرک'"
           (click)="openUploadModal()">
         </button>
@@ -228,6 +229,7 @@
                   <button 
                     type="button" 
                     appAction="view"
+                    display="label"
                     [label]="'پیش‌نمایش'"
                     size="sm"
                     (click)="openPreview(doc)">
@@ -237,6 +239,7 @@
                   <button 
                     type="button" 
                     appAction="download"
+                    display="label"
                     size="sm"
                     (click)="downloadDocument(doc)">
                   </button>
@@ -428,12 +431,14 @@
         <button 
           type="button" 
           appAction="close"
+          display="label"
           [label]="'انصراف'"
           (click)="closeUploadModal()">
         </button>
         <button 
           type="button" 
           appAction="upload"
+          display="label"
           [busy]="uploadModal.isSubmitting"
           [label]="'ثبت و ذخیره سند'"
           (click)="submitUpload()">

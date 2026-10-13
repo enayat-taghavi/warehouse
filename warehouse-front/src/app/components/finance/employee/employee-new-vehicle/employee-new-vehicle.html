@@ -1324,7 +1324,7 @@
             [busy]="isSaving"
             [disabled]="isSaving || isSubmitDisabled"
             (click)="submitDraftVehicle()"
-            [title]="isSubmitDisabled ? ('تکمیل نواقص الزامی است: ' + missingFieldsList.join('، ')) : 'ارسال پرونده به کارتابل سرپرست کارگاه'">
+            [hint]="isSubmitDisabled ? ('تکمیل نواقص الزامی است: ' + missingFieldsList.join('، ')) : 'ارسال پرونده به کارتابل سرپرست کارگاه'">
           </button>
 
         </div>

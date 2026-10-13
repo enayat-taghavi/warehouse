@@ -51,7 +51,7 @@
         <h4 class="text-xs font-black text-slate-800 flex items-center gap-2">
           <span>{{ editingProject ? 'ویرایش پروژه مالی' : 'تعریف پروژه مالی جدید' }}</span>
         </h4>
-        <button *ngIf="editingProject" type="button" appAction="close" label="انصراف" (click)="cancelEditProject()"></button>
+        <button *ngIf="editingProject" type="button" appAction="close" display="label" label="انصراف" (click)="cancelEditProject()"></button>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-5 gap-3.5">
@@ -81,7 +81,7 @@
             <input type="checkbox" [(ngModel)]="newProject.is_active" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
             <span>فعال</span>
           </label>
-          <button type="button" appAction="save" class="flex-1 w-full" [label]="editingProject ? 'بروزرسانی' : 'ثبت پروژه'" (click)="saveProject()"></button>
+          <button type="button" appAction="save" display="label" class="flex-1 w-full" [label]="editingProject ? 'بروزرسانی' : 'ثبت پروژه'" (click)="saveProject()"></button>
         </div>
       </div>
     </div>
@@ -102,7 +102,7 @@
             placeholder="🔍 جستجو در نام یا کد پروژه..." 
             class="w-full bg-white border border-slate-200 rounded-xl pr-3 pl-8 py-1.5 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-400"
           />
-          <button *ngIf="projectSearchQuery" type="button" (click)="onSearchQueryChange('projects', '')" class="tap-target absolute left-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer" title="پاک کردن جستجو" aria-label="پاک کردن جستجو">✕</button>
+          <button *ngIf="projectSearchQuery" type="button" (click)="onSearchQueryChange('projects', '')" class="tap-target absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer" title="پاک کردن جستجو" aria-label="پاک کردن جستجو">✕</button>
         </div>
       </div>
       <div class="overflow-x-auto">
@@ -164,7 +164,7 @@
         <h4 class="text-xs font-black text-slate-800 flex items-center gap-2">
           <span>{{ editingSection ? 'ویرایش بخش' : 'تعریف بخش جدید' }}</span>
         </h4>
-        <button *ngIf="editingSection" type="button" appAction="close" label="انصراف" (click)="cancelEditSection()"></button>
+        <button *ngIf="editingSection" type="button" appAction="close" display="label" label="انصراف" (click)="cancelEditSection()"></button>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-5 gap-3.5">
@@ -195,8 +195,8 @@
         </div>
         <!-- ۵. دکمه ثبت -->
         <div class="flex items-end gap-2">
-          <button type="button" appAction="save" class="w-full" [label]="editingSection ? 'بروزرسانی بخش' : 'ثبت بخش'" (click)="saveSection()"></button>
-          <button *ngIf="editingSection" type="button" appAction="close" label="انصراف" (click)="cancelEditSection()"></button>
+          <button type="button" appAction="save" display="label" class="w-full" [label]="editingSection ? 'بروزرسانی بخش' : 'ثبت بخش'" (click)="saveSection()"></button>
+          <button *ngIf="editingSection" type="button" appAction="close" display="label" label="انصراف" (click)="cancelEditSection()"></button>
         </div>
       </div>
     </div>
@@ -225,7 +225,7 @@
             placeholder="🔍 جستجو در نام یا کد بخش..." 
             class="w-full bg-white border border-slate-200 rounded-xl pr-3 pl-8 py-1.5 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-400"
           />
-          <button *ngIf="sectionSearchQuery" type="button" (click)="onSearchQueryChange('sections', '')" class="tap-target absolute left-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer" title="پاک کردن جستجو" aria-label="پاک کردن جستجو">✕</button>
+          <button *ngIf="sectionSearchQuery" type="button" (click)="onSearchQueryChange('sections', '')" class="tap-target absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer" title="پاک کردن جستجو" aria-label="پاک کردن جستجو">✕</button>
         </div>
       </div>
 
@@ -288,7 +288,7 @@
             *ngIf="assignmentSearchQuery"
             type="button"
             (click)="onSearchQueryChange('assignments', '')"
-            class="tap-target absolute left-2 top-1.5 text-slate-400 hover:text-rose-500 text-xs font-bold cursor-pointer"
+            class="tap-target absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 text-xs font-bold cursor-pointer"
             title="پاک کردن جستجو"
             aria-label="پاک کردن جستجو"
           >
@@ -324,12 +324,14 @@
           <button
             type="button"
             appAction="expand"
+            display="label"
             label="باز کردن همه"
             (click)="expandAllSections()"
           ></button>
           <button
             type="button"
             appAction="collapse"
+            display="label"
             label="بستن همه"
             (click)="collapseAllSections()"
           ></button>
@@ -396,6 +398,7 @@
             <button
               type="button"
               appAction="copy"
+              display="label"
               label="کپی چارت"
               (click)="openCloneModal(sGroup.section, $event)"
             ></button>
@@ -725,6 +728,7 @@
             type="button"
             id="close-quick-assign-btn"
             appAction="close"
+            display="label"
             label="انصراف"
             (click)="closeQuickAssignModal()"
           ></button>
@@ -732,11 +736,11 @@
             type="button"
             id="submit-quick-assign-btn"
             appAction="save"
-            [label]="quickAssignState.selectedUserIds.length > 1
-                     ? ('تایید و انتساب ' + quickAssignState.selectedUserIds.length + ' کاربر به عنوان ' + (quickAssignState.roleDef?.shortLabel || ''))
-                     : (quickAssignState.selectedUserIds.length === 1
-                        ? ('تایید و انتساب ۱ کاربر به عنوان ' + (quickAssignState.roleDef?.shortLabel || ''))
-                        : 'لطفاً کاربر(ان) را انتخاب کنید')"
+            display="label"
+            [label]="'تایید انتساب' + (quickAssignState.selectedUserIds.length > 0 ? ' (' + quickAssignState.selectedUserIds.length + ')' : '')"
+            [hint]="quickAssignState.selectedUserIds.length > 0
+                    ? ('انتساب ' + quickAssignState.selectedUserIds.length + ' کاربر به عنوان ' + (quickAssignState.roleDef?.shortLabel || ''))
+                    : 'لطفاً کاربر(ان) را انتخاب کنید'"
             [busy]="quickAssignState.isSubmitting"
             [disabled]="quickAssignState.selectedUserIds.length === 0 || quickAssignState.isSubmitting"
             (click)="submitQuickAssign()"
@@ -779,6 +783,7 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           [label]="confirmModal.cancelText"
           (click)="closeConfirmDialog()"
         ></button>
@@ -888,12 +893,14 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           label="انصراف"
           (click)="closeCloneModal()"
         ></button>
         <button
           type="button"
           appAction="copy"
+          display="label"
           label="کپی ساختار"
           [busy]="cloneModal.isSubmitting"
           [disabled]="cloneModal.isSubmitting || !cloneModal.sourceSectionId || cloneModal.sourceStats.total === 0"
@@ -954,12 +961,14 @@
         <button
           type="button"
           appAction="close"
+          display="label"
           label="انصراف"
           (click)="closeEditAssignmentModal()"
         ></button>
         <button
           type="button"
           appAction="save"
+          display="label"
           label="ثبت تغییرات"
           [busy]="editAssignmentModal.isSubmitting"
           [disabled]="editAssignmentModal.isSubmitting"
