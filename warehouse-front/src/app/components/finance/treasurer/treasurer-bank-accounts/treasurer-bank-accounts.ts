@@ -8,7 +8,10 @@ import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection } from '../../../../core/models/personnel.model';
-import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export interface BankAccountItem {
   id: number;
@@ -35,15 +38,51 @@ export interface ProjectCashboxItem {
 @Component({
   selector: 'app-treasurer-bank-accounts-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    TabBarComponent,
+    ActionButtonComponent,
+    CommandCenterComponent
+  ],
   templateUrl: './treasurer-bank-accounts.html',
   styleUrl: './treasurer-bank-accounts.css'
 })
 export class TreasurerBankAccountsComponent implements OnInit, OnDestroy {
   activeSubTab: 'bank_accounts' | 'project_cashboxes' = 'bank_accounts';
 
+  private tabsKey = '';
+  private tabsCache: TabDef[] = [];
+
+  get tabs(): TabDef[] {
+    const key = `${this.bankAccounts.length}:${this.cashboxes.length}`;
+    if (key === this.tabsKey) {
+      return this.tabsCache;
+    }
+    this.tabsKey = key;
+    this.tabsCache = [
+      {
+        id: 'bank_accounts',
+        label: 'حساب‌های بانکی سازمان',
+        shortLabel: 'بانک',
+        icon: ACCOUNTING_ENTITY_ICONS.bankAccounts,
+        count: this.bankAccounts.length
+      },
+      {
+        id: 'project_cashboxes',
+        label: 'صندوق‌های نقدی پروژه‌ها',
+        shortLabel: 'صندوق',
+        icon: ACCOUNTING_ENTITY_ICONS.pettyCash,
+        count: this.cashboxes.length
+      }
+    ];
+    return this.tabsCache;
+  }
+
   // State
   isLoading = false;
+  isSubmittingTransfer = false;
   searchQuery = '';
 
   bankAccounts: BankAccountItem[] = [
@@ -123,8 +162,10 @@ export class TreasurerBankAccountsComponent implements OnInit, OnDestroy {
     return this.bankAccounts.reduce((sum, b) => sum + b.current_balance, 0);
   }
 
-  switchSubTab(tab: 'bank_accounts' | 'project_cashboxes'): void {
-    this.activeSubTab = tab;
+  switchSubTab(tab: string): void {
+    if (tab === 'bank_accounts' || tab === 'project_cashboxes') {
+      this.activeSubTab = tab;
+    }
   }
 
   openTransferModal(account: BankAccountItem): void {
@@ -147,9 +188,11 @@ export class TreasurerBankAccountsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.isSubmittingTransfer = true;
     this.fromAccount.current_balance -= Number(this.transferAmount);
     this.toAccount.current_balance += Number(this.transferAmount);
     this.toast.success(`انتقال مبلغ ${Number(this.transferAmount).toLocaleString()} تومان از ${this.fromAccount.bank_name} به ${this.toAccount.bank_name} با موفقیت انجام شد.`);
+    this.isSubmittingTransfer = false;
     this.closeTransferModal();
   }
 
