@@ -21,7 +21,7 @@ import { ACCOUNTING_ENTITY_ICONS } from '../../../modules/accounting/entity-icon
   styleUrl: './base-settings.css'
 })
 export class BaseSettings implements OnInit, OnDestroy {
-  readonly settingsTabs: readonly TabDef[] = [
+  readonly settingsTabs: TabDef[] = [
     { id: 'grades', label: 'جدول گروه‌های شغلی', shortLabel: 'گروه‌ها', icon: ACCOUNTING_ENTITY_ICONS.jobGrades },
     { id: 'labor', label: 'مزایای قانون کار', shortLabel: 'مزایا', icon: ACCOUNTING_ENTITY_ICONS.payroll },
     { id: 'attendance_window', label: 'بازه ویرایش تقویم', shortLabel: 'تقویم', icon: ACCOUNTING_ENTITY_ICONS.attendance },
@@ -179,8 +179,8 @@ export class BaseSettings implements OnInit, OnDestroy {
     }
   }
 
-  setTab(tab: 'grades' | 'labor' | 'attendance_window' | 'dsk' | 'tax' | 'bank'): void {
-    this.activeTab = tab;
+  setTab(tab: 'grades' | 'labor' | 'attendance_window' | 'dsk' | 'tax' | 'bank' | string): void {
+    this.activeTab = tab as any;
     this.updateQueryParams();
   }
 

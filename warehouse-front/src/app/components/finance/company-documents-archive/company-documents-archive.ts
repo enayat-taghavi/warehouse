@@ -243,8 +243,8 @@ export class CompanyDocumentsArchiveComponent implements OnInit, OnDestroy {
     }
   }
 
-  setCategory(category: 'ALL' | 'CORPORATE' | 'LICENSES' | 'FISCAL' | 'CONTRACTS' | 'EXPIRING'): void {
-    this.activeCategory = category;
+  setCategory(category: 'ALL' | 'CORPORATE' | 'LICENSES' | 'FISCAL' | 'CONTRACTS' | 'EXPIRING' | string): void {
+    this.activeCategory = category as any;
     this.applyFilter();
   }
 
