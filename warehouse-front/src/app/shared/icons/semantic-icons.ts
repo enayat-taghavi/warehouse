@@ -43,6 +43,7 @@ export const ACTION_ICONS = {
   'expand': 'chevron-down',
   'collapse': 'chevron-up',
   'logout': 'log-out',
+  'terminate': 'slash',
 } as const satisfies Record<string, IconName>;
 
 export type ActionIconKey = keyof typeof ACTION_ICONS;

@@ -24,6 +24,28 @@ export const ACCOUNTING_ENTITY_ICONS = {
   cheques: 'clipboard-check',
   reconciliation: 'columns',
   companyDocumentsArchive: 'book',
+  /** بخش‌ها و کارگاه‌ها */
+  sections: 'map-pin',
+  /** گروه شغلی، احکام و قرارداد پرسنل */
+  jobGrades: 'star',
+  /** بیمه و تامین اجتماعی */
+  insurance: 'shield-plus',
+  /** مالیات و سامانه مالیاتی */
+  tax: 'globe-alt',
+  /** مجوزها و پروانه‌ها */
+  licenses: 'badge',
+  /** مشخصات فردی و شناسنامه‌ای */
+  identity: 'info',
+  /** قراردادها و اجاره‌نامه‌های شرکت */
+  contractsAndLeases: 'home',
+  /** طرف‌حساب تعمیرگاه */
+  repairShop: 'tool',
+  /** طرف‌حساب جایگاه سوخت */
+  fuelStation: 'droplet',
+  /** طرف‌حساب پیمانکار */
+  contractor: 'users-2',
+  /** سایر طرف‌حساب‌ها */
+  otherCounterparty: 'help-circle',
 } as const satisfies Record<string, IconName>;
 
 export type AccountingEntityIconKey = keyof typeof ACCOUNTING_ENTITY_ICONS;

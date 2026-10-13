@@ -22,7 +22,7 @@ export interface ActionCatalogEntry {
 /**
  * کاتالوگ جامع کارها (Action Catalog)
  * مرجع: جدول ۳-۱ در طرح جامع ارگونومی واکنش‌گرا
- * برای هر ۳۷ کلید ACTION_ICONS یک ورودی دقیق با بررسی خطای زمان کامپایل (satisfies).
+ * برای هر ۳۸ کلید ACTION_ICONS یک ورودی دقیق با بررسی خطای زمان کامپایل (satisfies).
  */
 export const ACTION_CATALOG = {
   'create': {
@@ -249,5 +249,11 @@ export const ACTION_CATALOG = {
     defaultLabel: 'خروج',
     tone: 'rose',
     sensitive: false,
+  },
+  'terminate': {
+    icon: ACTION_ICONS['terminate'],
+    defaultLabel: 'قطع همکاری',
+    tone: 'rose',
+    sensitive: true,
   },
 } as const satisfies Record<ActionIconKey, ActionCatalogEntry>;
