@@ -56,8 +56,8 @@ CONVERSATIONS_DIR = GEMINI_DIR / "conversations"
 LOG_DIR = PROJECT_DIR / "scratch" / "logs" / "runner"
 STATUS_FILE = LOG_DIR / "status.json"
 
-# پایان نوبت ایجنت: آخرین گام ایجنت پاسخ بی‌ابزار DONE باشد، هیچ گامی در پایگاه‌داده نشست در حال اجرا نباشد
-# و این مقدار ثانیه گام تازه‌ای نیاید.
+# پایان نوبت ایجنت: آخرین گام ایجنت پاسخ بی‌ابزار DONE و دارای متن باشد، هیچ گامی در پایگاه‌داده نشست در حال اجرا
+# نباشد و این مقدار ثانیه گام تازه‌ای نیاید.
 STABILITY_SECONDS = 20
 CHAT_STABILITY_SECONDS = 60
 # سکوتی که نشست را گیرکرده نشان می‌دهد. فرمان‌ها در پس‌زمینه اجرا می‌شوند و ایجنت وضعیتشان را مرتب می‌پرسد؛
@@ -67,7 +67,17 @@ STALL_TIMEOUT_SECONDS = 20 * 60
 # پس وضعیت «آخرین گام ایجنت» را عوض نمی‌کنند تا پایان نشست گم نشود.
 SYSTEM_STEP_TYPES = {"CHECKPOINT", "SYSTEM_MESSAGE", "EPHEMERAL_MESSAGE"}
 # وضعیت‌های پایانی گام در جدول steps پایگاه‌داده نشست؛ هر وضعیت دیگر یعنی گام (مثلاً فرمان پس‌زمینه) هنوز تمام نشده.
+# در آزمون زنده ۱۴۰۵/۰۷/۲۱ دیده شد: ۲ = فرمان یا ویرایش در حال اجرا (فرمان پس‌زمینه ۶۰ ثانیه‌ای تا پایانش ۲ ماند)،
+# ۸ = پاسخ ایجنت در حال تولید.
 DB_FINISHED_STATUSES = (3, 6, 7)
+
+# خطای سرویس مدل (مثلاً قطع اتصال به Google): Antigravity گاهی خودش دوباره تلاش می‌کند و گاهی با یک پاسخ خالی
+# رها می‌کند (چت توافق ۱۴۰۵/۰۷/۲۱: سه خطا پشت هم و پاسخ نهایی ساخته نشد). اگر پس از این مقدار سکوت آخرین گام ایجنت
+# خطا یا پاسخ خالی بود، نوبت با خطا تمام شده است و اجراکننده با RESUME_MESSAGE آن را در همان چت از سر می‌گیرد.
+ERROR_QUIET_SECONDS = 90
+MAX_ERROR_RESUMES = 3
+RESUME_MESSAGE = ("[RUNNER] Your previous turn stopped because of a model service error, not because of your work. "
+                  "Continue exactly where you stopped, finish the same task or answer, and end your turn.")
 
 MAX_FIX_ROUNDS = 2
 COMMAND_TIMEOUT_SECONDS = 30 * 60
@@ -477,6 +487,61 @@ def unfinished_db_steps(conv_id: str) -> list | None:
     return db_query(conv_id, f"SELECT idx, step_type, status FROM steps WHERE status NOT IN ({statuses})")
 
 
+def _protobuf_strings(data: bytes) -> list[str]:
+    """همه رشته‌های UTF-8 درون یک پیام protobuf، بی‌نیاز به schema (پیام‌های تودرتو هم پیمایش می‌شوند)."""
+    def varint(i):
+        shift = value = 0
+        while True:
+            byte = data[i]
+            i += 1
+            value |= (byte & 0x7F) << shift
+            shift += 7
+            if byte < 0x80:
+                return value, i
+
+    found, stack = [], [(0, len(data))]
+    while stack:
+        i, end = stack.pop()
+        try:
+            while i < end:
+                key, i = varint(i)
+                wire = key & 7
+                if wire == 0:
+                    _, i = varint(i)
+                elif wire == 1:
+                    i += 8
+                elif wire == 5:
+                    i += 4
+                elif wire == 2:
+                    size, i = varint(i)
+                    if i + size > end:
+                        break
+                    chunk = data[i:i + size]
+                    try:
+                        found.append(chunk.decode("utf-8"))
+                    except UnicodeDecodeError:
+                        pass
+                    stack.append((i, i + size))
+                    i += size
+                else:
+                    break
+        except IndexError:
+            continue
+    return found
+
+
+def full_step_text(conv_id: str, idx: int, partial: str) -> str:
+    """ترانسکریپت متن بلند را از میان می‌بُرد («<truncated N bytes>»)؛ متن کامل از step_payload پایگاه‌داده خوانده می‌شود."""
+    if "<truncated" not in partial:
+        return partial
+    rows = db_query(conv_id, f"SELECT step_payload FROM steps WHERE idx = {int(idx)}")
+    head = partial.split("<truncated", 1)[0].strip()[:60]
+    if not rows or not rows[0][0] or not head:
+        return partial
+    full = max((s for s in _protobuf_strings(rows[0][0]) if s.strip().startswith(head)), key=len, default="")
+    return full if len(full) > len(head) and "<truncated" not in full else partial
+
+
 def last_step_index(conv_id: str) -> int:
     idx = max((s["step_index"] for s in read_steps(conv_id)), default=-1)
     rows = db_query(conv_id, "SELECT MAX(idx) FROM steps")
@@ -508,12 +573,13 @@ def report_step(idx: int, step_type: str, status: str, tool_calls: list, content
 
 
 def monitor_conversation(ls_info: dict, conv_id: str, after_index: int = -1,
-                         stability: int | None = None) -> tuple[bool, int, str, str]:
+                         stability: int | None = None) -> tuple[bool, int, str, str, bool]:
     """
     رهگیری زنده نشست تا پایان نوبت ایجنت. فقط گام‌هایی با step_index بزرگ‌تر از after_index شمرده می‌شوند،
     پس پس از پیام اصلاحی، پاسخ قبلی ایجنت پایان حساب نمی‌شود.
-    خروجی: (پایان‌یافته، تعداد گام‌ها، آخرین پاسخ ایجنت، علت رها کردن)
-    پایان‌نیافته یعنی رهگیری رها شد (گیر کردن یا از دست رفتن سرور زبانی) و نشست شاید هنوز در حال اجراست.
+    خروجی: (پایان‌یافته، تعداد گام‌ها، آخرین پاسخ ایجنت، علت رها کردن، نوبت با خطای سرویس تمام شد)
+    پایان‌نیافته یعنی رهگیری رها شد (خطای سرویس، گیر کردن یا از دست رفتن سرور زبانی) و نشست شاید هنوز در حال اجراست.
+    پاسخ خالی پایان نوبت نیست؛ Antigravity پس از خطای سرویس پاسخ خالی می‌نویسد.
     """
     if stability is None:
         stability = STABILITY_SECONDS
@@ -531,7 +597,8 @@ def monitor_conversation(ls_info: dict, conv_id: str, after_index: int = -1,
 
     max_idx = after_index
     last_change = time.time()
-    last_type, last_status, last_tools, last_reply = "", "", False, ""
+    last_type, last_status, last_tools, last_text, last_reply, last_error = "", "", False, False, "", ""
+    last_reply_idx = -1
     background = set()
     signature = None
     waiting_logged = False
@@ -548,7 +615,7 @@ def monitor_conversation(ls_info: dict, conv_id: str, after_index: int = -1,
             time.sleep(3)
             new_ls = discover_language_server()
             if not new_ls:
-                return False, max_idx + 1, last_reply, "the Antigravity language server stopped"
+                return False, max_idx + 1, last_reply, "the Antigravity language server stopped", False
             log(f"Reconnected to language server PID={new_ls['pid']} port={new_ls['port']}.")
             ls_info.clear()
             ls_info.update(new_ls)
@@ -587,30 +654,39 @@ def monitor_conversation(ls_info: dict, conv_id: str, after_index: int = -1,
                 if step_type in SYSTEM_STEP_TYPES:
                     continue
                 last_type, last_status, last_tools = step_type, step_status, bool(tool_calls)
+                last_text = bool(content.strip())
                 if step_type == "PLANNER_RESPONSE" and content:
-                    last_reply = content
+                    last_reply, last_reply_idx = content, idx
+                if step_type == "ERROR_MESSAGE":
+                    last_error = content.strip().splitlines()[-1][:200] if content.strip() else "unknown error"
+                elif step_type == "PLANNER_RESPONSE" and (last_text or last_tools):
+                    last_error = ""
 
         quiet = time.time() - last_change
-        if (
-            last_type == "PLANNER_RESPONSE"
-            and last_status == "DONE"
-            and not last_tools
-            and quiet >= stability
-        ):
+        replied = last_type == "PLANNER_RESPONSE" and last_status == "DONE" and not last_tools and last_text
+        # نوبتی که با خطای سرویس یا پاسخ خالی تمام شد؛ Antigravity گاهی تا چند ثانیه بعد خودش دوباره تلاش می‌کند.
+        dead = last_type == "ERROR_MESSAGE" or (
+            last_type == "PLANNER_RESPONSE" and last_status == "DONE" and not last_tools and not last_text)
+        if (replied and quiet >= stability) or (dead and quiet >= ERROR_QUIET_SECONDS):
             unfinished = unfinished_db_steps(conv_id)
             if unfinished is None and not db_warning_logged:
                 log("WARNING: conversation database not readable; database running-step check skipped.")
                 db_warning_logged = True
             if not unfinished and not background:
+                last_reply = full_step_text(conv_id, last_reply_idx, last_reply)
+                if dead:
+                    reason = f"agent turn ended with a model service error ({last_error or 'empty reply'})"
+                    log(f"{reason}.")
+                    return False, max_idx + 1, last_reply, reason, True
                 log(f"Agent turn finished ({max_idx + 1} steps).")
-                return True, max_idx + 1, last_reply, ""
+                return True, max_idx + 1, last_reply, "", False
             if not waiting_logged:
-                log(f"Agent replied but {len(background)} background command(s) and "
+                log(f"Agent turn ended but {len(background)} background command(s) and "
                     f"{len(unfinished or [])} step(s) are still running; waiting...")
                 waiting_logged = True
 
         if quiet >= STALL_TIMEOUT_SECONDS:
-            return False, max_idx + 1, last_reply, f"no new step for {STALL_TIMEOUT_SECONDS // 60} minutes"
+            return False, max_idx + 1, last_reply, f"no new step for {STALL_TIMEOUT_SECONDS // 60} minutes", False
 
 
 # ---------------------------------------------------------------- queue
@@ -653,9 +729,19 @@ def run_one_task(ls_info: dict, model_enum: str, tasks_path: Path, history: Path
     log(f"Conversation: {conv_id}")
     write_status("running", task=task_no, total=total, title=task.title, conversation=conv_id)
 
-    after_index, fix_round = -1, 0
+    after_index, fix_round, resumes = -1, 0, 0
     while True:
-        finished, steps, reply, reason = monitor_conversation(ls_info, conv_id, after_index)
+        finished, steps, reply, reason, errored = monitor_conversation(ls_info, conv_id, after_index)
+        if errored and resumes < MAX_ERROR_RESUMES:
+            resumes += 1
+            after_index = last_step_index(conv_id)
+            log(f"Asking the agent to continue after the service error ({resumes}/{MAX_ERROR_RESUMES})...")
+            try:
+                send_message(ls_info, conv_id, RESUME_MESSAGE, model_enum)
+            except Exception as e:
+                record("STOPPED (could not send resume request)", conv_id, steps, reply)
+                return stop_queue(f"task {task_no}: could not send the resume request: {e}", conversation=conv_id)
+            continue
         if not finished:
             record(f"STOPPED ({reason})", conv_id, steps, reply)
             return stop_queue(f"task {task_no}: {reason}; the conversation may still be running in Antigravity",
@@ -767,7 +853,16 @@ def run_ask(args) -> int:
         send_message(ls_info, conv_id, message, model_enum)
     log(f"Conversation: {conv_id}")
 
-    finished, steps, reply, reason = monitor_conversation(ls_info, conv_id, after_index, CHAT_STABILITY_SECONDS)
+    resumes = 0
+    while True:
+        finished, steps, reply, reason, errored = monitor_conversation(ls_info, conv_id, after_index,
+                                                                       CHAT_STABILITY_SECONDS)
+        if not errored or resumes >= MAX_ERROR_RESUMES:
+            break
+        resumes += 1
+        after_index = last_step_index(conv_id)
+        log(f"Asking the agent to continue after the service error ({resumes}/{MAX_ERROR_RESUMES})...")
+        send_message(ls_info, conv_id, RESUME_MESSAGE, model_enum)
     changed = git_snapshot() != before
 
     header = [f"CONVERSATION: {conv_id}", f"STATUS: {'finished' if finished else 'gave up: ' + reason}"]

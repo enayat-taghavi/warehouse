@@ -7,21 +7,27 @@
 
 <!--
 یادداشت ناظر (Claude) — صف نشست‌های ۰ تا ۱۵ طرح ارگونومی واکنش‌گرا (گام‌های ۱۰ تا ۱۳):
-- قوانین مشترک همه نشست‌ها در بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» طرح است:
+- قوانین مشترک همه نشست‌ها در بخش ۹ طرح است (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`):
   Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md
-- هر نشست یک دروازه شروع دارد: فقط وقتی برچسب DONE نشست قبل در «گزارش پیشرفت» هست و درخت کاری تمیز است کار می‌کند؛
-  نشستی که قبلاً DONE شده خودش رد می‌شود. پس اگر اجراکننده وسط کار متوقف شد، اجرای دوباره run_tasks.bat امن است.
-- پس از پایان نشست ۱۵، این پیام را در یک نشست تازه به Claude بفرستید:
-  نقش ناظر: بازبینی نهایی نشست‌های ۰ تا ۱۵ (گام‌های ۱۰ تا ۱۳) طرح ارگونومی واکنش‌گرا؛ پایه: «پایه نشست ۰» در گزارش پیشرفت.
+- نشست‌های ۰ تا ۵ پیش‌تر انجام شده‌اند و [DONE] دارند. نشست ۶ تا ۱۵ دروازه ندارند.
+- نشست ۷ به دو نشست 7 و 7b تقسیم شد و تست نشست ۱۵ به جعبه‌ابزار مشترک محدود شد
+  (پیشنهاد چت توافق `aadc3b7d`، تأیید کاربر ۱۴۰۵/۰۷/۲۱).
+- هر نشست یک کامنت runner دارد که برای ایجنت فرستاده نمی‌شود:
+  - require: تمیزی درخت کاری پیش از شروع؛
+  - verify: بیلد (نشست ۱۵ هر سه پروفایل)، نگهبان‌های ۵۲، ۵۵ و ۵۶، ng-test-compare در برابر پایه نشست،
+    commit-exists برای هر ردیف و گزارش، clean-tree، و برای نشست‌هایی که پوشه‌شان شبا دارد diff-free.
+- [DONE] را فقط run_tasks.py پس از سبز شدن همه verifyها می‌گذارد. اگر صف ایستاد، اجرای دوباره از نخستین نشست بی‌[DONE] ادامه می‌دهد.
+- نگهبان ۲۹ (guardian_modularization.py) پیش از صف هم روی HEAD شکست می‌خورد (شمارنده‌های بک‌اند)، پس در verify نیست.
+- پس از نشست ۱۵، Claude بازبینی نهایی را انجام می‌دهد، از جمله ng test کامل در برابر «پایه نشست ۰» (`0bacd8f`).
 -->
 
-نشست 0 از 15 — طرح ارگونومی واکنش‌گرا: اصلاح جعبه‌ابزار و کلیدهای تازه فرهنگ آیکون (پیش از گام ۱۰)
+[DONE] نشست 0 از 15 — طرح ارگونومی واکنش‌گرا: اصلاح جعبه‌ابزار و کلیدهای تازه فرهنگ آیکون (پیش از گام ۱۰)
 
 ۱. دروازه شروع. پیش از هر تغییر این دو شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
 - در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S0-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
 - در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر — گام ۹» را بخوان.
+۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر — گام ۹» را بخوان.
 
 ۳. کار این نشست:
 الف) warehouse-front/src/app/shared/components/command-center/command-center.component.ts:
@@ -69,14 +75,14 @@
 
 ===
 
-نشست 1 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف‌های ۴.۱ و ۴.۴
+[DONE] نشست 1 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف‌های ۴.۱ و ۴.۴
 
 ۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
 - در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S0-DONE] باید باشد.
 - رشته [S1-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
 - در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست (مسیرها در warehouse-front/src/app/components/finance/accountant/):
 
@@ -121,14 +127,14 @@
 
 ===
 
-نشست 2 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف ۴.۳ (accountant-personnel)
+[DONE] نشست 2 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف ۴.۳ (accountant-personnel)
 
 ۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
 - در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S1-DONE] باید باشد.
 - رشته [S2-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
 - در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست: components/finance/accountant/accountant-personnel/
 
@@ -166,14 +172,14 @@
 
 ===
 
-نشست 3 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف ۴.۲ (accountant-fleet)
+[DONE] نشست 3 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف ۴.۲ (accountant-fleet)
 
 ۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
 - در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S2-DONE] باید باشد.
 - رشته [S3-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
 - در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست: components/finance/accountant/accountant-fleet/
 
@@ -208,14 +214,14 @@
 
 ===
 
-نشست 4 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف‌های ۴.۵ و ۴.۶
+[DONE] نشست 4 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف‌های ۴.۵ و ۴.۶
 
 ۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
 - در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S3-DONE] باید باشد.
 - رشته [S4-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
 - در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست (مسیرها در components/finance/accountant/):
 
@@ -246,14 +252,14 @@
 
 ===
 
-نشست 5 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف ۴.۷ (counterparties)
+[DONE] نشست 5 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف ۴.۷ (counterparties)
 
 ۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
 - در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S4-DONE] باید باشد.
 - رشته [S5-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
 - در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست: components/finance/counterparties/
 
@@ -289,12 +295,23 @@
 
 نشست 6 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف ۴.۲۲ (accountant-new-profiles) و پایان گام ۱۰
 
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S5-DONE] باید باشد.
-- رشته [S6-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/accountant/accountant-new-profiles/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.22)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 6"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+
+۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست: components/finance/accountant/accountant-new-profiles/
 الگو: components/finance/supervisor/supervisor-new-profiles/ (html و ts)، پس از بازبینی گام ۹.
@@ -319,26 +336,35 @@
   - savePersonnel: save با busy و label="ذخیره تغییرات"
   - submitRejectModal: [appAction] پویای return/reject
   - X سربرگ مودال‌ها display="icon"؛ دکمه‌های فوتر display="label"
-- دکمه ⚡ تولید شبا (convertAccountToShebaNow) و ساختار شبا دست نخورند. در گزارش خروجی این فرمان را بیاور:
-  git diff <پایه> -U0 | Select-String '^[+-].*(sheba|Sheba|IRANIAN_BANKS)'
+- دکمه ⚡ تولید شبا (convertAccountToShebaNow) و ساختار شبا دست نخورند.
 - در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md کل گام ۱۰ را تیک بزن.
 
 ۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S6-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S6-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
+- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
+- push نکن و پس از گزارش نوبت را تمام کن.
 
 ===
 
-نشست 7 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف‌های ۴.۸ تا ۴.۱۲ (خزانه)
+نشست 7 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف‌های ۴.۸ و ۴.۹ (خزانه، بخش ۱ از ۲)
 
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S6-DONE] باید باشد.
-- رشته [S7-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/treasurer/{treasurer-disbursements,treasurer-invoices}/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.8)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.9)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 7"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+
+۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست (مسیرها در components/finance/treasurer/). «تسویه نقدی و چکی» و «الصاق رسید» ردیف ۴.۹ در کد نیستند؛ نساز.
 
@@ -363,6 +389,36 @@
 - exportExcel و refreshData ← export-excel و refresh.
 - payInvoice: confirm با label="پرداخت و ثبت فیش".
 - refillPettyCash: confirm با label="واریز شارژ".
+
+۴. پایان:
+- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
+- push نکن و پس از گزارش نوبت را تمام کن.
+
+===
+
+نشست 7b از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف‌های ۴.۱۰ تا ۴.۱۲ (خزانه، بخش ۲ از ۲)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/treasurer/{treasurer-bank-accounts,treasurer-cheques,treasurer-reconciliation}/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.10)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.11)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.12)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 7b"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+
+۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+
+۳. کار این نشست (مسیرها در components/finance/treasurer/):
 
 ۴.۱۰ treasurer-bank-accounts:
 - تب‌ها:
@@ -389,21 +445,28 @@
 - exportExcel و refreshData ← export-excel و refresh.
 
 ۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S7-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S7-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
+- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
+- push نکن و پس از گزارش نوبت را تمام کن.
 
 ===
 
 نشست 8 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف ۴.۱۸ (projects-and-sections)
 
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S7-DONE] باید باشد.
-- رشته [S8-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/organization/projects-and-sections/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.18)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 8"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
+
+۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست: components/organization/projects-and-sections/
 
@@ -430,21 +493,31 @@
 - کارهای بی‌کلید: toggleAssignmentStatus (چیپ فعال و غیرفعال)، selectAllAvailableUsers و deselectAllUsers.
 
 ۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S8-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S8-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
+- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
+- push نکن و پس از گزارش نوبت را تمام کن.
 
 ===
 
 نشست 9 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف‌های ۴.۱۹ و ۴.۲۱
 
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S8-DONE] باید باشد.
-- رشته [S9-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/company-documents-archive/**/*.spec.ts" --include "src/app/components/personnel/base-settings/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.19)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.21)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 9"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+
+۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست:
 
@@ -487,21 +560,30 @@
 - هیچ عدد، ضریب یا فرمول §6 تغییر نکند.
 
 ۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S9-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S9-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
+- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
+- push نکن و پس از گزارش نوبت را تمام کن.
 
 ===
 
 نشست 10 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف ۴.۲۰ (personnel-profiles) و پایان گام ۱۱
 
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S9-DONE] باید باشد.
-- رشته [S10-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/personnel/personnel-profiles/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.20)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 10"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+
+۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست: components/personnel/personnel-profiles/
 
@@ -532,26 +614,35 @@
   - savePersonnel: save با busy
   - submitProfileRejectModal: [appAction] پویای return/reject
   - closePersonnelModal، closeDiffModal، closeProfileRejectModal و closeEndCollaborationModal: close
-- onFilterChange (فیلترها) و ساختار شبا دست نخورند. در گزارش خروجی این فرمان را بیاور:
-  git diff <پایه> -U0 | Select-String '^[+-].*(sheba|Sheba|IRANIAN_BANKS)'
+- onFilterChange (فیلترها) و ساختار شبا دست نخورند.
 - در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md کل گام ۱۱ را تیک بزن.
 
 ۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S10-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S10-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
+- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
+- push نکن و پس از گزارش نوبت را تمام کن.
 
 ===
 
 نشست 11 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف‌های ۴.۱۳ تا ۴.۱۶
 
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S10-DONE] باید باشد.
-- رشته [S11-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/manager/{manager-dashboard,manager-budget,manager-contracts,manager-reports}/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.13)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.14)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.15)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.16)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 11"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
+
+۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست (مسیرها در components/finance/manager/):
 
@@ -595,21 +686,30 @@
   - exportExcel و refreshData: export-excel و refresh
 
 ۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S11-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S11-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
+- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
+- push نکن و پس از گزارش نوبت را تمام کن.
 
 ===
 
 نشست 12 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف ۴.۱۷ (manager-approvals)
 
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S11-DONE] باید باشد.
-- رشته [S12-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/personnel/manager-approvals/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.17)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 12"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+
+۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست: components/personnel/manager-approvals/
 
@@ -644,21 +744,30 @@
 - onWarehouseChange (select) دست نخورد.
 
 ۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S12-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S12-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
+- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
+- push نکن و پس از گزارش نوبت را تمام کن.
 
 ===
 
 نشست 13 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف ۴.۲۳ (manager-fleet)
 
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S12-DONE] باید باشد.
-- رشته [S13-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/manager/manager-fleet/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.23)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 13"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+
+۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست: components/finance/manager/manager-fleet/
 
@@ -680,21 +789,30 @@
 - منطق تایید حذف و قطع همکاری (استعلام اثر حذف و deleteImpactHistory) دست نخورد.
 
 ۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S13-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S13-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
+- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
+- push نکن و پس از گزارش نوبت را تمام کن.
 
 ===
 
 نشست 14 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف ۴.۲۴ (manager-personnel) و پایان گام ۱۲
 
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S13-DONE] باید باشد.
-- رشته [S14-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/manager/manager-personnel/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.24)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 14"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
+   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+
+۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
 
 ۳. کار این نشست: components/finance/manager/manager-personnel/
 
@@ -718,21 +836,29 @@
 - در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md کل گام ۱۲ را تیک بزن.
 
 ۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S14-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S14-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
+- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
+- push نکن و پس از گزارش نوبت را تمام کن.
 
 ===
 
 نشست 15 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۳ (پایانی)
 
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S14-DONE] باید باشد.
-- رشته [S15-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: cd warehouse-front && npx ng build --configuration accounting-only --output-path ../scratch/ng-build-check
+verify: cd warehouse-front && npx ng build --configuration warehouse-only --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 15"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
 
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» را کامل بخوان و مو‌به‌مو اجرا کن. سپس بند ۳-۵ و بند ۵ (گام ۱۳) را بخوان.
+۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
+
+۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بند ۳-۵ و بند ۵ (گام ۱۳) را بخوان.
 
 ۳. کار این نشست:
 الف) پاک‌سازی رجیستری (بند ۳-۵):
@@ -744,29 +870,20 @@
   - اسکریپت را با python -X utf8 اجرا کن.
   - فقط نامزدی که همه شمارش‌هایش صفر است از icon-registry.ts حذف شود. RETIRED_VARIANTS نگهبان ۵۵ دست نخورد.
   - فهرست حذف‌شده‌ها و مانده‌ها را با علت در گزارش بیاور.
+  - اگر نامزدی حذف شد، حذف‌ها را جدا با پیام refactor(icons): prune retired icon variants (session 15) commit کن.
 ب) .agents/AGENTS.md (§7 و §9) و .claude/skills/design-system/SKILL.md:
   - به هر کدام یک زیربخش کوتاه بیفزا که این‌ها را راه پیش‌فرض بنامد: button[appAction] (با کلید terminate)، app-tab-bar، app-overflow-menu، app-command-center (با flex-wrap)، و فرهنگ‌های STATUS، ACTION، ROLE، PLATFORM و ACCOUNTING.
   - خلاصه بندهای ۹-۲ و ۹-۳ طرح را هم بیاور.
   - متن موجود را حذف نکن.
-ج) بیلد هر سه پروفایل: پیش‌فرض، accounting-only و warehouse-only.
-د) نگهبان‌ها:
-  - guardian_modularization.py، 52، 55 (و در پایان --update-baseline) و 56 با --base <پایه این نشست>.
-  - guardian_all.py را اجرا نکن؛ نگهبان‌های ۱۵، ۱۹ و menu_redesign به پایگاه داده می‌نویسند.
-ه) ng test کامل:
-  - tsconfig موقت tsconfig.fulltest.spec.json بساز که ./tsconfig.spec.json را extend کند.
-  - یک بار اجرا کن؛ specهایی را که خطای نوع (TS) دارند در exclude و با --exclude کنار بگذار و دوباره اجرا کن.
-  - همین را روی «پایه نشست ۰» تکرار کن (hash آن در عنوان گزارش نشست ۰ است)، با روش git archive و junction بند ۹-۴.
-  - فهرست تست‌هایی را که اینجا شکست می‌خورند ولی روی پایه نشست ۰ نه، در گزارش بیاور.
-  - tsconfig موقت را پاک کن.
-و) گزارش نهایی طرح در «گزارش پیشرفت»:
+  - این تغییرها را جدا با پیام docs(ergonomics): document shared toolkit defaults (session 15) commit کن.
+ج) بیلد هر سه پروفایل (پیش‌فرض، accounting-only و warehouse-only)، نگهبان‌های ۵۲ و ۵۶ و ng test جعبه‌ابزار مشترک در برابر پایه همین نشست را اجراکننده اجرا می‌کند؛ تو اجرا نکن. guardian_all.py را هم اجرا نکن؛ نگهبان‌های ۱۵، ۱۹ و menu_redesign به پایگاه داده می‌نویسند.
+د) گزارش نهایی طرح در «گزارش پیشرفت»:
   - جدول عددهای نگهبان ۵۵ از گام ۰ تا امروز؛
   - فهرست همه «کارهای بی‌کلید» نشست‌های ۱ تا ۱۴؛
   - فهرست کلیدهای تازه فرهنگ آیکون؛
   - چک‌لیست ۳۶۰px همه صفحه‌های پشت ورود برای کاربر.
-ز) در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md گام ۱۳ را تیک بزن.
+ه) در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md گام ۱۳ را تیک بزن.
 
 ۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S15-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S15-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
+- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
+- push نکن و پس از گزارش نوبت را تمام کن.

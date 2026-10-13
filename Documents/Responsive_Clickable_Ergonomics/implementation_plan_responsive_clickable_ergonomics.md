@@ -512,73 +512,42 @@ graph TD
 2. بعد کارهای آشنا را فقط‌آیکون کن.
 3. بعد کم‌اهمیت‌ها را به `app-overflow-menu` ببر.
 
-### ۹-۴. معیار پایان هر نشست (همه را اجرا کن و خروجی واقعی را در گزارش بیاور)
-فرمان‌ها برای PowerShell در ریشه مخزن `E:\warehouse project` است. هر جا `<پایه>` آمده، hash پایه نشست را بنویس.
+### ۹-۴. معیار پایان هر نشست
+این نشست‌ها را اجراکننده تسک‌ها (`run_tasks.py`) می‌فرستد و بخش «10. Runner Sessions & Lessons» فایل `.agents/AGENTS.md` بر آن‌ها حاکم است.
 
-1. **بیلد:** در `warehouse-front`:
+- **سنجش با اجراکننده است:** پس از پایان نوبت تو، اجراکننده خودش بیلد، نگهبان‌های ۵۲، ۵۵ و ۵۶، تست (`ng test` در برابر پایه نشست)، `commit-exists` و تمیزی درخت کاری را اجرا می‌کند. نتیجه را در `tasks_history.md` ثبت می‌کند.
+- **تو این‌ها را اجرا نکن:** بیلد، نگهبان‌ها، `ng test` و ساختن نسخه پایه با junction. عددی را هم که خودت در همین نشست اجرا نکرده‌ای در گزارش ننویس.
+- **تنها استثنا** نگهبان ۵۵ با `--update-baseline` است (بند ۳ پایین).
+
+1. **متن‌های تغییرکرده:** متن‌های تغییرکرده را در `*.spec.ts` جستجو کن (با ابزار جستجو، نه `grep` در Git Bash) و همان‌جا به‌روز کن.
+2. **بازبینی خودت:**
+   - هر فایل را یک‌بار دیگر با فهرست ۹-۲ و جمع عرض ۹-۳ مرور کن.
+   - `git diff --stat <پایه>` را ببین. برای هر قالبی که حذف خالص زیادی دارد، تکه diff را بخوان و مطمئن شو چیزی بیرون از دامنه نشست حذف نشده است.
+   - سیاهه ۹-۱ بند ۳ را با کد نهایی مقایسه کن.
+3. **نگهبان ۵۵ پیش از commit پایانی:**
    ```powershell
-   npx ng build --output-path ../scratch/ng-build-check *> ../scratch/logs/ergonomics-build.log
+   $env:PYTHONUTF8=1; python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline
    ```
-   - خط `Application bundle generation complete` و نبود `ERROR` و `NG8` را گزارش کن.
-   - نشست ۰ و نشست ۹ همین بیلد را با `--configuration accounting-only` و `--configuration warehouse-only` هم اجرا می‌کنند.
-2. **نگهبان‌ها:** با `$env:PYTHONUTF8=1`:
-   ```powershell
-   $env:PYTHONUTF8=1; python scripts/e2e/guardian_52_icon_registry.py
-   $env:PYTHONUTF8=1; python scripts/e2e/guardian_55_clickable_ergonomics.py
-   $env:PYTHONUTF8=1; python scripts/e2e/guardian_56_change_integrity.py --base <پایه>
-   ```
-   - نگهبان ۵۶ را **بدون** `--head` اجرا کن تا درخت کاری (commitشده و نشده با هم) سنجیده شود.
-   - هر سه باید کد ۰ بدهند.
-   - برای هر نوار `mobile="icon"` که نگهبان ۵۶ «ایستا سنجیدنی نیست» گزارش می‌کند، خودت ببین هر تب `icon` دارد.
-   - در پایان: `python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline` و عددهای تازه را گزارش کن.
-3. **تست (`ng test`، نه `vitest` خام):**
-   1. در `warehouse-front` فایل موقت `tsconfig.session.spec.json` با این محتوا بساز. خط آخر `include` نمونه است؛ به‌جایش الگوی پوشه‌های همان نشست را بگذار:
-      ```json
-      {
-        "extends": "./tsconfig.json",
-        "compilerOptions": { "outDir": "./out-tsc/spec", "types": ["vitest/globals", "node"] },
-        "include": [
-          "src/**/*.d.ts",
-          "src/app/shared/icons/*.spec.ts",
-          "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts",
-          "src/app/components/finance/accountant/accountant-payroll/**/*.spec.ts"
-        ],
-        "exclude": []
-      }
-      ```
-   2. در `warehouse-front` اجرا کن. هر الگو در **تک‌گیومه** باشد؛ آکولاد بی‌گیومه در PowerShell خطا می‌دهد. برای هر الگوی spec در `include` یک `--include` بگذار:
-      ```powershell
-      npx ng test --watch=false --ts-config tsconfig.session.spec.json --include 'src/app/shared/icons/*.spec.ts' --include 'src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts' --include 'src/app/components/finance/accountant/accountant-payroll/**/*.spec.ts' *> ../scratch/logs/session-test.log
-      ```
-   3. **spec کامپایل‌نشدنی:** اگر specی خطای نوع (`TS2xxx`) دارد، آن را با `exclude` در tsconfig و `--exclude` در فرمان کنار بگذار، فهرستش را گزارش کن، و ثابت کن روی پایه هم کامپایل نمی‌شد.
-   4. **مقایسه با پایه:**
-      ```powershell
-      git archive -o scratch/base-session.tar <پایه> warehouse-front
-      mkdir scratch/base-session
-      tar -xf scratch/base-session.tar -C scratch/base-session
-      cmd /c mklink /J "E:\warehouse project\scratch\base-session\warehouse-front\node_modules" "E:\warehouse project\warehouse-front\node_modules"
-      ```
-      - همان tsconfig را در `scratch/base-session/warehouse-front` کپی کن. همان فرمان را در همان پوشه اجرا کن، ولی خروجی را به مسیر مطلق `"E:\warehouse project\scratch\logs\session-test-base.log"` بفرست.
-      - **پاک کردن (به همین ترتیب):** اول `cmd /c rmdir "scratch\base-session\warehouse-front\node_modules"`. بعد ببین junction رفته باشد. فقط پس از آن `Remove-Item -Recurse -Force scratch\base-session, scratch\base-session.tar`.
-      - **هرگز** پیش از `rmdir` آن پوشه را `Remove-Item -Recurse` نکن؛ `node_modules` اصلی پاک می‌شود.
-   5. هر دو خط `Tests  N failed | M passed` را گزارش کن. شکست تازه نسبت به پایه یعنی پسرفت؛ پیش از commit رفعش کن.
-   6. `tsconfig.session.spec.json` را در پایان پاک کن.
-4. **متن‌های تغییرکرده:** متن‌های تغییرکرده را در `*.spec.ts` جستجو کن (با ابزار جستجو، نه `grep` در Git Bash) و همان‌جا به‌روز کن.
-5. **بازبینی خودت:** هر فایل را یک‌بار دیگر با فهرست ۹-۲ و جمع عرض ۹-۳ مرور کن.
-6. **commit و گزارش:**
+   - این فرمان یک‌طرفه است: اگر شمارنده‌ای بالا رفته باشد رد می‌شود. در آن صورت علت را در کد رفع کن و فایل خط مبنا را هرگز دستی ویرایش نکن.
+   - `scripts/e2e/clickable_ergonomics_baseline.json` را در commit پایانی بگذار و عددهای تازه را در گزارش بیاور.
+4. **commit:**
    - یک commit برای هر ردیف صفحه، با پیام `feat(ergonomics): migrate <page> to shared toolkit (row 4.x)`.
    - commit پایانی با پیام `docs(ergonomics): record session <N>` برای گزارش.
-   - بدون `Co-Authored-By`. **push نکن.**
-7. **گزارش در «گزارش پیشرفت»:** یادداشتی با عنوان `### <تاریخ شمسی امروز> — اجرای نشست <N> (ردیف‌های …؛ پایه <hash>) <برچسب>` بنویس.
-   - **برچسب:** فقط اگر همه معیارها سبز و همه commitها انجام شده، برچسب ASCII `[S<N>-DONE]` است (`<N>` شماره لاتین نشست). وگرنه `[S<N>-FAILED]` با علت.
-   - نشست بعد فقط با دیدن برچسب DONE نشست قبل شروع می‌شود. این برچسب را جای دیگری (مثلاً به‌عنوان نمونه) ننویس.
+   - فقط فایل‌های خودت را `git add` کن (۹-۱ بند ۱). بدون `Co-Authored-By`. **push نکن.**
+5. **گزارش در «گزارش پیشرفت»:** یادداشتی با عنوان `### <تاریخ شمسی امروز> — اجرای نشست <N> (ردیف‌های …؛ پایه <hash>)` بنویس.
+   - هیچ برچسب DONE یا FAILED ننویس. `[DONE]` را اجراکننده پس از سبز شدن سنجش‌هایش در `tasks.md` می‌گذارد.
    - یادداشت این‌ها را دارد:
-   - commitها؛
-   - جمع عرض ردیف‌های موبایل؛
-   - خروجی واقعی فرمان‌ها؛
-   - سه فهرست «سنجیده‌شده با فرمان»، «اجرانشده» و «پشت ورود (چک‌لیست ۳۶۰px برای کاربر)».
-
-   بعد در `task_responsive_clickable_ergonomics.md` ردیف‌ها را تیک بزن. سپس توقف کن و نشست بعد را شروع نکن.
+     - commitها؛
+     - جمع عرض ردیف‌های موبایل؛
+     - عددهای نگهبان ۵۵؛
+     - «کارهای بی‌کلید»؛
+     - سه فهرست: «سنجیده‌شده با فرمان» (فقط فرمان‌هایی که خودت اجرا کردی، با خروجی واقعی)، «به اجراکننده سپرده‌شده» (بیلد، نگهبان‌های ۵۲ و ۵۶، تست) و «پشت ورود (چک‌لیست ۳۶۰px برای کاربر)».
+   - بعد در `task_responsive_clickable_ergonomics.md` ردیف‌ها را تیک بزن.
+   - سپس نوبت را تمام کن و نشست بعد را شروع نکن.
+6. **بازخورد اجراکننده:** اگر پس از نوبتت پیامی با `[RUNNER]` آمد، یکی از سنجش‌ها شکست خورده است.
+   - خروجی و لاگ کامل را بخوان و علت را در دامنه همین نشست رفع کن.
+   - زیر یادداشت همین نشست یک خط «پاسخ به بازخورد اجراکننده» بیفزا.
+   - رفع و آن خط را با پیام `fix(ergonomics): address runner feedback (session <N>)` commit کن و نوبت را تمام کن. اجراکننده همه سنجش‌ها را دوباره اجرا می‌کند.
 
 ---
 

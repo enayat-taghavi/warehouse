@@ -117,3 +117,21 @@
 - **Local Typography & Zero-External-CDN Invariant:** Typography relies exclusively on local Vazirmatn font hosted in `public/fonts/vazirmatn/` and prefetched via Service Worker (`ngsw-config.json`). External font CDNs (Google Fonts, unpkg, etc.) are strictly forbidden to guarantee 100% offline continuity.
 - **Predictable Dark Mode Policy:** Tailwind `darkMode` is set strictly to `'selector'`. Operating system level dark mode (`media` query) must NEVER auto-trigger dark styles on partial layouts. Dark styling must strictly use semantic surface tokens (`bg-surface`, `text-fg`, `border-line`).
 - **Image Optimization & Accessibility:** Dynamic server images in fixed-dimension containers must use Angular `NgOptimizedImage` (`[ngSrc]`) with explicit `width` and `height`. Print templates (ID cards) and blob/data previews must remain plain `src`. Every `<img>` must feature a descriptive Persian `alt` or `alt=""` for decorative images.
+
+### 10. Runner Sessions & Lessons (`run_tasks.py`)
+A runner session is a conversation started by `run_tasks.py` with one task from `tasks.md`.
+- **The runner verifies, not you:** After your turn, the runner itself runs the build, guardians, `ng test` against the session base, `commit-exists` and a clean-tree check, and records the results in `tasks_history.md`.
+  - Do not run those yourself, unless the task or plan names a specific command for you (e.g. `guardian_55_clickable_ergonomics.py --update-baseline`).
+  - Never build a base copy with a junction to `node_modules`.
+  - For runner sessions this replaces the Guardian 56 runs required by §3 (Template Integrity) and §5 items 1 and 7. Never write a number or a "green" claim for a command you did not run in this session; list such checks under "left to the runner". Reading `git diff --stat <session base>` for your self-review is still required.
+- **No status labels:** Never write DONE/FAILED labels such as `[S<N>-DONE]`. The runner marks `[DONE]` in `tasks.md` after its own checks pass.
+- **Runner messages:** A message starting with `[RUNNER]` is one of two kinds:
+  - **A failed check after your turn:** read the quoted output and the full log, then fix the cause within the original task scope. Commit the fix (only your own files) and end your turn. The runner re-runs every check.
+  - **A resume after a model service error:** your turn was cut off by the service, not by your work. Continue exactly where you stopped.
+- **The "?" rules (§4) do not apply to runner messages:** Task texts and `[RUNNER]` messages are execution requests. A `?` inside code (e.g. a ternary `x ? 'a' : 'b'`) is not a question.
+- **Finding plan sections:** Locate a section by its heading (e.g. `## ۹.`), not by searching for a long Persian phrase.
+- **Git:**
+  - `git add` only the files you changed; never `git add -A` or `git add .`.
+  - Never stage `tasks.md`, `run_tasks.*` or `tasks_history.md`.
+  - Never push.
+- **Dialogue chats (`run_tasks.py ask`):** In a review or agreement chat, answer in the chat only. Do not create or edit any file or artifact, and do not run commands that change the repository.
