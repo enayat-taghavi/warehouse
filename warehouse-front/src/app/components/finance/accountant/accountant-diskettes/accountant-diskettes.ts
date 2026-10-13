@@ -10,6 +10,10 @@ import { PersonnelApiService } from '../../../../core/api/personnel-api.service'
 import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 import {
   PAYROLL_MONTHS,
   defaultPayrollPeriod,
@@ -21,12 +25,41 @@ import {
 @Component({
   selector: 'app-accountant-diskettes-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    TabBarComponent,
+    ActionButtonComponent,
+    CommandCenterComponent,
+    SvgIconDirective
+  ],
   templateUrl: './accountant-diskettes.html',
   styleUrl: './accountant-diskettes.css'
 })
 export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
   activeSubTab: 'social_security' | 'tax_portal' | 'bank_payroll' = 'social_security';
+
+  readonly tabs: TabDef[] = [
+    {
+      id: 'social_security',
+      label: 'بیمه تامین اجتماعی',
+      shortLabel: 'بیمه',
+      icon: ACCOUNTING_ENTITY_ICONS.insurance
+    },
+    {
+      id: 'tax_portal',
+      label: 'مالیات حقوق',
+      shortLabel: 'مالیات',
+      icon: ACCOUNTING_ENTITY_ICONS.tax
+    },
+    {
+      id: 'bank_payroll',
+      label: 'واریز بانکی',
+      shortLabel: 'بانک',
+      icon: ACCOUNTING_ENTITY_ICONS.bankAccounts
+    }
+  ];
 
   // دوره و دامنهٔ خروجی‌ها (منتقل‌شده از کارتابل مالی قدیمی)
   readonly monthNames = PAYROLL_MONTHS.map(m => m.name);
@@ -161,7 +194,10 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
     this.loadPeriod();
   }
 
-  switchSubTab(tab: 'social_security' | 'tax_portal' | 'bank_payroll'): void {
+  switchSubTab(tab: string): void {
+    if (tab !== 'social_security' && tab !== 'tax_portal' && tab !== 'bank_payroll') {
+      return;
+    }
     this.activeSubTab = tab;
     this.syncUrlParams();
   }
