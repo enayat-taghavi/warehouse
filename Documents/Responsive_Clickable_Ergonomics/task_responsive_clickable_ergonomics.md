@@ -120,8 +120,8 @@
   - [x] **۴.۲ ناوگان حسابدار (`accountant-fleet.html`)**
   - [x] **۴.۳ پرسنل حسابدار (`accountant-personnel.html`)**
   - [x] **۴.۴ فاکتورهای حسابدار (`accountant-invoices.html`)**
-  - [ ] **۴.۵ رسیدگی تنخواه (`accountant-petty-cash.html`)**
-  - [ ] **۴.۶ دیسکت‌های بیمه و مالیات (`accountant-diskettes.html`)**
+  - [x] **۴.۵ رسیدگی تنخواه (`accountant-petty-cash.html`)**
+  - [x] **۴.۶ دیسکت‌های بیمه و مالیات (`accountant-diskettes.html`)**
   - [ ] **۴.۷ طرف‌های حساب (`counterparties.html`):** ساختار شبا دست نخورد
   - [ ] **۴.۲۲ پرونده‌های جدید حسابدار (`accountant-new-profiles.html`)**
   - [ ] معیار پایان گام

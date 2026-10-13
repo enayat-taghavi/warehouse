@@ -1,9 +1,9 @@
 {
   "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
   "counters": {
-    "rule_1_unlabeled_icon_buttons": 124,
+    "rule_1_unlabeled_icon_buttons": 119,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 130,
+    "rule_3_non_standard_actions": 128,
     "rule_4_retired_icons": 58,
     "rule_5_neutralized_tap_targets": 0
   },
@@ -106,28 +106,28 @@
         "line": 175
       },
       {
-        "file": "components/finance/accountant/accountant-diskettes/accountant-diskettes.html",
-        "line": 139
-      },
-      {
-        "file": "components/finance/accountant/accountant-diskettes/accountant-diskettes.html",
-        "line": 172
-      },
-      {
-        "file": "components/finance/accountant/accountant-diskettes/accountant-diskettes.html",
-        "line": 206
-      },
-      {
-        "file": "components/finance/accountant/accountant-diskettes/accountant-diskettes.html",
-        "line": 222
-      },
-      {
-        "file": "components/finance/accountant/accountant-diskettes/accountant-diskettes.html",
-        "line": 238
+        "file": "components/finance/accountant/accountant-personnel/accountant-personnel.html",
+        "line": 265
       },
       {
         "file": "components/finance/accountant/accountant-personnel/accountant-personnel.html",
-        "line": 265
+        "line": 293
+      },
+      {
+        "file": "components/finance/accountant/accountant-personnel/accountant-personnel.html",
+        "line": 673
+      },
+      {
+        "file": "components/finance/company-documents-archive/company-documents-archive.html",
+        "line": 68
+      },
+      {
+        "file": "components/finance/company-documents-archive/company-documents-archive.html",
+        "line": 498
+      },
+      {
+        "file": "components/finance/counterparties/counterparties.html",
+        "line": 389
       }
     ],
     "rule_2_tab_min_widths": [],
@@ -289,18 +289,6 @@
         "icon": null
       },
       {
-        "file": "components/finance/accountant/accountant-petty-cash/accountant-petty-cash.html",
-        "line": 178,
-        "method": "approveReplenishment",
-        "icon": null
-      },
-      {
-        "file": "components/finance/accountant/accountant-petty-cash/accountant-petty-cash.html",
-        "line": 184,
-        "method": "rejectReplenishment",
-        "icon": null
-      },
-      {
         "file": "components/finance/company-documents-archive/company-documents-archive.html",
         "line": 309,
         "method": "deleteDocument",
@@ -311,6 +299,18 @@
         "line": 556,
         "method": "deleteCounterparty",
         "icon": null
+      },
+      {
+        "file": "components/finance/counterparties/counterparties.html",
+        "line": 608,
+        "method": "deleteCounterparty",
+        "icon": null
+      },
+      {
+        "file": "components/finance/employee/employee-attendance/employee-attendance.html",
+        "line": 238,
+        "method": "triggerExcelImport",
+        "icon": "action-upload"
       }
     ],
     "rule_4_retired_icons": [
