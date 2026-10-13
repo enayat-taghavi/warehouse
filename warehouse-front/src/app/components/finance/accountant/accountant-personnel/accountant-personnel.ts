@@ -31,6 +31,9 @@ import {
 } from '../../../../core/utils/sheba-utils';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ModalFocus } from '../../../../core/utils/modal-focus';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export type AccountantPersonnelSubTab = 'new' | 'payroll' | 'changes' | 'all';
 export type AccountantPersonnelStatusFilter = 'ALL' | 'pending_accountant' | 'pending_manager' | 'approved' | 'revision_required' | 'rejected';
@@ -38,7 +41,14 @@ export type AccountantPersonnelStatusFilter = 'ALL' | 'pending_accountant' | 'pe
 @Component({
   selector: 'app-accountant-personnel-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    SvgIconDirective,
+    TabBarComponent,
+    ActionButtonComponent
+  ],
   templateUrl: './accountant-personnel.html',
   styleUrl: './accountant-personnel.css',
   host: { '(document:keydown.escape)': 'onApprovalEscape()', '(document:keydown)': 'onDocumentKeydown($event)' }
@@ -67,6 +77,81 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     changesPending: 0,
     allTotal: 0
   };
+
+  // Memoized tabs for app-tab-bar (getter با آرایه تازه در هر چرخه، در dev mode خطای NG0100 می‌دهد)
+  private personnelSubTabsKey = '';
+  private personnelSubTabsCache: TabDef[] = [];
+  get personnelSubTabs(): TabDef[] {
+    const sc = this.statusCounters;
+    const key = `${sc.newPending}:${sc.payrollPending}:${sc.changesPending}:${sc.allTotal}`;
+    if (key !== this.personnelSubTabsKey) {
+      this.personnelSubTabsKey = key;
+      this.personnelSubTabsCache = [
+        {
+          id: 'new',
+          label: 'احکام و مدارک مالی',
+          shortLabel: 'احکام',
+          icon: ACCOUNTING_ENTITY_ICONS.newPersonnel,
+          count: sc.newPending,
+          tone: 'amber',
+          indicator: sc.newPending > 0 ? { tone: 'amber', label: 'نیازمند اقدام', pulse: true } : undefined
+        },
+        {
+          id: 'payroll',
+          label: 'حقوق و دستمزد ماهانه',
+          shortLabel: 'حقوق',
+          icon: ACCOUNTING_ENTITY_ICONS.payroll,
+          count: sc.payrollPending,
+          tone: 'indigo'
+        },
+        {
+          id: 'changes',
+          label: 'درخواست‌های تغییرات',
+          shortLabel: 'تغییرات',
+          icon: 'action-edit',
+          count: sc.changesPending,
+          tone: 'amber',
+          indicator: sc.changesPending > 0 ? { tone: 'amber', label: 'نیازمند اقدام', pulse: true } : undefined
+        },
+        {
+          id: 'all',
+          label: 'همه پرسنل',
+          shortLabel: 'همه',
+          icon: 'status-all',
+          count: sc.allTotal,
+          tone: 'slate'
+        }
+      ];
+    }
+    return this.personnelSubTabsCache;
+  }
+
+  readonly personnelModalTabs: TabDef[] = [
+    {
+      id: 'contract',
+      label: 'مزد و قرارداد',
+      shortLabel: 'مزد',
+      icon: ACCOUNTING_ENTITY_ICONS.payroll
+    },
+    {
+      id: 'insurance',
+      label: 'بیمه و شغل',
+      shortLabel: 'بیمه',
+      icon: ACCOUNTING_ENTITY_ICONS.insurance
+    },
+    {
+      id: 'identity',
+      label: 'مشخصات فردی',
+      shortLabel: 'فردی',
+      icon: ACCOUNTING_ENTITY_ICONS.identity
+    },
+    {
+      id: 'contact',
+      label: 'حساب بانکی و شبا',
+      shortLabel: 'بانکی',
+      icon: ACCOUNTING_ENTITY_ICONS.bankAccounts
+    }
+  ];
 
   // انتخاب و تایید گروهی حسابدار (تسک ۹.۷)
   selectedPersonnelIds: Set<number> = new Set();
@@ -232,8 +317,11 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     this.fetchData();
   }
 
-  switchSubTab(tab: AccountantPersonnelSubTab): void {
-    this.activeSubTab = tab;
+  switchSubTab(tab: string): void {
+    if (tab !== 'new' && tab !== 'payroll' && tab !== 'changes' && tab !== 'all') {
+      return;
+    }
+    this.activeSubTab = tab as AccountantPersonnelSubTab;
     this.syncUrlParams();
     this.fetchData();
   }
@@ -744,9 +832,11 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  setPersonnelTab(tab: 'identity' | 'contract' | 'insurance' | 'contact'): void {
-    this.personnelModalTab = tab;
-    this.cdr.detectChanges();
+  setPersonnelTab(tab: string): void {
+    if (tab === 'identity' || tab === 'contract' || tab === 'insurance' || tab === 'contact') {
+      this.personnelModalTab = tab;
+      this.cdr.detectChanges();
+    }
   }
 
   recalculatePersonnelRates(): void {

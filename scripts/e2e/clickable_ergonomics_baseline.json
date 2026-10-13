@@ -1,10 +1,10 @@
 {
   "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
   "counters": {
-    "rule_1_unlabeled_icon_buttons": 132,
+    "rule_1_unlabeled_icon_buttons": 128,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 145,
-    "rule_4_retired_icons": 64,
+    "rule_3_non_standard_actions": 137,
+    "rule_4_retired_icons": 60,
     "rule_5_neutralized_tap_targets": 0
   },
   "violations": {
@@ -450,19 +450,19 @@
         "icon": "edit-2"
       },
       {
-        "file": "components/finance/accountant/accountant-personnel/accountant-personnel.html",
-        "line": 254,
-        "icon": "edit-2"
+        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "line": 1395,
+        "icon": "trash"
       },
       {
-        "file": "components/finance/accountant/accountant-personnel/accountant-personnel.html",
-        "line": 272,
-        "icon": "undo-2"
+        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "line": 1413,
+        "icon": "trash"
       },
       {
-        "file": "components/finance/accountant/accountant-personnel/accountant-personnel.html",
-        "line": 370,
-        "icon": "edit-2"
+        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "line": 1637,
+        "icon": "trash"
       }
     ],
     "rule_5_neutralized_tap_targets": []

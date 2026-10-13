@@ -20,58 +20,13 @@
         </div>
 
         <!-- ناوبری زیرتب‌ها در کپسول محصور (Subtabs Pill Container) -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
-          <button
-            type="button"
-            (click)="switchSubTab('new')"
-            [ngClass]="activeSubTab === 'new' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="badge"></svg>
-            <span>احکام و مدارک مالی</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.newPending > 0 ? 'bg-amber-100 text-amber-900 font-black animate-pulse' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.newPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('payroll')"
-            [ngClass]="activeSubTab === 'payroll' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
-            <span>حقوق و دستمزد ماهانه</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.payrollPending > 0 ? 'bg-blue-100 text-blue-800 font-black' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.payrollPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('changes')"
-            [ngClass]="activeSubTab === 'changes' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer relative">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw"></svg>
-            <span>درخواست‌های تغییرات</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.changesPending > 0 ? 'bg-amber-500 text-white animate-pulse' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.changesPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('all')"
-            [ngClass]="activeSubTab === 'all' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
-            <span>همه پرسنل</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-slate-200/70 text-slate-600">
-              {{ statusCounters.allTotal }}
-            </span>
-          </button>
-        </div>
+        <app-tab-bar
+          [tabs]="personnelSubTabs"
+          [active]="activeSubTab"
+          (activeChange)="switchSubTab($event)"
+          mobile="icon"
+          fullLabelFrom="xl">
+        </app-tab-bar>
       </div>
 
       <!-- سمت چپ: باکس جستجو و دکمه رفرش -->
@@ -84,29 +39,27 @@
             placeholder="جستجوی پرسنل، کد ملی، شبا..."
             class="w-full bg-slate-100/90 text-xs py-1.5 pr-8 pl-6 rounded-xl border border-slate-200/80 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search" class="absolute right-2.5 top-2 text-slate-400 pointer-events-none"></svg>
-          <button *ngIf="searchQuery" (click)="searchQuery = ''; fetchData()" class="absolute left-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer" title="پاک کردن جستجو">
+          <button *ngIf="searchQuery" type="button" (click)="searchQuery = ''; fetchData()" class="absolute left-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer" title="پاک کردن جستجو" aria-label="پاک کردن جستجو">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
           </button>
         </div>
 
         <button
           type="button"
-          (click)="downloadMissingPrimaryShebaReport()"
+          appAction="download"
+          label="گزارش فاقد شبا"
+          labelFrom="md"
+          tone="emerald"
+          [busy]="isDownloadingShebaReport"
           [disabled]="isDownloadingShebaReport"
-          title="دانلود گزارش اکسل حساب‌های اصلی فاقد شبای معتبر (DEF-23)"
-          class="h-8 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer shadow-2xs">
-          <svg *ngIf="isDownloadingShebaReport" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="spinner" class="animate-spin"></svg>
-          <svg *ngIf="!isDownloadingShebaReport" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="bar-chart-2"></svg>
-          <span class="hidden md:inline">گزارش فاقد شبا</span>
+          (click)="downloadMissingPrimaryShebaReport()">
         </button>
 
         <button
           type="button"
-          (click)="fetchData()"
-          [disabled]="isLoading"
-          title="همگام‌سازی و بارگذاری مجدد"
-          class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200/80 text-slate-600 flex items-center justify-center transition-all cursor-pointer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="refresh-cw" [class.animate-spin]="isLoading"></svg>
+          appAction="refresh"
+          [busy]="isLoading"
+          (click)="fetchData()">
         </button>
       </div>
 
@@ -126,16 +79,15 @@
       <div class="flex items-center gap-2">
         <button
           type="button"
-          (click)="openBatchApprovalModal()"
-          class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5 transition-all">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check-check"></svg>
-          <span>تایید مالی گروهی و ارسال به مدیر</span>
+          appAction="approve"
+          label="تایید گروهی"
+          (click)="openBatchApprovalModal()">
         </button>
         <button
           type="button"
-          (click)="selectedPersonnelIds.clear()"
-          class="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold cursor-pointer transition-all">
-          لغو انتخاب
+          appAction="close"
+          label="لغو انتخاب"
+          (click)="selectedPersonnelIds.clear()">
         </button>
       </div>
     </div>
@@ -249,36 +201,30 @@
                 <div class="flex items-center justify-center gap-1.5 flex-wrap">
                   <button
                     type="button"
-                    (click)="openEditPersonnelModal(item)"
-                    class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-black cursor-pointer transition-all flex items-center gap-1">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit-2"></svg>
-                    <span>احکام و مدارک</span>
+                    appAction="edit"
+                    label="احکام و مدارک"
+                    (click)="openEditPersonnelModal(item)">
                   </button>
                   <button
                     type="button"
-                    (click)="openApprovalModal(item.id, (item.first_name || '') + ' ' + (item.last_name || ''), 'personnel')"
+                    appAction="approve"
+                    label="ارسال به مدیر"
                     [disabled]="!canSendToManager(item)"
-                    [title]="canSendToManager(item) ? 'تایید مالی و ارسال به مدیر' : ('نواقص: ' + getMissingFieldsSummary(item).join('، '))"
-                    class="px-2.5 py-1 rounded-lg text-xs font-black shadow-xs transition-all flex items-center gap-1"
-                    [ngClass]="canSendToManager(item) ? 'bg-emerald-700 text-white hover:bg-emerald-800 cursor-pointer' : 'bg-slate-200 text-slate-400 cursor-not-allowed'">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="send"></svg>
-                    <span>ارسال به مدیر</span>
+                    (click)="openApprovalModal(item.id, (item.first_name || '') + ' ' + (item.last_name || ''), 'personnel')">
                   </button>
                   <button
                     *ngIf="item.id"
                     type="button"
-                    (click)="openRejectModal(item.id, item.first_name + ' ' + item.last_name, 'personnel', 'revision')"
-                    class="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 text-xs font-bold cursor-pointer flex items-center gap-1">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="undo-2"></svg>
-                    <span>عودت</span>
+                    appAction="return"
+                    label="عودت"
+                    (click)="openRejectModal(item.id, item.first_name + ' ' + item.last_name, 'personnel', 'revision')">
                   </button>
                   <button
                     *ngIf="item.id"
                     type="button"
-                    (click)="openRejectModal(item.id, item.first_name + ' ' + item.last_name, 'personnel', 'reject')"
-                    class="px-2 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold cursor-pointer flex items-center gap-1">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
-                    <span>رد</span>
+                    appAction="reject"
+                    label="رد"
+                    (click)="openRejectModal(item.id, item.first_name + ' ' + item.last_name, 'personnel', 'reject')">
                   </button>
                 </div>
               </td>
@@ -365,35 +311,34 @@
         <div class="grid grid-cols-2 gap-2 pt-1">
           <button
             type="button"
-            (click)="openEditPersonnelModal(item)"
-            class="min-h-[40px] px-3 py-2 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-black flex items-center justify-center gap-1 cursor-pointer">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit-2"></svg>
-            <span>احکام و مدارک</span>
+            appAction="edit"
+            display="label"
+            label="احکام و مدارک"
+            (click)="openEditPersonnelModal(item)">
           </button>
           <button
             type="button"
-            (click)="openApprovalModal(item.id, (item.first_name || '') + ' ' + (item.last_name || ''), 'personnel')"
+            appAction="approve"
+            display="label"
+            label="ارسال به مدیر"
             [disabled]="!canSendToManager(item)"
-            class="min-h-[40px] px-3 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1 shadow-xs"
-            [ngClass]="canSendToManager(item) ? 'bg-emerald-700 text-white hover:bg-emerald-800 cursor-pointer' : 'bg-slate-200 text-slate-400 cursor-not-allowed'">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="send"></svg>
-            <span>ارسال به مدیر</span>
+            (click)="openApprovalModal(item.id, (item.first_name || '') + ' ' + (item.last_name || ''), 'personnel')">
           </button>
           <button
             *ngIf="item.id"
             type="button"
-            (click)="openRejectModal(item.id, item.first_name + ' ' + item.last_name, 'personnel', 'revision')"
-            class="min-h-[40px] px-3 py-2 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="undo-2"></svg>
-            <span>عودت</span>
+            appAction="return"
+            display="label"
+            label="عودت"
+            (click)="openRejectModal(item.id, item.first_name + ' ' + item.last_name, 'personnel', 'revision')">
           </button>
           <button
             *ngIf="item.id"
             type="button"
-            (click)="openRejectModal(item.id, item.first_name + ' ' + item.last_name, 'personnel', 'reject')"
-            class="min-h-[40px] px-3 py-2 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
-            <span>رد</span>
+            appAction="reject"
+            display="label"
+            label="رد"
+            (click)="openRejectModal(item.id, item.first_name + ' ' + item.last_name, 'personnel', 'reject')">
           </button>
         </div>
       </div>
@@ -467,10 +412,9 @@
               <td class="p-3">
                 <button
                   type="button"
-                  (click)="openDiffModal(cr)"
-                  class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 cursor-pointer flex items-center gap-1">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
-                  <span>مشاهده مغایرت‌ها (Diff)</span>
+                  appAction="view"
+                  label="مقایسه"
+                  (click)="openDiffModal(cr)">
                 </button>
               </td>
               <td class="p-3 font-mono text-slate-500">{{ cr.created_at | slice:0:10 }}</td>
@@ -483,17 +427,15 @@
                 <div class="flex items-center justify-center gap-1.5">
                   <button
                     type="button"
-                    (click)="openApprovalModal(cr.id, cr.personnel_name || ('درخواست #' + cr.id), 'personnel_cr')"
-                    class="px-2.5 py-1 rounded-lg bg-emerald-700 text-white hover:bg-emerald-800 text-xs font-black shadow-xs cursor-pointer transition-all flex items-center gap-1">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="send"></svg>
-                    <span>تایید مالی و ارسال به مدیر</span>
+                    appAction="approve"
+                    label="تایید مالی"
+                    (click)="openApprovalModal(cr.id, cr.personnel_name || ('درخواست #' + cr.id), 'personnel_cr')">
                   </button>
                   <button
                     type="button"
-                    (click)="openRejectModal(cr.id, cr.personnel_name || '', 'personnel_cr', 'reject')"
-                    class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold cursor-pointer flex items-center gap-1">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
-                    <span>رد درخواست</span>
+                    appAction="reject"
+                    label="رد"
+                    (click)="openRejectModal(cr.id, cr.personnel_name || '', 'personnel_cr', 'reject')">
                   </button>
                 </div>
               </td>
@@ -551,45 +493,24 @@
           </h3>
           <span class="text-xs text-slate-500 font-mono">کد ملی: {{ editingPersonnel?.national_code }}</span>
         </div>
-        <button (click)="closePersonnelModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer" title="بستن">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          size="sm"
+          (click)="closePersonnelModal()"
+          title="بستن">
         </button>
       </div>
 
       <!-- تب‌های درون مودال -->
-      <div class="flex border-b border-slate-200 bg-slate-100/60 px-4 pt-2 gap-2 overflow-x-auto">
-        <button
-          type="button"
-          (click)="setPersonnelTab('contract')"
-          [ngClass]="personnelModalTab === 'contract' ? 'bg-white text-blue-700 border-b-2 border-blue-600 font-black' : 'text-slate-600 font-bold'"
-          class="px-3 py-1.5 text-xs rounded-t-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="briefcase"></svg>
-          <span>مزد و قرارداد</span>
-        </button>
-        <button
-          type="button"
-          (click)="setPersonnelTab('insurance')"
-          [ngClass]="personnelModalTab === 'insurance' ? 'bg-white text-blue-700 border-b-2 border-blue-600 font-black' : 'text-slate-600 font-bold'"
-          class="px-3 py-1.5 text-xs rounded-t-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
-          <span>بیمه و شغل</span>
-        </button>
-        <button
-          type="button"
-          (click)="setPersonnelTab('identity')"
-          [ngClass]="personnelModalTab === 'identity' ? 'bg-white text-blue-700 border-b-2 border-blue-600 font-black' : 'text-slate-600 font-bold'"
-          class="px-3 py-1.5 text-xs rounded-t-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user"></svg>
-          <span>مشخصات فردی</span>
-        </button>
-        <button
-          type="button"
-          (click)="setPersonnelTab('contact')"
-          [ngClass]="personnelModalTab === 'contact' ? 'bg-white text-blue-700 border-b-2 border-blue-600 font-black' : 'text-slate-600 font-bold'"
-          class="px-3 py-1.5 text-xs rounded-t-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building"></svg>
-          <span>حساب بانکی و شبا</span>
-        </button>
+      <div class="px-4 pt-2 pb-1 shrink-0 bg-slate-50 border-b border-slate-200">
+        <app-tab-bar
+          [tabs]="personnelModalTabs"
+          [active]="personnelModalTab"
+          (activeChange)="setPersonnelTab($event)"
+          mobile="icon">
+        </app-tab-bar>
       </div>
 
       <!-- بدنه فرم مودال -->
@@ -914,18 +835,16 @@
       <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
         <button
           type="button"
-          (click)="closePersonnelModal()"
-          class="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">
-          انصراف
+          appAction="close"
+          label="انصراف"
+          (click)="closePersonnelModal()">
         </button>
         <button
           type="button"
-          (click)="savePersonnelFinancialChanges()"
-          [disabled]="isSavingPersonnel"
-          class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5">
-          <svg *ngIf="isSavingPersonnel" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="spinner" class="animate-spin"></svg>
-          <svg *ngIf="!isSavingPersonnel" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="save"></svg>
-          <span>{{ isSavingPersonnel ? 'در حال ذخیره‌سازی...' : 'ذخیره تغییرات احکام' }}</span>
+          appAction="save"
+          label="ذخیره تغییرات احکام"
+          [busy]="isSavingPersonnel"
+          (click)="savePersonnelFinancialChanges()">
         </button>
       </div>
 
@@ -938,8 +857,13 @@
       <div class="p-4 border-b flex items-center justify-between"
            [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-50 text-amber-900 border-amber-100' : 'bg-rose-50 text-rose-900 border-rose-100'">
         <h3 class="text-sm font-black">{{ rejectTarget?.action === 'revision' ? 'عودت پرونده به بازنگری' : 'رد قطعی پرونده' }}</h3>
-        <button (click)="closeRejectModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer" title="بستن">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          size="sm"
+          (click)="closeRejectModal()"
+          title="بستن">
         </button>
       </div>
       <div class="p-4 space-y-3">
@@ -971,16 +895,19 @@
       </div>
       <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
         <button
-          (click)="closeRejectModal()"
-          class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">
-          انصراف
+          type="button"
+          appAction="close"
+          label="انصراف"
+          (click)="closeRejectModal()">
         </button>
         <button
-          (click)="submitRejectModal()"
+          type="button"
+          [appAction]="rejectTarget?.action === 'revision' ? 'return' : 'reject'"
+          display="label"
+          [busy]="isSubmittingReject"
           [disabled]="isSubmittingReject"
-          class="px-4 py-1.5 rounded-xl text-white text-xs font-black shadow-xs cursor-pointer"
-          [ngClass]="rejectTarget?.action === 'revision' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-rose-600 hover:bg-rose-700'">
-          {{ isSubmittingReject ? 'در حال ثبت...' : 'ثبت قطعی' }}
+          [label]="rejectTarget?.action === 'revision' ? 'ثبت بازنگری' : 'ثبت قطعی رد'"
+          (click)="submitRejectModal()">
         </button>
       </div>
     </div>
@@ -993,8 +920,13 @@
         <h3 class="text-sm font-black text-indigo-900">
           مقایسه تفاوت‌ها (Diff): {{ selectedDiffCR?.personnel_name }}
         </h3>
-        <button (click)="closeDiffModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer" title="بستن">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          size="sm"
+          (click)="closeDiffModal()"
+          title="بستن">
         </button>
       </div>
       <div class="p-4 max-h-96 overflow-y-auto">
@@ -1023,17 +955,16 @@
       <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
         <button
           type="button"
-          (click)="closeDiffModal()"
-          class="px-4 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold cursor-pointer">
-          بستن پنجره
+          appAction="close"
+          label="بستن پنجره"
+          (click)="closeDiffModal()">
         </button>
         @if (selectedDiffCR?.id) {
           <button
             type="button"
-            (click)="openApprovalModal(selectedDiffCR?.id, selectedDiffCR?.personnel_name || '', 'personnel_cr')"
-            class="px-4 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="send"></svg>
-            <span>تایید مالی و ارسال به مدیر</span>
+            appAction="approve"
+            label="تایید مالی"
+            (click)="openApprovalModal(selectedDiffCR?.id, selectedDiffCR?.personnel_name || '', 'personnel_cr')">
           </button>
         }
       </div>
@@ -1049,8 +980,13 @@
           <h3 id="acc-personnel-approve-title" class="text-sm font-black text-fg">
             تایید مالی {{ approvalTarget.type === 'personnel' ? 'پرونده' : 'درخواست تغییرات' }}: {{ approvalTarget.title }}
           </h3>
-          <button type="button" (click)="closeApprovalModal()" class="btn-icon-sm btn-icon-slate cursor-pointer" title="بستن" aria-label="بستن">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+          <button
+            type="button"
+            appAction="close"
+            display="icon"
+            size="sm"
+            (click)="closeApprovalModal()"
+            title="بستن">
           </button>
         </div>
         <label for="acc-personnel-approve-note" class="text-xs text-fg-muted leading-relaxed">
@@ -1063,11 +999,18 @@
           class="w-full bg-surface-muted border border-line rounded-xl p-3 text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           placeholder="یادداشت محاسبات مالی، دستمزد یا بیمه..."></textarea>
         <div class="flex items-center justify-end gap-2">
-          <button type="button" (click)="closeApprovalModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-fg text-xs font-bold rounded-xl cursor-pointer">انصراف</button>
-          <button type="button" (click)="confirmApproval()" [disabled]="isApproving" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-black rounded-xl shadow-xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex items-center gap-1.5">
-            <svg *ngIf="isApproving" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="spinner" class="animate-spin"></svg>
-            <svg *ngIf="!isApproving" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
-            <span>{{ isApproving ? 'در حال ثبت...' : 'تایید مالی و ارسال به مدیر' }}</span>
+          <button
+            type="button"
+            appAction="close"
+            label="انصراف"
+            (click)="closeApprovalModal()">
+          </button>
+          <button
+            type="button"
+            appAction="approve"
+            label="تایید مالی و ارسال به مدیر"
+            [busy]="isApproving"
+            (click)="confirmApproval()">
           </button>
         </div>
       </div>
@@ -1079,8 +1022,13 @@
     <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
       <div class="p-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between text-emerald-900">
         <h3 class="text-sm font-black">تایید مالی گروهی پرسنل</h3>
-        <button (click)="closeBatchApprovalModal()" class="text-slate-400 hover:text-slate-600 cursor-pointer" title="بستن">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          size="sm"
+          (click)="closeBatchApprovalModal()"
+          title="بستن">
         </button>
       </div>
       <div class="p-4 space-y-3">
@@ -1099,18 +1047,16 @@
       <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
         <button
           type="button"
-          (click)="closeBatchApprovalModal()"
-          class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">
-          انصراف
+          appAction="close"
+          label="انصراف"
+          (click)="closeBatchApprovalModal()">
         </button>
         <button
           type="button"
-          (click)="confirmBatchApproval()"
-          [disabled]="isBatchApproving"
-          class="px-4 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5">
-          <svg *ngIf="isBatchApproving" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="spinner" class="animate-spin"></svg>
-          <svg *ngIf="!isBatchApproving" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check"></svg>
-          <span>{{ isBatchApproving ? 'در حال ارسال گروهی...' : 'تایید گروهی و ارسال' }}</span>
+          appAction="approve"
+          label="تایید گروهی و ارسال"
+          [busy]="isBatchApproving"
+          (click)="confirmBatchApproval()">
         </button>
       </div>
     </div>
