@@ -45,7 +45,6 @@ export interface PettyCashRefillItem {
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    SvgIconDirective,
     TabBarComponent,
     ActionButtonComponent,
     CommandCenterComponent

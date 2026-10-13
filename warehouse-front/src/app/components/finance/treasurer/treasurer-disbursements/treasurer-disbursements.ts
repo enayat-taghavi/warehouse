@@ -9,7 +9,6 @@ import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection } from '../../../../core/models/personnel.model';
-import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { PersianDatePipe } from '../../../../shared/pipes/persian-date.pipe';
 import { LoadingSkeletonComponent } from '../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { ModalFocus } from '../../../../core/utils/modal-focus';
@@ -53,7 +52,6 @@ export interface ReadyPayrollPeriod {
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    SvgIconDirective,
     PersianDatePipe,
     LoadingSkeletonComponent,
     TabBarComponent,
