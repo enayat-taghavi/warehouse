@@ -21,12 +21,23 @@ import {
   mergeFiscalYears,
   payrollMonthCode
 } from '../payroll-period';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { STATUS_ICONS, PLATFORM_ENTITY_ICONS } from '../../../../shared/icons/semantic-icons';
 
 export type AccountantPayrollSubTab = 'ready_to_calculate' | 'calculated' | 'approved' | 'all' | 'work_summary';
 
 @Component({
   selector: 'app-accountant-payroll-hub',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, LoadingSkeletonComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    SvgIconDirective,
+    LoadingSkeletonComponent,
+    TabBarComponent,
+    ActionButtonComponent
+  ],
   templateUrl: './accountant-payroll.html',
   styleUrl: './accountant-payroll.css',
   host: { '(document:keydown.escape)': 'onEscapeKey()', '(document:keydown)': 'onDocumentKeydown($event)' }
@@ -34,6 +45,59 @@ export type AccountantPayrollSubTab = 'ready_to_calculate' | 'calculated' | 'app
 export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
   // Subtabs navigation
   activeSubTab: AccountantPayrollSubTab = 'ready_to_calculate';
+
+  // Memoized tabs for app-tab-bar (getter با آرایه تازه در هر چرخه، در dev mode خطای NG0100 می‌دهد)
+  private payrollSubTabsKey = '';
+  private payrollSubTabsCache: TabDef[] = [];
+  get payrollSubTabs(): TabDef[] {
+    const sc = this.statusCounters;
+    const key = `${sc.ready_to_calculate}:${sc.calculated}:${sc.approved}:${sc.all}`;
+    if (key !== this.payrollSubTabsKey) {
+      this.payrollSubTabsKey = key;
+      this.payrollSubTabsCache = [
+        {
+          id: 'ready_to_calculate',
+          label: 'آماده محاسبه',
+          shortLabel: 'آماده',
+          icon: STATUS_ICONS.pending,
+          count: sc.ready_to_calculate,
+          tone: 'amber'
+        },
+        {
+          id: 'calculated',
+          label: 'محاسبه‌شده',
+          shortLabel: 'محاسبه',
+          icon: STATUS_ICONS.draft,
+          count: sc.calculated,
+          tone: 'indigo'
+        },
+        {
+          id: 'approved',
+          label: 'تایید نهایی',
+          shortLabel: 'تایید',
+          icon: STATUS_ICONS.approved,
+          count: sc.approved,
+          tone: 'emerald'
+        },
+        {
+          id: 'all',
+          label: 'کل پرونده‌ها',
+          shortLabel: 'همه',
+          icon: STATUS_ICONS.all,
+          count: sc.all,
+          tone: 'slate'
+        },
+        {
+          id: 'work_summary',
+          label: 'خلاصه کارکرد ماهانه',
+          shortLabel: 'خلاصه',
+          icon: PLATFORM_ENTITY_ICONS.reports,
+          tone: 'slate'
+        }
+      ];
+    }
+    return this.payrollSubTabsCache;
+  }
 
   // Section Isolation (Guardian G1)
   mySections: ProjectSection[] = [];
@@ -261,7 +325,10 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
     this.refreshCurrentTab();
   }
 
-  switchSubTab(tab: AccountantPayrollSubTab): void {
+  switchSubTab(tab: string): void {
+    if (tab !== 'ready_to_calculate' && tab !== 'calculated' && tab !== 'approved' && tab !== 'all' && tab !== 'work_summary') {
+      return;
+    }
     this.activeSubTab = tab;
     this.syncUrlParams();
     if (tab === 'work_summary') {
@@ -556,9 +623,16 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
     this.taxFocus.close();
   }
 
-  setTaxModalMode(mode: 'file' | 'paste'): void {
-    this.taxModalMode = mode;
-    this.taxImportResult = null;
+  readonly taxModalTabs: TabDef[] = [
+    { id: 'file', label: 'بارگذاری فایل اکسل', shortLabel: 'فایل', icon: 'upload' },
+    { id: 'paste', label: 'چسباندن متن', shortLabel: 'متن', icon: 'clipboard' }
+  ];
+
+  setTaxModalMode(mode: string): void {
+    if (mode === 'file' || mode === 'paste') {
+      this.taxModalMode = mode;
+      this.taxImportResult = null;
+    }
   }
 
   onTaxFileSelected(event: any): void {

@@ -62,64 +62,13 @@
         }
 
         <!-- تب‌های فرعی در کپسول محصور (Subtabs Navigation) -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
-          <button
-            type="button"
-            (click)="switchSubTab('ready_to_calculate')"
-            [ngClass]="activeSubTab === 'ready_to_calculate' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>⏳ آماده محاسبه</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="activeSubTab === 'ready_to_calculate' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.ready_to_calculate }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('calculated')"
-            [ngClass]="activeSubTab === 'calculated' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="bar-chart-2"></svg>
-            <span>پیش‌نمایش محاسبات</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="activeSubTab === 'calculated' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.calculated }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('approved')"
-            [ngClass]="activeSubTab === 'approved' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>✅ تایید مالی و نهایی</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="activeSubTab === 'approved' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.approved }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('all')"
-            [ngClass]="activeSubTab === 'all' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>📋 کل پرونده‌ها</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="activeSubTab === 'all' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.all }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('work_summary')"
-            [class]="activeSubTab === 'work_summary' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>🗓️ خلاصه کارکرد ماهانه</span>
-          </button>
-        </div>
+        <app-tab-bar
+          [tabs]="payrollSubTabs"
+          [active]="activeSubTab"
+          mobile="icon"
+          fullLabelFrom="xl"
+          (activeChange)="switchSubTab($event)"
+        />
       </div>
 
       <!-- سمت چپ: قفل دوره، محاسبه دسته‌ای و دکمه‌های اکشن -->
@@ -134,13 +83,11 @@
         @if (currentPeriodId && periodStatus && (isPeriodLocked ? canUnlockPeriod : canLockPeriod)) {
           <button
             type="button"
+            [appAction]="isPeriodLocked ? 'unlock' : 'lock'"
+            [label]="isPeriodLocked ? 'بازگشایی دوره' : 'قفل نهایی دوره'"
+            [busy]="isTogglingLock"
             (click)="toggleLockPeriod()"
-            [disabled]="isTogglingLock"
-            class="px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-            [class]="isPeriodLocked ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100' : 'bg-surface text-fg-muted border-line hover:bg-surface-muted'">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="isPeriodLocked ? 'unlock' : 'lock'"></svg>
-            <span>{{ isPeriodLocked ? 'بازگشایی دوره' : 'قفل نهایی دوره' }}</span>
-          </button>
+          ></button>
         }
 
         <button
@@ -148,41 +95,36 @@
           (click)="calculateBatch()"
           [disabled]="isCalculating || isPeriodLocked"
           [title]="isPeriodLocked ? 'دوره قفل شده است و محاسبهٔ دوباره نمی‌پذیرد' : 'محاسبهٔ ۵۸ ستون حقوق برای دوره و دامنهٔ انتخاب‌شده'"
-          class="px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap"></svg>
+          [attr.aria-label]="isCalculating ? 'در حال محاسبه حقوق...' : 'محاسبه مکانیزه حقوق'"
+          class="tap-target px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+          <svg *ngIf="!isCalculating" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap"></svg>
+          <svg *ngIf="isCalculating" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" appIcon="spinner"></svg>
           <span>{{ isCalculating ? 'در حال محاسبه حقوق...' : 'محاسبه مکانیزه حقوق' }}</span>
         </button>
 
         <!-- ورود مالیات دارایی (فایل اکسل یا چسباندن متن) -->
         <button
           type="button"
-          (click)="openTaxModal()"
+          appAction="import-excel"
+          label="درون‌ریزی مالیات"
           [disabled]="isPeriodLocked"
-          class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-          [title]="isPeriodLocked ? 'دوره قفل شده است و مالیات تازه نمی‌پذیرد' : 'درون‌ریزی مالیات دارایی (فایل اکسل یا چسباندن متن)'"
-          aria-label="درون‌ریزی مالیات دارایی">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="upload"></svg>
-        </button>
+          (click)="openTaxModal()"
+        ></button>
 
         <!-- خروجی اکسل ۵۸ ستونی -->
         <button
           type="button"
+          appAction="export-excel"
           (click)="exportExcel()"
-          class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="خروجی فایل اکسل ۵۸ ستونی حقوق دوره"
-          aria-label="خروجی اکسل">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
-        </button>
+        ></button>
 
         <!-- رفرش زنده داده‌ها -->
         <button
           type="button"
+          appAction="refresh"
+          [busy]="isLoading"
           (click)="refreshCurrentTab()"
-          class="w-9 h-9 rounded-xl bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="تازه‌سازی کارتابل حقوق"
-          aria-label="رفرش">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.animate-spin]="isLoading" appIcon="refresh-cw"></svg>
-        </button>
+        ></button>
       </div>
 
     </div>
@@ -404,30 +346,32 @@
               <div class="flex items-center justify-center gap-1">
                 <button
                   type="button"
+                  appAction="view"
+                  label="فیش"
+                  size="sm"
+                  display="label"
                   (click)="openPayslipModal(item)"
-                  class="px-2 py-1 text-indigo-700 hover:bg-indigo-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
-                  title="مشاهده و چاپ فیش حقوقی"
-                  [attr.aria-label]="'فیش حقوقی ' + (item.personnel_name || item.full_name || '')">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-lines"></svg>
-                  <span>فیش</span>
-                </button>
+                ></button>
                 <button
                   *ngIf="item.payment_hold"
                   type="button"
-                  (click)="releasePaymentHold(item)"
+                  appAction="unlock"
+                  label="آزادسازی"
+                  size="sm"
+                  display="label"
+                  [busy]="isReleasingHold === item.id"
                   [disabled]="isReleasingHold === item.id"
-                  class="px-2 py-1 text-amber-700 hover:text-amber-800 hover:bg-amber-50 border border-amber-200/80 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 disabled:opacity-50"
-                  title="آزادسازی پرداخت پس از تمدید اعتبار">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap"></svg>
-                  <span>آزادسازی</span>
-                </button>
+                  (click)="releasePaymentHold(item)"
+                ></button>
                 <button
                   *ngIf="!item.payment_hold"
                   type="button"
+                  appAction="approve"
+                  label="تایید نهایی"
+                  size="sm"
+                  display="label"
                   (click)="approveSingle(item)"
-                  class="px-2 py-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer">
-                  ✓ تایید نهایی مالی
-                </button>
+                ></button>
               </div>
             </td>
           </tr>
@@ -454,26 +398,20 @@
             <p class="text-[11px] text-fg-muted">دوره: <span class="font-mono font-bold text-indigo-700">{{ yearMonth }}</span></p>
           </div>
         </div>
-        <button type="button" (click)="closeTaxModal()" class="btn-icon-sm btn-icon-slate" title="بستن" aria-label="بستن">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
-        </button>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeTaxModal()"
+        ></button>
       </div>
 
       <!-- انتخاب روش: فایل اکسل یا چسباندن متن -->
-      <div class="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl shrink-0" role="group" aria-label="روش ورود مالیات">
-        <button type="button" [attr.aria-pressed]="taxModalMode === 'file'" (click)="setTaxModalMode('file')"
-          [class]="taxModalMode === 'file' ? 'bg-surface text-indigo-800 font-black shadow-xs' : 'text-fg-muted font-bold hover:text-fg'"
-          class="flex-1 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
-          <span>بارگذاری فایل اکسل</span>
-        </button>
-        <button type="button" [attr.aria-pressed]="taxModalMode === 'paste'" (click)="setTaxModalMode('paste')"
-          [class]="taxModalMode === 'paste' ? 'bg-surface text-indigo-800 font-black shadow-xs' : 'text-fg-muted font-bold hover:text-fg'"
-          class="flex-1 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clipboard"></svg>
-          <span>چسباندن متن</span>
-        </button>
-      </div>
+      <app-tab-bar
+        [tabs]="taxModalTabs"
+        [active]="taxModalMode"
+        (activeChange)="setTaxModalMode($event)"
+      />
 
       <div class="space-y-4 overflow-y-auto flex-1 text-xs">
         @if (taxModalMode === 'file') {
@@ -572,12 +510,22 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-3 border-t border-line-subtle shrink-0">
-        <button type="button" (click)="closeTaxModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-fg text-xs font-bold rounded-xl cursor-pointer transition-colors">انصراف</button>
-        <button type="button" (click)="submitTaxImport()"
+        <button
+          type="button"
+          appAction="close"
+          label="انصراف"
+          display="label"
+          (click)="closeTaxModal()"
+        ></button>
+        <button
+          type="button"
+          appAction="upload"
+          label="اعمال مالیات به دوره حقوق"
+          display="label"
+          [busy]="isImportingTax"
           [disabled]="isImportingTax || (taxModalMode === 'file' && !selectedTaxFile) || (taxModalMode === 'paste' && taxParsedRows.length === 0)"
-          class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md shadow-indigo-500/20 cursor-pointer flex items-center gap-2 disabled:opacity-50 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-          <span>{{ isImportingTax ? 'در حال پردازش و اعمال...' : 'اعمال مالیات به دوره حقوق' }}</span>
-        </button>
+          (click)="submitTaxImport()"
+        ></button>
       </div>
     </div>
   </div>
@@ -598,9 +546,12 @@
             <p class="text-[11px] text-fg-muted">{{ selectedPayslipRecord.full_name || selectedPayslipRecord.personnel_name }} — دوره: {{ yearMonth }}</p>
           </div>
         </div>
-        <button type="button" (click)="closePayslipModal()" class="btn-icon-sm btn-icon-slate" title="بستن" aria-label="بستن">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
-        </button>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closePayslipModal()"
+        ></button>
       </div>
 
       <div class="payslip-printable flex-1 overflow-y-auto p-4 bg-surface-muted rounded-2xl border border-line text-xs space-y-4">
@@ -681,11 +632,20 @@
       </div>
 
       <div class="flex items-center justify-between border-t border-line-subtle pt-3 shrink-0 no-print">
-        <button type="button" (click)="closePayslipModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-fg text-xs font-bold rounded-xl cursor-pointer">بستن</button>
-        <button type="button" (click)="printCurrentPayslip()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl shadow-md shadow-indigo-500/20 flex items-center gap-1.5 cursor-pointer">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="printer"></svg>
-          <span>چاپ فیش حقوقی</span>
-        </button>
+        <button
+          type="button"
+          appAction="close"
+          label="بستن"
+          display="label"
+          (click)="closePayslipModal()"
+        ></button>
+        <button
+          type="button"
+          appAction="print"
+          label="چاپ فیش حقوقی"
+          display="label"
+          (click)="printCurrentPayslip()"
+        ></button>
       </div>
     </div>
   </div>
