@@ -9,6 +9,9 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection } from '../../../../core/models/personnel.model';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonDirective } from '../../../../shared/components/action-button/action-button.directive';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export interface SectionBudgetItem {
   id: number;
@@ -27,12 +30,17 @@ export interface SectionBudgetItem {
 @Component({
   selector: 'app-manager-budget-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, TabBarComponent, ActionButtonDirective],
   templateUrl: './manager-budget.html',
   styleUrl: './manager-budget.css'
 })
 export class ManagerBudgetComponent implements OnInit, OnDestroy {
   activeSubTab: 'budget_matrix' | 'budget_revisions' | 'over_budget_alerts' = 'budget_matrix';
+
+  budgetTabs: TabDef[] = [
+    { id: 'budget_matrix', label: 'ماتریس تخصیص بودجه', shortLabel: 'ماتریس', icon: ACCOUNTING_ENTITY_ICONS.budget },
+    { id: 'over_budget_alerts', label: 'انحراف و مازاد هزینه', shortLabel: 'انحراف', icon: 'status-warning' }
+  ];
 
   // Section Isolation
   mySections: ProjectSection[] = [];
@@ -182,9 +190,11 @@ export class ManagerBudgetComponent implements OnInit, OnDestroy {
     this.syncUrlParams();
   }
 
-  switchSubTab(tab: 'budget_matrix' | 'budget_revisions' | 'over_budget_alerts'): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
+  switchSubTab(tab: string): void {
+    if (tab === 'budget_matrix' || tab === 'over_budget_alerts') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+    }
   }
 
   syncUrlParams(): void {
