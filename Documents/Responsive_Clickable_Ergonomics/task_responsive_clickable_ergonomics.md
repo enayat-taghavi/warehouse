@@ -126,7 +126,7 @@
   - [x] **۴.۲۲ پرونده‌های جدید حسابدار (`accountant-new-profiles.html`)**
   - [x] معیار پایان گام
 
-- [ ] **گام ۱۱: خزانه و سازمان**
+- [x] **گام ۱۱: خزانه و سازمان**
   - [x] **۴.۸ پرداخت حقوق و ناوگان (`treasurer-disbursements.html`)**
   - [x] **۴.۹ تسویه فاکتورها (`treasurer-invoices.html`)**
   - [x] **۴.۱۰ حساب‌های بانکی (`treasurer-bank-accounts.html`)**
@@ -134,9 +134,9 @@
   - [x] **۴.۱۲ مغایرت‌گیری بانکی (`treasurer-reconciliation.html`)**
   - [x] **۴.۱۸ پروژه‌ها و بخش‌ها (`projects-and-sections.html`)**
   - [x] **۴.۱۹ بایگانی مدارک شرکت (`company-documents-archive.html`)**
-  - [ ] **۴.۲۰ شناسنامه پرسنل (`personnel-profiles.html`)**
+  - [x] **۴.۲۰ شناسنامه پرسنل (`personnel-profiles.html`)**
   - [x] **۴.۲۱ تنظیمات پایه مالی (`base-settings.html`)**
-  - [ ] معیار پایان گام
+  - [x] معیار پایان گام
 
 - [ ] **گام ۱۲: مدیریت ارشد**
   - [ ] **۴.۱۳ داشبورد هوش مالی (`manager-dashboard.html`)**

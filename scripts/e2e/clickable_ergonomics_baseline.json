@@ -1,10 +1,10 @@
 {
   "_readme": "snapshot مبنای ارگونومی عناصر کلیک‌پذیر (نگهبان ۵۵). برای به‌روزرسانی: python scripts/e2e/guardian_55_clickable_ergonomics.py --update-baseline",
   "counters": {
-    "rule_1_unlabeled_icon_buttons": 107,
+    "rule_1_unlabeled_icon_buttons": 106,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 103,
-    "rule_4_retired_icons": 53,
+    "rule_3_non_standard_actions": 92,
+    "rule_4_retired_icons": 51,
     "rule_5_neutralized_tap_targets": 0
   },
   "violations": {
