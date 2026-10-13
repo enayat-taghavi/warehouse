@@ -122,7 +122,7 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
   }
 
   // ── تب‌های مودال ۵گانه پرسنل (Personnel Modal Tabs) ───────────
-  readonly personnelModalTabs: readonly TabDef[] = [
+  readonly personnelModalTabs: TabDef[] = [
     {
       id: 'identity',
       label: 'اطلاعات شناسنامه‌ای',
