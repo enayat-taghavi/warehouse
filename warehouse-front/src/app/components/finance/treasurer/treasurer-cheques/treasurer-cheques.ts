@@ -8,7 +8,11 @@ import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection } from '../../../../core/models/personnel.model';
-import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
+import { STATUS_ICONS } from '../../../../shared/icons/semantic-icons';
 
 export interface ChequeItem {
   id: number;
@@ -27,12 +31,24 @@ export interface ChequeItem {
 @Component({
   selector: 'app-treasurer-cheques-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    TabBarComponent,
+    ActionButtonComponent,
+    CommandCenterComponent
+  ],
   templateUrl: './treasurer-cheques.html',
   styleUrl: './treasurer-cheques.css'
 })
 export class TreasurerChequesComponent implements OnInit, OnDestroy {
   activeSubTab: 'issued_cheques' | 'cleared_archive' = 'issued_cheques';
+
+  readonly tabs: TabDef[] = [
+    { id: 'issued_cheques', label: 'چک‌های صادره و سررسیدها', shortLabel: 'صادره', icon: ACCOUNTING_ENTITY_ICONS.cheques },
+    { id: 'cleared_archive', label: 'آرشیو پاس‌شده و وصولی', shortLabel: 'آرشیو', icon: STATUS_ICONS.archived }
+  ];
 
   // State
   isLoading = false;
@@ -90,8 +106,10 @@ export class TreasurerChequesComponent implements OnInit, OnDestroy {
   ngOnInit(): void {}
   ngOnDestroy(): void {}
 
-  switchSubTab(tab: 'issued_cheques' | 'cleared_archive'): void {
-    this.activeSubTab = tab;
+  switchSubTab(tab: string): void {
+    if (tab === 'issued_cheques' || tab === 'cleared_archive') {
+      this.activeSubTab = tab;
+    }
   }
 
   get filteredCheques(): ChequeItem[] {
