@@ -73,7 +73,7 @@ graph TD
 | **دکمه کاری** | `shared/components/action-button/` با گزینشگر `button[appAction]` | از کاتالوگ کار، آیکون، عنوان پیش‌فرض، رنگ و پرچم حساس را می‌گیرد؛ `aria-label` و `title` را از همان عنوان می‌سازد؛ سطح لمسی موبایل را تضمین می‌کند. چون میزبانش خود `<button>` است، `(click)`، `disabled` و `type="submit"` بومی کار می‌کنند. | دکمه‌های دستی با کلاس‌های تکراری و `hidden sm:inline` |
 | **نوار تب** | `shared/components/tab-bar/` (`app-tab-bar`) | ظرف قرصی استاندارد AGENTS §7، تب فعال، شمارنده‌ها، `role="tablist"` و `aria-selected`، کلیدهای جهت‌دار راست‌به‌چپ، عنوان کوتاه یا فقط‌آیکون در موبایل، `overflow-x-auto` به‌عنوان تور ایمنی، بدون عرض ثابت. بی‌وضعیت است: `[active]` و `(activeChange)` به همان `switchSubTab()` صفحه وصل می‌شوند (همگام‌سازی با URL دست صفحه می‌ماند). | نوارهای تب دستی در ۳۶ فایل |
 | **منوی «بیشتر»** | `shared/components/overflow-menu/` (`app-overflow-menu`) | دکمه‌های داخلش را در ۶۴۰px به بالا ردیفی نشان می‌دهد (`display: contents`) و زیر آن در یک پاپ‌اوور با دکمه `more-vertical`؛ داخل پاپ‌اوور عنوان‌ها همیشه دیده می‌شوند. یک مجموعه دکمه، بدون نشانه‌گذاری یا متد تکراری. بستن با کلیک بیرون و Escape، `aria-expanded` و بازگشت فوکوس. | نوارهای اکشنی که در موبایل جا نمی‌شوند |
-| **سربرگ فرماندهی** | `shared/components/command-center/` (`app-command-center`) | سربرگ چسبان استاندارد AGENTS §7 با دو جایگاه `[cc-tabs]` (راست) و `[cc-actions]` (چپ)؛ در موبایل دو سطر جدا، هر کدام Zero-Scroll. | کپی دستی کلاس‌های سربرگ چسبان در ۴۲ فایل |
+| **سربرگ فرماندهی** | `shared/components/command-center/` (`app-command-center`) | سربرگ چسبان استاندارد AGENTS §7 با دو جایگاه `[cc-tabs]` (راست) و `[cc-actions]` (چپ)؛ در موبایل دو سطر جدا، هر کدام Zero-Scroll. اگر تب‌ها و اکشن‌ها در یک سطر جا نشوند، اکشن‌ها به سطر دوم (سمت چپ) می‌روند. | کپی دستی کلاس‌های سربرگ چسبان در ۴۲ فایل |
 | **کلاس‌های سراسری** | `src/styles.css` | `.tap-target` (حداقل `2.5rem` زیر ۶۴۰px) برای پیوندها، چیپ‌ها و منوهای سفارشی؛ همین حداقل برای `.btn-icon-square` و `.btn-icon-sm`؛ کلاس رنگ تازه `.btn-icon-primary` (نیلی پررنگ) کنار رنگ‌های موجود `btn-icon-indigo|emerald|rose|blue|purple|amber|slate`. | تکرار `min-w-[40px] min-h-[40px]` |
 | **سنجه Zero-Scroll** | `scripts/e2e/zero_scroll_probe.js` | قطعه JS برای اجرا در مرورگر داخلی: اسکرول افقی صفحه، سرریز هر نوار تب/اکشن و شکست سطر را گزارش می‌کند (بند ۵). | بررسی چشمی بدون عدد |
 | **نگهبان ۵۵** | `scripts/e2e/guardian_55_clickable_ergonomics.py` + خط مبنای `clickable_ergonomics_baseline.json` | به سبک نگهبان ۲۹ فقط با **افزایش** شکست می‌خورد. قواعد: (۱) دکمه فقط‌آیکون بدون `aria-label`/`title`؛ (۲) `min-w-[NNNpx]` درون نوار تب؛ (۳) دکمه‌ای که متدش الگوی یک کار شناخته‌شده است (`export*`، `refresh*`، `delete*`، `approve*`، `reject*` و ...) ولی `appAction` یا آیکون فرهنگ را ندارد؛ (۴) استفاده تازه از گونه‌های کنارگذاشته (بند ۳-۵). | قاعده‌هایی که فقط روی کاغذ بودند |
@@ -164,6 +164,7 @@ readonly tabs: TabDef[] = [
 | بازگشت / جلو (راست‌به‌چپ) | `back` / `forward` | `chevron-right` / `chevron-left` | `hero-chevron-left`، `hero-arrow-left` | بازگشت / جلو | slate | |
 | باز / جمع کردن | `expand` / `collapse` | `chevron-down` / `chevron-up` | `chevron-down-path`، `hero-chevron-down`، `hero-chevron-up` | باز کردن / جمع کردن | slate | |
 | خروج از حساب | `logout` | `log-out` | | خروج | rose | |
+| قطع همکاری | `terminate` | `slash` | | قطع همکاری | rose | ✓ |
 
 **استثنای AGENTS §7:** دکمه ✕ پاک کردن جستجو و 📋/✓ کپی شبا همان نماد متنی مصوب را نگه می‌دارند.
 
@@ -195,7 +196,7 @@ readonly tabs: TabDef[] = [
 |---|---|
 | `PLATFORM_ENTITY_ICONS` (مشترک) | داشبورد `grid`، گزارش‌ها `bar-chart-2`، شرکت `building`، کاربران سامانه `user-circle`، تنظیمات `settings`، رهگیری تغییرات `file-lines`، پایش سلامت `server`، پشتیبان `cloud`، اعلان‌ها `bell`، گفتگو `message-square` |
 | `modules/warehouse/entity-icons.ts` | انبارها `package`، مدیریت کالا `barcode`، کارتابل انبارگردان `clipboard`، تخصیص کالا `tag`، کارتابل مالی انبار `globe`، کارتابل سرپرست `check-square`، بررسی نهایی مدیر `check-circle`، پیگیری شمارش `activity` |
-| `modules/accounting/entity-icons.ts` | پروژه‌ها و بخش‌ها `folder`، کارکرد پرسنل `calendar`، ناوگان و خودرو `truck`، پرسنل `users`، تعریف پرسنل `user-plus`، فاکتور `file-text` (در هر چهار نقش)، تنخواه `credit-card`، حقوق و پرداخت `dollar-sign`، دیسکت‌ها `file-check`، طرف‌حساب‌ها `briefcase`، بانک پرونده‌ها `id-card`، بودجه `calculator`، کارتابل تاییدات `check-circle`، بستن دوره `lock`، حساب‌های بانکی `database`، چک‌ها `clipboard-check`، مغایرت‌گیری `columns`، بایگانی مدارک شرکت `book` |
+| `modules/accounting/entity-icons.ts` | پروژه‌ها و بخش‌ها `folder`، کارکرد پرسنل `calendar`، ناوگان و خودرو `truck`، پرسنل `users`، تعریف پرسنل `user-plus`، فاکتور `file-text` (در هر چهار نقش)، تنخواه `credit-card`، حقوق و پرداخت `dollar-sign`، دیسکت‌ها `file-check`، طرف‌حساب‌ها `briefcase`، بانک پرونده‌ها `id-card`، بودجه `calculator`، کارتابل تاییدات `check-circle`، بستن دوره `lock`، حساب‌های بانکی `database`، چک‌ها `clipboard-check`، مغایرت‌گیری `columns`، بایگانی مدارک شرکت `book`، بخش‌ها و کارگاه‌ها `sections`: `map-pin`، گروه شغلی و احکام `jobGrades`: `star`، بیمه و تامین اجتماعی `insurance`: `shield-plus`، مالیات `tax`: `globe-alt`، مجوزها و پروانه‌ها `licenses`: `badge`، مشخصات فردی `identity`: `info`، قراردادها و اجاره‌نامه‌های شرکت `contractsAndLeases`: `home`، طرف‌حساب تعمیرگاه `repairShop`: `tool`، طرف‌حساب جایگاه سوخت `fuelStation`: `droplet`، طرف‌حساب پیمانکار `contractor`: `users-2`، سایر طرف‌حساب‌ها `otherCounterparty`: `help-circle` |
 
 ### ۳-۴. اشتراک‌های مجاز (فهرست سفید)
 اشتراک آیکون فقط وقتی مجاز است که **معنا یکی باشد**: `download` (خروجی اکسل و دانلود)، `upload` (ورود اکسل و بارگذاری)، `rotate-ccw` (برگشت برای اصلاح، بازیابی و وضعیت اصلاح)، `check-circle` (تایید، وضعیت تایید شده، کارتابل‌های تایید نهایی)، `x-circle` (رد و وضعیت رد شده)، `lock` (قفل، وضعیت قفل‌شده، بستن دوره)، `cloud-upload` (همگام‌سازی و در صف ارسال)، `settings` (کار و موجودیت تنظیمات)، `file-lines` (تاریخچه و رهگیری تغییرات)، `bell` (وضعیت هشدار و اعلان‌ها)، `users` (پرسنل در هر نقش)، `calculator` (بودجه و انحراف بودجه). spec فرهنگ آیکون هر اشتراک دیگری را خطا می‌گیرد.
@@ -1727,6 +1728,36 @@ graph TD
   - دکمه «قفل و ارسال دوره»؛
   - فوتر مودال مقایسه در new-profiles؛
   - کارت موبایل fleet.
+
+### ۱۴۰۵/۰۷/۲۲ — اجرای نشست ۰ (اصلاح جعبه‌ابزار و کلیدهای تازه فرهنگ آیکون؛ پایه `0bacd8f`) [S0-DONE]
+* **دامنه نشست ۰:** اصلاح جعبه‌ابزار `command-center` (افزودن flex-wrap و چینش اسلات اکشن‌ها در شکست سطر)، تنظیم `fullLabelFrom="xl"` در ۴ فایل سرپرست و ۴ فایل کارمند، ثبت آیکون `droplet` در رجیستری، تعریف کار حساس `terminate` («قطع همکاری») در `ACTION_ICONS` و `ACTION_CATALOG`، ثبت ۱۱ کلید جدید موجودیت مالی در `ACCOUNTING_ENTITY_ICONS` و به‌روزرسانی مستندات طرح.
+* **commitها:**
+  - `de7542e`: `feat(ergonomics): upgrade command-center with flex-wrap and action slot alignment (session 0)`
+  - `2891979`: `feat(ergonomics): configure fullLabelFrom xl on multi-tab employee and supervisor bars (session 0)`
+  - `ae8ef31`: `feat(ergonomics): register droplet, terminate action, and accounting entity semantic icons (session 0)`
+* **جمع عرض ردیف‌های موبایل:**
+  - اسلات تب سربرگ (`cc-tabs`): ۳۰۹px (با `min-w-0 max-w-full` محصور، بدون سرریز)
+  - اسلات اکشن سربرگ (`cc-actions`): ۳۰۹px (با `ms-auto` در سطر دوم راست‌چین و بدون تداخل با تب‌ها)
+  - نوارهای تب ۴ و ۶ تایی با `mobile="icon"` و `fullLabelFrom="xl"` در بازه تبلت (تا ۱۲۸۰px) فقط‌آیکون مانده و دچار سرریز درون سایدبار باز نمی‌شوند.
+* **خروجی واقعی فرمان‌ها:**
+  - **بیلد پیش‌فرض:** `Application bundle generation complete. [72.314 seconds] - 2026-10-13T05:12:26.393Z` (بدون ERROR و NG8)
+  - **بیلد accounting-only:** `Application bundle generation complete. [66.749 seconds] - 2026-10-13T05:13:47.158Z` (بدون ERROR و NG8)
+  - **بیلد warehouse-only:** `Application bundle generation complete. [68.165 seconds] - 2026-10-13T05:15:09.484Z` (بدون ERROR و NG8)
+  - **نگهبان ۵۲:** `✅ بند ۱: 203 آیکن در رجیستری؛ همه SVG معتبر با نام یکتا.` / `🎉 نگهبان ۵۲: سامانهٔ آیکن مشترک سالم است.`
+  - **نگهبان ۵۵:** `📌 خط مبنا ذخیره شد: {'rule_1_unlabeled_icon_buttons': 134, 'rule_2_tab_min_widths': 0, 'rule_3_non_standard_actions': 148, 'rule_4_retired_icons': 64, 'rule_5_neutralized_tap_targets': 0}` / `🎉 نگهبان ۵۵: همه سنجه‌های ارگونومی کلیک‌پذیر در محدوده خط مبنا هستند.`
+  - **نگهبان ۵۶ (پایه 0bacd8f10cd3fbdfaea4f8d161928cd92a338700):** کد ۰ / `🎉 نگهبان ۵۶: تغییرات قالب سالم است.`
+  - **تست‌ها (ng test با tsconfig.session.spec.json موقت):**
+    - درخت پایه (`0bacd8f`): `Tests  43 passed (43)`
+    - درخت جاری: `Tests  44 passed (44)` (تست جدید شکست سطر command-center سبز شد؛ ۰ پسرفت)
+* **سنجیده‌شده با فرمان:**
+  - ۴۴ تست واحد Vitest در ۶ فایل spec جعبه‌ابزار و آیکون‌ها
+  - ۳ بیلد مستقل Angular (پیش‌فرض، حسابداری، انبار)
+  - نگهبان‌های ۵۲، ۵۵ و ۵۶
+* **اجرانشده:**
+  - تست E2E سنگین پاپتیر (طبق قاعده پیش‌فرض تست نوع ۱)
+* **پشت ورود (چک‌لیست ۳۶۰px برای کاربر):**
+  - بررسی شکست نرم سطر اکشن‌ها در سربرگ فرماندهی در صورت کوچک شدن عرض یا باز بودن سایدبار
+  - بررسی آیکون‌های نوارهای تب در صفحات کارمند و سرپرست تا نقطه شکست ۱۲۸۰px
 
 </div>
 
