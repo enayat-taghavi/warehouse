@@ -8,7 +8,10 @@ import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection } from '../../../../core/models/personnel.model';
-import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 export interface PayableInvoiceItem {
   id: number;
@@ -38,12 +41,25 @@ export interface PettyCashRefillItem {
 @Component({
   selector: 'app-treasurer-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    SvgIconDirective,
+    TabBarComponent,
+    ActionButtonComponent,
+    CommandCenterComponent
+  ],
   templateUrl: './treasurer-invoices.html',
   styleUrl: './treasurer-invoices.css'
 })
 export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
   activeSubTab: 'payable_invoices' | 'petty_cash_refills' = 'payable_invoices';
+
+  readonly tabs: TabDef[] = [
+    { id: 'payable_invoices', label: 'فاکتورهای آماده پرداخت', shortLabel: 'فاکتورها', icon: ACCOUNTING_ENTITY_ICONS.invoices },
+    { id: 'petty_cash_refills', label: 'شارژ دفاتر تنخواه', shortLabel: 'تنخواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash }
+  ];
 
   // Section Isolation
   mySections: ProjectSection[] = [];
@@ -137,9 +153,11 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     this.loadTreasuryData();
   }
 
-  switchSubTab(tab: 'payable_invoices' | 'petty_cash_refills'): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
+  switchSubTab(tab: string): void {
+    if (tab === 'payable_invoices' || tab === 'petty_cash_refills') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+    }
   }
 
   syncUrlParams(): void {
