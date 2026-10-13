@@ -8,17 +8,65 @@ import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection, ExpenseInvoice } from '../../../../core/models/personnel.model';
-import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { STATUS_ICONS } from '../../../../shared/icons/semantic-icons';
 
 @Component({
   selector: 'app-accountant-invoices-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    TabBarComponent,
+    ActionButtonComponent,
+    CommandCenterComponent
+  ],
   templateUrl: './accountant-invoices.html',
   styleUrl: './accountant-invoices.css'
 })
 export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
   activeSubTab: 'pending_audit' | 'booked' | 'all' = 'pending_audit';
+
+  // Memoized tabs for app-tab-bar (getter با آرایه تازه در هر چرخه، در dev mode خطای NG0100 می‌دهد)
+  private tabsKey = '';
+  private tabsCache: TabDef[] = [];
+  get tabs(): TabDef[] {
+    const sc = this.statusCounters;
+    const key = `${sc.pending_audit}:${sc.booked}:${sc.all}`;
+    if (key !== this.tabsKey) {
+      this.tabsKey = key;
+      this.tabsCache = [
+        {
+          id: 'pending_audit',
+          label: 'در انتظار صدور سند',
+          shortLabel: 'در انتظار',
+          icon: STATUS_ICONS.pending,
+          count: sc.pending_audit,
+          tone: 'amber'
+        },
+        {
+          id: 'booked',
+          label: 'اسناد ثبت‌شده',
+          shortLabel: 'ثبت‌شده',
+          icon: STATUS_ICONS.approved,
+          count: sc.booked,
+          tone: 'emerald'
+        },
+        {
+          id: 'all',
+          label: 'کل فاکتورها',
+          shortLabel: 'همه',
+          icon: STATUS_ICONS.all,
+          count: sc.all,
+          tone: 'slate'
+        }
+      ];
+    }
+    return this.tabsCache;
+  }
 
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
@@ -114,7 +162,10 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
     this.fetchInvoices();
   }
 
-  switchSubTab(tab: 'pending_audit' | 'booked' | 'all'): void {
+  switchSubTab(tab: string): void {
+    if (tab !== 'pending_audit' && tab !== 'booked' && tab !== 'all') {
+      return;
+    }
     this.activeSubTab = tab;
     this.syncUrlParams();
     this.updateViewAndCounters();
