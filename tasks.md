@@ -293,7 +293,7 @@
 
 ===
 
-نشست 6 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف ۴.۲۲ (accountant-new-profiles) و پایان گام ۱۰
+[DONE] نشست 6 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف ۴.۲۲ (accountant-new-profiles) و پایان گام ۱۰
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -345,7 +345,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-نشست 7 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف‌های ۴.۸ و ۴.۹ (خزانه، بخش ۱ از ۲)
+[DONE] نشست 7 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف‌های ۴.۸ و ۴.۹ (خزانه، بخش ۱ از ۲)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -396,7 +396,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-نشست 7b از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف‌های ۴.۱۰ تا ۴.۱۲ (خزانه، بخش ۲ از ۲)
+[DONE] نشست 7b از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف‌های ۴.۱۰ تا ۴.۱۲ (خزانه، بخش ۲ از ۲)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -450,7 +450,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-نشست 8 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف ۴.۱۸ (projects-and-sections)
+[DONE] نشست 8 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف ۴.۱۸ (projects-and-sections)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -498,7 +498,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-نشست 9 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف‌های ۴.۱۹ و ۴.۲۱
+[DONE] نشست 9 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف‌های ۴.۱۹ و ۴.۲۱
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -565,7 +565,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-نشست 10 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف ۴.۲۰ (personnel-profiles) و پایان گام ۱۱
+[DONE] نشست 10 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف ۴.۲۰ (personnel-profiles) و پایان گام ۱۱
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -623,7 +623,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-نشست 11 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف‌های ۴.۱۳ تا ۴.۱۶
+[DONE] نشست 11 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف‌های ۴.۱۳ تا ۴.۱۶
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -691,7 +691,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-نشست 12 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف ۴.۱۷ (manager-approvals)
+[DONE] نشست 12 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف ۴.۱۷ (manager-approvals)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -749,7 +749,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-نشست 13 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف ۴.۲۳ (manager-fleet)
+[DONE] نشست 13 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف ۴.۲۳ (manager-fleet)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -794,7 +794,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-نشست 14 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف ۴.۲۴ (manager-personnel) و پایان گام ۱۲
+[DONE] نشست 14 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف ۴.۲۴ (manager-personnel) و پایان گام ۱۲
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -841,7 +841,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-نشست 15 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۳ (پایانی)
+[DONE] نشست 15 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۳ (پایانی)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
