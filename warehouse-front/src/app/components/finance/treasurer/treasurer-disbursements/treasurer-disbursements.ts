@@ -13,6 +13,10 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { PersianDatePipe } from '../../../../shared/pipes/persian-date.pipe';
 import { LoadingSkeletonComponent } from '../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { ModalFocus } from '../../../../core/utils/modal-focus';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { STATUS_ICONS } from '../../../../shared/icons/semantic-icons';
 
 export interface DisbursementQueueItem {
   id: number;
@@ -45,13 +49,28 @@ export interface ReadyPayrollPeriod {
 @Component({
   selector: 'app-treasurer-disbursements-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, PersianDatePipe, LoadingSkeletonComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    SvgIconDirective,
+    PersianDatePipe,
+    LoadingSkeletonComponent,
+    TabBarComponent,
+    ActionButtonComponent,
+    CommandCenterComponent
+  ],
   templateUrl: './treasurer-disbursements.html',
   styleUrl: './treasurer-disbursements.css',
   host: { '(document:keydown.escape)': 'onEscapeKey()', '(document:keydown)': 'onDocumentKeydown($event)' }
 })
 export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
   activeSubTab: 'pending_queue' | 'disbursed_archive' = 'pending_queue';
+
+  readonly tabs: TabDef[] = [
+    { id: 'pending_queue', label: 'صف پرداخت‌های مصوب', shortLabel: 'صف', icon: STATUS_ICONS.pending },
+    { id: 'disbursed_archive', label: 'آرشیو واریزی‌ها', shortLabel: 'آرشیو', icon: STATUS_ICONS.archived }
+  ];
 
   // Section Isolation
   mySections: ProjectSection[] = [];
@@ -75,6 +94,7 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
 
   // Pay Single Modal
   isPayModalOpen = false;
+  isSubmittingSingle = false;
   payingItem: DisbursementQueueItem | null = null;
   paymentMethod = 'PAYA';
   trackingCodeInput = '';
@@ -172,9 +192,11 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
     this.refreshData();
   }
 
-  switchSubTab(tab: 'pending_queue' | 'disbursed_archive'): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
+  switchSubTab(tab: string): void {
+    if (tab === 'pending_queue' || tab === 'disbursed_archive') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+    }
   }
 
   syncUrlParams(): void {
@@ -382,15 +404,19 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
       payload.trip_ids = [this.payingItem.id];
     }
 
+    this.isSubmittingSingle = true;
     this.personnelApi.disburseTreasury(payload).subscribe({
       next: () => {
+        this.isSubmittingSingle = false;
         this.toast.success(`پرداخت مبلغ ${this.payingItem?.amount.toLocaleString()} ریال با شناسه پیگیری ${this.trackingCodeInput} قطعی شد.`);
         this.closePayModal();
         this.refreshData();
       },
       error: (err: any) => {
+        this.isSubmittingSingle = false;
         const msg = err?.error?.error || 'خطا در ثبت تسویه و پرداخت خزانه‌داری.';
         this.toast.error(msg);
+        this.cdr.detectChanges();
       }
     });
   }

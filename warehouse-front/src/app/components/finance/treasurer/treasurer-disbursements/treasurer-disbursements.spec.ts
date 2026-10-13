@@ -118,4 +118,17 @@ describe('TreasurerDisbursementsComponent — قابلیت‌های منتقل�
       tracking_code: 'TRK-1', batch_id: 'B-9', action: 'disburse_single_payroll', payroll_id: 1
     });
   });
+
+  it('8. defines responsive ergonomics tabs for pending queue and archive', () => {
+    expect(component.tabs.length).toBe(2);
+    expect(component.tabs[0].id).toBe('pending_queue');
+    expect(component.tabs[0].shortLabel).toBe('صف');
+    expect(component.tabs[1].id).toBe('disbursed_archive');
+    expect(component.tabs[1].shortLabel).toBe('آرشیو');
+
+    component.switchSubTab('disbursed_archive');
+    expect(component.activeSubTab).toBe('disbursed_archive');
+    component.switchSubTab('invalid_tab');
+    expect(component.activeSubTab).toBe('disbursed_archive');
+  });
 });

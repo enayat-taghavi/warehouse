@@ -1,101 +1,84 @@
 <div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-      
-      <!-- سمت راست: دراپ‌داون بخش، دوره و تب‌های فرعی -->
-      <div class="flex flex-wrap items-center gap-2 md:gap-3">
-        <!-- انتخابگر بخش فعال -->
-        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">بخش:</span>
-          <select
-            [(ngModel)]="selectedSectionId"
-            (change)="onSectionChanged()"
-            class="bg-transparent text-xs font-black text-teal-700 focus:outline-none cursor-pointer">
-            <option [ngValue]="null">همه بخش‌ها</option>
-            <option *ngFor="let sec of mySections" [value]="sec.id">
-              {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- فیلتر نوع پرداخت -->
-        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">نوع پرداخت:</span>
-          <select
-            [(ngModel)]="selectedPaymentType"
-            class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer">
-            <option value="all">همه موارد</option>
-            <option value="payroll">فقط حقوق پرسنل</option>
-            <option value="fleet">فقط تسویه ناوگان</option>
-          </select>
-        </div>
-
-        <!-- تب‌های فرعی در کپسول محصور (Subtabs Navigation) -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
-          <button
-            type="button"
-            (click)="switchSubTab('pending_queue')"
-            [ngClass]="activeSubTab === 'pending_queue' ? 'bg-white text-teal-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>💳 صف دستور پرداخت‌های مصوب</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-teal-100 text-teal-800" title="جمع صف پرداخت به میلیون ریال">
-              {{ pendingTotalAmount > 0 ? ((pendingTotalAmount / 1000000) | number:'1.0-0') + ' م.ر' : '۰' }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('disbursed_archive')"
-            [ngClass]="activeSubTab === 'disbursed_archive' ? 'bg-white text-teal-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>✅ آرشیو واریزی‌های انجام‌شده</span>
-          </button>
-        </div>
+  <app-command-center rowFrom="lg">
+    <!-- سمت راست: دراپ‌داون بخش، نوع پرداخت و تب‌های فرعی -->
+    <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
+      <!-- انتخابگر بخش فعال -->
+      <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
+        <span class="text-[11px] font-bold text-slate-500">بخش:</span>
+        <select
+          [(ngModel)]="selectedSectionId"
+          (change)="onSectionChanged()"
+          class="bg-transparent text-xs font-black text-teal-700 focus:outline-none cursor-pointer">
+          <option [ngValue]="null">همه بخش‌ها</option>
+          <option *ngFor="let sec of mySections" [value]="sec.id">
+            {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
+          </option>
+        </select>
       </div>
 
-      <!-- سمت چپ: دکمه‌های اکشن استاندارد و خروجی دیسکت پایا -->
-      <div class="flex items-center gap-2 justify-end">
-        <button
-          type="button"
-          (click)="generateBatchPayaFile()"
-          class="px-3 py-1.5 rounded-xl bg-teal-600 text-white hover:bg-teal-700 text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
-          <span>⚡</span>
-          <span>تولید فایل تجمیعی پایا/شبا</span>
-        </button>
-
-        <!-- خروجی اکسل ۲ ردیفه -->
-        <button
-          type="button"
-          (click)="exportExcel()"
-          class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="خروجی فایل اکسل لیست پرداخت"
-          aria-label="خروجی اکسل">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
-        </button>
-
-        <!-- بروزرسانی زنده -->
-        <button
-          type="button"
-          (click)="refreshData()"
-          class="w-9 h-9 rounded-xl bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="همگام‌سازی صف پرداخت"
-          aria-label="رفرش زنده">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="rotate-cw-path"></svg>
-        </button>
+      <!-- فیلتر نوع پرداخت -->
+      <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
+        <span class="text-[11px] font-bold text-slate-500">نوع پرداخت:</span>
+        <select
+          [(ngModel)]="selectedPaymentType"
+          class="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer">
+          <option value="all">همه موارد</option>
+          <option value="payroll">فقط حقوق پرسنل</option>
+          <option value="fleet">فقط تسویه ناوگان</option>
+        </select>
       </div>
 
+      <!-- تب‌های فرعی در کپسول محصور (Subtabs Navigation) -->
+      <app-tab-bar
+        [tabs]="tabs"
+        [active]="activeSubTab"
+        mobile="short"
+        fullLabelFrom="lg"
+        (activeChange)="switchSubTab($event)"
+      />
     </div>
-  </div>
+
+    <!-- سمت چپ: دکمه‌های اکشن استاندارد و خروجی دیسکت پایا -->
+    <div cc-actions class="flex items-center gap-2 justify-end">
+      <button
+        type="button"
+        appAction="download"
+        label="فایل پایا"
+        (click)="generateBatchPayaFile()"
+      ></button>
+
+      <!-- خروجی اکسل ۲ ردیفه -->
+      <button
+        type="button"
+        appAction="export-excel"
+        (click)="exportExcel()"
+      ></button>
+
+      <!-- بروزرسانی زنده -->
+      <button
+        type="button"
+        appAction="refresh"
+        (click)="refreshData()"
+      ></button>
+    </div>
+  </app-command-center>
 
   <!-- ── شاخص‌های صف خزانه‌داری (منتقل‌شده از کارتابل خزانه‌داری قدیمی) ── -->
   @if (loadError) {
     <div class="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs" role="alert">
       <span class="font-bold">بارگذاری کارتابل خزانه‌داری ناموفق بود؛ شاخص‌ها و دوره‌های زیر به‌روز نیستند.</span>
-      <button type="button" (click)="refreshData()" [disabled]="isLoading" class="shrink-0 px-3 py-1.5 rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-bold disabled:opacity-50 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">
-        تلاش دوباره
-      </button>
+      <button
+        type="button"
+        appAction="refresh"
+        label="تلاش دوباره"
+        display="label"
+        size="sm"
+        [busy]="isLoading"
+        [disabled]="isLoading"
+        (click)="refreshData()"
+      ></button>
     </div>
   }
   <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -157,18 +140,37 @@
                   </td>
                   <td class="py-3 px-3">
                     <div class="flex items-center justify-center gap-1.5">
-                      <button type="button" (click)="downloadPeriodDiskette(p, 'paya')" [disabled]="downloadingDisketteKey !== null" class="px-2.5 py-1 rounded-lg bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200 text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-wait">
-                        {{ downloadingDisketteKey === p.id + '-paya' ? 'در حال دریافت…' : 'دیسکت پایا' }}
-                      </button>
-                      <button type="button" (click)="downloadPeriodDiskette(p, 'satna')" [disabled]="downloadingDisketteKey !== null" class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200 text-[11px] font-bold cursor-pointer disabled:opacity-50 disabled:cursor-wait">
-                        {{ downloadingDisketteKey === p.id + '-satna' ? 'در حال دریافت…' : 'دیسکت ساتنا' }}
-                      </button>
+                      <button
+                        type="button"
+                        appAction="download"
+                        label="دیسکت دوره (پایا)"
+                        display="label"
+                        size="sm"
+                        [busy]="downloadingDisketteKey === p.id + '-paya'"
+                        [disabled]="downloadingDisketteKey !== null"
+                        (click)="downloadPeriodDiskette(p, 'paya')"
+                      ></button>
+                      <button
+                        type="button"
+                        appAction="download"
+                        label="دیسکت دوره (ساتنا)"
+                        display="label"
+                        size="sm"
+                        [busy]="downloadingDisketteKey === p.id + '-satna'"
+                        [disabled]="downloadingDisketteKey !== null"
+                        (click)="downloadPeriodDiskette(p, 'satna')"
+                      ></button>
                     </div>
                   </td>
                   <td class="py-3 px-3 text-center">
-                    <button type="button" (click)="openPeriodBatchModal(p)" class="px-3 py-1 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-[11px] font-bold shadow-2xs cursor-pointer">
-                      پرداخت یکجای دوره
-                    </button>
+                    <button
+                      type="button"
+                      appAction="confirm"
+                      label="پرداخت دوره"
+                      display="label"
+                      size="sm"
+                      (click)="openPeriodBatchModal(p)"
+                    ></button>
                   </td>
                 </tr>
               }
@@ -190,10 +192,17 @@
       </div>
 
       @if (activeSubTab === 'pending_queue' && pendingFleetItems.length > 0) {
-        <button type="button" (click)="openFleetBatchModal()" class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="truck"></svg>
-          <span>تسویه گروهی ناوگان ({{ pendingFleetItems.length }} سفر)</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            appAction="confirm"
+            label="تسویه ناوگان"
+            display="label"
+            size="sm"
+            (click)="openFleetBatchModal()"
+          ></button>
+          <span class="text-xs font-bold text-fg-muted">({{ pendingFleetItems.length }} سفر)</span>
+        </div>
       }
 
       <!-- جستجوی درون‌خطی جدول -->
@@ -251,10 +260,12 @@
               <button
                 *ngIf="item.status === 'pending_payment'"
                 type="button"
+                appAction="confirm"
+                label="ثبت واریز"
+                display="label"
+                size="sm"
                 (click)="openPayModal(item)"
-                class="px-3 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[11px] font-bold transition-all shadow-2xs cursor-pointer">
-                ثبت واریز بانکی
-              </button>
+              ></button>
               <span *ngIf="item.status === 'paid'" class="text-[11px] font-bold text-emerald-600">✓ واریز شده</span>
             </td>
           </tr>
@@ -268,7 +279,12 @@
     <div class="bg-white w-full max-w-md rounded-3xl border border-slate-200 shadow-xl p-5 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="text-sm font-black text-slate-900">ثبت پرداخت وجه و رهگیری بانک</h3>
-        <button type="button" (click)="closePayModal()" class="text-slate-400 hover:text-slate-600 text-sm">✕</button>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closePayModal()"
+        ></button>
       </div>
 
       <div class="space-y-3 text-xs">
@@ -324,8 +340,22 @@
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-        <button type="button" (click)="closePayModal()" class="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50">انصراف</button>
-        <button type="button" (click)="confirmDisbursement()" class="px-4 py-1.5 rounded-xl bg-teal-600 text-white text-xs font-black hover:bg-teal-700 shadow-xs">ثبت و تسویه نهایی</button>
+        <button
+          type="button"
+          appAction="close"
+          label="انصراف"
+          display="label"
+          (click)="closePayModal()"
+        ></button>
+        <button
+          type="button"
+          appAction="confirm"
+          label="ثبت واریز"
+          display="label"
+          [busy]="isSubmittingSingle"
+          [disabled]="isSubmittingSingle"
+          (click)="confirmDisbursement()"
+        ></button>
       </div>
     </div>
   </div>
@@ -337,9 +367,12 @@
       <div id="treasury-batch-dialog" class="relative bg-surface rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto flex flex-col modal-enter p-5 gap-4 text-xs">
         <div class="flex items-center justify-between border-b border-line-subtle pb-3">
           <h3 id="treasury-batch-title" class="text-sm font-black text-fg">ثبت دستور پرداخت و واریز خزانه‌داری</h3>
-          <button type="button" (click)="closeBatchModal()" class="btn-icon-sm btn-icon-slate" title="بستن" aria-label="بستن">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="x"></svg>
-          </button>
+          <button
+            type="button"
+            appAction="close"
+            display="icon"
+            (click)="closeBatchModal()"
+          ></button>
         </div>
 
         <div class="bg-surface-muted border border-line rounded-2xl p-3 space-y-1">
@@ -378,10 +411,23 @@
         </div>
 
         <div class="flex items-center justify-end gap-2 pt-2 border-t border-line-subtle">
-          <button type="button" (click)="closeBatchModal()" [disabled]="isSubmittingBatch" class="px-3 py-1.5 rounded-xl border border-line text-fg-muted text-xs font-bold hover:bg-surface-muted disabled:opacity-50">انصراف</button>
-          <button type="button" (click)="submitBatchDisbursement()" [disabled]="isSubmittingBatch || !batchTrackingCode.trim()" class="px-4 py-1.5 rounded-xl bg-teal-700 text-white text-xs font-black hover:bg-teal-800 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed">
-            {{ isSubmittingBatch ? 'در حال ثبت...' : 'تایید و ثبت قطعی پرداخت' }}
-          </button>
+          <button
+            type="button"
+            appAction="close"
+            label="انصراف"
+            display="label"
+            [disabled]="isSubmittingBatch"
+            (click)="closeBatchModal()"
+          ></button>
+          <button
+            type="button"
+            appAction="confirm"
+            label="ثبت واریز"
+            display="label"
+            [busy]="isSubmittingBatch"
+            [disabled]="isSubmittingBatch || !batchTrackingCode.trim()"
+            (click)="submitBatchDisbursement()"
+          ></button>
         </div>
       </div>
     </div>
