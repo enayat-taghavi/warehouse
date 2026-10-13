@@ -8,17 +8,65 @@ import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection, PettyCashTransaction } from '../../../../core/models/personnel.model';
-import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { STATUS_ICONS } from '../../../../shared/icons/semantic-icons';
 
 @Component({
   selector: 'app-accountant-petty-cash-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    TabBarComponent,
+    ActionButtonComponent,
+    CommandCenterComponent
+  ],
   templateUrl: './accountant-petty-cash.html',
   styleUrl: './accountant-petty-cash.css'
 })
 export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
   activeSubTab: 'pending_review' | 'settled' | 'all' = 'pending_review';
+
+  // Memoized tabs for app-tab-bar (NG0100 prevention)
+  private tabsKey = '';
+  private tabsCache: TabDef[] = [];
+  get tabs(): TabDef[] {
+    const sc = this.statusCounters;
+    const key = `${sc.pending_review}:${sc.settled}:${sc.all}`;
+    if (key !== this.tabsKey) {
+      this.tabsKey = key;
+      this.tabsCache = [
+        {
+          id: 'pending_review',
+          label: 'نیازمند ممیزی',
+          shortLabel: 'ممیزی',
+          icon: STATUS_ICONS.pending,
+          count: sc.pending_review,
+          tone: 'amber'
+        },
+        {
+          id: 'settled',
+          label: 'شارژ و تسویه شده',
+          shortLabel: 'تسویه',
+          icon: STATUS_ICONS.approved,
+          count: sc.settled,
+          tone: 'emerald'
+        },
+        {
+          id: 'all',
+          label: 'کل دفاتر تنخواه',
+          shortLabel: 'همه',
+          icon: STATUS_ICONS.all,
+          count: sc.all,
+          tone: 'slate'
+        }
+      ];
+    }
+    return this.tabsCache;
+  }
 
   mySections: ProjectSection[] = [];
   selectedSectionId: number | null = null;
@@ -114,7 +162,10 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
     this.fetchPettyCash();
   }
 
-  switchSubTab(tab: 'pending_review' | 'settled' | 'all'): void {
+  switchSubTab(tab: string): void {
+    if (tab !== 'pending_review' && tab !== 'settled' && tab !== 'all') {
+      return;
+    }
     this.activeSubTab = tab;
     this.syncUrlParams();
     this.updateViewAndCounters();

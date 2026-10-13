@@ -1,96 +1,54 @@
 <div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-      
-      <!-- سمت راست: بخش و تب‌های فرعی -->
-      <div class="flex flex-wrap items-center gap-2 md:gap-3">
-        <!-- انتخابگر بخش فعال -->
-        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
-          <span class="text-[11px] font-bold text-slate-500">بخش:</span>
-          <select
-            [(ngModel)]="selectedSectionId"
-            (change)="onSectionChanged()"
-            class="bg-transparent text-xs font-black text-blue-700 focus:outline-none cursor-pointer">
-            <option *ngFor="let sec of mySections" [value]="sec.id">
-              {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- تب‌های فرعی در کپسول محصور -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
-          <button
-            type="button"
-            (click)="switchSubTab('pending_review')"
-            [ngClass]="activeSubTab === 'pending_review' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>⏳ نیازمند ممیزی</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="activeSubTab === 'pending_review' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.pending_review }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('settled')"
-            [ngClass]="activeSubTab === 'settled' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>✅ شارژ و تسویه شده</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="activeSubTab === 'settled' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.settled }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('all')"
-            [ngClass]="activeSubTab === 'all' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="px-2.5 py-1 rounded-lg text-xs transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-            <span>💰 کل دفاتر تنخواه</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="activeSubTab === 'all' ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'">
-              {{ statusCounters.all }}
-            </span>
-          </button>
-        </div>
+  <app-command-center rowFrom="lg">
+    <!-- سمت راست: بخش و تب‌های فرعی -->
+    <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
+      <!-- انتخابگر بخش فعال -->
+      <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl">
+        <span class="text-[11px] font-bold text-slate-500">بخش:</span>
+        <select
+          [(ngModel)]="selectedSectionId"
+          (change)="onSectionChanged()"
+          class="bg-transparent text-xs font-black text-blue-700 focus:outline-none cursor-pointer">
+          <option *ngFor="let sec of mySections" [value]="sec.id">
+            {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
+          </option>
+        </select>
       </div>
 
-      <!-- سمت چپ: دکمه‌های اکشن ۳گانه -->
-      <div class="flex items-center gap-2 justify-end">
-        <button
-          type="button"
-          (click)="exportExcel()"
-          class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="خروجی گزارش تن‌خواه"
-          aria-label="خروجی اکسل">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="download"></svg>
-        </button>
-
-        <button
-          type="button"
-          (click)="importExcel()"
-          class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100/80 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="قالب اکسل تن‌خواه"
-          aria-label="ایمپورت اکسل">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" appIcon="upload"></svg>
-        </button>
-
-        <button
-          type="button"
-          (click)="fetchPettyCash()"
-          class="w-9 h-9 rounded-xl bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 transition-all flex items-center justify-center shadow-2xs cursor-pointer active:scale-95"
-          title="تازه‌سازی تن‌خواه"
-          aria-label="رفرش">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.animate-spin]="isLoading" appIcon="refresh-cw"></svg>
-        </button>
-      </div>
-
+      <!-- تب‌های فرعی در کپسول محصور (Subtabs Navigation) -->
+      <app-tab-bar
+        [tabs]="tabs"
+        [active]="activeSubTab"
+        mobile="short"
+        fullLabelFrom="lg"
+        (activeChange)="switchSubTab($event)"
+      />
     </div>
-  </div>
+
+    <!-- سمت چپ: دکمه‌های اکشن ۳گانه استاندارد -->
+    <div cc-actions class="flex items-center gap-2 justify-end">
+      <button
+        type="button"
+        appAction="export-excel"
+        (click)="exportExcel()"
+      ></button>
+
+      <button
+        type="button"
+        appAction="import-excel"
+        (click)="importExcel()"
+      ></button>
+
+      <button
+        type="button"
+        appAction="refresh"
+        [busy]="isLoading"
+        (click)="fetchPettyCash()"
+      ></button>
+    </div>
+  </app-command-center>
 
   <!-- ── ۲. جدول و کارت داده‌ها (Data Card Container) ── -->
   <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
@@ -177,17 +135,20 @@
               <div *ngIf="item.status === 'pending_accountant'" class="flex items-center justify-center gap-1.5">
                 <button
                   type="button"
+                  appAction="approve"
+                  label="تایید"
+                  display="label"
+                  size="sm"
                   (click)="approveReplenishment(item)"
-                  class="px-2 py-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer">
-                  ✓ ممیزی و تایید
-                </button>
+                ></button>
                 <button
                   type="button"
+                  appAction="return"
+                  label="عودت"
+                  display="label"
+                  size="sm"
                   (click)="rejectReplenishment(item)"
-                  class="px-2 py-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
-                  title="عودت به سرپرست">
-                  ✕ عودت
-                </button>
+                ></button>
               </div>
               <div *ngIf="item.status !== 'pending_accountant'" class="text-[11px] text-slate-400 font-bold">
                 {{ item.status === 'approved' ? '✅ تایید شده' : 'ارسال شده' }}
