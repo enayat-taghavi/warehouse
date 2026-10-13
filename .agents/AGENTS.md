@@ -121,7 +121,7 @@
 ### 10. Runner Sessions & Lessons (`run_tasks.py`)
 A runner session is a conversation started by `run_tasks.py` with one task from `tasks.md`.
 - **The runner verifies, not you:** After your turn, the runner itself runs the build, guardians, `ng test` against the session base, `commit-exists` and a clean-tree check, and records the results in `tasks_history.md`.
-  - Do not run those yourself, unless the task or plan names a specific command for you (e.g. `guardian_55_clickable_ergonomics.py --update-baseline`).
+  - Do not run those yourself: no `ng build`, `ng test`, `npx vitest`, `npx tsc` or guardian runs, not even for a single spec. The only exception is a command the task or plan names for you (e.g. `guardian_55_clickable_ergonomics.py --update-baseline`). If a `[RUNNER]` message reports a failed check, you may re-run that exact failed command to confirm your fix.
   - Never build a base copy with a junction to `node_modules`.
   - For runner sessions this replaces the Guardian 56 runs required by §3 (Template Integrity) and §5 items 1 and 7. Never write a number or a "green" claim for a command you did not run in this session; list such checks under "left to the runner". Reading `git diff --stat <session base>` for your self-review is still required.
 - **No status labels:** Never write DONE/FAILED labels such as `[S<N>-DONE]`. The runner marks `[DONE]` in `tasks.md` after its own checks pass.

@@ -4,7 +4,7 @@
 اجراکننده عمومی و ترتیبی تسک‌ها در نشست‌های مستقل Antigravity
 Generic sequential Antigravity task runner.
 
-صف (پیش‌فرض):   python run_tasks.py [--tasks FILE]
+صف (پیش‌فرض):   python run_tasks.py [--tasks FILE] [--resume CONVERSATION_ID --base HASH]
 گفتگو:          python run_tasks.py ask (--new | --conversation ID) --message-file FILE [--model ID] [--out FILE]
 
 تسک‌ها با خطی از === جدا می‌شوند. هر تسک می‌تواند دستورهای اجراکننده را در یک کامنت HTML داشته باشد
@@ -94,8 +94,11 @@ FALLBACK_MODEL_ENUM = "MODEL_PLACEHOLDER_M318"
 # فرمان پس‌زمینه: Antigravity به ایجنت می‌گوید فرمان را راه بینداز و نوبت را ببند؛ پایان فرمان بعداً با
 # SYSTEM_MESSAGE «Task id "…" finished» یا گام GENERIC «Task: … Status: …» می‌آید. تا آن موقع نوبت تمام نیست.
 # (نشست ۵ صف ارگونومی همین‌جا ۱۲ دقیقه زودتر «پایان‌یافته» شمرده شد و نشست ۶ هم‌زمان با آن شروع شد.)
+# فرمانی که ایجنت لغو می‌کند با GENERIC «Task "X" cancelled.» تمام می‌شود، نه با «finished»
+# (نشست ۶ صف، ۱۴۰۵/۰۷/۲۱: vitest لغوشده صف را ۲۰ دقیقه نگه داشت و ایستاند).
 BACKGROUND_START_RE = re.compile(r"running as a background task with task id:\s*(\S+)")
-BACKGROUND_FINISHED_RE = re.compile(r'Task id "([^"]+)" finished')
+BACKGROUND_FINISHED_RE = re.compile(
+    r'Task (?:id )?"([^"]+)" (?:finished|completed|cancell?ed|killed|failed|terminated|stopped)', re.IGNORECASE)
 BACKGROUND_STATUS_RE = re.compile(r"Task:\s*(\S+)\s+Status:\s*(\w+)")
 
 LS_SERVICE = "exa.language_server_pb.LanguageServerService"
@@ -647,7 +650,7 @@ def monitor_conversation(ls_info: dict, conv_id: str, after_index: int = -1,
                 background.update(BACKGROUND_START_RE.findall(content))
                 for task_id in BACKGROUND_FINISHED_RE.findall(content):
                     background.discard(task_id)
-                    log(f"  [#{idx}] background command finished")
+                    log(f"  [#{idx}] background command ended")
                 for task_id, task_status in BACKGROUND_STATUS_RE.findall(content):
                     if task_status.upper() != "RUNNING":
                         background.discard(task_id)
@@ -698,7 +701,9 @@ def open_run_log():
 
 
 def run_one_task(ls_info: dict, model_enum: str, tasks_path: Path, history: Path,
-                 task_no: int, total: int, task: Task) -> bool:
+                 task_no: int, total: int, task: Task, resume: tuple | None = None) -> bool:
+    """resume=(شناسه چت، hash پایه): تسکِ صفِ ایستاده در همان چت ادامه می‌یابد؛ require و ساخت چت رد می‌شوند
+    و ترانسکریپت از آغاز بازخوانده می‌شود، پس اگر نوبت ایجنت تمام شده، مستقیم سراغ verify می‌رود."""
     log("=" * 70)
     log(f"[Task {task_no}/{total}] {task.title[:100]}")
     log("=" * 70)
@@ -709,6 +714,13 @@ def run_one_task(ls_info: dict, model_enum: str, tasks_path: Path, history: Path
     def record(status: str, conv_id: str, steps: int, reply: str):
         append_history(history, task_no, total, task, conv_id, status, steps,
                        int(time.time() - started), reply, checks)
+    record.checks = checks
+
+    if resume:
+        conv_id, base = resume
+        log(f"Resuming conversation {conv_id} with base commit {base}.")
+        write_status("running", task=task_no, total=total, title=task.title, conversation=conv_id)
+        return continue_task(ls_info, model_enum, tasks_path, task_no, task, conv_id, base, record, started)
 
     if task.requires:
         log(f"Running {len(task.requires)} require command(s)...")
@@ -729,6 +741,13 @@ def run_one_task(ls_info: dict, model_enum: str, tasks_path: Path, history: Path
     log(f"Conversation: {conv_id}")
     write_status("running", task=task_no, total=total, title=task.title, conversation=conv_id)
 
+    return continue_task(ls_info, model_enum, tasks_path, task_no, task, conv_id, base, record, started)
+
+
+def continue_task(ls_info: dict, model_enum: str, tasks_path: Path, task_no: int, task: Task,
+                  conv_id: str, base: str, record, started: float) -> bool:
+    """پایش نوبت ایجنت، از سرگیری پس از خطای سرویس، verify، دورهای اصلاح و گذاشتن [DONE]."""
+    checks = record.checks
     after_index, fix_round, resumes = -1, 0, 0
     while True:
         finished, steps, reply, reason, errored = monitor_conversation(ls_info, conv_id, after_index)
@@ -773,11 +792,11 @@ def run_one_task(ls_info: dict, model_enum: str, tasks_path: Path, history: Path
     else:
         log("WARNING: title line not found in the tasks file; [DONE] not written.")
     record("DONE", conv_id, steps, reply)
-    log(f"[Task {task_no}/{total}] DONE in {int(time.time() - started) // 60} min.")
+    log(f"[Task {task_no}] DONE in {int(time.time() - started) // 60} min.")
     return True
 
 
-def run_queue(tasks_path: Path):
+def run_queue(tasks_path: Path, resume: tuple | None = None):
     global _queue_mode
     _queue_mode = True
     open_run_log()
@@ -813,7 +832,8 @@ def run_queue(tasks_path: Path):
     log(f"{total} pending task(s).")
     history = history_path(tasks_path)
     for task_no, task in enumerate(tasks, start=1):
-        if not run_one_task(ls_info, model_enum, tasks_path, history, task_no, total, task):
+        if not run_one_task(ls_info, model_enum, tasks_path, history, task_no, total, task,
+                            resume if task_no == 1 else None):
             return False
         if task_no < total:
             time.sleep(4)
@@ -879,6 +899,9 @@ def run_ask(args) -> int:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Sequential Antigravity task runner")
     parser.add_argument("--tasks", default=str(DEFAULT_TASKS_FILE), help="tasks file (default: tasks.md)")
+    parser.add_argument("--resume", metavar="CONVERSATION_ID",
+                        help="continue the first pending task in this conversation (skips require; checks the turn, then verifies)")
+    parser.add_argument("--base", help="base commit of the resumed task (required with --resume)")
     sub = parser.add_subparsers(dest="command")
     ask = sub.add_parser("ask", help="send one message to an Antigravity conversation and print the reply")
     target = ask.add_mutually_exclusive_group(required=True)
@@ -891,7 +914,10 @@ def main(argv=None) -> int:
 
     if args.command == "ask":
         return run_ask(args)
-    return 0 if run_queue(Path(args.tasks).resolve()) else 1
+    if args.resume and not args.base:
+        parser.error("--resume needs --base (the commit the task started from)")
+    resume = (args.resume, args.base) if args.resume else None
+    return 0 if run_queue(Path(args.tasks).resolve(), resume) else 1
 
 
 if __name__ == "__main__":
