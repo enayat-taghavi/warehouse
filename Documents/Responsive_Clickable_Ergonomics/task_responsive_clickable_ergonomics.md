@@ -132,7 +132,7 @@
   - [x] **۴.۱۰ حساب‌های بانکی (`treasurer-bank-accounts.html`)**
   - [x] **۴.۱۱ مدیریت چک‌ها (`treasurer-cheques.html`)**
   - [x] **۴.۱۲ مغایرت‌گیری بانکی (`treasurer-reconciliation.html`)**
-  - [ ] **۴.۱۸ پروژه‌ها و بخش‌ها (`projects-and-sections.html`)**
+  - [x] **۴.۱۸ پروژه‌ها و بخش‌ها (`projects-and-sections.html`)**
   - [ ] **۴.۱۹ بایگانی مدارک شرکت (`company-documents-archive.html`)**
   - [ ] **۴.۲۰ شناسنامه پرسنل (`personnel-profiles.html`)**
   - [ ] **۴.۲۱ تنظیمات پایه مالی (`base-settings.html`)**
