@@ -3,7 +3,7 @@
   "counters": {
     "rule_1_unlabeled_icon_buttons": 115,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 126,
+    "rule_3_non_standard_actions": 115,
     "rule_4_retired_icons": 58,
     "rule_5_neutralized_tap_targets": 0
   },
@@ -217,72 +217,6 @@
         "icon": null
       },
       {
-        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
-        "line": 182,
-        "method": "approvePersonnelFinance",
-        "icon": null
-      },
-      {
-        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
-        "line": 188,
-        "method": "openRejectModal",
-        "icon": null
-      },
-      {
-        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
-        "line": 195,
-        "method": "openRejectModal",
-        "icon": null
-      },
-      {
-        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
-        "line": 277,
-        "method": "approveVehicleFinance",
-        "icon": null
-      },
-      {
-        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
-        "line": 284,
-        "method": "openRejectModal",
-        "icon": null
-      },
-      {
-        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
-        "line": 292,
-        "method": "openRejectModal",
-        "icon": null
-      },
-      {
-        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
-        "line": 340,
-        "method": "approveChangeRequestFinance",
-        "icon": null
-      },
-      {
-        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
-        "line": 361,
-        "method": "approveChangeRequestFinance",
-        "icon": null
-      },
-      {
-        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
-        "line": 678,
-        "method": "closeRejectModal",
-        "icon": null
-      },
-      {
-        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
-        "line": 692,
-        "method": "closeRejectModal",
-        "icon": null
-      },
-      {
-        "file": "components/finance/accountant/accountant-new-profiles/accountant-new-profiles.html",
-        "line": 695,
-        "method": "submitRejectModal",
-        "icon": null
-      },
-      {
         "file": "components/finance/accountant/accountant-payroll/accountant-payroll.html",
         "line": 271,
         "method": "refreshCurrentTab",
@@ -311,6 +245,72 @@
         "line": 239,
         "method": "reopenRejectedPersonnel",
         "icon": null
+      },
+      {
+        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "line": 1006,
+        "method": "deleteExistingDocument",
+        "icon": null
+      },
+      {
+        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "line": 1077,
+        "method": "reopenEditingRejectedPersonnel",
+        "icon": null
+      },
+      {
+        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "line": 1390,
+        "method": "deleteDraftPersonnel",
+        "icon": "trash"
+      },
+      {
+        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "line": 1408,
+        "method": "deleteDraftPersonnel",
+        "icon": "trash"
+      },
+      {
+        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "line": 1636,
+        "method": "deleteDraftPersonnel",
+        "icon": "trash"
+      },
+      {
+        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "line": 1645,
+        "method": "deleteDraftPersonnel",
+        "icon": "trash"
+      },
+      {
+        "file": "components/finance/employee/employee-new-vehicle/employee-new-vehicle.html",
+        "line": 295,
+        "method": "reopenRejectedVehicle",
+        "icon": null
+      },
+      {
+        "file": "components/finance/employee/employee-new-vehicle/employee-new-vehicle.html",
+        "line": 479,
+        "method": "reopenRejectedVehicle",
+        "icon": null
+      },
+      {
+        "file": "components/finance/employee/employee-new-vehicle/employee-new-vehicle.html",
+        "line": 527,
+        "method": "deleteDraftVehicle",
+        "icon": null
+      },
+      {
+        "file": "components/finance/manager/manager-budget/manager-budget.html",
+        "line": 62,
+        "method": "refreshData",
+        "icon": "rotate-cw-path"
+      },
+      {
+        "file": "components/finance/manager/manager-contracts/manager-contracts.html",
+        "line": 62,
+        "method": "refreshData",
+        "icon": "rotate-cw-path"
       }
     ],
     "rule_4_retired_icons": [

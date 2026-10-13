@@ -1,110 +1,75 @@
 <div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
 
   <!-- ── ۱. هدر یکپارچه و چسبان مرکز فرماندهی (Unified Sticky Command Center Header) ── -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-      
-      <!-- سمت راست: انتخابگر بخش فعال و کپسول زیرتب‌ها -->
-      <div class="flex flex-wrap items-center gap-2 md:gap-3">
-        <!-- انتخابگر بخش فعال (Section Isolation) -->
-        <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-100/90 py-1 px-2.5 rounded-xl border border-slate-200/80">
-          <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
-          <select
-            [(ngModel)]="selectedSectionId"
-            (change)="onSectionChanged()"
-            class="bg-transparent text-xs font-black text-blue-700 focus:outline-none cursor-pointer">
-            <option *ngFor="let sec of mySections" [value]="sec.id">
-              {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- ناوبری زیرتب‌ها در کپسول محصور (Subtabs Pill Container) -->
-        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto w-full md:w-auto">
-          <button
-            type="button"
-            (click)="switchSubTab('personnel')"
-            [ngClass]="activeSubTab === 'personnel' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
-            <span>👥 پرونده‌های پرسنل</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.personnelPending > 0 ? 'bg-amber-100 text-amber-900 font-black animate-pulse' : 'bg-slate-200 text-slate-600'">
-              {{ statusCounters.personnelPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('vehicles')"
-            [ngClass]="activeSubTab === 'vehicles' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
-            <span>🚚 پرونده‌های ناوگان</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.vehiclesPending > 0 ? 'bg-amber-100 text-amber-900 font-black animate-pulse' : 'bg-slate-200 text-slate-600'">
-              {{ statusCounters.vehiclesPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('change_requests')"
-            [ngClass]="activeSubTab === 'change_requests' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
-            <span>📋 درخواست‌های تغییرات</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md"
-                  [ngClass]="statusCounters.changeRequestsPending > 0 ? 'bg-amber-100 text-amber-900 font-black' : 'bg-slate-200 text-slate-600'">
-              {{ statusCounters.changeRequestsPending }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            (click)="switchSubTab('all')"
-            [ngClass]="activeSubTab === 'all' ? 'bg-white text-blue-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 font-bold'"
-            class="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs transition-all whitespace-nowrap cursor-pointer">
-            <span>🗂️ همه موارد</span>
-            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-slate-200 text-slate-600">
-              {{ statusCounters.allTotal }}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <!-- سمت چپ: کادر جستجو و فیلتر وضعیت -->
-      <div class="flex items-center gap-2 w-full md:w-auto">
-        <!-- فیلتر وضعیت حسابداری -->
+  <app-command-center rowFrom="lg">
+    <!-- سمت راست: انتخابگر بخش فعال و کپسول زیرتب‌ها -->
+    <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
+      <!-- انتخابگر بخش فعال (Section Isolation) -->
+      <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-slate-100/90 py-1 px-2.5 rounded-xl border border-slate-200/80">
+        <span class="text-[11px] font-bold text-slate-500">بخش فعال:</span>
         <select
-          [(ngModel)]="statusFilter"
-          (change)="syncUrlParams(); fetchData()"
-          class="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 rounded-xl px-2.5 py-1.5 focus:outline-none cursor-pointer">
-          <option value="ALL">همه وضعیت‌ها</option>
-          <option value="pending_accountant">💼 فقط در انتظار تایید حسابدار</option>
-          <option value="pending_manager">⏳ در انتظار تایید مدیر</option>
-          <option value="approved">✓ مصوب و فعال</option>
-          <option value="revision_required">↩️ نیازمند اصلاح</option>
-          <option value="rejected">✕ رد شده</option>
+          [(ngModel)]="selectedSectionId"
+          (change)="onSectionChanged()"
+          class="bg-transparent text-xs font-black text-blue-700 focus:outline-none cursor-pointer">
+          <option *ngFor="let sec of mySections" [value]="sec.id">
+            {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
+          </option>
         </select>
-
-        <!-- کادر جستجوی زنده با کلید پاکسازی -->
-        <div class="relative flex-1 md:w-56">
-          <input
-            type="text"
-            [(ngModel)]="searchQuery"
-            (input)="syncUrlParams(); fetchData()"
-            placeholder="جستجوی نام، کد ملی، پلاک..."
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 pl-7 text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none" />
-          <button
-            *ngIf="searchQuery"
-            type="button"
-            (click)="clearSearch()"
-            class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer">
-            ✕
-          </button>
-        </div>
       </div>
 
+      <!-- ناوبری زیرتب‌ها با جعبه‌ابزار مشترک -->
+      <app-tab-bar
+        [tabs]="subTabs"
+        [active]="activeSubTab"
+        mobile="icon"
+        fullLabelFrom="xl"
+        (activeChange)="switchSubTab($event)" />
     </div>
-  </div>
+
+    <!-- سمت چپ: کادر جستجو، فیلتر وضعیت و دکمه تازه‌سازی -->
+    <div cc-actions class="flex items-center gap-2 w-full md:w-auto justify-end">
+      <!-- فیلتر وضعیت حسابداری -->
+      <select
+        [(ngModel)]="statusFilter"
+        (change)="syncUrlParams(); fetchData()"
+        class="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 rounded-xl px-2.5 py-1.5 focus:outline-none cursor-pointer">
+        <option value="ALL">همه وضعیت‌ها</option>
+        <option value="pending_accountant">💼 فقط در انتظار تایید حسابدار</option>
+        <option value="pending_manager">⏳ در انتظار تایید مدیر</option>
+        <option value="approved">✓ مصوب و فعال</option>
+        <option value="revision_required">↩️ نیازمند اصلاح</option>
+        <option value="rejected">✕ رد شده</option>
+      </select>
+
+      <!-- کادر جستجوی زنده با کلید پاکسازی -->
+      <div class="relative flex-1 md:w-56">
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          (input)="syncUrlParams(); fetchData()"
+          placeholder="جستجوی نام، کد ملی، پلاک..."
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 pl-7 text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none" />
+        <button
+          *ngIf="searchQuery"
+          type="button"
+          (click)="clearSearch()"
+          title="پاک‌سازی جستجو"
+          aria-label="پاک‌سازی جستجو"
+          class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer">
+          ✕
+        </button>
+      </div>
+
+      <!-- دکمه تازه‌سازی داده‌ها -->
+      <button
+        type="button"
+        appAction="refresh"
+        [busy]="isLoading"
+        [disabled]="isLoading"
+        (click)="fetchData()">
+      </button>
+    </div>
+  </app-command-center>
 
   <!-- ── ۲. بخش پرسنل (Personnel Cards & Table) ── -->
   <div *ngIf="activeSubTab === 'personnel' || activeSubTab === 'all'" class="space-y-3">
@@ -181,32 +146,36 @@
           <div *ngIf="p.approval_status === 'pending_accountant' || p.approval_status === 'supervisor_approved'" class="flex items-center gap-1.5">
             <button
               type="button"
-              (click)="approvePersonnelFinance(p)"
-              class="flex-1 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-black rounded-xl transition-all shadow-xs flex items-center justify-center gap-1 cursor-pointer">
-              <span>💳 تایید مالی (ارسال به مدیر)</span>
+              appAction="approve"
+              label="تایید مالی"
+              display="label"
+              class="flex-1 justify-center"
+              (click)="approvePersonnelFinance(p)">
             </button>
             <button
               type="button"
-              (click)="openRejectModal(p.id!, (p.first_name || '') + ' ' + (p.last_name || ''), 'personnel', 'revision')"
-              class="px-2.5 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-              title="عودت به کارمند جهت بازنگری">
-              <span>🔄 عودت</span>
+              appAction="return"
+              label="عودت"
+              display="label"
+              (click)="openRejectModal(p.id!, (p.first_name || '') + ' ' + (p.last_name || ''), 'personnel', 'revision')">
             </button>
             <button
               type="button"
-              (click)="openRejectModal(p.id!, (p.first_name || '') + ' ' + (p.last_name || ''), 'personnel', 'reject')"
-              class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-              title="رد پرونده">
-              <span>❌ رد</span>
+              appAction="reject"
+              label="رد"
+              display="label"
+              (click)="openRejectModal(p.id!, (p.first_name || '') + ' ' + (p.last_name || ''), 'personnel', 'reject')">
             </button>
           </div>
 
           <!-- دکمه ویرایش و تکمیل مدارک مالی -->
           <button
             type="button"
-            (click)="openEditPersonnelModal(p)"
-            class="w-full py-1.5 px-3 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-700 text-xs font-black rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer">
-            <span>✏️ ویرایش مدارک، مزد و احکام مالی</span>
+            appAction="edit"
+            label="ویرایش مدارک و احکام"
+            display="label"
+            class="w-full justify-center"
+            (click)="openEditPersonnelModal(p)">
           </button>
         </div>
 
@@ -273,29 +242,28 @@
         </div>
 
         <!-- دکمه‌های اقدام ناوگان -->
-        <div class="pt-3 border-t border-slate-100 flex items-center gap-1.5">
+        <div *ngIf="v.approval_status === 'pending_accountant' || v.approval_status === 'supervisor_approved'" class="pt-3 border-t border-slate-100 flex items-center gap-1.5">
           <button
-            *ngIf="v.approval_status === 'pending_accountant' || v.approval_status === 'supervisor_approved'"
             type="button"
-            (click)="approveVehicleFinance(v)"
-            class="flex-1 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-black rounded-xl transition-all shadow-xs flex items-center justify-center gap-1 cursor-pointer">
-            <span>💳 تایید مالی نرخ سرویس</span>
+            appAction="approve"
+            label="تایید مالی"
+            display="label"
+            class="flex-1 justify-center"
+            (click)="approveVehicleFinance(v)">
           </button>
           <button
-            *ngIf="v.approval_status === 'pending_accountant' || v.approval_status === 'supervisor_approved'"
             type="button"
-            (click)="openRejectModal(v.id!, v.plate_number, 'vehicle', 'revision')"
-            class="px-2.5 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-            title="عودت جهت اصلاح نرخ">
-            <span>🔄 عودت</span>
+            appAction="return"
+            label="عودت"
+            display="label"
+            (click)="openRejectModal(v.id!, v.plate_number, 'vehicle', 'revision')">
           </button>
           <button
-            *ngIf="v.approval_status === 'pending_accountant' || v.approval_status === 'supervisor_approved'"
             type="button"
-            (click)="openRejectModal(v.id!, v.plate_number, 'vehicle', 'reject')"
-            class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-            title="رد پرونده">
-            <span>❌ رد</span>
+            appAction="reject"
+            label="رد"
+            display="label"
+            (click)="openRejectModal(v.id!, v.plate_number, 'vehicle', 'reject')">
           </button>
         </div>
 
@@ -309,22 +277,10 @@
 
   <!-- ── ۴. بخش درخواست‌های تغییرات معلق (Change Requests) ── -->
   <div *ngIf="activeSubTab === 'change_requests'" class="space-y-3">
-    <div class="flex items-center gap-2">
-      <button
-        type="button"
-        (click)="changeRequestSubTab = 'personnel'"
-        [ngClass]="changeRequestSubTab === 'personnel' ? 'bg-blue-600 text-white' : 'bg-white text-slate-700 border border-slate-200'"
-        class="px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-colors">
-        تغییرات پرسنل ({{ personnelChangeRequests.length }})
-      </button>
-      <button
-        type="button"
-        (click)="changeRequestSubTab = 'vehicles'"
-        [ngClass]="changeRequestSubTab === 'vehicles' ? 'bg-blue-600 text-white' : 'bg-white text-slate-700 border border-slate-200'"
-        class="px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-colors">
-        تغییرات ناوگان ({{ vehicleChangeRequests.length }})
-      </button>
-    </div>
+    <app-tab-bar
+      [tabs]="changeRequestTabs"
+      [active]="changeRequestSubTab"
+      (activeChange)="setChangeRequestSubTab($event)" />
 
     <!-- لیست درخواست‌های پرسنل -->
     <div *ngIf="changeRequestSubTab === 'personnel'" class="space-y-2">
@@ -334,11 +290,19 @@
           <span class="text-[10px] text-slate-400">ثبت‌شده توسط: {{ cr.requested_by_name || 'کارمند' }}</span>
         </div>
         <div class="flex items-center gap-2">
-          <button type="button" (click)="openDiffModal(cr, 'personnel')" class="px-2.5 py-1 text-xs font-bold bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">
-            🔍 مشاهده تفاوت‌ها
+          <button
+            type="button"
+            appAction="view"
+            label="مقایسه"
+            display="label"
+            (click)="openDiffModal(cr, 'personnel')">
           </button>
-          <button type="button" (click)="approveChangeRequestFinance(cr, 'personnel')" class="px-3 py-1 text-xs font-bold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 cursor-pointer">
-            ✓ تایید مالی
+          <button
+            type="button"
+            appAction="approve"
+            label="تایید مالی"
+            display="label"
+            (click)="approveChangeRequestFinance(cr, 'personnel')">
           </button>
         </div>
       </div>
@@ -355,11 +319,19 @@
           <span class="text-[10px] text-slate-400">ثبت‌شده توسط: {{ vcr.requested_by_name || 'کارمند' }}</span>
         </div>
         <div class="flex items-center gap-2">
-          <button type="button" (click)="openDiffModal(vcr, 'vehicle')" class="px-2.5 py-1 text-xs font-bold bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">
-            🔍 مشاهده تفاوت‌ها
+          <button
+            type="button"
+            appAction="view"
+            label="مقایسه"
+            display="label"
+            (click)="openDiffModal(vcr, 'vehicle')">
           </button>
-          <button type="button" (click)="approveChangeRequestFinance(vcr, 'vehicle')" class="px-3 py-1 text-xs font-bold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 cursor-pointer">
-            ✓ تایید مالی
+          <button
+            type="button"
+            appAction="approve"
+            label="تایید مالی"
+            display="label"
+            (click)="approveChangeRequestFinance(vcr, 'vehicle')">
           </button>
         </div>
       </div>
@@ -384,41 +356,21 @@
           </h3>
           <span class="text-[11px] text-slate-500 font-mono">کد ملی: {{ editingPersonnel.national_code }}</span>
         </div>
-        <button type="button" (click)="closePersonnelModal()" class="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-300 text-slate-600 flex items-center justify-center font-bold text-xs cursor-pointer">
-          ✕
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closePersonnelModal()">
         </button>
       </div>
 
       <!-- تب‌های داخلی مودال -->
-      <div class="flex border-b border-slate-100 px-4 pt-2 bg-slate-50/50 gap-2 overflow-x-auto">
-        <button
-          type="button"
-          (click)="setPersonnelTab('contract')"
-          [ngClass]="personnelModalTab === 'contract' ? 'border-blue-600 text-blue-700 font-black' : 'border-transparent text-slate-500 hover:text-slate-800 font-bold'"
-          class="pb-2.5 px-3 border-b-2 text-xs transition-colors whitespace-nowrap cursor-pointer">
-          💰 مزد و مزایای قانونی
-        </button>
-        <button
-          type="button"
-          (click)="setPersonnelTab('insurance')"
-          [ngClass]="personnelModalTab === 'insurance' ? 'border-blue-600 text-blue-700 font-black' : 'border-transparent text-slate-500 hover:text-slate-800 font-bold'"
-          class="pb-2.5 px-3 border-b-2 text-xs transition-colors whitespace-nowrap cursor-pointer">
-          📑 بیمه و مالیات
-        </button>
-        <button
-          type="button"
-          (click)="setPersonnelTab('contact')"
-          [ngClass]="personnelModalTab === 'contact' ? 'border-blue-600 text-blue-700 font-black' : 'border-transparent text-slate-500 hover:text-slate-800 font-bold'"
-          class="pb-2.5 px-3 border-b-2 text-xs transition-colors whitespace-nowrap cursor-pointer">
-          🏦 شماره حساب و شبا
-        </button>
-        <button
-          type="button"
-          (click)="setPersonnelTab('identity')"
-          [ngClass]="personnelModalTab === 'identity' ? 'border-blue-600 text-blue-700 font-black' : 'border-transparent text-slate-500 hover:text-slate-800 font-bold'"
-          class="pb-2.5 px-3 border-b-2 text-xs transition-colors whitespace-nowrap cursor-pointer">
-          👤 مشخصات فردی
-        </button>
+      <div class="px-4 pt-2 bg-slate-50/50 border-b border-slate-100">
+        <app-tab-bar
+          [tabs]="modalTabs"
+          [active]="personnelModalTab"
+          mobile="icon"
+          (activeChange)="setPersonnelTab($event)" />
       </div>
 
       <!-- بدنه فرم مودال -->
@@ -649,16 +601,21 @@
 
       <!-- فوتر مودال -->
       <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-        <button type="button" (click)="closePersonnelModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl cursor-pointer">
-          انصراف
+        <button
+          type="button"
+          appAction="close"
+          label="انصراف"
+          display="label"
+          (click)="closePersonnelModal()">
         </button>
         <button
           type="button"
-          (click)="savePersonnel()"
+          appAction="save"
+          label="ذخیره تغییرات"
+          display="label"
+          [busy]="isSavingPersonnel"
           [disabled]="isSavingPersonnel"
-          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-black rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50">
-          <span *ngIf="isSavingPersonnel">در حال ذخیره...</span>
-          <span *ngIf="!isSavingPersonnel">💾 ذخیره تغییرات و احکام مالی</span>
+          (click)="savePersonnel()">
         </button>
       </div>
 
@@ -675,7 +632,12 @@
         <h3 class="text-sm font-black text-slate-800">
           {{ rejectTarget.action === 'reject' ? '❌ رد قطعی پرونده' : '🔄 ارجاع به بازنگری و عودت' }}
         </h3>
-        <button type="button" (click)="closeRejectModal()" class="text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer">✕</button>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeRejectModal()">
+        </button>
       </div>
 
       <p class="text-xs text-slate-600 leading-relaxed">
@@ -689,17 +651,21 @@
         class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium focus:bg-white focus:border-blue-500 focus:outline-none"></textarea>
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-        <button type="button" (click)="closeRejectModal()" class="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl cursor-pointer">
-          انصراف
+        <button
+          type="button"
+          appAction="close"
+          label="انصراف"
+          display="label"
+          (click)="closeRejectModal()">
         </button>
         <button
           type="button"
-          (click)="submitRejectModal()"
+          [appAction]="rejectTarget.action === 'reject' ? 'reject' : 'return'"
+          [label]="rejectTarget.action === 'reject' ? 'ثبت رد پرونده' : 'ارسال به بازنگری'"
+          display="label"
+          [busy]="isSubmittingReject"
           [disabled]="isSubmittingReject"
-          [ngClass]="rejectTarget.action === 'reject' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-orange-600 hover:bg-orange-700'"
-          class="px-4 py-1.5 text-white text-xs font-black rounded-xl cursor-pointer transition-colors disabled:opacity-50">
-          <span *ngIf="isSubmittingReject">در حال ثبت...</span>
-          <span *ngIf="!isSubmittingReject">{{ rejectTarget.action === 'reject' ? 'ثبت رد پرونده' : 'ارسال به بازنگری' }}</span>
+          (click)="submitRejectModal()">
         </button>
       </div>
     </div>
@@ -715,7 +681,12 @@
         <h3 class="text-sm font-black text-slate-800">
           🔍 مشاهده تفاوت‌ها و تغییرات پیشنهادی
         </h3>
-        <button type="button" (click)="closeDiffModal()" class="text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer">✕</button>
+        <button
+          type="button"
+          appAction="close"
+          display="icon"
+          (click)="closeDiffModal()">
+        </button>
       </div>
 
       <div class="border border-slate-100 rounded-2xl overflow-hidden max-h-72 overflow-y-auto">
@@ -738,8 +709,12 @@
       </div>
 
       <div class="flex justify-end pt-2 border-t border-slate-100">
-        <button type="button" (click)="closeDiffModal()" class="px-4 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl cursor-pointer">
-          بستن
+        <button
+          type="button"
+          appAction="close"
+          label="بستن"
+          display="label"
+          (click)="closeDiffModal()">
         </button>
       </div>
     </div>

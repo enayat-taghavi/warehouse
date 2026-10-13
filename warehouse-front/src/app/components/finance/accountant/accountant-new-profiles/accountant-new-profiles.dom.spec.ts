@@ -321,13 +321,13 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
     expect(hostElem.textContent).toContain('در انتظار تایید حسابدار');
 
     // Action buttons inside card
-    const approveBtn = hostElem.querySelector('button.bg-emerald-600');
+    const approveBtn = hostElem.querySelector('button[appAction="approve"]');
     expect(approveBtn).toBeTruthy();
-    expect(approveBtn?.textContent).toContain('تایید مالی (ارسال به مدیر)');
+    expect(approveBtn?.textContent).toContain('تایید مالی');
 
-    const editBtn = hostElem.querySelector('button.bg-blue-50');
+    const editBtn = hostElem.querySelector('button[appAction="edit"]');
     expect(editBtn).toBeTruthy();
-    expect(editBtn?.textContent).toContain('ویرایش مدارک، مزد و احکام مالی');
+    expect(editBtn?.textContent).toContain('ویرایش مدارک');
   });
 
   // ─────────────────────────────────────────────────────────────────
@@ -422,7 +422,7 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
     const hostElem: HTMLElement = fixture.nativeElement;
 
     const approveBtn: HTMLButtonElement | null = Array.from(hostElem.querySelectorAll('button'))
-      .find(b => b.textContent?.includes('تایید مالی (ارسال به مدیر)')) as HTMLButtonElement || null;
+      .find(b => b.textContent?.includes('تایید مالی')) as HTMLButtonElement || null;
     expect(approveBtn).toBeTruthy();
     approveBtn.click();
     fixture.detectChanges();
@@ -481,7 +481,7 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
 
     // Click approve vehicle button
     const approveVehBtn: HTMLButtonElement | null = Array.from(hostElem.querySelectorAll('button'))
-      .find(b => b.textContent?.includes('تایید مالی نرخ سرویس')) as HTMLButtonElement || null;
+      .find(b => b.textContent?.includes('تایید مالی')) as HTMLButtonElement || null;
     expect(approveVehBtn).toBeTruthy();
     approveVehBtn.click();
     fixture.detectChanges();
@@ -503,7 +503,7 @@ describe('AccountantNewProfilesHubComponent DOM & Browser Testing (12 Comprehens
 
     // Open Diff Modal
     const diffBtn: HTMLButtonElement | null = Array.from(hostElem.querySelectorAll('button'))
-      .find(b => b.textContent?.includes('مشاهده تفاوت‌ها')) as HTMLButtonElement || null;
+      .find(b => b.textContent?.includes('مقایسه')) as HTMLButtonElement || null;
     expect(diffBtn).toBeTruthy();
     diffBtn.click();
     fixture.detectChanges();

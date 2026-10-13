@@ -30,13 +30,25 @@ import {
   validateAccountNumber
 } from '../../../../core/utils/sheba-utils';
 
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
+
 export type AccountantSubTab = 'personnel' | 'vehicles' | 'change_requests' | 'all';
 export type AccountantStatusFilter = 'ALL' | 'pending_accountant' | 'pending_manager' | 'approved' | 'revision_required' | 'rejected' | 'draft';
 
 @Component({
   selector: 'app-accountant-new-profiles-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    CommandCenterComponent,
+    TabBarComponent,
+    ActionButtonComponent,
+  ],
   templateUrl: './accountant-new-profiles.html',
   styleUrl: './accountant-new-profiles.css'
 })
@@ -213,10 +225,96 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
     this.fetchData();
   }
 
-  switchSubTab(tab: AccountantSubTab): void {
-    this.activeSubTab = tab;
-    this.syncUrlParams();
-    this.fetchData();
+  // ─── نوار تب‌های اصلی (Memoized برای جلوگیری از NG0100) ───
+  private subTabsKey = '';
+  private subTabsCache: TabDef[] = [];
+  get subTabs(): TabDef[] {
+    const sc = this.statusCounters;
+    const key = `${sc.personnelPending}:${sc.vehiclesPending}:${sc.changeRequestsPending}:${sc.allTotal}`;
+    if (key !== this.subTabsKey) {
+      this.subTabsKey = key;
+      this.subTabsCache = [
+        {
+          id: 'personnel',
+          label: 'پرونده‌های پرسنل',
+          shortLabel: 'پرسنل',
+          icon: ACCOUNTING_ENTITY_ICONS.newPersonnel,
+          count: sc.personnelPending,
+          tone: sc.personnelPending > 0 ? 'amber' : 'slate',
+          indicator: sc.personnelPending > 0 ? { tone: 'amber', label: 'پرونده‌های پرسنل در انتظار تایید مالی', pulse: true } : undefined,
+        },
+        {
+          id: 'vehicles',
+          label: 'پرونده‌های ناوگان',
+          shortLabel: 'ناوگان',
+          icon: ACCOUNTING_ENTITY_ICONS.fleet,
+          count: sc.vehiclesPending,
+          tone: sc.vehiclesPending > 0 ? 'amber' : 'slate',
+          indicator: sc.vehiclesPending > 0 ? { tone: 'amber', label: 'پرونده‌های ناوگان در انتظار تایید مالی', pulse: true } : undefined,
+        },
+        {
+          id: 'change_requests',
+          label: 'درخواست‌های تغییرات',
+          shortLabel: 'تغییرات',
+          icon: 'action-edit',
+          count: sc.changeRequestsPending,
+          tone: sc.changeRequestsPending > 0 ? 'amber' : 'slate',
+        },
+        {
+          id: 'all',
+          label: 'همه موارد',
+          shortLabel: 'همه',
+          icon: 'status-all',
+          count: sc.allTotal,
+          tone: 'slate',
+        },
+      ];
+    }
+    return this.subTabsCache;
+  }
+
+  // ─── نوار تب درخواست‌های تغییرات (Memoized) ───
+  private crTabsKey = '';
+  private crTabsCache: TabDef[] = [];
+  get changeRequestTabs(): TabDef[] {
+    const pCount = this.personnelChangeRequests.length;
+    const vCount = this.vehicleChangeRequests.length;
+    const key = `${pCount}:${vCount}`;
+    if (key !== this.crTabsKey) {
+      this.crTabsKey = key;
+      this.crTabsCache = [
+        {
+          id: 'personnel',
+          label: 'تغییرات پرسنل',
+          shortLabel: 'پرسنل',
+          icon: ACCOUNTING_ENTITY_ICONS.personnel,
+          count: pCount,
+        },
+        {
+          id: 'vehicles',
+          label: 'تغییرات ناوگان',
+          shortLabel: 'ناوگان',
+          icon: ACCOUNTING_ENTITY_ICONS.fleet,
+          count: vCount,
+        },
+      ];
+    }
+    return this.crTabsCache;
+  }
+
+  setChangeRequestSubTab(tab: string): void {
+    if (tab === 'personnel' || tab === 'vehicles') {
+      this.changeRequestSubTab = tab;
+      this.cdr.detectChanges();
+    }
+  }
+
+  switchSubTab(tab: string): void {
+    if (tab === 'personnel' || tab === 'vehicles' || tab === 'change_requests' || tab === 'all') {
+      this.activeSubTab = tab;
+      this.syncUrlParams();
+      this.fetchData();
+    }
   }
 
   setStatusFilter(filter: AccountantStatusFilter): void {
@@ -449,9 +547,19 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  setPersonnelTab(tab: 'identity' | 'contract' | 'insurance' | 'contact'): void {
-    this.personnelModalTab = tab;
-    this.cdr.detectChanges();
+  // ─── تب‌های مودال احکام مالی پرسنل ───
+  readonly modalTabs: TabDef[] = [
+    { id: 'contract', label: 'مزد و مزایای قانونی', shortLabel: 'مزد', icon: ACCOUNTING_ENTITY_ICONS.payroll },
+    { id: 'insurance', label: 'بیمه و مالیات', shortLabel: 'بیمه', icon: ACCOUNTING_ENTITY_ICONS.insurance },
+    { id: 'contact', label: 'شماره حساب و شبا', shortLabel: 'بانکی', icon: ACCOUNTING_ENTITY_ICONS.bankAccounts },
+    { id: 'identity', label: 'مشخصات فردی', shortLabel: 'فردی', icon: ACCOUNTING_ENTITY_ICONS.identity },
+  ];
+
+  setPersonnelTab(tab: string): void {
+    if (tab === 'contract' || tab === 'insurance' || tab === 'contact' || tab === 'identity') {
+      this.personnelModalTab = tab;
+      this.cdr.detectChanges();
+    }
   }
 
   // ─── محاسبات آنی مزد بر اساس فرمول‌های حقوق انبارداری و قانون کار ───
