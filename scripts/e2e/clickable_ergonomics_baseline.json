@@ -3,8 +3,8 @@
   "counters": {
     "rule_1_unlabeled_icon_buttons": 106,
     "rule_2_tab_min_widths": 0,
-    "rule_3_non_standard_actions": 92,
-    "rule_4_retired_icons": 51,
+    "rule_3_non_standard_actions": 84,
+    "rule_4_retired_icons": 47,
     "rule_5_neutralized_tap_targets": 0
   },
   "violations": {
@@ -295,22 +295,22 @@
         "icon": null
       },
       {
-        "file": "components/finance/manager/manager-budget/manager-budget.html",
-        "line": 62,
-        "method": "refreshData",
-        "icon": "rotate-cw-path"
+        "file": "components/finance/manager/manager-fleet/manager-fleet.html",
+        "line": 164,
+        "method": "openApproveModal",
+        "icon": "check"
       },
       {
-        "file": "components/finance/manager/manager-contracts/manager-contracts.html",
-        "line": 62,
-        "method": "refreshData",
-        "icon": "rotate-cw-path"
+        "file": "components/finance/manager/manager-fleet/manager-fleet.html",
+        "line": 170,
+        "method": "openRejectModal",
+        "icon": "rotate-ccw"
       },
       {
-        "file": "components/finance/manager/manager-contracts/manager-contracts.html",
-        "line": 135,
-        "method": "approvePersonnelDecree",
-        "icon": null
+        "file": "components/finance/manager/manager-fleet/manager-fleet.html",
+        "line": 177,
+        "method": "openRejectModal",
+        "icon": "x"
       }
     ],
     "rule_4_retired_icons": [
