@@ -8,16 +8,15 @@ import { StateService } from '../../../../services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ProjectSection } from '../../../../core/models/personnel.model';
-import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
-import { ActionButtonDirective } from '../../../../shared/components/action-button/action-button.directive';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { PLATFORM_ENTITY_ICONS } from '../../../../shared/icons/semantic-icons';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../modules/accounting/entity-icons';
 
 @Component({
   selector: 'app-manager-dashboard-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, SvgIconDirective, TabBarComponent, ActionButtonDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, TabBarComponent, ActionButtonComponent],
   templateUrl: './manager-dashboard.html',
   styleUrl: './manager-dashboard.css'
 })
