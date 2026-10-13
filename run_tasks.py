@@ -97,6 +97,9 @@ FALLBACK_MODEL_ENUM = "MODEL_PLACEHOLDER_M318"
 # فرمانی که ایجنت لغو می‌کند با GENERIC «Task "X" cancelled.» تمام می‌شود، نه با «finished»
 # (نشست ۶ صف، ۱۴۰۵/۰۷/۲۱: vitest لغوشده صف را ۲۰ دقیقه نگه داشت و ایستاند).
 BACKGROUND_START_RE = re.compile(r"running as a background task with task id:\s*(\S+)")
+# تایمری که ایجنت برای بیدار شدن خودش می‌گذارد («Task Description: Timer: 20s, Prompt: …») فرمان در حال اجرا نیست؛
+# پایانش فقط با SYSTEM_MESSAGE «sender=<task id>» می‌آید (نشست ۶ صف، ۱۴۰۵/۰۷/۲۱: سه تایمر زده‌شده صف را نگه داشتند).
+BACKGROUND_TIMER_RE = re.compile(r"Task Description:\s*Timer\b", re.IGNORECASE)
 BACKGROUND_FINISHED_RE = re.compile(
     r'Task (?:id )?"([^"]+)" (?:finished|completed|cancell?ed|killed|failed|terminated|stopped)', re.IGNORECASE)
 BACKGROUND_STATUS_RE = re.compile(r"Task:\s*(\S+)\s+Status:\s*(\w+)")
@@ -647,7 +650,8 @@ def monitor_conversation(ls_info: dict, conv_id: str, after_index: int = -1,
                 tool_calls = step.get("tool_calls") or []
                 content = step.get("content") or ""
                 report_step(idx, step_type, step_status, tool_calls, content)
-                background.update(BACKGROUND_START_RE.findall(content))
+                if not BACKGROUND_TIMER_RE.search(content):
+                    background.update(BACKGROUND_START_RE.findall(content))
                 for task_id in BACKGROUND_FINISHED_RE.findall(content):
                     background.discard(task_id)
                     log(f"  [#{idx}] background command ended")
