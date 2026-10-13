@@ -133,9 +133,9 @@
   - [x] **۴.۱۱ مدیریت چک‌ها (`treasurer-cheques.html`)**
   - [x] **۴.۱۲ مغایرت‌گیری بانکی (`treasurer-reconciliation.html`)**
   - [x] **۴.۱۸ پروژه‌ها و بخش‌ها (`projects-and-sections.html`)**
-  - [ ] **۴.۱۹ بایگانی مدارک شرکت (`company-documents-archive.html`)**
+  - [x] **۴.۱۹ بایگانی مدارک شرکت (`company-documents-archive.html`)**
   - [ ] **۴.۲۰ شناسنامه پرسنل (`personnel-profiles.html`)**
-  - [ ] **۴.۲۱ تنظیمات پایه مالی (`base-settings.html`)**
+  - [x] **۴.۲۱ تنظیمات پایه مالی (`base-settings.html`)**
   - [ ] معیار پایان گام
 
 - [ ] **گام ۱۲: مدیریت ارشد**
