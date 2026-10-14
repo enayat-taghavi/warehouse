@@ -26,8 +26,34 @@ def derived_company_ids(user):
     """شناسهٔ شرکت‌هایی که کاربر از راه منابع مشتق ثبت‌شده در آن‌ها دسترسی کامل دارد."""
     ids = set()
     for source in _DERIVED_COMPANY_SOURCES:
-        ids.update(source(user))
+        res = source(user)
+        if isinstance(res, (set, list, tuple)):
+            for item in res:
+                if isinstance(item, dict) and 'company_id' in item:
+                    ids.add(item['company_id'])
+                elif isinstance(item, int):
+                    ids.add(item)
+                elif hasattr(item, 'id'):
+                    ids.add(item.id)
+        elif isinstance(res, set):
+            ids.update(res)
     return ids
+
+
+def derived_company_access_details(user) -> list[dict]:
+    """
+    اطلاعات کامل دسترسی‌های مشتق کاربر به شرکت‌ها از منابع ثبت‌شده
+    (جهت استفاده در سریالایزرهای کاربری بدون وابستگی به ماژول‌های خاص).
+    """
+    details = []
+    for source in _DERIVED_COMPANY_SOURCES:
+        res = source(user)
+        if isinstance(res, (list, tuple)):
+            for item in res:
+                if isinstance(item, dict) and 'company_id' in item:
+                    details.append(item)
+    return details
+
 
 
 def get_user_allowed_companies(user, required_level='workspace_full'):

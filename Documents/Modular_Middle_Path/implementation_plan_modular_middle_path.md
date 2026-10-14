@@ -530,6 +530,42 @@ warehouse-front/src/app/
     - runner: اجرای آزمون‌های verify برای گام ۲ (`django-check`، `guardian29-max`، بررسی تمیزی درخت و ایجاد کامیت).
     - ناظر (Claude): بازبین‌های `tenant-scope-reviewer`، بررسی استقرار و اجرای release روی `app`.
 
+- **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۶ (گام ۳-الف):**
+  - **پایهٔ نشست:** commit hash برابر `f9e539bdb4df1106c36bbdc126ace71429d20eb2`.
+  - **کارهای انجام‌شده:**
+    - انتقال تعاریف مشخصات ماژول‌ها (`WAREHOUSE_SPEC` و `ACCOUNTING_SPEC`) و فهرست مجوزها از هسته (`core/platform_core/module_catalog.py`) به فایل‌های مانیفست مستقل `warehouse-backend/modules/warehouse/module.py` و `warehouse-backend/modules/accounting/module.py`.
+    - بازنویسی `core/platform_core/module_catalog.py` به عنوان پویشگر خودکار و پویا با `importlib.util.spec_from_file_location` برای بارگذاری ماژول‌های موجود در `modules/*/module.py`، اعتبارسنجی انطباق `code` با نام پوشه، و ایجاد پویای دیکشنری `MODULE_CATALOG` بدون هاردکد کردن هیچ نام یا مشخصات ماژولی در هسته.
+    - پیاده‌سازی ابزارهای هسته:
+      - توابع `contribute(point, item)` و `contributions(point)` در `core/platform_core/registry.py` برای ثبت و بازیابی نقطه‌های توسعه.
+      - تابع `company_of(kind, id)` در `core/platform_core/registry.py` جهت حل شناسه شرکت مالک یک موجودیت.
+      - رویداد سراسری `scope_deleted` در فایل تازهٔ `core/platform_core/events.py` بر پایه Signal با پشتیبانی از هر دو الگوی فراخوانی تابعی و سیگنال جنگو.
+    - معکوس‌سازی و رفع ۴ یال وابستگی تولیدی طبق جدول طرح:
+      - یال `warehouses/signals.py → personnel`: حذف کامل وابستگی انبار به ۵ مدل پرسنلی؛ ارسال رویداد `scope_deleted('warehouse', instance.id)` توسط انبار و اتصال گیرنده `handle_scope_deleted` در `personnel/signals.py` جهت خالی‌سازی (`update to None`) شناسه‌های انبار در ۵ مدل پرسنلی (`PersonnelProfile`، `VehicleDriverProfile`، `DailyAttendance`، `MonthlyWorkPeriod`، `VehicleTripLog`) با حفظ کامل رکوردهای مالی.
+      - یال `personnel/models.py:2296 → warehouses`: جایگزینی کوئری مستقیم مدل Warehouse با `company_of('warehouse', self.warehouse_id)`.
+      - یال `personnel/views.py:4973 → warehouses`: جایگزینی کوئری مستقیم مدل Warehouse با `company_of('warehouse', warehouse_id)`.
+      - یال `accounts/serializers.py:449 → personnel`: حذف ایمپورت مستقیم مدل `UserSectionAssignment` پرسنل در هسته و استفاده از تابع تعمیم‌یافته `derived_company_access_details` در هسته `companies/access.py` که توسط `personnel.apps.PersonnelConfig.ready()` با منبع `section_derived_company_source` تغذیه می‌شود.
+    - ثبت تابع حل شناسه شرکت انبار در `warehouses/apps.py:ready()` به صورت `contribute('company_of:warehouse', _warehouse_company_resolver)`.
+    - نگارش آزمون جامع جنگو در `warehouse-backend/modules/accounting/personnel/test_scope_deleted_signal.py` جهت اعتبارسنجی برابری رفتار رویداد `scope_deleted` و خالی‌شدن فیلدهای انبار در ۵ مدل مالی و عدم حذف رکوردها.
+    - به‌روزرسانی مبنای نگهبان ۲۹ (`modularization_baseline.json`) با یک بار اجرای `--update-baseline` به دلیل کاهش نقض‌ها:
+      - نقض‌های تولیدی (`production_violations`): کاهش از ۱۳ به ۹ یال (کاهش ۴ یال).
+      - قرارداد استقلال دوطرفه ماژول‌ها C2: کاهش به ۰ (`contract:c2-accounting-independent-of-warehouse = 0` و `contract:c2-warehouse-independent-of-accounting = 0`).
+  - **انحراف‌ها:** هیچ. کلیهٔ وظایف نشست ۶ دقیقاً طبق طرح انجام شدند.
+  - **فرمان‌های مجاز اجراشده توسط ایجنت و خلاصه خروجی:**
+    - `python scripts/automation/verify_tools.py django-check` -> `[all] manage.py check -> exit 0 / [warehouse] manage.py check -> exit 0 / [accounting] manage.py check -> exit 0`
+    - `python scripts/automation/verify_tools.py migrations-unchanged` -> `No changes detected / No model change needs a migration.`
+    - `warehouse-backend\venv\Scripts\python.exe warehouse-backend\manage.py test personnel.test_scope_deleted_signal` -> `Ran 2 tests in 0.085s - OK`
+    - `python scripts/e2e/guardian_modularization.py --update-baseline` -> `unique_direct_violations = 9, production_violations = 9, non_production_violations = 0, composition_root_hardcoded_lines = 0, C2 = 0`
+    - `python scripts/e2e/guardian_modularization.py` -> `exit 0 (PASS)`
+    - `python scripts/e2e/guardian_30_settings_core.py` -> `exit 0 (PASS)`
+    - `python scripts/e2e/guardian_31_install_profiles.py` -> `exit 0 (PASS)`
+    - `python scripts/e2e/guardian_54_module_independence.py` -> `exit 0 (PASS)`
+    - `python scripts/e2e/guardian_56_change_integrity.py` -> `exit 0 (PASS)`
+    - `python scripts/e2e/guardian_57_front_module_fence.py` -> `exit 0 (PASS)`
+  - **آنچه به runner و ناظر می‌ماند:**
+    - runner: اجرای آزمون‌های verify برای گام ۳-الف، بررسی تمیزی درخت و تایید کامیت.
+    - ناظر (Claude): بازبین‌های `data-loss-reviewer` و `tenant-scope-reviewer`، بررسی استقرار و اجرای release روی `app`.
+
 </div>
+
 
 

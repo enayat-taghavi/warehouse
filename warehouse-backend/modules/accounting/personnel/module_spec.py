@@ -1,6 +1,7 @@
 """
 مشخصات ماژول حسابداری برای Entry-Point گروه 'wh.module' — فاز ۷.
 """
-from platform_core.module_catalog import ACCOUNTING_SPEC
+from platform_core.module_catalog import MODULE_CATALOG
 
-SPEC = ACCOUNTING_SPEC
+SPEC = MODULE_CATALOG.get('accounting')
+

@@ -49,6 +49,15 @@ class WarehousesConfig(AppConfig):
 
         # فاز ۳ §۳.۱ — ثبت ماژول انبار در رجیستری قابلیت‌ها. این خودِ رجیستری،
         # ماژول‌های ممیزیِ انباری (audit_modules) را هم در هسته ثبت می‌کند.
-        from platform_core.registry import register_module
-        from platform_core.module_catalog import WAREHOUSE_SPEC
-        register_module(WAREHOUSE_SPEC)
+        from platform_core.registry import register_module, contribute
+        from platform_core.module_catalog import MODULE_CATALOG
+        if 'warehouse' in MODULE_CATALOG:
+            register_module(MODULE_CATALOG['warehouse'])
+
+        # ثبت تابع حل شرکتِ این انبار در رجیستری هسته (گام ۳ طرح راه میانهٔ ماژولار)
+        def _warehouse_company_resolver(wh_id):
+            from warehouses.models import Warehouse
+            return Warehouse.objects.filter(id=wh_id).values_list('company_id', flat=True).first()
+
+        contribute('company_of:warehouse', _warehouse_company_resolver)
+

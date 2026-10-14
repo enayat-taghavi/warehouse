@@ -10,13 +10,15 @@ class PersonnelConfig(AppConfig):
         # فاز ۳ §۳.۱ — ثبت ماژول حسابداری در رجیستری قابلیت‌ها. این خودِ رجیستری،
         # ماژول‌های ممیزیِ حسابداری (audit_modules) را هم در هسته ثبت می‌کند.
         from platform_core.registry import register_module
-        from platform_core.module_catalog import ACCOUNTING_SPEC
-        register_module(ACCOUNTING_SPEC)
+        from platform_core.module_catalog import MODULE_CATALOG
+        if 'accounting' in MODULE_CATALOG:
+            register_module(MODULE_CATALOG['accounting'])
 
-        # دسترسی مشتق از عضویت بخش‌های پروژه در قواعد دسترسی شرکتِ هسته
+        # دسترسی مشتق از عضویت بخش‌های پروژه در قواعد دسترسی شرکتِ هسته (گام ۳)
         from companies.access import register_derived_company_source
-        from personnel.company_access import section_derived_company_ids
-        register_derived_company_source(section_derived_company_ids)
+        from personnel.company_access import section_derived_company_source
+        register_derived_company_source(section_derived_company_source)
+
 
         # بارگذاری سیگنال‌های خودکار همگام‌سازی شرکت و مدارک
         try:

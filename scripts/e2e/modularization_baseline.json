@@ -1,18 +1,18 @@
 {
   "_readme": "snapshot مبنای نقض‌های مرزبندی ماژولی (نگهبان ۲۹، فاز ۰). هیچ شمارنده‌ای مجاز به افزایش نیست. برای ثبت پیشرفت: python scripts/e2e/guardian_modularization.py --update-baseline",
   "counters": {
-    "unique_direct_violations": 13,
-    "production_violations": 13,
+    "unique_direct_violations": 9,
+    "production_violations": 9,
     "non_production_violations": 0,
     "composition_root_hardcoded_lines": 0,
-    "contract:c1-layering": 10,
-    "contract:c2-accounting-independent-of-warehouse": 2,
-    "contract:c2-warehouse-independent-of-accounting": 1,
-    "contract:c3-core-purity": 10
+    "contract:c1-layering": 9,
+    "contract:c2-accounting-independent-of-warehouse": 0,
+    "contract:c2-warehouse-independent-of-accounting": 0,
+    "contract:c3-core-purity": 9
   },
   "lint_imports": {
-    "kept": 0,
-    "broken": 4
+    "kept": 1,
+    "broken": 3
   },
   "composition_root": {
     "config/settings.py": [],
@@ -43,23 +43,8 @@
       ],
       [
         "accounts.serializers",
-        "personnel.models",
-        449
-      ],
-      [
-        "accounts.serializers",
         "warehouses.models",
         13
-      ],
-      [
-        "personnel.models",
-        "warehouses.models",
-        2296
-      ],
-      [
-        "personnel.views",
-        "warehouses.models",
-        4973
       ],
       [
         "reports.registry",
@@ -80,11 +65,6 @@
         "reports.registry",
         "warehouses.models",
         263
-      ],
-      [
-        "warehouses.signals",
-        "personnel.models",
-        35
       ]
     ],
     "non_production": []

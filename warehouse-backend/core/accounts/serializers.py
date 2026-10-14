@@ -443,29 +443,21 @@ class UserSerializer(serializers.ModelSerializer):
                             'is_default': is_def
                         })
 
-                # همچنین شرکت‌های متناظر با انتساب‌های فعال در بخش‌های پروژه
+                # همچنین شرکت‌های متناظر با منابع دسترسی مشتق ثبت‌شده در هسته (گام ۳)
                 existing_comp_ids = set(comp_ids)
-                if apps.is_installed('personnel'):
-                    from personnel.models import UserSectionAssignment
-                    sec_assignments = UserSectionAssignment.objects.filter(
-                        user=instance, is_active=True, section__project__company__isnull=False
-                    ).select_related('section__project__company')
-                    for sa in sec_assignments:
-                        sec_comp = sa.section.project.company
-                        if sec_comp and sec_comp.id not in existing_comp_ids:
-                            existing_comp_ids.add(sec_comp.id)
-                            comp_ids.append(sec_comp.id)
-                            is_first = (def_cid is None)
-                            if is_first:
-                                def_cid = sec_comp.id
-                            comp_access_data.append({
-                                'company_id': sec_comp.id,
-                                'company_name': sec_comp.name,
-                                'company_code': sec_comp.code,
-                                'access_level': 'workspace_full',
-                                'role_in_company': sa.get_role_display() if hasattr(sa, 'get_role_display') else '',
-                                'is_default': is_first
-                            })
+                from companies.access import derived_company_access_details
+                for acc_item in derived_company_access_details(instance):
+                    cid = acc_item.get('company_id')
+                    if cid and cid not in existing_comp_ids:
+                        existing_comp_ids.add(cid)
+                        comp_ids.append(cid)
+                        is_first = (def_cid is None)
+                        if is_first:
+                            def_cid = cid
+                        item_copy = dict(acc_item)
+                        item_copy['is_default'] = is_first
+                        comp_access_data.append(item_copy)
+
 
                 ret['company_accesses'] = comp_access_data
                 ret['company_ids'] = comp_ids

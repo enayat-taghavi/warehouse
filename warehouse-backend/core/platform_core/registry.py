@@ -38,6 +38,48 @@ class ModuleSpec:
 PLATFORM_VERSION = '1.0.0'
 
 _REGISTRY: dict[str, ModuleSpec] = {}
+_CONTRIBUTIONS: dict[str, list] = {}
+
+
+def contribute(point: str, item) -> None:
+    """
+    ثبت مشارکت ماژول‌ها در نقطه‌های توسعهٔ هسته (Extension Points) — طرح راه میانهٔ ماژولار (گام ۳).
+    """
+    _CONTRIBUTIONS.setdefault(point, []).append(item)
+
+
+def contributions(point: str) -> tuple:
+    """
+    دریافت مشارکت‌های ثبت‌شده در یک نقطهٔ توسعه.
+    """
+    return tuple(_CONTRIBUTIONS.get(point, ()))
+
+
+def company_of(kind: str, entity_id) -> int | None:
+    """
+    حل شناسه شرکت مالک یک موجودیت بدون وابستگی مستقیم به ماژول مالک.
+    مثال: company_of('warehouse', wh_id)
+    اگر ماژول مربوطه نصب نباشد یا رکوردی پیدا نشود، None برمی‌گرداند.
+    """
+    if not entity_id:
+        return None
+    for resolver in contributions(f"company_of:{kind}"):
+        try:
+            cid = resolver(entity_id)
+            if cid is not None:
+                return cid
+        except Exception:
+            continue
+    for item in contributions('company_resolvers'):
+        if isinstance(item, tuple) and len(item) == 2 and item[0] == kind and callable(item[1]):
+            try:
+                cid = item[1](entity_id)
+                if cid is not None:
+                    return cid
+            except Exception:
+                continue
+    return None
+
 
 
 def _verify_platform_compatibility(spec: ModuleSpec) -> None:

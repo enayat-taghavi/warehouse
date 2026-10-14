@@ -120,3 +120,30 @@ def handle_user_section_assignment_deleted(sender, instance, **kwargs):
     elif not user.is_superuser and user.company:
         user.company = None
         user.save(update_fields=['company'])
+
+
+# ─── رویداد حذف قلمروهای هسته/انبار (طرح راه میانهٔ ماژولار گام ۳) ───
+from platform_core.events import scope_deleted
+
+
+@receiver(scope_deleted)
+def handle_scope_deleted(sender, kind, id, **kwargs):
+    """
+    هنگام حذف یک قلمرو در هسته یا انبار (مانند 'warehouse')، شناسه‌های متناظر در ۵ مدل مالی
+    خالی می‌شوند (رفتار: خالی کردن فیلدها و نه حذف رکوردهای مالی).
+    """
+    if kind == 'warehouse' and id:
+        try:
+            from .models import (
+                PersonnelProfile, VehicleDriverProfile,
+                DailyAttendance, MonthlyWorkPeriod, VehicleTripLog
+            )
+            PersonnelProfile.objects.filter(assigned_warehouse_id=id).update(assigned_warehouse_id=None)
+            VehicleDriverProfile.objects.filter(assigned_warehouse_id=id).update(assigned_warehouse_id=None)
+            DailyAttendance.objects.filter(warehouse_id=id).update(warehouse_id=None)
+            MonthlyWorkPeriod.objects.filter(warehouse_id=id).update(warehouse_id=None)
+            VehicleTripLog.objects.filter(warehouse_id=id).update(warehouse_id=None)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"[PersonnelSignals] Error clearing warehouse_id on scope_deleted: {e}")
+

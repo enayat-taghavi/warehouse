@@ -29,21 +29,10 @@ def purge_warehouse_settings(sender, instance, **kwargs):
             clear_setting_cache(k, instance.id)
         clear_setting_cache(None, instance.id)
 
-    # رفع مشکل شناسه‌های یتیم (Orphaned IDs) در مدل‌های تفکیک‌شده
-    if apps.is_installed('personnel'):
-        try:
-            from personnel.models import (
-                PersonnelProfile, VehicleDriverProfile,
-                DailyAttendance, MonthlyWorkPeriod, VehicleTripLog
-            )
-            PersonnelProfile.objects.filter(assigned_warehouse_id=instance.id).update(assigned_warehouse_id=None)
-            VehicleDriverProfile.objects.filter(assigned_warehouse_id=instance.id).update(assigned_warehouse_id=None)
-            DailyAttendance.objects.filter(warehouse_id=instance.id).update(warehouse_id=None)
-            MonthlyWorkPeriod.objects.filter(warehouse_id=instance.id).update(warehouse_id=None)
-            VehicleTripLog.objects.filter(warehouse_id=instance.id).update(warehouse_id=None)
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"[WarehouseSignals] Error cleaning personnel warehouse_ids: {e}")
+    # اطلاع‌رسانی رویداد حذف قلمرو انبار به هسته و سایر ماژول‌ها (گام ۳ طرح راه میانهٔ ماژولار)
+    from platform_core.events import scope_deleted
+    scope_deleted('warehouse', instance.id)
+
 
     if apps.is_installed('communications'):
         try:

@@ -2290,16 +2290,17 @@ class MonthlyWorkPeriod(_WarehouseCompatMixin, models.Model):
         ordering = ['-year_month']
 
     def save(self, *args, **kwargs):
-        # انتساب خودکار شرکت از روی انبار در صورت خالی بودن
+        # انتساب خودکار شرکت از روی انبار در صورت خالی بودن (طرح راه میانهٔ ماژولار گام ۳)
         if not self.company_id and self.warehouse_id:
             try:
-                from warehouses.models import Warehouse
-                wh = Warehouse.objects.filter(id=self.warehouse_id).first()
-                if wh and wh.company_id:
-                    self.company_id = wh.company_id
+                from platform_core.registry import company_of
+                cid = company_of('warehouse', self.warehouse_id)
+                if cid:
+                    self.company_id = cid
             except Exception:
                 pass
         super().save(*args, **kwargs)
+
 
     def __str__(self):
         wh = self.warehouse

@@ -4970,10 +4970,11 @@ def broadcast_attendance_updated(warehouse_id=None, date_shamsi=None, year_month
                 cid = extra_data.get('company_id')
             if not cid and warehouse_id:
                 try:
-                    from warehouses.models import Warehouse
-                    cid = Warehouse.objects.filter(id=warehouse_id).values_list('company_id', flat=True).first()
+                    from platform_core.registry import company_of
+                    cid = company_of('warehouse', warehouse_id)
                 except Exception:
                     pass
+
 
             payload = {
                 'type': 'send_notification',
