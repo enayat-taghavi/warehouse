@@ -39,7 +39,7 @@
       </div>
 
       <!-- Dedicated Standalone Company Documents Archive Link (دسترسی مستقل و فارغ از شغل به اسناد شرکت‌های مجاز) -->
-      <div *ngIf="!store.isWarehouseContext() && hasCompanyDocumentsAccess" class="mt-2 pt-2 border-t border-slate-800/70 shrink-0">
+      <div *ngIf="!store.isWarehouseContext() && isCompanyDocumentsArchiveSupported && hasCompanyDocumentsAccess" class="mt-2 pt-2 border-t border-slate-800/70 shrink-0">
         <button 
           (click)="switchTab('company-documents')" 
           [class.active]="currentTab === 'company-documents' || currentTab === 'documents'"

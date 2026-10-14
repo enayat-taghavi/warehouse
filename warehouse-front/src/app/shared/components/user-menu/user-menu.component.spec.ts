@@ -373,6 +373,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
 
       expect(component.isWarehouseInstalled).toBe(true);
       expect(component.shortcutsCategories.some(c => c.id === 'counting')).toBe(true);
+      expect(component.shortcutsCategories.find(c => c.id === 'all')?.count).toBe(20);
       expect(component.allShortcuts.length).toBe(20);
     });
 
@@ -382,7 +383,17 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
       expect(component.isWarehouseInstalled).toBe(false);
       expect(component.shortcutsCategories.some(c => c.id === 'counting')).toBe(false);
       expect(component.shortcutsCategories.length).toBe(4);
+      expect(component.shortcutsCategories.find(c => c.id === 'all')?.count).toBe(15);
       expect(component.allShortcuts.length).toBe(15);
+    });
+
+    it('شمارنده «همه کلیدها» به صورت پویا از مجموع دسته‌ها محاسبه می‌شود و عدد ثابت نیست', () => {
+      mockModuleRegistry.getExtensions.mockReturnValue([]);
+      const allCat = component.shortcutsCategories.find(c => c.id === 'all');
+      const otherCats = component.shortcutsCategories.filter(c => c.id !== 'all');
+      const expectedTotal = otherCats.reduce((sum, c) => sum + (c.count || 0), 0);
+      expect(allCat?.count).toBe(expectedTotal);
+      expect(allCat?.count).toBe(15);
     });
   });
 });

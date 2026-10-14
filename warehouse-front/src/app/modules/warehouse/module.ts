@@ -61,8 +61,7 @@ export const MODULE: WhFrontendModule = {
       hasWarehouseModuleToggle: true
     },
     users: {
-      permissionGroupKeys: ['WH_AUDIT'],
-      rolePresetCategories: ['inventory']
+      permissionGroupKeys: ['WH_AUDIT']
     },
     healthDashboard: {
       panelScopes: ['warehouse']

@@ -1090,7 +1090,11 @@ export class Layout implements OnInit, OnDestroy {
   get userAvatar() { return this.auth.userAvatar(); }
   get userName() { return this.auth.userName(); }
   get userRole() { return this.auth.userRoleTitles()[0] || ''; }
+  get isCompanyDocumentsArchiveSupported(): boolean {
+    return this.moduleRegistry.getExtensions('layoutNav').some(e => e.extension.hasCompanyDocumentsArchive === true);
+  }
   get hasCompanyDocumentsAccess(): boolean {
+    if (!this.isCompanyDocumentsArchiveSupported) return false;
     const isSuper = !!this.auth.user()?.is_superuser || this.personaService.isSuperuser();
     if (isSuper) return true;
     return this.activeCompanyService.hasCompanyDocumentsAccess();

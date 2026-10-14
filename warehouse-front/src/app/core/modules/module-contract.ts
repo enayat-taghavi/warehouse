@@ -72,6 +72,7 @@ export interface ExtensionMap {
     }>;
     showWarehouseSwitcher?: boolean;
     defaultExitRoute?: string;
+    hasCompanyDocumentsArchive?: boolean;
   };
 
   /**
@@ -88,9 +89,8 @@ export interface ExtensionMap {
    */
   companies?: {
     tabs?: string[];
-    tableColumns?: string[];
     hasWarehouseModuleToggle?: boolean;
-    gdriveSupported?: boolean;
+    providesTreasury?: boolean;
   };
 
   /**
@@ -98,7 +98,6 @@ export interface ExtensionMap {
    */
   users?: {
     permissionGroupKeys?: string[];
-    rolePresetCategories?: string[];
   };
 
   /**

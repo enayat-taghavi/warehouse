@@ -40,6 +40,7 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
   let mockRouter: any;
   let mockStore: any;
   let mockPersona: any;
+  let mockAuth: any;
 
   beforeEach(() => {
     mockRouter = {
@@ -109,7 +110,8 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
               moduleCode: 'accounting',
               extension: {
                 showWarehouseSwitcher: false,
-                defaultExitRoute: '/app/finance'
+                defaultExitRoute: '/app/finance',
+                hasCompanyDocumentsArchive: true
               }
             },
             {
@@ -131,7 +133,7 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
       })
     };
 
-    const mockAuth: any = {
+    mockAuth = {
       user: () => ({ id: 1, username: 'admin' }),
       userPermissions: () => ['admin_all', 'manage_warehouse', 'view_reports'],
       userRoleTitles: () => ['مدیر سیستم']
@@ -358,5 +360,42 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
     component.switchTab('custom-path');
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/sample/custom-page']);
   });
+
+  describe('پیوند بایگانی اسناد شرکت‌ها (company-documents) بر اساس نقطه توسعه hasCompanyDocumentsArchive', () => {
+    it('در نسخه کامل برای سوپریوزر پیوند بایگانی اسناد شرکت‌ها (company-documents) فعال و قابل مشاهده است', () => {
+      mockAuth.user = () => ({ id: 1, username: 'admin', is_superuser: true });
+      mockPersona.isSuperuser.mockReturnValue(true);
+      mockStore.isWarehouseContext.mockReturnValue(false);
+
+      expect(component.isCompanyDocumentsArchiveSupported).toBe(true);
+      expect(component.hasCompanyDocumentsAccess).toBe(true);
+    });
+
+    it('در نسخه فقط‌انبار حتی برای سوپریوزر پیوند بایگانی اسناد شرکت‌ها (company-documents) پنهان است', () => {
+      mockAuth.user = () => ({ id: 1, username: 'admin', is_superuser: true });
+      mockPersona.isSuperuser.mockReturnValue(true);
+      mockStore.isWarehouseContext.mockReturnValue(false);
+
+      // شبیه‌سازی نسخه فقط‌انبار بدون ماژول حسابداری
+      mockRegistry.getExtensions.mockImplementation((extKey: string) => {
+        if (extKey === 'layoutNav') {
+          return [
+            {
+              moduleCode: 'warehouse',
+              extension: {
+                showWarehouseSwitcher: true,
+                defaultExitRoute: '/app/warehouse/projects'
+              }
+            }
+          ];
+        }
+        return [];
+      });
+
+      expect(component.isCompanyDocumentsArchiveSupported).toBe(false);
+      expect(component.hasCompanyDocumentsAccess).toBe(false);
+    });
+  });
 });
+
 

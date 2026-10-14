@@ -239,5 +239,28 @@
     - [ ] **مسیرهای مشترک `audit` و `health`:** بررسی رفتار این دو گزینه در ماژول انبار و ماژول مالی در هر دو حالت دسکتاپ و ۳۶۰px موبایل.
     - [ ] **نوار کناری کنترل عملیات (Operations Sidebar):** باز کردن منوی عملیات در ۳۶۰px و بررسی قرارگیری درست دکمه‌های پیوند سریع ماژول‌ها در کنار پیوندهای اصلی.
 
+- **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۳ (جفت‌شدگی‌های سست در شرکت‌ها، منوی کاربری و بایگانی اسناد):**
+  - **فهرست فایل‌های تغییریافته:**
+    - `warehouse-front/src/app/core/modules/module-contract.ts`: افزودن پرچم صریح `providesTreasury?: boolean;` به بخش `companies` و پرچم `hasCompanyDocumentsArchive?: boolean;` به بخش `layoutNav`؛ حذف فیلدهای بی‌مصرف `tableColumns` و `gdriveSupported` از بخش `companies` و `rolePresetCategories` از بخش `users`.
+    - `warehouse-front/src/app/modules/accounting/module.ts`: فعال‌سازی `providesTreasury: true` در اکستنشن `companies` و `hasCompanyDocumentsArchive: true` در اکستنشن `layoutNav`؛ حذف فیلدهای منسوخ `tableColumns` و `rolePresetCategories`.
+    - `warehouse-front/src/app/modules/warehouse/module.ts`: حذف فیلد منسوخ `rolePresetCategories` از اکستنشن `users`.
+    - `warehouse-front/src/app/modules/common/components/operations/companies/companies.ts`: بازنویسی `isAccountingInstalled` جهت استعلام انحصاری از پرچم صریح `providesTreasury` و حذف استنتاج سست از `extension.tabs?.length`.
+    - `warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts`: جایگزینی عدد ثابت ۱۵ با محاسبهٔ پویای تعداد کلیدها از روی مجموع آیتم‌های دسته‌بندی‌های پایه (`RAW_SHORTCUTS`) و اکستنشن‌های ماژولار (`userMenu`).
+    - `warehouse-front/src/app/modules/common/components/layout/layout.ts` و `layout.html`: تعریف ویژگی `isCompanyDocumentsArchiveSupported` بر مبنای نقطه توسعهٔ `hasCompanyDocumentsArchive` و مشروط کردن نمایش پیوند بایگانی اسناد شرکت‌ها برای سوپریوزر به این پرچم.
+    - `Documents/Modular_Middle_Path/guide_new_module.md`: حذف یادداشت «محدودیت فعلی» در بخش `## ۳.` و به‌روزرسانی کامل جدول نقاط توسعه متناسب با دستاوردهای نشست‌های ۲ و ۳.
+    - `warehouse-front/src/app/modules/common/components/layout/layout-modular.dom.spec.ts`: افزودن تست‌های اعتبارسنجی نمایش پیوند بایگانی اسناد در نسخه کامل برای سوپریوزر و پنهان بودن کامل آن در پروفایل فقط‌انبار.
+    - `warehouse-front/src/app/modules/common/components/operations/companies/companies.dom.spec.ts`: افزودن آزمون DOM برای جداسازی قطعی `isAccountingInstalled` از آرایهٔ `tabs` و اتکا به `providesTreasury`.
+    - `warehouse-front/src/app/shared/components/user-menu/user-menu.component.spec.ts`: افزودن آزمون اعتبارسنجی شمارش پویای کلیدهای میانبر در منوی کاربر.
+  - **تصمیم‌ها و دلایل حذف فیلدهای بی‌مصرف قرارداد:**
+    - `companies.tableColumns`: حذف شد؛ چیدمان و ستون‌های جدول شرکت‌ها در قالب ایستا (`companies.html`) با ستون‌های معنایی و `tableColspan` بر پایهٔ `providesTreasury` و `hasWarehouseModuleToggle` مدیریت می‌شود و آرایهٔ رشته‌ای ستون‌ها در هیچ بخشی استفاده نمی‌شد.
+    - `companies.gdriveSupported`: حذف شد؛ این قابلیت در هیچ ماژولی پیاده‌سازی نشده بود و تب گوگل‌درایو از طریق آرایهٔ عمومی `tabs` مدیریت می‌شود.
+    - `users.rolePresetCategories`: حذف شد؛ دسته‌بندی پیش‌تنظیم‌های نقش در `users.ts` به صورت پویا تفکیک نشده و ارائهٔ گروه‌های دسترسی ماژول از طریق `permissionGroupKeys` به صورت پاک انجام می‌گیرد.
+  - **نتایج آزمون‌ها و بیلد:**
+    - `layout-modular.dom.spec.ts`: پاس شدن ۸ آزمون (۸ passed).
+    - `user-menu.component.spec.ts`: پاس شدن ۱۶ آزمون (۱۶ passed).
+    - `companies.dom.spec.ts`: پاس شدن ۶۵ آزمون (۶۵ passed).
+    - بیلد فرانت‌اند (`npx ng build --output-path ../scratch/ng-build-agent`): موفقیت کامل بدون خطای کامپایل.
+    - نگهبان‌های ۵۲، ۵۵، ۵۶ و ۵۷: پاس قطعی همهٔ نگهبان‌ها.
+
 </div>
 

@@ -640,7 +640,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   /** در نصب «فقط انبار» تب‌ها و بخش‌های حسابداری شرکت پنهان‌اند */
   get isAccountingInstalled(): boolean {
-    return this.moduleRegistry.getExtensions('companies').some(e => (e.extension.tabs?.length ?? 0) > 0);
+    return this.moduleRegistry.getExtensions('companies').some(e => e.extension.providesTreasury === true);
   }
 
   /** در نصب «فقط مالی» ستون‌ها، فیلدها و تب‌های انبارداری شرکت پنهان‌اند */

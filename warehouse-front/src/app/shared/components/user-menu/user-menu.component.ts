@@ -174,13 +174,18 @@ export class UserMenuComponent implements OnInit, OnDestroy {
       .map(e => e.extension.shortcutsCategory)
       .filter((c): c is NonNullable<typeof c> => Boolean(c));
 
-    const extraCount = extCategories.reduce((sum, c) => sum + (c?.count || 0), 0);
-    return [
-      { id: 'all', label: 'همه کلیدها', count: 15 + extraCount },
-      { id: 'global', label: 'عمومی و منو', count: 5 },
+    const categoryList: ShortcutCategory[] = [
+      { id: 'global', label: 'عمومی و منو', count: this.RAW_SHORTCUTS.filter(s => s.category === 'global').length },
       ...extCategories,
-      { id: 'table', label: 'جدول اطلاعات و فرم‌ها', count: 5 },
-      { id: 'design', label: 'طراحی لیبل و کارت', count: 5 },
+      { id: 'table', label: 'جدول اطلاعات و فرم‌ها', count: this.RAW_SHORTCUTS.filter(s => s.category === 'table').length },
+      { id: 'design', label: 'طراحی لیبل و کارت', count: this.RAW_SHORTCUTS.filter(s => s.category === 'design').length },
+    ];
+
+    const totalCount = categoryList.reduce((sum, c) => sum + (c?.count || 0), 0);
+
+    return [
+      { id: 'all', label: 'همه کلیدها', count: totalCount },
+      ...categoryList,
     ];
   }
 

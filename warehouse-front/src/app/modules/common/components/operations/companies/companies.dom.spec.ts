@@ -1519,6 +1519,36 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(period.status).toBe('open');
     });
   });
+
+  describe('۱۱. اعتبارسنجی پرچم صریح providesTreasury در ماژول مدیریت شرکت‌ها', () => {
+    it('باید isAccountingInstalled بر اساس پرچم providesTreasury تعیین شود و وابسته به tabs نباشد', () => {
+      const registry = TestBed.inject(ModuleRegistryService);
+
+      // حالت ۱: ماژولی که tabs دارد اما providesTreasury ندارد یا false است
+      vi.spyOn(registry, 'getExtensions').mockReturnValue([
+        {
+          moduleCode: 'custom',
+          extension: {
+            tabs: ['custom-tab-1', 'custom-tab-2'],
+            providesTreasury: false
+          }
+        } as any
+      ]);
+      expect(component.isAccountingInstalled).toBe(false);
+
+      // حالت ۲: ماژول مالی که providesTreasury را true کرده است
+      vi.spyOn(registry, 'getExtensions').mockReturnValue([
+        {
+          moduleCode: 'accounting',
+          extension: {
+            tabs: ['bank-accounts', 'board-members', 'documents', 'fiscal-periods'],
+            providesTreasury: true
+          }
+        } as any
+      ]);
+      expect(component.isAccountingInstalled).toBe(true);
+    });
+  });
 });
 
 

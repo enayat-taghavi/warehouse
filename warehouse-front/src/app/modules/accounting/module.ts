@@ -57,6 +57,7 @@ export const MODULE: WhFrontendModule = {
       deepSyncScope: 'finance'
     },
     layoutNav: {
+      hasCompanyDocumentsArchive: true,
       roleMenus: [
         { role: 'org_admin', items: ORG_ADMIN_NAV_ITEMS, roleMarkers: ORG_ADMIN_ROLE_MARKERS },
         { role: 'operator', items: EMPLOYEE_NAV_ITEMS, roleMarkers: EMPLOYEE_ROLE_MARKERS },
@@ -74,11 +75,10 @@ export const MODULE: WhFrontendModule = {
     },
     companies: {
       tabs: ['bank-accounts', 'board-members', 'documents', 'fiscal-periods'],
-      tableColumns: ['bank_accounts_count', 'board_members_count']
+      providesTreasury: true
     },
     users: {
-      permissionGroupKeys: ['ACCOUNTING_FINANCE'],
-      rolePresetCategories: ['accounting']
+      permissionGroupKeys: ['ACCOUNTING_FINANCE']
     },
     healthDashboard: {
       panelScopes: ['accounting']
