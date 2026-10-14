@@ -680,6 +680,26 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
         self.assertIn(profile_a2.id, ids_aud)
         self.assertNotIn(self.profile_b.id, ids_aud)
 
+    def test_trips_endpoint_without_company_header_is_company_scoped(self):
+        """GET /api/personnel/trips/ بی سربرگ شرکت: کاربر الف فقط سفر الف، سوپریوزر هر دو، کاربر بی‌شرکت هیچ."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+
+        def trip_ids(user):
+            self.client.force_authenticate(user)
+            res = self.client.get('/api/personnel/trips/')
+            self.assertEqual(res.status_code, 200, res.content)
+            data = res.json()
+            return {r['id'] for r in (data if isinstance(data, list) else data.get('results', []))}
+
+        self.assertEqual(trip_ids(self.user_a), {self.trip_a.id})
+        self.assertTrue({self.trip_a.id, self.trip_b.id} <= trip_ids(self.superuser))
+        self.assertEqual(trip_ids(self.user_no_company), set())
+
+        # دسترسی مستقیم با شناسه به سفر شرکت دیگر هم بسته است
+        self.client.force_authenticate(self.user_a)
+        self.assertEqual(self.client.get(f'/api/personnel/trips/{self.trip_b.id}/').status_code, 404)
+
     def test_report_users_grouped_count_has_no_duplicates(self):
         """گزارش گروه‌بندی‌شدهٔ کاربران، کاربری را که به چند شرکت مجاز دسترسی دارد یک بار می‌شمارد."""
         actor = self._make_user_ab('actor_ab_count', '0012121212')

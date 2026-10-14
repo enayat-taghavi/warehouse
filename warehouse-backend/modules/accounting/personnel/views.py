@@ -6759,6 +6759,13 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         cid = validate_user_company_access(self.request.user, get_request_company_id(self.request))
         if cid:
             qs = qs.filter(Q(section__project__company_id=cid) | Q(vehicle__section__project__company_id=cid))
+        elif not self.request.user.is_superuser:
+            # بی سربرگ شرکت فقط شرکت‌های مجاز کاربر؛ پیش‌تر سفرهای همهٔ شرکت‌ها برمی‌گشت
+            allowed_ids = list(get_user_allowed_companies(self.request.user).values_list('id', flat=True))
+            qs = qs.filter(
+                Q(section__project__company_id__in=allowed_ids)
+                | Q(vehicle__section__project__company_id__in=allowed_ids)
+            )
         return qs
 
     def perform_create(self, serializer):
