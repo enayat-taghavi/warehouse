@@ -287,5 +287,15 @@
   - **مانده برای کاربر (پشت ورود):** فهرست چک ۳۶۰px نشست ۲ در بالا.
   - **اقدام بعدی:** release روی `app`. بعد، با تأیید کاربر: نشت `VehicleTripViewSet`، آزمون‌های خراب `personnel` و سه آزمون شکستهٔ شناخته‌شده؛ و release روی `soft` (نشست ۱ پیش از هر release روی `soft`).
 
+- **۲۳–۲۴ مهر ۱۴۰۵ (2026-10-14/15)، Claude — release و نشت سفرها (تحویل):**
+  - **release روی `app`:** پشتیبان `backup_20261014_232344.dump`، بیلد فرانت با `patch-ngsw-530`، بازراه‌اندازی daphne و worker گوگل‌درایو. هر دو نشانی ۲۰۰ و heartbeat تازه. صفحهٔ ورود روی 4300 بی‌خطای کنسول.
+  - **نشت `VehicleTripViewSet` (درخواست کاربر):** `get_queryset` بی سربرگ شرکت حالا برای غیرسوپریوزر به شرکت‌های مجاز محدود است (`section__project__company` یا `vehicle__section__project__company`، همان دو مسیر شاخهٔ سربرگ). commit `86399d8`. آزمون تازهٔ `test_trips_endpoint_without_company_header_is_company_scoped` (فهرست و دسترسی با شناسه). `test_company_scope_reports_import` ۱۸ OK؛ `integration_tests personnel` ۵۳۰ آزمون با همان ۷۱ خطای از پیش موجود و بی خطای تازه. پشتیبان `backup_20261015_000721.dump` و بازراه‌اندازی daphne روی `app`، هر دو نشانی ۲۰۰.
+  - **باز:**
+    - actionهای سفارشی همین ViewSet (`matrix`، `bulk-save`، `monthly-summary`، `monthly-grid` و بقیه) پرس‌وجوی خودشان را دارند و از `get_queryset` نمی‌گذرند؛ دامنهٔ شرکتشان بازبینی نشده است.
+    - ۶۹ آزمون خراب `personnel` (import انبار جامانده) و ۳ آزمون شکستهٔ شناخته‌شده.
+    - release روی `soft` با تأیید صریح کاربر؛ نشست ۱ و این رفع پیش از هر release روی `soft`.
+    - فهرست چک ۳۶۰px نشست ۲ با کاربر.
+  - **اقدام بعدی:** بازبینی دامنهٔ شرکت در actionهای سفارشی `VehicleTripViewSet` (`modules/accounting/personnel/views.py`، از `class VehicleTripViewSet`)، سپس پرسش از کاربر برای release روی `soft`.
+
 </div>
 
