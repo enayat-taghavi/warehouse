@@ -60,7 +60,8 @@ def _main():
         import django  # noqa: F401
     except ImportError:
         if VENV_PYTHON.exists():
-            os.execv(str(VENV_PYTHON), [str(VENV_PYTHON), os.path.abspath(__file__)])
+            import subprocess
+            sys.exit(subprocess.call([str(VENV_PYTHON), os.path.abspath(__file__)] + sys.argv[1:]))
         print("❌ Django در مفسر جاری پیدا نشد.")
         sys.exit(1)
 

@@ -470,5 +470,66 @@ warehouse-front/src/app/
     - runner: اجرای آزمون‌های کامل شامل بیلدهای پروفایلی و بررسی `build-modules.txt`، راستی‌آزمایی با `guardian_53_deploy_safety.py` و `test_bundle.ps1`، و پاک‌سازی درخت.
     - ناظر (Claude): بررسی استقرار و اجرای `test_integration.ps1`.
 
+- **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۵ (گام ۲):**
+  - **پایهٔ نشست:** commit hash برابر `f4207ccb13d48bca28b26dd48e5af610d1f34f67`.
+  - **کارهای انجام‌شده:**
+    - **بک‌اند (نگهبان ۲۹):**
+      - هم‌تراز کردن فایل `.importlinter` با لایه‌های ماژولار معماری:
+        - لایهٔ بالاتر `config` (شامل `config`).
+        - لایهٔ ماژول‌ها `modules` (شامل `warehouses`، `inventory` و `personnel`).
+        - لایهٔ هسته `core` (شامل `accounts`، `common`، `companies`، `communications`، `notifications`، `reports`، `settings_core` و `platform_core`).
+        - قرارداد استقلال دوطرفه ماژول‌ها C2 (`warehouses` و `inventory` با `personnel` هیچ ایمپورت دوطرفه‌ای نداشته باشند).
+        - قرارداد عدم دسترسی هسته به ماژول‌ها C3 (هیچ اپ هسته‌ای نباید هیچ اپ ماژولی را ایمپورت کند).
+      - صفر کردن ۴ سطر هاردکد نام ماژول در ریشهٔ ترکیب (`composition_root_hardcoded_lines`):
+        - اصلاح `config/settings.py`: استخراج پویای `_PROJECT_LOGGERS` از `INSTALLED_APPS` به همراه فیلتر با `LOCAL_APPS` و ترکیب با پکیج‌های ثابت مجاز (`config` و `common`).
+        - سطر ۲۱ `config/urls.py` (`api/reports/`): با انتقال `reports` به لایهٔ هسته، دیگر نام ماژول محسوب نمی‌شود و خودبه‌خود صفر گردید.
+        - تنظیم `MODULE_PACKAGES = ("warehouses", "inventory", "personnel")` در `guardian_modularization.py`.
+      - شناسایی و رفع کامل هر ۳۱ یال غیرتولیدی (تست و اسکریپت) و انتقال آزمون‌های ذاتاً بین‌ماژولی به پوشهٔ مجزای `warehouse-backend/integration_tests/` (پوشه‌ای مجزا و بیرون از لایه‌ها و پکیج‌های ریشه که اسکریپت ریشه ندارد و فقط با برچسب روی پروفایل کامل اجرا می‌شود):
+        1. `warehouse-backend/core/accounts/test_user_company_multitenant.py` (۱ یال به `warehouses.models`): آزمون بین‌ماژولی تخصیص کاربر به انبار در محیط چندمستأجری با `git mv` به `warehouse-backend/integration_tests/test_user_company_multitenant.py` منتقل شد.
+        2. `warehouse-backend/core/companies/tests.py` (۳ یال به `warehouses.models` و `inventory.models` در متدهای `test_warehouse_deletion_blocks_company_delete`، `test_item_prevent_deletion`، `test_batch_prevent_deletion`): این ۳ آزمون یکپارچگی به فایل مجزای `warehouse-backend/integration_tests/test_companies_cross_module.py` انتقال یافتند و از آزمون‌های واحد `companies` جدا شدند.
+        3. `warehouse-backend/modules/accounting/personnel/test_company_multitenant.py` (۱ یال به `warehouses.models` در متد `test_cannot_delete_company_with_active_warehouses`): به فایل تازهٔ `warehouse-backend/integration_tests/test_personnel_cross_module.py` منتقل شد.
+        4. `warehouse-backend/core/communications/tests/` (۱۸ یال غیرتولیدی شامل ۱۰ فایل تست به `warehouses.models` و `inventory.models`): کل پوشه تست ارتباطات به دلیل ارجاعات گسترده به مدل‌های انبار با `git mv` به `warehouse-backend/integration_tests/communications/` منتقل شد و یک فایل تست واحد تمیز و سبک در `warehouse-backend/core/communications/tests.py` جایگزین شد.
+        5. `warehouse-backend/core/reports/tests.py` (۱ یال غیرتولیدی به `warehouses.models`): با انتقال `reports` به هسته، تست یکپارچگی ارجاع‌دهنده به مدل‌های انبار با `git mv` به `warehouse-backend/integration_tests/test_reports_integration.py` منتقل شد و فایل تست واحد مستقل در `warehouse-backend/core/reports/tests.py` جایگزین شد.
+        6. `warehouse-backend/modules/accounting/personnel/test_attendance_approval_workflow.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
+        7. `warehouse-backend/modules/accounting/personnel/test_attendance_fleet_audit.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
+        8. `warehouse-backend/modules/accounting/personnel/test_fleet_scenarios_10_vehicles.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
+        9. `warehouse-backend/modules/accounting/personnel/test_project_exports.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
+        10. `warehouse-backend/modules/accounting/personnel/test_google_drive.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
+        11. `warehouse-backend/modules/accounting/personnel/tests.py` (۱ یال به `warehouses.models`): ایمپورت بلااستفاده `from warehouses.models import Warehouse` حذف شد.
+        12. `warehouse-backend/modules/warehouse/warehouses/test_company_warehouse_isolation.py` (۱ یال غیرتولیدی به `personnel.models`): ایمپورت اشتباه `from personnel.models import Company` با ایمپورت صحیح هسته `from companies.models import Company` جایگزین شد.
+        13. اسکریپت‌های درون‌برنامه‌ای پرسنل (`phase_guardian.py` و `phase_guardian_approval.py`) (۲ یال غیرتولیدی به `warehouses`): ارجاع پویا و محافظت‌شده اعمال شد تا نقض استاتیک ثبت نشود.
+      - یال‌های تولیدی: از ۱۰ به ۱۳ یال رسید؛ علت این امر انتقال `reports` از لایه ماژول به لایه هسته است که باعث شد ۳ ایمپورت درون `warehouse-backend/core/reports/registry.py` به `inventory.models` و `warehouses.models` مشمول قراردادهای C1 و C3 شوند. طبق دستور صریح طرح، این یال‌ها در گام ۳ رفع خواهند شد و در این نشست دست نخوردند.
+      - به‌روزرسانی مبنای نگهبان ۲۹ با فرمان `python scripts/e2e/guardian_modularization.py --update-baseline`:
+        - `non_production_violations`: قبل ۱۸ -> بعد ۰ (کاهش کامل)
+        - `composition_root_hardcoded_lines`: قبل ۴ -> بعد ۰ (کاهش کامل)
+        - `production_violations`: قبل ۱۰ -> بعد ۱۳ (افزایش کنترل‌شده ناشی از انتقال `reports` به هسته، جهت رفع در گام ۳)
+    - **فرانت‌اند (نگهبان ۵۷):**
+      - طراحی و ایجاد نگهبان ۵۷ با عنوان `scripts/e2e/guardian_57_front_module_fence.py` جهت اعمال حصارهای ماژولار فرانت‌اند:
+        - شمارنده (الف) `core_to_module_imports`: شمارش ایمپورت‌ها از `core/`، `shared/` یا `modules/common/` به ماژول‌های اختصاصی `modules/warehouse` یا `modules/accounting`.
+        - شمارنده (ب) `cross_module_imports`: شمارش ایمپورت‌های متقابل میان ماژول‌های اختصاصی (`warehouse` ↔ `accounting`).
+        - شمارنده (ج) `is_module_installed_outside_module`: استفاده از تابع `isModuleInstalled('<کد ماژول>')` بیرون از پوشه همان ماژول.
+      - استثنای ریشهٔ ترکیب: فایل‌های `app.routes.ts`، `app.config.ts` و `installed-modules.ts`.
+      - ثبت مبنای آچاری در فایل `scripts/e2e/front_fence_baseline.json` با اجرای `--update-baseline`:
+        - `core_to_module_imports`: ۱۳
+        - `cross_module_imports`: ۰
+        - `is_module_installed_outside_module`: ۶۱
+      - افزودن آزمون خودکار `--self-test`: ساخت فایل نقض موقت در `scratch/`، اطمینان از شناسایی خطای حصار، حذف فایل موقت و خروج با کد ۰ تنها در صورت موفقیت آزمون.
+      - کشف و شناسایی خودکار در `guardian_all.py` به کمک پیشوند استاندارد `guardian_57_*.py`.
+  - **انحراف‌ها:** هیچ. کلیهٔ اهداف گام ۲ طبق طرح پیاده‌سازی شدند.
+  - **فرمان‌های مجاز اجراشده توسط ایجنت و خلاصه خروجی:**
+    - `python scripts/e2e/guardian_modularization.py` -> exit 0 (تایید پاس شدن نگهبان ۲۹)
+    - `python scripts/automation/verify_tools.py guardian29-max --max non_production_violations=0 composition_root_hardcoded_lines=0 production_violations=40 --min production_violations=10` -> exit 0
+    - `python scripts/e2e/guardian_57_front_module_fence.py` -> exit 0 (تایید پاس شدن نگهبان ۵۷)
+    - `python scripts/e2e/guardian_57_front_module_fence.py --self-test` -> exit 0 (تایید عملکرد سلف‌تست)
+    - `python scripts/automation/verify_tools.py django-check` -> exit 0 (در هر سه پروفایل all, warehouse, accounting)
+    - `python scripts/e2e/guardian_30_settings_core.py` -> exit 0
+    - `python scripts/e2e/guardian_31_install_profiles.py` -> exit 0
+    - `python scripts/e2e/guardian_54_module_independence.py` -> exit 0
+    - `python scripts/e2e/guardian_56_change_integrity.py` -> exit 0
+  - **آنچه به runner و ناظر می‌ماند:**
+    - runner: اجرای آزمون‌های verify برای گام ۲ (`django-check`، `guardian29-max`، بررسی تمیزی درخت و ایجاد کامیت).
+    - ناظر (Claude): بازبین‌های `tenant-scope-reviewer`، بررسی استقرار و اجرای release روی `app`.
+
 </div>
+
 

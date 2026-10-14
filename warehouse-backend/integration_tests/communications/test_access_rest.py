@@ -1,9 +1,8 @@
 import json
 from rest_framework import status
 from django.core.files.uploadedfile import SimpleUploadedFile
-
 from communications.models import Conversation, Message, GenericComment, ConversationType
-from communications.tests.base import BaseCommsTestCase, User
+from .base import BaseCommsTestCase, User
 
 
 class AccessControlRESTTestCase(BaseCommsTestCase):

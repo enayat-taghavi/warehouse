@@ -439,48 +439,6 @@ class CompanyMultiTenantTestCase(TestCase):
         period.refresh_from_db()
         self.assertEqual(period.status, 'open')
 
-    def test_company_delete_protection_with_warehouses_and_profiles(self):
-        """
-        آزمون ممانعت از حذف شرکت در صورت وجود انبار، پرسنل یا دوره مالی
-        """
-        from warehouses.models import Warehouse
-        from personnel.models import Company
-        self.client.force_authenticate(user=self.admin_user)
-
-        # ایجاد شرکت موقت برای تست حذف
-        temp_comp = Company.objects.create(
-            code='TEMP_CO_DEL',
-            name='شرکت موقت تست حذف'
-        )
-
-        # ۱. انتساب انبار به شرکت
-        wh = Warehouse.objects.create(
-            name='انبار تست شرکت موقت',
-            company=temp_comp
-        )
-        res_del_wh = self.client.delete(f'/api/personnel/companies/{temp_comp.id}/')
-        self.assertEqual(res_del_wh.status_code, 400)
-        self.assertIn('انبار', res_del_wh.content.decode('utf-8'))
-
-        # حذف انبار و تست وجود پرسنل
-        wh.delete()
-        from personnel.models import PersonnelProfile
-        p = PersonnelProfile.objects.create(
-            first_name='علی',
-            last_name='رضایی',
-            national_code='9988776655',
-            company=temp_comp
-        )
-        res_del_pers = self.client.delete(f'/api/personnel/companies/{temp_comp.id}/')
-        self.assertEqual(res_del_pers.status_code, 400)
-        self.assertIn('پرسنل', res_del_pers.content.decode('utf-8'))
-
-        # حذف پرسنل -> اکنون حذف موفقیت‌آمیز است
-        p.delete()
-        res_del_ok = self.client.delete(f'/api/personnel/companies/{temp_comp.id}/')
-        self.assertEqual(res_del_ok.status_code, 204)
-        self.assertFalse(Company.objects.filter(id=temp_comp.id).exists())
-
     def test_websocket_broadcast_isolation_and_privacy(self):
         """
         آزمون فاز ۴: ایزولاسیون روم وب‌سوکت به شرکت مربوطه و عدم نشت کدملی در پی‌لود

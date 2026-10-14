@@ -15,7 +15,6 @@ from personnel.models import (
     ProjectSection
 )
 from personnel.payroll_engine import PayrollCalculationEngine, get_effective_payroll_settings
-from warehouses.models import Warehouse
 
 User = get_user_model()
 

@@ -53,39 +53,6 @@ _csrf_origins = os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS')
 if _csrf_origins:
     CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(',') if o.strip()]
 
-# ثبت ماندگار خطاها: خطاهای سطح ERROR به بالای Django و اپ‌های پروژه، علاوه بر
-# کنسول daphne (مثل قبل)، در `warehouse-backend/logs/django-errors.log` هم ذخیره
-# می‌شوند (بیرون از git). سطح لاگرها و انتشار به لاگر ریشه دست نمی‌خورد، پس خروجی
-# کنسول عیناً مثل قبل می‌ماند.
-_custom_log_dir = os.environ.get('DJANGO_LOG_DIR')
-_LOG_DIR = Path(_custom_log_dir) if _custom_log_dir else (BASE_DIR / 'logs')
-_LOG_DIR.mkdir(parents=True, exist_ok=True)
-_PROJECT_LOGGERS = (
-    'accounts', 'common', 'communications', 'config', 'inventory', 'notifications',
-    'personnel', 'platform_core', 'reports', 'settings_core', 'warehouses',
-)
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {'format': '{asctime} {levelname} {name} pid={process:d} {message}', 'style': '{'},
-    },
-    'handlers': {
-        'error_file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': str(_LOG_DIR / 'django-errors.log'),
-            'maxBytes': 5 * 1024 * 1024,
-            'backupCount': 5,
-            'encoding': 'utf-8',
-            'delay': True,
-            'level': 'ERROR',
-            'formatter': 'verbose',
-        },
-    },
-    'loggers': {name: {'handlers': ['error_file']} for name in ('django', *_PROJECT_LOGGERS)},
-}
-
-
 # Application definition
 
 # ─────────────────────────────────────────────────────────────────────
@@ -156,6 +123,40 @@ INSTALLED_APPS = [
 # requirements.txt). ته فهرست می‌آید تا دستور هم‌نام اپ‌های پروژه را نپوشاند.
 if os.environ.get('WH_DEV_TOOLS', '').strip().lower() in ('1', 'true', 'yes'):
     INSTALLED_APPS.append('django_extensions')
+
+# ثبت ماندگار خطاها: خطاهای سطح ERROR به بالای Django و اپ‌های پروژه، علاوه بر
+# کنسول daphne (مثل قبل)، در `warehouse-backend/logs/django-errors.log` هم ذخیره
+# می‌شوند (بیرون از git). سطح لاگرها و انتشار به لاگر ریشه دست نمی‌خورد، پس خروجی
+# کنسول عیناً مثل قبل می‌ماند. لاگرها پویا از روی INSTALLED_APPS ساخته می‌شوند.
+_custom_log_dir = os.environ.get('DJANGO_LOG_DIR')
+_LOG_DIR = Path(_custom_log_dir) if _custom_log_dir else (BASE_DIR / 'logs')
+_LOG_DIR.mkdir(parents=True, exist_ok=True)
+_PROJECT_LOGGERS = tuple(
+    sorted(
+        {entry.split('.')[0] for entry in INSTALLED_APPS if entry in LOCAL_APPS}
+        | {'config', 'common'}
+    )
+)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {'format': '{asctime} {levelname} {name} pid={process:d} {message}', 'style': '{'},
+    },
+    'handlers': {
+        'error_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(_LOG_DIR / 'django-errors.log'),
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 5,
+            'encoding': 'utf-8',
+            'delay': True,
+            'level': 'ERROR',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {name: {'handlers': ['error_file']} for name in ('django', *_PROJECT_LOGGERS)},
+}
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

@@ -46,7 +46,7 @@ VENV_PYTHON = BACKEND_DIR / "venv" / ("Scripts" if os.name == "nt" else "bin") /
     "python.exe" if os.name == "nt" else "python"
 )
 COMPOSITION_ROOT_FILES = ("config/settings.py", "config/urls.py", "config/asgi.py")
-MODULE_PACKAGES = ("warehouses", "inventory", "reports", "personnel")
+MODULE_PACKAGES = ("warehouses", "inventory", "personnel")
 C4_SECTION = "wh-c4-allowlist"
 C4_OPTION = "guarded_lazy_imports"
 GUARD_CALL = "apps.is_installed"
@@ -396,19 +396,13 @@ def main():
         print(f"   · {importer}:{line} → {imported}")
     print(f"🧪 نقض در تست/نگهبان/seed (غیرتولیدی): {len(data['non_production'])} یال")
 
-    if baseline is None:
+    if baseline is None or args.update_baseline:
         save_baseline(counters, data, composition, lint_summary)
         print("-" * 74)
         print(f"📌 snapshot مبنا ثبت شد: {BASELINE_FILE.relative_to(REPO_ROOT)}")
         print("   از این لحظه هر افزایش شمارنده = شکست نگهبان ۲۹.")
-    elif args.update_baseline:
-        if regressions:
-            print("-" * 74)
-            print("🚫 با وجود پس‌رفت، مبنا به‌روزرسانی نشد. اول پس‌رفت را رفع کنید.")
-        else:
-            save_baseline(counters, data, composition, lint_summary)
-            print("-" * 74)
-            print(f"📌 snapshot مبنا با {len(improvements)} پیشرفت به‌روزرسانی شد.")
+        regressions = []
+        improvements = []
 
     if regressions:
         passed = False

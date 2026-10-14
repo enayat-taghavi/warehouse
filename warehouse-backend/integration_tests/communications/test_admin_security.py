@@ -8,7 +8,7 @@ from communications.admin import (
     ConversationAdmin, ConversationParticipantAdmin,
     MessageAdmin, MessageAttachmentAdmin, GenericCommentAdmin
 )
-from communications.tests.base import BaseCommsTestCase
+from .base import BaseCommsTestCase
 
 
 class AdminSecurityTestCase(BaseCommsTestCase):

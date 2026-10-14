@@ -10,7 +10,6 @@ from personnel.models import (
     VehicleTripLog,
     VehicleTripAuditLog,
 )
-from warehouses.models import Warehouse
 from personnel.fleet_settlement_engine import (
     calculate_monthly_fleet_settlement,
     generate_fleet_bank_meli_excel,

@@ -9,7 +9,6 @@ from personnel.models import (
     VehicleDriverProfile,
     VehicleTripLog,
 )
-from warehouses.models import Warehouse
 
 User = get_user_model()
 

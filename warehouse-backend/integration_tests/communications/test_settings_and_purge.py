@@ -12,7 +12,7 @@ from communications.models import (
     Conversation, Message, MessageAttachment, GenericComment
 )
 from communications.consumers import ChatConsumer
-from communications.tests.base import BaseCommsTestCase
+from .base import BaseCommsTestCase
 from settings_core.models import SystemSetting
 from warehouses.services import get_setting, clear_setting_cache
 

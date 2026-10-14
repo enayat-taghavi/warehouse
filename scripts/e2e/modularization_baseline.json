@@ -1,18 +1,18 @@
 {
   "_readme": "snapshot مبنای نقض‌های مرزبندی ماژولی (نگهبان ۲۹، فاز ۰). هیچ شمارنده‌ای مجاز به افزایش نیست. برای ثبت پیشرفت: python scripts/e2e/guardian_modularization.py --update-baseline",
   "counters": {
-    "unique_direct_violations": 28,
-    "production_violations": 10,
-    "non_production_violations": 18,
+    "unique_direct_violations": 13,
+    "production_violations": 13,
+    "non_production_violations": 0,
     "composition_root_hardcoded_lines": 0,
-    "contract:c1-layering": 23,
-    "contract:c2-accounting-independent-of-warehouse": 5,
-    "contract:c2-warehouse-independent-of-accounting": 0,
-    "contract:c3-core-purity": 18
+    "contract:c1-layering": 10,
+    "contract:c2-accounting-independent-of-warehouse": 2,
+    "contract:c2-warehouse-independent-of-accounting": 1,
+    "contract:c3-core-purity": 10
   },
   "lint_imports": {
-    "kept": 1,
-    "broken": 3
+    "kept": 0,
+    "broken": 4
   },
   "composition_root": {
     "config/settings.py": [],
@@ -24,7 +24,7 @@
       [
         "accounts.excel_utils",
         "warehouses.models",
-        24
+        27
       ],
       [
         "accounts.rollback_service",
@@ -43,126 +43,50 @@
       ],
       [
         "accounts.serializers",
+        "personnel.models",
+        449
+      ],
+      [
+        "accounts.serializers",
         "warehouses.models",
         13
       ],
       [
-        "communications.consumers",
-        "warehouses.services",
-        79
-      ],
-      [
-        "communications.models",
+        "personnel.models",
         "warehouses.models",
-        6
+        2296
       ],
       [
-        "communications.permissions",
-        "warehouses.services",
-        33
-      ],
-      [
-        "communications.views",
+        "personnel.views",
         "warehouses.models",
-        529
+        4973
       ],
       [
-        "communications.views",
-        "warehouses.services",
-        42
+        "reports.registry",
+        "inventory.models",
+        92
+      ],
+      [
+        "reports.registry",
+        "inventory.models",
+        163
+      ],
+      [
+        "reports.registry",
+        "personnel.models",
+        314
+      ],
+      [
+        "reports.registry",
+        "warehouses.models",
+        263
+      ],
+      [
+        "warehouses.signals",
+        "personnel.models",
+        35
       ]
     ],
-    "non_production": [
-      [
-        "communications.tests.base",
-        "inventory.models",
-        11
-      ],
-      [
-        "communications.tests.base",
-        "warehouses.models",
-        10
-      ],
-      [
-        "communications.tests.test_presence",
-        "config.asgi",
-        5
-      ],
-      [
-        "communications.tests.test_settings_and_purge",
-        "warehouses.services",
-        17
-      ],
-      [
-        "communications.tests.test_ws_access",
-        "config.asgi",
-        10
-      ],
-      [
-        "communications.tests.test_ws_access",
-        "inventory.models",
-        12
-      ],
-      [
-        "communications.tests.test_ws_access",
-        "warehouses.models",
-        11
-      ],
-      [
-        "communications.tests.test_ws_access",
-        "warehouses.services",
-        291
-      ],
-      [
-        "communications.tests.test_ws_comments",
-        "config.asgi",
-        13
-      ],
-      [
-        "communications.tests.test_ws_comments",
-        "inventory.models",
-        15
-      ],
-      [
-        "communications.tests.test_ws_comments",
-        "warehouses.models",
-        14
-      ],
-      [
-        "personnel.phase_guardian",
-        "warehouses.models",
-        112
-      ],
-      [
-        "personnel.phase_guardian_approval",
-        "config.views_backup",
-        2710
-      ],
-      [
-        "personnel.phase_guardian_approval",
-        "config.views_backup",
-        3022
-      ],
-      [
-        "personnel.test_attendance_fleet_audit",
-        "warehouses.models",
-        12
-      ],
-      [
-        "personnel.test_fleet_scenarios_10_vehicles",
-        "warehouses.models",
-        13
-      ],
-      [
-        "personnel.test_project_exports",
-        "warehouses.models",
-        13
-      ],
-      [
-        "personnel.tests",
-        "warehouses.models",
-        7
-      ]
-    ]
+    "non_production": []
   }
 }

@@ -110,10 +110,10 @@ class PhaseGuardian:
                 all_passed = False
             
             # Check 2: Mathematical parity test with exact 0 discrepancy
-            # Test sample calculation logic
-            from warehouses.models import Warehouse
+            from django.apps import apps
             from personnel.models import PersonnelProfile, MonthlyWorkPeriod
-            wh, _ = Warehouse.objects.get_or_create(code='TEST-GUARDIAN', defaults={'name': 'انبار تست نگهبان'})
+            WarehouseModel = apps.get_model('warehouses', 'Warehouse') if apps.is_installed('warehouses') else None
+            wh = WarehouseModel.objects.get_or_create(code='TEST-GUARDIAN', defaults={'name': 'انبار تست نگهبان'})[0] if WarehouseModel else None
             p, _ = PersonnelProfile.objects.get_or_create(
                 national_code='9999999999',
                 defaults={

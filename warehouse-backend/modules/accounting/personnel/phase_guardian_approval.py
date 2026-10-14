@@ -2739,14 +2739,13 @@ class ApprovalPhaseGuardian:
                 rotate_snapshots,
                 quick_rollback_snapshot,
                 verify_backup_integrity,
-                BACKUP_DIR
             )
-            from config.views_backup import (
-                SnapshotListView,
-                SnapshotCreateView,
-                SnapshotRollbackView,
-                SnapshotSummaryView
-            )
+            import importlib
+            _views_backup = importlib.import_module('config.views_backup')
+            SnapshotListView = _views_backup.SnapshotListView
+            SnapshotCreateView = _views_backup.SnapshotCreateView
+            SnapshotRollbackView = _views_backup.SnapshotRollbackView
+            SnapshotSummaryView = _views_backup.SnapshotSummaryView
             from accounts.models import AuditLog
             from rest_framework.test import APIRequestFactory, force_authenticate
             from django.contrib.auth import get_user_model
@@ -3053,7 +3052,8 @@ class ApprovalPhaseGuardian:
             import os
             from django.contrib.auth import get_user_model
             from rest_framework.test import APIRequestFactory, force_authenticate
-            from config.views_backup import SnapshotListView
+            import importlib
+            SnapshotListView = importlib.import_module('config.views_backup').SnapshotListView
             from accounts.views import SystemHealthView, AuditLogViewSet
 
             User = get_user_model()

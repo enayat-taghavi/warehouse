@@ -20,8 +20,6 @@ from personnel.models import (
     VehicleDriverProfile,
     VehicleDocument
 )
-from inventory.models import Item, ItemPhoto
-from warehouses.models import Warehouse
 from personnel.google_drive_service import (
     encrypt_secret,
     decrypt_secret,

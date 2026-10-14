@@ -9,7 +9,7 @@ from communications.models import (
     Conversation, ConversationParticipant, Message, ConversationType
 )
 from communications.broadcast import broadcast_message_ws
-from communications.tests.base import BaseCommsTestCase
+from .base import BaseCommsTestCase
 
 User = get_user_model()
 

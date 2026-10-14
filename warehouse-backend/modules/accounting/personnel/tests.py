@@ -4,7 +4,6 @@ from django.test import TestCase
 from django.core.management import call_command
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
-from warehouses.models import Warehouse
 from .models import (
     FinancialProject,
     PersonnelProfile,
@@ -31,11 +30,6 @@ class PersonnelAppTests(TestCase):
         self.client.force_authenticate(user=self.user)
         call_command('seed_payroll_settings')
         
-        self.warehouse = Warehouse.objects.create(
-            name='انبار مرکزی پارس',
-            code='WH-PARS-01'
-        )
-        
         self.project = FinancialProject.objects.create(
             name='پروژه پارس',
             code='PRJ-PARS',
@@ -48,7 +42,7 @@ class PersonnelAppTests(TestCase):
             national_code='2452304301',
             job_title='مدیر پروژه',
             daily_base_wage=6572696,
-            assigned_warehouse=self.warehouse,
+            assigned_warehouse=None,
             project=self.project,
             approval_status='approved'
         )

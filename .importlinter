@@ -45,7 +45,7 @@ root_packages =
 #  ترتیب از بالا به پایین. لایهٔ بالاتر می‌تواند پایین‌تر را ایمپورت کند، برعکس نه.
 #    · config              ریشهٔ ترکیب (composition root): امروز مجاز است همه را
 #                          بشناسد، ولی از فاز ۳ باید از رجیستری ساخته شود.
-#    · لایهٔ ماژول‌ها        warehouses/inventory/reports (انبار) و personnel (حسابداری)
+#    · لایهٔ ماژول‌ها        warehouses/inventory (انبار) و personnel (حسابداری)
 #    · لایهٔ پلتفرم         هرگز رو به بالا ایمپورت نمی‌کند
 #  جداکنندهٔ «:» یعنی هم‌لایه‌های *وابسته‌پذیر*؛ استقلال انبار↔حسابداری وظیفهٔ C2 است.
 # ---------------------------------------------------------------------------
@@ -54,8 +54,8 @@ name = C1 — لایه‌بندی پلتفرم → ماژول‌ها → ریش�
 type = layers
 layers =
     config
-    warehouses : inventory : reports : personnel
-    accounts : common : communications : companies : notifications : settings_core : platform_core
+    warehouses : inventory : personnel
+    accounts : common : communications : companies : notifications : reports : settings_core : platform_core
 
 # ---------------------------------------------------------------------------
 #  C2 — استقلال ماژول‌ها (دو طرفه). هیچ یالی در هیچ جهتی مجاز نیست.
@@ -66,7 +66,6 @@ type = forbidden
 source_modules =
     warehouses
     inventory
-    reports
 forbidden_modules =
     personnel
 
@@ -78,12 +77,10 @@ source_modules =
 forbidden_modules =
     warehouses
     inventory
-    reports
 
 # ---------------------------------------------------------------------------
 #  C3 — پاکی هسته
-#  هستهٔ پلتفرم هیچ‌گاه نام هیچ ماژولی را نمی‌شناسد. (settings_core و
-#  platform_core در فازهای ۱ و ۵ به source_modules اضافه می‌شوند.)
+#  هستهٔ پلتفرم هیچ‌گاه نام هیچ ماژولی را نمی‌شناسد.
 # ---------------------------------------------------------------------------
 [importlinter:contract:c3-core-purity]
 name = C3 — پاکی هستهٔ پلتفرم نسبت به هر دو ماژول
@@ -95,11 +92,11 @@ source_modules =
     companies
     notifications
     platform_core
+    reports
     settings_core
 forbidden_modules =
     warehouses
     inventory
-    reports
     personnel
 
 # ===========================================================================

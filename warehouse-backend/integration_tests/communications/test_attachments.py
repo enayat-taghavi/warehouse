@@ -6,7 +6,7 @@ from django.test import Client
 from rest_framework import status
 
 from communications.models import MessageAttachment
-from communications.tests.base import BaseCommsTestCase
+from .base import BaseCommsTestCase
 from common.media_urls import signed_media_url, verify
 
 
