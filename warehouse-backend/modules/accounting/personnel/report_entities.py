@@ -2,10 +2,89 @@
 موجودیت‌های ماژول حسابداری و پرسنلی برای موتور گزارش‌ساز پلتفرم.
 طرح راه میانهٔ ماژولار (گام ۳-ب).
 """
+from django.db.models import Q
 from platform_core.query_engine import (
     EntityConfig,
     register_entity,
 )
+
+
+def resolve_personnel_profiles_scope(qs, user):
+    """
+    قلمرو شرکت برای پرسنل:
+    - سوپریوزر: همه رکوردها
+    - کاربر عادی: پرسنل شرکت‌های مجاز کاربر (از طریق company یا section__project__company)
+      و پیش‌نویس‌های بدون شرکت و بخش ثبت‌شده توسط خود کاربر
+    - کاربر بدون شرکت: فقط پیش‌نویس‌های بدون شرکت و بخش ثبت‌شده توسط خودش
+    """
+    if not user or not user.is_authenticated:
+        return qs.none()
+    if user.is_superuser:
+        return qs
+    try:
+        from companies.access import get_user_allowed_companies
+        allowed_ids = list(get_user_allowed_companies(user).values_list('id', flat=True))
+    except Exception:
+        allowed_ids = []
+
+    if not allowed_ids:
+        return qs.filter(company__isnull=True, section__isnull=True, created_by=user)
+    return qs.filter(
+        Q(company_id__in=allowed_ids)
+        | Q(section__project__company_id__in=allowed_ids)
+        | Q(company__isnull=True, section__isnull=True, created_by=user)
+    ).distinct()
+
+
+def resolve_monthly_payrolls_scope(qs, user):
+    """
+    قلمرو شرکت برای محاسبات حقوق ماهانه از طریق پرسنل:
+    - سوپریوزر: همه رکوردها
+    - کاربر عادی: محاسبات پرسنل شرکت‌های مجاز
+    - کاربر بدون شرکت: خالی (یا پیش‌نویس بدون شرکت کاربر)
+    """
+    if not user or not user.is_authenticated:
+        return qs.none()
+    if user.is_superuser:
+        return qs
+    try:
+        from companies.access import get_user_allowed_companies
+        allowed_ids = list(get_user_allowed_companies(user).values_list('id', flat=True))
+    except Exception:
+        allowed_ids = []
+
+    if not allowed_ids:
+        return qs.filter(personnel__company__isnull=True, personnel__section__isnull=True, personnel__created_by=user)
+    return qs.filter(
+        Q(personnel__company_id__in=allowed_ids)
+        | Q(personnel__section__project__company_id__in=allowed_ids)
+        | Q(personnel__company__isnull=True, personnel__section__isnull=True, personnel__created_by=user)
+    ).distinct()
+
+
+def resolve_fleet_trips_scope(qs, user):
+    """
+    قلمرو شرکت برای سفرهای ناوگان:
+    - سوپریوزر: همه رکوردها
+    - کاربر عادی: سفرهایی که بخش یا وسیله نقلیه آن‌ها متعلق به شرکت‌های مجاز کاربر باشد
+    - کاربر بدون شرکت: خالی
+    """
+    if not user or not user.is_authenticated:
+        return qs.none()
+    if user.is_superuser:
+        return qs
+    try:
+        from companies.access import get_user_allowed_companies
+        allowed_ids = list(get_user_allowed_companies(user).values_list('id', flat=True))
+    except Exception:
+        allowed_ids = []
+
+    if not allowed_ids:
+        return qs.none()
+    return qs.filter(
+        Q(section__project__company_id__in=allowed_ids)
+        | Q(vehicle__section__project__company_id__in=allowed_ids)
+    ).distinct()
 
 
 def build_accounting_entities():
@@ -18,6 +97,7 @@ def build_accounting_entities():
             model=PersonnelProfile,
             permissions=('view_sys_personnel',),
             scope_path=None,
+            scope_resolver=resolve_personnel_profiles_scope,
             include=('id', 'personnel_code', 'national_code', 'first_name', 'last_name',
                      'contract_type', 'employment_status', 'created_at'),
             module_code='accounting',
@@ -28,6 +108,7 @@ def build_accounting_entities():
             model=MonthlyPayrollRecord,
             permissions=('view_sys_payroll',),
             scope_path=None,
+            scope_resolver=resolve_monthly_payrolls_scope,
             include=('id', 'national_code', 'full_name', 'gross_salary', 'net_salary',
                      'payable_amount', 'income_tax', 'worker_insurance', 'payment_status'),
             module_code='accounting',
@@ -38,6 +119,7 @@ def build_accounting_entities():
             model=VehicleTripLog,
             permissions=('view_sys_fleet_settlement',),
             scope_path=None,
+            scope_resolver=resolve_fleet_trips_scope,
             include=('id', 'trip_date', 'total_amount', 'is_settled', 'settled_at'),
             module_code='accounting',
         ),

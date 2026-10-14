@@ -34,21 +34,40 @@ class WarehouseUserExtension:
             wh_items.append(f"{w.name} ({w.code})" if w.code else w.name)
         return '، '.join(wh_items)
 
-    def get_template_warehouse_names(self):
+    def _get_scoped_warehouses_qs(self, user=None):
+        """دریافت کوئری‌ست انبارها متناسب با دامنهٔ دسترسی کاربر یا کل انبارها."""
+        from warehouses.models import Warehouse
+        from django.db.models import Q
+        qs = Warehouse.objects.all()
+        if user is None or not getattr(user, 'is_authenticated', False) or getattr(user, 'is_superuser', False):
+            return qs
+
+        try:
+            from companies.access import get_user_allowed_companies
+            allowed_cids = list(get_user_allowed_companies(user).values_list('id', flat=True))
+        except Exception:
+            allowed_cids = []
+
+        q = Q()
+        if allowed_cids:
+            q |= Q(company_id__in=allowed_cids)
+        # انبارهای قدیمی بی‌شرکت که مستقیم به خود او منتسب‌اند
+        q |= Q(company__isnull=True, assigned_users=user)
+        return qs.filter(q).distinct()
+
+    def get_template_warehouse_names(self, user=None):
         """فهرست نام انبارها جهت منوی آبشاری قالب اکسل."""
-        from warehouses.models import Warehouse
-        return [w.name for w in Warehouse.objects.all().order_by('name') if w.name and w.name.strip()]
+        qs = self._get_scoped_warehouses_qs(user)
+        return [w.name for w in qs.order_by('name') if w.name and w.name.strip()]
 
-    def get_all_warehouses(self):
+    def get_all_warehouses(self, user=None):
         """لیست تمامی اشیاء انبار برای گزینه «همه انبارها» در اکسل."""
-        from warehouses.models import Warehouse
-        return list(Warehouse.objects.all())
+        return list(self._get_scoped_warehouses_qs(user))
 
-    def build_warehouses_lookup(self):
+    def build_warehouses_lookup(self, user=None):
         """ساخت نقشه جستجوی نام و کد انبار جهت تطبیق هوشمند ردیف‌های فایل اکسل."""
-        from warehouses.models import Warehouse
         lookup = {}
-        for wh in Warehouse.objects.all():
+        for wh in self._get_scoped_warehouses_qs(user):
             if wh.code:
                 lookup[wh.code.lower().strip()] = wh
             if wh.name:

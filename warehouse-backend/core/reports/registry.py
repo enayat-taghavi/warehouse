@@ -84,11 +84,13 @@ def _register_platform_entities():
                     distinct=True,
                 ),
             )
+        from accounts.scope import get_visible_users_for_user
         register_entity(
             EntityConfig(
                 key='users', label='کاربران', model=CustomUser,
                 permissions=('view_sys_users',),
                 scope_path=None,
+                scope_resolver=lambda qs, user: get_visible_users_for_user(user, qs=qs),
                 include=('id', 'username', 'first_name', 'last_name', 'phone_number',
                          'operational_zone', 'is_active', 'date_joined'),
                 extra=user_extra,

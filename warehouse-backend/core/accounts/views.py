@@ -87,13 +87,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             qs = qs.filter(Q(company_accesses__company_id=cid) | Q(is_superuser=True)).distinct()
         elif user and user.is_authenticated and not user.is_superuser:
             # کاربر عادی بدون فیلتر صریح: فقط کاربران شرکت‌های مشترک مجاز را مشاهده می‌کند
-            if get_user_allowed_companies is not None:
-                allowed_cids = get_user_allowed_companies(user).values_list('id', flat=True)
-                if allowed_cids.exists():
-                    qs = qs.filter(Q(company_accesses__company_id__in=allowed_cids) | Q(id=user.id)).distinct()
-                else:
-                    # کاربر بدون هیچ شرکت مجاز، کاربران شرکت‌ها را نمی‌بیند
-                    qs = qs.filter(id=user.id)
+            from accounts.scope import get_visible_users_for_user
+            qs = get_visible_users_for_user(user, qs=qs)
 
         has_perm = self.request.query_params.get('has_perm')
         if has_perm:
@@ -591,7 +586,7 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     def download_template(self, request):
         """Download an empty Excel template with sample data."""
         from .excel_utils import generate_users_template
-        return generate_users_template()
+        return generate_users_template(actor=request.user)
 
     @action(detail=False, methods=['post'])
     def import_excel(self, request):
@@ -604,9 +599,21 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         if not file.name.endswith('.xlsx'):
             return Response({'success': False, 'errors': [{'row': 0, 'field': 'file', 'message': 'فقط فایل‌های با فرمت xlsx پشتیبانی می‌شوند.'}]}, status=400)
 
+        # استخراج و اعتبارسنجی شرکت فعال سازنده
+        from companies.access import get_request_company_id, validate_user_company_access
+        company_id_raw = get_request_company_id(request)
+        cid = None
+        if company_id_raw:
+            try:
+                cid = validate_user_company_access(request.user, company_id_raw)
+            except Exception as e:
+                return Response({'success': False, 'errors': [{'row': 0, 'field': 'company', 'message': str(e)}]}, status=400)
+        elif request.user and request.user.is_authenticated and not request.user.is_superuser:
+            return Response({'success': False, 'errors': [{'row': 0, 'field': 'company', 'message': 'برای ورود کاربران از اکسل باید یک شرکت فعال انتخاب شده باشد.'}]}, status=400)
+
         update_existing = request.POST.get('update_existing') in ('true', 'True', True, '1', 1) or request.data.get('update_existing') in ('true', 'True', True, '1', 1)
         dry_run = request.POST.get('dry_run') in ('true', 'True', True, '1', 1) or request.data.get('dry_run') in ('true', 'True', True, '1', 1)
-        result = parse_users_excel(file, update_existing=update_existing)
+        result = parse_users_excel(file, update_existing=update_existing, actor=request.user, active_company_id=cid)
 
         # If there are file-level errors (row=0), return immediately
         file_errors = [e for e in result['errors'] if e['row'] == 0]
@@ -657,6 +664,11 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         updated_count = 0
         commit_errors = list(result.get('errors', []))
 
+        from accounts.scope import get_visible_users_for_user
+        from .excel_utils import _get_user_warehouse_extension
+        wh_ext = _get_user_warehouse_extension()
+        allowed_warehouses = set(wh_ext.get_all_warehouses(user=request.user)) if wh_ext else set()
+
         try:
             with transaction.atomic():
                 for row_data in result['valid_rows']:
@@ -666,20 +678,27 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                     roles = row_data.pop('roles', [])
                     warehouses = row_data.pop('warehouses', [])
 
+                    # فیلتر انبارهای غیرمجاز در زمان ثبت
+                    if warehouses and wh_ext:
+                        warehouses = [w for w in warehouses if w in allowed_warehouses]
+
                     if is_update and user_id:
-                        user = CustomUser.objects.filter(id=user_id).first()
-                        if user:
-                            for k, v in row_data.items():
-                                setattr(user, k, v)
-                            if request.user and request.user.is_authenticated:
-                                user.modified_by = request.user
-                            user.save()
-                            # همگام‌سازی قطعی دسترسی‌ها (خالی بودن ستون در اکسل باعث پاک شدن دسترسی‌ها می‌شود)
-                            user.groups.set(roles)
-                            if hasattr(user, 'assigned_warehouses'):
-                                user.assigned_warehouses.set(warehouses)
-                            updated_count += 1
+                        visible_qs = get_visible_users_for_user(request.user) if not request.user.is_superuser else CustomUser.objects.all()
+                        user = visible_qs.filter(id=user_id).first()
+                        if not user:
+                            commit_errors.append({'row': row_num, 'field': 'username', 'message': 'کاربر هدف در قلمرو مجاز شما نیست.'})
                             continue
+                        for k, v in row_data.items():
+                            setattr(user, k, v)
+                        if request.user and request.user.is_authenticated:
+                            user.modified_by = request.user
+                        user.save()
+                        # همگام‌سازی قطعی دسترسی‌ها (خالی بودن ستون در اکسل باعث پاک شدن دسترسی‌ها می‌شود)
+                        user.groups.set(roles)
+                        if hasattr(user, 'assigned_warehouses'):
+                            user.assigned_warehouses.set(warehouses)
+                        updated_count += 1
+                        continue
 
                     password = row_data.get('national_code') or '123456'
                     user = CustomUser(**row_data)
@@ -692,6 +711,15 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                     user.groups.set(roles)
                     if hasattr(user, 'assigned_warehouses'):
                         user.assigned_warehouses.set(warehouses)
+
+                    # ایجاد دسترسی شرکت برای کاربر جدید
+                    if cid:
+                        from companies.models import UserCompanyAccess
+                        UserCompanyAccess.objects.update_or_create(
+                            user=user,
+                            company_id=cid,
+                            defaults={'access_level': 'workspace_full'}
+                        )
                     created_count += 1
 
                 from .audit_utils import log_audit_event

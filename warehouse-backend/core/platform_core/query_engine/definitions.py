@@ -206,6 +206,7 @@ class EntityConfig:
         module_code: str = 'warehouse',
         dynamic_fields_factory: Optional[Callable] = None,
         sensitive_keys_resolver: Optional[Callable] = None,
+        scope_resolver: Optional[Callable] = None,
     ):
         self.key = key
         self.label = label
@@ -222,6 +223,7 @@ class EntityConfig:
         self.module_code = module_code
         self.dynamic_fields_factory = dynamic_fields_factory
         self.sensitive_keys_resolver = sensitive_keys_resolver
+        self.scope_resolver = scope_resolver
 
     @property
     def warehouse_path(self) -> Optional[str]:

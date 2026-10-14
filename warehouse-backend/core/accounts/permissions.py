@@ -468,3 +468,6 @@ class SoDPolicyPermission(permissions.BasePermission):
 
         return True
 
+
+from .scope import get_visible_users_for_user  # noqa: E402, F401
+

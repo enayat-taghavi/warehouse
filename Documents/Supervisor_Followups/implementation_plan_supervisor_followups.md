@@ -195,6 +195,24 @@
     - پذیرفته: بررسی پیشوندهای ثابت `switchTab` در نشست ۲ کوتیشن دوتایی و template literal را هم می‌گیرد؛ در نشست ۱ شرکت فعال در صورت نیاز به پیش‌نمایش Excel هم می‌رسد.
     - رد: ادعای «باگ regex» در خط verify آزمون‌های نشست ۱. Python 3.12 نام متد را داخل پرانتز می‌آورد و همان regex روی لاگ واقعی HEAD هر سه خطا را درست شناخت.
   - کاربر گفت صف را بی‌انتظار شروع کن (۲۳ مهر). صف در تب Windows Terminal اجرا شد.
-  - **اقدام بعدی:** پس از پایان صف، بازبینی ناظر (`tenant-scope-reviewer` روی نشست ۱، `ui-reviewer` روی ۲ و ۳)، بررسی 4300 و release روی `app`.
+- **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۱ (دامنهٔ شرکت در گزارش‌ساز و ورود کاربران از Excel):**
+  - **فهرست فایل‌های تغییریافته و ایجادشده:**
+    - `warehouse-backend/core/accounts/scope.py`: تابع کمکی مشترک `get_visible_users_for_user(user, qs=None)` با منطق همسان `UserViewSet.get_queryset` (کاربران شرکت‌های مجاز، خود کاربر، حذف سوپریوزرها برای کاربر غیرسوپریوزر، distinct).
+    - `warehouse-backend/core/accounts/permissions.py`: صادر کردن مجدد `get_visible_users_for_user`.
+    - `warehouse-backend/core/accounts/views.py`: استفادهٔ `UserViewSet.get_queryset` از تابع کمکی مشترک؛ پاس دادن `actor` در `download_template`؛ اعتبارسنجی شرکت فعال و دامنهٔ انبارها و کاربران در `import_excel` و ایجاد رکورد `UserCompanyAccess` با سطح `workspace_full` برای کاربر جدید در شرکت فعال سازنده.
+    - `warehouse-backend/core/accounts/excel_utils.py`: فیلتر کردن گزینه‌های قالب اکسل در `generate_users_template(actor=None)`؛ پشتیبانی از پارامترهای اختیاری `actor=None` و `active_company_id=None` در `parse_users_excel`؛ اعتبارسنجی الزام شرکت فعال سازنده در پیش‌نمایش و ثبت؛ تشخیص تکرار دو منبعی (کل پایگاه داده برای جلوگیری از تصادم، و کاربران در دامنه برای `update_existing`)؛ صدور خطای شفاف ردیف برای فیلدهای خارج از قلمرو.
+    - `warehouse-backend/core/platform_core/query_engine/definitions.py`: افزودن فیلد اختیاری `scope_resolver` به `EntityConfig`.
+    - `warehouse-backend/core/platform_core/query_engine/engine.py`: اعمال قلاب `scope_resolver(qs, user)` با اولویت اول در `_scope_queryset`؛ پشتیبانی از `scope_kind='company'` با فیلتر `{scope_path}__in` شرکت‌های مجاز کاربر در `_check_scope_access` و `_scope_queryset` (نتیجهٔ خالی برای کاربر بی‌شرکت، بدون محدودیت برای سوپریوزر). مسیرهای run و export هر دو از این دامنه عبور می‌کنند.
+    - `warehouse-backend/core/reports/registry.py`: افزودن `scope_resolver=lambda qs, user: get_visible_users_for_user(user, qs)` به موجودیت `users`.
+    - `warehouse-backend/modules/accounting/personnel/report_entities.py`: تعریف سه resolver دامنه‌ساز ماژولار (`resolve_personnel_profiles_scope`, `resolve_monthly_payrolls_scope`, `resolve_fleet_trips_scope`) با بازاستفاده از قواعد `scope_personnel_queryset` و `VehicleTripViewSet.get_queryset`، و اتصال آن‌ها به `EntityConfig` سه موجودیت `personnel_profiles`، `monthly_payrolls` و `fleet_trips`.
+    - `warehouse-backend/modules/warehouse/warehouses/user_extension.py`: افزودن متد کمکی `_get_scoped_warehouses_qs` و پارامتر اختیاری `user=None` به متدهای `get_template_warehouse_names`, `get_all_warehouses`, `build_warehouses_lookup` جهت محدودسازی انبارها به شرکت‌های مجاز کاربر بدون وابستگی مستقیم هسته به ماژول.
+    - `warehouse-backend/integration_tests/test_company_scope_reports_import.py`: ایجاد ۱۳ متد آزمون جامع و یکپارچه بدون هیچ skip در پروفایل کامل، با پوشش ۱۰۰٪ موارد بند ۳ پرامپت (اجرای موفق با وضعیت OK در ۲۰.۶۷ ثانیه).
+  - **فهرست سفید موجودیت‌های سراسری بدون دامنه (GLOBAL_WHITELIST):**
+    - دیکشنری `GLOBAL_WHITELIST` در آزمون خالی است؛ زیرا کلیهٔ موجودیت‌های ثبت‌شده فعلی در موتور گزارش‌ساز یا دارای `scope_path` معتبر (انبار/شرکت) هستند یا دارای `scope_resolver` اختصاصی. در صورت افزودن موجودیت کاملاً عمومی و فاقد شرکت (مانند تقویم تعطیلات رسمی کشوری)، باید با ذکر دلیل در این دیکشنری ثبت شود.
+  - **تصمیم‌ها و انحراف‌ها:**
+    - عدم تغییر در مدل‌ها، مایگریشن‌ها و فرانت‌ند دقیقاً طبق قیود طرح حفظ شد.
+    - هیچ import مستقیمی از هسته به ماژول‌ها انجام نشد و ارتباط انبار از طریق اکستنشن موجود در رجیستری پیاده‌سازی گردید.
+    - در `MonthlyPayrollRecord` آزمون، با توجه به الزامی بودن کلید خارجی `period`، رکورد `MonthlyWorkPeriod` متناظر با شرکت مربوطه ساخته شد تا یکپارچگی ارجاعی حفظ شود.
 
 </div>
+

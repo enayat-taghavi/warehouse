@@ -221,6 +221,12 @@ class ReportEngine:
             if target_wh is not None and not can_access_warehouse(self.user, target_wh):
                 raise ReportError('به این انبار دسترسی ندارید.', status=403)
             self._assigned_ids = user_warehouse_ids(self.user)
+        elif self.config.scope_kind == 'company':
+            target_scope = int(self.scope_id) if self.scope_id else None
+            if target_scope is not None:
+                from companies.access import validate_user_company_access
+                validate_user_company_access(self.user, target_scope)
+            self._assigned_ids = None
         else:
             self._assigned_ids = None
 
@@ -229,6 +235,9 @@ class ReportEngine:
         return self._check_scope_access()
 
     def _scope_queryset(self, qs):
+        if getattr(self.config, 'scope_resolver', None) is not None:
+            return self.config.scope_resolver(qs, self.user)
+
         path = self.config.scope_path
         if not path:
             return qs
@@ -237,6 +246,15 @@ class ReportEngine:
             qs = scope_queryset(qs, self.user, field=path)
             if self.warehouse_id:
                 qs = qs.filter(**{path: self.warehouse_id})
+        elif self.config.scope_kind == 'company':
+            if self.user.is_superuser:
+                return qs
+            from companies.access import get_user_allowed_companies
+            if get_user_allowed_companies is not None:
+                allowed_cids = list(get_user_allowed_companies(self.user).values_list('id', flat=True))
+                if allowed_cids:
+                    return qs.filter(**{f'{path}__in': allowed_cids})
+            return qs.none()
         return qs
 
     # ------------------------------------------------------------- validation

@@ -284,10 +284,10 @@ def generate_id_cards_excel(queryset):
     return response
 
 
-def generate_users_template():
+def generate_users_template(actor=None):
     """
     تولید فایل قالب نمونه دو سطری پویا با اعتبارسنجی درون اکسل متصل به دیتابیس زنده،
-    شیت دوم راهنما و مقادیر مجاز، و شیت سوم مراجع داده
+    شیت دوم راهنما و مقادیر مجاز، و شیت سوم مراجع داده (محدود به قلمرو کاربر)
     """
     wb = Workbook()
     ws = wb.active
@@ -319,9 +319,9 @@ def generate_users_template():
         role_titles = ['کاربر عادی', 'سرپرست انبار', 'مدیر سیستم']
     dropdown_roles = ['همه نقش‌ها'] + [r for r in role_titles if r != 'همه نقش‌ها']
 
-    # ب) انبارهای فعال همراه با گزینه «همه انبارها»
+    # ب) انبارهای فعال همراه با گزینه «همه انبارها» (محدود به دامنهٔ کاربر جاری)
     wh_ext = _get_user_warehouse_extension()
-    wh_names = wh_ext.get_template_warehouse_names() if wh_ext is not None else []
+    wh_names = wh_ext.get_template_warehouse_names(user=actor) if wh_ext is not None else []
     if not wh_names:
         wh_names = ['انبار مرکزی']
     dropdown_warehouses = ['همه انبارها'] + [w for w in wh_names if w != 'همه انبارها']
@@ -332,14 +332,16 @@ def generate_users_template():
     # د) وضعیت فعال
     active_statuses = ['بله', 'خیر']
 
-    # ه) شرکت‌های متبوع
-    companies = list(CustomUser.objects.exclude(company__isnull=True).exclude(company__exact='').values_list('company', flat=True).distinct())
+    # ه) شرکت‌های متبوع (محدود به دامنهٔ کاربران مجاز)
+    from accounts.scope import get_visible_users_for_user
+    user_scope_qs = get_visible_users_for_user(actor) if (actor and not actor.is_superuser) else CustomUser.objects.all()
+    companies = list(user_scope_qs.exclude(company__isnull=True).exclude(company__exact='').values_list('company', flat=True).distinct())
     companies = [c.strip() for c in companies if c and c.strip()]
     if not companies:
         companies = ['شرکت اصلی', 'پیمانکار']
 
-    # و) مناطق عملیاتی
-    zones = list(CustomUser.objects.exclude(operational_zone__isnull=True).exclude(operational_zone__exact='').values_list('operational_zone', flat=True).distinct())
+    # و) مناطق عملیاتی (محدود به دامنهٔ کاربران مجاز)
+    zones = list(user_scope_qs.exclude(operational_zone__isnull=True).exclude(operational_zone__exact='').values_list('operational_zone', flat=True).distinct())
     zones = [z.strip() for z in zones if z and z.strip()]
     if not zones:
         zones = ['منطقه ۱ - جنوب', 'منطقه ۲ - مرکز', 'منطقه ۳ - شمال']
@@ -414,14 +416,15 @@ def generate_users_template():
     ws_help.append([])
     ws_help.append([])
 
-    # جدول مرجع انبارهای فعال در راهنما
+    # جدول مرجع انبارهای فعال در راهنما (محدود به دامنهٔ کاربر)
     whs_h = [styled_cell(ws_help, 'نام انبار'), styled_cell(ws_help, 'کد انبار'), styled_cell(ws_help, 'وضعیت')]
     apply_header_styles_to_row(whs_h, is_key_row=False)
     ws_help.append(whs_h)
     ws_help.append(['همه انبارها', 'ALL_WAREHOUSES', 'دسترسی مجاز به کلیه انبارهای فعال سیستم'])
-    if WhModel is not None:
-        for wh in WhModel.objects.all():
+    if wh_ext is not None:
+        for wh in wh_ext.get_all_warehouses(user=actor):
             ws_help.append([wh.name, wh.code or '', 'فعال'])
+
 
     # ۴. شیت سوم: مراجع داده (Data References) - مخفی‌سازی کامل شیت جهت عدم نمایش ستون‌های اضافی به کاربر
     ws_ref = wb.create_sheet(title='مراجع داده')
@@ -530,14 +533,18 @@ def generate_users_template():
 
 # ── Smart Excel Parser ───────────────────────────────────────────────
 
-def parse_users_excel(file, update_existing=False):
+def parse_users_excel(file, update_existing=False, actor=None, active_company_id=None):
     """
     پارس و اعتبارسنجی هوشمند فایل اکسل کاربران
     - پشتیبانی از تطبیق دوگانه نقش‌ها (عنوان فارسی و نام انگلیسی)
     - پشتیبانی از تطبیق دوگانه انبارها (کد و نام انبار)
     - پاکسازی خودکار ارقام و کد ملی و تلفن
     - پشتیبانی از پارامتر update_existing
+    - اعتبارسنجی دامنهٔ شرکت و انبارها بر مبنای کاربر انجام‌دهنده (actor)
     """
+    if actor and not actor.is_superuser and not active_company_id:
+        return {'valid_rows': [], 'errors': [{'row': 0, 'field': 'company', 'message': 'برای ورود کاربران از اکسل باید یک شرکت فعال انتخاب شده باشد.'}]}
+
     try:
         wb = load_workbook(file, read_only=True, data_only=True)
     except Exception:
@@ -550,10 +557,18 @@ def parse_users_excel(file, update_existing=False):
     if len(rows) > MAX_IMPORT_ROWS:
         return {'valid_rows': [], 'errors': [{'row': 0, 'field': 'file', 'message': f'حداکثر {MAX_IMPORT_ROWS} سطر قابل پردازش است. فایل شما {len(rows)} سطر دارد.'}]}
 
-    # ساخت مپ‌های جستجوی هوشمند
-    existing_users_by_username = {u.username.lower(): u for u in CustomUser.objects.all()}
-    existing_users_by_nid = {
-        u.national_code: u for u in CustomUser.objects.exclude(national_code__isnull=True).exclude(national_code='')
+    # منبع ۱: تشخیص تکرار سراسری بدون بازگرداندن شیء کاربر
+    all_existing_usernames = {u.lower() for u in CustomUser.objects.values_list('username', flat=True)}
+    all_existing_nids = set(
+        CustomUser.objects.exclude(national_code__isnull=True).exclude(national_code='').values_list('national_code', flat=True)
+    )
+
+    # منبع ۲: کاربران قابل‌مشاهده برای کاربر جاری (جهت update_existing)
+    from accounts.scope import get_visible_users_for_user
+    visible_users_qs = get_visible_users_for_user(actor) if actor else CustomUser.objects.all()
+    visible_users_by_username = {u.username.lower(): u for u in visible_users_qs}
+    visible_users_by_nid = {
+        u.national_code: u for u in visible_users_qs.exclude(national_code__isnull=True).exclude(national_code='')
     }
 
     # نقشه نقش‌ها: هم بر اساس name (کد انگلیسی) و هم بر اساس title (عنوان فارسی)
@@ -567,9 +582,9 @@ def parse_users_excel(file, update_existing=False):
         except Exception:
             pass
 
-    # نقشه انبارها: هم بر اساس code و هم بر اساس name
+    # نقشه انبارها: هم بر اساس code و هم بر اساس name (محدود به دامنهٔ کاربر جاری)
     wh_ext = _get_user_warehouse_extension()
-    warehouses_lookup = wh_ext.build_warehouses_lookup() if wh_ext is not None else {}
+    warehouses_lookup = wh_ext.build_warehouses_lookup(user=actor) if wh_ext is not None else {}
 
     valid_rows = []
     errors = []
@@ -636,13 +651,16 @@ def parse_users_excel(file, update_existing=False):
             elif username in seen_usernames:
                 row_errors.append({'row': row_num, 'field': 'username', 'message': 'این شناسه ورود در همین فایل تکرار شده است.'})
             else:
-                existing_user = existing_users_by_username.get(username.lower())
-                if existing_user:
+                existing_visible_user = visible_users_by_username.get(username.lower())
+                if existing_visible_user:
                     if update_existing:
                         is_update_record = True
-                        target_user_id = existing_user.id
+                        target_user_id = existing_visible_user.id
                     else:
                         row_errors.append({'row': row_num, 'field': 'username', 'message': 'این شناسه ورود قبلاً در سیستم ثبت شده است.'})
+                elif username.lower() in all_existing_usernames:
+                    # تکرار با کاربری بیرون از قلمرو یا سوپریوزر
+                    row_errors.append({'row': row_num, 'field': 'username', 'message': 'کاربر با این شناسه ورود در سامانه وجود دارد اما در قلمرو دسترسی شما نیست.'})
                 seen_usernames.add(username)
 
         # ── اعتبارسنجی کد ملی ──
@@ -652,10 +670,12 @@ def parse_users_excel(file, update_existing=False):
             elif national_code in seen_national_codes:
                 row_errors.append({'row': row_num, 'field': 'national_code', 'message': 'این کد ملی در همین فایل تکرار شده است.'})
             else:
-                nid_user = existing_users_by_nid.get(national_code)
-                if nid_user:
-                    if not update_existing or (is_update_record and nid_user.id != target_user_id):
+                nid_visible_user = visible_users_by_nid.get(national_code)
+                if nid_visible_user:
+                    if not update_existing or (is_update_record and nid_visible_user.id != target_user_id):
                         row_errors.append({'row': row_num, 'field': 'national_code', 'message': 'این کد ملی به کاربر دیگری تخصیص دارد.'})
+                elif national_code in all_existing_nids:
+                    row_errors.append({'row': row_num, 'field': 'national_code', 'message': 'این کد ملی در سامانه برای کاربر دیگری ثبت شده است که در قلمرو مجاز شما نیست.'})
                 seen_national_codes.add(national_code)
 
         # ── اعتبارسنجی فرمت ایمیل ──
@@ -693,7 +713,7 @@ def parse_users_excel(file, update_existing=False):
             wh_items = split_items(warehouses_str)
             has_all_whs = any(w.lower().strip() in ALL_WHS_ALIASES for w in wh_items)
             if has_all_whs and wh_ext is not None:
-                for wh in wh_ext.get_all_warehouses():
+                for wh in wh_ext.get_all_warehouses(user=actor):
                     if wh not in resolved_warehouses:
                         resolved_warehouses.append(wh)
             else:
