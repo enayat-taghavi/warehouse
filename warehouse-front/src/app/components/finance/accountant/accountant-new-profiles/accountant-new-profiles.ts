@@ -256,7 +256,7 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
           id: 'change_requests',
           label: 'درخواست‌های تغییرات',
           shortLabel: 'تغییرات',
-          icon: 'action-edit',
+          icon: ACCOUNTING_ENTITY_ICONS.changeRequests,
           count: sc.changeRequestsPending,
           tone: sc.changeRequestsPending > 0 ? 'amber' : 'slate',
         },

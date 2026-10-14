@@ -271,7 +271,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
           id: 'change_requests',
           label: 'کارتابل ویرایش‌ها',
           shortLabel: 'ویرایش‌ها',
-          icon: 'action-edit',
+          icon: ACCOUNTING_ENTITY_ICONS.changeRequests,
           count: this.pendingCRCount,
           tone: 'rose',
           // نقطه چشمک‌زن نسخه پایه؛ در mobile="icon" شمارنده زیر ۶۴۰px پنهان است

@@ -175,7 +175,7 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
           id: 'change_requests',
           label: 'درخواست‌های تغییرات',
           shortLabel: 'تغییرات',
-          icon: 'action-edit',
+          icon: ACCOUNTING_ENTITY_ICONS.changeRequests,
           count: sc.change_requests,
           tone: 'amber',
           // مثل پیش از کوچ فقط این تب نشانه چشمک‌زن دارد

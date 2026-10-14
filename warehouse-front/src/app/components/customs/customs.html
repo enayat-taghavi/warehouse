@@ -31,11 +31,11 @@
             ></app-warehouse-selector>
           </div>
           <!-- Barcode Scanner Trigger Button -->
-          <button appAction="scan" tone="indigo" display="icon" title="اسکن بارکد با دوربین" aria-label="اسکن دوربین" (click)="scanner.openCamera()"></button>
+          <button appAction="scan" tone="indigo" display="icon" hint="اسکن بارکد با دوربین" (click)="scanner.openCamera()"></button>
           <!-- Export Excel Button -->
-          <button appAction="export-excel" tone="emerald" display="icon" title="خروجی و دانلود اکسل کارتابل مالی" aria-label="خروجی اکسل" (click)="openExportModal()"></button>
+          <button appAction="export-excel" tone="emerald" display="icon" hint="خروجی و دانلود اکسل کارتابل مالی" (click)="openExportModal()"></button>
           <!-- Refresh Button -->
-          <button appAction="refresh" tone="indigo" display="icon" [busy]="isLoading" title="بروزرسانی کارتابل مالی و گمرک" aria-label="بروزرسانی" (click)="refreshCurrentTab()"></button>
+          <button appAction="refresh" tone="indigo" display="icon" [busy]="isLoading" hint="بروزرسانی کارتابل مالی و گمرک" (click)="refreshCurrentTab()"></button>
         </div>
       </header>
 
@@ -85,8 +85,7 @@
               <button 
                 appAction="close"
                 display="icon"
-                title="لغو انتخاب‌ها"
-                aria-label="لغو انتخاب‌ها"
+                label="لغو انتخاب‌ها"
                 (click)="clearAllSelections()"
                 class="!bg-transparent hover:!bg-slate-800 !text-slate-400 hover:!text-white !border-transparent">
               </button>
@@ -112,7 +111,6 @@
                 tone="emerald"
                 [busy]="isSaving"
                 label="ارسال به سرپرست"
-                title="ارسال به سرپرست"
                 (click)="submitSelected()">
               </button>
             </div>
@@ -669,7 +667,7 @@
       
       <!-- Detail Header (Identical to Counter) -->
       <header class="bg-white px-4 py-3 border-b border-slate-200 flex items-center justify-between shadow-sm sticky top-0 z-20">
-        <button appAction="back" display="icon" title="بازگشت به لیست" aria-label="بازگشت به لیست" (click)="closeDetail()"></button>
+        <button appAction="back" display="icon" label="بازگشت به لیست" (click)="closeDetail()"></button>
         <div class="font-bold text-sm text-slate-800 flex items-center gap-2">
           <span>ثبت اطلاعات مالی</span>
           <span *ngIf="isReadOnly(selectedTask)" class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
@@ -911,7 +909,6 @@
             size="lg"
             [busy]="isSaving"
             label="ثبت و ارسال به سرپرست"
-            title="ثبت و ارسال به سرپرست"
             (click)="submitCurrentTask()"
             class="w-full sm:flex-1 order-1">
           </button>
@@ -925,7 +922,6 @@
               size="lg"
               [busy]="isSaving"
               label="ذخیره پیش‌نویس"
-              title="ذخیره پیش‌نویس"
               (click)="saveDraft(true)"
               class="flex-1 sm:flex-none">
             </button>
@@ -937,7 +933,6 @@
               size="lg"
               [disabled]="isSaving"
               label="انصراف"
-              title="انصراف"
               (click)="closeDetail()"
               class="flex-1 sm:flex-none">
             </button>
@@ -951,7 +946,7 @@
             size="lg"
             [busy]="isSaving"
             label="بازگشت به وضعیت قبل"
-            title="حذف پیش‌نویس و بازگرداندن کالا به وضعیت پیشین"
+            hint="حذف پیش‌نویس و بازگرداندن کالا به وضعیت پیشین"
             (click)="revertTaskStatus(selectedTask)"
             class="w-full sm:w-auto order-3">
           </button>
@@ -963,7 +958,6 @@
             tone="slate"
             size="lg"
             label="بازگشت به لیست"
-            title="بازگشت به لیست"
             (click)="closeDetail(true)"
             class="w-full">
           </button>
@@ -991,7 +985,7 @@
             <p class="text-[11px] text-slate-400 mt-0.5">انتخاب ردیف‌ها و ستون‌های مورد نیاز</p>
           </div>
         </div>
-        <button appAction="close" display="icon" title="بستن" aria-label="بستن" (click)="closeExportModal()"></button>
+        <button appAction="close" display="icon" (click)="closeExportModal()"></button>
       </div>
 
       <!-- Modal Body -->
@@ -1067,14 +1061,14 @@
               <span class="text-[10px] text-indigo-600 block truncate">شامل ستون‌های فعال، فرمت‌های مجاز و سلول‌های کشویی</span>
             </div>
           </div>
-          <button appAction="download" tone="indigo" size="sm" [busy]="isDownloadingTemplate" label="دانلود قالب" title="دانلود قالب اکسل نمونه" (click)="downloadSampleTemplate()"></button>
+          <button appAction="download" tone="indigo" size="sm" [busy]="isDownloadingTemplate" label="دانلود قالب" hint="دانلود قالب اکسل نمونه" (click)="downloadSampleTemplate()"></button>
         </div>
 
       </div>
 
       <!-- Modal Footer -->
       <div class="pt-4 border-t border-slate-100 flex items-center gap-2">
-        <button appAction="close" tone="slate" size="md" label="انصراف" title="انصراف" (click)="closeExportModal()" class="flex-1"></button>
+        <button appAction="close" tone="slate" size="md" label="انصراف" (click)="closeExportModal()" class="flex-1"></button>
         <button 
           appAction="export-excel" 
           tone="emerald" 
@@ -1082,7 +1076,6 @@
           [busy]="isExporting" 
           [disabled]="exportColumnScope === 'custom' && selectedExportColumns.size === 0" 
           label="دانلود فایل اکسل" 
-          title="دانلود فایل اکسل" 
           (click)="executeExport()" 
           class="flex-1">
         </button>
@@ -1115,7 +1108,7 @@
             </p>
           </div>
         </div>
-        <button appAction="close" display="icon" [disabled]="isApplyingBatchUpdate" title="بستن" aria-label="بستن" (click)="closeScanBatchModal()"></button>
+        <button appAction="close" display="icon" [disabled]="isApplyingBatchUpdate" (click)="closeScanBatchModal()"></button>
       </div>
 
       <!-- Stat Cards Filter -->
@@ -1249,7 +1242,7 @@
 
       <!-- Modal Footer -->
       <div class="pt-4 border-t border-slate-100 flex items-center gap-2 shrink-0 mt-3">
-        <button appAction="close" tone="slate" size="md" [disabled]="isApplyingBatchUpdate" label="انصراف" title="انصراف" (click)="closeScanBatchModal()" class="flex-1"></button>
+        <button appAction="close" tone="slate" size="md" [disabled]="isApplyingBatchUpdate" label="انصراف" (click)="closeScanBatchModal()" class="flex-1"></button>
         <button 
           appAction="confirm" 
           tone="primary" 
@@ -1257,7 +1250,7 @@
           [busy]="isApplyingBatchUpdate" 
           [disabled]="((scanBatchSummary?.readyCount || 0) + (scanBatchSummary?.poolCount || 0) === 0)" 
           [label]="'تایید و اعمال روی ' + ((scanBatchSummary?.readyCount || 0) + (scanBatchSummary?.poolCount || 0)) + ' کالا'" 
-          title="تایید و اعمال دسته‌ای" 
+          hint="تایید و اعمال دسته‌ای" 
           (click)="applyBulkScanUpdate()" 
           class="flex-[2]">
         </button>

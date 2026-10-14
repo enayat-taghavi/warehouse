@@ -26,11 +26,11 @@
       </div>
       
       <!-- Barcode Scanner Trigger Button -->
-      <button type="button" appAction="scan" size="lg" (click)="scanner?.openCamera()" title="اسکن بارکد با دوربین"></button>
+      <button type="button" appAction="scan" size="lg" (click)="scanner?.openCamera()" hint="اسکن بارکد با دوربین"></button>
       <!-- Export Excel Button -->
-      <button type="button" appAction="export-excel" (click)="openExportModal()" title="خروجی و دانلود اکسل مدیر"></button>
+      <button type="button" appAction="export-excel" (click)="openExportModal()" hint="خروجی و دانلود اکسل مدیر"></button>
       <!-- Refresh Button -->
-      <button type="button" appAction="refresh" (click)="refreshCurrentTab()" [busy]="isLoading || isDocLoading" title="بروزرسانی کارتابل مدیر"></button>
+      <button type="button" appAction="refresh" (click)="refreshCurrentTab()" [busy]="isLoading || isDocLoading" hint="بروزرسانی کارتابل مدیر"></button>
     </div>
   </header>
 
@@ -101,7 +101,7 @@
             (click)="clearAllSelections()" 
             type="button"
             appAction="close"
-            title="لغو انتخاب‌ها">
+            display="icon" label="لغو انتخاب‌ها">
           </button>
           <div class="flex items-center gap-1.5 font-bold text-xs whitespace-nowrap">
             <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
@@ -124,7 +124,7 @@
             appAction="reject"
             label="رد"
             (click)="openBulkRejectDialog()"
-            title="رد و دستور بازشماری">
+            hint="رد و دستور بازشماری">
           </button>
 
           <button 
@@ -132,7 +132,7 @@
             appAction="approve"
             label="تایید"
             (click)="openApproveDialog()"
-            title="تایید نهایی مدیر">
+            hint="تایید نهایی مدیر">
           </button>
         </div>
       </div>
@@ -426,9 +426,9 @@
           
           <!-- Quick Actions -->
           <div class="flex items-center gap-1.5">
-            <button type="button" appAction="view" (click)="$event.stopPropagation(); openCountingDetail(task, $event)" title="مشاهده جزئیات کامل"></button>
-            <button type="button" appAction="reject" display="label" label="رد" (click)="$event.stopPropagation(); rejectSingle(task)" title="رد و دستور بازشماری"></button>
-            <button type="button" appAction="approve" display="label" label="تایید" (click)="$event.stopPropagation(); approveSingle(task)" title="تایید نهایی کالا"></button>
+            <button type="button" appAction="view" (click)="$event.stopPropagation(); openCountingDetail(task, $event)" hint="مشاهده جزئیات کامل"></button>
+            <button type="button" appAction="reject" display="label" label="رد" (click)="$event.stopPropagation(); rejectSingle(task)" hint="رد و دستور بازشماری"></button>
+            <button type="button" appAction="approve" display="label" label="تایید" (click)="$event.stopPropagation(); approveSingle(task)" hint="تایید نهایی کالا"></button>
           </div>
         </div>
       </div>
@@ -573,7 +573,7 @@
             (click)="clearAllSelections()" 
             type="button"
             appAction="close"
-            title="لغو انتخاب‌ها">
+            display="icon" label="لغو انتخاب‌ها">
           </button>
           <div class="flex items-center gap-1.5 font-bold text-xs">
             <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
@@ -597,7 +597,7 @@
             display="label"
             label="رد"
             (click)="openDocRejectDialog()"
-            title="رد اسناد مالی">
+            hint="رد اسناد مالی">
           </button>
 
           <button 
@@ -606,7 +606,7 @@
             display="label"
             label="تایید"
             (click)="openDocApproveDialog()"
-            title="تایید نهایی مالی">
+            hint="تایید نهایی مالی">
           </button>
         </div>
       </div>
@@ -893,9 +893,9 @@
           </div>
 
           <div class="flex items-center gap-1.5 mr-auto">
-            <button type="button" appAction="view" (click)="$event.stopPropagation(); openDocDetail(task)" title="مشاهده جزئیات کامل"></button>
-            <button type="button" appAction="reject" display="label" label="رد" (click)="$event.stopPropagation(); rejectSingleDoc(task, $event)" title="رد سند"></button>
-            <button type="button" appAction="approve" display="label" label="تایید" (click)="$event.stopPropagation(); approveSingleDoc(task, $event)" title="تایید نهایی سند"></button>
+            <button type="button" appAction="view" (click)="$event.stopPropagation(); openDocDetail(task)" hint="مشاهده جزئیات کامل"></button>
+            <button type="button" appAction="reject" display="label" label="رد" (click)="$event.stopPropagation(); rejectSingleDoc(task, $event)" hint="رد سند"></button>
+            <button type="button" appAction="approve" display="label" label="تایید" (click)="$event.stopPropagation(); approveSingleDoc(task, $event)" hint="تایید نهایی سند"></button>
           </div>
         </div>
       </div>

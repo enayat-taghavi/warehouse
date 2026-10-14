@@ -48,7 +48,7 @@
           (click)="exportExcel()"
           [disabled]="isExportingExcel || !selectedSectionId"
           [busy]="isExportingExcel"
-          title="خروجی رسمی اکسل پرسنل">
+          hint="خروجی رسمی اکسل پرسنل">
         </button>
 
         <!-- ۲. دکمه ورود اطلاعات از طریق اکسل (Indigo Icon - مشابه projects-and-sections) -->
@@ -59,7 +59,7 @@
           size="sm"
           (click)="openImportModal()"
           [disabled]="!selectedSectionId"
-          title="ورود اطلاعات از طریق فایل اکسل">
+          hint="ورود اطلاعات از طریق فایل اکسل">
         </button>
 
         <!-- ۳. دکمه بازخوانی داده‌ها (Slate Icon) -->
@@ -71,7 +71,7 @@
           (click)="loadRecentPersonnel()"
           [disabled]="isLoadingPersonnel"
           [busy]="isLoadingPersonnel"
-          title="بروزرسانی داده‌ها">
+          hint="بروزرسانی داده‌ها">
         </button>
 
         <!-- ۴. دکمه معرفی پرسنل جدید به صورت آیکونی شاخص (Purple Icon) -->
@@ -81,7 +81,7 @@
           display="icon"
           size="sm"
           (click)="openNewPersonnelModal()"
-          title="معرفی پرسنل جدید (پیش‌نویس)">
+          hint="معرفی پرسنل جدید (پیش‌نویس)">
         </button>
       </div>
 
@@ -123,7 +123,7 @@
           display="icon"
           size="sm"
           (click)="closeNewPersonnelModal()"
-          title="بستن (Esc)">
+          hint="بستن (Esc)">
         </button>
       </div>
 
@@ -1116,7 +1116,7 @@
                 size="lg"
                 [busy]="isSaving"
                 (click)="savePersonnel('pending_supervisor')"
-                title="ثبت تغییرات پیشنهادی و ارسال به کارتابل سرپرست">
+                hint="ثبت تغییرات پیشنهادی و ارسال به کارتابل سرپرست">
               </button>
             </div>
           </ng-container>
@@ -1149,7 +1149,7 @@
                 tone="slate"
                 [busy]="isSaving"
                 (click)="savePersonnel('draft')"
-                title="ذخیره موقت پیش‌نویس بدون ارسال به کارتابل سرپرست">
+                hint="ذخیره موقت پیش‌نویس بدون ارسال به کارتابل سرپرست">
               </button>
 
               <!-- دکمه ثبت و ارسال به سرپرست (قفل در صورت وجود نواقص - تسک ۶.۷) -->

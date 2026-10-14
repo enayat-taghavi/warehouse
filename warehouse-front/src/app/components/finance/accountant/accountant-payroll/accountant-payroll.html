@@ -98,7 +98,7 @@
           [attr.aria-label]="isCalculating ? 'در حال محاسبه حقوق...' : 'محاسبه مکانیزه حقوق'"
           class="tap-target px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
           <svg *ngIf="!isCalculating" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="zap"></svg>
-          <svg *ngIf="isCalculating" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" appIcon="spinner"></svg>
+          <svg *ngIf="isCalculating" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin" appIcon="action-loading"></svg>
           <span>{{ isCalculating ? 'در حال محاسبه حقوق...' : 'محاسبه مکانیزه حقوق' }}</span>
         </button>
 

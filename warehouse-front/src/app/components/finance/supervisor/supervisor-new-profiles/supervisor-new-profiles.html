@@ -32,14 +32,16 @@
         type="button"
         appAction="export-excel"
         (click)="exportExcel()"
-        title="خروجی گزارش پیش‌نویس‌ها">
+        hint="خروجی گزارش پیش‌نویس‌ها">
       </button>
 
       <button
         type="button"
-        appAction="import-excel"
+        appAction="download"
+        display="label"
+        label="قالب اکسل"
         (click)="importExcel()"
-        title="قالب اکسل پرونده‌ها">
+        hint="قالب اکسل پرونده‌ها">
       </button>
 
       <button
@@ -48,7 +50,7 @@
         [busy]="isLoading"
         [disabled]="isLoading"
         (click)="fetchProfiles()"
-        title="تازه‌سازی پیش‌نویس‌ها">
+        hint="تازه‌سازی پیش‌نویس‌ها">
       </button>
     </div>
   </app-command-center>
@@ -266,7 +268,7 @@
                     size="sm"
                     display="label"
                     label="مقایسه Diff"
-                    title="مشاهده مقایسه تفصیلی تغییرات"
+                    hint="مشاهده مقایسه تفصیلی تغییرات"
                     (click)="openDiffModal(cr, 'personnel')">
                   </button>
                   <button
@@ -275,7 +277,7 @@
                     size="sm"
                     display="label"
                     label="تایید سرپرست"
-                    title="تایید مرحله اول سرپرست و ارسال به حسابداری"
+                    hint="تایید مرحله اول سرپرست و ارسال به حسابداری"
                     (click)="openApprovalModal('personnel_cr', cr)">
                   </button>
                   <button
@@ -283,7 +285,7 @@
                     appAction="reject"
                     size="sm"
                     label="عودت"
-                    title="رد درخواست تغییرات"
+                    hint="رد درخواست تغییرات"
                     (click)="rejectPersonnelChange(cr)">
                   </button>
                 </div>
@@ -345,7 +347,7 @@
                     size="sm"
                     display="label"
                     label="مقایسه Diff"
-                    title="مشاهده مقایسه تفصیلی تغییرات خودرو"
+                    hint="مشاهده مقایسه تفصیلی تغییرات خودرو"
                     (click)="openDiffModal(cr, 'vehicle')">
                   </button>
                   <button
@@ -354,7 +356,7 @@
                     size="sm"
                     display="label"
                     label="تایید سرپرست"
-                    title="تایید مرحله اول سرپرست و ارسال به حسابداری"
+                    hint="تایید مرحله اول سرپرست و ارسال به حسابداری"
                     (click)="openApprovalModal('vehicle_cr', cr)">
                   </button>
                   <button
@@ -362,7 +364,7 @@
                     appAction="reject"
                     size="sm"
                     label="عودت"
-                    title="رد تغییرات ناوگان"
+                    hint="رد تغییرات ناوگان"
                     (click)="rejectVehicleChange(cr)">
                   </button>
                 </div>

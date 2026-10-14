@@ -60,7 +60,7 @@
             tone="emerald" 
             size="sm" 
             label="جدید" 
-            title="تمپلیت جدید" 
+            hint="تمپلیت جدید" 
             (click)="startCreateNew()">
           </button>
 
@@ -71,7 +71,7 @@
               tone="primary" 
               size="sm" 
               label="کپی به این انبار" 
-              title="کپی این لیبل Global برای این انبار" 
+              hint="کپی این لیبل Global برای این انبار" 
               (click)="copyToThisWarehouse(template)">
             </button>
           </ng-container>
@@ -85,7 +85,7 @@
               size="sm" 
               [disabled]="!template.id" 
               label="نام" 
-              title="تغییر نام" 
+              hint="تغییر نام" 
               (click)="startRename()">
             </button>
             <!-- Clone -->
@@ -95,7 +95,7 @@
               tone="blue" 
               size="sm" 
               label="کپی" 
-              title="کپی گرفتن از این تمپلیت" 
+              hint="کپی گرفتن از این تمپلیت" 
               (click)="startCopy()">
             </button>
             <!-- Delete -->
@@ -105,7 +105,7 @@
               tone="rose" 
               size="sm" 
               label="حذف" 
-              title="حذف تمپلیت" 
+              hint="حذف تمپلیت" 
               (click)="askDeleteConfirm(template.id!)">
             </button>
             <!-- Delete confirm inline -->
@@ -124,7 +124,7 @@
               [busy]="isSaving" 
               [disabled]="!template.id" 
               label="ذخیره" 
-              title="ذخیره تمپلیت" 
+              hint="ذخیره تمپلیت" 
               (click)="saveTemplate()" 
               class="mr-2">
             </button>
@@ -277,7 +277,6 @@
         size="lg" 
         [busy]="isSaving" 
         label="ذخیره ساختار لیبل" 
-        title="ذخیره ساختار لیبل" 
         (click)="saveTemplate()" 
         class="w-full">
       </button>
@@ -372,7 +371,7 @@
                 size="md" 
                 [busy]="isPrinting" 
                 [label]="'چاپ لیبل (' + itemsConfig.length + ' آیتم)'" 
-                title="چاپ لیبل" 
+                hint="چاپ لیبل" 
                 (click)="directPrint()" 
                 class="w-full">
               </button>
@@ -436,8 +435,7 @@
             tone="rose" 
             size="sm" 
             display="icon" 
-            title="حذف المان" 
-            aria-label="حذف المان" 
+            hint="حذف المان"
             (click)="removeElement(selectedElement)">
           </button>
         </div>

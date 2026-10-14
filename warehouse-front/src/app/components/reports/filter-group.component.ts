@@ -59,7 +59,7 @@ import { ActionButtonComponent } from '../../shared/components/action-button/act
           label="شرط"
           [disabled]="totalConditions >= 60"
           (click)="addCondition()"
-          title="{{ totalConditions >= 60 ? 'حداکثر ۶۰ شرط مجاز است' : 'افزودن یک شرط جدید' }}"
+          [hint]="totalConditions >= 60 ? 'حداکثر ۶۰ شرط مجاز است' : 'افزودن یک شرط جدید'"
         ></button>
         @if (depth < maxDepth) {
           <button
@@ -70,7 +70,7 @@ import { ActionButtonComponent } from '../../shared/components/action-button/act
             tone="slate"
             label="گروه تودرتو"
             (click)="addGroup()"
-            title="افزودن زیرمجموعه شروط با منطق جداگانه"
+            hint="افزودن زیرمجموعه شروط با منطق جداگانه"
           ></button>
         }
         @if (depth > 0) {
@@ -82,7 +82,7 @@ import { ActionButtonComponent } from '../../shared/components/action-button/act
             tone="rose"
             [label]="'حذف گروه'"
             (click)="removeSelf.emit()"
-            title="حذف این گروه و تمام شروط درون آن"
+            hint="حذف این گروه و تمام شروط درون آن"
             class="mr-auto"
           ></button>
         }
@@ -143,7 +143,7 @@ import { ActionButtonComponent } from '../../shared/components/action-button/act
               tone="slate"
               [label]="'حذف شرط'"
               (click)="removeChild($index)"
-              title="حذف این شرط"
+              hint="حذف این شرط"
               class="mr-auto min-w-[40px] min-h-[40px] sm:min-w-[32px] sm:min-h-[32px]"
             ></button>
           </div>

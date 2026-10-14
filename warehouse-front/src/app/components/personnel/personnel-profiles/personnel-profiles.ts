@@ -87,7 +87,7 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
           id: 'change_requests',
           label: 'تاریخچه درخواست‌های تغییر',
           shortLabel: 'تغییرات',
-          icon: 'action-edit',
+          icon: ACCOUNTING_ENTITY_ICONS.changeRequests,
         },
       ];
     }

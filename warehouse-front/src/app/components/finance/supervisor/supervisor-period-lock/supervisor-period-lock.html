@@ -50,7 +50,7 @@
         [label]="currentPeriodSummary.is_locked ? 'دوره قفل و ارسال شده' : 'قفل و ارسال دوره'"
         [busy]="isLocking"
         [disabled]="isLocking || currentPeriodSummary.is_locked || currentPeriodSummary.pending_approvals > 0"
-        [title]="currentPeriodSummary.pending_approvals > 0 ? 'ابتدا باید تمام کارکردهای در انتظار تایید شوند' : ''"
+        [hint]="currentPeriodSummary.pending_approvals > 0 ? 'ابتدا باید تمام کارکردهای در انتظار تایید شوند' : ''"
         (click)="lockAndSubmitPeriod()">
       </button>
 
@@ -58,14 +58,14 @@
         type="button"
         appAction="export-excel"
         (click)="exportExcel()"
-        title="خروجی گزارش تجمیعی ماهانه">
+        hint="خروجی گزارش تجمیعی ماهانه">
       </button>
 
       <button
         type="button"
         appAction="import-excel"
         (click)="importExcel()"
-        title="قالب گزارش تجمیعی">
+        hint="قالب گزارش تجمیعی">
       </button>
 
       <button
@@ -74,7 +74,7 @@
         [busy]="isLoading"
         [disabled]="isLoading"
         (click)="fetchPeriodData()"
-        title="تازه‌سازی اطلاعات دوره">
+        hint="تازه‌سازی اطلاعات دوره">
       </button>
     </div>
   </app-command-center>

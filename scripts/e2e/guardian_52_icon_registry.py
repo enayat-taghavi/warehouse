@@ -12,6 +12,8 @@
   ۳) هر کامپوننتی که در قالبش appIcon دارد، SvgIconDirective را در imports خود دارد.
   ۴) هیچ svg آیکنی با محتوای ثابت به‌صورت درون‌خطی در قالب‌ها نمانده است؛ آیکن تازه
      باید در رجیستری اضافه شود (svg هایی که داخلشان کد Angular هست مستثنا هستند).
+  ۵) هر svg دارای appIcon ویژگی viewBox و fill دارد. دایرکتیو فقط محتوای درونی را می‌سازد؛
+     بی viewBox آیکن بریده و بی fill توپر سیاه رسم می‌شود (۶۳ مورد در بازبینی ناظر ۱۴۰۵/۰۷/۲۲).
 """
 
 import re
@@ -32,6 +34,9 @@ DIRECTIVE = APP_DIR / "shared" / "icons" / "svg-icon.directive.ts"
 SEMANTIC = APP_DIR / "shared" / "icons" / "semantic-icons.ts"
 
 SVG = re.compile(r'<svg\b((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>(.*?)</svg>', re.S)
+SVG_OPEN = re.compile(r'<svg\b((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>', re.S)
+HAS_VIEWBOX = re.compile(r'(?:^|\s)(?:viewBox|\[attr\.viewBox\])\s*=')
+HAS_FILL = re.compile(r'(?:^|\s)(?:fill|\[attr\.fill\])\s*=')
 NG_SYNTAX = re.compile(
     r'\{\{|\s\[[\w.@-]+\]\s*=|\s\([\w.-]+\)\s*=|\s\*ng\w*\s*=|@(if|for|switch|defer|else|case|default)\b'
     r'|\s#\w+[\s>/=]|\s(ngIf|ngFor|ngClass|ngStyle|ngSwitch)\b'
@@ -107,7 +112,7 @@ def test_icon_registry():
         if stat_m:
             status_icons = dict(re.findall(r"'([^']+)':\s*'([^']+)'", stat_m.group(1)))
 
-    unknown, missing_import, inline_left = [], [], []
+    unknown, missing_import, inline_left, no_frame = [], [], [], []
     used = 0
     for path, text, owner in templates():
         rel = path.relative_to(APP_DIR).as_posix()
@@ -127,6 +132,10 @@ def test_icon_registry():
             inner = m.group(2)
             if inner.strip() and "appIcon" not in m.group(1) and not NG_SYNTAX.search(inner):
                 inline_left.append(f"{rel}:{text[:m.start()].count(chr(10)) + 1}")
+        for m in SVG_OPEN.finditer(text):
+            attrs = m.group(1)
+            if ANY_ICON.search(attrs) and not (HAS_VIEWBOX.search(attrs) and HAS_FILL.search(attrs)):
+                no_frame.append(f"{rel}:{text[:m.start()].count(chr(10)) + 1}")
 
     if unknown:
         errors.append("نام ناشناخته")
@@ -145,6 +154,12 @@ def test_icon_registry():
         print(f"❌ بند ۴: svg آیکن درون‌خطی باقی مانده ({len(inline_left)}): {inline_left[:10]}")
     else:
         print("✅ بند ۴: هیچ svg آیکن ثابت درون‌خطی در قالب‌ها نمانده است.")
+
+    if no_frame:
+        errors.append("viewBox/fill")
+        print(f"❌ بند ۵: svg دارای appIcon بی viewBox یا fill ({len(no_frame)}): {no_frame[:10]}")
+    else:
+        print("✅ بند ۵: همهٔ svgهای دارای appIcon ویژگی viewBox و fill دارند.")
 
     print("=" * 74)
     if errors:

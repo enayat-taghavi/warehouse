@@ -46,6 +46,8 @@ export const ACCOUNTING_ENTITY_ICONS = {
   contractor: 'users-2',
   /** سایر طرف‌حساب‌ها */
   otherCounterparty: 'help-circle',
+  /** درخواست‌های تغییرات پرونده پرسنل و ناوگان */
+  changeRequests: 'file-pen',
 } as const satisfies Record<string, IconName>;
 
 export type AccountingEntityIconKey = keyof typeof ACCOUNTING_ENTITY_ICONS;

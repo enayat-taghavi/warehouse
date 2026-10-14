@@ -31,12 +31,12 @@
           </div>
           
           <!-- Barcode Scanner Trigger Button -->
-          <button type="button" appAction="scan" size="lg" tone="indigo" (click)="scanner.openCamera()" title="اسکن بارکد با دوربین"></button>
+          <button type="button" appAction="scan" size="lg" tone="indigo" (click)="scanner.openCamera()" hint="اسکن بارکد با دوربین"></button>
 
           <!-- Export Excel Button -->
-          <button type="button" appAction="export-excel" (click)="openExportModal()" title="خروجی و دانلود اکسل کارتابل"></button>
+          <button type="button" appAction="export-excel" (click)="openExportModal()" hint="خروجی و دانلود اکسل کارتابل"></button>
           <!-- Refresh Button -->
-          <button type="button" appAction="refresh" [busy]="isLoading" (click)="refreshCurrentTab()" title="بروزرسانی کارتابل انبارگردان"></button>
+          <button type="button" appAction="refresh" [busy]="isLoading" (click)="refreshCurrentTab()" hint="بروزرسانی کارتابل انبارگردان"></button>
         </div>
       </header>
 
@@ -475,7 +475,7 @@
                       label="ارسال"
                       size="sm"
                       (click)="quickSubmitTask(task, $event)"
-                      title="ارسال سریع مستقیم به سرپرست">
+                      hint="ارسال سریع مستقیم به سرپرست">
                     </button>
 
                    <!-- دکمه سریع بازگشت به وضعیت قبل در لیست -->
@@ -484,8 +484,9 @@
                      type="button"
                      appAction="return"
                      size="sm"
+                     label="بازگشت به وضعیت قبل"
                      (click)="revertTaskStatus(task, $event)"
-                     title="لغو پیش‌نویس و بازگرداندن به وضعیت قبل">
+                     hint="لغو پیش‌نویس و بازگرداندن به وضعیت قبل">
                    </button>
                  </div>
                </div>
@@ -941,7 +942,7 @@
             [busy]="isSubmitting"
             (click)="revertTaskStatus(selectedTask)"
             class="w-full sm:w-auto order-3"
-            title="حذف پیش‌نویس و بازگرداندن کالا به وضعیت پیشین">
+            hint="حذف پیش‌نویس و بازگرداندن کالا به وضعیت پیشین">
           </button>
         </div>
 

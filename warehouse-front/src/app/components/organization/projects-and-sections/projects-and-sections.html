@@ -456,7 +456,7 @@
                     appAction="edit"
                     display="icon"
                     size="sm"
-                    title="ویرایش سمت یا وضعیت"
+                    hint="ویرایش سمت یا وضعیت"
                     (click)="openEditAssignmentModal(a, $event)"
                   ></button>
                   <button
@@ -464,7 +464,7 @@
                     appAction="delete"
                     display="icon"
                     size="sm"
-                    title="لغو انتساب این کاربر"
+                    hint="لغو انتساب این کاربر"
                     (click)="deleteAssignment(a.id!, (a.user_full_name || a.username))"
                   ></button>
                 </div>

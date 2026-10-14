@@ -64,7 +64,7 @@ export class ManagerFleetHubComponent implements OnInit, OnDestroy {
           id: 'changes',
           label: 'درخواست‌های تغییرات',
           shortLabel: 'تغییرات',
-          icon: 'action-edit',
+          icon: ACCOUNTING_ENTITY_ICONS.changeRequests,
           count: sc.changesPending,
           tone: 'amber',
           indicator: sc.changesPending > 0 ? { tone: 'amber', label: 'درخواست‌های تغییرات', pulse: true } : undefined

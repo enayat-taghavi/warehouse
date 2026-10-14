@@ -624,8 +624,8 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
   }
 
   readonly taxModalTabs: TabDef[] = [
-    { id: 'file', label: 'بارگذاری فایل اکسل', shortLabel: 'فایل', icon: 'upload' },
-    { id: 'paste', label: 'چسباندن متن', shortLabel: 'متن', icon: 'clipboard' }
+    { id: 'file', label: 'بارگذاری فایل اکسل', shortLabel: 'فایل', icon: 'action-upload' },
+    { id: 'paste', label: 'چسباندن متن', shortLabel: 'متن', icon: 'clipboard-paste' }
   ];
 
   setTaxModalMode(mode: string): void {

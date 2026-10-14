@@ -166,7 +166,7 @@
                 label="تصویر"
                 size="sm"
                 (click)="openAttachmentPreview(inv)"
-                title="مشاهده تصویر فاکتور">
+                hint="مشاهده تصویر فاکتور">
               </button>
               <span *ngIf="!inv.attachment" class="text-slate-300 text-[11px]">-</span>
             </td>
@@ -198,7 +198,7 @@
                   size="sm"
                   (click)="sendToSupervisor(inv)"
                   [disabled]="isSaving"
-                  title="ارسال فاکتور به کارتابل سرپرست کارگاه">
+                  hint="ارسال فاکتور به کارتابل سرپرست کارگاه">
                 </button>
 
                 <!-- حذف فاکتور (فقط برای پیش‌نویس) -->
@@ -210,7 +210,7 @@
                   size="sm"
                   (click)="deleteDraftInvoice(inv)"
                   [disabled]="isSaving"
-                  title="حذف فاکتور پیش‌نویس">
+                  hint="حذف فاکتور پیش‌نویس">
                 </button>
 
                 <!-- وضعیت قفل‌شده برای مراحل بعد -->

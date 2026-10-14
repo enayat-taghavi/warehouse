@@ -66,7 +66,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
           id: 'changes',
           label: 'درخواست‌های تغییرات',
           shortLabel: 'تغییرات',
-          icon: 'action-edit',
+          icon: ACCOUNTING_ENTITY_ICONS.changeRequests,
           count: sc.changesCount,
           tone: 'amber',
           indicator: sc.changesCount > 0 ? { tone: 'amber', label: 'درخواست تغییرات جدید', pulse: true } : undefined

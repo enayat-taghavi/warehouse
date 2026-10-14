@@ -57,7 +57,7 @@
           (click)="exportExcel()"
           [disabled]="isExportingExcel || !selectedSectionId"
           [busy]="isExportingExcel"
-          title="خروجی رسمی اکسل ناوگان">
+          hint="خروجی رسمی اکسل ناوگان">
         </button>
 
         <!-- دکمه ورود دسته‌جمعی از اکسل (Modal) -->
@@ -68,7 +68,7 @@
           size="sm"
           (click)="openImportModal()"
           [disabled]="!selectedSectionId"
-          title="ورود اطلاعات دسته‌جمعی از اکسل">
+          hint="ورود اطلاعات دسته‌جمعی از اکسل">
         </button>
 
         <!-- دکمه بازخوانی داده‌ها -->
@@ -80,7 +80,7 @@
           (click)="loadRecentVehicles()"
           [disabled]="isLoadingVehicles"
           [busy]="isLoadingVehicles"
-          title="بروزرسانی داده‌ها">
+          hint="بروزرسانی داده‌ها">
         </button>
 
         <!-- دکمه باز کردن مودال ثبت خودرو جدید (پیش‌نویس) -->
@@ -91,7 +91,7 @@
           size="sm"
           (click)="openNewVehicleModal()"
           [disabled]="!selectedSectionId"
-          title="معرفی خودرو جدید (پیش‌نویس ۵ مرحله‌ای)">
+          hint="معرفی خودرو جدید (پیش‌نویس ۵ مرحله‌ای)">
         </button>
       </div>
 
@@ -1309,7 +1309,7 @@
             tone="slate"
             [busy]="isSaving"
             (click)="saveVehicle('draft')"
-            title="ذخیره اطلاعات بدون ارسال به کارتابل سرپرست">
+            hint="ذخیره اطلاعات بدون ارسال به کارتابل سرپرست">
           </button>
 
           <!-- دکمه صریح ارسال به سرپرست (فراخوانی POST /submit/ - تسک ۶.۷) -->
