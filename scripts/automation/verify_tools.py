@@ -7,6 +7,12 @@
   python scripts/automation/verify_tools.py commit-exists --base HASH --grep TEXT
   python scripts/automation/verify_tools.py diff-free --base HASH --pattern REGEX [--path PATH ...]
   python scripts/automation/verify_tools.py ng-test-compare --base HASH --include GLOB [...] [--exclude GLOB ...]
+  python scripts/automation/verify_tools.py django-check [--modules all warehouse accounting]
+  python scripts/automation/verify_tools.py migrations-unchanged
+  python scripts/automation/verify_tools.py dist-free --dist PATH --pattern REGEX
+  python scripts/automation/verify_tools.py guardian29-max --max COUNTER=N [...] [--min COUNTER=N ...]
+  python scripts/automation/verify_tools.py migrate-empty [--modules all warehouse accounting]
+  python scripts/automation/verify_tools.py sample-module
 
 هر فرمان در موفقیت کد ۰ و در شکست کد ۱ می‌دهد و علت را چاپ می‌کند.
 الگوهای ng-test-compare نسبت به warehouse-front هستند (مثل src/app/shared/icons/*.spec.ts).
@@ -22,6 +28,7 @@ import stat
 import subprocess
 import sys
 import tarfile
+import time
 from pathlib import Path
 
 if sys.platform == "win32":
@@ -94,6 +101,207 @@ def cmd_diff_free(args) -> int:
             print(f"  {ln[:200]}")
         return 1
     print(f"No changed line since {args.base} matches /{args.pattern}/.")
+    return 0
+
+
+# ---------------------------------------------------------------- backend profiles and build output
+
+BACKEND_DIR = REPO_ROOT / "warehouse-backend"
+BACKEND_PYTHON = BACKEND_DIR / "venv" / "Scripts" / "python.exe"
+
+
+def run_manage(args: list, modules: str, extra_env: dict | None = None,
+               backend: Path = BACKEND_DIR) -> tuple[int, str]:
+    # modules خالی یعنی پروفایل کامل (WH_MODULES تنظیم نمی‌شود).
+    env = dict(os.environ, PYTHONUTF8="1", **(extra_env or {}))
+    env.pop("WH_MODULES", None)
+    if modules:
+        env["WH_MODULES"] = modules
+    r = subprocess.run([str(BACKEND_PYTHON), "manage.py", *args], cwd=backend, env=env,
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    return r.returncode, (r.stdout + r.stderr).strip()
+
+
+def tail(text: str, n: int = 30) -> str:
+    return "\n".join(f"  {ln}" for ln in text.splitlines()[-n:])
+
+
+def cmd_django_check(args) -> int:
+    failed = 0
+    for profile in args.modules:
+        modules = "" if profile == "all" else profile
+        code, out = run_manage(["check"], modules)
+        print(f"[{profile}] manage.py check -> exit {code}")
+        if code != 0:
+            failed += 1
+            print("\n".join(f"  {ln}" for ln in out.splitlines()[-30:]))
+    return 1 if failed else 0
+
+
+def cmd_migrations_unchanged(args) -> int:
+    code, out = run_manage(["makemigrations", "--check", "--dry-run"], "")
+    print("\n".join(out.splitlines()[-30:]))
+    if code != 0:
+        print("makemigrations --check found model changes without a migration (or failed).")
+        return 1
+    print("No model change needs a migration.")
+    return 0
+
+
+def cmd_dist_free(args) -> int:
+    rx = re.compile(args.pattern)
+    root = (REPO_ROOT / args.dist).resolve()
+    if not (root / "index.html").is_file():
+        print(f"No build output at {root} (index.html missing).")
+        return 1
+    hits = []
+    for path in root.rglob("*"):
+        if path.is_file() and path.suffix in (".js", ".html", ".json"):
+            m = rx.search(path.read_text(encoding="utf-8", errors="replace"))
+            if m:
+                hits.append(f"{path.relative_to(root)}: {m.group(0)[:80]}")
+    if hits:
+        print(f"{len(hits)} file(s) in {args.dist} match /{args.pattern}/ (code of another module is in this build):")
+        for h in hits[:30]:
+            print(f"  {h}")
+        return 1
+    print(f"No file in {args.dist} matches /{args.pattern}/.")
+    return 0
+
+
+def cmd_guardian29_max(args) -> int:
+    # تا وقتی خود نگهبان ۲۹ روی HEAD رد می‌شود، فقط «افزایش نیافتن» شمارنده‌ها سنجیده می‌شود.
+    def parse(items) -> dict:
+        out = {}
+        for item in items or []:
+            key, _, value = item.partition("=")
+            out[key] = int(value)
+        return out
+    limits, floors = parse(args.max), parse(args.min)
+    r = subprocess.run([sys.executable, str(REPO_ROOT / "scripts" / "e2e" / "guardian_modularization.py"), "--json"],
+                       cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       env=dict(os.environ, PYTHONUTF8="1"))
+    try:
+        # نگهبان پس از JSON گزارش فارسی را هم چاپ می‌کند؛ فقط شیء اول خوانده می‌شود.
+        counters = json.JSONDecoder().raw_decode(r.stdout.lstrip())[0]["counters"]
+    except (ValueError, KeyError):
+        print(f"guardian_modularization.py --json gave no counters (exit {r.returncode}):")
+        print(tail(r.stdout + r.stderr))
+        return 1
+    bad = [f"{k} = {counters.get(k)} > {v}" for k, v in limits.items() if counters.get(k) is None or counters[k] > v]
+    # --min نشان می‌دهد lint-imports واقعاً بسته‌ها را پیدا کرده است (شمار صفرِ ناشی از نیافتن بسته‌ها پذیرفته نمی‌شود).
+    bad += [f"{k} = {counters.get(k)} < {v}" for k, v in floors.items() if counters.get(k) is None or counters[k] < v]
+    print("Counters: " + ", ".join(f"{k}={counters.get(k)}" for k in {**limits, **floors}))
+    if bad:
+        print("Outside the allowed range:")
+        for b in bad:
+            print(f"  {b}")
+        return 1
+    print("Every counter is within its range.")
+    return 0
+
+
+VERIFY_PG = "wh-verify-pg"
+VERIFY_PG_PORT = "55432"
+
+
+def docker(*args, check: bool = True) -> subprocess.CompletedProcess:
+    r = subprocess.run(["docker", *args], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if check and r.returncode != 0:
+        raise RuntimeError(f"docker {' '.join(args[:2])} failed: {(r.stdout + r.stderr).strip()[:300]}")
+    return r
+
+
+def cmd_migrate_empty(args) -> int:
+    # یک postgres موقت جدا (نه پایگاه app روی 5432)؛ برای هر پروفایل یک پایگاه خالی و migrate کامل.
+    docker("rm", "-f", VERIFY_PG, check=False)
+    docker("run", "-d", "--rm", "--name", VERIFY_PG, "-e", "POSTGRES_USER=verify", "-e", "POSTGRES_PASSWORD=verify",
+           "-p", f"127.0.0.1:{VERIFY_PG_PORT}:5432", "postgres:15-alpine")
+    failed = 0
+    try:
+        for _ in range(60):
+            if docker("exec", VERIFY_PG, "pg_isready", "-U", "verify", check=False).returncode == 0:
+                break
+            time.sleep(1)
+        else:
+            raise RuntimeError("temporary postgres did not become ready in 60 s")
+        for profile in args.modules:
+            db = f"verify_{profile}"
+            docker("exec", VERIFY_PG, "createdb", "-U", "verify", db)
+            env = {"DB_NAME": db, "DB_USER": "verify", "DB_PASSWORD": "verify",
+                   "DB_HOST": "127.0.0.1", "DB_PORT": VERIFY_PG_PORT}
+            code, out = run_manage(["migrate", "--noinput"], "" if profile == "all" else profile, env)
+            print(f"[{profile}] migrate on an empty database -> exit {code}")
+            if code != 0:
+                failed += 1
+                print(tail(out))
+    finally:
+        docker("rm", "-f", VERIFY_PG, check=False)
+    return 1 if failed else 0
+
+
+SAMPLE_ALLOWED = ("warehouse-backend/modules/sample/", "warehouse-front/src/app/modules/sample/",
+                  "warehouse-front/src/app/modules/installed-modules.ts")
+
+
+def cmd_sample_module(args) -> int:
+    # قالب ماژول (گام ۵): ساخت ماژول sample در کپی HEAD، بدون تغییر هیچ فایل بیرون از پوشه‌های خودش.
+    work = BASE_WORK_DIR / "sample-module"
+    BASE_WORK_DIR.mkdir(parents=True, exist_ok=True)
+    safe_remove_tree(work)
+    problems = []
+    try:
+        work.mkdir()
+        tar_path = BASE_WORK_DIR / "sample-module.tar"
+        git("archive", "-o", str(tar_path), "HEAD")
+        with tarfile.open(tar_path) as tf:
+            tf.extractall(work, filter="data")
+        tar_path.unlink()
+        def snapshot() -> dict:
+            return {p.relative_to(work).as_posix(): (p.stat().st_size, p.stat().st_mtime_ns)
+                    for p in work.rglob("*") if p.is_file()}
+        before = snapshot()
+        r = subprocess.run([sys.executable, str(work / "scripts" / "new_module.py"), "--code", "sample",
+                            "--title-fa", "ماژول نمونه", "--root", str(work)],
+                           cwd=work, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if r.returncode != 0:
+            print(f"new_module.py failed (exit {r.returncode}):\n{tail(r.stdout + r.stderr)}")
+            return 1
+        after = snapshot()
+        changed = [k for k in after if after[k] != before.get(k)]
+        changed += [k for k in before if k not in after]
+        outside = [k for k in changed if not k.startswith(SAMPLE_ALLOWED)]
+        if outside:
+            problems.append(f"new_module.py changed files outside the module folders: {outside[:10]}")
+        if not any(k.startswith(SAMPLE_ALLOWED[0]) for k in changed) or not any(k.startswith(SAMPLE_ALLOWED[1]) for k in changed):
+            problems.append("new_module.py did not create both the backend and the frontend module folder")
+        for profile in ("sample", ""):
+            code, out = run_manage(["check"], profile, backend=work / "warehouse-backend")
+            if code != 0:
+                problems.append(f"manage.py check (WH_MODULES={profile or 'all'}) exit {code}:\n{tail(out)}")
+        front = work / "warehouse-front"
+        mk = subprocess.run(["cmd", "/c", "mklink", "/J", str(front / "node_modules"), str(FRONT_DIR / "node_modules")],
+                            capture_output=True, text=True)
+        if mk.returncode != 0:
+            raise RuntimeError(f"mklink failed: {mk.stdout.strip()} {mk.stderr.strip()}")
+        b = subprocess.run("npm run build:modules", shell=True, cwd=front, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", env=dict(os.environ, WH_MODULES="sample"))
+        if b.returncode != 0:
+            problems.append(f"build:modules (WH_MODULES=sample) exit {b.returncode}:\n{tail(b.stdout + b.stderr)}")
+        for guardian in ("guardian_modularization.py", "guardian_57_front_module_fence.py"):
+            g = subprocess.run([sys.executable, str(work / "scripts" / "e2e" / guardian)], cwd=work,
+                               capture_output=True, text=True, encoding="utf-8", errors="replace",
+                               env=dict(os.environ, PYTHONUTF8="1"))
+            if g.returncode != 0:
+                problems.append(f"{guardian} exit {g.returncode}:\n{tail(g.stdout + g.stderr)}")
+    finally:
+        safe_remove_tree(work)
+    if problems:
+        print("Sample module check failed:")
+        for p in problems:
+            print(f"- {p}")
+        return 1
+    print("Sample module: created only inside its own folders; check, build:modules and guardians 29/57 pass.")
     return 0
 
 
@@ -269,6 +477,23 @@ def base_suite(full_hash: str, includes: list, excludes: list) -> dict:
     return result
 
 
+def front_renames(full_hash: str) -> dict:
+    """فایل‌های جابه‌جاشدهٔ warehouse-front از BASE تا HEAD (مسیر نسبت به warehouse-front)، تا نتیجهٔ پایه با مسیر تازه مقایسه شود."""
+    out = git("-c", "diff.renameLimit=20000", "diff", "--name-status", "-M", full_hash, "HEAD", "--", "warehouse-front/src")
+    renames = {}
+    for line in out.splitlines():
+        parts = line.split("\t")
+        if len(parts) == 3 and parts[0].startswith("R"):
+            renames[parts[1].removeprefix("warehouse-front/")] = parts[2].removeprefix("warehouse-front/")
+    return renames
+
+
+def remap_path_prefix(name: str, renames: dict) -> str:
+    # نام تست شکست‌خورده با مسیر spec شروع می‌شود («src/... > describe > it»).
+    path, sep, rest = name.partition(" ")
+    return renames.get(path, path) + sep + rest
+
+
 def cmd_ng_test_compare(args) -> int:
     cleanup_stale_base_dirs()
     full_hash = git("rev-parse", args.base).strip()
@@ -276,6 +501,13 @@ def cmd_ng_test_compare(args) -> int:
     excludes = [p for pattern in (args.exclude or []) for p in expand_braces(pattern)]
 
     base = base_suite(full_hash, includes, excludes)
+    renames = front_renames(full_hash)
+    if renames:
+        print(f"{len(renames)} frontend file(s) moved since base; base results are compared under their new paths.")
+        base = dict(base,
+                    type_errors={renames.get(f, f): e for f, e in base["type_errors"].items()},
+                    failing=[remap_path_prefix(n, renames) for n in base["failing"]],
+                    skipped_specs=[renames.get(f, f) for f in base["skipped_specs"]])
     base_broken = set(base["type_errors"])
     try:
         head = run_suite(FRONT_DIR, "head", includes, excludes,
@@ -332,6 +564,31 @@ def main(argv=None) -> int:
     p.add_argument("--pattern", required=True)
     p.add_argument("--path", nargs="*")
     p.set_defaults(func=cmd_diff_free)
+
+    p = sub.add_parser("django-check", help="manage.py check passes for each module profile")
+    p.add_argument("--modules", nargs="+", default=["all", "warehouse", "accounting"],
+                   help="WH_MODULES values to check; 'all' means every module (default: all warehouse accounting)")
+    p.set_defaults(func=cmd_django_check)
+
+    p = sub.add_parser("migrations-unchanged", help="makemigrations --check --dry-run finds nothing (full profile)")
+    p.set_defaults(func=cmd_migrations_unchanged)
+
+    p = sub.add_parser("dist-free", help="no .js/.html/.json file in a build output matches the pattern")
+    p.add_argument("--dist", required=True, help="build output folder relative to the repository root")
+    p.add_argument("--pattern", required=True)
+    p.set_defaults(func=cmd_dist_free)
+
+    p = sub.add_parser("guardian29-max", help="guardian 29 counters (--json) are not above the given maximums")
+    p.add_argument("--max", nargs="+", required=True, metavar="COUNTER=N")
+    p.add_argument("--min", nargs="+", metavar="COUNTER=N")
+    p.set_defaults(func=cmd_guardian29_max)
+
+    p = sub.add_parser("migrate-empty", help="migrate on an empty database (temporary postgres container) per profile")
+    p.add_argument("--modules", nargs="+", default=["all", "warehouse", "accounting"])
+    p.set_defaults(func=cmd_migrate_empty)
+
+    p = sub.add_parser("sample-module", help="new_module.py builds a sample module in a HEAD copy without touching the core")
+    p.set_defaults(func=cmd_sample_module)
 
     p = sub.add_parser("ng-test-compare", help="ng test on HEAD has no new failure compared with BASE")
     p.add_argument("--base", required=True)

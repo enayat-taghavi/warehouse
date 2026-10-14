@@ -1,4 +1,4 @@
-<!-- 
+<!--
 راهنمای استفاده:
 - هر تسک را می‌توانید به صورت چندخطی و با توضیحات کامل بنویسید.
 - بین هر تسک از جداکننده سه مساوی یا بیشتر (===) در یک خط مجزا استفاده کنید.
@@ -6,884 +6,433 @@
 -->
 
 <!--
-یادداشت ناظر (Claude) — صف نشست‌های ۰ تا ۱۵ طرح ارگونومی واکنش‌گرا (گام‌های ۱۰ تا ۱۳):
-- قوانین مشترک همه نشست‌ها در بخش ۹ طرح است (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`):
-  Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md
-- نشست‌های ۰ تا ۵ پیش‌تر انجام شده‌اند و [DONE] دارند. نشست ۶ تا ۱۵ دروازه ندارند.
-- نشست ۷ به دو نشست 7 و 7b تقسیم شد و تست نشست ۱۵ به جعبه‌ابزار مشترک محدود شد
-  (پیشنهاد چت توافق `aadc3b7d`، تأیید کاربر ۱۴۰۵/۰۷/۲۱).
-- هر نشست یک کامنت runner دارد که برای ایجنت فرستاده نمی‌شود:
-  - require: تمیزی درخت کاری پیش از شروع؛
-  - verify: بیلد (نشست ۱۵ هر سه پروفایل)، نگهبان‌های ۵۲، ۵۵ و ۵۶، ng-test-compare در برابر پایه نشست،
-    commit-exists برای هر ردیف و گزارش، clean-tree، و برای نشست‌هایی که پوشه‌شان شبا دارد diff-free.
-- [DONE] را فقط run_tasks.py پس از سبز شدن همه verifyها می‌گذارد. اگر صف ایستاد، اجرای دوباره از نخستین نشست بی‌[DONE] ادامه می‌دهد.
-- نگهبان ۲۹ (guardian_modularization.py) پیش از صف هم روی HEAD شکست می‌خورد (شمارنده‌های بک‌اند)، پس در verify نیست.
-- پس از نشست ۱۵، Claude بازبینی نهایی را انجام می‌دهد، از جمله ng test کامل در برابر «پایه نشست ۰» (`0bacd8f`).
+یادداشت ناظر (Claude) — صف ۱۰ نشستی طرح «راه میانهٔ ماژولار»:
+- طرح: Documents/Modular_Middle_Path/implementation_plan_modular_middle_path.md (قواعد مشترک در بخش `## ۷.`).
+- صف قبلی (ارگونومی، نشست‌های ۰ تا ۱۵) کامل [DONE] شده بود و در تاریخچهٔ git همین فایل هست (commit de276d9).
+- هر نشست یک کامنت runner دارد که برای ایجنت فرستاده نمی‌شود: require تمیزی درخت کاری؛ verify بررسی‌های همان گام،
+  commit-exists و clean-tree.
+- نگهبان ۲۹ تا پیش از نشست ۵ روی HEAD رد می‌شود؛ تا آن موقع به‌جایش verify_tools.py guardian29-max می‌آید.
+- بازبین‌ها، بررسی 4300، release روی app، test_integration.ps1 و هر کار روی soft با ناظر است، نه با صف.
+- پیش‌شرط صف: Docker روشن باشد (migrate-empty و test_bundle.ps1 کانتینر می‌سازند). ناظر پیش از شروع می‌سنجد.
+- توافق با Antigravity: چت‌های f2b8c66f (بازبینی طرح) و f8f6a31d (این صف)؛ تصمیم‌ها در بخش `## ۸.` طرح.
 -->
 
-[DONE] نشست 0 از 15 — طرح ارگونومی واکنش‌گرا: اصلاح جعبه‌ابزار و کلیدهای تازه فرهنگ آیکون (پیش از گام ۱۰)
-
-۱. دروازه شروع. پیش از هر تغییر این دو شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S0-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
-
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر — گام ۹» را بخوان.
-
-۳. کار این نشست:
-الف) warehouse-front/src/app/shared/components/command-center/command-center.component.ts:
-  - در ROW_CONTAINER_CLASSES، در مقدار md بعد از md:flex-row کلاس md:flex-wrap، و در مقدار lg بعد از lg:flex-row کلاس lg:flex-wrap را بیفزا.
-  - در قالب، div اسلات cc-tabs (class="flex items-center overflow-x-auto") کلاس‌های min-w-0 max-w-full بگیرد، و div اسلات cc-actions کلاس ms-auto.
-  - توضیح فارسی کوتاه: «اگر تب‌ها و اکشن‌ها در یک سطر جا نشوند، اکشن‌ها به سطر دوم (سمت چپ) می‌روند.»
-  - در command-center.component.spec.ts یک تست برای وجود md:flex-wrap روی ظرف و ms-auto روی اسلات اکشن بیفزا.
-ب) fullLabelFrom:
-  - در supervisor-attendance.html، supervisor-fleet.html، supervisor-personnel.html و supervisor-new-profiles.html (پوشه components/finance/supervisor/) روی app-tab-bar مقدار fullLabelFrom="lg" را fullLabelFrom="xl" کن.
-  - به نوار وضعیت این چهار فایل در components/finance/employee/ هم fullLabelFrom="xl" بیفزا:
-    - employee-invoices.html ([tabs]="invoiceStatusTabs")
-    - employee-petty-cash.html ([tabs]="pettyCashStatusTabs")
-    - employee-new-vehicle.html ([tabs]="statusFilterTabs")
-    - employee-new-personnel.html ([tabs]="statusFilterTabs")
-ج) رجیستری: به warehouse-front/src/app/shared/icons/icon-registry.ts آیکون 'droplet' را با این محتوا بیفزا:
-'<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>'
-د) کار تازه «قطع همکاری»:
-  - در shared/icons/semantic-icons.ts، به ACTION_ICONS کلید 'terminate': 'slash' را بیفزا.
-  - در shared/components/action-button/action-catalog.ts ورودی 'terminate' را بیفزا: icon: ACTION_ICONS['terminate']، defaultLabel: 'قطع همکاری'، tone: 'rose'، sensitive: true.
-  - توضیح «برای هر ۳۷ کلید» را ۳۸ کن. اگر specی تعداد کلیدها را می‌شمارد، به‌روزش کن.
-ه) کلیدهای تازه modules/accounting/entity-icons.ts، هر کدام با توضیح فارسی یک‌خطی:
-  - sections: 'map-pin' — بخش‌ها و کارگاه‌ها
-  - jobGrades: 'star' — گروه شغلی، احکام و قرارداد پرسنل
-  - insurance: 'shield-plus' — بیمه و تامین اجتماعی
-  - tax: 'globe-alt' — مالیات و سامانه مالیاتی
-  - licenses: 'badge' — مجوزها و پروانه‌ها
-  - identity: 'info' — مشخصات فردی و شناسنامه‌ای
-  - contractsAndLeases: 'home' — قراردادها و اجاره‌نامه‌های شرکت
-  - repairShop: 'tool' — طرف‌حساب تعمیرگاه
-  - fuelStation: 'droplet' — طرف‌حساب جایگاه سوخت
-  - contractor: 'users-2' — طرف‌حساب پیمانکار
-  - otherCounterparty: 'help-circle' — سایر طرف‌حساب‌ها
-  spec فرهنگ آیکون (semantic-icons.spec.ts) باید سبز بماند.
-و) در طرح:
-  - در جدول بند ۲، ردیف «سربرگ فرماندهی»، جمله توضیح بند الف را بیفزا.
-  - در جدول ۳-۱ ردیف terminate را بیفزا.
-  - در جدول ۳-۳ کلیدهای بند ه را بیفزا.
-ز) بیلد را برای هر سه پروفایل اجرا کن: پیش‌فرض، --configuration accounting-only و --configuration warehouse-only.
-
-۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S0-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S0-FAILED] و علت. «پایه» را حتماً در عنوان گزارش بنویس؛ نشست ۱۵ از آن استفاده می‌کند.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
-
-===
-
-[DONE] نشست 1 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف‌های ۴.۱ و ۴.۴
-
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S0-DONE] باید باشد.
-- رشته [S1-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
-
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
-
-۳. کار این نشست (مسیرها در warehouse-front/src/app/components/finance/accountant/):
-
-۴.۱ accountant-payroll:
-- تب‌ها: پنج switchSubTab به app-tab-bar با mobile="icon" و fullLabelFrom="xl"، شمارنده‌ها مثل پایه:
-  - ready_to_calculate: «آماده محاسبه» / «آماده» / status-pending
-  - calculated: «محاسبه‌شده» / «محاسبه» / status-draft
-  - approved: «تایید نهایی» / «تایید» / status-approved
-  - all: «کل پرونده‌ها» / «همه» / status-all
-  - work_summary: «خلاصه کارکرد ماهانه» / «خلاصه» / PLATFORM_ENTITY_ICONS.reports
-- دکمه‌های سربرگ:
-  - toggleLockPeriod: [appAction]="isPeriodLocked ? 'unlock' : 'lock'" با عنوان متن فعلی و [busy]="isTogglingLock".
-  - calculateBatch: کار بی‌کلید است (۹-۲ مورد ۱۰). [disabled] و [title] پویایش بماند.
-  - openTaxModal: import-excel با label="درون‌ریزی مالیات".
-  - exportExcel: export-excel.
-  - refreshCurrentTab: refresh.
-- سطرها:
-  - openPayslipModal: view با label="فیش".
-  - releasePaymentHold: unlock با label="آزادسازی".
-  - approveSingle: approve با label="تایید نهایی".
-- مودال‌ها:
-  - دو setTaxModalMode یک app-tab-bar دوتبی شوند.
-  - submitTaxImport: upload با busy.
-  - printCurrentPayslip: print.
-  - X سربرگ مودال‌ها display="icon"؛ دکمه‌های فوتر display="label".
-- هیچ محاسبه §6 تغییر نکند.
-
-۴.۴ accountant-invoices:
-- تب‌ها: سه switchSubTab با mobile="short" و fullLabelFrom="lg":
-  - pending_audit: «در انتظار صدور سند» / «در انتظار» / status-pending
-  - booked: «اسناد ثبت‌شده» / «ثبت‌شده» / status-approved
-  - all: «کل فاکتورها» / «همه» / status-all
-- exportExcel، importExcel و fetchInvoices ← export-excel، import-excel و refresh.
-- bookDocument: approve با label="صدور سند" و display="label".
-- rejectDocument: اول API را بخوان. عودت برای اصلاح ← return، رد قطعی ← reject؛ label="عودت".
-
-۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S1-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S1-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
-
-===
-
-[DONE] نشست 2 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف ۴.۳ (accountant-personnel)
-
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S1-DONE] باید باشد.
-- رشته [S2-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
-
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
-
-۳. کار این نشست: components/finance/accountant/accountant-personnel/
-
-- تب‌ها: چهار switchSubTab به app-tab-bar با mobile="icon" و fullLabelFrom="xl". شمارنده و tone مثل پایه. indicator با pulse فقط روی تبی که در پایه animate-pulse داشت.
-  - new: «احکام و مدارک مالی» / «احکام» / ACCOUNTING_ENTITY_ICONS.newPersonnel
-  - payroll: «حقوق و دستمزد ماهانه» / «حقوق» / ACCOUNTING_ENTITY_ICONS.payroll
-  - changes: «درخواست‌های تغییرات» / «تغییرات» / action-edit
-  - all: «همه پرسنل» / «همه» / status-all
-- تب‌های مودال: چهار setPersonnelTab به app-tab-bar با mobile="icon":
-  - contract: «مزد و قرارداد» / «مزد» / ACCOUNTING_ENTITY_ICONS.payroll
-  - insurance: «بیمه و شغل» / «بیمه» / ACCOUNTING_ENTITY_ICONS.insurance
-  - identity: «مشخصات فردی» / «فردی» / ACCOUNTING_ENTITY_ICONS.identity
-  - contact: «حساب بانکی و شبا» / «بانکی» / ACCOUNTING_ENTITY_ICONS.bankAccounts
-- دکمه‌ها:
-  - fetchData: refresh
-  - downloadMissingPrimaryShebaReport: download عنوان‌دار با متن فعلی
-  - openBatchApprovalModal: approve با label="تایید گروهی"
-  - selectedPersonnelIds.clear: close با label="لغو انتخاب"
-  - openEditPersonnelModal: edit
-  - openApprovalModal: approve با متن کوتاه‌شده فعلی، مثلاً «ارسال به مدیر» یا «تایید مالی»
-  - openRejectModal: آرگومان آخر را بخوان؛ 'revision' ← return با «عودت»، 'reject' ← reject با «رد»
-  - openDiffModal: view با label="مقایسه"
-  - recalculatePersonnelRates: کار بی‌کلید
-  - savePersonnelFinancialChanges: save با busy
-  - confirmApproval و confirmBatchApproval: approve
-  - submitRejectModal: [appAction] پویای return/reject، مثل supervisor-personnel.html
-- copyField (📋 و ✓)، convertAccountToShebaNow (⚡) و ساختار شبا دست نخورند. در گزارش خروجی این فرمان را بیاور:
-  git diff <پایه> -U0 | Select-String '^[+-].*(sheba|Sheba|IRANIAN_BANKS)'
-
-۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S2-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S2-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
-
-===
-
-[DONE] نشست 3 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف ۴.۲ (accountant-fleet)
-
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S2-DONE] باید باشد.
-- رشته [S3-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
-
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
-
-۳. کار این نشست: components/finance/accountant/accountant-fleet/
-
-- ستون «وضعیت فعلی» ردیف ۴.۲ از «محاسبه کرایه» و «تسویه صورتحساب» نام می‌برد، ولی این دو در کد نیستند؛ نساز.
-- تب‌ها: چهار switchSubTab به app-tab-bar با mobile="icon" و fullLabelFrom="xl". شمارنده و tone مثل پایه. indicator با pulse فقط روی تبی که در پایه animate-pulse داشت.
-  - new: «خودروها و نرخ کرایه» / «خودروها» / ACCOUNTING_ENTITY_ICONS.fleet
-  - settlement: «تسویه‌حساب و کارکرد» / «تسویه» / ACCOUNTING_ENTITY_ICONS.payroll
-  - changes: «درخواست‌های تغییرات» / «تغییرات» / action-edit
-  - all: «همه ناوگان» / «همه» / status-all
-- دکمه‌ها:
-  - exportExcel: export-excel
-  - fetchFleetData: refresh
-  - openBatchApprovalModal: approve با label="تایید گروهی"
-  - selectedVehicleIds.clear: close با label="لغو انتخاب"
-  - openEditVehicleModal: edit
-  - openApprovalModal: approve با label="تایید مالی"
-  - openRejectModal: 'revision' ← return با «عودت»، 'reject' ← reject با «رد»
-  - exportFleetBankExcel: download با label="اکسل بانکی"
-  - loadSettlement («تلاش دوباره»): refresh با display="label" و label="تلاش دوباره"
-  - openDiffModal: view با label="مقایسه"
-  - saveVehicleFinancialChanges: save با busy
-  - confirmApproval و confirmBatchApproval: approve
-  - submitRejectModal: [appAction] پویای return/reject
-- copyToClipboard، onBankSelect، setPrimaryBankAccount، convertAccountToShebaNow و ساختار شبا و بانک دست نخورند. در گزارش خروجی این فرمان را بیاور:
-  git diff <پایه> -U0 | Select-String '^[+-].*(sheba|Sheba|IRANIAN_BANKS)'
-
-۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S3-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S3-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
-
-===
-
-[DONE] نشست 4 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف‌های ۴.۵ و ۴.۶
-
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S3-DONE] باید باشد.
-- رشته [S4-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
-
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
-
-۳. کار این نشست (مسیرها در components/finance/accountant/):
-
-۴.۵ accountant-petty-cash:
-- تب‌ها: سه switchSubTab با mobile="short" و fullLabelFrom="lg":
-  - pending_review: «نیازمند ممیزی» / «ممیزی» / status-pending
-  - settled: «شارژ و تسویه شده» / «تسویه» / status-approved
-  - all: «کل دفاتر تنخواه» / «همه» / status-all
-- exportExcel، importExcel و fetchPettyCash ← export-excel، import-excel و refresh.
-- approveReplenishment: approve با label="تایید".
-- rejectReplenishment: اول API را بخوان. return یا reject؛ label="عودت".
-
-۴.۶ accountant-diskettes:
-- تب‌ها: سه switchSubTab با mobile="short" و fullLabelFrom="lg":
-  - social_security: «بیمه تامین اجتماعی» / «بیمه» / ACCOUNTING_ENTITY_ICONS.insurance
-  - tax_portal: «مالیات حقوق» / «مالیات» / ACCOUNTING_ENTITY_ICONS.tax
-  - bank_payroll: «واریز بانکی» / «بانک» / ACCOUNTING_ENTITY_ICONS.bankAccounts
-- exportExcel: export-excel.
-- importExcel: عنوانش «راهنمای ساختار دیسکت» است. متد را بخوان؛ اگر فقط راهنما یا قالب نشان می‌دهد ← view با label="راهنما"، وگرنه import-excel.
-- loadPeriod: متد را بخوان؛ اگر داده را دوباره می‌خواند ← refresh.
-- generateSocialSecurityDiskette، generateTaxDiskette، generateBankDiskette، generateReleasedBankDiskette و generateFleetBankExcel: download با display="label" و متن کوتاه‌شده فعلی.
-
-۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S4-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S4-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
-
-===
-
-[DONE] نشست 5 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف ۴.۷ (counterparties)
-
-۱. دروازه شروع. پیش از هر تغییر این سه شرط را بسنج. اگر یکی برقرار نبود، هیچ فایلی را تغییر نده، فقط علت را در یک جمله بنویس و پایان بده:
-- در فایل Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md رشته [S4-DONE] باید باشد.
-- رشته [S5-DONE] نباید باشد؛ اگر هست، این نشست قبلاً انجام شده است.
-- در خروجی git status --porcelain هیچ خطی نباید باشد که با ?? شروع نشود، جز tasks.md، run_tasks.bat، run_tasks.py و tasks_history.md.
-
-۲. در همان فایل طرح، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
-
-۳. کار این نشست: components/finance/counterparties/
-
-- فیلتر نوع: شش onTypeFilterChange به app-tab-bar با mobile="icon" و fullLabelFrom="xl". شمارنده‌ها (totalCount و …) مثل پایه:
-  - all: «همه» / status-all
-  - driver: «راننده» / ACCOUNTING_ENTITY_ICONS.fleet
-  - repair_shop: «تعمیرگاه» / ACCOUNTING_ENTITY_ICONS.repairShop
-  - fuel_station: «جایگاه سوخت» / «سوخت» / ACCOUNTING_ENTITY_ICONS.fuelStation
-  - contractor: «پیمانکار» / ACCOUNTING_ENTITY_ICONS.contractor
-  - other: «سایر» / ACCOUNTING_ENTITY_ICONS.otherCounterparty
-- حالت نمایش: دو onViewModeChange به app-tab-bar دوتبی بدون آیکون («جدول» و «کارت»، mobile="short").
-- دکمه‌ها:
-  - exportExcel: export-excel
-  - openImportModal: import-excel
-  - refreshCounterparties: refresh
-  - saveCounterparty: save با type="submit"، class="w-full sm:w-auto" و busy اگر هست. عنوان پویای فعلی را با [label] نگه دار.
-  - cancelEdit: close با label="انصراف"
-  - editCounterparty: edit
-  - deleteCounterparty: delete
-  - executeConfirmDialog: کار همان دیالوگ را از کد بخوان؛ اگر حذف است ← delete
-  - closeConfirmDialog: close
-- toggleCounterpartyStatus (چیپ فعال و غیرفعال) کار بی‌کلید است.
-- copyShebaToClipboard و copyAccountNumberToClipboard (📋 و ✓)، toggleBankDropdown و selectBank و ساختار شبا طبق AGENTS §7 دست نخورند. در گزارش خروجی این فرمان را بیاور:
-  git diff <پایه> -U0 | Select-String '^[+-].*(sheba|Sheba|IRANIAN_BANKS)'
-
-۴. پایان:
-- معیار ۹-۴ را کامل اجرا کن.
-- گزارش را با برچسب [S5-DONE] بنویس، فقط اگر همه معیارها سبز بود؛ وگرنه با [S5-FAILED] و علت.
-- commit کن، push نکن و توقف کن.
-- اگر خطای بیلد، نگهبان یا پسرفت تست را با دو تلاش رفع نکردی، برچسب FAILED بزن و توقف کن.
-
-===
-
-[DONE] نشست 6 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۰، ردیف ۴.۲۲ (accountant-new-profiles) و پایان گام ۱۰
+نشست 1 از 10 — راه میانهٔ ماژولار: گام ۰-الف (پوشه‌های بک‌اند)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys; b=pathlib.Path('warehouse-backend'); need=['core/accounts','core/common','core/companies','core/communications','core/notifications','core/reports','core/settings_core','core/platform_core','modules/warehouse/warehouses','modules/warehouse/inventory','modules/accounting/personnel']; miss=[p for p in need if not (b/p/'__init__.py').is_file()]; root=[p.split('/')[-1] for p in need if (b/p.split('/')[-1]/'__init__.py').exists()]; pk=[str(p) for p in [b/'modules'/'__init__.py']+[d/'__init__.py' for d in (b/'modules').iterdir() if d.is_dir()] if p.exists()]; helper=(b/'backend_paths.py').is_file(); print('missing:',miss,'still at root:',root,'package markers:',pk,'helper:',helper); sys.exit(1 if miss or root or pk or not helper else 0)"
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py migrate-empty
+verify: python scripts/automation/verify_tools.py guardian29-max --max unique_direct_violations=41 production_violations=10 non_production_violations=31 composition_root_hardcoded_lines=4 --min unique_direct_violations=41 production_violations=10
+verify: python scripts/e2e/guardian_30_settings_core.py
+verify: python scripts/e2e/guardian_31_install_profiles.py
+verify: python scripts/e2e/guardian_54_module_independence.py
+verify: python scripts/e2e/guardian_53_deploy_safety.py
+verify: python scripts/test_guard_hooks.py
+verify: pwsh -NoProfile -File scripts/deploy_tests/test_bundle.ps1
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(modular): step 0-a backend folders"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+۱. در فایل Documents/Modular_Middle_Path/implementation_plan_modular_middle_path.md این بخش‌ها را کامل بخوان: `## ۲.`، `## ۴.`، `### گام ۰-الف` و `## ۷.`. قواعد `.agents/AGENTS.md` بخش ۵ و ۱۰ برقرارند. hash فعلی HEAD را پیش از هر تغییر یادداشت کن؛ پایهٔ این نشست است.
+
+۲. کار این نشست، دقیقاً طبق `### گام ۰-الف`:
+- با git mv اپ‌ها را جابه‌جا کن: accounts، common، companies، communications، notifications، reports، settings_core و platform_core به warehouse-backend/core/؛ warehouses و inventory به warehouse-backend/modules/warehouse/؛ personnel به warehouse-backend/modules/accounting/. پوشهٔ config و فایل manage.py سر جایشان می‌مانند.
+- در هیچ‌کدام از warehouse-backend/modules/ و warehouse-backend/modules/<x>/ فایل __init__.py نساز (علتش در بخش `### گام ۳` طرح آمده است).
+- name و label هیچ AppConfig و هیچ ایمپورتی (from accounts...) را عوض نکن. هیچ مایگریشنی نساز.
+- warehouse-backend/backend_paths.py را با paths() و install() بساز و در config/__init__.py صدا بزن.
+- همهٔ مصرف‌کننده‌های فهرست‌شده در طرح را اصلاح کن: نگهبان ۲۹ (PYTHONPATH برای lint-imports از paths())، اسکریپت‌های scripts/ که sys.path.insert دارند، اسکریپت‌های داخل اپ‌ها که مسیر را از __file__ می‌سازند، pyproject.toml، توضیح .importlinter، Get-BackendWhitelist و Test-BundleStage در deploy.ps1، scripts/deploy_tests/test_bundle.ps1 (همراه یک بررسی تازه: فهرست اپ‌های بسته برابر INSTALLED_APPS پروفایل کامل باشد)، warehouse-backend/docker-compose.yml اگر مسیر اپ دارد، .claude/hooks/guard.py، .claude/skills/safe-migration، .claude/agents، بخش ساختار CLAUDE.md و .agents/AGENTS.md.
+- deploy.ps1 فقط در همین نقاط تغییر کند. تغییر دیگری در آن نده.
+- پس از git mv، پوشه‌های قدیمی که فقط __pycache__ (نادیده‌گرفته‌شده در git) یا desktop.ini دارند را پاک کن تا پوشهٔ خالی هم‌نام اپ در ریشهٔ بک‌اند نماند.
+
+۳. فرمان‌هایی که خودت می‌توانی اجرا کنی (استثنای بخش ۱۰ AGENTS): git mv، و این دو فرمان برای بازخورد:
+python scripts/automation/verify_tools.py django-check
+python scripts/automation/verify_tools.py migrations-unchanged
+بقیهٔ بررسی‌ها را runner اجرا می‌کند.
+
+۴. پایان:
+- خودبازبینی با git diff --stat <پایه> و git status.
+- در انتهای همان فایل طرح، زیر `## گزارش پیشرفت`، یک بند کوتاه برای «نشست ۱ (گام ۰-الف)» بنویس: کارهای انجام‌شده، انحراف‌ها و علتشان، فرمان‌هایی که خودت اجرا کردی با خط خلاصهٔ خروجی، و آنچه به runner و ناظر می‌ماند. هیچ برچسب DONE یا FAILED ننویس.
+- فقط فایل‌های خودت را stage کن (tasks.md، run_tasks.* و tasks_history.md را نه) و با این پیام commit کن، بدون push:
+refactor(modular): step 0-a backend folders
+- اگر چیزی در طرح با کد نخواند و نتوانستی بی‌انحراف بزرگ ادامه دهی، علت را در همان بند گزارش بنویس، همان را commit کن و پایان بده.
+
+===
+
+نشست 2 از 10 — راه میانهٔ ماژولار: گام ۰-ب-۱ (پوشه‌های مشترک فرانت)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys; m=pathlib.Path('warehouse-front/src/app/modules'); c=pathlib.Path('warehouse-front/src/app/components'); need=['login','layout','app-launcher','change-password','verify-card','users','operations','audit','health-dashboard','settings']; miss=[n for n in need if not (m/'common'/'components'/n).is_dir()]; old=[n for n in need if (c/n).exists()]; shell=(m/'platform-shell').exists(); script=pathlib.Path('scripts/refactor/move_front_components.mjs').is_file(); print('missing:',miss,'still in components:',old,'platform-shell left:',shell,'script:',script); sys.exit(1 if miss or old or shell or not script else 0)"
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: cd warehouse-front && npx ng build --configuration accounting-only --output-path ../scratch/ng-build-acc
+verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"
+verify: cd warehouse-front && npx ng build --configuration warehouse-only --output-path ../scratch/ng-build-wh
+verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/e2e/guardian_38_users_persona_texts.py
+verify: python scripts/e2e/guardian_39_users_chunked_list.py
+verify: python scripts/e2e/guardian_40_users_avatar_transactional.py
+verify: python scripts/e2e/guardian_42_users_role_scope_permissions.py
+verify: python scripts/e2e/guardian_44_users_query_params_clean.py
+verify: python scripts/e2e/guardian_45_users_mobile_actions.py
+verify: python scripts/e2e/guardian_46_users_avatar_contrast.py
+verify: python scripts/e2e/guardian_47_users_status_filters.py
+verify: python scripts/e2e/guardian_48_users_emergency_normalize.py
+verify: warehouse-backend\venv\Scripts\python.exe scripts/e2e/guardian_50_users_sensitive_sync.py
+verify: python scripts/e2e/guardian_51_users_expiry_cleanup.py
+verify: python scripts/test_guard_hooks.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(modular): step 0-b1 common front folders"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+۱. در فایل Documents/Modular_Middle_Path/implementation_plan_modular_middle_path.md بخش‌های `## ۴.`، `### گام ۰-ب` و `## ۷.` را کامل بخوان. قواعد `.agents/AGENTS.md` بخش ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن؛ پایهٔ این نشست است.
+
+۲. کار این نشست، طبق «نشست ۰-ب-۱» در `### گام ۰-ب`:
+- نگاشت را قطعی کن: برای هر پوشهٔ warehouse-front/src/app/components/<name> از روی route‌ها (app.routes.ts و modules/*/…routes.ts) و گراف ایمپورت تعیین کن به common، warehouse یا accounting می‌رود. جدول نهایی را در بند گزارش این نشست بنویس. پوشه‌های جدول پیش‌نویس طرح فقط وقتی جابه‌جا شوند که شواهد خلافشان را نشان ندهد؛ اگر نشان داد، شاهد را در گزارش بیاور.
+- اسکریپت scripts/refactor/move_front_components.mjs را با API کامپایلر TypeScript (موجود در node_modules) بساز: با git mv پوشه را منتقل کند و مسیرهای نسبی ایمپورت را در همهٔ فایل‌های *.ts (از جمله *.spec.ts و *.dom.spec.ts و import() پویا) بازنویسی کند؛ هم در فایل‌های جابه‌جاشده و هم در فایل‌هایی که به آن‌ها ایمپورت دارند. نام فایل‌ها پسوند .component ندارند (مثل login/login.ts).
+- فقط پوشه‌های گروه common را به warehouse-front/src/app/modules/common/components/ ببر و محتوای modules/platform-shell را در modules/common ادغام کن (index.ts و هر ارجاع به آن را درست کن). پوشه‌های انبار و مالی در این نشست دست نخورند.
+- هر مسیر ثابتی که به پوشه‌های جابه‌جاشدهٔ همین نشست اشاره دارد، در همین نشست اصلاح شود تا همه‌چیز سبز بماند. فهرست کامل این فایل‌ها در `### گام ۰-ب` طرح، بند «مسیرهای ثابتی که باید اصلاح شوند» است: مبنای نگهبان ۵۵ (فقط بازنویسی مسیر، بدون --update-baseline)، نگهبان‌های users (۳۸ تا ۵۱)، scripts/test_guard_hooks.py (مسیر components/login)، dom-verify.js، tsconfig.*.spec.json، specهای __dirname و مستندها. بقیهٔ پوشه‌ها در نشست ۳.
+- templateUrl و styleUrl را دست نزن. هیچ رفتار، قالب یا استایلی را تغییر نده.
+
+۳. فرمان‌هایی که خودت می‌توانی اجرا کنی: git mv، اسکریپت خودت، و حداکثر دو بار این بیلد برای بازخورد:
+cd warehouse-front && npx ng build --output-path ../scratch/ng-build-agent
+بقیهٔ بررسی‌ها (دو بیلد پروفایل، نگهبان‌ها و ng test) را runner اجرا می‌کند.
+
+۴. پایان:
+- خودبازبینی با git diff -M --stat <پایه>: باید فقط تغییر نام و سطرهای ایمپورت باشد.
+- زیر `## گزارش پیشرفت` طرح، بند «نشست ۲ (گام ۰-ب-۱)» را مثل نشست ۱ بنویس، همراه جدول نهایی نگاشت. هیچ برچسب DONE یا FAILED ننویس.
+- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
+refactor(modular): step 0-b1 common front folders
+
+===
+
+نشست 3 از 10 — راه میانهٔ ماژولار: گام ۰-ب-۲ (پوشه‌های انبار و مالی در فرانت)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys; m=pathlib.Path('warehouse-front/src/app/modules'); c=pathlib.Path('warehouse-front/src/app/components'); left=[str(p) for p in c.rglob('*.ts')] if c.exists() else []; ok=[(m/'warehouse'/'components'/'counter').is_dir(),(m/'accounting'/'components'/'finance').is_dir()]; script=pathlib.Path('scripts/refactor/move_front_components.mjs').exists(); print('left in components:',left[:5],'module folders:',ok,'script left:',script); sys.exit(1 if left or not all(ok) or script else 0)"
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: cd warehouse-front && npx ng build --configuration accounting-only --output-path ../scratch/ng-build-acc
+verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"
+verify: cd warehouse-front && npx ng build --configuration warehouse-only --output-path ../scratch/ng-build-wh
+verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer"
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/e2e/guardian_38_users_persona_texts.py
+verify: python scripts/e2e/guardian_39_users_chunked_list.py
+verify: python scripts/e2e/guardian_40_users_avatar_transactional.py
+verify: python scripts/e2e/guardian_42_users_role_scope_permissions.py
+verify: python scripts/e2e/guardian_44_users_query_params_clean.py
+verify: python scripts/e2e/guardian_45_users_mobile_actions.py
+verify: python scripts/e2e/guardian_46_users_avatar_contrast.py
+verify: python scripts/e2e/guardian_47_users_status_filters.py
+verify: python scripts/e2e/guardian_48_users_emergency_normalize.py
+verify: warehouse-backend\venv\Scripts\python.exe scripts/e2e/guardian_50_users_sensitive_sync.py
+verify: python scripts/e2e/guardian_51_users_expiry_cleanup.py
+verify: python scripts/test_guard_hooks.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(modular): step 0-b2 module front folders"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+۱. در فایل طرح بخش‌های `### گام ۰-ب` و `## ۷.` و بند «نشست ۲» زیر `## گزارش پیشرفت` (جدول نهایی نگاشت) را بخوان. قواعد `.agents/AGENTS.md` بخش ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
+
+۲. کار این نشست، طبق «نشست ۰-ب-۲» در `### گام ۰-ب`:
+- با همان اسکریپت scripts/refactor/move_front_components.mjs همهٔ پوشه‌های باقی‌ماندهٔ warehouse-front/src/app/components را طبق جدول نشست ۲ به modules/warehouse/components/ و modules/accounting/components/ (یا common اگر جدول گفته) ببر. در پایان پوشهٔ components نباید هیچ فایل *.ts داشته باشد.
+- باقی‌ماندهٔ مسیرهای ثابت فهرست‌شده در طرح را اصلاح کن (هر چه نشست ۲ برای پوشه‌های خودش اصلاح نکرده است):
+  - مبنای نگهبان ۵۵ (scripts/e2e/clickable_ergonomics_baseline.json): فقط مسیرها را با همان نگاشت بازنویسی کن. --update-baseline اجرا نکن و هیچ عددی را عوض نکن.
+  - نگهبان‌های ۳۸ تا ۴۰، ۴۲، ۴۴ تا ۴۸، ۵۰، ۵۱ و guardian_header_harmonization.py، و scripts/test_guard_hooks.py.
+  - warehouse-front/tools/dom-verify.js، tsconfig.spec.json و tsconfig.test21.spec.json.
+  - specهایی که با __dirname فایل می‌خوانند.
+  - .agents/PROJECT_ARCHITECTURE_MAP.md، .claude/skills/design-system، .claude/agents/ui-reviewer.md، CLAUDE.md و .agents/AGENTS.md.
+- در پایان اسکریپت scripts/refactor/move_front_components.mjs را حذف کن (git rm).
+- هیچ رفتار، قالب یا استایلی را تغییر نده.
+
+۳. فرمان‌هایی که خودت می‌توانی اجرا کنی: git mv، اسکریپت، و حداکثر دو بار:
+cd warehouse-front && npx ng build --output-path ../scratch/ng-build-agent
+بقیه را runner اجرا می‌کند.
+
+۴. پایان:
+- خودبازبینی با git diff -M --stat <پایه>.
+- زیر `## گزارش پیشرفت` طرح، بند «نشست ۳ (گام ۰-ب-۲)» را بنویس. هیچ برچسب DONE یا FAILED ننویس.
+- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
+refactor(modular): step 0-b2 module front folders
+
+===
+
+نشست 4 از 10 — راه میانهٔ ماژولار: گام ۱ (بیلد و استقرار جدا)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: cd warehouse-front && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
+verify: python -c "import pathlib,sys; t=pathlib.Path('scratch/ng-build-acc/browser/build-modules.txt').read_text(encoding='utf-8').strip(); print(repr(t)); sys.exit(0 if t=='accounting' else 1)"
+verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"
+verify: cd warehouse-front && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
+verify: python -c "import pathlib,sys; t=pathlib.Path('scratch/ng-build-wh/browser/build-modules.txt').read_text(encoding='utf-8').strip(); print(repr(t)); sys.exit(0 if t=='warehouse' else 1)"
+verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer"
+verify: cd warehouse-front && set "WH_MODULES=" && npm run build:modules -- --output-path ../scratch/ng-build-all
+verify: python -c "import pathlib,sys; t=pathlib.Path('scratch/ng-build-all/browser/build-modules.txt').read_text(encoding='utf-8').strip(); print(repr(t)); sys.exit(0 if t=='accounting,warehouse' else 1)"
+verify: python scripts/e2e/guardian_53_deploy_safety.py
+verify: pwsh -NoProfile -File scripts/deploy_tests/test_bundle.ps1
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(modular): step 1 per-module build and deploy"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+۱. در فایل طرح بخش‌های `### گام ۱` و `## ۷.` را کامل بخوان. قواعد `.agents/AGENTS.md` بخش ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
+
+۲. کار این نشست، طبق `### گام ۱`:
+- warehouse-front/tools/build-for-modules.js و اسکریپت npm به نام build:modules:
+  - فهرست ماژول‌ها را از متغیر WH_MODULES می‌خواند. خالی یعنی همهٔ ماژول‌ها.
+  - accounting پروفایل accounting-only، warehouse پروفایل warehouse-only، و هر دو یا خالی بیلد کامل را می‌سازد.
+  - گزینهٔ --output-path را به ng build می‌دهد و همان مسیر را به tools/patch-ngsw-530.js هم می‌رساند. برای این کار به patch-ngsw-530.js یک آرگومان اختیاری مسیر خروجی اضافه کن؛ بی‌آرگومان، رفتار امروزش عوض نشود.
+  - پس از بیلد، فایل <output-path>/browser/build-modules.txt را می‌نویسد: کد ماژول‌ها به ترتیب الفبا و جداشده با ویرگول (accounting، warehouse یا accounting,warehouse).
+- deploy.ps1:
+  - فرانت را با npm run build:modules و WH_MODULES برابر Modules پیکربندی بیلد کند.
+  - نشانگر .build-complete شامل MODULES= شود تا -SkipBuild بیلد پروفایل دیگر را دوباره به‌کار نبرد.
+  - بررسی بسته build-modules.txt را با Modules سرور مقایسه کند (مقایسهٔ مجموعه، نه ترتیب).
+  - -AddModule پیش از تغییر WH_MODULES فرانت را با فهرست تازه بیلد و release کند. بقیهٔ مسیر مثل امروز بماند.
+  - $KnownModules را از git ls-tree کامیت استقرار (warehouse-backend/modules/*/) بسازد، نه ثابت.
+- scripts/deploy/warehouse-deploy.sh: KNOWN_MODULES را از پوشهٔ modules همان release بسازد. MODULE_SERVICES برای ماژول ناشناخته مقدار خالی بگیرد.
+- به نگهبان ۵۳ یک بند تازه اضافه کن: فهرست ماژول‌ها در deploy.ps1 و warehouse-deploy.sh ثابت نوشته نشده باشد.
+- scripts/deploy_tests/test_bundle.ps1 را برای مسیر تازهٔ بیلد به‌روز کن، از جمله بررسی محتوای .build-complete (امروز دقیقاً COMMIT=<sha> را می‌خواهد) که باید با بخش تازهٔ MODULES= بخواند.
+
+۳. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر یک بار بیلد هر پروفایل با build:modules برای بازخورد. test_integration.ps1 را اجرا نکن؛ با ناظر است.
+
+۴. پایان:
+- خودبازبینی با git diff --stat <پایه>.
+- زیر `## گزارش پیشرفت` طرح، بند «نشست ۴ (گام ۱)» را بنویس. هیچ برچسب DONE یا FAILED ننویس.
+- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
+feat(modular): step 1 per-module build and deploy
+
+===
+
+نشست 5 از 10 — راه میانهٔ ماژولار: گام ۲ (حصارها)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/e2e/guardian_modularization.py
+verify: python scripts/automation/verify_tools.py guardian29-max --max non_production_violations=0 composition_root_hardcoded_lines=0 production_violations=40 --min production_violations=10
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/e2e/guardian_57_front_module_fence.py --self-test
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/e2e/guardian_30_settings_core.py
+verify: python scripts/e2e/guardian_31_install_profiles.py
+verify: python scripts/e2e/guardian_54_module_independence.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "chore(modular): step 2 backend and front fences"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+۱. در فایل طرح بخش‌های `### گام ۲`، `## ۴.` (قاعدهٔ وابستگی) و `## ۷.` را کامل بخوان. قواعد `.agents/AGENTS.md` بخش ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
+
+۲. کار این نشست، طبق `### گام ۲`:
+- بک‌اند:
+  - .importlinter را با پوشه‌ها هم‌تراز کن: config بالا، warehouses و inventory و personnel در لایهٔ ماژول، و همهٔ اپ‌های core (از جمله reports) در لایهٔ هسته. C2 دوطرفه بماند و C3 یعنی هیچ اپ هسته‌ای هیچ اپ ماژولی را ایمپورت نکند.
+  - ۴ سطر ریشهٔ ترکیب را صفر کن. _PROJECT_LOGGERS در config/settings.py از INSTALLED_APPS ساخته شود. سطر urls.py را پس از هم‌ترازی دوباره بسنج.
+  - هر ۳۱ یال غیرتولیدی را رفع کن. تست‌های ذاتاً بین‌ماژولی را به warehouse-backend/integration_tests/ ببر (این پوشه در root_packages نیست، اسکریپت ریشه ندارد و فقط با برچسب اجرا می‌شود).
+  - شمار یال‌های تولیدی پس از هم‌ترازی ممکن است بیشتر از ۱۰ شود (مثلاً ایمپورت‌های انباری reports). این‌ها در گام ۳ رفع می‌شوند؛ در این نشست رفعشان نکن.
+  - پس از همهٔ این‌ها یک بار python scripts/e2e/guardian_modularization.py --update-baseline اجرا کن. عددهای قبل و بعد هر شمارنده را در گزارش بیاور.
+- فرانت: scripts/e2e/guardian_57_front_module_fence.py را بساز، طبق بند «فرانت» در `### گام ۲`:
+  - سه شمارنده (الف، ب، ج)، استثنای ریشهٔ ترکیب، و مبنای آچاری scripts/e2e/front_fence_baseline.json (فقط کاهش مجاز است؛ --update-baseline برای ثبت).
+  - گزینهٔ --self-test یک فایل نقض ساختگی در scratch/ می‌سازد و فقط وقتی کد ۰ می‌دهد که نقض را پیدا کرده باشد. فایل ساختگی را پاک می‌کند.
+  - نگهبان باید در guardian_all.py خودکار کشف شود.
+  - یک بار با --update-baseline مبنای امروز را ثبت کن.
+
+۳. فرمان‌هایی که خودت می‌توانی اجرا کنی: guardian_modularization.py (با و بی --update-baseline، به‌ترتیب بالا)، lint-imports با PYTHONUTF8=1، نگهبان ۵۷ و --self-test و --update-baseline آن، و verify_tools.py django-check.
+
+۴. پایان:
+- خودبازبینی با git diff --stat <پایه>.
+- زیر `## گزارش پیشرفت` طرح، بند «نشست ۵ (گام ۲)» را با فهرست یال‌های غیرتولیدی و راه رفع هر کدام بنویس. هیچ برچسب DONE یا FAILED ننویس.
+- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
+chore(modular): step 2 backend and front fences
+
+===
+
+نشست 6 از 10 — راه میانهٔ ماژولار: گام ۳-الف (معرفی ماژول‌ها و ابزار هسته)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,re,sys; b=pathlib.Path('warehouse-backend'); files={'modules/warehouse/warehouses/signals.py':'personnel','modules/accounting/personnel/models.py':'warehouses','modules/accounting/personnel/views.py':'warehouses','core/accounts/serializers.py':'personnel'}; bad=[f for f,m in files.items() if re.search(r'^\s*(from|import)\s+'+m+r'(\.|\s|$)',(b/f).read_text(encoding='utf-8'),re.M)]; man=[str(p) for p in [b/'modules/warehouse/module.py',b/'modules/accounting/module.py',b/'core/platform_core/events.py'] if not p.is_file()]; cat=(b/'core/platform_core/module_catalog.py').read_text(encoding='utf-8'); hard=[n for n in ('WAREHOUSE_SPEC = ','ACCOUNTING_SPEC = ') if n in cat]; print('still importing:',bad,'missing:',man,'hard-coded specs:',hard); sys.exit(1 if bad or man or hard else 0)"
+verify: python scripts/e2e/guardian_modularization.py
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py migrate-empty
+verify: python scripts/e2e/guardian_30_settings_core.py
+verify: python scripts/e2e/guardian_31_install_profiles.py
+verify: python scripts/e2e/guardian_54_module_independence.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(modular): step 3a module manifests and core events"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+۱. در فایل طرح بخش‌های `### گام ۳`، `## ۳.` (جدول ۱۰ یال تولیدی) و `## ۷.` را کامل بخوان. قواعد `.agents/AGENTS.md` بخش ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
+
+۲. کار این نشست (نیمهٔ اول `### گام ۳`):
+- معرفی خودکار: WAREHOUSE_SPEC و ACCOUNTING_SPEC و فهرست مجوزهای هر ماژول را از core/platform_core/module_catalog.py به warehouse-backend/modules/warehouse/module.py و modules/accounting/module.py ببر. module_catalog.py فقط modules/*/module.py را با importlib.util.spec_from_file_location و نام یکتا پویش کند و شرط برابری code با نام پوشه را بسنجد. config/settings.py همان MODULE_CATALOG را بی‌تغییر بخواند.
+- ابزار هسته: contribute(point, item)، contributions(point) و company_of(kind, id) در platform_core/registry.py، و رویداد scope_deleted در platform_core/events.py (فایل تازه).
+- این چهار یال، دقیقاً طبق جدول `### گام ۳`:
+  - warehouses/signals.py → personnel: انبار scope_deleted را می‌فرستد و personnel/signals.py گیرنده است و همان ۵ مدل را خالی می‌کند. رفتار عوض نشود (خالی کردن، نه حذف).
+  - personnel/models.py:2296 و personnel/views.py:4973 → warehouses: انبار تابع «شرکتِ این انبار» را contribute می‌کند و مالی company_of('warehouse', id) را صدا می‌زند.
+  - accounts/serializers.py:449 → personnel: مالی در ready() با register_derived_company_source (companies/access.py) ثبت می‌شود.
+- برای سیگنال حذف انبار یک تست Django در اپ personnel بنویس که برابری رفتار را نشان دهد. اگر پایگاه تست در دسترس نبود، در گزارش صریح بنویس که اجرا نشد.
+
+۳. فرمان‌هایی که خودت می‌توانی اجرا کنی: verify_tools.py django-check، verify_tools.py migrations-unchanged و guardian_modularization.py (بدون --update-baseline، مگر شمار کم شده باشد؛ در آن صورت یک بار --update-baseline و عددها در گزارش).
+
+۴. پایان:
+- خودبازبینی با git diff --stat <پایه>.
+- زیر `## گزارش پیشرفت` طرح، بند «نشست ۶ (گام ۳-الف)» را بنویس. هیچ برچسب DONE یا FAILED ننویس.
+- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
+refactor(modular): step 3a module manifests and core events
+
+===
+
+نشست 7 از 10 — راه میانهٔ ماژولار: گام ۳-ب (بقیهٔ یال‌های هسته)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/e2e/guardian_modularization.py
+verify: python scripts/automation/verify_tools.py guardian29-max --max production_violations=0 non_production_violations=0 composition_root_hardcoded_lines=0
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py migrate-empty
+verify: python scripts/e2e/guardian_30_settings_core.py
+verify: python scripts/e2e/guardian_31_install_profiles.py
+verify: python scripts/e2e/guardian_54_module_independence.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(modular): step 3b extension points for core edges"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+۱. در فایل طرح بخش‌های `### گام ۳` و `## ۷.` و بند «نشست ۶» زیر `## گزارش پیشرفت` را بخوان. قواعد `.agents/AGENTS.md` بخش ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
+
+۲. کار این نشست (نیمهٔ دوم `### گام ۳`)، با همان ابزار contribute و contributions نشست ۶:
+- accounts/serializers.py:13 و accounts/excel_utils.py → warehouses: نقطهٔ user_extensions. انبار فیلد و ستون اکسل «انبارهای کاربر» را می‌دهد. خروجی API و اکسل در پروفایل کامل عوض نشود.
+- accounts/rollback_service.py → inventory و warehouses: نقطهٔ rollback_models. هر ماژول نگاشت نام به مدل خودش را می‌دهد.
+- reports: همهٔ موجودیت‌ها و joinهای انبار و مالی از core/reports/registry.py (و هر ایمپورت ماژولی در core/reports، مثل serializers.py) به فایل report_entities.py هر ماژول بروند و در ready() با register_entity و register_joins ثبت شوند. فهرست موجودیت‌ها و کلیدهایشان در پروفایل کامل عیناً همان قبل بماند.
+- هر نقض تولیدی دیگری که نگهبان ۲۹ پس از نشست ۵ نشان می‌دهد، به همین روش رفع شود. هدف: production_violations = 0.
+- پس از صفر شدن، یک بار python scripts/e2e/guardian_modularization.py --update-baseline.
+- یک تست Django بنویس که فهرست کلید موجودیت‌های گزارش در پروفایل کامل را با فهرست پیش از تغییر مقایسه کند. اگر پایگاه تست در دسترس نبود، در گزارش صریح بنویس.
+
+۳. فرمان‌هایی که خودت می‌توانی اجرا کنی: verify_tools.py django-check، verify_tools.py migrations-unchanged و guardian_modularization.py (با --update-baseline فقط یک بار در پایان).
+
+۴. پایان:
+- خودبازبینی با git diff --stat <پایه>.
+- زیر `## گزارش پیشرفت` طرح، بند «نشست ۷ (گام ۳-ب)» را بنویس. هیچ برچسب DONE یا FAILED ننویس.
+- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
+refactor(modular): step 3b extension points for core edges
+
+===
+
+نشست 8 از 10 — راه میانهٔ ماژولار: گام ۴-الف (قرارداد فرانت و پوسته)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys; f=pathlib.Path('warehouse-front'); m=f/'src/app/modules'; stubs=[str(p) for p in m.rglob('*.stub.ts')]; aj=(f/'angular.json').read_text(encoding='utf-8'); prof=[n for n in ('accounting-only','warehouse-only') if n in aj]; need=[str(p) for p in [f/'src/app/core/modules/module-contract.ts',m/'warehouse/module.ts',m/'accounting/module.ts',m/'installed-modules.ts',f/'tools/gen-installed-modules.js'] if not p.is_file()]; print('stubs:',stubs,'profiles in angular.json:',prof,'missing:',need); sys.exit(1 if stubs or prof or need else 0)"
+verify: cd warehouse-front && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
+verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"
+verify: cd warehouse-front && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
+verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer"
+verify: cd warehouse-front && set "WH_MODULES=" && npm run build:modules -- --output-path ../scratch/ng-build-all
+verify: python -c "import pathlib,sys; t=pathlib.Path('scratch/ng-build-all/browser/build-modules.txt').read_text(encoding='utf-8').strip(); print(repr(t)); sys.exit(0 if t=='accounting,warehouse' else 1)"
 verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_52_icon_registry.py
 verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/accountant/accountant-new-profiles/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.22)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 6"
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(modular): step 4a front module contract"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
-۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+۱. در فایل طرح بخش‌های `### گام ۴`، `## ۴.` و `## ۷.` را کامل بخوان. قواعد `.agents/AGENTS.md` بخش ۵، ۹ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
 
-۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۲. کار این نشست، طبق «نشست ۴-الف» در `### گام ۴`:
+- warehouse-front/src/app/core/modules/module-contract.ts: نوع WhFrontendModule (فیلدهای فعلی FrontendModuleSpec به‌علاوهٔ routes، navItems، entityIcons و extensions) و نوع ExtensionMap. نام‌های ExtensionMap را پس از خواندن هر ۲۴ فایلی که isModuleInstalled دارند قطعی کن و فهرستش را در گزارش بیاور.
+- modules/warehouse/module.ts و modules/accounting/module.ts هر کدام export const MODULE.
+- tools/gen-installed-modules.js فایل src/app/modules/installed-modules.ts را از WH_MODULES می‌سازد (خالی یعنی همهٔ پوشه‌هایی که module.ts دارند). نسخهٔ commitشده همهٔ ماژول‌ها را دارد. build-for-modules.js به‌جای انتخاب پروفایل، مولد را صدا بزند و پس از بیلد نسخهٔ commitشده را برگرداند تا درخت کاری تمیز بماند. بازگرداندن حتماً در try/finally باشد تا شکست یا قطع بیلد هم درخت را کثیف نگذارد. قرارداد build:modules (WH_MODULES، --output-path، build-modules.txt) عوض نشود و deploy.ps1 دست نخورد.
+- فایل‌های *.stub.ts و پرچم‌های modules/*/…-flags*.ts و پروفایل‌های accounting-only و warehouse-only و نسخه‌های dev آن‌ها (accounting-dev و warehouse-dev و پیکربندی‌های serve وابسته) از angular.json حذف شوند. اسکریپت‌های npm قدیمی build:accounting و build:warehouse هم به build:modules با WH_MODULES تبدیل یا حذف شوند.
+- ModuleRegistryService فهرست را از installed-modules.ts بسازد و KNOWN_MODULE_CATALOG از هسته حذف شود. isModuleInstalled می‌ماند.
+- پوسته (layout، app-launcher، user-menu) از extensions بخواند، نه از نام ماژول.
+- تست DOM برای layout، app-launcher و user-menu با سه فهرست ماژول (فقط انبار، فقط مالی، هر دو).
+- ظاهر و رفتار در پروفایل کامل عوض نشود.
 
-۳. کار این نشست: components/finance/accountant/accountant-new-profiles/
-الگو: components/finance/supervisor/supervisor-new-profiles/ (html و ts)، پس از بازبینی گام ۹.
-
-- تب‌ها: چهار switchSubTab به app-tab-bar با mobile="icon" و fullLabelFrom="xl". شمارنده و tone مثل پایه. indicator فقط جایی که پایه animate-pulse داشت.
-  - personnel: «پرونده‌های پرسنل» / «پرسنل» / ACCOUNTING_ENTITY_ICONS.newPersonnel
-  - vehicles: «پرونده‌های ناوگان» / «ناوگان» / ACCOUNTING_ENTITY_ICONS.fleet
-  - change_requests: «درخواست‌های تغییرات» / «تغییرات» / action-edit
-  - all: «همه موارد» / «همه» / status-all
-- دو changeRequestSubTab: app-tab-bar دوتبی (ACCOUNTING_ENTITY_ICONS.personnel و ACCOUNTING_ENTITY_ICONS.fleet).
-- تب‌های مودال: چهار setPersonnelTab به app-tab-bar با mobile="icon":
-  - contract: «مزد و مزایای قانونی» / «مزد» / ACCOUNTING_ENTITY_ICONS.payroll
-  - insurance: «بیمه و مالیات» / «بیمه» / ACCOUNTING_ENTITY_ICONS.insurance
-  - contact: «شماره حساب و شبا» / «بانکی» / ACCOUNTING_ENTITY_ICONS.bankAccounts
-  - identity: «مشخصات فردی» / «فردی» / ACCOUNTING_ENTITY_ICONS.identity
-- دکمه‌ها:
-  - fetchData: refresh
-  - approvePersonnelFinance، approveVehicleFinance و approveChangeRequestFinance: approve با label="تایید مالی"
-  - openRejectModal: آرگومان آخر را بخوان؛ 'revision' ← return با «عودت»، 'reject' ← reject با «رد»
-  - openEditPersonnelModal: edit
-  - openDiffModal: view با label="مقایسه"
-  - savePersonnel: save با busy و label="ذخیره تغییرات"
-  - submitRejectModal: [appAction] پویای return/reject
-  - X سربرگ مودال‌ها display="icon"؛ دکمه‌های فوتر display="label"
-- دکمه ⚡ تولید شبا (convertAccountToShebaNow) و ساختار شبا دست نخورند.
-- در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md کل گام ۱۰ را تیک بزن.
+۳. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر دو بار npx ng build --output-path ../scratch/ng-build-agent، و تست‌های DOM تازهٔ خودت با npx ng test --watch=false --include <فایل spec> (فقط همان فایل‌ها).
 
 ۴. پایان:
-- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
-- push نکن و پس از گزارش نوبت را تمام کن.
+- خودبازبینی با git diff --stat <پایه>.
+- زیر `## گزارش پیشرفت` طرح، بند «نشست ۸ (گام ۴-الف)» را بنویس، همراه فهرست نقطه‌های ExtensionMap و یک چک‌لیست از ۲۴ فایل: برای هر فایل، نقطهٔ توسعهٔ آن و اینکه در این نشست تبدیل شد یا به نشست ۹ می‌ماند. نشست ۹ بی‌پویش دوباره از همین چک‌لیست کار می‌کند. هیچ برچسب DONE یا FAILED ننویس.
+- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
+feat(modular): step 4a front module contract
 
 ===
 
-[DONE] نشست 7 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف‌های ۴.۸ و ۴.۹ (خزانه، بخش ۱ از ۲)
+نشست 9 از 10 — راه میانهٔ ماژولار: گام ۴-ب (نقطه‌های توسعه)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import json,pathlib,sys; d=json.loads(pathlib.Path('scripts/e2e/front_fence_baseline.json').read_text(encoding='utf-8')); c=d.get('counters',d); bad={k:v for k,v in c.items() if isinstance(v,int) and v!=0}; print('non-zero fence counters:',bad); sys.exit(1 if bad else 0)"
+verify: cd warehouse-front && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
+verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"
+verify: cd warehouse-front && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
+verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer"
 verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_52_icon_registry.py
 verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/treasurer/{treasurer-disbursements,treasurer-invoices}/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.8)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.9)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 7"
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(modular): step 4b front extension points"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
-۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+۱. در فایل طرح بخش `### گام ۴` و `## ۷.` و بند «نشست ۸» زیر `## گزارش پیشرفت` (نقطه‌ها و فهرست ۲۴ فایل) را بخوان. قواعد `.agents/AGENTS.md` بخش ۵، ۹ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
 
-۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۲. کار این نشست، طبق «نشست ۴-ب» در `### گام ۴`:
+- هر فایلی از آن ۲۴ فایل که هنوز نام ماژول را با isModuleInstalled یا رشتهٔ ثابت می‌سنجد، به خواندن extensions تبدیل شود. ماژول‌ها نقطه‌ها را در module.ts خود پر کنند. اگر ماژولی به قابلیت ماژول دیگر نیاز دارد، آن هم از راه نقطهٔ توسعه است.
+- تست DOM مرکز عملیات (operations-cockpit و operations-layout) با سه فهرست ماژول.
+- نگهبان ۵۷ سخت‌گیر شود: بررسی‌های قرارداد بند «نگهبان ۵۷ گسترش می‌یابد» در `### گام ۴` (module.ts در هر پوشهٔ ماژول، برابری code با نام پوشه و با warehouse-backend/modules/<x>/module.py، کامل بودن installed-modules.ts) و مبنای همهٔ شمارنده‌ها صفر. یک بار --update-baseline.
+- ظاهر و رفتار در پروفایل کامل عوض نشود.
 
-۳. کار این نشست (مسیرها در components/finance/treasurer/). «تسویه نقدی و چکی» و «الصاق رسید» ردیف ۴.۹ در کد نیستند؛ نساز.
-
-۴.۸ treasurer-disbursements:
-- تب‌ها (mobile="short"، fullLabelFrom="lg"):
-  - pending_queue: «صف پرداخت‌های مصوب» / «صف» / status-pending
-  - disbursed_archive: «آرشیو واریزی‌ها» / «آرشیو» / status-archived
-- generateBatchPayaFile: download با label="فایل پایا".
-- downloadPeriodDiskette: download با label="دیسکت دوره".
-- exportExcel و refreshData ← export-excel و refresh.
-- openPeriodBatchModal: confirm با label="پرداخت دوره".
-- openFleetBatchModal: confirm با label="تسویه ناوگان". اگر شمار سفر در جمع عرض ردیف جا نشد، آن را کنار دکمه به‌صورت متن بیاور.
-- openPayModal: confirm با label="ثبت واریز".
-- confirmDisbursement و submitBatchDisbursement: confirm با busy.
-- closePayModal و closeBatchModal: close.
-- clearSearch (✕ جستجو، AGENTS §7) دست نخورد.
-
-۴.۹ treasurer-invoices:
-- تب‌ها (mobile="short"، fullLabelFrom="lg"):
-  - payable_invoices: «فاکتورهای آماده پرداخت» / «فاکتورها» / ACCOUNTING_ENTITY_ICONS.invoices
-  - petty_cash_refills: «شارژ دفاتر تنخواه» / «تنخواه» / ACCOUNTING_ENTITY_ICONS.pettyCash
-- exportExcel و refreshData ← export-excel و refresh.
-- payInvoice: confirm با label="پرداخت و ثبت فیش".
-- refillPettyCash: confirm با label="واریز شارژ".
+۳. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر دو بار npx ng build --output-path ../scratch/ng-build-agent، تست‌های DOM تازهٔ خودت با npx ng test --watch=false --include <فایل spec>، و نگهبان ۵۷ (با --update-baseline یک بار در پایان).
 
 ۴. پایان:
-- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
-- push نکن و پس از گزارش نوبت را تمام کن.
+- خودبازبینی با git diff --stat <پایه>. برای هر قالبی که حذف خالص بزرگ دارد، hunk را بخوان (AGENTS بخش ۵ بند ۷).
+- زیر `## گزارش پیشرفت` طرح، بند «نشست ۹ (گام ۴-ب)» را بنویس، همراه فهرست چک ۳۶۰px برای کاربر (موارد پشت ورود). هیچ برچسب DONE یا FAILED ننویس.
+- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
+refactor(modular): step 4b front extension points
 
 ===
 
-[DONE] نشست 7b از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف‌های ۴.۱۰ تا ۴.۱۲ (خزانه، بخش ۲ از ۲)
+نشست 10 از 10 — راه میانهٔ ماژولار: گام ۵ (ماژول‌های آینده)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/treasurer/{treasurer-bank-accounts,treasurer-cheques,treasurer-reconciliation}/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.10)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.11)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.12)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 7b"
+verify: python -c "import pathlib,sys; need=[pathlib.Path(p) for p in ('scripts/new_module.py','scripts/module-template','Documents/Modular_Middle_Path/guide_new_module.md')]; miss=[str(p) for p in need if not p.exists()]; print('missing:',miss); sys.exit(1 if miss else 0)"
+verify: python scripts/automation/verify_tools.py sample-module
+verify: python scripts/e2e/guardian_modularization.py
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(modular): step 5 module template and guide"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
-۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
+۱. در فایل طرح بخش‌های `### گام ۵`، `## ۴.` و `## ۷.` را کامل بخوان. قواعد `.agents/AGENTS.md` بخش ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
 
-۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
+۲. کار این نشست، طبق `### گام ۵`:
+- قالب خالی scripts/module-template/ (بک‌اند: module.py و یک اپ با apps.py که در ready() ثبت می‌کند، models.py، urls.py، migrations/__init__.py و tests.py؛ فرانت: module.ts، <code>.routes.ts، nav-items.ts و یک صفحهٔ نمونه که از مؤلفه‌ها و آیکون‌های مشترک استفاده می‌کند).
+- scripts/new_module.py با گزینه‌های --code، --title-fa و --root (پیش‌فرض ریشهٔ همین مخزن). قالب را با نام تازه در <root>/warehouse-backend/modules/<code> و <root>/warehouse-front/src/app/modules/<code> می‌سازد و installed-modules.ts را با gen-installed-modules.js به‌روز می‌کند. هیچ فایل دیگری را تغییر نمی‌دهد. اگر پوشهٔ مقصد وجود دارد، بدون تغییر خطا می‌دهد.
+- راهنمای Documents/Modular_Middle_Path/guide_new_module.md به فارسی و کوتاه، با محتوای فهرست‌شده در `### گام ۵`، داخل <div dir="rtl" align="right">.
+- قالب در مخزن نباید به‌عنوان ماژول نصب‌شده شناخته شود (scripts/module-template بیرون از warehouse-backend/modules و src/app/modules است).
+- حصار ماژول تازه بدون ویرایش هسته: نگهبان ۲۹ بسته‌های ماژول‌ها را از warehouse-backend/modules/*/*/__init__.py کشف کند و اگر در .importlinter نیستند، یک پیکربندی موقت در scratch/ از روی .importlinter به‌علاوهٔ آن‌ها بسازد (لایهٔ ماژول، و قرارداد استقلال برای هر دو ماژول). نگهبان ۵۷ هم پوشه‌های ماژول را خودش کشف کند. هیچ فهرست ثابت ماژولی در این دو نگهبان نماند.
 
-۳. کار این نشست (مسیرها در components/finance/treasurer/):
-
-۴.۱۰ treasurer-bank-accounts:
-- تب‌ها:
-  - bank_accounts: «حساب‌های بانکی سازمان» / «بانک» / ACCOUNTING_ENTITY_ICONS.bankAccounts
-  - project_cashboxes: «صندوق‌های نقدی پروژه‌ها» / «صندوق» / ACCOUNTING_ENTITY_ICONS.pettyCash
-- exportExcel و refreshData ← export-excel و refresh.
-- openTransferModal: send با label="انتقال وجه".
-- executeTransfer: send با label="ثبت انتقال" و busy.
-- closeTransferModal: close.
-
-۴.۱۱ treasurer-cheques:
-- تب‌ها:
-  - issued_cheques: «چک‌های صادره و سررسیدها» / «صادره» / ACCOUNTING_ENTITY_ICONS.cheques
-  - cleared_archive: «آرشیو پاس‌شده و وصولی» / «آرشیو» / status-archived
-- exportExcel و refreshData ← export-excel و refresh.
-- markCleared: approve با label="اعلام پاس‌شدن".
-- markBounced: reject با label="برگشت".
-
-۴.۱۲ treasurer-reconciliation:
-- تب‌ها:
-  - bank_reconciliation: «مغایرت‌گیری صورت‌حساب» / «مغایرت» / ACCOUNTING_ENTITY_ICONS.reconciliation
-  - cash_flow_forecast: «تقویم جریان نقدینگی» / «نقدینگی» / PLATFORM_ENTITY_ICONS.reports
-- autoMatch («تطبیق هوشمند اقلام باز»): کار بی‌کلید؛ ⚡ آن برداشته شود.
-- exportExcel و refreshData ← export-excel و refresh.
+۳. فرمان‌هایی که خودت می‌توانی اجرا کنی: یک بار python scripts/automation/verify_tools.py sample-module برای بازخورد. هیچ ماژول نمونه‌ای در خود مخزن نساز.
 
 ۴. پایان:
-- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
-- push نکن و پس از گزارش نوبت را تمام کن.
-
-===
-
-[DONE] نشست 8 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف ۴.۱۸ (projects-and-sections)
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/organization/projects-and-sections/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.18)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 8"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-
-۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
-
-۳. کار این نشست: components/organization/projects-and-sections/
-
-- تب‌ها: سه switchSubTab با شمارنده (mobile="short"، fullLabelFrom="lg"):
-  - projects: «پروژه‌های مالی» / «پروژه‌ها» / ACCOUNTING_ENTITY_ICONS.projectsAndSections
-  - sections: «بخش‌ها و دپارتمان‌ها» / «بخش‌ها» / ACCOUNTING_ENTITY_ICONS.sections
-  - assignments: «انتساب کاربران و نقش‌ها» / «انتساب‌ها» / PLATFORM_ENTITY_ICONS.users
-- حالت نمایش انتساب‌ها: دو onAssignmentViewModeChange به app-tab-bar دوتبی بدون آیکون («ماتریس» و «جدول»، mobile="short").
-- دکمه‌ها:
-  - exportExcel: export-excel
-  - openImportModal: import-excel
-  - loadAllData: refresh
-  - editProject، editSection و openEditAssignmentModal: edit
-  - deleteProject، deleteSection و deleteAssignment: delete
-  - cancelEditProject و cancelEditSection: close با «انصراف»
-  - saveProject، saveSection، submitQuickAssign و submitEditAssignment: save، با busy اگر هست
-  - expandAllSections و collapseAllSections: expand و collapse، عنوان‌دار
-  - toggleSectionCollapse: [appAction] پویای expand/collapse با display="icon"
-  - openCloneModal: copy با label="کپی چارت"
-  - executeCloneAssignments: copy با label="کپی ساختار" و busy
-  - openQuickAssignModal: create با متن کوتاه‌شده فعلی
-  - closeQuickAssignModal، closeCloneModal، closeEditAssignmentModal و closeConfirmDialog: close
-  - executeConfirmDialog: کار دیالوگ را از کد بخوان؛ حذف ← delete
-- کارهای بی‌کلید: toggleAssignmentStatus (چیپ فعال و غیرفعال)، selectAllAvailableUsers و deselectAllUsers.
-
-۴. پایان:
-- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
-- push نکن و پس از گزارش نوبت را تمام کن.
-
-===
-
-[DONE] نشست 9 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف‌های ۴.۱۹ و ۴.۲۱
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/company-documents-archive/**/*.spec.ts" --include "src/app/components/personnel/base-settings/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.19)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.21)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 9"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
-
-۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
-
-۳. کار این نشست:
-
-۴.۱۹ components/finance/company-documents-archive/
-- دسته‌ها: شش setCategory به app-tab-bar با mobile="icon" و fullLabelFrom="xl"، شمارنده‌ها مثل پایه:
-  - ALL: «همه اسناد» / «همه» / status-all
-  - CORPORATE: «اساسنامه و روزنامه» / «اساسنامه» / PLATFORM_ENTITY_ICONS.company
-  - LICENSES: «مجوزها و پروانه‌ها» / «مجوزها» / ACCOUNTING_ENTITY_ICONS.licenses
-  - FISCAL: «مالیات و بیمه» / «مالیات» / ACCOUNTING_ENTITY_ICONS.tax
-  - CONTRACTS: «قراردادها و اجاره‌نامه» / «قراردادها» / ACCOUNTING_ENTITY_ICONS.contractsAndLeases
-  - EXPIRING: «نیازمند تمدید» / «تمدید» / status-warning، با tone="rose"
-- دکمه‌ها:
-  - openUploadModal: upload با label="بارگذاری مدرک"
-  - openPreview: view با label="پیش‌نمایش"
-  - downloadDocument: download
-  - deleteDocument: delete
-  - submitUpload: upload با busy
-  - closeUploadModal و closePreview: close
-- selectCompany، clearSearch (✕ جستجو) و کنترل‌های تاریخ (ng-persian-datepicker، AGENTS §3) دست نخورند؛ فقط tap-target اگر لازم است.
-
-۴.۲۱ components/personnel/base-settings/
-- تب‌ها: شش setTab به app-tab-bar با mobile="icon" و fullLabelFrom="xl"، بی شماره‌گذاری «۱.»:
-  - grades: «جدول گروه‌های شغلی» / «گروه‌ها» / ACCOUNTING_ENTITY_ICONS.jobGrades
-  - labor: «مزایای قانون کار» / «مزایا» / ACCOUNTING_ENTITY_ICONS.payroll
-  - attendance_window: «بازه ویرایش تقویم» / «تقویم» / ACCOUNTING_ENTITY_ICONS.attendance
-  - dsk: «اطلاعات کارگاه بیمه» / «بیمه» / ACCOUNTING_ENTITY_ICONS.insurance
-  - tax: «سازمان مالیاتی» / «مالیات» / ACCOUNTING_ENTITY_ICONS.tax
-  - bank: «تنظیمات بانک ملی» / «بانک» / ACCOUNTING_ENTITY_ICONS.bankAccounts
-- دکمه‌ها:
-  - openCreateYearModal: create با label="سال جدید"
-  - openCreateVersionModal: create با label="اصلاحیه"
-  - cloneForSelectedProject: copy با label="نسخه اختصاصی"
-  - revertToGlobal: restore با label="بازگشت به سراسری". حساس است و منطق تاییدش دست نخورد.
-  - saveYearlySettings: save با busy
-  - exportJobGradesCsv: export-excel
-  - importJobGradesCsv: import-excel
-  - submitCreateVersion و submitCreateYear: save با busy
-  - closeCreateVersionModal و closeCreateYearModal: close
-- چهار setAttendanceWindowPreset کار بی‌کلید است (⚡ برداشته شود).
-- هیچ عدد، ضریب یا فرمول §6 تغییر نکند.
-
-۴. پایان:
-- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
-- push نکن و پس از گزارش نوبت را تمام کن.
-
-===
-
-[DONE] نشست 10 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۱، ردیف ۴.۲۰ (personnel-profiles) و پایان گام ۱۱
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/personnel/personnel-profiles/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.20)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 10"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
-
-۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
-
-۳. کار این نشست: components/personnel/personnel-profiles/
-
-- تب‌ها: سه setTab با mobile="short" و fullLabelFrom="lg". شمار درون متن «({…})» به فیلد count برود:
-  - personnel: «پرونده‌های پرسنل» / «پرسنل» / ACCOUNTING_ENTITY_ICONS.personnel
-  - vehicles: «پرونده‌های ناوگان و ماشین‌آلات» / «ناوگان» / ACCOUNTING_ENTITY_ICONS.fleet
-  - change_requests: «تاریخچه درخواست‌های تغییر» / «تغییرات» / action-edit
-- دو setChangeRequestSubTab: app-tab-bar دوتبی (ACCOUNTING_ENTITY_ICONS.personnel و ACCOUNTING_ENTITY_ICONS.fleet).
-- تب‌های مودال: پنج setPersonnelTab به app-tab-bar با mobile="icon"، بی شماره‌گذاری:
-  - identity: «اطلاعات شناسنامه‌ای» / «هویتی» / ACCOUNTING_ENTITY_ICONS.identity
-  - contract: «قرارداد و گروه شغلی» / «قرارداد» / ACCOUNTING_ENTITY_ICONS.jobGrades
-  - insurance: «بیمه و مالیات» / «بیمه» / ACCOUNTING_ENTITY_ICONS.insurance
-  - allowances: «مزایا و فوق‌العاده‌ها» / «مزایا» / ACCOUNTING_ENTITY_ICONS.payroll
-  - contact: «بانکی و تماس» / «بانکی» / ACCOUNTING_ENTITY_ICONS.bankAccounts
-- دکمه‌ها:
-  - importExcel: import-excel. input مخفی excelFileInput بماند.
-  - openAddPersonnelModal: create با label="کارمند جدید"
-  - openAddVehicleModal: create با label="خودرو جدید"
-  - loadProfiles: refresh
-  - approvePersonnelFinance: approve با label="تایید مالی"
-  - approvePersonnelManager: approve با label="تصویب نهایی"
-  - openProfileRejectModal: آرگومان آخر را بخوان؛ revision ← return، reject ← reject
-  - togglePersonnelActive و toggleVehicleActive («قطع همکاری»): terminate
-  - submitEndCollaboration: terminate با busy اگر هست
-  - deletePersonnel و deleteVehicle: delete
-  - openEditPersonnelModal و openEditVehicleModal: edit
-  - openDiffModal: view با label="مقایسه"
-  - savePersonnel: save با busy
-  - submitProfileRejectModal: [appAction] پویای return/reject
-  - closePersonnelModal، closeDiffModal، closeProfileRejectModal و closeEndCollaborationModal: close
-- onFilterChange (فیلترها) و ساختار شبا دست نخورند.
-- در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md کل گام ۱۱ را تیک بزن.
-
-۴. پایان:
-- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
-- push نکن و پس از گزارش نوبت را تمام کن.
-
-===
-
-[DONE] نشست 11 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف‌های ۴.۱۳ تا ۴.۱۶
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/manager/{manager-dashboard,manager-budget,manager-contracts,manager-reports}/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.13)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.14)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.15)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.16)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 11"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-
-۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
-
-۳. کار این نشست (مسیرها در components/finance/manager/):
-
-۴.۱۳ manager-dashboard:
-- تب‌ها (mobile="short"، fullLabelFrom="lg"):
-  - kpi_overview: «شاخص‌های کلان» / «شاخص‌ها» / PLATFORM_ENTITY_ICONS.reports
-  - section_variance: «انحراف بودجه بخش‌ها» / «انحراف» / ACCOUNTING_ENTITY_ICONS.budget
-  - urgent_alerts: «هشدارهای نیازمند اقدام» / «هشدارها» / status-alert، با شمارنده
-- دکمه‌ها:
-  - navigateToApprovals: forward با display="label" و [label] «کارتابل تاییدات» همراه شمار فعلی
-  - navigateToBudget و پیوندهای alert.linkTab: forward با متن کوتاه‌شده فعلی
-  - exportExecutiveSummary: export-excel
-  - refreshData: refresh
-
-۴.۱۴ manager-budget:
-- تب‌ها:
-  - budget_matrix: «ماتریس تخصیص بودجه» / «ماتریس» / ACCOUNTING_ENTITY_ICONS.budget
-  - over_budget_alerts: «انحراف و مازاد هزینه» / «انحراف» / status-warning
-- دکمه‌ها:
-  - exportExcel و refreshData: export-excel و refresh
-  - openEditBudgetModal: edit
-  - saveNewBudget: save با label="ذخیره سقف"
-  - closeEditModal: close
-
-۴.۱۵ manager-contracts:
-- تب‌ها:
-  - personnel_decrees: «احکام حقوقی پرسنل» / «احکام» / ACCOUNTING_ENTITY_ICONS.personnel
-  - fleet_contracts: «قراردادهای ناوگان و ماشین‌آلات» / «ناوگان» / ACCOUNTING_ENTITY_ICONS.fleet
-- دکمه‌ها:
-  - exportExcel و refreshData: export-excel و refresh
-  - approvePersonnelDecree: approve با label="تایید و ابلاغ"
-  - approveFleetContract: approve با label="تصویب قرارداد"
-  - rejectPersonnelDecree و rejectFleetContract: اول API را بخوان؛ reject یا return
-
-۴.۱۶ manager-reports:
-- تب‌ها:
-  - labor_costs: «بهای تمام‌شده نیروی انسانی» / «پرسنل» / ACCOUNTING_ENTITY_ICONS.personnel
-  - fleet_efficiency: «بهره‌وری و مصارف ناوگان» / «ناوگان» / ACCOUNTING_ENTITY_ICONS.fleet
-- دکمه‌ها:
-  - printReport: print
-  - exportExcel و refreshData: export-excel و refresh
-
-۴. پایان:
-- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
-- push نکن و پس از گزارش نوبت را تمام کن.
-
-===
-
-[DONE] نشست 12 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف ۴.۱۷ (manager-approvals)
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/personnel/manager-approvals/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.17)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 12"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
-
-۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
-
-۳. کار این نشست: components/personnel/manager-approvals/
-
-- تب اصلی: شش setTab به app-tab-bar با mobile="icon" و fullLabelFrom="xl". شماره‌گذاری «۱.» برداشته شود؛ شمارنده‌ها مثل پایه:
-  - new_personnel: «پرسنل جدید» / «پرسنل» / ACCOUNTING_ENTITY_ICONS.newPersonnel
-  - new_fleet: «ناوگان جدید» / «ناوگان» / ACCOUNTING_ENTITY_ICONS.fleet
-  - change_requests: «کارتابل ویرایش‌ها» / «ویرایش‌ها» / action-edit
-  - work_periods: «دوره‌های کارکرد ماهانه» / «دوره‌ها» / ACCOUNTING_ENTITY_ICONS.attendance
-  - invoices: «فاکتورهای هزینه» / «فاکتور» / ACCOUNTING_ENTITY_ICONS.invoices
-  - petty_cash: «اسناد تنخواه‌گردان» / «تنخواه» / ACCOUNTING_ENTITY_ICONS.pettyCash
-- فیلتر وضعیت: هر یک از دو گروه چهارتایی setStatusFilter به app-tab-bar با mobile="icon" و fullLabelFrom="xl":
-  - pending_manager: «در انتظار تصویب مدیر» / «در انتظار» / status-pending
-  - revision_required: «نیازمند بازنگری» / «بازنگری» / status-revision
-  - approved: «مصوب نهایی و فعال» / «مصوب» / status-approved
-  - ALL: «همه» / status-all
-- دو setCRSubTab: پرسنل و ناوگان با آیکون موجودیت.
-- چهار setCRStatusFilter: pending_manager / approved / rejected / ALL با status-pending / status-approved / status-rejected / status-all.
-- دکمه‌ها:
-  - refreshCurrentTabData، loadInvoices و loadPettyCash: refresh
-  - openApprovalModal و approveChangeRequestManager: approve با label="تصویب نهایی"؛ در کارت موبایل size="lg" و display="label"
-  - openProfileRejectModal: آرگومان آخر را بخوان؛ revision ← return با «بازنگری»، reject ← reject با «رد». دکمه‌های فقط ❌ هم عنوان «رد» بگیرند.
-  - openEditPersonnelModal: edit
-  - openDiffModal: view با label="مقایسه"
-  - submitPeriodForFinance: send با label="ارسال به مالی"
-  - reopenPeriod: unlock با label="بازگشایی دوره"
-  - approveInvoiceManager: approve با label="مجوز پرداخت"
-  - approvePettyCashManager: approve با label="تایید پرداخت"
-  - rejectInvoiceManager و rejectPettyCashManager: اول API را بخوان؛ return یا reject
-  - confirmProfileRejectOrRevision: [appAction] پویای return/reject
-  - confirmApprovalWithNote: approve با busy و label="تصویب نهایی"
-  - closeApprovalModal و هر جا isDiffModalOpen = false یا isRejectModalOpen = false: close
-- onWarehouseChange (select) دست نخورد.
-
-۴. پایان:
-- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
-- push نکن و پس از گزارش نوبت را تمام کن.
-
-===
-
-[DONE] نشست 13 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف ۴.۲۳ (manager-fleet)
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/manager/manager-fleet/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.23)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 13"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
-
-۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
-
-۳. کار این نشست: components/finance/manager/manager-fleet/
-
-- تب‌ها: چهار switchSubTab به app-tab-bar با mobile="icon" و fullLabelFrom="xl". شمارنده و tone مثل پایه؛ indicator فقط جایی که پایه animate-pulse داشت.
-  - new: «ناوگان در انتظار تایید» / «جدید» / ACCOUNTING_ENTITY_ICONS.fleet
-  - settlement: «تسویه‌حساب و کارکرد» / «تسویه» / ACCOUNTING_ENTITY_ICONS.payroll
-  - changes: «درخواست‌های تغییرات» / «تغییرات» / action-edit
-  - all: «همه ناوگان فعال» / «همه» / status-all
-- دکمه‌ها:
-  - fetchFleetData: refresh (در حالت خطا با display="label")
-  - openApproveModal: approve، با متن کوتاه‌شده فعلی («تصویب نهایی» و «تصویب تغییرات»)
-  - openRejectModal: 'revision' ← return با «اصلاح»، 'reject' ← reject با «رد»
-  - openDiffModal: view با label="مقایسه"
-  - openEndCollaborationModal و submitEndCollaboration: terminate، با busy اگر هست
-  - openDeleteModal و confirmDeleteVehicle: delete
-  - submitApproval: approve با busy
-  - submitReject: [appAction]="rejectActionType === 'reject_final' ? 'reject' : 'return'". مقدارهای واقعی rejectActionType را از ts بخوان.
-  - closeApproveModal، closeRejectModal، closeDiffModal، closeEndCollaborationModal و closeDeleteModal: close
-- منطق تایید حذف و قطع همکاری (استعلام اثر حذف و deleteImpactHistory) دست نخورد.
-
-۴. پایان:
-- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
-- push نکن و پس از گزارش نوبت را تمام کن.
-
-===
-
-[DONE] نشست 14 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۲، ردیف ۴.۲۴ (manager-personnel) و پایان گام ۱۲
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts" --include "src/app/components/finance/manager/manager-personnel/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "sheba|Sheba|IRANIAN_BANKS" --path warehouse-front/src
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "(row 4.24)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 14"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-   اجراکننده همچنین می‌سنجد که هیچ خط تغییرکرده‌ای در warehouse-front/src عبارت sheba، Sheba یا IRANIAN_BANKS نداشته باشد (ساختار شبا، AGENTS §7).
-
-۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بندهای ۱ تا ۳ طرح و ردیف‌های همین نشست در بند ۴ را بخوان. از «گزارش پیشرفت» فقط آخرین «بازبینی ناظر» و گزارش نشست قبل را بخوان.
-
-۳. کار این نشست: components/finance/manager/manager-personnel/
-
-- تب‌ها: چهار switchSubTab به app-tab-bar با mobile="icon" و fullLabelFrom="xl". ایموجی‌ها برداشته شود؛ شمارنده و tone مثل پایه؛ indicator فقط جایی که پایه animate-pulse داشت.
-  - new: «تصویب پرونده‌های جدید» / «جدید» / ACCOUNTING_ENTITY_ICONS.newPersonnel
-  - contracts: «احکام و قراردادها» / «احکام» / ACCOUNTING_ENTITY_ICONS.jobGrades
-  - changes: «تصویب تغییرات» / «تغییرات» / action-edit
-  - all: «پرسنل فعال» / «همه» / status-all
-- دکمه‌ها:
-  - fetchData (🔄): refresh
-  - openApproveModal: approve، با متن کوتاه‌شده فعلی («تصویب استخدام» و «تصویب تغییرات»)
-  - openRejectModal: آرگومان‌ها و API را بخوان؛ return یا reject
-  - openDiffModal: view با label="مقایسه"
-  - openEndCollaborationModal و submitEndCollaboration: terminate
-  - openDeleteModal و confirmDeletePersonnel: delete
-  - submitApproval: approve با busy
-  - submitReject: [appAction] پویای return/reject
-  - closeApproveModal، closeRejectModal، closeDiffModal، closeEndCollaborationModal و closeDeleteModal: close
-- copyToClipboard (📋 و ✓) دست نخورد.
-- اگر «📊 تحلیل بار مالی» کلیک‌پذیر است، ایموجی‌اش با PLATFORM_ENTITY_ICONS.reports جایگزین شود؛ اگر فقط عنوان است، دست نزن.
-- در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md کل گام ۱۲ را تیک بزن.
-
-۴. پایان:
-- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
-- push نکن و پس از گزارش نوبت را تمام کن.
-
-===
-
-[DONE] نشست 15 از 15 — طرح ارگونومی واکنش‌گرا: گام ۱۳ (پایانی)
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: cd warehouse-front && npx ng build --configuration accounting-only --output-path ../scratch/ng-build-check
-verify: cd warehouse-front && npx ng build --configuration warehouse-only --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/shared/icons/*.spec.ts" --include "src/app/shared/components/{action-button,tab-bar,overflow-menu,command-center}/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "docs(ergonomics): record session 15"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-۱. این نشست را اجراکننده تسک‌ها (run_tasks.py) فرستاده است. بخش «10. Runner Sessions & Lessons» فایل .agents/AGENTS.md را رعایت کن: بیلد، نگهبان‌ها و تست را اجراکننده پس از نوبت تو اجرا می‌کند و تو برچسب DONE یا FAILED نمی‌نویسی.
-
-۲. در فایل طرح Documents/Responsive_Clickable_Ergonomics/implementation_plan_responsive_clickable_ergonomics.md، بخش «۹. دستورالعمل اجرای نشست‌های باقی‌مانده (Antigravity)» (از تیتر `## ۹.` تا تیتر `## گزارش پیشرفت`) را کامل بخوان و مو‌به‌مو اجرا کن. سپس بند ۳-۵ و بند ۵ (گام ۱۳) را بخوان.
-
-۳. کار این نشست:
-الف) پاک‌سازی رجیستری (بند ۳-۵):
-  - نامزدها فقط نام‌های مجموعه RETIRED_VARIANTS در scripts/e2e/guardian_55_clickable_ergonomics.py هستند.
-  - یک اسکریپت پایتون موقت در scratch/ بنویس که برای هر نامزد این‌ها را بشمارد:
-    - رخدادهای 'نام' و "نام" در warehouse-front/src، جز shared/icons/icon-registry.ts؛
-    - رخدادهای 'نام' و "نام" در warehouse-backend، جز venv، __pycache__ و logs؛
-    - الگوهای ساخت پویا با پیشوند نام، مثل 'پیشوند-' + و `پیشوند-${.
-  - اسکریپت را با python -X utf8 اجرا کن.
-  - فقط نامزدی که همه شمارش‌هایش صفر است از icon-registry.ts حذف شود. RETIRED_VARIANTS نگهبان ۵۵ دست نخورد.
-  - فهرست حذف‌شده‌ها و مانده‌ها را با علت در گزارش بیاور.
-  - اگر نامزدی حذف شد، حذف‌ها را جدا با پیام refactor(icons): prune retired icon variants (session 15) commit کن.
-ب) .agents/AGENTS.md (§7 و §9) و .claude/skills/design-system/SKILL.md:
-  - به هر کدام یک زیربخش کوتاه بیفزا که این‌ها را راه پیش‌فرض بنامد: button[appAction] (با کلید terminate)، app-tab-bar، app-overflow-menu، app-command-center (با flex-wrap)، و فرهنگ‌های STATUS، ACTION، ROLE، PLATFORM و ACCOUNTING.
-  - خلاصه بندهای ۹-۲ و ۹-۳ طرح را هم بیاور.
-  - متن موجود را حذف نکن.
-  - این تغییرها را جدا با پیام docs(ergonomics): document shared toolkit defaults (session 15) commit کن.
-ج) بیلد هر سه پروفایل (پیش‌فرض، accounting-only و warehouse-only)، نگهبان‌های ۵۲ و ۵۶ و ng test جعبه‌ابزار مشترک در برابر پایه همین نشست را اجراکننده اجرا می‌کند؛ تو اجرا نکن. guardian_all.py را هم اجرا نکن؛ نگهبان‌های ۱۵، ۱۹ و menu_redesign به پایگاه داده می‌نویسند.
-د) گزارش نهایی طرح در «گزارش پیشرفت»:
-  - جدول عددهای نگهبان ۵۵ از گام ۰ تا امروز؛
-  - فهرست همه «کارهای بی‌کلید» نشست‌های ۱ تا ۱۴؛
-  - فهرست کلیدهای تازه فرهنگ آیکون؛
-  - چک‌لیست ۳۶۰px همه صفحه‌های پشت ورود برای کاربر.
-ه) در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md گام ۱۳ را تیک بزن.
-
-۴. پایان:
-- معیار ۹-۴ را اجرا کن: به‌روزرسانی spec، بازبینی خودت، نگهبان ۵۵ با --update-baseline، commitها، گزارش بی برچسب DONE یا FAILED، و تیک ردیف‌ها فقط در Documents/Responsive_Clickable_Ergonomics/task_responsive_clickable_ergonomics.md (نه در tasks.md).
-- push نکن و پس از گزارش نوبت را تمام کن.
+- خودبازبینی با git diff --stat <پایه>.
+- زیر `## گزارش پیشرفت` طرح، بند «نشست ۱۰ (گام ۵)» را بنویس. هیچ برچسب DONE یا FAILED ننویس.
+- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
+feat(modular): step 5 module template and guide
