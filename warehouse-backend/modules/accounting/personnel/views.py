@@ -6755,6 +6755,54 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
             )
         return qs
 
+    def _validate_write_target(self, request, section_id, project_id):
+        sec_obj = None
+        if section_id:
+            try:
+                sec_id_int = int(section_id)
+            except (ValueError, TypeError):
+                return Response({'error': 'شناسه بخش نامعتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
+            sec_obj = ProjectSection.objects.filter(id=sec_id_int).select_related('project').first()
+            if not sec_obj:
+                return Response({'error': 'بخش مشخص‌شده یافت نشد.'}, status=status.HTTP_400_BAD_REQUEST)
+            if not sec_obj.project or not sec_obj.project.company_id:
+                return Response({'error': 'بخش مشخص‌شده فاقد پروژه یا شرکت معتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        proj_obj = None
+        if project_id:
+            try:
+                proj_id_int = int(project_id)
+            except (ValueError, TypeError):
+                return Response({'error': 'شناسه پروژه نامعتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
+            proj_obj = FinancialProject.objects.filter(id=proj_id_int).first()
+            if not proj_obj:
+                return Response({'error': 'پروژه مشخص‌شده یافت نشد.'}, status=status.HTTP_400_BAD_REQUEST)
+            if not proj_obj.company_id:
+                return Response({'error': 'پروژه مشخص‌شده فاقد شرکت معتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if sec_obj and proj_obj:
+            if sec_obj.project_id != proj_obj.id:
+                return Response({'error': 'بخش انتخابی متعلق به پروژه مشخص‌شده نیست.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            cid = validate_user_company_access(request.user, get_request_company_id(request))
+        except PermissionDenied as e:
+            return Response({'error': str(e.detail) if hasattr(e, 'detail') else str(e)}, status=status.HTTP_403_FORBIDDEN)
+
+        if cid:
+            if sec_obj and sec_obj.project.company_id != cid:
+                return Response({'error': 'بخش مشخص‌شده متعلق به شرکت فعال در سربرگ نیست.'}, status=status.HTTP_403_FORBIDDEN)
+            if proj_obj and proj_obj.company_id != cid:
+                return Response({'error': 'پروژه مشخص‌شده متعلق به شرکت فعال در سربرگ نیست.'}, status=status.HTTP_403_FORBIDDEN)
+        elif not request.user.is_superuser:
+            allowed_ids = set(get_user_allowed_companies(request.user).values_list('id', flat=True))
+            if sec_obj and sec_obj.project.company_id not in allowed_ids:
+                return Response({'error': 'شما به بخش یا شرکت مربوطه دسترسی ندارید.'}, status=status.HTTP_403_FORBIDDEN)
+            if proj_obj and proj_obj.company_id not in allowed_ids:
+                return Response({'error': 'شما به پروژه یا شرکت مربوطه دسترسی ندارید.'}, status=status.HTTP_403_FORBIDDEN)
+
+        return None
+
     def get_queryset(self):
         qs = super().get_queryset()
         warehouse_id = self.request.query_params.get('warehouse_id')
@@ -6896,14 +6944,13 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         warehouse_id = int(raw_wh) if (raw_wh and str(raw_wh).upper() not in ['ALL', '0', 'NONE', '']) else None
         raw_sec = serializer.validated_data.get('section_id') or request.query_params.get('section_id') or request.data.get('section_id')
         section_id = int(raw_sec) if (raw_sec and str(raw_sec).upper() not in ['ALL', '0', 'NONE', '']) else None
-        if section_id and not request.user.is_superuser:
-            sec_obj = ProjectSection.objects.filter(id=section_id).select_related('project').first()
-            if sec_obj:
-                allowed_ids = set(get_user_allowed_companies(request.user).values_list('id', flat=True))
-                if sec_obj.project.company_id not in allowed_ids:
-                    return Response({'error': 'شما به بخش یا شرکت مربوطه دسترسی ندارید.'}, status=status.HTTP_403_FORBIDDEN)
         raw_proj = serializer.validated_data.get('project_id') or request.query_params.get('project_id') or request.data.get('project_id')
         project_id = int(raw_proj) if (raw_proj and str(raw_proj).upper() not in ['ALL', '0', 'NONE', '']) else None
+
+        target_err = self._validate_write_target(request, section_id, project_id)
+        if target_err is not None:
+            return target_err
+
         date_shamsi = serializer.validated_data['date_shamsi']
         items = serializer.validated_data['items']
 
@@ -7289,14 +7336,12 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
 
         raw_sec = serializer.validated_data.get('section_id') or request.query_params.get('section_id') or request.data.get('section_id')
         section_id = int(raw_sec) if (raw_sec and str(raw_sec).upper() not in ['ALL', '0', 'NONE', '']) else None
-        if section_id and not request.user.is_superuser:
-            sec_obj = ProjectSection.objects.filter(id=section_id).select_related('project').first()
-            if sec_obj:
-                allowed_ids = set(get_user_allowed_companies(request.user).values_list('id', flat=True))
-                if sec_obj.project.company_id not in allowed_ids:
-                    return Response({'error': 'شما به بخش یا شرکت مربوطه دسترسی ندارید.'}, status=status.HTTP_403_FORBIDDEN)
         raw_proj = serializer.validated_data.get('project_id') or request.query_params.get('project_id') or request.data.get('project_id')
         project_id = int(raw_proj) if (raw_proj and str(raw_proj).upper() not in ['ALL', '0', 'NONE', '']) else None
+
+        target_err = self._validate_write_target(request, section_id, project_id)
+        if target_err is not None:
+            return target_err
 
         v_obj = self._scoped_vehicles().filter(id=vehicle_id).first()
         if not v_obj:
@@ -7481,14 +7526,13 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         warehouse_id = int(raw_wh) if (raw_wh and str(raw_wh).upper() not in ['ALL', '0', 'NONE', '']) else None
         raw_sec = serializer.validated_data.get('section_id') or request.query_params.get('section_id') or request.data.get('section_id')
         section_id = int(raw_sec) if (raw_sec and str(raw_sec).upper() not in ['ALL', '0', 'NONE', '']) else None
-        if section_id and not request.user.is_superuser:
-            sec_obj = ProjectSection.objects.filter(id=section_id).select_related('project').first()
-            if sec_obj:
-                allowed_ids = set(get_user_allowed_companies(request.user).values_list('id', flat=True))
-                if sec_obj.project.company_id not in allowed_ids:
-                    return Response({'error': 'شما به بخش یا شرکت مربوطه دسترسی ندارید.'}, status=status.HTTP_403_FORBIDDEN)
         raw_proj = serializer.validated_data.get('project_id') or request.query_params.get('project_id') or request.data.get('project_id')
         project_id = int(raw_proj) if (raw_proj and str(raw_proj).upper() not in ['ALL', '0', 'NONE', '']) else None
+
+        target_err = self._validate_write_target(request, section_id, project_id)
+        if target_err is not None:
+            return target_err
+
         year_month = serializer.validated_data['year_month']
         items = serializer.validated_data['items']
         client_tab_id = serializer.validated_data.get('client_tab_id')

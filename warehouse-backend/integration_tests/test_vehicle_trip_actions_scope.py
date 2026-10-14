@@ -366,3 +366,222 @@ class VehicleTripActionsScopeIntegrationTests(TestCase):
         res = self.client.get('/api/personnel/trips/matrix/?date_shamsi=1405/01/10')
         self.assertEqual(res.status_code, 200, res.content)
         self.assertEqual(res.json().get('rows', []), [])
+
+    def test_update_day_trip_with_section_b_by_user_a(self):
+        """update-day-trip با section_id بخش ب توسط کاربر الف: ۴۰۳ و عدم تغییر یا ایجاد سفر."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import VehicleTripLog
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'vehicle_id': self.veh_a.id,
+            'section_id': self.sec_b.id,
+            'date_shamsi': '1405/01/22',
+            'trip_count': 3,
+        }
+        res = self.client.post('/api/personnel/trips/update-day-trip/', payload, format='json')
+        self.assertEqual(res.status_code, 403, res.content)
+        self.assertFalse(VehicleTripLog.objects.filter(vehicle=self.veh_a, date_shamsi='1405/01/22').exists())
+
+    def test_bulk_save_monthly_grid_with_section_b_by_user_a(self):
+        """bulk-save-monthly-grid با section_id بخش ب توسط کاربر الف: ۴۰۳ و عدم ایجاد سفر."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import VehicleTripLog
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'year_month': '1405/01',
+            'section_id': self.sec_b.id,
+            'items': [
+                {'vehicle_id': self.veh_a.id, 'day': 22, 'trip_count': 2}
+            ]
+        }
+        res = self.client.post('/api/personnel/trips/bulk-save-monthly-grid/', payload, format='json')
+        self.assertEqual(res.status_code, 403, res.content)
+        self.assertFalse(VehicleTripLog.objects.filter(vehicle=self.veh_a, date_shamsi='1405/01/22').exists())
+
+    def test_bulk_save_with_vehicle_a_and_project_b_by_user_a(self):
+        """bulk-save با خودروی الف و project_id پروژهٔ ب توسط کاربر الف: ۴۰۳ و عدم ایجاد سفر."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import VehicleTripLog
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'project_id': self.proj_b.id,
+            'date_shamsi': '1405/01/23',
+            'items': [
+                {'vehicle_id': self.veh_a.id, 'trip_count': 2, 'unit_rate': 200000}
+            ]
+        }
+        res = self.client.post('/api/personnel/trips/bulk-save/', payload, format='json')
+        self.assertEqual(res.status_code, 403, res.content)
+        self.assertFalse(VehicleTripLog.objects.filter(vehicle=self.veh_a, date_shamsi='1405/01/23').exists())
+
+    def test_update_day_trip_with_project_b_by_user_a(self):
+        """update-day-trip با project_id پروژهٔ ب توسط کاربر الف: ۴۰۳ و عدم ایجاد سفر."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import VehicleTripLog
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'vehicle_id': self.veh_a.id,
+            'project_id': self.proj_b.id,
+            'date_shamsi': '1405/01/24',
+            'trip_count': 1,
+        }
+        res = self.client.post('/api/personnel/trips/update-day-trip/', payload, format='json')
+        self.assertEqual(res.status_code, 403, res.content)
+        self.assertFalse(VehicleTripLog.objects.filter(vehicle=self.veh_a, date_shamsi='1405/01/24').exists())
+
+    def test_bulk_save_monthly_grid_with_project_b_by_user_a(self):
+        """bulk-save-monthly-grid با project_id پروژهٔ ب توسط کاربر الف: ۴۰۳ و عدم ایجاد سفر."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import VehicleTripLog
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'year_month': '1405/01',
+            'project_id': self.proj_b.id,
+            'items': [
+                {'vehicle_id': self.veh_a.id, 'day': 24, 'trip_count': 3}
+            ]
+        }
+        res = self.client.post('/api/personnel/trips/bulk-save-monthly-grid/', payload, format='json')
+        self.assertEqual(res.status_code, 403, res.content)
+        self.assertFalse(VehicleTripLog.objects.filter(vehicle=self.veh_a, date_shamsi='1405/01/24').exists())
+
+    def test_bulk_save_with_company_a_header_and_section_b_by_dual_company_user(self):
+        """کاربر دارای دسترسی به الف و ب، با سربرگ شرکت الف و section_id بخش ب در bulk-save: ۴۰۳."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import VehicleTripLog
+        user_ab = User.objects.create_user(
+            username='user_fleet_dual_ab',
+            password='Password123!',
+            national_code='0033333334',
+            phone_number='09123333334'
+        )
+        UserCompanyAccess.objects.create(user=user_ab, company=self.company_a, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=user_ab, company=self.company_b, access_level='workspace_full')
+        user_ab.user_permissions.set(Permission.objects.filter(
+            codename__in=['view_sys_fleet_settlement', 'view_sys_personnel', 'view_sys_reports']
+        ))
+        self.client.force_authenticate(user_ab)
+        payload = {
+            'section_id': self.sec_b.id,
+            'date_shamsi': '1405/01/27',
+            'items': [
+                {'vehicle_id': self.veh_a.id, 'trip_count': 1, 'unit_rate': 200000}
+            ]
+        }
+        res = self.client.post(
+            '/api/personnel/trips/bulk-save/',
+            payload,
+            format='json',
+            HTTP_X_COMPANY_ID=str(self.company_a.id)
+        )
+        self.assertEqual(res.status_code, 403, res.content)
+        self.assertFalse(VehicleTripLog.objects.filter(date_shamsi='1405/01/27').exists())
+
+    def test_bulk_save_with_mismatched_section_and_project(self):
+        """bulk-save با section_id بخش الف و project_id پروژهٔ ناهمخوان (پروژه ب): ۴۰۰ و عدم ایجاد سفر."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import VehicleTripLog
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'section_id': self.sec_a.id,
+            'project_id': self.proj_b.id,
+            'date_shamsi': '1405/01/28',
+            'items': [
+                {'vehicle_id': self.veh_a.id, 'trip_count': 2, 'unit_rate': 200000}
+            ]
+        }
+        res = self.client.post('/api/personnel/trips/bulk-save/', payload, format='json')
+        self.assertEqual(res.status_code, 400, res.content)
+        self.assertFalse(VehicleTripLog.objects.filter(date_shamsi='1405/01/28').exists())
+
+    def test_bulk_save_positive_path_with_section_and_project_a(self):
+        """مسیر مثبت: bulk-save با خودرو، بخش و پروژهٔ الف توسط کاربر الف موفق است و سفر با همان بخش و پروژه ذخیره می‌شود."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import VehicleTripLog
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'section_id': self.sec_a.id,
+            'project_id': self.proj_a.id,
+            'date_shamsi': '1405/01/29',
+            'items': [
+                {'vehicle_id': self.veh_a.id, 'trip_count': 3, 'unit_rate': 200000}
+            ]
+        }
+        res = self.client.post('/api/personnel/trips/bulk-save/', payload, format='json')
+        self.assertEqual(res.status_code, 200, res.content)
+        saved_trip = VehicleTripLog.objects.filter(vehicle=self.veh_a, date_shamsi='1405/01/29').first()
+        self.assertIsNotNone(saved_trip)
+        self.assertEqual(saved_trip.trip_count, 3)
+        self.assertEqual(saved_trip.section_id, self.sec_a.id)
+        self.assertEqual(saved_trip.project_id, self.proj_a.id)
+
+    def test_bulk_save_with_nonexistent_section_id_returns_400(self):
+        """bulk-save با section_id ناموجود در دیتابیس: ۴۰۰."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'section_id': 999999,
+            'date_shamsi': '1405/01/30',
+            'items': [
+                {'vehicle_id': self.veh_a.id, 'trip_count': 1, 'unit_rate': 200000}
+            ]
+        }
+        res = self.client.post('/api/personnel/trips/bulk-save/', payload, format='json')
+        self.assertEqual(res.status_code, 400, res.content)
+
+    def test_bulk_save_with_nonexistent_project_id_returns_400(self):
+        """bulk-save با project_id ناموجود در دیتابیس: ۴۰۰."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'project_id': 999999,
+            'date_shamsi': '1405/01/30',
+            'items': [
+                {'vehicle_id': self.veh_a.id, 'trip_count': 1, 'unit_rate': 200000}
+            ]
+        }
+        res = self.client.post('/api/personnel/trips/bulk-save/', payload, format='json')
+        self.assertEqual(res.status_code, 400, res.content)
+
+    def test_bulk_save_with_company_a_header_and_project_b_by_dual_company_user(self):
+        """کاربر دارای دسترسی به الف و ب، با سربرگ شرکت الف و project_id پروژهٔ ب در bulk-save: ۴۰۳."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import VehicleTripLog
+        user_ab = User.objects.create_user(
+            username='user_fleet_dual_ab_proj',
+            password='Password123!',
+            national_code='0055555556',
+            phone_number='09125555556'
+        )
+        UserCompanyAccess.objects.create(user=user_ab, company=self.company_a, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=user_ab, company=self.company_b, access_level='workspace_full')
+        user_ab.user_permissions.set(Permission.objects.filter(
+            codename__in=['view_sys_fleet_settlement', 'view_sys_personnel', 'view_sys_reports']
+        ))
+        self.client.force_authenticate(user_ab)
+        payload = {
+            'project_id': self.proj_b.id,
+            'date_shamsi': '1405/01/31',
+            'items': [
+                {'vehicle_id': self.veh_a.id, 'trip_count': 1, 'unit_rate': 200000}
+            ]
+        }
+        res = self.client.post(
+            '/api/personnel/trips/bulk-save/',
+            payload,
+            format='json',
+            HTTP_X_COMPANY_ID=str(self.company_a.id)
+        )
+        self.assertEqual(res.status_code, 403, res.content)
+        self.assertFalse(VehicleTripLog.objects.filter(date_shamsi='1405/01/31').exists())
