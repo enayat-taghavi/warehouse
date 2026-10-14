@@ -15,7 +15,7 @@ from .models import (
 from common.date_utils import normalize_digits
 
 
-def export_fleet_monthly_excel(warehouse_id=None, year_month=None, section_id=None):
+def export_fleet_monthly_excel(warehouse_id=None, year_month=None, section_id=None, vehicles_qs=None, trips_qs=None):
     """
     تولید فایل اکسل استاندارد ۳۱ روزه تردد و کارکرد ماهانه ناوگان
     مطابق با معماری ۲ سطری هدر:
@@ -123,15 +123,27 @@ def export_fleet_monthly_excel(warehouse_id=None, year_month=None, section_id=No
         cell.border = thin_border
 
     # واکشی اطلاعات خودروها و ترددها
-    vehicles = VehicleDriverProfile.objects.filter(
-        Q(assigned_warehouse_id=warehouse_id) | Q(assigned_warehouse_id__isnull=True),
-        is_active=True
-    ).order_by('driver_name')
+    if vehicles_qs is not None:
+        vehicles = vehicles_qs.filter(
+            Q(assigned_warehouse_id=warehouse_id) | Q(assigned_warehouse_id__isnull=True),
+            is_active=True
+        ).order_by('driver_name')
+    else:
+        vehicles = VehicleDriverProfile.objects.filter(
+            Q(assigned_warehouse_id=warehouse_id) | Q(assigned_warehouse_id__isnull=True),
+            is_active=True
+        ).order_by('driver_name')
 
-    trips = VehicleTripLog.objects.filter(
-        date_shamsi__startswith=year_month,
-        is_deleted=False
-    )
+    if trips_qs is not None:
+        trips = trips_qs.filter(
+            date_shamsi__startswith=year_month,
+            is_deleted=False
+        )
+    else:
+        trips = VehicleTripLog.objects.filter(
+            date_shamsi__startswith=year_month,
+            is_deleted=False
+        )
     if warehouse_id:
         trips = trips.filter(warehouse_id=warehouse_id)
     if section_id:
@@ -225,7 +237,7 @@ def export_fleet_monthly_excel(warehouse_id=None, year_month=None, section_id=No
     return output
 
 
-def import_fleet_monthly_excel(file_obj, warehouse_id=None, year_month=None, user=None):
+def import_fleet_monthly_excel(file_obj, warehouse_id=None, year_month=None, user=None, vehicles_qs=None):
     """
     درون‌ریزی هوشمند فایل اکسل ۳۱ روزه تردد ناوگان و ذخیره در پایگاه داده
     """
@@ -269,8 +281,9 @@ def import_fleet_monthly_excel(file_obj, warehouse_id=None, year_month=None, use
     plate_col = key_col_map.get('plate_number', 3)
     driver_col = key_col_map.get('driver_name', 2)
 
-    all_vehicles = {v.plate_number.replace(' ', ''): v for v in VehicleDriverProfile.objects.filter(is_active=True)}
-    all_vehicles_by_name = {v.driver_name.strip(): v for v in VehicleDriverProfile.objects.filter(is_active=True)}
+    v_base = vehicles_qs.filter(is_active=True) if vehicles_qs is not None else VehicleDriverProfile.objects.filter(is_active=True)
+    all_vehicles = {v.plate_number.replace(' ', ''): v for v in v_base}
+    all_vehicles_by_name = {v.driver_name.strip(): v for v in v_base}
 
     updated_trips_count = 0
     with transaction.atomic():

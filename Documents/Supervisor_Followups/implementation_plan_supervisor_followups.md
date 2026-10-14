@@ -296,7 +296,35 @@
     - release روی `soft` با تأیید صریح کاربر؛ نشست ۱ و این رفع پیش از هر release روی `soft`.
     - فهرست چک ۳۶۰px نشست ۲ با کاربر.
   - **اقدام بعدی:** بازبینی دامنهٔ شرکت در actionهای سفارشی `VehicleTripViewSet` (`modules/accounting/personnel/views.py`، از `class VehicleTripViewSet`) سپس پرسش از کاربر برای release روی `soft`.
-  - **تغییر روال (تصمیم کاربر، ۲۴ مهر):** از این پس همهٔ کار اجرایی با Antigravity است و Claude فقط ناظر است. پس اقدام بعدی به‌صورت یک تسک `tasks.md` با کامنت runner نوشته و با runner اجرا می‌شود؛ Claude خودش کد را ویرایش نمی‌کند.
+- **۲۴ مهر ۱۴۰۵ (2026-10-15)، Antigravity — دامنهٔ شرکت در actionهای سفارشی VehicleTripViewSet:**
+  - **علت ریشه‌ای:**
+    اکشن‌های سفارشی `VehicleTripViewSet` (`matrix`، `bulk-save`، `monthly-summary`، `monthly-grid`، `update-day-trip`، `bulk-save-monthly-grid`، `audit-logs`، `export-monthly-excel`، `import-monthly-excel`) پرس‌وجوهای مستقیم و بدون فیلتر شرکتی روی `VehicleDriverProfile.objects` و `VehicleTripLog.objects` اجرا می‌کردند و از فیلترهای تفکیک شرکت در `get_queryset` عبور نمی‌کردند. همچنین توابع ورود و خروج اکسل ناوگان در `fleet_excel_engine.py` فاقد امکان دریافت کوئری‌های فیلترشده بودند و تمام رکوردهای فعال سیستم را بررسی می‌کردند. در اکشن‌های تغییر داده نیز `section_id` ورودی با شرکت‌های مجاز کاربر تطبیق داده نمی‌شد.
+  - **فهرست فایل‌های تغییریافته:**
+    - `warehouse-backend/modules/accounting/personnel/views.py`: تعریف متدهای کمکی `_scoped_vehicles` (مبتنی بر تابع امنیتی استاندارد `scope_vehicle_queryset`) و `_scoped_trips` (انتقال قاعده شرکتی `get_queryset`)؛ اتصال `get_queryset` به `_scoped_trips`؛ جایگزینی کوئری‌های خام خودرو و سفر با متدهای کمکی در تمام اکشن‌های ViewSet؛ بررسی دسترسی شرکت کاربر به `section_id` ارسالی در اکشن‌های نوشتنی و صدور خطای ۴۰۳ در صورت عدم دسترسی؛ انتقال querysetهای در دامنه به توابع اکسل.
+    - `warehouse-backend/modules/accounting/personnel/fleet_excel_engine.py`: افزودن پارامترهای اختیاری `vehicles_qs=None` و `trips_qs=None` به تابع `export_fleet_monthly_excel` و پارامتر اختیاری `vehicles_qs=None` به تابع `import_fleet_monthly_excel` با حفظ کامل رفتار پیش‌فرض در صورت عدم ارسال (None).
+    - `warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py`: ایجاد فایل آزمون یکپارچگی مستقل شامل ۱۳ متد آزمون مجزا جهت آزمودن تک‌تک اکشن‌های خواندنی، نوشتنی، اکسل، سربرگ غیرمجاز شرکت، ممیزی، مسیر مثبت و کاربر فاقد شرکت.
+    - `Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md`: ثبت این گزارش در بخش گزارش پیشرفت طرح.
+  - **رفتار هر action پس از تغییر:**
+    - `get_queryset`: بازاستفاده مستقیم از متد کمکی `_scoped_trips` با حفظ ۱۰۰٪ رفتار قبلی.
+    - `matrix (get_matrix)`: واکشی خودروها از `_scoped_vehicles()` و سفرهای ثبت‌شده از `_scoped_trips(...)`؛ کاربر شرکت الف فقط خودرو و سفر شرکت الف را مشاهده می‌کند؛ سوپریوزر هر دو شرکت را می‌بیند؛ ارسال سربرگ شرکت ب برای کاربر الف با خطای ۴۰۳ مسدود می‌شود؛ کاربر بدون شرکت هیچ رکوردی دریافت نمی‌کند.
+    - `monthly-summary`: واکشی خودروها و سفرهای ماهانه صرفاً در قلمرو شرکت‌های مجاز کاربر درخواست‌دهنده.
+    - `monthly-grid`: ساخت ماتریس ۳۱ روزه بر پایه خودروها و سفرهای فیلترشده در دامنه، بدون افشای تردد سایر شرکت‌ها.
+    - `audit-logs`: اعمال فیلتر `trip__in=self._scoped_trips(VehicleTripLog.objects.all())` روی `VehicleTripAuditLog`؛ عدم دسترسی به تاریخچه تغییرات ترددهای سایر شرکت‌ها.
+    - `bulk-save`: اعتبارسنجی شناسه خودرو فقط در دامنه `_scoped_vehicles()`؛ نادیده گرفتن خودروهای خارج از دامنه بدون ایجاد یا تغییر سفر؛ ارزیابی تعلق `section_id` به شرکت‌های مجاز کاربر و بازگرداندن پاسخ ۴۰۳ در صورت مغایرت.
+    - `update-day-trip`: جستجوی خودرو در `_scoped_vehicles()` و بازگرداندن پاسخ ۴۰۴ در صورت خارج از قلمرو بودن؛ بررسی شرکت `section_id` با خطای ۴۰۳؛ تضمین عدم تغییر رکوردهای شرکت‌های دیگر.
+    - `bulk-save-monthly-grid`: جلوگیری از ثبت یا دستکاری تردد برای خودروهای خارج از دامنه؛ بررسی شرکت `section_id` با خطای ۴۰۳.
+    - `export-monthly-excel`: ارسال `vehicles_qs` و `trips_qs` فیلترشده به موتور اکسل؛ عدم درج پلاک یا تردد شرکت‌های غیرمجاز در شیت خروجی.
+    - `import-monthly-excel`: ارسال `vehicles_qs` به موتور ایمپورت و نادیده گرفتن ردیف‌های خارج از دامنه مشابه رفتار خودروهای ناموجود.
+  - **آزمون‌هایی که واقعاً اجرا شد با نتیجه:**
+    - `integration_tests.test_vehicle_trip_actions_scope`: اجرای ۱۳ آزمون در ۱۴.۷۵۹ ثانیه با وضعیت OK (۱۳ پاس، ۰ شکست، ۰ خطا، ۰ پرش).
+    - `AST verification`: اعتبارسنجی نحوی ast برای کلاس `VehicleTripViewSet` و کلیه متدهای اکشن و کمکی با خروجی `failed: []` و کد خروج ۰.
+    - `django-check`: اجرای موفق در هر سه پروفایل `all`، `warehouse` و `accounting` با کد خروج ۰.
+    - `migrations-unchanged`: عدم وجود تغییر در مدل‌ها نیازمند مایگریشن با کد خروج ۰.
+    - `personnel.test_attendance_fleet_audit`: اجرای ۱۷ آزمون با خطای از پیش موجود `NameError: name 'Warehouse' is not defined` ناشی از فایل آزمون (مطابق لاگ `known_failures_trip_actions.txt`).
+  - **ابهام‌های مانده:**
+    - خطاهای از پیش موجود در فایل‌های آزمون ماژول `personnel` (مانند جا ماندن ایمپورت `Warehouse` در برخی تست‌های قدیمی) خارج از دامنه این نشست بوده و طبق الزامات طرح تغییر نیافتند.
 
 </div>
+
+
 

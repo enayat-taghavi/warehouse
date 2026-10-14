@@ -6739,6 +6739,22 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = None
 
+    def _scoped_vehicles(self, qs=None):
+        base_qs = VehicleDriverProfile.objects.all() if qs is None else qs
+        return scope_vehicle_queryset(self.request, base_qs)
+
+    def _scoped_trips(self, qs):
+        cid = validate_user_company_access(self.request.user, get_request_company_id(self.request))
+        if cid:
+            return qs.filter(Q(section__project__company_id=cid) | Q(vehicle__section__project__company_id=cid))
+        if not self.request.user.is_superuser:
+            allowed_ids = list(get_user_allowed_companies(self.request.user).values_list('id', flat=True))
+            return qs.filter(
+                Q(section__project__company_id__in=allowed_ids)
+                | Q(vehicle__section__project__company_id__in=allowed_ids)
+            )
+        return qs
+
     def get_queryset(self):
         qs = super().get_queryset()
         warehouse_id = self.request.query_params.get('warehouse_id')
@@ -6756,17 +6772,7 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         vehicle_id = self.request.query_params.get('vehicle_id')
         if vehicle_id:
             qs = qs.filter(vehicle_id=vehicle_id)
-        cid = validate_user_company_access(self.request.user, get_request_company_id(self.request))
-        if cid:
-            qs = qs.filter(Q(section__project__company_id=cid) | Q(vehicle__section__project__company_id=cid))
-        elif not self.request.user.is_superuser:
-            # بی سربرگ شرکت فقط شرکت‌های مجاز کاربر؛ پیش‌تر سفرهای همهٔ شرکت‌ها برمی‌گشت
-            allowed_ids = list(get_user_allowed_companies(self.request.user).values_list('id', flat=True))
-            qs = qs.filter(
-                Q(section__project__company_id__in=allowed_ids)
-                | Q(vehicle__section__project__company_id__in=allowed_ids)
-            )
-        return qs
+        return self._scoped_trips(qs)
 
     def perform_create(self, serializer):
         from .fleet_lifecycle_services import assert_vehicle_trip_allowed
@@ -6805,24 +6811,22 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         elif status_filter == 'inactive':
             active_filter_q = Q(is_active=False)
 
+        vehicles_base = self._scoped_vehicles().filter(active_filter_q)
         if warehouse_id:
-            vehicles = VehicleDriverProfile.objects.filter(
-                Q(assigned_warehouse_id=warehouse_id) | Q(assigned_warehouse_id__isnull=True),
-                active_filter_q
+            vehicles = vehicles_base.filter(
+                Q(assigned_warehouse_id=warehouse_id) | Q(assigned_warehouse_id__isnull=True)
             ).order_by('driver_name')
-            trip_qs = VehicleTripLog.objects.filter(
+            trip_qs = self._scoped_trips(VehicleTripLog.objects.filter(
                 warehouse_id=warehouse_id,
                 date_shamsi=date_shamsi,
                 is_deleted=False
-            )
+            ))
         else:
-            vehicles = VehicleDriverProfile.objects.filter(
-                active_filter_q
-            ).order_by('driver_name')
-            trip_qs = VehicleTripLog.objects.filter(
+            vehicles = vehicles_base.order_by('driver_name')
+            trip_qs = self._scoped_trips(VehicleTripLog.objects.filter(
                 date_shamsi=date_shamsi,
                 is_deleted=False
-            )
+            ))
 
         raw_sec = request.query_params.get('section_id')
         section_id = int(raw_sec) if (raw_sec and str(raw_sec).upper() not in ['ALL', '0', 'NONE', '']) else None
@@ -6892,6 +6896,12 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         warehouse_id = int(raw_wh) if (raw_wh and str(raw_wh).upper() not in ['ALL', '0', 'NONE', '']) else None
         raw_sec = serializer.validated_data.get('section_id') or request.query_params.get('section_id') or request.data.get('section_id')
         section_id = int(raw_sec) if (raw_sec and str(raw_sec).upper() not in ['ALL', '0', 'NONE', '']) else None
+        if section_id and not request.user.is_superuser:
+            sec_obj = ProjectSection.objects.filter(id=section_id).select_related('project').first()
+            if sec_obj:
+                allowed_ids = set(get_user_allowed_companies(request.user).values_list('id', flat=True))
+                if sec_obj.project.company_id not in allowed_ids:
+                    return Response({'error': 'شما به بخش یا شرکت مربوطه دسترسی ندارید.'}, status=status.HTTP_403_FORBIDDEN)
         raw_proj = serializer.validated_data.get('project_id') or request.query_params.get('project_id') or request.data.get('project_id')
         project_id = int(raw_proj) if (raw_proj and str(raw_proj).upper() not in ['ALL', '0', 'NONE', '']) else None
         date_shamsi = serializer.validated_data['date_shamsi']
@@ -6914,7 +6924,7 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                 vehicle_id = item['vehicle_id']
                 trip_count = item.get('trip_count', 0)
                 
-                v_obj = VehicleDriverProfile.objects.filter(id=vehicle_id).first()
+                v_obj = self._scoped_vehicles().filter(id=vehicle_id).first()
                 if not v_obj:
                     continue
 
@@ -7031,24 +7041,22 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
             latest_period = MonthlyWorkPeriod.objects.order_by('-year_month').first()
             year_month = latest_period.year_month if latest_period else '1405/06'
 
+        vehicles_base = self._scoped_vehicles().filter(is_active=True)
         if warehouse_id:
-            vehicles = VehicleDriverProfile.objects.filter(
-                Q(assigned_warehouse_id=warehouse_id) | Q(assigned_warehouse_id__isnull=True),
-                is_active=True
+            vehicles = vehicles_base.filter(
+                Q(assigned_warehouse_id=warehouse_id) | Q(assigned_warehouse_id__isnull=True)
             ).order_by('driver_name')
-            trips = VehicleTripLog.objects.filter(
+            trips = self._scoped_trips(VehicleTripLog.objects.filter(
                 warehouse_id=warehouse_id,
                 date_shamsi__startswith=year_month,
                 is_deleted=False
-            )
+            ))
         else:
-            vehicles = VehicleDriverProfile.objects.filter(
-                is_active=True
-            ).order_by('driver_name')
-            trips = VehicleTripLog.objects.filter(
+            vehicles = vehicles_base.order_by('driver_name')
+            trips = self._scoped_trips(VehicleTripLog.objects.filter(
                 date_shamsi__startswith=year_month,
                 is_deleted=False
-            )
+            ))
 
         summary_rows = []
         for v in vehicles:
@@ -7147,15 +7155,13 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         elif status_filter == 'inactive':
             active_filter_q = Q(is_active=False)
 
+        vehicles_base = self._scoped_vehicles().filter(active_filter_q)
         if warehouse_id:
-            vehicles = VehicleDriverProfile.objects.filter(
-                Q(assigned_warehouse_id=warehouse_id) | Q(assigned_warehouse_id__isnull=True),
-                active_filter_q
+            vehicles = vehicles_base.filter(
+                Q(assigned_warehouse_id=warehouse_id) | Q(assigned_warehouse_id__isnull=True)
             ).order_by('driver_name')
         else:
-            vehicles = VehicleDriverProfile.objects.filter(
-                active_filter_q
-            ).order_by('driver_name')
+            vehicles = vehicles_base.order_by('driver_name')
 
         raw_sec = request.query_params.get('section_id')
         section_id = int(raw_sec) if (raw_sec and str(raw_sec).upper() not in ['ALL', '0', 'NONE', '', 'UNDEFINED', 'NULL']) else None
@@ -7167,10 +7173,10 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         if project_id:
             vehicles = vehicles.filter(section__project_id=project_id)
 
-        trips = VehicleTripLog.objects.filter(
+        trips = self._scoped_trips(VehicleTripLog.objects.filter(
             date_shamsi__startswith=year_month,
             is_deleted=False
-        )
+        ))
         if warehouse_id:
             trips = trips.filter(warehouse_id=warehouse_id)
         if section_id:
@@ -7283,10 +7289,16 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
 
         raw_sec = serializer.validated_data.get('section_id') or request.query_params.get('section_id') or request.data.get('section_id')
         section_id = int(raw_sec) if (raw_sec and str(raw_sec).upper() not in ['ALL', '0', 'NONE', '']) else None
+        if section_id and not request.user.is_superuser:
+            sec_obj = ProjectSection.objects.filter(id=section_id).select_related('project').first()
+            if sec_obj:
+                allowed_ids = set(get_user_allowed_companies(request.user).values_list('id', flat=True))
+                if sec_obj.project.company_id not in allowed_ids:
+                    return Response({'error': 'شما به بخش یا شرکت مربوطه دسترسی ندارید.'}, status=status.HTTP_403_FORBIDDEN)
         raw_proj = serializer.validated_data.get('project_id') or request.query_params.get('project_id') or request.data.get('project_id')
         project_id = int(raw_proj) if (raw_proj and str(raw_proj).upper() not in ['ALL', '0', 'NONE', '']) else None
 
-        v_obj = VehicleDriverProfile.objects.filter(id=vehicle_id).first()
+        v_obj = self._scoped_vehicles().filter(id=vehicle_id).first()
         if not v_obj:
             return Response({'error': 'خودرو یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -7447,7 +7459,8 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         """
         vehicle_id = request.query_params.get('vehicle_id')
         year_month = request.query_params.get('year_month')
-        qs = VehicleTripAuditLog.objects.all().select_related('changed_by')
+        scoped_trips_qs = self._scoped_trips(VehicleTripLog.objects.all())
+        qs = VehicleTripAuditLog.objects.filter(trip__in=scoped_trips_qs).select_related('changed_by')
         if vehicle_id:
             qs = qs.filter(trip__vehicle_id=vehicle_id)
         if year_month:
@@ -7468,6 +7481,12 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         warehouse_id = int(raw_wh) if (raw_wh and str(raw_wh).upper() not in ['ALL', '0', 'NONE', '']) else None
         raw_sec = serializer.validated_data.get('section_id') or request.query_params.get('section_id') or request.data.get('section_id')
         section_id = int(raw_sec) if (raw_sec and str(raw_sec).upper() not in ['ALL', '0', 'NONE', '']) else None
+        if section_id and not request.user.is_superuser:
+            sec_obj = ProjectSection.objects.filter(id=section_id).select_related('project').first()
+            if sec_obj:
+                allowed_ids = set(get_user_allowed_companies(request.user).values_list('id', flat=True))
+                if sec_obj.project.company_id not in allowed_ids:
+                    return Response({'error': 'شما به بخش یا شرکت مربوطه دسترسی ندارید.'}, status=status.HTTP_403_FORBIDDEN)
         raw_proj = serializer.validated_data.get('project_id') or request.query_params.get('project_id') or request.data.get('project_id')
         project_id = int(raw_proj) if (raw_proj and str(raw_proj).upper() not in ['ALL', '0', 'NONE', '']) else None
         year_month = serializer.validated_data['year_month']
@@ -7485,7 +7504,7 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                 v_id = item['vehicle_id']
                 day = item['day']
                 trip_count = item.get('trip_count', 0)
-                v_obj = VehicleDriverProfile.objects.filter(id=v_id).first()
+                v_obj = self._scoped_vehicles().filter(id=v_id).first()
                 if not v_obj:
                     continue
 
@@ -7593,7 +7612,13 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         raw_sec = request.query_params.get('section_id')
         section_id = int(raw_sec) if (raw_sec and str(raw_sec).upper() not in ['ALL', '0', 'NONE', '']) else None
 
-        excel_buffer = export_fleet_monthly_excel(warehouse_id=warehouse_id, year_month=year_month, section_id=section_id)
+        excel_buffer = export_fleet_monthly_excel(
+            warehouse_id=warehouse_id,
+            year_month=year_month,
+            section_id=section_id,
+            vehicles_qs=self._scoped_vehicles(),
+            trips_qs=self._scoped_trips(VehicleTripLog.objects.all())
+        )
         filename = f"Fleet_Timesheet_{year_month.replace('/', '_')}.xlsx"
         response = HttpResponse(
             excel_buffer.getvalue(),
@@ -7620,7 +7645,8 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                 file_obj=file_obj,
                 warehouse_id=warehouse_id,
                 year_month=year_month,
-                user=request.user
+                user=request.user,
+                vehicles_qs=self._scoped_vehicles()
             )
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
