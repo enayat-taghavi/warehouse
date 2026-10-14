@@ -10,7 +10,7 @@ import { AccountsHttpService, User, Role, Permission, ImportResult } from '../..
 import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
 import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
 import { ClickOutsideDirective } from '../../../../shared/directives/click-outside.directive';
-import { IdCards } from '../../../../components/id-cards/id-cards';
+import { IdCards } from '../id-cards/id-cards';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ExcelImportModal } from '../../../../shared/components/excel-import-modal/excel-import-modal';
 import { SmartDeleteModalComponent } from '../../../../shared/components/smart-delete-modal/smart-delete-modal';

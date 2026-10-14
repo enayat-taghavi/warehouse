@@ -15,8 +15,8 @@ def verify_count_tracking():
     errors = []
     successes = []
 
-    html_path = r"e:\warehouse project\warehouse-front\src\app\components\count-tracking\count-tracking.html"
-    ts_path = r"e:\warehouse project\warehouse-front\src\app\components\count-tracking\count-tracking.ts"
+    html_path = r"e:\warehouse project\warehouse-front\src\app\modules\warehouse\components\count-tracking\count-tracking.html"
+    ts_path = r"e:\warehouse project\warehouse-front\src\app\modules\warehouse\components\count-tracking\count-tracking.ts"
     css_path = r"e:\warehouse project\warehouse-front\src\styles.css"
     dt_path = r"e:\warehouse project\warehouse-front\src\app\shared\components\data-table\data-table.component.ts"
 

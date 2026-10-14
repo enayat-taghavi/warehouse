@@ -198,7 +198,7 @@ graph TD
 * **`api/` (۱۷ سرویس API تخصصی):**
   `count-task-api.service.ts`, `doc-task-api.service.ts`, `item-api.service.ts`, `report-api.service.ts`, `dynamic-field-api.service.ts`, `label-api.service.ts`, `user-api.service.ts`, `role-api.service.ts`, `tag-api.service.ts`, `table-view-api.service.ts`, `audit-api.service.ts`, `config-api.service.ts`, `dashboard-api.service.ts`, `feeding-api.service.ts`, `project-api.service.ts`, `api.service.ts`.
 
-### ب) کاتالوگ کامپوننت‌های ۲۴ گانه (`src/app/components/`):
+### ب) کاتالوگ کامپوننت‌های ماژولار (`src/app/modules/`):
 1. **کارتابل‌ها:** `CounterDashboard`, `SupervisorDashboard`, `ManagerReview`, `Customs`, `CountTracking`, `Feeding`, `Dispatch`.
 2. **مدیریت و سیستم:** `Dashboard`, `Projects`, `Docs`, `Users`, `Settings`, `WhSettings`, `Audit`, `Reports`, `IdCards`, `VerifyCard`, `ChangePassword`, `Login`, `Placeholders`.
 3. **طراحی و ابزارها:** `LabelDesigner`, `Field`, `DynamicFields`.
@@ -369,9 +369,9 @@ stateDiagram-v2
 | **۷** | [`core/services/offline-sync.service.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/offline-sync.service.ts) | Frontend | مدیریت صف آفلاین، همگام‌سازی خودکار و پایش خطاها |
 | **۸** | [`core/services/offline-db.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/services/offline-db.ts) | Frontend | شمای پایگاه داده محلی Dexie v4 شامل ۸ جدول کلیدی |
 | **۹** | [`core/interceptors/offline.interceptor.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/core/interceptors/offline.interceptor.ts) | Frontend | رهگیری درخواست‌های متغیر و تولید پاسخ شبیه‌سازی‌شده 200 OK |
-| **۱۰** | [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/counter/counter-dashboard/counter-dashboard.ts) | Frontend | میزکار شمارشگر، ثبت مقادیر، سورت بازشماری و همگام‌سازی زنده |
-| **۱۱** | [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) | Frontend | کارتابل سرپرست شمارش، تایید/رد مقادیر و مدیریت مغایرت‌ها |
-| **۱۲** | [`manager-review.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/manager-review/manager-review.ts) | Frontend | کارتابل مدیر انبارگردانی، تایید نهایی و ارجاع اقلام به بازشماری |
-| **۱۳** | [`customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/components/customs/customs.ts) | Frontend | کارتابل مالی، گمرکی، اسناد فاکتور و قیمت‌گذاری کالاها |
+| **۱۰** | [`counter-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/modules/warehouse/components/counter/counter-dashboard/counter-dashboard.ts) | Frontend | میزکار شمارشگر، ثبت مقادیر، سورت بازشماری و همگام‌سازی زنده |
+| **۱۱** | [`supervisor-dashboard.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/modules/warehouse/components/supervisor/supervisor-dashboard/supervisor-dashboard.ts) | Frontend | کارتابل سرپرست شمارش، تایید/رد مقادیر و مدیریت مغایرت‌ها |
+| **۱۲** | [`manager-review.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/modules/warehouse/components/manager-review/manager-review.ts) | Frontend | کارتابل مدیر انبارگردانی، تایید نهایی و ارجاع اقلام به بازشماری |
+| **۱۳** | [`customs.ts`](file:///e:/warehouse%20project/warehouse-front/src/app/modules/warehouse/components/customs/customs.ts) | Frontend | کارتابل مالی، گمرکی، اسناد فاکتور و قیمت‌گذاری کالاها |
 
 </div>

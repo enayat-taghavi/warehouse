@@ -17,13 +17,13 @@ import { UserMenuComponent } from '../../../../shared/components/user-menu/user-
 import { AccountsHttpService } from '../../../../core/http/accounts-http.service';
 import { NavigationHistoryService } from '../../../../core/services/navigation-history.service';
 import { OfflinePendingBadgeComponent } from '../../../../shared/components/offline-pending-badge/offline-pending-badge.component';
-import { ChatDrawerComponent } from '../../../../components/communications/chat-drawer/chat-drawer.component';
+import { ChatDrawerComponent } from '../communications/chat-drawer/chat-drawer.component';
 import { CommunicationService } from '../../../../core/services/communication.service';
 import { WebSocketService } from '../../../../core/http/websocket.service';
 import { AppPersonaService } from '../../../../core/services/app-persona.service';
 import { AppRoleSwitcherComponent } from '../../../../shared/components/app-role-switcher/app-role-switcher.component';
-import { CompanySwitcherComponent } from '../../../../components/organization/company-switcher/company-switcher';
-import { CompanySelectionModalComponent } from '../../../../components/organization/company-selection-modal/company-selection-modal';
+import { CompanySwitcherComponent } from '../../../accounting/components/organization/company-switcher/company-switcher';
+import { CompanySelectionModalComponent } from '../../../accounting/components/organization/company-selection-modal/company-selection-modal';
 import { ActiveCompanyService } from '../../../../core/services/active-company.service';
 import { FirstBootWizardComponent } from '../operations/first-boot-wizard/first-boot-wizard';
 import { environment } from '../../../../../environments/environment';

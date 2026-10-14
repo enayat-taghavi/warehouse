@@ -8,10 +8,10 @@ import { NavigationHistoryService } from '../../../../../core/services/navigatio
 import { CommunicationService } from '../../../../../core/services/communication.service';
 import { AppRoleSwitcherComponent } from '../../../../../shared/components/app-role-switcher/app-role-switcher.component';
 import { OfflinePendingBadgeComponent } from '../../../../../shared/components/offline-pending-badge/offline-pending-badge.component';
-import { ChatDrawerComponent } from '../../../../../components/communications/chat-drawer/chat-drawer.component';
+import { ChatDrawerComponent } from '../../communications/chat-drawer/chat-drawer.component';
 import { UserMenuComponent } from '../../../../../shared/components/user-menu/user-menu.component';
-import { CompanySwitcherComponent } from '../../../../../components/organization/company-switcher/company-switcher';
-import { CompanySelectionModalComponent } from '../../../../../components/organization/company-selection-modal/company-selection-modal';
+import { CompanySwitcherComponent } from '../../../../accounting/components/organization/company-switcher/company-switcher';
+import { CompanySelectionModalComponent } from '../../../../accounting/components/organization/company-selection-modal/company-selection-modal';
 import { FirstBootWizardComponent } from '../first-boot-wizard/first-boot-wizard';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
 import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';

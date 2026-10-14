@@ -412,5 +412,31 @@ warehouse-front/src/app/
     - runner: اجرای بیلدهای پروفایلی (`build:accounting` و `build:warehouse`)، بررسی `dist-free`، اجرای `ng-test-compare`، راستی‌آزمایی نگهبان‌ها و ایجاد کامیت.
     - ناظر (Claude): بازبین `ui-reviewer`، بررسی صفحه ورود روی 4300 و release روی `app`.
 
+- **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۳ (گام ۰-ب-۲):**
+  - **پایهٔ نشست:** commit hash برابر `925339413ca2a8c008f22881ec9fced525c870b5`.
+  - **کارهای انجام‌شده:**
+    - انتقال با `git mv` برای کلیهٔ ۲۱ پوشهٔ باقیماندهٔ `warehouse-front/src/app/components/` طبق جدول نگاشت قطعی:
+      - ۱۶ پوشهٔ ماژول انبار به `src/app/modules/warehouse/components/` (`count-tracking`، `counter`، `customs`، `dashboard`، `dispatch`، `docs`، `dynamic-fields`، `feeding`، `field`، `label-designer`، `manager-review`، `placeholders`، `projects`، `reports`، `supervisor`، `wh-settings`).
+      - ۳ پوشهٔ ماژول مالی و پرسنلی به `src/app/modules/accounting/components/` (`finance`، `organization`، `personnel`).
+      - ۲ پوشهٔ باقیماندهٔ مشترک به `src/app/modules/common/components/` (`communications`، `id-cards`).
+    - پاک‌سازی کامل پوشهٔ `warehouse-front/src/app/components` (صفر فایل `*.ts` و حذف کامل پوشه).
+    - بازنویسی مکانیزهٔ کلیهٔ مسیرهای نسبی با TypeScript Compiler API: تعداد ۱۶۱۶ ایمپورت در ۲۸۵ فایل فرانت‌اند بدون دستکاری دستی یا تغییر در رفتار، قالب و استایل‌ها.
+    - اصلاح تمامی مسیرهای ثابت تعیین‌شده در طرح:
+      - خط مبنای نگهبان ۵۵ در `scripts/e2e/clickable_ergonomics_baseline.json`: بازنویسی مسیرهای ۱۳ فایل باقیمانده بدون تغییر هیچ عدد یا نقضی.
+      - فایل `warehouse-front/tools/dom-verify.js`: به‌روزرسانی مسیرهای تمپلیت‌های انبار و مالی به `src/app/modules/`.
+      - فایل‌های کانفیگ تست: `tsconfig.spec.json` (مسیر exclude پرسنل) و `tsconfig.test21.spec.json` (مسیرهای ۵ کامپوننت انبار).
+      - اسپک با مسیر عمیق `__dirname`: `employee-new-vehicle.dom.spec.ts` (اصلاح عمق نسبی دسترسی به `excel-import-modal` از ۴ به ۶ سطح والد).
+      - اسکریپت‌های نگهبان: `scripts/e2e/guardian_header_harmonization.py` (متد چندمسیره `resolve_component_path`) و `scripts/e2e/guardian_count_tracking.py` (مسیرهای انبار).
+      - مستندات معماری: `.agents/PROJECT_ARCHITECTURE_MAP.md` (لینک‌های مستقیم کامپوننت‌ها به `modules/warehouse/components/` و تیتر کامپوننت‌های ماژولار).
+    - حذف نهایی اسکریپت موقت `scripts/refactor/move_front_components.mjs` با `git rm`.
+  - **انحراف‌ها:** هیچ. جابه‌جایی مکانیکی به طور کامل بر اساس جدول نشست ۲ انجام و پروندهٔ پوشهٔ قدیمی `components` به صورت کامل بسته شد.
+  - **فرمان‌های مجاز اجراشده توسط ایجنت و خلاصه خروجی:**
+    - `node scripts/refactor/move_front_components.mjs --step 0-b2` -> `TypeScript imports rewritten: 1616 imports across 285 files. Step 0-b2 migration complete!`
+    - `cd warehouse-front && npx ng build --output-path ../scratch/ng-build-agent` -> `Application bundle generation complete. [74.151 seconds] - exit 0`
+    - `git rm -f scripts/refactor/move_front_components.mjs` -> `rm 'scripts/refactor/move_front_components.mjs'`
+  - **آنچه به runner و ناظر می‌ماند:**
+    - runner: اجرای بیلدهای پروفایلی (`build:accounting` و `build:warehouse`)، بررسی `dist-free`، اجرای `ng-test-compare` در برابر پایه، راستی‌آزمایی نگهبان‌های ۵۲، ۵۵، ۵۶ و ایجاد کامیت.
+    - ناظر (Claude): بررسی صفحهٔ ورود روی 4300 و انتشار release روی `app`.
+
 </div>
 

@@ -38,10 +38,20 @@ def check_phase_1():
     print("  ✅ فاز ۱: کلیه معیارهای کامپوننت نشانگر پویا و کپسولی تایید شدند.")
     return True, "Phase 1 Pass"
 
+def resolve_component_path(*rel_parts):
+    p = os.path.join(SRC_DIR, "components", *rel_parts)
+    if os.path.exists(p):
+        return p
+    for sub in ["modules/common/components", "modules/warehouse/components", "modules/accounting/components"]:
+        cand = os.path.join(SRC_DIR, sub.replace("/", os.sep), *rel_parts)
+        if os.path.exists(cand):
+            return cand
+    return p
+
 def check_phase_2():
     print("🛡️ [Guardian Phase 2] بازرسی هدر سراسری کل سیستم (Top Navbar)...")
-    layout_ts = os.path.join(SRC_DIR, "components", "layout", "layout.ts")
-    layout_html = os.path.join(SRC_DIR, "components", "layout", "layout.html")
+    layout_ts = resolve_component_path("layout", "layout.ts")
+    layout_html = resolve_component_path("layout", "layout.html")
 
     with open(layout_ts, "r", encoding="utf-8") as f:
         ts_content = f.read()
@@ -60,11 +70,11 @@ def check_phase_2():
 def check_phase_3():
     print("🛡️ [Guardian Phase 3] بازرسی هدرهای تب‌های عملیاتی پنج‌گانه بر اساس الگوی کارتابل مدیر...")
     operational_files = [
-        os.path.join(SRC_DIR, "components", "counter", "counter-dashboard", "counter-dashboard.html"),
-        os.path.join(SRC_DIR, "components", "supervisor", "supervisor-dashboard", "supervisor-dashboard.html"),
-        os.path.join(SRC_DIR, "components", "manager-review", "manager-review.html"),
-        os.path.join(SRC_DIR, "components", "count-tracking", "count-tracking.html"),
-        os.path.join(SRC_DIR, "components", "customs", "customs.html"),
+        resolve_component_path("counter", "counter-dashboard", "counter-dashboard.html"),
+        resolve_component_path("supervisor", "supervisor-dashboard", "supervisor-dashboard.html"),
+        resolve_component_path("manager-review", "manager-review.html"),
+        resolve_component_path("count-tracking", "count-tracking.html"),
+        resolve_component_path("customs", "customs.html"),
     ]
 
     for path in operational_files:
@@ -93,20 +103,8 @@ def check_phase_4():
     ]
 
     for name, ts_rel, html_rel in management_views:
-        ts_path = os.path.join(SRC_DIR, "components", ts_rel)
-        if not os.path.exists(ts_path):
-            for sub in ["modules/common/components", "modules/warehouse/components", "modules/accounting/components"]:
-                p = os.path.join(SRC_DIR, sub.replace("/", os.sep), ts_rel)
-                if os.path.exists(p):
-                    ts_path = p
-                    break
-        html_path = os.path.join(SRC_DIR, "components", html_rel)
-        if not os.path.exists(html_path):
-            for sub in ["modules/common/components", "modules/warehouse/components", "modules/accounting/components"]:
-                p = os.path.join(SRC_DIR, sub.replace("/", os.sep), html_rel)
-                if os.path.exists(p):
-                    html_path = p
-                    break
+        ts_path = resolve_component_path(ts_rel)
+        html_path = resolve_component_path(html_rel)
 
         if not os.path.exists(ts_path) or not os.path.exists(html_path):
             return False, f"فایل‌های مربوط به {name} یافت نشدند."
@@ -134,8 +132,8 @@ def check_phase_5():
     ]
 
     for name, ts_rel, html_rel in views:
-        ts_path = os.path.join(SRC_DIR, "components", ts_rel)
-        html_path = os.path.join(SRC_DIR, "components", html_rel)
+        ts_path = resolve_component_path(ts_rel)
+        html_path = resolve_component_path(html_rel)
 
         if not os.path.exists(ts_path) or not os.path.exists(html_path):
             return False, f"فایل‌های مربوط به {name} یافت نشدند."

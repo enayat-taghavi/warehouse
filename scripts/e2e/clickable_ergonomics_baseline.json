@@ -66,67 +66,67 @@
         "line": 1824
       },
       {
-        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "file": "modules/warehouse/components/counter/counter-dashboard/counter-dashboard.html",
         "line": 234
       },
       {
-        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "file": "modules/warehouse/components/counter/counter-dashboard/counter-dashboard.html",
         "line": 538
       },
       {
-        "file": "components/customs/customs.html",
+        "file": "modules/warehouse/components/customs/customs.html",
         "line": 230
       },
       {
-        "file": "components/customs/customs.html",
+        "file": "modules/warehouse/components/customs/customs.html",
         "line": 545
       },
       {
-        "file": "components/dispatch/dispatch.html",
+        "file": "modules/warehouse/components/dispatch/dispatch.html",
         "line": 465
       },
       {
-        "file": "components/dispatch/dispatch.html",
+        "file": "modules/warehouse/components/dispatch/dispatch.html",
         "line": 517
       },
       {
-        "file": "components/dispatch/dispatch.html",
+        "file": "modules/warehouse/components/dispatch/dispatch.html",
         "line": 541
       },
       {
-        "file": "components/dispatch/dispatch.html",
+        "file": "modules/warehouse/components/dispatch/dispatch.html",
         "line": 583
       },
       {
-        "file": "components/docs/docs.html",
+        "file": "modules/warehouse/components/docs/docs.html",
         "line": 44
       },
       {
-        "file": "components/docs/docs.html",
+        "file": "modules/warehouse/components/docs/docs.html",
         "line": 175
       },
       {
-        "file": "components/finance/accountant/accountant-personnel/accountant-personnel.html",
+        "file": "modules/accounting/components/finance/accountant/accountant-personnel/accountant-personnel.html",
         "line": 265
       },
       {
-        "file": "components/finance/accountant/accountant-personnel/accountant-personnel.html",
+        "file": "modules/accounting/components/finance/accountant/accountant-personnel/accountant-personnel.html",
         "line": 293
       },
       {
-        "file": "components/finance/accountant/accountant-personnel/accountant-personnel.html",
+        "file": "modules/accounting/components/finance/accountant/accountant-personnel/accountant-personnel.html",
         "line": 673
       },
       {
-        "file": "components/finance/company-documents-archive/company-documents-archive.html",
+        "file": "modules/accounting/components/finance/company-documents-archive/company-documents-archive.html",
         "line": 67
       },
       {
-        "file": "components/finance/employee/employee-attendance/employee-attendance.html",
+        "file": "modules/accounting/components/finance/employee/employee-attendance/employee-attendance.html",
         "line": 579
       },
       {
-        "file": "components/finance/employee/employee-attendance/employee-attendance.html",
+        "file": "modules/accounting/components/finance/employee/employee-attendance/employee-attendance.html",
         "line": 661
       }
     ],
@@ -145,169 +145,169 @@
         "icon": null
       },
       {
-        "file": "components/counter/counter-dashboard/counter-dashboard.html",
+        "file": "modules/warehouse/components/counter/counter-dashboard/counter-dashboard.html",
         "line": 973,
         "method": "closeExportModal",
         "icon": "action-close"
       },
       {
-        "file": "components/dispatch/dispatch.html",
+        "file": "modules/warehouse/components/dispatch/dispatch.html",
         "line": 186,
         "method": "openExportModal",
         "icon": "action-download"
       },
       {
-        "file": "components/dispatch/dispatch.html",
+        "file": "modules/warehouse/components/dispatch/dispatch.html",
         "line": 446,
         "method": "openDeleteModal",
         "icon": "trash-lucide"
       },
       {
-        "file": "components/dispatch/dispatch.html",
+        "file": "modules/warehouse/components/dispatch/dispatch.html",
         "line": 465,
         "method": "closeExportModal",
         "icon": "action-close"
       },
       {
-        "file": "components/dispatch/dispatch.html",
+        "file": "modules/warehouse/components/dispatch/dispatch.html",
         "line": 516,
         "method": "closeExportModal",
         "icon": null
       },
       {
-        "file": "components/dispatch/dispatch.html",
+        "file": "modules/warehouse/components/dispatch/dispatch.html",
         "line": 517,
         "method": "executeExport",
         "icon": "action-loading"
       },
       {
-        "file": "components/docs/docs.html",
+        "file": "modules/warehouse/components/docs/docs.html",
         "line": 44,
         "method": "importService.currentState.importTag = tag",
         "icon": null
       },
       {
-        "file": "components/docs/docs.html",
+        "file": "modules/warehouse/components/docs/docs.html",
         "line": 171,
         "method": "simulateImportProcess",
         "icon": "upload-cloud"
       },
       {
-        "file": "components/docs/docs.html",
+        "file": "modules/warehouse/components/docs/docs.html",
         "line": 217,
         "method": "importService.revertOperation",
         "icon": null
       },
       {
-        "file": "components/docs/docs.html",
+        "file": "modules/warehouse/components/docs/docs.html",
         "line": 452,
         "method": "closeDeleteModal",
         "icon": null
       },
       {
-        "file": "components/docs/docs.html",
+        "file": "modules/warehouse/components/docs/docs.html",
         "line": 488,
         "method": "confirmEmptyTagImport",
         "icon": null
       },
       {
-        "file": "components/docs/docs.html",
+        "file": "modules/warehouse/components/docs/docs.html",
         "line": 515,
         "method": "executeImport",
         "icon": null
       },
       {
-        "file": "components/finance/accountant/accountant-payroll/accountant-payroll.html",
+        "file": "modules/accounting/components/finance/accountant/accountant-payroll/accountant-payroll.html",
         "line": 271,
         "method": "refreshCurrentTab",
         "icon": null
       },
       {
-        "file": "components/finance/employee/employee-attendance/employee-attendance.html",
+        "file": "modules/accounting/components/finance/employee/employee-attendance/employee-attendance.html",
         "line": 238,
         "method": "triggerExcelImport",
         "icon": "action-upload"
       },
       {
-        "file": "components/finance/employee/employee-attendance/employee-attendance.html",
+        "file": "modules/accounting/components/finance/employee/employee-attendance/employee-attendance.html",
         "line": 1099,
         "method": "closeExcelImportModal",
         "icon": null
       },
       {
-        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.html",
         "line": 239,
         "method": "reopenRejectedPersonnel",
         "icon": null
       },
       {
-        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.html",
         "line": 1006,
         "method": "deleteExistingDocument",
         "icon": null
       },
       {
-        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.html",
         "line": 1077,
         "method": "reopenEditingRejectedPersonnel",
         "icon": null
       },
       {
-        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.html",
         "line": 1390,
         "method": "deleteDraftPersonnel",
         "icon": "trash"
       },
       {
-        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.html",
         "line": 1408,
         "method": "deleteDraftPersonnel",
         "icon": "trash"
       },
       {
-        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.html",
         "line": 1636,
         "method": "deleteDraftPersonnel",
         "icon": "trash"
       },
       {
-        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.html",
         "line": 1645,
         "method": "deleteDraftPersonnel",
         "icon": "trash"
       },
       {
-        "file": "components/finance/employee/employee-new-vehicle/employee-new-vehicle.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.html",
         "line": 295,
         "method": "reopenRejectedVehicle",
         "icon": null
       },
       {
-        "file": "components/finance/employee/employee-new-vehicle/employee-new-vehicle.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.html",
         "line": 479,
         "method": "reopenRejectedVehicle",
         "icon": null
       },
       {
-        "file": "components/finance/employee/employee-new-vehicle/employee-new-vehicle.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.html",
         "line": 527,
         "method": "deleteDraftVehicle",
         "icon": null
       },
       {
-        "file": "components/label-designer/label-designer.html",
+        "file": "modules/warehouse/components/label-designer/label-designer.html",
         "line": 115,
         "method": "confirmDelete",
         "icon": null
       },
       {
-        "file": "components/label-designer/label-designer.html",
+        "file": "modules/warehouse/components/label-designer/label-designer.html",
         "line": 116,
         "method": "cancelDelete",
         "icon": null
       },
       {
-        "file": "components/manager-review/manager-review.html",
+        "file": "modules/warehouse/components/manager-review/manager-review.html",
         "line": 1172,
         "method": "cancelApprove",
         "icon": "action-close"
@@ -410,57 +410,57 @@
         "icon": "spinner-arc"
       },
       {
-        "file": "components/dispatch/dispatch.html",
+        "file": "modules/warehouse/components/dispatch/dispatch.html",
         "line": 447,
         "icon": "trash-lucide"
       },
       {
-        "file": "components/dispatch/dispatch.html",
+        "file": "modules/warehouse/components/dispatch/dispatch.html",
         "line": 584,
         "icon": "x-path"
       },
       {
-        "file": "components/docs/docs.html",
+        "file": "modules/warehouse/components/docs/docs.html",
         "line": 177,
         "icon": "loader-arc"
       },
       {
-        "file": "components/docs/docs.html",
+        "file": "modules/warehouse/components/docs/docs.html",
         "line": 233,
         "icon": "loader-arc"
       },
       {
-        "file": "components/field/field.html",
+        "file": "modules/warehouse/components/field/field.html",
         "line": 78,
         "icon": "eye-slash"
       },
       {
-        "file": "components/field/field.html",
+        "file": "modules/warehouse/components/field/field.html",
         "line": 82,
         "icon": "eye-slash"
       },
       {
-        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.html",
         "line": 1395,
         "icon": "trash"
       },
       {
-        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.html",
         "line": 1413,
         "icon": "trash"
       },
       {
-        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.html",
         "line": 1637,
         "icon": "trash"
       },
       {
-        "file": "components/finance/employee/employee-new-personnel/employee-new-personnel.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel.html",
         "line": 1646,
         "icon": "trash"
       },
       {
-        "file": "components/finance/employee/employee-new-vehicle/employee-new-vehicle.html",
+        "file": "modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.html",
         "line": 332,
         "icon": "edit-2"
       }
