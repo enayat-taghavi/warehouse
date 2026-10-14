@@ -54,12 +54,27 @@ def discover_module_names(app_dir):
     """کشف پویای نام ماژول‌ها از پوشهٔ modules (به‌جز common)."""
     modules_dir = app_dir / "modules"
     if not modules_dir.exists():
-        return {"warehouse", "accounting"}
-    names = set()
-    for child in modules_dir.iterdir():
-        if child.is_dir() and child.name != "common":
-            names.add(child.name)
-    return names or {"warehouse", "accounting"}
+        return set()
+    return {child.name for child in modules_dir.iterdir() if child.is_dir() and child.name != "common"}
+
+
+def discover_module_aliases(app_dir, module_names):
+    """استخراج پویای نام‌های مستعار ماژول‌ها از فایل قرارداد module.ts هر ماژول."""
+    alias_map = {}
+    for mod_name in module_names:
+        alias_map[mod_name] = mod_name
+        alias_map[f"{mod_name}-ui"] = mod_name
+        mod_file = app_dir / "modules" / mod_name / "module.ts"
+        if mod_file.exists():
+            try:
+                content = mod_file.read_text(encoding="utf-8")
+                m = re.search(r"""aliases\s*:\s*\[(.*?)\]""", content, re.DOTALL)
+                if m:
+                    for a in re.findall(r"""['"]([^'"]+)['"]""", m.group(1)):
+                        alias_map[a.strip()] = mod_name
+            except Exception:
+                pass
+    return alias_map
 
 
 def get_file_zone(rel_posix, module_names):
@@ -78,15 +93,13 @@ def get_file_zone(rel_posix, module_names):
     return "core_common"
 
 
-def resolve_import_zone(src_file, import_str, app_dir, module_names):
+def resolve_import_zone(src_file, import_str, app_dir, module_names, alias_map=None):
     """
     تشخیص ناحیهٔ مقصد یک ایمپورت:
     اگر به ماژولی اشاره دارد نام آن، در غیر این صورت None.
     """
-    if import_str == "warehouse-ui":
-        return "warehouse"
-    if import_str == "accounting-ui":
-        return "accounting"
+    if alias_map and import_str in alias_map:
+        return alias_map[import_str]
     if import_str == "platform-shell":
         return "common"
 
@@ -113,6 +126,8 @@ def scan_front_fences(app_dir=FRONT_APP_DIR, extra_files=None):
       (ج) is_module_installed_outside_module
     """
     module_names = discover_module_names(app_dir)
+    alias_map = discover_module_aliases(app_dir, module_names)
+
     violations = {
         "core_to_module_imports": [],
         "cross_module_imports": [],
@@ -158,7 +173,7 @@ def scan_front_fences(app_dir=FRONT_APP_DIR, extra_files=None):
         for line_idx, line in enumerate(lines, 1):
             for m in IMPORT_RE.finditer(line):
                 import_str = m.group(1)
-                t_zone = resolve_import_zone(file_path, import_str, app_dir, module_names)
+                t_zone = resolve_import_zone(file_path, import_str, app_dir, module_names, alias_map)
                 if not t_zone:
                     continue
 
@@ -182,8 +197,7 @@ def scan_front_fences(app_dir=FRONT_APP_DIR, extra_files=None):
         for line_idx, line in enumerate(lines, 1):
             for m in IS_MODULE_INSTALLED_RE.finditer(line):
                 code = m.group(1).strip()
-                # نام مستعار: personnel همان ماژول accounting است
-                norm_code = "accounting" if code == "personnel" else code
+                norm_code = alias_map.get(code, code)
                 if norm_code in module_names and zone != norm_code:
                     violations["is_module_installed_outside_module"].append({
                         "file": rel_posix,
@@ -370,7 +384,7 @@ def main():
 
     labels = {
         "core_to_module_imports": "ایمپورت از هسته/مشترک به ماژول (الف)",
-        "cross_module_imports": "ایمپورت متقابل انبار ↔ مالی (ب)",
+        "cross_module_imports": "ایمپورت متقابل بین ماژول‌ها (ب)",
         "is_module_installed_outside_module": "فراخوانی isModuleInstalled بیرون از ماژول (ج)",
     }
 

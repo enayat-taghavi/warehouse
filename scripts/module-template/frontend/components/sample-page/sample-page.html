@@ -1,0 +1,18 @@
+<div class="p-6 space-y-6" dir="rtl">
+  <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+    <div class="flex items-center gap-3">
+      <svg appIcon="box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-7 h-7 text-indigo-600"></svg>
+      <div>
+        <h1 class="text-xl font-black text-slate-800">{{ title }}</h1>
+        <p class="text-xs text-slate-500">صفحه نمونه ماژول مستقل</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="button" appAction="refresh" (click)="onRefresh()"></button>
+      <button type="button" appAction="create" (click)="onCreate()"></button>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+    <p class="text-sm text-slate-600">این صفحه به عنوان نمونهٔ اولیه برای توسعهٔ قابلیت‌های ماژول جدید پیاده‌سازی شده است.</p>
+  </div>
+</div>

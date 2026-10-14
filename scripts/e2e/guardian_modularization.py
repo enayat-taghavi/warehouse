@@ -42,14 +42,127 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_DIR = REPO_ROOT / "warehouse-backend"
 IMPORTLINTER_FILE = REPO_ROOT / ".importlinter"
 BASELINE_FILE = Path(__file__).resolve().parent / "modularization_baseline.json"
-VENV_PYTHON = BACKEND_DIR / "venv" / ("Scripts" if os.name == "nt" else "bin") / (
-    "python.exe" if os.name == "nt" else "python"
-)
+
+
+def get_venv_python():
+    cand = BACKEND_DIR / "venv" / ("Scripts" if os.name == "nt" else "bin") / (
+        "python.exe" if os.name == "nt" else "python"
+    )
+    if cand.exists():
+        return cand
+    cur = REPO_ROOT
+    while cur.parent != cur:
+        cand = cur / "warehouse-backend" / "venv" / ("Scripts" if os.name == "nt" else "bin") / (
+            "python.exe" if os.name == "nt" else "python"
+        )
+        if cand.exists():
+            return cand
+        cur = cur.parent
+    return BACKEND_DIR / "venv" / ("Scripts" if os.name == "nt" else "bin") / (
+        "python.exe" if os.name == "nt" else "python"
+    )
+
+
+VENV_PYTHON = get_venv_python()
 COMPOSITION_ROOT_FILES = ("config/settings.py", "config/urls.py", "config/asgi.py")
-MODULE_PACKAGES = ("warehouses", "inventory", "personnel")
+
+SCRATCH_DIR = REPO_ROOT / "scratch"
 C4_SECTION = "wh-c4-allowlist"
 C4_OPTION = "guarded_lazy_imports"
 GUARD_CALL = "apps.is_installed"
+
+
+def discover_backend_modules(backend_dir=BACKEND_DIR):
+    """
+    کشف پویای ماژول‌ها و بسته‌های آن‌ها از warehouse-backend/modules/*/*/__init__.py
+    خروجی:
+      - module_packages: دیکشنری {کد_ماژول: [لیست_بسته‌ها]}
+      - all_packages: لیست مرتب تمام بسته‌های پایتونی ماژول‌ها
+    """
+    modules_dir = backend_dir / "modules"
+    module_packages = {}
+    if modules_dir.is_dir():
+        for init_file in sorted(modules_dir.glob("*/*/__init__.py")):
+            pkg_name = init_file.parent.name
+            mod_code = init_file.parent.parent.name
+            module_packages.setdefault(mod_code, []).append(pkg_name)
+    all_packages = sorted({pkg for pkgs in module_packages.values() for pkg in pkgs})
+    return module_packages, all_packages
+
+
+def get_effective_importlinter_config():
+    """
+    خواندن .importlinter و در صورت وجود بسته‌های ماژول تازه (کشف‌شده از modules/*/*/__init__.py)،
+    ساخت یک پیکربندی موقت در scratch/ شامل لایه ماژول، قرارداد استقلال ماژول‌ها و پاکی هسته.
+    خروجی: (parser, config_file_path_or_None, all_module_packages)
+    """
+    base_parser = read_importlinter_config()
+    module_packages, all_module_pkgs = discover_backend_modules()
+    configured_roots = set(as_list(base_parser["importlinter"].get("root_packages", "")))
+    missing_pkgs = [p for p in all_module_pkgs if p not in configured_roots]
+
+    if not missing_pkgs:
+        return base_parser, None, all_module_pkgs
+
+    # ایجاد یک کپی در حافظه از کانفیگ پایه و الحاق بسته‌های جدید
+    parser = configparser.ConfigParser()
+    parser.read_string(IMPORTLINTER_FILE.read_text(encoding="utf-8"))
+
+    # ۱. افزودن به root_packages
+    current_roots = as_list(parser["importlinter"].get("root_packages", ""))
+    for p in missing_pkgs:
+        if p not in current_roots:
+            current_roots.append(p)
+    parser["importlinter"]["root_packages"] = "\n    " + "\n    ".join(sorted(current_roots))
+
+    # ۲. افزودن به لایه ماژول‌ها در c1-layering
+    if parser.has_section("importlinter:contract:c1-layering"):
+        layers_raw = parser["importlinter:contract:c1-layering"].get("layers", "")
+        lines = [l.strip() for l in layers_raw.splitlines() if l.strip()]
+        if len(lines) >= 3:
+            # lines[1] لایه ماژول‌هاست
+            mod_layer_items = [item.strip() for item in lines[1].split(":") if item.strip()]
+            for p in missing_pkgs:
+                if p not in mod_layer_items:
+                    mod_layer_items.append(p)
+            lines[1] = " : ".join(mod_layer_items)
+            parser["importlinter:contract:c1-layering"]["layers"] = "\n    " + "\n    ".join(lines)
+
+    # ۳. قراردادهای استقلال C2 برای کلیه زوج ماژول‌ها
+    all_mods = sorted(module_packages.keys())
+    for i, mod_a in enumerate(all_mods):
+        for mod_b in all_mods[i + 1:]:
+            sec_1 = f"importlinter:contract:c2-{mod_a}-independent-of-{mod_b}"
+            if not parser.has_section(sec_1):
+                parser.add_section(sec_1)
+                parser[sec_1]["name"] = f"C2 — {mod_a} هرگز {mod_b} را ایمپورت نمی‌کند"
+                parser[sec_1]["type"] = "forbidden"
+                parser[sec_1]["source_modules"] = "\n    " + "\n    ".join(sorted(module_packages[mod_a]))
+                parser[sec_1]["forbidden_modules"] = "\n    " + "\n    ".join(sorted(module_packages[mod_b]))
+
+            sec_2 = f"importlinter:contract:c2-{mod_b}-independent-of-{mod_a}"
+            if not parser.has_section(sec_2):
+                parser.add_section(sec_2)
+                parser[sec_2]["name"] = f"C2 — {mod_b} هرگز {mod_a} را ایمپورت نمی‌کند"
+                parser[sec_2]["type"] = "forbidden"
+                parser[sec_2]["source_modules"] = "\n    " + "\n    ".join(sorted(module_packages[mod_b]))
+                parser[sec_2]["forbidden_modules"] = "\n    " + "\n    ".join(sorted(module_packages[mod_a]))
+
+    # ۴. افزودن به forbidden_modules در c3-core-purity
+    if parser.has_section("importlinter:contract:c3-core-purity"):
+        c3_forbidden = as_list(parser["importlinter:contract:c3-core-purity"].get("forbidden_modules", ""))
+        for p in missing_pkgs:
+            if p not in c3_forbidden:
+                c3_forbidden.append(p)
+        parser["importlinter:contract:c3-core-purity"]["forbidden_modules"] = "\n    " + "\n    ".join(sorted(c3_forbidden))
+
+    SCRATCH_DIR.mkdir(parents=True, exist_ok=True)
+    temp_config_path = SCRATCH_DIR / "importlinter_dynamic.ini"
+    with open(temp_config_path, "w", encoding="utf-8") as f:
+        parser.write(f)
+
+    return parser, temp_config_path, all_module_pkgs
+
 
 # ماژول‌هایی که مسیر اجرایی تولیدی نیستند: تست، نگهبان و دستورهای seed.
 # طرح جداسازی این‌ها را صریحاً «غیرتولیدی» می‌نامد (§۴).
@@ -230,9 +343,13 @@ def verify_c4_entry(entry):
     return True, f"{len(findings)} ایمپورت تنبل گاردشده تایید شد"
 
 
-def composition_root_counts():
+def composition_root_counts(module_packages=None):
     """شمار سطرهای ریشهٔ ترکیب که نام ماژول را سخت‌کد کرده‌اند (معیار خروج فاز ۳)."""
-    pattern = re.compile(r"\b(" + "|".join(MODULE_PACKAGES) + r")\b")
+    if not module_packages:
+        _, module_packages = discover_backend_modules()
+    if not module_packages:
+        return {rel: [] for rel in COMPOSITION_ROOT_FILES}
+    pattern = re.compile(r"\b(" + "|".join(module_packages) + r")\b")
     result = {}
     for rel in COMPOSITION_ROOT_FILES:
         path = BACKEND_DIR / rel
@@ -245,15 +362,17 @@ def composition_root_counts():
     return result
 
 
-def run_lint_imports():
+def run_lint_imports(config_path=None):
     """
-    اجرای `lint-imports` برای اثبات اعتبار خود فایل .importlinter.
+    اجرای `lint-imports` برای اثبات اعتبار خود فایل .importlinter (یا فایل موقت).
     کد خروجی آن در فاز ۰ عمداً ۱ است (report-only) و شکست نگهبان نیست؛
     آنچه شکست است، نتوانستن از خواندن/تحلیل کانفیگ است.
     """
     executables = [
         BACKEND_DIR / "venv" / "Scripts" / "lint-imports.exe",
         BACKEND_DIR / "venv" / "bin" / "lint-imports",
+        VENV_PYTHON.parent / "lint-imports.exe",
+        VENV_PYTHON.parent / "lint-imports",
     ]
     command = None
     for candidate in executables:
@@ -262,6 +381,9 @@ def run_lint_imports():
             break
     if command is None:
         command = [sys.executable, "-c", "from importlinter.cli import lint_imports_command; lint_imports_command()"]
+
+    if config_path:
+        command.extend(["--config", str(config_path)])
 
     env = dict(os.environ)
     env["PYTHONUTF8"] = "1"
@@ -280,9 +402,9 @@ def run_lint_imports():
     return {"kept": int(match.group(1)), "broken": int(match.group(2))}, output
 
 
-def build_snapshot(root_packages, rules):
+def build_snapshot(root_packages, rules, module_packages=None):
     data = collect_violations(root_packages, rules)
-    composition = composition_root_counts()
+    composition = composition_root_counts(module_packages)
     counters = {
         "unique_direct_violations": len(data["unique_edges"]),
         "production_violations": len(data["production"]),
@@ -329,12 +451,13 @@ def main():
     args = ap.parse_args()
 
     ensure_engine()
-    parser = read_importlinter_config()
+    parser, scratch_config, module_pkgs = get_effective_importlinter_config()
     root_packages = as_list(parser["importlinter"].get("root_packages", ""))
     rules = build_contract_rules(parser)
-    counters, data, composition = build_snapshot(root_packages, rules)
-    lint_summary, lint_output = run_lint_imports()
+    counters, data, composition = build_snapshot(root_packages, rules, module_pkgs)
+    lint_summary, lint_output = run_lint_imports(scratch_config)
     baseline = load_baseline()
+
 
     if args.json:
         print(json.dumps({"counters": counters, "lint_imports": lint_summary}, ensure_ascii=False, indent=2))
