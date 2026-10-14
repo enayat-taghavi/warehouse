@@ -2507,3 +2507,162 @@ refactor(modular): loose coupling cleanup in companies, user menu and archive li
    - در `warehouse-front/src/app/modules/common/components/operations/companies/companies.ts` گتر `isAccou...
 
 ---
+
+### Task 1 of 1 — 2026-10-15 02:58:59
+- **Status:** DONE
+- **Conversation:** `f41cb30f-85cf-4f4c-a32e-02bd4b5ffe64`
+- **Steps:** 255
+- **Duration:** 48m 26s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 8/8 passed
+- **Task:**
+```
+نشست 1 از 1 — دامنهٔ شرکت در actionهای سفارشی VehicleTripViewSet (بک‌اند)
+
+
+
+۱. قواعد حیاتی:
+- فقط این فایل‌ها را تغییر بده: warehouse-backend/modules/accounting/personnel/views.py، warehouse-backend/modules/accounting/personnel/fleet_excel_engine.py، فایل تازهٔ warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py و بند گزارش در فایل طرح. هیچ مدل، مایگریشن یا فایل فرانتی تغییر نکند.
+- push نکن. فقط فایل‌های خودت را stage کن؛ tasks.md، run_tasks.py، run_tasks.bat و tasks_history.md را stage نکن.
+- هرگز manage.py test بی‌برچسب اجرا نکن (روی دیتابیس واقعی انبارها را پاک می‌کند).
+- هیچ رکورد سفر یا خودرویی حذف نشود. درخواست بیرون از دامنه فقط رد شود؛ داده‌ای پاک یا بازنویسی نشود.
+- قواعد `.agents/AGENTS.md` بخش ۳، ۵ و ۱۰ برقرارند.
+
+۲. زمینه، پیش از هر ویرایش بخوان:
+- در فایل طرح Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md بخش `## ۴.` و دو ورودی آخر زیر `## گزارش پیشرفت`.
+- در warehouse-backend/modules/accounting/personnel/views.py: تابع scope_vehicle_queryset، کل کلاس VehicleTripViewSet (از class VehicleTripViewSet تا class MonthlyWorkPeriodViewSet)، و get_queryset در VehicleDriverProfileViewSet.
+- warehouse-backend/modules/accounting/personnel/fleet_excel_engine.py: تابع‌های export_fleet_monthly_excel و import_fleet_monthly_excel.
+- آزمون test_trips_endpoint_without_company_header_is_company_scoped و setUp کلاس در warehouse-backend/integration_tests/test_company_scope_reports_import.py، به‌عنوان الگوی ساخت داده.
+- hash فعلی HEAD را یادداشت کن.
+
+۳. تعریف‌ها:
+- «خودروهای در دامنه»: scope_vehicle_queryset(self.request, VehicleDriverProfile.objects.all()). این همان قاعدهٔ صفحهٔ فهرست خودروهاست (بخش منتسب یا ثبت خودِ کاربر، و شرکت‌های مجاز؛ سوپریوزر و ممیز سراسری طبق همان تابع).
+- «سفرهای در دامنه»: همان بخش شرکتی امروز get_queryset (از خط cid = validate_user_company_access تا پایان آن): با سربرگ شرکت، فقط همان شرکت؛ بی سربرگ و غیرسوپریوزر، شرکت‌های مجاز از get_user_allowed_companies؛ سوپریوزر بی‌محدودیت. مسیر شرکت سفر: section__project__company_id یا vehicle__section__project__company_id.
+- «شرکت ب»: هر شرکتی که در دامنهٔ کاربر درخواست‌دهنده نیست.
+
+۴. کار این نشست:
+- دو متد کمکی در VehicleTripViewSet با همین نام‌ها بساز: _scoped_vehicles(self, qs=None) که خروجی‌اش «خودروهای در دامنه» است، و _scoped_trips(self, qs) که فقط بخش شرکتی را روی qs اعمال می‌کند. بخش شرکتی get_queryset به _scoped_trips منتقل شود و get_queryset آن را صدا بزند، بی هیچ تغییر رفتاری. رونوشت قاعده ممنوع است؛ هر دو متد قاعدهٔ موجود را بازاستفاده کنند.
+- actionهای خواندنی matrix (get_matrix)، monthly-summary و monthly-grid: هر جا امروز VehicleDriverProfile.objects خام است، از _scoped_vehicles() شروع شود؛ هر جا VehicleTripLog.objects برای خواندن است، از self._scoped_trips(...) بگذرد. فیلترهای امروز (انبار، بخش، تاریخ، وضعیت) عیناً روی همان بمانند.
+- audit-logs: فقط ممیزی سفرهای در دامنه، با فیلتر trip__in روی self._scoped_trips(VehicleTripLog.objects.all()). VehicleTripAuditLog.objects.all() بی‌فیلتر نماند.
+- actionهای نوشتنی bulk-save، update-day-trip و bulk-save-monthly-grid: خودرو با شناسه فقط از _scoped_vehicles() پیدا شود. خودروی بیرون از دامنه دقیقاً مثل خودروی ناموجود امروز رفتار شود (همان پاسخ یا خطای ردیف موجود)، و برای آن هیچ سفری ساخته یا عوض نشود. section_id داده‌شده در درخواست، اگر به شرکتی بیرون از شرکت‌های مجاز کاربر تعلق دارد (برای غیرسوپریوزر)، پاسخ ۴۰۳ با پیام فارسی بدهد و هیچ نوشتنی انجام نشود.
+- export-monthly-excel و import-monthly-excel: به export_fleet_monthly_excel و import_fleet_monthly_excel پارامتر اختیاری vehicles_qs=None بده (و برای export در صورت نیاز trips_qs=None). مقدار پیش‌فرض None باید رفتار امروز را عیناً نگه دارد، چون آزمون‌های test_attendance_fleet_audit.py بی این پارامترها صدا می‌زنند. ViewSet هر دو را با _scoped_vehicles() و _scoped_trips(...) صدا بزند. در import، ردیف خودروی بیرون از دامنه همان رفتار «خودرو پیدا نشد» امروز را بگیرد.
+- پیام‌های اعلان (company_{cid}_notifications) و بقیهٔ منطق قفل دوره و ممیزی دست نخورد.
+- بیرون از دامنه: viewsetهای دیگر، فرانت، و آزمون‌های خراب از پیش موجود personnel.
+
+۵. آزمون‌ها: فایل تازهٔ warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py با دو شرکت (الف و ب)، در هر شرکت یک پروژه، یک بخش، یک خودرو و یک سفر با ممیزی؛ یک کاربر غیرسوپریوزر شرکت الف با UserCompanyAccess سطح workspace_full و انتساب فعال به بخش الف و مجوزهای لازم؛ یک کاربر بی‌شرکت؛ یک سوپریوزر. درخواست‌ها بی سربرگ شرکت، مگر جایی که گفته شده. هر بند یک متد جدا (دست‌کم ۱۲ متد):
+- matrix: کاربر الف فقط خودرو و سفر الف را می‌بیند؛ سوپریوزر هر دو را.
+- matrix با سربرگ شرکت ب برای کاربر الف: هیچ دادهٔ ب برنمی‌گردد (۴۰۳ یا نتیجهٔ بی ب).
+- monthly-summary: کاربر الف هیچ دادهٔ ب نمی‌بیند.
+- monthly-grid: کاربر الف هیچ دادهٔ ب نمی‌بیند.
+- audit-logs: ممیزی سفر ب برای کاربر الف برنمی‌گردد و ممیزی سفر الف برمی‌گردد.
+- bulk-save با خودروی ب توسط کاربر الف: پس از خواندن دوباره از دیتابیس، هیچ سفری برای خودروی ب ساخته یا عوض نشده است.
+- update-day-trip با خودروی ب: پاسخ غیر ۲xx و سفر ب پس از خواندن دوباره دست‌نخورده.
+- bulk-save-monthly-grid با خودروی ب: سفر ب دست‌نخورده و سفر تازه‌ای برای ب ساخته نشده.
+- bulk-save با section_id بخش ب توسط کاربر الف: پاسخ ۴۰۳ و هیچ سفر تازه‌ای.
+- export-monthly-excel توسط کاربر الف: پلاک خودروی ب در هیچ سلول کتاب‌کار (با openpyxl) نیست و پلاک الف هست.
+- import-monthly-excel توسط کاربر الف با ردیفی برای پلاک ب: سفر ب ساخته یا عوض نمی‌شود.
+- مسیر مثبت: bulk-save با خودروی الف توسط کاربر الف موفق است و سفر ساخته یا به‌روز می‌شود.
+- کاربر بی‌شرکت: matrix هیچ خودرویی برنمی‌گرداند.
+هیچ آزمونی در پروفایل کامل skip نشود. اگر personnel نصب نیست، با skipTest و پیام روشن رد شود (مثل همان فایل الگو).
+
+۶. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر چهار بار فقط فایل آزمون تازه، در پوشهٔ warehouse-backend با متغیرهای PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: venv\Scripts\python.exe manage.py test integration_tests.test_vehicle_trip_actions_scope --noinput. و یک بار: venv\Scripts\python.exe manage.py test personnel.test_attendance_fleet_audit --noinput. اگر فرمانی دو بار با یک خطا شکست، رویکرد را عوض کن، نه تکرار. فرمان را در پس‌زمینه رها نکن؛ پیش از پایان نوبت هر فرمانی باید تمام شده باشد.
+
+۷. راستی‌آزمایی پیش از پایان:
+- git diff --stat <پایه> فقط فایل‌های بند ۱ را نشان دهد.
+- در diff ببین get_queryset همان رفتار را دارد و فقط _scoped_trips را صدا می‌زند.
+- برای هر action بند ۴ یک بار بخوان که خودرو و سفر از دو متد کمکی می‌آیند.
+
+۸. پایان:
+- زیر `## گزارش پیشرفت` طرح یک بند تازه بنویس با عنوان «۲۴ مهر ۱۴۰۵ (2026-10-15)، Antigravity — دامنهٔ شرکت در actionهای سفارشی VehicleTripViewSet»، شامل جداگانه: علت ریشه‌ای، فهرست فایل‌های تغییریافته، رفتار هر action پس از تغییر، آزمون‌هایی که واقعاً اجرا شد با نتیجه، و ابهام‌های مانده. عدد ساختگی ننویس. هیچ برچسب DONE یا FAILED ننویس. محتوای بند داخل همان <div dir="rtl"> موجود بماند.
+- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
+fix(scope): company scope in VehicleTripViewSet custom actions
+- پس از commit نوبت را تمام کن. پایان نوبت پیش از commit شکست است.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح سادهٔ خواستهٔ کاربر (Explanation)
+کاربر درخواست نمود که دامنه و قلمرو تفکیک چندشرکتی (`Company Scope`) در تمام اکشن‌های سفارشی کلاس `VehicleTripViewSet` (شامل اکشن‌های خواندنی `matrix`، `monthly-summary`، `monthly-grid`، ممیزی `audit-logs`، و اکشن‌های تغییر و ثبت داده `bulk-save`، `update-day-trip`، `bulk-save-monthly-grid` و توابع اکسل `export-monthly-excel` و `import-monthly-excel`) اعمال شود. علت این امر آن بود که متد `get_queryset` پیش‌تر اصلاح شده بود، اما این اکشن‌های سفارشی کوئری‌های خام خود را مستقیماً روی کل جداول دیتابیس اجرا می‌کردند و باعث نشت اطلاعات سفرها و خودروها بین شرکت‌ها می‌شدند.
+
+---
+
+### ۲. اعتبارسنجی فنی و بررسی پایگاه‌کد (Ve...
+
+---
+
+### Task 1 of 1 — 2026-10-15 03:22:50
+- **Status:** DONE
+- **Conversation:** `7988ecaa-3507-4599-9bef-c5f8e585ad94`
+- **Steps:** 112
+- **Duration:** 20m 38s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 8/8 passed
+- **Task:**
+```
+نشست 2 از 2 — اصلاح یافته‌های بازبین: پروژه و سربرگ شرکت در actionهای نوشتنی VehicleTripViewSet (بک‌اند)
+
+
+
+۱. قواعد حیاتی:
+- فقط این فایل‌ها را تغییر بده: warehouse-backend/modules/accounting/personnel/views.py، warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py و بند گزارش در فایل طرح. هیچ مدل، مایگریشن، فایل فرانت یا fleet_excel_engine.py تغییر نکند.
+- push نکن. فقط فایل‌های خودت را stage کن؛ tasks.md، run_tasks.py، run_tasks.bat و tasks_history.md را stage نکن.
+- هرگز manage.py test بی‌برچسب اجرا نکن.
+- هیچ رکوردی حذف نشود. درخواست نامعتبر فقط رد شود و پیش از هر نوشتنی برگردد.
+- قواعد `.agents/AGENTS.md` بخش ۳، ۵ و ۱۰ برقرارند.
+
+۲. زمینه، پیش از هر ویرایش بخوان:
+- آخرین ورودی Antigravity زیر `## گزارش پیشرفت` در Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md (کار نشست قبل، commit d189c44).
+- در views.py کلاس VehicleTripViewSet: متدهای _scoped_vehicles و _scoped_trips، و سه action نوشتنی bulk_save، update_day_trip و bulk_save_monthly_grid، به‌ویژه بلوک «if section_id and not request.user.is_superuser» و خواندن raw_proj و project_id در هر سه.
+- تابع‌های get_request_company_id و validate_user_company_access در warehouse-backend/core/companies/access.py.
+- فایل آزمون warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py.
+- hash فعلی HEAD را یادداشت کن.
+
+۳. یافته‌های تأییدشدهٔ بازبین که باید رفع شوند:
+- (متوسط) project_id درخواست در هر سه action سنجیده نمی‌شود. کاربر شرکت الف با خودروی خودش و project_id پروژهٔ شرکت ب، سفر را در پروژهٔ ب ثبت می‌کند (trip_obj.project_id = effective_project_id و VehicleTripLog.objects.create(project_id=...)).
+- (متوسط) سنجش section_id سربرگ شرکت را نادیده می‌گیرد. کاربر دارای دسترسی به الف و ب، با سربرگ شرکت الف و section_id بخش ب، سفر را در بخش ب ثبت می‌کند و فهرست سفرهای الف دیگر آن را نمی‌بیند.
+
+۴. کار این نشست:
+- یک متد کمکی در VehicleTripViewSet با همین نام بساز: _validate_write_target(self, request, section_id, project_id). خروجی: None اگر مجاز است، وگرنه یک Response. سه action نوشتنی، پس از خواندن section_id و project_id و پیش از هر نوشتن، آن را صدا بزنند و اگر Response برگشت همان را برگردانند. بلوک‌های تکراری فعلی سنجش بخش در هر سه action با این متد جایگزین شوند.
+- قاعده‌های متد:
+  - section_id یا project_id داده‌شده‌ای که در دیتابیس نیست: پاسخ ۴۰۰ با پیام فارسی.
+  - شرکت هدف: برای بخش، section.project.company_id؛ برای پروژه، project.company_id (مدل Project).
+  - اگر سربرگ شرکت آمده است (cid = validate_user_company_access(request.user, get_request_company_id(request)) مقدار دارد)، شرکت هدف بخش و پروژه باید برابر cid باشد؛ وگرنه ۴۰۳ با پیام فارسی. این قاعده برای سوپریوزر هم برقرار است.
+  - بی سربرگ و غیرسوپریوزر: شرکت هدف باید در get_user_allowed_companies(request.user) باشد؛ وگرنه ۴۰۳. سوپریوزر بی سربرگ بی‌محدودیت است.
+  - اگر هر دو داده شده‌اند، section.project_id باید برابر project_id باشد؛ وگرنه ۴۰۰ با پیام فارسی.
+- رفتار مسیر مجاز امروز (خودرو، بخش و پروژهٔ شرکت خود کاربر، یا بی section_id و project_id) عیناً بماند.
+- بیرون از دامنه: warehouse_id درخواست، viewsetهای دیگر، موتور Excel، فرانت.
+
+۵. آزمون‌ها: به فایل warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py متدهای تازه اضافه کن؛ آزمون‌های موجود دست‌نخورده بمانند و همه پاس شوند. مجموع دست‌کم ۲۰ متد. هر بند یک متد جدا، و در هر بند ردشده، پس از خواندن دوباره از دیتابیس هیچ سفر تازه یا تغییری نباشد:
+- update-day-trip با section_id بخش ب توسط کاربر الف: ۴۰۳.
+- bulk-save-monthly-grid با section_id بخش ب توسط کاربر الف: ۴۰۳.
+- bulk-save با خودروی الف و project_id پروژهٔ ب توسط کاربر الف: ۴۰۳.
+- update-day-trip با project_id پروژهٔ ب: ۴۰۳.
+- bulk-save-monthly-grid با project_id پروژهٔ ب: ۴۰۳.
+- کاربر دارای دسترسی به الف و ب، با سربرگ شرکت الف و section_id بخش ب در bulk-save: ۴۰۳.
+- bulk-save با section_id بخش الف و project_id پروژهٔ دیگری (ناهمخوان): ۴۰۰.
+- مسیر مثبت: bulk-save با خودرو، بخش و پروژهٔ الف توسط کاربر الف موفق است و سفر با همان بخش و پروژه ذخیره می‌شود.
+
+۶. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر چهار بار، در پوشهٔ warehouse-backend با PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: venv\Scripts\python.exe manage.py test integration_tests.test_vehicle_trip_actions_scope --noinput. اگر فرمانی دو بار با یک خطا شکست، رویکرد را عوض کن. فرمان را در پس‌زمینه رها نکن.
+
+۷. راستی‌آزمایی پیش از پایان:
+- git diff --stat <پایه> فقط فایل‌های بند ۱ را نشان دهد.
+- در diff ببین هر سه action متد کمکی را پیش از هر نوشتن صدا می‌زنند و بلوک‌های قدیمی سنجش بخش حذف شده‌اند.
+
+۸. پایان:
+- زیر `## گزارش پیشرفت` طرح یک بند تازه بنویس با عنوان «۲۴ مهر ۱۴۰۵ (2026-10-15)، Antigravity — اصلاح یافته‌های بازبین در actionهای نوشتنی سفر»، شامل جداگانه: هر یافته و رفع آن، فهرست فایل‌ها، آزمون‌هایی که واقعاً اجرا شد با نتیجه، و ابهام‌های مانده. عدد ساختگی ننویس. هیچ برچسب DONE یا FAILED ننویس. محتوا داخل همان <div dir="rtl"> موجود بماند.
+- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
+fix(scope): validate project and header company in trip write actions
+- پس از commit نوبت را تمام کن. پایان نوبت پیش از commit شکست است.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح سادهٔ درخواست (Explain Simply)
+کاربر درخواست نمود که یافته‌های تأییدشدهٔ بازبین در خصوص قلمرو شرکت (Tenant Scope) در سه action نوشتنی `VehicleTripViewSet` (`bulk-save`، `update-day-trip` و `bulk-save-monthly-grid`) اصلاح و برطرف شوند:
+1. پارامتر `project_id` در این اکشن‌ها مورد سنجش و اعتبارسنجی قرار نمی‌گرفت و امکان ثبت سفر در پروژهٔ شرکت دیگر وجود داشت.
+2. اعتبارسنجی `section_id` سربرگ شرکت فعال (`X-Company-ID`) را نادیده می‌گرفت و کاربر دارای دسترسی به دو شرکت می‌توانست با سربرگ یک شرکت، سفر را در بخش شرکت دیگر ثبت کند.
+3. متد کمکی متمرکزی به نام `_validate_write_target(self, request, section_id, project_id)` جهت اعتبارسنجی یکپارچه، پیش از هرگون...
+
+---

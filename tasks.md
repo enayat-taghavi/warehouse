@@ -6,152 +6,151 @@
 -->
 
 <!--
-یادداشت ناظر (Claude) — صف ۳ نشستی طرح «پیگیری‌های بازبینی ناظر»:
-- طرح: Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md (قواعد مشترک در `## ۴.`، راستی‌آزمایی در `## ۵.`).
-- صف قبلی (راه میانهٔ ماژولار، ۱۰ نشست) کامل [DONE] شده بود و در تاریخچهٔ git همین فایل هست (commit d33644a).
-- هر نشست یک کامنت runner دارد که برای ایجنت فرستاده نمی‌شود: require تمیزی درخت کاری؛ verify بررسی‌های همان نشست،
-  commit-exists و clean-tree.
-- نگهبان‌های ۲۹ و ۵۷ در ۲۳ مهر روی HEAD (ddc3ea1) سبز بودند.
-- آزمون‌های بک‌اند نشست ۱ روی HEAD (ddc3ea1): ۲۱۹ آزمون، ۳ خطای از پیش موجود در خود فایل‌های آزمون
-  (دو ExportWorkerTests با import نسبی integration_tests.management، و NameError status در test_company_warehouse_isolation).
-  خط verify فقط همین سه را می‌پذیرد و هر شکست تازه را رد می‌کند.
-- بازبین‌ها (tenant-scope-reviewer برای نشست ۱، ui-reviewer برای ۲ و ۳)، بررسی 4300، release روی app و هر کار روی soft با ناظر است، نه با صف.
-- توافق با Antigravity: چت 35c27e73 (دو دور). پذیرفته: سخت‌گیری بررسی switchTab در نشست ۲ (کوتیشن دوتایی و template literal)،
-  و جملهٔ شرکت فعال در پیش‌نمایش Excel در نشست ۱. رد: «باگ regex» خط verify آزمون‌های نشست ۱، چون Python 3.12 نام متد را
-  داخل پرانتز می‌آورد و همان regex روی لاگ واقعی HEAD درست کار کرد.
+یادداشت ناظر (Claude) — تسک تک‌نشستی «دامنهٔ شرکت در actionهای سفارشی VehicleTripViewSet» (۲۴ مهر ۱۴۰۵):
+- طرح: Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md، بند «اقدام بعدی» آخرین ورودی `## گزارش پیشرفت`.
+- صف قبلی (سه نشست پیگیری‌های ناظر) کامل [DONE] شده و در تاریخچهٔ git همین فایل هست (commit 4a47e18).
+- یافته‌های ناظر روی HEAD (4a47e18)، همه بی‌دامنه: matrix، monthly-summary، monthly-grid (VehicleDriverProfile.objects و VehicleTripLog.objects خام)،
+  bulk-save، update-day-trip، bulk-save-monthly-grid (خودرو با شناسهٔ خام)، audit-logs (VehicleTripAuditLog.objects.all())،
+  export-monthly-excel و import-monthly-excel (موتور fleet_excel_engine.py همهٔ خودروها را می‌خواند).
+- آزمون‌های پایه: «integration_tests personnel» روی HEAD؛ شناسهٔ خطاهای از پیش موجود در scratch/runner-cache/known_failures_trip_actions.txt.
+  خط verify فقط همین‌ها را می‌پذیرد و هر شکست تازه را رد می‌کند.
+- بازبین tenant-scope-reviewer و release روی app با ناظر است، نه با صف.
 -->
 
-[DONE] نشست 1 از 3 — پیگیری‌های ناظر: دامنهٔ شرکت در گزارش‌ساز و ورود کاربران از Excel (بک‌اند)
+[DONE] نشست 1 از 1 — دامنهٔ شرکت در actionهای سفارشی VehicleTripViewSet (بک‌اند)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import subprocess,sys; f=subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True,encoding='utf-8').stdout.split(); bad=[x for x in f if x.startswith('warehouse-front/') or '/migrations/' in x]; new=[x for x in f if x.endswith('integration_tests/test_company_scope_reports_import.py')]; print('front or migration files changed:',bad,'new test file in diff:',new); sys.exit(1 if bad or not new else 0)"
+verify: python -c "import subprocess,sys; f=subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True,encoding='utf-8').stdout.split(); ok={'warehouse-backend/modules/accounting/personnel/views.py','warehouse-backend/modules/accounting/personnel/fleet_excel_engine.py','warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py','Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md'}; bad=[x for x in f if x not in ok]; new='warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py' in f; print('files outside scope:',bad,'new test file in diff:',new); sys.exit(1 if bad or not new else 0)"
+verify: python -c "import ast,sys; src=open('warehouse-backend/modules/accounting/personnel/views.py',encoding='utf-8').read(); t=ast.parse(src); c=[n for n in t.body if isinstance(n,ast.ClassDef) and n.name=='VehicleTripViewSet'][0]; m={n.name:ast.get_source_segment(src,n) for n in c.body if isinstance(n,ast.FunctionDef)}; g=lambda k:m.get(k,''); trips=['get_matrix','get_monthly_summary','get_monthly_grid','audit_logs','export_monthly_excel','get_queryset']; veh=['get_matrix','get_monthly_summary','get_monthly_grid','bulk_save','update_day_trip','bulk_save_monthly_grid','export_monthly_excel','import_monthly_excel']; p={'_scoped_vehicles uses scope_vehicle_queryset':'scope_vehicle_queryset(' in g('_scoped_vehicles'),'_scoped_trips exists':bool(g('_scoped_trips'))}; p.update({k+' uses _scoped_trips':'_scoped_trips(' in g(k) for k in trips}); p.update({k+' uses _scoped_vehicles':'_scoped_vehicles(' in g(k) for k in veh}); p.update({k+' no raw VehicleDriverProfile.objects':'VehicleDriverProfile.objects' not in g(k) for k in veh}); p['audit_logs no objects.all()']='VehicleTripAuditLog.objects.all()' not in g('audit_logs'); bad=[k for k,v in p.items() if not v]; print('failed:',bad); sys.exit(1 if bad else 0)"
 verify: python scripts/automation/verify_tools.py django-check
 verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python -c "import os,re,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests.test_company_scope_reports_import','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; m=re.search(r'Ran (\d+) test',o); n=int(m.group(1)) if m else 0; sk='skipped=' in o; print(o[-3000:]); print('exit',r.returncode,'ran',n,'skipped',sk); sys.exit(0 if r.returncode==0 and n>=13 and not sk else 1)"
-verify: python -c "import os,re,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests','accounts','warehouses','reports','platform_core','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; known={'test_reports_integration.ExportWorkerTests.test_orphan_poison_pill_fails_after_max_attempts','test_reports_integration.ExportWorkerTests.test_orphan_recovery_by_heartbeat_not_age','test_company_warehouse_isolation.CompanyWarehouseIsolationTestCase.test_superuser_sees_all_warehouses_without_company_filter'}; bad=[t for t in re.findall(r'^(?:ERROR|FAIL): \S+ \(([^)]+)\)',o,re.M) if '.'.join(t.split('.')[-3:]) not in known]; ran=re.search(r'^Ran (\d+) test',o,re.M); print(o[-2500:]); print('ran',ran.group(1) if ran else None,'new failures:',bad); sys.exit(1 if bad or not ran else 0)"
-verify: python scripts/e2e/guardian_modularization.py
-verify: python scripts/e2e/guardian_57_front_module_fence.py
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(scope): company scope in report builder and users Excel import"
+verify: python -c "import os,re,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests.test_vehicle_trip_actions_scope','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; m=re.search(r'Ran (\d+) test',o); n=int(m.group(1)) if m else 0; sk='skipped=' in o; print(o[-3000:]); print('exit',r.returncode,'ran',n,'skipped',sk); sys.exit(0 if r.returncode==0 and n>=12 and not sk else 1)"
+verify: python -c "import os,re,subprocess,sys; known=set(open('scratch/runner-cache/known_failures_trip_actions.txt',encoding='utf-8').read().split()); py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests','personnel','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; got=re.findall(r'^(?:ERROR|FAIL): \S+ \(([^)]+)\)',o,re.M); bad=sorted({x for x in got if x not in known}); ran=re.search(r'^Ran (\d+) test',o,re.M); print(o[-2000:]); print('ran',ran.group(1) if ran else None,'new failures:',bad); sys.exit(1 if bad or not ran else 0)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(scope): company scope in VehicleTripViewSet custom actions"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
-۱. در فایل طرح Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md بخش‌های `## ۲.`، `## ۴.` و `## ۷.` را کامل بخوان. قواعد `.agents/AGENTS.md` بخش ۳، ۵ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
+۱. قواعد حیاتی:
+- فقط این فایل‌ها را تغییر بده: warehouse-backend/modules/accounting/personnel/views.py، warehouse-backend/modules/accounting/personnel/fleet_excel_engine.py، فایل تازهٔ warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py و بند گزارش در فایل طرح. هیچ مدل، مایگریشن یا فایل فرانتی تغییر نکند.
+- push نکن. فقط فایل‌های خودت را stage کن؛ tasks.md، run_tasks.py، run_tasks.bat و tasks_history.md را stage نکن.
+- هرگز manage.py test بی‌برچسب اجرا نکن (روی دیتابیس واقعی انبارها را پاک می‌کند).
+- هیچ رکورد سفر یا خودرویی حذف نشود. درخواست بیرون از دامنه فقط رد شود؛ داده‌ای پاک یا بازنویسی نشود.
+- قواعد `.agents/AGENTS.md` بخش ۳، ۵ و ۱۰ برقرارند.
 
-۲. کار این نشست، طبق `### ۲.۱.` و `### ۲.۲.`:
-- تابع کمکی مشترک «کاربران قابل‌مشاهده برای این کاربر» در core/accounts، با همان قاعدهٔ امروز UserViewSet.get_queryset (کاربران شرکت‌های مجاز به‌علاوهٔ خود کاربر، حذف سوپریوزرها برای غیرسوپریوزر، distinct). UserViewSet.get_queryset هم از همین تابع استفاده کند و رفتارش عوض نشود.
-- موتور گزارش (core/platform_core/query_engine/engine.py): قلاب اختیاری scope_resolver(qs, user) در EntityConfig (نام دقیقاً همین)، و در صورت نیاز scope_kind='company' با فیلتر {scope_path}__in روی شناسه‌های get_user_allowed_companies(user). سوپریوزر بی‌محدودیت؛ کاربر بی‌شرکت نتیجهٔ خالی. مسیر run و export هر دو از همین دامنه بگذرند.
-- چهار موجودیت personnel_profiles، monthly_payrolls، fleet_trips (در modules/accounting/personnel/report_entities.py) و users (در core/reports/registry.py) دامنه بگیرند. resolverهای پرسنل و سفر در سمت ماژول تعریف شوند و قاعدهٔ موجود scope_personnel_queryset و VehicleTripViewSet.get_queryset را بازاستفاده کنند، نه رونوشت.
-- ورود کاربران از Excel (core/accounts/excel_utils.py و UserViewSet.import_excel و download_template) و تابع‌های افزونهٔ انبار در modules/warehouse/warehouses/user_extension.py دقیقاً طبق `### ۲.۲.`: پارامترهای اختیاری actor=None و user=None، تشخیص تکرار از دو منبع، خطای ردیف فارسی در همان قالب موجود {'row','field','message'}، سنجش دوباره در زمان ثبت، و رکورد UserCompanyAccess با سطح workspace_full برای شرکت فعال سازنده. شرکت فعال در import_excel از request گرفته می‌شود و اگر پیش‌نمایش (dry-run) هم به آن نیاز دارد، با پارامتر اختیاری به parse_users_excel داده شود، تا خطای «بی‌شرکت فعال» در پیش‌نمایش و ثبت یکسان باشد.
-- هسته به ماژول import مستقیم نگیرد؛ دامنهٔ انبار فقط از راه همان افزونهٔ موجود برود.
-- هیچ مدل و مایگریشنی عوض نشود. فرانت دست نخورد، چون مودال ورود خطاهای ردیف را با همان قالب نشان می‌دهد.
+۲. زمینه، پیش از هر ویرایش بخوان:
+- در فایل طرح Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md بخش `## ۴.` و دو ورودی آخر زیر `## گزارش پیشرفت`.
+- در warehouse-backend/modules/accounting/personnel/views.py: تابع scope_vehicle_queryset، کل کلاس VehicleTripViewSet (از class VehicleTripViewSet تا class MonthlyWorkPeriodViewSet)، و get_queryset در VehicleDriverProfileViewSet.
+- warehouse-backend/modules/accounting/personnel/fleet_excel_engine.py: تابع‌های export_fleet_monthly_excel و import_fleet_monthly_excel.
+- آزمون test_trips_endpoint_without_company_header_is_company_scoped و setUp کلاس در warehouse-backend/integration_tests/test_company_scope_reports_import.py، به‌عنوان الگوی ساخت داده.
+- hash فعلی HEAD را یادداشت کن.
 
-۳. آزمون‌ها، طبق `### ۲.۳.`: فایل تازهٔ warehouse-backend/integration_tests/test_company_scope_reports_import.py با دو شرکت، یک کاربر غیرسوپریوزر در هر شرکت، یک کاربر بی‌شرکت و یک سوپریوزر. هر بند زیر یک متد آزمون جدا است (دست‌کم ۱۳ متد):
-- run برای personnel_profiles: کاربر شرکت الف فقط ردیف‌های الف، سوپریوزر هر دو، کاربر بی‌شرکت هیچ.
-- همین برای monthly_payrolls.
-- همین برای fleet_trips.
-- همین برای users، به‌علاوهٔ پنهان بودن سوپریوزر برای غیرسوپریوزر.
-- مسیر export همان دامنه را دارد.
-- پیمایش همهٔ موجودیت‌های ثبت‌شده: هر کدام scope_path یا scope_resolver دارد یا در فهرست سفید «سراسری» با دلیل نوشته‌شده در خود آزمون است.
-- ورود با update_existing=1 و ردیفی برای کاربر شرکت ب: خطای ردیف، و کاربر هدف پس از خواندن دوباره از دیتابیس دست‌نخورده.
-- همین برای یک سوپریوزر.
-- ورود با انبار شرکت ب: خطای ردیف.
-- قالب دانلودی نام انبار شرکت ب را ندارد.
-- ورود موفق کاربر مجاز در دامنهٔ خودش، و کاربر تازه رکورد UserCompanyAccess با workspace_full برای شرکت فعال سازنده دارد.
-- غیرسوپریوزر بی‌شرکت فعال: خطای روشن فارسی و هیچ کاربری ساخته نمی‌شود.
-- تکرار نام کاربری یا کد ملی کاربرِ بیرون از دامنه: خطای ردیف، بی IntegrityError و بی پاسخ ۵۰۰.
-در پروفایل کامل هیچ آزمونی skip نشود. در پروفایل تک‌ماژول، اگر موجودیتی ثبت نیست، همان آزمون با skipTest و پیام روشن رد شود (مثل test_companies_cross_module.py).
+۳. تعریف‌ها:
+- «خودروهای در دامنه»: scope_vehicle_queryset(self.request, VehicleDriverProfile.objects.all()). این همان قاعدهٔ صفحهٔ فهرست خودروهاست (بخش منتسب یا ثبت خودِ کاربر، و شرکت‌های مجاز؛ سوپریوزر و ممیز سراسری طبق همان تابع).
+- «سفرهای در دامنه»: همان بخش شرکتی امروز get_queryset (از خط cid = validate_user_company_access تا پایان آن): با سربرگ شرکت، فقط همان شرکت؛ بی سربرگ و غیرسوپریوزر، شرکت‌های مجاز از get_user_allowed_companies؛ سوپریوزر بی‌محدودیت. مسیر شرکت سفر: section__project__company_id یا vehicle__section__project__company_id.
+- «شرکت ب»: هر شرکتی که در دامنهٔ کاربر درخواست‌دهنده نیست.
 
-۴. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر سه بار فقط فایل آزمون تازه، در پوشهٔ warehouse-backend با متغیرهای PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: venv\Scripts\python.exe manage.py test integration_tests.test_company_scope_reports_import --noinput. هرگز manage.py test بی‌برچسب اجرا نکن.
+۴. کار این نشست:
+- دو متد کمکی در VehicleTripViewSet با همین نام‌ها بساز: _scoped_vehicles(self, qs=None) که خروجی‌اش «خودروهای در دامنه» است، و _scoped_trips(self, qs) که فقط بخش شرکتی را روی qs اعمال می‌کند. بخش شرکتی get_queryset به _scoped_trips منتقل شود و get_queryset آن را صدا بزند، بی هیچ تغییر رفتاری. رونوشت قاعده ممنوع است؛ هر دو متد قاعدهٔ موجود را بازاستفاده کنند.
+- actionهای خواندنی matrix (get_matrix)، monthly-summary و monthly-grid: هر جا امروز VehicleDriverProfile.objects خام است، از _scoped_vehicles() شروع شود؛ هر جا VehicleTripLog.objects برای خواندن است، از self._scoped_trips(...) بگذرد. فیلترهای امروز (انبار، بخش، تاریخ، وضعیت) عیناً روی همان بمانند.
+- audit-logs: فقط ممیزی سفرهای در دامنه، با فیلتر trip__in روی self._scoped_trips(VehicleTripLog.objects.all()). VehicleTripAuditLog.objects.all() بی‌فیلتر نماند.
+- actionهای نوشتنی bulk-save، update-day-trip و bulk-save-monthly-grid: خودرو با شناسه فقط از _scoped_vehicles() پیدا شود. خودروی بیرون از دامنه دقیقاً مثل خودروی ناموجود امروز رفتار شود (همان پاسخ یا خطای ردیف موجود)، و برای آن هیچ سفری ساخته یا عوض نشود. section_id داده‌شده در درخواست، اگر به شرکتی بیرون از شرکت‌های مجاز کاربر تعلق دارد (برای غیرسوپریوزر)، پاسخ ۴۰۳ با پیام فارسی بدهد و هیچ نوشتنی انجام نشود.
+- export-monthly-excel و import-monthly-excel: به export_fleet_monthly_excel و import_fleet_monthly_excel پارامتر اختیاری vehicles_qs=None بده (و برای export در صورت نیاز trips_qs=None). مقدار پیش‌فرض None باید رفتار امروز را عیناً نگه دارد، چون آزمون‌های test_attendance_fleet_audit.py بی این پارامترها صدا می‌زنند. ViewSet هر دو را با _scoped_vehicles() و _scoped_trips(...) صدا بزند. در import، ردیف خودروی بیرون از دامنه همان رفتار «خودرو پیدا نشد» امروز را بگیرد.
+- پیام‌های اعلان (company_{cid}_notifications) و بقیهٔ منطق قفل دوره و ممیزی دست نخورد.
+- بیرون از دامنه: viewsetهای دیگر، فرانت، و آزمون‌های خراب از پیش موجود personnel.
 
-۵. پایان:
-- خودبازبینی با git diff --stat <پایه>.
-- زیر `## گزارش پیشرفت` طرح، بند «نشست ۱» را بنویس: فهرست فایل‌ها، فهرست سفید موجودیت‌های سراسری با دلیل، و هر تصمیم یا انحراف. هیچ برچسب DONE یا FAILED ننویس.
+۵. آزمون‌ها: فایل تازهٔ warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py با دو شرکت (الف و ب)، در هر شرکت یک پروژه، یک بخش، یک خودرو و یک سفر با ممیزی؛ یک کاربر غیرسوپریوزر شرکت الف با UserCompanyAccess سطح workspace_full و انتساب فعال به بخش الف و مجوزهای لازم؛ یک کاربر بی‌شرکت؛ یک سوپریوزر. درخواست‌ها بی سربرگ شرکت، مگر جایی که گفته شده. هر بند یک متد جدا (دست‌کم ۱۲ متد):
+- matrix: کاربر الف فقط خودرو و سفر الف را می‌بیند؛ سوپریوزر هر دو را.
+- matrix با سربرگ شرکت ب برای کاربر الف: هیچ دادهٔ ب برنمی‌گردد (۴۰۳ یا نتیجهٔ بی ب).
+- monthly-summary: کاربر الف هیچ دادهٔ ب نمی‌بیند.
+- monthly-grid: کاربر الف هیچ دادهٔ ب نمی‌بیند.
+- audit-logs: ممیزی سفر ب برای کاربر الف برنمی‌گردد و ممیزی سفر الف برمی‌گردد.
+- bulk-save با خودروی ب توسط کاربر الف: پس از خواندن دوباره از دیتابیس، هیچ سفری برای خودروی ب ساخته یا عوض نشده است.
+- update-day-trip با خودروی ب: پاسخ غیر ۲xx و سفر ب پس از خواندن دوباره دست‌نخورده.
+- bulk-save-monthly-grid با خودروی ب: سفر ب دست‌نخورده و سفر تازه‌ای برای ب ساخته نشده.
+- bulk-save با section_id بخش ب توسط کاربر الف: پاسخ ۴۰۳ و هیچ سفر تازه‌ای.
+- export-monthly-excel توسط کاربر الف: پلاک خودروی ب در هیچ سلول کتاب‌کار (با openpyxl) نیست و پلاک الف هست.
+- import-monthly-excel توسط کاربر الف با ردیفی برای پلاک ب: سفر ب ساخته یا عوض نمی‌شود.
+- مسیر مثبت: bulk-save با خودروی الف توسط کاربر الف موفق است و سفر ساخته یا به‌روز می‌شود.
+- کاربر بی‌شرکت: matrix هیچ خودرویی برنمی‌گرداند.
+هیچ آزمونی در پروفایل کامل skip نشود. اگر personnel نصب نیست، با skipTest و پیام روشن رد شود (مثل همان فایل الگو).
+
+۶. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر چهار بار فقط فایل آزمون تازه، در پوشهٔ warehouse-backend با متغیرهای PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: venv\Scripts\python.exe manage.py test integration_tests.test_vehicle_trip_actions_scope --noinput. و یک بار: venv\Scripts\python.exe manage.py test personnel.test_attendance_fleet_audit --noinput. اگر فرمانی دو بار با یک خطا شکست، رویکرد را عوض کن، نه تکرار. فرمان را در پس‌زمینه رها نکن؛ پیش از پایان نوبت هر فرمانی باید تمام شده باشد.
+
+۷. راستی‌آزمایی پیش از پایان:
+- git diff --stat <پایه> فقط فایل‌های بند ۱ را نشان دهد.
+- در diff ببین get_queryset همان رفتار را دارد و فقط _scoped_trips را صدا می‌زند.
+- برای هر action بند ۴ یک بار بخوان که خودرو و سفر از دو متد کمکی می‌آیند.
+
+۸. پایان:
+- زیر `## گزارش پیشرفت` طرح یک بند تازه بنویس با عنوان «۲۴ مهر ۱۴۰۵ (2026-10-15)، Antigravity — دامنهٔ شرکت در actionهای سفارشی VehicleTripViewSet»، شامل جداگانه: علت ریشه‌ای، فهرست فایل‌های تغییریافته، رفتار هر action پس از تغییر، آزمون‌هایی که واقعاً اجرا شد با نتیجه، و ابهام‌های مانده. عدد ساختگی ننویس. هیچ برچسب DONE یا FAILED ننویس. محتوای بند داخل همان <div dir="rtl"> موجود بماند.
 - فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
-fix(scope): company scope in report builder and users Excel import
+fix(scope): company scope in VehicleTripViewSet custom actions
+- پس از commit نوبت را تمام کن. پایان نوبت پیش از commit شکست است.
 
 ===
 
-[DONE] نشست 2 از 3 — پیگیری‌های ناظر: لانچر، سایدبار و پیوند سریع از نقطه‌های توسعه (فرانت)
+[DONE] نشست 2 از 2 — اصلاح یافته‌های بازبین: پروژه و سربرگ شرکت در actionهای نوشتنی VehicleTripViewSet (بک‌اند)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import pathlib,re,sys; app=pathlib.Path('warehouse-front/src/app'); tpl=pathlib.Path('scripts/module-template/frontend'); mt=(tpl/'module.ts').read_text(encoding='utf-8'); nv=(tpl/'nav-items.ts').read_text(encoding='utf-8'); lt=(app/'modules/common/components/layout/layout.ts').read_text(encoding='utf-8'); lh=(app/'modules/common/components/app-launcher/app-launcher.html').read_text(encoding='utf-8'); ol=(app/'modules/common/components/operations/operations-layout/operations-layout.ts').read_text(encoding='utf-8'); specs=['modules/common/components/app-launcher/app-launcher.dom.spec.ts','modules/common/components/layout/layout-modular.dom.spec.ts','modules/common/components/operations/operations-layout/operations-layout.dom.spec.ts']; p={'template layoutNav':'layoutNav' in mt,'template old navItems gone':not re.search(r'^\s*navItems\s*:',mt,re.M),'template ModuleNavItem':'ModuleNavItem' in nv and 'interface NavItem' not in nv,'switchTab hard-coded prefixes gone':not re.search(r'[\x22\x27]/app/(warehouse|finance)/[\x22\x27]\s*\+|\x60/app/(warehouse|finance)/\$\{',lt),'launcher extraCards':'extraCards()' in lh,'operations quickLink':'quickLink' in ol}; p.update({'fake module in '+s.split('/')[-1]:'/app/sample' in (app/s).read_text(encoding='utf-8') for s in specs}); bad=[k for k,v in p.items() if not v]; print(p); print('failed:',bad); sys.exit(1 if bad else 0)"
-verify: cd warehouse-front && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
-verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"
-verify: cd warehouse-front && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
-verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer"
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
-verify: python scripts/e2e/guardian_57_front_module_fence.py
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py sample-module
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(modular): launcher, sidebar and quick link from module extensions"
+verify: python -c "import subprocess,sys; f=subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True,encoding='utf-8').stdout.split(); ok={'warehouse-backend/modules/accounting/personnel/views.py','warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py','Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md'}; bad=[x for x in f if x not in ok]; print('files outside scope:',bad,'files:',f); sys.exit(1 if bad or 'warehouse-backend/modules/accounting/personnel/views.py' not in f else 0)"
+verify: python -c "import ast,sys; src=open('warehouse-backend/modules/accounting/personnel/views.py',encoding='utf-8').read(); t=ast.parse(src); c=[n for n in t.body if isinstance(n,ast.ClassDef) and n.name=='VehicleTripViewSet'][0]; m={n.name:ast.get_source_segment(src,n) for n in c.body if isinstance(n,ast.FunctionDef)}; h=m.get('_validate_write_target',''); p={'helper exists':bool(h),'helper reads header company':'get_request_company_id(' in h,'helper checks project':'Project' in h,'helper checks allowed companies':'get_user_allowed_companies(' in h}; p.update({k+' calls helper':'_validate_write_target(' in m.get(k,'') for k in ('bulk_save','update_day_trip','bulk_save_monthly_grid')}); p.update({k+' old inline section check gone':'ProjectSection.objects.filter(id=section_id)' not in m.get(k,'') for k in ('bulk_save','update_day_trip','bulk_save_monthly_grid')}); bad=[k for k,v in p.items() if not v]; print('failed:',bad); sys.exit(1 if bad else 0)"
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python -c "import os,re,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests.test_vehicle_trip_actions_scope','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; m=re.search(r'Ran (\d+) test',o); n=int(m.group(1)) if m else 0; sk='skipped=' in o; print(o[-3000:]); print('exit',r.returncode,'ran',n,'skipped',sk); sys.exit(0 if r.returncode==0 and n>=20 and not sk else 1)"
+verify: python -c "import os,re,subprocess,sys; known=set(open('scratch/runner-cache/known_failures_trip_actions.txt',encoding='utf-8').read().split()); py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests','personnel','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; got=re.findall(r'^(?:ERROR|FAIL): \S+ \(([^)]+)\)',o,re.M); bad=sorted({x for x in got if x not in known}); ran=re.search(r'^Ran (\d+) test',o,re.M); print(o[-2000:]); print('ran',ran.group(1) if ran else None,'new failures:',bad); sys.exit(1 if bad or not ran else 0)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(scope): validate project and header company in trip write actions"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
-۱. در فایل طرح Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md بخش‌های `## ۳.` و `## ۴.` و بند «نشست ۱» زیر `## گزارش پیشرفت` را بخوان. قواعد `.agents/AGENTS.md` بخش ۳، ۵، ۷، ۹ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
+۱. قواعد حیاتی:
+- فقط این فایل‌ها را تغییر بده: warehouse-backend/modules/accounting/personnel/views.py، warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py و بند گزارش در فایل طرح. هیچ مدل، مایگریشن، فایل فرانت یا fleet_excel_engine.py تغییر نکند.
+- push نکن. فقط فایل‌های خودت را stage کن؛ tasks.md، run_tasks.py، run_tasks.bat و tasks_history.md را stage نکن.
+- هرگز manage.py test بی‌برچسب اجرا نکن.
+- هیچ رکوردی حذف نشود. درخواست نامعتبر فقط رد شود و پیش از هر نوشتنی برگردد.
+- قواعد `.agents/AGENTS.md` بخش ۳، ۵ و ۱۰ برقرارند.
 
-۲. کار این نشست، طبق `### ۳.۱.`، `### ۳.۲.` و `### ۳.۲-ب.` (بند `### ۳.۳.` مال نشست ۳ است و دست نخورد):
-- لانچر (modules/common/components/app-launcher/): کاشی‌های غنی امروز دست‌نخورده؛ برای هر ماژول نصب‌شدهٔ دیگر کاشی عمومی با @for (card of extraCards(); track card.code). «دیگر» از روی خود کارت تعیین شود، نه با نام ماژول. نقشهٔ ثابت کلاس برای هر themeColor، توکن‌های معنایی، appIcon و قفل بی‌دسترسی مثل کاشی‌های موجود. visibleCardsCount، isSingleAppMode و gridContainerClass دقیقاً برابر تعداد کاشی‌های رندرشده.
-- سایدبار (modules/common/components/layout/): مسیر هر آیتم از ماژول صاحبش (routePrefix به‌علاوهٔ شناسه، یا فیلد اختیاری route در ModuleNavItem). امضای switchTab(tabId: string) عوض نشود و پیشوندهای ثابت '/app/warehouse/' و '/app/finance/' از آن برداشته شوند. شناسه‌های مشترک (audit، health) از روی ماژول فعال حل شوند. همهٔ مسیرهای امروز انبار و مالی، از جمله ریدایرکت companies، عیناً بمانند. آیتم‌های ماژولی که showWarehouseSwitcher ندارد در بخشی جدا با عنوان «سامانه‌های دیگر» و فقط با مجوز آیتم دیده شوند.
-- پیوند سریع (modules/common/components/operations/operations-layout/): operations.quickLink هر ماژول نصب‌شده در نوار کناری خوانده و نشان داده شود؛ پیوندهای امروز انبار و مالی بمانند.
-- قالب ماژول (scripts/module-template/frontend/): module.ts یک extensions.layoutNav واقعی بگیرد و بلوک خوانده‌نشدهٔ navItems حذف شود؛ nav-items.ts نوع ModuleNavItem را از module-contract.ts بگیرد و interface NavItem جدا حذف شود. فیلد icon در قالب نام یک آیکون رجیستری باشد، نه emoji، اگر کاشی عمومی آن را با appIcon نشان می‌دهد.
-- ظاهر و رفتار در پروفایل کامل (انبار و مالی) عوض نشود.
+۲. زمینه، پیش از هر ویرایش بخوان:
+- آخرین ورودی Antigravity زیر `## گزارش پیشرفت` در Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md (کار نشست قبل، commit d189c44).
+- در views.py کلاس VehicleTripViewSet: متدهای _scoped_vehicles و _scoped_trips، و سه action نوشتنی bulk_save، update_day_trip و bulk_save_monthly_grid، به‌ویژه بلوک «if section_id and not request.user.is_superuser» و خواندن raw_proj و project_id در هر سه.
+- تابع‌های get_request_company_id و validate_user_company_access در warehouse-backend/core/companies/access.py.
+- فایل آزمون warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py.
+- hash فعلی HEAD را یادداشت کن.
 
-۳. آزمون‌ها، طبق `### ۳.۴.`: در app-launcher.dom.spec.ts، layout-modular.dom.spec.ts و operations-layout.dom.spec.ts با سه فهرست ماژول (کامل، فقط انبار، فقط مالی) و یک ماژول ساختگی سوم با code برابر 'sample' و routePrefix برابر '/app/sample':
-- کاشی ماژول sample رندر می‌شود و تعداد کاشی‌های رندرشده با visibleCardsCount برابر است.
-- آیتم سایدبار ماژول sample به '/app/sample/...' می‌رود.
-- مسیرهای امروز انبار و مالی (از جمله audit و health در هر persona) عوض نمی‌شوند.
-- پیوند سریع ماژول sample در operations-layout دیده می‌شود.
+۳. یافته‌های تأییدشدهٔ بازبین که باید رفع شوند:
+- (متوسط) project_id درخواست در هر سه action سنجیده نمی‌شود. کاربر شرکت الف با خودروی خودش و project_id پروژهٔ شرکت ب، سفر را در پروژهٔ ب ثبت می‌کند (trip_obj.project_id = effective_project_id و VehicleTripLog.objects.create(project_id=...)).
+- (متوسط) سنجش section_id سربرگ شرکت را نادیده می‌گیرد. کاربر دارای دسترسی به الف و ب، با سربرگ شرکت الف و section_id بخش ب، سفر را در بخش ب ثبت می‌کند و فهرست سفرهای الف دیگر آن را نمی‌بیند.
 
-۴. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر دو بار npx ng build --output-path ../scratch/ng-build-agent، تست‌های DOM همین سه فایل با npx ng test --watch=false --include <فایل spec>، و یک بار python scripts/automation/verify_tools.py sample-module برای بازخورد.
+۴. کار این نشست:
+- یک متد کمکی در VehicleTripViewSet با همین نام بساز: _validate_write_target(self, request, section_id, project_id). خروجی: None اگر مجاز است، وگرنه یک Response. سه action نوشتنی، پس از خواندن section_id و project_id و پیش از هر نوشتن، آن را صدا بزنند و اگر Response برگشت همان را برگردانند. بلوک‌های تکراری فعلی سنجش بخش در هر سه action با این متد جایگزین شوند.
+- قاعده‌های متد:
+  - section_id یا project_id داده‌شده‌ای که در دیتابیس نیست: پاسخ ۴۰۰ با پیام فارسی.
+  - شرکت هدف: برای بخش، section.project.company_id؛ برای پروژه، project.company_id (مدل Project).
+  - اگر سربرگ شرکت آمده است (cid = validate_user_company_access(request.user, get_request_company_id(request)) مقدار دارد)، شرکت هدف بخش و پروژه باید برابر cid باشد؛ وگرنه ۴۰۳ با پیام فارسی. این قاعده برای سوپریوزر هم برقرار است.
+  - بی سربرگ و غیرسوپریوزر: شرکت هدف باید در get_user_allowed_companies(request.user) باشد؛ وگرنه ۴۰۳. سوپریوزر بی سربرگ بی‌محدودیت است.
+  - اگر هر دو داده شده‌اند، section.project_id باید برابر project_id باشد؛ وگرنه ۴۰۰ با پیام فارسی.
+- رفتار مسیر مجاز امروز (خودرو، بخش و پروژهٔ شرکت خود کاربر، یا بی section_id و project_id) عیناً بماند.
+- بیرون از دامنه: warehouse_id درخواست، viewsetهای دیگر، موتور Excel، فرانت.
 
-۵. پایان:
-- خودبازبینی با git diff --stat <پایه>. برای هر قالبی که حذف خالص بزرگ دارد، hunk را بخوان (AGENTS بخش ۵ بند ۷).
-- زیر `## گزارش پیشرفت` طرح، بند «نشست ۲» را بنویس، همراه فهرست چک ۳۶۰px برای کاربر (موارد پشت ورود). هیچ برچسب DONE یا FAILED ننویس.
+۵. آزمون‌ها: به فایل warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py متدهای تازه اضافه کن؛ آزمون‌های موجود دست‌نخورده بمانند و همه پاس شوند. مجموع دست‌کم ۲۰ متد. هر بند یک متد جدا، و در هر بند ردشده، پس از خواندن دوباره از دیتابیس هیچ سفر تازه یا تغییری نباشد:
+- update-day-trip با section_id بخش ب توسط کاربر الف: ۴۰۳.
+- bulk-save-monthly-grid با section_id بخش ب توسط کاربر الف: ۴۰۳.
+- bulk-save با خودروی الف و project_id پروژهٔ ب توسط کاربر الف: ۴۰۳.
+- update-day-trip با project_id پروژهٔ ب: ۴۰۳.
+- bulk-save-monthly-grid با project_id پروژهٔ ب: ۴۰۳.
+- کاربر دارای دسترسی به الف و ب، با سربرگ شرکت الف و section_id بخش ب در bulk-save: ۴۰۳.
+- bulk-save با section_id بخش الف و project_id پروژهٔ دیگری (ناهمخوان): ۴۰۰.
+- مسیر مثبت: bulk-save با خودرو، بخش و پروژهٔ الف توسط کاربر الف موفق است و سفر با همان بخش و پروژه ذخیره می‌شود.
+
+۶. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر چهار بار، در پوشهٔ warehouse-backend با PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: venv\Scripts\python.exe manage.py test integration_tests.test_vehicle_trip_actions_scope --noinput. اگر فرمانی دو بار با یک خطا شکست، رویکرد را عوض کن. فرمان را در پس‌زمینه رها نکن.
+
+۷. راستی‌آزمایی پیش از پایان:
+- git diff --stat <پایه> فقط فایل‌های بند ۱ را نشان دهد.
+- در diff ببین هر سه action متد کمکی را پیش از هر نوشتن صدا می‌زنند و بلوک‌های قدیمی سنجش بخش حذف شده‌اند.
+
+۸. پایان:
+- زیر `## گزارش پیشرفت` طرح یک بند تازه بنویس با عنوان «۲۴ مهر ۱۴۰۵ (2026-10-15)، Antigravity — اصلاح یافته‌های بازبین در actionهای نوشتنی سفر»، شامل جداگانه: هر یافته و رفع آن، فهرست فایل‌ها، آزمون‌هایی که واقعاً اجرا شد با نتیجه، و ابهام‌های مانده. عدد ساختگی ننویس. هیچ برچسب DONE یا FAILED ننویس. محتوا داخل همان <div dir="rtl"> موجود بماند.
 - فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
-feat(modular): launcher, sidebar and quick link from module extensions
-
-===
-
-[DONE] نشست 3 از 3 — پیگیری‌های ناظر: جفت‌شدگی‌های سست (فرانت)
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import pathlib,re,sys; app=pathlib.Path('warehouse-front/src/app'); co=(app/'modules/common/components/operations/companies/companies.ts').read_text(encoding='utf-8'); um=(app/'shared/components/user-menu/user-menu.component.ts').read_text(encoding='utf-8'); ct=(app/'core/modules/module-contract.ts').read_text(encoding='utf-8'); gd=pathlib.Path('Documents/Modular_Middle_Path/guide_new_module.md').read_text(encoding='utf-8'); sp=(app/'modules/common/components/layout/layout-modular.dom.spec.ts').read_text(encoding='utf-8'); files=[q for q in app.rglob('*.ts') if q.name not in ('module.ts','module-contract.ts') and not q.name.endswith('.spec.ts')]; dead=[f for f in ('tableColumns','gdriveSupported','rolePresetCategories') if re.search(r'\b'+f+r'\??\s*:',ct) and not any(f in q.read_text(encoding='utf-8') for q in files)]; p={'companies providesTreasury':'providesTreasury' in co and 'providesTreasury' in ct,'companies tabs inference gone':not re.search(r'extension\.tabs\?*\.length',co),'user-menu fixed 15 gone':not re.search(r'\b15\s*\+',um),'contract fields declared but never read':not dead,'guide limitation note gone':'\u0645\u062d\u062f\u0648\u062f\u06cc\u062a \u0641\u0639\u0644\u06cc' not in gd,'archive link test':'company-documents' in sp}; bad=[k for k,v in p.items() if not v]; print(p,'dead:',dead); print('failed:',bad); sys.exit(1 if bad else 0)"
-verify: cd warehouse-front && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
-verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"
-verify: cd warehouse-front && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
-verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer"
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
-verify: python scripts/e2e/guardian_57_front_module_fence.py
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py sample-module
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(modular): loose coupling cleanup in companies, user menu and archive link"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-۱. در فایل طرح Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md بخش‌های `## ۳.` و `## ۴.` و بندهای «نشست ۱» و «نشست ۲» زیر `## گزارش پیشرفت` را بخوان. قواعد `.agents/AGENTS.md` بخش ۳، ۵، ۷، ۹ و ۱۰ برقرارند. hash فعلی HEAD را یادداشت کن.
-
-۲. کار این نشست، طبق `### ۳.۳.`:
-- modules/common/components/operations/companies/companies.ts: isAccountingInstalled دیگر از «هر ماژولی که companies.tabs دارد» نتیجه گرفته نشود. پرچم صریح providesTreasury در بخش companies از ExtensionMap (module-contract.ts) تعریف شود، ماژول مالی در module.ts خود آن را true کند، و companies.ts فقط همین پرچم را بخواند. رفتار پروفایل کامل و فقط‌انبار عوض نشود.
-- shared/components/user-menu/user-menu.component.ts: عدد ثابت 15 در شمارندهٔ «همه کلیدها» از روی خود داده شمرده شود.
-- modules/common/components/layout/layout.html: پیوند «بایگانی اسناد شرکت‌ها» برای سوپریوزر فقط وقتی دیده شود که ماژول صاحب آن نصب است، از راه یک نقطهٔ توسعه، نه با نام ماژول.
-- فیلدهای بی‌مصرف ExtensionMap (companies.tableColumns، companies.gdriveSupported، users.rolePresetCategories): هر کدام یا مصرف شود یا از قرارداد و از module.ts ماژول‌ها حذف شود. تصمیم و دلیل هر کدام را در گزارش بنویس.
-- Documents/Modular_Middle_Path/guide_new_module.md: یادداشت «محدودیت فعلی» در `## ۳.` حذف شود و جدول نقطه‌ها با نقطه‌های نشست ۲ و این نشست به‌روز شود.
-
-۳. آزمون‌ها: در layout-modular.dom.spec.ts پیوند بایگانی اسناد (company-documents) در نسخهٔ فقط‌انبار نیست و در نسخهٔ کامل برای سوپریوزر هست. برای پرچم providesTreasury و شمارندهٔ منوی کاربر هم تست DOM کوتاه در spec همان مؤلفه.
-
-۴. فرمان‌هایی که خودت می‌توانی اجرا کنی: حداکثر دو بار npx ng build --output-path ../scratch/ng-build-agent، و تست‌های DOM همان specها با npx ng test --watch=false --include <فایل spec>.
-
-۵. پایان:
-- خودبازبینی با git diff --stat <پایه>. برای هر قالبی که حذف خالص بزرگ دارد، hunk را بخوان (AGENTS بخش ۵ بند ۷).
-- زیر `## گزارش پیشرفت` طرح، بند «نشست ۳» را بنویس. هیچ برچسب DONE یا FAILED ننویس.
-- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
-refactor(modular): loose coupling cleanup in companies, user menu and archive link
+fix(scope): validate project and header company in trip write actions
+- پس از commit نوبت را تمام کن. پایان نوبت پیش از commit شکست است.
