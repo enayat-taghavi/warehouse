@@ -33,11 +33,26 @@ const buildModulesText = selectedModules.slice().sort().join(',');
 
 console.log(`[build-for-modules] Modules: [${buildModulesText}]`);
 
-// ذخیرهٔ محتوای متعهدشدهٔ نسخهٔ کامل برای بازگردانی تمیز درخت کاری پس از بیلد
-const committedAllModules = getDiscoveredModules();
-const committedContent = fs.existsSync(TARGET_FILE)
-  ? fs.readFileSync(TARGET_FILE, 'utf8')
-  : generateInstalledModulesContent(committedAllModules);
+// نسخهٔ commitشده همیشه همهٔ ماژول‌های کشف‌شده است (نگهبان ۵۷) و مولد قطعی است؛ پس بازگردانی از روی
+// همان تولید می‌شود، نه از روی فایل درخت کاری که شاید از بیلد نیمه‌کارهٔ قبلی زیرمجموعه مانده باشد.
+const committedContent = generateInstalledModulesContent(getDiscoveredModules());
+
+function restoreCommitted() {
+  try {
+    fs.writeFileSync(TARGET_FILE, committedContent, 'utf8');
+    console.log('[build-for-modules] ✔ Restored committed installed-modules.ts (clean tree guaranteed)');
+  } catch (restoreErr) {
+    console.error('[build-for-modules] ✖ Failed to restore installed-modules.ts:', restoreErr);
+  }
+}
+
+// با Ctrl-C یا kill هم فهرست کامل برگردد (بدون شنونده، Node بی‌اجرای finally بسته می‌شود)
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+  process.on(sig, () => {
+    restoreCommitted();
+    process.exit(130);
+  });
+}
 
 let exitCode = 0;
 
@@ -102,12 +117,7 @@ try {
   exitCode = 1;
 } finally {
   // ۵. بازگرداندن حتمی نسخهٔ متعهدشده به درخت کاری حتی در صورت بروز خطا یا قطع بیلد
-  try {
-    fs.writeFileSync(TARGET_FILE, committedContent, 'utf8');
-    console.log('[build-for-modules] ✔ Restored committed installed-modules.ts (clean tree guaranteed)');
-  } catch (restoreErr) {
-    console.error('[build-for-modules] ✖ Failed to restore installed-modules.ts:', restoreErr);
-  }
+  restoreCommitted();
 }
 
 if (exitCode !== 0) {

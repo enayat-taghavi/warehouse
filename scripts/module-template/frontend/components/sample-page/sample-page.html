@@ -1,18 +1,33 @@
-<div class="p-6 space-y-6" dir="rtl">
-  <div class="flex items-center justify-between border-b border-slate-200 pb-4">
-    <div class="flex items-center gap-3">
-      <svg appIcon="box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-7 h-7 text-indigo-600"></svg>
-      <div>
-        <h1 class="text-xl font-black text-slate-800">{{ title }}</h1>
-        <p class="text-xs text-slate-500">صفحه نمونه ماژول مستقل</p>
+<div class="p-4 sm:p-6 space-y-4">
+  <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <svg appIcon="box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-7 h-7 shrink-0 text-indigo-600"></svg>
+      <div class="min-w-0">
+        <h1 class="text-lg font-black text-fg truncate">{{ title }}</h1>
+        <p class="text-[12px] text-fg-muted">صفحهٔ نمونهٔ ماژول مستقل</p>
       </div>
     </div>
-    <div class="flex items-center gap-2">
+    <button type="button" appAction="refresh" [busy]="loading()" (click)="onRefresh()"></button>
+  </div>
+
+  @if (loading() && !status()) {
+    <app-loading-skeleton type="card" [count]="1" />
+  } @else if (error()) {
+    <div class="bg-surface rounded-2xl border border-line p-6 flex flex-col items-center gap-3 text-center text-fg-muted" role="alert">
+      <svg appIcon="alert-triangle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6"></svg>
+      <p class="text-[12px] font-bold">
+        {{ error() === 'offline' ? 'سرور در دسترس نیست؛ پس از برقراری اتصال دوباره تلاش کنید.' : 'دریافت وضعیت ماژول انجام نشد.' }}
+      </p>
       <button type="button" appAction="refresh" (click)="onRefresh()"></button>
-      <button type="button" appAction="create" (click)="onCreate()"></button>
     </div>
-  </div>
-  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-    <p class="text-sm text-slate-600">این صفحه به عنوان نمونهٔ اولیه برای توسعهٔ قابلیت‌های ماژول جدید پیاده‌سازی شده است.</p>
-  </div>
+  } @else {
+    <div class="bg-surface rounded-2xl border border-line p-6 space-y-2">
+      <p class="text-[13px] font-bold text-fg">وضعیت ماژول: {{ status()?.status === 'ok' ? 'فعال' : 'نامشخص' }}</p>
+      <p class="text-[12px] text-fg-muted">این صفحه نمونهٔ اولیه برای توسعهٔ قابلیت‌های ماژول تازه است.</p>
+    </div>
+    <div class="bg-surface rounded-2xl border border-dashed border-line p-6 flex flex-col items-center gap-2 text-center text-fg-muted">
+      <svg appIcon="info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6"></svg>
+      <p class="text-[12px] font-bold">هنوز رکوردی ثبت نشده است.</p>
+    </div>
+  }
 </div>

@@ -434,9 +434,9 @@ try {
     $sha1 = New-TestCommit $head 'e2e: working tree' -FromWorkingTree
     $sha2 = New-TestCommit $sha1 'e2e: second release'
     $sha3 = New-TestCommit $sha1 'e2e: third release'
-    $shaMig = New-TestCommit $sha1 'e2e: release with a forward-only migration' @{ 'warehouse-backend/accounts/migrations/0036_e2e_forward_only.py' = $migration }
+    $shaMig = New-TestCommit $sha1 'e2e: release with a forward-only migration' @{ 'warehouse-backend/core/accounts/migrations/0036_e2e_forward_only.py' = $migration }
     # A warehouse migration that fails: harmless while warehouse is not installed, fatal for -AddModule warehouse.
-    $shaBrokenWh = New-TestCommit $shaMig 'e2e: release whose warehouse migration fails' @{ 'warehouse-backend/inventory/migrations/0002_e2e_broken.py' = $brokenWarehouseMigration }
+    $shaBrokenWh = New-TestCommit $shaMig 'e2e: release whose warehouse migration fails' @{ 'warehouse-backend/modules/warehouse/inventory/migrations/0002_e2e_broken.py' = $brokenWarehouseMigration }
     $SkipBuild = $true
 
     # --- container -----------------------------------------------------------------------------

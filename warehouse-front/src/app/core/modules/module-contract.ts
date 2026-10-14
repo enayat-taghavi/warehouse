@@ -1,3 +1,4 @@
+import { Type } from '@angular/core';
 import { Routes } from '@angular/router';
 
 /**
@@ -136,9 +137,10 @@ export interface ExtensionMap {
   };
 
   /**
-   * ۱۲. کامپوننت طراح لیبل ماژول انبار — مصرف در settings-label-tab.ts
+   * ۱۲. بارگذار تنبل کامپوننت طراح لیبل — مصرف در settings-label-tab.ts
+   * (تنبل تا کامپوننت از راه installed-modules.ts وارد باندل اولیه نشود)
    */
-  labelDesignerComponent?: any;
+  loadLabelDesigner?: () => Promise<Type<unknown>>;
 }
 
 /**

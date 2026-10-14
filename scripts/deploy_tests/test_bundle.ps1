@@ -51,7 +51,8 @@ Assert-True (Test-Path -LiteralPath $bundle.Path) "bundle created ($($bundle.Sha
 Assert-True ((Get-FileSha256 $bundle.Path) -eq $bundle.Sha256) 'returned sha256 matches the file'
 Assert-True (-not (Test-Path -LiteralPath (Join-Path $LocalDeployScratch "bundle_stage_$sha"))) 'stage directory removed'
 $whitelist = Get-BackendWhitelist $sha
-Write-Host "[INFO] backend whitelist: $(($whitelist.Apps + $whitelist.Files) -join ', ')"
+Write-Host "[INFO] backend whitelist: $(($whitelist.Apps + $whitelist.Files + $whitelist.Manifests) -join ', ')"
+Assert-True (@($whitelist.Manifests).Count -gt 0) "module manifests in the whitelist: $(@($whitelist.Manifests) -join ', ')"
 
 # --- 3. open the bundle in ubuntu:24.04 ----------------------------------------------------------
 $container = "wh-bundle-test-$((Get-Date).ToString('yyyyMMddHHmmss'))"
@@ -78,6 +79,9 @@ for f in warehouse-front/dist/warehouse-app/browser/index.html warehouse-front/d
          scripts/deploy/warehouse-deploy.sh scripts/deploy/warehouse-nightly-backup.sh scripts/remote-setup.sh \
          warehouse-backend/backend_paths.py warehouse-backend/manage.py warehouse-backend/requirements.txt warehouse-backend/requirements.lock; do
     [ -f "$f" ] && pass "present: $f" || bad "missing: $f"
+done
+for d in warehouse-backend/modules/*/; do
+    [ -f "${d}module.py" ] && pass "present: ${d}module.py" || bad "missing: ${d}module.py"
 done
 apps=$(find warehouse-backend -name "apps.py" -exec dirname {} + | xargs -n1 basename | sort -u | tr '\n' ' ')
 [ "$apps" = "$EXPECTED_APPS " ] && pass "bundle apps equal full profile INSTALLED_APPS" || bad "bundle apps: $apps (expected: $EXPECTED_APPS)"

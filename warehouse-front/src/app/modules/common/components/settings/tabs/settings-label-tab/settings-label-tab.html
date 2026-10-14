@@ -7,12 +7,22 @@
             </h4>
           </div>
           <div class="p-6">
-            <ng-container *ngIf="labelDesignerComponent; else noWarehouse">
-              <ng-container *ngComponentOutlet="labelDesignerComponent; inputs: { warehouseId: null }"></ng-container>
-            </ng-container>
-            <ng-template #noWarehouse>
-              <div class="p-6 text-center text-slate-500">طراح لیبل فقط در ماژول انبارداری فعال است.</div>
-            </ng-template>
+            @if (!hasLabelDesigner) {
+              <div class="flex flex-col items-center gap-2 p-6 text-center text-fg-muted">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="info"></svg>
+                <p class="text-[12px] font-bold">طراح لیبل فقط در ماژول انبارداری فعال است.</p>
+              </div>
+            } @else if (loadFailed()) {
+              <div class="flex flex-col items-center gap-3 p-6 text-center text-fg-muted" role="alert">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle"></svg>
+                <p class="text-[12px] font-bold">بارگذاری طراح لیبل انجام نشد؛ اتصال را بررسی کنید و دوباره تلاش کنید.</p>
+                <button type="button" appAction="refresh" (click)="loadDesigner()"></button>
+              </div>
+            } @else if (labelDesignerComponent()) {
+              <ng-container *ngComponentOutlet="labelDesignerComponent(); inputs: { warehouseId: null }"></ng-container>
+            } @else {
+              <app-loading-skeleton type="card" [count]="1" />
+            }
           </div>
         </div>
       </div>

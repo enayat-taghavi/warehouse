@@ -11,6 +11,7 @@
 """
 
 import argparse
+import keyword
 import os
 import pathlib
 import subprocess
@@ -34,9 +35,39 @@ def parse_args():
     return parser.parse_args()
 
 
-def validate_module_code(code: str) -> None:
+# نام‌هایی که ماژول تازه نباید بگیرد: پوسته و ماژول‌های هستهٔ فرانت، بسته‌های کلیدی بک‌اند و نام‌های دستگاه ویندوز
+RESERVED_CODES = {
+    'common', 'core', 'operations', 'ops', 'soc', 'shared', 'platform', 'app', 'api', 'admin',
+    'config', 'modules', 'scripts', 'static', 'media', 'templates', 'integration_tests',
+    'django', 'rest_framework', 'rest_framework_simplejwt', 'channels', 'daphne', 'corsheaders',
+    'con', 'prn', 'aux', 'nul', *(f'com{i}' for i in range(1, 10)), *(f'lpt{i}' for i in range(1, 10)),
+}
+FORBIDDEN_TITLE_CHARS = set('\'"\\`<>{}$')
+
+
+def existing_backend_packages(root: pathlib.Path) -> set[str]:
+    """نام بسته‌های بک‌اند که روی sys.path می‌نشینند (ریشه، core و modules/*)؛ ماژول تازه نباید آن‌ها را بپوشاند."""
+    backend = root / "warehouse-backend"
+    names: set[str] = set()
+    bases = [backend, backend / "core", *(p for p in (backend / "modules").glob("*") if p.is_dir())]
+    for base in bases:
+        if base.is_dir():
+            names.update(p.parent.name for p in base.glob("*/__init__.py"))
+    return names
+
+
+def validate_module_code(code: str, root: pathlib.Path) -> None:
     if not code or not code.isidentifier() or not code.islower():
         sys.exit(f"❌ خطا: کد ماژول '{code}' نامعتبر است. کد باید شامل حروف کوچک انگلیسی، اعداد یا خط زیر (_) و یک شناسه معتبر پایتون باشد.")
+    if keyword.iskeyword(code) or code in RESERVED_CODES or code in sys.stdlib_module_names:
+        sys.exit(f"❌ خطا: کد ماژول '{code}' رزرو شده است (هسته، کتابخانهٔ پایتون یا نام دستگاه ویندوز).")
+    if code in existing_backend_packages(root):
+        sys.exit(f"❌ خطا: کد ماژول '{code}' با نام یک اپ موجود بک‌اند یکی است و آن را می‌پوشاند.")
+
+
+def validate_title(title_fa: str) -> None:
+    if not title_fa or any(ch in FORBIDDEN_TITLE_CHARS or not ch.isprintable() for ch in title_fa):
+        sys.exit("❌ خطا: عنوان فارسی خالی است یا نویسهٔ غیرمجاز دارد (کوتیشن، بک‌اسلش، بک‌تیک، < > { } $ یا نویسهٔ کنترلی).")
 
 
 def main():
@@ -45,7 +76,8 @@ def main():
     title_fa = args.title_fa.strip()
     root = pathlib.Path(args.root).resolve()
 
-    validate_module_code(code)
+    validate_module_code(code, root)
+    validate_title(title_fa)
 
     backend_module_dir = root / "warehouse-backend" / "modules" / code
     frontend_module_dir = root / "warehouse-front" / "src" / "app" / "modules" / code
@@ -120,7 +152,8 @@ def main():
         sys.exit(f"❌ خطا: اسکریپت مولد ماژول‌های فرانت یافت نشد: {gen_script}")
 
     node_cmd = "node"
-    r = subprocess.run([node_cmd, str(gen_script)], cwd=str(root / "warehouse-front"), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    # --all: فهرست commitشده همیشه همهٔ ماژول‌هاست؛ WH_MODULES به‌ارث‌رسیده از پوسته نباید آن را کوتاه کند
+    r = subprocess.run([node_cmd, str(gen_script), "--all"], cwd=str(root / "warehouse-front"), capture_output=True, text=True, encoding="utf-8", errors="replace")
     if r.returncode != 0:
         sys.exit(f"❌ خطا در اجرای gen-installed-modules.js (exit {r.returncode}):\n{r.stderr or r.stdout}")
 

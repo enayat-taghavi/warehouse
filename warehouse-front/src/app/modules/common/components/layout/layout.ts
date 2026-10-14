@@ -1089,7 +1089,10 @@ export class Layout implements OnInit, OnDestroy {
     }
     this.store.setWarehouseContext(false);
     const navExts = this.moduleRegistry.getExtensions('layoutNav');
-    const exitRoute = navExts.find(e => e.extension.defaultExitRoute)?.extension.defaultExitRoute;
+    // خروج از حالت انبار به مسیر ماژول صاحب سوییچر انبار؛ فقط اگر نبود، اولین مسیر خروج دیگر
+    const exitExt = navExts.find(e => e.extension.showWarehouseSwitcher && e.extension.defaultExitRoute)
+      ?? navExts.find(e => e.extension.defaultExitRoute);
+    const exitRoute = exitExt?.extension.defaultExitRoute;
     if (exitRoute) {
       this.router.navigate([exitRoute]);
     } else {

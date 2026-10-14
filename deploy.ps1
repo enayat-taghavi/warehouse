@@ -486,7 +486,9 @@ function Get-ServerModuleList($Config) {
     # which only happens on servers set up before WH_MODULES existed, where every module is installed.
     $r = Invoke-RemoteRootScript -Config $Config -Gateway 'modules' -Capture -Quiet
     $found = @($r.Output | ForEach-Object { if ($_ -match '^\[MODULES\] ([a-z,]+)$') { $Matches[1] } })
-    if ($r.ExitCode -eq 0 -and $found.Count -eq 1 -and (ConvertTo-CanonicalModuleList $found[0]) -ceq $found[0]) { return $found[0] }
+    # Compared as a set: server tooling from before per-module deploy prints catalog order (warehouse,accounting).
+    $canonical = if ($found.Count -eq 1) { ConvertTo-CanonicalModuleList $found[0] } else { $null }
+    if ($r.ExitCode -eq 0 -and $canonical) { return $canonical }
     if ($r.ExitCode -eq 2 -and $found.Count -eq 0 -and $r.StdErr -like '*unrecognized subcommand*') { return $null }
     throw "Could not read the installed modules of the server (exit $($r.ExitCode))."
 }
@@ -1322,7 +1324,15 @@ function Get-BackendWhitelist([string]$Sha) {
         if ($names -notcontains "warehouse-backend/$f") { throw "Commit $Sha has no warehouse-backend/$f; it is mandatory in the bundle." }
     }
     if ($apps.Count -eq 0) { throw "No backend app packages found in $Sha." }
-    return [pscustomobject]@{ Apps = $apps; Files = $files }
+    # Module manifests (modules/<m>/module.py) sit outside any app package; module_catalog builds INSTALLED_APPS from them.
+    $manifests = @($names | ForEach-Object {
+        if ($_ -match '^warehouse-backend/(modules/[^/]+/module\.py)$') { $Matches[1] }
+    } | Sort-Object -Unique)
+    $moduleDirs = @($apps | ForEach-Object { if ($_ -match '^(modules/[^/]+)/') { $Matches[1] } } | Sort-Object -Unique)
+    foreach ($d in $moduleDirs) {
+        if ($manifests -notcontains "$d/module.py") { throw "Commit $Sha has no warehouse-backend/$d/module.py; every module needs its manifest in the bundle." }
+    }
+    return [pscustomobject]@{ Apps = $apps; Files = $files; Manifests = $manifests }
 }
 
 function Test-BundleStage([string]$StageDir, $Whitelist, [string]$ExpectedModules = $null) {
@@ -1352,6 +1362,11 @@ function Test-BundleStage([string]$StageDir, $Whitelist, [string]$ExpectedModule
     foreach ($appRel in $Whitelist.Apps) {
         if (-not (Test-Path -LiteralPath (Join-Path $StageDir "warehouse-backend/$appRel/__init__.py"))) {
             $problems.Add("backend app $appRel missing from bundle")
+        }
+    }
+    foreach ($manifestRel in $Whitelist.Manifests) {
+        if (-not (Test-Path -LiteralPath (Join-Path $StageDir "warehouse-backend/$manifestRel"))) {
+            $problems.Add("module manifest $manifestRel missing from bundle")
         }
     }
     $dist = Join-Path $StageDir "warehouse-front\$FrontDistRelative"
@@ -1392,6 +1407,7 @@ function New-DeploymentBundle([string]$Sha, [string]$SnapshotFront, [string]$Exp
         $pathspecs = [System.Collections.Generic.List[string]]::new()
         foreach ($f in $whitelist.Files) { $pathspecs.Add("warehouse-backend/$f") }
         foreach ($a in $whitelist.Apps) { $pathspecs.Add("warehouse-backend/$a") }
+        foreach ($m in $whitelist.Manifests) { $pathspecs.Add("warehouse-backend/$m") }
         $pathspecs.AddRange([string[]]@('scripts/deploy', 'scripts/remote-setup.sh', ':(exclude,glob)warehouse-backend/**/test_phase*.py'))
         $archiveArgs = @('-C', $ScriptRoot, 'archive', '--format=tar', '-o', $sourceTar, $Sha, '--') + $pathspecs.ToArray()
         if ((Invoke-Native $GitExe $archiveArgs) -ne 0) { throw "git archive failed for $Sha." }

@@ -134,6 +134,27 @@ describe('AppLauncherComponent DOM & Modular Layout Tests', () => {
     expect(cards.some(c => c.code === 'personnel')).toBe(true);
   });
 
+  it('سوپریوزر با allowed_apps بدون operations — کارت عملیات شمرده می‌شود (سه ستون در نسخهٔ کامل)', () => {
+    mockAuth.user = () => ({ username: 'root', allowed_apps: ['warehouse', 'finance'] });
+    mockPersona.isSuperuser = () => true;
+    mockPersona.hasOperationsAccess = () => true;
+    registry.setInstalledModules(['warehouse', 'accounting']);
+
+    expect(component.appCards().some(c => c.code === 'operations')).toBe(true);
+    expect(component.visibleCardsCount).toBe(3);
+    expect(component.gridContainerClass).toContain('lg:grid-cols-3');
+  });
+
+  it('سوپریوزر در نسخهٔ تک‌ماژول — دو کارت (ماژول و عملیات) و نه حالت تک‌ماژول', () => {
+    mockAuth.user = () => ({ username: 'root', allowed_apps: ['warehouse'] });
+    mockPersona.isSuperuser = () => true;
+    mockPersona.hasOperationsAccess = () => true;
+    registry.setInstalledModules(['warehouse']);
+
+    expect(component.visibleCardsCount).toBe(2);
+    expect(component.isSingleAppMode).toBe(false);
+  });
+
   it('ورود به برنامه سوئیچ به persona مناسب و خروج از بافت انبار انجام می‌دهد', () => {
     registry.setInstalledModules(['warehouse', 'accounting']);
     component.enterApp('warehouse');

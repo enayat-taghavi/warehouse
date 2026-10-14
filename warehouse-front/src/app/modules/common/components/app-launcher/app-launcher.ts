@@ -79,13 +79,13 @@ export class AppLauncherComponent implements OnInit {
         themeColor
       };
     }).filter(card => {
-      // عملیات فقط برای سوپریوزر نمایش داده می‌شود
-      if (card.code === 'operations' && !this.persona.isSuperuser()) return false;
+      const spec = this.moduleRegistry.getSpec(card.code);
+      // عملیات (فقط سوپریوزر) در allowed_apps توکن نیست؛ همان شرط کاشی قالب (hasOperations) را می‌گیرد
+      if (spec?.isSuperuserOnly) return this.hasOperations;
 
       // فیلتر بر اساس allowed_apps اعلامی در توکن کاربر
       if (allowed && Array.isArray(allowed) && allowed.length > 0) {
         const normAllowed = allowed.map(a => a.toLowerCase());
-        const spec = this.moduleRegistry.getSpec(card.code);
         const matches = normAllowed.includes(card.code.toLowerCase()) ||
           (spec?.code && normAllowed.includes(spec.code.toLowerCase())) ||
           spec?.aliases?.some(a => normAllowed.includes(a.toLowerCase()));

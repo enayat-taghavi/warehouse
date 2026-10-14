@@ -47,7 +47,7 @@ class Command(BaseCommand):
         out_path = options.get('output')
         if not out_path:
             # ذخیره در پوشه scratch ریشه پروژه
-            root_dir = Path(__file__).resolve().parents[4]
+            root_dir = Path(__file__).resolve().parents[6]
             scratch_dir = root_dir / 'scratch'
             scratch_dir.mkdir(parents=True, exist_ok=True)
             out_path = str(scratch_dir / 'missing_primary_sheba_report.xlsx')

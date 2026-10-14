@@ -66,7 +66,15 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
       isModuleInstalled: vi.fn().mockReturnValue(true),
       getExtensions: vi.fn().mockImplementation((extKey: string) => {
         if (extKey === 'layoutNav') {
+          // همان ترتیب واقعی INSTALLED_MODULES (الفبایی: accounting پیش از warehouse)
           return [
+            {
+              moduleCode: 'accounting',
+              extension: {
+                showWarehouseSwitcher: false,
+                defaultExitRoute: '/app/finance'
+              }
+            },
             {
               moduleCode: 'warehouse',
               extension: {
@@ -78,13 +86,6 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
                 contextItems: [
                   { id: 'items', label: 'کالاها', icon: 'package', permission: 'view_wh_dashboard' }
                 ]
-              }
-            },
-            {
-              moduleCode: 'accounting',
-              extension: {
-                showWarehouseSwitcher: false,
-                defaultExitRoute: '/app/finance'
               }
             }
           ];
@@ -170,6 +171,11 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
     expect(component.hasWarehouseSwitcher).toBe(true);
     expect(component.deepSyncScopeLabel).toBe('انبار');
     expect(component.primaryNavItems().length).toBeGreaterThan(0);
+  });
+
+  it('حالت ۱: هر دو ماژول فعال — خروج از بافت انبار به پروژه‌های انبار می‌رود، نه مالی', () => {
+    component.exitWarehouseMode();
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/warehouse/projects']);
   });
 
   it('حالت ۲: فقط ماژول انبار فعال — خروج از بافت انبار به مسیر اختصاصی انبار ریدایرکت می‌کند', () => {
