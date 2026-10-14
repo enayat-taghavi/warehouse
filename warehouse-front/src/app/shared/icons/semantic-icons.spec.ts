@@ -7,8 +7,12 @@ import {
   ROLE_ICONS,
   resolveSemanticIcon,
 } from './semantic-icons';
-import { WAREHOUSE_ENTITY_ICONS } from '../../modules/warehouse/entity-icons';
-import { ACCOUNTING_ENTITY_ICONS } from '../../modules/accounting/entity-icons';
+import { INSTALLED_MODULES } from '../../modules/installed-modules';
+
+const warehouseModule = INSTALLED_MODULES.find(m => m.code === 'warehouse');
+const accountingModule = INSTALLED_MODULES.find(m => m.code === 'accounting');
+const WAREHOUSE_ENTITY_ICONS = warehouseModule?.entityIcons || {};
+const ACCOUNTING_ENTITY_ICONS = accountingModule?.entityIcons || {};
 
 describe('فرهنگ آیکون یکسان (Semantic Icon Dictionary)', () => {
   const ALLOWED_SHARED_ICONS = new Set([

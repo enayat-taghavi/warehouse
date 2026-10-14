@@ -29,7 +29,11 @@ describe('AuthGuards & Warehouse Routing Integrity', () => {
     TestBed.resetTestingModule();
 
     moduleRegistryMock = {
-      isModuleInstalled: vi.fn().mockReturnValue(true)
+      isModuleInstalled: vi.fn().mockReturnValue(true),
+      getInstalledModules: vi.fn().mockReturnValue([
+        { code: 'warehouse', scopeKind: 'warehouse', defaultRoute: '/app/warehouse' },
+        { code: 'accounting', scopeKind: 'finance', defaultRoute: '/app/finance' }
+      ])
     };
 
     activeCompanyMock = {
@@ -69,19 +73,19 @@ describe('AuthGuards & Warehouse Routing Integrity', () => {
   describe('WarehouseModuleMatchGuard', () => {
     it('should match route when activeCompany is null on initial boot', () => {
       activeCompanyMock.activeCompany = null;
-      const result = TestBed.runInInjectionContext(() => WarehouseModuleMatchGuard({} as any, []));
+      const result = TestBed.runInInjectionContext(() => WarehouseModuleMatchGuard({} as any, [], {} as any));
       expect(result).toBe(true);
     });
 
     it('should match route when company has warehouse module', () => {
       activeCompanyMock.activeCompany = { id: 1, name: 'شرکت ۱', has_warehouse_module: true };
-      const result = TestBed.runInInjectionContext(() => WarehouseModuleMatchGuard({} as any, []));
+      const result = TestBed.runInInjectionContext(() => WarehouseModuleMatchGuard({} as any, [], {} as any));
       expect(result).toBe(true);
     });
 
     it('should reject route ONLY when company explicitly disables warehouse module', () => {
       activeCompanyMock.activeCompany = { id: 2, name: 'شرکت ۲', has_warehouse_module: false };
-      const result = TestBed.runInInjectionContext(() => WarehouseModuleMatchGuard({} as any, []));
+      const result = TestBed.runInInjectionContext(() => WarehouseModuleMatchGuard({} as any, [], {} as any));
       expect(result).toBe(false);
     });
   });

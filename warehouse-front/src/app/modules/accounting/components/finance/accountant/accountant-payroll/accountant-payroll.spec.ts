@@ -45,7 +45,15 @@ describe('AccountantPayrollHubComponent — قابلیت‌های منتقل‌�
     mockRoute = { queryParams: of({ year: '1405', month: 'شهریور', wh: '19' }) };
     mockCdr = { detectChanges: vi.fn(), markForCheck: vi.fn() };
     mockWh = { getAll: vi.fn().mockReturnValue(of([{ id: 19, name: 'انبار ۱۹' }, { id: 26, name: 'انبار ۲۶' }])) };
-    mockRegistry = { isModuleInstalled: vi.fn().mockReturnValue(true) };
+    mockRegistry = {
+      isModuleInstalled: vi.fn().mockReturnValue(true),
+      getExtensions: vi.fn().mockImplementation((point: string) => {
+        if (point === 'crossModuleFilters') {
+          return [{ moduleCode: 'warehouse', extension: { warehouseScopeFilter: true } }];
+        }
+        return [];
+      })
+    };
 
     component = new AccountantPayrollHubComponent(
       mockAuth, {} as any, mockToast, mockPersonnelApi, mockRouter, mockRoute, mockCdr, mockWh, mockRegistry

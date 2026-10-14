@@ -27,7 +27,7 @@ export class FirstBootWizardComponent {
   readonly branding = BRANDING;
 
   get isWarehouseInstalled(): boolean {
-    return this.moduleRegistry.isModuleInstalled('warehouse');
+    return this.moduleRegistry.getExtensions('companies').some(e => e.extension.hasWarehouseModuleToggle);
   }
 
   public formData = {

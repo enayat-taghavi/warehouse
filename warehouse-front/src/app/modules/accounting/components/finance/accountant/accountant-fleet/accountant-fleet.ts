@@ -210,7 +210,8 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
   }
 
   get showWarehouseScope(): boolean {
-    return !!this.moduleRegistry?.isModuleInstalled('warehouse') && this.warehouses.length > 0;
+    const hasFilter = this.moduleRegistry?.getExtensions('crossModuleFilters').some(e => e.extension.warehouseScopeFilter);
+    return !!hasFilter && this.warehouses.length > 0;
   }
 
   ngOnInit(): void {
@@ -245,7 +246,8 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
       error: () => {}
     });
 
-    if (this.whService && this.moduleRegistry?.isModuleInstalled('warehouse')) {
+    const hasWhFilter = this.moduleRegistry?.getExtensions('crossModuleFilters').some(e => e.extension.warehouseScopeFilter);
+    if (this.whService && hasWhFilter) {
       this.whService.getAll().subscribe({
         next: (data: any) => {
           this.warehouses = (Array.isArray(data) ? data : []).map((w: any) => ({ id: w.id, name: w.name }));

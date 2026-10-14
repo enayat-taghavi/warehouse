@@ -29,11 +29,11 @@ export class OperationsCockpitComponent implements OnInit {
 
   /** بایگانی مدارک شرکت در حسابداری است؛ در نصب «فقط انبار» ویجت سررسید مدارک نمایش داده نمی‌شود */
   get isAccountingInstalled(): boolean {
-    return this.moduleRegistry.isModuleInstalled('accounting');
+    return this.moduleRegistry.getExtensions('operations').some(e => e.extension.hasExpiringDocsWidget);
   }
 
   get isWarehouseInstalled(): boolean {
-    return this.moduleRegistry.isModuleInstalled('warehouse');
+    return this.moduleRegistry.getExtensions('operations').some(e => e.extension.syncMonitorScope === 'warehouse');
   }
 
   public isCreatingSnapshot = signal<boolean>(false);

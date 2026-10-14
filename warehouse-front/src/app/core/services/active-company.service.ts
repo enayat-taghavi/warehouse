@@ -17,8 +17,9 @@ export class ActiveCompanyService {
 
   /** شرکت‌ها در هسته‌اند؛ با نصب حسابداری، نسخهٔ کامل‌تر حسابداری خوانده می‌شود (مانند CompanyApiService). */
   private get apiUrl(): string {
-    return this.moduleRegistry.isModuleInstalled('accounting')
-      ? `${environment.apiUrl}/personnel/companies`
+    const ep = this.moduleRegistry.getExtensions('companyApiEndpoints')[0]?.extension;
+    return ep?.companiesEndpoint
+      ? `${environment.apiUrl}${ep.companiesEndpoint}`
       : `${environment.apiUrl}/org/companies`;
   }
 
@@ -47,7 +48,8 @@ export class ActiveCompanyService {
   public isLoading$ = this.isLoadingSubject.asObservable();
 
   public hasWarehouseModuleSignal = computed<boolean>(() => {
-    if (!this.moduleRegistry.isModuleInstalled('warehouse')) return false;
+    const hasWh = this.moduleRegistry.getExtensions('companies').some(e => e.extension.hasWarehouseModuleToggle);
+    if (!hasWh) return false;
     const c = this.activeCompanySignal();
     if (!c) {
       return true;
@@ -97,7 +99,7 @@ export class ActiveCompanyService {
   }
 
   public hasWarehouseModule$ = this.activeCompany$.pipe(
-    map((c) => this.moduleRegistry.isModuleInstalled('warehouse') && !!c && c.has_warehouse_module !== false)
+    map((c) => this.hasWarehouseModuleSignal() && !!c && c.has_warehouse_module !== false)
   );
 
   public loadDocumentCompanies(): Observable<Company[]> {

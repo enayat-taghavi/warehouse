@@ -549,11 +549,11 @@ export class HealthDashboardComponent implements OnInit, OnDestroy {
   }
 
   get isWarehouseInstalled(): boolean {
-    return this.personaService.moduleRegistry.isModuleInstalled('warehouse');
+    return this.personaService.moduleRegistry.getExtensions('healthDashboard').some(e => e.extension.panelScopes?.includes('warehouse'));
   }
 
   get isAccountingInstalled(): boolean {
-    return this.personaService.moduleRegistry.isModuleInstalled('accounting');
+    return this.personaService.moduleRegistry.getExtensions('healthDashboard').some(e => e.extension.panelScopes?.includes('accounting'));
   }
 
   ngOnInit(): void {

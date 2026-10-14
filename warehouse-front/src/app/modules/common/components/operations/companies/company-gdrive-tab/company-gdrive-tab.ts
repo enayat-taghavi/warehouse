@@ -118,7 +118,7 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
   public isSuperuser = this.auth.isSuperuser;
 
   get isWarehouseInstalled(): boolean {
-    return this.moduleRegistry.isModuleInstalled('warehouse');
+    return this.moduleRegistry.getExtensions('companies').some(e => e.extension.hasWarehouseModuleToggle);
   }
 
   // وضعیت‌های داده‌ای

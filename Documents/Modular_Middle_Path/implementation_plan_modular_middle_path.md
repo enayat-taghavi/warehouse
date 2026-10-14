@@ -669,8 +669,71 @@ warehouse-front/src/app/
     - `python scripts/e2e/guardian_52_icon_registry.py` -> `نتیجه: نگهبان ۵۲ تایید شد (PASS)`
     - `python scripts/e2e/guardian_55_clickable_ergonomics.py` -> `نتیجه: نگهبان ۵۵ تایید شد (PASS)`
   - **آنچه به runner و ناظر می‌ماند:**
-    - runner: اجرای بیلد سه پروفایل با مولد ماژول‌ها، بررسی آزمون‌های DOM و نگهبان‌ها، بررسی تمیزی درخت و تأیید کامیت.
-    - ناظر (Claude): بازبین‌های `data-loss-reviewer` و `ui-reviewer`، بررسی استقرار و اجرای release روی `app`.
+- **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۹ (گام ۴-ب):**
+  - **پایهٔ نشست:** commit hash برابر `e33d4e3a213e6cc94d7964cd052f274fa4359fec`.
+  - **کارهای انجام‌شده:**
+    - تبدیل تمامی فایل‌های باقیمانده از فهرست ۲۴ فایل به خواندن `extensions` از طریق `ModuleRegistryService` (`getExtensions` و `getExtension`):
+      - ماژول‌های مالی (`accountant-diskettes.ts`، `accountant-fleet.ts`، `accountant-payroll.ts`): جایگزینی ارجاعات مستقیم به ماژول انبار با نقطهٔ توسعهٔ بین‌ماژولی `crossModuleFilters.warehouseScopeFilter`.
+      - کامپوننت طراحی لیبل (`settings-label-tab.ts` و `settings-label-tab.html`): حذف ایمپورت استاتیک کامپوننت انبار و رندر داینامیک آن از طریق `*ngComponentOutlet="labelDesignerComponent"` ثبت‌شده در اکستنشن `labelDesignerComponent` ماژول انبار.
+      - سرویس‌های شرکت (`company-api.service.ts` و `active-company.service.ts`): خواندن اندپوئینت‌های شرکتی از نقطهٔ توسعهٔ `companyApiEndpoints` و پرچم تعویض‌گر انبار از اکستنشن `companies.hasWarehouseModuleToggle`.
+      - مدیریت کاربران (`users.ts`): استخراج کلیدهای گروه‌های دسترسی و رول‌ها از نقطهٔ توسعهٔ `users.permissionGroupKeys`.
+      - اجزای مرکز عملیات و زیرساخت (`operations-cockpit.ts`، `operations-layout.ts`، `operations-sync-monitor.ts`): دریافت پیوندها، حوزه‌های پایش صف و ویجت سررسید مدارک از نقطهٔ توسعهٔ `operations`.
+      - ثبت وقایع و لاگ امنیتی (`audit.ts`): استخراج حوزه‌های اپلیکیشن از نقطهٔ توسعهٔ `audit.appScopes`.
+      - داشبورد پایش پایداری (`health-dashboard.ts`): استخراج قلمروهای پنل سلامت از نقطهٔ توسعهٔ `healthDashboard.panelScopes`.
+      - صدور کارت شناسایی (`id-cards.ts`): بررسی فعال بودن پشتیبانی کارت انبار از نقطهٔ توسعهٔ `idCards.supported`.
+      - مدیریت شرکت‌ها و راه‌اندازی اول (`companies.ts`، `company-gdrive-tab.ts`، `first-boot-wizard.ts`): استخراج تب‌ها و پرچم‌های ماژولار از نقطهٔ توسعهٔ `companies`.
+      - گاردهای دسترسی و مسیر (`auth.guard.ts`): جایگزینی تطابق‌های سخت‌کدشده با فیلتر روی ماژول‌های فعال `moduleRegistry.getInstalledModules()`.
+      - کلاینت HTTP انبار (`warehouse-http.service.ts`): بررسی ماژولار حضور انبار از طریق `moduleRegistry.getInstalledModules()`.
+      - آیکون‌های معنایی موجودیت‌ها (`semantic-icons.spec.ts`): خواندن داینامیک آیکون‌های موجودیت از `INSTALLED_MODULES`.
+    - انتقال ساختاری با `git mv`:
+      - پوشه‌های `company-switcher` و `company-selection-modal` از `modules/accounting/components/organization/` به `modules/common/components/organization/` به عنوان اجزای هسته و پوسته هلدینگ.
+      - فایل تست `all-users-permissions-dom.spec.ts` از `core/auth/` به `modules/accounting/all-users-permissions-dom.spec.ts` به عنوان تست اختصاصی نقش‌ها و مجوزهای مالی.
+    - نگارش و اجرای آزمون‌های جامع DOM برای مرکز عملیات و زیرساخت در هر سه پروفایل ماژولی (نصب کامل، فقط انبار، فقط مالی):
+      - `operations-cockpit.dom.spec.ts`: ۴ آزمون (بررسی فعال بودن ویجت مدارک در مالی، فعال بودن تنظیمات انبار، و اکشن ایجاد اسنپ‌شات).
+      - `operations-layout.dom.spec.ts`: ۴ آزمون (بررسی پیوندهای دوطرفه، ناوبری به سامانه‌ها و ارگونومی نوار کناری).
+      - `layout-modular.dom.spec.ts`: ۳ آزمون پوسته.
+      - مجموعاً ۱۱ آزمون DOM ماژولار با موفقیت کامل پاس شدند (`11 passed`).
+    - گسترش و سخت‌گیر کردن نگهبان ۵۷ (`scripts/e2e/guardian_57_front_module_fence.py`):
+      - افزودن تابع `check_module_contracts` جهت بررسی قراردادهای ساختاری:
+        ۱. وجود `module.ts` در هر پوشهٔ ماژول فرانت (به‌جز `common`).
+        ۲. برابری فیلد `code` در `module.ts` با نام پوشه ماژول.
+        ۳. برابری فیلد `code` فرانت با فیلد `code` در مانیفست بک‌اند `warehouse-backend/modules/<x>/module.py`.
+        ۴. کامل بودن `installed-modules.ts` و ایمپورت بودن تمامی ماژول‌های کشف‌شده.
+      - صفر شدن قطعی تمامی شمارنده‌های نقض و به‌روزرسانی مبنا با `--update-baseline`:
+        - `core_to_module_imports = 0` (کاهش از ۱۰ به ۰)
+        - `cross_module_imports = 0` (صفر)
+        - `is_module_installed_outside_module = 0` (کاهش از ۴۵ به ۰)
+      - پاس شدن آزمون خودکار `--self-test` با کد خروج ۰.
+    - بیلد کامل فرانت‌اند و اعتبارسنجی نهایی:
+      - اجرای `npx ng build --output-path ../scratch/ng-build-agent` با موفقیت کامل (کد خروج ۰، زمان ۱۱۲ ثانیه) بدون هیچ خطای کامپایل TypeScript و بدون هشدار NG8113.
+    - اجرای نگهبان ۵۶ (`scripts/e2e/guardian_56_change_integrity.py --base e33d4e3a213e6cc94d7964cd052f274fa4359fec`): کد خروج ۰.
+      - توجیه ۸ فایل گزارش‌شده ذیل معیار ۲: فایل‌های `company-switcher` و `company-selection-modal` با `git mv` به `modules/common/components/organization/` منتقل شدند و `all-users-permissions-dom.spec.ts` با `git mv` به `modules/accounting/` منتقل گردید؛ هیچ خط یا کامپوننتی پاک نشده است.
+  - **فرمان‌های مجاز اجراشده توسط ایجنت و خلاصه خروجی:**
+    - `python scripts/automation/verify_tools.py ng-test-compare --base e33d4e3 --include "src/**/*.spec.ts"` -> `No regression against base. HEAD: {'failed': 11, 'passed': 868} - exit 0`
+    - `npx vitest run operations-cockpit.dom.spec.ts operations-layout.dom.spec.ts layout-modular.dom.spec.ts` -> `Test Files 3 passed (3) | Tests 11 passed (11) - exit 0`
+    - `npx ng build --output-path ../scratch/ng-build-agent` -> `Application bundle generation complete. [112.710 seconds] - exit 0`
+    - `python scripts/e2e/guardian_57_front_module_fence.py --update-baseline` -> `core_to_module_imports=0, cross_module_imports=0, is_module_installed_outside_module=0, contracts=OK - exit 0`
+    - `python scripts/e2e/guardian_57_front_module_fence.py --self-test` -> `✅ خودآزمایی نگهبان ۵۷ (--self-test): نقض ساختگی و قراردادهای ماژول با موفقیت راستی‌آزمایی شدند. - exit 0`
+    - `python scripts/e2e/guardian_56_change_integrity.py --base e33d4e3a213e6cc94d7964cd052f274fa4359fec` -> `🎉 نگهبان ۵۶: تغییرات قالب سالم است. - exit 0`
+  - **تفکیک سه لیست ارزیابی:**
+    1. **راستی‌آزمایی‌شده با فرمان (Verified by Command):**
+       - بیلد کامل تولیدی فرانت‌اند (`ng build` با خروجی به `scratch/ng-build-agent`) بدون هیچ خطای کامپایلر.
+       - نگهبان ۵۷ با بررسی‌های قرارداد ساختاری ماژول‌ها و خط مبنای کاملاً صفر (`0, 0, 0`).
+       - خودآزمایی نگهبان ۵۷ (`--self-test`) با کد خروج ۰.
+       - نگهبان ۵۶ (بررسی یکپارچگی تغییرات و حفظ قالب‌ها نسبت به پایه نشست) با کد خروج ۰.
+       - اعتبارسنجی مقایسه‌ای کامل کل آزمون‌های پروژه در برابر شاخه مبنا (`verify_tools.py ng-test-compare --base e33d4e3`): بدون کوچک‌ترین پس‌رفت و قبولی ۸۶۸ آزمون (`No regression against base. HEAD: {'failed': 11, 'passed': 868}`).
+       - ۱۱ آزمون DOM ماژولار در محیط jsdom با Vitest.
+    2. **اجرانشده (Not Run) و دلیل:**
+       - مهاجرت دیتابیس / تست‌های بک‌اند: این نشست صرفاً بازآرایی نقطه‌های توسعه فرانت‌اند و ایزولاسیون مرزهای کلاینت بوده و کدهای بک‌اند تغییری نداشتند.
+    3. **ناحیه‌های تست‌نشده پشت ورود (Unverified Behind Login — چک‌لیست ۳۶۰px برای کاربر):**
+       - [ ] باز کردن نمای موبایل (عرض ۳۶۰px) در آدرس `/app/operations/cockpit`: بررسی نمایش سالم کارت‌های شاخص سلامت، وضعیت حافظه آفلاین و دکمه اسنپ‌شات فوری بدون اسکرول افقی.
+       - [ ] باز کردن سایدبار مرکز عملیات در ۳۶۰px: بررسی عدم شکست دکمه‌های پیوند به انبارداری و مالی و منوی تاشو.
+       - [ ] ورود با نقش مدیر در `/app/finance/settings`: باز کردن تب تنظیمات پرسنلی و فیلتر حوزه انبار و اطمینان از عملکرد روان فرم‌ها.
+       - [ ] ورود به مدیریت کاربران در `/app/operations/users`: بررسی رندر شدن چک‌باکس‌ها و گروه‌های دسترسی ماژول‌ها در مودال کاربر.
+       - [ ] بررسی سوییچر شرکت‌ها در هدر: انتخاب شرکت با ماژول انبار فعال و شرکت بدون ماژول انبار و بررسی واکنش پویای آیتم‌های سایدبار.
+  - **آنچه به runner و ناظر می‌ماند:**
+    - runner: اجرای بیلد با `build:modules`، بررسی استقرار و ایجاد کامیت در صورت تایید.
+    - ناظر (Claude): بررسی صفحه ورود روی ۴۳۰۰، بازبین‌های `ui-reviewer` و اعمال انتشار روی `app`.
 
 </div>
 

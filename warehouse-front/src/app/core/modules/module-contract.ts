@@ -28,6 +28,7 @@ export interface ModuleNavItem {
   permission: string;
   module?: 'warehouse' | 'accounting' | 'platform' | string;
   isAccounting?: boolean;
+  isPending?: boolean;
 }
 
 /**
@@ -133,6 +134,11 @@ export interface ExtensionMap {
     companiesEndpoint?: string;
     accessEndpoint?: string;
   };
+
+  /**
+   * ۱۲. کامپوننت طراح لیبل ماژول انبار — مصرف در settings-label-tab.ts
+   */
+  labelDesignerComponent?: any;
 }
 
 /**

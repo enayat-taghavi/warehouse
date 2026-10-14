@@ -1,12 +1,18 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LabelDesigner } from '../../../../../warehouse/components/label-designer/label-designer';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
+import { ModuleRegistryService } from '../../../../../../core/modules/module-registry.service';
 
 @Component({
   selector: 'app-settings-label-tab',
   standalone: true,
-  imports: [CommonModule, LabelDesigner, SvgIconDirective],
+  imports: [CommonModule, SvgIconDirective],
   templateUrl: './settings-label-tab.html'
 })
-export class SettingsLabelTabComponent {}
+export class SettingsLabelTabComponent {
+  private moduleRegistry = inject(ModuleRegistryService);
+
+  get labelDesignerComponent() {
+    return this.moduleRegistry.getSpec('warehouse')?.extensions?.labelDesignerComponent;
+  }
+}

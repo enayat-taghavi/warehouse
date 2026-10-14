@@ -241,7 +241,7 @@ export class IdCards implements OnInit {
   constructor() {}
 
   get isWarehouseInstalled(): boolean {
-    return this.registry.isModuleInstalled('warehouse');
+    return this.registry.getExtensions('idCards').some(e => e.extension.supported);
   }
 
   get isWarehouseScope(): boolean {

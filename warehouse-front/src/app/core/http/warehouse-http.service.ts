@@ -38,10 +38,14 @@ export class WarehouseHttpService {
   private baseUrl = `${environment.apiUrl}/warehouses/`;
   private moduleRegistry = inject(ModuleRegistryService);
 
+  private get isWarehouseAvailable(): boolean {
+    return this.moduleRegistry.getInstalledModules().some(m => m.scopeKind === 'warehouse');
+  }
+
   constructor(private http: HttpClient) {}
 
   getAll(companyId?: number): Observable<Warehouse[]> {
-    if (!this.moduleRegistry.isModuleInstalled('warehouse')) {
+    if (!this.isWarehouseAvailable) {
       return of([]);
     }
     let url = this.baseUrl;
@@ -54,14 +58,14 @@ export class WarehouseHttpService {
   }
 
   getById(id: number): Observable<Warehouse> {
-    if (!this.moduleRegistry.isModuleInstalled('warehouse')) {
+    if (!this.isWarehouseAvailable) {
       return EMPTY;
     }
     return this.http.get<Warehouse>(`${this.baseUrl}${id}/`);
   }
 
   create(data: Partial<Warehouse>): Observable<Warehouse> {
-    if (!this.moduleRegistry.isModuleInstalled('warehouse')) {
+    if (!this.isWarehouseAvailable) {
       return EMPTY;
     }
     return this.http.post<Warehouse>(this.baseUrl, data).pipe(
@@ -70,7 +74,7 @@ export class WarehouseHttpService {
   }
 
   update(id: number, data: Partial<Warehouse>): Observable<Warehouse> {
-    if (!this.moduleRegistry.isModuleInstalled('warehouse')) {
+    if (!this.isWarehouseAvailable) {
       return EMPTY;
     }
     return this.http.patch<Warehouse>(`${this.baseUrl}${id}/`, data).pipe(
@@ -79,7 +83,7 @@ export class WarehouseHttpService {
   }
 
   delete(id: number): Observable<void> {
-    if (!this.moduleRegistry.isModuleInstalled('warehouse')) {
+    if (!this.isWarehouseAvailable) {
       return EMPTY;
     }
     return this.http.delete<void>(`${this.baseUrl}${id}/`).pipe(
@@ -88,7 +92,7 @@ export class WarehouseHttpService {
   }
 
   toggleArchive(id: number): Observable<Warehouse> {
-    if (!this.moduleRegistry.isModuleInstalled('warehouse')) {
+    if (!this.isWarehouseAvailable) {
       return EMPTY;
     }
     return this.http.patch<Warehouse>(`${this.baseUrl}${id}/toggle_archive/`, {}).pipe(
@@ -98,14 +102,14 @@ export class WarehouseHttpService {
 
   // ── Excel Import/Export ────────────────────────────────────────────
   exportExcel(): Observable<Blob> {
-    if (!this.moduleRegistry.isModuleInstalled('warehouse')) {
+    if (!this.isWarehouseAvailable) {
       return EMPTY;
     }
     return this.http.get(`${this.baseUrl}export_excel/`, { responseType: 'blob' });
   }
 
   importExcel(file: File): Observable<ImportResult> {
-    if (!this.moduleRegistry.isModuleInstalled('warehouse')) {
+    if (!this.isWarehouseAvailable) {
       return EMPTY;
     }
     const formData = new FormData();
@@ -114,7 +118,7 @@ export class WarehouseHttpService {
   }
 
   downloadTemplate(): Observable<Blob> {
-    if (!this.moduleRegistry.isModuleInstalled('warehouse')) {
+    if (!this.isWarehouseAvailable) {
       return EMPTY;
     }
     return this.http.get(`${this.baseUrl}download_template/`, { responseType: 'blob' });

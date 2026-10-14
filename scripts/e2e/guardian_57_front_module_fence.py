@@ -223,6 +223,86 @@ def save_baseline(counters, violations):
     BASELINE_FILE.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def check_module_contracts(app_dir=FRONT_APP_DIR, repo_root=REPO_ROOT):
+    """
+    بررسی‌های قرارداد ساختاری ماژول‌ها طبق گام ۴ طرح راه میانهٔ ماژولار:
+      ۱. وجود module.ts در هر پوشهٔ ماژول فرانت (به‌جز common).
+      ۲. برابری code در module.ts با نام پوشه.
+      ۳. برابری code ماژول فرانت با code در warehouse-backend/modules/<x>/module.py.
+      ۴. کامل بودن installed-modules.ts (شامل همهٔ پوشه‌های ماژول‌های کشف‌شده).
+    """
+    errors = []
+    modules_dir = app_dir / "modules"
+    if not modules_dir.exists():
+        errors.append("پوشهٔ modules در فرانت‌اند یافت نشد.")
+        return errors
+
+    discovered = sorted([d for d in modules_dir.iterdir() if d.is_dir() and d.name != "common"], key=lambda d: d.name)
+    if not discovered:
+        errors.append("هیچ ماژولی در پوشهٔ modules یافت نشد.")
+        return errors
+
+    backend_modules_dir = repo_root / "warehouse-backend" / "modules"
+
+    for mod_dir in discovered:
+        mod_name = mod_dir.name
+        # ۱. وجود module.ts
+        mod_file = mod_dir / "module.ts"
+        if not mod_file.exists():
+            errors.append(f"ماژول '{mod_name}' فاقد فایل قرارداد module.ts است ({mod_file.relative_to(repo_root)}).")
+            continue
+
+        try:
+            content = mod_file.read_text(encoding="utf-8")
+        except Exception as e:
+            errors.append(f"خطا در خواندن {mod_file}: {e}")
+            continue
+
+        # ۲. برابری code با نام پوشه
+        m = re.search(r"""\bcode\s*:\s*['"]([^'"]+)['"]""", content)
+        if not m:
+            errors.append(f"فیلد code در {mod_file.relative_to(repo_root)} یافت نشد.")
+            front_code = None
+        else:
+            front_code = m.group(1).strip()
+            if front_code != mod_name:
+                errors.append(f"کد ماژول '{front_code}' در {mod_file.relative_to(repo_root)} با نام پوشه '{mod_name}' تطابق ندارد.")
+
+        # ۳. برابری با بک‌اند
+        b_mod_file = backend_modules_dir / mod_name / "module.py"
+        if b_mod_file.exists():
+            try:
+                b_content = b_mod_file.read_text(encoding="utf-8")
+                bm = re.search(r"""\bcode\s*=\s*['"]([^'"]+)['"]""", b_content)
+                if not bm:
+                    errors.append(f"فیلد code در ماژول بک‌اند {b_mod_file.relative_to(repo_root)} یافت نشد.")
+                else:
+                    backend_code = bm.group(1).strip()
+                    if front_code and backend_code != front_code:
+                        errors.append(f"عدم تطابق کد ماژول: فرانت '{front_code}' با بک‌اند '{backend_code}' برابر نیست.")
+            except Exception as e:
+                errors.append(f"خطا در خواندن ماژول بک‌اند {b_mod_file}: {e}")
+        else:
+            errors.append(f"ماژول متناظر در بک‌اند یافت نشد: {b_mod_file.relative_to(repo_root)}")
+
+    # ۴. کامل بودن installed-modules.ts
+    installed_file = modules_dir / "installed-modules.ts"
+    if not installed_file.exists():
+        errors.append(f"فایل installed-modules.ts یافت نشد ({installed_file.relative_to(repo_root)}).")
+    else:
+        try:
+            inst_text = installed_file.read_text(encoding="utf-8")
+            for mod_dir in discovered:
+                mod_name = mod_dir.name
+                expected_import = f"./{mod_name}/module"
+                if expected_import not in inst_text:
+                    errors.append(f"ماژول '{mod_name}' در installed-modules.ts ایمپورت نشده است ({expected_import}).")
+        except Exception as e:
+            errors.append(f"خطا در خواندن installed-modules.ts: {e}")
+
+    return errors
+
+
 def run_self_test():
     """
     آزمون خودکار: ایجاد یک فایل نقض ساختگی در scratch/، اجرای پویش،
@@ -244,8 +324,14 @@ def run_self_test():
         found_import = any(v["file"] == dummy_file.name for v in violations["core_to_module_imports"])
         found_call = any(v["file"] == dummy_file.name for v in violations["is_module_installed_outside_module"])
 
+        # آزمون قراردادهای ماژول
+        contract_errors = check_module_contracts()
+        if contract_errors:
+            print(f"❌ خودآزمایی قرارداد ماژول‌ها با خطا مواجه شد: {contract_errors}")
+            return 1
+
         if found_import and found_call:
-            print("✅ خودآزمایی نگهبان ۵۷ (--self-test): نقض ساختگی با موفقیت کشف و راستی‌آزمایی شد.")
+            print("✅ خودآزمایی نگهبان ۵۷ (--self-test): نقض ساختگی و قراردادهای ماژول با موفقیت راستی‌آزمایی شدند.")
             return 0
         else:
             print(f"❌ خودآزمایی شکست خورد: found_import={found_import}, found_call={found_call}")
@@ -305,7 +391,20 @@ def main():
 
     print("-" * 74)
 
+    # بررسی قرارداد ساختاری ماژول‌ها طبق گام ۴
+    contract_errors = check_module_contracts()
+    print("📋 بررسی قرارداد ساختاری ماژول‌ها (module.ts، تطابق با بک‌اند، installed-modules.ts):")
+    if not contract_errors:
+        print("   🟢 کلیه قراردادهای ساختاری ماژول‌ها برقرار و معتبرند.")
+    else:
+        for err in contract_errors:
+            print(f"   ❌ {err}")
+    print("-" * 74)
+
     passed = True
+    if contract_errors:
+        passed = False
+
     if baseline is None or args.update_baseline:
         save_baseline(counters, violations)
         print(f"📌 snapshot مبنا ثبت شد: {BASELINE_FILE.relative_to(REPO_ROOT)}")

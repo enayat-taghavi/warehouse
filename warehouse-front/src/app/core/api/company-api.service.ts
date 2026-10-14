@@ -28,8 +28,9 @@ export class CompanyApiService {
    * (/personnel/companies) شمار پروژه‌ها، مدارک، حساب‌های بانکی و هیئت‌مدیره را هم برمی‌گرداند.
    */
   private get endpoint(): string {
-    return this.moduleRegistry.isModuleInstalled('accounting')
-      ? `${environment.apiUrl}/personnel/companies`
+    const ep = this.moduleRegistry.getExtensions('companyApiEndpoints')[0]?.extension;
+    return ep?.companiesEndpoint
+      ? `${environment.apiUrl}${ep.companiesEndpoint}`
       : `${environment.apiUrl}/org/companies`;
   }
 
@@ -38,8 +39,9 @@ export class CompanyApiService {
    * نگه داشته می‌شود تا کلید کش آفلاین و نشانیِ درخواست‌های صف‌شدهٔ قبلی عوض نشود.
    */
   private get accessEndpoint(): string {
-    return this.moduleRegistry.isModuleInstalled('accounting')
-      ? `${environment.apiUrl}/personnel/user-company-access`
+    const ep = this.moduleRegistry.getExtensions('companyApiEndpoints')[0]?.extension;
+    return ep?.accessEndpoint
+      ? `${environment.apiUrl}${ep.accessEndpoint}`
       : `${environment.apiUrl}/org/user-company-access`;
   }
 

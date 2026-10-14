@@ -3,12 +3,12 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { signal, Injector } from '@angular/core';
 import { Router } from '@angular/router';
-import { AppPersonaService } from '../services/app-persona.service';
-import { AuthService } from './auth.service';
-import { hasRoutePermission } from './auth.guard';
-import { ModuleRegistryService } from '../modules/module-registry.service';
-import { WebSocketService } from '../http/websocket.service';
-import { SessionTabService } from '../services/session-tab.service';
+import { AppPersonaService } from '../../core/services/app-persona.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { hasRoutePermission } from '../../core/auth/auth.guard';
+import { ModuleRegistryService } from '../../core/modules/module-registry.service';
+import { WebSocketService } from '../../core/http/websocket.service';
+import { SessionTabService } from '../../core/services/session-tab.service';
 import {
   NavItem,
   ORG_ADMIN_NAV_ITEMS,
@@ -24,7 +24,7 @@ import {
   MANAGER_ROLE_MARKERS,
   TREASURER_ROLE_MARKERS,
   filterRoleNavItems
-} from '../../modules/accounting/nav-items';
+} from './nav-items';
 
 // switchRole نقش فعال را در localStorage می‌نویسد؛ محیط آزمون آن را ندارد
 function createStorageMock() {

@@ -2,6 +2,8 @@ import { WhFrontendModule } from '../../core/modules/module-contract';
 import { WAREHOUSE_SYSTEM_NAV_ITEMS, WAREHOUSE_CONTEXT_NAV_ITEMS } from './nav-items';
 import { WAREHOUSE_ENTITY_ICONS } from './entity-icons';
 
+import { LabelDesigner } from './components/label-designer/label-designer';
+
 /**
  * مانیفست رسمی و مستقل ماژول انبارداری و ره‌گیری کالا (Front-End Module Manifest)
  */
@@ -75,6 +77,7 @@ export const MODULE: WhFrontendModule = {
     },
     crossModuleFilters: {
       warehouseScopeFilter: true
-    }
+    },
+    labelDesignerComponent: LabelDesigner
   }
 };

@@ -12,7 +12,8 @@ export const WarehouseModuleMatchGuard: CanMatchFn = () => {
   const moduleRegistry = inject(ModuleRegistryService);
   const activeCompany = inject(ActiveCompanyService, { optional: true });
 
-  if (!moduleRegistry.isModuleInstalled('warehouse')) {
+  const hasWh = moduleRegistry.getInstalledModules().some(m => m.scopeKind === 'warehouse');
+  if (!hasWh) {
     return false;
   }
   if (activeCompany?.activeCompany && activeCompany.activeCompany.has_warehouse_module === false) {
@@ -40,7 +41,7 @@ export const WarehouseCompanyGuard: CanActivateFn = () => {
  */
 export const AccountingModuleMatchGuard: CanMatchFn = () => {
   const moduleRegistry = inject(ModuleRegistryService);
-  return moduleRegistry.isModuleInstalled('accounting');
+  return moduleRegistry.getInstalledModules().some(m => m.scopeKind === 'finance');
 };
 
 /**
@@ -233,15 +234,19 @@ export const AuthGuard: CanActivateFn = (route, state) => {
     const hasWarehouseAccess = isAdmin || WAREHOUSE_PERMISSIONS.some(p => userPerms.includes(p));
     const hasPersonnelAccess = isAdmin || PERSONNEL_PERMISSIONS.some(p => userPerms.includes(p));
 
+    const installed = moduleRegistry.getInstalledModules();
+    const whModule = installed.find(m => m.scopeKind === 'warehouse');
+    const accModule = installed.find(m => m.scopeKind === 'finance');
+
     // بررسی دسترسی به سطح ماژول انبار (هم نصب بودن ماژول و هم مجوز دسترسی کاربر)
     const isWarehouseScope = state.url.includes('/app/warehouse') || route.routeConfig?.path === 'warehouse';
     if (isWarehouseScope) {
-      if (!moduleRegistry.isModuleInstalled('warehouse')) {
-        return router.parseUrl(moduleRegistry.isModuleInstalled('accounting') ? '/app/finance' : '/app/launcher');
+      if (!whModule) {
+        return router.parseUrl(accModule ? accModule.defaultRoute : '/app/launcher');
       }
       if (!hasWarehouseAccess) {
-        if (hasPersonnelAccess && moduleRegistry.isModuleInstalled('accounting')) {
-          return router.parseUrl('/app/finance');
+        if (hasPersonnelAccess && accModule) {
+          return router.parseUrl(accModule.defaultRoute);
         }
         return router.parseUrl('/login');
       }
@@ -252,19 +257,19 @@ export const AuthGuard: CanActivateFn = (route, state) => {
     const isCompanyDocsRoute = state.url.includes('company-documents') || state.url.includes('/documents') || route.routeConfig?.path === 'company-documents' || route.routeConfig?.path === 'documents';
 
     if (isFinanceScope) {
-      if (!moduleRegistry.isModuleInstalled('accounting')) {
-        return router.parseUrl(moduleRegistry.isModuleInstalled('warehouse') ? '/app/warehouse/dashboard' : '/app/launcher');
+      if (!accModule) {
+        return router.parseUrl(whModule ? whModule.defaultRoute : '/app/launcher');
       }
       if (isCompanyDocsRoute) {
         // دسترسی به اسناد شرکت‌ها فارغ از شغل کاربری و فقط منوط به داشتن دسترسی در حداقل یک شرکت است
         const activeCompanyService = inject(ActiveCompanyService);
         const hasDocAccess = isAdmin || activeCompanyService.hasCompanyDocumentsAccess();
         if (!hasDocAccess) {
-          return router.parseUrl(hasWarehouseAccess ? '/app/warehouse/dashboard' : '/app/launcher');
+          return router.parseUrl(hasWarehouseAccess && whModule ? whModule.defaultRoute : '/app/launcher');
         }
       } else if (!hasPersonnelAccess) {
-        if (hasWarehouseAccess && moduleRegistry.isModuleInstalled('warehouse')) {
-          return router.parseUrl('/app/warehouse/dashboard');
+        if (hasWarehouseAccess && whModule) {
+          return router.parseUrl(whModule.defaultRoute);
         }
         return router.parseUrl('/login');
       }

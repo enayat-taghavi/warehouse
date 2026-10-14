@@ -162,11 +162,11 @@ export class Audit implements OnInit, OnDestroy {
   }
 
   get isWarehouseInstalled(): boolean {
-    return this.personaService.moduleRegistry.isModuleInstalled('warehouse');
+    return this.personaService.moduleRegistry.getExtensions('audit').some(e => e.extension.appScopes?.includes('warehouse'));
   }
 
   get isAccountingInstalled(): boolean {
-    return this.personaService.moduleRegistry.isModuleInstalled('accounting');
+    return this.personaService.moduleRegistry.getExtensions('audit').some(e => e.extension.appScopes?.includes('finance'));
   }
 
   public readonly BRANDING = BRANDING;

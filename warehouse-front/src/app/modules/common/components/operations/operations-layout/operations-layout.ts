@@ -10,8 +10,8 @@ import { AppRoleSwitcherComponent } from '../../../../../shared/components/app-r
 import { OfflinePendingBadgeComponent } from '../../../../../shared/components/offline-pending-badge/offline-pending-badge.component';
 import { ChatDrawerComponent } from '../../communications/chat-drawer/chat-drawer.component';
 import { UserMenuComponent } from '../../../../../shared/components/user-menu/user-menu.component';
-import { CompanySwitcherComponent } from '../../../../accounting/components/organization/company-switcher/company-switcher';
-import { CompanySelectionModalComponent } from '../../../../accounting/components/organization/company-selection-modal/company-selection-modal';
+import { CompanySwitcherComponent } from '../../organization/company-switcher/company-switcher';
+import { CompanySelectionModalComponent } from '../../organization/company-selection-modal/company-selection-modal';
 import { FirstBootWizardComponent } from '../first-boot-wizard/first-boot-wizard';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
 import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
@@ -58,11 +58,12 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
   private router = inject(Router);
 
   get showWarehouseLink(): boolean {
-    return this.activeCompanyService?.hasWarehouseModuleSignal?.() ?? this.moduleRegistry.isModuleInstalled('warehouse');
+    const hasOpsLink = this.moduleRegistry.getExtensions('operations').some(e => e.extension.syncMonitorScope === 'warehouse');
+    return this.activeCompanyService?.hasWarehouseModuleSignal?.() ?? hasOpsLink;
   }
 
   get showAccountingLink(): boolean {
-    return this.moduleRegistry.isModuleInstalled('accounting');
+    return this.moduleRegistry.getExtensions('operations').some(e => e.extension.syncMonitorScope === 'accounting');
   }
 
   get hasAnyConnectedModule(): boolean {

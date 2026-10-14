@@ -405,11 +405,13 @@ export class Users implements OnInit, OnDestroy {
   }
 
   hasInventoryModule(): boolean {
-    return this.registry.isModuleInstalled('warehouse') && this.systemPermissionGroups.some(g => g.key === 'WH_AUDIT');
+    const hasAuditGroup = this.registry.getExtensions('users').some(e => e.extension.permissionGroupKeys?.includes('WH_AUDIT'));
+    return hasAuditGroup && this.systemPermissionGroups.some(g => g.key === 'WH_AUDIT');
   }
 
   hasAccountingModule(): boolean {
-    return this.registry.isModuleInstalled('accounting') && this.systemPermissionGroups.some(g => g.key === 'ACCOUNTING_FINANCE');
+    const hasAccGroup = this.registry.getExtensions('users').some(e => e.extension.permissionGroupKeys?.includes('ACCOUNTING_FINANCE'));
+    return hasAccGroup && this.systemPermissionGroups.some(g => g.key === 'ACCOUNTING_FINANCE');
   }
 
   get visiblePermissionGroups() {

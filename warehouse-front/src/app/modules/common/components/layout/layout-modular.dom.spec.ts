@@ -71,7 +71,13 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
               moduleCode: 'warehouse',
               extension: {
                 showWarehouseSwitcher: true,
-                defaultExitRoute: '/app/warehouse/projects'
+                defaultExitRoute: '/app/warehouse/projects',
+                primaryItems: [
+                  { id: 'dashboard', label: 'داشبورد', icon: 'grid', permission: 'view_wh_dashboard' }
+                ],
+                contextItems: [
+                  { id: 'items', label: 'کالاها', icon: 'package', permission: 'view_wh_dashboard' }
+                ]
               }
             },
             {

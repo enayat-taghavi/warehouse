@@ -121,6 +121,7 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
   let mockConfirmDialog: any;
   let mockRouter: any;
   let queryParamsSubject: Subject<any>;
+  let activeModuleList: string[];
 
   beforeEach(async () => {
     queryParamsSubject = new Subject();
@@ -198,10 +199,24 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
       isCurrentActive: vi.fn().mockReturnValue(true)
     };
 
+    activeModuleList = ['warehouse', 'accounting'];
     mockRegistry = {
-      isModuleActive: vi.fn().mockReturnValue(true),
-      isModuleInstalled: vi.fn().mockReturnValue(true),
-      permissionMarkers: vi.fn().mockReturnValue([])
+      isModuleActive: vi.fn().mockImplementation((c: string) => activeModuleList.includes(c)),
+      isModuleInstalled: vi.fn().mockImplementation((c: string) => activeModuleList.includes(c)),
+      permissionMarkers: vi.fn().mockReturnValue([]),
+      getExtensions: vi.fn().mockImplementation((point: string) => {
+        if (point === 'users') {
+          const list: any[] = [];
+          if (activeModuleList.includes('warehouse')) {
+            list.push({ moduleCode: 'warehouse', extension: { permissionGroupKeys: ['WH_AUDIT', 'SENSITIVE'] } });
+          }
+          if (activeModuleList.includes('accounting')) {
+            list.push({ moduleCode: 'accounting', extension: { permissionGroupKeys: ['ACCOUNTING_FINANCE'] } });
+          }
+          return list;
+        }
+        return [];
+      })
     };
 
     mockConfirmDialog = {
@@ -835,7 +850,7 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
     });
 
     it('در حالت تک‌ماژول بدون مالی (فقط انبارداری)، hasAccountingModule باید false باشد و تب مالی مخفی بماند (L10)', () => {
-      mockRegistry.isModuleInstalled.mockImplementation((c: string) => c === 'warehouse');
+      activeModuleList = ['warehouse'];
       expect(component.hasAccountingModule()).toBe(false);
       expect(component.hasInventoryModule()).toBe(true);
 
@@ -848,7 +863,7 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
     });
 
     it('در حالت تک‌ماژول بدون انبارداری (فقط مالی)، hasInventoryModule باید false باشد و متون به پروژه تغییر یابند (L11)', () => {
-      mockRegistry.isModuleInstalled.mockImplementation((c: string) => c === 'accounting');
+      activeModuleList = ['accounting'];
       expect(component.hasInventoryModule()).toBe(false);
       expect(component.hasAccountingModule()).toBe(true);
 

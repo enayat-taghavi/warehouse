@@ -60,8 +60,23 @@ describe('HealthDashboard DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () =
       runConcurrencyStressTest: vi.fn().mockResolvedValue({})
     };
 
+    let activeScopes: string[] = ['warehouse', 'accounting'];
+
     mockRegistry = {
-      isModuleInstalled: vi.fn().mockReturnValue(true)
+      isModuleInstalled: vi.fn().mockImplementation((code: string) => activeScopes.includes(code)),
+      getExtensions: vi.fn().mockImplementation((point: string) => {
+        if (point === 'healthDashboard') {
+          const list: any[] = [];
+          if (activeScopes.includes('warehouse')) {
+            list.push({ module: { code: 'warehouse' }, extension: { panelScopes: ['warehouse'] } });
+          }
+          if (activeScopes.includes('accounting')) {
+            list.push({ module: { code: 'accounting' }, extension: { panelScopes: ['accounting'] } });
+          }
+          return list;
+        }
+        return [];
+      })
     };
 
     mockPersona = {
@@ -108,7 +123,12 @@ describe('HealthDashboard DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () =
   });
 
   it('در حالت تک‌ماژول حسابداری (بدون انبار)، detectScope قلمرو مالی را انتخاب کرده و رکوردهای انبار نمایش داده نمی‌شوند (L20)', () => {
-    mockRegistry.isModuleInstalled.mockImplementation((code: string) => code === 'accounting');
+    mockRegistry.getExtensions.mockImplementation((point: string) => {
+      if (point === 'healthDashboard') {
+        return [{ module: { code: 'accounting' }, extension: { panelScopes: ['accounting'] } }];
+      }
+      return [];
+    });
     component.detectScope();
     fixture.detectChanges();
 
@@ -124,7 +144,12 @@ describe('HealthDashboard DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () =
   });
 
   it('در حالت تک‌ماژول انبارداری (بدون مالی)، detectScope قلمرو انبار را انتخاب کرده و گزینه‌های خزانه‌داری پنهان می‌مانند (L20)', () => {
-    mockRegistry.isModuleInstalled.mockImplementation((code: string) => code === 'warehouse');
+    mockRegistry.getExtensions.mockImplementation((point: string) => {
+      if (point === 'healthDashboard') {
+        return [{ module: { code: 'warehouse' }, extension: { panelScopes: ['warehouse'] } }];
+      }
+      return [];
+    });
     component.detectScope();
     fixture.detectChanges();
 
@@ -141,7 +166,6 @@ describe('HealthDashboard DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () =
 
   it('در نصب کامل روی مسیر انبار، سناریوی پیش‌فرض همان «ترکیبی» می‌ماند (بند ۳-۱: نصب کامل بی‌تغییر)', () => {
     mockRouter.url = '/app/warehouse/health';
-    mockRegistry.isModuleInstalled.mockReturnValue(true);
     component.detectScope();
 
     expect(component.appScope).toBe('warehouse');

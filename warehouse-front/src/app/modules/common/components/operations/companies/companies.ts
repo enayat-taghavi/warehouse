@@ -640,12 +640,12 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   /** در نصب «فقط انبار» تب‌ها و بخش‌های حسابداری شرکت پنهان‌اند */
   get isAccountingInstalled(): boolean {
-    return this.moduleRegistry.isModuleInstalled('accounting');
+    return this.moduleRegistry.getExtensions('companies').some(e => (e.extension.tabs?.length ?? 0) > 0);
   }
 
   /** در نصب «فقط مالی» ستون‌ها، فیلدها و تب‌های انبارداری شرکت پنهان‌اند */
   get isWarehouseInstalled(): boolean {
-    return this.moduleRegistry.isModuleInstalled('warehouse');
+    return this.moduleRegistry.getExtensions('companies').some(e => e.extension.hasWarehouseModuleToggle);
   }
 
   /** تعداد ستون‌های پویا: ۸ پایه + ۲ حسابداری + ۱ انبار */

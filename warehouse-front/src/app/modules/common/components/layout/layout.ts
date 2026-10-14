@@ -22,20 +22,14 @@ import { CommunicationService } from '../../../../core/services/communication.se
 import { WebSocketService } from '../../../../core/http/websocket.service';
 import { AppPersonaService } from '../../../../core/services/app-persona.service';
 import { AppRoleSwitcherComponent } from '../../../../shared/components/app-role-switcher/app-role-switcher.component';
-import { CompanySwitcherComponent } from '../../../accounting/components/organization/company-switcher/company-switcher';
-import { CompanySelectionModalComponent } from '../../../accounting/components/organization/company-selection-modal/company-selection-modal';
+import { CompanySwitcherComponent } from '../organization/company-switcher/company-switcher';
+import { CompanySelectionModalComponent } from '../organization/company-selection-modal/company-selection-modal';
 import { ActiveCompanyService } from '../../../../core/services/active-company.service';
 import { FirstBootWizardComponent } from '../operations/first-boot-wizard/first-boot-wizard';
 import { environment } from '../../../../../environments/environment';
-
-import { WAREHOUSE_SYSTEM_NAV_ITEMS, WAREHOUSE_CONTEXT_NAV_ITEMS } from '../../../warehouse/nav-items';
-import {
-  NavItem, filterRoleNavItems,
-  ORG_ADMIN_NAV_ITEMS, EMPLOYEE_NAV_ITEMS, SUPERVISOR_NAV_ITEMS, ACCOUNTANT_NAV_ITEMS, MANAGER_NAV_ITEMS, TREASURER_NAV_ITEMS,
-  ORG_ADMIN_ROLE_MARKERS, EMPLOYEE_ROLE_MARKERS, SUPERVISOR_ROLE_MARKERS, ACCOUNTANT_ROLE_MARKERS, MANAGER_ROLE_MARKERS, TREASURER_ROLE_MARKERS
-} from '../../../accounting/nav-items';
 import { hasRoutePermission } from '../../../../core/auth/auth.guard';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
+import { ModuleNavItem } from '../../../../core/modules/module-contract';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { IconName } from '../../../../shared/icons/icon-registry';
 import { NotificationCenterComponent } from '../../../../shared/components/notification-center/notification-center.component';
@@ -518,32 +512,41 @@ export class Layout implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  private SYSTEM_NAV_ITEMS: any[] = [
-    ...WAREHOUSE_SYSTEM_NAV_ITEMS
-  ];
-
-  /**
-   * آکاردئون هر منوی نقش و شناسه صفحه‌هایی که با ورود به آن‌ها باید باز شود
-   * (آیتم‌های منو به‌علاوه صفحه‌های همان نقش که در منو نیستند).
-   */
-  private readonly ROLE_MENU_TABS: { tabs: string[]; open: () => void }[] = [
-    { tabs: ORG_ADMIN_NAV_ITEMS.map(i => i.id), open: () => (this.isOrgAdminMenuOpen = true) },
-    { tabs: EMPLOYEE_NAV_ITEMS.map(i => i.id), open: () => (this.isEmployeeMenuOpen = true) },
-    { tabs: [...SUPERVISOR_NAV_ITEMS.map(i => i.id), 'supervisor-attendance', 'supervisor-new-profiles'], open: () => (this.isSupervisorMenuOpen = true) },
-    { tabs: [...ACCOUNTANT_NAV_ITEMS.map(i => i.id), 'accountant-new-profiles'], open: () => (this.isAccountantMenuOpen = true) },
-    { tabs: [...MANAGER_NAV_ITEMS.map(i => i.id), 'manager-contracts'], open: () => (this.isManagerMenuOpen = true) },
-    { tabs: TREASURER_NAV_ITEMS.map(i => i.id), open: () => (this.isTreasurerMenuOpen = true) },
-  ];
+  private getRoleNavConfig(role: string): { items: ModuleNavItem[]; roleMarkers: string[] } | null {
+    for (const e of this.moduleRegistry.getExtensions('layoutNav')) {
+      const found = e.extension.roleMenus?.find(m => m.role === role);
+      if (found) return found;
+    }
+    return null;
+  }
 
   private openRoleMenusForTab(tab: string): void {
-    for (const menu of this.ROLE_MENU_TABS) {
-      if (menu.tabs.includes(tab)) menu.open();
+    const roleMenuTabs: { role: string; extraTabs: string[]; open: () => void }[] = [
+      { role: 'org_admin', extraTabs: [], open: () => (this.isOrgAdminMenuOpen = true) },
+      { role: 'operator', extraTabs: [], open: () => (this.isEmployeeMenuOpen = true) },
+      { role: 'supervisor', extraTabs: ['supervisor-attendance', 'supervisor-new-profiles'], open: () => (this.isSupervisorMenuOpen = true) },
+      { role: 'accountant', extraTabs: ['accountant-new-profiles'], open: () => (this.isAccountantMenuOpen = true) },
+      { role: 'manager', extraTabs: ['manager-contracts'], open: () => (this.isManagerMenuOpen = true) },
+      { role: 'treasury', extraTabs: [], open: () => (this.isTreasurerMenuOpen = true) },
+    ];
+    for (const menu of roleMenuTabs) {
+      const cfg = this.getRoleNavConfig(menu.role);
+      const tabs = [...(cfg?.items.map(i => i.id) || []), ...menu.extraTabs];
+      if (tabs.includes(tab)) {
+        menu.open();
+      }
     }
   }
 
-  private WAREHOUSE_NAV_ITEMS: any[] = [
-    ...WAREHOUSE_CONTEXT_NAV_ITEMS
-  ];
+  private get systemNavItems(): ModuleNavItem[] {
+    const ext = this.moduleRegistry.getExtensions('layoutNav').find(e => e.extension.primaryItems);
+    return ext?.extension.primaryItems || [];
+  }
+
+  private get warehouseNavItems(): ModuleNavItem[] {
+    const ext = this.moduleRegistry.getExtensions('layoutNav').find(e => e.extension.contextItems);
+    return ext?.extension.contextItems || [];
+  }
 
   private lastHandledCompanyId: number | null = null;
 
@@ -978,7 +981,7 @@ export class Layout implements OnInit, OnDestroy {
     const userPerms = this.auth.userPermissions();
     const isAdmin = userPerms.includes('admin_all');
     
-    let items = this.store.isWarehouseContext() ? this.WAREHOUSE_NAV_ITEMS : this.SYSTEM_NAV_ITEMS;
+    let items = this.store.isWarehouseContext() ? this.warehouseNavItems : this.systemNavItems;
     
     return items.filter(item => {
       if (item.isAccounting || item.module === 'accounting') return false;
@@ -1003,9 +1006,9 @@ export class Layout implements OnInit, OnDestroy {
    * منوی یک نقش مالی: فقط در سامانه مالی و فقط برای پرسونای فعال همان نقش (سوپریوزر همه را می‌بیند)؛
    * آیتمی که گارد مسیر (ROUTE_PERMISSIONS) رد می‌کند نمایش داده نمی‌شود.
    */
-  private roleNavItems(role: string, items: NavItem[], roleMarkers: string[]): NavItem[] {
-    const hasRoleMenu = this.moduleRegistry.getExtensions('layoutNav').some(e => e.extension.roleMenus?.some(m => m.role === role));
-    if (!hasRoleMenu || this.personaService.activeApp() === 'warehouse' || this.store.isWarehouseContext()) {
+  private roleNavItems(role: string): ModuleNavItem[] {
+    const cfg = this.getRoleNavConfig(role);
+    if (!cfg || this.personaService.activeApp() === 'warehouse' || this.store.isWarehouseContext()) {
       return [];
     }
     const userPerms = this.auth.userPermissions();
@@ -1013,20 +1016,19 @@ export class Layout implements OnInit, OnDestroy {
     if (!isAdmin && this.personaService.activeRole() !== role) {
       return [];
     }
-    return filterRoleNavItems(items, {
-      isAdmin,
-      userPerms,
-      roleMarkers,
-      routeAllowed: (id) => hasRoutePermission(id, userPerms)
+    const hasRoleMarker = cfg.roleMarkers.some(m => userPerms.includes(m));
+    return cfg.items.filter(item => {
+      if (isAdmin) return true;
+      return (hasRoleMarker || userPerms.includes(item.permission)) && hasRoutePermission(item.id, userPerms);
     });
   }
 
-  readonly orgAdminNavItems = computed(() => this.roleNavItems('org_admin', ORG_ADMIN_NAV_ITEMS, ORG_ADMIN_ROLE_MARKERS));
-  readonly employeeNavItems = computed(() => this.roleNavItems('operator', EMPLOYEE_NAV_ITEMS, EMPLOYEE_ROLE_MARKERS));
-  readonly supervisorNavItems = computed(() => this.roleNavItems('supervisor', SUPERVISOR_NAV_ITEMS, SUPERVISOR_ROLE_MARKERS));
-  readonly accountantNavItems = computed(() => this.roleNavItems('accountant', ACCOUNTANT_NAV_ITEMS, ACCOUNTANT_ROLE_MARKERS));
-  readonly managerNavItems = computed(() => this.roleNavItems('manager', MANAGER_NAV_ITEMS, MANAGER_ROLE_MARKERS));
-  readonly treasurerNavItems = computed(() => this.roleNavItems('treasury', TREASURER_NAV_ITEMS, TREASURER_ROLE_MARKERS));
+  readonly orgAdminNavItems = computed(() => this.roleNavItems('org_admin'));
+  readonly employeeNavItems = computed(() => this.roleNavItems('operator'));
+  readonly supervisorNavItems = computed(() => this.roleNavItems('supervisor'));
+  readonly accountantNavItems = computed(() => this.roleNavItems('accountant'));
+  readonly managerNavItems = computed(() => this.roleNavItems('manager'));
+  readonly treasurerNavItems = computed(() => this.roleNavItems('treasury'));
 
   readonly navItems = computed(() => [...this.primaryNavItems(), ...this.orgAdminNavItems(), ...this.employeeNavItems(), ...this.supervisorNavItems(), ...this.accountantNavItems(), ...this.managerNavItems(), ...this.treasurerNavItems()]);
   
@@ -1044,11 +1046,20 @@ export class Layout implements OnInit, OnDestroy {
   openSidebar() { this.store.openSidebar(); }
   closeSidebar() { this.store.closeSidebar(); }
 
+  private isRoleMenuTab(tabId: string): boolean {
+    const extraTabs = ['supervisor-attendance', 'supervisor-new-profiles', 'accountant-new-profiles', 'manager-contracts'];
+    if (extraTabs.includes(tabId)) return true;
+    for (const e of this.moduleRegistry.getExtensions('layoutNav')) {
+      if (e.extension.roleMenus?.some(m => m.items.some(i => i.id === tabId))) return true;
+    }
+    return false;
+  }
+
   switchTab(tabId: string) {
     this.closeSidebar();
     // همهٔ صفحه‌های منوهای نقش در سامانه مالی‌اند؛ به‌علاوه چند صفحهٔ مالی بیرون از منوهای نقش
     const isAccountingItem = ['companies', 'company-documents', 'documents'].includes(tabId) ||
-      this.ROLE_MENU_TABS.some(menu => menu.tabs.includes(tabId));
+      this.isRoleMenuTab(tabId);
     if (isAccountingItem) {
       this.router.navigate(['/app/finance/' + tabId]);
     } else {

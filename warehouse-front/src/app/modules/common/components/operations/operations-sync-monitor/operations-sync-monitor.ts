@@ -70,11 +70,11 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
 
   get isWarehouseInstalled(): boolean {
-    return this.moduleRegistry.isModuleInstalled('warehouse');
+    return this.moduleRegistry.getExtensions('operations').some(e => e.extension.syncMonitorScope === 'warehouse');
   }
 
   get isAccountingInstalled(): boolean {
-    return this.moduleRegistry.isModuleInstalled('accounting');
+    return this.moduleRegistry.getExtensions('operations').some(e => e.extension.syncMonitorScope === 'accounting');
   }
 
   get showWarehouseQueue(): boolean {

@@ -30,7 +30,24 @@ describe('CompanyApiService: نشانی هسته یا حسابداری بر پا
       providers: [
         CompanyApiService,
         { provide: HttpClient, useValue: http },
-        { provide: ModuleRegistryService, useValue: { isModuleInstalled: (code: string) => code === 'accounting' && accountingInstalled } },
+        {
+          provide: ModuleRegistryService,
+          useValue: {
+            isModuleInstalled: (code: string) => code === 'accounting' && accountingInstalled,
+            getExtensions: (point: string) => {
+              if (point === 'companyApiEndpoints' && accountingInstalled) {
+                return [{
+                  moduleCode: 'accounting',
+                  extension: {
+                    companiesEndpoint: '/personnel/companies',
+                    accessEndpoint: '/personnel/user-company-access',
+                  }
+                }];
+              }
+              return [];
+            }
+          }
+        },
       ],
     });
     api = TestBed.inject(CompanyApiService);
