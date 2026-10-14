@@ -26,8 +26,8 @@ except Exception:
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FRONT_DIR = REPO_ROOT / "warehouse-front"
-USERS_TS = FRONT_DIR / "src" / "app" / "components" / "users" / "users.ts"
-USERS_HTML = FRONT_DIR / "src" / "app" / "components" / "users" / "users.html"
+USERS_TS = FRONT_DIR / "src" / "app" / "modules" / "common" / "components" / "users" / "users.ts"
+USERS_HTML = FRONT_DIR / "src" / "app" / "modules" / "common" / "components" / "users" / "users.html"
 PACKAGE_JSON = FRONT_DIR / "package.json"
 
 

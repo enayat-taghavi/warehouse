@@ -1,5 +1,5 @@
 import { CanDeactivateFn } from '@angular/router';
-import { Settings } from '../../components/settings/settings';
+import { Settings } from '../../modules/common/components/settings/settings';
 
 export const settingsLeaveGuard: CanDeactivateFn<Settings> = (component: Settings) => {
   if (component.hasChanges()) {

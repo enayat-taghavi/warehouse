@@ -358,5 +358,59 @@ warehouse-front/src/app/
     - runner: اجرای آزمون‌های خودکار گام ۰-الف (`django-check`، `migrations-unchanged`، `migrate-empty`، آزمون بسته‌بندی `test_bundle.ps1`، سنجش عددهای نگهبان ۲۹ با `guardian29-max`، آزمون تمیزی درخت و ایجاد کامیت).
     - ناظر (Claude): بازبین‌های `data-loss-reviewer` و `tenant-scope-reviewer`، بررسی استقرار روی `app` و فراخوانی `/` و `/api/public/config/`.
 
+- **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۲ (گام ۰-ب-۱):**
+  - **پایهٔ نشست:** commit hash برابر `bde7841a4798fe24c3f6daf83fa15aaadef9bb20`.
+  - **کارهای انجام‌شده:**
+    - نگاشت قطعی ۳۱ پوشهٔ کامپوننت فرانت‌اند بر اساس بررسی گراف وابستگی‌ها و تحلیل فایل‌های route (`app.routes.ts`، `warehouse.routes.ts` و `accounting.routes.ts`).
+    - ساخت اسکریپت `scripts/refactor/move_front_components.mjs` مبتنی بر TypeScript Compiler API در `node_modules` برای انتقال با `git mv` و بازنویسی مسیرهای ایمپورت نسبی در کلیهٔ فایل‌های `*.ts` (از جمله `*.spec.ts` و `*.dom.spec.ts` و `import()` پویا).
+    - انتقال ۱۰ پوشهٔ گروه common به `warehouse-front/src/app/modules/common/components/` با `git mv` (`login`، `layout`، `app-launcher`، `change-password`، `verify-card`، `users`، `operations`، `audit`، `health-dashboard`، `settings`).
+    - ادغام کامل `modules/platform-shell` در `modules/common`: انتقال با `git mv`، بازنویسی اکسپورت‌های `modules/common/index.ts` و به‌روزرسانی مسیر alias در `warehouse-front/tsconfig.json`.
+    - بازنویسی دقیق مسیرهای نسبی ۲۹۱ ایمپورت در ۳۶ فایل فرانت‌اند بدون دستکاری دستی `templateUrl` و `styleUrl` یا استایل‌ها.
+    - اصلاح مسیرهای ثابت: خط مبنای نگهبان ۵۵ در `scripts/e2e/clickable_ergonomics_baseline.json` (۳۵ مسیر `audit.html` بدون تغییر شمارنده‌ها)، نگهبان‌های users (۳۸ تا ۵۱)، `scripts/e2e/guardian_header_harmonization.py`، `scripts/test_guard_hooks.py` (مسیرهای `components/login`)، `warehouse-front/tools/dom-verify.js` و `warehouse-front/tsconfig.test21.spec.json`.
+  - **جدول نهایی نگاشت پوشه‌های ۳۱ گانه:**
+
+| نام پوشه در `components/` | مقصد نهایی | دلیل فنی و شواهد وابستگی | وضعیت انتقال |
+|---|---|---|---|
+| `app-launcher` | `modules/common/components/app-launcher` | روت در `app.routes.ts` (لانچر مرکزی مشترک) | انجام شد در نشست ۲ |
+| `audit` | `modules/common/components/audit` | استفاده همزمان در `app.routes.ts`، `warehouse.routes.ts` و `accounting.routes.ts` | انجام شد در نشست ۲ |
+| `change-password` | `modules/common/components/change-password` | روت در `app.routes.ts` (صفحه مشترک تغییر رمز) | انجام شد در نشست ۲ |
+| `health-dashboard` | `modules/common/components/health-dashboard` | استفاده همزمان در `app.routes.ts`، `warehouse.routes.ts` و `accounting.routes.ts` | انجام شد در نشست ۲ |
+| `layout` | `modules/common/components/layout` | پوسته اصلی در `app.routes.ts` برای همه ماژول‌ها | انجام شد در نشست ۲ |
+| `login` | `modules/common/components/login` | روت ورود در `app.routes.ts` | انجام شد در نشست ۲ |
+| `operations` | `modules/common/components/operations` | روت مرکز عملیات در `app.routes.ts` | انجام شد در نشست ۲ |
+| `settings` | `modules/common/components/settings` | استفاده در `app.routes.ts` و `warehouse.routes.ts` (تنظیمات پایه و عمومی) | انجام شد در نشست ۲ |
+| `users` | `modules/common/components/users` | مدیریت کاربران در `app.routes.ts`، `operations` و `warehouse.routes.ts` | انجام شد در نشست ۲ |
+| `verify-card` | `modules/common/components/verify-card` | روت عمومی استعلام کارت در `app.routes.ts` | انجام شد در نشست ۲ |
+| `communications` | `modules/common/components/communications` | استفاده مشترک در پوسته (`layout`، `operations-layout`) و صفحات انبار (`supervisor`، `manager-review`، `count-tracking`) | نشست ۳ (گام ۰-ب-۲) |
+| `id-cards` | `modules/common/components/id-cards` | زیرکامپوننت تب صدور کارت در `users` (مشترک سامانه) | نشست ۳ (گام ۰-ب-۲) |
+| `count-tracking` | `modules/warehouse/components/count-tracking` | فقط در `warehouse.routes.ts` روت دارد | نشست ۳ (گام ۰-ب-۲) |
+| `counter` | `modules/warehouse/components/counter` | فقط در `warehouse.routes.ts` روت دارد | نشست ۳ (گام ۰-ب-۲) |
+| `customs` | `modules/warehouse/components/customs` | فقط در `warehouse.routes.ts` روت دارد | نشست ۳ (گام ۰-ب-۲) |
+| `dashboard` | `modules/warehouse/components/dashboard` | فقط در `warehouse.routes.ts` روت دارد | نشست ۳ (گام ۰-ب-۲) |
+| `dispatch` | `modules/warehouse/components/dispatch` | فقط در `warehouse.routes.ts` روت دارد | نشست ۳ (گام ۰-ب-۲) |
+| `docs` | `modules/warehouse/components/docs` | فقط در `warehouse.routes.ts` روت دارد | نشست ۳ (گام ۰-ب-۲) |
+| `dynamic-fields` | `modules/warehouse/components/dynamic-fields` | فیلدهای پویای کالا در انبار؛ ایمپورت در `wh-settings` | نشست ۳ (گام ۰-ب-۲) |
+| `feeding` | `modules/warehouse/components/feeding` | فقط در `warehouse.routes.ts` روت دارد | نشست ۳ (گام ۰-ب-۲) |
+| `field` | `modules/warehouse/components/field` | شمارش میدانی انبار (ریدایرکت به `counter` در `warehouse.routes.ts`) | نشست ۳ (گام ۰-ب-۲) |
+| `label-designer` | `modules/warehouse/components/label-designer` | طراحی لیبل کالا؛ استفاده در `dispatch` و `wh-settings` | نشست ۳ (گام ۰-ب-۲) |
+| `manager-review` | `modules/warehouse/components/manager-review` | فقط در `warehouse.routes.ts` روت دارد | نشست ۳ (گام ۰-ب-۲) |
+| `placeholders` | `modules/warehouse/components/placeholders` | روت‌های خالی انبار (`tasks`، `labels`، `approvals` در `warehouse.routes.ts`) | نشست ۳ (گام ۰-ب-۲) |
+| `projects` | `modules/warehouse/components/projects` | فقط در `warehouse.routes.ts` روت دارد (مدیریت پروژه‌ها/انبارهای سیستم) | نشست ۳ (گام ۰-ب-۲) |
+| `reports` | `modules/warehouse/components/reports` | روت در `warehouse.routes.ts` (گزارش‌های انبارگردانی) | نشست ۳ (گام ۰-ب-۲) |
+| `supervisor` | `modules/warehouse/components/supervisor` | فقط در `warehouse.routes.ts` روت دارد | نشست ۳ (گام ۰-ب-۲) |
+| `wh-settings` | `modules/warehouse/components/wh-settings` | فقط در `warehouse.routes.ts` روت دارد | نشست ۳ (گام ۰-ب-۲) |
+| `finance` | `modules/accounting/components/finance` | فقط در `accounting.routes.ts` روت و ایمپورت دارد | نشست ۳ (گام ۰-ب-۲) |
+| `organization` | `modules/accounting/components/organization` | فقط در `accounting.routes.ts` روت و ایمپورت دارد | نشست ۳ (گام ۰-ب-۲) |
+| `personnel` | `modules/accounting/components/personnel` | فقط در `accounting.routes.ts` روت و ایمپورت دارد | نشست ۳ (گام ۰-ب-۲) |
+
+  - **انحراف‌ها:** پوشه `reports` بر اساس شواهد کدبیس منحصراً در `warehouse.routes.ts` مورد ارجاع قرار گرفته است و بنابراین مقصد قطعی آن ماژول انبار (`modules/warehouse/components/reports`) تعیین گردید. پوشه `id-cards` به دلیل وابستگی متقابل مستقیم با تب کارت در `users` به عنوان کامپوننت مشترک به `modules/common/components/id-cards` تعیین شد که همراه باقی‌مانده‌ها در نشست ۳ جابه‌جا خواهد شد.
+  - **فرمان‌های اجراشده توسط ایجنت و خلاصه خروجی:**
+    - `node scripts/refactor/move_front_components.mjs --step 0-b1` -> `TypeScript imports rewritten: 270 imports across 32 files. Step 0-b1 migration complete!`
+    - `cd warehouse-front && npx ng build --output-path ../scratch/ng-build-agent` -> `Application bundle generation complete. [134.079 seconds] - exit 0`
+    - نگهبان‌های ۵۲، ۵۵، ۵۶، ۳۸ تا ۵۱، `scripts/test_guard_hooks.py` و `warehouse-front/tools/dom-verify.js` همگی اجرا شده و سبز (کد خروج ۰) تأیید شدند.
+  - **آنچه به runner و ناظر می‌ماند:**
+    - runner: اجرای بیلدهای پروفایلی (`build:accounting` و `build:warehouse`)، بررسی `dist-free`، اجرای `ng-test-compare`، راستی‌آزمایی نگهبان‌ها و ایجاد کامیت.
+    - ناظر (Claude): بازبین `ui-reviewer`، بررسی صفحه ورود روی 4300 و release روی `app`.
+
 </div>
 

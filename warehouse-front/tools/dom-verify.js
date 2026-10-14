@@ -21,11 +21,11 @@ const templateFiles = [
   'src/app/components/finance/accountant/accountant-payroll/accountant-payroll.html',
   'src/app/components/dashboard/dashboard.html',
   'src/app/components/reports/reports.html',
-  'src/app/components/operations/operations-sync-monitor/operations-sync-monitor.html',
-  'src/app/components/operations/operations-rbac-governance/operations-rbac-governance.html',
+  'src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.html',
+  'src/app/modules/common/components/operations/operations-rbac-governance/operations-rbac-governance.html',
   'src/app/components/projects/projects.html',
-  'src/app/components/audit/audit.html',
-  'src/app/components/login/login.html'
+  'src/app/modules/common/components/audit/audit.html',
+  'src/app/modules/common/components/login/login.html'
 ];
 
 let totalChecked = 0;

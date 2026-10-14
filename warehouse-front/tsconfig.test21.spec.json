@@ -19,13 +19,13 @@
     "src/app/components/docs/docs.spec.ts",
     "src/app/components/feeding/feeding.spec.ts",
     "src/app/components/projects/projects.spec.ts",
-    "src/app/components/users/users.spec.ts",
-    "src/app/components/operations/companies/companies.dom.spec.ts",
-    "src/app/components/operations/companies/company-gdrive-tab/company-gdrive-tab.spec.ts",
-    "src/app/components/operations/operations-cockpit/operations-cockpit.dom.spec.ts",
-    "src/app/components/operations/operations-sync-monitor/operations-sync-monitor.dom.spec.ts",
-    "src/app/components/health-dashboard/health-dashboard.dom.spec.ts",
-    "src/app/components/settings/settings.spec.ts",
-    "src/app/components/layout/layout.spec.ts"
+    "src/app/modules/common/components/users/users.spec.ts",
+    "src/app/modules/common/components/operations/companies/companies.dom.spec.ts",
+    "src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.spec.ts",
+    "src/app/modules/common/components/operations/operations-cockpit/operations-cockpit.dom.spec.ts",
+    "src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.dom.spec.ts",
+    "src/app/modules/common/components/health-dashboard/health-dashboard.dom.spec.ts",
+    "src/app/modules/common/components/settings/settings.spec.ts",
+    "src/app/modules/common/components/layout/layout.spec.ts"
   ]
 }

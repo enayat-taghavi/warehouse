@@ -6,9 +6,9 @@
       "file": "src/app/components/supervisor/supervisor-dashboard/supervisor-dashboard.html",
       "status": "VALID",
       "elements": {
-        "buttons": 94,
-        "btnIconSquare": 3,
-        "svgs": 62,
+        "buttons": 88,
+        "btnIconSquare": 0,
+        "svgs": 42,
         "tables": 0,
         "inputs": 19,
         "rtlContainers": 2
@@ -19,9 +19,9 @@
       "file": "src/app/components/manager-review/manager-review.html",
       "status": "VALID",
       "elements": {
-        "buttons": 94,
-        "btnIconSquare": 3,
-        "svgs": 58,
+        "buttons": 88,
+        "btnIconSquare": 0,
+        "svgs": 35,
         "tables": 0,
         "inputs": 19,
         "rtlContainers": 2
@@ -32,9 +32,9 @@
       "file": "src/app/components/count-tracking/count-tracking.html",
       "status": "VALID",
       "elements": {
-        "buttons": 25,
-        "btnIconSquare": 5,
-        "svgs": 38,
+        "buttons": 22,
+        "btnIconSquare": 0,
+        "svgs": 20,
         "tables": 2,
         "inputs": 6,
         "rtlContainers": 3
@@ -46,8 +46,8 @@
       "status": "VALID",
       "elements": {
         "buttons": 38,
-        "btnIconSquare": 2,
-        "svgs": 29,
+        "btnIconSquare": 0,
+        "svgs": 37,
         "tables": 0,
         "inputs": 15,
         "rtlContainers": 4
@@ -58,9 +58,9 @@
       "file": "src/app/components/customs/customs.html",
       "status": "VALID",
       "elements": {
-        "buttons": 54,
-        "btnIconSquare": 3,
-        "svgs": 50,
+        "buttons": 52,
+        "btnIconSquare": 0,
+        "svgs": 39,
         "tables": 0,
         "inputs": 19,
         "rtlContainers": 2
@@ -73,7 +73,7 @@
       "elements": {
         "buttons": 18,
         "btnIconSquare": 0,
-        "svgs": 32,
+        "svgs": 31,
         "tables": 0,
         "inputs": 6,
         "rtlContainers": 5
@@ -84,9 +84,9 @@
       "file": "src/app/components/finance/employee/employee-attendance/employee-attendance.html",
       "status": "VALID",
       "elements": {
-        "buttons": 65,
+        "buttons": 63,
         "btnIconSquare": 0,
-        "svgs": 23,
+        "svgs": 12,
         "tables": 3,
         "inputs": 38,
         "rtlContainers": 1
@@ -97,11 +97,11 @@
       "file": "src/app/components/personnel/personnel-profiles/personnel-profiles.html",
       "status": "VALID",
       "elements": {
-        "buttons": 42,
-        "btnIconSquare": 1,
-        "svgs": 16,
+        "buttons": 29,
+        "btnIconSquare": 0,
+        "svgs": 5,
         "tables": 3,
-        "inputs": 53,
+        "inputs": 43,
         "rtlContainers": 1
       },
       "warnings": []
@@ -110,9 +110,9 @@
       "file": "src/app/components/personnel/base-settings/base-settings.html",
       "status": "VALID",
       "elements": {
-        "buttons": 24,
+        "buttons": 19,
         "btnIconSquare": 0,
-        "svgs": 3,
+        "svgs": 2,
         "tables": 1,
         "inputs": 49,
         "rtlContainers": 3
@@ -123,9 +123,9 @@
       "file": "src/app/components/finance/treasurer/treasurer-disbursements/treasurer-disbursements.html",
       "status": "VALID",
       "elements": {
-        "buttons": 18,
+        "buttons": 16,
         "btnIconSquare": 0,
-        "svgs": 4,
+        "svgs": 0,
         "tables": 2,
         "inputs": 9,
         "rtlContainers": 1
@@ -136,9 +136,9 @@
       "file": "src/app/components/personnel/manager-approvals/manager-approvals.html",
       "status": "VALID",
       "elements": {
-        "buttons": 51,
-        "btnIconSquare": 3,
-        "svgs": 6,
+        "buttons": 30,
+        "btnIconSquare": 0,
+        "svgs": 1,
         "tables": 6,
         "inputs": 7,
         "rtlContainers": 1
@@ -149,9 +149,9 @@
       "file": "src/app/components/finance/accountant/accountant-payroll/accountant-payroll.html",
       "status": "VALID",
       "elements": {
-        "buttons": 23,
+        "buttons": 17,
         "btnIconSquare": 0,
-        "svgs": 13,
+        "svgs": 7,
         "tables": 3,
         "inputs": 9,
         "rtlContainers": 1
@@ -163,8 +163,8 @@
       "status": "VALID",
       "elements": {
         "buttons": 2,
-        "btnIconSquare": 1,
-        "svgs": 11,
+        "btnIconSquare": 0,
+        "svgs": 10,
         "tables": 0,
         "inputs": 0,
         "rtlContainers": 1
@@ -175,9 +175,9 @@
       "file": "src/app/components/reports/reports.html",
       "status": "VALID",
       "elements": {
-        "buttons": 35,
-        "btnIconSquare": 7,
-        "svgs": 17,
+        "buttons": 31,
+        "btnIconSquare": 0,
+        "svgs": 8,
         "tables": 0,
         "inputs": 18,
         "rtlContainers": 0
@@ -185,12 +185,12 @@
       "warnings": []
     },
     {
-      "file": "src/app/components/operations/operations-sync-monitor/operations-sync-monitor.html",
+      "file": "src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.html",
       "status": "VALID",
       "elements": {
         "buttons": 6,
         "btnIconSquare": 0,
-        "svgs": 2,
+        "svgs": 3,
         "tables": 2,
         "inputs": 0,
         "rtlContainers": 1
@@ -198,12 +198,12 @@
       "warnings": []
     },
     {
-      "file": "src/app/components/operations/operations-rbac-governance/operations-rbac-governance.html",
+      "file": "src/app/modules/common/components/operations/operations-rbac-governance/operations-rbac-governance.html",
       "status": "VALID",
       "elements": {
-        "buttons": 5,
-        "btnIconSquare": 1,
-        "svgs": 1,
+        "buttons": 2,
+        "btnIconSquare": 0,
+        "svgs": 2,
         "tables": 2,
         "inputs": 0,
         "rtlContainers": 1
@@ -215,8 +215,8 @@
       "status": "VALID",
       "elements": {
         "buttons": 16,
-        "btnIconSquare": 3,
-        "svgs": 10,
+        "btnIconSquare": 0,
+        "svgs": 9,
         "tables": 0,
         "inputs": 28,
         "rtlContainers": 1
@@ -224,12 +224,12 @@
       "warnings": []
     },
     {
-      "file": "src/app/components/audit/audit.html",
+      "file": "src/app/modules/common/components/audit/audit.html",
       "status": "VALID",
       "elements": {
         "buttons": 66,
-        "btnIconSquare": 6,
-        "svgs": 82,
+        "btnIconSquare": 4,
+        "svgs": 80,
         "tables": 3,
         "inputs": 33,
         "rtlContainers": 9
@@ -237,7 +237,7 @@
       "warnings": []
     },
     {
-      "file": "src/app/components/login/login.html",
+      "file": "src/app/modules/common/components/login/login.html",
       "status": "VALID",
       "elements": {
         "buttons": 3,

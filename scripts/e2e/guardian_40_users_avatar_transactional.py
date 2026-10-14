@@ -25,7 +25,7 @@ except Exception:
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FRONT_DIR = REPO_ROOT / "warehouse-front"
-USERS_TS = FRONT_DIR / "src" / "app" / "components" / "users" / "users.ts"
+USERS_TS = FRONT_DIR / "src" / "app" / "modules" / "common" / "components" / "users" / "users.ts"
 
 
 def test_users_avatar_transactional():

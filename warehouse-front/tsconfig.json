@@ -4,7 +4,7 @@
   "compileOnSave": false,
   "compilerOptions": {
     "paths": {
-      "platform-shell": ["./src/app/modules/platform-shell/index.ts"],
+      "platform-shell": ["./src/app/modules/common/index.ts"],
       "warehouse-ui": ["./src/app/modules/warehouse/index.ts"],
       "accounting-ui": ["./src/app/modules/accounting/index.ts"]
     },

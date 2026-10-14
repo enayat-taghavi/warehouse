@@ -39,8 +39,8 @@ import { TreasurerInvoicesComponent } from '../../components/finance/treasurer/t
 import { TreasurerBankAccountsComponent } from '../../components/finance/treasurer/treasurer-bank-accounts/treasurer-bank-accounts';
 import { TreasurerChequesComponent } from '../../components/finance/treasurer/treasurer-cheques/treasurer-cheques';
 import { TreasurerReconciliationComponent } from '../../components/finance/treasurer/treasurer-reconciliation/treasurer-reconciliation';
-import { Audit } from '../../components/audit/audit';
-import { HealthDashboardComponent } from '../../components/health-dashboard/health-dashboard';
+import { Audit } from '../common/components/audit/audit';
+import { HealthDashboardComponent } from '../common/components/health-dashboard/health-dashboard';
 import { CompanyDocumentsArchiveComponent } from '../../components/finance/company-documents-archive/company-documents-archive';
 
 export { IS_ACCOUNTING_INSTALLED } from './accounting-flags';

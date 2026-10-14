@@ -84,8 +84,8 @@ def claude(name, ev, tool, inp, expect, extra=None):
     print(('OK ' if ok else 'BAD'), f'{name:44s} got={got} expect={expect}')
 
 
-LOGIN = FRONT + 'components' + S + 'login' + S + 'login.html'
-TS = FRONT + 'components' + S + 'login' + S + 'login.ts'
+LOGIN = FRONT + 'modules' + S + 'common' + S + 'components' + S + 'login' + S + 'login.html'
+TS = FRONT + 'modules' + S + 'common' + S + 'components' + S + 'login' + S + 'login.ts'
 claude('Write new root file', 'PreToolUse', 'Write', {'file_path': ROOT + S + 'zz.txt', 'content': 'x'}, 'deny')
 claude('Write existing CLAUDE.md', 'PreToolUse', 'Write', {'file_path': ROOT + S + 'CLAUDE.md', 'content': 'x'}, 'pass')
 claude('Write new file in scripts/', 'PreToolUse', 'Write', {'file_path': ROOT + S + 'scripts' + S + 'n.py', 'content': 'x'}, 'pass')

@@ -94,7 +94,19 @@ def check_phase_4():
 
     for name, ts_rel, html_rel in management_views:
         ts_path = os.path.join(SRC_DIR, "components", ts_rel)
+        if not os.path.exists(ts_path):
+            for sub in ["modules/common/components", "modules/warehouse/components", "modules/accounting/components"]:
+                p = os.path.join(SRC_DIR, sub.replace("/", os.sep), ts_rel)
+                if os.path.exists(p):
+                    ts_path = p
+                    break
         html_path = os.path.join(SRC_DIR, "components", html_rel)
+        if not os.path.exists(html_path):
+            for sub in ["modules/common/components", "modules/warehouse/components", "modules/accounting/components"]:
+                p = os.path.join(SRC_DIR, sub.replace("/", os.sep), html_rel)
+                if os.path.exists(p):
+                    html_path = p
+                    break
 
         if not os.path.exists(ts_path) or not os.path.exists(html_path):
             return False, f"فایل‌های مربوط به {name} یافت نشدند."

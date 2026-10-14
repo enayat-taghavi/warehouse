@@ -26,7 +26,7 @@ except Exception:
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_DIR = REPO_ROOT / "warehouse-backend"
 FRONT_DIR = REPO_ROOT / "warehouse-front"
-GOVERNANCE_TS = FRONT_DIR / "src" / "app" / "components" / "operations" / "operations-rbac-governance" / "operations-rbac-governance.ts"
+GOVERNANCE_TS = FRONT_DIR / "src" / "app" / "modules" / "common" / "components" / "operations" / "operations-rbac-governance" / "operations-rbac-governance.ts"
 
 
 def test_sensitive_permissions_sync():
