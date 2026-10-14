@@ -386,14 +386,32 @@ export class AppPersonaService {
       localStorage.setItem('active_app_module', 'personnel');
       try { this.ws.switchAppChannel('finance'); } catch {}
       this.sanitizeActiveRole();
+    } else {
+      // ماژول‌های دیگر (ساخته‌شده از قالب) از روی routePrefix خودشان
+      const generic = this.moduleRegistry.getInstalledSpecs().find(s =>
+        this.isGenericModuleApp(s.code) && !!s.routePrefix
+        && (cleanUrl === s.routePrefix || cleanUrl.startsWith(s.routePrefix + '/')));
+      if (generic && this.activeApp() !== generic.code && this.canAccessApp(generic.code)) {
+        this.activeApp.set(generic.code);
+        this.sessionTab.setActiveApp(generic.code);
+        localStorage.setItem('active_app_module', generic.code);
+      }
     }
+  }
+
+  /** ماژولی غیر از انبار، مالی و عملیات که تبادل قلمرو توکن و کانال وب‌سوکت ویژهٔ خودش را ندارد */
+  public isGenericModuleApp(app: AppModuleType): boolean {
+    if (['warehouse', 'personnel', 'accounting', 'finance', 'operations'].includes(app)) return false;
+    return !!this.moduleRegistry.getSpec(app);
   }
 
   public sanitizeActiveRole(): void {
     const hasWh = this.hasWarehouseAccess();
     const hasPers = this.hasPersonnelAccess();
 
-    if (!hasWh && hasPers && this.activeApp() !== 'personnel') {
+    if (this.isGenericModuleApp(this.activeApp())) {
+      // ماژول دیگرِ فعال به انبار یا مالی برگردانده نشود
+    } else if (!hasWh && hasPers && this.activeApp() !== 'personnel') {
       this.activeApp.set('personnel');
       this.sessionTab.setActiveApp('personnel');
       localStorage.setItem('active_app_module', 'personnel');
@@ -420,7 +438,14 @@ export class AppPersonaService {
     this.activeApp.set(app);
     this.sessionTab.setActiveApp(app);
     localStorage.setItem('active_app_module', app);
-    
+
+    if (this.isGenericModuleApp(app)) {
+      // ماژول دیگر: بی‌تبادل قلمرو توکن و کانال (ویژهٔ انبار و مالی)، مستقیم به مسیر پیش‌فرض خود ماژول
+      const spec = this.moduleRegistry.getSpec(app);
+      this.router.navigate([spec?.defaultRoute || spec?.routePrefix || '/app/launcher']);
+      return;
+    }
+
     // تبادل زنده قلمرو فعال توکن در بک‌اند (Live Token Exchange)
     const targetScope: 'warehouse' | 'finance' = app === 'warehouse' ? 'warehouse' : 'finance';
     if (app !== 'operations') {

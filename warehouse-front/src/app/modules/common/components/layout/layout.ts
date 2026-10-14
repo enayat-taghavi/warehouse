@@ -538,13 +538,14 @@ export class Layout implements OnInit, OnDestroy {
     }
   }
 
+  // منوی اصلی و بافت انبار فقط از ماژول صاحب سوییچر انبار؛ ماژول دیگری که پیش از آن مرتب شود جایش را نمی‌گیرد
   private get systemNavItems(): ModuleNavItem[] {
-    const ext = this.moduleRegistry.getExtensions('layoutNav').find(e => e.extension.primaryItems);
+    const ext = this.moduleRegistry.getExtensions('layoutNav').find(e => e.extension.showWarehouseSwitcher && e.extension.primaryItems);
     return ext?.extension.primaryItems || [];
   }
 
   private get warehouseNavItems(): ModuleNavItem[] {
-    const ext = this.moduleRegistry.getExtensions('layoutNav').find(e => e.extension.contextItems);
+    const ext = this.moduleRegistry.getExtensions('layoutNav').find(e => e.extension.showWarehouseSwitcher && e.extension.contextItems);
     return ext?.extension.contextItems || [];
   }
 
@@ -1072,6 +1073,25 @@ export class Layout implements OnInit, OnDestroy {
 
   get otherModuleTotalItemsCount(): number {
     return this.otherModuleNavSections().reduce((sum, s) => sum + s.items.length, 0);
+  }
+
+  /** مسیر آیتم سامانه‌های دیگر از ماژول صاحبش، نه از شناسه؛ تا شناسهٔ هم‌نام (مثل dashboard) به انبار نرود */
+  moduleNavItemRoute(moduleCode: string, item: ModuleNavItem): string {
+    if (item.route) return item.route;
+    const prefix = this.moduleRegistry.getSpec(moduleCode)?.routePrefix || '';
+    return `${prefix}/${item.id}`;
+  }
+
+  openModuleNavItem(moduleCode: string, item: ModuleNavItem): void {
+    this.closeSidebar();
+    this.router.navigate([this.moduleNavItemRoute(moduleCode, item)]);
+  }
+
+  isModuleNavItemActive(moduleCode: string, item: ModuleNavItem): boolean {
+    this.store.currentTab(); // وابستگی واکنشی: با هر تغییر تب دوباره سنجیده شود
+    const url = this.router.url.split('?')[0];
+    const route = this.moduleNavItemRoute(moduleCode, item);
+    return url === route || url.startsWith(route + '/');
   }
 
   readonly navItems = computed(() => [

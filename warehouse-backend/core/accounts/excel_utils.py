@@ -533,6 +533,25 @@ def generate_users_template(actor=None):
 
 # ── Smart Excel Parser ───────────────────────────────────────────────
 
+def target_company_ids_for_warehouses(target_user=None, active_company_id=None):
+    """
+    شرکت‌هایی که انبارهای کاربر هدف باید از آن‌ها باشند: کاربر موجود همان دسترسی‌های شرکتش، کاربر تازه شرکت فعال سازنده.
+    تهی یعنی بی‌محدودیت (کاربر سوپریوزر، کاربر بی‌دسترسی شرکت، یا سازندهٔ سوپریوزرِ بی‌شرکت فعال)، مثل UserSerializer.validate.
+    """
+    if target_user is not None:
+        if target_user.is_superuser:
+            return set()
+        return set(target_user.company_accesses.values_list('company_id', flat=True))
+    return {int(active_company_id)} if active_company_id else set()
+
+
+def warehouses_outside_companies(warehouses, company_ids):
+    """انبارهای شرکت‌داری که به هیچ‌یک از company_ids تعلق ندارند؛ انبار قدیمی بی‌شرکت آزاد است."""
+    if not company_ids:
+        return []
+    return [w for w in warehouses if getattr(w, 'company_id', None) is not None and w.company_id not in company_ids]
+
+
 def parse_users_excel(file, update_existing=False, actor=None, active_company_id=None):
     """
     پارس و اعتبارسنجی هوشمند فایل اکسل کاربران
@@ -567,6 +586,7 @@ def parse_users_excel(file, update_existing=False, actor=None, active_company_id
     from accounts.scope import get_visible_users_for_user
     visible_users_qs = get_visible_users_for_user(actor) if actor else CustomUser.objects.all()
     visible_users_by_username = {u.username.lower(): u for u in visible_users_qs}
+    visible_users_by_id = {u.id: u for u in visible_users_by_username.values()}
     visible_users_by_nid = {
         u.national_code: u for u in visible_users_qs.exclude(national_code__isnull=True).exclude(national_code='')
     }
@@ -709,6 +729,7 @@ def parse_users_excel(file, update_existing=False, actor=None, active_company_id
 
         # ── تطبیق هوشمند انبارها (پشتیبانی از گزینه «همه انبارها») ──
         resolved_warehouses = []
+        has_all_whs = False
         if warehouses_str:
             wh_items = split_items(warehouses_str)
             has_all_whs = any(w.lower().strip() in ALL_WHS_ALIASES for w in wh_items)
@@ -727,6 +748,17 @@ def parse_users_excel(file, update_existing=False, actor=None, active_company_id
                         row_errors.append({'row': row_num, 'field': 'warehouses', 'message': f'انبار «{witem}» در سیستم یافت نشد.'})
                     elif matched_wh not in resolved_warehouses:
                         resolved_warehouses.append(matched_wh)
+
+        # انبارها باید از شرکت‌های خود کاربر هدف باشند (همان قاعدهٔ UserSerializer.validate)
+        target_cids = target_company_ids_for_warehouses(
+            visible_users_by_id.get(target_user_id) if is_update_record else None, active_company_id
+        )
+        if has_all_whs:
+            outside = warehouses_outside_companies(resolved_warehouses, target_cids)
+            resolved_warehouses = [w for w in resolved_warehouses if w not in outside]
+        else:
+            for wh in warehouses_outside_companies(resolved_warehouses, target_cids):
+                row_errors.append({'row': row_num, 'field': 'warehouses', 'message': f'انبار «{wh.name}» متعلق به شرکت دیگری است و به شرکت‌های این کاربر تعلق ندارد.'})
 
         if row_errors:
             errors.extend(row_errors)

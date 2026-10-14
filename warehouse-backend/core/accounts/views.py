@@ -665,7 +665,9 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         commit_errors = list(result.get('errors', []))
 
         from accounts.scope import get_visible_users_for_user
-        from .excel_utils import _get_user_warehouse_extension
+        from .excel_utils import (
+            _get_user_warehouse_extension, target_company_ids_for_warehouses, warehouses_outside_companies,
+        )
         wh_ext = _get_user_warehouse_extension()
         allowed_warehouses = set(wh_ext.get_all_warehouses(user=request.user)) if wh_ext else set()
 
@@ -688,6 +690,10 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                         if not user:
                             commit_errors.append({'row': row_num, 'field': 'username', 'message': 'کاربر هدف در قلمرو مجاز شما نیست.'})
                             continue
+                        outside = warehouses_outside_companies(warehouses, target_company_ids_for_warehouses(user))
+                        if outside:
+                            commit_errors.append({'row': row_num, 'field': 'warehouses', 'message': f'انبار «{outside[0].name}» متعلق به شرکت دیگری است و به شرکت‌های این کاربر تعلق ندارد.'})
+                            continue
                         for k, v in row_data.items():
                             setattr(user, k, v)
                         if request.user and request.user.is_authenticated:
@@ -696,8 +702,15 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                         # همگام‌سازی قطعی دسترسی‌ها (خالی بودن ستون در اکسل باعث پاک شدن دسترسی‌ها می‌شود)
                         user.groups.set(roles)
                         if hasattr(user, 'assigned_warehouses'):
-                            user.assigned_warehouses.set(warehouses)
+                            # فقط بخشِ درون دامنهٔ سازنده جایگزین می‌شود؛ انبارهای بیرون از دامنهٔ او دست‌نخورده می‌مانند
+                            kept = [w for w in user.assigned_warehouses.all() if wh_ext and w not in allowed_warehouses]
+                            user.assigned_warehouses.set(kept + list(warehouses))
                         updated_count += 1
+                        continue
+
+                    outside = warehouses_outside_companies(warehouses, target_company_ids_for_warehouses(None, cid))
+                    if outside:
+                        commit_errors.append({'row': row_num, 'field': 'warehouses', 'message': f'انبار «{outside[0].name}» متعلق به شرکت دیگری است و به شرکت فعال شما تعلق ندارد.'})
                         continue
 
                     password = row_data.get('national_code') or '123456'

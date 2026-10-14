@@ -74,7 +74,6 @@ export const MODULE: WhFrontendModule = {
       syncMonitorScope: 'accounting'
     },
     companies: {
-      tabs: ['bank-accounts', 'board-members', 'documents', 'fiscal-periods'],
       providesTreasury: true
     },
     users: {

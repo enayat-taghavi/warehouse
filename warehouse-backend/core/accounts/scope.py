@@ -31,7 +31,10 @@ def get_visible_users_for_user(user, qs=None):
     if get_user_allowed_companies is not None:
         allowed_cids = get_user_allowed_companies(user).values_list('id', flat=True)
         if allowed_cids.exists():
-            qs = qs.filter(Q(company_accesses__company_id__in=allowed_cids) | Q(id=user.id)).distinct()
+            # زیرپرس‌وجو به‌جای join چندمقداری: گزارش گروه‌بندی‌شده (Count) کاربر چندشرکتی را چند بار نشمارد.
+            from companies.models import UserCompanyAccess
+            access_user_ids = UserCompanyAccess.objects.filter(company_id__in=allowed_cids).values('user_id')
+            qs = qs.filter(Q(id__in=access_user_ids) | Q(id=user.id)).distinct()
         else:
             qs = qs.filter(id=user.id)
     else:

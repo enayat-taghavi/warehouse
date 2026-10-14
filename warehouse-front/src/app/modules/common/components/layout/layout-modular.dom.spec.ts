@@ -361,6 +361,38 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/sample/custom-page']);
   });
 
+  it('ماژول sample که در ترتیب الفبایی پیش از warehouse است، منوی اصلی و بافت انبار را نمی‌گیرد و شناسهٔ هم‌نامش به مسیر خودش می‌رود', () => {
+    const SAMPLE_NAV = {
+      showWarehouseSwitcher: false,
+      primaryItems: [{ id: 'dashboard', label: 'داشبورد نمونه', icon: 'box', permission: 'view_sample' }],
+      contextItems: [{ id: 'dashboard', label: 'داشبورد نمونه', icon: 'box', permission: 'view_sample' }]
+    };
+    const WAREHOUSE_NAV = {
+      showWarehouseSwitcher: true,
+      defaultExitRoute: '/app/warehouse/projects',
+      primaryItems: [{ id: 'dashboard', label: 'داشبورد', icon: 'grid', permission: 'view_wh_dashboard' }],
+      contextItems: [{ id: 'items', label: 'کالاها', icon: 'package', permission: 'view_wh_dashboard' }]
+    };
+    mockRegistry.getExtensions.mockImplementation((extKey: string) => extKey === 'layoutNav'
+      ? [
+          { moduleCode: 'accounting', extension: { showWarehouseSwitcher: false, defaultExitRoute: '/app/finance' } },
+          { moduleCode: 'sample', extension: SAMPLE_NAV },
+          { moduleCode: 'warehouse', extension: WAREHOUSE_NAV }
+        ]
+      : []);
+    mockRegistry.getSpec.mockImplementation((code: string) => {
+      if (code === 'sample') return { code: 'sample', titleFa: 'ماژول نمونه', routePrefix: '/app/sample' };
+      if (code === 'warehouse') return { code: 'warehouse', routePrefix: '/app/warehouse' };
+      return undefined;
+    });
+
+    expect((component as any).systemNavItems).toBe(WAREHOUSE_NAV.primaryItems);
+    expect((component as any).warehouseNavItems).toBe(WAREHOUSE_NAV.contextItems);
+
+    component.openModuleNavItem('sample', SAMPLE_NAV.primaryItems[0] as any);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/sample/dashboard']);
+  });
+
   describe('پیوند بایگانی اسناد شرکت‌ها (company-documents) بر اساس نقطه توسعه hasCompanyDocumentsArchive', () => {
     it('در نسخه کامل برای سوپریوزر پیوند بایگانی اسناد شرکت‌ها (company-documents) فعال و قابل مشاهده است', () => {
       mockAuth.user = () => ({ id: 1, username: 'admin', is_superuser: true });

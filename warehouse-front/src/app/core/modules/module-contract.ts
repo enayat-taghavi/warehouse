@@ -85,10 +85,9 @@ export interface ExtensionMap {
   };
 
   /**
-   * ۵. پیکربندی‌ها، ستون‌ها و تب‌های ماژول در مدیریت شرکت‌ها — مصرف در companies.ts، company-gdrive-tab.ts و first-boot-wizard.ts
+   * ۵. پرچم‌های ماژول در مدیریت شرکت‌ها — مصرف در companies.ts، company-gdrive-tab.ts، first-boot-wizard.ts و active-company.service.ts
    */
   companies?: {
-    tabs?: string[];
     hasWarehouseModuleToggle?: boolean;
     providesTreasury?: boolean;
   };

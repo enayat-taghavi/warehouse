@@ -100,7 +100,8 @@ warehouse-front/src/app/modules/<code>/
 | **فرانت** | میانبرهای منوی کاربری | `extensions.userMenu` | ثبت دسته‌بندی میانبرها (محاسبه پویا از روی داده‌ها) و قلمرو سینک عمیق |
 | **فرانت** | ناوبری پوسته اصلی | `extensions.layoutNav` | منوهای اصلی، فرعی و نقش‌ها در سایدبار (حل پویا با `routePrefix`، بخش «سامانه‌های دیگر» و پرچم `hasCompanyDocumentsArchive`) |
 | **فرانت** | مرکز عملیات پلتفرم | `extensions.operations` | پیوند سریع در نوار کناری عملیات (`quickLink`)، ویجت انقضای مدارک و پایش همگام‌سازی |
-| **فرانت** | تب‌های مدیریت شرکت‌ها | `extensions.companies` | تب‌های اختصاصی شرکت‌ها، فعال‌سازی انبارداری (`hasWarehouseModuleToggle`) و پرچم خزانه‌داری (`providesTreasury`) |
+| **فرانت** | پرچم‌های مدیریت شرکت‌ها | `extensions.companies` | فعال‌سازی انبارداری (`hasWarehouseModuleToggle`) و پرچم خزانه‌داری (`providesTreasury`) که تب‌ها و APIهای مالی شرکت را باز می‌کند |
+| **فرانت** | نشانی API شرکت‌ها | `extensions.companyApiEndpoints` | نشانی اختصاصی فهرست شرکت‌ها و دسترسی‌ها (`companiesEndpoint`، `accessEndpoint`) |
 | **فرانت** | گروه‌های دسترسی کاربر | `extensions.users` | پیش‌تنظیم‌ها و گروه‌های دسترسی ماژول در فرم کاربران (`permissionGroupKeys`) |
 | **فرانت** | پایش سلامت سیستم | `extensions.healthDashboard` | شاخص‌ها و پنل‌های سلامت و اتصال ماژول (`panelScopes`) |
 | **فرانت** | لاگ‌های ممیزی | `extensions.audit` | قلمروهای لاگ ممیزی در سامانه (`appScopes`) |

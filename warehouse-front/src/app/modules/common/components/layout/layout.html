@@ -229,19 +229,22 @@
         <div class="mt-3 pt-3 border-t border-slate-800/60 shrink-0">
           <div class="px-3 py-1.5 text-[10px] font-black tracking-wider text-slate-400 uppercase flex items-center justify-between">
             <span>سامانه‌های دیگر</span>
-            <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
-              {{ otherModuleTotalItemsCount }}
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+              {{ otherModuleTotalItemsCount.toLocaleString('fa-IR') }}
             </span>
           </div>
           <div class="mt-1 space-y-0.5">
             @for (sec of otherModuleNavSections(); track sec.module.code) {
+              @if (otherModuleNavSections().length > 1) {
+                <div class="px-3 pt-2 pb-1 text-[10px] font-bold text-slate-500 truncate">{{ sec.module.titleFa }}</div>
+              }
               @for (item of sec.items; track item.id) {
                 <button
                   type="button"
-                  (click)="switchTab(item.id)"
-                  [class.active]="currentTab === item.id"
-                  [attr.aria-current]="currentTab === item.id ? 'page' : null"
-                  class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/80"
+                  (click)="openModuleNavItem(sec.module.code, item)"
+                  [class.active]="isModuleNavItemActive(sec.module.code, item)"
+                  [attr.aria-current]="isModuleNavItemActive(sec.module.code, item) ? 'page' : null"
+                  class="sidebar-link w-full min-h-[40px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/80"
                   [title]="item.label"
                 >
                   <span class="shrink-0">

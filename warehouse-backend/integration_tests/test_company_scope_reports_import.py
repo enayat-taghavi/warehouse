@@ -203,6 +203,11 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
                 total_amount=2000000,
             )
 
+            # کاربر غیرممیز پرسنل فقط بخش‌های منتسب فعال خود را می‌بیند (همان قاعدهٔ صفحهٔ پرسنل)
+            from personnel.models import UserSectionAssignment
+            UserSectionAssignment.objects.create(user=self.user_a, section=self.sec_a, is_active=True)
+            UserSectionAssignment.objects.create(user=self.user_b, section=self.sec_b, is_active=True)
+
     # -------------------------------------------------------------------------
     # ۱. run برای personnel_profiles: کاربر شرکت الف فقط الف، سوپریوزر هر دو، کاربر بی‌شرکت هیچ
     # -------------------------------------------------------------------------
@@ -621,3 +626,110 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
         errors_n = data_n.get('errors', [])
         self.assertTrue(any(e.get('field') == 'national_code' for e in errors_n), f"خطای ردیف برای کد ملی بیرون از دامنه صادر نشد: {errors_n}")
         self.assertFalse(User.objects.filter(username='brand_new_user_xyz').exists())
+
+    # -------------------------------------------------------------------------
+    # بازبینی ناظر: یافته‌های tenant-scope-reviewer روی نشست ۱
+    # -------------------------------------------------------------------------
+    def _make_user_ab(self, username, national_code):
+        """کاربر غیرسوپریوزر با دسترسی به هر دو شرکت."""
+        u = User.objects.create_user(
+            username=username, password='Password123!', national_code=national_code,
+            first_name='کاربر', last_name='دوشرکتی',
+        )
+        UserCompanyAccess.objects.create(user=u, company=self.company_a, access_level='workspace_full', is_default=True)
+        UserCompanyAccess.objects.create(user=u, company=self.company_b, access_level='workspace_full')
+        return u
+
+    def _import(self, actor, rows, update_existing, company):
+        excel_data = _make_users_excel(rows)
+        file = SimpleUploadedFile('import.xlsx', excel_data, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        self.client.force_authenticate(actor)
+        return self.client.post(
+            '/api/auth/users/import_excel/',
+            {'file': file, 'update_existing': 'true' if update_existing else 'false'},
+            format='multipart',
+            HTTP_X_COMPANY_ID=str(company.id)
+        )
+
+    def test_report_personnel_profiles_limited_to_assigned_sections(self):
+        """کاربر غیرممیز شرکت الف که فقط به بخش الف منتسب است، پرسنل بخش دیگر همان شرکت را نمی‌بیند."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import ProjectSection, PersonnelProfile
+        sec_a2 = ProjectSection.objects.create(project=self.proj_a, code='SA2', name='بخش دوم الف')
+        profile_a2 = PersonnelProfile.objects.create(
+            company=self.company_a, section=sec_a2, first_name='پرسنل', last_name='بخش دوم',
+            national_code='0077777777', personnel_id_code='EMP-A2',
+        )
+        spec = {'entity': 'personnel_profiles', 'fields': ['id', 'first_name']}
+
+        self.client.force_authenticate(self.user_a)
+        ids_a = [r['id'] for r in self.client.post('/api/reports/run/', spec, format='json').json()['rows']]
+        self.assertIn(self.profile_a.id, ids_a)
+        self.assertNotIn(profile_a2.id, ids_a)
+
+        # ممیز پرسنل (حسابدار کل) به بخش محدود نیست ولی همچنان به شرکت‌های مجاز محدود است
+        auditor = User.objects.create_user(username='pers_auditor_a', password='Password123!', national_code='0088888888')
+        UserCompanyAccess.objects.create(user=auditor, company=self.company_a, access_level='workspace_full', is_default=True)
+        auditor.user_permissions.set(Permission.objects.filter(
+            codename__in=['view_sys_reports', 'view_sys_personnel', 'perm_approve_personnel_finance']
+        ))
+        self.client.force_authenticate(auditor)
+        ids_aud = [r['id'] for r in self.client.post('/api/reports/run/', spec, format='json').json()['rows']]
+        self.assertIn(self.profile_a.id, ids_aud)
+        self.assertIn(profile_a2.id, ids_aud)
+        self.assertNotIn(self.profile_b.id, ids_aud)
+
+    def test_report_users_grouped_count_has_no_duplicates(self):
+        """گزارش گروه‌بندی‌شدهٔ کاربران، کاربری را که به چند شرکت مجاز دسترسی دارد یک بار می‌شمارد."""
+        actor = self._make_user_ab('actor_ab_count', '0012121212')
+        actor.user_permissions.set(Permission.objects.filter(codename__in=['view_sys_reports', 'view_sys_users']))
+        self._make_user_ab('target_ab_count', '0013131313')
+
+        self.client.force_authenticate(actor)
+        flat = self.client.post('/api/reports/run/', {'entity': 'users', 'fields': ['id']}, format='json').json()
+        grouped = self.client.post('/api/reports/run/', {
+            'entity': 'users',
+            'group_by': ['is_active'],
+            'aggregations': [{'field': 'id', 'fn': 'count', 'alias': 'n'}],
+        }, format='json').json()
+        self.assertEqual(sum(int(r['n']) for r in grouped['rows']), flat['count'])
+
+    def test_excel_import_update_keeps_warehouses_outside_actor_scope(self):
+        """به‌روزرسانی با سازندهٔ فقط‌الف، انبار شرکت ب کاربر دوشرکتی را پاک نمی‌کند."""
+        if not apps.is_installed('warehouses'):
+            self.skipTest('ماژول انبار نصب نیست.')
+        target = self._make_user_ab('target_ab_wh', '0014141414')
+        target.assigned_warehouses.set([self.wh_a, self.wh_b])
+
+        res = self._import(self.user_a, [{
+            'first_name': 'کاربر', 'last_name': 'دوشرکتی', 'username': target.username,
+            'national_code': target.national_code, 'warehouses': self.wh_a.name, 'is_active': 'بله',
+        }], update_existing=True, company=self.company_a)
+        self.assertEqual(res.status_code, 200, res.content)
+        self.assertEqual(res.json().get('summary', {}).get('updated'), 1, res.json())
+
+        target.refresh_from_db()
+        self.assertEqual(set(target.assigned_warehouses.all()), {self.wh_a, self.wh_b})
+
+    def test_excel_import_warehouse_must_belong_to_new_user_company(self):
+        """سازندهٔ دوشرکتی با شرکت فعال الف: انبار شرکت ب برای کاربر تازه خطای ردیف است و «همه انبارها» فقط انبارهای الف را می‌دهد."""
+        if not apps.is_installed('warehouses'):
+            self.skipTest('ماژول انبار نصب نیست.')
+        actor = self._make_user_ab('actor_ab_wh', '0015151515')
+        actor.user_permissions.set(Permission.objects.filter(codename__in=['view_sys_users', 'perm_usr_add']))
+
+        res = self._import(actor, [
+            {'first_name': 'تازه', 'last_name': 'یک', 'username': 'new_wh_b_user', 'national_code': '0016161616',
+             'warehouses': self.wh_b.name, 'is_active': 'بله'},
+            {'first_name': 'تازه', 'last_name': 'دو', 'username': 'new_all_wh_user', 'national_code': '0017171717',
+             'warehouses': 'all_warehouses', 'is_active': 'بله'},
+        ], update_existing=False, company=self.company_a)
+        self.assertEqual(res.status_code, 200, res.content)
+        errors = res.json().get('errors', [])
+        self.assertTrue(any(e.get('field') == 'warehouses' for e in errors), errors)
+        self.assertFalse(User.objects.filter(username='new_wh_b_user').exists())
+
+        all_user = User.objects.get(username='new_all_wh_user')
+        self.assertIn(self.wh_a, set(all_user.assigned_warehouses.all()))
+        self.assertNotIn(self.wh_b, set(all_user.assigned_warehouses.all()))

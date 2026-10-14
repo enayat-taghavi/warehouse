@@ -107,6 +107,11 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
     return count > 1;
   }
 
+  /** getter هر بار شیء تازه می‌سازد؛ trackBy دکمه‌ها را در هر چرخهٔ بررسی تغییرات از نو نمی‌سازد */
+  public trackQuickLink(_index: number, link: OperationsQuickLink): string {
+    return link.code;
+  }
+
   public navigateToQuickLink(route: string): void {
     this.router.navigate([route]);
     this.closeMobileMenu();

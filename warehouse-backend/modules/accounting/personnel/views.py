@@ -226,13 +226,23 @@ def scope_personnel_queryset(request, qs):
     user = request.user
     if not user or not user.is_authenticated:
         return qs.none()
+    cid = validate_user_company_access(user, get_request_company_id(request))
+    return scope_personnel_for_user(user, qs, company_id=cid)
+
+
+def scope_personnel_for_user(user, qs, company_id=None):
+    """
+    همان قاعدهٔ scope_personnel_queryset بدون request (برای گزارش‌ساز): company_id تهی یعنی همهٔ شرکت‌های مجاز.
+    """
+    if not user or not user.is_authenticated:
+        return qs.none()
     if not is_personnel_global_auditor(user):
         user_section_ids = list(
             UserSectionAssignment.objects.filter(user=user, is_active=True).values_list('section_id', flat=True)
         )
         qs = qs.filter(Q(section_id__in=user_section_ids) | Q(created_by=user))
 
-    cid = validate_user_company_access(user, get_request_company_id(request))
+    cid = company_id
     if cid:
         return qs.filter(Q(company_id=cid) | Q(section__project__company_id=cid))
     if user.is_superuser:
