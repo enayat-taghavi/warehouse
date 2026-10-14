@@ -10,6 +10,7 @@ scripts/deploy/** text eol=lf
 # these rules are defence in depth.
 # warehouse-backend root: only manage.py and the requirements files ship (app packages have no dot in their name)
 warehouse-backend/*.* export-ignore
+warehouse-backend/backend_paths.py -export-ignore
 warehouse-backend/manage.py -export-ignore
 warehouse-backend/requirements.txt -export-ignore
 warehouse-backend/requirements.lock -export-ignore

@@ -143,6 +143,8 @@ def collect_violations(root_packages, rules):
     """
     if str(BACKEND_DIR) not in sys.path:
         sys.path.insert(0, str(BACKEND_DIR))
+    import backend_paths
+    backend_paths.install()
     import grimp
 
     graph = grimp.build_graph(*root_packages, include_external_packages=False)
@@ -263,7 +265,11 @@ def run_lint_imports():
 
     env = dict(os.environ)
     env["PYTHONUTF8"] = "1"
-    env["PYTHONPATH"] = os.pathsep.join(filter(None, [str(BACKEND_DIR), env.get("PYTHONPATH", "")]))
+    if str(BACKEND_DIR) not in sys.path:
+        sys.path.insert(0, str(BACKEND_DIR))
+    import backend_paths
+    python_paths = [str(BACKEND_DIR)] + backend_paths.paths()
+    env["PYTHONPATH"] = os.pathsep.join(filter(None, [os.pathsep.join(python_paths), env.get("PYTHONPATH", "")]))
     proc = subprocess.run(
         command, cwd=str(REPO_ROOT), env=env, capture_output=True, text=True, encoding="utf-8"
     )

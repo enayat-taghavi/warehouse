@@ -94,6 +94,8 @@ def test_installation_profiles():
 import sys
 if 'warehouse-backend' not in sys.path:
     sys.path.insert(0, r'E:\\warehouse project\\warehouse-backend')
+import backend_paths
+backend_paths.install()
 
 from platform_core.registry import register_module, ModuleSpec, PLATFORM_VERSION
 
@@ -131,6 +133,8 @@ import os, sys, django
 os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
 if 'warehouse-backend' not in sys.path:
     sys.path.insert(0, r'E:\\warehouse project\\warehouse-backend')
+import backend_paths
+backend_paths.install()
 
 django.setup()
 from django.test import Client
@@ -165,6 +169,8 @@ import os, sys, django
 os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
 if 'warehouse-backend' not in sys.path:
     sys.path.insert(0, r'E:\\warehouse project\\warehouse-backend')
+import backend_paths
+backend_paths.install()
 
 django.setup()
 from django.test import Client
@@ -197,6 +203,8 @@ import os, sys, django
 os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
 if 'warehouse-backend' not in sys.path:
     sys.path.insert(0, r'E:\\warehouse project\\warehouse-backend')
+import backend_paths
+backend_paths.install()
 
 django.setup()
 from django.test import Client

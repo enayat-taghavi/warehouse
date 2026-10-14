@@ -343,5 +343,20 @@ warehouse-front/src/app/
     - همهٔ `python -c`های verify زیر `cmd.exe` بی‌خطای نحوی اجرا شدند.
   - گام پیش‌نیاز انجام شد (کامیت جدای تغییرهای استقرار).
   - اقدام بعدی: اجرای صف (نشست ۱).
+- **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۱ (گام ۰-الف):**
+  - **کارهای انجام‌شده:**
+    - انتقال اپ‌ها با `git mv`: اپ‌های هسته (`accounts`، `common`، `companies`، `communications`، `notifications`، `reports`، `settings_core`، `platform_core`) به `warehouse-backend/core/`؛ اپ‌های انبار (`warehouses`، `inventory`) به `warehouse-backend/modules/warehouse/`؛ اپ مالی (`personnel`) به `warehouse-backend/modules/accounting/`.
+    - پاکسازی پوشه‌های خالی قدیمی همنام اپ در ریشه بک‌اند؛ عدم ایجاد `__init__.py` در `modules/` و `modules/<x>/`.
+    - ساخت `warehouse-backend/backend_paths.py` با `paths()` و `install()` و فراخوانی آن در `config/__init__.py`.
+    - اصلاح مصرف‌کننده‌ها: نگهبان ۲۹ (تنظیم `PYTHONPATH` از `paths()`)، نگهبان‌های ۳۰، ۳۱، ۳۶، ۴۱، ۴۳، ۴۹ (به‌همراه مسیر `VIEWS_PY`)، ۵۰، ۵۳ (مسیر `settings_core/views.py`)، ۵۴، نگهبان‌های فاز ۱ تا ۵، `setup_e2e_data.py`، اسکریپت‌های داخل اپ‌ها (`accounts/concurrency_stress_test.py` و ۶ اسکریپت نگهبان در `personnel`)، `pyproject.toml` (`package-dir` و `where`)، کامنت بالای `.importlinter`، استثنای `backend_paths.py` در `.gitattributes`، `Get-BackendWhitelist` و `Test-BundleStage` در `deploy.ps1`، `scripts/deploy_tests/test_bundle.ps1` (بررسی برابری اپ‌های بسته با `INSTALLED_APPS` پروفایل کامل)، و مستندات ساختار در `CLAUDE.md` و اسکیل‌های `tenant-scope-reviewer`.
+  - **انحراف‌ها:** هیچ. جابه‌جایی مکانیکی کاملاً منطبق بر طرح انجام شد بدون تغییر در `name` یا `label` یا ایجاد مایگریشن.
+  - **فرمان‌های اجراشده توسط ایجنت و خلاصه خروجی:**
+    - `python scripts/automation/verify_tools.py django-check` -> `[all] manage.py check -> exit 0` / `[warehouse] manage.py check -> exit 0` / `[accounting] manage.py check -> exit 0`
+    - `python scripts/automation/verify_tools.py migrations-unchanged` -> `No changes detected` / `No model change needs a migration.`
+    - `pwsh -NoProfile -File scripts/deploy_tests/test_bundle.ps1` -> `[PASS] bundle created ... [PASS] container gate script exit 0 [RESULT] failures=0`
+  - **آنچه به runner و ناظر می‌ماند:**
+    - runner: اجرای آزمون‌های خودکار گام ۰-الف (`django-check`، `migrations-unchanged`، `migrate-empty`، آزمون بسته‌بندی `test_bundle.ps1`، سنجش عددهای نگهبان ۲۹ با `guardian29-max`، آزمون تمیزی درخت و ایجاد کامیت).
+    - ناظر (Claude): بازبین‌های `data-loss-reviewer` و `tenant-scope-reviewer`، بررسی استقرار روی `app` و فراخوانی `/` و `/api/public/config/`.
 
 </div>
+

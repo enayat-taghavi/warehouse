@@ -42,6 +42,8 @@ PROFILE_CHECK = r"""
 import io, os, sys
 os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
 sys.path.insert(0, os.getcwd())
+import backend_paths
+backend_paths.install()
 import django
 django.setup()
 from django.conf import settings

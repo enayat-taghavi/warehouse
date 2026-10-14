@@ -26,23 +26,26 @@
 
 ## Repository layout (monorepo)
 
-- `warehouse-backend/` — Django backend (with `venv/`). Config in `warehouse-backend/config/` (`settings.py`, `urls.py`, `asgi.py`, `wsgi.py`).
+- `warehouse-backend/` — Django backend (with `venv/`).
+  - `config/` — system settings and composition root (`settings.py`, `urls.py`, `asgi.py`, `wsgi.py`).
+  - `backend_paths.py` — path discovery helper adding `core/` and `modules/*` to `sys.path`.
+  - `core/` — platform core apps (`accounts`, `common`, `companies`, `communications`, `notifications`, `platform_core`, `reports`, `settings_core`).
+  - `modules/warehouse/` — warehouse module apps (`warehouses`, `inventory`).
+  - `modules/accounting/` — accounting module apps (`personnel`).
 - `warehouse-front/` — Angular frontend (`src/app/`). Key services in `src/app/core/services/`.
 - `scripts/` — guardian/test scripts (`scripts/e2e/`).
-- `Documents/Modular_Split_Warehouse_Accounting/` — module-split docs and checklist.
+- `Documents/Modular_Middle_Path/` — modular architecture implementation plan.
 - `pyproject.toml` — dev-only umbrella package `wh-suite` (`import-linter==2.3` as dev).
 
 ### Backend apps (Django)
 
-`accounts`, `common`, `communications`, `config`, `inventory`, `notifications`, `personnel`, `reports`, `settings_core`, `warehouses`.
-
 - `config` — settings and system boot. `AUTH_USER_MODEL` is subject to the split; guardians sometimes use `auth.User`.
-- `settings_core` — platform app split out of `warehouses`; model `SystemSetting` with `db_table='warehouses_systemsetting'`. Settings functions in `settings_core/services.py`; shim in `warehouses/services.py`; viewsets in `settings_core/views.py`. Key `installed_modules` in `/api/public/config/`.
-- `warehouses` — warehouse core. `Warehouse.assigned_users` (M2M, `db_table='accounts_customuser_assigned_warehouses'`). `management/commands/setup_project.py`.
-- `accounts` — users and accounting. `AuditLog.warehouse_id` is numeric (IntegerField) on the same column/index as before; `AUDIT_MODULES` registry in `accounts/models.py`.
-- `personnel` — accounting modules (attendance/fleet/payroll/treasury/projects/invoices), registered in `personnel/apps.py`.
-- `communications` — chat.
-- `reports` — report-builder engine (`reports/`: `engine.py`, `registry.py`, `views.py`, `pdf.py`).
+- `core/settings_core` — platform app split out of `warehouses`; model `SystemSetting` with `db_table='warehouses_systemsetting'`. Settings functions in `settings_core/services.py`; shim in `warehouses/services.py`; viewsets in `settings_core/views.py`. Key `installed_modules` in `/api/public/config/`.
+- `modules/warehouse/warehouses` — warehouse core. `Warehouse.assigned_users` (M2M, `db_table='accounts_customuser_assigned_warehouses'`). `management/commands/setup_project.py`.
+- `core/accounts` — users and accounting. `AuditLog.warehouse_id` is numeric (IntegerField) on the same column/index as before; `AUDIT_MODULES` registry in `accounts/models.py`.
+- `modules/accounting/personnel` — accounting modules (attendance/fleet/payroll/treasury/projects/invoices), registered in `personnel/apps.py`.
+- `core/communications` — chat.
+- `core/reports` — report-builder engine (`reports/`: `engine.py`, `registry.py`, `views.py`, `pdf.py`).
 
 ## Frontend architecture (Angular)
 

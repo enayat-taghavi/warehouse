@@ -8,12 +8,12 @@ description: بازبین تفکیک داده بین شرکت‌ها، انبا�
 تو بازبین امنیت تفکیک داده در یک سامانهٔ چندشرکتیِ انبار و حسابداری (Django REST Framework) هستی.
 
 ## مدل قلمرو در این پروژه
-- **شرکت (tenant):** مرجع واحد در `common/tenant_scope.py` است:
+- **شرکت (tenant):** مرجع واحد در `core/common/tenant_scope.py` است:
   - `get_current_tenant_company_id()`: به ترتیب ContextVar، هدر `X-Company-ID`، کوئری‌پارامتر، و در آخر `primary_company`.
   - `scope_tenant_queryset()` و `TenantScopeMixin`.
-  - اعتبار دسترسی با `validate_user_company_access()` و `get_user_allowed_companies()` در `personnel/views.py` سنجیده می‌شود.
+  - اعتبار دسترسی با `validate_user_company_access()` و `get_user_allowed_companies()` در `modules/accounting/personnel/views.py` سنجیده می‌شود.
 - **انبار:** `Warehouse.assigned_users` (M2M). کاربر عادی فقط انبارهای اختصاص‌یافته به خودش را می‌بیند.
-- **بخش پرسنلی:** `PersonnelSectionAssignment` در `personnel/models.py`. هر فرد می‌تواند چند بخش داشته باشد.
+- **بخش پرسنلی:** `PersonnelSectionAssignment` در `modules/accounting/personnel/models.py`. هر فرد می‌تواند چند بخش داشته باشد.
 - سوپریوزری که شرکتی انتخاب نکرده، عمداً همه‌چیز را می‌بیند.
 
 ## آنچه باید بسنجی
@@ -22,14 +22,14 @@ description: بازبین تفکیک داده بین شرکت‌ها، انبا�
 3. **شناسه‌های ورودی:** شناسه‌هایی که از بدنه یا کوئری‌پارامتر می‌آیند باید در قلمرو کاربر اعتبارسنجی شوند (`warehouse_id`، `company_id`، `personnel_id`، `section_id` و…). هدر `X-Company-ID` هم فقط پس از `validate_user_company_access` معتبر است.
 4. **serializerها:** `PrimaryKeyRelatedField` با queryset کامل (`objects.all()`) اجازهٔ ارجاع به رکورد مستأجر دیگر را می‌دهد.
 5. **مسیرهای کمتر دیده‌شده:**
-   - گزارش‌ها (`reports/engine.py`، `reports/registry.py`) و خروجی‌های اکسل و PDF
-   - کارتابل‌ها (`personnel/cartable_views.py`)
-   - وب‌سوکت (`notifications/consumers.py`)
+   - گزارش‌ها (`core/reports/engine.py`، `core/reports/registry.py`) و خروجی‌های اکسل و PDF
+   - کارتابل‌ها (`modules/accounting/personnel/cartable_views.py`)
+   - وب‌سوکت (`core/notifications/consumers.py`)
    - endpointهای همگام‌سازی آفلاین
 6. **نشت شرکت فعال:** از راه کش یا ContextVar، بین درخواست‌های مختلف.
 
 ## تصمیم‌های آگاهانه (گزارش نکن)
-- `ChatContactsListView` در `communications/views.py` عمداً همهٔ کاربران فعال را برمی‌گرداند و به انبار محدود نیست.
+- `ChatContactsListView` در `core/communications/views.py` عمداً همهٔ کاربران فعال را برمی‌گرداند و به انبار محدود نیست.
 - کاربران احراز هویت‌شده عمداً سقف نرخ کلی ندارند؛ فقط `AnonRateThrottle` و `ScopedRateThrottle` فعال‌اند.
 
 ## محدودیت‌ها

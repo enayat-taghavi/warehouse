@@ -24,7 +24,7 @@ except Exception:
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_DIR = REPO_ROOT / "warehouse-backend"
-VIEWS_PY = BACKEND_DIR / "accounts" / "views.py"
+VIEWS_PY = BACKEND_DIR / "core" / "accounts" / "views.py"
 
 
 def test_users_backend_n1():
@@ -58,6 +58,8 @@ def test_users_backend_n1():
     # ۲. راستی‌آزمایی در سطح Django ORM
     if str(BACKEND_DIR) not in sys.path:
         sys.path.insert(0, str(BACKEND_DIR))
+    import backend_paths
+    backend_paths.install()
 
     os.environ["DJANGO_SETTINGS_MODULE"] = "config.settings"
     import django

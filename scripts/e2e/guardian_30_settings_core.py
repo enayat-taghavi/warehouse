@@ -66,6 +66,8 @@ def _main():
 
     if str(BACKEND_DIR) not in sys.path:
         sys.path.insert(0, str(BACKEND_DIR))
+    import backend_paths
+    backend_paths.install()
 
     # ── ۱) settings مشتق‌شده با INSTALLED_APPS حداقلی ─────────────────
     import config.settings as base_settings  # نوع‌های تنظیمات (بدون بوت)

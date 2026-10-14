@@ -4,7 +4,7 @@
 #  with the cp1252 locale codec and aborts with:
 #      'charmap' codec can't decode byte ... in position ...
 #  Correct invocation from the repository root:
-#      PYTHONUTF8=1 PYTHONPATH=warehouse-backend lint-imports
+#      PYTHONUTF8=1 PYTHONPATH="warehouse-backend;warehouse-backend/core;warehouse-backend/modules/warehouse;warehouse-backend/modules/accounting" lint-imports
 #  Guardian 29 sets both variables itself, so it always works:
 #      python scripts/e2e/guardian_modularization.py
 # ===========================================================================
@@ -21,7 +21,7 @@
 #
 #  اجرا (از ریشهٔ مخزن) — یکی از دو راه:
 #     ۱) pip install -e ".[dev]"  و سپس  PYTHONUTF8=1 lint-imports
-#     ۲) PYTHONUTF8=1 PYTHONPATH=warehouse-backend lint-imports
+#     ۲) PYTHONUTF8=1 PYTHONPATH="warehouse-backend;warehouse-backend/core;warehouse-backend/modules/warehouse;warehouse-backend/modules/accounting" lint-imports
 #     نگهبان ۲۹ خودش هر دو متغیر را ست می‌کند، پس بدون نصب هم کار می‌کند.
 # ===========================================================================
 

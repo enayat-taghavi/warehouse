@@ -1285,8 +1285,10 @@ function Get-BackendWhitelist([string]$Sha) {
     $r = Invoke-Git @('ls-tree', '-r', '-z', '--name-only', $Sha, '--', 'warehouse-backend')
     if ($r.ExitCode -ne 0) { throw "git ls-tree failed for $Sha." }
     $names = $r.Output.Split([char]0)
-    $apps = @($names | ForEach-Object { if ($_ -match '^warehouse-backend/([^/]+)/__init__\.py$') { $Matches[1] } } | Sort-Object -Unique)
-    $files = @('manage.py', 'requirements.txt', 'requirements.lock')
+    $apps = @($names | ForEach-Object {
+        if ($_ -match '^warehouse-backend/((?:core/|modules/[^/]+/|)([^/]+))/__init__\.py$') { $Matches[1] }
+    } | Sort-Object -Unique)
+    $files = @('backend_paths.py', 'manage.py', 'requirements.txt', 'requirements.lock')
     foreach ($f in $files) {
         if ($names -notcontains "warehouse-backend/$f") { throw "Commit $Sha has no warehouse-backend/$f; it is mandatory in the bundle." }
     }
@@ -1313,9 +1315,15 @@ function Test-BundleStage([string]$StageDir, $Whitelist) {
         }
     }
     $backendTop = @(Get-ChildItem -LiteralPath (Join-Path $StageDir 'warehouse-backend') -Force | ForEach-Object { $_.Name } | Sort-Object)
-    $expectedTop = @(@($Whitelist.Apps) + @($Whitelist.Files) | Sort-Object)
+    $expectedTopDirs = @($Whitelist.Apps | ForEach-Object { $_.Split('/')[0] } | Sort-Object -Unique)
+    $expectedTop = @(@($expectedTopDirs) + @($Whitelist.Files) | Sort-Object)
     if (($backendTop -join '|') -cne ($expectedTop -join '|')) {
         $problems.Add("warehouse-backend top level differs from the whitelist (got: $($backendTop -join ', '))")
+    }
+    foreach ($appRel in $Whitelist.Apps) {
+        if (-not (Test-Path -LiteralPath (Join-Path $StageDir "warehouse-backend/$appRel/__init__.py"))) {
+            $problems.Add("backend app $appRel missing from bundle")
+        }
     }
     $dist = Join-Path $StageDir "warehouse-front\$FrontDistRelative"
     foreach ($required in 'index.html', 'ngsw.json') {

@@ -46,18 +46,25 @@ accounting = "personnel.module_spec:SPEC"
 dependencies = { file = ["warehouse-backend/requirements.txt"] }
 
 [tool.setuptools]
-package-dir = { "" = "warehouse-backend" }
+package-dir = { "" = "warehouse-backend", accounts = "warehouse-backend/core/accounts", common = "warehouse-backend/core/common", communications = "warehouse-backend/core/communications", companies = "warehouse-backend/core/companies", notifications = "warehouse-backend/core/notifications", platform_core = "warehouse-backend/core/platform_core", reports = "warehouse-backend/core/reports", settings_core = "warehouse-backend/core/settings_core", warehouses = "warehouse-backend/modules/warehouse/warehouses", inventory = "warehouse-backend/modules/warehouse/inventory", personnel = "warehouse-backend/modules/accounting/personnel" }
 
 [tool.setuptools.packages.find]
-where = ["warehouse-backend"]
+where = [
+    "warehouse-backend",
+    "warehouse-backend/core",
+    "warehouse-backend/modules/warehouse",
+    "warehouse-backend/modules/accounting",
+]
 include = [
     "accounts*",
     "common*",
     "communications*",
+    "companies*",
     "config*",
     "inventory*",
     "notifications*",
     "personnel*",
+    "platform_core*",
     "reports*",
     "settings_core*",
     "warehouses*",

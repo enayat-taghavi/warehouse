@@ -288,7 +288,7 @@ def verify_deploy_safety() -> bool:
     domain_problems = []
     settings_py = REPO_ROOT / "warehouse-backend" / "config" / "settings.py"
     settings_text = settings_py.read_text(encoding="utf-8") if settings_py.exists() else ""
-    views_py = REPO_ROOT / "warehouse-backend" / "settings_core" / "views.py"
+    views_py = REPO_ROOT / "warehouse-backend" / "core" / "settings_core" / "views.py"
     views_text = views_py.read_text(encoding="utf-8") if views_py.exists() else ""
 
     remove_start = deploy_text.find('if [[ "${1:-}" == "--remove-legacy-domain" ]]')

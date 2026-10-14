@@ -75,9 +75,11 @@ forbidden=$(find . \( -name '__pycache__' -o -name 'test_phase*' -o -name '.env'
 [ -z "$forbidden" ] && pass "no __pycache__, test_phase, .env or db.sqlite3" || bad "forbidden: $forbidden"
 for f in warehouse-front/dist/warehouse-app/browser/index.html warehouse-front/dist/warehouse-app/browser/ngsw.json RELEASE \
          scripts/deploy/warehouse-deploy.sh scripts/deploy/warehouse-nightly-backup.sh scripts/remote-setup.sh \
-         warehouse-backend/manage.py warehouse-backend/requirements.txt warehouse-backend/requirements.lock; do
+         warehouse-backend/backend_paths.py warehouse-backend/manage.py warehouse-backend/requirements.txt warehouse-backend/requirements.lock; do
     [ -f "$f" ] && pass "present: $f" || bad "missing: $f"
 done
+apps=$(find warehouse-backend -name "apps.py" -exec dirname {} + | xargs -n1 basename | sort -u | tr '\n' ' ')
+[ "$apps" = "$EXPECTED_APPS " ] && pass "bundle apps equal full profile INSTALLED_APPS" || bad "bundle apps: $apps (expected: $EXPECTED_APPS)"
 grep -qx "COMMIT=$EXPECTED_SHA" RELEASE && pass "RELEASE names the commit" || bad "RELEASE: $(cat RELEASE)"
 for s in scripts/deploy/*.sh scripts/remote-setup.sh; do
     bash -n "$s" && pass "bash -n $s" || bad "bash -n $s"
@@ -85,13 +87,15 @@ done
 echo "[INFO] modes as stored by bsdtar: $(stat -c '%a' RELEASE scripts/deploy/warehouse-deploy.sh warehouse-backend | tr '\n' ' ')"
 exit $fail
 '@
-$expectedTop = (@(@($whitelist.Apps) + @($whitelist.Files)) | Sort-Object -Culture ([cultureinfo]::InvariantCulture)) -join ' '
+$expectedTopDirs = @($whitelist.Apps | ForEach-Object { $_.Split('/')[0] } | Sort-Object -Unique)
+$expectedTop = (@(@($expectedTopDirs) + @($whitelist.Files)) | Sort-Object -Culture ([cultureinfo]::InvariantCulture)) -join ' '
+$expectedApps = 'accounts communications companies inventory notifications personnel platform_core reports settings_core warehouses'
 try {
     $run = Invoke-Process -FilePath $DockerExe -ArgumentList @('run', '-d', '--name', $container, 'ubuntu:24.04', 'sleep', 'infinity') -Capture -Quiet
     if ($run.ExitCode -ne 0) { throw 'docker run failed.' }
     $cp = Invoke-Process -FilePath $DockerExe -ArgumentList @('cp', $bundle.Path, "${container}:/bundle.tar.gz") -Capture -Quiet
     Assert-True ($cp.ExitCode -eq 0) 'bundle copied into the container'
-    $ex = Invoke-Process -FilePath $DockerExe -ArgumentList @('exec', '-i', '-e', "EXPECTED_TOP=$expectedTop", '-e', "EXPECTED_SHA=$sha", '-e', 'LC_ALL=C', $container, 'bash', '-s') -StdinText $check.Replace("`r", '') -Capture
+    $ex = Invoke-Process -FilePath $DockerExe -ArgumentList @('exec', '-i', '-e', "EXPECTED_TOP=$expectedTop", '-e', "EXPECTED_SHA=$sha", '-e', "EXPECTED_APPS=$expectedApps", '-e', 'LC_ALL=C', $container, 'bash', '-s') -StdinText $check.Replace("`r", '') -Capture
     foreach ($line in $ex.Output) { if ($line -like '[[]FAIL[]]*') { $failures++ } }
     Assert-True ($ex.ExitCode -eq 0) "container gate script exit $($ex.ExitCode)"
 } finally {

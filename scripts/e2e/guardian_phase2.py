@@ -9,6 +9,8 @@ except Exception:
 backend_dir = r"e:\warehouse project\warehouse-backend"
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
+import backend_paths
+backend_paths.install()
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 

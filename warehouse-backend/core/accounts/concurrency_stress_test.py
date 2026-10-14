@@ -13,7 +13,9 @@ import sys
 import argparse
 
 # تنظیم کانتکست پروژه جنگو
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import backend_paths
+backend_paths.install()
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 try:

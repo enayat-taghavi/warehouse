@@ -54,6 +54,8 @@ def test_sensitive_permissions_sync():
     # ۳. بررسی وجود در SENSITIVE_PERMISSION_CODENAMES بک‌اند
     if str(BACKEND_DIR) not in sys.path:
         sys.path.insert(0, str(BACKEND_DIR))
+    import backend_paths
+    backend_paths.install()
 
     os.environ["DJANGO_SETTINGS_MODULE"] = "config.settings"
     import django
