@@ -188,4 +188,13 @@
     4. اجرای صف در تب Windows Terminal با `.\run_tasks.bat`.
     5. بازبینی ناظر.
 
+- **۲۳ مهر ۱۴۰۵ (2026-10-14)، Claude — توافق مراحل و صف:**
+  - سه نشست با کامنت runner در `tasks.md` نوشته شد. همهٔ خط‌های `python -c` روی HEAD (`ddc3ea1`) بی‌خطای نحوی اجرا شدند و، چون کار انجام نشده بود، درست رد شدند.
+  - روی HEAD: نگهبان ۲۹ و ۵۷ سبز. آزمون‌های بک‌اند نشست ۱ (۲۱۹ آزمون) سه خطای از پیش موجود در خود فایل‌های آزمون دارند: دو `ExportWorkerTests` در `integration_tests/test_reports_integration.py` (import نسبی ناموجود `integration_tests.management`) و `NameError` برای `status` در `modules/warehouse/warehouses/test_company_warehouse_isolation.py`. خط verify فقط همین سه را می‌پذیرد. رفع این سه بیرون از دامنهٔ این طرح است.
+  - چت توافق Antigravity: `35c27e73` (Gemini 3.8 Flash (High)، دو دور، «توافق دارم»).
+    - پذیرفته: بررسی پیشوندهای ثابت `switchTab` در نشست ۲ کوتیشن دوتایی و template literal را هم می‌گیرد؛ در نشست ۱ شرکت فعال در صورت نیاز به پیش‌نمایش Excel هم می‌رسد.
+    - رد: ادعای «باگ regex» در خط verify آزمون‌های نشست ۱. Python 3.12 نام متد را داخل پرانتز می‌آورد و همان regex روی لاگ واقعی HEAD هر سه خطا را درست شناخت.
+  - کاربر گفت صف را بی‌انتظار شروع کن (۲۳ مهر). صف در تب Windows Terminal اجرا شد.
+  - **اقدام بعدی:** پس از پایان صف، بازبینی ناظر (`tenant-scope-reviewer` روی نشست ۱، `ui-reviewer` روی ۲ و ۳)، بررسی 4300 و release روی `app`.
+
 </div>
