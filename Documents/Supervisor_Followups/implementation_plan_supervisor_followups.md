@@ -214,5 +214,30 @@
     - هیچ import مستقیمی از هسته به ماژول‌ها انجام نشد و ارتباط انبار از طریق اکستنشن موجود در رجیستری پیاده‌سازی گردید.
     - در `MonthlyPayrollRecord` آزمون، با توجه به الزامی بودن کلید خارجی `period`، رکورد `MonthlyWorkPeriod` متناظر با شرکت مربوطه ساخته شد تا یکپارچگی ارجاعی حفظ شود.
 
+- **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۲ (لانچر، سایدبار و پیوند سریع از نقطه‌های توسعه در فرانت):**
+  - **فهرست فایل‌های تغییریافته و ایجادشده:**
+    - `warehouse-front/src/app/core/modules/module-contract.ts`: افزودن ویژگی اختیاری `route?: string;` به `ModuleNavItem`؛ توسعهٔ تایپ `themeColor` در کاشی‌های لانچر (`launcherTile`).
+    - `warehouse-front/src/app/core/modules/module-registry.service.ts`: تزریق خودکار فیلد `moduleCode` در اشیاء خروجی `getExtensions` جهت انتساب صحیح اکستنشن به ماژول صاحبش؛ افزودن متد `registerModule` برای تسهیل تست‌های پویا.
+    - `warehouse-front/src/app/modules/common/components/app-launcher/app-launcher.ts` و `app-launcher.html`: ایجاد سیگنال `extraCards()` جهت شناسایی ماژول‌های ثالث نصب‌شده بر اساس ویژگی‌های خود کارت (نه هاردکد نام ماژول در هسته)؛ ایجاد نگاشت کلاس‌های ثابت `LAUNCHER_THEMES` سازگار با Tailwind JIT؛ تنظیم تطابق ۱:۱ سنجه‌های `visibleCardsCount`، `isSingleAppMode` و `gridContainerClass` با تعداد واقعی کاشی‌های رندرشده؛ رندر کاشی‌های ماژول‌های نصب‌شده با `@for (card of extraCards(); track card.code)` همراه قفل دسترسی و آیکون معتبر رجیستری.
+    - `warehouse-front/src/app/modules/common/components/layout/layout.ts` و `layout.html`: حذف پیشوندهای ثابت و هاردکدشدهٔ `'/app/warehouse/'` و `'/app/finance/'` در `switchTab` و حل پویا بر پایهٔ `routePrefix` ماژول و فیلد اختیاری `route`؛ حفظ امضای `switchTab(tabId: string)`؛ حل پویا و وابسته به ماژول فعال برای شناسه‌های مشترک نظیر `audit` و `health`؛ حفظ کلیهٔ مسیرها و ریدایرکت‌های موجود از جمله `companies`؛ تفکیک ماژول‌های بدون انبار (`showWarehouseSwitcher === false`) در بخش مجزای «سامانه‌های دیگر» در سایدبار مشروط به مجوز آیتم.
+    - `warehouse-front/src/app/modules/common/components/operations/operations-layout/operations-layout.ts` و `operations-layout.html`: استخراج و نمایش پیوندهای سریع ماژول‌های نصب‌شده از طریق اکستنشن `operations.quickLink` در نوار کناری و کشوی موبایل عملیات، ضمن حفظ پیوندهای ثابت انبار و مالی.
+    - `scripts/module-template/frontend/nav-items.ts`: بازنویسی برای استفاده مستقیم از `ModuleNavItem` برگرفته از `module-contract.ts` و حذف اینترفیس جداگانهٔ `NavItem`.
+    - `scripts/module-template/frontend/module.ts`: تصحیح نام آیکون به آیکون معتبر رجیستری (`'box'`)؛ افزودن اکستنشن واقعی `extensions.layoutNav` و حذف بلوک زائد `navItems`.
+    - `warehouse-front/src/app/modules/common/components/app-launcher/app-launcher.dom.spec.ts`: آزمون‌های DOM جامع برای اعتبارسنجی ۳ پروفایل ماژولی (کامل، فقط انبار، فقط مالی) به همراه ماژول ساختگی `sample` و مطابقت کامل شمارندهٔ کاشی‌ها با `visibleCardsCount`.
+    - `warehouse-front/src/app/modules/common/components/layout/layout-modular.dom.spec.ts`: آزمون‌های DOM جامع برای ناوبری به ماژول `sample` (`/app/sample/...`)، پایداری مسیرهای انبار و مالی، حل صحیح شناسه‌های مشترک و بخش «سامانه‌های دیگر».
+    - `warehouse-front/src/app/modules/common/components/operations/operations-layout/operations-layout.dom.spec.ts`: آزمون‌های DOM برای نمایش پیوند سریع ماژول ساختگی `sample` در نوار عملیات و تداوم پیوندهای موجود.
+    - `warehouse-front/tsconfig.test21.spec.json`: افزودن `operations-layout.dom.spec.ts` به لیست فایل‌های تحت آزمون مستقل.
+  - **تصمیم‌ها و انحراف‌ها:**
+    - ظاهر و رفتار موجود در پروفایل کامل (انبار و مالی) دقیقاً دست‌نخورده باقی ماند.
+    - از هرگونه هاردکد کردن نام ماژول‌ها در مؤلفه‌های هسته خودداری شد و کلیه اکستنشن‌ها از رجیستری ماژولار استخراج شدند.
+    - آزمون‌های DOM هر سه کامپوننت با متدولوژی سبک (Type 1: jsdom + Vitest) با موفقیت کامل و بدون وابستگی به مرورگر سنگین اجرا شدند.
+  - **فهرست چک ۳۶۰px برای کاربر (موارد پشت صفحهٔ ورود):**
+    - [ ] **صفحه لانچر در ۳۶۰px (`/app/launcher`):** بررسی نمایش گرید تک‌ستونه بدون هیچ‌گونه اسکرول افقی ناخواسته؛ بررسی تناسب ابعاد کارت‌ها و عنوان‌ها در عرض ۳۶۰ پیکسل.
+    - [ ] **کارت‌های دارای دسترسی/فاقد دسترسی در لانچر:** بررسی رفتار کاشی‌های ماژول‌های متصل در صورت عدم برخورداری کاربر از دسترسی (نمایش برچسب قفل دسترسی و غیرفعال بودن رویداد کلیک).
+    - [ ] **کشوی منوی سایدبار (Mobile Drawer) در ۳۶۰px:** باز کردن منوی کناری موبایل و بررسی تفکیک صحیح بخش «سامانه‌های دیگر» برای ماژول‌های مستقل از انبار بدون بیرون‌زدگی تگ‌ها یا متون دکمه‌ها.
+    - [ ] **ناوبری گزینه‌های سایدبار:** لمس گزینه‌های منوی ناوبری و هدایت موفق به آدرس‌های تعریف‌شده در ماژول بدون شکست مسیر یا ارجاع اشتباه به روت انبار/مالی.
+    - [ ] **مسیرهای مشترک `audit` و `health`:** بررسی رفتار این دو گزینه در ماژول انبار و ماژول مالی در هر دو حالت دسکتاپ و ۳۶۰px موبایل.
+    - [ ] **نوار کناری کنترل عملیات (Operations Sidebar):** باز کردن منوی عملیات در ۳۶۰px و بررسی قرارگیری درست دکمه‌های پیوند سریع ماژول‌ها در کنار پیوندهای اصلی.
+
 </div>
 

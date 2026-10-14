@@ -29,6 +29,7 @@
     "src/app/modules/common/components/layout/layout.spec.ts",
     "src/app/modules/common/components/layout/layout-modular.dom.spec.ts",
     "src/app/modules/common/components/app-launcher/app-launcher.dom.spec.ts",
+    "src/app/modules/common/components/operations/operations-layout/operations-layout.dom.spec.ts",
     "src/app/shared/components/user-menu/user-menu.component.spec.ts"
   ]
 }

@@ -234,6 +234,69 @@
         </div>
       </div>
 
+      <!-- ۴. کاشی‌های عمومی برای ماژول‌های نصب‌شده دیگر (بر پایه نقطه توسعه launcherTile) -->
+      @for (card of extraCards(); track card.code) {
+        <div
+          class="relative rounded-3xl p-6 sm:p-8 border transition-all duration-300 flex flex-col justify-between group overflow-hidden"
+          [ngClass]="card.hasAccess
+            ? 'bg-slate-900/80 hover:bg-slate-900 ' + getThemeClasses(card.themeColor).cardBorder + ' hover:shadow-2xl cursor-pointer'
+            : 'bg-slate-900/40 border-slate-800/80 opacity-60 cursor-not-allowed'"
+          (click)="card.hasAccess ? enterApp(card.code) : null"
+        >
+          <!-- افکت نور داخلی -->
+          <div *ngIf="card.hasAccess" class="absolute -right-20 -top-20 w-48 h-48 rounded-full blur-2xl transition-all pointer-events-none" [ngClass]="getThemeClasses(card.themeColor).glowBg"></div>
+
+          <div>
+            <!-- هدر کارت -->
+            <div class="flex items-start justify-between mb-5">
+              <div class="w-14 h-14 rounded-2xl border flex items-center justify-center text-2xl shadow-inner" [ngClass]="getThemeClasses(card.themeColor).iconBg + ' ' + getThemeClasses(card.themeColor).iconBorder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="getCardIcon(card.icon)"></svg>
+              </div>
+              <div>
+                <span *ngIf="card.hasAccess" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black border" [ngClass]="getThemeClasses(card.themeColor).badgeBg + ' ' + getThemeClasses(card.themeColor).badgeBorder + ' ' + getThemeClasses(card.themeColor).badgeText">
+                  <span class="w-1.5 h-1.5 rounded-full" [ngClass]="getThemeClasses(card.themeColor).badgeDot"></span>
+                  دسترسی مجاز
+                </span>
+                <span *ngIf="!card.hasAccess" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-slate-800 border border-slate-700 text-slate-400">
+                  🔒 فاقد دسترسی
+                </span>
+              </div>
+            </div>
+
+            <!-- عنوان و توضیحات -->
+            <h3 class="text-lg sm:text-xl font-black text-white transition-colors" [ngClass]="getThemeClasses(card.themeColor).titleHover">
+              {{ card.title }}
+            </h3>
+            <p class="text-xs font-mono font-bold mt-1" [ngClass]="getThemeClasses(card.themeColor).routeColor">{{ card.routePrefix }}</p>
+            <p class="text-xs sm:text-sm text-slate-400 mt-3 leading-relaxed">
+              {{ card.description }}
+            </p>
+          </div>
+
+          <!-- دکمه ورود و برچسب‌های ماژول -->
+          <div class="mt-8 pt-5 border-t border-slate-800/80 flex items-center justify-between">
+            <div class="flex items-center gap-1.5 text-[11px] text-slate-400 truncate max-w-[60%]">
+              <span *ngFor="let tag of card.tags; let last = last">
+                🔹 {{ tag }}<span *ngIf="!last" class="mx-1">•</span>
+              </span>
+            </div>
+
+            <button
+              type="button"
+              [disabled]="!card.hasAccess"
+              (click)="$event.stopPropagation(); enterApp(card.code)"
+              class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-md active:scale-95"
+              [ngClass]="card.hasAccess
+                ? getThemeClasses(card.themeColor).buttonBg + ' cursor-pointer'
+                : 'bg-slate-800 text-slate-500 cursor-not-allowed'"
+            >
+              <span>ورود به سامانه</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="rotate-180" appIcon="arrow-right"></svg>
+            </button>
+          </div>
+        </div>
+      }
+
     </div>
   </main>
 

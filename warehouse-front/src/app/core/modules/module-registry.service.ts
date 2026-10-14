@@ -141,14 +141,34 @@ export class ModuleRegistryService {
    */
   public getExtensions<K extends keyof ExtensionMap>(
     point: K
-  ): Array<{ module: WhFrontendModule; extension: NonNullable<ExtensionMap[K]> }> {
-    const results: Array<{ module: WhFrontendModule; extension: NonNullable<ExtensionMap[K]> }> = [];
+  ): Array<{ module: WhFrontendModule; moduleCode: string; extension: NonNullable<ExtensionMap[K]> }> {
+    const results: Array<{ module: WhFrontendModule; moduleCode: string; extension: NonNullable<ExtensionMap[K]> }> = [];
     for (const mod of this.getInstalledModules()) {
       if (mod.extensions && mod.extensions[point]) {
-        results.push({ module: mod, extension: mod.extensions[point]! });
+        results.push({
+          module: mod,
+          moduleCode: mod.code,
+          extension: mod.extensions[point]!
+        });
       }
     }
     return results;
+  }
+
+  /**
+   * ثبت ماژول در زمان اجرا (برای آزمون‌های ماژولار و سناریوهای پویا)
+   */
+  public registerModule(module: WhFrontendModule): void {
+    const existingIdx = this.modules.findIndex(m => m.code === module.code);
+    if (existingIdx >= 0) {
+      this.modules[existingIdx] = module;
+    } else {
+      this.modules.push(module);
+    }
+    const current = this.installedModuleCodes();
+    if (!current.includes(module.code)) {
+      this.installedModuleCodes.set([...current, module.code]);
+    }
   }
 
   /**

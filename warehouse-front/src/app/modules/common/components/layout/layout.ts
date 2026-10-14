@@ -1030,7 +1030,60 @@ export class Layout implements OnInit, OnDestroy {
   readonly managerNavItems = computed(() => this.roleNavItems('manager'));
   readonly treasurerNavItems = computed(() => this.roleNavItems('treasury'));
 
-  readonly navItems = computed(() => [...this.primaryNavItems(), ...this.orgAdminNavItems(), ...this.employeeNavItems(), ...this.supervisorNavItems(), ...this.accountantNavItems(), ...this.managerNavItems(), ...this.treasurerNavItems()]);
+  /**
+   * آیتم‌های ماژول‌های دیگر که فاقد سوییچر انبارند و جزو منوهای نقش مالی نیستند
+   */
+  readonly otherModuleNavSections = computed(() => {
+    if (this.store.isWarehouseContext()) {
+      return [];
+    }
+    const userPerms = this.auth.userPermissions();
+    const isAdmin = userPerms.includes('admin_all');
+    const sections: Array<{ module: { code: string; titleFa: string }; items: ModuleNavItem[] }> = [];
+
+    const exts = this.moduleRegistry.getExtensions('layoutNav');
+    for (const ext of exts) {
+      if (ext.extension.showWarehouseSwitcher) continue;
+      const modCode = (ext as any).moduleCode || ext.module?.code;
+      if (modCode === 'accounting' || modCode === 'personnel' || modCode === 'finance') {
+        continue;
+      }
+      const candidateItems = ext.extension.primaryItems || ext.extension.contextItems || [];
+      if (candidateItems.length === 0) continue;
+
+      const spec = this.moduleRegistry.getSpec(modCode) || ext.module;
+      const visibleItems = candidateItems.filter(item => {
+        if (isAdmin) return true;
+        return userPerms.includes(item.permission);
+      });
+
+      if (visibleItems.length > 0) {
+        sections.push({
+          module: {
+            code: modCode,
+            titleFa: spec?.titleFa || modCode
+          },
+          items: visibleItems
+        });
+      }
+    }
+    return sections;
+  });
+
+  get otherModuleTotalItemsCount(): number {
+    return this.otherModuleNavSections().reduce((sum, s) => sum + s.items.length, 0);
+  }
+
+  readonly navItems = computed(() => [
+    ...this.primaryNavItems(),
+    ...this.orgAdminNavItems(),
+    ...this.employeeNavItems(),
+    ...this.supervisorNavItems(),
+    ...this.accountantNavItems(),
+    ...this.managerNavItems(),
+    ...this.treasurerNavItems(),
+    ...this.otherModuleNavSections().flatMap(s => s.items)
+  ]);
   
   get isSidebarOpen() { return this.store.isSidebarOpen(); }
   get currentTab() { return this.store.currentTab(); }
@@ -1055,16 +1108,58 @@ export class Layout implements OnInit, OnDestroy {
     return false;
   }
 
-  switchTab(tabId: string) {
-    this.closeSidebar();
-    // همهٔ صفحه‌های منوهای نقش در سامانه مالی‌اند؛ به‌علاوه چند صفحهٔ مالی بیرون از منوهای نقش
+  private resolveRouteForTab(tabId: string): string {
+    const whSpec = this.moduleRegistry.getSpec('warehouse');
+    const whPrefix = whSpec?.routePrefix || '/app/warehouse';
+    const finSpec = this.moduleRegistry.getSpec('accounting') || this.moduleRegistry.getSpec('personnel');
+    const finPrefix = finSpec?.routePrefix || '/app/finance';
+    const opsSpec = this.moduleRegistry.getSpec('operations');
+    const opsPrefix = opsSpec?.routePrefix || '/app/operations';
+
+    // ۱. شناسه‌های مشترک (audit، health) بر اساس ماژول فعال حل می‌شوند
+    if (tabId === 'audit' || tabId === 'health') {
+      if (this.personaService.activeApp() === 'personnel') {
+        return `${finPrefix}/${tabId}`;
+      }
+      if (this.personaService.activeApp() === 'operations') {
+        return `${opsPrefix}/${tabId}`;
+      }
+      return `${whPrefix}/${tabId}`;
+    }
+
+    // ۲. صفحات مالی بیرون از منوهای نقش یا منوهای نقش مالی
     const isAccountingItem = ['companies', 'company-documents', 'documents'].includes(tabId) ||
       this.isRoleMenuTab(tabId);
     if (isAccountingItem) {
-      this.router.navigate(['/app/finance/' + tabId]);
-    } else {
-      this.router.navigate(['/app/warehouse/' + tabId]);
+      return `${finPrefix}/${tabId}`;
     }
+
+    // ۳. جستجو در کلیه ماژول‌های ثبت‌شده (شامل ماژول‌های دیگر مثل sample)
+    for (const mod of this.moduleRegistry.getInstalledModules()) {
+      const layoutNav = mod.extensions?.layoutNav;
+      if (!layoutNav) continue;
+
+      const allItems: ModuleNavItem[] = [
+        ...(layoutNav.primaryItems || []),
+        ...(layoutNav.contextItems || []),
+        ...(layoutNav.roleMenus?.flatMap(m => m.items) || [])
+      ];
+      const found = allItems.find(i => i.id === tabId);
+      if (found) {
+        if (found.route) return found.route;
+        const prefix = mod.routePrefix || '';
+        return prefix ? `${prefix}/${found.id}` : `/${found.id}`;
+      }
+    }
+
+    // ۴. پیش‌فرض در بافت انبارداری
+    return `${whPrefix}/${tabId}`;
+  }
+
+  switchTab(tabId: string) {
+    this.closeSidebar();
+    const route = this.resolveRouteForTab(tabId);
+    this.router.navigate([route]);
   }
 
   /** ──── Warehouse Selector ──── */

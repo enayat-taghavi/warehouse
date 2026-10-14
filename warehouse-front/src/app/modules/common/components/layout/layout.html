@@ -224,6 +224,39 @@
         </div>
       </div>
 
+      <!-- بخش اختصاصی سامانه‌های دیگر (ماژول‌های نصب‌شدهٔ فاقد سوییچر انبار) -->
+      @if (!store.isWarehouseContext() && otherModuleNavSections().length > 0) {
+        <div class="mt-3 pt-3 border-t border-slate-800/60 shrink-0">
+          <div class="px-3 py-1.5 text-[10px] font-black tracking-wider text-slate-400 uppercase flex items-center justify-between">
+            <span>سامانه‌های دیگر</span>
+            <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
+              {{ otherModuleTotalItemsCount }}
+            </span>
+          </div>
+          <div class="mt-1 space-y-0.5">
+            @for (sec of otherModuleNavSections(); track sec.module.code) {
+              @for (item of sec.items; track item.id) {
+                <button
+                  type="button"
+                  (click)="switchTab(item.id)"
+                  [class.active]="currentTab === item.id"
+                  [attr.aria-current]="currentTab === item.id ? 'page' : null"
+                  class="sidebar-link w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/80"
+                  [title]="item.label"
+                >
+                  <span class="shrink-0">
+                    @if (menuIcon(item.icon); as icon) {
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="icon"></svg>
+                    }
+                  </span>
+                  <span class="truncate">{{ item.label }}</span>
+                </button>
+              }
+            }
+          </div>
+        </div>
+      }
+
       <div *ngIf="store.isWarehouseContext()" class="mt-6 pt-4 border-t border-slate-800/60 flex flex-col gap-3 shrink-0">
         <!-- Warehouse Card (Clickable to change warehouse) -->
         <button (click)="exitWarehouseMode(true)" class="w-full bg-slate-800/50 hover:bg-slate-700/60 transition-all rounded-2xl p-4 border border-slate-700/60 hover:border-slate-500/60 flex flex-col items-center justify-center text-center shadow-inner relative overflow-hidden group cursor-pointer" title="کلیک برای تغییر انبار جاری">

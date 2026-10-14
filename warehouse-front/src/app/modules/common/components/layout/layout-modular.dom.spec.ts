@@ -54,7 +54,9 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
       isWarehouseContext: vi.fn().mockReturnValue(true),
       setWarehouseContext: vi.fn(),
       setIsSwitchingWarehouse: vi.fn(),
-      sanitizeActiveWarehouse: vi.fn()
+      sanitizeActiveWarehouse: vi.fn(),
+      closeSidebar: vi.fn(),
+      openSidebar: vi.fn()
     };
 
     mockPersona = {
@@ -64,6 +66,41 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
 
     mockRegistry = {
       isModuleInstalled: vi.fn().mockReturnValue(true),
+      getSpec: vi.fn().mockImplementation((code: string) => {
+        if (code === 'warehouse') return { code: 'warehouse', routePrefix: '/app/warehouse' };
+        if (code === 'accounting' || code === 'personnel') return { code: 'accounting', routePrefix: '/app/finance' };
+        if (code === 'operations') return { code: 'operations', routePrefix: '/app/operations' };
+        return undefined;
+      }),
+      getInstalledModules: vi.fn().mockImplementation(() => [
+        {
+          code: 'accounting',
+          routePrefix: '/app/finance',
+          extensions: {
+            layoutNav: {
+              showWarehouseSwitcher: false,
+              defaultExitRoute: '/app/finance',
+              roleMenus: []
+            }
+          }
+        },
+        {
+          code: 'warehouse',
+          routePrefix: '/app/warehouse',
+          extensions: {
+            layoutNav: {
+              showWarehouseSwitcher: true,
+              defaultExitRoute: '/app/warehouse/projects',
+              primaryItems: [
+                { id: 'dashboard', label: 'داشبورد', icon: 'grid', permission: 'view_wh_dashboard' }
+              ],
+              contextItems: [
+                { id: 'items', label: 'کالاها', icon: 'package', permission: 'view_wh_dashboard' }
+              ]
+            }
+          }
+        }
+      ]),
       getExtensions: vi.fn().mockImplementation((extKey: string) => {
         if (extKey === 'layoutNav') {
           // همان ترتیب واقعی INSTALLED_MODULES (الفبایی: accounting پیش از warehouse)
@@ -226,4 +263,100 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
     expect(mockStore.setWarehouseContext).toHaveBeenCalledWith(false);
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/finance']);
   });
+
+  it('مسیرهای امروز انبار و مالی (از جمله audit و health در هر persona) عوض نمی‌شوند', () => {
+    // مسیرهای عمومی انبار
+    component.switchTab('dashboard');
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/warehouse/dashboard']);
+
+    component.switchTab('items');
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/warehouse/items']);
+
+    // مسیرهای مالی و ریدایرکت شرکت‌ها
+    component.switchTab('companies');
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/finance/companies']);
+
+    component.switchTab('company-documents');
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/finance/company-documents']);
+
+    // شناسه مشترک audit در پرسونای انبار
+    mockPersona.activeApp.mockReturnValue('warehouse');
+    component.switchTab('audit');
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/warehouse/audit']);
+
+    // شناسه مشترک audit در پرسونای مالی
+    mockPersona.activeApp.mockReturnValue('personnel');
+    component.switchTab('audit');
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/finance/audit']);
+
+    // شناسه مشترک health در پرسونای انبار
+    mockPersona.activeApp.mockReturnValue('warehouse');
+    component.switchTab('health');
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/warehouse/health']);
+
+    // شناسه مشترک health در پرسونای مالی
+    mockPersona.activeApp.mockReturnValue('personnel');
+    component.switchTab('health');
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/finance/health']);
+  });
+
+  it('ماژول ساختگی سوم sample با routePrefix برابر /app/sample — آیتم سایدبار به مسیر ماژول می‌رود', () => {
+    const SAMPLE_MODULE: any = {
+      code: 'sample',
+      titleFa: 'ماژول نمونه',
+      routePrefix: '/app/sample',
+      extensions: {
+        layoutNav: {
+          primaryItems: [
+            { id: 'sample-overview', label: 'نمای کلی نمونه', icon: 'box', permission: 'view_sample' },
+            { id: 'custom-path', label: 'مسیر اختصاصی', icon: 'box', permission: 'view_sample', route: '/app/sample/custom-page' }
+          ],
+          showWarehouseSwitcher: false,
+          defaultExitRoute: '/app/sample'
+        }
+      }
+    };
+
+    mockRegistry.getInstalledModules.mockReturnValue([
+      {
+        code: 'warehouse',
+        routePrefix: '/app/warehouse',
+        extensions: {
+          layoutNav: { showWarehouseSwitcher: true, defaultExitRoute: '/app/warehouse/projects' }
+        }
+      },
+      SAMPLE_MODULE
+    ]);
+
+    mockRegistry.getExtensions.mockImplementation((extKey: string) => {
+      if (extKey === 'layoutNav') {
+        return [
+          {
+            moduleCode: 'sample',
+            module: SAMPLE_MODULE,
+            extension: SAMPLE_MODULE.extensions.layoutNav
+          }
+        ];
+      }
+      return [];
+    });
+
+    // خارج از بافت انبار: بخش «سامانه‌های دیگر» فعال می‌شود
+    mockStore.isWarehouseContext.mockReturnValue(false);
+
+    const sections = component.otherModuleNavSections();
+    expect(sections.length).toBe(1);
+    expect(sections[0].module.code).toBe('sample');
+    expect(sections[0].items.length).toBe(2);
+    expect(component.otherModuleTotalItemsCount).toBe(2);
+
+    // ناوبری بر اساس prefix و id
+    component.switchTab('sample-overview');
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/sample/sample-overview']);
+
+    // ناوبری با فیلد اختیاری route
+    component.switchTab('custom-path');
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/sample/custom-page']);
+  });
 });
+

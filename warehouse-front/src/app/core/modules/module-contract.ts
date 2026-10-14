@@ -30,6 +30,7 @@ export interface ModuleNavItem {
   module?: 'warehouse' | 'accounting' | 'platform' | string;
   isAccounting?: boolean;
   isPending?: boolean;
+  route?: string;
 }
 
 /**
@@ -41,7 +42,7 @@ export interface ExtensionMap {
    * ۱. کاشی لانچر برنامه‌ها (App Launcher Tile) — مصرف در app-launcher.ts
    */
   launcherTile?: {
-    themeColor: 'indigo' | 'emerald' | 'cyan';
+    themeColor: 'indigo' | 'emerald' | 'cyan' | 'amber' | 'rose' | 'sky' | 'violet' | string;
     tags: string[];
     appKey?: string;
   };

@@ -28,6 +28,13 @@ interface NavItem {
   badgeClass?: string;
 }
 
+export interface OperationsQuickLink {
+  code: string;
+  title: string;
+  route: string;
+  icon?: string;
+}
+
 @Component({
   selector: 'app-operations-layout',
   standalone: true,
@@ -66,12 +73,43 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
     return this.moduleRegistry.getExtensions('operations').some(e => e.extension.syncMonitorScope === 'accounting');
   }
 
+  /**
+   * پیوندهای سریع ماژول‌های نصب‌شده (بر پایه نقطه توسعه operations.quickLink)
+   * پیوندهای اختصاصی انبار و مالی جداگانه مدیریت می‌شوند
+   */
+  get extraQuickLinks(): OperationsQuickLink[] {
+    const exts = this.moduleRegistry.getExtensions('operations');
+    const links: OperationsQuickLink[] = [];
+    for (const e of exts) {
+      const code = (e as any).moduleCode || e.module?.code;
+      if (code === 'warehouse' || code === 'accounting' || code === 'finance') {
+        continue;
+      }
+      const ql = e.extension.quickLink;
+      if (ql && ql.route) {
+        links.push({
+          code: code || 'extra',
+          title: ql.title || code || 'ماژول متصل',
+          route: ql.route,
+          icon: ql.icon || 'box'
+        });
+      }
+    }
+    return links;
+  }
+
   get hasAnyConnectedModule(): boolean {
-    return this.showWarehouseLink || this.showAccountingLink;
+    return this.showWarehouseLink || this.showAccountingLink || this.extraQuickLinks.length > 0;
   }
 
   get hasMultipleConnectedModules(): boolean {
-    return this.showWarehouseLink && this.showAccountingLink;
+    const count = (this.showWarehouseLink ? 1 : 0) + (this.showAccountingLink ? 1 : 0) + this.extraQuickLinks.length;
+    return count > 1;
+  }
+
+  public navigateToQuickLink(route: string): void {
+    this.router.navigate([route]);
+    this.closeMobileMenu();
   }
 
   public isSidebarCollapsed = signal<boolean>(false);

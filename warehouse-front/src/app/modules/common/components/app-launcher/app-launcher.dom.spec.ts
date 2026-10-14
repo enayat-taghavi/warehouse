@@ -161,4 +161,44 @@ describe('AppLauncherComponent DOM & Modular Layout Tests', () => {
     expect(mockStore.setWarehouseContext).toHaveBeenCalledWith(false);
     expect(mockPersona.switchApp).toHaveBeenCalledWith('warehouse');
   });
+
+  it('ماژول ساختگی سوم sample — کاشی ماژول sample رندر می‌شود و تعداد کاشی‌ها با visibleCardsCount برابر است', () => {
+    mockAuth.user = () => ({ username: 'admin', allowed_apps: ['warehouse', 'accounting', 'sample'] });
+    const SAMPLE_MODULE: any = {
+      code: 'sample',
+      titleFa: 'ماژول نمونه',
+      titleShortFa: 'نمونه',
+      descriptionFa: 'ماژول نمونه جهت آزمون توسعه‌پذیری',
+      icon: 'box',
+      routePrefix: '/app/sample',
+      defaultRoute: '/app/sample/overview',
+      scopeKind: 'operations',
+      permissionMarkers: ['view_sample'],
+      roles: ['sample_user'],
+      extensions: {
+        launcherTile: {
+          themeColor: 'amber',
+          tags: ['نمونه', 'آزمایشی'],
+          appKey: 'sample'
+        }
+      }
+    };
+    registry.registerModule(SAMPLE_MODULE);
+    registry.setInstalledModules(['warehouse', 'accounting', 'sample']);
+
+    const extras = component.extraCards();
+    expect(extras.length).toBe(1);
+    expect(extras[0].code).toBe('sample');
+    expect(extras[0].title).toBe('ماژول نمونه');
+    expect(extras[0].routePrefix).toBe('/app/sample');
+    expect(extras[0].themeColor).toBe('amber');
+
+    // ۲ کاشی غنی (انبار و مالی) + ۱ کاشی عمومی ماژول نمونه = ۳
+    expect(component.visibleCardsCount).toBe(3);
+    expect(component.isSingleAppMode).toBe(false);
+
+    component.enterApp('sample');
+    expect(mockPersona.switchApp).toHaveBeenCalledWith('sample');
+  });
 });
+

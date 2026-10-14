@@ -187,4 +187,33 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
     component.closeMobileMenu();
     expect(component.isMobileMenuOpen()).toBe(false);
   });
+
+  it('ماژول ساختگی سوم sample با routePrefix برابر /app/sample — پیوند سریع در operations-layout دیده می‌شود', () => {
+    activeModuleCodes = ['warehouse', 'accounting', 'sample'];
+    const prevGetExtensions = mockRegistry.getExtensions;
+    mockRegistry.getExtensions = vi.fn().mockImplementation((point: string) => {
+      const list = prevGetExtensions(point);
+      if (point === 'operations') {
+        list.push({
+          moduleCode: 'sample',
+          extension: {
+            quickLink: { title: 'ماژول نمونه', route: '/app/sample', icon: 'box' },
+            syncMonitorScope: 'sample'
+          }
+        });
+      }
+      return list;
+    });
+
+    const extra = component.extraQuickLinks;
+    expect(extra.length).toBe(1);
+    expect(extra[0].code).toBe('sample');
+    expect(extra[0].title).toBe('ماژول نمونه');
+    expect(extra[0].route).toBe('/app/sample');
+    expect(component.hasAnyConnectedModule).toBe(true);
+
+    component.navigateToQuickLink('/app/sample');
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/sample']);
+  });
 });
+
