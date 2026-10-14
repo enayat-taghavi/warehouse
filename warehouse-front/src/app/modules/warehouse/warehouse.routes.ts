@@ -19,7 +19,6 @@ import { Customs } from './components/customs/customs';
 import { importLeaveGuard } from '../../core/guards/import-leave.guard';
 import { settingsLeaveGuard } from '../../core/guards/settings-leave.guard';
 
-export { IS_WAREHOUSE_INSTALLED } from './warehouse-flags';
 
 export const WAREHOUSE_ROUTES: Routes = [
   { path: 'dashboard', component: Dashboard },

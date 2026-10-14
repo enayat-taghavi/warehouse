@@ -3,7 +3,7 @@ import { NetworkStatusService } from './network-status.service';
 import { isServerUnreachable } from './server-reachability';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { IS_WAREHOUSE_INSTALLED } from '../../modules/warehouse/warehouse-flags';
+import { INSTALLED_MODULES } from '../../modules/installed-modules';
 
 /**
  * SyncPullService — دانلود دلتای سرور به Dexie (نیمهٔ Pull معماری Local-First)
@@ -128,7 +128,8 @@ export class SyncPullService {
 
     if (this.inFlight) return { status: 'already-running' };
     if (!this.network.isBrowserOnline) return { status: 'offline' };
-    if (scopeKind === 'warehouse' && !IS_WAREHOUSE_INSTALLED) {
+    const isWarehouseInstalled = INSTALLED_MODULES.some(m => m.code === 'warehouse');
+    if (scopeKind === 'warehouse' && !isWarehouseInstalled) {
       return { status: 'completed', upserted: 0, deleted: 0, bytes: 0 };
     }
 

@@ -55,48 +55,54 @@ export class AppLauncherComponent implements OnInit {
   }
 
   /**
-   * آیا ماژول انبارداری در این توزیع سرور اجرا شده و فعال است؟
+   * ساخت پویا و ماژولار کارت‌های برنامه‌ها بر پایه نقطه توسعه launcherTile
    */
-  get isWarehouseInstalled(): boolean {
-    const fromRegistry = this.moduleRegistry.isModuleInstalled('warehouse');
-    if (!fromRegistry) return false;
-
-    // بررسی گارد allowed_apps توکن کاربر
+  public appCards = computed<AppLauncherCard[]>(() => {
+    const installed = this.moduleRegistry.getInstalledModules();
     const allowed = this.auth.user()?.allowed_apps;
-    if (allowed && Array.isArray(allowed) && allowed.length > 0) {
-      const hasWh = allowed.some(a => a.toLowerCase() === 'warehouse' || a.toLowerCase() === 'wh');
-      if (!hasWh && (allowed.includes('finance') || allowed.includes('personnel'))) {
-        return false;
-      }
-    }
-    return true;
-  }
 
-  /**
-   * آیا ماژول مالی و حسابداری در این توزیع سرور اجرا شده و فعال است؟
-   */
-  get isFinanceInstalled(): boolean {
-    const fromRegistry = this.moduleRegistry.isModuleInstalled('accounting');
-    if (!fromRegistry) return false;
+    return installed.map(mod => {
+      const tile = mod.extensions?.launcherTile;
+      const appKey = tile?.appKey || mod.code;
+      const hasAccess = this.persona.canAccessApp(appKey);
+      const themeColor = tile?.themeColor || 'indigo';
+      const tags = tile?.tags || ['کارتابل', 'مدیریت'];
 
-    // بررسی گارد allowed_apps توکن کاربر
-    const allowed = this.auth.user()?.allowed_apps;
-    if (allowed && Array.isArray(allowed) && allowed.length > 0) {
-      const hasFin = allowed.some(a => a.toLowerCase() === 'finance' || a.toLowerCase() === 'personnel' || a.toLowerCase() === 'accounting');
-      if (!hasFin && allowed.includes('warehouse')) {
-        return false;
+      return {
+        code: appKey,
+        title: mod.titleFa,
+        routePrefix: mod.routePrefix,
+        icon: mod.icon,
+        description: mod.descriptionFa,
+        hasAccess,
+        tags,
+        themeColor
+      };
+    }).filter(card => {
+      // عملیات فقط برای سوپریوزر نمایش داده می‌شود
+      if (card.code === 'operations' && !this.persona.isSuperuser()) return false;
+
+      // فیلتر بر اساس allowed_apps اعلامی در توکن کاربر
+      if (allowed && Array.isArray(allowed) && allowed.length > 0) {
+        const normAllowed = allowed.map(a => a.toLowerCase());
+        const spec = this.moduleRegistry.getSpec(card.code);
+        const matches = normAllowed.includes(card.code.toLowerCase()) ||
+          (spec?.code && normAllowed.includes(spec.code.toLowerCase())) ||
+          spec?.aliases?.some(a => normAllowed.includes(a.toLowerCase()));
+        if (!matches && (normAllowed.includes('warehouse') || normAllowed.includes('finance') || normAllowed.includes('personnel'))) {
+          return false;
+        }
       }
-    }
-    return true;
-  }
+
+      return true;
+    });
+  });
 
   /**
    * تعداد کل کارت‌های قابل نمایش در این محیط
    */
   get visibleCardsCount(): number {
-    return (this.isWarehouseInstalled ? 1 : 0) +
-           (this.isFinanceInstalled ? 1 : 0) +
-           (this.hasOperations ? 1 : 0);
+    return this.appCards().length;
   }
 
   get isSingleAppMode(): boolean {
@@ -113,47 +119,13 @@ export class AppLauncherComponent implements OnInit {
     return 'md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto';
   }
 
-  /**
-   * ساخت پویا و ماژولار کارت‌های برنامه‌ها بر پایه رجیستری — فاز ۶ (تسک ۵۷)
-   */
-  public appCards = computed<AppLauncherCard[]>(() => {
-    const installed = this.moduleRegistry.getInstalledSpecs();
-    return installed.map(spec => {
-      const isOps = spec.code === 'operations';
-      const isAcct = spec.code === 'accounting';
-      const appKey = isAcct ? 'personnel' : spec.code;
-      const hasAccess = this.persona.canAccessApp(appKey);
+  get isWarehouseInstalled(): boolean {
+    return this.appCards().some(c => c.code === 'warehouse');
+  }
 
-      let themeColor: 'indigo' | 'emerald' | 'cyan' = 'indigo';
-      let tags: string[] = ['کارتابل', 'مدیریت'];
-
-      if (isOps) {
-        themeColor = 'cyan';
-        tags = ['اسنپ‌شات‌ها', 'پایش سلامت', 'امنیت'];
-      } else if (isAcct) {
-        themeColor = 'emerald';
-        tags = ['کارتابل مالی', 'ثبت کارکرد', 'خزانه‌داری'];
-      } else {
-        themeColor = 'indigo';
-        tags = ['کارتابل انبارگردان', 'مدیریت کالا'];
-      }
-
-      return {
-        code: appKey,
-        title: spec.titleFa,
-        routePrefix: spec.routePrefix,
-        icon: spec.icon,
-        description: spec.descriptionFa,
-        hasAccess,
-        tags,
-        themeColor
-      };
-    }).filter(card => {
-      // عملیات فقط برای سوپریوزر نمایش داده می‌شود
-      if (card.code === 'operations' && !this.persona.isSuperuser()) return false;
-      return true;
-    });
-  });
+  get isFinanceInstalled(): boolean {
+    return this.appCards().some(c => c.code === 'personnel' || c.code === 'accounting');
+  }
 
   enterApp(code: string): void {
     if (!this.persona.canAccessApp(code)) return;

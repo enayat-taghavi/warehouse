@@ -82,7 +82,27 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
     };
 
     mockModuleRegistry = {
-      isModuleInstalled: vi.fn().mockImplementation((m: string) => m === 'warehouse' || m === 'personnel' || m === 'accounting')
+      isModuleInstalled: vi.fn().mockImplementation((m: string) => m === 'warehouse' || m === 'personnel' || m === 'accounting'),
+      getExtensions: vi.fn().mockImplementation((extKey: string) => {
+        if (extKey === 'userMenu') {
+          return [
+            {
+              moduleCode: 'warehouse',
+              extension: {
+                shortcutsCategory: { id: 'counting', label: 'انبارگردانی و اسکنر', count: 5 },
+                deepSyncScope: 'warehouse'
+              }
+            },
+            {
+              moduleCode: 'accounting',
+              extension: {
+                deepSyncScope: 'finance'
+              }
+            }
+          ];
+        }
+        return [];
+      })
     };
 
     mockToast = {
@@ -325,6 +345,45 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
   it('باید نام عمومی سامانه را از BRANDING.systemName در دسترس قرار دهد (L13)', () => {
     expect(component.BRANDING.systemName).toBeDefined();
     expect(component.BRANDING.systemName.length).toBeGreaterThan(0);
+  });
+
+  describe('Modular Extension Points & Configuration Behavior', () => {
+    it('حالت ۱: هر دو ماژول فعال — دسته‌بندی انبارگردانی در کلیدها و قابلیت دیپ‌سینک انبار فعال است', () => {
+      expect(component.isWarehouseInstalled).toBe(true);
+      expect(component.shortcutsCategories.some(c => c.id === 'counting')).toBe(true);
+      expect(component.shortcutsCategories.length).toBe(5);
+      expect(component.allShortcuts.length).toBe(20);
+    });
+
+    it('حالت ۲: فقط ماژول انبار فعال — دسته‌بندی انبارگردانی فعال است', () => {
+      mockModuleRegistry.getExtensions.mockImplementation((extKey: string) => {
+        if (extKey === 'userMenu') {
+          return [
+            {
+              moduleCode: 'warehouse',
+              extension: {
+                shortcutsCategory: { id: 'counting', label: 'انبارگردانی و اسکنر', count: 5 },
+                allowWarehouseDeepSync: true
+              }
+            }
+          ];
+        }
+        return [];
+      });
+
+      expect(component.isWarehouseInstalled).toBe(true);
+      expect(component.shortcutsCategories.some(c => c.id === 'counting')).toBe(true);
+      expect(component.allShortcuts.length).toBe(20);
+    });
+
+    it('حالت ۳: فقط ماژول مالی فعال — دسته‌بندی انبارگردانی وجود ندارد و تعداد کلیدها به ۱۵ کاهش می‌یابد', () => {
+      mockModuleRegistry.getExtensions.mockReturnValue([]);
+
+      expect(component.isWarehouseInstalled).toBe(false);
+      expect(component.shortcutsCategories.some(c => c.id === 'counting')).toBe(false);
+      expect(component.shortcutsCategories.length).toBe(4);
+      expect(component.allShortcuts.length).toBe(15);
+    });
   });
 });
 

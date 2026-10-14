@@ -354,7 +354,7 @@
         <span *ngIf="isPulling">
           <ng-container *ngIf="deepUpdateState">
             <ng-container *ngIf="deepUpdateState.mode === 'all'">
-              در حال دریافت {{ moduleRegistry.isModuleInstalled('warehouse') ? 'انبار' : 'پروژه / کارگاه' }} {{deepUpdateState.currentIndex}} از {{deepUpdateState.totalWarehouses}} ({{deepUpdateState.currentWarehouseName}}):
+              در حال دریافت {{ deepSyncScopeLabel }} {{deepUpdateState.currentIndex}} از {{deepUpdateState.totalWarehouses}} ({{deepUpdateState.currentWarehouseName}}):
             </ng-container>
             <ng-container *ngIf="deepUpdateState.mode === 'current'">
               در حال دریافت {{deepUpdateState.currentWarehouseName}}:

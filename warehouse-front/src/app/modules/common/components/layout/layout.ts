@@ -81,7 +81,7 @@ export class Layout implements OnInit, OnDestroy {
   isShortcutsHelpOpen = false;
   shortcutsSearchQuery = '';
   shortcutsActiveCategory: string = 'all';
-  isDesktopSidebarCollapsed = localStorage.getItem('desktopSidebarCollapsed') === 'true';
+  isDesktopSidebarCollapsed = typeof localStorage !== 'undefined' ? localStorage.getItem('desktopSidebarCollapsed') === 'true' : false;
 
   shortcutsCategories = [
     { id: 'all', label: 'همه کلیدها', count: 20 },
@@ -622,7 +622,7 @@ export class Layout implements OnInit, OnDestroy {
           return;
         }
 
-        if (this.moduleRegistry.isModuleInstalled('warehouse') && company.has_warehouse_module !== false) {
+        if (this.hasWarehouseSwitcher && company.has_warehouse_module !== false) {
           this.whService.getAll().subscribe({
             next: (data) => this.handleWarehousesLoaded(data),
             error: () => {}
@@ -643,7 +643,7 @@ export class Layout implements OnInit, OnDestroy {
     );
 
     // دریافت لیست انبارها از بک‌اند (با خودترمیمی آنی در صورت حذف یا نامعتبر شدن انبار فعال)
-    if (this.moduleRegistry.isModuleInstalled('warehouse')) {
+    if (this.hasWarehouseSwitcher) {
       this.whService.getAll().subscribe({
         next: (data) => {
           this.handleWarehousesLoaded(data);
@@ -695,7 +695,7 @@ export class Layout implements OnInit, OnDestroy {
 
         // اگر از حالت آفلاین به آنلاین برگشتیم: استعلام سبک پس‌زمینه برای جبران تغییرات زمان قطعی
         if (wasOffline && state === 'online') {
-          if (this.moduleRegistry.isModuleInstalled('warehouse')) {
+          if (this.hasWarehouseSwitcher) {
             console.log('[Layout] 🌐 اتصال مجدد شبکه — استعلام سبک پس‌زمینه...');
             this.whService.getAll().subscribe({
               next: (data) => this.handleWarehousesLoaded(data),
@@ -716,7 +716,7 @@ export class Layout implements OnInit, OnDestroy {
           `تغییر شما به دلیل «${reason}» توسط سرور رد شد و داده‌ها به آخرین نسخه سرور بازگردانی شدند.`
         );
         // استعلام تازه برای اطمینان از همگامی کامل نما
-        if (this.moduleRegistry.isModuleInstalled('warehouse')) {
+        if (this.hasWarehouseSwitcher) {
           this.whService.getAll().subscribe({
             next: (data) => this.handleWarehousesLoaded(data),
             error: () => {}
@@ -728,7 +728,7 @@ export class Layout implements OnInit, OnDestroy {
     // شنود رویدادهای زنده تغییرات انبار از طریق وب‌سوکت برای همگام‌سازی بلادرنگ همه کلاینت‌ها
     this.offlineSubs.push(
       this.wsService.notifications$.subscribe(async (data: any) => {
-        if (this.moduleRegistry.isModuleInstalled('warehouse') && data && (data.event === 'warehouse_mutation' || data.type === 'warehouse_mutation')) {
+        if (this.hasWarehouseSwitcher && data && (data.event === 'warehouse_mutation' || data.type === 'warehouse_mutation')) {
           console.log('[Layout] 🔔 دریافت رویداد تغییرات انبار از وب‌سوکت:', data);
           await syncService.invalidateCache(`${environment.apiUrl}/warehouses/`);
           this.whService.getAll().subscribe({
@@ -959,10 +959,19 @@ export class Layout implements OnInit, OnDestroy {
     return date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
   }
 
+  /** آیا ماژولی دارای قابلیت تعویض و مدیریت انبار است؟ (بر پایه اکستنشن layoutNav) */
+  get hasWarehouseSwitcher(): boolean {
+    return this.moduleRegistry.getExtensions('layoutNav').some(e => e.extension.showWarehouseSwitcher);
+  }
+
+  get deepSyncScopeLabel(): string {
+    return this.hasWarehouseSwitcher ? 'انبار' : 'پروژه / کارگاه';
+  }
+
   /** ──── Sidebar Navigation Signals ──── */
   readonly primaryNavItems = computed(() => {
     // اگر ماژول انبار نصب نیست یا کاربر در سامانه کارکرد و مالی است، منوهای انبارداری مخفی می‌شوند
-    if (!this.moduleRegistry.isModuleInstalled('warehouse') || this.personaService.activeApp() === 'personnel') {
+    if (!this.hasWarehouseSwitcher || this.personaService.activeApp() === 'personnel') {
       return [];
     }
 
@@ -995,7 +1004,8 @@ export class Layout implements OnInit, OnDestroy {
    * آیتمی که گارد مسیر (ROUTE_PERMISSIONS) رد می‌کند نمایش داده نمی‌شود.
    */
   private roleNavItems(role: string, items: NavItem[], roleMarkers: string[]): NavItem[] {
-    if (!this.moduleRegistry.isModuleInstalled('accounting') || this.personaService.activeApp() === 'warehouse' || this.store.isWarehouseContext()) {
+    const hasRoleMenu = this.moduleRegistry.getExtensions('layoutNav').some(e => e.extension.roleMenus?.some(m => m.role === role));
+    if (!hasRoleMenu || this.personaService.activeApp() === 'warehouse' || this.store.isWarehouseContext()) {
       return [];
     }
     const userPerms = this.auth.userPermissions();
@@ -1067,10 +1077,10 @@ export class Layout implements OnInit, OnDestroy {
       this.store.setIsSwitchingWarehouse(false);
     }
     this.store.setWarehouseContext(false);
-    if (this.moduleRegistry.isModuleInstalled('warehouse')) {
-      this.router.navigate(['/app/warehouse/projects']);
-    } else if (this.moduleRegistry.isModuleInstalled('accounting')) {
-      this.router.navigate(['/app/finance']);
+    const navExts = this.moduleRegistry.getExtensions('layoutNav');
+    const exitRoute = navExts.find(e => e.extension.defaultExitRoute)?.extension.defaultExitRoute;
+    if (exitRoute) {
+      this.router.navigate([exitRoute]);
     } else {
       this.router.navigate(['/app/launcher']);
     }

@@ -1,6 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const {
+  generateInstalledModules,
+  resolveSelectedModules,
+  generateInstalledModulesContent,
+  getDiscoveredModules,
+  TARGET_FILE
+} = require('./gen-installed-modules');
 
 let outputPath = null;
 const extraArgs = [];
@@ -13,90 +20,96 @@ for (let i = 2; i < process.argv.length; i++) {
     }
   } else if (arg.startsWith('--output-path=')) {
     outputPath = arg.slice('--output-path='.length);
+  } else if (arg.startsWith('--modules=')) {
+    process.env.WH_MODULES = arg.slice('--modules='.length);
   } else {
     extraArgs.push(arg);
   }
 }
 
 const rawModules = process.env.WH_MODULES ? process.env.WH_MODULES.trim() : '';
-const defaultModules = ['accounting', 'warehouse'];
+const selectedModules = resolveSelectedModules(rawModules);
+const buildModulesText = selectedModules.slice().sort().join(',');
 
-let selectedModules;
-if (!rawModules) {
-  selectedModules = [...defaultModules];
-} else {
-  const parts = rawModules
-    .split(',')
-    .map(s => s.trim().toLowerCase())
-    .filter(Boolean);
-  selectedModules = Array.from(new Set(parts.length ? parts : defaultModules)).sort();
+console.log(`[build-for-modules] Modules: [${buildModulesText}]`);
+
+// ذخیرهٔ محتوای متعهدشدهٔ نسخهٔ کامل برای بازگردانی تمیز درخت کاری پس از بیلد
+const committedAllModules = getDiscoveredModules();
+const committedContent = fs.existsSync(TARGET_FILE)
+  ? fs.readFileSync(TARGET_FILE, 'utf8')
+  : generateInstalledModulesContent(committedAllModules);
+
+let exitCode = 0;
+
+try {
+  // ۱. ساخت installed-modules.ts متناسب با ماژول‌های انتخاب‌شده
+  generateInstalledModules(rawModules);
+
+  // ۲. اجرای بیلد استاندارد انگولار (بدون نیاز به پروفایل‌های angular.json)
+  const ngArgs = ['build'];
+  if (outputPath) {
+    ngArgs.push('--output-path', outputPath);
+  }
+  ngArgs.push(...extraArgs);
+
+  const isWindows = process.platform === 'win32';
+  const ngCmd = isWindows ? 'npx.cmd' : 'npx';
+
+  console.log(`[build-for-modules] Running ${ngCmd} ng ${ngArgs.join(' ')}...`);
+  const buildResult = spawnSync(ngCmd, ['ng', ...ngArgs], {
+    stdio: 'inherit',
+    shell: true,
+    cwd: path.resolve(__dirname, '..')
+  });
+
+  if (buildResult.status !== 0) {
+    console.error(`[build-for-modules] ✖ ng build failed with exit code ${buildResult.status}`);
+    exitCode = buildResult.status || 1;
+  } else {
+    // ۳. اجرای پچ Service Worker
+    const patchScript = path.join(__dirname, 'patch-ngsw-530.js');
+    const patchArgs = [patchScript];
+    if (outputPath) {
+      patchArgs.push(outputPath);
+    }
+
+    const patchResult = spawnSync(process.execPath, patchArgs, {
+      stdio: 'inherit',
+      cwd: path.resolve(__dirname, '..')
+    });
+
+    if (patchResult.status !== 0) {
+      console.error(`[build-for-modules] ✖ patch-ngsw-530 failed with exit code ${patchResult.status}`);
+      exitCode = patchResult.status || 1;
+    } else {
+      // ۴. نوشتن برچسب build-modules.txt برای بررسی ناظر و استقرار
+      const resolvedOut = outputPath
+        ? path.resolve(process.cwd(), outputPath)
+        : path.resolve(__dirname, '..', 'dist', 'warehouse-app');
+      const browserDir = path.join(resolvedOut, 'browser');
+
+      if (!fs.existsSync(browserDir)) {
+        fs.mkdirSync(browserDir, { recursive: true });
+      }
+
+      const txtPath = path.join(browserDir, 'build-modules.txt');
+      fs.writeFileSync(txtPath, buildModulesText + '\n', 'utf8');
+      console.log(`[build-for-modules] ✔ Wrote ${buildModulesText} to ${txtPath}`);
+    }
+  }
+} catch (err) {
+  console.error('[build-for-modules] ✖ Unexpected error during build:', err);
+  exitCode = 1;
+} finally {
+  // ۵. بازگرداندن حتمی نسخهٔ متعهدشده به درخت کاری حتی در صورت بروز خطا یا قطع بیلد
+  try {
+    fs.writeFileSync(TARGET_FILE, committedContent, 'utf8');
+    console.log('[build-for-modules] ✔ Restored committed installed-modules.ts (clean tree guaranteed)');
+  } catch (restoreErr) {
+    console.error('[build-for-modules] ✖ Failed to restore installed-modules.ts:', restoreErr);
+  }
 }
 
-let profile = null;
-let buildModulesText;
-
-if (selectedModules.length === 1 && selectedModules[0] === 'accounting') {
-  profile = 'accounting-only';
-  buildModulesText = 'accounting';
-} else if (selectedModules.length === 1 && selectedModules[0] === 'warehouse') {
-  profile = 'warehouse-only';
-  buildModulesText = 'warehouse';
-} else {
-  profile = null;
-  buildModulesText = selectedModules.sort().join(',');
+if (exitCode !== 0) {
+  process.exit(exitCode);
 }
-
-console.log(`[build-for-modules] Profile: ${profile || 'full (default)'}, Modules: ${buildModulesText}`);
-
-const ngArgs = ['build'];
-if (profile) {
-  ngArgs.push('--configuration', profile);
-}
-if (outputPath) {
-  ngArgs.push('--output-path', outputPath);
-}
-ngArgs.push(...extraArgs);
-
-const isWindows = process.platform === 'win32';
-const ngCmd = isWindows ? 'npx.cmd' : 'npx';
-
-console.log(`[build-for-modules] Running ${ngCmd} ng ${ngArgs.join(' ')}...`);
-const buildResult = spawnSync(ngCmd, ['ng', ...ngArgs], {
-  stdio: 'inherit',
-  shell: true,
-  cwd: path.resolve(__dirname, '..')
-});
-
-if (buildResult.status !== 0) {
-  console.error(`[build-for-modules] ✖ ng build failed with exit code ${buildResult.status}`);
-  process.exit(buildResult.status || 1);
-}
-
-const patchScript = path.join(__dirname, 'patch-ngsw-530.js');
-const patchArgs = [patchScript];
-if (outputPath) {
-  patchArgs.push(outputPath);
-}
-
-const patchResult = spawnSync(process.execPath, patchArgs, {
-  stdio: 'inherit',
-  cwd: path.resolve(__dirname, '..')
-});
-
-if (patchResult.status !== 0) {
-  console.error(`[build-for-modules] ✖ patch-ngsw-530 failed with exit code ${patchResult.status}`);
-  process.exit(patchResult.status || 1);
-}
-
-const resolvedOut = outputPath
-  ? path.resolve(process.cwd(), outputPath)
-  : path.resolve(__dirname, '..', 'dist', 'warehouse-app');
-const browserDir = path.join(resolvedOut, 'browser');
-
-if (!fs.existsSync(browserDir)) {
-  fs.mkdirSync(browserDir, { recursive: true });
-}
-
-const txtPath = path.join(browserDir, 'build-modules.txt');
-fs.writeFileSync(txtPath, buildModulesText + '\n', 'utf8');
-console.log(`[build-for-modules] ✔ Wrote ${buildModulesText} to ${txtPath}`);

@@ -26,6 +26,22 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { ActionButtonComponent } from '../action-button/action-button.component';
 import { BRANDING } from '../../../core/branding';
 
+export interface ShortcutCategory {
+  id: string;
+  label: string;
+  count: number;
+}
+
+export interface ShortcutItem {
+  category: string;
+  categoryLabel: string;
+  categoryColor: string;
+  title: string;
+  description: string;
+  keys: string[];
+  altKeys: string[] | null;
+}
+
 @Component({
   selector: 'app-user-menu',
   standalone: true,
@@ -127,8 +143,9 @@ export class UserMenuComponent implements OnInit, OnDestroy {
     }
 
     // ۳. بررسی بر اساس ماژول‌های فعال نصب‌شده
-    const hasWarehouse = this.moduleRegistry.isModuleInstalled('warehouse');
-    const hasPersonnel = this.moduleRegistry.isModuleInstalled('accounting') || this.moduleRegistry.isModuleInstalled('personnel');
+    const installed = this.moduleRegistry.getInstalledModules();
+    const hasWarehouse = installed.some(m => m.scopeKind === 'warehouse');
+    const hasPersonnel = installed.some(m => m.scopeKind === 'finance');
 
     if (hasWarehouse && !hasPersonnel) {
       return 'warehouse';
@@ -148,27 +165,31 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   public shortcutsActiveCategory = 'all';
 
   public get isWarehouseInstalled(): boolean {
-    return this.moduleRegistry.isModuleInstalled('warehouse');
+    return this.moduleRegistry.getExtensions('userMenu').some(e => e.extension.shortcutsCategory?.id === 'counting');
   }
 
-  public get shortcutsCategories() {
+  public get shortcutsCategories(): ShortcutCategory[] {
+    const extCategories = this.moduleRegistry
+      .getExtensions('userMenu')
+      .map(e => e.extension.shortcutsCategory)
+      .filter((c): c is NonNullable<typeof c> => Boolean(c));
+
+    const extraCount = extCategories.reduce((sum, c) => sum + (c?.count || 0), 0);
     return [
-      { id: 'all', label: 'همه کلیدها', count: this.allShortcuts.length },
+      { id: 'all', label: 'همه کلیدها', count: 15 + extraCount },
       { id: 'global', label: 'عمومی و منو', count: 5 },
-      ...(this.isWarehouseInstalled ? [{ id: 'counting', label: 'انبارگردانی و اسکنر', count: 5 }] : []),
+      ...extCategories,
       { id: 'table', label: 'جدول اطلاعات و فرم‌ها', count: 5 },
       { id: 'design', label: 'طراحی لیبل و کارت', count: 5 },
     ];
   }
 
-  public get allShortcuts() {
-    return this.RAW_SHORTCUTS.filter(s => {
-      if (s.category === 'counting' && !this.isWarehouseInstalled) return false;
-      return true;
-    });
+  public get allShortcuts(): ShortcutItem[] {
+    const supportedCategories = new Set(this.shortcutsCategories.map((c: ShortcutCategory) => c.id));
+    return this.RAW_SHORTCUTS.filter((s: ShortcutItem) => supportedCategories.has(s.category));
   }
 
-  private RAW_SHORTCUTS = [
+  private RAW_SHORTCUTS: ShortcutItem[] = [
     {
       category: 'global',
       categoryLabel: 'عمومی',
@@ -324,7 +345,9 @@ export class UserMenuComponent implements OnInit, OnDestroy {
     },
     {
       category: 'design',
-      categoryLabel: 'کپی و جایگذاری المان',
+      categoryLabel: 'طراحی',
+      categoryColor: 'purple',
+      title: 'کپی و جایگذاری المان',
       description: 'تکثیر و کپی کردن المان انتخاب‌شده روی بوم',
       keys: ['Ctrl', 'C'],
       altKeys: ['Ctrl', 'V'],
@@ -349,8 +372,8 @@ export class UserMenuComponent implements OnInit, OnDestroy {
     },
   ];
 
-  public get filteredShortcuts() {
-    return this.allShortcuts.filter(item => {
+  public get filteredShortcuts(): ShortcutItem[] {
+    return this.allShortcuts.filter((item: ShortcutItem) => {
       const matchCat = this.shortcutsActiveCategory === 'all' || item.category === this.shortcutsActiveCategory;
       if (!matchCat) return false;
       if (!this.shortcutsSearchQuery.trim()) return true;
@@ -359,8 +382,8 @@ export class UserMenuComponent implements OnInit, OnDestroy {
         (item.title && item.title.toLowerCase().includes(q)) ||
         (item.description && item.description.toLowerCase().includes(q)) ||
         (item.categoryLabel && item.categoryLabel.toLowerCase().includes(q)) ||
-        item.keys.some(k => k.toLowerCase().includes(q)) ||
-        (item.altKeys && item.altKeys.some(k => k.toLowerCase().includes(q)))
+        item.keys.some((k: string) => k.toLowerCase().includes(q)) ||
+        (item.altKeys && item.altKeys.some((k: string) => k.toLowerCase().includes(q)))
       );
     });
   }
@@ -488,10 +511,13 @@ export class UserMenuComponent implements OnInit, OnDestroy {
     this.isDeepSyncModalOpen = true;
     this.cdr.detectChanges();
 
-    // ۳. واکشی داده‌های زنده و تازه‌سازی فهرست‌ها متناسب با قلمرو فعال
+    // ۳. واکشی داده‌های زنده و تازه‌سازی فهرست‌ها متناسب با قلمرو فعال از طریق اکستنشن‌های ثبت‌شده
     const fetchPromises: Promise<any>[] = [];
+    const userMenuExts = this.moduleRegistry.getExtensions('userMenu');
+    const hasWarehouseSync = userMenuExts.some(e => e.extension.deepSyncScope === 'warehouse');
+    const hasFinanceSync = userMenuExts.some(e => e.extension.deepSyncScope === 'finance');
 
-    if ((context === 'warehouse' || context === 'operations') && this.moduleRegistry.isModuleInstalled('warehouse')) {
+    if ((context === 'warehouse' || context === 'operations') && hasWarehouseSync && this.whService) {
       fetchPromises.push(
         firstValueFrom(this.whService.getAll())
           .then((data) => {
@@ -506,7 +532,7 @@ export class UserMenuComponent implements OnInit, OnDestroy {
       );
     }
 
-    if ((context === 'finance' || context === 'operations') && this.personnelApi) {
+    if ((context === 'finance' || context === 'operations') && hasFinanceSync && this.personnelApi) {
       fetchPromises.push(
         firstValueFrom(this.personnelApi.getFinancialProjects({ is_active: true }))
           .then((projects) => {

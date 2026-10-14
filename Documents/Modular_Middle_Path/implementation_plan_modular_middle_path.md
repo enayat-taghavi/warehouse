@@ -600,6 +600,78 @@ warehouse-front/src/app/
     - runner: اجرای آزمون‌های verify برای گام ۳-ب، بررسی تمیزی درخت و تایید کامیت.
     - ناظر (Claude): بازبین‌های `data-loss-reviewer` و `tenant-scope-reviewer`، بررسی استقرار و اجرای release روی `app`.
 
+- **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۸ (گام ۴-الف):**
+  - **پایهٔ نشست:** commit hash برابر `571142367675a247cfc29d5ba120ca46a4cf63bd`.
+  - **کارهای انجام‌شده:**
+    - تعریف قرارداد ماژول فرانت‌اند (`WhFrontendModule`)، نوع `ExtensionMap` و مشخصات ماژول در `warehouse-front/src/app/core/modules/module-contract.ts` شامل مسیرها، آیتم‌های ناوبری، آیکون‌های موجودیت و ۱۱ نقطه توسعه رسمی.
+    - ایجاد مانیفست‌های رسمی ماژول‌ها با صادرات `export const MODULE: WhFrontendModule`:
+      - `warehouse-front/src/app/modules/warehouse/module.ts` (انبار)
+      - `warehouse-front/src/app/modules/accounting/module.ts` (مالی)
+    - ساخت اسکریپت مولد `warehouse-front/tools/gen-installed-modules.js` برای تولید `src/app/modules/installed-modules.ts` از روی متغیر `WH_MODULES`.
+    - بازنویسی `warehouse-front/tools/build-for-modules.js` جهت صدا زدن خودکار مولد و بازگردانی تضمینی نسخه متعهدشده در بلوک `try/finally` (بدون تغییر در قرارداد `build:modules`، `build-modules.txt` یا `deploy.ps1`).
+    - حذف کامل ۶ فایل استاب و پرچم با `git rm`:
+      - `accounting-flags.stub.ts`، `accounting-flags.ts`، `accounting.routes.stub.ts`
+      - `warehouse-flags.stub.ts`، `warehouse-flags.ts`، `warehouse.routes.stub.ts`
+    - پاکسازی پروفایل‌های موازی `accounting-only`، `warehouse-only`، `accounting-dev`، `warehouse-dev` و پیکربندی‌های `serve` وابسته از `angular.json`.
+    - به‌روزرسانی اسکریپت‌های npm در `package.json` (`build:accounting` و `build:warehouse` از طریق `build-for-modules.js`).
+    - بازنویسی `ModuleRegistryService` بر پایه `installed-modules.ts`، حذف کاتالوگ سخت‌کد شده `KNOWN_MODULE_CATALOG`، و افزودن متدهای `getExtensions` و `getExtension`.
+    - لود دینامیک و ماژولار روت‌های فرانت در `app.routes.ts` از روی `INSTALLED_MODULES`.
+    - بازنویسی اجزای پوسته بر پایه اکستنشن‌ها:
+      - `AppLauncherComponent`: ساخت کارت‌ها و تم از اکستنشن `launcherTile`
+      - `UserMenuComponent`: دسته‌بندی کلیدهای میانبر و قلمروهای بروزرسانی عمیق از اکستنشن `userMenu`
+      - `Layout`: مدیریت سوییچر انبار، منوهای نقش و ریدایرکت خروج از بافت از اکستنشن `layoutNav`
+    - نگارش آزمون‌های جامع DOM برای هر سه جزء پوسته در سه حالت ماژولی (فقط انبار، فقط مالی، هر دو):
+      - `app-launcher.dom.spec.ts` (۴ تست)
+      - `user-menu.component.spec.ts` (۱۵ تست)
+      - `layout-modular.dom.spec.ts` (۳ تست)
+  - **فهرست ۱۱ نقطهٔ توسعهٔ ExtensionMap فرانت‌اند:**
+    1. `launcherTile`: کاشی، تم رنگی، نشانگرها و برچسب‌های صفحه انتخاب برنامه (App Launcher).
+    2. `userMenu`: کلیدهای میانبر، دسته‌بندی‌های منوی کاربری و مجوزهای بروزرسانی عمیق قلمروها.
+    3. `layoutNav`: سوییچر انبار در هدر، مسیر پیش‌فرض خروج از بافت و منوهای نقش اختصاصی سایدبار.
+    4. `systemHealth`: سنجه‌های پایگاه‌های داده محلی IndexedDB و وضعیت سلامت قلمروها در داشبورد سلامت.
+    5. `auditLog`: فیلترها، عناوین رویدادها و اکشن‌های لاگ حسابرسی ویژه هر ماژول.
+    6. `clientTelemetry`: قلمروهای مانیتورینگ صف آفلاین، همگام‌سازی و سلامت کلاینت‌های متصل.
+    7. `companySettings`: فیلدها و تب‌های تنظیمات شرکتی متناسب با ماژول‌های فعال.
+    8. `companyGdrive`: تنظیمات تب‌های پشتیبان‌گیری و دیسک ذخیره‌سازی ابری در سطح شرکت.
+    9. `userPermissions`: دسته‌بندی و فهرست مجوزهای هر ماژول در مودال و صفحه مدیریت کاربران.
+    10. `dashboardWidget`: ویجت‌ها و کارت‌های تحلیلی جهت ادغام در داشبوردهای عملیاتی پلتفرم.
+    11. `reportsCatalog`: کاتالوگ قالب‌ها و ساختار گزارش‌های پیش‌ساخته ویژه ماژول.
+  - **چک‌لیست ۲۴ فایل دارای isModuleInstalled:**
+    1. `src/app/app.routes.ts` | نقطه توسعه: `INSTALLED_MODULES.routes` | وضعیت: تبدیل شد در نشست ۸
+    2. `src/app/modules/common/components/app-launcher/app-launcher.ts` | نقطه توسعه: `launcherTile` | وضعیت: تبدیل شد در نشست ۸
+    3. `src/app/shared/components/user-menu/user-menu.component.ts` | نقطه توسعه: `userMenu` | وضعیت: تبدیل شد در نشست ۸
+    4. `src/app/modules/common/components/layout/layout.ts` | نقطه توسعه: `layoutNav` | وضعیت: تبدیل شد در نشست ۸
+    5. `src/app/modules/common/components/layout/layout.html` | نقطه توسعه: `layoutNav` (`deepSyncScopeLabel`) | وضعیت: تبدیل شد در نشست ۸
+    6. `src/app/core/services/sync-pull.service.ts` | نقطه توسعه: `INSTALLED_MODULES` (وارسی حضور ماژول انبار) | وضعیت: تبدیل شد در نشست ۸
+    7. `src/app/core/auth/auth.guard.ts` | نقطه توسعه: `WhFrontendModule.permissionMarkers` | وضعیت: نشست ۹ (گام ۴-ب)
+    8. `src/app/modules/common/components/health-dashboard/health-dashboard.ts` | نقطه توسعه: `systemHealth` | وضعیت: نشست ۹ (گام ۴-ب)
+    9. `src/app/modules/common/components/audit/audit.ts` | نقطه توسعه: `auditLog` | وضعیت: نشست ۹ (گام ۴-ب)
+    10. `src/app/modules/common/components/users/users.ts` | نقطه توسعه: `userPermissions` | وضعیت: نشست ۹ (گام ۴-ب)
+    11. `src/app/modules/common/components/operations/companies/companies.ts` | نقطه توسعه: `companySettings` | وضعیت: نشست ۹ (گام ۴-ب)
+    12. `src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.ts` | نقطه توسعه: `companyGdrive` | وضعیت: نشست ۹ (گام ۴-ب)
+    13. `src/app/modules/common/components/operations/operations-cockpit/operations-cockpit.ts` | نقطه توسعه: `dashboardWidget` | وضعیت: نشست ۹ (گام ۴-ب)
+    14. `src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts` | نقطه توسعه: `clientTelemetry` | وضعیت: نشست ۹ (گام ۴-ب)
+    15. `src/app/modules/common/components/operations/operations-rbac-governance/operations-rbac-governance.ts` | نقطه توسعه: `userPermissions` | وضعیت: نشست ۹ (گام ۴-ب)
+    16. `src/app/modules/common/components/settings/settings.ts` | نقطه توسعه: `companySettings` | وضعیت: نشست ۹ (گام ۴-ب)
+    17. `src/app/modules/common/components/id-cards/id-cards.ts` | نقطه توسعه: فیلتر انبار در صدور کارت | وضعیت: نشست ۹ (گام ۴-ب)
+    18. `src/app/core/services/client-telemetry.service.ts` | نقطه توسعه: `clientTelemetry` | وضعیت: نشست ۹ (گام ۴-ب)
+    19. `src/app/core/services/domain-migration.service.ts` | نقطه توسعه: قلمروهای دامنه | وضعیت: نشست ۹ (گام ۴-ب)
+    20. `src/app/core/services/offline-sync.service.ts` | نقطه توسعه: همگام‌سازی آفلاین قلمروها | وضعیت: نشست ۹ (گام ۴-ب)
+    21. `src/app/core/services/photo-upload-queue.service.ts` | نقطه توسعه: صف آپلود تصاویر | وضعیت: نشست ۹ (گام ۴-ب)
+    22. `src/app/core/services/sync-push.service.ts` | نقطه توسعه: ارسال صف آفلاین دامنه | وضعیت: نشست ۹ (گام ۴-ب)
+    23. `src/app/core/services/active-company.service.ts` | نقطه توسعه: اعتبارسنجی ماژول‌های فعال شرکت | وضعیت: نشست ۹ (گام ۴-ب)
+    24. `src/app/core/interceptors/offline.interceptor.ts` | نقطه توسعه: رهگیری آفلاین دامنه‌ها | وضعیت: نشست ۹ (گام ۴-ب)
+  - **فرمان‌های مجاز اجراشده توسط ایجنت و خلاصه خروجی:**
+    - `npx ng build --output-path ../scratch/ng-build-agent` -> `Application bundle generation complete. [122.280 seconds] - exit 0`
+    - `npx vitest run app-launcher.dom.spec.ts layout-modular.dom.spec.ts user-menu.component.spec.ts` -> `Test Files  3 passed (3), Tests  22 passed (22)`
+    - `python scripts/e2e/guardian_57_front_module_fence.py` -> `نتیجه: نگهبان ۵۷ تایید شد (PASS) — فراخوانی isModuleInstalled از 61 به 45 کاهش یافت`
+    - `python scripts/e2e/guardian_56_change_integrity.py --base 571142367675a247cfc29d5ba120ca46a4cf63bd` -> `نتیجه: نگهبان ۵۶ تایید شد (PASS)`
+    - `python scripts/e2e/guardian_52_icon_registry.py` -> `نتیجه: نگهبان ۵۲ تایید شد (PASS)`
+    - `python scripts/e2e/guardian_55_clickable_ergonomics.py` -> `نتیجه: نگهبان ۵۵ تایید شد (PASS)`
+  - **آنچه به runner و ناظر می‌ماند:**
+    - runner: اجرای بیلد سه پروفایل با مولد ماژول‌ها، بررسی آزمون‌های DOM و نگهبان‌ها، بررسی تمیزی درخت و تأیید کامیت.
+    - ناظر (Claude): بازبین‌های `data-loss-reviewer` و `ui-reviewer`، بررسی استقرار و اجرای release روی `app`.
+
 </div>
 
 

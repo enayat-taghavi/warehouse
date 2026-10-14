@@ -43,7 +43,6 @@ import { Audit } from '../common/components/audit/audit';
 import { HealthDashboardComponent } from '../common/components/health-dashboard/health-dashboard';
 import { CompanyDocumentsArchiveComponent } from './components/finance/company-documents-archive/company-documents-archive';
 
-export { IS_ACCOUNTING_INSTALLED } from './accounting-flags';
 
 export const ACCOUNTING_ROUTES: Routes = [
   // مسیرهای بازنشسته (پنل تجمیعی کارمند، کارکرد مشترک، کارتابل مالی و خزانه) مستقیم به هاب جانشین می‌روند

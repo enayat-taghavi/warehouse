@@ -1,93 +1,51 @@
 import { Injectable, signal } from '@angular/core';
-import { IS_WAREHOUSE_INSTALLED } from '../../modules/warehouse/warehouse-flags';
-import { IS_ACCOUNTING_INSTALLED } from '../../modules/accounting/accounting-flags';
+import {
+  FrontendModuleSpec,
+  WhFrontendModule,
+  ExtensionMap,
+  ModuleNavItem
+} from './module-contract';
+import { INSTALLED_MODULES } from '../../modules/installed-modules';
 
-export interface FrontendModuleSpec {
-  code: string;
-  aliases?: string[];
-  titleFa: string;
-  titleShortFa: string;
-  descriptionFa: string;
-  icon: string;
-  routePrefix: string;
-  defaultRoute: string;
-  scopeKind: 'warehouse' | 'finance' | 'operations';
-  permissionMarkers: string[];
-  roles: string[];
-  isSuperuserOnly?: boolean;
-}
+export type { FrontendModuleSpec, WhFrontendModule, ExtensionMap, ModuleNavItem };
 
-export const KNOWN_MODULE_CATALOG: FrontendModuleSpec[] = [
-  {
-    code: 'warehouse',
-    aliases: ['wh'],
-    titleFa: 'سامانه انبارداری و ره‌گیری کالا',
-    titleShortFa: 'انبارداری',
-    descriptionFa: 'مدیریت فرآیند شمارش کور انبار، کارتابل سرپرست، تخصیص کالا و صدور MT26/49، ثبت مغایرت‌ها، داشبورد ره‌گیری و ممیزی موجودی کالا.',
-    icon: '📦',
-    routePrefix: '/app/warehouse',
-    defaultRoute: '/app/warehouse/dashboard',
-    scopeKind: 'warehouse',
-    permissionMarkers: [
-      'view_sys_dashboard', 'view_wh_dashboard', 'view_sys_counter',
-      'view_sys_supervisor', 'view_sys_manager_review', 'view_wh_docs',
-      'view_wh_dispatch', 'view_wh_customs', 'view_wh_doc_approvals',
-      'view_wh_feeding', 'view_wh_feed_approvals', 'view_wh_labels',
-      'view_wh_label_designer', 'view_wh_audit', 'view_wh_settings',
-      'view_sys_recounts', 'view_sys_export', 'view_sys_reports',
-      'perm_doc_approve_action', 'perm_feed_approve_action', 'perm_inventory_finalize',
-      'perm_rec_import', 'perm_rec_recount', 'perm_rec_dispatch',
-      'perm_wh_create', 'perm_wh_edit', 'perm_wh_freeze'
-    ],
-    roles: ['counter', 'warehouse_supervisor', 'docs_specialist', 'manager_review']
-  },
-  {
-    code: 'accounting',
-    aliases: ['personnel', 'finance'],
-    titleFa: 'سامانه مالی، حقوق و کارکرد',
-    titleShortFa: 'مالی و حقوق',
-    descriptionFa: 'ثبت و کنترل کارکرد روزانه، کارتابل تاییدات ۵ سطحی، محاسبات فیش حقوقی، دیسکت‌های بیمه تامین اجتماعی و مالیات، خزانه‌داری و پرداخت پایا.',
-    icon: '💳',
-    routePrefix: '/app/finance',
-    defaultRoute: '/app/finance',
-    scopeKind: 'finance',
-    permissionMarkers: [
-      'view_sys_personnel', 'view_sys_personnel_attendance', 'view_sys_fleet_attendance',
-      'view_sys_payroll', 'view_sys_fleet_settlement', 'view_sys_treasury',
-      'perm_lock_work_period', 'perm_approve_personnel_supervisor', 'perm_approve_personnel_manager',
-      'perm_approve_personnel_finance', 'perm_approve_fleet_supervisor', 'perm_approve_fleet_manager',
-      'perm_approve_fleet_finance', 'perm_manager_payment_authorize', 'perm_treasury_disburse_action',
-      'can_act_as_accountant', 'can_act_as_operator', 'view_sys_projects', 'perm_manage_projects_sections'
-    ],
-    roles: ['operator', 'supervisor', 'accountant', 'manager', 'treasury', 'org_admin']
-  },
-  {
-    code: 'operations',
-    aliases: ['ops', 'soc'],
-    titleFa: 'مرکز عملیات و زیرساخت (SOC)',
-    titleShortFa: 'پدافند و زیرساخت',
-    descriptionFa: 'اتاق فرماندهی پدافند، پایش علائم حیاتی سرور، اسنپ‌شات‌ها و بازیابی سریع دیتابیس، ممیزی امنیتی و مانیتورینگ کلاینت‌های تبلت.',
-    icon: '🛡️',
-    routePrefix: '/app/operations',
-    defaultRoute: '/app/operations/cockpit',
-    scopeKind: 'operations',
-    permissionMarkers: ['admin_all'],
-    roles: ['ops_commander', 'superuser'],
-    isSuperuserOnly: true
+/**
+ * مشخصات سامانه عملیات و پدافند زیرساخت پلتفرم (Platform Operations Shell)
+ */
+const OPERATIONS_SPEC: WhFrontendModule = {
+  code: 'operations',
+  aliases: ['ops', 'soc'],
+  titleFa: 'مرکز عملیات و زیرساخت (SOC)',
+  titleShortFa: 'پدافند و زیرساخت',
+  descriptionFa: 'اتاق فرماندهی پدافند، پایش علائم حیاتی سرور، اسنپ‌شات‌ها و بازیابی سریع دیتابیس، ممیزی امنیتی و مانیتورینگ کلاینت‌های تبلت.',
+  icon: '🛡️',
+  routePrefix: '/app/operations',
+  defaultRoute: '/app/operations/cockpit',
+  scopeKind: 'operations',
+  permissionMarkers: ['admin_all'],
+  roles: ['ops_commander', 'superuser'],
+  isSuperuserOnly: true,
+  extensions: {
+    launcherTile: {
+      themeColor: 'cyan',
+      tags: ['اسنپ‌شات‌ها', 'پایش سلامت', 'امنیت'],
+      appKey: 'operations'
+    }
   }
-];
+};
 
 @Injectable({ providedIn: 'root' })
 export class ModuleRegistryService {
   private static readonly STORAGE_KEY = 'wh_installed_modules';
 
+  /** فهرست کلیه ماژول‌های موجود در این بیلد (ماژول‌های نصب‌شده به علاوه پوسته عملیات) */
+  private modules: WhFrontendModule[] = [...INSTALLED_MODULES, OPERATIONS_SPEC];
+
   /** ماژول‌های نصب‌شده اعلام‌شده توسط سرور در public config (پیش‌فرض: خواندن از کش یا همه) */
   private installedModuleCodes = signal<string[]>(this.getInitialModuleCodes());
 
   private getInitialModuleCodes(): string[] {
-    const codes = ['operations'];
-    if (IS_WAREHOUSE_INSTALLED) codes.push('warehouse');
-    if (IS_ACCOUNTING_INSTALLED) codes.push('accounting');
+    const defaultCodes = this.modules.map(m => m.code);
 
     if (typeof window !== 'undefined') {
       try {
@@ -95,17 +53,19 @@ export class ModuleRegistryService {
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed.filter(c => {
+            const valid = parsed.filter(c => {
               const norm = String(c).toLowerCase();
-              if ((norm === 'warehouse' || norm === 'wh') && !IS_WAREHOUSE_INSTALLED) return false;
-              if ((norm === 'accounting' || norm === 'finance') && !IS_ACCOUNTING_INSTALLED) return false;
-              return true;
+              return this.modules.some(m => m.code === norm || m.aliases?.includes(norm));
             });
+            if (valid.length > 0) {
+              if (!valid.includes('operations')) valid.push('operations');
+              return valid;
+            }
           }
         }
       } catch {}
     }
-    return codes;
+    return defaultCodes;
   }
 
   /**
@@ -114,11 +74,8 @@ export class ModuleRegistryService {
   public setInstalledModules(codes: string[]): void {
     if (!codes || !Array.isArray(codes) || codes.length === 0) return;
     const normalized = codes.map(c => c.toLowerCase()).filter(norm => {
-      if ((norm === 'warehouse' || norm === 'wh') && !IS_WAREHOUSE_INSTALLED) return false;
-      if ((norm === 'accounting' || norm === 'finance') && !IS_ACCOUNTING_INSTALLED) return false;
-      return true;
+      return this.modules.some(m => m.code === norm || m.aliases?.includes(norm));
     });
-    // اگر پلتفرم یا حسابداری اعلام شده، به رسمیت بشناس
     if (!normalized.includes('operations')) normalized.push('operations');
     this.installedModuleCodes.set(normalized);
     if (typeof window !== 'undefined') {
@@ -136,30 +93,43 @@ export class ModuleRegistryService {
   }
 
   /**
-   * آیا ماژول مورد نظر در این نصب فعال است؟
+   * آیا ماژول مورد نظر در این توزیع بیلد و در سرور نصب و فعال است؟
    */
   public isModuleInstalled(code: string): boolean {
     const norm = code.toLowerCase();
-    if ((norm === 'warehouse' || norm === 'wh') && !IS_WAREHOUSE_INSTALLED) return false;
-    if ((norm === 'accounting' || norm === 'finance') && !IS_ACCOUNTING_INSTALLED) return false;
+    const spec = this.getSpec(norm);
+    if (!spec) return false;
 
     const installed = this.installedModuleCodes();
-    if (installed.includes(norm)) return true;
-    const spec = this.getSpec(norm);
-    if (spec?.aliases?.some(a => installed.includes(a))) return true;
+    if (installed.includes(spec.code)) return true;
+    if (spec.aliases?.some(a => installed.includes(a))) return true;
     return false;
   }
 
   /**
    * دریافت مشخصات یک ماژول بر اساس کد یا نام مستعار
    */
-  public getSpec(code: string): FrontendModuleSpec | undefined {
+  public getSpec(code: string): WhFrontendModule | undefined {
     const norm = code.toLowerCase();
-    return KNOWN_MODULE_CATALOG.find(m => m.code === norm || m.aliases?.includes(norm));
+    return this.modules.find(m => m.code === norm || m.aliases?.includes(norm));
   }
 
   /**
-   * استخراج مارکرهای مجوز ماژول برای اعتبارسنجی روت‌ها — فاز ۶ (تسک ۵۳)
+   * دریافت فهرست ماژول‌های فعال
+   */
+  public getInstalledModules(): WhFrontendModule[] {
+    return this.modules.filter(m => this.isModuleInstalled(m.code));
+  }
+
+  /**
+   * دریافت مشخصات ماژول‌های نصب‌شده و فعال در کاتالوگ
+   */
+  public getInstalledSpecs(): FrontendModuleSpec[] {
+    return this.getInstalledModules();
+  }
+
+  /**
+   * استخراج مارکرهای مجوز ماژول برای اعتبارسنجی روت‌ها
    */
   public permissionMarkers(code: string): string[] {
     const spec = this.getSpec(code);
@@ -167,14 +137,34 @@ export class ModuleRegistryService {
   }
 
   /**
-   * دریافت مشخصات ماژول‌های نصب‌شده و فعال در کاتالوگ
+   * دریافت همه مشارکت‌های ثبت‌شده در یک نقطه توسعه خاص
    */
-  public getInstalledSpecs(): FrontendModuleSpec[] {
-    return KNOWN_MODULE_CATALOG.filter(m => this.isModuleInstalled(m.code));
+  public getExtensions<K extends keyof ExtensionMap>(
+    point: K
+  ): Array<{ module: WhFrontendModule; extension: NonNullable<ExtensionMap[K]> }> {
+    const results: Array<{ module: WhFrontendModule; extension: NonNullable<ExtensionMap[K]> }> = [];
+    for (const mod of this.getInstalledModules()) {
+      if (mod.extensions && mod.extensions[point]) {
+        results.push({ module: mod, extension: mod.extensions[point]! });
+      }
+    }
+    return results;
   }
 
   /**
-   * ارزیابی دسترسی کاربر به یک ماژول بر اساس مجوزها و نقش‌ها (وارونه‌سازی)
+   * دریافت مشارکت یک ماژول خاص در یک نقطه توسعه
+   */
+  public getExtension<K extends keyof ExtensionMap>(
+    moduleCode: string,
+    point: K
+  ): NonNullable<ExtensionMap[K]> | undefined {
+    const mod = this.getSpec(moduleCode);
+    if (!mod || !this.isModuleInstalled(mod.code)) return undefined;
+    return mod.extensions?.[point] as NonNullable<ExtensionMap[K]> | undefined;
+  }
+
+  /**
+   * ارزیابی دسترسی کاربر به یک ماژول بر اساس مجوزها و نقش‌ها
    */
   public userHasAccessToModule(
     moduleCode: string,
@@ -182,7 +172,6 @@ export class ModuleRegistryService {
     allowedApps?: string[],
     isSuperuser = false
   ): boolean {
-    // قانون ۵: ماژول نصب‌نشده در این توزیع وجود ندارد و به هیچ کاربری (حتی مدیر ارشد) دسترسی داده نمی‌شود
     if (!this.isModuleInstalled(moduleCode)) return false;
     if (isSuperuser) return true;
 
@@ -190,7 +179,6 @@ export class ModuleRegistryService {
     if (!spec) return false;
     if (spec.isSuperuserOnly) return isSuperuser;
 
-    // بررسی allowed_apps اعلامی از سمت توکن احراز هویت
     if (allowedApps && Array.isArray(allowedApps)) {
       const matchAllowed = allowedApps.some(a => {
         const normA = a.toLowerCase();
@@ -199,7 +187,6 @@ export class ModuleRegistryService {
       if (matchAllowed) return true;
     }
 
-    // بررسی تطابق با مارکرهای مجوز ماژول
     return spec.permissionMarkers.some(p => userPerms.includes(p));
   }
 }

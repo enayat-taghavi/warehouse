@@ -4,11 +4,9 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve --proxy-config proxy.conf.json",
-    "start:accounting": "ng serve --proxy-config proxy.conf.json --configuration accounting-only",
-    "start:warehouse": "ng serve --proxy-config proxy.conf.json --configuration warehouse-only",
     "build": "ng build && node tools/patch-ngsw-530.js",
-    "build:accounting": "ng build --configuration accounting-only && node tools/patch-ngsw-530.js",
-    "build:warehouse": "ng build --configuration warehouse-only && node tools/patch-ngsw-530.js",
+    "build:accounting": "node tools/build-for-modules.js --modules=accounting",
+    "build:warehouse": "node tools/build-for-modules.js --modules=warehouse",
     "build:modules": "node tools/build-for-modules.js",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",

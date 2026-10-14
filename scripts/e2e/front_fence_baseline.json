@@ -1,9 +1,9 @@
 {
   "_readme": "snapshot مبنای حصار ماژول‌های فرانت‌اند (نگهبان ۵۷). فقط کاهش مجاز است (قانون آچار یک‌طرفه). برای ثبت پیشرفت: python scripts/e2e/guardian_57_front_module_fence.py --update-baseline",
   "counters": {
-    "core_to_module_imports": 13,
+    "core_to_module_imports": 10,
     "cross_module_imports": 0,
-    "is_module_installed_outside_module": 61
+    "is_module_installed_outside_module": 45
   },
   "violations": {
     "core_to_module_imports": [
@@ -12,24 +12,6 @@
         "line": 27,
         "import": "../../modules/accounting/nav-items",
         "target_module": "accounting"
-      },
-      {
-        "file": "core/modules/module-registry.service.ts",
-        "line": 2,
-        "import": "../../modules/warehouse/warehouse-flags",
-        "target_module": "warehouse"
-      },
-      {
-        "file": "core/modules/module-registry.service.ts",
-        "line": 3,
-        "import": "../../modules/accounting/accounting-flags",
-        "target_module": "accounting"
-      },
-      {
-        "file": "core/services/sync-pull.service.ts",
-        "line": 6,
-        "import": "../../modules/warehouse/warehouse-flags",
-        "target_module": "warehouse"
       },
       {
         "file": "modules/common/components/layout/layout.ts",
@@ -257,18 +239,6 @@
         "current_zone": "accounting"
       },
       {
-        "file": "modules/common/components/app-launcher/app-launcher.ts",
-        "line": 61,
-        "code": "warehouse",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "modules/common/components/app-launcher/app-launcher.ts",
-        "line": 79,
-        "code": "accounting",
-        "current_zone": "core_common"
-      },
-      {
         "file": "modules/common/components/audit/audit.ts",
         "line": 165,
         "code": "warehouse",
@@ -296,60 +266,6 @@
         "file": "modules/common/components/id-cards/id-cards.ts",
         "line": 244,
         "code": "warehouse",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "modules/common/components/layout/layout.ts",
-        "line": 625,
-        "code": "warehouse",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "modules/common/components/layout/layout.ts",
-        "line": 646,
-        "code": "warehouse",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "modules/common/components/layout/layout.ts",
-        "line": 698,
-        "code": "warehouse",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "modules/common/components/layout/layout.ts",
-        "line": 719,
-        "code": "warehouse",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "modules/common/components/layout/layout.ts",
-        "line": 731,
-        "code": "warehouse",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "modules/common/components/layout/layout.ts",
-        "line": 965,
-        "code": "warehouse",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "modules/common/components/layout/layout.ts",
-        "line": 998,
-        "code": "accounting",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "modules/common/components/layout/layout.ts",
-        "line": 1070,
-        "code": "warehouse",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "modules/common/components/layout/layout.ts",
-        "line": 1072,
-        "code": "accounting",
         "current_zone": "core_common"
       },
       {
@@ -422,36 +338,6 @@
         "file": "modules/common/components/users/users.ts",
         "line": 412,
         "code": "accounting",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "shared/components/user-menu/user-menu.component.ts",
-        "line": 130,
-        "code": "warehouse",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "shared/components/user-menu/user-menu.component.ts",
-        "line": 131,
-        "code": "accounting",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "shared/components/user-menu/user-menu.component.ts",
-        "line": 131,
-        "code": "personnel",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "shared/components/user-menu/user-menu.component.ts",
-        "line": 151,
-        "code": "warehouse",
-        "current_zone": "core_common"
-      },
-      {
-        "file": "shared/components/user-menu/user-menu.component.ts",
-        "line": 494,
-        "code": "warehouse",
         "current_zone": "core_common"
       }
     ]

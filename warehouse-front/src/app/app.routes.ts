@@ -21,6 +21,35 @@ import { HealthDashboardComponent } from './modules/common/components/health-das
 import { ModuleRegistryService } from './core/modules/module-registry.service';
 import { ActiveCompanyService } from './core/services/active-company.service';
 
+import { INSTALLED_MODULES } from './modules/installed-modules';
+
+const dynamicModuleRoutes: Routes = INSTALLED_MODULES.filter(m => typeof m.routes === 'function').map(m => {
+  const cleanPrefix = m.routePrefix.replace(/^\//, '');
+  return {
+    path: cleanPrefix,
+    component: Layout,
+    canMatch: [
+      () => {
+        const reg = inject(ModuleRegistryService);
+        if (!reg.isModuleInstalled(m.code)) return false;
+        if (m.code === 'warehouse') {
+          const activeCompany = inject(ActiveCompanyService, { optional: true });
+          if (activeCompany?.activeCompany && activeCompany.activeCompany.has_warehouse_module === false) {
+            return false;
+          }
+        }
+        return true;
+      }
+    ],
+    canActivate: [
+      AuthGuard,
+      ...(m.code === 'warehouse' ? [WarehouseCompanyGuard] : [])
+    ],
+    canActivateChild: [AuthGuardChild],
+    loadChildren: m.routes!
+  };
+});
+
 export const routes: Routes = [
   // ─── احراز هویت و صفحات عمومی ─────────────────────────
   { path: 'login', component: Login },
@@ -30,25 +59,8 @@ export const routes: Routes = [
   // ─── پورتال لانچر برنامه‌ها (App Launcher) ──────────────
   { path: 'app/launcher', component: AppLauncherComponent, canActivate: [AuthGuard] },
 
-  // ─── ماژول ۱: سامانه انبارگردانی (/app/warehouse/...) با بارگذاری تنبل (Lazy Loading) ──
-  {
-    path: 'app/warehouse',
-    component: Layout,
-    canMatch: [WarehouseModuleMatchGuard],
-    canActivate: [AuthGuard, WarehouseCompanyGuard],
-    canActivateChild: [AuthGuardChild],
-    loadChildren: () => import('./modules/warehouse/warehouse.routes').then(m => m.WAREHOUSE_ROUTES)
-  },
-
-  // ─── ماژول ۲: سامانه مالی و پرسنلی (/app/finance/...) با بارگذاری تنبل (Lazy Loading) ───
-  {
-    path: 'app/finance',
-    component: Layout,
-    canMatch: [AccountingModuleMatchGuard],
-    canActivate: [AuthGuard],
-    canActivateChild: [AuthGuardChild],
-    loadChildren: () => import('./modules/accounting/accounting.routes').then(m => m.ACCOUNTING_ROUTES)
-  },
+  // ─── روت‌های ماژول‌های نصب‌شده (بارگذاری تنبل و پویا) ───────
+  ...dynamicModuleRoutes,
 
   // ─── ماژول ۳: مرکز عملیات و زیرساخت سازمان (/app/operations/...) ───
   {

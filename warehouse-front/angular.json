@@ -66,127 +66,18 @@
                   "with": "src/environments/environment.development.ts"
                 }
               ]
-            },
-            "accounting-only": {
-              "budgets": [
-                {
-                  "type": "initial",
-                  "maximumWarning": "3.5mb",
-                  "maximumError": "4.5mb"
-                }
-              ],
-              "outputHashing": "all",
-              "optimization": {
-                "scripts": true,
-                "styles": {
-                  "minify": true,
-                  "inlineCritical": true
-                },
-                "fonts": false
-              },
-              "fileReplacements": [
-                {
-                  "replace": "src/app/modules/warehouse/warehouse.routes.ts",
-                  "with": "src/app/modules/warehouse/warehouse.routes.stub.ts"
-                },
-                {
-                  "replace": "src/app/modules/warehouse/warehouse-flags.ts",
-                  "with": "src/app/modules/warehouse/warehouse-flags.stub.ts"
-                }
-              ],
-              "serviceWorker": "ngsw-config.json"
-            },
-            "warehouse-only": {
-              "budgets": [
-                {
-                  "type": "initial",
-                  "maximumWarning": "3.5mb",
-                  "maximumError": "4.5mb"
-                }
-              ],
-              "outputHashing": "all",
-              "optimization": {
-                "scripts": true,
-                "styles": {
-                  "minify": true,
-                  "inlineCritical": true
-                },
-                "fonts": false
-              },
-              "fileReplacements": [
-                {
-                  "replace": "src/app/modules/accounting/accounting.routes.ts",
-                  "with": "src/app/modules/accounting/accounting.routes.stub.ts"
-                },
-                {
-                  "replace": "src/app/modules/accounting/accounting-flags.ts",
-                  "with": "src/app/modules/accounting/accounting-flags.stub.ts"
-                }
-              ],
-              "serviceWorker": "ngsw-config.json"
-            },
-            "accounting-dev": {
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true,
-              "fileReplacements": [
-                {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.development.ts"
-                },
-                {
-                  "replace": "src/app/modules/warehouse/warehouse.routes.ts",
-                  "with": "src/app/modules/warehouse/warehouse.routes.stub.ts"
-                },
-                {
-                  "replace": "src/app/modules/warehouse/warehouse-flags.ts",
-                  "with": "src/app/modules/warehouse/warehouse-flags.stub.ts"
-                }
-              ]
-            },
-            "warehouse-dev": {
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true,
-              "fileReplacements": [
-                {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.development.ts"
-                },
-                {
-                  "replace": "src/app/modules/accounting/accounting.routes.ts",
-                  "with": "src/app/modules/accounting/accounting.routes.stub.ts"
-                },
-                {
-                  "replace": "src/app/modules/accounting/accounting-flags.ts",
-                  "with": "src/app/modules/accounting/accounting-flags.stub.ts"
-                }
-              ]
             }
           },
           "defaultConfiguration": "production"
         },
         "serve": {
           "builder": "@angular/build:dev-server",
-
           "configurations": {
             "production": {
               "buildTarget": "warehouse-app:build:production"
             },
             "development": {
               "buildTarget": "warehouse-app:build:development"
-            },
-            "accounting-only": {
-              "buildTarget": "warehouse-app:build:accounting-dev"
-            },
-            "warehouse-only": {
-              "buildTarget": "warehouse-app:build:warehouse-dev"
-            },
-            "accounting-prod": {
-              "buildTarget": "warehouse-app:build:accounting-only"
-            },
-            "warehouse-prod": {
-              "buildTarget": "warehouse-app:build:warehouse-only"
             }
           },
           "defaultConfiguration": "development"
