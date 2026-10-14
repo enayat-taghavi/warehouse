@@ -21,7 +21,7 @@
   داخل پرانتز می‌آورد و همان regex روی لاگ واقعی HEAD درست کار کرد.
 -->
 
-نشست 1 از 3 — پیگیری‌های ناظر: دامنهٔ شرکت در گزارش‌ساز و ورود کاربران از Excel (بک‌اند)
+[DONE] نشست 1 از 3 — پیگیری‌های ناظر: دامنهٔ شرکت در گزارش‌ساز و ورود کاربران از Excel (بک‌اند)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -72,7 +72,7 @@ fix(scope): company scope in report builder and users Excel import
 
 ===
 
-نشست 2 از 3 — پیگیری‌های ناظر: لانچر، سایدبار و پیوند سریع از نقطه‌های توسعه (فرانت)
+[DONE] نشست 2 از 3 — پیگیری‌های ناظر: لانچر، سایدبار و پیوند سریع از نقطه‌های توسعه (فرانت)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -117,7 +117,7 @@ feat(modular): launcher, sidebar and quick link from module extensions
 
 ===
 
-نشست 3 از 3 — پیگیری‌های ناظر: جفت‌شدگی‌های سست (فرانت)
+[DONE] نشست 3 از 3 — پیگیری‌های ناظر: جفت‌شدگی‌های سست (فرانت)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
