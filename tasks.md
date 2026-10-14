@@ -17,7 +17,7 @@
 - توافق با Antigravity: چت‌های f2b8c66f (بازبینی طرح) و f8f6a31d (این صف)؛ تصمیم‌ها در بخش `## ۸.` طرح.
 -->
 
-نشست 1 از 10 — راه میانهٔ ماژولار: گام ۰-الف (پوشه‌های بک‌اند)
+[DONE] نشست 1 از 10 — راه میانهٔ ماژولار: گام ۰-الف (پوشه‌های بک‌اند)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -61,7 +61,7 @@ refactor(modular): step 0-a backend folders
 
 ===
 
-نشست 2 از 10 — راه میانهٔ ماژولار: گام ۰-ب-۱ (پوشه‌های مشترک فرانت)
+[DONE] نشست 2 از 10 — راه میانهٔ ماژولار: گام ۰-ب-۱ (پوشه‌های مشترک فرانت)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -112,7 +112,7 @@ refactor(modular): step 0-b1 common front folders
 
 ===
 
-نشست 3 از 10 — راه میانهٔ ماژولار: گام ۰-ب-۲ (پوشه‌های انبار و مالی در فرانت)
+[DONE] نشست 3 از 10 — راه میانهٔ ماژولار: گام ۰-ب-۲ (پوشه‌های انبار و مالی در فرانت)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -167,7 +167,7 @@ refactor(modular): step 0-b2 module front folders
 
 ===
 
-نشست 4 از 10 — راه میانهٔ ماژولار: گام ۱ (بیلد و استقرار جدا)
+[DONE] نشست 4 از 10 — راه میانهٔ ماژولار: گام ۱ (بیلد و استقرار جدا)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -213,7 +213,7 @@ feat(modular): step 1 per-module build and deploy
 
 ===
 
-نشست 5 از 10 — راه میانهٔ ماژولار: گام ۲ (حصارها)
+[DONE] نشست 5 از 10 — راه میانهٔ ماژولار: گام ۲ (حصارها)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -254,7 +254,7 @@ chore(modular): step 2 backend and front fences
 
 ===
 
-نشست 6 از 10 — راه میانهٔ ماژولار: گام ۳-الف (معرفی ماژول‌ها و ابزار هسته)
+[DONE] نشست 6 از 10 — راه میانهٔ ماژولار: گام ۳-الف (معرفی ماژول‌ها و ابزار هسته)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -291,7 +291,7 @@ refactor(modular): step 3a module manifests and core events
 
 ===
 
-نشست 7 از 10 — راه میانهٔ ماژولار: گام ۳-ب (بقیهٔ یال‌های هسته)
+[DONE] نشست 7 از 10 — راه میانهٔ ماژولار: گام ۳-ب (بقیهٔ یال‌های هسته)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -327,7 +327,7 @@ refactor(modular): step 3b extension points for core edges
 
 ===
 
-نشست 8 از 10 — راه میانهٔ ماژولار: گام ۴-الف (قرارداد فرانت و پوسته)
+[DONE] نشست 8 از 10 — راه میانهٔ ماژولار: گام ۴-الف (قرارداد فرانت و پوسته)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -370,7 +370,7 @@ feat(modular): step 4a front module contract
 
 ===
 
-نشست 9 از 10 — راه میانهٔ ماژولار: گام ۴-ب (نقطه‌های توسعه)
+[DONE] نشست 9 از 10 — راه میانهٔ ماژولار: گام ۴-ب (نقطه‌های توسعه)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -407,7 +407,7 @@ refactor(modular): step 4b front extension points
 
 ===
 
-نشست 10 از 10 — راه میانهٔ ماژولار: گام ۵ (ماژول‌های آینده)
+[DONE] نشست 10 از 10 — راه میانهٔ ماژولار: گام ۵ (ماژول‌های آینده)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
