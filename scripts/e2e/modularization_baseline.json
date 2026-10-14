@@ -1,18 +1,18 @@
 {
   "_readme": "snapshot مبنای نقض‌های مرزبندی ماژولی (نگهبان ۲۹، فاز ۰). هیچ شمارنده‌ای مجاز به افزایش نیست. برای ثبت پیشرفت: python scripts/e2e/guardian_modularization.py --update-baseline",
   "counters": {
-    "unique_direct_violations": 9,
-    "production_violations": 9,
+    "unique_direct_violations": 0,
+    "production_violations": 0,
     "non_production_violations": 0,
     "composition_root_hardcoded_lines": 0,
-    "contract:c1-layering": 9,
+    "contract:c1-layering": 0,
     "contract:c2-accounting-independent-of-warehouse": 0,
     "contract:c2-warehouse-independent-of-accounting": 0,
-    "contract:c3-core-purity": 9
+    "contract:c3-core-purity": 0
   },
   "lint_imports": {
-    "kept": 1,
-    "broken": 3
+    "kept": 4,
+    "broken": 0
   },
   "composition_root": {
     "config/settings.py": [],
@@ -20,53 +20,7 @@
     "config/asgi.py": []
   },
   "violations": {
-    "production": [
-      [
-        "accounts.excel_utils",
-        "warehouses.models",
-        27
-      ],
-      [
-        "accounts.rollback_service",
-        "inventory.models",
-        155
-      ],
-      [
-        "accounts.rollback_service",
-        "inventory.models",
-        160
-      ],
-      [
-        "accounts.rollback_service",
-        "warehouses.models",
-        168
-      ],
-      [
-        "accounts.serializers",
-        "warehouses.models",
-        13
-      ],
-      [
-        "reports.registry",
-        "inventory.models",
-        92
-      ],
-      [
-        "reports.registry",
-        "inventory.models",
-        163
-      ],
-      [
-        "reports.registry",
-        "personnel.models",
-        314
-      ],
-      [
-        "reports.registry",
-        "warehouses.models",
-        263
-      ]
-    ],
+    "production": [],
     "non_production": []
   }
 }

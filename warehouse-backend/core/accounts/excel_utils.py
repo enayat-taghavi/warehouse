@@ -18,14 +18,14 @@ from django.contrib.auth.models import Group
 from .models import CustomUser, CustomRole
 
 
-# فاز ۲ §۲.۳ — حل اختیاری اپ انبار.
-def _warehouse_model():
-    """اگر اپ `warehouses` نصب است مدل `Warehouse` را برمی‌گرداند، وگرنه None."""
-    from django.apps import apps
-    if not apps.is_installed('warehouses'):
-        return None
-    from warehouses.models import Warehouse
-    return Warehouse
+# فاز ۲ §۲.۳ و گام ۳-ب — حل اختیاری اکستنشن انبار برای اکسل.
+def _get_user_warehouse_extension():
+    """دریافت اکستنشن انبار از نقطه توسعه user_extensions."""
+    from platform_core.registry import contributions
+    for ext in contributions('user_extensions'):
+        if getattr(ext, 'name', '') == 'warehouses' or hasattr(ext, 'format_excel_warehouses'):
+            return ext
+    return None
 
 
 # ── Column Definitions ──────────────────────────────────────────────
@@ -178,13 +178,8 @@ def generate_users_excel(queryset):
                 role_names.append(g.name)
         roles_str = '، '.join(role_names)
 
-        wh_items = []
-        # فاز ۲ §۲.۳ — اکسسور `user.assigned_warehouses` فقط در نصب دارای اپ
-        # انبار وجود دارد؛ در حسابداری‌تنها این ستون خالی می‌ماند.
-        if _warehouse_model() is not None:
-            for w in user.assigned_warehouses.all():
-                wh_items.append(f"{w.name} ({w.code})" if w.code else w.name)
-        wh_str = '، '.join(wh_items)
+        wh_ext = _get_user_warehouse_extension()
+        wh_str = wh_ext.format_excel_warehouses(user) if wh_ext else ''
 
         row_data = [
             user.first_name or '',
@@ -254,11 +249,8 @@ def generate_id_cards_excel(queryset):
                 role_names.append(g.name)
         roles_str = '، '.join(role_names)
 
-        wh_items = []
-        if _warehouse_model() is not None:
-            for w in user.assigned_warehouses.all():
-                wh_items.append(f"{w.name} ({w.code})" if w.code else w.name)
-        wh_str = '، '.join(wh_items)
+        wh_ext = _get_user_warehouse_extension()
+        wh_str = wh_ext.format_excel_warehouses(user) if wh_ext else ''
 
         barcode_str = f"GP-{user.username or user.pk}"
         if user.national_code:
@@ -328,10 +320,8 @@ def generate_users_template():
     dropdown_roles = ['همه نقش‌ها'] + [r for r in role_titles if r != 'همه نقش‌ها']
 
     # ب) انبارهای فعال همراه با گزینه «همه انبارها»
-    wh_names = []
-    WhModel = _warehouse_model()
-    if WhModel is not None:
-        wh_names = [w.name for w in WhModel.objects.all().order_by('name') if w.name and w.name.strip()]
+    wh_ext = _get_user_warehouse_extension()
+    wh_names = wh_ext.get_template_warehouse_names() if wh_ext is not None else []
     if not wh_names:
         wh_names = ['انبار مرکزی']
     dropdown_warehouses = ['همه انبارها'] + [w for w in wh_names if w != 'همه انبارها']
@@ -578,17 +568,8 @@ def parse_users_excel(file, update_existing=False):
             pass
 
     # نقشه انبارها: هم بر اساس code و هم بر اساس name
-    warehouses_lookup = {}
-    WhModel = _warehouse_model()
-    if WhModel is not None:
-        for wh in WhModel.objects.all():
-            if wh.code:
-                warehouses_lookup[wh.code.lower().strip()] = wh
-            if wh.name:
-                warehouses_lookup[wh.name.lower().strip()] = wh
-                # حالت ترکیبی نام و کد مثل "انبار مرکزی (WH-1)"
-                if wh.code:
-                    warehouses_lookup[f"{wh.name.lower().strip()} ({wh.code.lower().strip()})"] = wh
+    wh_ext = _get_user_warehouse_extension()
+    warehouses_lookup = wh_ext.build_warehouses_lookup() if wh_ext is not None else {}
 
     valid_rows = []
     errors = []
@@ -711,8 +692,8 @@ def parse_users_excel(file, update_existing=False):
         if warehouses_str:
             wh_items = split_items(warehouses_str)
             has_all_whs = any(w.lower().strip() in ALL_WHS_ALIASES for w in wh_items)
-            if has_all_whs and WhModel is not None:
-                for wh in WhModel.objects.all():
+            if has_all_whs and wh_ext is not None:
+                for wh in wh_ext.get_all_warehouses():
                     if wh not in resolved_warehouses:
                         resolved_warehouses.append(wh)
             else:

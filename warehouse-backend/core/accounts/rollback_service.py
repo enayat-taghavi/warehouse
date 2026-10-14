@@ -146,30 +146,23 @@ def get_model_class(model_name):
     if not model_name:
         return None
         
-    # نگاشت اختصاصی برای مدل‌های متداول پروژه
-    # فاز ۲ §۲.۵ — گارد `apps.is_installed` برای مدل‌هایِ ماژولِ انبار: در نصب
-    # حسابداری‌تنها این اپ‌ها وجود ندارند و نباید ایمپورت شوند.
-    if model_name == 'Item':
-        if not apps.is_installed('inventory'):
-            return None
-        from inventory.models import Item
-        return Item
-    elif model_name == 'CountTask':
-        if not apps.is_installed('inventory'):
-            return None
-        from inventory.models import CountTask
-        return CountTask
-    elif model_name in ('CustomUser', 'User'):
+    # نگاشت اختصاصی برای مدل‌های پلتفرم و هسته
+    if model_name in ('CustomUser', 'User'):
         from accounts.models import CustomUser
         return CustomUser
-    elif model_name == 'Warehouse':
-        if not apps.is_installed('warehouses'):
-            return None
-        from warehouses.models import Warehouse
-        return Warehouse
     elif model_name == 'CustomRole':
         from accounts.models import CustomRole
         return CustomRole
+
+    # فاز ۳-ب — دریافت نگاشت مدل‌های ماژول‌ها از طریق نقطه توسعه rollback_models
+    from platform_core.registry import contributions
+    for mapping in contributions('rollback_models'):
+        if isinstance(mapping, dict) and model_name in mapping:
+            return mapping[model_name]
+        elif callable(mapping):
+            res = mapping(model_name)
+            if res is not None:
+                return res
 
     # جستجوی عمومی در تمامی اپ‌های رجیستر شده جنگو
     for model in apps.get_models():

@@ -28,10 +28,11 @@ class ReportTemplateSerializer(serializers.ModelSerializer):
     def validate_warehouse(self, value):
         if value is None:
             return value
-        from django.apps import apps
-        if not apps.is_installed('warehouses'):
+        from platform_core.registry import contributions
+        validators = contributions('validate_warehouse')
+        if not validators:
             raise serializers.ValidationError('سامانهٔ انبار نصب نیست.')
-        if not apps.get_model('warehouses', 'Warehouse').objects.filter(pk=value).exists():
+        if not any(v(value) for v in validators):
             raise serializers.ValidationError('انبار نامعتبر است.')
         return value
 

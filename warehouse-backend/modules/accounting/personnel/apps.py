@@ -59,3 +59,12 @@ class PersonnelConfig(AppConfig):
         except Exception:
             pass
 
+        # ثبت موجودیت‌های گزارش حسابداری در رجیستری پلتفرم (گام ۳-ب)
+        try:
+            from personnel.report_entities import register_accounting_report_entities
+            from platform_core.registry import contribute
+            register_accounting_report_entities()
+            contribute('report_registrars', register_accounting_report_entities)
+        except Exception:
+            pass
+

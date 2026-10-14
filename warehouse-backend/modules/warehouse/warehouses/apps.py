@@ -61,3 +61,19 @@ class WarehousesConfig(AppConfig):
 
         contribute('company_of:warehouse', _warehouse_company_resolver)
 
+        # ثبت اکستنشن انبار برای کاربران پلتفرم (گام ۳-ب)
+        from warehouses.user_extension import register_user_extension
+        register_user_extension()
+
+        # ثبت مدل‌های قابل بازگردانی انبار (گام ۳-ب)
+        from warehouses.models import Warehouse
+        contribute('rollback_models', {'Warehouse': Warehouse})
+
+        # ثبت اعتبارسنجی انبار برای گزارش‌ساز (گام ۳-ب)
+        contribute('validate_warehouse', lambda wid: Warehouse.objects.filter(pk=wid).exists())
+
+        # ثبت موجودیت‌های گزارش انبار در رجیستری پلتفرم (گام ۳-ب)
+        from warehouses.report_entities import register_warehouse_report_entities
+        register_warehouse_report_entities()
+        contribute('report_registrars', register_warehouse_report_entities)
+

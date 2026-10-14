@@ -5,13 +5,14 @@ from django.contrib.auth.models import Group, Permission
 from .models import CustomUser, CustomRole
 
 
-# فاز ۲ §۲.۳ — حل اختیاری اپ انبار. در نصب بدون انبار فیلدهای مرتبط حذف می‌شوند.
-def _warehouse_model():
-    """اگر اپ `warehouses` نصب است مدل `Warehouse` را برمی‌گرداند، وگرنه None."""
-    if not apps.is_installed('warehouses'):
-        return None
-    from warehouses.models import Warehouse
-    return Warehouse
+# فاز ۲ §۲.۳ و گام ۳-ب — حل اختیاری اکستنشن انبار برای کاربران.
+def _get_user_warehouse_extension():
+    """دریافت اکستنشن انبار از نقطه توسعه user_extensions."""
+    from platform_core.registry import contributions
+    for ext in contributions('user_extensions'):
+        if getattr(ext, 'name', '') == 'warehouses' or hasattr(ext, 'get_serializer_field'):
+            return ext
+    return None
 
 class PermissionSerializer(serializers.ModelSerializer):
     is_sensitive = serializers.SerializerMethodField()
@@ -261,14 +262,11 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     def get_fields(self):
-        # فاز ۲ §۲.۳ — فیلد `assigned_warehouses` فقط در نصب‌های دارای اپ انبار
-        # معنی دارد. در نصب حسابداری‌تنها این فیلد حذف می‌شود.
+        # فاز ۲ §۲.۳ و گام ۳-ب — فیلد `assigned_warehouses` از طریق اکستنشن انبار
         fields = super().get_fields()
-        Warehouse = _warehouse_model()
-        if Warehouse is not None:
-            fields['assigned_warehouses'] = serializers.PrimaryKeyRelatedField(
-                many=True, queryset=Warehouse.objects.all(), required=False,
-            )
+        wh_ext = _get_user_warehouse_extension()
+        if wh_ext is not None:
+            fields['assigned_warehouses'] = wh_ext.get_serializer_field()
         else:
             fields.pop('assigned_warehouses', None)
         return fields
@@ -474,10 +472,10 @@ class UserSerializer(serializers.ModelSerializer):
             ret['company_ids'] = []
             ret['default_company_id'] = None
 
-        # Admin/superuser gets all warehouses (فقط در نصب‌های دارای اپ انبار).
-        Warehouse = _warehouse_model()
-        if instance.is_superuser and Warehouse is not None and 'assigned_warehouses' in ret:
-            ret['assigned_warehouses'] = list(Warehouse.objects.values_list('id', flat=True))
+        # Admin/superuser gets all warehouses (فقط در نصب‌های دارای اکستنشن انبار).
+        wh_ext = _get_user_warehouse_extension()
+        if instance.is_superuser and wh_ext is not None and 'assigned_warehouses' in ret:
+            ret['assigned_warehouses'] = wh_ext.get_all_warehouse_ids()
         return ret
 
     def create(self, validated_data):
@@ -496,8 +494,9 @@ class UserSerializer(serializers.ModelSerializer):
             groups = validated_data.pop('groups', None)
             roles = validated_data.pop('roles', None)
             user_permissions = validated_data.pop('user_permissions', [])
-            # فاز ۲ §۲.۳ — در نصب بدون انبار این کلید وجود ندارد.
-            assigned_warehouses = validated_data.pop('assigned_warehouses', []) if _warehouse_model() is not None else []
+            # فاز ۲ §۲.۳ و گام ۳-ب — در نصب بدون اکستنشن انبار این کلید وجود ندارد.
+            wh_ext = _get_user_warehouse_extension()
+            assigned_warehouses = validated_data.pop('assigned_warehouses', []) if wh_ext is not None else []
             password = validated_data.pop('password', None)
 
             if not validated_data.get('email'):
@@ -550,7 +549,8 @@ class UserSerializer(serializers.ModelSerializer):
             groups = validated_data.pop('groups', None)
             roles = validated_data.pop('roles', None)
             user_permissions = validated_data.pop('user_permissions', None)
-            assigned_warehouses = validated_data.pop('assigned_warehouses', None) if _warehouse_model() is not None else None
+            wh_ext = _get_user_warehouse_extension()
+            assigned_warehouses = validated_data.pop('assigned_warehouses', None) if wh_ext is not None else None
             password = validated_data.pop('password', None)
             if password:
                 instance.set_password(password)

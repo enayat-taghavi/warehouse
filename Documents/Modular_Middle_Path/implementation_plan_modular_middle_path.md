@@ -565,6 +565,41 @@ warehouse-front/src/app/
     - runner: اجرای آزمون‌های verify برای گام ۳-الف، بررسی تمیزی درخت و تایید کامیت.
     - ناظر (Claude): بازبین‌های `data-loss-reviewer` و `tenant-scope-reviewer`، بررسی استقرار و اجرای release روی `app`.
 
+- **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۷ (گام ۳-ب):**
+  - **پایهٔ نشست:** commit hash برابر `fc3cb13134d343bd40f1d40b86181580de836897`.
+  - **کارهای انجام‌شده:**
+    - پیاده‌سازی نقطهٔ توسعهٔ `user_extensions`:
+      - ساخت کلاس `WarehouseUserExtension` در فایل تازهٔ `warehouse-backend/modules/warehouse/warehouses/user_extension.py` و ثبت آن در نقطهٔ `user_extensions` از طریق `WarehousesConfig.ready()`.
+      - حذف ایمپورت استاتیک `from warehouses.models import Warehouse` و تابع کمکی `_warehouse_model()` از `core/accounts/serializers.py` و دریافت فیلد، شناسه‌ها و اعتبارسنجی انبارها از طریق اکستنشن ثبت‌شده.
+      - حذف ایمپورت استاتیک `from warehouses.models import Warehouse` و تابع کمکی `_warehouse_model()` از `core/accounts/excel_utils.py` و تأمین داده‌های ستون انبار در اکسل کاربران، اکسل کارت تردد، گزینه‌های منوی آبشاری قالب اکسل و تطبیق هوشمند نام/کد انبار در ورود اکسل از طریق اکستنشن انبار.
+    - پیاده‌سازی نقطهٔ توسعهٔ `rollback_models`:
+      - ثبت مدل انبار `contribute('rollback_models', {'Warehouse': Warehouse})` در `WarehousesConfig.ready()`.
+      - ثبت مدل‌های کالا و تسک `contribute('rollback_models', {'Item': Item, 'CountTask': CountTask})` در `InventoryConfig.ready()`.
+      - حذف ۳ ایمپورت استاتیک `inventory.models.Item`، `inventory.models.CountTask` و `warehouses.models.Warehouse` از تابع `get_model_class` در `core/accounts/rollback_service.py` و حل پویا از طریق مشارکت‌های `rollback_models`.
+    - ماژولارکردن رجیستری موتور گزارش‌ساز (`reports`):
+      - انتقال تعاریف موجودیت‌های `items`، `count_tasks`, `count_task_history`، `doc_tasks`، `doc_task_history`، توابع فیلدهای پویا و کلیدهای حساس، و دیکشنری روابط مجاز `INVENTORY_JOINS` به فایل تازهٔ `warehouse-backend/modules/warehouse/inventory/report_entities.py` و ثبت با `register_entity` و `register_joins` در `InventoryConfig.ready()`.
+      - انتقال تعریف موجودیت `warehouses` به فایل تازهٔ `warehouse-backend/modules/warehouse/warehouses/report_entities.py` و ثبت آن در `WarehousesConfig.ready()`.
+      - انتقال تعاریف موجودیت‌های `personnel_profiles`، `monthly_payrolls` و `fleet_trips` به فایل تازهٔ `warehouse-backend/modules/accounting/personnel/report_entities.py` و ثبت با `register_entity` در `PersonnelConfig.ready()`.
+      - ثبت تابع اعتبارسنجی انبار در گزارش‌ساز با `contribute('validate_warehouse', ...)` در انبار و حذف ارجاع به `warehouses` در `core/reports/serializers.py`.
+      - پاکسازی کامل `core/reports/registry.py` از هرگونه ایمپورت از `warehouses`، `inventory` و `personnel`. این فایل اکنون صرفاً موجودیت پلتفرمی `users` را ثبت کرده و پروکسی سازگار رو به عقب `JOINS` و متدهای `register_warehouse_reports()` و `get_registry()` را ارائه می‌دهد.
+    - نگارش آزمون جامع جنگو در `warehouse-backend/integration_tests/test_report_entities_registry.py` جهت مقایسه و تطبیق دقیق فهرست هر ۱۰ کلید موجودیت، تمامی فیلدهای مشتق/اصلی و تمامی روابط JOIN در پروفایل کامل با مبنای پیش از تغییر.
+    - به‌روزرسانی مبنای نگهبان ۲۹ (`modularization_baseline.json`) با یک بار اجرای `--update-baseline`:
+      - نقض‌های تولیدی (`production_violations`): کاهش از ۹ به ۰ (هدف گام ۳ به صورت کامل محقق شد).
+      - نقض‌های مستقیم (`unique_direct_violations`): کاهش از ۹ به ۰.
+      - قرارداد لایه‌بندی C1 (`contract:c1-layering`): کاهش از ۹ به ۰ (صفر نقض).
+      - قرارداد پاکی هسته C3 (`contract:c3-core-purity`): کاهش از ۹ به ۰ (صفر نقض).
+      - همه ۴ قرارداد وابستگی `lint-imports` اکنون بدون هیچ شکست یا استثنایی در وضعیت ۱۰۰٪ سالم (4 healthy) قرار دارند.
+  - **انحراف‌ها:** هیچ. تمام ۹ یال باقیمانده طبق جدول طرح به نقطه‌های توسعه تبدیل شدند و خروجی‌ها در پروفایل کامل ۱۰۰٪ حفظ شدند.
+  - **فرمان‌های مجاز اجراشده توسط ایجنت و خلاصه خروجی:**
+    - `python scripts/automation/verify_tools.py django-check` -> `[all] manage.py check -> exit 0 / [warehouse] manage.py check -> exit 0 / [accounting] manage.py check -> exit 0`
+    - `python scripts/automation/verify_tools.py migrations-unchanged` -> `No changes detected / No model change needs a migration.`
+    - `warehouse-backend\venv\Scripts\python.exe manage.py test integration_tests.test_report_entities_registry` -> `Ran 3 tests in 0.002s - OK`
+    - `python scripts/e2e/guardian_modularization.py --update-baseline` -> `unique_direct_violations = 0, production_violations = 0, non_production_violations = 0, composition_root_hardcoded_lines = 0, contract:c1-layering = 0, contract:c3-core-purity = 0`
+    - `python scripts/e2e/guardian_modularization.py` -> `exit 0 (PASS — 4 contracts analyzed, 4 healthy, 0 broken)`
+  - **آنچه به runner و ناظر می‌ماند:**
+    - runner: اجرای آزمون‌های verify برای گام ۳-ب، بررسی تمیزی درخت و تایید کامیت.
+    - ناظر (Claude): بازبین‌های `data-loss-reviewer` و `tenant-scope-reviewer`، بررسی استقرار و اجرای release روی `app`.
+
 </div>
 
 
