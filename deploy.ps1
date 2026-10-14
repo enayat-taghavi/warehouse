@@ -31,6 +31,7 @@ param(
     [switch]$Restore,
     [switch]$RestoreDrill,
     [switch]$Rollback,
+    [string]$RollbackRelease,
     [switch]$GoLive,
     [switch]$CreateAdmin,
     [switch]$ResetLockout,
@@ -203,7 +204,8 @@ function Invoke-Process {
         [string]$StdoutFile,
         [switch]$Capture,
         [switch]$Raw,
-        [switch]$Quiet
+        [switch]$Quiet,
+        [switch]$SuppressStdErr
     )
     $psi = [System.Diagnostics.ProcessStartInfo]::new($FilePath)
     foreach ($a in $ArgumentList) { $psi.ArgumentList.Add($a) }
@@ -299,7 +301,7 @@ function Invoke-Process {
             $outFile = $null
         }
         $errText = $errTask.GetAwaiter().GetResult()
-        if ($errText -and $errText.Trim()) {
+        if ($errText -and $errText.Trim() -and -not $SuppressStdErr) {
             Write-Host ($errText.TrimEnd()) -ForegroundColor DarkYellow
         }
         $output = if ($Raw) { [string]$rawText } else { $lines.ToArray() }
@@ -890,7 +892,8 @@ function Invoke-Ssh {
         [string]$StdoutFile,
         [switch]$Capture,
         [switch]$Raw,
-        [switch]$Quiet
+        [switch]$Quiet,
+        [switch]$SuppressStdErr
     )
     $sshArgs = [System.Collections.Generic.List[string]]::new()
     $sshArgs.AddRange([string[]]@('-p', [string]$Config.SshPort,
@@ -908,7 +911,7 @@ function Invoke-Ssh {
         $p.Inherit = $true
     } else {
         foreach ($k in 'StdinText', 'StdinFile', 'StdoutFile') { if ($PSBoundParameters.ContainsKey($k)) { $p[$k] = $PSBoundParameters[$k] } }
-        foreach ($k in 'Capture', 'Raw', 'Quiet') { if ($PSBoundParameters[$k]) { $p[$k] = $true } }
+        foreach ($k in 'Capture', 'Raw', 'Quiet', 'SuppressStdErr') { if ($PSBoundParameters[$k]) { $p[$k] = $true } }
     }
     return (Invoke-Process @p)
 }
@@ -928,7 +931,8 @@ function Invoke-RemoteRootScript {
         [switch]$Tty,
         [switch]$Capture,
         [switch]$Raw,
-        [switch]$Quiet
+        [switch]$Quiet,
+        [switch]$SuppressStdErr
     )
     $sudoPrefix = Get-SudoPrefix $Config
     $quotedArgs = @($ArgumentList | ForEach-Object { ConvertTo-ShellLiteral $_ }) -join ' '
@@ -947,7 +951,7 @@ function Invoke-RemoteRootScript {
 
     if ($StdoutFile) { $p.StdoutFile = $StdoutFile }
     if ($Tty) { $p.Tty = $true }
-    foreach ($k in 'Capture', 'Raw', 'Quiet') { if ($PSBoundParameters[$k]) { $p[$k] = $true } }
+    foreach ($k in 'Capture', 'Raw', 'Quiet', 'SuppressStdErr') { if ($PSBoundParameters[$k]) { $p[$k] = $true } }
     return (Invoke-Ssh @p)
 }
 
@@ -2323,12 +2327,89 @@ function Invoke-RestoreDrillMode {
 function Invoke-RollbackMode {
     Assert-Interactive 'Rollback'
     $config = Connect-Server
-    if (-not (Confirm-TypedWord 'YES' 'Type YES to switch the server back to the previous release')) {
-        Write-Warn 'Rollback cancelled.'
-        return 0
+
+    if ($RollbackRelease) {
+        $targetName = $RollbackRelease.Trim()
+        if (-not (Confirm-TypedWord 'YES' "Type YES to switch the server back to release $targetName")) {
+            Write-Warn 'Rollback cancelled.'
+            return 0
+        }
+        $r = Invoke-RemoteRootScript -Config $config -Gateway 'deploy-rollback' -ArgumentList @('--release', $targetName, '--domain', $config.Domain)
+        if ($r.ExitCode -ne 0) { Write-Err "Rollback failed with exit code $($r.ExitCode)." } else { Write-Success "Rollback completed to $targetName." }
+        return $r.ExitCode
     }
-    $r = Invoke-RemoteRootScript -Config $config -Gateway 'deploy-rollback' -ArgumentList @('--domain', $config.Domain)
-    if ($r.ExitCode -ne 0) { Write-Err "Rollback failed with exit code $($r.ExitCode)." } else { Write-Success 'Rollback completed.' }
+
+    Write-Step 'Querying available releases on the server...'
+    $listRes = Invoke-RemoteRootScript -Config $config -Gateway 'deploy-rollback' -ArgumentList @('--list') -Capture -Quiet -SuppressStdErr
+    $availableReleases = [System.Collections.Generic.List[object]]::new()
+    if ($listRes.ExitCode -eq 0) {
+        foreach ($line in $listRes.Output) {
+            if ($line -match '^\[RELEASE_ITEM\] name=([^\s]+) tag=([^\s]*) compat=([^\s]+) commit=([^\s]*) date=([^\s]*)') {
+                $availableReleases.Add([pscustomobject]@{
+                    Name = $Matches[1]
+                    Tag = $Matches[2]
+                    Compat = $Matches[3]
+                    Commit = $Matches[4]
+                    Date = $Matches[5]
+                })
+            }
+        }
+    }
+
+    $candidates = @($availableReleases | Where-Object { $_.Tag -ne 'active' })
+    $targetReleaseName = $null
+
+    if ($candidates.Count -gt 0) {
+        Write-Info 'Available releases on the server:'
+        for ($i = 0; $i -lt $candidates.Count; $i++) {
+            $cand = $candidates[$i]
+            $tagStr = if ($cand.Tag -eq 'previous') { ' (previous release)' } else { '' }
+            $compatStr = if ($cand.Compat -eq 'ok') { '[COMPATIBLE]' } else { '[INCOMPATIBLE - schema mismatch]' }
+            $color = if ($cand.Compat -eq 'ok') { 'Green' } else { 'DarkYellow' }
+            $commitStr = if ($cand.Commit) { " commit: $($cand.Commit.Substring(0, [Math]::Min(10, $cand.Commit.Length)))" } else { '' }
+            Write-Host ('  {0}) {1}{2}{3}  {4}' -f ($i + 1), $cand.Name, $tagStr, $commitStr, $compatStr) -ForegroundColor $color
+        }
+
+        $prevIndex = [array]::FindIndex($candidates.ToArray(), [System.Predicate[object]]{ param($c) $c.Tag -eq 'previous' })
+        if ($prevIndex -lt 0) { $prevIndex = 0 }
+
+        $promptMsg = "Type YES to switch to previous release, or enter number [1-$($candidates.Count)]:"
+        $answer = ([string](Read-Host -Prompt $promptMsg)).Trim()
+
+        if ($answer -ceq 'YES') {
+            $targetReleaseName = $candidates[$prevIndex].Name
+        } else {
+            $pickIdx = 0
+            if ([int]::TryParse($answer, [ref]$pickIdx) -and $pickIdx -ge 1 -and $pickIdx -le $candidates.Count) {
+                $selected = $candidates[$pickIdx - 1]
+                $targetReleaseName = $selected.Name
+                if ($selected.Compat -ne 'ok') {
+                    Write-Warn "Release $($selected.Name) is marked as incompatible with current database schema. Rollback will be refused unless schema matches or a matching backup is restored."
+                }
+                if (-not (Confirm-TypedWord 'YES' "Type YES to confirm switching server to release $($selected.Name)")) {
+                    Write-Warn 'Rollback cancelled.'
+                    return 0
+                }
+            } else {
+                Write-Warn 'Rollback cancelled.'
+                return 0
+            }
+        }
+    } else {
+        if ($listRes.ExitCode -ne 0) {
+            Write-Info 'Server tooling predates multi-release listing (will activate after your next -Update).'
+            Write-Info 'Proceeding with standard rollback to the recorded previous release.'
+        }
+        if (-not (Confirm-TypedWord 'YES' 'Type YES to switch the server back to the previous release')) {
+            Write-Warn 'Rollback cancelled.'
+            return 0
+        }
+    }
+
+    $gwArgs = @('--domain', $config.Domain)
+    if ($targetReleaseName) { $gwArgs = @('--release', $targetReleaseName) + $gwArgs }
+    $r = Invoke-RemoteRootScript -Config $config -Gateway 'deploy-rollback' -ArgumentList $gwArgs
+    if ($r.ExitCode -ne 0) { Write-Err "Rollback failed with exit code $($r.ExitCode)." } else { Write-Success "Rollback completed$(if ($targetReleaseName) { " to $targetReleaseName" } else { '' })." }
     return $r.ExitCode
 }
 
@@ -2747,7 +2828,7 @@ Modes (exactly one):
   -PruneBackups      Delete server dumps whose local copy matches a fresh server sha256
   -Restore           Restore the database from a server dump (typed confirmation)
   -RestoreDrill      Restore the newest verified local dump into a throwaway Docker PostgreSQL
-  -Rollback          Switch back to the previous release
+  -Rollback          Switch back to the previous release (or an older release with -RollbackRelease)
   -ChangeDomain <d>  Change primary domain to <d>: issues/installs cert, puts old domain in transition
   -FinishDomainChange Convert all legacy transition domains to permanent 301 redirects
   -RemoveLegacyDomain <d> Remove legacy domain redirect (archives its TLS files to shared/retired/)
@@ -2812,6 +2893,7 @@ function Invoke-Main {
     # Persian names (branding) must show and be typed correctly in the console.
     try { [Console]::OutputEncoding = $Utf8NoBom; [Console]::InputEncoding = $Utf8NoBom } catch { Write-Verbose "Console encoding unchanged: $_" }
     try {
+        if ($RollbackRelease -and -not $Rollback) { $Rollback = $true }
         $flags = [ordered]@{
             InstallKey = [bool]$InstallKey; Setup = [bool]$Setup; Update = [bool]$Update; Backup = [bool]$Backup
             PullBackups = [bool]$PullBackups; PruneBackups = [bool]$PruneBackups; Restore = [bool]$Restore

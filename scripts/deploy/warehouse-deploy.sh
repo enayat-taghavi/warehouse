@@ -677,14 +677,18 @@ switch_current() {
 }
 
 # ==============================================================================
-# Mode: --rollback [--domain <d>]   (only to the recorded PREVIOUS_RELEASE)
+# Mode: --rollback [--domain <d>] [--release <rel>] [--list]
 # ==============================================================================
 if [[ "${1:-}" == "--rollback" ]]; then
     shift
     DOMAIN=""
+    TARGET_NAME=""
+    LIST_ONLY=0
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --domain) [[ $# -ge 2 ]] || die "--domain needs a value"; DOMAIN="$2"; shift 2 ;;
+            --release) [[ $# -ge 2 ]] || die "--release needs a value"; TARGET_NAME="$2"; shift 2 ;;
+            --list) LIST_ONLY=1; shift ;;
             *) die "Unknown rollback option: $1" ;;
         esac
     done
@@ -692,50 +696,88 @@ if [[ "${1:-}" == "--rollback" ]]; then
     [[ -z "$DOMAIN" || "$DOMAIN" =~ $DOMAIN_RE ]] || die "Invalid domain format: $DOMAIN"
     assert_not_legacy_domain "$DOMAIN"
 
+    if [[ "$LIST_ONLY" -eq 1 ]]; then
+        ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
+        ACTIVE_NAME="${ACTIVE_RELEASE##*/}"
+        PREV_NAME=$(head -n 1 "${SHARED_DIR}/PREVIOUS_RELEASE" 2>/dev/null || true)
+        cd "$RELEASES_DIR"
+        # shellcheck disable=SC2012
+        for rdir in $(ls -1dt -- */ 2>/dev/null | sed 's/\/$//'); do
+            if [[ "$rdir" =~ $RELEASE_NAME_RE && -d "$rdir" && ! -L "$rdir" ]]; then
+                tag=""
+                if [[ "$rdir" == "$ACTIVE_NAME" ]]; then
+                    tag="active"
+                elif [[ "$rdir" == "$PREV_NAME" ]]; then
+                    tag="previous"
+                fi
+                compat="ok"
+                if ! check_migration_compatibility "${RELEASES_DIR}/${rdir}" strict >/dev/null 2>&1; then
+                    compat="incompatible"
+                fi
+                commit=""
+                date=""
+                if [[ -f "${rdir}/RELEASE" ]]; then
+                    commit=$(sed -n 's/^COMMIT=//p' "${rdir}/RELEASE" 2>/dev/null | head -n 1 || true)
+                    date=$(sed -n 's/^DATE=//p' "${rdir}/RELEASE" 2>/dev/null | head -n 1 || true)
+                fi
+                echo "[RELEASE_ITEM] name=${rdir} tag=${tag} compat=${compat} commit=${commit} date=${date}"
+            fi
+        done
+        exit 0
+    fi
+
     echo "=== Initiating Release Rollback ==="
     ACTIVE_RELEASE=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
-    PREV_NAME=$(head -n 1 "${SHARED_DIR}/PREVIOUS_RELEASE" 2>/dev/null || true)
-    [[ "$PREV_NAME" =~ $RELEASE_NAME_RE ]] || die "No valid previous release is recorded in ${SHARED_DIR}/PREVIOUS_RELEASE; nothing to roll back to."
-    PREV_RELEASE="${RELEASES_DIR}/${PREV_NAME}"
-    [[ -d "$PREV_RELEASE" && ! -L "$PREV_RELEASE" ]] || die "Recorded previous release ${PREV_NAME} no longer exists."
-    [[ "$PREV_RELEASE" != "$ACTIVE_RELEASE" ]] || die "Recorded previous release ${PREV_NAME} is already active."
+    if [[ -n "$TARGET_NAME" ]]; then
+        [[ "$TARGET_NAME" =~ $RELEASE_NAME_RE ]] || die "Invalid release name format: $TARGET_NAME"
+        TARGET_RELEASE="${RELEASES_DIR}/${TARGET_NAME}"
+        [[ -d "$TARGET_RELEASE" && ! -L "$TARGET_RELEASE" ]] || die "Selected release ${TARGET_NAME} does not exist."
+    else
+        PREV_NAME=$(head -n 1 "${SHARED_DIR}/PREVIOUS_RELEASE" 2>/dev/null || true)
+        [[ "$PREV_NAME" =~ $RELEASE_NAME_RE ]] || die "No valid previous release is recorded in ${SHARED_DIR}/PREVIOUS_RELEASE; nothing to roll back to."
+        TARGET_NAME="$PREV_NAME"
+        TARGET_RELEASE="${RELEASES_DIR}/${TARGET_NAME}"
+        [[ -d "$TARGET_RELEASE" && ! -L "$TARGET_RELEASE" ]] || die "Recorded previous release ${TARGET_NAME} no longer exists."
+    fi
 
-    # Strict: after a restored older dump the previous release may have unapplied migrations too.
-    echo "[INFO] Checking that ${PREV_NAME} matches the database schema exactly..."
-    if ! check_migration_compatibility "$PREV_RELEASE" strict; then
-        die "Rollback refused to prevent a database schema mismatch. Restore a backup that matches ${PREV_NAME} (deploy.ps1 -Restore), or Update."
+    [[ "$TARGET_RELEASE" != "$ACTIVE_RELEASE" ]] || die "Selected release ${TARGET_NAME} is already active."
+
+    # Strict: after a restored older dump the target release may have unapplied migrations too.
+    echo "[INFO] Checking that ${TARGET_NAME} matches the database schema exactly..."
+    if ! check_migration_compatibility "$TARGET_RELEASE" strict; then
+        die "Rollback refused to prevent a database schema mismatch. Restore a backup that matches ${TARGET_NAME} (deploy.ps1 -Restore), or Update."
     fi
     # The target matches the schema exactly, so a hold left by a restore no longer applies.
     rm -f "$HELD_FLAG"
 
     if [[ -n "$DOMAIN" ]]; then
-        if ! install_runtime_infra "$PREV_RELEASE" "$DOMAIN"; then
+        if ! install_runtime_infra "$TARGET_RELEASE" "$DOMAIN"; then
             echo "[WARNING] The current nginx configuration was kept for the rollback." >&2
-            install_units "$PREV_RELEASE"
+            install_units "$TARGET_RELEASE"
             systemctl daemon-reload
         fi
     else
         echo "[WARNING] No domain is known (no --domain and no shared/DOMAIN); nginx configuration not re-rendered." >&2
-        install_units "$PREV_RELEASE"
+        install_units "$TARGET_RELEASE"
         systemctl daemon-reload
     fi
 
-    switch_current "$PREV_RELEASE"
-    write_record ACTIVE_RELEASE "$PREV_NAME"
+    switch_current "$TARGET_RELEASE"
+    write_record ACTIVE_RELEASE "$TARGET_NAME"
     if [[ -n "$ACTIVE_RELEASE" ]]; then write_record PREVIOUS_RELEASE "$(basename "$ACTIVE_RELEASE")"; fi
 
     systemctl restart "${SERVICES[@]}"
     systemctl reload nginx
 
     if ! wait_backend_live "$DOMAIN"; then
-        die "${PREV_NAME} is active but the backend did not answer within 60s. Check: journalctl -u warehouse-backend"
+        die "${TARGET_NAME} is active but the backend did not answer within 60s. Check: journalctl -u warehouse-backend"
     fi
     # The target passed the migration check and answers, so a flag left by a failed activation is stale.
     if [[ -e "${SHARED_DIR}/MAINTENANCE" ]]; then
         rm -f "${SHARED_DIR}/MAINTENANCE"
-        echo "[INFO] A MAINTENANCE flag left by an earlier failure was cleared; ${PREV_NAME} is compatible and answers."
+        echo "[INFO] A MAINTENANCE flag left by an earlier failure was cleared; ${TARGET_NAME} is compatible and answers."
     fi
-    echo "[SUCCESS] Rolled back to: ${PREV_NAME}"
+    echo "[SUCCESS] Rolled back to: ${TARGET_NAME}"
     exit 0
 fi
 
