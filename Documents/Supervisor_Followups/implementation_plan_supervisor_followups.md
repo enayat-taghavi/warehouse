@@ -295,7 +295,8 @@
     - ۶۹ آزمون خراب `personnel` (import انبار جامانده) و ۳ آزمون شکستهٔ شناخته‌شده.
     - release روی `soft` با تأیید صریح کاربر؛ نشست ۱ و این رفع پیش از هر release روی `soft`.
     - فهرست چک ۳۶۰px نشست ۲ با کاربر.
-  - **اقدام بعدی:** بازبینی دامنهٔ شرکت در actionهای سفارشی `VehicleTripViewSet` (`modules/accounting/personnel/views.py`، از `class VehicleTripViewSet`)، سپس پرسش از کاربر برای release روی `soft`.
+  - **اقدام بعدی:** بازبینی دامنهٔ شرکت در actionهای سفارشی `VehicleTripViewSet` (`modules/accounting/personnel/views.py`، از `class VehicleTripViewSet`) سپس پرسش از کاربر برای release روی `soft`.
+  - **تغییر روال (تصمیم کاربر، ۲۴ مهر):** از این پس همهٔ کار اجرایی با Antigravity است و Claude فقط ناظر است. پس اقدام بعدی به‌صورت یک تسک `tasks.md` با کامنت runner نوشته و با runner اجرا می‌شود؛ Claude خودش کد را ویرایش نمی‌کند.
 
 </div>
 

@@ -68,7 +68,8 @@
 - **Deliberate user decisions (never report them as issues in audits):** the chat contacts list (`ChatContactsListView` in `communications/views.py`) intentionally returns all active users, not limited by warehouse; authenticated users have no global rate limit (only `AnonRateThrottle` and `ScopedRateThrottle` are active) so they don't get locked out behind the tunnel.
 - **Never search Persian text with `grep` in Bash** — Windows Git Bash garbles UTF-8; use the Grep tool.
 - **I can't see passwords or pages behind login** — final verification of anything behind the login page (dashboard, warehouses, counting) is the user's. Verify as far as possible with server-side simulation or on the login page, and say explicitly what remains unverified and how the user can test it.
-- **Do all the work yourself** (since 30 Sep 2026): the user runs no commands at all — not build, restart, git or install. Never prepare commands for the user to run.
+- **The user runs nothing** (since 30 Sep 2026): no build, restart, git or install. Never prepare commands for the user to run.
+- **Antigravity executes, Claude supervises** (since 15 Oct 2026, to save Claude tokens): all app code, reviewer-finding fixes and `app` releases go to Antigravity (Gemini 3.8 Flash (High)) as `tasks.md` tasks run by `run_tasks.py`. Claude writes plans, `tasks.md` with runner verify lines, progress logs and runner tooling, runs the queue, reviews diffs with the sonnet reviewers and decides; it never edits app code itself. Task text follows the memory `gemini-flash-prompting`.
   - Ask one short yes/no question only before work that directly affects production (next item) or opens a data-loss path.
   - Replies stay short and in Persian.
 - **Environment roles (`app` vs `soft`):**
