@@ -81,9 +81,9 @@ $RemoteGoLiveFlag = '/var/www/warehouse/shared/GO_LIVE'
 $PullTaskPath = '\Warehouse\'
 $PullTaskName = 'WarehouseSoftPullBackups'
 $SecretKeyAllowList = @('GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 'OUTBOUND_HTTP_PROXY', 'CLOUDFLARE_DNS_API_TOKEN')
-# Installable modules in catalog order (platform_core/module_catalog.py); WH_MODULES on the server.
-$KnownModules = @('warehouse', 'accounting')
-$AllModules = $KnownModules -join ','
+# Installable modules discovered dynamically from the repository; WH_MODULES on the server.
+$KnownModules = @()
+$AllModules = ''
 # Certificate modes: http01 (webroot), dns01-cloudflare, cloudflare-origin, custom.
 $KnownCertModes = @('http01', 'dns01-cloudflare', 'cloudflare-origin', 'custom')
 $DefaultCertMode = 'http01'
@@ -326,6 +326,24 @@ function Invoke-Git {
     return (Invoke-Process -FilePath $GitExe -ArgumentList (@('-C', $ScriptRoot) + $ArgumentList) -Raw -Quiet)
 }
 
+function Get-KnownModules([string]$Sha = 'HEAD') {
+    $r = Invoke-Git @('ls-tree', '-d', '--name-only', $Sha, 'warehouse-backend/modules/')
+    if ($r.ExitCode -eq 0 -and -not [string]::IsNullOrWhiteSpace($r.Output)) {
+        $lines = $r.Output -split "[\r\n]+" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        $mods = @($lines | ForEach-Object { Split-Path ($_.Trim().Replace('\', '/')) -Leaf } | Sort-Object -Unique)
+        if ($mods.Count -gt 0) { return $mods }
+    }
+    $localModsDir = Join-Path $ScriptRoot 'warehouse-backend\modules'
+    if (Test-Path -LiteralPath $localModsDir) {
+        $mods = @(Get-ChildItem -LiteralPath $localModsDir -Directory | ForEach-Object { $_.Name } | Sort-Object -Unique)
+        if ($mods.Count -gt 0) { return $mods }
+    }
+    return @()
+}
+
+$KnownModules = @(Get-KnownModules 'HEAD')
+$AllModules = $KnownModules -join ','
+
 function Test-LocalTool([string[]]$Name) {
     $map = @{ ssh = $SshExe; 'ssh-keygen' = $SshKeygenExe; 'ssh-keyscan' = $SshKeyscanExe; git = $GitExe; tar = $TarExe; npm = $NpmCmd; docker = $DockerExe }
     foreach ($n in $Name) {
@@ -520,11 +538,12 @@ function Read-MenuChoice {
 }
 
 function Read-ModuleChoice([string]$Current) {
-    $options = @('warehouse', 'accounting', $AllModules)
+    $options = @($KnownModules) + $(if ($KnownModules.Count -gt 1) { @($AllModules) } else { @() })
     $idx = [array]::IndexOf($options, $Current)
     $tag = 'current'
-    if ($idx -lt 0) { $idx = 2; $tag = 'default' }
-    return $options[(Read-MenuChoice 'Modules to install:' @('warehouse only', 'accounting only', 'warehouse and accounting') $idx $tag)]
+    if ($idx -lt 0) { $idx = [Math]::Max(0, $options.Count - 1); $tag = 'default' }
+    $labels = @($KnownModules | ForEach-Object { "$_ only" }) + $(if ($KnownModules.Count -gt 1) { @($KnownModules -join ' and ') } else { @() })
+    return $options[(Read-MenuChoice 'Modules to install:' $labels $idx $tag)]
 }
 
 function Read-CertModeChoice([string]$Current) {
@@ -1169,7 +1188,9 @@ function Get-DeployCommit {
     }
     $sha = (Invoke-Git @('rev-parse', '--verify', 'HEAD^{commit}')).Output.Trim()
     if ($sha -cnotmatch '^[0-9a-f]{40}$') { throw 'Could not resolve the HEAD commit.' }
-    Write-Success "Deploying commit $sha"
+    $script:KnownModules = @(Get-KnownModules $sha)
+    $script:AllModules = $script:KnownModules -join ','
+    Write-Success "Deploying commit $sha (Known modules: $AllModules)"
     return $sha
 }
 
@@ -1228,11 +1249,13 @@ function Build-IsolatedFrontend([string]$Sha, $Config) {
     $distDir = Join-Path $snapshotFront $FrontDistRelative
     $marker = Join-Path $scratchDir '.build-complete'
     $stamp = Get-BrandingStamp $Config
-    $expectedMarker = if ($stamp) { "COMMIT=$Sha BRANDING=$stamp" } else { "COMMIT=$Sha" }
+    $buildModules = if ($Config -and $Config.Modules) { ConvertTo-CanonicalModuleList $Config.Modules } else { $AllModules }
+    $modulesMarker = "MODULES=$buildModules"
+    $expectedMarker = if ($stamp) { "COMMIT=$Sha $modulesMarker BRANDING=$stamp" } else { "COMMIT=$Sha $modulesMarker" }
 
     if ($SkipBuild) {
         $markerOk = (Test-Path -LiteralPath $marker) -and ([System.IO.File]::ReadAllText($marker).Trim() -ceq $expectedMarker)
-        $distOk = (Test-Path -LiteralPath (Join-Path $distDir 'index.html')) -and (Test-Path -LiteralPath (Join-Path $distDir 'ngsw.json'))
+        $distOk = (Test-Path -LiteralPath (Join-Path $distDir 'index.html')) -and (Test-Path -LiteralPath (Join-Path $distDir 'ngsw.json')) -and (Test-Path -LiteralPath (Join-Path $distDir 'build-modules.txt'))
         if (-not ($markerOk -and $distOk)) { throw "-SkipBuild: no completed build for commit $Sha in $scratchDir." }
         Write-Info "Reusing completed build for $Sha (-SkipBuild)."
         return $snapshotFront
@@ -1266,14 +1289,20 @@ function Build-IsolatedFrontend([string]$Sha, $Config) {
     $junction = Join-Path $snapshotFront 'node_modules'
     New-SafeJunction $junction $sourceNodeModules
     try {
-        Write-Info 'Running npm run build (includes the ngsw patch)...'
-        $code = Invoke-Native $NpmCmd @('run', 'build') -WorkingDirectory $snapshotFront
-        if ($code -ne 0) { throw "npm run build failed with exit code $code." }
+        Write-Info "Running npm run build:modules (WH_MODULES=$buildModules, includes the ngsw patch)..."
+        $prevWhModules = $env:WH_MODULES
+        try {
+            $env:WH_MODULES = $buildModules
+            $code = Invoke-Native $NpmCmd @('run', 'build:modules') -WorkingDirectory $snapshotFront
+            if ($code -ne 0) { throw "npm run build:modules failed with exit code $code." }
+        } finally {
+            $env:WH_MODULES = $prevWhModules
+        }
     } finally {
         Remove-SafeJunction $junction
     }
 
-    foreach ($required in 'index.html', 'ngsw.json') {
+    foreach ($required in 'index.html', 'ngsw.json', 'build-modules.txt') {
         if (-not (Test-Path -LiteralPath (Join-Path $distDir $required))) { throw "Build output is missing $required in $distDir." }
     }
     Write-Utf8LfFile $marker "$expectedMarker`n"
@@ -1296,7 +1325,7 @@ function Get-BackendWhitelist([string]$Sha) {
     return [pscustomobject]@{ Apps = $apps; Files = $files }
 }
 
-function Test-BundleStage([string]$StageDir, $Whitelist) {
+function Test-BundleStage([string]$StageDir, $Whitelist, [string]$ExpectedModules = $null) {
     $problems = [System.Collections.Generic.List[string]]::new()
     Assert-NoReparsePoint $StageDir
     $rootFull = [System.IO.Path]::GetFullPath($StageDir).TrimEnd('\') + '\'
@@ -1326,8 +1355,19 @@ function Test-BundleStage([string]$StageDir, $Whitelist) {
         }
     }
     $dist = Join-Path $StageDir "warehouse-front\$FrontDistRelative"
-    foreach ($required in 'index.html', 'ngsw.json') {
+    foreach ($required in 'index.html', 'ngsw.json', 'build-modules.txt') {
         if (-not (Test-Path -LiteralPath (Join-Path $dist $required))) { $problems.Add("frontend $required missing from bundle") }
+    }
+    $buildModulesFile = Join-Path $dist 'build-modules.txt'
+    if (Test-Path -LiteralPath $buildModulesFile) {
+        $actualText = [System.IO.File]::ReadAllText($buildModulesFile).Trim()
+        $actualSet = @($actualText -split '[, ]+' | Where-Object { $_ } | Sort-Object -Unique)
+        if (-not [string]::IsNullOrWhiteSpace($ExpectedModules)) {
+            $expectedSet = @($ExpectedModules -split '[, ]+' | Where-Object { $_ } | Sort-Object -Unique)
+            if (($actualSet -join ',') -cne ($expectedSet -join ',')) {
+                $problems.Add("build-modules.txt mismatch: bundle has '$($actualSet -join ',')', expected '$($expectedSet -join ',')'")
+            }
+        }
     }
     foreach ($required in 'scripts/deploy/warehouse-deploy.sh', 'scripts/deploy/warehouse-nightly-backup.sh', 'scripts/remote-setup.sh', 'RELEASE') {
         if (-not (Test-Path -LiteralPath (Join-Path $StageDir $required.Replace('/', '\')))) { $problems.Add("$required missing from bundle") }
@@ -1335,7 +1375,7 @@ function Test-BundleStage([string]$StageDir, $Whitelist) {
     if ($problems.Count -gt 0) { throw "Bundle gate failed:`n  $($problems -join "`n  ")" }
 }
 
-function New-DeploymentBundle([string]$Sha, [string]$SnapshotFront) {
+function New-DeploymentBundle([string]$Sha, [string]$SnapshotFront, [string]$ExpectedModules = $null) {
     Write-Step "Creating the release bundle from commit $Sha..."
     if ($Sha -cnotmatch '^[0-9a-f]{40}$') { throw "Invalid commit: $Sha" }
     [void][System.IO.Directory]::CreateDirectory($LocalDeployScratch)
@@ -1366,7 +1406,7 @@ function New-DeploymentBundle([string]$Sha, [string]$SnapshotFront) {
         Write-Utf8LfFile (Join-Path $stageDir 'RELEASE') $release
 
         Write-Info 'Checking bundle gates (whitelist, CR, forbidden files, frontend artifacts)...'
-        Test-BundleStage $stageDir $whitelist
+        Test-BundleStage $stageDir $whitelist $ExpectedModules
         Copy-Item -LiteralPath (Join-Path $stageDir 'scripts\remote-setup.sh') -Destination $setupScript
 
         Write-Info 'Creating ustar tar.gz (owner root:root)...'
@@ -1875,7 +1915,7 @@ function Invoke-SetupMode {
 
     $sha = Get-DeployCommit
     $front = Build-IsolatedFrontend $sha $config
-    $bundle = New-DeploymentBundle $sha $front
+    $bundle = New-DeploymentBundle $sha $front $config.Modules
     $stage = $null
     try {
         $stage = New-RemoteStage $config
@@ -1975,7 +2015,7 @@ function Invoke-UpdateMode {
     }
     $sha = Get-DeployCommit
     $front = Build-IsolatedFrontend $sha $config
-    $bundle = New-DeploymentBundle $sha $front
+    $bundle = New-DeploymentBundle $sha $front $config.Modules
     $stage = $null
     try {
         $stage = New-RemoteStage $config
@@ -2009,7 +2049,8 @@ function Invoke-AddModuleMode([string]$Code) {
         $Code = $missing[(Read-MenuChoice 'Module to add:' $missing 0 'default')]
     }
     if ($Code -cnotin $KnownModules) { throw "Unknown module '$Code' (known: $($KnownModules -join ', '))." }
-    $config = Connect-Server
+    Test-LocalTool 'git', 'tar', 'npm'
+    $config = Connect-Server -ForBuild
     $serverModules = Get-ServerModuleList $config
     if ($null -eq $serverModules) { throw 'The server tooling predates module selection and already runs every module; run deploy.ps1 -Update first.' }
     if ($Code -in $serverModules.Split(',')) {
@@ -2022,6 +2063,33 @@ function Invoke-AddModuleMode([string]$Code) {
 
     # The backup is stored off-server and verified before anything changes.
     $backup = Invoke-RemoteBackup $config 'pre_module'
+
+    # Build and release the frontend with the updated module list before changing WH_MODULES on the server
+    Write-Step "Building frontend with updated module list ($newModules) and deploying release..."
+    $newConfig = $config.PSObject.Copy()
+    $newConfig.Modules = $newModules
+    $sha = Get-DeployCommit
+    $front = Build-IsolatedFrontend $sha $newConfig
+    $bundle = New-DeploymentBundle $sha $front $newModules
+    $stage = $null
+    try {
+        $stage = New-RemoteStage $config
+        [void](Send-RemoteFile $config $bundle.Path $stage 'bundle.tar.gz')
+        $prepared = Invoke-PrepareAndPullBackup $config $sha $bundle $stage
+        if ($prepared.ExitCode -ne 0) { return $prepared.ExitCode }
+
+        $activateArgs = @($prepared.Release, '--verified-backup', $prepared.Backup, '--domain', $config.Domain)
+        if ($Maintenance) { $activateArgs += '--maintenance' }
+        $act = Invoke-RemoteRootScript -Config $config -Gateway 'deploy-activate' -ArgumentList $activateArgs
+        if ($act.ExitCode -ne 0) {
+            Write-Err "Release activation failed with exit code $($act.ExitCode)."
+            return $act.ExitCode
+        }
+    } finally {
+        if ($stage) { Remove-RemoteStage $config $stage }
+        Remove-LocalBundle $bundle
+    }
+
     Write-Step "Adding module $Code on the server (migrate, permissions, restart, health check)..."
     $r = Invoke-RemoteRootScript -Config $config -Gateway 'add-module' -ArgumentList @($Code, '--verified-backup', $backup.Name, '--domain', $config.Domain) -Capture
     if ($r.ExitCode -ne 0 -or -not ($r.Output -contains "[MODULE_ADDED] $Code")) {
@@ -2060,7 +2128,7 @@ function Invoke-ResetServerMode {
     }
     $sha = Get-DeployCommit
     $front = Build-IsolatedFrontend $sha $config
-    $bundle = New-DeploymentBundle $sha $front
+    $bundle = New-DeploymentBundle $sha $front $config.Modules
     $stage = $null
     try {
         $stage = New-RemoteStage $config

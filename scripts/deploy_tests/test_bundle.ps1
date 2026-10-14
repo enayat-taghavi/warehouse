@@ -43,10 +43,10 @@ Write-Host "[TEMP_COMMIT] $sha"
 # --- 2. real build and bundle --------------------------------------------------------------------
 $front = Build-IsolatedFrontend $sha
 $marker = Join-Path (Join-Path $LocalDeployScratch $sha) '.build-complete'
-Assert-True ([System.IO.File]::ReadAllText($marker) -ceq "COMMIT=$sha`n") '.build-complete marker written with LF'
+Assert-True ([System.IO.File]::ReadAllText($marker) -ceq "COMMIT=$sha MODULES=$AllModules`n") '.build-complete marker written with LF and MODULES'
 $junction = Join-Path $front 'node_modules'
 Assert-True (-not (Test-Path -LiteralPath $junction)) 'node_modules junction removed after the build'
-$bundle = New-DeploymentBundle $sha $front
+$bundle = New-DeploymentBundle $sha $front $AllModules
 Assert-True (Test-Path -LiteralPath $bundle.Path) "bundle created ($($bundle.Sha256))"
 Assert-True ((Get-FileSha256 $bundle.Path) -eq $bundle.Sha256) 'returned sha256 matches the file'
 Assert-True (-not (Test-Path -LiteralPath (Join-Path $LocalDeployScratch "bundle_stage_$sha"))) 'stage directory removed'
@@ -73,7 +73,8 @@ top=$(ls -A warehouse-backend | sort | tr '\n' ' ')
 [ "$top" = "$EXPECTED_TOP " ] && pass "warehouse-backend top level equals the whitelist" || bad "warehouse-backend top level: $top"
 forbidden=$(find . \( -name '__pycache__' -o -name 'test_phase*' -o -name '.env' -o -name '.env.*' -o -name 'db.sqlite3' \) -print)
 [ -z "$forbidden" ] && pass "no __pycache__, test_phase, .env or db.sqlite3" || bad "forbidden: $forbidden"
-for f in warehouse-front/dist/warehouse-app/browser/index.html warehouse-front/dist/warehouse-app/browser/ngsw.json RELEASE \
+for f in warehouse-front/dist/warehouse-app/browser/index.html warehouse-front/dist/warehouse-app/browser/ngsw.json \
+         warehouse-front/dist/warehouse-app/browser/build-modules.txt RELEASE \
          scripts/deploy/warehouse-deploy.sh scripts/deploy/warehouse-nightly-backup.sh scripts/remote-setup.sh \
          warehouse-backend/backend_paths.py warehouse-backend/manage.py warehouse-backend/requirements.txt warehouse-backend/requirements.lock; do
     [ -f "$f" ] && pass "present: $f" || bad "missing: $f"
@@ -81,6 +82,7 @@ done
 apps=$(find warehouse-backend -name "apps.py" -exec dirname {} + | xargs -n1 basename | sort -u | tr '\n' ' ')
 [ "$apps" = "$EXPECTED_APPS " ] && pass "bundle apps equal full profile INSTALLED_APPS" || bad "bundle apps: $apps (expected: $EXPECTED_APPS)"
 grep -qx "COMMIT=$EXPECTED_SHA" RELEASE && pass "RELEASE names the commit" || bad "RELEASE: $(cat RELEASE)"
+grep -qx "$EXPECTED_MODULES" warehouse-front/dist/warehouse-app/browser/build-modules.txt && pass "build-modules.txt has expected modules" || bad "build-modules.txt: $(cat warehouse-front/dist/warehouse-app/browser/build-modules.txt 2>/dev/null)"
 for s in scripts/deploy/*.sh scripts/remote-setup.sh; do
     bash -n "$s" && pass "bash -n $s" || bad "bash -n $s"
 done
@@ -95,7 +97,7 @@ try {
     if ($run.ExitCode -ne 0) { throw 'docker run failed.' }
     $cp = Invoke-Process -FilePath $DockerExe -ArgumentList @('cp', $bundle.Path, "${container}:/bundle.tar.gz") -Capture -Quiet
     Assert-True ($cp.ExitCode -eq 0) 'bundle copied into the container'
-    $ex = Invoke-Process -FilePath $DockerExe -ArgumentList @('exec', '-i', '-e', "EXPECTED_TOP=$expectedTop", '-e', "EXPECTED_SHA=$sha", '-e', "EXPECTED_APPS=$expectedApps", '-e', 'LC_ALL=C', $container, 'bash', '-s') -StdinText $check.Replace("`r", '') -Capture
+    $ex = Invoke-Process -FilePath $DockerExe -ArgumentList @('exec', '-i', '-e', "EXPECTED_TOP=$expectedTop", '-e', "EXPECTED_SHA=$sha", '-e', "EXPECTED_APPS=$expectedApps", '-e', "EXPECTED_MODULES=$AllModules", '-e', 'LC_ALL=C', $container, 'bash', '-s') -StdinText $check.Replace("`r", '') -Capture
     foreach ($line in $ex.Output) { if ($line -like '[[]FAIL[]]*') { $failures++ } }
     Assert-True ($ex.ExitCode -eq 0) "container gate script exit $($ex.ExitCode)"
 } finally {

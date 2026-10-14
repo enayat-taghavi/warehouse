@@ -21,6 +21,7 @@
   ۱۴) تغییر دامنه (طرح Modular_Deploy_Options گام ۵): پارامترهای ChangeDomain، FinishDomainChange و RemoveLegacyDomain؛
       بازنویسی اتمیک کلیدهای دامنه در .env؛ رهگیری دامنه‌های قبلی در DOMAINS_LEGACY؛ حالت‌های transition و redirect امن (API و ngsw.json
       دامنهٔ قبلی سرو می‌شوند و فقط ناوبری 301 است)؛ انتقال گواهی‌های قبلی به shared/retired/ در حذف؛ بازگشت خودکار در شکست تغییر دامنه.
+  ۱۵) عدم نگارش ثابت فهرست ماژول‌ها (طرح راه میانهٔ ماژولار گام ۱): فهرست ماژول‌ها در deploy.ps1 و warehouse-deploy.sh نباید ثابت نوشته شده باشد و باید پویا باشد.
 """
 
 import json
@@ -227,7 +228,6 @@ def verify_deploy_safety() -> bool:
     gw_reset = gateway_text[gateway_text.find("    reset-database)"):]
     add_block = deploy_text[deploy_text.find('if [[ "${1:-}" == "--add-module" ]]'):]
     checks = [
-        ('KNOWN_MODULES=(warehouse accounting)' in deploy_text, "فهرست سامانه‌ها در warehouse-deploy.sh با کاتالوگ یکی نیست"),
         ('Modules mismatch' in deploy_text and '--modules' in deploy_text, "prepare ناهمخوانی سامانه‌ها را رد نمی‌کند"),
         ('Modules mismatch' in setup_text and 'WH_MODULES=${MODULES}' in setup_text, "remote-setup.sh سامانه‌ها را ثبت یا بررسی نمی‌کند"),
         ('GO_LIVE' in reset_block[:600], "--reset-database پس از GO_LIVE رد نمی‌شود"),
@@ -311,6 +311,24 @@ def verify_deploy_safety() -> bool:
         print("❌ بند ۱۴: " + "؛ ".join(domain_problems))
     else:
         print("✅ بند ۱۴: تغییر دامنه: پارامترهای deploy.ps1، بازنویسی اتمیک .env، تفکیک transition/redirect امن (API و سرویس‌ورکر دامنهٔ قبلی می‌مانند)، بازگشت با trap، بایگانی در retired/ و canonical_domain بک‌اند.")
+
+    # 15. Dynamic module list (plan Modular_Middle_Path step 1)
+    dyn_mod_problems = []
+    has_hardcoded_sh = bool(re.search(r'KNOWN_MODULES=\s*\(\s*warehouse\s+accounting\s*\)', deploy_text))
+    has_dynamic_sh = "discover_known_modules" in deploy_text and "warehouse-backend/modules" in deploy_text
+    has_hardcoded_ps1 = bool(re.search(r'\$KnownModules\s*=\s*@\(\s*[\'"]warehouse[\'"]\s*,\s*[\'"]accounting[\'"]\s*\)', ps1_text))
+    has_dynamic_ps1 = "Get-KnownModules" in ps1_text and "warehouse-backend/modules" in ps1_text
+
+    if has_hardcoded_sh or not has_dynamic_sh:
+        dyn_mod_problems.append("فهرست ماژول‌ها در warehouse-deploy.sh نباید ثابت باشد و باید با discover_known_modules به صورت پویا ساخته شود")
+    if has_hardcoded_ps1 or not has_dynamic_ps1:
+        dyn_mod_problems.append("فهرست ماژول‌ها در deploy.ps1 نباید ثابت باشد و باید با Get-KnownModules به صورت پویا ساخته شود")
+
+    if dyn_mod_problems:
+        errors.extend(dyn_mod_problems)
+        print("❌ بند ۱۵: " + "؛ ".join(dyn_mod_problems))
+    else:
+        print("✅ بند ۱۵: فهرست ماژول‌ها در deploy.ps1 و warehouse-deploy.sh ثابت نیست و به صورت پویا از روی پوشه‌ها کشف می‌شود.")
 
     print("=" * 74)
     if errors:

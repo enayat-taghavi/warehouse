@@ -19,7 +19,19 @@
 const fs = require('fs');
 const path = require('path');
 
-const workerPath = path.join(__dirname, '..', 'dist', 'warehouse-app', 'browser', 'ngsw-worker.js');
+function resolveWorkerPath() {
+  if (process.argv[2]) {
+    const customOut = path.resolve(process.cwd(), process.argv[2]);
+    const inBrowser = path.join(customOut, 'browser', 'ngsw-worker.js');
+    if (fs.existsSync(inBrowser)) return inBrowser;
+    const direct = path.join(customOut, 'ngsw-worker.js');
+    if (fs.existsSync(direct)) return direct;
+    return inBrowser;
+  }
+  return path.join(__dirname, '..', 'dist', 'warehouse-app', 'browser', 'ngsw-worker.js');
+}
+
+const workerPath = resolveWorkerPath();
 
 const ORIGINAL_MANIFEST_CHECK = '(res.status === 503 || res.status === 504) && ignoreOfflineError';
 const PATCHED_MANIFEST_CHECK =

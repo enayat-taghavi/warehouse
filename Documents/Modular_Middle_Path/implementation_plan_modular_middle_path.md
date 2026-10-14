@@ -438,5 +438,37 @@ warehouse-front/src/app/
     - runner: اجرای بیلدهای پروفایلی (`build:accounting` و `build:warehouse`)، بررسی `dist-free`، اجرای `ng-test-compare` در برابر پایه، راستی‌آزمایی نگهبان‌های ۵۲، ۵۵، ۵۶ و ایجاد کامیت.
     - ناظر (Claude): بررسی صفحهٔ ورود روی 4300 و انتشار release روی `app`.
 
+- **۲۳ مهر ۱۴۰۵ (2026-10-14)، Antigravity — نشست ۴ (گام ۱):**
+  - **پایهٔ نشست:** commit hash برابر `d82ad714c0f64dc9023ee90b153869d7776e69ca`.
+  - **کارهای انجام‌شده:**
+    - ساخت `warehouse-front/tools/build-for-modules.js` و افزودن اسکریپت npm با عنوان `"build:modules": "node tools/build-for-modules.js"` به `package.json`:
+      - خواندن ماژول‌ها از متغیر محیطی `WH_MODULES` (خالی یا شامل هر دو = بیلد کامل).
+      - تفکیک پروفایل‌ها: ماژول `accounting` به پروفایل `accounting-only`، ماژول `warehouse` به پروفایل `warehouse-only`، و حالت ترکیبی یا خالی به بیلد کامل سامانه.
+      - پشتیبانی از گزینهٔ اختیاری `--output-path` و انتقال همان مسیر به `ng build` و `tools/patch-ngsw-530.js`.
+      - تولید و نگارش فایل `<output-path>/browser/build-modules.txt` شامل نام ماژول‌های بیلدشده به ترتیب الفبا و جداشده با ویرگول (`accounting`، `warehouse` یا `accounting,warehouse`).
+    - به‌روزرسانی `warehouse-front/tools/patch-ngsw-530.js`:
+      - پذیرش آرگومان اختیاری برای مسیر سفارشی خروجی بیلد با حفظ دقیق رفتار پیش‌فرض فعلی در صورت عدم ارسال آرگومان.
+    - به‌روزرسانی `deploy.ps1`:
+      - ساخت تابع پویا `Get-KnownModules([string]$Sha = 'HEAD')` با خواندن پوشه‌های `warehouse-backend/modules/` از طریق `git ls-tree` برای کامیت هدف و حذف آرایه‌های هاردکدشده.
+      - به‌روزرسانی `Build-IsolatedFrontend`: استفاده از `npm run build:modules` تحت متغیر `WH_MODULES` و ثبت نشانگر `MODULES=` در `.build-complete` (برای جلوگیری از سوءاستفاده از `-SkipBuild` در پروفایل‌های نامتناسب) و اعتبارسنجی تولید `build-modules.txt`.
+      - به‌روزرسانی `Test-BundleStage` و `New-DeploymentBundle`: اعتبارسنجی وجود `build-modules.txt` و بررسی تطابق مجموعه‌ای آن با ماژول‌های هدف.
+      - به‌روزرسانی `Invoke-AddModuleMode`: اجرای خودکار فرآیند بیلد و انتشار بسته با ماژول جدید پیش از اعمال `add-module` و تغییر `WH_MODULES` روی سرور.
+    - به‌روزرسانی `scripts/deploy/warehouse-deploy.sh`:
+      - استخراج پویای `KNOWN_MODULES` از پوشهٔ `modules` همان release با تابع `discover_known_modules`.
+      - مقداردهی پویا و مدیریت متغیر خالی برای `MODULE_SERVICES` روی ماژول‌های ناموجود.
+    - افزودن بند ۱۵ به نگهبان ۵۳ (`scripts/e2e/guardian_53_deploy_safety.py`):
+      - اعتبارسنجی عدم وجود لیست‌های استاتیک و هاردکدشده برای ماژول‌ها در `deploy.ps1` و `warehouse-deploy.sh`.
+    - به‌روزرسانی `scripts/deploy_tests/test_bundle.ps1`:
+      - تطابق نشانگر `.build-complete` با ساختار جدید `MODULES=$AllModules` و بررسی محتوای `build-modules.txt` در کانتینر اوبونتو.
+  - **انحراف‌ها:** هیچ. تمام مفاد گام ۱ بدون تغییر یا دستکاری کدهای نامرتبط پیاده‌سازی شدند.
+  - **فرمان‌های مجاز اجراشده توسط ایجنت و خلاصه خروجی:**
+    - `python scripts/e2e/guardian_53_deploy_safety.py` -> `✅ بند ۱۵: فهرست ماژول‌ها در deploy.ps1 و warehouse-deploy.sh ثابت نیست و به صورت پویا از روی پوشه‌ها کشف می‌شود. / 🎉 نگهبان ۵۳: تمامی حفاظ‌های امنیتی استقرار سرور با موفقیت تایید شدند.`
+    - `pwsh -NoProfile -File scripts/deploy_tests/test_bundle.ps1` -> `[PASS] bundle created ... [PASS] container gate script exit 0 [RESULT] failures=0`
+    - اجرای آزمایشی بیلد `accounting` فرانت -> `✔ ngsw-worker.js patched successfully / ✔ Wrote accounting to build-modules.txt / dist-free verification exit 0`
+    - اجرای آزمایشی بیلد `warehouse` فرانت -> `✔ ngsw-worker.js patched successfully / ✔ Wrote warehouse to build-modules.txt`
+  - **آنچه به runner و ناظر می‌ماند:**
+    - runner: اجرای آزمون‌های کامل شامل بیلدهای پروفایلی و بررسی `build-modules.txt`، راستی‌آزمایی با `guardian_53_deploy_safety.py` و `test_bundle.ps1`، و پاک‌سازی درخت.
+    - ناظر (Claude): بررسی استقرار و اجرای `test_integration.ps1`.
+
 </div>
 

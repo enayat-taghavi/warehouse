@@ -22,12 +22,46 @@ PRE_UPDATE_RE='^db_pre_update_[0-9]{8}_[0-9]{6}\.dump$'
 STAGE_FILE_RE='^/tmp/wh-deploy\.[A-Za-z0-9]{10}/[A-Za-z0-9._-]+$'
 PRE_MODULE_RE='^db_pre_module_[0-9]{8}_[0-9]{6}\.dump$'
 
-# Installable modules in catalog order (platform_core/module_catalog.py). WH_MODULES in shared/.env selects
-# them; a missing or empty value means all of them (Django's default and every install made before it existed).
-KNOWN_MODULES=(warehouse accounting)
-# Units that run only when their module is installed. Every unit today is core (backend, export worker,
-# gdrive worker of settings_core, backup timer), so no module has a unit of its own yet.
-declare -A MODULE_SERVICES=([warehouse]="" [accounting]="")
+# Discover known modules dynamically from warehouse-backend/modules/*/
+# The list is sorted alphabetically by directory name.
+KNOWN_MODULES=()
+declare -A MODULE_SERVICES=()
+
+discover_known_modules() {
+    local base_rel="${1:-}"
+    if [[ -z "$base_rel" ]]; then
+        if [[ -d "${CURRENT_LINK}/warehouse-backend/modules" ]]; then
+            base_rel="${CURRENT_LINK}"
+        else
+            local latest
+            latest=$(ls -td "${RELEASES_DIR}"/* 2>/dev/null | head -n 1 || true)
+            if [[ -n "$latest" && -d "${latest}/warehouse-backend/modules" ]]; then
+                base_rel="$latest"
+            elif [[ -d "$(dirname "$0")/../../warehouse-backend/modules" ]]; then
+                base_rel="$(dirname "$0")/../.."
+            fi
+        fi
+    fi
+    KNOWN_MODULES=()
+    if [[ -n "$base_rel" && -d "${base_rel}/warehouse-backend/modules" ]]; then
+        local d mod_name
+        for d in "${base_rel}/warehouse-backend/modules"/*/; do
+            if [[ -d "$d" ]]; then
+                mod_name=$(basename "$d")
+                KNOWN_MODULES+=("$mod_name")
+            fi
+        done
+    fi
+    if [[ ${#KNOWN_MODULES[@]} -gt 0 ]]; then
+        readarray -t KNOWN_MODULES < <(printf '%s\n' "${KNOWN_MODULES[@]}" | sort)
+    fi
+    for m in "${KNOWN_MODULES[@]}"; do
+        if [[ -z "${MODULE_SERVICES[$m]+x}" ]]; then
+            MODULE_SERVICES[$m]=""
+        fi
+    done
+}
+discover_known_modules
 
 die() { echo "[ERROR] $*" >&2; exit 1; }
 
@@ -887,7 +921,7 @@ if [[ "${1:-}" == "--add-module" ]]; then
         if [[ "$ENV_SWITCHED" -eq 1 ]]; then
             write_env_modules_line "$OLD_LINE"
             if [[ -n "$OLD_RECORD" ]]; then write_record MODULES "$OLD_RECORD"; else rm -f "${SHARED_DIR}/MODULES"; fi
-            for u in ${MODULE_SERVICES[$ADD_CODE]}; do systemctl disable --now "$u" || true; done
+            for u in ${MODULE_SERVICES[$ADD_CODE]:-}; do systemctl disable --now "$u" || true; done
             echo "[INFO] WH_MODULES put back to ${OLD_MODULES}; restarting the services..." >&2
             systemctl restart "${SERVICES[@]}" || true
             if wait_backend_live "$DOMAIN"; then
@@ -922,13 +956,13 @@ if [[ "${1:-}" == "--add-module" ]]; then
     set_env_modules "$NEW_MODULES"
 
     echo "=== [3/4] Restarting the services ==="
-    for u in ${MODULE_SERVICES[$ADD_CODE]}; do systemctl enable "$u"; done
+    for u in ${MODULE_SERVICES[$ADD_CODE]:-}; do systemctl enable "$u"; done
     # shellcheck disable=SC2086
-    systemctl restart "${SERVICES[@]}" ${MODULE_SERVICES[$ADD_CODE]} || echo "[WARNING] systemctl restart reported an error; the health check decides." >&2
+    systemctl restart "${SERVICES[@]}" ${MODULE_SERVICES[$ADD_CODE]:-} || echo "[WARNING] systemctl restart reported an error; the health check decides." >&2
 
     echo "=== [4/4] Health check ==="
     wait_backend_live "$DOMAIN" || revert_modules "The backend did not answer within 60s with ${NEW_MODULES}."
-    for s in "${SERVICES[@]}" ${MODULE_SERVICES[$ADD_CODE]}; do
+    for s in "${SERVICES[@]}" ${MODULE_SERVICES[$ADD_CODE]:-}; do
         systemctl is-active --quiet "$s" || revert_modules "$s is not active."
     done
     CONFIG_JSON=$(curl -fsS -H "Host: ${DOMAIN:-localhost}" -H "X-Forwarded-Proto: https" http://127.0.0.1:8000/api/public/config/ || true)
@@ -1077,6 +1111,7 @@ if [[ "${1:-}" == "--prepare" ]]; then
     TEMP_EXTRACT=$(mktemp -d "${RELEASES_DIR}/.incoming_XXXXXX")
     tar -xzf "$BUNDLE_PATH" -C "$TEMP_EXTRACT"
     chown -R root:root "$TEMP_EXTRACT"
+    discover_known_modules "$TEMP_EXTRACT"
     find "$TEMP_EXTRACT" -type d -exec chmod 755 {} +
     find "$TEMP_EXTRACT" -type f -exec chmod 644 {} +
     find "$TEMP_EXTRACT" -type f -name "*.sh" -exec chmod 755 {} +

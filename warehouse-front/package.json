@@ -9,6 +9,7 @@
     "build": "ng build && node tools/patch-ngsw-530.js",
     "build:accounting": "ng build --configuration accounting-only && node tools/patch-ngsw-530.js",
     "build:warehouse": "ng build --configuration warehouse-only && node tools/patch-ngsw-530.js",
+    "build:modules": "node tools/build-for-modules.js",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "check:deps": "node tools/check-circular-deps.js"
