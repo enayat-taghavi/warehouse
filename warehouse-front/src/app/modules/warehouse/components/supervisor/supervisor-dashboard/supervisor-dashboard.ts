@@ -1,21 +1,3 @@
-import {
-  normalizeText,
-  normalizeDigits,
-  convertPersianKeyboardToEnglish,
-  filterAndSortSupervisorCountTasks,
-  filterAndSortSupervisorDocTasks,
-  handleSupervisorKeydownEvent,
-  downloadBlob,
-  matchesSupervisorBarcode,
-  parseSupervisorUrlParams,
-  getInvoiceTypeLabel,
-  getCurrencyLabel,
-  formatNumberWithCommas,
-  getActionTypeLabel,
-  SupervisorLongPressController,
-  handleSupervisorSwr
-} from './supervisor-dashboard.helpers';
-import { SupervisorDashboardFacade } from './supervisor-dashboard.facade';
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject, HostListener, ViewChild } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { Subscription, Subject, filter, debounceTime, distinctUntilChanged } from 'rxjs';
@@ -154,9 +136,18 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
   // ─── Counting Task Details Modal ───
   selectedCountingDetailTask: CountTask | null = null;
 
-  openCountingDetail(task: CountTask, event?: Event) { if (event) event.stopPropagation(); this.selectedCountingDetailTask = task; this.cdr.detectChanges(); }
+  openCountingDetail(task: CountTask, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.selectedCountingDetailTask = task;
+    this.cdr.detectChanges();
+  }
 
-  closeCountingDetail() { this.selectedCountingDetailTask = null; this.cdr.detectChanges(); }
+  closeCountingDetail() {
+    this.selectedCountingDetailTask = null;
+    this.cdr.detectChanges();
+  }
 
   setSort(field: 'created_at' | 'updated_at' | 'location' | 'recount_first' | 'code' | 'title') {
     if (this.sortField === field) {
@@ -276,7 +267,12 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
     }
   }
 
-  setLocationFilter(loc: string) { this.locationFilter = loc; this.applyFilters(); this.updateUrlState(); }
+  setLocationFilter(loc: string) {
+    this.locationFilter = loc;
+    this.applyFilters();
+    this.updateUrlState();
+    this.cdr.detectChanges();
+  }
 
   get availableLocations(): string[] {
     const locSet = new Set<string>();
@@ -303,6 +299,19 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
     this.docPoolTasks = [];
     this.refreshCurrentTab();
     this.preloadTabCounts();
+  }
+
+  normalizeText(str: string | null | undefined): string {
+    if (!str) return '';
+    return String(str)
+      .replace(/[آأإ]/g, 'ا')
+      .replace(/ي/g, 'ی')
+      .replace(/ك/g, 'ک')
+      .replace(/ة/g, 'ه')
+      .replace(/[۰-۹]/g, d => '0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(d)])
+      .replace(/[٠-٩]/g, d => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])
+      .toLowerCase()
+      .trim();
   }
 
   getDynamicEntries(task: CountTask | DocTask | null | undefined): { key: string, label: string, value: any }[] {
@@ -369,15 +378,42 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
   // Doc Detail Modal State
   selectedDocDetailTask: DocTask | null = null;
 
-  openDocDetail(task: DocTask) { this.selectedDocDetailTask = task; this.cdr.detectChanges(); }
+  openDocDetail(task: DocTask) {
+    this.selectedDocDetailTask = task;
+    this.cdr.detectChanges();
+  }
 
-  closeDocDetail() { this.selectedDocDetailTask = null; this.cdr.detectChanges(); }
+  closeDocDetail() {
+    this.selectedDocDetailTask = null;
+    this.cdr.detectChanges();
+  }
 
-  getInvoiceTypeLabel(val: string | null | undefined): string { return getInvoiceTypeLabel(val); }
+  getInvoiceTypeLabel(val: string | null | undefined): string {
+    const map: Record<string, string> = {
+      'formal': 'رسمی/مالیاتی',
+      'domestic': 'داخلی',
+      'foreign': 'خارجی',
+      'consignment': 'امانی'
+    };
+    return val ? (map[val] || val) : '-';
+  }
 
-  getCurrencyLabel(val: string | null | undefined): string { return getCurrencyLabel(val); }
+  getCurrencyLabel(val: string | null | undefined): string {
+    const map: Record<string, string> = {
+      'IRR': 'ریال',
+      'USD': 'دلار',
+      'EUR': 'یورو',
+      'OTHER': 'سایر'
+    };
+    return val ? (map[val] || val) : '-';
+  }
 
-  formatNumberWithCommas(val: any): string { return formatNumberWithCommas(val); }
+  formatNumberWithCommas(val: any): string {
+    if (val === null || val === undefined || val === '') return '-';
+    const parts = String(val).replace(/,/g, '').split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
+  }
 
   getItemDetail(task: DocTask | CountTask | any | null, key: string): any {
     if (!task || !task.item_details) return '-';
@@ -404,13 +440,141 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   handleKeyDown(event: KeyboardEvent) {
-    handleSupervisorKeydownEvent(event, this);
+    const target = event.target as HTMLElement;
+    const isInsideInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+
+    // Escape: close any open dialog
+    if (event.key === 'Escape') {
+      if (this.selectedCountingDetailTask) {
+        event.preventDefault();
+        this.closeCountingDetail();
+      } else if (this.selectedDocDetailTask) {
+        event.preventDefault();
+        this.closeDocDetail();
+      } else if (this.showRejectDialog) {
+        event.preventDefault();
+        this.closeRejectDialog();
+      } else if (this.showBulkRejectDialog) {
+        event.preventDefault();
+        this.cancelBulkReject();
+      } else if (this.showApproveDialog) {
+        event.preventDefault();
+        this.cancelApprove();
+      } else if (this.showHistoryDialog) {
+        event.preventDefault();
+        this.closeHistoryDialog();
+      } else if (this.showDocRejectDialog) {
+        event.preventDefault();
+        this.closeDocRejectDialog();
+      } else if (this.showDocApproveDialog) {
+        event.preventDefault();
+        this.cancelDocApprove();
+      } else if (this.isExportModalOpen) {
+        event.preventDefault();
+        this.closeExportModal();
+      }
+    }
+
+    // Ctrl+Enter: confirm active action dialog
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+      if (this.showRejectDialog) {
+        event.preventDefault();
+        this.confirmReject();
+      } else if (this.showBulkRejectDialog) {
+        event.preventDefault();
+        this.confirmBulkReject();
+      } else if (this.showApproveDialog) {
+        event.preventDefault();
+        this.confirmApprove();
+      } else if (this.showDocRejectDialog) {
+        event.preventDefault();
+        this.confirmDocReject();
+      } else if (this.showDocApproveDialog) {
+        event.preventDefault();
+        this.confirmDocApprove();
+      } else if (this.isExportModalOpen && !this.isExporting) {
+        event.preventDefault();
+        this.executeExport();
+      }
+    }
+
+    // Quick Action A (Approve / Claim) when tasks selected and not inside text input
+    if (!isInsideInput && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (event.key === 'a' || event.key === 'A' || event.key === 'ش') {
+        if (this.currentTab === 'my-tasks' && this.selectedTasks.size > 0 && !this.showApproveDialog && !this.showRejectDialog) {
+          event.preventDefault();
+          this.openApproveDialog();
+        } else if (this.currentTab === 'doc' && this.selectedDocTasks.size > 0 && !this.showDocApproveDialog && !this.showDocRejectDialog) {
+          event.preventDefault();
+          this.openDocApproveDialog();
+        } else if (this.currentTab === 'pool' && this.selectedPoolTasks.size > 0) {
+          event.preventDefault();
+          this.claimSelectedTasks();
+        } else if (this.currentTab === 'doc-pool' && this.selectedDocPoolTasks.size > 0) {
+          event.preventDefault();
+          this.claimSelectedDocTasks();
+        }
+      }
+    }
+
+    // Tab switching Alt+1, Alt+2, Alt+3, Alt+4
+    if (event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey) {
+      if (event.key === '1' || event.key === '۱') {
+        event.preventDefault();
+        this.setTab('my-tasks');
+      } else if (event.key === '2' || event.key === '۲') {
+        event.preventDefault();
+        this.setTab('pool');
+      } else if (event.key === '3' || event.key === '۳') {
+        event.preventDefault();
+        this.setTab('doc');
+      } else if (event.key === '4' || event.key === '۴') {
+        event.preventDefault();
+        this.setTab('doc-pool');
+      }
+    }
+
+    // Hardware Keyboard Wedge Barcode Scanner Listener
+    if (!this.selectedCountingDetailTask && !this.selectedDocDetailTask && !this.showRejectDialog && !this.showBulkRejectDialog && !this.showApproveDialog && !this.showHistoryDialog && !this.showDocRejectDialog && !this.showDocApproveDialog && !this.isExportModalOpen && !isInsideInput) {
+      const now = Date.now();
+      if (now - this.lastKeyTime > 500) {
+        this.barcodeBuffer = '';
+      }
+      this.lastKeyTime = now;
+
+      if (event.key === 'Enter') {
+        if (this.barcodeBuffer.length >= 3) {
+          const code = this.barcodeBuffer;
+          this.barcodeBuffer = '';
+          event.preventDefault();
+          this.onBarcodeScanned(code);
+        }
+      } else if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+        this.barcodeBuffer += event.key;
+      }
+    }
   }
 
-  getActionTypeLabel(val: string | null | undefined): string { return getActionTypeLabel(val); }
+  getActionTypeLabel(val: string | null | undefined): string {
+    if (!val) return '-';
+    const map: Record<string, string> = {
+      'COUNTED': 'شمارش شده',
+      'INITIAL_COUNT': 'ثبت اولیه شمارش',
+      'MANAGER_REVIEW': 'ارسال به مدیر',
+      'SUPERVISOR_REJECTED': 'بررسی مجدد (سرپرست)',
+      'MANAGER_REJECTED': 'بررسی مجدد (مدیر)',
+      'FINAL_APPROVED': 'تایید نهایی مدیر',
+      'DOC_PROCESSED': 'ثبت اولیه سند',
+      'DOC_SUPERVISOR_REJECTED': 'رد سرپرست مالی',
+      'DOC_MANAGER_REVIEW': 'ارسال به مدیر مالی',
+      'DOC_MANAGER_REJECTED': 'رد مدیر مالی',
+      'DOC_FINAL_APPROVED': 'تایید نهایی مالی',
+      'CLAIMED': 'به عهده گرفته شد',
+    };
+    return map[val] || val.replace(/_/g, ' ');
+  }
 
   constructor(
-    public facade: SupervisorDashboardFacade,
     private countTaskApi: CountTaskApiService,
     private docTaskApi: DocTaskApiService,
     private toast: ToastService,
@@ -431,6 +595,8 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.wsService.connect();
+
+    // Fetch camera preset
     this.fetchSettings();
 
     this.wsDebounceSub = this.wsUpdateSubject.pipe(debounceTime(600)).subscribe(() => {
@@ -443,33 +609,72 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
         return;
       }
       if (data.type === 'count_task_update' || data.event === 'count_task_update') {
-        if (data.task && data.task.id) this.updateCountTaskInPlace(data.task);
-        else if (data.task_id) this.fetchSingleCountTask(data.task_id);
-        else this.wsUpdateSubject.next(data);
+        if (data.task && data.task.id) {
+          this.updateCountTaskInPlace(data.task);
+        } else if (data.task_id) {
+          this.fetchSingleCountTask(data.task_id);
+        } else {
+          this.wsUpdateSubject.next(data);
+        }
       } else if (data.type === 'doc_task_update' || data.event === 'doc_task_update') {
-        if (data.task && data.task.id) this.updateDocTaskInPlace(data.task);
-        else if (data.task_id) this.fetchSingleDocTask(data.task_id);
-        else this.wsUpdateSubject.next(data);
+        if (data.task && data.task.id) {
+          this.updateDocTaskInPlace(data.task);
+        } else if (data.task_id) {
+          this.fetchSingleDocTask(data.task_id);
+        } else {
+          this.wsUpdateSubject.next(data);
+        }
       }
     });
 
+    // ── URL State: خواندن وضعیت و فیلترها از آدرس مرورگر ──
     this.syncStateFromUrl();
     this.routerSub = this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd)
     ).subscribe(() => this.syncStateFromUrl());
 
+    // ── پیش‌بارگذاری آرام شمارنده‌های تب‌های دیگر ──
     this.preloadTabCounts();
 
+    // ─── SWR Live Revalidation: دریافت داده‌های جدیدتر سرور در پس‌زمینه با فیلتر دقیق نقش سرپرست ───
     this.swrSub = this.offlineSync.liveDataUpdates$.subscribe(({ url, data }) => {
-      handleSupervisorSwr(url, data, this.currentTab, {
-        tasks: this.tasks,
-        poolTasks: this.poolTasks,
-        docTasks: this.docTasks,
-        docPoolTasks: this.docPoolTasks,
-        trackUpdates: this.trackUpdates.bind(this),
-        applyFilters: this.applyFilters.bind(this),
-        detectChanges: () => this.cdr.detectChanges()
-      });
+      if (!data) return;
+      const freshList = Array.isArray(data) ? data : data.results || [];
+      const isPoolUrl = url.includes('/pool_tasks/');
+      const isSupervisorCountTasks = url.includes('/inventory/count-tasks/') && (url.includes('as_role=supervisor') || (!url.includes('as_role=counter') && !url.includes('as_role=manager') && !url.includes('as_role=tracking')));
+      const isSupervisorDocTasks = url.includes('/inventory/doc-tasks/') && (url.includes('as_role=doc_supervisor') || (!url.includes('as_role=doc_worker') && !url.includes('as_role=manager')));
+
+      if (isSupervisorCountTasks) {
+        if (isPoolUrl) {
+          if (this.currentTab === 'pool') this.trackUpdates(this.poolTasks, freshList);
+          this.poolTasks = freshList;
+          this.applyFilters();
+          this.cdr.detectChanges();
+        } else {
+          const filtered = freshList.filter((t: CountTask) => t.status === 'COUNTED' || t.status === 'MANAGER_REJECTED');
+          if (filtered.length > 0 || freshList.length === 0) {
+            if (this.currentTab === 'my-tasks') this.trackUpdates(this.tasks, filtered);
+            this.tasks = filtered;
+            this.applyFilters();
+            this.cdr.detectChanges();
+          }
+        }
+      } else if (isSupervisorDocTasks) {
+        if (isPoolUrl) {
+          if (this.currentTab === 'doc-pool') this.trackUpdates(this.docPoolTasks, freshList);
+          this.docPoolTasks = freshList;
+          this.applyFilters();
+          this.cdr.detectChanges();
+        } else {
+          const filtered = freshList.filter((t: DocTask) => t.status === 'DOC_PROCESSED' || t.status === 'DOC_MANAGER_REJECTED');
+          if (filtered.length > 0 || freshList.length === 0) {
+            if (this.currentTab === 'doc') this.trackUpdates(this.docTasks, filtered);
+            this.docTasks = filtered;
+            this.applyFilters();
+            this.cdr.detectChanges();
+          }
+        }
+      }
     });
   }
 
@@ -486,44 +691,191 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  setStatusFilter(filter: "all" | "counted" | "recount") { this.statusFilter = filter; this.applyFilters(); this.updateUrlState(); }
+  setStatusFilter(filter: 'all' | 'counted' | 'recount') {
+    this.statusFilter = filter;
+    this.applyFilters();
+    this.updateUrlState();
+    this.cdr.detectChanges();
+  }
 
-  setDateFilter(filter: "all" | "today" | "yesterday" | "week") { this.dateFilter = filter; this.applyFilters(); this.updateUrlState(); }
+  setDateFilter(filter: 'all' | 'today' | 'yesterday' | 'week') {
+    this.dateFilter = filter;
+    this.applyFilters();
+    this.updateUrlState();
+    this.cdr.detectChanges();
+  }
+
+  private normalizeDigits(str: any): string {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/[۰-۹]/g, d => '0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(d)])
+      .replace(/[٠-٩]/g, d => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])
+      .replace(/[/،]/g, '.')
+      .trim();
+  }
+
+  private convertPersianKeyboardToEnglish(str: string): string {
+    if (!str) return '';
+    const faToEn: Record<string, string> = {
+      'ض': 'q', 'ص': 'w', 'ث': 'e', 'ق': 'r', 'ف': 't', 'غ': 'y', 'ع': 'u', 'ه': 'i', 'خ': 'o', 'ح': 'p', 'ج': '[', 'چ': ']',
+      'ش': 'a', 'س': 's', 'ی': 'd', 'ب': 'f', 'ل': 'g', 'ا': 'h', 'ت': 'j', 'ن': 'k', 'م': 'l', 'ک': ';', 'گ': "'",
+      'ظ': 'z', 'ط': 'x', 'ز': 'c', 'ر': 'v', 'ذ': 'b', 'د': 'n', 'پ': 'm', 'و': ',', 'ئ': 'm'
+    };
+    return str.split('').map(char => faToEn[char] || faToEn[char.toLowerCase()] || char).join('');
+  }
 
   applyFilters() {
-    const opts = {
-      searchQuery: this.searchQuery,
-      locationFilter: this.locationFilter,
-      dateFilter: this.dateFilter,
-      statusFilter: this.statusFilter,
-      sortField: this.sortField,
-      sortDirection: this.sortDirection
+    const rawQuery = (this.searchQuery || '').trim();
+    const query = this.normalizeText(rawQuery);
+    const normDigitsQuery = this.normalizeDigits(rawQuery.toLowerCase());
+    const convertedQuery = this.convertPersianKeyboardToEnglish(rawQuery).toLowerCase();
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterday = today - 86400000;
+    const week = today - 7 * 86400000;
+
+    const matchesSearch = (itemDetails: any, workerOrCounterName?: string, taskData?: any) => {
+      if (!rawQuery) return true;
+      const unic = this.normalizeText(itemDetails?.fa_unic_code || '');
+      const enUnic = this.normalizeText(itemDetails?.en_unic_code || '');
+      const desc = this.normalizeText(itemDetails?.description || '');
+      const itemNo = this.normalizeText(itemDetails?.item_no || itemDetails?.part_no || '');
+      const po = this.normalizeText(itemDetails?.po || '');
+      const tag = this.normalizeText(itemDetails?.tag || itemDetails?.tag_number || '');
+      const pkNumber = this.normalizeText(itemDetails?.pk_number || itemDetails?.plpkitem || '');
+      const locNew = this.normalizeText(itemDetails?.new_location || '');
+      const locOld = this.normalizeText(itemDetails?.old_location || '');
+      const personName = this.normalizeText(workerOrCounterName || '');
+      const rti = this.normalizeText(taskData?.inv_rti_number || taskData?.added_rti_no || '');
+      const supplier = this.normalizeText(taskData?.doc_supplier || '');
+
+      return unic.includes(query) || unic.includes(normDigitsQuery) || unic.includes(convertedQuery) ||
+             enUnic.includes(query) ||
+             desc.includes(query) ||
+             itemNo.includes(query) ||
+             po.includes(query) ||
+             tag.includes(query) ||
+             pkNumber.includes(query) ||
+             locNew.includes(query) || locOld.includes(query) ||
+             personName.includes(query) ||
+             rti.includes(query) ||
+             supplier.includes(query);
     };
 
-    this.filteredTasks = filterAndSortSupervisorCountTasks(this.tasks, opts);
-    this.filteredPoolTasks = this.poolTasks.filter(t => {
-      const loc = (t.item_details?.new_location || t.item_details?.old_location || '').toLowerCase().trim();
-      const matchLoc = !this.locationFilter || this.locationFilter === 'all' || loc.startsWith(this.locationFilter.toLowerCase().trim());
-      if (!matchLoc) return false;
-      if (!this.searchQuery) return true;
-      const q = normalizeText(this.searchQuery);
-      const enQ = normalizeText(convertPersianKeyboardToEnglish(this.searchQuery));
-      const unic = normalizeText(t.item_details?.fa_unic_code || '');
-      const desc = normalizeText(t.item_details?.description || '');
-      return unic.includes(q) || unic.includes(enQ) || desc.includes(q);
+    const matchesLocation = (itemDetails: any) => {
+      if (!this.locationFilter || this.locationFilter === 'all') return true;
+      const loc = (itemDetails?.new_location || itemDetails?.old_location || '').toLowerCase().trim();
+      return loc.startsWith(this.locationFilter.toLowerCase().trim());
+    };
+
+    const matchesDate = (t: any) => {
+      if (this.dateFilter === 'all') return true;
+      const dateStr = t.updated_at || t.created_at;
+      if (!dateStr) return true;
+      const taskDate = new Date(dateStr).getTime();
+      if (this.dateFilter === 'today') return taskDate >= today;
+      if (this.dateFilter === 'yesterday') return taskDate >= yesterday && taskDate < today;
+      if (this.dateFilter === 'week') return taskDate >= week;
+      return true;
+    };
+
+    // ۱. فیلتر کارهای من (انبارگردانی)
+    this.filteredTasks = this.tasks.filter(t => {
+      if (!matchesDate(t)) return false;
+      if (this.statusFilter === 'counted' && t.status !== 'COUNTED') return false;
+      if (this.statusFilter === 'recount' && t.status !== 'MANAGER_REJECTED') return false;
+      if (!matchesLocation(t.item_details)) return false;
+      return matchesSearch(t.item_details, t.counter_name, t);
     });
 
-    this.filteredDocTasks = filterAndSortSupervisorDocTasks(this.docTasks, opts);
-    this.filteredDocPoolTasks = this.docPoolTasks.filter(t => {
-      const loc = (t.item_details?.new_location || t.item_details?.old_location || '').toLowerCase().trim();
-      const matchLoc = !this.locationFilter || this.locationFilter === 'all' || loc.startsWith(this.locationFilter.toLowerCase().trim());
-      if (!matchLoc) return false;
-      if (!this.searchQuery) return true;
-      const q = normalizeText(this.searchQuery);
-      const enQ = normalizeText(convertPersianKeyboardToEnglish(this.searchQuery));
-      const unic = normalizeText(t.item_details?.fa_unic_code || '');
-      const desc = normalizeText(t.item_details?.description || '');
-      return unic.includes(q) || unic.includes(enQ) || desc.includes(q);
+    // ۲. فیلتر استخر (انبارگردانی)
+    this.filteredPoolTasks = this.poolTasks.filter(t => matchesLocation(t.item_details) && matchesSearch(t.item_details, undefined, t));
+
+    // ۳. فیلتر اسناد مالی
+    this.filteredDocTasks = this.docTasks.filter(t => {
+      if (!matchesDate(t)) return false;
+      if (this.statusFilter === 'counted' && t.status !== 'DOC_PROCESSED') return false;
+      if (this.statusFilter === 'recount' && t.status !== 'DOC_MANAGER_REJECTED') return false;
+      if (!matchesLocation(t.item_details)) return false;
+      return matchesSearch(t.item_details, t.doc_worker_name, t);
+    });
+
+    // ۴. فیلتر استخر اسناد
+    this.filteredDocPoolTasks = this.docPoolTasks.filter(t => matchesLocation(t.item_details) && matchesSearch(t.item_details, undefined, t));
+
+    // ۵. اعمال مرتب‌سازی هوشمند برای اقلام انبارگردانی
+    this.filteredTasks.sort((a, b) => {
+      let result = 0;
+      if (this.sortField === 'created_at') {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.id || 0);
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.id || 0);
+        result = timeA - timeB;
+      } else if (this.sortField === 'updated_at') {
+        const timeA = (a as any).updated_at ? new Date((a as any).updated_at).getTime() : (a.created_at ? new Date(a.created_at).getTime() : (a.id || 0));
+        const timeB = (b as any).updated_at ? new Date((b as any).updated_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : (b.id || 0));
+        result = timeA - timeB;
+      } else if (this.sortField === 'location') {
+        const locA = a.item_details?.new_location || a.item_details?.old_location || '';
+        const locB = b.item_details?.new_location || b.item_details?.old_location || '';
+        result = locA.localeCompare(locB, undefined, { numeric: true, sensitivity: 'base' });
+      } else if (this.sortField === 'recount_first') {
+        const isRecountA = (a.status === 'SUPERVISOR_REJECTED' || a.status === 'MANAGER_REJECTED') ? 0 : 1;
+        const isRecountB = (b.status === 'SUPERVISOR_REJECTED' || b.status === 'MANAGER_REJECTED') ? 0 : 1;
+        if (isRecountA !== isRecountB) {
+          return isRecountA - isRecountB;
+        }
+        const locA = a.item_details?.new_location || a.item_details?.old_location || '';
+        const locB = b.item_details?.new_location || b.item_details?.old_location || '';
+        const locCompare = locA.localeCompare(locB, undefined, { numeric: true, sensitivity: 'base' });
+        return this.sortDirection === 'asc' ? locCompare : -locCompare;
+      } else if (this.sortField === 'code') {
+        const codeA = a.item_details?.fa_unic_code || '';
+        const codeB = b.item_details?.fa_unic_code || '';
+        result = codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+      } else if (this.sortField === 'title') {
+        const titleA = a.item_details?.description || '';
+        const titleB = b.item_details?.description || '';
+        result = titleA.localeCompare(titleB, 'fa', { sensitivity: 'base' });
+      }
+      return this.sortDirection === 'asc' ? result : -result;
+    });
+
+    // ۶. اعمال مرتب‌سازی هوشمند برای اسناد مالی
+    this.filteredDocTasks.sort((a, b) => {
+      let result = 0;
+      if (this.sortField === 'created_at') {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.id || 0);
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.id || 0);
+        result = timeA - timeB;
+      } else if (this.sortField === 'updated_at') {
+        const timeA = (a as any).updated_at ? new Date((a as any).updated_at).getTime() : (a.created_at ? new Date(a.created_at).getTime() : (a.id || 0));
+        const timeB = (b as any).updated_at ? new Date((b as any).updated_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : (b.id || 0));
+        result = timeA - timeB;
+      } else if (this.sortField === 'location') {
+        const locA = a.item_details?.new_location || a.item_details?.old_location || '';
+        const locB = b.item_details?.new_location || b.item_details?.old_location || '';
+        result = locA.localeCompare(locB, undefined, { numeric: true, sensitivity: 'base' });
+      } else if (this.sortField === 'recount_first') {
+        const isRecountA = (a.status === 'DOC_SUPERVISOR_REJECTED' || a.status === 'DOC_MANAGER_REJECTED') ? 0 : 1;
+        const isRecountB = (b.status === 'DOC_SUPERVISOR_REJECTED' || b.status === 'DOC_MANAGER_REJECTED') ? 0 : 1;
+        if (isRecountA !== isRecountB) {
+          return isRecountA - isRecountB;
+        }
+        const locA = a.item_details?.new_location || a.item_details?.old_location || '';
+        const locB = b.item_details?.new_location || b.item_details?.old_location || '';
+        const locCompare = locA.localeCompare(locB, undefined, { numeric: true, sensitivity: 'base' });
+        return this.sortDirection === 'asc' ? locCompare : -locCompare;
+      } else if (this.sortField === 'code') {
+        const codeA = a.item_details?.fa_unic_code || '';
+        const codeB = b.item_details?.fa_unic_code || '';
+        result = codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+      } else if (this.sortField === 'title') {
+        const titleA = a.item_details?.description || '';
+        const titleB = b.item_details?.description || '';
+        result = titleA.localeCompare(titleB, 'fa', { sensitivity: 'base' });
+      }
+      return this.sortDirection === 'asc' ? result : -result;
     });
   }
 
@@ -536,43 +888,68 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
     this.scanBusy = true;
     try {
       const rawQ = (code || '').trim().toLowerCase();
-      const convertedQ = convertPersianKeyboardToEnglish(rawQ).toLowerCase();
-      const normQ = normalizeDigits(rawQ).toLowerCase();
-      const normConvertedQ = normalizeDigits(convertedQ).toLowerCase();
-      const match = (t: any) => matchesSupervisorBarcode(t, rawQ, convertedQ, normQ, normConvertedQ);
+      const convertedQ = this.convertPersianKeyboardToEnglish(rawQ).toLowerCase();
+      const normQ = this.normalizeDigits(rawQ).toLowerCase();
+      const normConvertedQ = this.normalizeDigits(convertedQ).toLowerCase();
+
+      const match = (t: any) => {
+        const unic = (t.item_details?.fa_unic_code || '').trim().toLowerCase();
+        const normUnic = this.normalizeDigits(unic).toLowerCase();
+        const itemNo = (t.item_details?.item_no || '').trim().toLowerCase();
+        const itemId = String(t.item_details?.id || t.item || '').trim();
+        const po = (t.item_details?.po || '').trim().toLowerCase();
+
+        const matchesAny = (val: string) => {
+          if (!val) return false;
+          return val === rawQ || val === convertedQ || val === normQ || val === normConvertedQ;
+        };
+
+        return matchesAny(unic) || matchesAny(normUnic) || matchesAny(itemNo) || matchesAny(itemId) || matchesAny(po);
+      };
 
       if (this.activeSection === 'counting') {
-        const foundTask = this.tasks.find(match);
-        if (foundTask) {
-          this.openCountingDetail(foundTask);
+        const targetMyTask = this.tasks.find(match);
+        if (targetMyTask) {
+          this.selectedTasks.clear();
+          this.selectedTasks.add(targetMyTask.id);
+          this.toast.success(`کالای «${targetMyTask.item_details?.fa_unic_code}» انتخاب شد`);
+          this.triggerFlash(targetMyTask.id);
+          this.cdr.detectChanges();
           return;
         }
-        const foundPool = this.poolTasks.find(match);
-        if (foundPool) {
-          this.toast.info(`کالای ${code} در استخر انبارگردانی یافت شد`);
-          this.setTab('pool');
+
+        const targetPoolTask = this.poolTasks.find(match);
+        if (targetPoolTask) {
+          const confirmed = await this.confirmDialog.open({
+            title: 'بر عهده گرفتن کالا',
+            message: `کالای «${targetPoolTask.item_details?.fa_unic_code} - ${targetPoolTask.item_details?.description}» در مخزن سرپرستان است. آیا آن را بر عهده می‌گیرید؟`,
+            confirmText: 'بله، بر عهده می‌گیرم',
+            cancelText: 'انصراف',
+            type: 'info'
+          });
+          if (confirmed) {
+            this.selectedPoolTasks = new Set([targetPoolTask.id]);
+            this.claimSelectedTasks();
+          }
           return;
         }
       } else {
-        const foundDoc = this.docTasks.find(match);
-        if (foundDoc) {
-          this.openDocDetail(foundDoc);
+        const targetDocTask = this.docTasks.find(match);
+        if (targetDocTask) {
+          this.openDocDetail(targetDocTask);
           return;
         }
-        const foundDocPool = this.docPoolTasks.find(match);
-        if (foundDocPool) {
-          this.toast.info(`سند ${code} در استخر اسناد مالی یافت شد`);
-          this.setTab('doc-pool');
+        const targetDocPool = this.docPoolTasks.find(match);
+        if (targetDocPool) {
+          this.selectedDocPoolTasks = new Set([targetDocPool.id]);
+          this.claimSelectedDocTasks();
           return;
         }
       }
-      this.searchQuery = rawQ;
-      this.applyFilters();
-      this.toast.warning(`موردی مطابق با «${rawQ}» یافت نشد.`);
-      this.cdr.detectChanges();
+
+      this.toast.error(`کالایی با کد «${code}» در کارتابل یا استخر یافت نشد`);
     } finally {
       this.scanBusy = false;
-      this.scanner?.focusInput();
       this.cdr.detectChanges();
     }
   }
@@ -582,8 +959,9 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
     const countParams: any = { as_role: 'supervisor' };
     if (whId && whId !== 'ALL' && whId !== -1) countParams.warehouse_id = whId;
 
+    // استعلام سبک برای بج استخر انبارگردانی
     if (this.currentTab !== 'pool') {
-      this.facade.loadPoolTasks(countParams).subscribe({
+      this.http.get<CountTask[]>(`${environment.apiUrl}/inventory/count-tasks/pool_tasks/`, { params: countParams }).subscribe({
         next: (res: any) => {
           this.poolTasks = Array.isArray(res) ? res : (res.results || []);
           this.cdr.detectChanges();
@@ -592,10 +970,11 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
       });
     }
 
+    // استعلام سبک برای بج کارهای اسناد مالی
     if (this.currentTab !== 'doc') {
       const docParams: any = { as_role: 'doc_supervisor', page_size: 500 };
       if (whId && whId !== 'ALL' && whId !== -1) docParams.warehouse_id = whId;
-      this.facade.loadDocTasks(docParams).subscribe({
+      this.docTaskApi.getAll(docParams).subscribe({
         next: (res: any) => {
           const all: DocTask[] = Array.isArray(res) ? res : (res.results || []);
           this.docTasks = all.filter(t => t.status === 'DOC_PROCESSED' || t.status === 'DOC_MANAGER_REJECTED');
@@ -605,10 +984,11 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
       });
     }
 
+    // استعلام سبک برای بج استخر اسناد مالی
     if (this.currentTab !== 'doc-pool') {
       const docPoolParams: any = { as_role: 'doc_supervisor' };
       if (whId && whId !== 'ALL' && whId !== -1) docPoolParams.warehouse_id = whId;
-      this.facade.loadDocPoolTasks(docPoolParams).subscribe({
+      this.docTaskApi.poolTasks(docPoolParams).subscribe({
         next: (res: any) => {
           this.docPoolTasks = Array.isArray(res) ? res : (res.results || []);
           this.cdr.detectChanges();
@@ -645,6 +1025,7 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
   updateCountTaskInPlace(taskData: any) {
     if (!taskData || !taskData.id) return;
     const id = taskData.id;
+
     if (taskData._deleted) {
       this.tasks = this.tasks.filter(t => t.id !== id);
       this.poolTasks = this.poolTasks.filter(t => t.id !== id);
@@ -653,8 +1034,11 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
       this.cdr.detectChanges();
       return;
     }
+
     const isSupervisorStatus = taskData.status === 'COUNTED' || taskData.status === 'MANAGER_REJECTED';
+
     if (!isSupervisorStatus) {
+      // تسک از کارتابل سرپرست خارج شده است
       this.tasks = this.tasks.filter(t => t.id !== id);
       this.poolTasks = this.poolTasks.filter(t => t.id !== id);
       this.selectedTasks.delete(id);
@@ -662,30 +1046,43 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
       this.cdr.detectChanges();
       return;
     }
+
     const currentUserId = this.auth.user()?.id;
-    const isMyTask = taskData.supervisor === currentUserId || (taskData.supervisor && typeof taskData.supervisor === 'object' && taskData.supervisor.id === currentUserId);
+    const isMyTask = taskData.supervisor === currentUserId ||
+      (taskData.supervisor && typeof taskData.supervisor === 'object' && taskData.supervisor.id === currentUserId);
     const isPool = !taskData.supervisor;
 
     if (isMyTask) {
       const idx = this.tasks.findIndex(t => t.id === id);
-      if (idx !== -1) this.tasks[idx] = { ...this.tasks[idx], ...taskData };
-      else this.tasks = [taskData, ...this.tasks];
+      if (idx !== -1) {
+        this.tasks[idx] = { ...this.tasks[idx], ...taskData };
+      } else {
+        this.tasks = [taskData, ...this.tasks];
+      }
       this.poolTasks = this.poolTasks.filter(t => t.id !== id);
       this.triggerFlash(id);
     } else if (isPool) {
       const idx = this.poolTasks.findIndex(t => t.id === id);
-      if (idx !== -1) this.poolTasks[idx] = { ...this.poolTasks[idx], ...taskData };
-      else this.poolTasks = [taskData, ...this.poolTasks];
+      if (idx !== -1) {
+        this.poolTasks[idx] = { ...this.poolTasks[idx], ...taskData };
+      } else {
+        this.poolTasks = [taskData, ...this.poolTasks];
+      }
       this.tasks = this.tasks.filter(t => t.id !== id);
       this.triggerFlash(id);
     } else {
+      // به سرپرست دیگری تخصیص یافته است
       this.tasks = this.tasks.filter(t => t.id !== id);
       this.poolTasks = this.poolTasks.filter(t => t.id !== id);
       this.selectedTasks.delete(id);
       this.selectedPoolTasks.delete(id);
     }
     if (this.selectedCountingDetailTask && this.selectedCountingDetailTask.id === id) {
-      this.selectedCountingDetailTask = { ...this.selectedCountingDetailTask, ...taskData };
+      if (taskData._deleted || !isSupervisorStatus) {
+        this.selectedCountingDetailTask = null;
+      } else {
+        this.selectedCountingDetailTask = { ...this.selectedCountingDetailTask, ...taskData };
+      }
     }
     this.cdr.detectChanges();
   }
@@ -693,49 +1090,70 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
   updateDocTaskInPlace(taskData: any) {
     if (!taskData || !taskData.id) return;
     const id = taskData.id;
+
     if (taskData._deleted) {
       this.docTasks = this.docTasks.filter(t => t.id !== id);
       this.docPoolTasks = this.docPoolTasks.filter(t => t.id !== id);
       this.selectedDocTasks.delete(id);
       this.selectedDocPoolTasks.delete(id);
-      if (this.selectedDocDetailTask?.id === id) this.selectedDocDetailTask = null;
+      if (this.selectedDocDetailTask && this.selectedDocDetailTask.id === id) {
+        this.selectedDocDetailTask = null;
+      }
       this.cdr.detectChanges();
       return;
     }
+
     const isSupervisorDocStatus = taskData.status === 'DOC_PROCESSED' || taskData.status === 'DOC_MANAGER_REJECTED';
+
     if (!isSupervisorDocStatus) {
       this.docTasks = this.docTasks.filter(t => t.id !== id);
       this.docPoolTasks = this.docPoolTasks.filter(t => t.id !== id);
       this.selectedDocTasks.delete(id);
       this.selectedDocPoolTasks.delete(id);
-      if (this.selectedDocDetailTask?.id === id) this.selectedDocDetailTask = null;
+      if (this.selectedDocDetailTask && this.selectedDocDetailTask.id === id) {
+        this.selectedDocDetailTask = null;
+      }
       this.cdr.detectChanges();
       return;
     }
+
     const currentUserId = this.auth.user()?.id;
-    const isMyTask = taskData.doc_supervisor === currentUserId || (taskData.doc_supervisor && typeof taskData.doc_supervisor === 'object' && taskData.doc_supervisor.id === currentUserId);
+    const isMyDoc = taskData.doc_supervisor === currentUserId ||
+      (taskData.doc_supervisor && typeof taskData.doc_supervisor === 'object' && taskData.doc_supervisor.id === currentUserId);
     const isPool = !taskData.doc_supervisor;
 
-    if (isMyTask) {
+    if (isMyDoc) {
       const idx = this.docTasks.findIndex(t => t.id === id);
-      if (idx !== -1) this.docTasks[idx] = { ...this.docTasks[idx], ...taskData };
-      else this.docTasks = [taskData, ...this.docTasks];
+      if (idx !== -1) {
+        this.docTasks[idx] = { ...this.docTasks[idx], ...taskData };
+      } else {
+        this.docTasks = [taskData, ...this.docTasks];
+      }
       this.docPoolTasks = this.docPoolTasks.filter(t => t.id !== id);
       this.triggerFlash(id);
     } else if (isPool) {
       const idx = this.docPoolTasks.findIndex(t => t.id === id);
-      if (idx !== -1) this.docPoolTasks[idx] = { ...this.docPoolTasks[idx], ...taskData };
-      else this.docPoolTasks = [taskData, ...this.docPoolTasks];
+      if (idx !== -1) {
+        this.docPoolTasks[idx] = { ...this.docPoolTasks[idx], ...taskData };
+      } else {
+        this.docPoolTasks = [taskData, ...this.docPoolTasks];
+      }
       this.docTasks = this.docTasks.filter(t => t.id !== id);
       this.triggerFlash(id);
     } else {
+      // به سرپرست مالی دیگری تخصیص یافته است
       this.docTasks = this.docTasks.filter(t => t.id !== id);
       this.docPoolTasks = this.docPoolTasks.filter(t => t.id !== id);
       this.selectedDocTasks.delete(id);
       this.selectedDocPoolTasks.delete(id);
     }
+
     if (this.selectedDocDetailTask && this.selectedDocDetailTask.id === id) {
-      this.selectedDocDetailTask = { ...this.selectedDocDetailTask, ...taskData };
+      if (taskData._deleted || !isSupervisorDocStatus) {
+        this.selectedDocDetailTask = null;
+      } else {
+        this.selectedDocDetailTask = { ...this.selectedDocDetailTask, ...taskData };
+      }
     }
     this.cdr.detectChanges();
   }
@@ -782,56 +1200,85 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
   }
 
   loadTasks(showLoading = true, preserveState = false) {
-    if (!preserveState) this.selectedTasks.clear();
-    if (showLoading) { this.isLoading = true; this.cdr.detectChanges(); }
-
+    if (!preserveState) {
+      this.selectedTasks.clear();
+    }
+    if (showLoading) {
+      this.isLoading = true;
+      this.cdr.detectChanges();
+    }
+    
     const params: any = { as_role: 'supervisor', page_size: 1000 };
     const whId = this.state.appState.activeWarehouseId;
-    if (whId && whId !== 'ALL' && whId !== -1) params.warehouse_id = whId;
+    if (whId && whId !== 'ALL' && whId !== -1) {
+      params.warehouse_id = whId;
+    }
 
-    this.facade.loadCountTasks(params).then(newTasks => {
-      this.trackUpdates(this.tasks, newTasks);
-      this.tasks = newTasks;
-      this.applyFilters();
-      if (preserveState) {
-        const validIds = new Set(this.tasks.map(t => t.id));
-        this.selectedTasks = new Set(Array.from(this.selectedTasks).filter(id => validIds.has(id)));
+    this.countTaskApi.getAll(params).subscribe({
+      next: (res: any) => {
+        try {
+          const allTasks = Array.isArray(res) ? res : (res.results || []);
+          const newTasks = Array.isArray(allTasks) ? allTasks.filter((t: CountTask) => t.status === 'COUNTED' || t.status === 'MANAGER_REJECTED') : [];
+          this.trackUpdates(this.tasks, newTasks);
+          this.tasks = newTasks;
+          this.applyFilters();
+          if (preserveState) {
+            const validIds = new Set(this.tasks.map(t => t.id));
+            this.selectedTasks = new Set(Array.from(this.selectedTasks).filter(id => validIds.has(id)));
+          }
+        } catch (e) {
+          console.error('Error assigning tasks:', e);
+          this.tasks = [];
+          this.applyFilters();
+        }
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        if (NetworkStatusService.getInstance().isOnline && err?.status !== 503) {
+          this.toast.error('خطا در دریافت اطلاعات');
+        }
+        this.isLoading = false;
+        this.cdr.detectChanges();
       }
-      this.isLoading = false;
-      this.cdr.detectChanges();
-    }).catch(err => {
-      if (NetworkStatusService.getInstance().isOnline && err?.status !== 503) {
-        this.toast.error('خطا در دریافت اطلاعات');
-      }
-      this.isLoading = false;
-      this.cdr.detectChanges();
     });
   }
 
   loadPoolTasks(showLoading = true, preserveState = false) {
-    if (!preserveState) this.selectedPoolTasks.clear();
-    if (showLoading) { this.isLoading = true; this.cdr.detectChanges(); }
-
+    if (!preserveState) {
+      this.selectedPoolTasks.clear();
+    }
+    if (showLoading) {
+      this.isLoading = true;
+      this.cdr.detectChanges();
+    }
+    
     const params: any = { as_role: 'supervisor' };
     const whId = this.state.appState.activeWarehouseId;
-    if (whId && whId !== 'ALL' && whId !== -1) params.warehouse_id = whId;
-
-    this.facade.loadCountPoolTasks(params).then(res => {
-      this.trackUpdates(this.poolTasks, res);
-      this.poolTasks = res;
-      this.applyFilters();
-      if (preserveState) {
-        const validIds = new Set(this.poolTasks.map(t => t.id));
-        this.selectedPoolTasks = new Set(Array.from(this.selectedPoolTasks).filter(id => validIds.has(id)));
+    if (whId && whId !== 'ALL' && whId !== -1) {
+      params.warehouse_id = whId;
+    }
+    
+    this.http.get<CountTask[]>(`${environment.apiUrl}/inventory/count-tasks/pool_tasks/`, { params }).subscribe({
+      next: (res: any) => {
+        const newPoolTasks = Array.isArray(res) ? res : (res.results || []);
+        this.trackUpdates(this.poolTasks, newPoolTasks);
+        this.poolTasks = newPoolTasks;
+        this.applyFilters();
+        if (preserveState) {
+          const validIds = new Set(this.poolTasks.map(t => t.id));
+          this.selectedPoolTasks = new Set(Array.from(this.selectedPoolTasks).filter(id => validIds.has(id)));
+        }
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        if (NetworkStatusService.getInstance().isOnline && err?.status !== 503) {
+          this.toast.error('خطا در دریافت تسک‌های استخر');
+        }
+        this.isLoading = false;
+        this.cdr.detectChanges();
       }
-      this.isLoading = false;
-      this.cdr.detectChanges();
-    }).catch(err => {
-      if (NetworkStatusService.getInstance().isOnline && err?.status !== 503) {
-        this.toast.error('خطا در دریافت اطلاعات استخر انبارگردانی');
-      }
-      this.isLoading = false;
-      this.cdr.detectChanges();
     });
   }
 
@@ -872,25 +1319,82 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
   private syncStateFromUrl() {
     if (!this.router.url.split('?')[0].includes('/supervisor')) return;
     const params = this.router.parseUrl(this.router.url).queryParams;
-    const p = parseSupervisorUrlParams(params);
+    
+    // 1. Sync Tab & Persistence
+    let tab = params['tab'] as typeof this.currentTab;
+    const validTabs: typeof this.currentTab[] = ['my-tasks', 'pool', 'doc', 'doc-pool'];
+    
+    if (!validTabs.includes(tab) && typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const savedTab = localStorage.getItem('supervisor_active_tab') as typeof this.currentTab;
+        if (validTabs.includes(savedTab)) {
+          tab = savedTab;
+        }
+      } catch (e) {
+        console.warn('LocalStorage read failed:', e);
+      }
+    }
 
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const savedLastCount = localStorage.getItem('supervisor_last_count_tab');
+        if (savedLastCount === 'my-tasks' || savedLastCount === 'pool') {
+          this.lastCountTab = savedLastCount;
+        }
+        const savedLastDoc = localStorage.getItem('supervisor_last_doc_tab');
+        if (savedLastDoc === 'doc' || savedLastDoc === 'doc-pool') {
+          this.lastDocTab = savedLastDoc;
+        }
+      } catch (e) {}
+    }
+
+    const resolvedTab = validTabs.includes(tab) ? tab : 'my-tasks';
     let tabChanged = false;
-    if (p.tab !== this.currentTab) {
-      this.currentTab = p.tab;
-      this.selectedTasks.clear();
-      this.selectedPoolTasks.clear();
-      this.selectedDocTasks.clear();
-      this.selectedDocPoolTasks.clear();
+    if (resolvedTab !== this.currentTab) {
+      this.currentTab = resolvedTab;
+      this.clearAllSelections();
       tabChanged = true;
     }
-    this.statusFilter = p.statusFilter;
-    this.dateFilter = p.dateFilter;
-    this.locationFilter = p.locationFilter;
-    this.sortField = p.sortField;
-    this.sortDirection = p.sortDirection;
-    this.searchQuery = p.searchQuery;
+
+    if (this.currentTab === 'my-tasks' || this.currentTab === 'pool') {
+      this.lastCountTab = this.currentTab;
+    } else {
+      this.lastDocTab = this.currentTab;
+    }
+
+    // 2. Status Filter
+    const status = params['status'];
+    const validStatuses = ['all', 'counted', 'recount'];
+    this.statusFilter = validStatuses.includes(status) ? (status as any) : 'all';
+
+    // 3. Date Filter
+    const date = params['date'];
+    const validDates = ['all', 'today', 'yesterday', 'week'];
+    this.dateFilter = validDates.includes(date) ? (date as any) : 'all';
+
+    // 3.5 Location Filter
+    const loc = params['loc'];
+    this.locationFilter = loc || 'all';
+
+    // 4. Sort Field
+    const sort = params['sort'];
+    const validSorts = ['created_at', 'updated_at', 'location', 'recount_first', 'code', 'title'];
+    this.sortField = validSorts.includes(sort) ? (sort as any) : 'updated_at';
+
+    // 5. Sort Direction
+    const sortDir = params['sortDir'];
+    if (sortDir === 'asc' || sortDir === 'desc') {
+      this.sortDirection = sortDir;
+    } else {
+      this.sortDirection = (this.sortField === 'created_at' || this.sortField === 'updated_at') ? 'desc' : 'asc';
+    }
+
+    // 6. Search Query
+    const q = params['q'] || '';
+    this.searchQuery = q;
 
     this.applyFilters();
+
     if (tabChanged || !this.initialLoadDone) {
       this.initialLoadDone = true;
       this.refreshCurrentTab();
@@ -912,74 +1416,135 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
   }
 
   // ─── Touch / Long Press Handling for Counting Tasks ───
-  private countLpCtrl = new SupervisorLongPressController();
-  private docLpCtrl = new SupervisorLongPressController();
-
   onTaskPressStart(task: CountTask, event: PointerEvent) {
     if (!this.isTaskSelectable(task)) return;
-    this.countLpCtrl.start(event, () => {
-      this.toggleSelection(task.id);
+    this.initialTouchY = event.clientY;
+    this.initialTouchX = event.clientX;
+    
+    this.pressTimeout = setTimeout(() => {
+      this.pressTimeout = null;
+      this.justLongPressed = true;
+      if (!this.selectedTasks.has(task.id)) {
+        this.selectedTasks.add(task.id);
+      } else {
+        this.selectedTasks.delete(task.id);
+      }
+      this.selectedTasks = new Set(this.selectedTasks);
       this.cdr.markForCheck();
-    });
+      if (typeof navigator !== 'undefined' && (navigator as any).vibrate) {
+        (navigator as any).vibrate(50);
+      }
+    }, 450);
   }
 
   onTaskPressMove(event: PointerEvent) {
-    this.countLpCtrl.move(event);
+    if (this.pressTimeout) {
+      if (Math.abs(event.clientY - this.initialTouchY) > 10 || Math.abs(event.clientX - this.initialTouchX) > 10) {
+        clearTimeout(this.pressTimeout);
+        this.pressTimeout = null;
+      }
+    }
   }
 
   onTaskPressEnd() {
-    this.countLpCtrl.end();
+    if (this.pressTimeout) {
+      clearTimeout(this.pressTimeout);
+      this.pressTimeout = null;
+    }
   }
 
   onTaskClick(task: CountTask, event: Event) {
-    if (this.countLpCtrl.justLongPressed) {
-      this.countLpCtrl.justLongPressed = false;
+    if (this.justLongPressed) {
+      this.justLongPressed = false;
       event.preventDefault();
       event.stopPropagation();
       return;
     }
-    if (this.selectedTasks.size > 0 && this.isTaskSelectable(task)) {
-      event.preventDefault();
+    
+    // اگر در حالت انتخاب گروهی هستیم، ترافیک انتخاب را تغییر می‌دهیم
+    if (this.selectedTasks.size > 0) {
       this.toggleSelection(task.id);
       return;
     }
-    this.openCountingDetail(task);
+
+    this.openCountingDetail(task, event);
   }
 
+  // ─── Touch / Long Press Handling for Doc Tasks ───
   onDocTaskPressStart(task: DocTask, event: PointerEvent) {
     if (!this.isTaskSelectable(task)) return;
-    this.docLpCtrl.start(event, () => {
-      this.toggleDocSelection(task.id);
+    this.initialTouchY = event.clientY;
+    this.initialTouchX = event.clientX;
+    
+    this.pressTimeout = setTimeout(() => {
+      this.pressTimeout = null;
+      this.justLongPressed = true;
+      if (!this.selectedDocTasks.has(task.id)) {
+        this.selectedDocTasks.add(task.id);
+      } else {
+        this.selectedDocTasks.delete(task.id);
+      }
+      this.selectedDocTasks = new Set(this.selectedDocTasks);
       this.cdr.markForCheck();
-    });
+      if (typeof navigator !== 'undefined' && (navigator as any).vibrate) {
+        (navigator as any).vibrate(50);
+      }
+    }, 450);
   }
 
   onDocTaskPressMove(event: PointerEvent) {
-    this.docLpCtrl.move(event);
+    if (this.pressTimeout) {
+      if (Math.abs(event.clientY - this.initialTouchY) > 10 || Math.abs(event.clientX - this.initialTouchX) > 10) {
+        clearTimeout(this.pressTimeout);
+        this.pressTimeout = null;
+      }
+    }
   }
 
   onDocTaskPressEnd() {
-    this.docLpCtrl.end();
+    if (this.pressTimeout) {
+      clearTimeout(this.pressTimeout);
+      this.pressTimeout = null;
+    }
   }
 
   onDocTaskClick(task: DocTask, event: Event) {
-    if (this.docLpCtrl.justLongPressed) {
-      this.docLpCtrl.justLongPressed = false;
+    if (this.justLongPressed) {
+      this.justLongPressed = false;
       event.preventDefault();
       event.stopPropagation();
       return;
     }
+    
     if (this.selectedDocTasks.size > 0) {
-      event.preventDefault();
       this.toggleDocSelection(task.id);
       return;
     }
+
     this.openDocDetail(task);
   }
 
-  togglePoolSelection(taskId: number) { if (this.selectedPoolTasks.has(taskId)) this.selectedPoolTasks.delete(taskId); else this.selectedPoolTasks.add(taskId); this.selectedPoolTasks = new Set(this.selectedPoolTasks); this.cdr.detectChanges(); }
+  togglePoolSelection(taskId: number) {
+    if (this.selectedPoolTasks.has(taskId)) {
+      this.selectedPoolTasks.delete(taskId);
+    } else {
+      this.selectedPoolTasks.add(taskId);
+    }
+    this.selectedPoolTasks = new Set(this.selectedPoolTasks);
+    this.cdr.detectChanges();
+  }
 
-  toggleAllPool(event: Event) { const chk = (event.target as HTMLInputElement).checked; if (chk) this.filteredPoolTasks.forEach(t => this.selectedPoolTasks.add(t.id)); else this.filteredPoolTasks.forEach(t => this.selectedPoolTasks.delete(t.id)); this.selectedPoolTasks = new Set(this.selectedPoolTasks); this.cdr.detectChanges(); }
+  toggleAllPool(event: Event) {
+    const isChecked = (event.target as HTMLInputElement).checked;
+    const targetList = this.filteredPoolTasks;
+    if (isChecked) {
+      targetList.forEach(t => this.selectedPoolTasks.add(t.id));
+    } else {
+      targetList.forEach(t => this.selectedPoolTasks.delete(t.id));
+    }
+    this.selectedPoolTasks = new Set(this.selectedPoolTasks);
+    this.cdr.detectChanges();
+  }
 
   isAllPoolSelected() {
     return this.filteredPoolTasks.length > 0 && this.filteredPoolTasks.every(t => this.selectedPoolTasks.has(t.id));
@@ -991,8 +1556,17 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
       this.toast.error('عملیات به عهده گرفتن نیازمند اتصال اینترنت است');
       return;
     }
+    
+    const payload: any = {
+      task_ids: Array.from(this.selectedPoolTasks),
+      as_role: 'supervisor'
+    };
     const whId = this.state.appState.activeWarehouseId;
-    this.facade.claimCountTasks(Array.from(this.selectedPoolTasks), whId).subscribe({
+    if (whId && whId !== 'ALL' && whId !== -1) {
+      payload.warehouse_id = whId;
+    }
+
+    this.http.post(`${environment.apiUrl}/inventory/count-tasks/claim_tasks/`, payload).subscribe({
       next: (res: any) => {
         this.toast.success(`${res.claimed_count} کالا با موفقیت به عهده گرفته شد`);
         this.selectedPoolTasks.clear();
@@ -1000,22 +1574,53 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
         this.setTab('my-tasks');
       },
       error: (err: any) => {
-        this.toast.error(err?.error?.error || 'خطا در عملیات');
+        const errorMsg = err?.error?.error || 'خطا در عملیات';
+        this.toast.error(errorMsg);
       }
     });
   }
 
-  toggleSelection(taskId: number) { if (this.selectedTasks.has(taskId)) this.selectedTasks.delete(taskId); else this.selectedTasks.add(taskId); this.selectedTasks = new Set(this.selectedTasks); this.cdr.detectChanges(); }
+  toggleSelection(taskId: number) {
+    if (this.selectedTasks.has(taskId)) {
+      this.selectedTasks.delete(taskId);
+    } else {
+      this.selectedTasks.add(taskId);
+    }
+    this.selectedTasks = new Set(this.selectedTasks);
+    this.cdr.detectChanges();
+  }
 
-  toggleAll(event?: Event) { const chk = (event?.target as HTMLInputElement)?.checked ?? !this.isAllSelected(); if (chk) this.filteredTasks.forEach(t => this.selectedTasks.add(t.id)); else this.filteredTasks.forEach(t => this.selectedTasks.delete(t.id)); this.selectedTasks = new Set(this.selectedTasks); this.cdr.detectChanges(); }
+  toggleAll(event?: Event) {
+    const target = event?.target as HTMLInputElement | undefined;
+    const isCheckbox = target?.type === 'checkbox';
+    const isChecked = isCheckbox ? target.checked : !this.isAllSelected();
+
+    const targetList = this.filteredTasks;
+    if (isChecked) {
+      targetList.forEach(t => this.selectedTasks.add(t.id));
+    } else {
+      targetList.forEach(t => this.selectedTasks.delete(t.id));
+    }
+    this.selectedTasks = new Set(this.selectedTasks);
+    this.cdr.detectChanges();
+  }
 
   isAllSelected() {
     return this.filteredTasks.length > 0 && this.filteredTasks.every(t => this.selectedTasks.has(t.id));
   }
 
-  openApproveDialog() { if (this.selectedTasks.size === 0) return; this.approveNote = ""; this.showApproveDialog = true; this.cdr.detectChanges(); }
+  openApproveDialog() {
+    if (this.selectedTasks.size === 0) return;
+    this.approveNote = '';
+    this.showApproveDialog = true;
+    this.cdr.detectChanges();
+  }
 
-  cancelApprove() { this.showApproveDialog = false; this.approveNote = ""; this.cdr.detectChanges(); }
+  cancelApprove() {
+    this.showApproveDialog = false;
+    this.approveNote = '';
+    this.cdr.detectChanges();
+  }
 
   confirmApprove() {
     if (this.selectedTasks.size === 0) return;
@@ -1023,12 +1628,13 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
     const count = taskIds.length;
     const backupTasks = [...this.tasks];
 
+    // اعمال خوش‌بینانه در جدول
     this.tasks = this.tasks.filter(t => !taskIds.includes(t.id));
     this.selectedTasks.clear();
     this.showApproveDialog = false;
     this.cdr.detectChanges();
 
-    this.facade.approveCountTasks(taskIds, this.approveNote).subscribe({
+    this.countTaskApi.bulkApprove(taskIds, this.approveNote).subscribe({
       next: (res: any) => {
         const isOffline = res?._offlinePending || !navigator.onLine;
         if (isOffline) {
@@ -1046,11 +1652,32 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
     });
   }
 
-  approveSingle(task: CountTask) { this.selectedTasks.clear(); this.selectedTasks.add(task.id); this.openApproveDialog(); }
+  approveSingle(task: CountTask) {
+    this.selectedTasks = new Set([task.id]);
+    this.openApproveDialog();
+  }
 
-  openRejectDialog(task: CountTask) { this.rejectingTask = task; this.rejectNote = ""; this.showRejectDialog = true; this.cdr.detectChanges(); }
+  openRejectDialog(task: CountTask) {
+    this.rejectingTask = task;
+    this.rejectNote = '';
+    this.showRejectDialog = true;
+    this.cdr.detectChanges();
+  }
 
-  async closeRejectDialog() { this.showRejectDialog = false; this.rejectNote = ""; this.rejectingTask = null; this.cdr.detectChanges(); }
+  async closeRejectDialog() {
+    if (this.rejectNote.trim()) {
+      const ok = await this.confirmDialog.open({
+        title: 'انصراف از رد تسک',
+        message: 'متن یادداشت ذخیره نشده است. آیا مایل به بستن پنجره هستید؟',
+        type: 'warning'
+      });
+      if (!ok) return;
+    }
+    this.showRejectDialog = false;
+    this.rejectingTask = null;
+    this.rejectNote = '';
+    this.cdr.detectChanges();
+  }
 
   confirmReject() {
     if (!this.rejectNote.trim()) {
@@ -1061,12 +1688,13 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
     if (this.rejectingTask) {
       const taskId = this.rejectingTask.id;
       const backupTasks = [...this.tasks];
+      // اعمال خوش‌بینانه
       this.tasks = this.tasks.filter(t => t.id !== taskId);
       this.selectedTasks.delete(taskId);
       this.showRejectDialog = false;
       this.cdr.detectChanges();
 
-      this.facade.rejectCountTask(taskId, this.rejectNote).subscribe({
+      this.countTaskApi.reject(taskId, this.rejectNote).subscribe({
         next: (res: any) => {
           const isOffline = res?._offlinePending || !navigator.onLine;
           if (isOffline) {
@@ -1085,49 +1713,79 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
     }
   }
 
-  openBulkRejectDialog() { if (this.selectedTasks.size === 0) return; this.bulkRejectNote = ""; this.showBulkRejectDialog = true; this.cdr.detectChanges(); }
+  openBulkRejectDialog() {
+    if (this.selectedTasks.size === 0) return;
+    this.bulkRejectNote = '';
+    this.showBulkRejectDialog = true;
+    this.cdr.detectChanges();
+  }
 
-  async cancelBulkReject() { this.showBulkRejectDialog = false; this.bulkRejectNote = ""; this.cdr.detectChanges(); }
+  async cancelBulkReject() {
+    if (this.bulkRejectNote.trim()) {
+      const ok = await this.confirmDialog.open({
+        title: 'انصراف از رد گروهی',
+        message: 'متن یادداشت ذخیره نشده است. آیا مایل به بستن پنجره هستید؟',
+        type: 'warning'
+      });
+      if (!ok) return;
+    }
+    this.showBulkRejectDialog = false;
+    this.bulkRejectNote = '';
+    this.cdr.detectChanges();
+  }
 
   confirmBulkReject() {
     if (this.selectedTasks.size === 0) return;
     if (!this.bulkRejectNote.trim()) {
-      this.toast.error('لطفا دلیل ارجاع را بنویسید');
+      this.toast.error('لطفاً دلیل ارجاع جهت بررسی مجدد را بنویسید.');
       return;
     }
-
     const taskIds = Array.from(this.selectedTasks);
     const count = taskIds.length;
     const backupTasks = [...this.tasks];
 
+    // اعمال خوش‌بینانه
     this.tasks = this.tasks.filter(t => !taskIds.includes(t.id));
     this.selectedTasks.clear();
     this.showBulkRejectDialog = false;
     this.cdr.detectChanges();
 
-    this.facade.bulkRejectCountTasks(taskIds, this.bulkRejectNote).subscribe({
+    this.countTaskApi.bulkReject(taskIds, this.bulkRejectNote).subscribe({
       next: (res: any) => {
         const isOffline = res?._offlinePending || !navigator.onLine;
         if (isOffline) {
-          this.toast.info(`ارجاع ${count} کالا در صف ارسال آفلاین ذخیره شد.`);
+          this.toast.info(`ارجاع جهت بررسی مجدد ${count} کالا در صف آفلاین ذخیره شد.`);
         } else {
-          this.toast.success(res?.message || `${count} کالا با موفقیت جهت بررسی مجدد ارجاع داده شد`);
+          this.toast.success(res?.message || `${count} کالا جهت بررسی مجدد ارجاع داده شد`);
         }
         this.loadTasks(false, true);
       },
       error: (err: any) => {
         this.tasks = backupTasks;
-        this.toast.error(err?.error?.error || 'خطا در ارجاع کالاها');
+        const msg = err?.error?.error || 'خطا در رد گروهی کالاها';
+        this.toast.error(msg);
         this.loadTasks(false, true);
       }
     });
   }
 
-  openHistoryDialog(task: CountTask) { this.historyTask = task; this.showHistoryDialog = true; this.cdr.detectChanges(); }
+  openHistoryDialog(task: CountTask) {
+    this.historyTask = task;
+    this.showHistoryDialog = true;
+    this.cdr.detectChanges();
+  }
 
-  closeHistoryDialog() { this.showHistoryDialog = false; this.historyTask = null; this.cdr.detectChanges(); }
+  closeHistoryDialog() {
+    this.showHistoryDialog = false;
+    this.historyTask = null;
+    this.cdr.detectChanges();
+  }
 
-  approveSingleDoc(task: DocTask, event?: Event) { if (event) event.stopPropagation(); this.selectedDocTasks.clear(); this.selectedDocTasks.add(task.id); this.openDocApproveDialog(); }
+  approveSingleDoc(task: DocTask, event?: Event) {
+    if (event) event.stopPropagation();
+    this.selectedDocTasks = new Set([task.id]);
+    this.openDocApproveDialog();
+  }
 
   rejectSingleDoc(task: DocTask, event?: Event) {
     if (event) event.stopPropagation();
@@ -1135,77 +1793,119 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
     this.openDocRejectDialog();
   }
 
-  claimSingleDocTask(task: DocTask, event?: Event) { if (event) event.stopPropagation(); this.selectedDocPoolTasks.clear(); this.selectedDocPoolTasks.add(task.id); this.claimSelectedDocTasks(); }
+  claimSingleDocTask(task: DocTask, event?: Event) {
+    if (event) event.stopPropagation();
+    this.selectedDocPoolTasks = new Set([task.id]);
+    this.claimSelectedDocTasks();
+  }
 
-  claimSingleTask(task: CountTask, event?: Event) { if (event) event.stopPropagation(); this.selectedPoolTasks.clear(); this.selectedPoolTasks.add(task.id); this.claimSelectedTasks(); }
+  claimSingleTask(task: CountTask, event?: Event) {
+    if (event) event.stopPropagation();
+    this.selectedPoolTasks = new Set([task.id]);
+    this.claimSelectedTasks();
+  }
 
   // ════════════════════════════════════════════
   //  Doc Task Tab
   // ════════════════════════════════════════════
 
   loadDocTasks(showLoading = true, preserveState = false) {
-    if (!preserveState) this.selectedDocTasks.clear();
-    if (showLoading) { this.isLoading = true; this.cdr.detectChanges(); }
-
+    if (!preserveState) {
+      this.selectedDocTasks.clear();
+    }
+    if (showLoading) {
+      this.isDocLoading = true;
+      this.cdr.detectChanges();
+    }
     const params: any = { as_role: 'doc_supervisor', page_size: 1000 };
     const whId = this.state.appState.activeWarehouseId;
     if (whId && whId !== 'ALL' && whId !== -1) params.warehouse_id = whId;
 
-    this.facade.loadDocTasksData(params).then(newDocTasks => {
-      this.trackUpdates(this.docTasks, newDocTasks);
-      this.docTasks = newDocTasks;
-      this.applyFilters();
-      if (preserveState) {
-        const validIds = new Set(this.docTasks.map(t => t.id));
-        this.selectedDocTasks = new Set(Array.from(this.selectedDocTasks).filter(id => validIds.has(id)));
+    this.docTaskApi.getAll(params).subscribe({
+      next: (res: any) => {
+        const all: DocTask[] = Array.isArray(res) ? res : (res.results || []);
+        const newDocTasks = all.filter(t => t.status === 'DOC_PROCESSED' || t.status === 'DOC_MANAGER_REJECTED');
+        this.trackUpdates(this.docTasks, newDocTasks);
+        this.docTasks = newDocTasks;
+        this.applyFilters();
+        if (preserveState) {
+          const validIds = new Set(this.docTasks.map(t => t.id));
+          this.selectedDocTasks = new Set(Array.from(this.selectedDocTasks).filter(id => validIds.has(id)));
+        }
+        this.isDocLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        if (NetworkStatusService.getInstance().isOnline && err?.status !== 503) {
+          this.toast.error('خطا در دریافت اسناد مالی');
+        }
+        this.isDocLoading = false;
+        this.cdr.detectChanges();
       }
-      this.isLoading = false;
-      this.cdr.detectChanges();
-    }).catch(err => {
-      if (NetworkStatusService.getInstance().isOnline && err?.status !== 503) {
-        this.toast.error('خطا در دریافت اطلاعات اسناد مالی');
-      }
-      this.isLoading = false;
-      this.cdr.detectChanges();
     });
   }
 
-  toggleDocSelection(id: number) { if (this.selectedDocTasks.has(id)) this.selectedDocTasks.delete(id); else this.selectedDocTasks.add(id); this.selectedDocTasks = new Set(this.selectedDocTasks); this.cdr.detectChanges(); }
+  toggleDocSelection(id: number) {
+    if (this.selectedDocTasks.has(id)) this.selectedDocTasks.delete(id);
+    else this.selectedDocTasks.add(id);
+    this.selectedDocTasks = new Set(this.selectedDocTasks);
+    this.cdr.detectChanges();
+  }
 
-  toggleAllDoc(event?: Event) { const chk = (event?.target as HTMLInputElement)?.checked ?? !this.isAllDocSelected(); if (chk) this.filteredDocTasks.forEach(t => this.selectedDocTasks.add(t.id)); else this.filteredDocTasks.forEach(t => this.selectedDocTasks.delete(t.id)); this.selectedDocTasks = new Set(this.selectedDocTasks); this.cdr.detectChanges(); }
+  toggleAllDoc(event?: Event) {
+    const target = event?.target as HTMLInputElement | undefined;
+    const isCheckbox = target?.type === 'checkbox';
+    const isChecked = isCheckbox ? target.checked : !this.isAllDocSelected();
+
+    const targetList = this.filteredDocTasks;
+    if (isChecked) targetList.forEach(t => this.selectedDocTasks.add(t.id));
+    else targetList.forEach(t => this.selectedDocTasks.delete(t.id));
+    this.selectedDocTasks = new Set(this.selectedDocTasks);
+    this.cdr.detectChanges();
+  }
 
   isAllDocSelected() {
     return this.filteredDocTasks.length > 0 && this.filteredDocTasks.every(t => this.selectedDocTasks.has(t.id));
   }
 
-  openDocApproveDialog() { if (this.selectedDocTasks.size === 0) return; this.docApproveNote = ""; this.showDocApproveDialog = true; this.cdr.detectChanges(); }
+  openDocApproveDialog() {
+    if (this.selectedDocTasks.size === 0) return;
+    this.docApproveNote = '';
+    this.showDocApproveDialog = true;
+    this.cdr.detectChanges();
+  }
 
-  cancelDocApprove() { this.showDocApproveDialog = false; this.docApproveNote = ""; this.cdr.detectChanges(); }
+  cancelDocApprove() {
+    this.showDocApproveDialog = false;
+    this.docApproveNote = '';
+    this.cdr.detectChanges();
+  }
 
   confirmDocApprove() {
     if (this.selectedDocTasks.size === 0) return;
     const taskIds = Array.from(this.selectedDocTasks);
     const count = taskIds.length;
-    const backupTasks = [...this.docTasks];
+    const backupDocTasks = [...this.docTasks];
 
+    // اعمال خوش‌بینانه
     this.docTasks = this.docTasks.filter(t => !taskIds.includes(t.id));
     this.selectedDocTasks.clear();
     this.showDocApproveDialog = false;
     this.cdr.detectChanges();
 
-    this.facade.approveDocTasks(taskIds, this.docApproveNote).subscribe({
+    this.docTaskApi.bulkApprove(taskIds, this.docApproveNote).subscribe({
       next: (res: any) => {
         const isOffline = res?._offlinePending || !navigator.onLine;
         if (isOffline) {
-          this.toast.info(`تأیید ${count} سند مالی در صف ارسال آفلاین قرار گرفت.`);
+          this.toast.info(`تأیید ${count} سند در صف آفلاین ذخیره شد.`);
         } else {
-          this.toast.success(res?.message || `${count} سند مالی با موفقیت تایید شد`);
+          this.toast.success(res?.message || `${count} سند با موفقیت تایید شد`);
         }
         this.loadDocTasks(false, true);
       },
       error: (err: any) => {
-        this.docTasks = backupTasks;
-        this.toast.error(err?.error?.error || 'خطا در تایید اسناد مالی');
+        this.docTasks = backupDocTasks;
+        this.toast.error(err?.error?.error || 'خطا در تایید اسناد');
         this.loadDocTasks(false, true);
       }
     });
@@ -1233,20 +1933,18 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
   }
 
   confirmDocReject() {
-    if (!this.docRejectNote.trim()) {
-      this.toast.error('لطفاً دلیل رد را بنویسید');
-      return;
-    }
-
+    if (!this.docRejectNote.trim()) { this.toast.error('لطفاً دلیل رد را بنویسید'); return; }
     const taskIds = Array.from(this.selectedDocTasks);
     const count = taskIds.length;
-    const backupTasks = [...this.docTasks];
+    const backupDocTasks = [...this.docTasks];
+
+    // اعمال خوش‌بینانه
     this.docTasks = this.docTasks.filter(t => !taskIds.includes(t.id));
     this.selectedDocTasks.clear();
     this.showDocRejectDialog = false;
     this.cdr.detectChanges();
 
-    this.facade.bulkRejectDocTasks(taskIds, this.docRejectNote).subscribe({
+    this.docTaskApi.reject(taskIds, this.docRejectNote).subscribe({
       next: (res: any) => {
         const isOffline = res?._offlinePending || !navigator.onLine;
         if (isOffline) {
@@ -1257,7 +1955,7 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
         this.loadDocTasks(false, true);
       },
       error: (err: any) => {
-        this.docTasks = backupTasks;
+        this.docTasks = backupDocTasks;
         this.toast.error(err?.error?.error || 'خطا در رد اسناد');
         this.loadDocTasks(false, true);
       }
@@ -1269,48 +1967,67 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
   // ════════════════════════════════════════════
 
   loadDocPoolTasks(showLoading = true, preserveState = false) {
-    if (!preserveState) this.selectedDocPoolTasks.clear();
-    if (showLoading) { this.isLoading = true; this.cdr.detectChanges(); }
-
+    if (!preserveState) {
+      this.selectedDocPoolTasks.clear();
+    }
+    if (showLoading) {
+      this.isDocPoolLoading = true;
+      this.cdr.detectChanges();
+    }
     const params: any = { as_role: 'doc_supervisor' };
     const whId = this.state.appState.activeWarehouseId;
     if (whId && whId !== 'ALL' && whId !== -1) params.warehouse_id = whId;
 
-    this.facade.loadDocPoolTasksData(params).then(res => {
-      this.trackUpdates(this.docPoolTasks, res);
-      this.docPoolTasks = res;
-      this.applyFilters();
-      if (preserveState) {
-        const validIds = new Set(this.docPoolTasks.map(t => t.id));
-        this.selectedDocPoolTasks = new Set(Array.from(this.selectedDocPoolTasks).filter(id => validIds.has(id)));
+    this.docTaskApi.poolTasks(params).subscribe({
+      next: (res: any) => {
+        const newDocPoolTasks = Array.isArray(res) ? res : (res.results || []);
+        this.trackUpdates(this.docPoolTasks, newDocPoolTasks);
+        this.docPoolTasks = newDocPoolTasks;
+        this.applyFilters();
+        if (preserveState) {
+          const validIds = new Set(this.docPoolTasks.map(t => t.id));
+          this.selectedDocPoolTasks = new Set(Array.from(this.selectedDocPoolTasks).filter(id => validIds.has(id)));
+        }
+        this.isDocPoolLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        if (NetworkStatusService.getInstance().isOnline && err?.status !== 503) {
+          this.toast.error('خطا در دریافت استخر اسناد');
+        }
+        this.isDocPoolLoading = false;
+        this.cdr.detectChanges();
       }
-      this.isLoading = false;
-      this.cdr.detectChanges();
-    }).catch(err => {
-      if (NetworkStatusService.getInstance().isOnline && err?.status !== 503) {
-        this.toast.error('خطا در دریافت اطلاعات استخر اسناد');
-      }
-      this.isLoading = false;
-      this.cdr.detectChanges();
     });
   }
 
-  toggleDocPoolSelection(id: number) { if (this.selectedDocPoolTasks.has(id)) this.selectedDocPoolTasks.delete(id); else this.selectedDocPoolTasks.add(id); this.selectedDocPoolTasks = new Set(this.selectedDocPoolTasks); this.cdr.detectChanges(); }
+  toggleDocPoolSelection(id: number) {
+    if (this.selectedDocPoolTasks.has(id)) this.selectedDocPoolTasks.delete(id);
+    else this.selectedDocPoolTasks.add(id);
+    this.selectedDocPoolTasks = new Set(this.selectedDocPoolTasks);
+    this.cdr.detectChanges();
+  }
 
-  toggleAllDocPool(event: Event) { const chk = (event.target as HTMLInputElement).checked; if (chk) this.filteredDocPoolTasks.forEach(t => this.selectedDocPoolTasks.add(t.id)); else this.filteredDocPoolTasks.forEach(t => this.selectedDocPoolTasks.delete(t.id)); this.selectedDocPoolTasks = new Set(this.selectedDocPoolTasks); this.cdr.detectChanges(); }
+  toggleAllDocPool(event: Event) {
+    const checked = (event.target as HTMLInputElement).checked;
+    const targetList = this.filteredDocPoolTasks;
+    if (checked) targetList.forEach(t => this.selectedDocPoolTasks.add(t.id));
+    else targetList.forEach(t => this.selectedDocPoolTasks.delete(t.id));
+    this.selectedDocPoolTasks = new Set(this.selectedDocPoolTasks);
+    this.cdr.detectChanges();
+  }
 
   isAllDocPoolSelected() {
     return this.filteredDocPoolTasks.length > 0 && this.filteredDocPoolTasks.every(t => this.selectedDocPoolTasks.has(t.id));
   }
 
-  async claimSelectedDocTasks() {
+  claimSelectedDocTasks() {
     if (this.selectedDocPoolTasks.size === 0) return;
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       this.toast.error('عملیات به عهده گرفتن نیازمند اتصال اینترنت است');
       return;
     }
-    const whId = this.state.appState.activeWarehouseId;
-    this.facade.claimDocTasks(Array.from(this.selectedDocPoolTasks), whId).subscribe({
+    this.docTaskApi.claimTasks(Array.from(this.selectedDocPoolTasks), 'doc_supervisor').subscribe({
       next: (res: any) => {
         this.toast.success(`${res.claimed_count} سند با موفقیت به عهده گرفته شد`);
         this.selectedDocPoolTasks.clear();
@@ -1318,7 +2035,8 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
         this.setTab('doc');
       },
       error: (err: any) => {
-        this.toast.error(err?.error?.error || 'خطا در عملیات');
+        const errorMsg = err?.error?.error || 'خطا در عملیات';
+        this.toast.error(errorMsg);
       }
     });
   }
@@ -1360,41 +2078,70 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
 
   executeExport() {
     this.isExporting = true;
+    
     const isCount = this.activeSection === 'counting';
     const role = isCount ? 'supervisor' : 'doc_supervisor';
+    const api = isCount ? this.countTaskApi : this.docTaskApi;
 
     const payload: any = {
       data_scope: this.exportDataScope,
       columns_scope: this.exportColumnScope,
       as_role: role,
     };
+    
     if (this.exportDataScope === 'selected') {
       payload.selected_ids = Array.from(this.currentSelectedTasks);
     }
+    
     if (this.exportColumnScope === 'custom') {
       payload.columns_list = Array.from(this.selectedExportColumns);
     }
+    
     const params: any = { as_role: role };
     const whId = this.state.appState.activeWarehouseId;
-    if (whId && whId !== 'ALL' && whId !== -1) params.warehouse_id = whId;
-    if (this.searchQuery && this.searchQuery.trim()) params.q = this.searchQuery.trim();
-    if (this.statusFilter && this.statusFilter !== 'all') params.status = this.statusFilter;
-    if (this.dateFilter && this.dateFilter !== 'all') params.date = this.dateFilter;
+    if (whId && whId !== 'ALL' && whId !== -1) {
+      params.warehouse_id = whId;
+    }
+    if (this.searchQuery && this.searchQuery.trim()) {
+      params.q = this.searchQuery.trim();
+    }
+    if (this.statusFilter && this.statusFilter !== 'all') {
+      params.status = this.statusFilter;
+    }
+    if (this.dateFilter && this.dateFilter !== 'all') {
+      params.date = this.dateFilter;
+    }
 
     if ((this.currentTab === 'pool' || this.currentTab === 'doc-pool') && this.exportDataScope === 'all') {
-      payload.selected_ids = this.currentTab === 'pool' ? this.poolTasks.map(t => t.id) : this.docPoolTasks.map(t => t.id);
+      const poolIds = this.currentTab === 'pool'
+        ? this.poolTasks.map(t => t.id)
+        : this.docPoolTasks.map(t => t.id);
+      payload.selected_ids = poolIds;
       payload.data_scope = 'selected';
     }
 
-    this.exportSubscription = this.facade.exportExcel(isCount, payload, params).subscribe({
+    this.exportSubscription = api.exportExcel({ ...payload, ...params }).subscribe({
       next: (blob) => {
-        downloadBlob(blob, `export_supervisor_${role}_${new Date().getTime()}.xlsx`);
+        try {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `export_supervisor_${role}_${new Date().getTime()}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        } catch(e) {
+          console.error('File download error', e);
+        }
+        
         this.isExporting = false;
         this.closeExportModal();
         this.toast.success('خروجی اکسل با موفقیت دانلود شد.');
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err) => {
+        console.error('Export error:', err);
         this.toast.error('خطا در دریافت فایل خروجی');
         this.isExporting = false;
         this.cdr.detectChanges();
