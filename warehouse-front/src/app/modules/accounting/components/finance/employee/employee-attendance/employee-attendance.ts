@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, HostListener, Optional } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpContext } from '@angular/common/http';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
@@ -26,25 +26,6 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 
-import { EmployeeAttendanceFacade } from './employee-attendance.facade';
-import {
-  PERSIAN_MONTHS,
-  shiftShamsiDay,
-  getTodayShamsi,
-  syncYearMonthFromDailyDate,
-  parseExcelPasteToRows,
-  handleAttendanceGridKeydown,
-  computeAttendanceCounts,
-  computeAttendanceRegistrationState,
-  calculateDateRangeAttendance,
-  markRowsAsOfficialHoliday,
-  clearRowsAttendance,
-  applyBulkHoursToRows,
-  triggerFileDownload,
-  buildAttendanceBulkPayload,
-  buildMonthlyGridBulkItems
-} from './employee-attendance.helpers';
-
 @Component({
   selector: 'app-employee-attendance-hub',
   standalone: true,
@@ -58,7 +39,6 @@ import {
     TabBarComponent,
     CommandCenterComponent,
   ],
-  providers: [EmployeeAttendanceFacade],
   templateUrl: './employee-attendance.html',
   styleUrl: './employee-attendance.css'
 })
@@ -103,7 +83,20 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
 
   // Persian Month Popover
   isMonthPickerOpen = false;
-  readonly PERSIAN_MONTHS = PERSIAN_MONTHS;
+  readonly PERSIAN_MONTHS = [
+    { num: 1, name: 'فروردین' },
+    { num: 2, name: 'اردیبهشت' },
+    { num: 3, name: 'خرداد' },
+    { num: 4, name: 'تیر' },
+    { num: 5, name: 'مرداد' },
+    { num: 6, name: 'شهریور' },
+    { num: 7, name: 'مهر' },
+    { num: 8, name: 'آبان' },
+    { num: 9, name: 'آذر' },
+    { num: 10, name: 'دی' },
+    { num: 11, name: 'بهمن' },
+    { num: 12, name: 'اسفند' }
+  ];
 
   // Daily Matrix Attendance
   attendanceRows: AttendanceMatrixRow[] = [];
@@ -195,8 +188,6 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   private wsSub?: Subscription;
   private wsConnectedSub?: Subscription;
 
-  readonly facade: EmployeeAttendanceFacade;
-
   constructor(
     public auth: AuthService,
     private personnelApi: PersonnelApiService,
@@ -205,11 +196,8 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     private toast: ToastService,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
-    private router: Router,
-    @Optional() facade?: EmployeeAttendanceFacade
-  ) {
-    this.facade = facade ?? new EmployeeAttendanceFacade(this.personnelApi, this.whService, this.toast);
-  }
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.initDefaultDate();
@@ -674,7 +662,13 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
       ? this.attendanceRows.filter(r => this.selectedPersonnelIds.has(r.personnel_id))
       : (this.searchQuery.trim() ? this.filteredAttendanceRows : this.attendanceRows);
 
-    markRowsAsOfficialHoliday(targets);
+    targets.forEach(r => {
+      r.status = 'LEAVE';
+      r.effective_hours = 0;
+      r.overtime_hours = 0;
+      r.notes = r.notes ? `${r.notes} (تعطیل رسمی)` : 'تعطیل رسمی';
+      r._isDirty = true;
+    });
     this.hasUnsavedChanges = true;
     this.toast.show('success', `وضعیت ${targets.length} نفر به تعطیل رسمی تغییر یافت`);
     this.cdr.detectChanges();
@@ -695,7 +689,17 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
       return;
     }
 
-    clearRowsAttendance(target);
+    target.forEach(r => {
+      r.status = '';
+      r.effective_hours = 0;
+      r.overtime_hours = 0;
+      r.is_friday_work = false;
+      r.is_mission = false;
+      r.advance_payment = 0;
+      r.notes = '';
+      r._isDirty = true;
+    });
+
     this.hasUnsavedChanges = true;
     this.applySearchFilter();
     this.toast.show('info', `وضعیت ${target.length} نفر پاکسازی شد. جهت اعمال نهایی در سرور، دکمه «به‌روزرسانی کارکرد» را بزنید.`);
@@ -725,14 +729,26 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
       targets = baseRows;
     }
 
-    applyBulkHoursToRows(
-      targets,
-      this.bulkStatusOption,
-      this.bulkEffectiveHours,
-      this.bulkOvertimeHours,
-      this.bulkAdvancePayment,
-      this.bulkNotes
-    );
+    targets.forEach(r => {
+      const isAbsentOrLeave = r.status === 'ABSENT' || r.status === 'LEAVE';
+      if (this.bulkStatusOption) {
+        r.status = this.bulkStatusOption;
+        r.effective_hours = this.bulkEffectiveHours;
+        r.overtime_hours = this.bulkOvertimeHours;
+      } else {
+        if (!isAbsentOrLeave) {
+          r.effective_hours = this.bulkEffectiveHours;
+          r.overtime_hours = this.bulkOvertimeHours;
+        }
+      }
+      if (this.bulkAdvancePayment !== null && this.bulkAdvancePayment !== undefined && this.bulkAdvancePayment >= 0) {
+        r.advance_payment = Number(this.bulkAdvancePayment);
+      }
+      if (this.bulkNotes.trim()) {
+        r.notes = this.bulkNotes.trim();
+      }
+      r._isDirty = true;
+    });
     this.hasUnsavedChanges = true;
     this.isBulkHoursModalOpen = false;
     this.toast.show('success', `ساعات کارکرد برای ${targets.length} نفر با موفقیت اعمال شد`);
@@ -748,7 +764,49 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   }
 
   parseExcelPasteText(): void {
-    this.excelParsedRows = parseExcelPasteToRows(this.excelPasteText, this.attendanceRows);
+    if (!this.excelPasteText.trim()) {
+      this.excelParsedRows = [];
+      return;
+    }
+    const lines = this.excelPasteText.trim().split('\n');
+    this.excelParsedRows = [];
+
+    lines.forEach(line => {
+      const cols = line.split('\t').map(c => c.trim());
+      if (cols.length === 0 || !cols[0]) return;
+
+      const codeOrName = cols[0];
+      const matchedRow = this.attendanceRows.find(r =>
+        r.national_code === codeOrName ||
+        (r.full_name && r.full_name.includes(codeOrName))
+      );
+
+      let status = cols[1] || 'PRESENT_10H';
+      if (status.includes('حاضر')) status = 'PRESENT_10H';
+      else if (status.includes('غایب')) status = 'ABSENT';
+      else if (status.includes('مرخصی')) status = 'LEAVE';
+      else if (status.includes('ماموریت')) status = 'MISSION';
+      else if (status.includes('جمعه')) status = 'FRIDAY_WORK';
+
+      const isZeroHourStatus = (status === 'ABSENT' || status === 'LEAVE');
+      const defaultHours = isZeroHourStatus ? 0 : 10;
+      const effectiveHours = cols[2] ? parseFloat(cols[2]) : defaultHours;
+      const overtimeHours = (cols[3] && !isZeroHourStatus) ? parseFloat(cols[3]) : 0;
+      const rawAdv = cols[4] ? parseFloat(cols[4].replace(/,/g, '')) : 0;
+      const advancePayment = !isNaN(rawAdv) && rawAdv > 0 ? rawAdv : 0;
+      const notes = cols[5] || (isNaN(rawAdv) ? cols[4] : '') || '';
+
+      this.excelParsedRows.push({
+        national_code: matchedRow?.national_code || (codeOrName.length === 10 ? codeOrName : ''),
+        full_name: matchedRow?.full_name || codeOrName,
+        status,
+        effective_hours: isNaN(effectiveHours) ? defaultHours : (isZeroHourStatus ? 0 : effectiveHours),
+        overtime_hours: isNaN(overtimeHours) ? 0 : (isZeroHourStatus ? 0 : overtimeHours),
+        advance_payment: advancePayment,
+        notes,
+        matchedRow
+      });
+    });
   }
 
   applyExcelPaste(): void {
@@ -847,15 +905,26 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     }
 
     this.isSavingAttendance = true;
-    const payload = buildAttendanceBulkPayload(
-      this.selectedWarehouseId,
-      this.selectedSectionId,
-      this.selectedDateShamsi,
-      this.wsService.tabId,
-      dirtyRows
-    );
 
-    this.facade.saveAttendanceBulk(payload).subscribe({
+    const payload = {
+      warehouse_id: this.selectedWarehouseId,
+      section_id: this.selectedSectionId,
+      date_shamsi: this.selectedDateShamsi,
+      client_tab_id: this.wsService.tabId,
+      items: dirtyRows.map(r => ({
+        personnel_id: r.personnel_id,
+        warehouse_id: r.warehouse_id || this.selectedWarehouseId || null,
+        status: r.status || '',
+        effective_hours: Number(r.effective_hours) || 0,
+        overtime_hours: Number(r.overtime_hours) || 0,
+        is_friday_work: !!r.is_friday_work,
+        is_mission: !!r.is_mission,
+        advance_payment: Number(r.advance_payment) || 0,
+        notes: r.notes || ''
+      }))
+    };
+
+    this.personnelApi.saveAttendanceBulk(payload).subscribe({
       next: res => {
         this.isSavingAttendance = false;
         this.hasUnsavedChanges = false;
@@ -962,9 +1031,27 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
       return;
     }
     this.isSavingMonthlyGrid = true;
-    const items = buildMonthlyGridBulkItems(this.monthlyGridRows);
 
-    this.facade.bulkSaveMonthlyGrid({
+    const items: any[] = [];
+    for (const row of this.monthlyGridRows) {
+      for (const d of row.days) {
+        if (d.status || d.effective_hours > 0 || d.is_existing) {
+          items.push({
+            personnel_id: row.personnel_id,
+            day: d.day,
+            status: d.status || 'PRESENT_10H',
+            effective_hours: d.effective_hours,
+            overtime_hours: d.overtime_hours,
+            is_friday_work: d.is_friday_work,
+            is_mission: d.is_mission,
+            advance_payment: d.advance_payment || 0,
+            notes: d.notes || ''
+          });
+        }
+      }
+    }
+
+    this.personnelApi.bulkSaveMonthlyGrid({
       warehouse_id: this.selectedWarehouseId,
       section_id: this.selectedSectionId,
       year_month: this.selectedYearMonth,
@@ -1105,29 +1192,51 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const res = calculateDateRangeAttendance(
-      this.monthlyGridRows,
-      this.monthlyGridDays,
-      this.selectedPersonnelIds,
-      this.rangeStartDay,
-      this.rangeEndDay,
-      this.rangeTargetScope,
-      this.rangeStatus,
-      this.rangeEffectiveHours,
-      this.rangeOvertimeHours,
-      this.rangeSkipFridays,
-      this.rangeOnlyEmptyDays
-    );
+    const targetRows = this.rangeTargetScope === 'selected' && this.selectedPersonnelIds.size > 0
+      ? this.monthlyGridRows.filter(r => this.selectedPersonnelIds.has(r.personnel_id))
+      : this.monthlyGridRows;
 
-    if (res.targetRowsCount === 0) {
+    if (targetRows.length === 0) {
       this.toast.show('warning', 'سطری برای اعمال کارکرد یافت نشد.');
       return;
     }
 
+    const fridayDays = new Set(this.monthlyGridDays.filter(m => m.is_friday).map(m => m.day));
+    let affectedCount = 0;
+
+    for (const row of targetRows) {
+      for (const d of row.days) {
+        if (d.day < this.rangeStartDay || d.day > this.rangeEndDay) {
+          continue;
+        }
+        const isFriday = fridayDays.has(d.day);
+        if (this.rangeSkipFridays && isFriday && this.rangeStatus !== 'FRIDAY_WORK') {
+          continue;
+        }
+
+        if (this.rangeOnlyEmptyDays) {
+          const hasExistingWork = d.status && d.status !== 'ABSENT' && Number(d.effective_hours) > 0;
+          if (hasExistingWork) {
+            continue;
+          }
+        }
+
+        d.status = this.rangeStatus;
+        d.effective_hours = this.rangeEffectiveHours;
+        d.overtime_hours = this.rangeOvertimeHours;
+        d.is_friday_work = isFriday && this.rangeEffectiveHours > 0;
+        d.is_mission = this.rangeStatus === 'MISSION';
+        affectedCount++;
+      }
+      row.total_hours = row.days.reduce((acc, d) => acc + (parseFloat(d.effective_hours as any) || 0), 0);
+      row.total_overtime = row.days.reduce((acc, d) => acc + (parseFloat(d.overtime_hours as any) || 0), 0);
+      row.present_days = row.days.filter(d => ['PRESENT_10H', 'HALF_5H', 'FRIDAY_WORK', 'MISSION', 'CUSTOM'].includes(d.status) && (parseFloat(d.effective_hours as any) || 0) > 0).length;
+    }
+
     this.isRangeModalOpen = false;
-    if (res.affectedCount > 0) {
+    if (affectedCount > 0) {
       this.hasUnsavedMonthlyGrid = true;
-      this.toast.show('success', `کارکرد روزهای ${this.rangeStartDay} تا ${this.rangeEndDay} برای ${res.targetRowsCount} نفر (${res.affectedCount} سلول) اعمال شد. جهت ثبت نهایی، دکمه ذخیره را بزنید.`);
+      this.toast.show('success', `کارکرد روزهای ${this.rangeStartDay} تا ${this.rangeEndDay} برای ${targetRows.length} نفر (${affectedCount} سلول) اعمال شد. جهت ثبت نهایی، دکمه ذخیره را بزنید.`);
     } else {
       this.toast.show('info', 'هیچ سلولی مطابق شروط انتخابی تغییر نیافت.');
     }
@@ -1138,11 +1247,18 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   exportMonthlyExcel(): void {
     if (!this.selectedYearMonth) return;
     this.isExportingMonthlyExcel = true;
-    this.facade.exportMonthlyExcel(this.selectedWarehouseId, this.selectedYearMonth, this.selectedSectionId).subscribe({
+    this.personnelApi.exportMonthlyAttendanceExcel(this.selectedWarehouseId, this.selectedYearMonth, this.selectedSectionId).subscribe({
       next: (blob: Blob) => {
         this.isExportingMonthlyExcel = false;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
         const secName = this.selectedSection?.name || 'all_sections';
-        triggerFileDownload(blob, `Timesheet_${this.selectedYearMonth.replace('/', '_')}_${secName}.xlsx`);
+        a.download = `Timesheet_${this.selectedYearMonth.replace('/', '_')}_${secName}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
         this.toast.show('success', 'فایل اکسل تقویم کارکرد با موفقیت دانلود شد');
         this.cdr.detectChanges();
       },
@@ -1188,7 +1304,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     }
     formData.append('year_month', this.selectedYearMonth);
 
-    this.facade.uploadMonthlyTimesheetExcel(formData).subscribe({
+    this.personnelApi.importMonthlyAttendanceExcel(formData).subscribe({
       next: (res) => {
         this.isImportingMonthlyExcel = false;
         this.closeExcelImportModal();
@@ -1216,7 +1332,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
 
   submitPeriodForReview(): void {
     this.isSubmittingWorkflow = true;
-    this.facade.periodWorkflowAction({
+    this.personnelApi.periodWorkflowAction({
       warehouse_id: this.selectedWarehouseId,
       year_month: this.selectedYearMonth,
       action: 'submit',
@@ -1265,7 +1381,115 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
 
   // --- ناوبری صفحه کلید (Keyboard Grid Ergonomics) ---
   onAttendanceGridKeydown(event: KeyboardEvent, colType: 'status' | 'eff' | 'ot' | 'adv' | 'note' | 'wh', rowIndex: number, statusType?: string, row?: AttendanceMatrixRow): void {
-    handleAttendanceGridKeydown(event, colType, rowIndex, statusType, row, (r, s) => this.setAttendanceStatus(r, s));
+    const key = event.key;
+
+    if (colType === 'status') {
+      const statuses = ['PRESENT_10H', 'HALF_5H', 'LEAVE', 'ABSENT', 'MISSION'];
+      const currentIdx = statuses.indexOf(statusType || 'PRESENT_10H');
+
+      if (key === 'ArrowLeft') {
+        event.preventDefault();
+        if (currentIdx < statuses.length - 1) {
+          const nextStatus = statuses[currentIdx + 1];
+          const el = document.getElementById(`btn-status-${nextStatus}-${rowIndex}`);
+          if (el) el.focus();
+        } else {
+          const el = document.getElementById(`input-eff-${rowIndex}`);
+          if (el) {
+            (el as HTMLInputElement).focus();
+            (el as HTMLInputElement).select?.();
+          }
+        }
+      } else if (key === 'ArrowRight') {
+        event.preventDefault();
+        if (currentIdx > 0) {
+          const prevStatus = statuses[currentIdx - 1];
+          const el = document.getElementById(`btn-status-${prevStatus}-${rowIndex}`);
+          if (el) el.focus();
+        } else {
+          const el = document.getElementById(`chk-${rowIndex}`);
+          if (el) el.focus();
+        }
+      } else if (key === 'ArrowDown') {
+        event.preventDefault();
+        const nextEl = document.getElementById(`btn-status-${statusType}-${rowIndex + 1}`);
+        if (nextEl) nextEl.focus();
+      } else if (key === 'ArrowUp') {
+        event.preventDefault();
+        const prevEl = document.getElementById(`btn-status-${statusType}-${rowIndex - 1}`);
+        if (prevEl) prevEl.focus();
+      } else if (key === 'Enter' || key === ' ') {
+        event.preventDefault();
+        if (row && statusType) {
+          this.setAttendanceStatus(row, statusType);
+        }
+      }
+      return;
+    }
+
+    if (key === 'ArrowUp') {
+      event.preventDefault();
+      const prevEl = document.getElementById(colType === 'wh' ? `select-wh-${rowIndex - 1}` : `input-${colType}-${rowIndex - 1}`);
+      if (prevEl) {
+        (prevEl as HTMLElement).focus();
+        (prevEl as HTMLInputElement).select?.();
+      }
+    } else if (key === 'ArrowDown' || key === 'Enter') {
+      event.preventDefault();
+      const nextEl = document.getElementById(colType === 'wh' ? `select-wh-${rowIndex + 1}` : `input-${colType}-${rowIndex + 1}`);
+      if (nextEl) {
+        (nextEl as HTMLElement).focus();
+        (nextEl as HTMLInputElement).select?.();
+      } else {
+        (event.target as HTMLElement).blur();
+      }
+    } else if (key === 'ArrowLeft') {
+      const target = event.target as HTMLInputElement;
+      const isAtEnd = target.selectionStart === target.selectionEnd && target.selectionStart === (target.value || '').length;
+      if (isAtEnd || target.type === 'number' || target.tagName === 'SELECT') {
+        event.preventDefault();
+        let nextColId = '';
+        if (colType === 'eff') nextColId = `input-ot-${rowIndex}`;
+        else if (colType === 'ot') nextColId = `input-adv-${rowIndex}`;
+        else if (colType === 'adv') nextColId = `input-note-${rowIndex}`;
+        else if (colType === 'note') nextColId = `select-wh-${rowIndex}`;
+        if (nextColId) {
+          const el = document.getElementById(nextColId);
+          if (el) {
+            (el as HTMLElement).focus();
+            (el as HTMLInputElement).select?.();
+          }
+        }
+      }
+    } else if (key === 'ArrowRight') {
+      const target = event.target as HTMLInputElement;
+      const isAtStart = target.selectionStart === 0 && target.selectionEnd === 0;
+      if (isAtStart || target.type === 'number' || target.tagName === 'SELECT') {
+        event.preventDefault();
+        let prevColId = '';
+        if (colType === 'wh') prevColId = `input-note-${rowIndex}`;
+        else if (colType === 'note') prevColId = `input-adv-${rowIndex}`;
+        else if (colType === 'adv') prevColId = `input-ot-${rowIndex}`;
+        else if (colType === 'ot') prevColId = `input-eff-${rowIndex}`;
+        else if (colType === 'eff') {
+          const activeStatus = row?.status || 'MISSION';
+          prevColId = `btn-status-${activeStatus}-${rowIndex}`;
+          if (!document.getElementById(prevColId)) {
+            prevColId = `btn-status-MISSION-${rowIndex}`;
+          }
+        }
+        if (prevColId) {
+          const el = document.getElementById(prevColId);
+          if (el) {
+            (el as HTMLElement).focus();
+            (el as HTMLInputElement).select?.();
+          }
+        }
+      }
+    } else if (key === 'Escape') {
+      event.preventDefault();
+      (event.target as HTMLElement).blur();
+    }
   }
 
   // --- متدهای کمکی و تاریخ ---
@@ -1366,17 +1590,34 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
 
   private syncYearMonthFromDailyDate(): void {
     if (this.selectedDateShamsi) {
-      this.selectedYearMonth = syncYearMonthFromDailyDate(this.selectedDateShamsi);
-      this.fiscalYear = this.selectedDateShamsi.split('/')[0];
+      const parts = this.selectedDateShamsi.split('/');
+      if (parts.length >= 2) {
+        this.selectedYearMonth = `${parts[0]}/${parts[1]}`;
+        this.fiscalYear = parts[0];
+      }
     }
   }
 
   private shiftShamsiDay(dateStr: string, deltaDays: number): string {
-    return shiftShamsiDay(dateStr, deltaDays);
+    try {
+      const parts = dateStr.split('/').map(p => parseInt(p, 10));
+      if (parts.length !== 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) return dateStr;
+      const g = jalaliToGregorian(parts[0], parts[1], parts[2]);
+      const d = new Date(g.gy, g.gm - 1, g.gd);
+      d.setDate(d.getDate() + deltaDays);
+      const j = gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+      const pad = (n: number) => n < 10 ? '0' + n : String(n);
+      return `${j.jy}/${pad(j.jm)}/${pad(j.jd)}`;
+    } catch {
+      return dateStr;
+    }
   }
 
   private getTodayShamsi(): string {
-    return getTodayShamsi();
+    const d = new Date();
+    const j = gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    const pad = (n: number) => n < 10 ? '0' + n : String(n);
+    return `${j.jy}/${pad(j.jm)}/${pad(j.jd)}`;
   }
 
   toggleMonthPicker(event?: Event): void {
@@ -1438,7 +1679,40 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   }
 
   get attendanceCounts() {
-    return computeAttendanceCounts(this.attendanceRows);
+    let present = 0;
+    let half = 0;
+    let absent = 0;
+    let leave = 0;
+    let mission = 0;
+    let other = 0;
+    let totalEffectiveHours = 0;
+    let totalOvertimeHours = 0;
+    let totalAdvance = 0;
+
+    for (const r of (this.attendanceRows || [])) {
+      if (r.status === 'PRESENT_10H') present++;
+      else if (r.status === 'HALF_5H') half++;
+      else if (r.status === 'ABSENT') absent++;
+      else if (r.status === 'LEAVE' || r.status === 'HOURLY_LEAVE') leave++;
+      else if (r.status === 'MISSION') mission++;
+      else if (r.status) other++;
+
+      totalEffectiveHours += Number(r.effective_hours) || 0;
+      totalOvertimeHours += Number(r.overtime_hours) || 0;
+      totalAdvance += Number(r.advance_payment) || 0;
+    }
+    return {
+      present,
+      half,
+      absent,
+      leave,
+      mission,
+      other,
+      total: this.attendanceRows.length,
+      totalEffectiveHours,
+      totalOvertimeHours,
+      totalAdvance
+    };
   }
 
   get attendanceRegistrationState(): {
@@ -1447,7 +1721,18 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     totalCount: number;
     label: string;
   } {
-    return computeAttendanceRegistrationState(this.attendanceRows);
+    const total = this.attendanceRows.length;
+    if (total === 0) {
+      return { status: 'none', savedCount: 0, totalCount: 0, label: 'پیش‌نویس (بدون پرسنل)' };
+    }
+    const saved = this.attendanceRows.filter(r => !!r.is_existing || !!r.attendance_id).length;
+    if (saved === 0) {
+      return { status: 'none', savedCount: 0, totalCount: total, label: 'پیش‌نویس (ذخیره‌نشده)' };
+    } else if (saved === total) {
+      return { status: 'full', savedCount: saved, totalCount: total, label: `نهایی (${saved} از ${total})` };
+    } else {
+      return { status: 'partial', savedCount: saved, totalCount: total, label: `ثبت ناقص (${saved} از ${total})` };
+    }
   }
 
   @HostListener('document:click')
