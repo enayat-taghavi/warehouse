@@ -444,6 +444,10 @@ def send_message(ls_info: dict, cascade_id: str, text: str, model_enum: str):
             "plannerConfig": {
                 "requestedModel": {"model": model_enum},
                 "planModel": model_enum,
+                # از به‌روزرسانی ۲.۲۳.۱ (۱۵ اکتبر ۲۰۲۶) فرمان‌ها در ترمینال IDE در وضعیت RUNNING گیر می‌کنند؛
+                # اجرای مستقیم با خود language server (Go) درست کار می‌کند.
+                "toolConfig": {"runCommand": {"forceGoTerminalExecution": True,
+                                              "enableIdeTerminalExecution": False}},
             }
         },
     }
