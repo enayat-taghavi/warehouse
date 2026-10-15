@@ -2,12 +2,14 @@ import uuid
 from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from warehouses.models import Warehouse
+from companies.models import Company, UserCompanyAccess
 from inventory.models import Item, CountTask, CountTaskHistory, DocTask, DocTaskHistory, ItemFieldDefinition
 from inventory.serializers import DocTaskSerializer, ItemSerializer
 from inventory.views import _soft_delete_items_cascade
@@ -23,9 +25,16 @@ class OfflineSystemRemediationTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
+        self.company, _ = Company.objects.get_or_create(
+            code="TEST-OFFLINE-CO",
+            defaults={"name": "شرکت تستی آفلاین", "has_warehouse_module": True}
+        )
+
         self.warehouse = Warehouse.objects.create(
             name="انبار مرکزی تست آفلاین",
-            project_name="پروژه تست"
+            project_name="پروژه تست",
+            company_id=self.company.id,
+            company_name=self.company.name
         )
 
         self.user = User.objects.create_superuser(
@@ -38,10 +47,18 @@ class OfflineSystemRemediationTests(TestCase):
             username="counter_offline",
             password="Password123!"
         )
-        p1 = Permission.objects.get(codename='view_sys_counter')
-        p2 = Permission.objects.get(codename='can_act_as_counter')
-        p3 = Permission.objects.get(codename='view_wh_stocktaking')
-        self.counter.user_permissions.add(p1, p2, p3)
+        ct = ContentType.objects.get_for_model(User)
+        for code in ['view_sys_counter', 'can_act_as_counter', 'view_wh_stocktaking']:
+            p, _ = Permission.objects.get_or_create(content_type=ct, codename=code, defaults={'name': code})
+            self.counter.user_permissions.add(p)
+
+        UserCompanyAccess.objects.create(
+            user=self.counter,
+            company=self.company,
+            access_level='workspace_full',
+            is_default=True
+        )
+        self.warehouse.assigned_users.add(self.counter)
 
         self.client.force_authenticate(user=self.user)
 

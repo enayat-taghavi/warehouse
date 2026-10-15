@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from warehouses.models import Warehouse
+from companies.models import Company, UserCompanyAccess
 from settings_core.models import SystemSetting
 from inventory.models import Item, CountTask, CountTaskHistory, ItemFieldDefinition
 
@@ -20,14 +21,22 @@ class BaseInventoryTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-        # ۱. ساخت انبارهای تستی (انبار اصلی و انبار دوم جهت تست ایزولاسیون)
+        # ۱. ساخت یا دریافت شرکت تستی و انبارهای تستی (انبار اصلی و انبار دوم جهت تست ایزولاسیون)
+        self.company, _ = Company.objects.get_or_create(
+            code="TEST-CO",
+            defaults={"name": "شرکت تستی انبار", "has_warehouse_module": True}
+        )
         self.warehouse = Warehouse.objects.create(
             name="انبار مرکزی پروژه شیراز",
-            project_name="پروژه شیراز"
+            project_name="پروژه شیراز",
+            company_id=self.company.id,
+            company_name=self.company.name
         )
         self.warehouse2 = Warehouse.objects.create(
             name="انبار فرعی بوشهر",
-            project_name="پروژه بوشهر"
+            project_name="پروژه بوشهر",
+            company_id=self.company.id,
+            company_name=self.company.name
         )
 
         # ۲. ساخت کاربران با سطوح دسترسی تفکیک‌شده (RBAC)
@@ -99,6 +108,16 @@ class BaseInventoryTestCase(TestCase):
             last_name="عادی",
             password="Password123!"
         )
+
+        # انتساب کاربران مجاز به شرکت و انبار (Scoped Users)
+        for u in [self.manager, self.supervisor, self.counter, self.counter2]:
+            UserCompanyAccess.objects.create(
+                user=u,
+                company=self.company,
+                access_level='workspace_full',
+                is_default=True
+            )
+        self.warehouse.assigned_users.add(self.manager, self.supervisor, self.counter, self.counter2)
 
         # ۳. ساخت اقلام نمونه با تنوع مقادیر و مشخصات
         self.item1 = Item.objects.create(
@@ -319,6 +338,7 @@ class InventoryDispatchAndRoutingTests(BaseInventoryTestCase):
 
     def test_06_multi_warehouse_dispatch_isolation(self):
         """تست ایزولاسیون انبارها: ارجاع انبار ۱ نباید بر انبار ۲ تاثیر بگذارد"""
+        self.warehouse2.assigned_users.add(self.manager, self.counter)
         self.client.force_authenticate(user=self.manager)
         resp = self.client.post('/api/inventory/items/bulk_assign/', {
             'item_ids': [self.item_wh2.id],

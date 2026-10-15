@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from warehouses.models import Warehouse
+from companies.models import Company, UserCompanyAccess
 from settings_core.models import SystemSetting
 from inventory.models import Item, DocTask, DocTaskHistory, ItemFieldDefinition
 from inventory.serializers import DocTaskSerializer
@@ -39,10 +40,16 @@ class FinancialDocsCycleTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-        # ۱. ساخت انبار
+        # ۱. ساخت شرکت تستی و انبار
+        self.company, _ = Company.objects.get_or_create(
+            code="TEST-DOC-CO",
+            defaults={"name": "شرکت تستی اسناد", "has_warehouse_module": True}
+        )
         self.warehouse = Warehouse.objects.create(
             name="انبار مرکزی اسناد و کالا",
-            project_name="پروژه مالی شیراز"
+            project_name="پروژه مالی شیراز",
+            company_id=self.company.id,
+            company_name=self.company.name
         )
 
         # ۲. ساخت کاربران با سطوح دسترسی
@@ -97,6 +104,16 @@ class FinancialDocsCycleTests(TestCase):
         self.other_worker = self._assign_perms(self.other_worker, [
             'view_wh_customs'
         ])
+
+        # انتساب کاربران مجاز به شرکت و انبار (Scoped Users)
+        for u in [self.manager, self.supervisor, self.doc_worker, self.other_worker]:
+            UserCompanyAccess.objects.create(
+                user=u,
+                company=self.company,
+                access_level='workspace_full',
+                is_default=True
+            )
+        self.warehouse.assigned_users.add(self.manager, self.supervisor, self.doc_worker, self.other_worker)
 
         # ۳. ساخت اقلام نمونه
         self.item1 = Item.objects.create(

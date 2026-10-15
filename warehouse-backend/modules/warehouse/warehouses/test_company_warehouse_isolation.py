@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from rest_framework import status
 from rest_framework.test import APIClient
 from warehouses.models import Warehouse
 from companies.models import Company, UserCompanyAccess
@@ -80,7 +81,7 @@ class CompanyWarehouseIsolationTestCase(TestCase):
     def test_superuser_sees_all_warehouses_without_company_filter(self):
         self.client.force_authenticate(user=self.superuser)
         response = self.client.get('/api/warehouses/')
-        self.assertEqual(response.status_code, status.status.HTTP_200_OK if hasattr(status, 'status') else 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         names = [w['name'] for w in response.data]
         self.assertIn("انبار مرکزی فارس عالیش", names)
         self.assertIn("انبار دالان پاینده توان", names)
