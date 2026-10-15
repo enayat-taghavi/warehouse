@@ -1,11 +1,11 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ItemPhoto } from '../models/item.model';
 import { NetworkStatusService } from './network-status.service';
 import { offlineDb, PhotoQueueEntry } from './offline-db';
 import { isServerUnreachable } from './server-reachability';
-import { ModuleRegistryService } from '../modules/module-registry.service';
+import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 
 /**
  * نتیجه یک دور تخلیه صف عکس — با همان منطق سه‌حالته صف اصلی
@@ -79,7 +79,7 @@ export class PhotoUploadQueueService {
   private static instance: PhotoUploadQueueService;
   private network = NetworkStatusService.getInstance();
   private flushing = false;
-  private moduleRegistry = inject(ModuleRegistryService);
+  private moduleRegistry = getModuleRegistry();
 
   /** بعد از این تعداد تلاش ناموفق فقط پیام هشدار عوض می‌شود؛ رکورد نمی‌سوزد */
   private readonly MAX_RETRIES = 3;
@@ -106,7 +106,7 @@ export class PhotoUploadQueueService {
 
   static getInstance(): PhotoUploadQueueService {
     if (!PhotoUploadQueueService.instance) {
-      PhotoUploadQueueService.instance = inject(PhotoUploadQueueService);
+      PhotoUploadQueueService.instance = new PhotoUploadQueueService();
     }
     return PhotoUploadQueueService.instance;
   }

@@ -11,4 +11,11 @@ describe('PhotoUploadQueueService', () => {
     expect(service).toBeTruthy();
     expect(PhotoUploadQueueService.getInstance()).toBe(service);
   });
+
+  it('PhotoUploadQueueService.getInstance() بیرون از TestBed.runInInjectionContext بدون خطا نمونه برمیگرداند', () => {
+    const instance = PhotoUploadQueueService.getInstance();
+    expect(instance).toBeTruthy();
+    expect(instance instanceof PhotoUploadQueueService).toBe(true);
+    expect(instance.pendingCount$).toBeDefined();
+  });
 });

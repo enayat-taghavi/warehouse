@@ -1,10 +1,10 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { offlineDb, warehouseOfflineDb, financeOfflineDb, SyncCursorEntry } from './offline-db';
 import { NetworkStatusService } from './network-status.service';
 import { isServerUnreachable } from './server-reachability';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ModuleRegistryService } from '../modules/module-registry.service';
+import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 
 /**
  * SyncPullService — دانلود دلتای سرور به Dexie (نیمهٔ Pull معماری Local-First)
@@ -92,7 +92,7 @@ export class SyncPullService {
   private static instance: SyncPullService;
   private network = NetworkStatusService.getInstance();
   private inFlight = false;
-  private moduleRegistry = inject(ModuleRegistryService);
+  private moduleRegistry = getModuleRegistry();
 
   private _isPulling$ = new BehaviorSubject<boolean>(false);
   readonly isPulling$ = this._isPulling$.asObservable();
@@ -110,7 +110,7 @@ export class SyncPullService {
 
   static getInstance(): SyncPullService {
     if (!SyncPullService.instance) {
-      SyncPullService.instance = inject(SyncPullService);
+      SyncPullService.instance = new SyncPullService();
     }
     return SyncPullService.instance;
   }

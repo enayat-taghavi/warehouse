@@ -34,7 +34,10 @@ const OPERATIONS_SPEC: WhFrontendModule = {
   }
 };
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root',
+  useFactory: () => getModuleRegistry(),
+})
 export class ModuleRegistryService {
   private static readonly STORAGE_KEY = 'wh_installed_modules';
 
