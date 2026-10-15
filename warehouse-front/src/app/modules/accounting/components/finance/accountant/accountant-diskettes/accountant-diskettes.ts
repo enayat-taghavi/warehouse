@@ -6,7 +6,7 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
-import { PersonnelApiService } from '../../../../../../core/api/personnel-api.service';
+import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { WarehouseHttpService } from '../../../../../../core/http/warehouse-http.service';
 import { ModuleRegistryService } from '../../../../../../core/modules/module-registry.service';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';

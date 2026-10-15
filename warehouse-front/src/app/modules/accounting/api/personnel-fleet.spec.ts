@@ -80,13 +80,13 @@ describe('Fleet and Personnel Integration Frontend Fast Tests (10 Vehicles & Div
 
       // بررسی خودروی شرکتی (سرویس دارد ولی مبلغ کل صفر است)
       const companyRow = res.rows.find((r: any) => r.vehicle_id === 5);
-      expect(companyRow.total_trips).toBe(20);
-      expect(companyRow.total_amount).toBe(0);
+      expect(companyRow!.total_trips).toBe(20);
+      expect(companyRow!.total_amount).toBe(0);
 
       // بررسی خودروی استیجاری
       const contractRow = res.rows.find((r: any) => r.vehicle_id === 1);
-      expect(contractRow.total_trips).toBe(5);
-      expect(contractRow.total_amount).toBe(5 * 1200000);
+      expect(contractRow!.total_trips).toBe(5);
+      expect(contractRow!.total_amount).toBe(5 * 1200000);
     });
 
     expect(mockApiService.get).toHaveBeenCalledWith(
@@ -164,7 +164,7 @@ describe('Fleet and Personnel Integration Frontend Fast Tests (10 Vehicles & Div
 
     mockApiService.get.mockReturnValue(of(mockLogs));
 
-    personnelApi.getVehicleTripAuditLogs({ vehicle_id: 1, date_shamsi: '1405/06/05' }).subscribe(logs => {
+    personnelApi.getVehicleTripAuditLogs({ vehicle_id: 1, date_shamsi: '1405/06/05' } as any).subscribe(logs => {
       expect(logs.length).toBe(1);
       expect(logs[0].field_name).toBe('unit_rate');
       expect(logs[0].new_value).toBe('1300000');

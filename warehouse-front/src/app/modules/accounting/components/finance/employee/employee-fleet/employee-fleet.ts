@@ -6,7 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
-import { PersonnelApiService } from '../../../../../../core/api/personnel-api.service';
+import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { WarehouseHttpService } from '../../../../../../core/http/warehouse-http.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { SKIP_OFFLINE } from '../../../../../../core/interceptors/offline.interceptor';

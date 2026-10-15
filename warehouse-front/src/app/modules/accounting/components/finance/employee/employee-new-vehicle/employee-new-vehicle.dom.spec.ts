@@ -14,7 +14,7 @@ import * as path from 'path';
 import { EmployeeNewVehicleHubComponent } from './employee-new-vehicle';
 import { ExcelImportModal } from '../../../../../../shared/components/excel-import-modal/excel-import-modal';
 import { AuthService } from '../../../../../../core/auth/auth.service';
-import { PersonnelApiService } from '../../../../../../core/api/personnel-api.service';
+import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { VehicleDriverProfile, ProjectSection } from '../../../../../../core/models/personnel.model';

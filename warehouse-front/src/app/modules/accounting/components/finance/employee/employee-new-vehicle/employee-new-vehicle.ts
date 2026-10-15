@@ -11,7 +11,7 @@ import {
   VehicleDocument,
   WorkflowAuditLog
 } from '../../../../../../core/models/personnel.model';
-import { PersonnelApiService } from '../../../../../../core/api/personnel-api.service';
+import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';

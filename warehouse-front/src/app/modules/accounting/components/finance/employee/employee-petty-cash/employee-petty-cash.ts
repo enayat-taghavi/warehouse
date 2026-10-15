@@ -8,7 +8,7 @@ import {
   PettyCashTransaction,
   PettyCashBalanceSummary
 } from '../../../../../../core/models/personnel.model';
-import { PersonnelApiService } from '../../../../../../core/api/personnel-api.service';
+import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { gregorianToJalali } from '../../../../../../core/utils/date-utils';

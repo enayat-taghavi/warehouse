@@ -7,7 +7,7 @@ import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { hasStructureWritePermission } from '../../../../../core/auth/auth.guard';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
-import { PersonnelApiService } from '../../../../../core/api/personnel-api.service';
+import { PersonnelApiService } from '../../../api/personnel-api.service';
 import { AccountsHttpService, User, ImportResult } from '../../../../../core/http/accounts-http.service';
 import { WebSocketService } from '../../../../../core/http/websocket.service';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';

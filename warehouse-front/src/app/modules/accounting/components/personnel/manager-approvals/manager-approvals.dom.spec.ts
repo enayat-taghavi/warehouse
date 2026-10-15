@@ -16,7 +16,7 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../core/services/state.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { PersonnelApiService } from '../../../../../core/api/personnel-api.service';
+import { PersonnelApiService } from '../../../api/personnel-api.service';
 import { WarehouseHttpService } from '../../../../../core/http/warehouse-http.service';
 
 try {
