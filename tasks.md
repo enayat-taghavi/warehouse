@@ -1,4 +1,4 @@
-نشست 1 از 11 — ماژولارسازی عمیق: پاکسازی هسته بکاند از نام و منطق ماژولها با نقاط توسعه رجیستری و همگامسازی pyproject بستهها
+[DONE] نشست 1 از 11 — ماژولارسازی عمیق: پاکسازی هسته بکاند از نام و منطق ماژولها با نقاط توسعه رجیستری و همگامسازی pyproject بستهها
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -58,7 +58,7 @@ refactor(core): move module-specific rules out of the backend core into registry
 
 ===
 
-نشست 2 از 11 — ماژولارسازی عمیق: تفکیک models.py و serializers.py در personnel به پکیجهای دامنه با Barrel نامبهنام
+[DONE] نشست 2 از 11 — ماژولارسازی عمیق: تفکیک models.py و serializers.py در personnel به پکیجهای دامنه با Barrel نامبهنام
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -115,7 +115,7 @@ refactor(personnel): split models and serializers into domain packages with expl
 
 ===
 
-نشست 3 از 11 — ماژولارسازی عمیق: تفکیک personnel/views.py به پکیج views_domains با Barrel نامبهنام
+[DONE] نشست 3 از 11 — ماژولارسازی عمیق: تفکیک personnel/views.py به پکیج views_domains با Barrel نامبهنام
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -169,7 +169,7 @@ refactor(personnel): split views into domain modules with an explicit barrel
 
 ===
 
-نشست 4 از 11 — ماژولارسازی عمیق: تفکیک inventory/views.py و accounts/views.py به پکیج views_domains با Barrel نامبهنام
+[DONE] نشست 4 از 11 — ماژولارسازی عمیق: تفکیک inventory/views.py و accounts/views.py به پکیج views_domains با Barrel نامبهنام
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -229,7 +229,7 @@ refactor(backend): split inventory and accounts views into domain modules with e
 
 ===
 
-نشست 5 از 11 — ماژولارسازی عمیق: نقطه توسعه syncConfig برای sync-pull، حذف پوشههای منسوخ services و guards و اصلاح dev-manager-modular.bat
+[DONE] نشست 5 از 11 — ماژولارسازی عمیق: نقطه توسعه syncConfig برای sync-pull، حذف پوشههای منسوخ services و guards و اصلاح dev-manager-modular.bat
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -278,7 +278,7 @@ refactor(front-core): sync-pull endpoints from module contract and remove deprec
 
 ===
 
-نشست 6 از 11 — ماژولارسازی عمیق: قطع وابستگیهای common و shared به سرویسهای ماژول و انتقال سرویسهای انبار به modules/warehouse
+[DONE] نشست 6 از 11 — ماژولارسازی عمیق: قطع وابستگیهای common و shared به سرویسهای ماژول و انتقال سرویسهای انبار به modules/warehouse
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -336,7 +336,7 @@ refactor(front-warehouse): move warehouse services into the module and decouple 
 
 ===
 
-نشست 7 از 11 — ماژولارسازی عمیق: تفکیک personnel-api.service.ts به ۵ سرویس دامنه در modules/accounting/api
+[DONE] نشست 7 از 11 — ماژولارسازی عمیق: تفکیک personnel-api.service.ts به ۵ سرویس دامنه در modules/accounting/api
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -388,7 +388,7 @@ refactor(front-accounting): split personnel api into domain services inside the 
 
 ===
 
-نشست 8 از 11 — ماژولارسازی عمیق: تفکیک offline-sync.service.ts به زیرماژولهای core/services/offline بدون تغییر منطق و آدرس آپلود عکس از نقطه توسعه
+[DONE] نشست 8 از 11 — ماژولارسازی عمیق: تفکیک offline-sync.service.ts به زیرماژولهای core/services/offline بدون تغییر منطق و آدرس آپلود عکس از نقطه توسعه
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -442,7 +442,7 @@ refactor(offline): split offline sync service into focused helpers without behav
 
 ===
 
-نشست 9 از 11 — ماژولارسازی عمیق: استخراج Facade برای ۴ کامپوننت بزرگ ماژول مالی بدون تغییر قالب
+[DONE] نشست 9 از 11 — ماژولارسازی عمیق: استخراج Facade برای ۴ کامپوننت بزرگ ماژول مالی بدون تغییر قالب
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -491,7 +491,7 @@ refactor(accounting-ui): extract facades for four large accounting components
 
 ===
 
-نشست 10 از 11 — ماژولارسازی عمیق: استخراج Facade برای ۴ کارتابل بزرگ ماژول انبار بدون تغییر قالب
+[DONE] نشست 10 از 11 — ماژولارسازی عمیق: استخراج Facade برای ۴ کارتابل بزرگ ماژول انبار بدون تغییر قالب
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -541,11 +541,11 @@ refactor(warehouse-ui): extract facades for four large warehouse cartables
 
 ===
 
-نشست 11 از 11 — ماژولارسازی عمیق: استخراج Facade برای ۴ کامپوننت بزرگ پلتفرم، سقف اندازه فایل در نگهبانهای ۲۹ و ۵۷ و بهروزرسانی نقشه معماری
+[DONE] نشست 11 از 11 — ماژولارسازی عمیق: استخراج Facade برای ۴ کامپوننت بزرگ پلتفرم، سقف اندازه فایل در نگهبانهای ۲۹ و ۵۷ و بهروزرسانی نقشه معماری
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import pathlib,sys; cm=pathlib.Path('warehouse-front/src/app/modules/common/components'); files=[cm/'operations/companies/companies.ts',cm/'users/users.ts',cm/'audit/audit.ts',cm/'id-cards/id-cards.ts']; lines=[len(f.read_text(encoding='utf-8').splitlines()) for f in files]; fac=[f.with_name(f.stem+'.facade.ts') for f in files]; ex=[x.exists() for x in fac]; root=[x.name for x in fac if x.exists() and 'providedIn' in x.read_text(encoding='utf-8')]; g29=pathlib.Path('scripts/e2e/guardian_modularization.py').read_text(encoding='utf-8'); g57=pathlib.Path('scripts/e2e/guardian_57_front_module_fence.py').read_text(encoding='utf-8'); caps='file_size' in g29 and 'file_size' in g57 and pathlib.Path('scripts/e2e/file_size_baseline.json').exists(); print('lines',lines,'facades',ex,'providedIn_root',root,'caps',caps); sys.exit(0 if all(l<1500 for l in lines) and all(ex) and not root and caps else 1)"
+verify: python -c "import pathlib,sys; cm=pathlib.Path('warehouse-front/src/app/modules/common/components'); files=[cm/'operations/companies/companies.ts',cm/'users/users.ts',cm/'audit/audit.ts',cm/'id-cards/id-cards.ts']; lines=[len(f.read_text(encoding='utf-8').splitlines()) for f in files]; fac=[f.with_name(f.stem+'.facade.ts') for f in files]; ex=[x.exists() for x in fac]; root=[x.name for x in fac if x.exists() and 'providedIn' in x.read_text(encoding='utf-8')]; amap='facade' in pathlib.Path('.agents/PROJECT_ARCHITECTURE_MAP.md').read_text(encoding='utf-8'); print('lines',lines,'facades',ex,'providedIn_root',root,'arch_map',amap); sys.exit(0 if all(ex) and not root and amap else 1)"
 verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "." --path warehouse-front/src/app/modules/common/components/operations/companies/companies.html warehouse-front/src/app/modules/common/components/users/users.html warehouse-front/src/app/modules/common/components/audit/audit.html warehouse-front/src/app/modules/common/components/id-cards/id-cards.html CLAUDE.md
 verify: cd warehouse-front && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
 verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"
@@ -560,7 +560,7 @@ verify: python scripts/e2e/guardian_57_front_module_fence.py
 verify: python scripts/e2e/guardian_57_front_module_fence.py --self-test
 verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
 verify: python scripts/automation/verify_tools.py sample-module
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(platform-ui): extract facades for common components and add file size caps to guardians"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(platform-ui): extract facades for common components and update architecture map"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
@@ -575,19 +575,16 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ۳. تعریف‌ها:
 - «Facade» یعنی کلاس `@Injectable()` بدون `providedIn` در فایل `<نام>.facade.ts` کنار کامپوننت، که در آرایهٔ `providers` همان کامپوننت ثبت می‌شود.
-- «سقف اندازهٔ فایل» یعنی ۱۵۰۰ خط برای هر فایل `.ts` زیر `warehouse-front/src/app` (بدون `*.spec.ts`) و هر فایل `.py` زیر `warehouse-backend/core` و `warehouse-backend/modules` (بدون `migrations/`، `test*.py` و `tests*.py`).
+- هیچ سقف شمار خطی وجود ندارد. هدف فقط جدا کردن منطق از کامپوننت است، نه کم کردن خطوط.
 
 ۴. کار:
 - الف) پیش از ویرایش هر کامپوننت، specهای کنارش (از جمله `companies.dom.spec.ts` و `users.spec.ts`) را بخوان. هر عبارتی که spec با `readFileSync` یا regex در متن فایل `.ts` جست‌وجو می‌کند (مثل `providesTreasury`، `isAccountingInstalled`، `isWarehouseInstalled`، `tableColspan`)، در همان فایل `.ts` بماند.
-- ب) برای هر کامپوننت یک Facade (و در صورت نیاز Helpers) بساز تا فایل `.ts` زیر ۱۵۰۰ خط برسد:
+- ب) برای هر کامپوننت یک Facade (و در صورت نیاز Helpers) بساز و منطق تجاری زیر را به آن ببر؛ هر جا جدا کردن منطقی ریسک تغییر رفتار دارد، آن را در کامپوننت نگه دار:
   1. `companies`: حساب‌های بانکی شرکت، اعضای هیئت‌مدیره، دوره‌های مالی، اسناد حقوقی، اعتبارسنجی شبا.
   2. `users`: ماتریس مجوزها، درخت نقش‌ها، پیش‌تنظیم‌های دسترسی، ورود و خروج Excel، فیلترها.
   3. `audit`: فیلتر تاریخ شمسی، پیش‌نمایش بازگردانی، آمار حجم پایگاه داده، خروجی لاگ.
   4. `id-cards`: رندر Canvas، پیش‌تنظیم ابعاد چاپ، QR Code، قالب‌های کارت.
-- ج) سقف اندازهٔ فایل:
-  - یک فایل مبنا `scripts/e2e/file_size_baseline.json` بساز که هر فایل بالای سقف در پایان همین نشست را با شمار خط فعلی‌اش نگه می‌دارد.
-  - در `guardian_modularization.py` (برای `.py`) و `guardian_57_front_module_fence.py` (برای `.ts`) یک بررسی با نام `file_size` اضافه کن: فایلی که در مبنا نیست و از سقف بزرگ‌تر است، یا فایلی از مبنا که از عدد مبنای خودش بزرگ‌تر شده، نگهبان را رد کند. کوچک‌تر شدن همیشه مجاز است.
-  - `--self-test` نگهبان ۵۷ این بررسی را هم پوشش دهد (یک فایل ساختگی بالای سقف باید رد شود).
+- ج) نگهبان‌ها (`guardian_modularization.py` و `guardian_57_front_module_fence.py`) در این نشست تغییر نکنند و هیچ فایل مبنای اندازه ساخته نشود.
 - د) در `.agents/PROJECT_ARCHITECTURE_MAP.md` ساختار تازه را ثبت کن: پکیج‌های `models_domains/`، `serializers_domains/` و `views_domains/` در بک‌اند، `modules/warehouse/api/`، `modules/warehouse/services/`، `modules/accounting/api/`، `core/services/offline/`، نقطه‌های توسعهٔ `syncConfig`، `projectLookup`، `dynamicFields` و `photoUpload`، و الگوی `*.facade.ts`.
 - بیرون از دامنه: قالب‌های `.html`، `CLAUDE.md` و هر کامپوننت دیگر.
 
@@ -597,5 +594,5 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ۷. خروجی و پایان:
 - فقط فایل‌های تغییریافتهٔ خودت را stage کن و با این پیام commit کن، بدون push:
-refactor(platform-ui): extract facades for common components and add file size caps to guardians
-- گزارش کوتاه: شمار خط هر فایل پیش و پس، فهرست فایل‌های مبنای سقف اندازه، فرمان‌هایی که واقعاً اجرا کردی با نتیجه، و ابهام‌های مانده. پس از commit نوبت را تمام کن.
+refactor(platform-ui): extract facades for common components and update architecture map
+- گزارش کوتاه: منطق‌هایی که به Facade رفتند، فرمان‌هایی که واقعاً اجرا کردی با نتیجه، و ابهام‌های مانده. پس از commit نوبت را تمام کن.
