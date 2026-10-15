@@ -26,7 +26,6 @@ verify: python -c "import ast,sys; src=open('warehouse-backend/modules/accountin
 verify: python scripts/automation/verify_tools.py django-check
 verify: python scripts/automation/verify_tools.py migrations-unchanged
 verify: python -c "import os,re,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests.test_vehicle_trip_actions_scope','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; m=re.search(r'Ran (\d+) test',o); n=int(m.group(1)) if m else 0; sk='skipped=' in o; print(o[-3000:]); print('exit',r.returncode,'ran',n,'skipped',sk); sys.exit(0 if r.returncode==0 and n>=12 and not sk else 1)"
-verify: python -c "import os,re,subprocess,sys; known=set(open('scratch/runner-cache/known_failures_trip_actions.txt',encoding='utf-8').read().split()); py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests','personnel','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; got=re.findall(r'^(?:ERROR|FAIL): \S+ \(([^)]+)\)',o,re.M); bad=sorted({x for x in got if x not in known}); ran=re.search(r'^Ran (\d+) test',o,re.M); print(o[-2000:]); print('ran',ran.group(1) if ran else None,'new failures:',bad); sys.exit(1 if bad or not ran else 0)"
 verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(scope): company scope in VehicleTripViewSet custom actions"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
@@ -99,7 +98,6 @@ verify: python -c "import ast,sys; src=open('warehouse-backend/modules/accountin
 verify: python scripts/automation/verify_tools.py django-check
 verify: python scripts/automation/verify_tools.py migrations-unchanged
 verify: python -c "import os,re,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests.test_vehicle_trip_actions_scope','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; m=re.search(r'Ran (\d+) test',o); n=int(m.group(1)) if m else 0; sk='skipped=' in o; print(o[-3000:]); print('exit',r.returncode,'ran',n,'skipped',sk); sys.exit(0 if r.returncode==0 and n>=20 and not sk else 1)"
-verify: python -c "import os,re,subprocess,sys; known=set(open('scratch/runner-cache/known_failures_trip_actions.txt',encoding='utf-8').read().split()); py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests','personnel','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; got=re.findall(r'^(?:ERROR|FAIL): \S+ \(([^)]+)\)',o,re.M); bad=sorted({x for x in got if x not in known}); ran=re.search(r'^Ran (\d+) test',o,re.M); print(o[-2000:]); print('ran',ran.group(1) if ran else None,'new failures:',bad); sys.exit(1 if bad or not ran else 0)"
 verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(scope): validate project and header company in trip write actions"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
@@ -153,4 +151,120 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - زیر `## گزارش پیشرفت` طرح یک بند تازه بنویس با عنوان «۲۴ مهر ۱۴۰۵ (2026-10-15)، Antigravity — اصلاح یافته‌های بازبین در actionهای نوشتنی سفر»، شامل جداگانه: هر یافته و رفع آن، فهرست فایل‌ها، آزمون‌هایی که واقعاً اجرا شد با نتیجه، و ابهام‌های مانده. عدد ساختگی ننویس. هیچ برچسب DONE یا FAILED ننویس. محتوا داخل همان <div dir="rtl"> موجود بماند.
 - فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
 fix(scope): validate project and header company in trip write actions
+- پس از commit نوبت را تمام کن. پایان نوبت پیش از commit شکست است.
+
+===
+
+[DONE] نشست 3 از 4 — دو آزمون حقوق شکستهٔ personnel.tests (مالیات Excel و دیسکت بیمه)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import subprocess,sys; f=subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True,encoding='utf-8').stdout.split(); ok={'warehouse-backend/modules/accounting/personnel/tests.py','warehouse-backend/modules/accounting/personnel/payroll_engine.py','warehouse-backend/modules/accounting/personnel/payroll_exports.py','warehouse-backend/modules/accounting/personnel/views.py','Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md'}; bad=[x for x in f if x not in ok]; print('files outside scope:',bad); sys.exit(1 if bad or not f else 0)"
+verify: python -c "import os,re,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','personnel.tests','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; got=re.findall(r'^(?:ERROR|FAIL): \S+ \(([^)]+)\)',o,re.M); sk=re.search(r'skipped=(\d+)',o); s=int(sk.group(1)) if sk else 0; print(o[-2500:]); print('failures',got,'skipped',s); sys.exit(0 if r.returncode==0 and not got and s<=2 else 1)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(personnel): fix payroll tax import and dsk export tests"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+۱. قواعد حیاتی:
+- فقط warehouse-backend/modules/accounting/personnel/tests.py را تغییر بده، مگر اینکه علت یک باگ واقعی در کد حقوق باشد؛ آن‌وقت فقط فایل مربوط در همان پوشه (payroll_engine.py، payroll_exports.py یا views.py)، و بند گزارش در فایل طرح. هیچ مدل، مایگریشن یا فرانتی تغییر نکند.
+- هیچ فایلی در Documents یا ریشهٔ مخزن ساخته یا عوض نشود، جز بند گزارش طرح.
+- push نکن. فقط فایل‌های خودت را stage کن؛ tasks.md، run_tasks.py، run_tasks.bat و tasks_history.md را stage نکن.
+- هرگز manage.py test بی‌برچسب اجرا نکن.
+- قواعد `.agents/AGENTS.md` بخش ۳، ۵ و ۱۰ برقرارند.
+
+۲. زمینه:
+- Claude در commit 685d22e خطاهای import آزمون‌های personnel را رفع کرد. فقط این دو آزمون در personnel.tests.PersonnelAppTests هنوز شکست می‌خورند:
+  - test_import_tax_excel_flow: AssertionError: 0 not greater than 0 روی res.data['matched_count']. فایل ورودی از فهرست possible_paths خوانده می‌شود (Documents/SalaryCalculation و ریشهٔ مخزن)، و کدملی پرسنل در آزمون 2450718214 گذاشته می‌شود.
+  - test_monthly_payroll_calculation_and_exports_flow: AssertionError: 972 not greater than 1000 روی طول ZIP خروجی export-dsk-zip.
+- تا پیش از commit f9e539b این دو آزمون به‌خاطر خطای import اصلاً اجرا نمی‌شدند، پس ممکن است انتظارشان از رفتارهای بعدی کهنه شده باشد.
+- hash فعلی HEAD را یادداشت کن.
+
+۳. کار این نشست:
+- برای هر آزمون علت ریشه‌ای را پیدا کن: کدام فایل ورودی پیدا شد، آیا کدملی‌ها در آن فایل با پرسنل آزمون می‌خوانند، و ZIP دیسکت دقیقاً چه فایل‌ها و چند ردیف دارد.
+- اگر انتظار آزمون کهنه است یا آزمون به فایل بیرونی ناپایدار وابسته است: آزمون را طوری درست کن که دادهٔ ورودی‌اش را خودش در حافظه بسازد (مثلاً کتاب‌کار openpyxl با همان ستون‌هایی که import-tax-excel می‌خواند و کدملی پرسنل آزمون)، و برای ZIP به‌جای طول خام، وجود DSKWOR00.DBF و DSKKAR00.DBF و ردیف پرسنل را بسنج. انتظار را سست نکن.
+- اگر باگ واقعی در کد حقوق است: کمترین اصلاح را در همان فایل کد بده و در گزارش بنویس. اگر اصلاح امن نیست، آزمون را با @unittest.skip('باگ برنامه: <شرح کوتاه>') نشانه بگذار و در گزارش بنویس (حداکثر ۲ skip).
+
+۴. فرمان‌هایی که خودت می‌توانی اجرا کنی، در پوشهٔ warehouse-backend با PYTHONUTF8=1 و PYTHONIOENCODING=utf-8: حداکثر پنج بار venv\Scripts\python.exe manage.py test personnel.tests.PersonnelAppTests --noinput. فرمان را در پس‌زمینه رها نکن. اگر فرمانی دو بار با یک خطا شکست، رویکرد را عوض کن.
+
+۵. پایان:
+- زیر `## گزارش پیشرفت` طرح یک بند تازه بنویس با عنوان «۲۴ مهر ۱۴۰۵ (2026-10-15)، Antigravity — دو آزمون حقوق personnel»، شامل جداگانه: علت ریشه‌ای هر آزمون، تغییرها، آیا باگ برنامه بود، و آزمون‌هایی که واقعاً اجرا شد با نتیجه. عدد ساختگی ننویس. هیچ برچسب DONE یا FAILED ننویس. محتوا داخل همان <div dir="rtl"> موجود بماند.
+- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
+test(personnel): fix payroll tax import and dsk export tests
+- پس از commit نوبت را تمام کن. پایان نوبت پیش از commit شکست است.
+
+===
+
+[DONE] نشست 4 از 4 — سفرهای خودروی بی‌شرکت و بی‌بخش، و سنجش warehouse_id در actionهای نوشتنی سفر (بک‌اند)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import subprocess,sys; f=subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True,encoding='utf-8').stdout.split(); ok={'warehouse-backend/modules/accounting/personnel/views.py','warehouse-backend/modules/accounting/personnel/report_entities.py','warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py','Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md'}; bad=[x for x in f if x not in ok]; print('files outside scope:',bad); sys.exit(1 if bad or 'warehouse-backend/modules/accounting/personnel/views.py' not in f else 0)"
+verify: python -c "import ast,sys; src=open('warehouse-backend/modules/accounting/personnel/views.py',encoding='utf-8').read(); t=ast.parse(src); fn={n.name:ast.get_source_segment(src,n) for n in t.body if isinstance(n,ast.FunctionDef)}; c=[n for n in t.body if isinstance(n,ast.ClassDef) and n.name=='VehicleTripViewSet'][0]; m={n.name:ast.get_source_segment(src,n) for n in c.body if isinstance(n,ast.FunctionDef)}; s=fn.get('scope_trips_for_user',''); re_src=open('warehouse-backend/modules/accounting/personnel/report_entities.py',encoding='utf-8').read(); rt=ast.parse(re_src); r=[ast.get_source_segment(re_src,n) for n in rt.body if isinstance(n,ast.FunctionDef) and n.name=='resolve_fleet_trips_scope']; r=r[0] if r else ''; h=m.get('_validate_write_target',''); p={'shared function exists':bool(s),'covers vehicle company':'vehicle__company_id' in s,'covers trip project company':'project__company_id' in s,'covers creator orphan rule':'vehicle__created_by' in s,'_scoped_trips reuses it':'scope_trips_for_user(' in m.get('_scoped_trips',''),'report resolver reuses it':'scope_trips_for_user(' in r,'helper takes warehouse_id':'warehouse_id' in h.split(')')[0],'helper uses registry':'company_of(' in h or 'user_extensions' in h}; p.update({k+' passes warehouse_id':'_validate_write_target(' in m.get(k,'') and 'warehouse_id' in m.get(k,'').split('_validate_write_target(')[1].split(')')[0] for k in ('bulk_save','update_day_trip','bulk_save_monthly_grid','import_monthly_excel')}); bad=[k for k,v in p.items() if not v]; print('failed:',bad); sys.exit(1 if bad else 0)"
+verify: python -c "import re,subprocess,sys; d=subprocess.run(['git','diff','{base}','HEAD','--','warehouse-backend/modules/accounting'],capture_output=True,text=True,encoding='utf-8').stdout; bad=re.findall(r'^\+\s*(?:from|import)\s+(?:warehouses|inventory)\b.*$',d,re.M); print('direct warehouse imports added:',bad); sys.exit(1 if bad else 0)"
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python -c "import os,re,subprocess,sys; py=os.path.abspath(r'warehouse-backend\venv\Scripts\python.exe'); r=subprocess.run([py,'manage.py','test','integration_tests.test_vehicle_trip_actions_scope','integration_tests.test_company_scope_reports_import','personnel.test_fleet_scenarios_10_vehicles','personnel.test_attendance_fleet_audit','--noinput'],cwd='warehouse-backend',capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1',PYTHONIOENCODING='utf-8')); o=r.stdout+r.stderr; m=re.search(r'Ran (\d+) test',o); n=int(m.group(1)) if m else 0; sk='skipped=' in o; print(o[-3000:]); print('exit',r.returncode,'ran',n,'skipped',sk); sys.exit(0 if r.returncode==0 and n>=60 and not sk else 1)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(scope): orphan vehicle trips and warehouse check in trip writes"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+۱. قواعد حیاتی:
+- فقط این فایل‌ها را تغییر بده: warehouse-backend/modules/accounting/personnel/views.py، warehouse-backend/modules/accounting/personnel/report_entities.py، warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py و بند گزارش در فایل طرح. هیچ مدل، مایگریشن یا فرانتی تغییر نکند.
+- ماژول حسابداری هیچ import مستقیمی از warehouses یا inventory نگیرد. انبار فقط از راه رجیستری هسته: company_of('warehouse', id) و contributions('user_extensions') از platform_core.registry.
+- هیچ رکوردی حذف یا بازنویسی نشود. سفرهای موجود فقط دیده‌شدنی‌تر می‌شوند؛ درخواست نامعتبر پیش از هر نوشتن رد می‌شود.
+- push نکن. فقط فایل‌های خودت را stage کن؛ tasks.md، run_tasks.py، run_tasks.bat و tasks_history.md را stage نکن.
+- هرگز manage.py test بی‌برچسب اجرا نکن.
+- قواعد `.agents/AGENTS.md` بخش ۳، ۵ و ۱۰ برقرارند.
+
+۲. زمینه، پیش از هر ویرایش بخوان:
+- دو ورودی آخر Antigravity و آخرین ورودی Claude زیر `## گزارش پیشرفت` در Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md.
+- در views.py: تابع‌های scope_vehicle_queryset و scope_personnel_for_user (الگوی تابع مشترک)، و در VehicleTripViewSet متدهای _scoped_vehicles، _scoped_trips، _validate_write_target و actionهای bulk_save، update_day_trip، bulk_save_monthly_grid و import_monthly_excel.
+- resolve_fleet_trips_scope در report_entities.py.
+- company_of و contributions در warehouse-backend/core/platform_core/registry.py، و _get_scoped_warehouses_qs و get_all_warehouses در warehouse-backend/modules/warehouse/warehouses/user_extension.py (فقط خواندن؛ این فایل را تغییر نده).
+- hash فعلی HEAD را یادداشت کن.
+
+۳. تعریف‌ها:
+- «خودروی یتیم»: VehicleDriverProfile با company خالی و section خالی. scope_vehicle_queryset آن را برای سازنده‌اش (created_by) نشان می‌دهد، ولی سفرهایش امروز از _scoped_trips دیده نمی‌شوند، چون مسیرهای شرکت سفر فقط section__project__company_id و vehicle__section__project__company_id است.
+- «انبار در دامنه» برای غیرسوپریوزر: شناسه‌ای که در خروجی get_all_warehouses(user=request.user) افزونهٔ user_extensions هست (انبار شرکت‌های مجاز، یا انبار قدیمی بی‌شرکت که مستقیم به خود کاربر منتسب است).
+
+۴. کار این نشست:
+- (یتیم‌ها) تابع مشترک سطح ماژول scope_trips_for_user(user, qs, company_id=None) در views.py بساز، به سبک scope_personnel_for_user:
+  - کاربر ناشناس: qs.none().
+  - با company_id: فقط سفرهایی که یکی از این مسیرها برابر آن است: section__project__company_id، project__company_id، vehicle__company_id، vehicle__section__project__company_id.
+  - بی company_id و سوپریوزر: بی‌محدودیت.
+  - بی company_id و غیرسوپریوزر: یکی از همان چهار مسیر در شرکت‌های مجاز get_user_allowed_companies(user)، یا قاعدهٔ یتیم: vehicle__company__isnull=True و vehicle__section__isnull=True و vehicle__created_by=user (همان قاعدهٔ scope_vehicle_queryset). distinct اگر join چندمقداری تکرار می‌سازد.
+  - _scoped_trips در VehicleTripViewSet همین تابع را با company_id حاصل از validate_user_company_access(request.user, get_request_company_id(request)) صدا بزند، و resolve_fleet_trips_scope در report_entities.py هم همین تابع را بازاستفاده کند (import از views.py یا جابه‌جایی تابع به فایل مشترکی که هر دو import کنند؛ رونوشت ممنوع است).
+- (warehouse_id) امضای _validate_write_target را به _validate_write_target(self, request, section_id, project_id, warehouse_id=None) گسترش بده و در bulk_save، update_day_trip، bulk_save_monthly_grid و import_monthly_excel همان warehouse_id خوانده‌شده را به آن بده، پیش از هر نوشتن. قاعده‌ها:
+  - اگر warehouse_id خالی است یا ماژول warehouse نصب نیست (is_module_installed('warehouse') از platform_core.registry): رفتار امروز، بی سنجش.
+  - انبار ناموجود (company_of خالی و همچنین در هیچ‌جا پیدا نشود): ۴۰۰ با پیام فارسی. برای تشخیص وجود از contributions('validate_warehouse') هسته استفاده کن.
+  - با سربرگ شرکت (cid): اگر انبار شرکت دارد و برابر cid نیست، ۴۰۳.
+  - غیرسوپریوزر: انبار باید «انبار در دامنه» باشد؛ وگرنه ۴۰۳ با پیام فارسی.
+  - سوپریوزر بی سربرگ: فقط سنجش وجود.
+- actionهای خواندنی (matrix، monthly-grid، monthly-summary، export) را تغییر نده؛ دادهٔ آن‌ها از قبل با _scoped_vehicles و _scoped_trips محدود است.
+
+۵. آزمون‌ها: به warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py متدهای تازه اضافه کن؛ آزمون‌های موجود دست‌نخورده بمانند و پاس شوند. هر بند یک متد جدا. آزمون‌های وابسته به انبار، اگر warehouses نصب نیست، با skipTest رد شوند:
+- کاربر الف خودروی یتیم خودش را دارد و سفر آن را با bulk-save ثبت می‌کند؛ سفر در GET /api/personnel/trips/ و در monthly-grid برای همان کاربر دیده می‌شود.
+- همان سفر یتیم برای کاربر دیگر شرکت الف (نه سازنده) و برای کاربر شرکت ب دیده نمی‌شود.
+- سفری با خودروی دارای company شرکت الف و بی section برای کاربر الف دیده می‌شود و برای کاربر ب نه.
+- گزارش fleet_trips (POST /api/reports/run/) برای سازندهٔ خودروی یتیم سفرش را برمی‌گرداند و برای کاربر ب نه.
+- bulk-save با warehouse_id انبار شرکت ب توسط کاربر الف: ۴۰۳ و هیچ سفر تازه.
+- update-day-trip با warehouse_id انبار شرکت ب: ۴۰۳.
+- bulk-save-monthly-grid با warehouse_id انبار شرکت ب: ۴۰۳.
+- import-monthly-excel با warehouse_id انبار شرکت ب: ۴۰۳.
+- warehouse_id ناموجود در bulk-save: ۴۰۰.
+- مسیر مثبت: bulk-save با warehouse_id انبار شرکت الف موفق است و سفر با همان warehouse_id ذخیره می‌شود.
+
+۶. فرمان‌هایی که خودت می‌توانی اجرا کنی، در پوشهٔ warehouse-backend با PYTHONUTF8=1 و PYTHONIOENCODING=utf-8:
+- حداکثر چهار بار: venv\Scripts\python.exe manage.py test integration_tests.test_vehicle_trip_actions_scope integration_tests.test_company_scope_reports_import --noinput.
+- یک بار: venv\Scripts\python.exe manage.py test personnel.test_attendance_fleet_audit --noinput.
+فرمان را در پس‌زمینه رها نکن. اگر فرمانی دو بار با یک خطا شکست، رویکرد را عوض کن.
+
+۷. راستی‌آزمایی پیش از پایان:
+- git diff --stat <پایه> فقط فایل‌های بند ۱ را نشان دهد.
+- در diff ببین _scoped_trips و resolve_fleet_trips_scope هر دو scope_trips_for_user را صدا می‌زنند و هیچ رونوشتی از قاعده نمانده است.
+
+۸. پایان:
+- زیر `## گزارش پیشرفت` طرح یک بند تازه بنویس با عنوان «۲۴ مهر ۱۴۰۵ (2026-10-15)، Antigravity — سفرهای خودروی یتیم و سنجش warehouse_id»، شامل جداگانه: علت ریشه‌ای هر مورد، فهرست فایل‌ها، رفتار تازه، آزمون‌هایی که واقعاً اجرا شد با نتیجه، و ابهام‌های مانده. عدد ساختگی ننویس. هیچ برچسب DONE یا FAILED ننویس. محتوا داخل همان <div dir="rtl"> موجود بماند.
+- فقط فایل‌های خودت را stage کن و با این پیام commit کن، بدون push:
+fix(scope): orphan vehicle trips and warehouse check in trip writes
 - پس از commit نوبت را تمام کن. پایان نوبت پیش از commit شکست است.
