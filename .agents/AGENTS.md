@@ -146,6 +146,7 @@ A runner session is a conversation started by `run_tasks.py` with one task from 
   - **A failed check after your turn:** read the quoted output and the full log, then fix the cause within the original task scope. Commit the fix (only your own files) and end your turn. The runner re-runs every check.
   - **A resume after a model service error:** your turn was cut off by the service, not by your work. Continue exactly where you stopped.
   - **A resume after an Antigravity restart:** the language server restarted mid-turn. Your uncommitted edits are still in the working tree, but your background commands were stopped. Check `git status`, re-read the files you were editing, re-run any command whose result you still need, then continue exactly where you stopped.
+- **English with the supervisor (user decision, 15 Oct 2026):** In runner sessions and in supervisor (Claude) review chats, write all replies, reports and commit messages in plain English, without the RTL `<div>` wrapper from §2. Task texts from the supervisor are English too; older Persian tasks stay valid as written. Persian stays mandatory for user-facing app UI text and for replies to the user in normal chats.
 - **The "?" rules (§4) do not apply to runner messages:** Task texts and `[RUNNER]` messages are execution requests. A `?` inside code (e.g. a ternary `x ? 'a' : 'b'`) is not a question.
 - **Finding plan sections:** Locate a section by its heading (e.g. `## ۹.`), not by searching for a long Persian phrase.
 - **Git:**
