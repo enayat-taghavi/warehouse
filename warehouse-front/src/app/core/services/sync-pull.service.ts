@@ -4,7 +4,7 @@ import { NetworkStatusService } from './network-status.service';
 import { isServerUnreachable } from './server-reachability';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
+import { ModuleRegistryService } from '../modules/module-registry.service';
 
 /**
  * SyncPullService — دانلود دلتای سرور به Dexie (نیمهٔ Pull معماری Local-First)
@@ -92,7 +92,7 @@ export class SyncPullService {
   private static instance: SyncPullService;
   private network = NetworkStatusService.getInstance();
   private inFlight = false;
-  private moduleRegistry: ModuleRegistryService;
+  private moduleRegistry = inject(ModuleRegistryService);
 
   private _isPulling$ = new BehaviorSubject<boolean>(false);
   readonly isPulling$ = this._isPulling$.asObservable();
@@ -104,26 +104,13 @@ export class SyncPullService {
   private _pullCompleted$ = new Subject<{ warehouseId: number }>();
   readonly pullCompleted$ = this._pullCompleted$.asObservable();
 
-  constructor(moduleRegistry?: ModuleRegistryService) {
-    if (moduleRegistry) {
-      this.moduleRegistry = moduleRegistry;
-    } else {
-      try {
-        this.moduleRegistry = inject(ModuleRegistryService);
-      } catch {
-        this.moduleRegistry = getModuleRegistry();
-      }
-    }
+  constructor() {
     SyncPullService.instance = this;
   }
 
   static getInstance(): SyncPullService {
     if (!SyncPullService.instance) {
-      try {
-        SyncPullService.instance = inject(SyncPullService);
-      } catch {
-        SyncPullService.instance = new SyncPullService();
-      }
+      SyncPullService.instance = inject(SyncPullService);
     }
     return SyncPullService.instance;
   }

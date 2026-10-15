@@ -5,7 +5,7 @@ import { ItemPhoto } from '../models/item.model';
 import { NetworkStatusService } from './network-status.service';
 import { offlineDb, PhotoQueueEntry } from './offline-db';
 import { isServerUnreachable } from './server-reachability';
-import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
+import { ModuleRegistryService } from '../modules/module-registry.service';
 
 /**
  * نتیجه یک دور تخلیه صف عکس — با همان منطق سه‌حالته صف اصلی
@@ -79,7 +79,7 @@ export class PhotoUploadQueueService {
   private static instance: PhotoUploadQueueService;
   private network = NetworkStatusService.getInstance();
   private flushing = false;
-  private moduleRegistry: ModuleRegistryService;
+  private moduleRegistry = inject(ModuleRegistryService);
 
   /** بعد از این تعداد تلاش ناموفق فقط پیام هشدار عوض می‌شود؛ رکورد نمی‌سوزد */
   private readonly MAX_RETRIES = 3;
@@ -100,26 +100,13 @@ export class PhotoUploadQueueService {
   private _changed$ = new Subject<void>();
   readonly changed$ = this._changed$.asObservable();
 
-  constructor(moduleRegistry?: ModuleRegistryService) {
-    if (moduleRegistry) {
-      this.moduleRegistry = moduleRegistry;
-    } else {
-      try {
-        this.moduleRegistry = inject(ModuleRegistryService);
-      } catch {
-        this.moduleRegistry = getModuleRegistry();
-      }
-    }
+  constructor() {
     PhotoUploadQueueService.instance = this;
   }
 
   static getInstance(): PhotoUploadQueueService {
     if (!PhotoUploadQueueService.instance) {
-      try {
-        PhotoUploadQueueService.instance = inject(PhotoUploadQueueService);
-      } catch {
-        PhotoUploadQueueService.instance = new PhotoUploadQueueService();
-      }
+      PhotoUploadQueueService.instance = inject(PhotoUploadQueueService);
     }
     return PhotoUploadQueueService.instance;
   }
