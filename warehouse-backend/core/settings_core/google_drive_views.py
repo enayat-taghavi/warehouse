@@ -269,9 +269,10 @@ class SystemGoogleDriveConfigView(APIView):
         # Query companies configured for google drive to toggle backup sync
         backup_companies = []
         try:
-            from django.apps import apps
-            if apps.is_installed('personnel'):
-                CompanyGoogleDriveConfig = apps.get_model('personnel', 'CompanyGoogleDriveConfig')
+            from platform_core.registry import contributions
+            models = contributions('company_gdrive_config_model')
+            if models:
+                CompanyGoogleDriveConfig = models[0]
                 cfgs = CompanyGoogleDriveConfig.objects.filter(company__is_active=True).select_related('company').order_by('company__id')
                 for c in cfgs:
                     backup_companies.append({

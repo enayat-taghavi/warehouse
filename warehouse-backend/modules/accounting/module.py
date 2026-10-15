@@ -42,6 +42,7 @@ ACCOUNTING_SPEC = ModuleSpec(
         ('projects', 'پروژه‌ها و بخش‌ها'),
         ('invoices', 'فاکتورهای هزینه'),
     ),
+    audit_scope_keys=('personnel', 'payroll', 'attendance', 'fleet', 'treasury', 'finance'),
     sod_app_module='personnel',
 )
 

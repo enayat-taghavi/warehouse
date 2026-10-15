@@ -125,42 +125,16 @@ def get_user_valid_roles_for_app(user, app_module: str = 'personnel') -> list[st
             return list(spec.roles)
         return ['superuser']
 
-    roles = []
-    if module_code == 'accounting':
-        # راهبر تشکیلات: نشانگر آن مجوز مدیریت پروژه‌ها و بخش‌هاست
-        is_org_admin = user.has_perm('accounts.perm_manage_projects_sections')
-        # اپراتور/کارمند: فقط اگر صراحتاً نقش کارمند داشته باشد
-        if user.has_perm('accounts.can_act_as_operator'):
-            roles.append('operator')
-        if user.has_perm('accounts.can_act_as_workshop_supervisor') or user.has_perm('accounts.perm_approve_personnel_supervisor') or user.has_perm('accounts.perm_approve_fleet_supervisor'):
-            roles.append('supervisor')
-        if user.has_perm('accounts.can_act_as_accountant') or user.has_perm('accounts.perm_approve_personnel_finance') or user.has_perm('accounts.perm_approve_fleet_finance'):
-            roles.append('accountant')
-        if user.has_perm('accounts.can_act_as_company_manager') or user.has_perm('accounts.perm_manager_payment_authorize') or user.has_perm('accounts.perm_approve_personnel_manager'):
-            roles.append('manager')
-        if user.has_perm('accounts.perm_treasury_disburse_action') or user.has_perm('accounts.view_sys_treasury'):
-            roles.append('treasury')
-        if not roles and not is_org_admin and (user.has_perm('accounts.view_sys_personnel_attendance') or user.has_perm('accounts.view_sys_personnel')):
-            roles.append('operator')
-        # در ابتدای فهرست تا «آخرین نقش معتبر» (پیش‌فرض resolve_effective_role) برای کاربر چندنقشه عوض نشود
-        if is_org_admin:
-            roles.insert(0, 'org_admin')
-    elif module_code == 'warehouse':
-        # Warehouse & Inventory App
-        if user.has_perm('accounts.can_act_as_counter') or user.has_perm('accounts.view_sys_counter') or user.has_perm('accounts.view_wh_dispatch'):
-            roles.append('counter')
-        if user.has_perm('accounts.can_act_as_wh_supervisor') or (user.has_perm('accounts.view_sys_supervisor') and not user.has_perm('accounts.can_act_as_workshop_supervisor')) or user.has_perm('accounts.view_wh_doc_approvals'):
-            roles.append('warehouse_supervisor')
-        if user.has_perm('accounts.can_act_as_doc_worker') or user.has_perm('accounts.view_wh_docs') or user.has_perm('accounts.perm_doc_approve_action'):
-            roles.append('docs_specialist')
-        if user.has_perm('accounts.can_act_as_wh_manager') or user.has_perm('accounts.can_act_as_manager') or user.has_perm('accounts.view_sys_manager_review') or user.has_perm('accounts.perm_inventory_finalize'):
-            roles.append('manager_review')
-        if not roles and any(p in user.get_all_permissions() for p in spec.permission_markers):
-            roles.append('counter')
-    else:
-        return []
+    from platform_core.registry import contributions
+    for item in contributions('role_resolver'):
+        if isinstance(item, (tuple, list)) and len(item) == 2 and item[0] == module_code and callable(item[1]):
+            try:
+                return item[1](user, spec)
+            except TypeError:
+                return item[1](user)
 
-    return roles
+    return []
+
 
 
 def resolve_effective_role(user, requested_role: str, app_module: str = 'personnel') -> str:

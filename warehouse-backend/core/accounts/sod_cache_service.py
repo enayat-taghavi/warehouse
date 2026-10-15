@@ -9,184 +9,31 @@ CACHE_KEY_SOD_MATRIX = 'sod:policy_matrix'
 CACHE_KEY_SOD_ROLE_MAP = 'sod:role_map:{app}:{role}'
 CACHE_TTL = 86400  # 24 hours
 
-# قوانین پیش‌فرض ماتریس تفکیک وظایف (خطوط قرمز مصوب)
-DEFAULT_SOD_RULES = [
-    # --- سامانه کارکرد و مالی (Personnel & Payroll) ---
-    # ۱. کارمند / اپراتور
-    {
-        'app_module': 'personnel',
-        'role_code': 'operator',
-        'role_title_fa': 'کارمند / اپراتور ثبت کارکرد',
-        'page_route': '/attendance',
-        'action_code': 'approve_attendance_period',
-        'action_title_fa': 'تایید و ارسال نهایی کارکرد ماهانه',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'کارمند فاقد صلاحیت اداری جهت تایید نهایی کارکرد ماهانه است.'
-    },
-    {
-        'app_module': 'personnel',
-        'role_code': 'operator',
-        'role_title_fa': 'کارمند / اپراتور ثبت کارکرد',
-        'page_route': '/profiles',
-        'action_code': 'approve_personnel_profile',
-        'action_title_fa': 'تصویب یا فعال‌سازی احکام پرونده پرسنل',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'کارمند مجاز به تصویب احکام یا تغییر وضعیت پرونده‌ها نیست.'
-    },
-    {
-        'app_module': 'personnel',
-        'role_code': 'operator',
-        'role_title_fa': 'کارمند / اپراتور ثبت کارکرد',
-        'page_route': '/finance-cartable',
-        'action_code': 'view_and_calculate_payroll',
-        'action_title_fa': 'محاسبه حقوق و مشاهده دستمزد دیگران',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'جهت حفظ محرمانگی حقوق، دسترسی به ارقام مالی و دیسکت‌ها برای اپراتور مسدود است.'
-    },
+# قوانین پیش‌فرض ماتریس تفکیک وظایف (خطوط قرمز مصوب) که از رجیستری خوانده می‌شوند
+class _LazyDefaultSoDRules(list):
+    def __iter__(self):
+        from platform_core.registry import contributions
+        return iter(contributions('sod_rules'))
 
-    # ۲. سرپرست انبار
-    {
-        'app_module': 'personnel',
-        'role_code': 'supervisor',
-        'role_title_fa': 'سرپرست انبار (میدانی)',
-        'page_route': '/profiles',
-        'action_code': 'edit_base_wage_and_bonuses',
-        'action_title_fa': 'تعیین یا تغییر حقوق پایه، حق مسکن و ضرایب مالی',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'تعیین دستمزد و ضرایب مالی در صلاحیت امور مالی و کارگزینی است، نه سرپرست میدانی.'
-    },
-    {
-        'app_module': 'personnel',
-        'role_code': 'supervisor',
-        'role_title_fa': 'سرپرست انبار (میدانی)',
-        'page_route': '/finance-cartable',
-        'action_code': 'approve_payroll_finance',
-        'action_title_fa': 'تایید محاسبات مالی حقوق یا دیسکت بیمه/مالیات',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'تایید مالی و محاسبات حقوق در حیطه وظایف حسابداری است.'
-    },
-    {
-        'app_module': 'personnel',
-        'role_code': 'supervisor',
-        'role_title_fa': 'سرپرست انبار (میدانی)',
-        'page_route': '/treasury-cartable',
-        'action_code': 'disburse_treasury_payment',
-        'action_title_fa': 'واریز وجه یا دانلود دیسکت‌های بانکی پایا/ساتنا',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'سرپرست انبار دسترسی به عملیات واریز خزانه‌داری ندارد.'
-    },
+    def __len__(self):
+        from platform_core.registry import contributions
+        return len(contributions('sod_rules'))
 
-    # ۳. حسابدار / امور مالی
-    {
-        'app_module': 'personnel',
-        'role_code': 'accountant',
-        'role_title_fa': 'حسابدار / امور مالی',
-        'page_route': '/attendance',
-        'action_code': 'create_daily_attendance_entry',
-        'action_title_fa': 'ثبت اولیه یا تغییر مستقیم روزهای حضور میدانی در انبار',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'حسابدار نباید ساعات حضور میدانی تولید کند؛ هرگونه اصلاح باید از طریق ارجاع به بازنگری انجام شود.'
-    },
-    {
-        'app_module': 'personnel',
-        'role_code': 'accountant',
-        'role_title_fa': 'حسابدار / امور مالی',
-        'page_route': '/manager-approvals',
-        'action_code': 'authorize_manager_payment',
-        'action_title_fa': 'صدور مجوز نهایی پرداخت بدون امضای مدیر شرکت',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'صدور مجوز پرداخت فقط با امضا و تایید مدیرعامل / مدیر شرکت امکان‌پذیر است.'
-    },
-    {
-        'app_module': 'personnel',
-        'role_code': 'accountant',
-        'role_title_fa': 'حسابدار / امور مالی',
-        'page_route': '/treasury-cartable',
-        'action_code': 'disburse_direct_payment',
-        'action_title_fa': 'واریز مستقیم وجه و خزانه‌داری بدون تفکیک نقش',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'بر اساس اصل تفکیک وظایف، حسابدار نباید مجری واریز وجه باشد.'
-    },
+    def __getitem__(self, index):
+        from platform_core.registry import contributions
+        return contributions('sod_rules')[index]
 
-    # ۴. مدیر شرکت
-    {
-        'app_module': 'personnel',
-        'role_code': 'manager',
-        'role_title_fa': 'مدیر شرکت / مدیرعامل',
-        'page_route': '/attendance',
-        'action_code': 'input_bulk_attendance_records',
-        'action_title_fa': 'ورود دستی و روزمره داده‌های تردد ۳۱ روزه پرسنل',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'ورود روزمره داده‌های تردد وظیفه رده عملیاتی است و مدیر وظیفه نظارت و تصویب را دارد.'
-    },
-    {
-        'app_module': 'personnel',
-        'role_code': 'manager',
-        'role_title_fa': 'مدیر شرکت / مدیرعامل',
-        'page_route': '/treasury-cartable',
-        'action_code': 'disburse_treasury_paya',
-        'action_title_fa': 'انتقال مستقیم بانکی بدون ثبت در کارتابل خزانه‌داری',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'مدیر صادرکننده مجوز هزینه است و عملیات فنی بانکی بر عهده خزانه‌دار است.'
-    },
+    def __bool__(self):
+        from platform_core.registry import contributions
+        return bool(contributions('sod_rules'))
 
-    # ۵. خزانه‌دار / متصدی پرداخت
-    {
-        'app_module': 'personnel',
-        'role_code': 'treasury',
-        'role_title_fa': 'خزانه‌دار و متصدی پرداخت',
-        'page_route': '/finance-cartable',
-        'action_code': 'modify_payroll_calculations',
-        'action_title_fa': 'تغییر مبالغ محاسبه‌شده حقوق، بیمه یا مالیات',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'خزانه‌دار صرفاً مجری دستور پرداخت مصوب است و نباید مبالغ را تغییر دهد.'
-    },
-    {
-        'app_module': 'personnel',
-        'role_code': 'treasury',
-        'role_title_fa': 'خزانه‌دار و متصدی پرداخت',
-        'page_route': '/profiles',
-        'action_code': 'modify_employment_contracts',
-        'action_title_fa': 'تغییر احکام استخدامی و ساعات کارکرد',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'خزانه‌دار دسترسی به تغییر احکام یا ساعات کارکرد ندارد.'
-    },
+    def __repr__(self):
+        from platform_core.registry import contributions
+        return repr(list(contributions('sod_rules')))
 
-    # --- سامانه انبارداری و انبارگردانی (Warehouse & Inventory) ---
-    # ۶. انبارگردان / شمارشگر (Counter)
-    {
-        'app_module': 'warehouse',
-        'role_code': 'counter',
-        'role_title_fa': 'انبارگردان / شمارشگر کور',
-        'page_route': '/manager-review',
-        'action_code': 'finalize_inventory_count',
-        'action_title_fa': 'تایید نهایی و بستن دوره انبارگردانی',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'شمارشگر کور فقط مقدار فیزیکی را وارد می‌کند و حق بستن دوره یا دیدن موجودی دفتری را ندارد.'
-    },
-    {
-        'app_module': 'warehouse',
-        'role_code': 'counter',
-        'role_title_fa': 'انبارگردان / شمارشگر کور',
-        'page_route': '/customs',
-        'action_code': 'view_customs_and_costs',
-        'action_title_fa': 'مشاهده فیلدهای گمرکی، قیمت‌ها و ارزش کالاها',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'شمارشگر انبار نباید اطلاعات قیمتی و ارزش مالی کالاها را ببیند.'
-    },
 
-    # ۷. سرپرست شمارش انبار
-    {
-        'app_module': 'warehouse',
-        'role_code': 'warehouse_supervisor',
-        'role_title_fa': 'سرپرست انبار و شمارش',
-        'page_route': '/feeding',
-        'action_code': 'approve_mt_feeding_export',
-        'action_title_fa': 'تایید مستقیم تغذیه MT و اعمال اسناد سیستمی به تنهایی',
-        'is_prohibited': True,
-        'prohibition_reason_fa': 'تایید نهایی صدور تغذیه سیستمی نیازمند تایید مدیر پروژه/ناظر عالی است.'
-    }
-]
+DEFAULT_SOD_RULES = _LazyDefaultSoDRules()
+
 
 
 class SoDCacheService:

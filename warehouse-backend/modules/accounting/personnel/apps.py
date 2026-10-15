@@ -68,3 +68,18 @@ class PersonnelConfig(AppConfig):
         except Exception:
             pass
 
+        # قوانین تفکیک وظایف (SoD) ماژول حسابداری
+        from platform_core.registry import contribute
+        from personnel.sod_rules import SOD_RULES
+        for rule in SOD_RULES:
+            contribute('sod_rules', rule)
+
+        # حل‌کننده نقش‌های ماژول حسابداری برای میان‌افزار احراز هویت
+        from personnel.role_resolver import resolve_personnel_roles
+        contribute('role_resolver', ('accounting', resolve_personnel_roles))
+
+        # ثبت مدل پیکربندی گوگل‌درایو شرکت‌ها در رجیستری برای هسته
+        from personnel.models import CompanyGoogleDriveConfig
+        contribute('company_gdrive_config_model', CompanyGoogleDriveConfig)
+
+

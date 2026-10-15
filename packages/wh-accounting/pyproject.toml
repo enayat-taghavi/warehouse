@@ -19,10 +19,11 @@ classifiers = [
 accounting = "personnel.module_spec:SPEC"
 
 [tool.setuptools]
-package-dir = { "" = "../../warehouse-backend" }
+package-dir = { "" = "../../warehouse-backend/modules/accounting" }
 
 [tool.setuptools.packages.find]
-where = ["../../warehouse-backend"]
+where = ["../../warehouse-backend/modules/accounting"]
 include = [
     "personnel*",
 ]
+

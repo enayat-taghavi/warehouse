@@ -22,12 +22,12 @@ classifiers = [
 warehouse = "warehouses.module_spec:SPEC"
 
 [tool.setuptools]
-package-dir = { "" = "../../warehouse-backend" }
+package-dir = { "" = "../../warehouse-backend/modules/warehouse" }
 
 [tool.setuptools.packages.find]
-where = ["../../warehouse-backend"]
+where = ["../../warehouse-backend/modules/warehouse"]
 include = [
     "warehouses*",
     "inventory*",
-    "reports*",
 ]
+

@@ -30,6 +30,7 @@ class ModuleSpec:
     ws_routes: tuple = ()
     url_includes: tuple[tuple[str, str], ...] = ()  # (پیشوند مسیر، urlconf)
     audit_modules: tuple[tuple[str, str], ...] = ()
+    audit_scope_keys: tuple[str, ...] = ()
     sod_app_module: str = ''           # برای حسابداری: 'personnel' (سازگاری داده)
     pull_entities: tuple[str, ...] = ()
     requires_platform: str = '>=1.0,<2.0'
@@ -253,3 +254,14 @@ _MODULE_SCOPE_CODES = {
 def module_scope_codes(module_code):
     """کدهای مجازِ `allowed_apps` برای بررسی قلمروِ یک ماژول."""
     return _MODULE_SCOPE_CODES.get(module_code, (module_allowed_app_code(module_code),))
+
+
+def audit_scope_keys(module_code: str) -> tuple[str, ...]:
+    """
+    برگرداندن کلیدهای دامنه ممیزی (audit_scope_keys) برای یک ماژول نصب‌شده، یا () اگر نصب نباشد.
+    """
+    spec = _REGISTRY.get(module_code)
+    if spec:
+        return getattr(spec, 'audit_scope_keys', ())
+    return ()
+

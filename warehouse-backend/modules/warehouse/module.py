@@ -40,6 +40,7 @@ WAREHOUSE_SPEC = ModuleSpec(
         ('supervisor', 'کارتابل سرپرست شمارش'),
         ('manager', 'بررسی نهایی مدیر'),
     ),
+    audit_scope_keys=('docs', 'dispatch', 'customs', 'feeding', 'labels', 'counter', 'supervisor', 'manager', 'warehouses'),
     sod_app_module='warehouse',
 )
 

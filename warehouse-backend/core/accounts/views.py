@@ -1933,9 +1933,10 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
                     qs = qs.filter(warehouse_id__in=assigned_wh_ids)
                 else:
                     # در نمای جامع، لاگ‌های مالی با شناسه انبار تهی نیز برای حسابداران/کاربران مجاز نمایش داده می‌شوند
+                    from platform_core.registry import audit_scope_keys
                     qs = qs.filter(
                         Q(warehouse_id__in=assigned_wh_ids) |
-                        Q(warehouse_id__isnull=True, module__in=['personnel', 'payroll', 'attendance', 'fleet', 'treasury', 'finance'])
+                        Q(warehouse_id__isnull=True, module__in=audit_scope_keys('accounting'))
                     )
 
 
@@ -1986,18 +1987,19 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         if app_scope and str(app_scope).lower().strip() != 'all':
             app_scope = str(app_scope).lower().strip()
             from django.db.models import Q
+            from platform_core.registry import audit_scope_keys
             if app_scope == 'warehouse':
                 qs = qs.filter(
-                    Q(module__in=['docs', 'dispatch', 'customs', 'feeding', 'labels', 'counter', 'supervisor', 'manager', 'warehouses']) |
+                    Q(module__in=audit_scope_keys('warehouse')) |
                     Q(warehouse_id__isnull=False)
                 ).exclude(
                     Q(details__event='CROSS_APP_DENIED') |
                     Q(details__event='APP_SCOPE_SWITCH') |
-                    Q(module__in=['personnel', 'payroll', 'attendance', 'fleet', 'treasury', 'finance'])
+                    Q(module__in=audit_scope_keys('accounting'))
                 )
             elif app_scope in ['finance', 'personnel']:
                 qs = qs.filter(
-                    Q(module__in=['personnel', 'payroll', 'attendance', 'fleet', 'treasury', 'finance']) |
+                    Q(module__in=audit_scope_keys('accounting')) |
                     Q(target_model__in=['PersonnelProfile', 'MonthlyPayrollRecord', 'VehicleDriverProfile', 'VehicleTripLog', 'MonthlyWorkPeriod', 'AttendanceDailyRecord']) |
                     Q(details__target_module='finance')
                 ).exclude(
@@ -2071,17 +2073,18 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         cross_app_denied_count = base_qs.filter(details__event='CROSS_APP_DENIED').count()
         app_switch_count = base_qs.filter(details__event='APP_SCOPE_SWITCH').count()
 
+        from platform_core.registry import audit_scope_keys
         warehouse_logs_count = base_qs.filter(
-            Q(module__in=['docs', 'dispatch', 'customs', 'feeding', 'labels', 'counter', 'supervisor', 'manager', 'warehouses']) |
+            Q(module__in=audit_scope_keys('warehouse')) |
             Q(warehouse_id__isnull=False)
         ).exclude(
             Q(details__event='CROSS_APP_DENIED') |
             Q(details__event='APP_SCOPE_SWITCH') |
-            Q(module__in=['personnel', 'payroll', 'attendance', 'fleet', 'treasury', 'finance'])
+            Q(module__in=audit_scope_keys('accounting'))
         ).count()
 
         finance_logs_count = base_qs.filter(
-            Q(module__in=['personnel', 'payroll', 'attendance', 'fleet', 'treasury', 'finance']) |
+            Q(module__in=audit_scope_keys('accounting')) |
             Q(target_model__in=['PersonnelProfile', 'MonthlyPayrollRecord', 'VehicleDriverProfile', 'VehicleTripLog', 'MonthlyWorkPeriod', 'AttendanceDailyRecord']) |
             Q(details__target_module='finance')
         ).exclude(
@@ -2157,18 +2160,19 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
             if app_scope and str(app_scope).lower().strip() != 'all':
                 app_scope = str(app_scope).lower().strip()
                 from django.db.models import Q
+                from platform_core.registry import audit_scope_keys
                 if app_scope == 'warehouse':
                     qs = qs.filter(
-                        Q(module__in=['docs', 'dispatch', 'customs', 'feeding', 'labels', 'counter', 'supervisor', 'manager', 'warehouses']) |
+                        Q(module__in=audit_scope_keys('warehouse')) |
                         Q(warehouse_id__isnull=False)
                     ).exclude(
                         Q(details__event='CROSS_APP_DENIED') |
                         Q(details__event='APP_SCOPE_SWITCH') |
-                        Q(module__in=['personnel', 'payroll', 'attendance', 'fleet', 'treasury', 'finance'])
+                        Q(module__in=audit_scope_keys('accounting'))
                     )
                 elif app_scope in ['finance', 'personnel']:
                     qs = qs.filter(
-                        Q(module__in=['personnel', 'payroll', 'attendance', 'fleet', 'treasury', 'finance']) |
+                        Q(module__in=audit_scope_keys('accounting')) |
                         Q(target_model__in=['PersonnelProfile', 'MonthlyPayrollRecord', 'VehicleDriverProfile', 'VehicleTripLog', 'MonthlyWorkPeriod', 'AttendanceDailyRecord']) |
                         Q(details__target_module='finance')
                     ).exclude(
@@ -2825,10 +2829,13 @@ class SwitchAppScopeView(APIView):
 
     def post(self, request):
         target_app = (request.data.get('app') or request.data.get('target_app') or '').strip().lower()
-        if target_app not in ('warehouse', 'finance'):
+        from platform_core.module_catalog import MODULE_CATALOG
+        from platform_core.registry import module_allowed_app_code
+        allowed_catalog_app_codes = {module_allowed_app_code(code) for code in MODULE_CATALOG.keys()}
+        if target_app not in allowed_catalog_app_codes:
             return Response({
                 'success': False,
-                'error': 'قلمرو نامعتبر است. فقط warehouse یا finance مجاز است.'
+                'error': f"قلمرو نامعتبر است. فقط {', '.join(sorted(allowed_catalog_app_codes))} مجاز است."
             }, status=status.HTTP_400_BAD_REQUEST)
 
         from .middleware import get_user_allowed_apps, get_user_valid_roles_for_app
