@@ -370,6 +370,28 @@
       - اجرای اول (پایه): `Ran 11 tests in 4.308s` با نتیجه `FAILED (failures=2)` روی دو متد فوق.
       - اجرای دوم (پس از اصلاح آزمون‌ها): `Ran 11 tests in 4.535s` با نتیجه `OK` (۱۱ آزمون موفق، ۰ خطا، ۰ شکست، ۰ پرش).
 
+- **۲۴ مهر ۱۴۰۵ (2026-10-15)، Antigravity — سفرهای خودروی یتیم و سنجش warehouse_id:**
+  - **علت ریشه‌ای هر مورد:**
+    ۱) **سفرهای خودروی یتیم:** خودروهای ثبت‌شده توسط کاربر بدون انتساب به شرکت و بدون انتساب به بخش (orphan vehicle)، در `scope_vehicle_queryset` برای خود کاربر سازنده (`created_by=user`) قابل مشاهده بودند؛ اما به دلیل اینکه متد `_scoped_trips` در `VehicleTripViewSet` و تابع `resolve_fleet_trips_scope` در `report_entities.py` صرفاً مسیرهای شرکتی (`section__project__company` و `vehicle__section__project__company`) را فیلتر می‌کردند، سفرهای ثبت‌شده برای این خودروها نادیده گرفته شده و در فهرست سفرها، نمای ماتریس ماهانه و گزارش‌های تجمیعی نمایش داده نمی‌شدند. همچنین منطق فیلتر سفرها بین ViewSet و گزارش‌ساز به صورت مستقل و غیرمتمرکز پیاده شده بود.
+    ۲) **عدم سنجش `warehouse_id` در اکشن‌های تغییردهندهٔ سفر:** در اکشن‌های نوشتنی سفر (`bulk_save`، `update_day_trip`، `bulk_save_monthly_grid` و `import_monthly_excel`)، مقدار ورودی `warehouse_id` اعتبارسنجی نمی‌شد؛ در نتیجه کاربر می‌توانست شناسه انبار متعلق به شرکت دیگری یا شناسه ناموجود را در درخواست‌های ثبت و ویرایش ارسال نماید بدون اینکه مغایرت شرکتی یا عدم دسترسی کاربر به انبار بررسی شود.
+  - **فهرست فایل‌ها:**
+    - `warehouse-backend/modules/accounting/personnel/views.py`: تعریف تابع مشترک ماژولار `scope_trips_for_user` با پشتیبانی از ۴ مسیر شرکتی و قاعده خودروی یتیم سازنده (`vehicle__company__isnull=True, vehicle__section__isnull=True, vehicle__created_by=user`)؛ بازاستفاده در `_scoped_trips`؛ گسترش امضای `_validate_write_target` برای دریافت و ارزیابی `warehouse_id` (بررسی وجود انبار با `contributions('validate_warehouse')`، تطابق شرکت انبار با سربرگ فعال از طریق `company_of('warehouse', id)`، و محدودسازی کاربران غیرسوپریوزر به انبارهای در دامنه از طریق `contributions('user_extensions')`)؛ اتصال سنجش انبار به هر چهار اکشن نوشتنی پیش از هرگونه درج یا ویرایش داده.
+    - `warehouse-backend/modules/accounting/personnel/report_entities.py`: بازنویسی `resolve_fleet_trips_scope` جهت بازاستفاده مستقیم از تابع مشترک `scope_trips_for_user(user, qs)` بدون هیچ‌گونه تکرار کد یا قاعده‌سازی جداگانه.
+    - `warehouse-backend/integration_tests/test_vehicle_trip_actions_scope.py`: افزودن ۱۰ متد آزمون یکپارچگی مستقل جهت پوشش کامل سناریوهای سفرهای خودروی یتیم، جداسازی دسترسی شرکت‌ها، گزارش fleet_trips، اعتبارسنجی انبارهای ناموجود و غیرمجاز در اکشن‌های چهارگانه، و مسیر مثبت ثبت با انبار معتبر (افزایش مجموع تست‌های این فایل از ۲۴ به ۳۴ آزمون).
+    - `Documents/Supervisor_Followups/implementation_plan_supervisor_followups.md`: ثبت این گزارش در مستندات پیگیری ناظر.
+  - **رفتار تازه:**
+    - سازنده خودروی یتیم می‌تواند ترددهای خودروی خود را با `bulk-save` ثبت کند و این ترددها در `GET /api/personnel/trips/`، ماتریس ۳۱ روزه ماهانه (`monthly-grid`) و گزارش‌های سامانه (`fleet_trips`) به درستی قابل مشاهده است.
+    - سایر کاربران (چه از همان شرکت و چه از شرکت‌های دیگر) هیچ دسترسی به خودرو و سفرهای یتیم ثبت‌شده توسط کاربر دیگر ندارند.
+    - سفرهای خودروهای دارای شرکت و فاقد بخش منحصراً برای کاربران همان شرکت نمایش داده می‌شوند.
+    - ارسال `warehouse_id` متعلق به شرکت غیرمجاز یا خارج از دامنه دسترسی کاربر در هر یک از اکشن‌های `bulk-save`، `update-day-trip`، `bulk-save-monthly-grid` و `import-monthly-excel` با خطای ۴۰۳ مسدود می‌گردد.
+    - ارسال `warehouse_id` ناموجود با خطای ۴۰۰ مسدود می‌شود.
+    - ارسال `warehouse_id` مجاز و معتبر با موفقیت ثبت شده و مقدار شناسه انبار در رکورد سفر ذخیره می‌گردد.
+  - **آزمون‌هایی که واقعاً اجرا شد با نتیجه:**
+    - `integration_tests.test_vehicle_trip_actions_scope` و `integration_tests.test_company_scope_reports_import`: اجرای ۵۲ آزمون در ۶۲.۱۷۳ ثانیه با وضعیت `OK` (۵۲ پاس، ۰ شکست، ۰ خطا، ۰ پرش).
+    - `personnel.test_attendance_fleet_audit`: اجرای ۱۷ آزمون در ۵.۷۰۱ ثانیه با وضعیت `OK` (۱۷ پاس، ۰ شکست، ۰ خطا، ۰ پرش).
+  - **ابهام‌های مانده:**
+    - هیچ ابهامی در حوزه سفرهای خودروهای یتیم و سنجش انبار در اکشن‌های سفر وجود ندارد؛ رفتار سیستم به طور کامل با قواعد طرح منطبق و تثبیت شده است.
+
 </div>
 
 

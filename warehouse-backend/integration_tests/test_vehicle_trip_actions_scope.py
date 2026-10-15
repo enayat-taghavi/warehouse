@@ -585,3 +585,324 @@ class VehicleTripActionsScopeIntegrationTests(TestCase):
         )
         self.assertEqual(res.status_code, 403, res.content)
         self.assertFalse(VehicleTripLog.objects.filter(date_shamsi='1405/01/31').exists())
+
+    def _create_user_b(self):
+        user_b = User.objects.create_user(
+            username='user_fleet_b_scope',
+            password='Password123!',
+            national_code='0077777778',
+            phone_number='09127777778',
+            first_name='کاربر',
+            last_name='شرکت ب'
+        )
+        UserCompanyAccess.objects.create(
+            user=user_b,
+            company=self.company_b,
+            access_level='workspace_full',
+            is_default=True
+        )
+        user_b.user_permissions.set(Permission.objects.filter(
+            codename__in=['view_sys_fleet_settlement', 'view_sys_personnel', 'view_sys_reports']
+        ))
+        return user_b
+
+    def _create_warehouses(self):
+        if not apps.is_installed('warehouses'):
+            self.skipTest('ماژول انبار نصب نیست.')
+        from warehouses.models import Warehouse
+        wh_a = Warehouse.objects.create(name='انبار تست شرکت الف', code='WH-A-TEST-SCOPE', company=self.company_a)
+        wh_b = Warehouse.objects.create(name='انبار تست شرکت ب', code='WH-B-TEST-SCOPE', company=self.company_b)
+        return wh_a, wh_b
+
+    def test_orphan_vehicle_trips_visible_to_creator_in_trips_and_monthly_grid(self):
+        """کاربر الف خودروی یتیم خودش را دارد و سفر آن را با bulk-save ثبت می‌کند؛ سفر در GET /api/personnel/trips/ و در monthly-grid برای همان کاربر دیده می‌شود."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import VehicleDriverProfile, VehicleTripLog
+        veh_orphan = VehicleDriverProfile.objects.create(
+            company=None,
+            section=None,
+            created_by=self.user_a,
+            driver_name='راننده یتیم الف',
+            plate_number='33-333-33',
+            approval_status='approved',
+            is_active=True,
+            default_service_rate=Decimal('150000'),
+        )
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'date_shamsi': '1405/02/05',
+            'items': [
+                {'vehicle_id': veh_orphan.id, 'trip_count': 3, 'unit_rate': 150000}
+            ]
+        }
+        res_save = self.client.post('/api/personnel/trips/bulk-save/', payload, format='json')
+        self.assertEqual(res_save.status_code, 200, res_save.content)
+
+        res_trips = self.client.get('/api/personnel/trips/')
+        self.assertEqual(res_trips.status_code, 200, res_trips.content)
+        trip_ids = [t['id'] for t in res_trips.json()]
+        saved_trip = VehicleTripLog.objects.filter(vehicle=veh_orphan, date_shamsi='1405/02/05').first()
+        self.assertIsNotNone(saved_trip)
+        self.assertIn(saved_trip.id, trip_ids)
+
+        res_grid = self.client.get('/api/personnel/trips/monthly-grid/?year_month=1405/02')
+        self.assertEqual(res_grid.status_code, 200, res_grid.content)
+        grid_rows = res_grid.json().get('rows', [])
+        orphan_row = next((r for r in grid_rows if r['vehicle_id'] == veh_orphan.id), None)
+        self.assertIsNotNone(orphan_row)
+        self.assertEqual(orphan_row['total_trips'], 3)
+
+    def test_orphan_vehicle_trips_not_visible_to_other_users_same_or_other_company(self):
+        """همان سفر یتیم برای کاربر دیگر شرکت الف (نه سازنده) و برای کاربر شرکت ب دیده نمی‌شود."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import VehicleDriverProfile, VehicleTripLog
+        veh_orphan = VehicleDriverProfile.objects.create(
+            company=None,
+            section=None,
+            created_by=self.user_a,
+            driver_name='راننده یتیم انحصاری',
+            plate_number='33-444-33',
+            approval_status='approved',
+            is_active=True,
+            default_service_rate=Decimal('150000'),
+        )
+        trip_orphan = VehicleTripLog.objects.create(
+            vehicle=veh_orphan,
+            section=None,
+            project=None,
+            date_shamsi='1405/02/06',
+            trip_count=2,
+            unit_rate=Decimal('150000'),
+            total_amount=Decimal('300000'),
+            created_by=self.user_a
+        )
+
+        user_other_a = User.objects.create_user(
+            username='user_other_a_scope',
+            password='Password123!',
+            national_code='0088888889',
+            phone_number='09128888889'
+        )
+        UserCompanyAccess.objects.create(user=user_other_a, company=self.company_a, access_level='workspace_full')
+        user_other_a.user_permissions.set(Permission.objects.filter(
+            codename__in=['view_sys_fleet_settlement', 'view_sys_personnel', 'view_sys_reports']
+        ))
+
+        user_b = self._create_user_b()
+
+        self.client.force_authenticate(user_other_a)
+        res_trips_other = self.client.get('/api/personnel/trips/')
+        self.assertEqual(res_trips_other.status_code, 200, res_trips_other.content)
+        ids_other = [t['id'] for t in res_trips_other.json()]
+        self.assertNotIn(trip_orphan.id, ids_other)
+
+        res_grid_other = self.client.get('/api/personnel/trips/monthly-grid/?year_month=1405/02')
+        self.assertEqual(res_grid_other.status_code, 200, res_grid_other.content)
+        grid_other_vids = {r['vehicle_id'] for r in res_grid_other.json().get('rows', [])}
+        self.assertNotIn(veh_orphan.id, grid_other_vids)
+
+        self.client.force_authenticate(user_b)
+        res_trips_b = self.client.get('/api/personnel/trips/')
+        self.assertEqual(res_trips_b.status_code, 200, res_trips_b.content)
+        ids_b = [t['id'] for t in res_trips_b.json()]
+        self.assertNotIn(trip_orphan.id, ids_b)
+
+        res_grid_b = self.client.get('/api/personnel/trips/monthly-grid/?year_month=1405/02')
+        self.assertEqual(res_grid_b.status_code, 200, res_grid_b.content)
+        grid_b_vids = {r['vehicle_id'] for r in res_grid_b.json().get('rows', [])}
+        self.assertNotIn(veh_orphan.id, grid_b_vids)
+
+    def test_trips_with_vehicle_company_and_no_section_visible_to_company_user_only(self):
+        """سفری با خودروی دارای company شرکت الف و بی section برای کاربر الف دیده می‌شود و برای کاربر ب نه."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import VehicleDriverProfile, VehicleTripLog
+        veh_comp_only = VehicleDriverProfile.objects.create(
+            company=self.company_a,
+            section=None,
+            driver_name='راننده شرکت الف بدون بخش',
+            plate_number='44-444-44',
+            approval_status='approved',
+            is_active=True,
+            default_service_rate=Decimal('180000'),
+        )
+        trip_comp_only = VehicleTripLog.objects.create(
+            vehicle=veh_comp_only,
+            section=None,
+            project=None,
+            date_shamsi='1405/02/07',
+            trip_count=2,
+            unit_rate=Decimal('180000'),
+            total_amount=Decimal('360000')
+        )
+        user_b = self._create_user_b()
+
+        self.client.force_authenticate(self.user_a)
+        res_trips_a = self.client.get('/api/personnel/trips/')
+        self.assertEqual(res_trips_a.status_code, 200, res_trips_a.content)
+        ids_a = [t['id'] for t in res_trips_a.json()]
+        self.assertIn(trip_comp_only.id, ids_a)
+
+        self.client.force_authenticate(user_b)
+        res_trips_b = self.client.get('/api/personnel/trips/')
+        self.assertEqual(res_trips_b.status_code, 200, res_trips_b.content)
+        ids_b = [t['id'] for t in res_trips_b.json()]
+        self.assertNotIn(trip_comp_only.id, ids_b)
+
+    def test_fleet_trips_report_returns_orphan_vehicle_trips_for_creator_only(self):
+        """گزارش fleet_trips (POST /api/reports/run/) برای سازندهٔ خودروی یتیم سفرش را برمی‌گرداند و برای کاربر ب نه."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        from personnel.models import VehicleDriverProfile, VehicleTripLog
+        veh_orphan = VehicleDriverProfile.objects.create(
+            company=None,
+            section=None,
+            created_by=self.user_a,
+            driver_name='راننده گزارش یتیم',
+            plate_number='55-555-55',
+            approval_status='approved',
+            is_active=True,
+            default_service_rate=Decimal('100000'),
+        )
+        trip_orphan = VehicleTripLog.objects.create(
+            vehicle=veh_orphan,
+            section=None,
+            project=None,
+            date_shamsi='1405/02/08',
+            trip_count=1,
+            unit_rate=Decimal('100000'),
+            total_amount=Decimal('100000'),
+            created_by=self.user_a
+        )
+        user_b = self._create_user_b()
+
+        spec = {'entity': 'fleet_trips', 'fields': ['id', 'total_amount']}
+
+        self.client.force_authenticate(self.user_a)
+        res_a = self.client.post('/api/reports/run/', spec, format='json')
+        self.assertEqual(res_a.status_code, 200, res_a.content)
+        ids_a = [r['id'] for r in res_a.json().get('rows', [])]
+        self.assertIn(trip_orphan.id, ids_a)
+
+        self.client.force_authenticate(user_b)
+        res_b = self.client.post('/api/reports/run/', spec, format='json')
+        self.assertEqual(res_b.status_code, 200, res_b.content)
+        ids_b = [r['id'] for r in res_b.json().get('rows', [])]
+        self.assertNotIn(trip_orphan.id, ids_b)
+
+    def test_bulk_save_with_other_company_warehouse_forbidden(self):
+        """bulk-save با warehouse_id انبار شرکت ب توسط کاربر الف: ۴۰۳ و هیچ سفر تازه."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        wh_a, wh_b = self._create_warehouses()
+        from personnel.models import VehicleTripLog
+        cnt_before = VehicleTripLog.objects.count()
+
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'warehouse_id': wh_b.id,
+            'date_shamsi': '1405/02/10',
+            'items': [
+                {'vehicle_id': self.veh_a.id, 'trip_count': 1, 'unit_rate': 200000}
+            ]
+        }
+        res = self.client.post('/api/personnel/trips/bulk-save/', payload, format='json')
+        self.assertEqual(res.status_code, 403, res.content)
+        self.assertEqual(VehicleTripLog.objects.count(), cnt_before)
+
+    def test_update_day_trip_with_other_company_warehouse_forbidden(self):
+        """update-day-trip با warehouse_id انبار شرکت ب: ۴۰۳."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        wh_a, wh_b = self._create_warehouses()
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'vehicle_id': self.veh_a.id,
+            'warehouse_id': wh_b.id,
+            'date_shamsi': '1405/02/11',
+            'trip_count': 1,
+            'unit_rate': 200000
+        }
+        res = self.client.post('/api/personnel/trips/update-day-trip/', payload, format='json')
+        self.assertEqual(res.status_code, 403, res.content)
+
+    def test_bulk_save_monthly_grid_with_other_company_warehouse_forbidden(self):
+        """bulk-save-monthly-grid با warehouse_id انبار شرکت ب: ۴۰۳."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        wh_a, wh_b = self._create_warehouses()
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'warehouse_id': wh_b.id,
+            'year_month': '1405/02',
+            'items': [
+                {'vehicle_id': self.veh_a.id, 'day': 12, 'trip_count': 1, 'unit_rate': 200000}
+            ]
+        }
+        res = self.client.post('/api/personnel/trips/bulk-save-monthly-grid/', payload, format='json')
+        self.assertEqual(res.status_code, 403, res.content)
+
+    def test_import_monthly_excel_with_other_company_warehouse_forbidden(self):
+        """import-monthly-excel با warehouse_id انبار شرکت ب: ۴۰۳."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        wh_a, wh_b = self._create_warehouses()
+        self.client.force_authenticate(self.user_a)
+        excel_bio = _make_fleet_excel([{
+            'driver_name': self.veh_a.driver_name,
+            'plate_number': self.veh_a.plate_number,
+            'day_01': 2
+        }])
+        excel_file = SimpleUploadedFile(
+            'fleet_import_test.xlsx',
+            excel_bio.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        data = {
+            'file': excel_file,
+            'warehouse_id': wh_b.id,
+            'year_month': '1405/02'
+        }
+        res = self.client.post('/api/personnel/trips/import-monthly-excel/', data, format='multipart')
+        self.assertEqual(res.status_code, 403, res.content)
+
+    def test_bulk_save_with_non_existent_warehouse_returns_400(self):
+        """warehouse_id ناموجود در bulk-save: ۴۰۰."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        if not apps.is_installed('warehouses'):
+            self.skipTest('ماژول انبار نصب نیست.')
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'warehouse_id': 999999,
+            'date_shamsi': '1405/02/15',
+            'items': [
+                {'vehicle_id': self.veh_a.id, 'trip_count': 1, 'unit_rate': 200000}
+            ]
+        }
+        res = self.client.post('/api/personnel/trips/bulk-save/', payload, format='json')
+        self.assertEqual(res.status_code, 400, res.content)
+
+    def test_bulk_save_with_company_warehouse_succeeds(self):
+        """مسیر مثبت: bulk-save با warehouse_id انبار شرکت الف موفق است و سفر با همان warehouse_id ذخیره می‌شود."""
+        if not apps.is_installed('personnel'):
+            self.skipTest('ماژول پرسنل و حسابداری نصب نیست.')
+        wh_a, wh_b = self._create_warehouses()
+        from personnel.models import VehicleTripLog
+        self.client.force_authenticate(self.user_a)
+        payload = {
+            'warehouse_id': wh_a.id,
+            'date_shamsi': '1405/02/16',
+            'items': [
+                {'vehicle_id': self.veh_a.id, 'trip_count': 2, 'unit_rate': 200000}
+            ]
+        }
+        res = self.client.post('/api/personnel/trips/bulk-save/', payload, format='json')
+        self.assertEqual(res.status_code, 200, res.content)
+        trip = VehicleTripLog.objects.filter(vehicle=self.veh_a, date_shamsi='1405/02/16').first()
+        self.assertIsNotNone(trip)
+        self.assertEqual(trip.warehouse_id, wh_a.id)
+        self.assertEqual(trip.trip_count, 2)
+

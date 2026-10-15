@@ -329,6 +329,47 @@ def scope_vehicle_queryset(request, qs, prefix=''):
     )
 
 
+def scope_trips_for_user(user, qs, company_id=None):
+    """
+    قلمرو امنیتی سفرهای ناوگان:
+    - کاربر ناشناس: خالی
+    - با company_id: سفرهایی که بخش، پروژه، خودرو یا بخشِ خودرو متعلق به آن شرکت باشد
+    - بی company_id و سوپریوزر: بدون محدودیت
+    - بی company_id و غیرسوپریوزر: یکی از همان چهار مسیر در شرکت‌های مجاز یا قاعدهٔ خودروی یتیم سازنده (بی‌شرکت و بی‌بخش)
+    """
+    if not user or not user.is_authenticated:
+        return qs.none()
+
+    if company_id:
+        return qs.filter(
+            Q(section__project__company_id=company_id)
+            | Q(project__company_id=company_id)
+            | Q(vehicle__company_id=company_id)
+            | Q(vehicle__section__project__company_id=company_id)
+        ).distinct()
+
+    if user.is_superuser:
+        return qs
+
+    try:
+        from companies.access import get_user_allowed_companies
+        allowed_ids = list(get_user_allowed_companies(user).values_list('id', flat=True))
+    except Exception:
+        allowed_ids = []
+
+    orphan_q = Q(vehicle__company__isnull=True, vehicle__section__isnull=True, vehicle__created_by=user)
+    if allowed_ids:
+        return qs.filter(
+            Q(section__project__company_id__in=allowed_ids)
+            | Q(project__company_id__in=allowed_ids)
+            | Q(vehicle__company_id__in=allowed_ids)
+            | Q(vehicle__section__project__company_id__in=allowed_ids)
+            | orphan_q
+        ).distinct()
+
+    return qs.filter(orphan_q).distinct()
+
+
 def broadcast_personnel_update(personnel, action_type='updated', message=None, sender_id=None, client_tab_id=None):
     """
     تسک ۴.۳: ارسال بلادرنگ رویدادهای تغییر وضعیت یا ویرایش پرونده پرسنل به کانال اختصاصی شرکت مربوطه.
@@ -6745,17 +6786,9 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
 
     def _scoped_trips(self, qs):
         cid = validate_user_company_access(self.request.user, get_request_company_id(self.request))
-        if cid:
-            return qs.filter(Q(section__project__company_id=cid) | Q(vehicle__section__project__company_id=cid))
-        if not self.request.user.is_superuser:
-            allowed_ids = list(get_user_allowed_companies(self.request.user).values_list('id', flat=True))
-            return qs.filter(
-                Q(section__project__company_id__in=allowed_ids)
-                | Q(vehicle__section__project__company_id__in=allowed_ids)
-            )
-        return qs
+        return scope_trips_for_user(self.request.user, qs, company_id=cid)
 
-    def _validate_write_target(self, request, section_id, project_id):
+    def _validate_write_target(self, request, section_id, project_id, warehouse_id=None):
         sec_obj = None
         if section_id:
             try:
@@ -6800,6 +6833,39 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                 return Response({'error': 'شما به بخش یا شرکت مربوطه دسترسی ندارید.'}, status=status.HTTP_403_FORBIDDEN)
             if proj_obj and proj_obj.company_id not in allowed_ids:
                 return Response({'error': 'شما به پروژه یا شرکت مربوطه دسترسی ندارید.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if warehouse_id is not None:
+            from platform_core.registry import is_module_installed, company_of, contributions
+            if is_module_installed('warehouse'):
+                try:
+                    wh_id_int = int(warehouse_id)
+                except (ValueError, TypeError):
+                    return Response({'error': 'شناسه انبار نامعتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                validators = contributions('validate_warehouse')
+                wh_exists = any(v(wh_id_int) for v in validators) if validators else (company_of('warehouse', wh_id_int) is not None)
+                if not wh_exists:
+                    return Response({'error': 'انبار مشخص‌شده یافت نشد.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                wh_cid = company_of('warehouse', wh_id_int)
+                if cid:
+                    if wh_cid is not None and wh_cid != cid:
+                        return Response({'error': 'انبار مشخص‌شده متعلق به شرکت فعال در سربرگ نیست.'}, status=status.HTTP_403_FORBIDDEN)
+
+                if not request.user.is_superuser:
+                    scoped_wh_ids = set()
+                    for ext in contributions('user_extensions'):
+                        if hasattr(ext, 'get_all_warehouses'):
+                            try:
+                                wh_list = ext.get_all_warehouses(user=request.user)
+                                for w in wh_list:
+                                    w_id = getattr(w, 'id', getattr(w, 'pk', None))
+                                    if w_id is not None:
+                                        scoped_wh_ids.add(w_id)
+                            except Exception:
+                                pass
+                    if wh_id_int not in scoped_wh_ids:
+                        return Response({'error': 'شما به انبار مشخص‌شده دسترسی ندارید.'}, status=status.HTTP_403_FORBIDDEN)
 
         return None
 
@@ -6940,14 +7006,14 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         serializer = BulkVehicleTripMatrixSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        raw_wh = serializer.validated_data.get('warehouse_id')
+        raw_wh = serializer.validated_data.get('warehouse_id') or request.query_params.get('warehouse_id') or request.data.get('warehouse_id')
         warehouse_id = int(raw_wh) if (raw_wh and str(raw_wh).upper() not in ['ALL', '0', 'NONE', '']) else None
         raw_sec = serializer.validated_data.get('section_id') or request.query_params.get('section_id') or request.data.get('section_id')
         section_id = int(raw_sec) if (raw_sec and str(raw_sec).upper() not in ['ALL', '0', 'NONE', '']) else None
         raw_proj = serializer.validated_data.get('project_id') or request.query_params.get('project_id') or request.data.get('project_id')
         project_id = int(raw_proj) if (raw_proj and str(raw_proj).upper() not in ['ALL', '0', 'NONE', '']) else None
 
-        target_err = self._validate_write_target(request, section_id, project_id)
+        target_err = self._validate_write_target(request, section_id, project_id, warehouse_id=warehouse_id)
         if target_err is not None:
             return target_err
 
@@ -7324,7 +7390,7 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         vehicle_id = serializer.validated_data['vehicle_id']
-        raw_wh = serializer.validated_data.get('warehouse_id')
+        raw_wh = serializer.validated_data.get('warehouse_id') or request.query_params.get('warehouse_id') or request.data.get('warehouse_id')
         warehouse_id = int(raw_wh) if (raw_wh and str(raw_wh).upper() not in ['ALL', '0', 'NONE', '']) else None
         date_shamsi = serializer.validated_data['date_shamsi']
         trip_count = serializer.validated_data.get('trip_count', 0)
@@ -7339,7 +7405,7 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         raw_proj = serializer.validated_data.get('project_id') or request.query_params.get('project_id') or request.data.get('project_id')
         project_id = int(raw_proj) if (raw_proj and str(raw_proj).upper() not in ['ALL', '0', 'NONE', '']) else None
 
-        target_err = self._validate_write_target(request, section_id, project_id)
+        target_err = self._validate_write_target(request, section_id, project_id, warehouse_id=warehouse_id)
         if target_err is not None:
             return target_err
 
@@ -7522,14 +7588,14 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         serializer = BulkVehicleMonthlyGridSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        raw_wh = serializer.validated_data.get('warehouse_id')
+        raw_wh = serializer.validated_data.get('warehouse_id') or request.query_params.get('warehouse_id') or request.data.get('warehouse_id')
         warehouse_id = int(raw_wh) if (raw_wh and str(raw_wh).upper() not in ['ALL', '0', 'NONE', '']) else None
         raw_sec = serializer.validated_data.get('section_id') or request.query_params.get('section_id') or request.data.get('section_id')
         section_id = int(raw_sec) if (raw_sec and str(raw_sec).upper() not in ['ALL', '0', 'NONE', '']) else None
         raw_proj = serializer.validated_data.get('project_id') or request.query_params.get('project_id') or request.data.get('project_id')
         project_id = int(raw_proj) if (raw_proj and str(raw_proj).upper() not in ['ALL', '0', 'NONE', '']) else None
 
-        target_err = self._validate_write_target(request, section_id, project_id)
+        target_err = self._validate_write_target(request, section_id, project_id, warehouse_id=warehouse_id)
         if target_err is not None:
             return target_err
 
@@ -7676,12 +7742,21 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
         """
         درون‌ریزی فایل اکسل ۳۱ روزه کارکرد ناوگان
         """
+        raw_wh = request.data.get('warehouse_id') or request.query_params.get('warehouse_id')
+        warehouse_id = int(raw_wh) if (raw_wh and str(raw_wh).upper() not in ['ALL', '0', 'NONE', '']) else None
+        raw_sec = request.data.get('section_id') or request.query_params.get('section_id')
+        section_id = int(raw_sec) if (raw_sec and str(raw_sec).upper() not in ['ALL', '0', 'NONE', '']) else None
+        raw_proj = request.data.get('project_id') or request.query_params.get('project_id')
+        project_id = int(raw_proj) if (raw_proj and str(raw_proj).upper() not in ['ALL', '0', 'NONE', '']) else None
+
+        target_err = self._validate_write_target(request, section_id, project_id, warehouse_id=warehouse_id)
+        if target_err is not None:
+            return target_err
+
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({'error': 'فایل اکسل الزامی است.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        raw_wh = request.data.get('warehouse_id')
-        warehouse_id = int(raw_wh) if (raw_wh and str(raw_wh).upper() not in ['ALL', '0', 'NONE', '']) else None
         year_month = request.data.get('year_month')
 
         try:

@@ -48,25 +48,11 @@ def resolve_fleet_trips_scope(qs, user):
     """
     قلمرو شرکت برای سفرهای ناوگان:
     - سوپریوزر: همه رکوردها
-    - کاربر عادی: سفرهایی که بخش یا وسیله نقلیه آن‌ها متعلق به شرکت‌های مجاز کاربر باشد
-    - کاربر بدون شرکت: خالی
+    - کاربر عادی: سفرهایی که بخش، پروژه، خودرو یا بخشِ خودرو متعلق به شرکت‌های مجاز کاربر باشد یا خودروی یتیم سازنده
+    - کاربر بدون شرکت: خالی (مگر خودروی یتیم خودش)
     """
-    if not user or not user.is_authenticated:
-        return qs.none()
-    if user.is_superuser:
-        return qs
-    try:
-        from companies.access import get_user_allowed_companies
-        allowed_ids = list(get_user_allowed_companies(user).values_list('id', flat=True))
-    except Exception:
-        allowed_ids = []
-
-    if not allowed_ids:
-        return qs.none()
-    return qs.filter(
-        Q(section__project__company_id__in=allowed_ids)
-        | Q(vehicle__section__project__company_id__in=allowed_ids)
-    ).distinct()
+    from personnel.views import scope_trips_for_user
+    return scope_trips_for_user(user, qs)
 
 
 def build_accounting_entities():
