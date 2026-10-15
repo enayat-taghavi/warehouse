@@ -252,7 +252,30 @@ class PersonnelAppTests(TestCase):
         res_dsk = self.client.get(f'/api/personnel/monthly-payroll/export-dsk-zip/?period_id={period_id}&project_id={self.project.id}')
         self.assertEqual(res_dsk.status_code, 200)
         self.assertEqual(res_dsk['Content-Type'], 'application/zip')
-        self.assertGreater(len(res_dsk.content), 1000)
+        self.assertGreater(len(res_dsk.content), 0)
+
+        import io
+        import zipfile
+        import struct
+        with zipfile.ZipFile(io.BytesIO(res_dsk.content)) as z:
+            namelist = z.namelist()
+            self.assertIn("DSKKAR00.DBF", namelist)
+            self.assertIn("DSKWOR00.DBF", namelist)
+
+            dskkar_bytes = z.read("DSKKAR00.DBF")
+            dskwor_bytes = z.read("DSKWOR00.DBF")
+
+            # هدر دیسکت کارگاه و کارکنان
+            self.assertGreaterEqual(len(dskkar_bytes), 680)
+            self.assertGreaterEqual(len(dskwor_bytes), 961)
+
+            # اعتبارسنجی تعداد ردیف‌ها از روی هدر استاندارد DBF (بایت‌های ۴ تا ۷)
+            kar_count = struct.unpack_from('<I', dskkar_bytes, 4)[0]
+            wor_count = struct.unpack_from('<I', dskwor_bytes, 4)[0]
+            self.assertEqual(kar_count, 1)  # یک کارگاه در پروژه
+            self.assertGreaterEqual(wor_count, 1)  # حداقل یک ردیف پرسنل بیمه‌شده
+            # سنجش وجود ردیف پرسنل آزمون در بدنه دیسکت بیمه
+            self.assertIn(self.personnel2.national_code.encode('ascii'), dskwor_bytes)
 
         # 3. تست صدور فایل‌های مالیات حقوق (WH و WP)
         res_wh = self.client.get(f'/api/personnel/monthly-payroll/export-tax-wh/?period_id={period_id}&project_id={self.project.id}')
@@ -310,7 +333,13 @@ class PersonnelAppTests(TestCase):
 
     def test_import_tax_excel_flow(self):
         """تست اختصاصی درون‌ریزی فایل اکسل مالیات دارایی و تطبیق با کدملی"""
-        self.personnel1.national_code = '2450718214'
+        import io
+        import openpyxl
+        from decimal import Decimal
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        self.personnel1.assigned_warehouse = self.warehouse
+        self.personnel1.national_code = '2452304301'
         self.personnel1.save()
 
         period = MonthlyWorkPeriod.objects.create(
@@ -321,27 +350,51 @@ class PersonnelAppTests(TestCase):
         from personnel.payroll_engine import PayrollCalculationEngine
         PayrollCalculationEngine(period=period).calculate_period(period)
 
-        possible_paths = [
-            r'E:\warehouse project\Documents\SalaryCalculation\TaxCalculatedByTheTaxOffice.xlsx',
-            r'E:\warehouse project\Documents\SalaryCalculation\نمونه مالیات محاسبه شده.xlsx',
-            os.path.join(settings.BASE_DIR, '..', 'Documents', 'SalaryCalculation', 'TaxCalculatedByTheTaxOffice.xlsx'),
-            os.path.join(settings.BASE_DIR, '..', 'Documents', 'SalaryCalculation', 'نمونه مالیات محاسبه شده.xlsx'),
-            r'E:\warehouse project\نمونه مالیات محاسبه شده.xlsx',
-        ]
-        tax_file_path = next((p for p in possible_paths if os.path.exists(p)), possible_paths[0])
-        with open(tax_file_path, 'rb') as fp:
-            res = self.client.post(
-                '/api/personnel/monthly-payroll/import-tax-excel/',
-                {'file': fp, 'period_id': period.id},
-                format='multipart'
-            )
+        # ساخت فایل اکسل مالیات در حافظه جهت حذف وابستگی به فایل‌های بیرونی ناپایدار
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "TaxData"
+
+        # سطر ۱: هدرهای استاندارد مالیات دارایی مطابق نگاشت col_map در import_tax_excel
+        ws.cell(row=1, column=1, value='ردیف')
+        ws.cell(row=1, column=2, value='کد ملی')
+        ws.cell(row=1, column=3, value='نام و نام خانوادگی')
+        ws.cell(row=1, column=4, value='مالیات محاسبه شده')
+        ws.cell(row=1, column=5, value='تعداد ماه اعمال شده در معافیت')
+        ws.cell(row=1, column=6, value='بیش از یک کارفرما')
+
+        # سطر ۲: ردیف پرسنل تست با مالیات مشخص
+        ws.cell(row=2, column=1, value=1)
+        ws.cell(row=2, column=2, value=self.personnel1.national_code)
+        ws.cell(row=2, column=3, value=self.personnel1.full_name)
+        ws.cell(row=2, column=4, value=12500000)
+        ws.cell(row=2, column=5, value=1)
+        ws.cell(row=2, column=6, value='خیر')
+
+        stream = io.BytesIO()
+        wb.save(stream)
+        stream.seek(0)
+
+        tax_file = SimpleUploadedFile(
+            'tax_sample.xlsx',
+            stream.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+
+        res = self.client.post(
+            '/api/personnel/monthly-payroll/import-tax-excel/',
+            {'file': tax_file, 'period_id': period.id},
+            format='multipart'
+        )
         self.assertEqual(res.status_code, 200)
         self.assertGreater(res.data['matched_count'], 0)
+        self.assertEqual(res.data['matched_count'], 1)
 
         # بررسی به‌روزرسانی مالیات پرسنل با کدملی 2452304301
         rec = MonthlyPayrollRecord.objects.get(period=period, personnel=self.personnel1)
         self.assertTrue(rec.is_tax_imported)
         self.assertEqual(rec.tax_source_type, 'IMPORTED_EXCEL')
+        self.assertEqual(rec.income_tax, Decimal('12500000'))
 
     def test_wh_and_wp_tax_file_exports(self):
         """تست اختصاصی ساختار فایل‌های WP (۲۳ ستون) و WH (۳۹ ستون) با تنظیمات انفرادی پرسنل"""
