@@ -6853,6 +6853,11 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                         return Response({'error': 'انبار مشخص‌شده متعلق به شرکت فعال در سربرگ نیست.'}, status=status.HTTP_403_FORBIDDEN)
 
                 if not request.user.is_superuser:
+                    if wh_cid is not None:
+                        allowed_ids = set(get_user_allowed_companies(request.user).values_list('id', flat=True))
+                        if wh_cid not in allowed_ids:
+                            return Response({'error': 'شما به انبار مشخص‌شده دسترسی ندارید.'}, status=status.HTTP_403_FORBIDDEN)
+
                     scoped_wh_ids = set()
                     for ext in contributions('user_extensions'):
                         if hasattr(ext, 'get_all_warehouses'):
@@ -6864,6 +6869,19 @@ class VehicleTripViewSet(viewsets.ModelViewSet):
                                         scoped_wh_ids.add(w_id)
                             except Exception:
                                 pass
+
+                    # همچنین برای خودروهای یتیم خود کاربر (بی‌شرکت و بی‌بخش)، انبار بی‌شرکت خودرو در دامنه است
+                    if wh_cid is None:
+                        orphan_wh_ids = set(
+                            VehicleDriverProfile.objects.filter(
+                                created_by=request.user,
+                                company__isnull=True,
+                                section__isnull=True,
+                                assigned_warehouse_id__isnull=False
+                            ).values_list('assigned_warehouse_id', flat=True)
+                        )
+                        scoped_wh_ids.update(orphan_wh_ids)
+
                     if wh_id_int not in scoped_wh_ids:
                         return Response({'error': 'شما به انبار مشخص‌شده دسترسی ندارید.'}, status=status.HTTP_403_FORBIDDEN)
 

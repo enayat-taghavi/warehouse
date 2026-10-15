@@ -389,6 +389,7 @@
   - **آزمون‌هایی که واقعاً اجرا شد با نتیجه:**
     - `integration_tests.test_vehicle_trip_actions_scope` و `integration_tests.test_company_scope_reports_import`: اجرای ۵۲ آزمون در ۶۲.۱۷۳ ثانیه با وضعیت `OK` (۵۲ پاس، ۰ شکست، ۰ خطا، ۰ پرش).
     - `personnel.test_attendance_fleet_audit`: اجرای ۱۷ آزمون در ۵.۷۰۱ ثانیه با وضعیت `OK` (۱۷ پاس، ۰ شکست، ۰ خطا، ۰ پرش).
+    - مجموعه آزمون‌های کامل ناظر (`test_vehicle_trip_actions_scope`, `test_company_scope_reports_import`, `test_fleet_scenarios_10_vehicles`, `test_attendance_fleet_audit`): اجرای ۷۶ آزمون با نتیجه `Ran 76 tests in 69.794s - OK` و کد خروج ۰ بدون هیچ آزمون skipشده (`exit 0 ran 76 skipped False`).
   - **ابهام‌های مانده:**
     - هیچ ابهامی در حوزه سفرهای خودروهای یتیم و سنجش انبار در اکشن‌های سفر وجود ندارد؛ رفتار سیستم به طور کامل با قواعد طرح منطبق و تثبیت شده است.
 
