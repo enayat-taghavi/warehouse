@@ -15,6 +15,8 @@
   python scripts/automation/verify_tools.py guardian29-max --max COUNTER=N [...] [--min COUNTER=N ...]
   python scripts/automation/verify_tools.py migrate-empty [--modules all warehouse accounting]
   python scripts/automation/verify_tools.py sample-module
+  python scripts/automation/verify_tools.py release-mark
+  python scripts/automation/verify_tools.py release-check
 
 هر فرمان در موفقیت کد ۰ و در شکست کد ۱ می‌دهد و علت را چاپ می‌کند.
 الگوهای ng-test-compare نسبت به warehouse-front هستند (مثل src/app/shared/icons/*.spec.ts).
@@ -168,6 +170,119 @@ def cmd_dist_free(args) -> int:
             print(f"  {h}")
         return 1
     print(f"No file in {args.dist} matches /{args.pattern}/.")
+    return 0
+
+
+RELEASE_MARK = CACHE_DIR / "release_start.json"
+RELEASE_URLS = ("https://app.farsalish.ir/", "https://app.farsalish.ir/api/public/config/")
+DIST_BROWSER = FRONT_DIR / "dist" / "warehouse-app" / "browser"
+NGSW_PATCH_MARK = "(res.status >= 520 && res.status <= 530)) && ignoreOfflineError"
+RELEASE_PROBE = (
+    "import json\n"
+    "from accounts.backup_service import get_backup_dir\n"
+    "from settings_core.models import SystemGoogleDriveConfig\n"
+    "c = SystemGoogleDriveConfig.objects.filter(id=1).only('worker_heartbeat_at').first()\n"
+    "hb = c.worker_heartbeat_at.timestamp() if c and c.worker_heartbeat_at else None\n"
+    "print('PROBE=' + json.dumps({'dir': get_backup_dir(), 'hb': hb}))\n"
+)
+
+
+def cmd_release_mark(args) -> int:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    RELEASE_MARK.write_text(json.dumps({"start": time.time()}), encoding="utf-8")
+    print(f"Release start recorded in {RELEASE_MARK}.")
+    return 0
+
+
+def cmd_release_check(args) -> int:
+    """release روی app پس از release-mark: پشتیبان تازه، بیلد تازهٔ وصله‌شده، daphne و worker تازه، heartbeat و ۲۰۰."""
+    import urllib.request
+    import psutil
+
+    if not RELEASE_MARK.is_file():
+        print("No release mark; run release-mark before the session.")
+        return 1
+    start = json.loads(RELEASE_MARK.read_text(encoding="utf-8"))["start"]
+    problems, ok = [], []
+
+    code, out = run_manage(["shell", "-c", RELEASE_PROBE], "")
+    m = re.search(r"^PROBE=(.*)$", out, re.M)
+    if code != 0 or not m:
+        problems.append("backend probe failed:\n" + tail(out, 15))
+        probe = {"dir": None, "hb": None}
+    else:
+        probe = json.loads(m.group(1))
+
+    if probe["dir"]:
+        dumps = [p for p in Path(probe["dir"]).glob("*.dump") if p.stat().st_size > 0]
+        fresh = [p for p in dumps if p.stat().st_mtime >= start]
+        meta_ok = [p for p in fresh if (p.parent / f"{p.name}.meta.json").is_file()
+                   or (p.parent / f"{p.stem}.meta.json").is_file()]
+        if meta_ok:
+            ok.append(f"backup {meta_ok[0].name} ({meta_ok[0].stat().st_size} bytes)")
+        else:
+            problems.append(f"no non-empty .dump with .meta.json created in {probe['dir']} after the release mark")
+
+    for name in ("index.html", "ngsw.json", "ngsw-worker.js"):
+        f = DIST_BROWSER / name
+        if not f.is_file() or f.stat().st_mtime < start:
+            problems.append(f"{f.relative_to(REPO_ROOT)} was not rebuilt after the release mark")
+    worker = DIST_BROWSER / "ngsw-worker.js"
+    if worker.is_file() and NGSW_PATCH_MARK not in worker.read_text(encoding="utf-8", errors="replace"):
+        problems.append("ngsw-worker.js is not patched (run node tools/patch-ngsw-530.js)")
+
+    daphne = None
+    for c in psutil.net_connections(kind="tcp"):
+        if c.laddr and c.laddr.port == 8000 and c.status == psutil.CONN_LISTEN and c.pid:
+            daphne = psutil.Process(c.pid)
+            break
+    if daphne is None:
+        problems.append("nothing listens on port 8000")
+    else:
+        cmdline = " ".join(daphne.cmdline())
+        if "daphne" not in cmdline:
+            problems.append(f"port 8000 is not daphne: {cmdline[:150]}")
+        elif daphne.create_time() < start:
+            problems.append("daphne on port 8000 was started before the release mark (not restarted)")
+        else:
+            ok.append(f"daphne pid {daphne.pid}")
+
+    workers = []
+    for p in psutil.process_iter(["pid", "name", "cmdline", "create_time"]):
+        cl = " ".join(p.info["cmdline"] or [])
+        if "run_gdrive_sync_worker" in cl and "python" in (p.info["name"] or "").lower():
+            workers.append(p)
+    if not workers:
+        problems.append("no GDrive sync worker python process is running")
+    elif not any(p.info["create_time"] >= start for p in workers):
+        problems.append("GDrive sync worker was not restarted after the release mark")
+    else:
+        ok.append(f"gdrive worker pid(s) {[p.pid for p in workers]}")
+    if probe["hb"] is None or time.time() - probe["hb"] > 180:
+        problems.append(f"worker heartbeat is not fresh (last: {probe['hb']})")
+
+    for url in RELEASE_URLS:
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "release-check"}),
+                                        timeout=30) as r:
+                status = r.status
+        except urllib.error.HTTPError as e:
+            status = e.code
+        except Exception as e:
+            status = f"error {e}"
+        if status == 200:
+            ok.append(f"200 {url}")
+        else:
+            problems.append(f"{url} -> {status}")
+
+    for line in ok:
+        print(f"OK  {line}")
+    if problems:
+        print("Release check failed:")
+        for p in problems:
+            print(f"  - {p}")
+        return 1
+    print("Release check passed.")
     return 0
 
 
@@ -725,6 +840,12 @@ def main(argv=None) -> int:
     p = sub.add_parser("migrate-empty", help="migrate on an empty database (temporary postgres container) per profile")
     p.add_argument("--modules", nargs="+", default=["all", "warehouse", "accounting"])
     p.set_defaults(func=cmd_migrate_empty)
+
+    p = sub.add_parser("release-mark", help="record the start time of an app release (require: line)")
+    p.set_defaults(func=cmd_release_mark)
+
+    p = sub.add_parser("release-check", help="app release after release-mark: backup, patched build, restarts, heartbeat, 200")
+    p.set_defaults(func=cmd_release_check)
 
     p = sub.add_parser("sample-module", help="new_module.py builds a sample module in a HEAD copy without touching the core")
     p.set_defaults(func=cmd_sample_module)
