@@ -163,6 +163,13 @@ export interface ExtensionMap {
   dynamicFields?: {
     fieldsEndpoint: string;
   };
+
+  /**
+   * ۱۷. نقطه توسعه آپلود تصاویر کالا — مصرف در photo-upload-queue.service.ts
+   */
+  photoUpload?: {
+    itemPhotosEndpoint: (itemId: number | string) => string;
+  };
 }
 
 /**

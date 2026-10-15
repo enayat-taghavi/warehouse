@@ -83,6 +83,9 @@ export const MODULE: WhFrontendModule = {
     dynamicFields: {
       fieldsEndpoint: '/inventory/dynamic-fields/'
     },
+    photoUpload: {
+      itemPhotosEndpoint: (itemId: number | string) => `/inventory/items/${itemId}/photos/`
+    },
     loadLabelDesigner: () => import('./components/label-designer/label-designer').then(m => m.LabelDesigner)
   }
 };

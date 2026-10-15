@@ -4,6 +4,7 @@ import { ItemPhoto } from '../models/item.model';
 import { NetworkStatusService } from './network-status.service';
 import { offlineDb, PhotoQueueEntry } from './offline-db';
 import { isServerUnreachable } from './server-reachability';
+import { getModuleRegistry } from '../modules/module-registry.service';
 
 /**
  * نتیجه یک دور تخلیه صف عکس — با همان منطق سه‌حالته صف اصلی
@@ -355,7 +356,22 @@ export class PhotoUploadQueueService {
       if (token) headers['Authorization'] = `Bearer ${token}`;
       // Content-Type عمداً ست نمی‌شود: مرورگر باید خودش boundary را بگذارد.
 
-      const response = await fetch(`${environment.apiUrl}/inventory/items/${entry.itemId}/photos/`, {
+      // خواندن آدرس آپلود عکس از نقطه توسعه ماژول انبار
+      const photoUploadExt = getModuleRegistry()
+        .getExtensions('photoUpload')[0]?.extension;
+      if (!photoUploadExt?.itemPhotosEndpoint) {
+        console.warn('[PhotoQueue] ⚠ نقطه توسعه photoUpload ثبت نشده است — رکورد در صف ماند');
+        await offlineDb.photoQueue.update(entry.id, {
+          status: 'pending',
+          lastError: 'نقطه توسعه آپلود عکس در ماژول ثبت نشده است',
+        });
+        return 'server-error';
+      }
+
+      const endpoint = photoUploadExt.itemPhotosEndpoint(entry.itemId);
+      const url = endpoint.startsWith('http') ? endpoint : `${environment.apiUrl}${endpoint}`;
+
+      const response = await fetch(url, {
         method: 'POST',
         headers,
         body: form,
