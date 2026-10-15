@@ -3554,3 +3554,61 @@ refactor(platform-ui): extract facades for common components and update architec
 </div>
 
 ---
+
+### Task 1 of 1 — 2026-10-15 22:57:02
+- **Status:** DONE
+- **Conversation:** `24630338-92e5-46d6-a577-bbf174076fc0`
+- **Steps:** 264
+- **Duration:** 77m 27s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 15/16 passed
+    - FAILED (exit 1): `python -c "import pathlib,sys; app=pathlib.Path('warehouse-front/src/app'); reg=pathlib.Path('warehouse-backend/core/platform_core/registry.py').read_text(encoding='utf-8'); fn=reg[reg.find('def audit_scope_keys'):][:900]; sp=(app/'core/services/sync-pull.service.ts').read_text(encoding='utf-8'); pq=(app/'core/services/photo-upload-queue.service.ts').read_text(encoding='utf-8'); bat=pathlib.Path('dev-manager-modular.bat').read_bytes(); amap=pathlib.Path('.agents/PROJECT_ARCHITECTURE_MAP.md').read_text(encoding='utf-8'); ok={'audit_catalog':'MODULE_CATALOG' in fn,'no_second_registry':'getModuleRegistry' not in sp and 'getModuleRegistry' not in pq,'bat_ascii':all(b<128 for b in bat),'map_no_reverted_facades':'(مالی، انبار و پلتفرم مشترک' not in amap}; print(ok); sys.exit(0 if all(ok.values()) else 1)"`
+  - verify round 1: 16/16 passed
+- **Task:**
+```
+نشست 12 از 12 — ماژولارسازی عمیق: رفع یافتههای ناظر (ممیزی تکماژول، رجیستری ماژول در سرویسهای آفلاین، runQueue، فایل bat، نقشه معماری)
+
+
+
+۱. قواعد سخت:
+- `.agents/AGENTS.md` بخش‌های ۳، ۵، ۷، ۹ و ۱۰ برقرارند.
+- push نکن. فقط فایل‌هایی را که خودت تغییر دادی stage کن. `tasks.md`، `tasks_history.md`، `run_tasks.py` و `run_tasks.bat` را هرگز stage نکن.
+- `manage.py test` را فقط با برچسب اپ اجرا کن.
+- قانون از دست نرفتن داده: رکورد صف همگام‌سازی فقط با 2xx یا 4xx صریح حذف می‌شود؛ 5xx و قطع اتصال یعنی تلاش دوباره. تشخیص قطع اتصال فقط با `isServerUnreachable()`.
+- فقط پنج بند زیر را انجام بده. هیچ فایل دیگری را تغییر نده.
+
+۲. زمینه: بخش `## ۵.` و «گزارش پیشرفت» سند `Documents/Deep_Modularization_Phase2/implementation_plan_deep_modularization.md`. ناظر Facadeهای نشست ۹ و ۱۰ را با `git revert` برگرداند (کامیت‌های `633c22c` و `cc2aecf`)؛ آن‌ها را دوباره نساز.
+
+۳. تعریف‌ها: «کاتالوگ» یعنی `MODULE_CATALOG` در `warehouse-backend/core/platform_core/module_catalog.py` که همهٔ ماژول‌های کشف‌شده را دارد، نصب‌شده یا نه. «رجیستری ریشه» یعنی نمونهٔ `ModuleRegistryService` که Angular با `inject()` می‌دهد و `config-api.service.ts` روی آن `setInstalledModules()` را صدا می‌زند.
+
+۴. کار:
+- الف) `audit_scope_keys(module_code)` در `warehouse-backend/core/platform_core/registry.py` به‌جای `_REGISTRY` از `MODULE_CATALOG` بخواند تا در پروفایل تک‌ماژول هم کلیدهای ماژول نصب‌نشده برگردد و `.exclude(...)` در `AuditLogViewSet` خالی نشود. import کاتالوگ را درون تابع بگذار تا import حلقوی پیش نیاید. یک آزمون در `warehouse-backend/core/platform_core/tests.py` (یا فایل آزمون موجود همان اپ) اضافه کن که با `unittest.mock.patch.dict` روی `_REGISTRY` و حذف `'accounting'` از آن، همچنان شش کلید `('personnel', 'payroll', 'attendance', 'fleet', 'treasury', 'finance')` برگردد.
+- ب) در `warehouse-front/src/app/core/services/sync-pull.service.ts` و `warehouse-front/src/app/core/services/photo-upload-queue.service.ts`، `getModuleRegistry()` را با `inject(ModuleRegistryService)` (رجیستری ریشه) جایگزین کن. هر دو سرویس `@Injectable` هستند. اگر یکی از آن‌ها بیرون از injection context ساخته می‌شود (مثلاً `getInstance()` ایستا)، رجیستری را از همان جایی بگیر که نمونهٔ Angular آن ساخته می‌شود و در گزارش بنویس. specهای همین دو سرویس را هماهنگ کن.
+- ج) `runQueue` در `warehouse-front/src/app/core/services/offline-sync.service.ts`: نسخهٔ کامیت `de01d8e` همین متد را بخوان و دو رفتار را دقیقاً برگردان: (۱) `_lastSyncTime$.next(Date.now())` در همان شرایط قبلی (از جمله وقتی هر دو صف در نخستین دور خالی‌اند)؛ (۲) در خطای پیش‌بینی‌نشده، همان محاسبهٔ نتیجهٔ قبلی، نه `server-unreachable` ثابت. تابع `runQueueSequential` در `core/services/offline/offline-queue-runner.ts` را برای این کار فقط در حد لازم تغییر بده و شرط حذف رکورد صف را دست نزن.
+- د) در `dev-manager-modular.bat` دو خط `rem` فارسی را با این خط انگلیسی جایگزین کن: `rem The dev server always shows all modules; single-module builds use npm run build:modules`. فایل باید فقط نویسهٔ ASCII داشته باشد.
+- ه) در `.agents/PROJECT_ARCHITECTURE_MAP.md` زیر عنوان «الگوی معماری فکاد»، متن را اصلاح کن: الگوی Facade فقط در چهار کامپوننت پلتفرم مشترک (`companies`، `users`، `audit`، `id-cards`) به کار رفته است؛ Facadeهای کامپوننت‌های مالی و انبار برگردانده شدند، چون جابه‌جایی منطقشان رفتار را عوض کرده بود.
+
+۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `warehouse-front`، حداکثر دو بار `warehouse-backend\venv\Scripts\python.exe manage.py test platform_core accounts --noinput` در پوشهٔ `warehouse-backend` با `PYTHONUTF8=1`، و یک بار `python scripts/e2e/guardian_57_front_module_fence.py`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+
+۶. پیش از پایان: `git diff --stat` را ببین؛ جز فایل‌های همین پنج بند و specها و آزمون‌های مربوط نباید فایلی تغییر کرده باشد.
+
+۷. خروجی و پایان:
+- فقط فایل‌های تغییریافتهٔ خودت را stage کن و با این پیام commit کن، بدون push:
+fix(modular): resolve supervisor findings of the deep modularization queue
+- گزارش کوتاه: برای هر بند الف تا ه، فایل و تغییر؛ فرمان‌هایی که واقعاً اجرا کردی با نتیجه؛ و ابهام‌های مانده. پس از commit نوبت را تمام کن.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده علت شکست و اصلاح انجام‌شده (Simple Explanation)
+بررسی لاگ راستی‌آزمایی رانر (`runner`) نشان داد که شرط `'no_second_registry'` به دلیل باقی ماندن فراخوانی `getModuleRegistry` در بلوک‌های جایگزین (`fallback catch`) سازنده دو سرویس `sync-pull.service.ts` و `photo-upload-queue.service.ts` شکست خورده بود. برای عبور قطعی از راستی‌آزمایی، این دو سرویس مستقیماً و منحصراً به فیلد تزریق‌شده ریشه `inject(ModuleRegistryService)` متصل شدند و هرگونه ارجاع یا ایمپورت `getModuleRegistry` از هر دو فایل به طور کامل حذف گردید.
+
+---
+
+### ۲. اعتبارسنجی و تأیید (Verification)
+فرمان اعتبارسنجی رانر مجدداً اجرا شد و هر ۴ بررسی با موفقیت کامل سبز شدند:
+```bash
+python ...
+
+---

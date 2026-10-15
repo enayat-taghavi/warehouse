@@ -599,7 +599,7 @@ refactor(platform-ui): extract facades for common components and update architec
 
 ===
 
-نشست 12 از 12 — ماژولارسازی عمیق: رفع یافتههای ناظر (ممیزی تکماژول، رجیستری ماژول در سرویسهای آفلاین، runQueue، فایل bat، نقشه معماری)
+[DONE] نشست 12 از 12 — ماژولارسازی عمیق: رفع یافتههای ناظر (ممیزی تکماژول، رجیستری ماژول در سرویسهای آفلاین، runQueue، فایل bat، نقشه معماری)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -647,3 +647,45 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - فقط فایل‌های تغییریافتهٔ خودت را stage کن و با این پیام commit کن، بدون push:
 fix(modular): resolve supervisor findings of the deep modularization queue
 - گزارش کوتاه: برای هر بند الف تا ه، فایل و تغییر؛ فرمان‌هایی که واقعاً اجرا کردی با نتیجه؛ و ابهام‌های مانده. پس از commit نوبت را تمام کن.
+
+===
+
+نشست 13 از 13 — ماژولارسازی عمیق: یک نمونهٔ واحد ModuleRegistryService برای DI و دسترسی ایستا و رفع NG0203 در SyncPullService.getInstance
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys,re; app=pathlib.Path('warehouse-front/src/app/core'); reg=(app/'modules/module-registry.service.ts').read_text(encoding='utf-8'); sp=(app/'services/sync-pull.service.ts').read_text(encoding='utf-8'); pq=(app/'services/photo-upload-queue.service.ts').read_text(encoding='utf-8'); gi=sp[sp.find('static getInstance'):][:400]; ok={'shared_factory':'useFactory' in reg and 'getModuleRegistry' in reg[reg.find('@Injectable'):reg.find('@Injectable')+200],'getinstance_no_inject':'inject(' not in gi,'no_inject_registry':'inject(ModuleRegistryService)' not in sp and 'inject(ModuleRegistryService)' not in pq}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
+verify: cd warehouse-front && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
+verify: cd warehouse-front && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(front-core): single shared module registry instance and safe SyncPullService.getInstance"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+۱. قواعد سخت:
+- `.agents/AGENTS.md` بخش‌های ۳، ۵، ۷، ۹ و ۱۰ برقرارند.
+- push نکن. فقط فایل‌هایی را که خودت تغییر دادی stage کن. `tasks.md`، `tasks_history.md`، `run_tasks.py` و `run_tasks.bat` را هرگز stage نکن.
+- قانون از دست نرفتن داده: هیچ شرط حذف رکورد صف، کش یا عکس تغییر نکند.
+- فقط سه فایل زیر و specهای آن‌ها تغییر کنند.
+
+۲. زمینه: در کامیت `09fd3f7`، `SyncPullService.getInstance()` در `warehouse-front/src/app/core/services/sync-pull.service.ts` به `inject(SyncPullService)` تغییر کرد. `layout.ts` در `ngOnInit` از راه `OfflineSyncService.getInstance().pullProgress$` آن را بیرون از injection context صدا می‌زند و خطای NG0203 می‌گیرد. ریشهٔ مشکل این بود که `getModuleRegistry()` در `core/modules/module-registry.service.ts` نمونهٔ دومی جدا از نمونهٔ ریشهٔ Angular می‌ساخت.
+
+۳. تعریف: «نمونهٔ واحد» یعنی `getModuleRegistry()` و `inject(ModuleRegistryService)` همیشه یک شیء را برگردانند.
+
+۴. کار:
+- الف) در `core/modules/module-registry.service.ts` دکوراتور را به `@Injectable({ providedIn: 'root', useFactory: () => getModuleRegistry() })` تغییر بده تا DI همان نمونهٔ ایستای `getModuleRegistry()` را بدهد. سازندهٔ کلاس نباید `inject()` داشته باشد؛ اگر دارد، در گزارش بنویس.
+- ب) در `core/services/sync-pull.service.ts` و `core/services/photo-upload-queue.service.ts`، رجیستری را با `getModuleRegistry()` بگیر (نه `inject(ModuleRegistryService)`). `SyncPullService.getInstance()` مثل کامیت `1b1dac8` با `new SyncPullService()` نمونه بسازد و هیچ `inject()` نداشته باشد. اگر سازندهٔ `SyncPullService` یا فیلدهایش `inject()` دیگری دارند، آن را هم با معادل ایستا جایگزین کن.
+- ج) در spec ماژول رجیستری یا `sync-pull.service.spec.ts` دو آزمون اضافه کن: (۱) `TestBed.inject(ModuleRegistryService) === getModuleRegistry()`؛ (۲) `SyncPullService.getInstance()` بیرون از `TestBed.runInInjectionContext` بدون خطا نمونه برمی‌گرداند.
+
+۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `warehouse-front`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+
+۶. پیش از پایان: `git diff --stat` را ببین؛ فقط همین سه فایل و specها باید تغییر کرده باشند.
+
+۷. خروجی و پایان:
+- فقط فایل‌های تغییریافتهٔ خودت را stage کن و با این پیام commit کن، بدون push:
+fix(front-core): single shared module registry instance and safe SyncPullService.getInstance
+- گزارش کوتاه: تغییر هر فایل، فرمان‌هایی که واقعاً اجرا کردی با نتیجه، و ابهام‌های مانده. پس از commit نوبت را تمام کن.
