@@ -3612,3 +3612,49 @@ fix(modular): resolve supervisor findings of the deep modularization queue
 python ...
 
 ---
+
+### Task 1 of 1 — 2026-10-15 23:29:38
+- **Status:** DONE
+- **Conversation:** `e5f633ba-5c13-49cd-b132-2aed4829bb46`
+- **Steps:** 145
+- **Duration:** 28m 41s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 10/10 passed
+- **Task:**
+```
+نشست 13 از 13 — ماژولارسازی عمیق: یک نمونهٔ واحد ModuleRegistryService برای DI و دسترسی ایستا و رفع NG0203 در SyncPullService.getInstance
+
+
+
+۱. قواعد سخت:
+- `.agents/AGENTS.md` بخش‌های ۳، ۵، ۷، ۹ و ۱۰ برقرارند.
+- push نکن. فقط فایل‌هایی را که خودت تغییر دادی stage کن. `tasks.md`، `tasks_history.md`، `run_tasks.py` و `run_tasks.bat` را هرگز stage نکن.
+- قانون از دست نرفتن داده: هیچ شرط حذف رکورد صف، کش یا عکس تغییر نکند.
+- فقط سه فایل زیر و specهای آن‌ها تغییر کنند.
+
+۲. زمینه: در کامیت `09fd3f7`، `SyncPullService.getInstance()` در `warehouse-front/src/app/core/services/sync-pull.service.ts` به `inject(SyncPullService)` تغییر کرد. `layout.ts` در `ngOnInit` از راه `OfflineSyncService.getInstance().pullProgress$` آن را بیرون از injection context صدا می‌زند و خطای NG0203 می‌گیرد. ریشهٔ مشکل این بود که `getModuleRegistry()` در `core/modules/module-registry.service.ts` نمونهٔ دومی جدا از نمونهٔ ریشهٔ Angular می‌ساخت.
+
+۳. تعریف: «نمونهٔ واحد» یعنی `getModuleRegistry()` و `inject(ModuleRegistryService)` همیشه یک شیء را برگردانند.
+
+۴. کار:
+- الف) در `core/modules/module-registry.service.ts` دکوراتور را به `@Injectable({ providedIn: 'root', useFactory: () => getModuleRegistry() })` تغییر بده تا DI همان نمونهٔ ایستای `getModuleRegistry()` را بدهد. سازندهٔ کلاس نباید `inject()` داشته باشد؛ اگر دارد، در گزارش بنویس.
+- ب) در `core/services/sync-pull.service.ts` و `core/services/photo-upload-queue.service.ts`، رجیستری را با `getModuleRegistry()` بگیر (نه `inject(ModuleRegistryService)`). `SyncPullService.getInstance()` مثل کامیت `1b1dac8` با `new SyncPullService()` نمونه بسازد و هیچ `inject()` نداشته باشد. اگر سازندهٔ `SyncPullService` یا فیلدهایش `inject()` دیگری دارند، آن را هم با معادل ایستا جایگزین کن.
+- ج) در spec ماژول رجیستری یا `sync-pull.service.spec.ts` دو آزمون اضافه کن: (۱) `TestBed.inject(ModuleRegistryService) === getModuleRegistry()`؛ (۲) `SyncPullService.getInstance()` بیرون از `TestBed.runInInjectionContext` بدون خطا نمونه برمی‌گرداند.
+
+۵. فرمان‌های مجاز: حداکثر دو بار `npx ng build --output-path ../scratch/ng-build-agent` در `warehouse-front`. اگر فرمانی شکست خورد، همان را تکرار نکن؛ علت را از خروجی بخوان و رویکرد را عوض کن.
+
+۶. پیش از پایان: `git diff --stat` را ببین؛ فقط همین سه فایل و specها باید تغییر کرده باشند.
+
+۷. خروجی و پایان:
+- فقط فایل‌های تغییریافتهٔ خودت را stage کن و با این پیام commit کن، بدون push:
+fix(front-core): single shared module registry instance and safe SyncPullService.getInstance
+- گزارش کوتاه: تغییر هر فایل، فرمان‌هایی که واقعاً اجرا کردی با نتیجه، و ابهام‌های مانده. پس از commit نوبت را تمام کن.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خواسته کاربر
+در کامیت قبلی (`09fd3f7`)، تابع ایستا `SyncPullService.getInstance()` برای دریافت وابستگی‌ها به `inject(SyncPullService)` تغییر یافته بود. از آنجا که کامپوننت `layout.ts` در متد چرخه حیات `ngOnInit` خود از طریق `OfflineSyncService.getInstance().pullProgress$` این متد را در خارج از کانتکست تزریق وابستگی (Injection Context) فراخوانی می‌کرد، خطای زمان اجرای `NG0203: inject() must be called from an injection context` رخ می‌داد. دلیل زیربنایی این تغییر ناامن نیز دوگانگی نمونه‌های `getModuleRegistry()` و نمونه ساخته‌شده توسط DI انگولار در `ModuleRegistryService` بود. هدف، یکی کردن نمونه بازگشتی DI و متد ایستا (`===`) و ایمن‌سازی کامل `S...
+
+---

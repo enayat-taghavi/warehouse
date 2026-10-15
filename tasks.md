@@ -650,7 +650,7 @@ fix(modular): resolve supervisor findings of the deep modularization queue
 
 ===
 
-نشست 13 از 13 — ماژولارسازی عمیق: یک نمونهٔ واحد ModuleRegistryService برای DI و دسترسی ایستا و رفع NG0203 در SyncPullService.getInstance
+[DONE] نشست 13 از 13 — ماژولارسازی عمیق: یک نمونهٔ واحد ModuleRegistryService برای DI و دسترسی ایستا و رفع NG0203 در SyncPullService.getInstance
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
