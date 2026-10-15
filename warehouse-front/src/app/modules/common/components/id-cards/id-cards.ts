@@ -1,3 +1,14 @@
+import { IdCardsFacade } from './id-cards.facade';
+import {
+  CardCustomTexts,
+  DEFAULT_CARD_TEXTS,
+  IdCardSettings,
+  drawPure2DBarcode,
+  drawCanvas1DBarcode,
+  drawCanvas2DBarcode,
+  getBarcodeSvgString,
+  getQrCodeSvgString
+} from './id-cards.helpers';
 import { Component, OnInit, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -12,65 +23,15 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 
-export interface CardCustomTexts {
-  companyName: string;
-  companySub: string;
-  backHeaderTitle: string;
-  backHeaderSub: string;
-  regulationsText: string;
-  signatureTitle: string;
-  signatureSub: string;
-}
-
-export const DEFAULT_CARD_TEXTS: CardCustomTexts = {
-  companyName: 'فارس عــالیش',
-  companySub: 'FARS AALISH CO. - REG: 420',
-  backHeaderTitle: 'ضوابط و امنیت تردد سازمانی',
-  backHeaderSub: 'SECURITY & SAFETY GUIDELINES',
-  regulationsText: 'همراه داشتن این کارت در کلیه مبادی ورودی و محوطه سازمانی الزامی است. هرگونه واگذاری به غیر ممنوع می‌باشد.',
-  signatureTitle: 'مهر و امضای حراست و انتظامات',
-  signatureSub: 'SECURITY CLEARANCE'
-};
-
-export interface IdCardSettings {
-  dataSource: 'db' | 'external';
-  presetLayout: 'classic-vertical' | 'badge-horizontal' | 'industrial-security' | 'compact-minimal';
-  cardType: 'pvc-vertical' | 'badge-horizontal';
-  theme: 'corporate' | 'industrial' | 'security' | 'custom';
-  customColor: string;
-  customDomain?: string;
-  photoPosition: 'center' | 'top' | 'left' | 'right';
-  barcodeType: '1d' | '2d';
-  barcodePlacement: 'front' | 'back' | 'both' | 'none';
-  expiryDays: number;
-  globalProjectNote: string;
-  customTexts: CardCustomTexts;
-  fields: {
-    photo: boolean;
-    role: boolean;
-    nationalCode: boolean;
-    personnelCode: boolean;
-    projects: boolean;
-    barcode: boolean;
-    expiry: boolean;
-    bloodType: boolean;
-    emergencyContact: boolean;
-    globalNote: boolean;
-    signature: boolean;
-    hologram: boolean;
-    regulations: boolean;
-  };
-  printSide: 'front' | 'back' | 'both';
-  printLayout: 'a4-grid' | 'laminate-side-by-side';
-}
-
 @Component({
   selector: 'app-id-cards',
   imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, TabBarComponent],
+  providers: [IdCardsFacade],
   templateUrl: './id-cards.html',
   styleUrl: './id-cards.css'
 })
 export class IdCards implements OnInit {
+  private facade = inject(IdCardsFacade);
   private readonly STORAGE_KEY = 'aalish_id_card_settings_v5';
 
   readonly PRESET_COLORS = [
@@ -255,17 +216,14 @@ export class IdCards implements OnInit {
 
   private restoreSavedSettings() {
     try {
-      if (typeof localStorage !== 'undefined') {
-        const saved = localStorage.getItem(this.STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          this.idCardSettings = {
-            ...this.idCardSettings,
-            ...parsed,
-            customTexts: { ...DEFAULT_CARD_TEXTS, ...(parsed.customTexts || {}) },
-            fields: { ...this.idCardSettings.fields, ...(parsed.fields || {}) }
-          };
-        }
+      const saved = this.facade.loadSavedSettings();
+      if (saved) {
+        this.idCardSettings = {
+          ...this.idCardSettings,
+          ...saved,
+          customTexts: { ...DEFAULT_CARD_TEXTS, ...(saved.customTexts || {}) },
+          fields: { ...this.idCardSettings.fields, ...(saved.fields || {}) }
+        };
       }
     } catch (e) {
       console.warn('Failed to load id card settings from localStorage', e);
@@ -273,11 +231,7 @@ export class IdCards implements OnInit {
   }
 
   saveSettings() {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.idCardSettings));
-      }
-    } catch (e) {}
+    this.facade.saveSettings(this.idCardSettings);
   }
 
   resetToDefaultTexts() {

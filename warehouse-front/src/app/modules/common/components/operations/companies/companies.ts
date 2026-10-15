@@ -1,3 +1,20 @@
+import { CompaniesFacade } from './companies.facade';
+import {
+  COMPANY_DOCUMENT_TYPES_LIST,
+  getFiscalPeriodStatusBadge,
+  getFiscalPeriodStatusLabel,
+  getEmptyFiscalPeriodData,
+  getEmptyBankAccountData,
+  getEmptyBoardMemberData,
+  getEmptyDocData,
+  getDocStatusClass,
+  getDocStatusLabel,
+  filterCompanyDocuments,
+  filterIranianBanksList,
+  isNationalIdChecksumValid,
+  validateNationalCode,
+  buildCompanyPayload
+} from './companies.helpers';
 import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -49,10 +66,12 @@ import { CompanyGdriveTabComponent } from './company-gdrive-tab/company-gdrive-t
   selector: 'app-companies-management',
   standalone: true,
   imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, CompanyGdriveTabComponent],
+  providers: [CompaniesFacade],
   templateUrl: './companies.html',
   styleUrls: ['./companies.css']
 })
 export class CompaniesManagementComponent implements OnInit, OnDestroy {
+  private facade = inject(CompaniesFacade);
   /** تب‌هایی که داده‌شان در حسابداری است (بانک، هیئت‌مدیره، گوگل‌درایو). در تب مدارک فقط بایگانی حسابداری پنهان می‌شود. */
   private static readonly ACCOUNTING_TABS = ['treasury', 'governance', 'gdrive'];
 
@@ -974,7 +993,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   loadCompanyFiscalPeriods(companyId: number): void {
     if (!this.isAccountingInstalled) return;
     this.isLoadingFiscalPeriods = true;
-    this.api.getFiscalPeriods(companyId).subscribe({
+    this.facade.getFiscalPeriods(companyId).subscribe({
       next: (res) => {
         this.isLoadingFiscalPeriods = false;
         if (Array.isArray(res)) {
@@ -1055,7 +1074,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       notes: this.newFiscalPeriod.notes.trim() || null
     };
 
-    this.api.createFiscalPeriod(payload).subscribe({
+    this.facade.createFiscalPeriod(payload).subscribe({
       next: (created) => {
         this.isSavingFiscalPeriod = false;
         this.toast.success(`دوره مالی «${created.title}» با موفقیت تعریف شد.`);
@@ -1074,7 +1093,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   closeFiscalPeriod(period: CompanyFiscalPeriod): void {
     if (!period.id) return;
-    this.api.closeFiscalPeriod(period.id).subscribe({
+    this.facade.closeFiscalPeriod(period.id).subscribe({
       next: () => {
         this.toast.success(`دوره مالی «${period.title}» با موفقیت بسته شد.`);
         period.status = 'closed';
@@ -1090,7 +1109,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   freezeFiscalPeriod(period: CompanyFiscalPeriod): void {
     if (!period.id) return;
-    this.api.freezeFiscalPeriod(period.id).subscribe({
+    this.facade.freezeFiscalPeriod(period.id).subscribe({
       next: () => {
         this.toast.success(`دوره مالی «${period.title}» منجمد شد.`);
         period.status = 'frozen';
@@ -1106,7 +1125,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   reopenFiscalPeriod(period: CompanyFiscalPeriod): void {
     if (!period.id) return;
-    this.api.reopenFiscalPeriod(period.id).subscribe({
+    this.facade.reopenFiscalPeriod(period.id).subscribe({
       next: () => {
         this.toast.success(`دوره مالی «${period.title}» مجدداً بازگشایی شد.`);
         period.status = 'open';
@@ -1160,7 +1179,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   loadCompanyDocuments(companyId: number): void {
     if (!this.isAccountingInstalled) return;
     this.isLoadingDocuments = true;
-    this.api.getDocuments({ company_id: companyId }).subscribe({
+    this.facade.getDocuments({ company_id: companyId }).subscribe({
       next: (res) => {
         this.isLoadingDocuments = false;
         if (Array.isArray(res)) {
@@ -1480,7 +1499,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   loadCompanyBankAccounts(companyId: number): void {
     if (!this.isAccountingInstalled) return;
     this.isLoadingBankAccounts = true;
-    this.api.getBankAccounts(companyId).subscribe({
+    this.facade.getBankAccounts(companyId).subscribe({
       next: (res) => {
         this.isLoadingBankAccounts = false;
         if (Array.isArray(res)) {
@@ -1667,7 +1686,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     };
 
     if (this.isEditingAccount && this.editingAccountId) {
-      this.api.updateBankAccount(this.editingAccountId, payload).subscribe({
+      this.facade.updateBankAccount(this.editingAccountId, payload).subscribe({
         next: (saved) => {
           this.isSavingBankAccount = false;
           this.toast.success(`حساب بانکی «${saved.bank_name}» با موفقیت ویرایش شد.`);
@@ -1696,7 +1715,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         }
       });
     } else {
-      this.api.createBankAccount(payload).subscribe({
+      this.facade.createBankAccount(payload).subscribe({
         next: (created) => {
           this.isSavingBankAccount = false;
           this.toast.success(`حساب بانکی «${created.bank_name}» با موفقیت افزوده شد.`);
@@ -1753,7 +1772,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       `آیا از حذف حساب بانکی «${acc.bank_name}» با شماره شبای «${acc.sheba_number}» اطمینان دارید؟`
     );
     if (!ok) return;
-    this.api.deleteBankAccount(acc.id).subscribe({
+    this.facade.deleteBankAccount(acc.id).subscribe({
       next: () => {
         this.toast.success('حساب بانکی با موفقیت حذف شد.');
         this.companyBankAccounts = this.companyBankAccounts.filter(a => a.id !== acc.id);
@@ -1818,7 +1837,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   loadCompanyBoardMembers(companyId: number): void {
     if (!this.isAccountingInstalled) return;
     this.isLoadingBoardMembers = true;
-    this.api.getBoardMembers(companyId).subscribe({
+    this.facade.getBoardMembers(companyId).subscribe({
       next: (res) => {
         this.isLoadingBoardMembers = false;
         if (Array.isArray(res)) {
@@ -1979,7 +1998,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
     const companyId = this.companyModal.data.id;
     if (this.isEditingBoardMember && this.editingBoardMemberId) {
-      this.api.updateBoardMember(this.editingBoardMemberId, formData).subscribe({
+      this.facade.updateBoardMember(this.editingBoardMemberId, formData).subscribe({
         next: (updated) => {
           this.isSavingBoardMember = false;
           this.toast.success(`مشخصات «${updated.first_name} ${updated.last_name}» با موفقیت ویرایش شد.`);
@@ -2002,7 +2021,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         }
       });
     } else {
-      this.api.createBoardMember(formData).subscribe({
+      this.facade.createBoardMember(formData).subscribe({
         next: (created) => {
           this.isSavingBoardMember = false;
           this.toast.success(`عضو جدید «${created.first_name} ${created.last_name}» با موفقیت افزوده شد.`);
@@ -2028,7 +2047,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       `آیا از حذف عضو «${member.first_name} ${member.last_name}» اطمینان دارید؟`
     );
     if (!ok) return;
-    this.api.deleteBoardMember(member.id).subscribe({
+    this.facade.deleteBoardMember(member.id).subscribe({
       next: () => {
         this.toast.success('عضو هیئت‌مدیره با موفقیت حذف گردید.');
         this.companyBoardMembers = this.companyBoardMembers.filter(m => m.id !== member.id);
@@ -2131,7 +2150,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     formData.append('is_confidential', String(this.newDoc.is_confidential));
     if (this.newDoc.description) formData.append('description', this.newDoc.description);
 
-    this.api.createDocument(formData).subscribe({
+    this.facade.createDocument(formData).subscribe({
       next: (created) => {
         this.isUploadingDoc = false;
         this.toast.success(`مدرک «${created.title}» با موفقیت در آرشیو ثبت شد.`);
@@ -2158,7 +2177,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       `آیا از حذف مدرک «${doc.title}» اطمینان دارید؟`
     );
     if (!ok) return;
-    this.api.deleteDocument(doc.id).subscribe({
+    this.facade.deleteDocument(doc.id).subscribe({
       next: () => {
         this.toast.success('مدرک با موفقیت حذف شد.');
         this.companyDocuments = this.companyDocuments.filter(d => d.id !== doc.id);
