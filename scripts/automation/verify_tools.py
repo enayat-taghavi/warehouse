@@ -10,6 +10,8 @@
   python scripts/automation/verify_tools.py django-check [--modules all warehouse accounting]
   python scripts/automation/verify_tools.py migrations-unchanged
   python scripts/automation/verify_tools.py dist-free --dist PATH --pattern REGEX
+  python scripts/automation/verify_tools.py django-tests --labels APP [...] [--known FILE] [--min-tests N]
+  python scripts/automation/verify_tools.py module-names --base HASH --file PATH [...]
   python scripts/automation/verify_tools.py guardian29-max --max COUNTER=N [...] [--min COUNTER=N ...]
   python scripts/automation/verify_tools.py migrate-empty [--modules all warehouse accounting]
   python scripts/automation/verify_tools.py sample-module
@@ -167,6 +169,131 @@ def cmd_dist_free(args) -> int:
         return 1
     print(f"No file in {args.dist} matches /{args.pattern}/.")
     return 0
+
+
+TEST_FAIL_RE = re.compile(r"^(?:FAIL|ERROR): (\S+) \(([\w.]+)\)", re.M)
+TEST_RAN_RE = re.compile(r"^Ran (\d+) tests? in", re.M)
+
+
+def cmd_django_tests(args) -> int:
+    # آزمون‌های بک‌اند با برچسب اپ؛ فقط شکست تازه (نبوده در فهرست شناخته‌شده) رد می‌شود.
+    known = set()
+    if args.known:
+        for ln in (REPO_ROOT / args.known).read_text(encoding="utf-8").splitlines():
+            ln = ln.split("#", 1)[0].strip()
+            if ln:
+                known.add(ln)
+    code, out = run_manage(["test", *args.labels, "--noinput"], "", {"PYTHONIOENCODING": "utf-8"})
+    log = REPO_ROOT / "scratch" / "logs" / "verify-django-tests.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text(out, encoding="utf-8")
+    m = TEST_RAN_RE.search(out)
+    ran = int(m.group(1)) if m else 0
+    # پایتون ۳.۱۱ به بعد نام متد را درون پرانتز هم می‌آورد: test_x (app.mod.Class.test_x)
+    failed = {cls if cls.endswith(f".{name}") else f"{cls}.{name}" for name, cls in TEST_FAIL_RE.findall(out)}
+    new = sorted(failed - known)
+    print(f"Ran {ran} tests, exit {code}; failing {len(failed)}, known {len(failed & known)}, new {len(new)} (log: {log.relative_to(REPO_ROOT)})")
+    if not m:
+        print("The test run did not finish (no 'Ran N tests' line):")
+        print(tail(out))
+        return 1
+    if ran < args.min_tests:
+        print(f"Only {ran} tests ran; expected at least {args.min_tests}.")
+        return 1
+    if code != 0 and not failed:
+        print("The run failed without a FAIL/ERROR entry:")
+        print(tail(out))
+        return 1
+    if new:
+        print("New failing tests:")
+        for t in new[:40]:
+            print(f"  {t}")
+        return 1
+    print("No new failing test.")
+    return 0
+
+
+def top_level_names(source: str, with_imports: bool = False) -> set:
+    # نام‌هایی که در سطح بالای ماژول تعریف می‌شوند (def، class، انتساب)، از جمله درون if/try سطح بالا؛
+    # نام‌های import‌شده فقط با with_imports.
+    import ast
+    names = set()
+
+    def visit(stmts):
+        for node in stmts:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names.add(node.name)
+            elif isinstance(node, (ast.Import, ast.ImportFrom)) and with_imports:
+                for a in node.names:
+                    if a.name != "*":
+                        names.add(a.asname or a.name.split(".")[0])
+            elif isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                for t in targets:
+                    for n in ast.walk(t):
+                        if isinstance(n, ast.Name):
+                            names.add(n.id)
+            elif isinstance(node, ast.If):
+                visit(node.body)
+                visit(node.orelse)
+            elif isinstance(node, ast.Try):
+                visit(node.body)
+                for h in node.handlers:
+                    visit(h.body)
+                visit(node.orelse)
+                visit(node.finalbody)
+    visit(ast.parse(source).body)
+    return names
+
+
+def cmd_module_names(args) -> int:
+    # Barrel باید هر نامی را که ماژول روی BASE داشت هنوز صادر کند (حتی نام‌های آغازشده با _).
+    # نام‌های BASE ایستا از متن git خوانده می‌شوند؛ نام‌های HEAD با import واقعی در جنگو.
+    expected = {}
+    for rel in args.file:
+        rel = rel.replace("\\", "/")
+        path = Path(rel)
+        module = f"{path.parent.name}.{path.stem}"
+        try:
+            src = git("show", f"{args.base}:{rel}")
+        except RuntimeError as err:
+            print(f"{rel} not found at {args.base}: {err}")
+            return 1
+        expected[module] = top_level_names(src, args.with_imports) - {"__doc__", "__all__"}
+    # نام‌هایی هم که فایل‌های بک‌اند همین حالا از این ماژول‌ها import می‌کنند باید در دسترس باشند.
+    import ast
+    for py in BACKEND_DIR.rglob("*.py"):
+        if "venv" in py.parts or "migrations" in py.parts:
+            continue
+        try:
+            tree = ast.parse(py.read_text(encoding="utf-8", errors="replace"))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ImportFrom) or not node.module:
+                continue
+            target = node.module
+            if node.level == 1:
+                target = f"{py.parent.name}.{node.module}"
+            if target in expected:
+                expected[target] |= {a.name for a in node.names if a.name != "*"}
+    script =("import json,importlib;mods=" + json.dumps(sorted(expected)) +
+              ";print('MODULE-NAMES '+json.dumps({m:dir(importlib.import_module(m)) for m in mods}))")
+    code, out = run_manage(["shell", "-c", script], "")
+    line = next((ln for ln in out.splitlines() if ln.startswith("MODULE-NAMES ")), None)
+    if code != 0 or not line:
+        print(f"Importing the modules failed (exit {code}):")
+        print(tail(out))
+        return 1
+    actual = json.loads(line[len("MODULE-NAMES "):])
+    failed = 0
+    for module, names in expected.items():
+        missing = sorted(names - set(actual[module]))
+        print(f"{module}: {len(names)} names at {args.base}, missing now: {len(missing)}")
+        if missing:
+            failed += 1
+            print("  " + ", ".join(missing[:60]))
+    return 1 if failed else 0
 
 
 def cmd_guardian29_max(args) -> int:
@@ -577,6 +704,18 @@ def main(argv=None) -> int:
     p.add_argument("--dist", required=True, help="build output folder relative to the repository root")
     p.add_argument("--pattern", required=True)
     p.set_defaults(func=cmd_dist_free)
+
+    p = sub.add_parser("django-tests", help="manage.py test LABELS has no failing test outside the known list")
+    p.add_argument("--labels", nargs="+", required=True)
+    p.add_argument("--known", help="repo-relative file: one known failing test per line (app.module.Class.test_name)")
+    p.add_argument("--min-tests", type=int, default=1)
+    p.set_defaults(func=cmd_django_tests)
+
+    p = sub.add_parser("module-names", help="each backend module still exposes every top-level name it had at BASE")
+    p.add_argument("--base", required=True)
+    p.add_argument("--file", nargs="+", required=True, help="repo-relative .py path(s), e.g. warehouse-backend/modules/accounting/personnel/views.py")
+    p.add_argument("--with-imports", action="store_true", help="also require the names the module imported at BASE")
+    p.set_defaults(func=cmd_module_names)
 
     p = sub.add_parser("guardian29-max", help="guardian 29 counters (--json) are not above the given maximums")
     p.add_argument("--max", nargs="+", required=True, metavar="COUNTER=N")
