@@ -25,6 +25,23 @@ import { CommandCenterComponent } from '../../../../../shared/components/command
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
 import { PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons/semantic-icons';
 
+import { ProjectsAndSectionsFacade } from './projects-and-sections.facade';
+import {
+  ROLE_DEFINITIONS,
+  normalizeInput,
+  extractApiErrorMessage,
+  getUserInitials,
+  findRoleDef,
+  getExportTooltipForTab,
+  getImportTooltipForTab,
+  loadCollapsedSectionsFromStorage,
+  saveCollapsedSectionsToStorage,
+  pruneCollapsedSections,
+  filterAssignmentsList,
+  groupAssignmentsBySectionList,
+  computeAvailableUsersForQuickAssign
+} from './projects-and-sections.helpers';
+
 export interface RoleDefinition {
   key: 'manager' | 'accountant' | 'supervisor' | 'treasury' | 'employee';
   label: string;
@@ -58,6 +75,7 @@ export interface SectionGroupedAssignments {
     ActionButtonComponent,
     CommandCenterComponent
   ],
+  providers: [ProjectsAndSectionsFacade],
   templateUrl: './projects-and-sections.html',
   styleUrl: './projects-and-sections.css'
 })
@@ -159,63 +177,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
   assignmentViewMode: 'matrix' | 'table' = 'matrix';
 
   // تعاریف نقش‌های ۵ گانه سازمانی
-  readonly roleDefinitions: RoleDefinition[] = [
-    {
-      key: 'manager',
-      label: 'مدیران پروژه / شرکت (تایید نهایی)',
-      shortLabel: 'مدیران',
-      badgeClass: 'bg-purple-100 text-purple-800 border-purple-300',
-      bgClass: 'bg-purple-50/50',
-      borderClass: 'border-purple-200',
-      textClass: 'text-purple-900',
-      icon: '👑',
-      description: 'تایید هر یک از مدیران، گردش‌کار و اسناد را مستقیماً به مرحله بعد منتقل می‌کند.'
-    },
-    {
-      key: 'accountant',
-      label: 'حسابداران پروژه (بررسی و تایید مالی)',
-      shortLabel: 'حسابداران',
-      badgeClass: 'bg-amber-100 text-amber-800 border-amber-300',
-      bgClass: 'bg-amber-50/50',
-      borderClass: 'border-amber-200',
-      textClass: 'text-amber-900',
-      icon: '💼',
-      description: 'بررسی هزینه‌ها و تطبیق صورت‌حساب‌ها.'
-    },
-    {
-      key: 'supervisor',
-      label: 'سرپرستان بخش (بررسی عملیاتی)',
-      shortLabel: 'سرپرستان',
-      badgeClass: 'bg-blue-100 text-blue-800 border-blue-300',
-      bgClass: 'bg-blue-50/50',
-      borderClass: 'border-blue-200',
-      textClass: 'text-blue-900',
-      icon: '🛡️',
-      description: 'نظارت عملیاتی بر ترددها، کارکرد پرسنل و ناوگان.'
-    },
-    {
-      key: 'treasury',
-      label: 'خزانه‌داران کل (پرداخت و تسویه)',
-      shortLabel: 'خزانه‌داران',
-      badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-      bgClass: 'bg-emerald-50/50',
-      borderClass: 'border-emerald-200',
-      textClass: 'text-emerald-900',
-      icon: '💰',
-      description: 'صدور حواله پرداخت و تسویه ریالی فاکتورها.'
-    },
-    {
-      key: 'employee',
-      label: 'کارمندان و اپراتورها (ثبت‌کنندگان)',
-      shortLabel: 'کارمندان',
-      badgeClass: 'bg-slate-100 text-slate-800 border-slate-300',
-      bgClass: 'bg-slate-50/70',
-      borderClass: 'border-slate-200',
-      textClass: 'text-slate-900',
-      icon: '📝',
-      description: 'ثبت اطلاعات خام، کارکرد و پیش‌نویس اسناد.'
-    }
-  ];
+  readonly roleDefinitions: RoleDefinition[] = ROLE_DEFINITIONS;
 
   // وضعیت مدال انتساب سریع درجا (پشتیبانی از انتخاب همزمان چند کاربر)
   quickAssignState: {
@@ -272,6 +234,8 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
   private subs: Subscription[] = [];
   private offlineSync = OfflineSyncService.getInstance();
 
+  readonly facade: ProjectsAndSectionsFacade;
+
   constructor(
     public auth: AuthService,
     public state: StateService,
@@ -282,8 +246,11 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
     private router: Router,
-    @Optional() public activeCompanyService?: ActiveCompanyService
-  ) {}
+    @Optional() public activeCompanyService?: ActiveCompanyService,
+    @Optional() facade?: ProjectsAndSectionsFacade
+  ) {
+    this.facade = facade ?? new ProjectsAndSectionsFacade(this.api, this.accountsHttp, this.toast);
+  }
 
   ngOnInit(): void {
     this.ws.connect();
@@ -611,86 +578,29 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
     if (this._cachedFilteredAssignments) {
       return this._cachedFilteredAssignments;
     }
-    let list = this.userAssignments;
-    const pFilter = this.assignmentProjectFilter ? Number(this.assignmentProjectFilter) : null;
-    if (pFilter) {
-      list = list.filter(a => {
-        if (a.project_id) return Number(a.project_id) === pFilter;
-        const sec = this.projectSections.find(s => s.id === a.section);
-        return sec ? Number(sec.project) === pFilter : false;
-      });
-    }
-    if (this.assignmentRoleFilter && this.assignmentRoleFilter !== 'all') {
-      list = list.filter(a => a.role === this.assignmentRoleFilter);
-    }
-    if (this.assignmentSearchQuery?.trim()) {
-      const q = this.assignmentSearchQuery.trim().toLowerCase();
-      list = list.filter(a =>
-        (a.user_full_name && a.user_full_name.toLowerCase().includes(q)) ||
-        (a.username && a.username.toLowerCase().includes(q)) ||
-        (a.section_name && a.section_name.toLowerCase().includes(q)) ||
-        (a.project_name && a.project_name.toLowerCase().includes(q)) ||
-        (a.role_display && a.role_display.toLowerCase().includes(q))
-      );
-    }
-    this._cachedFilteredAssignments = list;
-    return list;
+    this._cachedFilteredAssignments = filterAssignmentsList(
+      this.userAssignments,
+      this.projectSections,
+      this.assignmentProjectFilter,
+      this.assignmentRoleFilter,
+      this.assignmentSearchQuery
+    );
+    return this._cachedFilteredAssignments;
   }
 
   get groupedAssignmentsBySection(): SectionGroupedAssignments[] {
     if (this._cachedGroupedAssignments) {
       return this._cachedGroupedAssignments;
     }
-    let sections = [...this.projectSections];
-    const pFilter = this.assignmentProjectFilter ? Number(this.assignmentProjectFilter) : null;
-    if (pFilter) {
-      sections = sections.filter(s => Number(s.project) === pFilter);
-    }
-
-    const query = this.assignmentSearchQuery?.trim().toLowerCase();
-    const result: SectionGroupedAssignments[] = [];
-
-    for (const sec of sections) {
-      const secAssignments = this.userAssignments.filter(a => {
-        const secId = typeof a.section === 'object' ? (a.section as any)?.id : a.section;
-        return Number(secId) === Number(sec.id) && a.is_active !== false;
-      });
-
-      let rolesData = this.roleDefinitions.map(roleDef => {
-        const assigned = secAssignments.filter(a => a.role === roleDef.key);
-        return {
-          roleDef,
-          assignments: assigned
-        };
-      });
-
-      if (this.assignmentRoleFilter && this.assignmentRoleFilter !== 'all') {
-        rolesData = rolesData.filter(r => r.roleDef.key === this.assignmentRoleFilter);
-      }
-
-      if (query) {
-        const matchesSection = (sec.name && sec.name.toLowerCase().includes(query)) ||
-                               (sec.code && sec.code.toLowerCase().includes(query)) ||
-                               (sec.project_name && sec.project_name.toLowerCase().includes(query));
-        const hasMatchingUser = secAssignments.some(a =>
-          (a.user_full_name && a.user_full_name.toLowerCase().includes(query)) ||
-          (a.username && a.username.toLowerCase().includes(query)) ||
-          (a.role_display && a.role_display.toLowerCase().includes(query))
-        );
-        if (!matchesSection && !hasMatchingUser) {
-          continue;
-        }
-      }
-
-      result.push({
-        section: sec,
-        roles: rolesData,
-        totalAssignedUsers: secAssignments.length
-      });
-    }
-
-    this._cachedGroupedAssignments = result;
-    return result;
+    this._cachedGroupedAssignments = groupAssignmentsBySectionList(
+      this.projectSections,
+      this.userAssignments,
+      this.roleDefinitions,
+      this.assignmentProjectFilter,
+      this.assignmentRoleFilter,
+      this.assignmentSearchQuery
+    );
+    return this._cachedGroupedAssignments;
   }
 
   get availableUsersForQuickAssign(): User[] {
@@ -704,105 +614,65 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
       return this._cachedAvailableUsers;
     }
 
-    const existingUserIds = new Set(
+    this._cachedAvailableUsers = computeAvailableUsersForQuickAssign(
+      this.quickAssignState.section,
+      currentRole,
+      q,
+      this.systemUsers,
       this.userAssignments
-        .filter(a => {
-          const secId = typeof a.section === 'object' ? (a.section as any)?.id : a.section;
-          return Number(secId) === currentSectionId && a.role === currentRole && a.is_active !== false;
-        })
-        .map(a => Number(typeof a.user === 'object' ? (a.user as any)?.id : a.user))
     );
-    let users = this.systemUsers.filter(u => u.is_active !== false && !existingUserIds.has(Number(u.id)));
-    if (q) {
-      users = users.filter(u =>
-        (u.first_name && u.first_name.toLowerCase().includes(q)) ||
-        (u.last_name && u.last_name.toLowerCase().includes(q)) ||
-        (u.username && u.username.toLowerCase().includes(q))
-      );
-    }
-    this._cachedAvailableUsers = users;
     this._lastQuickAssignStateKey = currentKey;
-    return users;
+    return this._cachedAvailableUsers;
   }
 
   // --- ورودی و خروجی اکسل ---
   private triggerDownloadBlob(blob: Blob, filename: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    this.facade.triggerDownloadBlob(blob, filename);
   }
 
   exportExcel(): void {
     this.isLoading = true;
+    let obs$;
+    let filename = 'organization_structure.xlsx';
+    let successMsg = 'فایل اکسل ساختار سازمانی دانلود شد.';
+    let errorMsg = 'خطا در دانلود فایل اکسل';
+
     if (this.activeSubTab === 'projects') {
-      this.api.exportFinancialProjectsExcel().subscribe({
-        next: (blob) => {
-          this.triggerDownloadBlob(blob, 'financial_projects.xlsx');
-          this.toast.show('success', 'فایل اکسل پروژه‌های مالی با موفقیت دانلود شد.');
-          this.isLoading = false;
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.toast.show('error', 'خطا در دانلود فایل اکسل پروژه‌ها');
-          this.isLoading = false;
-          this.cdr.detectChanges();
-        }
-      });
+      obs$ = this.facade.exportProjectsExcel();
+      filename = 'financial_projects.xlsx';
+      successMsg = 'فایل اکسل پروژه‌های مالی با موفقیت دانلود شد.';
+      errorMsg = 'خطا در دانلود فایل اکسل پروژه‌ها';
     } else if (this.activeSubTab === 'sections') {
-      this.api.exportProjectSectionsExcel(this.selectedProjectId || undefined).subscribe({
-        next: (blob) => {
-          this.triggerDownloadBlob(blob, 'project_sections.xlsx');
-          this.toast.show('success', 'فایل اکسل بخش‌های پروژه با موفقیت دانلود شد.');
-          this.isLoading = false;
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.toast.show('error', 'خطا در دانلود فایل اکسل بخش‌ها');
-          this.isLoading = false;
-          this.cdr.detectChanges();
-        }
-      });
+      obs$ = this.facade.exportSectionsExcel(this.selectedProjectId || undefined);
+      filename = 'project_sections.xlsx';
+      successMsg = 'فایل اکسل بخش‌های پروژه با موفقیت دانلود شد.';
+      errorMsg = 'خطا در دانلود فایل اکسل بخش‌ها';
     } else if (this.activeSubTab === 'assignments') {
-      this.api.exportUserSectionAssignmentsExcel(this.assignmentProjectFilter || undefined, this.assignmentRoleFilter).subscribe({
-        next: (blob) => {
-          this.triggerDownloadBlob(blob, 'user_assignments.xlsx');
-          this.toast.show('success', 'فایل اکسل انتساب پرسنل و نقش‌ها با موفقیت دانلود شد.');
-          this.isLoading = false;
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.toast.show('error', 'خطا در دانلود فایل اکسل انتساب پرسنل');
-          this.isLoading = false;
-          this.cdr.detectChanges();
-        }
-      });
+      obs$ = this.facade.exportAssignmentsExcel(this.assignmentProjectFilter || undefined, this.assignmentRoleFilter);
+      filename = 'user_assignments.xlsx';
+      successMsg = 'فایل اکسل انتساب پرسنل و نقش‌ها با موفقیت دانلود شد.';
+      errorMsg = 'خطا در دانلود فایل اکسل انتساب پرسنل';
     } else {
-      this.api.exportFinancialProjectsExcel().subscribe({
-        next: (blob) => {
-          this.triggerDownloadBlob(blob, 'organization_structure.xlsx');
-          this.toast.show('success', 'فایل اکسل ساختار سازمانی دانلود شد.');
-          this.isLoading = false;
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.toast.show('error', 'خطا در دانلود فایل اکسل');
-          this.isLoading = false;
-          this.cdr.detectChanges();
-        }
-      });
+      obs$ = this.facade.exportProjectsExcel();
     }
+
+    obs$.subscribe({
+      next: (blob) => {
+        this.triggerDownloadBlob(blob, filename);
+        this.toast.show('success', successMsg);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.toast.show('error', errorMsg);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   getExportTooltip(): string {
-    switch (this.activeSubTab) {
-      case 'projects': return 'خروجی اکسل پروژه‌های مالی';
-      case 'sections': return 'خروجی اکسل بخش‌ها و دپارتمان‌ها';
-      case 'assignments': return 'خروجی اکسل ماتریس انتساب کاربران و نقش‌ها';
-      default: return 'خروجی فایل اکسل';
-    }
+    return getExportTooltipForTab(this.activeSubTab);
   }
 
   /** درون‌ریزی اکسل برای نویسندگان ساختار (از جمله راهبر تشکیلات)؛ بک‌اند آن را به شرکت فعالِ مجاز محدود می‌کند. */
@@ -814,26 +684,21 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
   }
 
   getImportTooltip(): string {
-    switch (this.activeSubTab) {
-      case 'projects': return 'ورودی و ثبت پروژه‌ها از فایل اکسل';
-      case 'sections': return 'ورودی و ثبت بخش‌ها از فایل اکسل';
-      case 'assignments': return 'ورودی و ثبت انتساب پرسنل از فایل اکسل';
-      default: return 'ورودی فایل اکسل';
-    }
+    return getImportTooltipForTab(this.activeSubTab);
   }
 
   openImportModal(): void {
     if (this.activeSubTab === 'projects') {
       this.excelModalTitle = 'آپلود و ثبت دسته‌جمعی پروژه‌ها از اکسل';
-      this.excelImportFn = (file: File, updateExisting: boolean, dryRun?: boolean) => this.api.importFinancialProjectsExcel(file, dryRun);
+      this.excelImportFn = (file: File, updateExisting: boolean, dryRun?: boolean) => this.facade.importProjectsExcel(file, dryRun);
       this.excelTemplateFn = () => this.downloadProjectsTemplate();
     } else if (this.activeSubTab === 'sections') {
       this.excelModalTitle = 'آپلود و ثبت دسته‌جمعی بخش‌های پروژه از اکسل';
-      this.excelImportFn = (file: File, updateExisting: boolean, dryRun?: boolean) => this.api.importProjectSectionsExcel(file, dryRun);
+      this.excelImportFn = (file: File, updateExisting: boolean, dryRun?: boolean) => this.facade.importSectionsExcel(file, dryRun);
       this.excelTemplateFn = () => this.downloadSectionsTemplate();
     } else {
       this.excelModalTitle = 'آپلود و ثبت دسته‌جمعی انتساب پرسنل و نقش‌ها از اکسل';
-      this.excelImportFn = (file: File, updateExisting: boolean, dryRun?: boolean) => this.api.importUserSectionAssignmentsExcel(file, dryRun);
+      this.excelImportFn = (file: File, updateExisting: boolean, dryRun?: boolean) => this.facade.importAssignmentsExcel(file, dryRun);
       this.excelTemplateFn = () => this.downloadAssignmentsTemplate();
     }
     this.isExcelModalOpen = true;
@@ -841,7 +706,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
   }
 
   downloadProjectsTemplate(): void {
-    this.api.downloadFinancialProjectsTemplate().subscribe({
+    this.facade.downloadProjectsTemplate().subscribe({
       next: (blob) => {
         this.triggerDownloadBlob(blob, 'projects_template.xlsx');
         this.toast.show('success', 'قالب اکسل پروژه‌ها با موفقیت دانلود شد.');
@@ -851,7 +716,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
   }
 
   downloadSectionsTemplate(): void {
-    this.api.downloadProjectSectionsTemplate().subscribe({
+    this.facade.downloadSectionsTemplate().subscribe({
       next: (blob) => {
         this.triggerDownloadBlob(blob, 'sections_template.xlsx');
         this.toast.show('success', 'قالب اکسل بخش‌ها با موفقیت دانلود شد.');
@@ -861,7 +726,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
   }
 
   downloadAssignmentsTemplate(): void {
-    this.api.downloadUserSectionAssignmentsTemplate().subscribe({
+    this.facade.downloadAssignmentsTemplate().subscribe({
       next: (blob) => {
         this.triggerDownloadBlob(blob, 'assignments_template.xlsx');
         this.toast.show('success', 'قالب اکسل انتساب پرسنل با موفقیت دانلود شد.');
@@ -874,7 +739,6 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
     if (result?.success) {
       this.toast.show('success', 'اطلاعات اکسل با موفقیت اعمال شد.');
       this.loadAllData();
-      // مودال باز می‌ماند تا کاربر گزارش سطور و خطاها را ببیند و خودش دکمه بستن را بزند
     }
   }
 
@@ -884,16 +748,11 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
   }
 
   normalizeInput(val?: string | null): string {
-    if (!val) return '';
-    return val
-      .toString()
-      .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString())
-      .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString())
-      .trim();
+    return normalizeInput(val);
   }
 
   loadSections(): void {
-    this.api.getProjectSections().subscribe({
+    this.facade.loadSections().subscribe({
       next: (sections) => {
         this.projectSections = sections;
         this.pruneCollapsedSectionsState();
@@ -924,7 +783,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
       }
     }
 
-    this.api.getUserSectionAssignments(params, forceFresh).subscribe({
+    this.facade.loadAssignments(params, forceFresh).subscribe({
       next: (assignments) => {
         this.userAssignments = assignments;
         this.invalidateAssignmentsCache();
@@ -938,7 +797,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
   }
 
   loadUsers(): void {
-    this.accountsHttp.getUsers().subscribe({
+    this.facade.loadUsers().subscribe({
       next: (users) => {
         this.systemUsers = users;
         this.invalidateAssignmentsCache();
@@ -980,7 +839,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
 
     if (this.editingProject?.id) {
       const editId = this.editingProject.id;
-      this.api.updateFinancialProject(editId, payload).subscribe({
+      this.facade.updateProject(editId, payload).subscribe({
         next: (updated) => {
           this.toast.show('success', `پروژه «${updated.name}» بروزرسانی شد.`);
           this.editingProject = null;
@@ -996,7 +855,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
         }
       });
     } else {
-      this.api.createFinancialProject(payload).subscribe({
+      this.facade.createProject(payload).subscribe({
         next: (created) => {
           this.toast.show('success', `پروژه «${created.name}» با موفقیت ایجاد شد.`);
           this.newProject = { code: '', name: '', description: '', is_active: true };
@@ -1033,7 +892,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
       cancelText: 'انصراف',
       isDanger: true,
       onConfirm: () => {
-        this.api.deleteFinancialProject(id).subscribe({
+        this.facade.deleteProject(id).subscribe({
           next: () => {
             this.toast.show('success', 'پروژه با موفقیت حذف یا غیرفعال شد.');
             this.financialProjects = this.financialProjects.filter(p => p.id !== id);
@@ -1076,7 +935,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
 
     if (this.editingSection?.id) {
       const editId = this.editingSection.id;
-      this.api.updateProjectSection(editId, payload).subscribe({
+      this.facade.updateSection(editId, payload).subscribe({
         next: (updated) => {
           this.toast.show('success', `بخش «${updated.name}» بروزرسانی شد.`);
           this.editingSection = null;
@@ -1092,7 +951,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
         }
       });
     } else {
-      this.api.createProjectSection(payload).subscribe({
+      this.facade.createSection(payload).subscribe({
         next: (created) => {
           this.toast.show('success', `بخش «${created.name}» با موفقیت ایجاد شد.`);
           this.newSection = { project: targetProjectId, code: '', name: '', is_active: true };
@@ -1134,7 +993,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
       cancelText: 'انصراف',
       isDanger: true,
       onConfirm: () => {
-        this.api.deleteProjectSection(id).subscribe({
+        this.facade.deleteSection(id).subscribe({
           next: () => {
             this.toast.show('success', 'بخش با موفقیت حذف یا غیرفعال شد.');
             this.projectSections = this.projectSections.filter(s => s.id !== id);
@@ -1185,7 +1044,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
       role: this.editAssignmentModal.role,
       is_active: this.editAssignmentModal.is_active
     };
-    this.api.updateUserSectionAssignment(id, payload).subscribe({
+    this.facade.updateAssignment(id, payload).subscribe({
       next: (updated) => {
         this.toast.show('success', 'انتساب با موفقیت ویرایش شد.');
         this.userAssignments = this.userAssignments.map(a => a.id === id ? { ...a, ...updated } : a);
@@ -1211,15 +1070,13 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
       cancelText: 'انصراف',
       isDanger: true,
       onConfirm: () => {
-        // ۱. حذف آنی و خوش‌بینانه از آرایه محلی
         this.userAssignments = this.userAssignments.filter(a => a.id !== id);
         this.invalidateAssignmentsCache();
         this.cdr.detectChanges();
 
-        this.api.deleteUserSectionAssignment(id).subscribe({
+        this.facade.deleteAssignment(id).subscribe({
           next: () => {
             this.toast.show('success', 'انتساب با موفقیت لغو شد.');
-            // ۲. نامعتبرسازی کش و استعلام مستقیم بدون کش SWR از سرور
             this.offlineSync.invalidateCache('user-section-assignments');
             this.loadAssignments(true);
             this.cdr.detectChanges();
@@ -1235,17 +1092,11 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
   }
 
   getRoleDef(key: string): RoleDefinition {
-    return this.roleDefinitions.find(r => r.key === key) || this.roleDefinitions[4];
+    return findRoleDef(key, this.roleDefinitions);
   }
 
   getUserInitials(name?: string, username?: string): string {
-    const clean = (name || username || '').trim();
-    if (!clean) return '؟';
-    const parts = clean.split(/\s+/);
-    if (parts.length >= 2) {
-      return (parts[0][0] + ' ' + parts[1][0]);
-    }
-    return clean.slice(0, 2);
+    return getUserInitials(name, username);
   }
 
   // --- متدهای انتساب سریع و گروهی پرسنل به بخش‌ها ---
@@ -1312,7 +1163,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
     const roleDef = this.quickAssignState.roleDef;
 
     this.quickAssignState.isSubmitting = true;
-    this.api.bulkAssignUsersToSection({
+    this.facade.bulkAssignUsers({
       section_id: section.id!,
       user_ids: userIds,
       role: role
@@ -1321,7 +1172,6 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
         const count = createdAssignments.length;
         this.toast.show('success', `${count} کاربر با موفقیت به عنوان «${roleDef?.shortLabel || 'نقش'}» در بخش «${section.name}» منتسب شدند.`);
 
-        // ۱. ادغام آنی و خوش‌بینانه انتساب‌های جدید در لیست محلی
         const createdIds = new Set(createdAssignments.map(a => a.id));
         this.userAssignments = [
           ...createdAssignments,
@@ -1329,11 +1179,9 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
         ];
         this.invalidateAssignmentsCache();
 
-        // ۲. بستن فوری مدال و پاکسازی
         this.closeQuickAssignModal();
         this.cdr.detectChanges();
 
-        // ۳. نامعتبرسازی کش SWR و استعلام مستقیم بدون کش از سرور
         this.offlineSync.invalidateCache('user-section-assignments');
         this.loadAssignments(true);
       },
@@ -1379,41 +1227,17 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
     }
   }
 
-  // --- مدیریت کارت‌های جمع‌شونده (Collapsible Sections - پیش‌فرض: بسته بودن تمامی کارت‌ها) ---
+  // --- مدیریت کارت‌های جمع‌شونده (Collapsible Sections) ---
   private loadCollapsedSectionsState(): void {
-    try {
-      const stored = localStorage.getItem('warehouse_expanded_sections');
-      if (stored) {
-        const ids: number[] = JSON.parse(stored);
-        this.expandedSectionIds = new Set<number>(ids);
-      } else {
-        // پیش‌فرض: لیست خالی، یعنی تمامی کارت‌ها به صورت پیش‌فرض بسته هستند
-        this.expandedSectionIds = new Set<number>();
-      }
-    } catch {
-      this.expandedSectionIds = new Set<number>();
-    }
+    this.expandedSectionIds = loadCollapsedSectionsFromStorage();
   }
 
   private saveCollapsedSectionsState(): void {
-    try {
-      localStorage.setItem('warehouse_expanded_sections', JSON.stringify(Array.from(this.expandedSectionIds)));
-    } catch {
-      // Ignore
-    }
+    saveCollapsedSectionsToStorage(this.expandedSectionIds);
   }
 
   pruneCollapsedSectionsState(): void {
-    if (!this.projectSections || this.projectSections.length === 0) return;
-    const validIds = new Set(this.projectSections.map(s => s.id).filter((id): id is number => typeof id === 'number'));
-    let changed = false;
-    for (const id of Array.from(this.expandedSectionIds)) {
-      if (!validIds.has(id)) {
-        this.expandedSectionIds.delete(id);
-        changed = true;
-      }
-    }
-    if (changed) {
+    if (pruneCollapsedSections(this.expandedSectionIds, this.projectSections)) {
       this.saveCollapsedSectionsState();
     }
   }
@@ -1467,7 +1291,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
       sourceStats: { total: 0, roleCounts: {} }
     };
     if (this.assignmentProjectFilter || (this.assignmentRoleFilter && this.assignmentRoleFilter !== 'all')) {
-      this.api.getUserSectionAssignments().subscribe(allAssignments => {
+      this.facade.loadAssignments().subscribe(allAssignments => {
         this.userAssignments = allAssignments;
         this.updateCloneAvailableSections();
         this.cdr.detectChanges();
@@ -1545,12 +1369,11 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
 
     this.cloneModal.isSubmitting = true;
     const targetId = this.cloneModal.targetSection.id;
-    this.api.cloneSectionAssignments(targetId, this.cloneModal.sourceSectionId).subscribe({
+    this.facade.cloneSectionAssignments(targetId, this.cloneModal.sourceSectionId).subscribe({
       next: (res) => {
         this.toast.show('success', res?.message || 'ساختار پرسنلی با موفقیت کپی شد.');
         this.loadAssignments(true);
         this.offlineSync.invalidateCache('user-section-assignments');
-        // باز کردن کارت بخش مقصد تا کاربر نتیجه را بلافاصله ببیند
         this.expandedSectionIds.add(targetId);
         this.saveCollapsedSectionsState();
         this.closeCloneModal();
@@ -1567,7 +1390,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
   toggleAssignmentStatus(assignment: UserSectionAssignment): void {
     if (!assignment.id) return;
     const newStatus = !assignment.is_active;
-    this.api.updateUserSectionAssignment(assignment.id, { is_active: newStatus }).subscribe({
+    this.facade.updateAssignment(assignment.id, { is_active: newStatus }).subscribe({
       next: (updated) => {
         assignment.is_active = updated.is_active;
         this.invalidateAssignmentsCache();
@@ -1583,20 +1406,6 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
   }
 
   extractApiErrorMessage(err: any, fallback: string): string {
-    if (!err?.error) return fallback;
-    if (typeof err.error === 'string') return err.error;
-    if (err.error.error && typeof err.error.error === 'string') return err.error.error;
-    if (err.error.message && typeof err.error.message === 'string') return err.error.message;
-    if (err.error.detail && typeof err.error.detail === 'string') return err.error.detail;
-    if (typeof err.error === 'object') {
-      const messages: string[] = [];
-      for (const [key, val] of Object.entries(err.error)) {
-        if (key === 'success' || key === 'status') continue;
-        const text = Array.isArray(val) ? val.join('، ') : String(val);
-        messages.push(`${key}: ${text}`);
-      }
-      if (messages.length > 0) return messages.join(' | ');
-    }
-    return fallback;
+    return extractApiErrorMessage(err, fallback);
   }
 }
