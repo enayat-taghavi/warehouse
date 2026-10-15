@@ -93,6 +93,9 @@ export const MODULE: WhFrontendModule = {
       scopeKind: 'finance',
       pullEndpoint: '/personnel/sync/pull/',
       scopeParamKey: 'project_id'
+    },
+    projectLookup: {
+      financialProjectsEndpoint: '/personnel/financial-projects'
     }
   }
 };

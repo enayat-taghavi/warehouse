@@ -1,9 +1,9 @@
 import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CountTaskApiService } from '../../../../../core/api/count-task-api.service';
-import { ItemApiService } from '../../../../../core/api/item-api.service';
-import { DynamicFieldApiService } from '../../../../../core/api/dynamic-field-api.service';
+import { CountTaskApiService } from '../../../api/count-task-api.service';
+import { ItemApiService } from '../../../api/item-api.service';
+import { DynamicFieldApiService } from '../../../api/dynamic-field-api.service';
 import { SettingsService } from '../../../../../core/services/settings';
 import { CountTask, CountTaskStatus, CountTaskHistory } from '../../../../../core/models/count-task.model';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
@@ -18,15 +18,15 @@ import { environment } from '../../../../../../environments/environment';
 import { Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { Subject, Subscription, filter } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
-import { CountTaskStore } from '../../../../../core/services/count-task-store';
+import { CountTaskStore } from '../../../services/count-task-store';
 import { offlineDb } from '../../../../../core/services/offline-db';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';
 import { BarcodeScannerComponent } from '../../../../../shared/components/barcode-scanner/barcode-scanner.component';
 import { PersianDatePipe } from '../../../../../shared/pipes/persian-date.pipe';
 import { WebSocketService } from '../../../../../core/http/websocket.service';
-import { ItemPhotoGalleryComponent } from '../../../../../shared/components/item-photo-gallery/item-photo-gallery.component';
-import { ItemPhotoThumbComponent } from '../../../../../shared/components/item-photo-gallery/item-photo-thumb.component';
-import { PhotoGalleryHost } from '../../../../../shared/components/item-photo-gallery/photo-gallery-host';
+import { ItemPhotoGalleryComponent } from '../../item-photo-gallery/item-photo-gallery.component';
+import { ItemPhotoThumbComponent } from '../../item-photo-gallery/item-photo-thumb.component';
+import { PhotoGalleryHost } from '../../item-photo-gallery/photo-gallery-host';
 import { 
   FieldPermissionConfig, 
   mergeFieldPermissions 

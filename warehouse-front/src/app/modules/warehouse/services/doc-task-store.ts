@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { offlineDb } from './offline-db';
-import { OfflineSyncService } from './offline-sync.service';
-import { SyncPullService } from './sync-pull.service';
-import { environment } from '../../../environments/environment';
-import { DocTask } from '../models/doc-task.model';
+import { offlineDb } from '../../../core/services/offline-db';
+import { OfflineSyncService } from '../../../core/services/offline-sync.service';
+import { SyncPullService } from '../../../core/services/sync-pull.service';
+import { environment } from '../../../../environments/environment';
+import { DocTask } from '../../../core/models/doc-task.model';
 
 /**
  * DocTaskStore — مخزن Local-First تسک‌های مالی/اسناد

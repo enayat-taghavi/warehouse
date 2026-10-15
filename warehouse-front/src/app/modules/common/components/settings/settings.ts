@@ -10,7 +10,8 @@ import {
   mergeFieldPermissions,
   mergeDocFieldPermissions 
 } from '../../../../core/models/field-config.model';
-import { DynamicFieldApiService } from '../../../../core/api/dynamic-field-api.service';
+import { ApiService } from '../../../../core/api/api.service';
+import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
 import { finalize } from 'rxjs/operators';
 import { SystemSettingsConfig } from '../../../../core/models/system-settings.model';
 import { DestroyRef, inject } from '@angular/core';
@@ -44,6 +45,8 @@ import { PLATFORM_ENTITY_ICONS } from '../../../../shared/icons/semantic-icons';
 })
 export class Settings implements OnInit {
   private destroyRef = inject(DestroyRef);
+  private api = inject(ApiService);
+  private moduleRegistry = inject(ModuleRegistryService);
   isLoading = true;
   settings = {} as SystemSettingsConfig;
   activeTab: 'operations' | 'label' | 'counter_fields' | 'doc_fields' | 'backup' = 'operations';
@@ -78,7 +81,6 @@ export class Settings implements OnInit {
 
   constructor(
     private settingsService: SettingsService,
-    private dynamicFieldApi: DynamicFieldApiService,
     private toast: ToastService,
     private auth: AuthService,
     private cdr: ChangeDetectorRef,
@@ -117,7 +119,15 @@ export class Settings implements OnInit {
     this.isLoading = true;
     this.dynamicFieldsLoadFailed = false;
 
-    this.dynamicFieldApi.getFields()
+    const ext = this.moduleRegistry.getExtensions('dynamicFields')[0]?.extension;
+    if (!ext?.fieldsEndpoint) {
+      this.dynamicFieldsList = [];
+      this.dynamicFieldsLoadFailed = false;
+      this.fetchGlobalSettings();
+      return;
+    }
+
+    this.api.get<any>(ext.fieldsEndpoint, { page_size: 100 })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => {

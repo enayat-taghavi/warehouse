@@ -1,4 +1,4 @@
-import { ItemPhoto } from '../../../core/models/item.model';
+import { ItemPhoto } from '../../../../core/models/item.model';
 
 /**
  * وضعیت و منطق مشترک «میزبانِ گالری عکس»

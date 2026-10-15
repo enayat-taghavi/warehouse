@@ -16,7 +16,7 @@ import { ManagerReview } from './components/manager-review/manager-review';
 import { CountTracking } from './components/count-tracking/count-tracking';
 import { Reports } from './components/reports/reports';
 import { Customs } from './components/customs/customs';
-import { importLeaveGuard } from '../../core/guards/import-leave.guard';
+import { importLeaveGuard } from './guards/import-leave.guard';
 import { settingsLeaveGuard } from '../../core/guards/settings-leave.guard';
 
 

@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { StateService } from '../../../../core/services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../shared';
-import { DynamicFieldApiService } from '../../../../core/api';
+import { DynamicFieldApiService } from '../../api/dynamic-field-api.service';
 import { DynamicFieldDefinition } from '../../../../core/models';
 import { AuthStore } from '../../../../core/stores/auth.store';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';

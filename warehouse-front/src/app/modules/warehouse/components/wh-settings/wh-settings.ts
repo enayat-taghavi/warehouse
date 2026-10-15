@@ -14,7 +14,7 @@ import {
   mergeFieldPermissions,
   mergeDocFieldPermissions 
 } from '../../../../core/models/field-config.model';
-import { DynamicFieldApiService } from '../../../../core/api/dynamic-field-api.service';
+import { DynamicFieldApiService } from '../../api/dynamic-field-api.service';
 import { BackupApiService, DatabaseBackup, BackupVerifyResult } from '../../../../core/api/backup-api.service';
 
 @Component({

@@ -17,7 +17,7 @@ import { PwaInstallService } from '../../../core/services/pwa-install.service';
 import { Router } from '@angular/router';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
 import { AppPersonaService } from '../../../core/services/app-persona.service';
-import { PersonnelApiService } from '../../../core/api/personnel-api.service';
+import { ApiService } from '../../../core/api/api.service';
 
 describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
   let component: UserMenuComponent;
@@ -36,7 +36,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
   let mockSyncService: any;
   let mockCdr: any;
   let mockPersona: any;
-  let mockPersonnelApi: any;
+  let mockApi: any;
 
   beforeEach(() => {
     mockAuth = {
@@ -70,11 +70,16 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
       ]))
     };
 
-    mockPersonnelApi = {
-      getFinancialProjects: vi.fn().mockReturnValue(of([
-        { id: 10, name: 'پروژه خط ۲ مترو', code: 'PRJ-10', is_active: true },
-        { id: 11, name: 'کارگاه ساختمانی سپهر', code: 'PRJ-11', is_active: true }
-      ]))
+    mockApi = {
+      get: vi.fn().mockImplementation((endpoint: string, params: any) => {
+        if (endpoint === '/personnel/financial-projects') {
+          return of([
+            { id: 10, name: 'پروژه خط ۲ مترو', code: 'PRJ-10', is_active: true },
+            { id: 11, name: 'کارگاه ساختمانی سپهر', code: 'PRJ-11', is_active: true }
+          ]);
+        }
+        return of([]);
+      })
     };
 
     mockPersona = {
@@ -97,6 +102,16 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
               moduleCode: 'accounting',
               extension: {
                 deepSyncScope: 'finance'
+              }
+            }
+          ];
+        }
+        if (extKey === 'projectLookup') {
+          return [
+            {
+              moduleCode: 'accounting',
+              extension: {
+                financialProjectsEndpoint: '/personnel/financial-projects'
               }
             }
           ];
@@ -165,7 +180,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
         { provide: Router, useValue: mockRouter },
         { provide: ChangeDetectorRef, useValue: mockCdr },
         { provide: AppPersonaService, useValue: mockPersona },
-        { provide: PersonnelApiService, useValue: mockPersonnelApi }
+        { provide: ApiService, useValue: mockApi }
       ]
     });
 
@@ -228,7 +243,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
     expect(component.isDeepSyncModalOpen).toBe(true);
     expect(component.deepSyncWarehouses.length).toBe(0);
     expect(component.deepSyncProjects.length).toBe(2);
-    expect(mockPersonnelApi.getFinancialProjects).toHaveBeenCalledWith({ is_active: true });
+    expect(mockApi.get).toHaveBeenCalledWith('/personnel/financial-projects', { is_active: true });
   });
 
   it('should detect operations context mode from operations URL and load both warehouses and projects', async () => {
@@ -243,7 +258,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
     expect(component.deepSyncWarehouses.length).toBe(2);
     expect(component.deepSyncProjects.length).toBe(2);
     expect(mockWhService.getAll).toHaveBeenCalled();
-    expect(mockPersonnelApi.getFinancialProjects).toHaveBeenCalled();
+    expect(mockApi.get).toHaveBeenCalledWith('/personnel/financial-projects', { is_active: true });
   });
 
   it('should pass scopeKind = "warehouse" when syncing warehouseIds', async () => {

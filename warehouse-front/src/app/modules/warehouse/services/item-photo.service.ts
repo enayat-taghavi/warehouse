@@ -2,12 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { environment } from '../../../environments/environment';
-import { ItemPhoto } from '../models/item.model';
-import { ImageCompressorService, ImageDecodeError } from './image-compressor.service';
-import { PhotoQueueEntry } from './offline-db';
-import { PhotoUploadQueueService } from './photo-upload-queue.service';
-import { SyncPullService } from './sync-pull.service';
+import { environment } from '../../../../environments/environment';
+import { ItemPhoto } from '../../../core/models/item.model';
+import { ImageCompressorService, ImageDecodeError } from '../../../core/services/image-compressor.service';
+import { PhotoQueueEntry } from '../../../core/services/offline-db';
+import { PhotoUploadQueueService } from '../../../core/services/photo-upload-queue.service';
+import { SyncPullService } from '../../../core/services/sync-pull.service';
 
 export interface UploadPhotoOptions {
   caption?: string;

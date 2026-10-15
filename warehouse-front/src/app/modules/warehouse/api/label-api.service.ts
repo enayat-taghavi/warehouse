@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
+import { environment } from '../../../../environments/environment';
+import { SKIP_GLOBAL_ERROR_TOAST } from '../../../core/error/error.interceptor';
 
 export interface LabelElement {
   id: string;

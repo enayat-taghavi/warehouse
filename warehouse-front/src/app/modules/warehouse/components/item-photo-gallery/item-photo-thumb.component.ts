@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { SvgIconDirective } from '../../icons/svg-icon.directive';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 export type PhotoThumbSize = 'xs' | 'sm' | 'md' | 'lg';
 export type PhotoThumbAccent = 'indigo' | 'blue';

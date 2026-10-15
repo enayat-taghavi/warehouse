@@ -80,6 +80,9 @@ export const MODULE: WhFrontendModule = {
       pullEndpoint: '/inventory/sync/pull/',
       scopeParamKey: 'warehouse_id'
     },
+    dynamicFields: {
+      fieldsEndpoint: '/inventory/dynamic-fields/'
+    },
     loadLabelDesigner: () => import('./components/label-designer/label-designer').then(m => m.LabelDesigner)
   }
 };

@@ -20,7 +20,7 @@ import { ConfirmDialogService } from '../../../../shared/components/confirm-dial
 import { By } from '@angular/platform-browser';
 import { CompanyApiService } from '../../../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../../../core/services/active-company.service';
-import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
+import { ApiService } from '../../../../core/api/api.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -113,7 +113,7 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
   let mockWarehouseHttp: any;
   let mockCompanyApi: any;
   let mockActiveCompanyService: any;
-  let mockPersonnelApi: any;
+  let mockApi: any;
   let mockToast: any;
   let mockAuth: any;
   let mockPersona: any;
@@ -177,8 +177,10 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
       availableCompanies$: of(mockCompanies)
     };
 
-    mockPersonnelApi = {
-      getAll: vi.fn().mockReturnValue(of([]))
+    mockApi = {
+      get: vi.fn().mockReturnValue(of([])),
+      post: vi.fn().mockReturnValue(of({})),
+      patch: vi.fn().mockReturnValue(of({}))
     };
 
     mockToast = {
@@ -215,6 +217,12 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
           }
           return list;
         }
+        if (point === 'projectLookup') {
+          if (activeModuleList.includes('accounting')) {
+            return [{ moduleCode: 'accounting', extension: { financialProjectsEndpoint: '/personnel/financial-projects' } }];
+          }
+          return [];
+        }
         return [];
       })
     };
@@ -235,7 +243,7 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
         { provide: WarehouseHttpService, useValue: mockWarehouseHttp },
         { provide: CompanyApiService, useValue: mockCompanyApi },
         { provide: ActiveCompanyService, useValue: mockActiveCompanyService },
-        { provide: PersonnelApiService, useValue: mockPersonnelApi },
+        { provide: ApiService, useValue: mockApi },
         { provide: ToastService, useValue: mockToast },
         { provide: AuthService, useValue: mockAuth },
         { provide: AppPersonaService, useValue: mockPersona },

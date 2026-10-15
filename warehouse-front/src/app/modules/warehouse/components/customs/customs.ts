@@ -3,11 +3,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, Subscription, filter, firstValueFrom } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
-import { DocTaskApiService } from '../../../../core/api/doc-task-api.service';
-import { ItemApiService } from '../../../../core/api/item-api.service';
-import { DynamicFieldApiService } from '../../../../core/api/dynamic-field-api.service';
+import { DocTaskApiService } from '../../api/doc-task-api.service';
+import { ItemApiService } from '../../api/item-api.service';
+import { DynamicFieldApiService } from '../../api/dynamic-field-api.service';
 import { SettingsService } from '../../../../core/services/settings';
-import { DocTaskStore } from '../../../../core/services/doc-task-store';
+import { DocTaskStore } from '../../services/doc-task-store';
 import { DocTask, DocTaskStatus, INVOICE_TYPE_LABELS, CURRENCY_LABELS } from '../../../../core/models/doc-task.model';
 import { 
   FieldPermissionConfig, 
@@ -23,9 +23,9 @@ import { OfflinePendingBadgeComponent } from '../../../../shared/components/offl
 import { BarcodeScannerComponent } from '../../../../shared/components/barcode-scanner/barcode-scanner.component';
 import { PersianDatePipe } from '../../../../shared/pipes/persian-date.pipe';
 import { formatToStandardShamsi } from '../../../../core/utils/date-utils';
-import { ItemPhotoGalleryComponent } from '../../../../shared/components/item-photo-gallery/item-photo-gallery.component';
-import { ItemPhotoThumbComponent } from '../../../../shared/components/item-photo-gallery/item-photo-thumb.component';
-import { PhotoGalleryHost } from '../../../../shared/components/item-photo-gallery/photo-gallery-host';
+import { ItemPhotoGalleryComponent } from '../item-photo-gallery/item-photo-gallery.component';
+import { ItemPhotoThumbComponent } from '../item-photo-gallery/item-photo-thumb.component';
+import { PhotoGalleryHost } from '../item-photo-gallery/photo-gallery-host';
 import { environment } from '../../../../../environments/environment';
 import { Router, NavigationEnd } from '@angular/router';
 import { WebSocketService } from '../../../../core/http/websocket.service';

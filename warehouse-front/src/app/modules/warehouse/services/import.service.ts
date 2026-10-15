@@ -1,10 +1,10 @@
 import { Injectable, NgZone, ApplicationRef } from '@angular/core';
 import { Subject } from 'rxjs';
 import { ItemApiService } from '../api/item-api.service';
-import { ToastService } from '../../shared/components/toast/toast.component';
-import { StateService } from './state.service';
-import { isServerUnreachable } from './server-reachability';
-import { NetworkStatusService } from './network-status.service';
+import { ToastService } from '../../../shared/components/toast/toast.component';
+import { StateService } from '../../../core/services/state.service';
+import { isServerUnreachable } from '../../../core/services/server-reachability';
+import { NetworkStatusService } from '../../../core/services/network-status.service';
 
 export interface WarehouseImportState {
   importTag: string;

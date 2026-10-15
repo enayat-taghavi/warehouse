@@ -3,7 +3,7 @@ import { Subject, Subscription, of } from 'rxjs';
 import { debounceTime, switchMap, catchError } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LabelApiService, LabelTemplate, LabelElement, AvailableField } from '../../../../core/api/label-api.service';
+import { LabelApiService, LabelTemplate, LabelElement, AvailableField } from '../../api/label-api.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';

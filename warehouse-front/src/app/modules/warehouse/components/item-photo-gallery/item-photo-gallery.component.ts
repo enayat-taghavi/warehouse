@@ -2,11 +2,11 @@ import { Component, Input, Output, EventEmitter, OnInit, OnChanges, OnDestroy, S
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
-import { ItemPhoto } from '../../../core/models/item.model';
-import { ItemPhotoService, PhotoUploadResult } from '../../../core/services/item-photo.service';
-import { PhotoQueueEntry } from '../../../core/services/offline-db';
-import { ToastService } from '../../../shared/components/toast/toast.component';
-import { SvgIconDirective } from '../../icons/svg-icon.directive';
+import { ItemPhoto } from '../../../../core/models/item.model';
+import { ItemPhotoService, PhotoUploadResult } from '../../services/item-photo.service';
+import { PhotoQueueEntry } from '../../../../core/services/offline-db';
+import { ToastService } from '../../../../shared/components/toast/toast.component';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-item-photo-gallery',

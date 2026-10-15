@@ -8,7 +8,7 @@ import { AppPersonaService } from '../../../../core/services/app-persona.service
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
 import { AccountsHttpService, User, Role, Permission, ImportResult } from '../../../../core/http/accounts-http.service';
 import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
-import { PersonnelApiService } from '../../../../core/api/personnel-api.service';
+import { ApiService } from '../../../../core/api/api.service';
 import { ClickOutsideDirective } from '../../../../shared/directives/click-outside.directive';
 import { IdCards } from '../id-cards/id-cards';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
@@ -593,7 +593,7 @@ export class Users implements OnInit, OnDestroy {
   private toast = inject(ToastService);
   private accountsService = inject(AccountsHttpService);
   private whService = inject(WarehouseHttpService);
-  private personnelApi = inject(PersonnelApiService);
+  private api = inject(ApiService);
   private cdr = inject(ChangeDetectorRef);
   private confirmDialog = inject(ConfirmDialogService);
   private route = inject(ActivatedRoute);
@@ -805,7 +805,12 @@ export class Users implements OnInit, OnDestroy {
   }
 
   private loadFinancialProjects(): void {
-    this.personnelApi.getFinancialProjects({ is_active: true }).subscribe({
+    const ext = this.registry.getExtensions('projectLookup')[0]?.extension;
+    if (!ext?.financialProjectsEndpoint) {
+      this.state.appState.projects = [];
+      return;
+    }
+    this.api.get<any[]>(ext.financialProjectsEndpoint, { is_active: true }).subscribe({
       next: (projects: any[]) => {
         if (Array.isArray(projects)) {
           this.state.appState.projects = projects.map(p => ({

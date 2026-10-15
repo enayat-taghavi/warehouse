@@ -19,7 +19,7 @@ import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component
 import { AvatarCropperModal } from '../avatar-cropper-modal/avatar-cropper-modal';
 import { DeepSyncContextMode, DeepSyncModalComponent } from '../deep-sync-modal/deep-sync-modal.component';
 import { AppPersonaService } from '../../../core/services/app-persona.service';
-import { PersonnelApiService } from '../../../core/api/personnel-api.service';
+import { ApiService } from '../../../core/api/api.service';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
 import { Company } from '../../../core/models/company.model';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
@@ -73,7 +73,7 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private personaService = inject(AppPersonaService, { optional: true });
-  private personnelApi = inject(PersonnelApiService, { optional: true });
+  private api = inject(ApiService, { optional: true });
   public activeCompanyService = inject(ActiveCompanyService, { optional: true });
   public readonly BRANDING = BRANDING;
 
@@ -537,9 +537,10 @@ export class UserMenuComponent implements OnInit, OnDestroy {
       );
     }
 
-    if ((context === 'finance' || context === 'operations') && hasFinanceSync && this.personnelApi) {
+    const projectLookupExt = this.moduleRegistry.getExtensions('projectLookup')[0]?.extension;
+    if ((context === 'finance' || context === 'operations') && hasFinanceSync && projectLookupExt?.financialProjectsEndpoint && this.api) {
       fetchPromises.push(
-        firstValueFrom(this.personnelApi.getFinancialProjects({ is_active: true }))
+        firstValueFrom(this.api.get<any[]>(projectLookupExt.financialProjectsEndpoint, { is_active: true }))
           .then((projects) => {
             this.deepSyncProjects = projects || [];
             this.cdr.detectChanges();

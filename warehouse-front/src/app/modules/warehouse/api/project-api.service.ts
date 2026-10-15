@@ -1,13 +1,13 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from './api.service';
+import { ApiService } from '../../../core/api/api.service';
 import {
   Project,
   ProjectCreatePayload,
   ProjectUpdatePayload,
   ProjectStats,
-} from '../models/project.model';
-import { Paginated } from '../models/api-response.model';
+} from '../../../core/models/project.model';
+import { Paginated } from '../../../core/models/api-response.model';
 
 @Injectable({ providedIn: 'root' })
 export class ProjectApiService {

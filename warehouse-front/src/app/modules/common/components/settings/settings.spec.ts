@@ -6,7 +6,8 @@ import { of, throwError } from 'rxjs';
 
 import { Settings } from './settings';
 import { SettingsService } from '../../../../core/services/settings';
-import { DynamicFieldApiService } from '../../../../core/api/dynamic-field-api.service';
+import { ApiService } from '../../../../core/api/api.service';
+import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -16,7 +17,8 @@ describe('Settings Component (Core Settings & Delta Management)', () => {
   let component: Settings;
   let settingsServiceMock: any;
   let toastServiceMock: any;
-  let dynamicFieldApiMock: any;
+  let apiMock: any;
+  let moduleRegistryMock: any;
   let authServiceMock: any;
   let cdrMock: any;
   let routeMock: any;
@@ -49,8 +51,24 @@ describe('Settings Component (Core Settings & Delta Management)', () => {
       show: vi.fn(),
     };
 
-    dynamicFieldApiMock = {
-      getFields: vi.fn().mockReturnValue(of([])),
+    apiMock = {
+      get: vi.fn().mockReturnValue(of([])),
+    };
+
+    moduleRegistryMock = {
+      getExtensions: vi.fn().mockImplementation((key: string) => {
+        if (key === 'dynamicFields') {
+          return [
+            {
+              moduleCode: 'warehouse',
+              extension: {
+                fieldsEndpoint: '/inventory/dynamic-fields/'
+              }
+            }
+          ];
+        }
+        return [];
+      })
     };
 
     authServiceMock = {
@@ -85,7 +103,8 @@ describe('Settings Component (Core Settings & Delta Management)', () => {
     const injector = Injector.create({
       providers: [
         { provide: SettingsService, useValue: settingsServiceMock },
-        { provide: DynamicFieldApiService, useValue: dynamicFieldApiMock },
+        { provide: ApiService, useValue: apiMock },
+        { provide: ModuleRegistryService, useValue: moduleRegistryMock },
         { provide: ToastService, useValue: toastServiceMock },
         { provide: AuthService, useValue: authServiceMock },
         { provide: ChangeDetectorRef, useValue: cdrMock },
@@ -98,7 +117,6 @@ describe('Settings Component (Core Settings & Delta Management)', () => {
     runInInjectionContext(injector, () => {
       component = new Settings(
         settingsServiceMock,
-        dynamicFieldApiMock,
         toastServiceMock,
         authServiceMock,
         cdrMock,

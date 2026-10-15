@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from './api.service';
-import { Paginated } from '../models/api-response.model';
+import { ApiService } from '../../../core/api/api.service';
+import { Paginated } from '../../../core/models/api-response.model';
 
-import { CountTask } from '../models/count-task.model';
+import { CountTask } from '../../../core/models/count-task.model';
 
 @Injectable({ providedIn: 'root' })
 export class CountTaskApiService {

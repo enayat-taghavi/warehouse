@@ -142,12 +142,26 @@ export interface ExtensionMap {
   loadLabelDesigner?: () => Promise<Type<unknown>>;
 
   /**
-   * ۱۳. تنظیمات همگام‌سازی و دانلود دلتای داده‌ها (Sync Pull Config) — مصرف در sync-pull.service.ts
+   * ۱۴. تنظیمات همگام‌سازی و دانلود دلتای داده‌ها (Sync Pull Config) — مصرف در sync-pull.service.ts
    */
   syncConfig?: {
     scopeKind: string;
     pullEndpoint: string;
     scopeParamKey: string;
+  };
+
+  /**
+   * ۱۵. جستجو و استعلام پروژه‌های مالی — مصرف در users.ts و user-menu.component.ts
+   */
+  projectLookup?: {
+    financialProjectsEndpoint: string;
+  };
+
+  /**
+   * ۱۶. فیلدهای پویای انبارداری — مصرف در settings.ts
+   */
+  dynamicFields?: {
+    fieldsEndpoint: string;
   };
 }
 

@@ -1,14 +1,14 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { HttpEvent } from '@angular/common/http';
-import { ApiService } from './api.service';
-import { AuthService } from '../auth/auth.service';
+import { ApiService } from '../../../core/api/api.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import {
   Item,
-} from '../models/item.model';
-import { Paginated } from '../models/api-response.model';
-import { ImportLog } from '../models/audit-log.model';
-import { environment } from '../../../environments/environment';
+} from '../../../core/models/item.model';
+import { Paginated } from '../../../core/models/api-response.model';
+import { ImportLog } from '../../../core/models/audit-log.model';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class ItemApiService {

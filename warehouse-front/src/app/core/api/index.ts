@@ -1,17 +1,10 @@
 /**
- * Barrel export — تمام سرویس‌های API
+ * Barrel export — تمام سرویس‌های API هسته
  */
 export { ApiService } from './api.service';
-export { ProjectApiService } from './project-api.service';
-export { ItemApiService } from './item-api.service';
 export { UserApiService } from './user-api.service';
 export { RoleApiService } from './role-api.service';
-export { DashboardApiService } from './dashboard-api.service';
 export { AuditApiService } from './audit-api.service';
-export { FeedingApiService } from './feeding-api.service';
-export { TagApiService } from './tag-api.service';
-export { CountTaskApiService } from './count-task-api.service';
-export { DynamicFieldApiService } from './dynamic-field-api.service';
 export { TableViewApiService } from './table-view-api.service';
 export { ReportApiService } from './report-api.service';
 export { PersonnelApiService } from './personnel-api.service';
