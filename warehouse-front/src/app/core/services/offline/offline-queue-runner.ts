@@ -272,7 +272,8 @@ export async function getUnsentCountStrict(): Promise<number> {
 export async function runQueueSequential(
   networkStatus: NetworkStatusService,
   onProgress?: () => Promise<void>,
-  onRejected?: (err: SyncErrorEntry) => Promise<void>
+  onRejected?: (err: SyncErrorEntry) => Promise<void>,
+  onSyncSuccess?: () => void
 ): Promise<SyncOutcome> {
   // بررسی پیش‌پرواز — آفلاین یعنی «تلاشی انجام نشد»، نه «شکست خورد»
   if (!networkStatus.isBrowserOnline) return { status: 'offline' };
@@ -284,105 +285,115 @@ export async function runQueueSequential(
 
   console.log('[OfflineSync] 🔄 شروع پردازش صف همگام‌سازی تفکیک‌شده...');
 
-  const currentUserId = getStoredCurrentUserId();
-  let drainPass = 0;
-  const MAX_DRAIN_PASSES = 5;
+  try {
+    const currentUserId = getStoredCurrentUserId();
+    let drainPass = 0;
+    const MAX_DRAIN_PASSES = 5;
 
-  // تخلیه چندمرحله‌ای (Drain Loop) جهت جلوگیری از جا ماندن تغییرات همزمان (تسک ۱۱)
-  while (drainPass < MAX_DRAIN_PASSES && !transportAborted && !authRequired && networkStatus.isBrowserOnline) {
-    drainPass++;
+    // تخلیه چندمرحله‌ای (Drain Loop) جهت جلوگیری از جا ماندن تغییرات همزمان (تسک ۱۱)
+    while (drainPass < MAX_DRAIN_PASSES && !transportAborted && !authRequired && networkStatus.isBrowserOnline) {
+      drainPass++;
 
-    const currentScope = getCurrentActiveAppScope();
-    const otherScope: AppScope = currentScope === 'warehouse' ? 'finance' : 'warehouse';
+      const currentScope = getCurrentActiveAppScope();
+      const otherScope: AppScope = currentScope === 'warehouse' ? 'finance' : 'warehouse';
 
-    const currentDb = getOfflineDb(currentScope);
-    const otherDb = getOfflineDb(otherScope);
+      const currentDb = getOfflineDb(currentScope);
+      const otherDb = getOfflineDb(otherScope);
 
-    const [currentEntries, otherEntries] = await Promise.all([
-      currentDb.syncQueue.where('status').anyOf(['pending', 'failed']).sortBy('createdAt'),
-      otherDb.syncQueue.where('status').anyOf(['pending', 'failed']).sortBy('createdAt'),
-    ]);
+      const [currentEntries, otherEntries] = await Promise.all([
+        currentDb.syncQueue.where('status').anyOf(['pending', 'failed']).sortBy('createdAt'),
+        otherDb.syncQueue.where('status').anyOf(['pending', 'failed']).sortBy('createdAt'),
+      ]);
 
-    let queueJobs: { entry: SyncQueueEntry; db: OfflineDatabase }[] = [
-      ...currentEntries.map((e) => ({ entry: e, db: currentDb })),
-      ...otherEntries.map((e) => ({ entry: e, db: otherDb })),
-    ];
+      let queueJobs: { entry: SyncQueueEntry; db: OfflineDatabase }[] = [
+        ...currentEntries.map((e) => ({ entry: e, db: currentDb })),
+        ...otherEntries.map((e) => ({ entry: e, db: otherDb })),
+      ];
 
-    if (queueJobs.length === 0) {
-      if (drainPass === 1) {
-        console.log('[OfflineSync] ✅ صف‌های هر دو قلمرو خالی هستند');
-      }
-      break;
-    }
-
-    // اولویت‌بندی هوشمند صف (تسک ۱): رکوردهای تازه اولویت بالاتر از رکوردهای مکرراً شکست‌خورده دارند
-    queueJobs.sort((a, b) => {
-      const aExceeded = (a.entry.retryCount || 0) >= MAX_SYNC_RETRIES ? 1 : 0;
-      const bExceeded = (b.entry.retryCount || 0) >= MAX_SYNC_RETRIES ? 1 : 0;
-      if (aExceeded !== bExceeded) return aExceeded - bExceeded;
-      return a.entry.createdAt - b.entry.createdAt;
-    });
-
-    console.log(
-      `[OfflineSync] 📋 دور ${drainPass}: ${queueJobs.length} درخواست در صف‌های تفکیک‌شده (${currentEntries.length} در ${currentScope}، ${otherEntries.length} در ${otherScope})`
-    );
-
-    let passProcessed = 0;
-
-    for (const { entry, db } of queueJobs) {
-      if (!networkStatus.isBrowserOnline) {
-        console.log('[OfflineSync] 📴 اتصال قطع شد — پردازش متوقف شد (داده‌ها محفوظ است)');
-        transportAborted = true;
+      if (queueJobs.length === 0) {
+        if (drainPass === 1) {
+          console.log('[OfflineSync] ✅ صف‌های هر دو قلمرو خالی هستند');
+          if (onSyncSuccess) onSyncSuccess();
+        }
         break;
       }
 
-      // امنیت چندکاربری (تسک ۴): اگر رکورد متعلق به کاربر دیگری است، با توکن کاربر جاری ارسال نشود
-      if (entry.userId && currentUserId && entry.userId !== currentUserId) {
-        console.warn(
-          `[OfflineSync] ⏸️ رکورد ${entry.id} متعلق به کاربر ${entry.userId} است (کاربر لاگین: ${currentUserId})؛ ارسال متوقف شد.`
-        );
-        continue;
-      }
+      // اولویت‌بندی هوشمند صف (تسک ۱): رکوردهای تازه اولویت بالاتر از رکوردهای مکرراً شکست‌خورده دارند
+      queueJobs.sort((a, b) => {
+        const aExceeded = (a.entry.retryCount || 0) >= MAX_SYNC_RETRIES ? 1 : 0;
+        const bExceeded = (b.entry.retryCount || 0) >= MAX_SYNC_RETRIES ? 1 : 0;
+        if (aExceeded !== bExceeded) return aExceeded - bExceeded;
+        return a.entry.createdAt - b.entry.createdAt;
+      });
 
-      const result = await sendEntry(entry, db, false, networkStatus, onRejected);
-      if (onProgress) await onProgress();
-      passProcessed++;
+      console.log(
+        `[OfflineSync] 📋 دور ${drainPass}: ${queueJobs.length} درخواست در صف‌های تفکیک‌شده (${currentEntries.length} در ${currentScope}، ${otherEntries.length} در ${otherScope})`
+      );
 
-      if (result === 'sent') {
-        synced++;
-        continue;
-      }
-      if (result === 'rejected') {
-        rejected++;
-        continue;
-      }
-      if (result === 'auth-failed') {
-        authRequired = true;
-        break;
-      }
-      if (result === 'server-error') {
-        // رفع Head-of-line Blocking (تسک ۱): اگر رکورد به سقف تلاش رسیده، متوقف نشو و مانع کارهای بعدی نشو
-        if (entry.retryCount >= MAX_SYNC_RETRIES) {
-          console.warn(`[OfflineSync] ⚠️ رکورد ${entry.id} به سقف تلاش مجدد رسید و با خطای سرور معلق شد؛ مسدودسازی برداشته شد.`);
+      let passProcessed = 0;
+
+      for (const { entry, db } of queueJobs) {
+        if (!networkStatus.isBrowserOnline) {
+          console.log('[OfflineSync] 📴 اتصال قطع شد — پردازش متوقف شد (داده‌ها محفوظ است)');
+          transportAborted = true;
+          break;
+        }
+
+        // امنیت چندکاربری (تسک ۴): اگر رکورد متعلق به کاربر دیگری است، با توکن کاربر جاری ارسال نشود
+        if (entry.userId && currentUserId && entry.userId !== currentUserId) {
+          console.warn(
+            `[OfflineSync] ⏸️ رکورد ${entry.id} متعلق به کاربر ${entry.userId} است (کاربر لاگین: ${currentUserId})؛ ارسال متوقف شد.`
+          );
           continue;
         }
+
+        const result = await sendEntry(entry, db, false, networkStatus, onRejected);
+        if (onProgress) await onProgress();
+        passProcessed++;
+
+        if (result === 'sent') {
+          synced++;
+          continue;
+        }
+        if (result === 'rejected') {
+          rejected++;
+          continue;
+        }
+        if (result === 'auth-failed') {
+          authRequired = true;
+          break;
+        }
+        if (result === 'server-error') {
+          // رفع Head-of-line Blocking (تسک ۱): اگر رکورد به سقف تلاش رسیده، متوقف نشو و مانع کارهای بعدی نشو
+          if (entry.retryCount >= MAX_SYNC_RETRIES) {
+            console.warn(`[OfflineSync] ⚠️ رکورد ${entry.id} به سقف تلاش مجدد رسید و با خطای سرور معلق شد؛ مسدودسازی برداشته شد.`);
+            continue;
+          }
+          transportAborted = true;
+          break;
+        }
+        // transport-failed: عدم دسترسی واقعی به سرور
         transportAborted = true;
         break;
       }
-      // transport-failed: عدم دسترسی واقعی به سرور
-      transportAborted = true;
-      break;
+
+      if (passProcessed === 0) {
+        // همه رکوردهای باقیمانده متعلق به کاربران دیگر یا غیرقابل‌پردازش هستند
+        break;
+      }
+
+      const remainingCount = await getPendingCount();
+      if (remainingCount === 0) {
+        break;
+      }
     }
 
-    if (passProcessed === 0) {
-      // همه رکوردهای باقیمانده متعلق به کاربران دیگر یا غیرقابل‌پردازش هستند
-      break;
+    // زمان آخرین همگام‌سازی فقط وقتی معنا دارد که واقعاً با سرور حرف زده باشیم
+    if (!transportAborted && synced > 0) {
+      if (onSyncSuccess) onSyncSuccess();
     }
-
-    const remainingCount = await getPendingCount();
-    if (remainingCount === 0) {
-      break;
-    }
+  } catch (error) {
+    console.error('[OfflineSync] ❌ خطا در پردازش صف:', error);
   }
 
   // ─── تعیین نتیجه ───

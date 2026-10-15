@@ -258,10 +258,12 @@ def module_scope_codes(module_code):
 
 def audit_scope_keys(module_code: str) -> tuple[str, ...]:
     """
-    برگرداندن کلیدهای دامنه ممیزی (audit_scope_keys) برای یک ماژول نصب‌شده، یا () اگر نصب نباشد.
+    برگرداندن کلیدهای دامنه ممیزی (audit_scope_keys) برای یک ماژول از کاتالوگ (حتی اگر نصب نباشد).
     """
-    spec = _REGISTRY.get(module_code)
+    from platform_core.module_catalog import MODULE_CATALOG
+    spec = MODULE_CATALOG.get(module_code)
     if spec:
         return getattr(spec, 'audit_scope_keys', ())
     return ()
+
 

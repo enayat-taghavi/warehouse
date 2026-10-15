@@ -549,19 +549,12 @@ export class OfflineSyncService {
     this._isSyncing$.next(true);
 
     try {
-      const outcome = await runQueueSequential(
+      return await runQueueSequential(
         this.network,
         async () => { await this.refreshCounts(); },
-        async (rejectedErr) => { this._rejected$.next(rejectedErr); }
+        async (rejectedErr) => { this._rejected$.next(rejectedErr); },
+        () => { this._lastSyncTime$.next(Date.now()); }
       );
-
-      if (outcome.status === 'completed' || outcome.status === 'partial') {
-        this._lastSyncTime$.next(Date.now());
-      }
-      return outcome;
-    } catch (error) {
-      console.error('[OfflineSync] ❌ خطا در پردازش صف:', error);
-      return { status: 'server-unreachable', synced: 0 };
     } finally {
       this._isSyncing$.next(false);
       await this.refreshCounts();

@@ -1,10 +1,11 @@
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ItemPhoto } from '../models/item.model';
 import { NetworkStatusService } from './network-status.service';
 import { offlineDb, PhotoQueueEntry } from './offline-db';
 import { isServerUnreachable } from './server-reachability';
-import { getModuleRegistry } from '../modules/module-registry.service';
+import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 
 /**
  * نتیجه یک دور تخلیه صف عکس — با همان منطق سه‌حالته صف اصلی
@@ -71,10 +72,14 @@ function newSyncId(): string {
  *   نسخه دیگری از آن عکس هیچ‌جا وجود ندارد؛ تصمیم با کاربر است
  * • ۵xx / خطای شبکه / آفلاین → دست‌نخورده در صف می‌ماند
  */
+@Injectable({
+  providedIn: 'root',
+})
 export class PhotoUploadQueueService {
   private static instance: PhotoUploadQueueService;
   private network = NetworkStatusService.getInstance();
   private flushing = false;
+  private moduleRegistry: ModuleRegistryService;
 
   /** بعد از این تعداد تلاش ناموفق فقط پیام هشدار عوض می‌شود؛ رکورد نمی‌سوزد */
   private readonly MAX_RETRIES = 3;
@@ -95,11 +100,26 @@ export class PhotoUploadQueueService {
   private _changed$ = new Subject<void>();
   readonly changed$ = this._changed$.asObservable();
 
-  private constructor() {}
+  constructor(moduleRegistry?: ModuleRegistryService) {
+    if (moduleRegistry) {
+      this.moduleRegistry = moduleRegistry;
+    } else {
+      try {
+        this.moduleRegistry = inject(ModuleRegistryService);
+      } catch {
+        this.moduleRegistry = getModuleRegistry();
+      }
+    }
+    PhotoUploadQueueService.instance = this;
+  }
 
   static getInstance(): PhotoUploadQueueService {
     if (!PhotoUploadQueueService.instance) {
-      PhotoUploadQueueService.instance = new PhotoUploadQueueService();
+      try {
+        PhotoUploadQueueService.instance = inject(PhotoUploadQueueService);
+      } catch {
+        PhotoUploadQueueService.instance = new PhotoUploadQueueService();
+      }
     }
     return PhotoUploadQueueService.instance;
   }
@@ -357,7 +377,7 @@ export class PhotoUploadQueueService {
       // Content-Type عمداً ست نمی‌شود: مرورگر باید خودش boundary را بگذارد.
 
       // خواندن آدرس آپلود عکس از نقطه توسعه ماژول انبار
-      const photoUploadExt = getModuleRegistry()
+      const photoUploadExt = this.moduleRegistry
         .getExtensions('photoUpload')[0]?.extension;
       if (!photoUploadExt?.itemPhotosEndpoint) {
         console.warn('[PhotoQueue] ⚠ نقطه توسعه photoUpload ثبت نشده است — رکورد در صف ماند');

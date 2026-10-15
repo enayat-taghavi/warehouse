@@ -1,9 +1,10 @@
+import { Injectable, inject } from '@angular/core';
 import { offlineDb, warehouseOfflineDb, financeOfflineDb, SyncCursorEntry } from './offline-db';
 import { NetworkStatusService } from './network-status.service';
 import { isServerUnreachable } from './server-reachability';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { getModuleRegistry } from '../modules/module-registry.service';
+import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 
 /**
  * SyncPullService — دانلود دلتای سرور به Dexie (نیمهٔ Pull معماری Local-First)
@@ -84,10 +85,14 @@ export type PullOutcome =
   | { status: 'already-running' }
   | { status: 'error'; message: string };
 
+@Injectable({
+  providedIn: 'root',
+})
 export class SyncPullService {
   private static instance: SyncPullService;
   private network = NetworkStatusService.getInstance();
   private inFlight = false;
+  private moduleRegistry: ModuleRegistryService;
 
   private _isPulling$ = new BehaviorSubject<boolean>(false);
   readonly isPulling$ = this._isPulling$.asObservable();
@@ -99,11 +104,26 @@ export class SyncPullService {
   private _pullCompleted$ = new Subject<{ warehouseId: number }>();
   readonly pullCompleted$ = this._pullCompleted$.asObservable();
 
-  private constructor() {}
+  constructor(moduleRegistry?: ModuleRegistryService) {
+    if (moduleRegistry) {
+      this.moduleRegistry = moduleRegistry;
+    } else {
+      try {
+        this.moduleRegistry = inject(ModuleRegistryService);
+      } catch {
+        this.moduleRegistry = getModuleRegistry();
+      }
+    }
+    SyncPullService.instance = this;
+  }
 
   static getInstance(): SyncPullService {
     if (!SyncPullService.instance) {
-      SyncPullService.instance = new SyncPullService();
+      try {
+        SyncPullService.instance = inject(SyncPullService);
+      } catch {
+        SyncPullService.instance = new SyncPullService();
+      }
     }
     return SyncPullService.instance;
   }
@@ -128,7 +148,7 @@ export class SyncPullService {
 
     if (this.inFlight) return { status: 'already-running' };
     if (!this.network.isBrowserOnline) return { status: 'offline' };
-    const syncConfig = getModuleRegistry()
+    const syncConfig = this.moduleRegistry
       .getExtensions('syncConfig')
       .find(e => e.extension.scopeKind === scopeKind)?.extension;
     if (!syncConfig) {

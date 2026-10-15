@@ -55,7 +55,7 @@ set "MODE_SHORT=Accounting"
 set "WH_MOD_VAL=accounting"
 set "FRONT_BUILD=npm run build:accounting"
 set "FRONT_SSR=npm run build:accounting && node server.js"
-rem سرور توسعه همیشه همهٔ ماژول‌ها را نشان می‌دهد و بیلد تک‌ماژول با npm run build:modules است
+rem The dev server always shows all modules; single-module builds use npm run build:modules
 set "FRONT_DEV=npm start -- --port 4300"
 goto OPERATIONAL_MENU
 
@@ -65,7 +65,7 @@ set "MODE_SHORT=Warehouse"
 set "WH_MOD_VAL=warehouse"
 set "FRONT_BUILD=npm run build:warehouse"
 set "FRONT_SSR=npm run build:warehouse && node server.js"
-rem سرور توسعه همیشه همهٔ ماژول‌ها را نشان می‌دهد و بیلد تک‌ماژول با npm run build:modules است
+rem The dev server always shows all modules; single-module builds use npm run build:modules
 set "FRONT_DEV=npm start -- --port 4300"
 goto OPERATIONAL_MENU
 
