@@ -1,8 +1,8 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, computed, ViewChild, inject } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { StateService } from '../../../../services/state.service';
-import { ToastService } from '../../../../services/toast.service';
+import { StateService } from '../../../../core/services/state.service';
+import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AppPersonaService } from '../../../../core/services/app-persona.service';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';

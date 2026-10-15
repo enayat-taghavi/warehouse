@@ -6,7 +6,7 @@ import { of } from 'rxjs';
 import { Router } from '@angular/router';
 import { OperationsCockpitComponent } from './operations-cockpit';
 import { SystemHealthService } from '../../../../../core/services/system-health.service';
-import { SettingsService } from '../../../../../services/settings';
+import { SettingsService } from '../../../../../core/services/settings';
 import { CompanyApiService } from '../../../../../core/api/company-api.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';

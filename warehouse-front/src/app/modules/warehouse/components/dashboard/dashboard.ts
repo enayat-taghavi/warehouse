@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectorRef, effect, inject } from '@angular/c
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ItemApiService } from '../../../../core/api/item-api.service';
-import { StateService } from '../../../../services/state.service';
+import { StateService } from '../../../../core/services/state.service';
 import { AuthStore } from '../../../../core/stores/auth.store';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';

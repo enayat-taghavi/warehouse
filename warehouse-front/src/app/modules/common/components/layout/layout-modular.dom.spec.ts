@@ -6,7 +6,7 @@ import { of, Subject } from 'rxjs';
 import { Layout } from './layout';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AuthStore } from '../../../../core/stores/auth.store';
-import { StateService } from '../../../../services/state.service';
+import { StateService } from '../../../../core/services/state.service';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { Router, NavigationEnd } from '@angular/router';
 import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';

@@ -88,6 +88,11 @@ export const MODULE: WhFrontendModule = {
     companyApiEndpoints: {
       companiesEndpoint: '/personnel/companies',
       accessEndpoint: '/personnel/user-company-access'
+    },
+    syncConfig: {
+      scopeKind: 'finance',
+      pullEndpoint: '/personnel/sync/pull/',
+      scopeParamKey: 'project_id'
     }
   }
 };

@@ -8,9 +8,9 @@ import { CountTaskApiService } from '../../../../core/api/count-task-api.service
 import { CountTask } from '../../../../core/models/count-task.model';
 import { DocTaskApiService } from '../../../../core/api/doc-task-api.service';
 import { DocTask } from '../../../../core/models/doc-task.model';
-import { ToastService } from '../../../../services/toast.service';
+import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { StateService } from '../../../../services/state.service';
+import { StateService } from '../../../../core/services/state.service';
 import { WarehouseSelectorComponent } from '../../../../shared/components/warehouse-selector/warehouse-selector.component';
 import { OfflinePendingBadgeComponent } from '../../../../shared/components/offline-pending-badge/offline-pending-badge.component';
 import { BarcodeScannerComponent } from '../../../../shared/components/barcode-scanner/barcode-scanner.component';

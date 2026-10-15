@@ -6,16 +6,16 @@ import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { DocTaskApiService } from '../../../../core/api/doc-task-api.service';
 import { ItemApiService } from '../../../../core/api/item-api.service';
 import { DynamicFieldApiService } from '../../../../core/api/dynamic-field-api.service';
-import { SettingsService } from '../../../../services/settings';
+import { SettingsService } from '../../../../core/services/settings';
 import { DocTaskStore } from '../../../../core/services/doc-task-store';
 import { DocTask, DocTaskStatus, INVOICE_TYPE_LABELS, CURRENCY_LABELS } from '../../../../core/models/doc-task.model';
 import { 
   FieldPermissionConfig, 
   mergeDocFieldPermissions 
 } from '../../../../core/models/field-config.model';
-import { ToastService } from '../../../../services/toast.service';
+import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { StateService } from '../../../../services/state.service';
+import { StateService } from '../../../../core/services/state.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AuthStore } from '../../../../core/stores/auth.store';
 import { WarehouseSelectorComponent } from '../../../../shared/components/warehouse-selector/warehouse-selector.component';

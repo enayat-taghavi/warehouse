@@ -2,7 +2,7 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { SystemHealthService } from '../../../../../core/services/system-health.service';
-import { SettingsService } from '../../../../../services/settings';
+import { SettingsService } from '../../../../../core/services/settings';
 import { CompanyApiService } from '../../../../../core/api/company-api.service';
 import { CompanyDocument } from '../../../../../core/models/company.model';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';

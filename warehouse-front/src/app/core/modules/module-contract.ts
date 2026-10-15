@@ -140,6 +140,15 @@ export interface ExtensionMap {
    * (تنبل تا کامپوننت از راه installed-modules.ts وارد باندل اولیه نشود)
    */
   loadLabelDesigner?: () => Promise<Type<unknown>>;
+
+  /**
+   * ۱۳. تنظیمات همگام‌سازی و دانلود دلتای داده‌ها (Sync Pull Config) — مصرف در sync-pull.service.ts
+   */
+  syncConfig?: {
+    scopeKind: string;
+    pullEndpoint: string;
+    scopeParamKey: string;
+  };
 }
 
 /**

@@ -4,7 +4,7 @@ import { SessionTabService, TabSessionMessage } from './session-tab.service';
 import { detectClientDeviceModel, formatDeviceModelName } from '../utils/device-detector';
 import { warehouseOfflineDb, financeOfflineDb } from './offline-db';
 import { NetworkStatusService } from './network-status.service';
-import { ToastService } from '../../services/toast.service';
+import { ToastService } from '../../shared/components/toast/toast.component';
 import { WebSocketService } from '../http/websocket.service';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';

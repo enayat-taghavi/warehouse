@@ -13,8 +13,8 @@ import * as path from 'path';
 
 import { ManagerApprovals } from './manager-approvals';
 import { AuthService } from '../../../../../core/auth/auth.service';
-import { StateService } from '../../../../../services/state.service';
-import { ToastService } from '../../../../../services/toast.service';
+import { StateService } from '../../../../../core/services/state.service';
+import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { PersonnelApiService } from '../../../../../core/api/personnel-api.service';
 import { WarehouseHttpService } from '../../../../../core/http/warehouse-http.service';

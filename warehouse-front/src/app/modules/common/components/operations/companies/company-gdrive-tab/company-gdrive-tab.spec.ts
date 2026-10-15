@@ -7,7 +7,7 @@ import { HttpClient } from '@angular/common/http';
 
 import { CompanyGdriveTabComponent, GDriveConfigResponse, MODEL_NAME_PERSIAN_MAP } from './company-gdrive-tab';
 import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
-import { ToastService } from '../../../../../../services/toast.service';
+import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ModuleRegistryService } from '../../../../../../core/modules/module-registry.service';

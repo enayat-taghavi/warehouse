@@ -5,7 +5,7 @@ import { NetworkStatusService, ConnectionState } from '../../../core/services/ne
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
 import { SyncQueueEntry, SyncErrorEntry, offlineDb, getCurrentActiveAppScope } from '../../../core/services/offline-db';
 import { SystemHealthService, ServerHealthResponse, ClientStorageHealth } from '../../../core/services/system-health.service';
-import { StateService } from '../../../services/state.service';
+import { StateService } from '../../../core/services/state.service';
 import { Subscription } from 'rxjs';
 import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/conflict-resolution-modal.component';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';

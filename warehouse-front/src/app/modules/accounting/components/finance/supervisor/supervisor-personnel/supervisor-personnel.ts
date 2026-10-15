@@ -4,7 +4,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
-import { StateService } from '../../../../../../services/state.service';
+import { StateService } from '../../../../../../core/services/state.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../../../core/api/personnel-api.service';
 import { ProjectSection, PersonnelProfile, PersonnelChangeRequest } from '../../../../../../core/models/personnel.model';

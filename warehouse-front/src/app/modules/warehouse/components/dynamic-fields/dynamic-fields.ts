@@ -1,8 +1,8 @@
 import { Component, OnInit, ChangeDetectorRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { StateService } from '../../../../services/state.service';
-import { ToastService } from '../../../../services/toast.service';
+import { StateService } from '../../../../core/services/state.service';
+import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../shared';
 import { DynamicFieldApiService } from '../../../../core/api';
 import { DynamicFieldDefinition } from '../../../../core/models';

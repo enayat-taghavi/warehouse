@@ -75,6 +75,11 @@ export const MODULE: WhFrontendModule = {
     crossModuleFilters: {
       warehouseScopeFilter: true
     },
+    syncConfig: {
+      scopeKind: 'warehouse',
+      pullEndpoint: '/inventory/sync/pull/',
+      scopeParamKey: 'warehouse_id'
+    },
     loadLabelDesigner: () => import('./components/label-designer/label-designer').then(m => m.LabelDesigner)
   }
 };

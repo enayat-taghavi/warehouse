@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
-import { SKIP_OFFLINE } from '../core/interceptors/offline.interceptor';
-import { SKIP_GLOBAL_ERROR_TOAST } from '../core/error/error.interceptor';
+import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
+import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { environment } from '../../environments/environment';
+import { environment } from '../../../environments/environment';
 
 export interface SettingItem {
   value: any;

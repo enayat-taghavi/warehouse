@@ -6,8 +6,8 @@ import { of, throwError } from 'rxjs';
 
 import { offlineDb } from '../../../../../../core/services/offline-db';
 import { SettingsBackupTabComponent } from './settings-backup-tab';
-import { SettingsService } from '../../../../../../services/settings';
-import { ToastService } from '../../../../../../services/toast.service';
+import { SettingsService } from '../../../../../../core/services/settings';
+import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 
 describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {

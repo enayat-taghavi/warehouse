@@ -13,7 +13,7 @@ import { SessionTabService } from '../../../../../core/services/session-tab.serv
 import { ClientTelemetryService, FleetSessionItem } from '../../../../../core/services/client-telemetry.service';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';
 import { WebSocketService } from '../../../../../core/http/websocket.service';
-import { ToastService } from '../../../../../services/toast.service';
+import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ConflictResolutionModalComponent } from '../../../../../shared/components/conflict-resolution-modal/conflict-resolution-modal.component';
 import { Subscription } from 'rxjs';

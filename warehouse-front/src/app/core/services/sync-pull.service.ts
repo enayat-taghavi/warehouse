@@ -3,7 +3,7 @@ import { NetworkStatusService } from './network-status.service';
 import { isServerUnreachable } from './server-reachability';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { INSTALLED_MODULES } from '../../modules/installed-modules';
+import { getModuleRegistry } from '../modules/module-registry.service';
 
 /**
  * SyncPullService — دانلود دلتای سرور به Dexie (نیمهٔ Pull معماری Local-First)
@@ -128,8 +128,10 @@ export class SyncPullService {
 
     if (this.inFlight) return { status: 'already-running' };
     if (!this.network.isBrowserOnline) return { status: 'offline' };
-    const isWarehouseInstalled = INSTALLED_MODULES.some(m => m.code === 'warehouse');
-    if (scopeKind === 'warehouse' && !isWarehouseInstalled) {
+    const syncConfig = getModuleRegistry()
+      .getExtensions('syncConfig')
+      .find(e => e.extension.scopeKind === scopeKind)?.extension;
+    if (!syncConfig) {
       return { status: 'completed', upserted: 0, deleted: 0, bytes: 0 };
     }
 
@@ -172,12 +174,10 @@ export class SyncPullService {
       let cursor: string | null = state.cursor;
       let hasMore = true;
 
-      const endpoint = scopeKind === 'finance'
-        ? '/personnel/sync/pull/'
-        : '/inventory/sync/pull/';
+      const endpoint = syncConfig.pullEndpoint;
 
       while (hasMore) {
-        const paramKey = scopeKind === 'finance' ? 'project_id' : 'warehouse_id';
+        const paramKey = syncConfig.scopeParamKey;
         const params = new URLSearchParams({ [paramKey]: String(scopeId), limit: String(PAGE_LIMIT) });
         if (since) params.set('since', since);
         if (cursor) params.set('cursor', cursor);

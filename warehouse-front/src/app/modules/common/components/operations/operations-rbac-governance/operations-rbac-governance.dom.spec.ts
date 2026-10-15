@@ -13,7 +13,7 @@ import * as path from 'path';
 import { OperationsRbacGovernanceComponent } from './operations-rbac-governance';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { AppPersonaService } from '../../../../../core/services/app-persona.service';
-import { ToastService } from '../../../../../services/toast.service';
+import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { AccountsHttpService } from '../../../../../core/http/accounts-http.service';
 import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
 

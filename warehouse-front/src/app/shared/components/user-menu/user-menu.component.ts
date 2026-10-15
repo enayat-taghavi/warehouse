@@ -12,7 +12,7 @@ import { PwaUpdateService } from '../../../core/services/pwa-update.service';
 import { PwaInstallService } from '../../../core/services/pwa-install.service';
 import { AccountsHttpService } from '../../../core/http/accounts-http.service';
 import { WarehouseHttpService } from '../../../core/http/warehouse-http.service';
-import { StateService } from '../../../services/state.service';
+import { StateService } from '../../../core/services/state.service';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 import { ToastService } from '../toast/toast.component';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';

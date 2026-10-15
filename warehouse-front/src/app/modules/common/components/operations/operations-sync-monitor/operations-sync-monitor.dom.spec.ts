@@ -15,7 +15,7 @@ import { SessionTabService } from '../../../../../core/services/session-tab.serv
 import { ClientTelemetryService } from '../../../../../core/services/client-telemetry.service';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';
 import { WebSocketService } from '../../../../../core/http/websocket.service';
-import { ToastService } from '../../../../../services/toast.service';
+import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
 

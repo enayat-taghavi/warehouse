@@ -7,7 +7,7 @@ import {
   HttpContextToken,
 } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
-import { ToastService } from '../../services/toast.service';
+import { ToastService } from '../../shared/components/toast/toast.component';
 import { AuthStore } from '../stores/auth.store';
 import { OFFLINE_NO_CACHE, OFFLINE_UPLOAD_UNSUPPORTED } from '../interceptors/offline.interceptor';
 import { isServerUnreachable } from '../services/server-reachability';

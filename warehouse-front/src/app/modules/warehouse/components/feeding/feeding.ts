@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { StateService } from '../../../../services/state.service';
+import { StateService } from '../../../../core/services/state.service';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 /**

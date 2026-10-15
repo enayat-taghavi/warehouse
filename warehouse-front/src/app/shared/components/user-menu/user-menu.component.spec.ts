@@ -6,7 +6,7 @@ import { of } from 'rxjs';
 import { UserMenuComponent } from './user-menu.component';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AuthStore } from '../../../core/stores/auth.store';
-import { StateService } from '../../../services/state.service';
+import { StateService } from '../../../core/services/state.service';
 import { AccountsHttpService } from '../../../core/http/accounts-http.service';
 import { WarehouseHttpService } from '../../../core/http/warehouse-http.service';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';

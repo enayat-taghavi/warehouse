@@ -5,7 +5,7 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import { ItemPhoto } from '../../../core/models/item.model';
 import { ItemPhotoService, PhotoUploadResult } from '../../../core/services/item-photo.service';
 import { PhotoQueueEntry } from '../../../core/services/offline-db';
-import { ToastService } from '../../../services/toast.service';
+import { ToastService } from '../../../shared/components/toast/toast.component';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 @Component({

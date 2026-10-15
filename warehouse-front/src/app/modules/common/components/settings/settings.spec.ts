@@ -5,9 +5,9 @@ import { runInInjectionContext, Injector, signal, ChangeDetectorRef } from '@ang
 import { of, throwError } from 'rxjs';
 
 import { Settings } from './settings';
-import { SettingsService } from '../../../../services/settings';
+import { SettingsService } from '../../../../core/services/settings';
 import { DynamicFieldApiService } from '../../../../core/api/dynamic-field-api.service';
-import { ToastService } from '../../../../services/toast.service';
+import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ConfirmDialogService } from '../../../../shared';

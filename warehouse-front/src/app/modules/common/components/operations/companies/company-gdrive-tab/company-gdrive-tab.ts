@@ -20,7 +20,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { environment } from '../../../../../../../environments/environment';
 import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
 import { ModuleRegistryService } from '../../../../../../core/modules/module-registry.service';
-import { ToastService } from '../../../../../../services/toast.service';
+import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';

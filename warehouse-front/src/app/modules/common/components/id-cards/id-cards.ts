@@ -1,8 +1,8 @@
 import { Component, OnInit, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { StateService } from '../../../../services/state.service';
-import { ToastService } from '../../../../services/toast.service';
+import { StateService } from '../../../../core/services/state.service';
+import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { AccountsHttpService, User, Role } from '../../../../core/http/accounts-http.service';
 import { WarehouseHttpService, Warehouse } from '../../../../core/http/warehouse-http.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';

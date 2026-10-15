@@ -1,8 +1,8 @@
 import { Injectable, NgZone, ApplicationRef } from '@angular/core';
 import { Subject } from 'rxjs';
 import { ItemApiService } from '../api/item-api.service';
-import { ToastService } from '../../services/toast.service';
-import { StateService } from '../../services/state.service';
+import { ToastService } from '../../shared/components/toast/toast.component';
+import { StateService } from './state.service';
 import { isServerUnreachable } from './server-reachability';
 import { NetworkStatusService } from './network-status.service';
 

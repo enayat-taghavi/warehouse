@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { AppPersonaService } from '../../../../../core/services/app-persona.service';
-import { ToastService } from '../../../../../services/toast.service';
+import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { AccountsHttpService } from '../../../../../core/http/accounts-http.service';
 import { finalize } from 'rxjs/operators';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';

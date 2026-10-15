@@ -4,7 +4,7 @@ import { debounceTime, switchMap, catchError } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LabelApiService, LabelTemplate, LabelElement, AvailableField } from '../../../../core/api/label-api.service';
-import { ToastService } from '../../../../services/toast.service';
+import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';

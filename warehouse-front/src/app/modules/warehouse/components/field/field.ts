@@ -1,12 +1,12 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { StateService } from '../../../../services/state.service';
-import { ToastService } from '../../../../services/toast.service';
+import { StateService } from '../../../../core/services/state.service';
+import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { CountTaskApiService } from '../../../../core/api/count-task-api.service';
 import { ItemApiService } from '../../../../core/api/item-api.service';
 import { DynamicFieldApiService } from '../../../../core/api/dynamic-field-api.service';
-import { SettingsService } from '../../../../services/settings';
+import { SettingsService } from '../../../../core/services/settings';
 import { 
   FieldPermissionConfig, 
   DEFAULT_ITEM_FIELD_PERMISSIONS, 

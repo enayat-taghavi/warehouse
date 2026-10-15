@@ -7,7 +7,7 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ClientTelemetryService } from './client-telemetry.service';
 import { SessionTabService, TabSessionMessage } from './session-tab.service';
 import { WebSocketService } from '../http/websocket.service';
-import { ToastService } from '../../services/toast.service';
+import { ToastService } from '../../shared/components/toast/toast.component';
 import { Subject } from 'rxjs';
 
 try {

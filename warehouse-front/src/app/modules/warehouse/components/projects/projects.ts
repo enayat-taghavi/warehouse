@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject, ViewChild, ChangeDetectorRef } fr
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { StateService } from '../../../../services/state.service';
+import { StateService } from '../../../../core/services/state.service';
 import { ToastService, ModalComponent, ConfirmDialogService, StatusBadgeComponent, HasPermissionDirective } from '../../../../shared';
 import { SmartDeleteModalComponent } from '../../../../shared/components/smart-delete-modal/smart-delete-modal';
 import { AuthStore } from '../../../../core/stores/auth.store';

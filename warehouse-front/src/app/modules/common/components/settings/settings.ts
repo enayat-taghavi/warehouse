@@ -1,8 +1,8 @@
 import { Component, OnInit, ChangeDetectorRef, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SettingsService } from '../../../../services/settings';
-import { ToastService } from '../../../../services/toast.service';
+import { SettingsService } from '../../../../core/services/settings';
+import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { 

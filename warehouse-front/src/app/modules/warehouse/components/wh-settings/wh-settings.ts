@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SettingsService } from '../../../../services/settings';
+import { SettingsService } from '../../../../core/services/settings';
 import { ToastService, ConfirmDialogService } from '../../../../shared';
 import { AuthStore } from '../../../../core/stores/auth.store';
 import { AuthService } from '../../../../core/auth/auth.service';

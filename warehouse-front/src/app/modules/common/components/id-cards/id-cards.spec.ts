@@ -4,8 +4,8 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { IdCards, DEFAULT_CARD_TEXTS } from './id-cards';
 import { AccountsHttpService, User, Role } from '../../../../core/http/accounts-http.service';
 import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
-import { ToastService } from '../../../../services/toast.service';
-import { StateService } from '../../../../services/state.service';
+import { ToastService } from '../../../../shared/components/toast/toast.component';
+import { StateService } from '../../../../core/services/state.service';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
 import { DomSanitizer } from '@angular/platform-browser';
 

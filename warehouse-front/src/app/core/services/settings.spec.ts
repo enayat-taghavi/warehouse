@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { of } from 'rxjs';
 import { SettingsService } from './settings';
-import { environment } from '../../environments/environment';
+import { environment } from '../../../environments/environment';
 
 describe('SettingsService (Backup & Restore)', () => {
   let service: SettingsService;
