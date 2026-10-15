@@ -1,7 +1,22 @@
+// @vitest-environment jsdom
 import '@angular/compiler';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { signal } from '@angular/core';
 import { AppPersonaService } from './app-persona.service';
+
+function createStorageMock() {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, val: string) => { store[key] = String(val); },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+    get length() { return Object.keys(store).length; },
+    key: (i: number) => Object.keys(store)[i] || null,
+  };
+}
+
+(globalThis as any).localStorage = createStorageMock();
 
 /**
  * ماژول ساخته‌شده از قالب (sample): کاشی و پیوند سریع باید به defaultRoute خود ماژول بروند،
