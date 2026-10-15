@@ -28,6 +28,12 @@ from personnel.google_drive_service import (
     _escape_gdrive_query_string
 )
 from personnel.google_drive_path_resolver import GoogleDrivePathResolver, sanitize_filename
+from django.apps import apps
+
+# انبار از راه رجیستری اپ‌ها، بی import مستقیم ماژول انبار (حصار ماژول)
+Warehouse = apps.get_model('warehouses', 'Warehouse') if apps.is_installed('warehouses') else None
+Item = apps.get_model('inventory', 'Item') if apps.is_installed('inventory') else None
+ItemPhoto = apps.get_model('inventory', 'ItemPhoto') if apps.is_installed('inventory') else None
 
 User = get_user_model()
 

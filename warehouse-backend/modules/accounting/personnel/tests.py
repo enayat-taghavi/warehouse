@@ -15,6 +15,10 @@ from .models import (
     PayrollYearlySettings,
     MonthlyPayrollRecord
 )
+from django.apps import apps
+
+# انبار از راه رجیستری اپ‌ها، بی import مستقیم ماژول انبار (حصار ماژول)
+Warehouse = apps.get_model('warehouses', 'Warehouse') if apps.is_installed('warehouses') else None
 
 User = get_user_model()
 
@@ -29,7 +33,9 @@ class PersonnelAppTests(TestCase):
         )
         self.client.force_authenticate(user=self.user)
         call_command('seed_payroll_settings')
-        
+
+        self.warehouse = Warehouse.objects.create(name='انبار پارس', code='WH-PARS')
+
         self.project = FinancialProject.objects.create(
             name='پروژه پارس',
             code='PRJ-PARS',

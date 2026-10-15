@@ -9,6 +9,10 @@ from personnel.models import (
     VehicleDriverProfile,
     VehicleTripLog,
 )
+from django.apps import apps
+
+# انبار از راه رجیستری اپ‌ها، بی import مستقیم ماژول انبار (حصار ماژول)
+Warehouse = apps.get_model('warehouses', 'Warehouse') if apps.is_installed('warehouses') else None
 
 User = get_user_model()
 

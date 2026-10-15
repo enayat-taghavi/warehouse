@@ -18,6 +18,10 @@ from personnel.fleet_excel_engine import (
     export_fleet_monthly_excel,
     import_fleet_monthly_excel,
 )
+from django.apps import apps
+
+# انبار از راه رجیستری اپ‌ها، بی import مستقیم ماژول انبار (حصار ماژول)
+Warehouse = apps.get_model('warehouses', 'Warehouse') if apps.is_installed('warehouses') else None
 
 User = get_user_model()
 
@@ -295,6 +299,8 @@ class FleetComprehensiveTenVehiclesTests(TestCase):
 
         # ایجاد کاربر عادی بدون حق آنلاک
         normal_user = User.objects.create_user(username='normal_user', password='Password123!')
+        # خودروی بی‌شرکت و بی‌بخش فقط برای سازنده‌اش در دامنه است (scope_vehicle_queryset)
+        VehicleDriverProfile.objects.filter(pk=self.vehicles[0].pk).update(created_by=normal_user)
         self.client.force_authenticate(user=normal_user)
 
         payload = {

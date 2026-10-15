@@ -541,7 +541,7 @@ class ExportWorkerTests(BaseReportTest):
         self.assertEqual(job.status, 'pending')
 
     def test_orphan_recovery_by_heartbeat_not_age(self):
-        from .management.commands.run_export_worker import Command
+        from reports.management.commands.run_export_worker import Command
         old = timezone.now() - timezone.timedelta(minutes=10)
         dead = ReportExportJob.objects.create(
             owner=self.admin, spec=self.SPEC, status='running', heartbeat_at=old,
@@ -581,7 +581,7 @@ class ExportWorkerTests(BaseReportTest):
         self.assertEqual(queued.status, 'pending')
 
     def test_orphan_poison_pill_fails_after_max_attempts(self):
-        from .management.commands.run_export_worker import Command
+        from reports.management.commands.run_export_worker import Command
         old = timezone.now() - timezone.timedelta(minutes=10)
         poison = ReportExportJob.objects.create(
             owner=self.admin, spec=self.SPEC, status='running',
