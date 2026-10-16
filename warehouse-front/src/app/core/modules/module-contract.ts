@@ -1,5 +1,6 @@
 import { Type } from '@angular/core';
-import { Routes } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { Router, Routes } from '@angular/router';
 
 /**
  * مشخصات پایه یک ماژول فرانت‌اند در پلتفرم انبارداری و مالی
@@ -178,6 +179,30 @@ export interface ExtensionMap {
   photoUpload?: {
     itemPhotosEndpoint: (itemId: number | string) => string;
   };
+
+  /**
+   * ۱۸. هندلرهای اختصاصی ناوبری اعلان‌ها — مصرف در notification-center.component.ts
+   */
+  notificationHandlers?: NotificationHandler[];
+}
+
+/**
+ * سیاق ناوبری اعلان
+ */
+export interface NotificationNavigationContext {
+  item: any;
+  http: HttpClient;
+  router: Router;
+  userPerms: string[];
+  isSuperuser: boolean;
+}
+
+/**
+ * هندلر ماژولار ناوبری اعلان
+ */
+export interface NotificationHandler {
+  canHandle: (item: any) => boolean;
+  navigate: (ctx: NotificationNavigationContext) => void;
 }
 
 /**

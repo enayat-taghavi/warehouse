@@ -14,6 +14,7 @@ import {
   TREASURER_ROLE_MARKERS
 } from './nav-items';
 import { ACCOUNTING_ENTITY_ICONS } from './entity-icons';
+import { ACCOUNTING_NOTIFICATION_HANDLERS } from './notification-handlers';
 
 /**
  * مانیفست رسمی و مستقل ماژول مالی، حقوق و کارکرد (Front-End Module Manifest)
@@ -104,6 +105,7 @@ export const MODULE: WhFrontendModule = {
     },
     projectLookup: {
       financialProjectsEndpoint: '/personnel/financial-projects'
-    }
+    },
+    notificationHandlers: ACCOUNTING_NOTIFICATION_HANDLERS
   }
 };

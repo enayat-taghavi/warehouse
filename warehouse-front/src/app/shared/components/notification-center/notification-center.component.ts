@@ -6,6 +6,8 @@ import { Subscription } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { WebSocketService } from '../../../core/http/websocket.service';
 import { AuthService } from '../../../core/auth/auth.service';
+import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
+import { NotificationNavigationContext } from '../../../core/modules/module-contract';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 export interface NotificationItem {
@@ -123,6 +125,7 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
   private auth = inject(AuthService);
   private ws = inject(WebSocketService);
   private el = inject(ElementRef);
+  private moduleRegistry = inject(ModuleRegistryService);
 
   isOpen = signal<boolean>(false);
   isLoading = signal<boolean>(false);
@@ -226,146 +229,28 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // ناوبری هوشمند درخواست‌های تغییرات ناوگان (تسک ۱۱.۲۱ و ن-۱۰)
-    if (item.notification_type === 'fleet_change_request') {
-      const { perms, isSuper } = this.userPerms();
-      if (isSuper || perms.includes('perm_approve_fleet_manager') || perms.includes('can_act_as_manager')) {
-        this.router.navigate(['/app/finance/manager-fleet'], { queryParams: { tab: 'changes' } });
-      } else if (perms.includes('perm_approve_fleet_finance') || perms.includes('can_act_as_accountant') || perms.includes('view_sys_fleet_settlement')) {
-        this.router.navigate(['/app/finance/accountant-fleet'], { queryParams: { tab: 'changes' } });
-      } else if (perms.includes('perm_approve_fleet_supervisor') || perms.includes('can_act_as_workshop_supervisor')) {
-        this.router.navigate(['/app/finance/supervisor-fleet'], { queryParams: { tab: 'changes' } });
-      } else {
-        this.router.navigate(['/app/finance/employee-new-vehicle']);
-      }
-      return;
-    }
+    const { perms, isSuper } = this.userPerms();
+    const context: NotificationNavigationContext = {
+      item,
+      http: this.http,
+      router: this.router,
+      userPerms: perms,
+      isSuperuser: isSuper
+    };
 
-    // ناوبری هوشمند برای پرونده‌های ناوگان و رانندگان (تسک ۴.۱ و ۴.۲)
-    if (item.target_model === 'VehicleDriverProfile') {
-      const targetId = Number(item.target_id);
-      if (!item.target_id || !Number.isInteger(targetId) || targetId <= 0) {
-        this.navigateByRoleForFleet();
-        return;
+    for (const entry of this.moduleRegistry.getExtensions('notificationHandlers')) {
+      for (const handler of entry.extension) {
+        if (handler.canHandle(item)) {
+          handler.navigate(context);
+          return;
+        }
       }
-      const headers = new HttpHeaders({ SKIP_GLOBAL_ERROR_TOAST: 'true' });
-      this.http.get<any>(`${environment.apiUrl}/personnel/vehicles/${targetId}/`, { headers }).subscribe({
-        next: (v) => this.navigateToFleet(v),
-        error: () => this.navigateByRoleForFleet()
-      });
-      return;
     }
-
-    // ناوبری هوشمند بر اساس مدل هدف و شناسهٔ آن (تسک ۴.۴، تصمیم ۶.۷ و DEF-12):
-    // پرونده خوانده می‌شود و کاربر به کارتابل مرحلهٔ فعلی همان پرونده، فیلترشده روی همان پرونده، می‌رود.
-    if (item.target_model !== 'PersonnelProfile') return;
-    const targetId = Number(item.target_id);
-    if (!item.target_id || !Number.isInteger(targetId) || targetId <= 0) {
-      this.navigateByRole();
-      return;
-    }
-    const headers = new HttpHeaders({ SKIP_GLOBAL_ERROR_TOAST: 'true' });
-    this.http.get<any>(`${environment.apiUrl}/personnel/profiles/${targetId}/`, { headers }).subscribe({
-      next: (p) => this.navigateToPersonnel(p),
-      // پروندهٔ پاک‌شده یا بیرون از قلمرو: فقط به کارتابل نقش کاربر برو
-      error: () => this.navigateByRole()
-    });
   }
 
   private userPerms(): { perms: string[]; isSuper: boolean } {
     const user = this.auth.user();
     return { perms: user?.permissions || [], isSuper: !!user?.is_superuser };
-  }
-
-  private navigateToFleet(v: any): void {
-    const { perms, isSuper } = this.userPerms();
-    const has = (...codes: string[]) => isSuper || codes.some(c => perms.includes(c));
-    const q = v?.plate_number || '';
-    switch (v?.approval_status) {
-      case 'pending_manager':
-        if (has('perm_approve_fleet_manager', 'can_act_as_manager', 'can_act_as_company_manager')) {
-          this.router.navigate(['/app/finance/manager-fleet'], { queryParams: { tab: 'new', q } });
-          return;
-        }
-        break;
-      case 'pending_accountant':
-        if (has('perm_approve_fleet_finance', 'can_act_as_accountant', 'view_sys_fleet_settlement')) {
-          this.router.navigate(['/app/finance/accountant-fleet'], { queryParams: { tab: 'new', q } });
-          return;
-        }
-        break;
-      case 'pending_supervisor':
-        if (has('perm_approve_fleet_supervisor', 'can_act_as_workshop_supervisor', 'perm_approve_fleet_manager', 'can_act_as_manager')) {
-          this.router.navigate(['/app/finance/supervisor-fleet'], { queryParams: { tab: 'new', q } });
-          return;
-        }
-        break;
-    }
-    if (v?.approval_status === 'approved' || v?.approval_status === 'end_collaboration') {
-      this.router.navigate(['/app/finance/employee-fleet'], {
-        queryParams: { ...(v?.section ? { section_id: v.section } : {}), search: q || null }
-      });
-      return;
-    }
-    this.router.navigate(['/app/finance/employee-new-vehicle'], {
-      queryParams: { ...(v?.section ? { section_id: v.section } : {}), search: q || null, id: v?.id || null }
-    });
-  }
-
-  private navigateByRoleForFleet(): void {
-    const { perms, isSuper } = this.userPerms();
-    if (isSuper || perms.includes('perm_approve_fleet_manager') || perms.includes('can_act_as_manager')) {
-      this.router.navigate(['/app/finance/manager-fleet']);
-    } else if (perms.includes('perm_approve_fleet_finance') || perms.includes('can_act_as_accountant') || perms.includes('view_sys_fleet_settlement')) {
-      this.router.navigate(['/app/finance/accountant-fleet']);
-    } else if (perms.includes('perm_approve_fleet_supervisor') || perms.includes('can_act_as_workshop_supervisor')) {
-      this.router.navigate(['/app/finance/supervisor-fleet']);
-    } else {
-      this.router.navigate(['/app/finance/employee-new-vehicle']);
-    }
-  }
-
-  private navigateToPersonnel(p: any): void {
-    const { perms, isSuper } = this.userPerms();
-    const has = (...codes: string[]) => isSuper || codes.some(c => perms.includes(c));
-    const q = p?.national_code || '';
-    switch (p?.approval_status) {
-      case 'pending_manager':
-        if (has('perm_approve_personnel_manager', 'can_act_as_manager', 'can_act_as_company_manager')) {
-          this.router.navigate(['/app/finance/manager-personnel'], { queryParams: { tab: 'new', q } });
-          return;
-        }
-        break;
-      case 'pending_accountant':
-        if (has('perm_approve_personnel_finance')) {
-          this.router.navigate(['/app/finance/accountant-personnel'], { queryParams: { tab: 'new', q } });
-          return;
-        }
-        break;
-      case 'pending_supervisor':
-        if (has('perm_approve_personnel_supervisor', 'can_act_as_workshop_supervisor', 'perm_approve_personnel_manager', 'can_act_as_manager')) {
-          this.router.navigate(['/app/finance/supervisor-personnel'], { queryParams: { tab: 'new', q } });
-          return;
-        }
-        break;
-    }
-    // پیش‌نویس، عودت‌شده، مصوب یا ردشده: صفحهٔ بخش پرونده
-    this.router.navigate(['/app/finance/employee-new-personnel'], {
-      queryParams: { ...(p?.section ? { section_id: p.section } : {}), search: q || null }
-    });
-  }
-
-  private navigateByRole(): void {
-    const { perms, isSuper } = this.userPerms();
-    if (isSuper || perms.includes('perm_approve_personnel_manager') || perms.includes('can_act_as_manager')) {
-      this.router.navigate(['/app/finance/manager-personnel']);
-    } else if (perms.includes('perm_approve_personnel_finance')) {
-      this.router.navigate(['/app/finance/accountant-personnel']);
-    } else if (perms.includes('perm_approve_personnel_supervisor') || perms.includes('can_act_as_workshop_supervisor')) {
-      this.router.navigate(['/app/finance/supervisor-personnel']);
-    } else {
-      this.router.navigate(['/app/finance/employee-new-personnel']);
-    }
   }
 
   formatTimeAgo(isoString: string): string {
