@@ -85,4 +85,19 @@ class PersonnelConfig(AppConfig):
         from personnel.models import CompanyGoogleDriveConfig
         contribute('company_gdrive_config_model', CompanyGoogleDriveConfig)
 
+        # مسدودکننده‌های حذف شرکت ماژول حسابداری (گام ۴)
+        contribute('company_delete_blockers', (10, 'projects', "این شرکت دارای پروژه‌های ثبت‌شده است و نمی‌توان آن را حذف کرد."))
+        contribute('company_delete_blockers', (30, 'personnel_profiles', "این شرکت دارای پرونده‌های پرسنلی ثبت‌شده است و نمی‌توان آن را حذف کرد."))
+        contribute('company_delete_blockers', (40, 'monthly_work_periods', "این شرکت دارای دوره‌های کارکرد ثبت‌شده است و نمی‌توان آن را حذف کرد."))
+        contribute('company_delete_blockers', (50, 'counterparties', "این شرکت دارای طرف‌حساب‌های مالی ثبت‌شده است و نمی‌توان آن را حذف کرد."))
+        contribute('company_delete_blockers', (60, 'fiscal_periods', "این شرکت دارای دوره‌های مالی تعریف‌شده است و نمی‌توان آن را حذف کرد."))
+
+        # دسترسی نوشتن ساختار سازمانی ماژول حسابداری (گام ۴)
+        contribute('org_structure_write_perms', 'accounts.perm_approve_personnel_manager')
+
+        # فیلتر اعضای شرکت در دایرکتوری کاربران بر مبنای بخش‌های پروژه (گام ۴)
+        from personnel.company_access import build_section_member_q
+        contribute('company_member_q_builders', build_section_member_q)
+
+
 

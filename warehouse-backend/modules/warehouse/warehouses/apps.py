@@ -65,6 +65,9 @@ class WarehousesConfig(AppConfig):
         from warehouses.user_extension import register_user_extension
         register_user_extension()
 
+        # مسدودکننده حذف شرکت ماژول انبار (گام ۴)
+        contribute('company_delete_blockers', (20, 'warehouses', "این شرکت دارای انبارهای ثبت‌شده در سامانه است و نمی‌توان آن را حذف کرد."))
+
         # ثبت مدل‌های قابل بازگردانی انبار (گام ۳-ب)
         from warehouses.models import Warehouse
         contribute('rollback_models', {'Warehouse': Warehouse})

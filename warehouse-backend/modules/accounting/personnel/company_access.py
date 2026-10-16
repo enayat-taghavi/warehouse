@@ -32,3 +32,12 @@ def section_derived_company_source(user):
 
 # سازگاری رو به عقب
 section_derived_company_ids = section_derived_company_source
+
+
+def build_section_member_q(allowed_cids):
+    """
+    شرط فیلتر کاربران عضو شرکت از طریق انتساب فعال در بخش‌های پروژه‌های شرکت‌های مجاز (گام ۴).
+    """
+    from django.db.models import Q
+    return Q(section_assignments__is_active=True, section_assignments__section__project__company_id__in=allowed_cids)
+

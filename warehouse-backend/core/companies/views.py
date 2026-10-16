@@ -11,6 +11,8 @@ from rest_framework.response import Response
 from accounts.views import OptionalPageNumberPagination
 from common.date_utils import normalize_digits
 
+from platform_core.registry import contributions
+
 from .access import (
     derived_company_ids,
     ensure_scoped_write,
@@ -22,16 +24,8 @@ from .realtime import broadcast_org_structure_updated
 from .serializers import CompanySerializer, UserCompanyAccessSerializer
 
 
-# وابستگی‌های شرکت که در صورت وجود، حذف شرکت را مسدود می‌کنند. هر ماژول نصب‌نشده related_name خود را
-# روی Company ندارد و با hasattr کنار گذاشته می‌شود.
-COMPANY_DELETE_BLOCKERS = (
-    ('projects', "این شرکت دارای پروژه‌های ثبت‌شده است و نمی‌توان آن را حذف کرد."),
-    ('warehouses', "این شرکت دارای انبارهای ثبت‌شده در سامانه است و نمی‌توان آن را حذف کرد."),
-    ('personnel_profiles', "این شرکت دارای پرونده‌های پرسنلی ثبت‌شده است و نمی‌توان آن را حذف کرد."),
-    ('monthly_work_periods', "این شرکت دارای دوره‌های کارکرد ثبت‌شده است و نمی‌توان آن را حذف کرد."),
-    ('counterparties', "این شرکت دارای طرف‌حساب‌های مالی ثبت‌شده است و نمی‌توان آن را حذف کرد."),
-    ('fiscal_periods', "این شرکت دارای دوره‌های مالی تعریف‌شده است و نمی‌توان آن را حذف کرد."),
-)
+# وابستگی‌های شرکت که در صورت وجود، حذف شرکت را مسدود می‌کنند.
+# ماژول‌ها این وابستگی‌ها را در نقطهٔ توسعهٔ company_delete_blockers ثبت می‌کنند (گام ۴).
 
 
 class CompanyViewSet(viewsets.ModelViewSet):
@@ -89,7 +83,8 @@ class CompanyViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         if not (self.request.user.is_superuser or self.request.user.is_staff):
             raise PermissionDenied("تنها مدیران ارشد مجاز به حذف شرکت هستند.")
-        for related_name, message in COMPANY_DELETE_BLOCKERS:
+        blockers = sorted(contributions('company_delete_blockers'), key=lambda b: b[0])
+        for _order, related_name, message in blockers:
             if hasattr(instance, related_name) and getattr(instance, related_name).exists():
                 raise serializers.ValidationError(message)
         instance_id = instance.id

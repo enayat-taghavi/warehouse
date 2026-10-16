@@ -9,6 +9,7 @@ from platform_core.registry import contribute
 
 class WarehouseUserExtension:
     name = 'warehouses'
+    user_prefetch_related = ('assigned_warehouses',)
 
     def get_serializer_field(self):
         """فیلد انتساب انبار در سریالایزر کاربر پلتفرم."""

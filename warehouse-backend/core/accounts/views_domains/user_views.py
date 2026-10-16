@@ -18,6 +18,7 @@ from rest_framework.response import Response
 
 from common.mixins import DeleteImpactMixin
 from common.excel_utils import sanitize_excel_row
+from platform_core.registry import contributions
 
 from ..models import CustomUser, UserTableViewState
 from ..serializers import UserSerializer, UserDirectorySerializer, UserTableViewStateSerializer
@@ -35,13 +36,12 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     filterset_fields = ['is_active', 'company', 'operational_zone']
 
     def get_queryset(self):
-        from django.apps import apps
         from django.db.models import Q
 
         qs = CustomUser.objects.all().select_related('supervisor')
         prefetch_items = ['groups__customrole', 'user_permissions']
-        if apps.is_installed('warehouses'):
-            prefetch_items.append('assigned_warehouses')
+        for ext in contributions('user_extensions'):
+            prefetch_items.extend(getattr(ext, 'user_prefetch_related', ()))
         prefetch_items.append('company_accesses__company')
         qs = qs.prefetch_related(*prefetch_items)
 
@@ -110,11 +110,12 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             if not company_id_param.isdigit() or int(company_id_param) not in allowed_cids:
                 raise PermissionDenied('شما به کاربران این شرکت دسترسی ندارید.')
             allowed_cids = {int(company_id_param)}
-        # عضو شرکت = دسترسی صریح workspace_full یا انتساب فعال در بخش‌های پروژه‌های همان شرکت
+        # عضو شرکت = دسترسی صریح workspace_full یا سازنده‌های شرط عضویتی ماژول‌ها
         members = Q(company_accesses__company_id__in=allowed_cids, company_accesses__access_level='workspace_full') | Q(id=user.id)
-        from django.apps import apps
-        if apps.is_installed('personnel'):
-            members |= Q(section_assignments__is_active=True, section_assignments__section__project__company_id__in=allowed_cids)
+        for builder in contributions('company_member_q_builders'):
+            builder_q = builder(allowed_cids)
+            if builder_q is not None:
+                members |= builder_q
         return qs.filter(members).distinct()
 
     def get_serializer_class(self):
