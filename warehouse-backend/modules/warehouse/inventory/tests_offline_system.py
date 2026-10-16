@@ -279,3 +279,98 @@ class OfflineSystemRemediationTests(TestCase):
         self.assertIn('results', res.data)
         self.assertIn('next_cursor', res.data)
         self.assertIn('has_more', res.data)
+
+    def test_sync_id_retry_keeps_existing_item_unchanged(self):
+        """تسک ۲۴: ارسال مجدد با همان sync_id اما شرح متفاوت، ۲۰۰ با همان id می‌دهد و شرح اول دست‌نخورده می‌ماند"""
+        client_sync_id = str(uuid.uuid4())
+        payload = {
+            'warehouse': self.warehouse.id,
+            'fa_unic_code': 'TEST-NOOP-RETRY-001',
+            'description': 'شرح اولیه ثابت',
+            'sync_id': client_sync_id
+        }
+
+        # ارسال اول: ایجاد رکورد با 201
+        res1 = self.client.post('/api/inventory/items/', payload, format='json')
+        self.assertEqual(res1.status_code, status.HTTP_201_CREATED)
+        first_id = res1.data['id']
+
+        # ارسال مجدد با همان sync_id اما شرح متفاوت
+        payload['description'] = 'شرح ثانویه که نباید اعمال شود'
+        res2 = self.client.post('/api/inventory/items/', payload, format='json')
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+        self.assertEqual(res2.data['id'], first_id)
+
+        # بررسی پایگاه داده: شرح کالا همچنان شرح اول است
+        item = Item.objects.get(id=first_id)
+        self.assertEqual(item.description, 'شرح اولیه ثابت')
+
+    def test_sync_id_retry_for_soft_deleted_item_returns_200_and_stays_soft_deleted(self):
+        """تسک ۲۴: ارسال مجدد sync_id برای کالای حذف‌نرم شده، ۲۰۰ می‌دهد و کالا همچنان حذف‌نرم می‌ماند"""
+        client_sync_id = str(uuid.uuid4())
+        item = Item.objects.create(
+            warehouse=self.warehouse,
+            fa_unic_code='TEST-DEL-STAYS-001',
+            description='کالای حذف‌شده اولیه',
+            sync_id=client_sync_id
+        )
+        _soft_delete_items_cascade(Item.objects.filter(id=item.id))
+        item.refresh_from_db()
+        self.assertTrue(item.is_deleted)
+
+        payload = {
+            'warehouse': self.warehouse.id,
+            'fa_unic_code': 'TEST-DEL-STAYS-001',
+            'description': 'تلاش برای احیا با ارسال مجدد sync_id',
+            'sync_id': client_sync_id
+        }
+        res = self.client.post('/api/inventory/items/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['id'], item.id)
+
+        item.refresh_from_db()
+        self.assertTrue(item.is_deleted)
+
+    def test_scoped_user_cannot_create_or_patch_item_to_other_company_warehouse(self):
+        """تسک ۲۴: کاربر با اسکوپ محدود نمی‌تواند در انبار شرکت دیگر کالا بسازد (403) یا کالای خود را با PATCH به آن منتقل کند (403)"""
+        other_company = Company.objects.create(
+            code="ANOTHER-CO-TARGET",
+            name="شرکت دیگر هدف",
+            has_warehouse_module=True
+        )
+        other_warehouse = Warehouse.objects.create(
+            name="انبار شرکت دیگر هدف",
+            project_name="پروژه شرکت دیگر",
+            company_id=other_company.id,
+            company_name=other_company.name
+        )
+
+        self.client.force_authenticate(user=self.counter)
+
+        # ۱. تلاش برای POST کالای جدید در انبار شرکت دیگر -> 403 و رکوردی ساخته نمی‌شود
+        post_payload = {
+            'warehouse': other_warehouse.id,
+            'fa_unic_code': 'FORBIDDEN-POST-001',
+            'description': 'کالای ممنوعه در انبار شرکت دیگر'
+        }
+        res_post = self.client.post('/api/inventory/items/', post_payload, format='json')
+        self.assertEqual(res_post.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(Item.all_objects.filter(fa_unic_code='FORBIDDEN-POST-001').exists())
+
+        # ۲. ایجاد کالای مجاز در انبار خود کاربر
+        own_item = Item.objects.create(
+            warehouse=self.warehouse,
+            fa_unic_code='OWN-ITEM-TARGET-001',
+            description='کالای انبار مجاز کاربر'
+        )
+
+        # ۳. تلاش برای PATCH و تغییر انبار به انبار شرکت دیگر -> 403 و انبار بدون تغییر می‌ماند
+        patch_payload = {
+            'warehouse': other_warehouse.id
+        }
+        res_patch = self.client.patch(f'/api/inventory/items/{own_item.id}/', patch_payload, format='json')
+        self.assertEqual(res_patch.status_code, status.HTTP_403_FORBIDDEN)
+
+        own_item.refresh_from_db()
+        self.assertEqual(own_item.warehouse_id, self.warehouse.id)
+

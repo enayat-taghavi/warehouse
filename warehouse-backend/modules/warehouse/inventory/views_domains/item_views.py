@@ -128,14 +128,35 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                         status=status.HTTP_403_FORBIDDEN
                     )
 
-                serializer = self.get_serializer(instance=existing, data=request.data)
-                serializer.is_valid(raise_exception=True)
-                self.perform_create(serializer)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                return Response(self.get_serializer(existing).data, status=status.HTTP_200_OK)
 
         return super().create(request, *args, **kwargs)
 
+    def _ensure_target_warehouse_in_scope(self, warehouse):
+        from rest_framework.exceptions import PermissionDenied
+        from warehouses.models import Warehouse
+        from common.warehouse_scope import can_access_warehouse
+        from common.tenant_scope import scope_tenant_queryset
+
+        request = getattr(self, 'request', None)
+        user = getattr(request, 'user', None)
+
+        if warehouse is None:
+            if not can_access_warehouse(user, None):
+                raise PermissionDenied("دسترسی غیرمجاز: انبار انتخابشده خارج از محدودهٔ مجاز شماست.")
+            return
+
+        wh_id = getattr(warehouse, 'id', warehouse)
+        wh_pk = getattr(warehouse, 'pk', wh_id)
+
+        if not can_access_warehouse(user, wh_id):
+            raise PermissionDenied("دسترسی غیرمجاز: انبار انتخابشده خارج از محدودهٔ مجاز شماست.")
+
+        if not scope_tenant_queryset(Warehouse.objects.filter(pk=wh_pk), user, company_field='company_id', request=request).exists():
+            raise PermissionDenied("دسترسی غیرمجاز: انبار انتخابشده خارج از محدودهٔ مجاز شماست.")
+
     def perform_create(self, serializer):
+        self._ensure_target_warehouse_in_scope(serializer.validated_data.get('warehouse'))
         from accounts.audit_utils import log_audit_event
         # ۱. بررسی idempotency بر مبنای sync_id (تسک ۱۴)
         sync_id = serializer.validated_data.get('sync_id')
@@ -176,6 +197,8 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             pass
 
     def perform_update(self, serializer):
+        if 'warehouse' in serializer.validated_data:
+            self._ensure_target_warehouse_in_scope(serializer.validated_data.get('warehouse'))
         from accounts.audit_utils import log_audit_event, calculate_model_diff
         old_instance = self.get_object()
         before_state = model_to_dict(old_instance, exclude=['photo'])
