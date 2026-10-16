@@ -246,6 +246,53 @@ def cmd_restart_backend(args) -> int:
     return 1
 
 
+WORKER_TAB = ('wt.exe', '-w', '0', 'new-tab', '-d', str(REPO_ROOT / 'warehouse-backend'), '--title', 'GDrive Sync Worker',
+              'cmd', '/k', r'for /l %i in (1,0,2) do (.\venv\Scripts\python.exe -X utf8 manage.py '
+              r'run_gdrive_sync_worker --interval 5 & timeout /t 10 /nobreak >nul)')
+
+
+def cmd_restart_worker(args) -> int:
+    """worker گوگل‌درایو را تازه می‌کند: پروسهٔ python آن را می‌بندد تا حلقهٔ تبش دوباره بالا بیاوردش، یا اگر نبود تبش را باز می‌کند."""
+    import psutil
+
+    def workers():
+        found = []
+        for p in psutil.process_iter(["pid", "name", "cmdline", "create_time"]):
+            cl = " ".join(p.info["cmdline"] or [])
+            if "run_gdrive_sync_worker" in cl and "python" in (p.info["name"] or "").lower():
+                found.append(p)
+        return found
+
+    start = time.time()
+    old = workers()
+    for p in old:
+        r = subprocess.run(["taskkill", "/PID", str(p.pid), "/F"], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace")
+        print(f"taskkill {p.pid}: {(r.stdout or r.stderr).strip()[:200]}")
+    if not old:
+        print("No worker process; opening the GDrive Sync Worker tab.")
+        subprocess.run(list(WORKER_TAB))
+    deadline = time.time() + 60
+    while time.time() < deadline and not any(p.info["create_time"] >= start for p in workers()):
+        time.sleep(2)
+    fresh = [p.pid for p in workers() if p.info["create_time"] >= start]
+    if not fresh:
+        print("No fresh worker process within 60 s.")
+        return 1
+    print(f"Fresh worker pid(s) {fresh}.")
+    deadline = time.time() + 90
+    while time.time() < deadline:
+        code, out = run_manage(["shell", "-c", RELEASE_PROBE], "")
+        m = re.search(r"^PROBE=(.*)$", out, re.M)
+        hb = json.loads(m.group(1))["hb"] if code == 0 and m else None
+        if hb and hb >= start:
+            print("Worker heartbeat updated after the restart.")
+            return 0
+        time.sleep(5)
+    print("Worker heartbeat was not updated within 90 s of the restart.")
+    return 1
+
+
 def cmd_release_check(args) -> int:
     """release روی app پس از release-mark: پشتیبان تازه، بیلد تازهٔ وصله‌شده، daphne و worker تازه، heartbeat و ۲۰۰."""
     import urllib.request
@@ -907,6 +954,9 @@ def main(argv=None) -> int:
 
     p = sub.add_parser("restart-backend", help="restart daphne on port 8000 in a new Windows Terminal tab")
     p.set_defaults(func=cmd_restart_backend)
+
+    p = sub.add_parser("restart-worker", help="restart the GDrive sync worker (or open its tab) and wait for a fresh heartbeat")
+    p.set_defaults(func=cmd_restart_worker)
 
     p = sub.add_parser("sample-module", help="new_module.py builds a sample module in a HEAD copy without touching the core")
     p.set_defaults(func=cmd_sample_module)
