@@ -82,6 +82,7 @@ class CustomUser(AbstractUser):
             ("view_wh_label_designer", "طراحی و کانفیگ لیبل (انبار)"),
             ("view_wh_audit", "رهگیری تغییرات و ممیزی (انبار)"),
             ("view_wh_settings", "تنظیمات انبار"),
+            ("view_wh_stocktaking", "انبارگردانی و پیگیری شمارش (انبار)"),
             ("perm_wh_create", "تعریف کارگاه/انبار جدید"),
             ("perm_wh_edit", "ویرایش مشخصات انبارها"),
             ("perm_wh_freeze", "فریز کردن و توقف عملیات انبار"),
