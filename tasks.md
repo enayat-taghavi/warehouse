@@ -689,3 +689,664 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - فقط فایل‌های تغییریافتهٔ خودت را stage کن و با این پیام commit کن، بدون push:
 fix(front-core): single shared module registry instance and safe SyncPullService.getInstance
 - گزارش کوتاه: تغییر هر فایل، فرمان‌هایی که واقعاً اجرا کردی با نتیجه، و ابهام‌های مانده. پس از commit نوبت را تمام کن.
+
+===
+
+[DONE] Session 14 — Release the current main branch on the local app environment (app.farsalish.ir): backup, patched frontend build, Daphne and GDrive worker restart, health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py release-check
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
+- Never touch the untracked files under `warehouse-front/src/` (four `*.dom.spec.ts` files). Leave them exactly as they are.
+- Only the local `app` environment on this Windows machine is in scope. Do not connect to, deploy to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/`.
+- Do not stop the Express server on port 4200, PostgreSQL on port 5432 or `cloudflared`.
+
+2. Context: read `.agents/AGENTS.md` section 8, the "Local Test Deployment Protocol (`app.farsalish.ir`, no yes/no needed)" list. It has the exact commands for every step below. Your terminal commands may run in PowerShell; if so, drop the `MSYS_NO_PATHCONV=1 ` prefix from the `wt.exe` commands and set environment variables with `$env:NAME='value';`.
+
+3. Definitions:
+- "Daphne processes" means every process whose command line contains `-m daphne -b 0.0.0.0 -p 8000`: the process listening on port 8000 and its `venv\Scripts\python.exe` launcher.
+- "Worker processes" means every python process whose command line contains `run_gdrive_sync_worker`. There may be none.
+
+4. Task, in this order:
+- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app'); print(m['filename'], m['size'])"`
+  Stop the session and report if it fails or prints a size of 0. Do not continue to step b without a successful backup.
+- b) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false`, then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+- c) Daphne restart. List the Daphne processes with their PIDs, end them with `taskkill /PID <pid> /F`, confirm port 8000 is free, then launch Daphne with the `wt.exe ... --title "Backend Daphne" ...` command from section 8 step 3. Wait until port 8000 listens again (up to 60 seconds).
+- d) GDrive worker. If worker processes exist, end them with `taskkill /PID <pid> /F`; the auto-restart loop in their tab starts a fresh worker within about 10 seconds. If no worker process exists, launch the worker tab with the `wt.exe ... --title "GDrive Sync Worker" ...` command from section 8 step 4. Then wait until a worker process is running.
+- e) Health checks. Confirm HTTP 200 for `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/`. Wait about 30 seconds after step d, then confirm the worker heartbeat is fresh: in `warehouse-backend` run
+  `.\venv\Scripts\python.exe manage.py shell -c "from django.utils import timezone; from settings_core.models import SystemGoogleDriveConfig as C; c = C.objects.get(id=1); print((timezone.now() - c.worker_heartbeat_at).total_seconds())"`
+  The printed age must be below 180.
+
+5. Tool policy:
+- Allowed: the commands above, `netstat -ano`, `Get-NetTCPConnection`, `Get-CimInstance Win32_Process` (or `wmic process`) to find PIDs and command lines, `taskkill /PID <pid> /F` for Daphne and worker processes only, `Invoke-WebRequest`/`curl.exe` for the health checks, and short sleeps.
+- Run the build at most twice. If a command fails, read its output, do not repeat the same command unchanged, and change approach.
+- If a step cannot be completed, stop and report the exact error; do not try workarounds that touch files or other services.
+
+6. Before finishing: run `git status --short` and confirm it shows only the four untracked `*.dom.spec.ts` files and runner files.
+
+7. Output and stop condition: write a short English report: backup filename and size, build result and the patch script line, old and new Daphne PIDs, worker PIDs, both HTTP status codes, the heartbeat age, and anything unexpected. No commit in this session. End the turn after the report.
+
+===
+
+[DONE] Session 15 — Fix stale fixtures in 32 known-failing backend tests (inventory and warehouses): company and warehouse scope for test users, missing permission row, broken assertion
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import subprocess,sys; ok={'warehouse-backend/modules/warehouse/inventory/tests.py','warehouse-backend/modules/warehouse/inventory/tests_docs.py','warehouse-backend/modules/warehouse/inventory/tests_offline_system.py','warehouse-backend/modules/warehouse/warehouses/test_company_warehouse_isolation.py'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch)); print('outside scope:',bad); sys.exit(1 if bad or not ch else 0)"
+verify: python -c "import subprocess,sys,re; d=subprocess.run(['git','diff','-U0','{base}','HEAD','--','warehouse-backend'],capture_output=True,text=True,encoding='utf-8').stdout; rm=[l for l in d.splitlines() if l.startswith('-') and not l.startswith('---') and re.search(r'assert',l)]; print(len(rm),'removed or changed assert lines:'); [print(' ',l[:160]) for l in rm]; sys.exit(1 if len(rm)>1 else 0)"
+verify: python scripts/automation/verify_tools.py django-tests --labels inventory warehouses --known scratch/runner-cache/known_s15.txt --min-tests 90
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(inventory): company and warehouse scope in stale test fixtures"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Change only these four test files: `warehouse-backend/modules/warehouse/inventory/tests.py`, `warehouse-backend/modules/warehouse/inventory/tests_docs.py`, `warehouse-backend/modules/warehouse/inventory/tests_offline_system.py`, `warehouse-backend/modules/warehouse/warehouses/test_company_warehouse_isolation.py`. No app code, no models, no migrations, no other file.
+- Do not weaken any test: do not change expected status codes, expected counts, expected values, or remove assertions. The only assertion line you may rewrite is line 83 of `test_company_warehouse_isolation.py` (described in 4d).
+- Do not touch `test_idempotent_creation_with_sync_id` in `tests_offline_system.py`. It fails because of a real app bug that is out of scope; it must keep failing.
+- Do not push. Stage only the four files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+- Run `manage.py test` only with app or module labels, never without a label.
+
+2. Context:
+- Non-superuser API access is scoped by company and warehouse. `scope_tenant_queryset` in `warehouse-backend/core/common/tenant_scope.py` returns nothing for a non-superuser without company access (`get_user_allowed_companies` in `warehouse-backend/core/companies/access.py` reads `UserCompanyAccess` rows with `access_level='workspace_full'`). Warehouse-level scope uses `Warehouse.assigned_users`.
+- The failing test fixtures were written before this scoping. Their warehouses have no company, and their users have no `UserCompanyAccess` row and no warehouse assignment, so the API answers 403, 404 or empty lists.
+- A working fixture pattern is in `setUp` of `warehouse-backend/modules/warehouse/warehouses/test_company_warehouse_isolation.py` (`Company.objects.get_or_create(code=..., defaults={'name': ..., 'has_warehouse_module': True})`, `Warehouse.objects.create(..., company_id=..., company_name=...)`, `UserCompanyAccess.objects.create(user=..., company=..., access_level='workspace_full', is_default=True)`).
+- The permission `view_wh_stocktaking` is not created by any migration. `BaseInventoryTestCase._assign_perms` in `inventory/tests.py` already creates missing permissions with `Permission.objects.get_or_create(content_type=<User content type>, codename=code, defaults={'name': code})`.
+
+3. Definitions:
+- "Scoped user" means a non-superuser test user that has a `UserCompanyAccess` row with `access_level='workspace_full'` and `is_default=True` for the test company, and is in `assigned_users` of the warehouse it works in.
+- "Unauthorized user" means `simple_guest` in `inventory/tests.py`. It must stay without company access and without warehouse assignment.
+
+4. Task:
+- a) `inventory/tests.py`, `BaseInventoryTestCase.setUp`: create one test company, give both `self.warehouse` and `self.warehouse2` that company (`company_id` and `company_name`), and make `self.manager`, `self.supervisor`, `self.counter` and `self.counter2` scoped users of `self.warehouse`. In `test_06_multi_warehouse_dispatch_isolation`, before the request, also add `self.manager` and `self.counter` to `self.warehouse2.assigned_users`, because that test dispatches an item of `warehouse2`.
+- b) `inventory/tests_docs.py`, `FinancialDocsCycleTests.setUp`: same pattern. Give the test warehouse(s) a test company and make every non-superuser user created in `setUp` a scoped user of the warehouse it works in.
+- c) `inventory/tests_offline_system.py`, `OfflineSystemRemediationTests.setUp`: replace the three `Permission.objects.get(codename=...)` calls with `get_or_create` on the user model content type, as `_assign_perms` does. Give the test warehouse a test company and make `self.counter` a scoped user of it.
+- d) `warehouses/test_company_warehouse_isolation.py`: add `from rest_framework import status` to the imports and change line 83 to `self.assertEqual(response.status_code, status.HTTP_200_OK)`.
+- After the changes, all tests in these four files must pass except `test_idempotent_creation_with_sync_id`. If another test still fails, first check whether a scope row or assignment is missing for the user in that test. If the failure is not a fixture problem, do not change its assertions; list the test and the reason in your report.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test inventory.tests inventory.tests_docs inventory.tests_offline_system warehouses.test_company_warehouse_isolation --noinput`, and at most one run of `.\venv\Scripts\python.exe manage.py test inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: run `git diff --stat`; only the four files may be changed. Check that no assertion line was removed or changed except line 83 of the isolation test.
+
+7. Output and stop condition:
+- Stage only the four files and commit with this message, without push:
+test(inventory): company and warehouse scope in stale test fixtures
+- Short English report: what changed in each file, the test commands you actually ran with their pass/fail counts, and any test that still fails with its reason. End the turn after the commit and report.
+
+===
+
+[DONE] Session 16 — Make the four new DOM spec files compile and pass, remove the tests that only check their own mocks, and commit them
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import subprocess,sys; base='warehouse-front/src/app/modules/'; ok={base+'accounting/components/finance/finance-pages-workflow.dom.spec.ts',base+'accounting/components/finance/finance-operations-workflow.dom.spec.ts',base+'common/components/layout/login-and-app-switching.dom.spec.ts',base+'warehouse/components/counter/counter-offline-workflow.dom.spec.ts'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); print('changed:',sorted(ch)); bad=sorted(ch-ok); miss=sorted(ok-ch); print('outside scope:',bad,'not committed:',miss); sys.exit(1 if bad or miss else 0)"
+verify: python -c "import pathlib,sys; b=pathlib.Path('warehouse-front/src/app/modules'); lg=(b/'common/components/layout/login-and-app-switching.dom.spec.ts').read_text(encoding='utf-8'); ct=(b/'warehouse/components/counter/counter-offline-workflow.dom.spec.ts').read_text(encoding='utf-8'); bad={'logout_tautology':'mockAuth.logout();' in lg,'canaccess_override':'personaSvc.canAccessApp = ' in lg,'photo_flush_mock':chr(39)+'flush'+chr(39)+')' in ct,'processqueue_mock':chr(39)+'processQueue'+chr(39)+')' in ct,'uploadphotos_fake':'itemPhotoSvc.uploadPhotos = ' in ct}; print(bad); sys.exit(1 if any(bad.values()) else 0)"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(front): workflow DOM specs for finance pages, login and app switching, counter offline"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 9 and 10 apply.
+- Change only these four untracked files. Do not change any app file (`*.ts` that is not a spec, `*.html`, `*.css`), any other spec, `tsconfig*.json`, `angular.json` or `package.json`:
+  - `warehouse-front/src/app/modules/accounting/components/finance/finance-pages-workflow.dom.spec.ts`
+  - `warehouse-front/src/app/modules/accounting/components/finance/finance-operations-workflow.dom.spec.ts`
+  - `warehouse-front/src/app/modules/common/components/layout/login-and-app-switching.dom.spec.ts`
+  - `warehouse-front/src/app/modules/warehouse/components/counter/counter-offline-workflow.dom.spec.ts`
+- A test must exercise real component or service code. Do not replace the method under test with `vi.spyOn(...).mockImplementation`, a hand-written function or `Object.defineProperty`, and do not assert on values that only a mock produced.
+- Do not push. Stage only the four files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context: the Angular unit-test builder type-checks every spec, so a spec with a type error breaks the whole suite. Current type errors:
+- `finance-operations-workflow.dom.spec.ts` line 469: `'approved'` is not an `InvoiceStatusTab`.
+- `finance-pages-workflow.dom.spec.ts` line 93: `vehicle_model` is not in `VehicleDriverProfile`; line 368: `selectedBankCode` does not exist on `EmployeeNewPersonnelHubComponent`.
+- `counter-offline-workflow.dom.spec.ts` line 101: `warehouse` is not in `CountTask` (use `warehouse_id`); line 203: `dynamic_data` is possibly undefined and `batch_no` must be read with `['batch_no']`; line 348: the `OfflinePendingBadgeComponent` constructor needs a third argument `state: StateService`.
+
+3. Definitions: a "self-mock test" is a test or a part of a test whose assertions only check what a mock defined in the same test returned or recorded.
+
+4. Task:
+- a) Fix every type error above using the real types and members of the component or model. For `selectedBankCode`, read `EmployeeNewPersonnelHubComponent` and assert the member that really holds the detected bank; if no such member exists, delete only that assertion and say so in the report. Use the real union value of `InvoiceStatusTab` that matches the intent of the test.
+- b) Remove these self-mock tests and parts:
+  - `login-and-app-switching.dom.spec.ts`: the two logout `it` blocks (they call `mockAuth.logout()` and then assert that it was called), and the line `personaSvc.canAccessApp = (app: string) => true;` in the superuser test. After removing that line, keep the three `canAccessApp` assertions only if they pass with the real `AppPersonaService.canAccessApp`; otherwise delete them.
+  - `counter-offline-workflow.dom.spec.ts`: the whole second `describe` block (offline photo upload; it fakes `uploadPhotos`, `enqueue` and `flush`), and in the first test everything from the comment that starts with `// ۳.` to the end of that test (it asserts the result of a mocked `processQueue`). Also remove the `vi.spyOn(offlineSync, 'processQueue')` mock in that test. Keep the assertions about the task state and the enqueued mutations after `counterDashboard.saveDraft()`.
+- c) Every remaining test in the four files must pass. If a remaining test fails because the expectation is wrong for the real code, fix the setup or delete that single test and list it in the report; do not change app code to make it pass.
+
+5. Tool policy: to run only these specs, create a temporary tsconfig in `warehouse-front` that extends `tsconfig.spec.json` and includes `src/**/*.d.ts` plus the four files, and run `npx ng test --watch=false --ts-config <that file> --include <each file>` at most four times. Delete the temporary tsconfig before committing. If a command fails, read the output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: `git status --short` must show no change outside the four files except runner files.
+
+7. Output and stop condition:
+- Stage only the four files and commit with this message, without push:
+test(front): workflow DOM specs for finance pages, login and app switching, counter offline
+- Short English report: per file, what you fixed and removed, and the pass/fail counts you actually saw. End the turn after the commit and report.
+
+===
+
+[DONE] Session 17 — Close the sync-queue data-loss path in the offline badge: remove clear-all, current-user entries only, no cancel while sending, confirm dialog for single cancel
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys,subprocess; app=pathlib.Path('warehouse-front/src/app'); bd=(app/'shared/components/offline-pending-badge/offline-pending-badge.component.ts').read_text(encoding='utf-8'); sv=(app/'core/services/offline-sync.service.ts').read_text(encoding='utf-8'); rn=(app/'core/services/offline/offline-queue-runner.ts').read_text(encoding='utf-8'); g=lambda t,s: t[t.find(s):][:1500]; cq=g(rn,'export async function cancelQueueEntry'); oc=g(bd,'async onCancelQueueItem'); lq=g(bd,'async loadQueueEntries'); base=subprocess.run(['git','show','{base}:warehouse-front/src/app/core/services/offline/offline-queue-runner.ts'],capture_output=True,text=True,encoding='utf-8').stdout; gq=lambda t: t[t.find('export async function getQueueEntries'):][:900]; ic=subprocess.run(['git','diff','--name-only','{base}','HEAD','--','warehouse-front/src/app/core/interceptors'],capture_output=True,text=True).stdout.strip(); ok={'no_clear_all_button':'onClearAllQueue' not in bd,'no_clearQueue_service':'clearQueue(' not in sv,'cancel_blocks_sending':chr(39)+'sending'+chr(39) in cq,'cancel_checks_user':'getStoredCurrentUserId' in cq,'badge_confirm_dialog':'ConfirmDialogService' in bd and '.open(' in oc,'badge_user_filter':'getStoredCurrentUserId' in lq,'getQueueEntries_unchanged':gq(rn)==gq(base),'interceptors_unchanged':ic==''}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
+verify: python -c "import subprocess,sys; s=subprocess.run(['git','grep','-n','clearQueue(','--','warehouse-front/src'],capture_output=True,text=True).stdout; print(s or 'no clearQueue( left'); sys.exit(1 if s.strip() else 0)"
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(offline): no clear-all, own entries only and confirmed single cancel in the sync badge"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 7, 9 and 10 apply.
+- Data-loss rule of this project: a sync-queue record is deleted only on explicit server acceptance (2xx) or explicit rejection (4xx). The only user-initiated exception kept after this session is a confirmed cancel of one record of the current user that is not being sent.
+- Change only `warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts`, `warehouse-front/src/app/core/services/offline-sync.service.ts`, `warehouse-front/src/app/core/services/offline/offline-queue-runner.ts`, and spec files for them. Do not change `getQueueEntries` in `offline-queue-runner.ts` (the offline interceptor uses it to merge queued changes into cached reads) and do not change anything under `core/interceptors/`.
+- Do not change how records are sent, retried, marked failed or deleted after a server response.
+- User-facing text stays Persian. Use `<svg appIcon="...">` for any icon; no new inline svg.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- `OfflinePendingBadgeComponent` (header sync badge, used on many pages) has a queue tab. It lists `this.sync.getQueueEntries()`, which returns `pending` and `failed` records of both IndexedDB queues for all users on the device. A "لغو همه موارد" button calls `onClearAllQueue()`, which after a native `confirm()` calls `OfflineSyncService.clearQueue()`. That empties both queues completely, including records in `sending` state and records of other users, and it does not call `invalidateCache` for them. Each row also has a "لغو" button that calls `onCancelQueueItem(id)` with no confirmation.
+- `cancelQueueEntry` in `core/services/offline/offline-queue-runner.ts` deletes one record and calls `invalidateCacheFn`. `OfflineSyncService.cancelQueueEntry` wraps it.
+- The sender skips records of other users: in `processQueue` of `offline-queue-runner.ts`, `if (entry.userId && currentUserId && entry.userId !== currentUserId) continue;` with `currentUserId = getStoredCurrentUserId()` from `core/services/sync-pull.service.ts`.
+- The app confirm dialog: `ConfirmDialogService.open({ title, message, confirmText, cancelText, type: 'danger' })` in `shared/components/confirm-dialog/confirm-dialog.component.ts`; it resolves `true` on confirm.
+
+3. Definitions:
+- "Own record" means a queue record whose `userId` is empty or equals `getStoredCurrentUserId()`. This is the same rule the sender uses.
+- "Being sent" means `status === 'sending'`.
+
+4. Task:
+- a) Remove the "لغو همه موارد" button from the badge template, remove `onClearAllQueue()`, and remove `OfflineSyncService.clearQueue()`. Nothing else may call `clearQueue(`.
+- b) In the badge `loadQueueEntries()`, keep calling `this.sync.getQueueEntries()` and then keep only own records in `queueEntries`. Do not change `getQueueEntries` itself.
+- c) In `cancelQueueEntry` of `offline-queue-runner.ts`: read the record first; if it does not exist, is being sent, or is not an own record, do not delete it and return `false`; otherwise delete it, call `invalidateCacheFn` as today, and return `true`. Make `OfflineSyncService.cancelQueueEntry` return that boolean.
+- d) In the badge `onCancelQueueItem(id)`: first open the app confirm dialog with `type: 'danger'`, title «لغو این درخواست», message «این تغییر هنوز به سرور ارسال نشده است. با لغو، برای همیشه از این دستگاه حذف می‌شود و قابل بازگشت نیست.», `confirmText` «لغو درخواست» and `cancelText` «انصراف». Only when it resolves `true`, call `cancelQueueEntry`; remove the row from `queueEntries` only when that returns `true`; otherwise reload the list. Inject `ConfirmDialogService` with `inject()` as the component already does for other services; keep the constructor parameters unchanged.
+- e) Add spec tests (Vitest, real code, IndexedDB access mocked only at the Dexie table level if needed): `cancelQueueEntry` returns `false` and keeps the record for a `sending` record and for a record of another user, and returns `true` and deletes an own `pending` record; the badge does not call `cancelQueueEntry` when the dialog resolves `false`; the badge lists only own records.
+
+5. Tool policy: at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` in `warehouse-front`, and at most three targeted `npx ng test --watch=false` runs for your new specs (with a temporary tsconfig that you delete before committing). If a command fails, read the output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: run `git diff --stat`; only the files allowed in section 1 may be changed. Confirm `git grep -n "clearQueue(" -- warehouse-front/src` prints nothing.
+
+7. Output and stop condition:
+- Stage only your changed files and commit with this message, without push:
+fix(offline): no clear-all, own entries only and confirmed single cancel in the sync badge
+- Short English report: the change in each file, the commands you actually ran with results, and remaining doubts. End the turn after the commit and report.
+
+===
+
+[DONE] Session 18 — Single cancel in the sync badge must target the right queue database: pass appScope, refuse ambiguous ids, read and delete in one transaction
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys,subprocess; app=pathlib.Path('warehouse-front/src/app'); bd=(app/'shared/components/offline-pending-badge/offline-pending-badge.component.ts').read_text(encoding='utf-8'); rn=(app/'core/services/offline/offline-queue-runner.ts').read_text(encoding='utf-8'); g=lambda t,s: t[t.find(s):][:2500]; cq=g(rn,'export async function cancelQueueEntry'); oc=g(bd,'async onCancelQueueItem'); base=subprocess.run(['git','show','{base}:warehouse-front/src/app/core/services/offline/offline-queue-runner.ts'],capture_output=True,text=True,encoding='utf-8').stdout; gq=lambda t: t[t.find('export async function getQueueEntries'):][:900]; ok={'badge_passes_scope':'appScope' in oc,'template_passes_item':'onCancelQueueItem(item)' in bd,'cancel_in_transaction':'.transaction(' in cq,'cancel_checks_both_dbs':'warehouseOfflineDb' in cq and 'financeOfflineDb' in cq,'still_blocks_sending':chr(39)+'sending'+chr(39) in cq,'still_checks_user':'getStoredCurrentUserId' in cq,'confirm_fail_closed':'if (this.confirmDialog) {' not in oc and 'confirmDialog' in oc,'getQueueEntries_unchanged':gq(rn)==gq(base)}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
+verify: python -c "import subprocess,sys; ok={'warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts','warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.spec.ts','warehouse-front/src/app/core/services/offline/offline-queue-runner.ts','warehouse-front/src/app/core/services/offline/offline-queue-runner.spec.ts','warehouse-front/src/app/core/services/offline-sync.service.ts'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_52_icon_registry.py
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(offline): single cancel targets the record's own queue database"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 9 and 10 apply.
+- Data-loss rule: a sync-queue record is deleted only on explicit server acceptance (2xx), explicit rejection (4xx), or a confirmed user cancel of that exact record when it is an own record and not being sent. Never delete a record the user did not choose.
+- Change only `warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts`, `warehouse-front/src/app/core/services/offline/offline-queue-runner.ts`, `warehouse-front/src/app/core/services/offline-sync.service.ts` (only if its `cancelQueueEntry` signature must follow), and the two spec files next to the first two. Do not change `getQueueEntries`, the send/retry logic of `processQueue`, or anything under `core/interceptors/`.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- The warehouse and finance sync queues are two separate Dexie databases (`warehouseOfflineDb` and `financeOfflineDb` in `core/services/offline-db.ts`), each with its own auto-increment `++id`. The same `id` can exist in both.
+- `getQueueEntries()` merges both lists. Each record has `appScope` (`'warehouse'` or `'finance'`), except possibly old records written before that field existed.
+- The badge template calls `onCancelQueueItem(item.id!)`, and the badge calls `this.sync.cancelQueueEntry(id)` with no scope. `cancelQueueEntry` in `offline-queue-runner.ts` then looks in the warehouse database first. So confirming the cancel of finance record 5 deletes warehouse record 5 if it exists: the wrong record is lost, and the chosen one stays.
+- Also, `cancelQueueEntry` reads the record and deletes it in two separate steps, so the record can turn to `sending` in between.
+
+3. Definitions:
+- "Own record" and "being sent" keep the meaning from session 17: `userId` empty or equal to `getStoredCurrentUserId()`, and `status === 'sending'`.
+- "Ambiguous id" means a call without a scope where the id exists in both databases.
+
+4. Task:
+- a) Badge: change the template call to `onCancelQueueItem(item)`, make `onCancelQueueItem` take the `SyncQueueEntry`, keep the confirm dialog exactly as it is, and call `this.sync.cancelQueueEntry(item.id!, item.appScope)`. Remove the row only when the call returns `true`; otherwise reload the list, as today.
+- b) `cancelQueueEntry` in `offline-queue-runner.ts`:
+  - With a scope: use only that database.
+  - Without a scope: look up the id in both `warehouseOfflineDb` and `financeOfflineDb`. If it exists in both (ambiguous id), return `false` and delete nothing. If it exists in exactly one, use that one.
+  - Inside the chosen database, do the read, the guards (missing, being sent, not own record) and the delete in one `db.transaction('rw', db.syncQueue, ...)`. Call `invalidateCacheFn` after the transaction, only when the record was deleted. Return `true` only when it was deleted.
+- c) Keep `OfflineSyncService.cancelQueueEntry(id, scope)` passing the scope through and returning the boolean.
+- c2) The badge now injects `ConfirmDialogService` with `{ optional: true }` and, when it is missing, cancels without asking. Make it fail closed: when `this.confirmDialog` is missing, do not cancel and return. Keep the optional injection. In the dialog message, write «می‌شود» with a zero-width non-joiner (U+200C) between «می» and «شود».
+- d) Specs: add tests with real code (mock only at the Dexie table level if needed) for: finance record and warehouse record with the same id, a cancel with `scope 'finance'` deletes only the finance record; the same cancel without a scope returns `false` and deletes nothing; the badge passes `appScope` of the chosen row; the badge cancels nothing when no confirm dialog service is available. Keep the session 17 tests passing.
+
+5. Tool policy: at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` in `warehouse-front`, and at most three targeted `npx ng test --watch=false` runs for the two spec files (with a temporary tsconfig that you delete before committing). If a command fails, read the output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: run `git diff --stat`; only the allowed files may be changed, and the temporary tsconfig must be deleted.
+
+7. Output and stop condition:
+- Stage only your changed files and commit with this message, without push:
+fix(offline): single cancel targets the record's own queue database
+- Short English report: the change in each file, the commands you actually ran with results, and remaining doubts. End the turn after the commit and report.
+
+===
+
+[DONE] Session 19 — Harden single cancel in the sync queue: unscoped read errors refuse the cancel, no numeric-id branch in the badge, success flag only after the transaction commits
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys,subprocess; app=pathlib.Path('warehouse-front/src/app'); bd=(app/'shared/components/offline-pending-badge/offline-pending-badge.component.ts').read_text(encoding='utf-8'); rn=(app/'core/services/offline/offline-queue-runner.ts').read_text(encoding='utf-8'); g=lambda t,s: t[t.find(s):][:3000]; cq=g(rn,'export async function cancelQueueEntry'); oc=g(bd,'async onCancelQueueItem')[:1800]; base=subprocess.run(['git','show','{base}:warehouse-front/src/app/core/services/offline/offline-queue-runner.ts'],capture_output=True,text=True,encoding='utf-8').stdout; gq=lambda t: t[t.find('export async function getQueueEntries'):][:900]; ok={'no_swallowed_reads':'.catch(() => undefined)' not in cq,'no_numeric_branch':'typeof (item as any)' not in oc and chr(39)+'number'+chr(39) not in oc,'still_transaction':'.transaction(' in cq,'still_blocks_sending':chr(39)+'sending'+chr(39) in cq,'still_fail_closed':'if (!this.confirmDialog)' in oc,'getQueueEntries_unchanged':gq(rn)==gq(base)}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
+verify: python -c "import subprocess,sys; ok={'warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts','warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.spec.ts','warehouse-front/src/app/core/services/offline/offline-queue-runner.ts','warehouse-front/src/app/core/services/offline/offline-queue-runner.spec.ts'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base}
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(offline): harden single cancel against read errors and stale ids"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 9 and 10 apply.
+- Data-loss rule: never delete a sync-queue record the user did not choose. When in doubt, refuse the cancel and keep the record.
+- Change only `warehouse-front/src/app/core/services/offline/offline-queue-runner.ts`, `warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.component.ts` and the spec files next to them. Do not change `getQueueEntries`, `processQueue`, send/retry/delete-after-response logic, or anything under `core/interceptors/`.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context: read the current `cancelQueueEntry` in `offline-queue-runner.ts` and `onCancelQueueItem` in the badge (both changed in commit `a82e6f6`). A review found three remaining weak points:
+- In the call without a scope, both database reads use `.catch(() => undefined)`. If the finance read fails and the same id exists in the warehouse database, the warehouse record is deleted although the user chose the finance one.
+- `onCancelQueueItem` still accepts a number id (`typeof (item as any) === 'number'`), looks up the first row with that id and can pick the row of the other database. The template now always passes the row object, so this branch has no caller.
+- `deletedEntry` is set inside the transaction callback. If the transaction aborts and the fallback path then exits on a guard, the function can still return `true`.
+
+3. Definitions: "refuse" means return `false` and delete nothing.
+
+4. Task:
+- a) In the call without a scope: if either database read throws, refuse. Do not catch read errors to `undefined`.
+- b) Remove the numeric-id branch from `onCancelQueueItem`; it takes only a `SyncQueueEntry`. Keep the fail-closed check, the confirm dialog text and the `confirmed !== true` check unchanged.
+- c) In `cancelQueueEntry`, decide success only from the attempt that actually completed: reset the deleted-record variable before each attempt (transaction and fallback), and return `true` only when the attempt that finished without error deleted the record. Keep the read, the guards and the delete inside one transaction as today; keep `invalidateCacheFn` after a successful delete only.
+- d) Specs: a read error on one database in an unscoped call refuses and keeps both records; the badge has no numeric-id path (update or remove any spec that called it with a number). Keep all existing cancel tests passing.
+
+5. Tool policy: at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` in `warehouse-front`, and at most three targeted `npx ng test --watch=false` runs for the two spec files (with a temporary tsconfig that you delete before committing). If a command fails, read the output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files; the temporary tsconfig is deleted.
+
+7. Output and stop condition:
+- Stage only your changed files and commit with this message, without push:
+fix(offline): harden single cancel against read errors and stale ids
+- Short English report: the change in each file, the commands you actually ran with results, and remaining doubts. End the turn after the commit and report.
+
+===
+
+[DONE] Session 20 — Frontend-only release on the local app environment (app.farsalish.ir): backup, patched frontend build, health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py release-check --frontend-only
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- This session is a frontend release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
+- Do not stop, restart or start Daphne, the GDrive sync worker, the Express server on port 4200, PostgreSQL or `cloudflared`. Do not run `taskkill`. The backend code has not changed since the last release, so Daphne keeps running.
+- Only the local `app` environment is in scope. Do not connect to or deploy to `soft.farsalish.ir`; do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/`.
+
+2. Context: `.agents/AGENTS.md` section 8, "Local Test Deployment Protocol (`app.farsalish.ir`, no yes/no needed)", steps 1, 2 and 5. Your commands may run in PowerShell; set environment variables there with `$env:NAME='value';`.
+
+3. Task, in this order:
+- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app frontend'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false`, wait until it has finished completely, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build` and do not delete `dist`. Run the build in the foreground; do not end your turn while it runs.
+- c) Health checks. Confirm HTTP 200 for `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/`.
+
+4. Tool policy: only the commands above, `Invoke-WebRequest` or `curl.exe` for the checks, and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+5. Before finishing: `git status --short` shows only runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the build result and the patch script line, and both HTTP status codes. No commit in this session. End the turn after the report.
+
+===
+
+[DONE] Session 21 — Idempotent item creation: a retried POST with the same sync_id returns the existing item instead of 400, only inside the user's scope
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys; v=pathlib.Path('warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py').read_text(encoding='utf-8'); s=v.find('class ItemViewSet'); c=v.find('    def create(', s); body=v[c:c+3500] if c>0 else ''; ok={'create_override':c>0,'uses_tenant_scope':'scope_tenant_queryset' in body,'uses_warehouse_scope':'scope_queryset' in body,'uses_all_objects':'all_objects' in body}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
+verify: python -c "import subprocess,sys; ok={'warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py','warehouse-backend/modules/warehouse/inventory/tests_offline_system.py'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py django-tests --labels inventory warehouses --known scratch/runner-cache/known_empty.txt --min-tests 136
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(inventory): idempotent item POST by sync_id within the user's scope"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Change only `warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py` and `warehouse-backend/modules/warehouse/inventory/tests_offline_system.py`. No models, serializers, migrations or other files.
+- Tenant isolation: a user may never read, change or restore an item outside their company and warehouse scope through this path, and the response must not reveal whether such an item exists.
+- Do not change behaviour for a POST without `sync_id` or with a `sync_id` that no item has.
+- Do not push. Stage only the two files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- The offline queue in the frontend retries a POST when the first response was lost. A 4xx is treated as an explicit rejection and moves the record out of the queue.
+- `ItemViewSet.perform_create` in `views_domains/item_views.py` already has an idempotent branch: if an item with the same `sync_id` exists in `Item.all_objects`, it saves onto that item (restoring it and its photos if it was soft-deleted).
+- That branch is never reached on a retry: `ItemSerializer` (model `Item` has `unique_together = ('warehouse', 'fa_unic_code')`) runs DRF's unique-together validator in `is_valid()` first and answers 400 `The fields warehouse, fa_unic_code must make a unique set.`
+- Test `test_idempotent_creation_with_sync_id` in `tests_offline_system.py` shows the bug: the second POST must return 200 or 201 with the same `id`.
+- `ItemViewSet.get_queryset` scopes with `scope_tenant_queryset(queryset, self.request.user, company_field='warehouse__company_id', request=self.request)` from `common.tenant_scope` and then `scope_queryset(queryset, self.request.user)`.
+
+3. Definitions: "in scope" means the existing item is returned when `Item.all_objects.filter(pk=existing.pk)` is passed through exactly the same two scoping calls that `get_queryset` uses.
+
+4. Task:
+- a) Override `create(self, request, *args, **kwargs)` in `ItemViewSet`. If `request.data` has a non-empty `sync_id` and `Item.all_objects` has an item with that `sync_id`:
+  - If that item is not in scope, return 403 with the same Persian message style the view already uses for out-of-scope items (for example «دسترسی غیرمجاز: یک یا چند قلم کالا خارج از انبار مجاز شماست.»). Do not modify it.
+  - If it is in scope, build the serializer with `instance=existing` and `data=request.data`, call `is_valid(raise_exception=True)`, call `self.perform_create(serializer)` so the existing idempotent branch (restore, photos, audit) runs, and return the serialized item with status 200.
+  - Otherwise (no `sync_id`, or no item has it) call `super().create(...)` unchanged.
+- b) In `tests_offline_system.py`, keep `test_idempotent_creation_with_sync_id` unchanged, and add one test: a non-superuser scoped to the test company and warehouse POSTs a `sync_id` that belongs to an item of a different company's warehouse; the response is 403 and that item is unchanged (description and `is_deleted`).
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test inventory.tests_offline_system --noinput` and at most one run of `.\venv\Scripts\python.exe manage.py test inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: `git diff --stat` shows only the two files.
+
+7. Output and stop condition:
+- Stage only the two files and commit with this message, without push:
+fix(inventory): idempotent item POST by sync_id within the user's scope
+- Short English report: the change, the commands you actually ran with pass/fail counts, and remaining doubts. End the turn after the commit and report.
+
+===
+
+[DONE] Session 22 — Create the missing view_wh_stocktaking permission through the model and an additive migration, and apply it on the local app database
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import subprocess,sys; ok={'warehouse-backend/core/accounts/models.py','warehouse-backend/core/accounts/migrations/0002_view_wh_stocktaking_permission.py'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); miss=sorted(ok-ch); print('changed:',sorted(ch),'outside scope:',bad,'missing:',miss); sys.exit(1 if bad or miss else 0)"
+verify: python -c "import pathlib,sys,re; m=pathlib.Path('warehouse-backend/core/accounts/migrations/0002_view_wh_stocktaking_permission.py').read_text(encoding='utf-8'); md=pathlib.Path('warehouse-backend/core/accounts/models.py').read_text(encoding='utf-8'); bad=[op for op in ('RemoveField','DeleteModel','AlterField','RenameField','RenameModel','RunSQL','AlterUniqueTogether','AddConstraint','SeparateDatabaseAndState','.delete(') if op in m]; ok={'no_destructive_ops':not bad,'alter_options':'AlterModelOptions' in m,'dep_0001':'0001_initial' in m,'runpython_reversible':('RunPython' not in m) or ('reverse_code' in m or 'RunPython.noop' in m),'model_has_perm':'view_wh_stocktaking' in md}; print(ok, bad); sys.exit(0 if all(ok.values()) else 1)"
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scratch/runner-cache/probe_s22.py
+verify: python scripts/automation/verify_tools.py django-tests --labels accounts inventory warehouses --known scratch/runner-cache/known_empty.txt --min-tests 136
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(accounts): view_wh_stocktaking permission created by the model"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 8 and 10 apply. Read the skill file `.claude/skills/safe-migration/SKILL.md` and follow its steps 1, 2, 2-b, 3, 5 and 6.
+- No data may be lost. The migration must be additive only: `AlterModelOptions` plus, optionally, a `RunPython` that only renames an existing permission row, with `reverse_code=migrations.RunPython.noop`. No delete, no column change, no `RunSQL`.
+- Change only `warehouse-backend/core/accounts/models.py` and the new file `warehouse-backend/core/accounts/migrations/0002_view_wh_stocktaking_permission.py`.
+- Migrate only the local `app` database on this machine. Never touch `soft.farsalish.ir`; do not run `deploy.ps1`.
+- Do not run `run_auto_backup`. Do not push. Stage only the two files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- The permission codename `view_wh_stocktaking` is used by `modules/warehouse/inventory/views_domains/count_views.py`, `modules/warehouse/module.py` and the frontend, but no migration or model creates it. On a fresh database nobody can be given it. The local `app` database has one row for it (content type `accounts.customuser`) whose name is the raw codename, created earlier by a script.
+- All other warehouse menu permissions are declared in `CustomUser.Meta.permissions` in `warehouse-backend/core/accounts/models.py` (section "Warehouse Tabs"). Django's `post_migrate` handler creates missing declared permissions and does not rename existing ones.
+- The `accounts` app has only `0001_initial`. The `django_migrations` table of this database has no other `accounts` record, so the name `0002_view_wh_stocktaking_permission` is free; still run the collision check of skill step 2-b.
+
+3. Definitions: "additive" means the migration only adds state or permission rows and renames the one existing row's display name; it never removes or rewrites user data.
+
+4. Task:
+- a) In `CustomUser.Meta.permissions`, add `("view_wh_stocktaking", "انبارگردانی و پیگیری شمارش (انبار)")` in the "Warehouse Tabs" group, after `view_wh_settings`. Change nothing else in the model.
+- b) Create the migration with `.\venv\Scripts\python.exe manage.py makemigrations accounts --name view_wh_stocktaking_permission`. It must contain only `AlterModelOptions` for `customuser`. Then add one `RunPython` operation that sets the name to «انبارگردانی و پیگیری شمارش (انبار)» only for `Permission` rows with `codename='view_wh_stocktaking'` whose name equals the codename, with `reverse_code=migrations.RunPython.noop`. Use `apps.get_model('auth', 'Permission')` inside the function and add `('auth', '0012_alter_user_first_name_max_length')` or the latest existing `auth` migration as a dependency only if Django requires it.
+- c) Run `makemigrations --check --dry-run`: it must print "No changes detected".
+- d) Follow the skill: check unapplied migrations and the name collision (step 2 and 2-b), read the SQL with `sqlmigrate accounts 0002_view_wh_stocktaking_permission`, take a backup with `create_database_backup` (step 5), run `.\venv\Scripts\python.exe manage.py migrate accounts`, then step 6 checks.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`: the commands named in section 4 and in the skill, at most one `migrate accounts`, and at most one run of `.\venv\Scripts\python.exe manage.py test accounts inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach. If `migrate` fails, stop and report; do not edit the database by hand.
+
+6. Before finishing: `git diff --stat` and `git status --short` show only the two files.
+
+7. Output and stop condition:
+- Stage only the two files and commit with this message, without push:
+fix(accounts): view_wh_stocktaking permission created by the model
+- Short English report: the migration operations, the `sqlmigrate` output summary, the backup filename, the migrate result, the test counts, and remaining doubts. End the turn after the commit and report.
+
+===
+
+[DONE] Session 23 — Backend release on the local app environment: backup, Daphne restart by the runner, health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py release-check --backend-only
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Do not edit, create, stage or commit any file. Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill`. The runner restarts Daphne itself after your turn.
+- Only the local `app` environment is in scope; never `soft.farsalish.ir`, never `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush` or any `manage.py test`.
+
+2. Task:
+- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app backend'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Confirm nothing is left to migrate: `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. Report any `[ ]` line; do not migrate.
+
+3. Tool policy: only these two commands and `git status --short`. If a command fails, read the output, do not repeat it unchanged.
+
+4. Output and stop condition: a short English report with the backup filename and size and the `showmigrations` result. No commit. End the turn after the report.
+
+===
+
+[DONE] Session 24 — Item writes: a create retry by sync_id returns the existing item unchanged, and every item create or update must target a warehouse inside the user's scope
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys; v=pathlib.Path('warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py').read_text(encoding='utf-8'); s=v.find('class ItemViewSet'); c=v.find('    def create(', s); body=v[c:v.find('    def perform_create', c)] if c>0 else ''; pc=v.find('    def perform_create', s); pcb=v[pc:pc+2500]; pu=v.find('    def perform_update', s); pub=v[pu:pu+1500]; ok={'retry_no_save':'perform_create' not in body and '.save(' not in body and 'is_valid' not in body,'retry_200':'HTTP_200_OK' in body,'helper':'def _ensure_target_warehouse_in_scope' in v,'create_checks':'_ensure_target_warehouse_in_scope' in pcb,'update_checks':'_ensure_target_warehouse_in_scope' in pub,'helper_tenant':'scope_tenant_queryset' in v[v.find('def _ensure_target_warehouse_in_scope'):][:1500],'helper_wh':'can_access_warehouse' in v[v.find('def _ensure_target_warehouse_in_scope'):][:1500]}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
+verify: python -c "import subprocess,sys; ok={'warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py','warehouse-backend/modules/warehouse/inventory/tests_offline_system.py'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py django-tests --labels accounts inventory warehouses --known scratch/runner-cache/known_empty.txt --min-tests 139
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(inventory): no-op sync_id retry and target warehouse scope on item writes"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- No data may be lost: a retried create must never overwrite, revive or move an existing item.
+- Tenant isolation: a user may never create an item in, or move an item into, a warehouse outside their company and warehouse scope.
+- Change only `warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py` and `warehouse-backend/modules/warehouse/inventory/tests_offline_system.py`. No models, serializers, migrations or other files.
+- Do not push. Stage only the two files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Commit `2a63d96` added `ItemViewSet.create`: for a POST whose `sync_id` matches an existing in-scope item it validates `ItemSerializer(instance=existing, data=request.data)` and calls `perform_create`, whose idempotent branch saves the body onto the item with `is_deleted=False`. A review found:
+  - A stale offline retry overwrites newer edits by other users, revives a soft-deleted item, skips the `base_updated_at` conflict check of `update`, and writes no audit event.
+  - The body's `warehouse` is never checked, so the retry can move an in-scope item into another company's warehouse.
+- The same gap exists on normal writes: `perform_create` and `perform_update` never check that `serializer.validated_data['warehouse']` is inside the user's scope. The serializer field accepts any warehouse id.
+- Scope helpers: `can_access_warehouse(user, warehouse_id)` from `common.warehouse_scope` (already imported in this file) and `scope_tenant_queryset(queryset, user, company_field=..., request=...)` from `common.tenant_scope`. `can_access_warehouse` returns True for users with no warehouse restriction, so the company check is needed as well.
+
+3. Definitions: "target warehouse in scope" means `can_access_warehouse(request.user, warehouse.id)` is true AND `scope_tenant_queryset(Warehouse.objects.filter(pk=warehouse.pk), request.user, company_field='company_id', request=request).exists()` is true.
+
+4. Task:
+- a) In `ItemViewSet.create`, keep the lookup by `sync_id` in `Item.all_objects` and the out-of-scope 403. When the existing item is in scope, do not validate or save the body: return `Response(self.get_serializer(existing).data, status=200)` unchanged. Remove the serializer validation and the `perform_create` call from this branch.
+- b) Add a method `_ensure_target_warehouse_in_scope(self, warehouse)` on `ItemViewSet` that raises `rest_framework.exceptions.PermissionDenied` with «دسترسی غیرمجاز: انبار انتخاب‌شده خارج از محدودهٔ مجاز شماست.» when the warehouse is not in scope (a `None` warehouse passes only if `can_access_warehouse(request.user, None)` is true). Import `Warehouse` locally inside the method (`from warehouses.models import Warehouse`).
+- c) Call it at the start of `perform_create` with `serializer.validated_data.get('warehouse')`, and at the start of `perform_update` when `'warehouse' in serializer.validated_data`. Change nothing else in these methods.
+- d) Tests in `tests_offline_system.py` (keep all existing tests):
+  - A retry with the same `sync_id` but a different `description` returns 200 with the same id, and the stored description is still the first one.
+  - A retry for a soft-deleted item returns 200 and the item stays soft-deleted.
+  - A scoped non-superuser cannot POST a new item into a warehouse of another company (403, no item created), and cannot PATCH an own item's `warehouse` to that warehouse (403, warehouse unchanged).
+  - `test_idempotent_creation_with_sync_id` must still pass unchanged.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test inventory.tests_offline_system --noinput` and at most one run of `.\venv\Scripts\python.exe manage.py test accounts inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach. If an existing test fails because it relied on writing into an out-of-scope warehouse, report it; do not weaken the new check.
+
+6. Before finishing: `git diff --stat` shows only the two files.
+
+7. Output and stop condition:
+- Stage only the two files and commit with this message, without push:
+fix(inventory): no-op sync_id retry and target warehouse scope on item writes
+- Short English report: the change, the commands you actually ran with pass/fail counts, and remaining doubts. End the turn after the commit and report.
+
+===
+
+[DONE] Session 25 — Backend release on the local app environment after the item write fix: backup, Daphne restart by the runner, health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py release-check --backend-only
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Do not edit, create, stage or commit any file. Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill`. The runner restarts Daphne itself after your turn.
+- Only the local `app` environment is in scope; never `soft.farsalish.ir`, never `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush` or any `manage.py test`.
+
+2. Task:
+- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app backend'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Confirm nothing is left to migrate: `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. Report any `[ ]` line; do not migrate.
+
+3. Tool policy: only these two commands and `git status --short`. If a command fails, read the output, do not repeat it unchanged.
+
+4. Output and stop condition: a short English report with the backup filename and size and the `showmigrations` result. No commit. End the turn after the report.
+
+===
+
+[DONE] Session 26 — Company scope on every ItemViewSet write path: bulk_update protected fields, Excel import, clear and delete by Excel, import cancel and revert
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys,re; v=pathlib.Path('warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py').read_text(encoding='utf-8'); s=v.find('class ItemViewSet'); cls=v[s:]; calls=[m.start() for m in re.finditer(r'can_access_warehouse\(', cls)]; helper=cls.find('def _can_write_warehouse'); hb=cls[helper:helper+1500] if helper>0 else ''; outside=[c for c in calls if not (helper>0 and helper<=c<helper+1500)]; bu=cls[cls.find('    def bulk_update'):][:6000]; imp=cls[cls.find('    def import_excel'):][:20000]; ok={'helper_allowed_ids':'def _allowed_warehouse_ids' in cls,'helper_write':helper>0,'helper_tenant':'scope_tenant_queryset' in cls[cls.find('def _allowed_warehouse_ids'):][:2000],'no_direct_checks':not outside,'bulk_protected':'BULK_UPDATE_PROTECTED_FIELDS' in bu and 'is_deleted' in v[v.find('BULK_UPDATE_PROTECTED_FIELDS ='):][:300],'import_name_lookup_scoped':'Warehouse.objects.filter(Q(name__iexact' not in imp}; print(ok,'direct can_access_warehouse calls outside helper:',len(outside)); sys.exit(0 if all(ok.values()) else 1)"
+verify: python -c "import subprocess,sys; ok={'warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py','warehouse-backend/modules/warehouse/inventory/tests_offline_system.py','warehouse-backend/modules/warehouse/inventory/tests_item_write_scope.py'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py django-tests --labels accounts inventory warehouses --known scripts/automation/known_backend_failures.txt --min-tests 180
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(inventory): company scope on all item write paths"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Tenant isolation: a user may never write, import into, soft-delete, cancel or revert anything in a warehouse outside their company and warehouse scope. No data may be lost: do not change what a permitted user can do inside their own scope.
+- Change only `warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py`, plus tests in `warehouse-backend/modules/warehouse/inventory/tests_offline_system.py` or a new file `warehouse-backend/modules/warehouse/inventory/tests_item_write_scope.py`. No models, serializers, migrations or other files.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- `can_access_warehouse(user, warehouse_id)` in `core/common/warehouse_scope.py` only checks assigned warehouses and returns True for users without warehouse assignments (`user_warehouse_ids` returns None). It never checks the company. So a company-A user without assignments can act on a company-B warehouse.
+- `ItemViewSet` uses it alone in `cancel_import`, `import_excel` (top-level `warehouse_id`, per-row target warehouse, existing item by id), `revert_import`, `clear_warehouse_data`, the import-log action that calls it with `warehouse_id_val` before listing `ImportLog`, and `delete_from_excel`. Commit `59d5e3d` added `_ensure_target_warehouse_in_scope` (company + warehouse check) for create and update only.
+- `import_excel` resolves a warehouse name from a row with the unscoped `Warehouse.objects.filter(Q(name__iexact=...) | Q(code__iexact=...)).first()`, which can pick a same-named warehouse of another company. Its work runs in a background thread that streams the response, so request-scoped caches may be gone inside the worker.
+- `bulk_update` applies every key of `Item._meta.fields` from the body, including `warehouse` (moves the item anywhere), `created_by`, `modified_by`, `sync_id` and `is_deleted` (soft-delete or revive without the delete/restore paths).
+
+3. Definitions: "allowed warehouse ids" means the ids of `scope_tenant_queryset(Warehouse.objects.all(), user, company_field='company_id', request=request)`, further limited to `user_warehouse_ids(user)` when that is not None.
+
+4. Task:
+- a) Add `_allowed_warehouse_ids(self)` on `ItemViewSet` that computes the allowed warehouse ids once per request (cache it on `self`) and returns a `set` of ints. Add `_can_write_warehouse(self, warehouse_id)`: for `None` return `can_access_warehouse(self.request.user, None)`; otherwise return whether `int(warehouse_id)` is in the allowed set (invalid ids return False). Make `_ensure_target_warehouse_in_scope` use `_can_write_warehouse` and keep its message.
+- b) Replace every direct `can_access_warehouse(...)` call inside `ItemViewSet` with `self._can_write_warehouse(...)` (same argument), keeping each branch's current response and message. The only remaining direct call may be inside `_can_write_warehouse`.
+- c) `import_excel`: call `self._allowed_warehouse_ids()` in the request thread before the worker starts, and inside the worker use only that precomputed set (no request-scoped call). Resolve a row warehouse name or code with `Warehouse.objects.filter(id__in=<allowed set>).filter(Q(name__iexact=...) | Q(code__iexact=...)).first()`; a name that matches no allowed warehouse is the same row error as an unknown name.
+- d) `bulk_update`: add a module-level constant `BULK_UPDATE_PROTECTED_FIELDS = {'id', 'warehouse', 'created_by', 'modified_by', 'created_at', 'updated_at', 'sync_id', 'is_deleted'}` and skip these keys in the apply loop (ignore them silently, so rows that echo unchanged values keep working). Keep the existing field-permission validation as it is.
+- e) Tests (Django `TestCase`, two companies each with one warehouse, a non-superuser with `workspace_full` access to company A only and no warehouse assignment, and the permissions each action needs, created with `Permission.objects.get_or_create` on the user content type): for company B's warehouse, `clear_warehouse_data` and `delete_from_excel` (if it needs a file, build a small xlsx with openpyxl in memory) return 403 and soft-delete nothing; `import_excel` with company B's `warehouse_id` returns 403; `bulk_update` with `warehouse` set to company B's warehouse leaves the item's warehouse unchanged, and with `is_deleted: true` leaves the item active; the same user can still `clear_warehouse_data` in company A's warehouse.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most four runs of targeted `manage.py test inventory.<module> --noinput` and at most one run of `.\venv\Scripts\python.exe manage.py test accounts inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach. If an existing test fails because it relied on writing outside the user's company, report it; do not weaken the check.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Stage only your changed files and commit with this message, without push:
+fix(inventory): company scope on all item write paths
+- Short English report: each replaced check, the bulk_update change, the tests added, the commands you actually ran with pass/fail counts, and remaining doubts. End the turn after the commit and report.
+
+===
+
+[DONE] Session 27 — Backend release on the local app environment after the item write scope fix: backup, Daphne restart by the runner, health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py release-check --backend-only
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Do not edit, create, stage or commit any file. Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill`. The runner restarts Daphne itself after your turn.
+- Only the local `app` environment is in scope; never `soft.farsalish.ir`, never `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush` or any `manage.py test`.
+
+2. Task:
+- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app backend'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Confirm nothing is left to migrate: `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. Report any `[ ]` line; do not migrate.
+
+3. Tool policy: only these two commands and `git status --short`. If a command fails, read the output, do not repeat it unchanged.
+
+4. Output and stop condition: a short English report with the backup filename and size and the `showmigrations` result. No commit. End the turn after the report.
+
+===
+
+[DONE] Session 28 — Import logs and bulk_assign assignees scoped to the user's company: null-warehouse logs, cancel of a running import, no cross-company warehouse name leak, assignees from the item's company only
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys; v=pathlib.Path('warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py').read_text(encoding='utf-8'); cls=v[v.find('class ItemViewSet'):]; h=cls.find('def _can_manage_import_log'); ci=cls[cls.find('    def cancel_import'):][:2500]; ri=cls[cls.find('    def revert_import'):][:2500]; dl=cls[cls.find('    def download_import_log'):][:2500]; ba=cls[cls.find('    def bulk_assign'):][:9000]; ok={'helper':h>0,'cancel_uses_helper':'_can_manage_import_log' in ci,'cancel_owner_cache':'import_owner_' in ci and 'import_owner_' in cls[cls.find('    def import_excel'):],'revert_uses_helper':'_can_manage_import_log' in ri,'download_uses_helper':'_can_manage_import_log' in dl,'no_conflicting_wh_leak':'conflicting_wh' not in cls,'assignee_company_check':'get_user_allowed_companies' in ba}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
+verify: python -c "import subprocess,sys; ok={'warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py','warehouse-backend/modules/warehouse/inventory/tests_item_write_scope.py'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py django-tests --labels accounts inventory warehouses --known scripts/automation/known_backend_failures.txt --min-tests 189
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(inventory): company scope for import logs and bulk_assign assignees"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Tenant isolation: a user may never cancel, revert or download another company's import, learn another company's warehouse names, or assign another company's user to tasks. Do not change what a permitted user can do inside their own company.
+- Change only `warehouse-backend/modules/warehouse/inventory/views_domains/item_views.py` and `warehouse-backend/modules/warehouse/inventory/tests_item_write_scope.py`. No models, serializers, migrations or other files.
+- Do not push. Stage only the two files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context (all in `ItemViewSet`, commit `8589eee` added `_allowed_warehouse_ids` and `_can_write_warehouse`):
+- `_can_write_warehouse(None)` only asks whether the user is unrestricted. An `ImportLog` with `warehouse_id=None` (an import without `warehouse_id` that updates rows by item id) therefore passes this check for any unrestricted user of any company in `cancel_import`, `download_import_log` and `revert_import`. `revert_import` then rewrites or soft-deletes that log's items.
+- `ImportLog` is created only at the end of the import worker. While an import runs there is no log, so `cancel_import` sets `cancel_import_<id>` in the cache for anyone.
+- In `import_excel`, when a row warehouse is not in the allowed set and `warehouse_id` is given, the code runs an unscoped `Warehouse.objects.filter(name__iexact=...)` / `filter(code__iexact=...)` into `conflicting_wh` and puts `conflicting_wh.name` into the error. This reveals other companies' warehouse names.
+- `bulk_assign` resolves `field_assignee`, `supervisor_assignee`, `manager_assignee`, `doc_assignee`, `doc_supervisor_assignee` and `doc_manager_assignee` with `_get_user_or_none` (unscoped `User.objects.get`), so a user of another company can be made counter or manager of this company's items.
+- `get_user_allowed_companies(user)` in `core/companies/access.py` returns the companies a user may work in (superuser: all active).
+
+3. Definitions: "manage an import log" means: the request user is a superuser; or the log's `warehouse_id` is None and `log.imported_by_id == request.user.id`; or the log's `warehouse_id` is not None and `self._can_write_warehouse(log.warehouse_id)` is true.
+
+4. Task:
+- a) Add `_can_manage_import_log(self, import_log)` implementing the definition. Use it in `revert_import` and `cancel_import` instead of `_can_write_warehouse(import_log.warehouse_id)`. In `download_import_log` keep the owner rule and replace the warehouse part with the helper (superuser or owner or helper).
+- b) In `import_excel`, in the request thread before the worker starts, store `cache.set(f"import_owner_{import_id}", request.user.id, timeout=3600)` when `import_id` is present. In `cancel_import`, when no `ImportLog` exists yet, allow the cancel only for a superuser or when that cache value equals `request.user.id`; otherwise 403 with «شما دسترسی لازم برای لغو این فرآیند را ندارید.».
+- c) In `import_excel`, delete the `conflicting_wh` block; a row warehouse outside the allowed set gets the existing generic «انبار با نام یا کد ... یافت نشد.» row error.
+- d) In `bulk_assign`, after resolving the items, reject the request with 400 «کاربر انتخاب‌شده عضو شرکت این کالاها نیست.» when any given assignee is not a superuser and `get_user_allowed_companies(assignee)` does not contain the company of every selected item's warehouse (items whose warehouse has no company are checked only against the assignee being active). Check before any write.
+- e) Tests in `tests_item_write_scope.py` (reuse its two-company setup): another company's unrestricted user cannot revert, cancel or download a null-warehouse import log of the first user (403, items unchanged); cancel of a running import with no log works for the owner and is 403 for another user; an import row naming company B's warehouse code returns the generic not-found row error and the response body does not contain company B's warehouse name; `bulk_assign` with a company-B user as `field_assignee` on company-A items returns 400 and creates no `CountTask`; a company-A assignee still works.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most four runs of `.\venv\Scripts\python.exe manage.py test inventory.tests_item_write_scope --noinput` and at most one run of `.\venv\Scripts\python.exe manage.py test accounts inventory warehouses --noinput`. If a command fails, read the output, do not repeat it unchanged, and change approach. If an existing test fails because it relied on cross-company behaviour, report it; do not weaken the check.
+
+6. Before finishing: `git diff --stat` shows only the two files.
+
+7. Output and stop condition:
+- Stage only the two files and commit with this message, without push:
+fix(inventory): company scope for import logs and bulk_assign assignees
+- Short English report: each change, the tests added, the commands you actually ran with pass/fail counts, and remaining doubts. End the turn after the commit and report.
+
+===
+
+Session 29 — Backend release on the local app environment after the import-log scope fix: backup, Daphne restart by the runner, health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py release-check --backend-only
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Do not edit, create, stage or commit any file. Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill`. The runner restarts Daphne itself after your turn.
+- Only the local `app` environment is in scope; never `soft.farsalish.ir`, never `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush` or any `manage.py test`.
+
+2. Task:
+- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app backend'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0.
+- b) Confirm nothing is left to migrate: `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. Report any `[ ]` line; do not migrate.
+
+3. Tool policy: only these two commands and `git status --short`. If a command fails, read the output, do not repeat it unchanged.
+
+4. Output and stop condition: a short English report with the backup filename and size and the `showmigrations` result. No commit. End the turn after the report.
