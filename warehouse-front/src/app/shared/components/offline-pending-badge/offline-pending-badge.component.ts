@@ -684,6 +684,10 @@ export class OfflinePendingBadgeComponent implements OnInit, OnDestroy {
         return;
       }
 
+      if (!item?.id) {
+        return;
+      }
+
       const confirmed = await this.confirmDialog.open({
         title: 'لغو این درخواست',
         message: 'این تغییر هنوز به سرور ارسال نشده است. با لغو، برای همیشه از این دستگاه حذف می\u200Cشود و قابل بازگشت نیست.',
@@ -695,18 +699,10 @@ export class OfflinePendingBadgeComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const entryItem: SyncQueueEntry = typeof (item as any) === 'number'
-        ? (this.queueEntries.find((e) => e.id === (item as any)) || ({ id: item as any } as SyncQueueEntry))
-        : item;
-
-      if (!entryItem?.id) {
-        return;
-      }
-
-      const success = await this.sync.cancelQueueEntry(entryItem.id, entryItem.appScope);
+      const success = await this.sync.cancelQueueEntry(item.id, item.appScope);
       if (success) {
         this.queueEntries = this.queueEntries.filter(
-          (entry) => !(entry === entryItem || (entry.id === entryItem.id && entry.appScope === entryItem.appScope))
+          (entry) => !(entry === item || (entry.id === item.id && entry.appScope === item.appScope))
         );
       } else {
         await this.loadQueueEntries();

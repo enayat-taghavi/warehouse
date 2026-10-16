@@ -182,4 +182,15 @@ describe('OfflinePendingBadgeComponent: queue handling & data-loss prevention', 
     expect(cancelSpy).not.toHaveBeenCalled();
     expect(component.queueEntries).toEqual([item]);
   });
+
+  it('the badge ignores items without a valid id (no numeric-id fallback)', async () => {
+    mockConfirmDialog.open.mockResolvedValue(true);
+    const cancelSpy = vi.spyOn(syncService, 'cancelQueueEntry');
+
+    await component.onCancelQueueItem({} as SyncQueueEntry);
+    await component.onCancelQueueItem(undefined as any);
+
+    expect(mockConfirmDialog.open).not.toHaveBeenCalled();
+    expect(cancelSpy).not.toHaveBeenCalled();
+  });
 });

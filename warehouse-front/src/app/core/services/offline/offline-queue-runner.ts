@@ -422,10 +422,21 @@ export async function cancelQueueEntry(
   if (scope) {
     targetDb = getOfflineDb(scope);
   } else {
-    const [whEntry, finEntry] = await Promise.all([
-      warehouseOfflineDb.syncQueue.get(id).catch(() => undefined),
-      financeOfflineDb.syncQueue.get(id).catch(() => undefined),
-    ]);
+    let whEntry: SyncQueueEntry | undefined;
+    let finEntry: SyncQueueEntry | undefined;
+
+    try {
+      [whEntry, finEntry] = await Promise.all([
+        warehouseOfflineDb.syncQueue.get(id),
+        financeOfflineDb.syncQueue.get(id),
+      ]);
+    } catch (readErr) {
+      console.warn(
+        `[OfflineSync] ⚠️ خطا در خواندن صف پایگاه‌های داده هنگام لغو بدون قلمرو شناسه ${id}; عملیات لغو متوقف شد:`,
+        readErr
+      );
+      return false;
+    }
 
     if (whEntry && finEntry) {
       // شناسه مبهم در هر دو پایگاه‌داده وجود دارد؛ برای جلوگیری از حذف اشتباه لغو نمی‌شود
@@ -443,44 +454,53 @@ export async function cancelQueueEntry(
   }
 
   let deletedEntry: SyncQueueEntry | undefined;
+  let attemptSucceeded = false;
 
-  const runInTransaction = async (action: () => Promise<void>) => {
-    try {
-      await targetDb.transaction('rw', targetDb.syncQueue, action);
-    } catch (err: any) {
-      if (
-        err?.name === 'MissingAPIError' ||
-        err?.name === 'DatabaseClosedError' ||
-        err?.message?.includes('IndexedDB API missing')
-      ) {
-        await action();
-      } else {
-        throw err;
-      }
-    }
-  };
-
-  await runInTransaction(async () => {
+  const performDeleteAction = async (): Promise<SyncQueueEntry | undefined> => {
     const entry = await targetDb.syncQueue.get(id);
     if (!entry) {
-      return;
+      return undefined;
     }
 
     if (entry.status === 'sending') {
-      return;
+      return undefined;
     }
 
     const currentUserId = getStoredCurrentUserId();
     const isOwnRecord = !entry.userId || entry.userId === currentUserId;
     if (!isOwnRecord) {
-      return;
+      return undefined;
     }
 
     await targetDb.syncQueue.delete(id);
-    deletedEntry = entry;
-  });
+    return entry;
+  };
 
-  if (deletedEntry) {
+  try {
+    deletedEntry = undefined;
+    deletedEntry = await targetDb.transaction('rw', targetDb.syncQueue, performDeleteAction);
+    attemptSucceeded = true;
+  } catch (err: any) {
+    deletedEntry = undefined;
+    if (
+      err?.name === 'MissingAPIError' ||
+      err?.name === 'DatabaseClosedError' ||
+      err?.message?.includes('IndexedDB API missing')
+    ) {
+      try {
+        deletedEntry = undefined;
+        deletedEntry = await performDeleteAction();
+        attemptSucceeded = true;
+      } catch (fallbackErr) {
+        deletedEntry = undefined;
+        console.warn(`[OfflineSync] ⚠️ Fallback delete attempt failed for id ${id}:`, fallbackErr);
+      }
+    } else {
+      console.warn(`[OfflineSync] ⚠️ Transaction failed for id ${id}:`, err);
+    }
+  }
+
+  if (attemptSucceeded && deletedEntry) {
     if (deletedEntry.url && invalidateCacheFn) {
       try {
         await invalidateCacheFn(deletedEntry.url, deletedEntry.appScope);

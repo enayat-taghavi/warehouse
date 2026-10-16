@@ -177,4 +177,72 @@ describe('offline-queue-runner: cancelQueueEntry data-loss protection', () => {
     expect(finDeleteSpy).not.toHaveBeenCalled();
     expect(invalidateSpy).not.toHaveBeenCalled();
   });
+
+  it('when finance read throws in an unscoped call, cancelQueueEntry refuses (returns false) and deletes nothing', async () => {
+    localStorage.setItem('wh_user_profile', JSON.stringify({ id: 42 }));
+    const whEntry = createMockEntry({ id: 5, appScope: 'warehouse', status: 'pending', userId: 42 });
+
+    vi.spyOn(warehouseOfflineDb.syncQueue, 'get').mockResolvedValue(whEntry);
+    vi.spyOn(financeOfflineDb.syncQueue, 'get').mockRejectedValue(new Error('Finance DB read error'));
+    const whDeleteSpy = vi.spyOn(warehouseOfflineDb.syncQueue, 'delete').mockResolvedValue(undefined as any);
+    const finDeleteSpy = vi.spyOn(financeOfflineDb.syncQueue, 'delete').mockResolvedValue(undefined as any);
+    const invalidateSpy = vi.fn().mockResolvedValue(undefined);
+
+    const result = await cancelQueueEntry(5, undefined, invalidateSpy);
+
+    expect(result).toBe(false);
+    expect(whDeleteSpy).not.toHaveBeenCalled();
+    expect(finDeleteSpy).not.toHaveBeenCalled();
+    expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+
+  it('when warehouse read throws in an unscoped call, cancelQueueEntry refuses (returns false) and deletes nothing', async () => {
+    localStorage.setItem('wh_user_profile', JSON.stringify({ id: 42 }));
+    const finEntry = createMockEntry({ id: 5, appScope: 'finance', url: '/api/v1/finance/entries/5/', status: 'pending', userId: 42 });
+
+    vi.spyOn(warehouseOfflineDb.syncQueue, 'get').mockRejectedValue(new Error('Warehouse DB read error'));
+    vi.spyOn(financeOfflineDb.syncQueue, 'get').mockResolvedValue(finEntry);
+    const whDeleteSpy = vi.spyOn(warehouseOfflineDb.syncQueue, 'delete').mockResolvedValue(undefined as any);
+    const finDeleteSpy = vi.spyOn(financeOfflineDb.syncQueue, 'delete').mockResolvedValue(undefined as any);
+    const invalidateSpy = vi.fn().mockResolvedValue(undefined);
+
+    const result = await cancelQueueEntry(5, undefined, invalidateSpy);
+
+    expect(result).toBe(false);
+    expect(whDeleteSpy).not.toHaveBeenCalled();
+    expect(finDeleteSpy).not.toHaveBeenCalled();
+    expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+
+  it('cancelQueueEntry resets deletedEntry before fallback and returns false if fallback exits on guard', async () => {
+    localStorage.setItem('wh_user_profile', JSON.stringify({ id: 42 }));
+    const entry = createMockEntry({ id: 60, status: 'pending', userId: 42 });
+
+    let getCalls = 0;
+    vi.spyOn(warehouseOfflineDb.syncQueue, 'get').mockImplementation((() => {
+      getCalls++;
+      if (getCalls === 1) {
+        // Transaction callback finds own pending entry and deletes it inside transaction
+        return Promise.resolve(entry);
+      }
+      // Fallback attempt sees entry in sending state
+      return Promise.resolve({ ...entry, status: 'sending' });
+    }) as any);
+    const whDeleteSpy = vi.spyOn(warehouseOfflineDb.syncQueue, 'delete').mockResolvedValue(undefined as any);
+
+    // Make transaction fail with DatabaseClosedError so it falls back to non-transaction attempt
+    vi.spyOn(warehouseOfflineDb as any, 'transaction').mockImplementation(async (_mode: any, ...args: any[]) => {
+      const fn = args[args.length - 1];
+      // Simulate that the callback ran and set deletedEntry, but transaction threw
+      await fn();
+      throw { name: 'DatabaseClosedError' };
+    });
+    const invalidateSpy = vi.fn().mockResolvedValue(undefined);
+
+    const result = await cancelQueueEntry(60, 'warehouse', invalidateSpy);
+
+    expect(result).toBe(false);
+    expect(whDeleteSpy).toHaveBeenCalledTimes(1);
+    expect(invalidateSpy).not.toHaveBeenCalled();
+  });
 });
