@@ -416,25 +416,42 @@ export async function cancelQueueEntry(
   id: number,
   scope?: AppScope,
   invalidateCacheFn?: (url: string, scope?: AppScope) => Promise<void>
-): Promise<void> {
+): Promise<boolean> {
   let entry: SyncQueueEntry | undefined;
+  let targetDb: OfflineDatabase | undefined;
   if (scope) {
-    const targetDb = getOfflineDb(scope);
+    targetDb = getOfflineDb(scope);
     entry = await targetDb.syncQueue.get(id);
-    if (entry) await targetDb.syncQueue.delete(id);
   } else {
     entry = await warehouseOfflineDb.syncQueue.get(id);
     if (entry) {
-      await warehouseOfflineDb.syncQueue.delete(id);
+      targetDb = warehouseOfflineDb;
     } else {
       entry = await financeOfflineDb.syncQueue.get(id);
-      if (entry) await financeOfflineDb.syncQueue.delete(id);
+      if (entry) targetDb = financeOfflineDb;
     }
   }
+
+  if (!entry || !targetDb) {
+    return false;
+  }
+
+  if (entry.status === 'sending') {
+    return false;
+  }
+
+  const currentUserId = getStoredCurrentUserId();
+  const isOwnRecord = !entry.userId || entry.userId === currentUserId;
+  if (!isOwnRecord) {
+    return false;
+  }
+
+  await targetDb.syncQueue.delete(id);
   if (entry?.url && invalidateCacheFn) {
     await invalidateCacheFn(entry.url, entry.appScope);
   }
   console.log(`[OfflineSync] 🗑️ درخواست با شناسه ${id} از صف انتظار محلی لغو و حذف شد.`);
+  return true;
 }
 
 /**

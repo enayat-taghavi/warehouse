@@ -9,6 +9,8 @@ import { StateService } from '../../../core/services/state.service';
 import { Subscription } from 'rxjs';
 import { ConflictResolutionModalComponent } from '../conflict-resolution-modal/conflict-resolution-modal.component';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
+import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
+import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service';
 
 /**
  * مرکز یکپارچه وضعیت اتصال، صف انتظار و صندوق خطاهای همگام‌سازی
@@ -284,14 +286,6 @@ import { SvgIconDirective } from '../../icons/svg-icon.directive';
               <span class="text-[11px] font-extrabold text-slate-700 dark:text-slate-300">
                 درخواست‌های ذخیره‌شده روی دستگاه ({{ queueEntries.length }})
               </span>
-              <button
-                *ngIf="queueEntries.length > 1"
-                type="button"
-                (click)="onClearAllQueue()"
-                class="min-h-[40px] sm:min-h-[32px] px-2 py-1 inline-flex items-center text-[10px] text-rose-600 hover:text-rose-700 dark:text-rose-400 font-bold hover:underline cursor-pointer tap-target"
-              >
-                لغو همه موارد
-              </button>
             </div>
 
             <!-- Empty Queue State -->
@@ -492,6 +486,7 @@ export class OfflinePendingBadgeComponent implements OnInit, OnDestroy {
   private sync = OfflineSyncService.getInstance();
   private healthService = inject(SystemHealthService);
   private router = inject(Router);
+  private confirmDialog = inject(ConfirmDialogService, { optional: true });
   private subs: Subscription[] = [];
 
   constructor(
@@ -613,7 +608,9 @@ export class OfflinePendingBadgeComponent implements OnInit, OnDestroy {
 
   async loadQueueEntries(): Promise<void> {
     try {
-      this.queueEntries = await this.sync.getQueueEntries();
+      const allEntries = await this.sync.getQueueEntries();
+      const currentUserId = getStoredCurrentUserId();
+      this.queueEntries = allEntries.filter((item) => !item.userId || item.userId === currentUserId);
 
       // بازیابی مشخصات کاربرپسند برای تک‌تک اقلام صف
       for (const item of this.queueEntries) {
@@ -683,23 +680,27 @@ export class OfflinePendingBadgeComponent implements OnInit, OnDestroy {
 
   async onCancelQueueItem(id: number): Promise<void> {
     try {
-      await this.sync.cancelQueueEntry(id);
-      this.queueEntries = this.queueEntries.filter(item => item.id !== id);
+      if (this.confirmDialog) {
+        const confirmed = await this.confirmDialog.open({
+          title: 'لغو این درخواست',
+          message: 'این تغییر هنوز به سرور ارسال نشده است. با لغو، برای همیشه از این دستگاه حذف میشود و قابل بازگشت نیست.',
+          confirmText: 'لغو درخواست',
+          cancelText: 'انصراف',
+          type: 'danger',
+        });
+        if (confirmed !== true) {
+          return;
+        }
+      }
+
+      const success = await this.sync.cancelQueueEntry(id);
+      if (success) {
+        this.queueEntries = this.queueEntries.filter((item) => item.id !== id);
+      } else {
+        await this.loadQueueEntries();
+      }
     } catch (e) {
       console.error('[SyncBadge] Failed to cancel queue item:', e);
-    }
-    this.cdr.markForCheck();
-  }
-
-  async onClearAllQueue(): Promise<void> {
-    if (!confirm('آیا از لغو و حذف کلیه رکوردهای صف انتظار اطمینان دارید؟ این تغییرات دیگر به سرور ارسال نخواهند شد.')) {
-      return;
-    }
-    try {
-      await this.sync.clearQueue();
-      this.queueEntries = [];
-    } catch (e) {
-      console.error('[SyncBadge] Failed to clear queue:', e);
     }
     this.cdr.markForCheck();
   }

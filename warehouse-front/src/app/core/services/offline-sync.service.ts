@@ -362,9 +362,12 @@ export class OfflineSyncService {
   /**
    * لغو و حذف یک درخواست معلق از صف انتظار محلی قبل از ارسال به سرور
    */
-  async cancelQueueEntry(id: number, scope?: AppScope): Promise<void> {
-    await runnerCancelQueueEntry(id, scope, this.invalidateCache.bind(this));
-    await this.refreshCounts();
+  async cancelQueueEntry(id: number, scope?: AppScope): Promise<boolean> {
+    const success = await runnerCancelQueueEntry(id, scope, this.invalidateCache.bind(this));
+    if (success) {
+      await this.refreshCounts();
+    }
+    return success;
   }
 
   /**
@@ -598,18 +601,6 @@ export class OfflineSyncService {
   /** همهٔ رکوردهای صف هر دو پایگاه‌داده، با هر وضعیتی */
   async getUnsentCountStrict(): Promise<number> {
     return runnerGetUnsentCountStrict();
-  }
-
-  /** تخلیه کامل صف */
-  async clearQueue(scope?: AppScope | 'all'): Promise<void> {
-    const targetScope = scope || 'all';
-    if (targetScope === 'warehouse' || targetScope === 'all') {
-      await warehouseOfflineDb.syncQueue.clear();
-    }
-    if (targetScope === 'finance' || targetScope === 'all') {
-      await financeOfflineDb.syncQueue.clear();
-    }
-    await this.refreshCounts();
   }
 
   /**
