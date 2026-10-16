@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   Company,
@@ -19,13 +19,71 @@ import { ModuleRegistryService } from '../modules/module-registry.service';
 export class CompanyApiService {
   private http = inject(HttpClient);
   private moduleRegistry = inject(ModuleRegistryService);
-  private documentsEndpoint = `${environment.apiUrl}/personnel/company-documents`;
-  private bankAccountsEndpoint = `${environment.apiUrl}/personnel/company-bank-accounts`;
-  private boardMembersEndpoint = `${environment.apiUrl}/personnel/company-board-members`;
+
+  private get documentsEndpoint(): string | null {
+    const ep = this.moduleRegistry.getExtensions('companyApiEndpoints')[0]?.extension;
+    return ep?.documentsEndpoint ? `${environment.apiUrl}${ep.documentsEndpoint}` : null;
+  }
+
+  private get bankAccountsEndpoint(): string | null {
+    const ep = this.moduleRegistry.getExtensions('companyApiEndpoints')[0]?.extension;
+    return ep?.bankAccountsEndpoint ? `${environment.apiUrl}${ep.bankAccountsEndpoint}` : null;
+  }
+
+  private get boardMembersEndpoint(): string | null {
+    const ep = this.moduleRegistry.getExtensions('companyApiEndpoints')[0]?.extension;
+    return ep?.boardMembersEndpoint ? `${environment.apiUrl}${ep.boardMembersEndpoint}` : null;
+  }
+
+  private get fiscalPeriodsEndpoint(): string | null {
+    const ep = this.moduleRegistry.getExtensions('companyApiEndpoints')[0]?.extension;
+    return ep?.fiscalPeriodsEndpoint ? `${environment.apiUrl}${ep.fiscalPeriodsEndpoint}` : null;
+  }
+
+  getCompanyGdriveUrl(companyId: number | string, subPath = ''): string | null {
+    const ep = this.moduleRegistry.getExtensions('companyApiEndpoints')[0]?.extension;
+    if (!ep?.companyGdriveBaseEndpoint) {
+      return null;
+    }
+    const base = ep.companyGdriveBaseEndpoint(companyId);
+    if (!base) {
+      return null;
+    }
+    let normalizedSubPath = subPath;
+    if (normalizedSubPath && !normalizedSubPath.startsWith('/')) {
+      normalizedSubPath = '/' + normalizedSubPath;
+    }
+    return `${environment.apiUrl}${base}${normalizedSubPath}`;
+  }
+
+  matchesCompanyUrl(url: string, kind: 'companies' | 'bankAccounts' | 'boardMembers' | 'documents'): boolean {
+    if (!url) return false;
+    const ep = this.moduleRegistry.getExtensions('companyApiEndpoints')[0]?.extension;
+    if (kind === 'companies') {
+      const endpoint = ep?.companiesEndpoint;
+      if (endpoint && url.includes(endpoint)) {
+        return true;
+      }
+      return url.includes('/org/companies');
+    }
+    if (kind === 'bankAccounts') {
+      const endpoint = ep?.bankAccountsEndpoint;
+      return endpoint ? url.includes(endpoint) : false;
+    }
+    if (kind === 'boardMembers') {
+      const endpoint = ep?.boardMembersEndpoint;
+      return endpoint ? url.includes(endpoint) : false;
+    }
+    if (kind === 'documents') {
+      const endpoint = ep?.documentsEndpoint;
+      return endpoint ? url.includes(endpoint) : false;
+    }
+    return false;
+  }
 
   /**
    * شرکت‌ها در هسته‌اند (/org/companies). اگر حسابداری نصب باشد، نسخهٔ حسابداری همان منبع
-   * (/personnel/companies) شمار پروژه‌ها، مدارک، حساب‌های بانکی و هیئت‌مدیره را هم برمی‌گرداند.
+   * شمار پروژه‌ها، مدارک، حساب‌های بانکی و هیئت‌مدیره را هم برمی‌گرداند.
    */
   private get endpoint(): string {
     const ep = this.moduleRegistry.getExtensions('companyApiEndpoints')[0]?.extension;
@@ -106,6 +164,9 @@ export class CompanyApiService {
 
   // مدیریت اسناد و آرشیو مدارک شرکت
   getDocuments(params?: { company_id?: number; document_type?: string; search?: string }): Observable<CompanyDocument[] | { results: CompanyDocument[]; count: number }> {
+    if (!this.documentsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     let httpParams = new HttpParams();
     if (params?.company_id) httpParams = httpParams.set('company_id', String(params.company_id));
     if (params?.document_type) httpParams = httpParams.set('document_type', params.document_type);
@@ -114,14 +175,23 @@ export class CompanyApiService {
   }
 
   createDocument(formData: FormData): Observable<CompanyDocument> {
+    if (!this.documentsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.post<CompanyDocument>(`${this.documentsEndpoint}/`, formData);
   }
 
   deleteDocument(id: number): Observable<void> {
+    if (!this.documentsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.delete<void>(`${this.documentsEndpoint}/${id}/`);
   }
 
   downloadDocument(id: number): Observable<Blob> {
+    if (!this.documentsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.get(`${this.documentsEndpoint}/${id}/download/`, { responseType: 'blob' });
   }
 
@@ -156,6 +226,9 @@ export class CompanyApiService {
 
   // مدیریت حساب‌های بانکی و شبای رسمی شرکت
   getBankAccounts(companyId?: number): Observable<CompanyBankAccount[] | { results: CompanyBankAccount[]; count: number }> {
+    if (!this.bankAccountsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     let params = new HttpParams();
     if (companyId) {
       params = params.set('company_id', String(companyId));
@@ -164,23 +237,38 @@ export class CompanyApiService {
   }
 
   createBankAccount(payload: Partial<CompanyBankAccount>): Observable<CompanyBankAccount> {
+    if (!this.bankAccountsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.post<CompanyBankAccount>(`${this.bankAccountsEndpoint}/`, payload);
   }
 
   updateBankAccount(id: number, payload: Partial<CompanyBankAccount>): Observable<CompanyBankAccount> {
+    if (!this.bankAccountsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.put<CompanyBankAccount>(`${this.bankAccountsEndpoint}/${id}/`, payload);
   }
 
   deleteBankAccount(id: number): Observable<void> {
+    if (!this.bankAccountsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.delete<void>(`${this.bankAccountsEndpoint}/${id}/`);
   }
 
   setPrimaryBankAccount(id: number): Observable<CompanyBankAccount> {
+    if (!this.bankAccountsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.post<CompanyBankAccount>(`${this.bankAccountsEndpoint}/${id}/set-primary/`, {});
   }
 
   // مدیریت اعضای هیئت‌مدیره و ارکان قانونی شرکت
   getBoardMembers(companyId?: number, search?: string): Observable<CompanyBoardMember[] | { results: CompanyBoardMember[]; count: number }> {
+    if (!this.boardMembersEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     let params = new HttpParams();
     if (companyId) {
       params = params.set('company_id', String(companyId));
@@ -192,21 +280,31 @@ export class CompanyApiService {
   }
 
   createBoardMember(payload: FormData | Partial<CompanyBoardMember>): Observable<CompanyBoardMember> {
+    if (!this.boardMembersEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.post<CompanyBoardMember>(`${this.boardMembersEndpoint}/`, payload);
   }
 
   updateBoardMember(id: number, payload: FormData | Partial<CompanyBoardMember>): Observable<CompanyBoardMember> {
+    if (!this.boardMembersEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.patch<CompanyBoardMember>(`${this.boardMembersEndpoint}/${id}/`, payload);
   }
 
   deleteBoardMember(id: number): Observable<void> {
+    if (!this.boardMembersEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.delete<void>(`${this.boardMembersEndpoint}/${id}/`);
   }
 
   // مدیریت سال‌ها و دوره‌های مالی رسمی شرکت
-  private fiscalPeriodsEndpoint = `${environment.apiUrl}/personnel/company-fiscal-periods`;
-
   getFiscalPeriods(companyId?: number, fiscalYear?: string): Observable<CompanyFiscalPeriod[] | { results: CompanyFiscalPeriod[]; count: number }> {
+    if (!this.fiscalPeriodsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     let params = new HttpParams();
     if (companyId) {
       params = params.set('company_id', String(companyId));
@@ -218,18 +316,30 @@ export class CompanyApiService {
   }
 
   createFiscalPeriod(payload: Partial<CompanyFiscalPeriod>): Observable<CompanyFiscalPeriod> {
+    if (!this.fiscalPeriodsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.post<CompanyFiscalPeriod>(`${this.fiscalPeriodsEndpoint}/`, payload);
   }
 
   closeFiscalPeriod(id: number, notes?: string): Observable<{ detail: string }> {
+    if (!this.fiscalPeriodsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.post<{ detail: string }>(`${this.fiscalPeriodsEndpoint}/${id}/close-period/`, { notes });
   }
 
   freezeFiscalPeriod(id: number): Observable<{ detail: string }> {
+    if (!this.fiscalPeriodsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.post<{ detail: string }>(`${this.fiscalPeriodsEndpoint}/${id}/freeze-period/`, {});
   }
 
   reopenFiscalPeriod(id: number): Observable<{ detail: string }> {
+    if (!this.fiscalPeriodsEndpoint) {
+      return throwError(() => new Error('accounting-module-not-installed'));
+    }
     return this.http.post<{ detail: string }>(`${this.fiscalPeriodsEndpoint}/${id}/reopen-period/`, {});
   }
 }

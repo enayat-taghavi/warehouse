@@ -87,7 +87,12 @@ export const MODULE: WhFrontendModule = {
     },
     companyApiEndpoints: {
       companiesEndpoint: '/personnel/companies',
-      accessEndpoint: '/personnel/user-company-access'
+      accessEndpoint: '/personnel/user-company-access',
+      documentsEndpoint: '/personnel/company-documents',
+      bankAccountsEndpoint: '/personnel/company-bank-accounts',
+      boardMembersEndpoint: '/personnel/company-board-members',
+      fiscalPeriodsEndpoint: '/personnel/company-fiscal-periods',
+      companyGdriveBaseEndpoint: (cid) => '/personnel/companies/' + cid + '/gdrive'
     },
     syncConfig: {
       scopeKind: 'finance',

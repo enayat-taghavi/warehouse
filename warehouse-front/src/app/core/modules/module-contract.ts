@@ -133,6 +133,11 @@ export interface ExtensionMap {
   companyApiEndpoints?: {
     companiesEndpoint?: string;
     accessEndpoint?: string;
+    documentsEndpoint?: string;
+    bankAccountsEndpoint?: string;
+    boardMembersEndpoint?: string;
+    fiscalPeriodsEndpoint?: string;
+    companyGdriveBaseEndpoint?: (companyId: number | string) => string;
   };
 
   /**

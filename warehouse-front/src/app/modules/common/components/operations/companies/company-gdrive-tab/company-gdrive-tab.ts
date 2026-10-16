@@ -17,7 +17,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { environment } from '../../../../../../../environments/environment';
+import { CompanyApiService } from '../../../../../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
 import { ModuleRegistryService } from '../../../../../../core/modules/module-registry.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
@@ -106,6 +106,7 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
   @Input() companyId?: number | null;
 
   private http = inject(HttpClient);
+  private companyApi = inject(CompanyApiService, { optional: true });
   public activeCompanyService = inject(ActiveCompanyService);
   private moduleRegistry = inject(ModuleRegistryService);
   private toastService = inject(ToastService);
@@ -369,7 +370,17 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
       this.isOffline.set(false);
     }
 
-    this.http.get<GDriveConfigResponse>(`${environment.apiUrl}/personnel/companies/${cid}/gdrive/`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    const url = this.companyApi?.getCompanyGdriveUrl(cid, '/');
+    if (!url) {
+      this.isLoading.set(false);
+      this.loadError.set('خطا در دریافت وضعیت گوگل‌درایو شرکت');
+      if (!silent) {
+        this.toastService.error('خطا در دریافت وضعیت گوگل‌درایو شرکت');
+      }
+      return;
+    }
+
+    this.http.get<GDriveConfigResponse>(url).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (cfg) => {
         this.config.set(cfg);
         this.isLoading.set(false);
@@ -397,8 +408,11 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
     const cid = this.selectedCompanyId();
     if (!cid) return;
 
+    const url = this.companyApi?.getCompanyGdriveUrl(cid, '/');
+    if (!url) return;
+
     // takeUntilDestroyed: پاسخ دیررسیده پس از خروج از تب، polling تازه‌ای راه نیندازد
-    this.http.get<GDriveConfigResponse>(`${environment.apiUrl}/personnel/companies/${cid}/gdrive/`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.http.get<GDriveConfigResponse>(url).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (cfg) => {
         this.config.set(cfg);
         this.loadQueue(this.activeStatusFilter(), true);
@@ -443,9 +457,18 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
 
     const page = this.currentPage();
     const offset = (page - 1) * this.pageSize;
-    let url = `${environment.apiUrl}/personnel/companies/${cid}/gdrive/queue/?limit=${this.pageSize}&offset=${offset}`;
+    let subPath = `/queue/?limit=${this.pageSize}&offset=${offset}`;
     if (filterStatus !== 'all') {
-      url += `&status=${filterStatus}`;
+      subPath += `&status=${filterStatus}`;
+    }
+
+    const url = this.companyApi?.getCompanyGdriveUrl(cid, subPath);
+    if (!url) {
+      this.isQueueLoading.set(false);
+      if (!silent) {
+        this.toastService.error('خطا در دریافت لیست صف گوگل‌درایو');
+      }
+      return;
     }
 
     this.http.get<{ results: GDriveQueueItem[]; count: number }>(url).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -527,7 +550,16 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
 
     const payload: Record<string, any> = { [field]: value };
 
-    this.http.patch(`${environment.apiUrl}/personnel/companies/${cid}/gdrive/`, payload).subscribe({
+    const url = this.companyApi?.getCompanyGdriveUrl(cid, '/');
+    if (!url) {
+      this.isSavingField.set(null);
+      const rolledBack = { ...this.config()!, [field]: previousValue };
+      this.config.set(rolledBack);
+      this.toastService.error('خطا در ذخیره تنظیمات: خطای سرور');
+      return;
+    }
+
+    this.http.patch(url, payload).subscribe({
       next: () => {
         this.isSavingField.set(null);
         this.toastService.success('تنظیمات با موفقیت ذخیره شد.');
@@ -576,7 +608,15 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
     const isPopupBlocked = !popup || popup.closed || typeof popup.closed === 'undefined';
     const mode = isPopupBlocked ? 'redirect' : 'popup';
 
-    this.http.get<{ auth_url: string }>(`${environment.apiUrl}/personnel/companies/${cid}/gdrive/auth-url/?mode=${mode}&_t=${Date.now()}`).subscribe({
+    const url = this.companyApi?.getCompanyGdriveUrl(cid, `/auth-url/?mode=${mode}&_t=${Date.now()}`);
+    if (!url) {
+      this.isConnecting.set(false);
+      if (popup && !popup.closed) popup.close();
+      this.toastService.error('خطا در دریافت لینک اتصال به گوگل');
+      return;
+    }
+
+    this.http.get<{ auth_url: string }>(url).subscribe({
       next: (res) => {
         this.isConnecting.set(false);
         if (res.auth_url) {
@@ -615,7 +655,13 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
 
     if (!confirmed) return;
 
-    this.http.post(`${environment.apiUrl}/personnel/companies/${cid}/gdrive/disconnect/`, {}).subscribe({
+    const url = this.companyApi?.getCompanyGdriveUrl(cid, '/disconnect/');
+    if (!url) {
+      this.toastService.error('خطا در قطع ارتباط گوگل‌درایو');
+      return;
+    }
+
+    this.http.post(url, {}).subscribe({
       next: () => {
         this.toastService.info('اتصال به گوگل‌درایو با موفقیت قطع شد.');
         this.loadAll();
@@ -633,7 +679,13 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
     const cid = this.selectedCompanyId();
     if (!cid) return;
 
-    this.http.post(`${environment.apiUrl}/personnel/companies/${cid}/gdrive/tasks/${taskId}/retry/`, {}).subscribe({
+    const url = this.companyApi?.getCompanyGdriveUrl(cid, `/tasks/${taskId}/retry/`);
+    if (!url) {
+      this.toastService.error('خطا در تلاش مجدد تسک');
+      return;
+    }
+
+    this.http.post(url, {}).subscribe({
       next: () => {
         this.toastService.success('تسک با اولویت بالا در صف ارسال مجدد قرار گرفت.');
         this.loadAll(true);
@@ -651,8 +703,14 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
     const cid = this.selectedCompanyId();
     if (!cid) return;
 
+    const url = this.companyApi?.getCompanyGdriveUrl(cid, '/sync-all/');
+    if (!url) {
+      this.toastService.error('خطا در پیمایش فایل‌ها');
+      return;
+    }
+
     this.isSyncing.set(true);
-    this.http.post<{ message: string; enqueued_count: number }>(`${environment.apiUrl}/personnel/companies/${cid}/gdrive/sync-all/`, {}).subscribe({
+    this.http.post<{ message: string; enqueued_count: number }>(url, {}).subscribe({
       next: (res) => {
         this.isSyncing.set(false);
         this.toastService.success(res.message || 'فایل‌های واجد شرایط در صف همگام‌سازی ثبت شدند.');
@@ -672,9 +730,15 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
     const cid = this.selectedCompanyId();
     if (!cid) return;
 
+    const url = this.companyApi?.getCompanyGdriveUrl(cid, '/trigger-sync/');
+    if (!url) {
+      this.toastService.error('خطا در شروع ارسال دستی صف');
+      return;
+    }
+
     this.isTriggeringSync.set(true);
     this.http.post<{ success: boolean; message: string; pending_count: number }>(
-      `${environment.apiUrl}/personnel/companies/${cid}/gdrive/trigger-sync/`,
+      url,
       {}
     ).subscribe({
       next: (res) => {

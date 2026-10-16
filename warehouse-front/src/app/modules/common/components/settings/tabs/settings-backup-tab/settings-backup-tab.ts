@@ -12,7 +12,7 @@ import { AuthService } from '../../../../../../core/auth/auth.service';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { environment } from '../../../../../../../environments/environment';
+import { CompanyApiService } from '../../../../../../core/api/company-api.service';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 
 @Component({
@@ -28,6 +28,7 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
   private confirmDialog = inject(ConfirmDialogService, { optional: true });
   private router = inject(Router, { optional: true });
   private route = inject(ActivatedRoute, { optional: true });
+  private companyApi = inject(CompanyApiService, { optional: true });
 
   // ─── اسنپ‌شات‌های سرور و بازگشت سریع ───
   snapshots: any[] = [];
@@ -596,7 +597,12 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
 
   toggleCompanyBackupSync(company: any) {
     const nextState = !company.sync_backups;
-    this.http.patch(`${environment.apiUrl}/personnel/companies/${company.company_id}/gdrive/`, { sync_backups: nextState }).subscribe({
+    const url = this.companyApi?.getCompanyGdriveUrl(company.company_id, '/');
+    if (!url) {
+      this.toast.show('error', 'خطا در تغییر تنظیمات شرکت');
+      return;
+    }
+    this.http.patch(url, { sync_backups: nextState }).subscribe({
       next: () => {
         company.sync_backups = nextState;
         this.toast.show('success', `تنظیمات ارسال پشتیبان برای شرکت ${company.company_name} بروزرسانی شد.`);

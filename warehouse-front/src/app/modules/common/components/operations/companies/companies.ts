@@ -76,6 +76,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   private static readonly ACCOUNTING_TABS = ['treasury', 'governance', 'gdrive'];
 
   private api = inject(CompanyApiService);
+  private companyApi = this.api;
   private http = inject(HttpClient);
   public activeCompanyService = inject(ActiveCompanyService);
   private accountsHttp = inject(AccountsHttpService, { optional: true });
@@ -433,7 +434,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.offlineSync.liveDataUpdates$.pipe(takeUntil(this.destroy$)).subscribe(({ url, data }) => {
       if (!url) return;
       const currentCompanyId = this.companyModal.data?.id;
-      if (url.includes('/personnel/companies/') || url.includes('/org/companies/')) {
+      if (this.companyApi.matchesCompanyUrl(url, 'companies')) {
         if (Array.isArray(data)) {
           this.companies = data;
           this.applyFilter();
@@ -441,7 +442,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           this.companies = (data as any).results;
           this.applyFilter();
         }
-      } else if (url.includes('/personnel/company-bank-accounts/')) {
+      } else if (this.companyApi.matchesCompanyUrl(url, 'bankAccounts')) {
         if (this.companyModal.isOpen && currentCompanyId && url.includes(`company_id=${currentCompanyId}`)) {
           if (Array.isArray(data)) {
             this.companyBankAccounts = data;
@@ -450,7 +451,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           }
           this.cdr.markForCheck();
         }
-      } else if (url.includes('/personnel/company-board-members/')) {
+      } else if (this.companyApi.matchesCompanyUrl(url, 'boardMembers')) {
         if (this.companyModal.isOpen && currentCompanyId && url.includes(`company_id=${currentCompanyId}`)) {
           if (Array.isArray(data)) {
             this.companyBoardMembers = data;
@@ -459,7 +460,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           }
           this.cdr.markForCheck();
         }
-      } else if (url.includes('/personnel/company-documents/')) {
+      } else if (this.companyApi.matchesCompanyUrl(url, 'documents')) {
         if (this.companyModal.isOpen && currentCompanyId && url.includes(`company_id=${currentCompanyId}`)) {
           if (Array.isArray(data)) {
             this.companyDocuments = data;
