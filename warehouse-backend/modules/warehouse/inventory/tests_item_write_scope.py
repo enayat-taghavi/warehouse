@@ -194,3 +194,27 @@ class ItemWriteScopeSecurityTests(TestCase):
         # با ActiveManager نباید در objects یافت شود ولی در all_objects هست
         self.assertFalse(Item.objects.filter(id=self.item_a.id).exists())
         self.assertTrue(Item.all_objects.filter(id=self.item_a.id).exists())
+
+    def test_created_by_and_modified_by_cannot_be_set_by_client(self):
+        """
+        فیلدهای created_by و modified_by فقط‌خواندنی‌اند: شناسهٔ کاربر دیگر (حتی از شرکت دیگر) در ایجاد و ویرایش نادیده گرفته می‌شود.
+        """
+        other = User.objects.create_user(username="other_company_user", password="Password123!")
+        url = "/api/inventory/items/"
+        response = self.client.post(url, {
+            'warehouse': self.warehouse_a.id,
+            'fa_unic_code': 'ITEM-A-FORGE',
+            'description': 'کالای تازه',
+            'created_by': other.id,
+            'modified_by': other.id,
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = Item.objects.get(fa_unic_code='ITEM-A-FORGE', warehouse=self.warehouse_a)
+        self.assertNotEqual(created.created_by_id, other.id)
+        self.assertNotEqual(created.modified_by_id, other.id)
+
+        response = self.client.patch(f"{url}{self.item_a.id}/", {'created_by': other.id, 'modified_by': other.id}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.item_a.refresh_from_db()
+        self.assertNotEqual(self.item_a.created_by_id, other.id)
+        self.assertNotEqual(self.item_a.modified_by_id, other.id)

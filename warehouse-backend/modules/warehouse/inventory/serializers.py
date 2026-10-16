@@ -124,6 +124,8 @@ class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         fields = '__all__'
+        # ثبت‌کننده و ویرایش‌کننده را فقط سرور می‌نویسد؛ کلاینت نمی‌تواند شناسهٔ کاربر دیگری (حتی از شرکت دیگر) را جا بزند.
+        read_only_fields = ['created_by', 'modified_by']
 
     def get_warehouse_name(self, obj):
         if obj.warehouse:
