@@ -403,6 +403,51 @@ def check_sod_prohibition(request, page_route: str, action_code: str, app_module
         })
 
 
+def resolve_sod_context(request, view) -> tuple[str, str]:
+    """
+    استخراج مسیر صفحه (page_route) و کد عملیات (action_code) از ویو یا مسیر درخواست
+    جهت ارزیابی در ماتریس تفکیک وظایف (SoD).
+    """
+    page_route = getattr(view, 'sod_page_route', None)
+    action_code = getattr(view, 'sod_action_code', None)
+
+    if not page_route:
+        path = request.path.lower()
+        if 'attendance' in path:
+            page_route = '/attendance'
+        elif 'profiles' in path:
+            page_route = '/profiles'
+        elif 'finance' in path or 'monthly-payroll' in path:
+            page_route = '/finance-cartable'
+        elif 'treasury' in path:
+            page_route = '/treasury-cartable'
+        elif 'manager' in path:
+            page_route = '/manager-approvals'
+        elif 'customs' in path:
+            page_route = '/customs'
+        else:
+            page_route = '/attendance'
+
+    if not action_code:
+        action_name = getattr(view, 'action', None)
+        method = request.method.upper()
+
+        if action_name in ['approve_manager', 'approve_finance', 'approve_supervisor']:
+            action_code = f"approve_{action_name.split('_')[-1]}"
+        elif action_name in ['disburse_period', 'disburse_single_payroll', 'disburse_fleet']:
+            action_code = 'disburse_treasury_payment'
+        elif action_name == 'create' and page_route == '/attendance':
+            action_code = 'create_daily_attendance_entry'
+        elif action_name in ['lock_period', 'approve_period'] and page_route == '/attendance':
+            action_code = 'approve_attendance_period'
+        elif method in ['POST', 'PUT', 'PATCH'] and 'wage' in str(request.data):
+            action_code = 'edit_base_wage_and_bonuses'
+        else:
+            action_code = action_name or method.lower()
+
+    return page_route, action_code
+
+
 class SoDPolicyPermission(permissions.BasePermission):
     """
     گارد امنیتی تفکیک وظایف (SoD Policy Guard) در لایه DRF
@@ -424,42 +469,7 @@ class SoDPolicyPermission(permissions.BasePermission):
         app = app_code_for_sod(getattr(request, 'active_app', None) or get_current_active_app() or 'accounting')
 
         # استخراج مسیر صفحه و کد عملیات از ویو یا مسیر درخواست
-        page_route = getattr(view, 'sod_page_route', None)
-        action_code = getattr(view, 'sod_action_code', None)
-
-        if not page_route:
-            path = request.path.lower()
-            if 'attendance' in path:
-                page_route = '/attendance'
-            elif 'profiles' in path:
-                page_route = '/profiles'
-            elif 'finance' in path or 'monthly-payroll' in path:
-                page_route = '/finance-cartable'
-            elif 'treasury' in path:
-                page_route = '/treasury-cartable'
-            elif 'manager' in path:
-                page_route = '/manager-approvals'
-            elif 'customs' in path:
-                page_route = '/customs'
-            else:
-                page_route = '/attendance'
-
-        if not action_code:
-            action_name = getattr(view, 'action', None)
-            method = request.method.upper()
-
-            if action_name in ['approve_manager', 'approve_finance', 'approve_supervisor']:
-                action_code = f"approve_{action_name.split('_')[-1]}"
-            elif action_name in ['disburse_period', 'disburse_single_payroll', 'disburse_fleet']:
-                action_code = 'disburse_treasury_payment'
-            elif action_name == 'create' and page_route == '/attendance':
-                action_code = 'create_daily_attendance_entry'
-            elif action_name in ['lock_period', 'approve_period'] and page_route == '/attendance':
-                action_code = 'approve_attendance_period'
-            elif method in ['POST', 'PUT', 'PATCH'] and 'wage' in str(request.data):
-                action_code = 'edit_base_wage_and_bonuses'
-            else:
-                action_code = action_name or method.lower()
+        page_route, action_code = resolve_sod_context(request, view)
 
         is_prohibited, reason = SoDCacheService.is_action_prohibited(app, role, page_route, action_code)
         if is_prohibited:
