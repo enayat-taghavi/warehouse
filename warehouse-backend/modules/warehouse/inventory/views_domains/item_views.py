@@ -104,6 +104,37 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         queryset = scope_tenant_queryset(queryset, self.request.user, company_field='warehouse__company_id', request=self.request)
         return scope_queryset(queryset, self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        sync_id = request.data.get('sync_id') if hasattr(request, 'data') and hasattr(request.data, 'get') else None
+        if isinstance(sync_id, str):
+            sync_id = sync_id.strip()
+        if sync_id:
+            try:
+                existing = Item.all_objects.filter(sync_id=sync_id).first()
+            except Exception:
+                existing = None
+            if existing:
+                from common.tenant_scope import scope_tenant_queryset
+                scoped_qs = scope_tenant_queryset(
+                    Item.all_objects.filter(pk=existing.pk),
+                    request.user,
+                    company_field='warehouse__company_id',
+                    request=request
+                )
+                scoped_qs = scope_queryset(scoped_qs, request.user)
+                if not scoped_qs.filter(pk=existing.pk).exists():
+                    return Response(
+                        {"error": "دسترسی غیرمجاز: یک یا چند قلم کالا خارج از انبار مجاز شماست."},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+
+                serializer = self.get_serializer(instance=existing, data=request.data)
+                serializer.is_valid(raise_exception=True)
+                self.perform_create(serializer)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         from accounts.audit_utils import log_audit_event
         # ۱. بررسی idempotency بر مبنای sync_id (تسک ۱۴)

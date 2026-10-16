@@ -152,6 +152,44 @@ class OfflineSystemRemediationTests(TestCase):
         self.assertEqual(res2.data['id'], first_id)
         self.assertEqual(Item.objects.filter(sync_id=client_sync_id).count(), 1)
 
+    def test_idempotent_creation_out_of_scope_sync_id_forbidden(self):
+        """تست عدم امکان تغییر یا احیای کالای انبار/شرکت دیگر از طریق ارسال مجدد sync_id توسط کاربر غیرسوپریوزر"""
+        other_company = Company.objects.create(
+            code="OTHER-OFFLINE-CO",
+            name="شرکت دیگر آفلاین",
+            has_warehouse_module=True
+        )
+        other_warehouse = Warehouse.objects.create(
+            name="انبار شرکت دیگر",
+            project_name="پروژه شرکت دیگر",
+            company_id=other_company.id,
+            company_name=other_company.name
+        )
+        other_sync_id = str(uuid.uuid4())
+        other_item = Item.all_objects.create(
+            warehouse=other_warehouse,
+            fa_unic_code="OTHER-IDEM-001",
+            description="شرح اولیه شرکت دیگر",
+            sync_id=other_sync_id,
+            is_deleted=True
+        )
+
+        # احراز هویت با کاربر غیرسوپریوزر دارای دسترسی به شرکت و انبار تستی
+        self.client.force_authenticate(user=self.counter)
+        payload = {
+            'warehouse': self.warehouse.id,
+            'fa_unic_code': 'ATTACK-IDEM-001',
+            'description': 'تلاش برای دستکاری کالای شرکت دیگر',
+            'sync_id': other_sync_id
+        }
+
+        res = self.client.post('/api/inventory/items/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+        other_item.refresh_from_db()
+        self.assertEqual(other_item.description, "شرح اولیه شرکت دیگر")
+        self.assertTrue(other_item.is_deleted)
+
     def test_optimistic_concurrency_conflict_409(self):
         """تسک ۶: بررسی تشخیص تداخل و ارسال پاسخ 409 در صورت قدیمی بودن نسخه کلاینت"""
         item = Item.objects.create(
