@@ -1665,6 +1665,22 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                                 wh_str = str(warehouse_str).strip()
                                 wh = Warehouse.objects.filter(id__in=allowed_warehouse_ids).filter(Q(name__iexact=wh_str) | Q(code__iexact=wh_str)).first()
                                 if not wh:
+                                    if warehouse_id:
+                                        target_wh = Warehouse.objects.filter(id=int(warehouse_id)).first()
+                                        if target_wh:
+                                            if target_wh.company_id is not None:
+                                                same_co_qs = Warehouse.objects.filter(company_id=target_wh.company_id)
+                                            else:
+                                                same_co_qs = Warehouse.objects.filter(company__isnull=True)
+                                            mismatch_wh = same_co_qs.filter(Q(name__iexact=wh_str) | Q(code__iexact=wh_str)).first()
+                                            if mismatch_wh and mismatch_wh.id != int(warehouse_id):
+                                                failed += 1
+                                                err_msg = f"مغایرت انبار: فرآیند برای انبار شناسه {warehouse_id} آغاز شده اما این ردیف انبار '{mismatch_wh.name}' را مشخص کرده است."
+                                                error_details.append({"row": row_idx, "code": fa_unic_code, "error": err_msg})
+                                                append_colored_row(row, 'err', err_msg)
+                                                q.put(json.dumps({"type": "err", "msg": f"[ردیف {row_idx}] خطا در {fa_unic_code}: {err_msg}"}) + "\n")
+                                                continue
+
                                     failed += 1
                                     err_msg = f"انبار با نام یا کد '{wh_str}' یافت نشد."
                                     error_details.append({"row": row_idx, "code": fa_unic_code, "error": err_msg})
