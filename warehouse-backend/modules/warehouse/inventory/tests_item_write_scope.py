@@ -5,7 +5,7 @@ import openpyxl
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
-from django.test import TestCase
+from django.test import TransactionTestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -16,7 +16,7 @@ from inventory.models import Item
 User = get_user_model()
 
 
-class ItemWriteScopeSecurityTests(TestCase):
+class ItemWriteScopeSecurityTests(TransactionTestCase):
     """
     تست‌های ایزولاسیون تفکیک داده (Tenant Scope) در مسیرهای ویرایشی ItemViewSet:
     clear_warehouse_data, delete_from_excel, import_excel, bulk_update
@@ -39,12 +39,14 @@ class ItemWriteScopeSecurityTests(TestCase):
         )
 
         self.warehouse_a = Warehouse.objects.create(
+            code="WH-A-01",
             name="انبار الف",
             project_name="پروژه الف",
             company_id=self.company_a.id,
             company_name=self.company_a.name,
         )
         self.warehouse_b = Warehouse.objects.create(
+            code="WH-B-01",
             name="انبار ب",
             project_name="پروژه ب",
             company_id=self.company_b.id,
@@ -67,13 +69,29 @@ class ItemWriteScopeSecurityTests(TestCase):
 
         # ثبت مجوزهای لازم روی کانتنت‌تایپ User
         ct = ContentType.objects.get_for_model(User)
-        for perm_code in ['perm_rec_import', 'perm_wh_edit', 'view_sys_counter', 'view_sys_supervisor']:
+        for perm_code in ['perm_rec_import', 'perm_wh_edit', 'view_sys_counter', 'view_sys_supervisor', 'perm_rec_dispatch']:
             perm, _ = Permission.objects.get_or_create(
                 content_type=ct,
                 codename=perm_code,
                 defaults={'name': perm_code}
             )
             self.user.user_permissions.add(perm)
+
+        # کاربر شرکت ب (بدون انتساب انبار، دسترسی نامحدود به شرکت ب)
+        self.user_b = User.objects.create_user(
+            username="user_b_scope_tester",
+            password="Password123!",
+            is_superuser=False,
+        )
+        UserCompanyAccess.objects.create(
+            user=self.user_b,
+            company=self.company_b,
+            access_level="workspace_full",
+            is_default=True,
+        )
+        for perm_code in ['perm_rec_import', 'perm_wh_edit', 'view_sys_counter', 'view_sys_supervisor', 'perm_rec_dispatch']:
+            perm = Permission.objects.get(codename=perm_code)
+            self.user_b.user_permissions.add(perm)
 
         # ایجاد اقلام تستی در هر دو انبار
         self.item_a = Item.objects.create(
@@ -218,3 +236,154 @@ class ItemWriteScopeSecurityTests(TestCase):
         self.item_a.refresh_from_db()
         self.assertNotEqual(self.item_a.created_by_id, other.id)
         self.assertNotEqual(self.item_a.modified_by_id, other.id)
+
+    def test_null_warehouse_import_log_cannot_be_reverted_cancelled_or_downloaded_by_other_company_user(self):
+        """
+        لاگ واردات بدون انبار (warehouse=None) توسط کاربر نامحدود شرکت دیگر قابل بازگردانی، لغو یا دانلود نیست (۴۰۳)
+        و اقلام بدون تغییر باقی می‌مانند.
+        """
+        import os
+        import tempfile
+        from inventory.models import ImportLog, ImportHistory
+
+        import_id = "IMP-NULL-SCOPE-01"
+        log = ImportLog.objects.create(
+            import_id=import_id,
+            warehouse=None,
+            imported_by=self.user,
+            file_name="test_null_wh.xlsx",
+            records_created=0,
+            records_updated=1,
+            conflict_strategy="update",
+        )
+        ImportHistory.objects.create(
+            import_log=log,
+            item=self.item_a,
+            action="update",
+            previous_state={"description": "توضیحات قبل از بازگردانی"},
+        )
+
+        temp_dir = os.path.abspath(tempfile.gettempdir())
+        file_path = os.path.join(temp_dir, f"import_log_{import_id}.xlsx")
+        with open(file_path, "wb") as f:
+            f.write(b"dummy-import-log-content")
+        self.addCleanup(lambda: os.remove(file_path) if os.path.exists(file_path) else None)
+
+        client_b = APIClient()
+        client_b.force_authenticate(user=self.user_b)
+
+        # ۱. تلاش برای revert_import
+        resp_revert = client_b.post("/api/inventory/items/revert_import/", {'import_id': import_id}, format='json')
+        self.assertEqual(resp_revert.status_code, status.HTTP_403_FORBIDDEN)
+        log.refresh_from_db()
+        self.assertFalse(log.is_reverted)
+        self.item_a.refresh_from_db()
+        self.assertEqual(self.item_a.description, "کالای انبار الف")
+
+        # ۲. تلاش برای cancel_import
+        resp_cancel = client_b.post("/api/inventory/items/cancel_import/", {'import_id': import_id}, format='json')
+        self.assertEqual(resp_cancel.status_code, status.HTTP_403_FORBIDDEN)
+
+        # ۳. تلاش برای download_import_log
+        resp_download = client_b.get(f"/api/inventory/items/download_import_log/?import_id={import_id}")
+        self.assertEqual(resp_download.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cancel_running_import_with_no_log_works_for_owner_and_forbidden_for_other(self):
+        """
+        لغو فرآیند در حال اجرای واردات (قبل از تشکیل لاگ) برای مالک موفق و برای کاربر شرکت دیگر ۴۰۳ است.
+        """
+        from django.core.cache import cache
+
+        running_id = "IMP-RUNNING-SCOPE-99"
+        cache.set(f"import_owner_{running_id}", self.user.id, timeout=3600)
+        self.addCleanup(lambda: cache.delete(f"import_owner_{running_id}"))
+        self.addCleanup(lambda: cache.delete(f"cancel_import_{running_id}"))
+
+        client_b = APIClient()
+        client_b.force_authenticate(user=self.user_b)
+
+        # تلاش کاربر شرکت دیگر برای لغو فرآیند در حال اجرا
+        resp_b = client_b.post("/api/inventory/items/cancel_import/", {'import_id': running_id}, format='json')
+        self.assertEqual(resp_b.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(resp_b.json().get('error'), 'شما دسترسی لازم برای لغو این فرآیند را ندارید.')
+        self.assertIsNone(cache.get(f"cancel_import_{running_id}"))
+
+        # لغو توسط کاربر مالک
+        resp_a = self.client.post("/api/inventory/items/cancel_import/", {'import_id': running_id}, format='json')
+        self.assertEqual(resp_a.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp_a.json().get('status'), 'cancelled')
+        self.assertTrue(cache.get(f"cancel_import_{running_id}"))
+
+    def test_import_row_naming_other_company_warehouse_code_returns_generic_error_without_leaking_name(self):
+        """
+        ردیف واردات با کد انبار شرکت دیگر باید خطای عمومی 'یافت نشد' برگرداند و نام انبار شرکت دیگر را لو ندهد.
+        """
+        import asyncio
+
+        self.warehouse_b.code = "WH-B-SECRET-CODE"
+        self.warehouse_b.name = "انبار فوق محرمانه شرکت ب"
+        self.warehouse_b.save(update_fields=['code', 'name'])
+
+        excel_file = self._create_sample_excel_file(
+            headers=['fa_unic_code', 'description', 'warehouse'],
+            rows=[['ITEM-TEST-CROSS', 'کالای تستی', 'WH-B-SECRET-CODE']],
+            filename="import_cross_wh.xlsx"
+        )
+
+        response = self.client.post(
+            "/api/inventory/items/import_excel/",
+            {'warehouse_id': self.warehouse_a.id, 'file': excel_file, 'import_id': 'IMP-CROSS-01'},
+            format='multipart'
+        )
+
+        async def _consume(streaming_content):
+            res = []
+            async for chunk in streaming_content:
+                res.append(chunk.decode('utf-8') if isinstance(chunk, bytes) else chunk)
+            return "".join(res)
+
+        import json
+        content = asyncio.run(_consume(response.streaming_content))
+        # نام انبار شرکت ب نباید در پاسخ حضور داشته باشد
+        self.assertNotIn(self.warehouse_b.name, content)
+        # خطای عمومی عدم یافتن انبار باید بازگردانده شود
+        lines = [json.loads(line) for line in content.strip().splitlines() if line.strip()]
+        error_msgs = [line.get('msg', '') for line in lines if line.get('type') == 'err']
+        self.assertTrue(any("انبار با نام یا کد 'WH-B-SECRET-CODE' یافت نشد." in msg for msg in error_msgs))
+
+    def test_bulk_assign_blocks_cross_company_assignee_and_creates_no_count_task(self):
+        """
+        تخصیص کاربر شرکت ب به عنوان field_assignee برای کالاهای شرکت الف با خطای ۴۰۰ رد شده و تسک شمارش ایجاد نمی‌شود.
+        """
+        from inventory.models import CountTask
+
+        response = self.client.post(
+            "/api/inventory/items/bulk_assign/",
+            {
+                'ids': [self.item_a.id],
+                'field_assignee': self.user_b.id,
+                'field_status': 'counting',
+            },
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json().get('error'), 'کاربر انتخابشده عضو شرکت این کالاها نیست.')
+        self.assertFalse(CountTask.objects.filter(item=self.item_a).exists())
+
+    def test_bulk_assign_permits_same_company_assignee(self):
+        """
+        تخصیص کاربر همان شرکت با موفقیت انجام می‌شود و CountTask ایجاد می‌گردد.
+        """
+        from inventory.models import CountTask
+
+        response = self.client.post(
+            "/api/inventory/items/bulk_assign/",
+            {
+                'ids': [self.item_a.id],
+                'field_assignee': self.user.id,
+                'field_status': 'counting',
+            },
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(CountTask.objects.filter(item=self.item_a).exists())

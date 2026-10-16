@@ -177,6 +177,18 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         except (ValueError, TypeError):
             return False
 
+    def _can_manage_import_log(self, import_log):
+        if not import_log:
+            return False
+        user = getattr(getattr(self, 'request', None), 'user', None)
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_superuser:
+            return True
+        if import_log.warehouse_id is None:
+            return import_log.imported_by_id == user.id
+        return self._can_write_warehouse(import_log.warehouse_id)
+
     def _ensure_target_warehouse_in_scope(self, warehouse):
         from rest_framework.exceptions import PermissionDenied
         wh_id = getattr(warehouse, 'id', warehouse)
@@ -883,6 +895,23 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 doc_skip_supervisor = True
             else:
                 doc_supervisor_user = _get_user_or_none(doc_supervisor_id)
+
+        assignees = [u for u in [counter_user, supervisor_user, manager_user, doc_worker_user, doc_supervisor_user, doc_manager_user] if u is not None]
+        if assignees and items.exists():
+            from companies.access import get_user_allowed_companies
+            item_wh_companies = list(items.values_list('warehouse__company_id', flat=True).distinct())
+            has_no_company_items = any(cid is None for cid in item_wh_companies)
+            item_company_ids = {cid for cid in item_wh_companies if cid is not None}
+
+            for assignee in assignees:
+                if assignee.is_superuser:
+                    continue
+                if not assignee.is_active:
+                    return Response({'error': 'کاربر انتخابشده عضو شرکت این کالاها نیست.'}, status=400)
+                if item_company_ids:
+                    allowed_company_ids = set(get_user_allowed_companies(assignee).values_list('id', flat=True))
+                    if not item_company_ids.issubset(allowed_company_ids):
+                        return Response({'error': 'کاربر انتخابشده عضو شرکت این کالاها نیست.'}, status=400)
         
         update_data = {}
         if 'field_assignee' in request.data:
@@ -1249,8 +1278,13 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             return Response({'error': 'شناسه فرآیند نامعتبر است.'}, status=400)
 
         import_log = ImportLog.objects.filter(import_id=import_id).first()
-        if import_log and not self._can_write_warehouse(import_log.warehouse_id):
-            return Response({'error': 'شما دسترسی لازم برای لغو این فرآیند را ندارید.'}, status=403)
+        if import_log:
+            if not self._can_manage_import_log(import_log):
+                return Response({'error': 'شما دسترسی لازم برای لغو این فرآیند را ندارید.'}, status=403)
+        else:
+            cached_owner = cache.get(f"import_owner_{import_id}")
+            if not (request.user.is_superuser or (cached_owner is not None and cached_owner == request.user.id)):
+                return Response({'error': 'شما دسترسی لازم برای لغو این فرآیند را ندارید.'}, status=403)
 
         cache.set(f"cancel_import_{import_id}", True, timeout=3600)
         return Response({'status': 'cancelled'})
@@ -1269,10 +1303,9 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         if not import_log:
             return Response({'error': 'فایل لاگ یافت نشد یا منقضی شده است.'}, status=404)
 
-        # کنترل دسترسی کاربر به لاگ (سوپریوزر، ثبت‌کننده لاگ یا دسترسی مجاز به انبار)
+        # کنترل دسترسی کاربر به لاگ (سوپریوزر، ثبت‌کننده لاگ یا هلپر مدیریت لاگ)
         is_owner = (import_log.imported_by_id == request.user.id)
-        has_wh_access = self._can_write_warehouse(import_log.warehouse_id)
-        if not (request.user.is_superuser or is_owner or has_wh_access):
+        if not (request.user.is_superuser or is_owner or self._can_manage_import_log(import_log)):
             return Response({'error': 'شما دسترسی لازم برای دریافت این فایل لاگ را ندارید.'}, status=403)
 
         temp_dir = os.path.abspath(tempfile.gettempdir())
@@ -1357,6 +1390,9 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         user_id = request.user.id if request.user.is_authenticated else None
         original_file_name = file_obj.name
         allowed_warehouse_ids = self._allowed_warehouse_ids()
+
+        if import_id and request.user.is_authenticated:
+            cache.set(f"import_owner_{import_id}", request.user.id, timeout=3600)
 
         def worker(q):
             try:
@@ -1629,16 +1665,6 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                                 wh_str = str(warehouse_str).strip()
                                 wh = Warehouse.objects.filter(id__in=allowed_warehouse_ids).filter(Q(name__iexact=wh_str) | Q(code__iexact=wh_str)).first()
                                 if not wh:
-                                    if warehouse_id:
-                                        conflicting_wh = Warehouse.objects.filter(name__iexact=wh_str).first() or Warehouse.objects.filter(code__iexact=wh_str).first()
-                                        if conflicting_wh and conflicting_wh.id != int(warehouse_id):
-                                            failed += 1
-                                            err_msg = f"مغایرت انبار: فرآیند برای انبار شناسه {warehouse_id} آغاز شده اما این ردیف انبار '{conflicting_wh.name}' را مشخص کرده است."
-                                            error_details.append({"row": row_idx, "code": fa_unic_code, "error": err_msg})
-                                            append_colored_row(row, 'err', err_msg)
-                                            q.put(json.dumps({"type": "err", "msg": f"[ردیف {row_idx}] خطا در {fa_unic_code}: {err_msg}"}) + "\n")
-                                            continue
-
                                     failed += 1
                                     err_msg = f"انبار با نام یا کد '{wh_str}' یافت نشد."
                                     error_details.append({"row": row_idx, "code": fa_unic_code, "error": err_msg})
@@ -2141,7 +2167,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         except ImportLog.DoesNotExist:
             return Response({'error': 'فرآیندی با این شناسه یافت نشد.'}, status=404)
 
-        if not self._can_write_warehouse(import_log.warehouse_id):
+        if not self._can_manage_import_log(import_log):
             return Response({'error': 'شما به این انبار دسترسی ندارید.'}, status=403)
 
         if import_log.is_reverted:
