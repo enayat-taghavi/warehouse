@@ -5165,3 +5165,44 @@ test(org-directory): company_id narrowing for section members
   - Verifies that `UserViewSet._org_admin_directory_queryset` honors `company_id` query paramet...
 
 ---
+
+### Task 1 of 1 — 2026-10-17 00:52:54
+- **Status:** DONE
+- **Conversation:** `1b99792b-2108-4d37-af4a-156d9759a868`
+- **Steps:** 11
+- **Duration:** 3m 4s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 4/4 passed
+- **Task:**
+```
+Session 11 — Phase 3 release on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+
+2. Context: the phase 3 queue (sessions 1 to 10) changed backend and frontend code and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 3'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
+- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false`, then `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error; do not try workarounds that touch files or services.
+
+5. Before finishing: `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the `showmigrations` result, the build result (errors, warnings count) and the patch script line. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+I have launched the frontend build (`npx ng build --delete-output-path=false`) and am waiting for it to complete.
+
+---
