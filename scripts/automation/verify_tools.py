@@ -16,7 +16,7 @@
   python scripts/automation/verify_tools.py migrate-empty [--modules all warehouse accounting]
   python scripts/automation/verify_tools.py sample-module
   python scripts/automation/verify_tools.py release-mark
-  python scripts/automation/verify_tools.py release-check
+  python scripts/automation/verify_tools.py release-check [--frontend-only]
 
 هر فرمان در موفقیت کد ۰ و در شکست کد ۱ می‌دهد و علت را چاپ می‌کند.
 الگوهای ng-test-compare نسبت به warehouse-front هستند (مثل src/app/shared/icons/*.spec.ts).
@@ -231,6 +231,8 @@ def cmd_release_check(args) -> int:
     if worker.is_file() and NGSW_PATCH_MARK not in worker.read_text(encoding="utf-8", errors="replace"):
         problems.append("ngsw-worker.js is not patched (run node tools/patch-ngsw-530.js)")
 
+    # --frontend-only: فقط بیلد تازه لازم است؛ daphne و worker باید در حال اجرا باشند ولی لازم نیست تازه باشند.
+    restart_needed = not args.frontend_only
     daphne = None
     for c in psutil.net_connections(kind="tcp"):
         if c.laddr and c.laddr.port == 8000 and c.status == psutil.CONN_LISTEN and c.pid:
@@ -242,7 +244,7 @@ def cmd_release_check(args) -> int:
         cmdline = " ".join(daphne.cmdline())
         if "daphne" not in cmdline:
             problems.append(f"port 8000 is not daphne: {cmdline[:150]}")
-        elif daphne.create_time() < start:
+        elif restart_needed and daphne.create_time() < start:
             problems.append("daphne on port 8000 was started before the release mark (not restarted)")
         else:
             ok.append(f"daphne pid {daphne.pid}")
@@ -254,7 +256,7 @@ def cmd_release_check(args) -> int:
             workers.append(p)
     if not workers:
         problems.append("no GDrive sync worker python process is running")
-    elif not any(p.info["create_time"] >= start for p in workers):
+    elif restart_needed and not any(p.info["create_time"] >= start for p in workers):
         problems.append("GDrive sync worker was not restarted after the release mark")
     else:
         ok.append(f"gdrive worker pid(s) {[p.pid for p in workers]}")
@@ -845,6 +847,8 @@ def main(argv=None) -> int:
     p.set_defaults(func=cmd_release_mark)
 
     p = sub.add_parser("release-check", help="app release after release-mark: backup, patched build, restarts, heartbeat, 200")
+    p.add_argument("--frontend-only", action="store_true",
+                   help="daphne and the worker must run but need not be restarted after the mark")
     p.set_defaults(func=cmd_release_check)
 
     p = sub.add_parser("sample-module", help="new_module.py builds a sample module in a HEAD copy without touching the core")
