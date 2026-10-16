@@ -145,3 +145,29 @@ SOD_RULES = [
         'prohibition_reason_fa': 'خزانه‌دار دسترسی به تغییر احکام یا ساعات کارکرد ندارد.'
     },
 ]
+
+SOD_ROUTE_RULES = [
+    (10, ('attendance',), '/attendance'),
+    (20, ('profiles',), '/profiles'),
+    (30, ('finance', 'monthly-payroll'), '/finance-cartable'),
+    (40, ('treasury',), '/treasury-cartable'),
+    (50, ('manager',), '/manager-approvals'),
+]
+
+
+def resolve_personnel_sod_action(request, view, action_name, method, page_route) -> str | None:
+    """
+    ریزالور اکشن تفکیک وظایف (SoD) برای ماژول حسابداری و پرسنلی.
+    """
+    if action_name in ['approve_manager', 'approve_finance', 'approve_supervisor']:
+        return f"approve_{action_name.split('_')[-1]}"
+    elif action_name in ['disburse_period', 'disburse_single_payroll', 'disburse_fleet']:
+        return 'disburse_treasury_payment'
+    elif action_name == 'create' and page_route == '/attendance':
+        return 'create_daily_attendance_entry'
+    elif action_name in ['lock_period', 'approve_period'] and page_route == '/attendance':
+        return 'approve_attendance_period'
+    elif method in ['POST', 'PUT', 'PATCH'] and 'wage' in str(getattr(request, 'data', '')):
+        return 'edit_base_wage_and_bonuses'
+    return None
+

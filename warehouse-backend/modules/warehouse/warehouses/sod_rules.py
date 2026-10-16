@@ -39,3 +39,8 @@ SOD_RULES = [
         'prohibition_reason_fa': 'تایید نهایی صدور تغذیه سیستمی نیازمند تایید مدیر پروژه/ناظر عالی است.'
     },
 ]
+
+SOD_ROUTE_RULES = [
+    (60, ('customs',), '/customs'),
+]
+

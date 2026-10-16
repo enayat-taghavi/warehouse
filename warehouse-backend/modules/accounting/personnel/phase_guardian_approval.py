@@ -171,7 +171,7 @@ class ApprovalPhaseGuardian:
             from django.contrib.auth import get_user_model
             from django.contrib.auth.models import Permission
             from rest_framework.test import APIRequestFactory
-            from accounts.permissions import (
+            from personnel.permissions import (
                 CanApprovePersonnelSupervisor,
                 CanApprovePersonnelFinance,
                 CanApprovePersonnelManager,

@@ -78,9 +78,11 @@ class WarehousesConfig(AppConfig):
         contribute('report_registrars', register_warehouse_report_entities)
 
         # قوانین تفکیک وظایف (SoD) ماژول انبار
-        from warehouses.sod_rules import SOD_RULES
+        from warehouses.sod_rules import SOD_RULES, SOD_ROUTE_RULES
         for rule in SOD_RULES:
             contribute('sod_rules', rule)
+        for rule in SOD_ROUTE_RULES:
+            contribute('sod_route_rules', rule)
 
         # حل‌کننده نقش‌های ماژول انبار برای میان‌افزار احراز هویت
         from warehouses.role_resolver import resolve_warehouse_roles

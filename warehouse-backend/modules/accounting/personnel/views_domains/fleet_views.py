@@ -15,7 +15,7 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 from common.date_utils import normalize_digits
-from accounts.permissions import (
+from personnel.permissions import (
     CanApproveFleetManager,
     CanApproveFleetFinance,
 )

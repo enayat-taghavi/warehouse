@@ -15,7 +15,7 @@ from django.http import HttpResponse
 from django.db.models import Q
 from django.utils import timezone
 
-from accounts.permissions import (
+from personnel.permissions import (
     CanApprovePersonnelSupervisor,
     CanApproveFleetSupervisor,
     CanApprovePersonnelFinance,

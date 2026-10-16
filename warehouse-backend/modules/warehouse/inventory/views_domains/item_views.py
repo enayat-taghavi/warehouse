@@ -354,7 +354,8 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             _soft_delete_items_cascade(Item.objects.filter(id=instance.id))
 
     def get_permissions(self):
-        from accounts.permissions import HasMenuAccess, CanManageItemPhotos
+        from accounts.permissions import HasMenuAccess
+        from inventory.permissions import CanManageItemPhotos
         from rest_framework.permissions import AllowAny, IsAuthenticated
 
         if self.action == 'photos':

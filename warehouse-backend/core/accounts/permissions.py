@@ -168,211 +168,6 @@ class CanRestoreDeleted(permissions.BasePermission):
         )
 
 
-class CanApproveDocuments(permissions.BasePermission):
-    """
-    Allows approving, rejecting, and signing financial/shipping documents.
-    """
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        return bool(
-            request.user.is_superuser or
-            request.user.has_perm('accounts.perm_doc_approve_action') or
-            request.user.has_perm('accounts.can_act_as_doc_supervisor') or
-            request.user.has_perm('accounts.can_act_as_manager')
-        )
-
-
-class CanApproveFeeds(permissions.BasePermission):
-    """
-    Allows approving and applying feeding/customs records.
-    """
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        return bool(
-            request.user.is_superuser or
-            request.user.has_perm('accounts.perm_feed_approve_action') or
-            request.user.has_perm('accounts.can_act_as_supervisor') or
-            request.user.has_perm('accounts.can_act_as_manager')
-        )
-
-
-class CanFinalizeInventory(permissions.BasePermission):
-    """
-    Allows final approval and closing of inventory counts/discrepancies.
-    """
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        return bool(
-            request.user.is_superuser or
-            request.user.has_perm('accounts.perm_inventory_finalize') or
-            request.user.has_perm('accounts.can_act_as_manager')
-        )
-
-
-class CanManageItemPhotos(permissions.BasePermission):
-    """
-    اجازه ثبت/ویرایش/حذف عکس کالا.
-
-    پیش از این، نوشتنِ عکس فقط IsAuthenticated بود؛ یعنی کاربری با تنها
-    دسترسی «گزارش‌ساز» هم می‌توانست برای هر کالایی عکس آپلود یا عکس دیگران را
-    حذف کند. اینجا دقیقاً همان نقش‌هایی مجاز می‌شوند که در UI دکمه دوربین را
-    می‌بینند (کارتابل‌های شمارش، مدیریت کالا، تخصیص، گمرک).
-
-    فهرست عمداً سخاوتمندانه است: هدف بستن دسترسی نقش‌های نامرتبط است، نه
-    محدودکردن نقش‌هایی که امروز از این قابلیت استفاده می‌کنند. *خواندن* عکس
-    محدود نمی‌شود (فقط IsAuthenticated + اسکوپ انبار).
-    """
-
-    ALLOWED_PERMISSIONS = (
-        'accounts.view_sys_counter',
-        'accounts.view_sys_supervisor',
-        'accounts.view_sys_manager_review',
-        'accounts.view_sys_recounts',
-        'accounts.view_wh_docs',
-        'accounts.view_wh_dispatch',
-        'accounts.view_wh_customs',
-        'accounts.perm_inventory_finalize',
-        'accounts.can_act_as_manager',
-        'accounts.can_act_as_supervisor',
-        'accounts.can_act_as_counter',
-    )
-
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        if request.user.is_superuser:
-            return True
-        return any(request.user.has_perm(p) for p in self.ALLOWED_PERMISSIONS)
-
-
-class CanApprovePersonnelManager(permissions.BasePermission):
-    """
-    دسترسی تایید مرحله اول (عملیاتی) پرسنل
-    """
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        return bool(
-            request.user.is_superuser or
-            request.user.has_perm('accounts.perm_approve_personnel_manager') or
-            request.user.has_perm('accounts.can_act_as_manager')
-        )
-
-
-class CanApprovePersonnelFinance(permissions.BasePermission):
-    """
-    دسترسی تایید مرحله دوم (مالی) پرسنل
-    """
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        return bool(
-            request.user.is_superuser or
-            request.user.has_perm('accounts.perm_approve_personnel_finance')
-        )
-
-
-class CanApproveFleetManager(permissions.BasePermission):
-    """
-    دسترسی تایید مرحله اول (عملیاتی) ناوگان و رانندگان
-    """
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        return bool(
-            request.user.is_superuser or
-            request.user.has_perm('accounts.perm_approve_fleet_manager') or
-            request.user.has_perm('accounts.can_act_as_manager')
-        )
-
-
-class CanApproveFleetFinance(permissions.BasePermission):
-    """
-    دسترسی تایید مرحله دوم (مالی) ناوگان و رانندگان
-    """
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        return bool(
-            request.user.is_superuser or
-            request.user.has_perm('accounts.perm_approve_fleet_finance')
-        )
-
-
-class CanApprovePersonnelSupervisor(permissions.BasePermission):
-    """
-    دسترسی تایید مرحله سرپرست انبار برای پرسنل
-    """
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        return bool(
-            request.user.is_superuser or
-            request.user.has_perm('accounts.perm_approve_personnel_supervisor') or
-            request.user.has_perm('accounts.perm_approve_personnel_manager') or
-            request.user.has_perm('accounts.can_act_as_manager')
-        )
-
-
-class CanApproveFleetSupervisor(permissions.BasePermission):
-    """
-    دسترسی تایید مرحله سرپرست انبار برای ناوگان و رانندگان
-    """
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        return bool(
-            request.user.is_superuser or
-            request.user.has_perm('accounts.perm_approve_fleet_supervisor') or
-            request.user.has_perm('accounts.perm_approve_fleet_manager') or
-            request.user.has_perm('accounts.can_act_as_manager')
-        )
-
-
-class CanAuthorizePaymentManager(permissions.BasePermission):
-    """
-    دسترسی صدور مجوز پرداخت نهایی مدیر شرکت
-    """
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        return bool(
-            request.user.is_superuser or
-            request.user.has_perm('accounts.perm_manager_payment_authorize') or
-            request.user.has_perm('accounts.can_act_as_manager')
-        )
-
-
-class CanDisburseTreasury(permissions.BasePermission):
-    """
-    دسترسی ثبت واریز و تسویه نهایی خزانه‌داری
-    """
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        return bool(
-            request.user.is_superuser or
-            request.user.has_perm('accounts.perm_treasury_disburse_action')
-        )
-
-
-class CanViewTreasury(permissions.BasePermission):
-    """
-    دسترسی مشاهده کارتابل خزانه‌داری
-    """
-    def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        return bool(
-            request.user.is_superuser or
-            request.user.has_perm('accounts.view_sys_treasury') or
-            request.user.has_perm('accounts.perm_treasury_disburse_action')
-        )
-
-
 def check_sod_prohibition(request, page_route: str, action_code: str, app_module: str = None):
     """
     بررسی صریح خطوط قرمز تفکیک وظایف (SoD Barrier Check).
@@ -408,42 +203,33 @@ def resolve_sod_context(request, view) -> tuple[str, str]:
     استخراج مسیر صفحه (page_route) و کد عملیات (action_code) از ویو یا مسیر درخواست
     جهت ارزیابی در ماتریس تفکیک وظایف (SoD).
     """
+    from platform_core.registry import contributions
+
     page_route = getattr(view, 'sod_page_route', None)
     action_code = getattr(view, 'sod_action_code', None)
 
     if not page_route:
         path = request.path.lower()
-        if 'attendance' in path:
-            page_route = '/attendance'
-        elif 'profiles' in path:
-            page_route = '/profiles'
-        elif 'finance' in path or 'monthly-payroll' in path:
-            page_route = '/finance-cartable'
-        elif 'treasury' in path:
-            page_route = '/treasury-cartable'
-        elif 'manager' in path:
-            page_route = '/manager-approvals'
-        elif 'customs' in path:
-            page_route = '/customs'
-        else:
+        rules = sorted(contributions('sod_route_rules'), key=lambda r: r[0])
+        for priority, keywords, route in rules:
+            if any(kw in path for kw in keywords):
+                page_route = route
+                break
+        if not page_route:
             page_route = '/attendance'
 
     if not action_code:
         action_name = getattr(view, 'action', None)
         method = request.method.upper()
 
-        if action_name in ['approve_manager', 'approve_finance', 'approve_supervisor']:
-            action_code = f"approve_{action_name.split('_')[-1]}"
-        elif action_name in ['disburse_period', 'disburse_single_payroll', 'disburse_fleet']:
-            action_code = 'disburse_treasury_payment'
-        elif action_name == 'create' and page_route == '/attendance':
-            action_code = 'create_daily_attendance_entry'
-        elif action_name in ['lock_period', 'approve_period'] and page_route == '/attendance':
-            action_code = 'approve_attendance_period'
-        elif method in ['POST', 'PUT', 'PATCH'] and 'wage' in str(request.data):
-            action_code = 'edit_base_wage_and_bonuses'
-        else:
-            action_code = action_name or method.lower()
+        resolved = None
+        for resolver in contributions('sod_action_resolvers'):
+            res = resolver(request, view, action_name, method, page_route)
+            if res is not None:
+                resolved = res
+                break
+
+        action_code = resolved if resolved is not None else (action_name or method.lower())
 
     return page_route, action_code
 

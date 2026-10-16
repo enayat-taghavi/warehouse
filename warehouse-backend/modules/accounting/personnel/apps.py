@@ -70,9 +70,12 @@ class PersonnelConfig(AppConfig):
 
         # قوانین تفکیک وظایف (SoD) ماژول حسابداری
         from platform_core.registry import contribute
-        from personnel.sod_rules import SOD_RULES
+        from personnel.sod_rules import SOD_RULES, SOD_ROUTE_RULES, resolve_personnel_sod_action
         for rule in SOD_RULES:
             contribute('sod_rules', rule)
+        for rule in SOD_ROUTE_RULES:
+            contribute('sod_route_rules', rule)
+        contribute('sod_action_resolvers', resolve_personnel_sod_action)
 
         # حل‌کننده نقش‌های ماژول حسابداری برای میان‌افزار احراز هویت
         from personnel.role_resolver import resolve_personnel_roles

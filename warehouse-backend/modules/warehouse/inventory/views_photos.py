@@ -30,7 +30,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.middleware import get_client_ip
-from accounts.permissions import CanManageItemPhotos
+from inventory.permissions import CanManageItemPhotos
 from common.warehouse_scope import can_access_warehouse, scope_queryset
 
 from .models import Item, ItemPhoto
