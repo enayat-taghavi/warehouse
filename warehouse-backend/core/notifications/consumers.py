@@ -3,6 +3,7 @@ import logging
 from urllib.parse import parse_qs
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+from platform_core.registry import normalize_ws_app_scope
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +19,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             query_string = self.scope.get('query_string', b'').decode('utf-8')
             params = parse_qs(query_string)
             app_param = params.get('app', [None])[0]
-            if app_param in ('warehouse', 'finance', 'personnel'):
-                normalized_app = 'finance' if app_param == 'personnel' else app_param
+            normalized_app = normalize_ws_app_scope(app_param)
+            if normalized_app:
                 self.app_group_name = f'app_{normalized_app}'
             self.client_tab_id = params.get('tab_id', [None])[0]
         except Exception:
@@ -107,8 +108,8 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 new_app = payload.get('app')
                 if payload.get('tab_id'):
                     self.client_tab_id = payload.get('tab_id')
-                if new_app in ('warehouse', 'finance', 'personnel'):
-                    normalized_app = 'finance' if new_app == 'personnel' else new_app
+                normalized_app = normalize_ws_app_scope(new_app)
+                if normalized_app:
                     new_group = f'app_{normalized_app}'
                     if self.app_group_name != new_group:
                         if self.app_group_name:
@@ -208,7 +209,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             # ایزولاسیون قلمرو پیام: جلوگیری از ارسال رویدادهای غیرمرتبط به کلاینت
             event_app = event.get('app_module') or event.get('target_app')
             if event_app and self.app_group_name:
-                normalized_event_app = 'finance' if event_app == 'personnel' else event_app
+                normalized_event_app = normalize_ws_app_scope(event_app) or event_app
                 expected_group = f'app_{normalized_event_app}'
                 if expected_group != self.app_group_name and event.get('type_str') != 'system_broadcast':
                     return

@@ -88,7 +88,7 @@ class SwitchAppScopeView(APIView):
                 'error': f"قلمرو نامعتبر است. فقط {', '.join(sorted(allowed_catalog_app_codes))} مجاز است."
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        from ..middleware import get_user_allowed_apps, get_user_valid_roles_for_app
+        from ..middleware import get_user_allowed_apps
         user = request.user
         allowed_apps = get_user_allowed_apps(user)
 
@@ -123,12 +123,10 @@ class SwitchAppScopeView(APIView):
 
         # تولید RefreshToken جدید با قلمرو فعال به‌روزرسانی شده
         from rest_framework_simplejwt.tokens import RefreshToken
+        from platform_core.registry import build_user_token_scopes
         refresh = RefreshToken.for_user(user)
         refresh['allowed_apps'] = allowed_apps
-        refresh['scopes'] = {
-            'finance': get_user_valid_roles_for_app(user, 'personnel'),
-            'warehouse': get_user_valid_roles_for_app(user, 'warehouse')
-        }
+        refresh['scopes'] = build_user_token_scopes(user)
         refresh['active_app'] = target_app
 
         access_token = str(refresh.access_token)

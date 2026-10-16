@@ -611,19 +611,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
 
-        from accounts.middleware import get_user_allowed_apps, get_user_valid_roles_for_app
+        from accounts.middleware import get_user_allowed_apps
+        from platform_core.registry import build_user_token_scopes, resolve_default_active_app
         allowed_apps = get_user_allowed_apps(user)
         token['allowed_apps'] = allowed_apps
-        token['scopes'] = {
-            'finance': get_user_valid_roles_for_app(user, 'personnel'),
-            'warehouse': get_user_valid_roles_for_app(user, 'warehouse')
-        }
-        if 'finance' in allowed_apps and 'warehouse' not in allowed_apps:
-            token['active_app'] = 'finance'
-        elif 'warehouse' in allowed_apps and 'finance' not in allowed_apps:
-            token['active_app'] = 'warehouse'
-        else:
-            token['active_app'] = 'warehouse' if 'warehouse' in allowed_apps else 'finance'
+        token['scopes'] = build_user_token_scopes(user)
+        token['active_app'] = resolve_default_active_app(allowed_apps)
 
         return token
 
@@ -738,16 +731,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             except Exception:
                 role_titles.append(group.name)
 
-        from accounts.middleware import get_user_allowed_apps, get_user_valid_roles_for_app
+        from accounts.middleware import get_user_allowed_apps
+        from platform_core.registry import build_user_token_scopes, resolve_default_active_app
         allowed_apps = get_user_allowed_apps(user)
-        app_scopes = {
-            'finance': get_user_valid_roles_for_app(user, 'personnel'),
-            'warehouse': get_user_valid_roles_for_app(user, 'warehouse')
-        }
-        default_active_app = (
-            'finance' if 'finance' in allowed_apps and 'warehouse' not in allowed_apps
-            else ('warehouse' if 'warehouse' in allowed_apps else 'finance')
-        )
+        app_scopes = build_user_token_scopes(user)
+        default_active_app = resolve_default_active_app(allowed_apps)
 
         data['user'] = {
             'id': user.id,

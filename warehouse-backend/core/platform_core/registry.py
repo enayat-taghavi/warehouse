@@ -267,3 +267,40 @@ def audit_scope_keys(module_code: str) -> tuple[str, ...]:
     return ()
 
 
+def build_user_token_scopes(user) -> dict[str, list[str]]:
+    """
+    تولید دیکشنری scopeهای توکن JWT بر اساس ماژول‌های کاتالوگ پلتفرم.
+    """
+    from platform_core.module_catalog import MODULE_CATALOG
+    from accounts.middleware import get_user_valid_roles_for_app
+
+    scopes = {}
+    for code in MODULE_CATALOG.keys():
+        scopes[module_allowed_app_code(code)] = get_user_valid_roles_for_app(user, code)
+    return scopes
+
+
+def resolve_default_active_app(allowed_apps) -> str:
+    """
+    تعیین قلمرو فعال پیش‌فرض بر اساس فهرست قلمروهای مجاز کاربر.
+    اولویت: اگر finance مجاز و warehouse غیرمجاز باشد، finance؛ وگرنه اگر warehouse مجاز باشد، warehouse؛ در غیر این صورت finance.
+    """
+    allowed = set(allowed_apps or ())
+    if 'finance' in allowed and 'warehouse' not in allowed:
+        return 'finance'
+    elif 'warehouse' in allowed:
+        return 'warehouse'
+    else:
+        return 'finance'
+
+
+def normalize_ws_app_scope(code) -> str | None:
+    """
+    نرمال‌سازی قلمرو وب‌سوکت بر اساس رجیستری ماژول‌ها.
+    """
+    if not code:
+        return None
+    module = app_code_to_module(code)
+    return module_allowed_app_code(module) if module else None
+
+
