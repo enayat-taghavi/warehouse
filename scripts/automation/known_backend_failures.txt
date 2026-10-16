@@ -1,3 +1,2 @@
-# Backend tests failing on HEAD f2d8b95 (16 Oct 2026). One test per line; used by verify_tools.py django-tests --known.
-# Real app bug: a retried item POST with the same sync_id gets 400 from the (warehouse, fa_unic_code) unique validator before perform_create's idempotent path.
-inventory.tests_offline_system.OfflineSystemRemediationTests.test_idempotent_creation_with_sync_id
+# Backend tests failing on HEAD 59d5e3d (16 Oct 2026). One test per line; used by verify_tools.py django-tests --known.
+# (none)

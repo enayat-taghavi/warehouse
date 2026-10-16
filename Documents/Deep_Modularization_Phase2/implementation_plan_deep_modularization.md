@@ -740,4 +740,22 @@ refactor(platform-ui): extract facades for common components and update architec
     - تصمیم کاربر دربارهٔ دو باگ واقعی.
     - بررسی گزارش‌های آزمون دستی کاربر با `systematic-debugging` و تسک اصلاح برای Antigravity.
 
+- **۲۴ مهر ۱۴۰۵، Claude — اصلاح دو باگ واقعی (نشست‌های ۲۱ تا ۲۵، با تأیید کاربر):**
+  - **ابزار runner (`5a58a55`):** `restart-backend` (بستن daphne و بالا آوردنش در تب WT از سمت runner) و `release-check --backend-only`.
+  - **نشست ۲۱ (`2a63d96`) و ۲۴ (`59d5e3d`):**
+    - تکرار POST کالا با همان `sync_id` حالا کالای موجود را بی‌تغییر با ۲۰۰ برمی‌گرداند. بیرون از محدوده ۴۰۳ است.
+    - `tenant-scope-reviewer` در نسخهٔ ۲۱ سه مشکل یافت: بازنویسی ویرایش‌های تازه‌تر، احیای کالای حذف‌شده، و انتقال کالا به انبار شرکت دیگر. نشست ۲۴ هر سه را بست.
+    - `perform_create` و `perform_update` حالا انبار مقصد را با `_ensure_target_warehouse_in_scope` می‌سنجند.
+    - بازبینی دوم تمیز بود.
+  - **نشست ۲۲ (`36da05f`):**
+    - مجوز `view_wh_stocktaking` به `CustomUser.Meta.permissions` افزوده شد.
+    - مهاجرت افزایشی `accounts/0002_view_wh_stocktaking_permission` شامل `AlterModelOptions` و تغییر نام با `RunPython.noop` است.
+    - روی `app` اعمال شد و ۱۷۶ آزمون سبز شد.
+    - روی `soft` هنوز اجرا نشده است؛ با release بعدی `soft` و تأیید کاربر.
+  - **نشست ۲۳ و ۲۵:** release بک‌اند روی `app`. پشتیبان گرفته شد و daphne را runner دوباره راه انداخت.
+  - **`known_backend_failures.txt`:** آزمون idempotency حالا سبز است. فهرست باید خالی شود (کار Claude).
+  - **یافته‌های قدیمی و تأییدشده، اصلاح‌نشده (منتظر تصمیم کاربر):**
+    - `bulk_update` (`item_views.py` حدود ۷۰۲) فیلد `warehouse` را بی‌بررسی می‌نویسد.
+    - `import_excel`، `clear_warehouse_data` و `delete_from_excel` فقط `can_access_warehouse` دارند و بررسی شرکت ندارند. کاربرِ بدون انبار تخصیصی در شرکت A می‌تواند روی انبار شرکت B بنویسد یا آن را پاک (نرم) کند.
+
 </div>
