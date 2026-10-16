@@ -18,6 +18,9 @@ export interface RolePersona {
 export interface ModulePersonas {
   roles: RolePersona[];
   resolveRoleCodes: (ctx: { perms: string[]; userRoles: string[] }) => string[];
+  sodProhibitions?: Record<string, string[]>;
+  isRouteDeniedForRole?: (role: string, cleanRoute: string) => boolean;
+  defaultRouteForRole?: Record<string, string>;
 }
 
 /**

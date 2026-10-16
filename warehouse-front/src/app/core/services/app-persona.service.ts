@@ -44,30 +44,6 @@ export function getAllAppRoles(): RolePersona[] {
   return roles;
 }
 
-// ماتریس محلی خطوط قرمز جهت پنهان‌سازی سریع در DOM فرانت‌اند (O(1))
-export const FRONTEND_SOD_PROHIBITIONS: Record<string, string[]> = {
-  'personnel:operator:/attendance': ['approve_attendance_period', 'lock_period'],
-  'personnel:operator:/profiles': ['approve_personnel_profile', 'approve_vehicle_profile'],
-  'personnel:operator:/finance-cartable': ['view_and_calculate_payroll', 'calculate_payroll', 'export_dsk'],
-  'personnel:operator:/treasury-cartable': ['disburse_treasury_payment'],
-
-  'personnel:supervisor:/profiles': ['edit_base_wage_and_bonuses'],
-  'personnel:supervisor:/finance-cartable': ['approve_payroll_finance'],
-  'personnel:supervisor:/treasury-cartable': ['disburse_treasury_payment'],
-
-  'personnel:accountant:/attendance': ['create_daily_attendance_entry'],
-  'personnel:accountant:/manager-approvals': ['authorize_manager_payment'],
-  'personnel:accountant:/treasury-cartable': ['disburse_direct_payment'],
-
-  'personnel:manager:/attendance': ['input_bulk_attendance_records'],
-  'personnel:manager:/treasury-cartable': ['disburse_treasury_paya'],
-
-  'personnel:treasury:/finance-cartable': ['modify_payroll_calculations'],
-  'personnel:treasury:/profiles': ['modify_employment_contracts'],
-
-  'warehouse:counter:/manager-review': ['finalize_inventory_count'],
-  'warehouse:counter:/customs': ['view_customs_and_costs']
-};
 
 @Injectable({
   providedIn: 'root'
@@ -345,28 +321,15 @@ export class AppPersonaService {
 
   public getDefaultRouteForRole(roleCode?: string): string {
     const role = roleCode || this.activeRole();
+
+    for (const mod of this.moduleRegistry.getInstalledModules()) {
+      const route = mod.personas?.defaultRouteForRole?.[role];
+      if (route) {
+        return route;
+      }
+    }
+
     switch (role) {
-      case 'operator':
-        return '/app/finance/employee-attendance';
-      case 'supervisor':
-        return '/app/finance/supervisor-attendance';
-      case 'accountant':
-        return '/app/finance/accountant-payroll';
-      case 'manager':
-        return '/app/finance/manager-dashboard';
-      case 'treasury':
-      case 'treasurer':
-        return '/app/finance/treasurer-disbursements';
-      case 'org_admin':
-        return '/app/finance/projects-and-sections';
-      case 'counter':
-        return '/app/warehouse/counter';
-      case 'warehouse_supervisor':
-        return '/app/warehouse/supervisor';
-      case 'docs_specialist':
-        return '/app/warehouse/docs';
-      case 'manager_review':
-        return '/app/warehouse/dashboard';
       case 'ops_commander':
         return '/app/operations/cockpit';
       default:
@@ -422,51 +385,10 @@ export class AppPersonaService {
     }
     if (cleanRoute.startsWith('/app/operations') && !this.hasOperationsAccess()) return false;
 
-    // ایزولاسیون صددرصدی نقش فعال در سامانه مالی و کارکرد (Strict RBAC & SoD)
-    if (role === 'accountant') {
-      // حسابدار نباید به صفحات کارمند، سرپرست کارگاه، مدیر، خزانه‌دار دسترسی داشته باشد
-      if (cleanRoute.includes('/employee-') || cleanRoute.includes('/supervisor-') || cleanRoute.includes('/manager-') || cleanRoute.includes('/treasurer-')) {
+    // بررسی قوانین ایزولاسیون مسیر نقش‌ها در ماژول‌های نصب‌شده
+    for (const mod of this.moduleRegistry.getInstalledModules()) {
+      if (mod.personas?.isRouteDeniedForRole?.(role, cleanRoute)) {
         return false;
-      }
-      if (cleanRoute.includes('treasury-cartable') || cleanRoute.includes('manager-approvals') || cleanRoute.includes('/attendance') || cleanRoute.includes('/fleet')) {
-        return false;
-      }
-    } else if (role === 'operator') {
-      // کارمند نباید به کارتابل‌های سرپرست، حسابدار، مدیر یا خزانه‌دار دسترسی داشته باشد
-      if (cleanRoute.includes('/supervisor-') || cleanRoute.includes('/accountant-') || cleanRoute.includes('/manager-') || cleanRoute.includes('/treasurer-')) {
-        return false;
-      }
-      if (cleanRoute.includes('finance-cartable') || cleanRoute.includes('treasury-cartable') || cleanRoute.includes('manager-approvals')) {
-        return false;
-      }
-    } else if (role === 'supervisor') {
-      // سرپرست نباید به منوی کارمند، حسابدار، مدیر یا خزانه‌دار دسترسی داشته باشد
-      if (cleanRoute.includes('/employee-') || cleanRoute.includes('/accountant-') || cleanRoute.includes('/manager-') || cleanRoute.includes('/treasurer-')) {
-        return false;
-      }
-      if (cleanRoute.includes('finance-cartable') || cleanRoute.includes('treasury-cartable')) {
-        return false;
-      }
-    } else if (role === 'manager') {
-      // مدیر نباید به ثبت خام کارمند یا سرپرست یا محاسبات خام حسابدار دسترسی مستقیم داشته باشد
-      if (cleanRoute.includes('/employee-') || cleanRoute.includes('/supervisor-') || cleanRoute.includes('/accountant-') || cleanRoute.includes('/treasurer-')) {
-        return false;
-      }
-    } else if (role === 'treasury') {
-      // خزانه‌دار فقط به امور پرداخت و بانک دسترسی دارد
-      if (cleanRoute.includes('/employee-') || cleanRoute.includes('/supervisor-') || cleanRoute.includes('/accountant-') || cleanRoute.includes('/manager-')) {
-        return false;
-      }
-      if (cleanRoute.includes('finance-cartable') || cleanRoute.includes('manager-approvals')) {
-        return false;
-      }
-    } else if (role === 'org_admin') {
-      // راهبر تشکیلات فقط ساختار سازمانی را اداره می‌کند؛ هیچ کارتابل تایید، پرداخت یا ثبت کارکردی ندارد
-      if (cleanRoute.startsWith('/app/finance')) {
-        const allowed = ['/app/finance/projects-and-sections', '/app/finance/company-documents', '/app/finance/documents', '/app/finance/health'];
-        if (!allowed.some(a => cleanRoute === a || cleanRoute.startsWith(a + '/'))) {
-          return false;
-        }
       }
     }
 
@@ -482,7 +404,14 @@ export class AppPersonaService {
     // نرمال‌سازی پیشوند ماژولار /app/warehouse یا /app/finance به مسیر نسبی پایه
     const normalizedRoute = pageRoute.replace(/^\/app\/(warehouse|finance)/, '') || pageRoute;
     const key = `${app}:${role}:${normalizedRoute}`;
-    const prohibitedList = FRONTEND_SOD_PROHIBITIONS[key];
+
+    const mergedProhibitions: Record<string, string[]> = {};
+    for (const mod of this.moduleRegistry.getInstalledModules()) {
+      if (mod.personas?.sodProhibitions) {
+        Object.assign(mergedProhibitions, mod.personas.sodProhibitions);
+      }
+    }
+    const prohibitedList = mergedProhibitions[key];
 
     return prohibitedList ? prohibitedList.includes(actionCode) : false;
   }

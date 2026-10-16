@@ -61,7 +61,21 @@ export function resolveWarehouseRoleCodes(ctx: { perms: string[]; userRoles: str
   return roles;
 }
 
+export const WAREHOUSE_SOD_PROHIBITIONS: Record<string, string[]> = {
+  'warehouse:counter:/manager-review': ['finalize_inventory_count'],
+  'warehouse:counter:/customs': ['view_customs_and_costs']
+};
+
+export const WAREHOUSE_DEFAULT_ROUTES: Record<string, string> = {
+  counter: '/app/warehouse/counter',
+  warehouse_supervisor: '/app/warehouse/supervisor',
+  docs_specialist: '/app/warehouse/docs',
+  manager_review: '/app/warehouse/dashboard'
+};
+
 export const WAREHOUSE_PERSONAS: ModulePersonas = {
   roles: WAREHOUSE_ROLES,
-  resolveRoleCodes: resolveWarehouseRoleCodes
+  resolveRoleCodes: resolveWarehouseRoleCodes,
+  sodProhibitions: WAREHOUSE_SOD_PROHIBITIONS,
+  defaultRouteForRole: WAREHOUSE_DEFAULT_ROUTES
 };
