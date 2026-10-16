@@ -1,6 +1,24 @@
 import { Type } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router, Routes } from '@angular/router';
+import { IconName } from '../../shared/icons/icon-registry';
+
+export type AppModuleType = 'warehouse' | 'personnel' | 'operations' | string;
+
+export interface RolePersona {
+  code: string;
+  title: string;
+  app: AppModuleType;
+  badgeColor: string;
+  bgClass: string;
+  icon: IconName;
+  tierLevel: number;
+}
+
+export interface ModulePersonas {
+  roles: RolePersona[];
+  resolveRoleCodes: (ctx: { perms: string[]; userRoles: string[] }) => string[];
+}
 
 /**
  * مشخصات پایه یک ماژول فرانت‌اند در پلتفرم انبارداری و مالی
@@ -215,6 +233,8 @@ export interface WhFrontendModule extends FrontendModuleSpec {
   navItems?: Record<string, any>;
   /** فرهنگ آیکون‌های موجودیت‌های ماژول */
   entityIcons?: Record<string, string>;
+  /** تعریف پرسوناها و قواعد احراز نقش‌های ماژول */
+  personas?: ModulePersonas;
   /** مشارکت‌های ماژول در نقطه‌های توسعه پلتفرم */
   extensions?: ExtensionMap;
 }

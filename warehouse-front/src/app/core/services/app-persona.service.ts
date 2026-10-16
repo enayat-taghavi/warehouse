@@ -3,139 +3,46 @@ import { AuthService } from '../auth/auth.service';
 import { Router, NavigationEnd } from '@angular/router';
 import { WebSocketService } from '../http/websocket.service';
 import { SessionTabService } from './session-tab.service';
-import { ModuleRegistryService } from '../modules/module-registry.service';
+import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 import { ActiveCompanyService } from './active-company.service';
 import { filter } from 'rxjs';
 
-import { IconName } from '../../shared/icons/icon-registry';
 import { ROLE_ICONS } from '../../shared/icons/semantic-icons';
+import { RolePersona, AppModuleType, ModulePersonas } from '../modules/module-contract';
 
-export type AppModuleType = 'warehouse' | 'personnel' | 'operations' | string;
+export type { RolePersona, AppModuleType, ModulePersonas };
 
-export interface RolePersona {
-  code: string;
-  title: string;
-  app: AppModuleType;
-  badgeColor: string;
-  bgClass: string;
-  icon: IconName;
-  tierLevel: number;
-}
+export const CORE_OPS_COMMANDER: RolePersona = {
+  code: 'ops_commander',
+  title: 'فرمانده عملیات و پدافند',
+  app: 'operations',
+  badgeColor: '#06b6d4',
+  bgClass: 'bg-cyan-600',
+  icon: ROLE_ICONS.ops_commander,
+  tierLevel: 6
+};
 
-export const ALL_APP_ROLES: RolePersona[] = [
-  // --- Operations / Infrastructure Roles ---
-  {
-    code: 'ops_commander',
-    title: 'فرمانده عملیات و پدافند',
-    app: 'operations',
-    badgeColor: '#06b6d4',
-    bgClass: 'bg-cyan-600',
-    icon: ROLE_ICONS.ops_commander,
-    tierLevel: 6
-  },
-  // --- Personnel / Payroll / Treasury Roles ---
-  {
-    code: 'operator',
-    title: 'کارمند',
-    app: 'personnel',
-    badgeColor: '#64748b',
-    bgClass: 'bg-slate-600',
-    icon: ROLE_ICONS.operator,
-    tierLevel: 1
-  },
-  {
-    code: 'supervisor',
-    title: 'سرپرست',
-    app: 'personnel',
-    badgeColor: '#2563eb',
-    bgClass: 'bg-blue-600',
-    icon: ROLE_ICONS.supervisor,
-    tierLevel: 2
-  },
-  {
-    code: 'accountant',
-    title: 'حسابدار',
-    app: 'personnel',
-    badgeColor: '#059669',
-    bgClass: 'bg-emerald-600',
-    icon: ROLE_ICONS.accountant,
-    tierLevel: 3
-  },
-  {
-    code: 'manager',
-    title: 'مدیر',
-    app: 'personnel',
-    badgeColor: '#7c3aed',
-    bgClass: 'bg-purple-600',
-    icon: ROLE_ICONS.manager,
-    tierLevel: 4
-  },
-  {
-    code: 'treasury',
-    title: 'خزانه‌دار',
-    app: 'personnel',
-    badgeColor: '#d97706',
-    bgClass: 'bg-amber-600',
-    icon: ROLE_ICONS.treasury,
-    tierLevel: 5
-  },
-  {
-    code: 'org_admin',
-    title: 'راهبر تشکیلات و سیستم',
-    app: 'personnel',
-    badgeColor: '#0284c7',
-    bgClass: 'bg-sky-600',
-    icon: ROLE_ICONS.org_admin,
-    tierLevel: 4
-  },
-  // --- Warehouse / Inventory Roles ---
-  {
-    code: 'counter',
-    title: 'انبارگردان / شمارشگر کور',
-    app: 'warehouse',
-    badgeColor: '#0284c7',
-    bgClass: 'bg-sky-600',
-    icon: ROLE_ICONS.counter,
-    tierLevel: 1
-  },
-  {
-    code: 'warehouse_supervisor',
-    title: 'سرپرست انبار و شمارش',
-    app: 'warehouse',
-    badgeColor: '#4f46e5',
-    bgClass: 'bg-indigo-600',
-    icon: ROLE_ICONS.warehouse_supervisor,
-    tierLevel: 2
-  },
-  {
-    code: 'docs_specialist',
-    title: 'مسئول تطبیق و اسناد انبار',
-    app: 'warehouse',
-    badgeColor: '#0d9488',
-    bgClass: 'bg-teal-600',
-    icon: ROLE_ICONS.docs_specialist,
-    tierLevel: 3
-  },
-  {
-    code: 'manager_review',
-    title: 'ناظر عالی و بررسی مدیر',
-    app: 'warehouse',
-    badgeColor: '#9333ea',
-    bgClass: 'bg-purple-600',
-    icon: ROLE_ICONS.manager_review,
-    tierLevel: 4
-  },
-  // --- Global Superuser ---
-  {
-    code: 'superuser',
-    title: 'مدیر ارشد',
-    app: 'personnel',
-    badgeColor: '#e11d48',
-    bgClass: 'bg-rose-600',
-    icon: ROLE_ICONS.superuser,
-    tierLevel: 6
+export const CORE_SUPERUSER: RolePersona = {
+  code: 'superuser',
+  title: 'مدیر ارشد',
+  app: 'personnel',
+  badgeColor: '#e11d48',
+  bgClass: 'bg-rose-600',
+  icon: ROLE_ICONS.superuser,
+  tierLevel: 6
+};
+
+export function getAllAppRoles(): RolePersona[] {
+  const roles: RolePersona[] = [CORE_OPS_COMMANDER];
+  const registry = getModuleRegistry();
+  for (const mod of registry.getInstalledModules()) {
+    if (mod.personas?.roles) {
+      roles.push(...mod.personas.roles);
+    }
   }
-];
+  roles.push(CORE_SUPERUSER);
+  return roles;
+}
 
 // ماتریس محلی خطوط قرمز جهت پنهان‌سازی سریع در DOM فرانت‌اند (O(1))
 export const FRONTEND_SOD_PROHIBITIONS: Record<string, string[]> = {
@@ -254,7 +161,7 @@ export class AppPersonaService {
     const isSuper = this.isSuperuser();
     
     if (isSuper) {
-      return ALL_APP_ROLES.filter(r => r.app === app || r.code === 'superuser');
+      return getAllAppRoles().filter(r => r.app === app || r.code === 'superuser');
     }
 
     if (app === 'warehouse' && !this.hasWarehouseAccess()) {
@@ -268,70 +175,23 @@ export class AppPersonaService {
     const userRoles = (this.auth.user()?.roles || []).map(r => String(r).toLowerCase());
     const roles: RolePersona[] = [];
 
-    if (app === 'personnel') {
-      // کارمند: صراحتاً در نقش‌های کاربر یا دارای مجوز ثبت کارکرد (بدون تحمیل به حسابدار/سرپرست/مدیر/خزانه‌دار)
-      const hasOperatorRole = userRoles.includes('operator') || perms.includes('can_act_as_operator');
-      const hasOperatorPerm = perms.includes('view_sys_personnel_attendance');
-      const isOtherExplicitRole = userRoles.some(r => ['accountant', 'supervisor', 'manager', 'treasury'].includes(r)) ||
-        perms.includes('can_act_as_workshop_supervisor') ||
-        perms.includes('can_act_as_accountant') ||
-        perms.includes('can_act_as_company_manager') ||
-        perms.includes('perm_treasury_disburse_action') ||
-        perms.includes('perm_approve_personnel_supervisor') ||
-        perms.includes('perm_manage_projects_sections');
-      if (hasOperatorRole || (hasOperatorPerm && !isOtherExplicitRole)) {
-        const op = ALL_APP_ROLES.find(r => r.code === 'operator');
-        if (op) roles.push(op);
-      }
+    const targetModule = this.moduleRegistry.getInstalledModules().find(m =>
+      m.personas?.roles.some(r => r.app === app)
+    );
 
-      // سرپرست کارگاه
-      if (userRoles.includes('supervisor') || perms.includes('can_act_as_workshop_supervisor') || perms.includes('perm_approve_personnel_supervisor') || perms.includes('perm_approve_fleet_supervisor')) {
-        const sp = ALL_APP_ROLES.find(r => r.code === 'supervisor');
-        if (sp) roles.push(sp);
-      }
-
-      // حسابدار
-      if (userRoles.includes('accountant') || perms.includes('can_act_as_accountant') || perms.includes('perm_approve_personnel_finance') || perms.includes('perm_approve_fleet_finance')) {
-        const acc = ALL_APP_ROLES.find(r => r.code === 'accountant');
-        if (acc) roles.push(acc);
-      }
-
-      // مدیر شرکت
-      if (userRoles.includes('manager') || perms.includes('can_act_as_company_manager') || perms.includes('perm_manager_payment_authorize') || perms.includes('perm_approve_personnel_manager')) {
-        const mg = ALL_APP_ROLES.find(r => r.code === 'manager');
-        if (mg) roles.push(mg);
-      }
-
-      // خزانه‌دار
-      if (userRoles.includes('treasury') || userRoles.includes('treasurer') || perms.includes('perm_treasury_disburse_action') || perms.includes('view_sys_treasury')) {
-        const tr = ALL_APP_ROLES.find(r => r.code === 'treasury');
-        if (tr) roles.push(tr);
-      }
-
-      // راهبر تشکیلات: آخر فهرست تا نقش عملیاتی کاربر چندنقشه پیش‌فرض بماند
-      if (perms.includes('perm_manage_projects_sections')) {
-        const oa = ALL_APP_ROLES.find(r => r.code === 'org_admin');
-        if (oa) roles.push(oa);
-      }
-    } else if (app === 'warehouse') {
-      // Warehouse App
-      if (userRoles.includes('counter') || perms.includes('view_sys_counter') || perms.includes('can_act_as_counter') || perms.includes('view_wh_dispatch')) {
-        roles.push(ALL_APP_ROLES.find(r => r.code === 'counter')!);
-      }
-      if (userRoles.includes('warehouse_supervisor') || perms.includes('can_act_as_wh_supervisor') || (perms.includes('view_sys_supervisor') && !perms.includes('can_act_as_workshop_supervisor')) || perms.includes('view_wh_doc_approvals')) {
-        roles.push(ALL_APP_ROLES.find(r => r.code === 'warehouse_supervisor')!);
-      }
-      if (userRoles.includes('docs_specialist') || perms.includes('view_wh_docs') || perms.includes('can_act_as_doc_worker') || perms.includes('perm_doc_approve_action')) {
-        roles.push(ALL_APP_ROLES.find(r => r.code === 'docs_specialist')!);
-      }
-      if (userRoles.includes('manager_review') || perms.includes('can_act_as_wh_manager') || perms.includes('view_sys_manager_review') || perms.includes('perm_inventory_finalize')) {
-        roles.push(ALL_APP_ROLES.find(r => r.code === 'manager_review')!);
+    if (targetModule?.personas) {
+      const roleCodes = targetModule.personas.resolveRoleCodes({ perms, userRoles });
+      for (const code of roleCodes) {
+        const persona = targetModule.personas.roles.find(r => r.code === code);
+        if (persona) {
+          roles.push(persona);
+        }
       }
     } else if (app === 'operations') {
       if (isSuper) {
-        const opsRole = ALL_APP_ROLES.find(r => r.code === 'ops_commander');
+        const opsRole = getAllAppRoles().find(r => r.code === 'ops_commander');
         if (opsRole) roles.push(opsRole);
-        const superRole = ALL_APP_ROLES.find(r => r.code === 'superuser');
+        const superRole = getAllAppRoles().find(r => r.code === 'superuser');
         if (superRole) roles.push(superRole);
       }
     }
@@ -348,8 +208,9 @@ export class AppPersonaService {
   public currentPersona = computed<RolePersona>(() => {
     const code = this.activeRole();
     const app = this.activeApp();
-    const match = ALL_APP_ROLES.find(r => r.code === code && (r.app === app || r.code === 'superuser'));
-    return match || this.availableRoles()[0] || ALL_APP_ROLES[0];
+    const allRoles = getAllAppRoles();
+    const match = allRoles.find(r => r.code === code && (r.app === app || r.code === 'superuser'));
+    return match || this.availableRoles()[0] || allRoles[0];
   });
 
   constructor() {
