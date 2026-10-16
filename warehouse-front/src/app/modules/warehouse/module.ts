@@ -78,7 +78,10 @@ export const MODULE: WhFrontendModule = {
     syncConfig: {
       scopeKind: 'warehouse',
       pullEndpoint: '/inventory/sync/pull/',
-      scopeParamKey: 'warehouse_id'
+      scopeParamKey: 'warehouse_id',
+      activeAppHeader: 'warehouse',
+      defaultOfflineRole: 'counter',
+      tokenScopeKey: 'warehouse'
     },
     dynamicFields: {
       fieldsEndpoint: '/inventory/dynamic-fields/'

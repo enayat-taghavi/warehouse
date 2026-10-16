@@ -153,6 +153,9 @@ export interface ExtensionMap {
     scopeKind: string;
     pullEndpoint: string;
     scopeParamKey: string;
+    activeAppHeader?: string;
+    defaultOfflineRole?: string;
+    tokenScopeKey?: string;
   };
 
   /**

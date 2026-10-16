@@ -16,6 +16,7 @@ import { NetworkStatusService } from './network-status.service';
 import { PhotoUploadQueueService, PhotoFlushOutcome } from './photo-upload-queue.service';
 import { BehaviorSubject, Subject, Subscription, filter } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { getModuleRegistry } from '../modules/module-registry.service';
 
 import {
   SyncOutcome,
@@ -615,15 +616,18 @@ export class OfflineSyncService {
 
     if (warehouseIds.length === 0) return [];
 
+    const syncConfig = getModuleRegistry()
+      .getExtensions('syncConfig')
+      .find(e => e.extension.scopeKind === scopeKind)?.extension;
+    if (!syncConfig) return [];
+
     const token = sessionStorage.getItem('wh_access_token') || localStorage.getItem('wh_access_token');
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
     try {
       const testId = warehouseIds[0];
-      const probeEndpoint = scopeKind === 'finance'
-        ? `${environment.apiUrl}/personnel/sync/pull/?project_id=${testId}&limit=1`
-        : `${environment.apiUrl}/inventory/sync/pull/?warehouse_id=${testId}&limit=1`;
+      const probeEndpoint = `${environment.apiUrl}${syncConfig.pullEndpoint}?${syncConfig.scopeParamKey}=${testId}&limit=1`;
 
       const res = await fetch(probeEndpoint, { headers });
       if (!res.ok) {

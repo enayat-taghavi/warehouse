@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { cancelQueueEntry } from './offline-queue-runner';
+import { cancelQueueEntry, buildScopedHeaders } from './offline-queue-runner';
 import { warehouseOfflineDb, financeOfflineDb, SyncQueueEntry } from '../offline-db';
 import { OfflineSyncService } from '../offline-sync.service';
+import { getModuleRegistry } from '../../modules/module-registry.service';
 
 function createStorageMock() {
   let store: Record<string, string> = {};
@@ -246,3 +247,68 @@ describe('offline-queue-runner: cancelQueueEntry data-loss protection', () => {
     expect(invalidateSpy).not.toHaveBeenCalled();
   });
 });
+
+describe('offline-queue-runner: buildScopedHeaders', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('asserts exact headers for warehouse and finance with the real registry', () => {
+    sessionStorage.setItem('wh_tab_session_id', 'tab_real_123');
+    sessionStorage.setItem('wh_access_token_warehouse', 'token_wh_real');
+    sessionStorage.setItem('wh_access_token_finance', 'token_fin_real');
+
+    const whHeaders = buildScopedHeaders('warehouse');
+    expect(whHeaders).toEqual({
+      'Content-Type': 'application/json',
+      'X-Active-App': 'warehouse',
+      'X-Active-Role': 'counter',
+      'X-Client-Tab-Id': 'tab_real_123',
+      'Authorization': 'Bearer token_wh_real',
+    });
+
+    const finHeaders = buildScopedHeaders('finance');
+    expect(finHeaders).toEqual({
+      'Content-Type': 'application/json',
+      'X-Active-App': 'personnel',
+      'X-Active-Role': 'operator',
+      'X-Client-Tab-Id': 'tab_real_123',
+      'Authorization': 'Bearer token_fin_real',
+    });
+  });
+
+  it('asserts exact headers for warehouse and finance with a registry whose getExtensions returns [] (fallback)', () => {
+    sessionStorage.setItem('wh_tab_session_id', 'tab_fallback_456');
+    sessionStorage.setItem('wh_access_token_warehouse', 'token_wh_fallback');
+    sessionStorage.setItem('wh_access_token_finance', 'token_fin_fallback');
+
+    const registry = getModuleRegistry();
+    const spy = vi.spyOn(registry, 'getExtensions').mockReturnValue([]);
+
+    const whHeaders = buildScopedHeaders('warehouse');
+    expect(whHeaders).toEqual({
+      'Content-Type': 'application/json',
+      'X-Active-App': 'warehouse',
+      'X-Active-Role': 'counter',
+      'X-Client-Tab-Id': 'tab_fallback_456',
+      'Authorization': 'Bearer token_wh_fallback',
+    });
+
+    const finHeaders = buildScopedHeaders('finance');
+    expect(finHeaders).toEqual({
+      'Content-Type': 'application/json',
+      'X-Active-App': 'personnel',
+      'X-Active-Role': 'operator',
+      'X-Client-Tab-Id': 'tab_fallback_456',
+      'Authorization': 'Bearer token_fin_fallback',
+    });
+
+    spy.mockRestore();
+  });
+});
+

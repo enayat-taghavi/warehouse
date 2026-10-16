@@ -20,12 +20,19 @@ import {
 } from './offline-sync.models';
 import { reconcileRejected } from './offline-local-patcher';
 import { extractServerErrorMessage } from './offline-conflict-manager';
+import { getModuleRegistry } from '../../modules/module-registry.service';
 
 /**
  * ساخت هدرهای تفکیک‌شده قلمرو و شناسه تب
  */
 export function buildScopedHeaders(appScope: AppScope): Record<string, string> {
-  const tokenKey = appScope === 'finance' ? 'wh_access_token_finance' : 'wh_access_token_warehouse';
+  const syncConfig = getModuleRegistry()
+    .getExtensions('syncConfig')
+    .find(e => e.extension.scopeKind === appScope)?.extension;
+
+  const tokenKey = syncConfig?.tokenScopeKey
+    ? `wh_access_token_${syncConfig.tokenScopeKey}`
+    : (appScope === 'finance' ? 'wh_access_token_finance' : 'wh_access_token_warehouse');
   const token =
     sessionStorage.getItem(tokenKey) ||
     sessionStorage.getItem('wh_access_token') ||
@@ -34,11 +41,14 @@ export function buildScopedHeaders(appScope: AppScope): Record<string, string> {
   const tabId = sessionStorage.getItem('wh_tab_session_id') || 'tab_offline_sync';
   const role =
     sessionStorage.getItem('active_role_persona') ||
+    syncConfig?.defaultOfflineRole ||
     (appScope === 'finance' ? 'operator' : 'counter');
+
+  const activeApp = syncConfig?.activeAppHeader || (appScope === 'finance' ? 'personnel' : 'warehouse');
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'X-Active-App': appScope === 'finance' ? 'personnel' : 'warehouse',
+    'X-Active-App': activeApp,
     'X-Active-Role': role,
     'X-Client-Tab-Id': tabId,
   };

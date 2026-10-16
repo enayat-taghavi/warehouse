@@ -97,7 +97,10 @@ export const MODULE: WhFrontendModule = {
     syncConfig: {
       scopeKind: 'finance',
       pullEndpoint: '/personnel/sync/pull/',
-      scopeParamKey: 'project_id'
+      scopeParamKey: 'project_id',
+      activeAppHeader: 'personnel',
+      defaultOfflineRole: 'operator',
+      tokenScopeKey: 'finance'
     },
     projectLookup: {
       financialProjectsEndpoint: '/personnel/financial-projects'

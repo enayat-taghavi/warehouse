@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { getModuleRegistry } from '../modules/module-registry.service';
 
 export type AppModuleScope = 'warehouse' | 'personnel' | 'operations' | string;
 
@@ -82,13 +83,13 @@ export class SessionTabService {
         this.setActiveApp('operations');
         return 'operations';
       }
-      if (path.includes('/app/warehouse')) {
-        this.setActiveApp('warehouse');
-        return 'warehouse';
-      }
-      if (path.includes('/app/finance')) {
-        this.setActiveApp('personnel');
-        return 'personnel';
+
+      for (const mod of getModuleRegistry().getInstalledModules()) {
+        const appKey = mod.extensions?.launcherTile?.appKey;
+        if (path.includes(mod.routePrefix) && appKey) {
+          this.setActiveApp(appKey);
+          return appKey;
+        }
       }
 
       const globalFallback = (localStorage.getItem(this.APP_MODULE_KEY) as AppModuleScope) || 'personnel';
