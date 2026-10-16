@@ -5206,3 +5206,235 @@ Session 11 — Phase 3 release on the local app environment: backup, migration c
 I have launched the frontend build (`npx ng build --delete-output-path=false`) and am waiting for it to complete.
 
 ---
+
+### Task 1 of 4 — 2026-10-17 01:28:20
+- **Status:** DONE
+- **Conversation:** `7cc5d673-bf34-4240-bca4-b2bbc5abbd3a`
+- **Steps:** 185
+- **Duration:** 17m 37s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 4/5 passed
+    - FAILED (exit 1): `python -c "import subprocess,sys; ok={'warehouse-front/src/app/modules/accounting/components/organization/projects-and-sections/projects-and-sections.dom.spec.ts'}; ch=set(subprocess.run(['git','diff','--name-only','f51e714','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"`
+  - verify round 1: 5/5 passed
+- **Task:**
+```
+Session 12 of 22 — Phase 3 DOM test: the org-admin user directory inside projects-and-sections
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- This session adds one test file only: `warehouse-front/src/app/modules/accounting/components/organization/projects-and-sections/projects-and-sections.dom.spec.ts`. Do not change any application file, template, existing spec, config or script. If the application behaves differently from this task text, leave that assertion out of the file and list the difference in the report; do not change application code.
+- No `fs`, `path` or `__dirname`; no `it.skip`, `it.only`, `it.todo`, `xit`. Every test must assert on the rendered DOM (`fixture.nativeElement`) or on a mocked service call.
+- Do not push. Stage only the new spec. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase3/modular_architecture_phase3_plan.md`, heading `## گزارش پیشرفت`, the last entry (batch A). These specs replace a manual check of pages behind the login.
+- Component class in `projects-and-sections.ts` with template `projects-and-sections.html` (`templateUrl`). `loadUsers()` fills `systemUsers` from `AccountsHttpService.getUsers()` and shows a toast with the text «خطا در دریافت لیست کاربران» on error.
+- Spec style to copy: `src/app/modules/common/components/login/login.spec.ts` and `src/app/modules/common/components/health-dashboard/health-dashboard.dom.spec.ts` (`// @vitest-environment jsdom`, `import '@angular/compiler'`, `TestBed` with mocked providers, `getTestBed().initTestEnvironment(...)` inside a try block). The `@angular/build:unit-test` builder resolves `templateUrl`; no `fs` is needed.
+- Backend rule already tested in `warehouse-backend/integration_tests/test_company_extension_points.py`: an org admin (permission `perm_manage_projects_sections`, not superuser) receives only members of the sections of their companies. The frontend shows exactly what the API returns.
+
+3. Definitions:
+- "org admin" means a mocked `AuthService` whose `userPermissions()` returns `['perm_manage_projects_sections']` and whose `user()` returns a non-superuser.
+- "user directory" means every place in `projects-and-sections.html` where entries of `systemUsers` are rendered (for example a member picker or an assignment list). Read the template to find them, and open the modal or tab needed to make them visible through rendered buttons.
+
+4. Task: write the spec with at least 6 tests:
+- a) For the org admin, after `getUsers()` returns users A and B, the user directory shows A and B (by the name field the template renders).
+- b) A user C that the API did not return never appears in `fixture.nativeElement.textContent`.
+- c) `getUsers()` is called exactly once on init, without a `has_perm` argument (as today).
+- d) When `getUsers()` errors, the mocked toast receives `'error'` and a message containing «خطا در دریافت لیست کاربران», and the page header still renders.
+- e) An empty user list renders without throwing and shows no user entries.
+- f) After the public flow that refreshes assignments runs (the one the template triggers), users A and B are still shown.
+- Mock every injected service with `vi.fn()` returning `of(...)`; no real HTTP.
+
+5. Tool policy: from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/accounting/components/organization/projects-and-sections/projects-and-sections.dom.spec.ts"` (it runs the spec from the working tree and prints the log path). If a run fails, read the log and change approach; do not repeat it unchanged.
+
+6. Before finishing: `git status --short` shows only runner files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(dom): org-admin user directory in projects-and-sections
+- Short English report: tests added (one line each), the last ng-test-compare summary line, and any behavior that differed from this task text. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خطا و رفع آن (Explanation & Fix)
+خطای گزارش‌شده از سوی سیستم رانر به دلیل قطعی موقت ارتباط در نوبت قبلی رخ داده بود؛ در آن نوبت، قبل از اعمال کامیت، پردازش قطع شد و رانر مقایسه تغییرات گیت را در وضعیتی اجرا کرد که کامیت هنوز ثبت نشده بود (`changed: [] outside scope: []`). با تصحیح انواع فیلدهای مدل `User` و ثبت کامیت با پیام `test(dom): org-admin user directory in projects-and-sections`، تمامی تست‌ها و بررسی‌های رانر اعتبارسنجی شدند.
+
+### ۲. اعتبارسنجی مجدد تمامی شروط رانر (Verification)
+تمام ۶ مرحله بررسی رانر اجرا شده و همگی با کد ۰ موفق شدند:
+۱. `clean-tree` تأیید شد (درخت تمیز است و فقط فایل‌های رانر وجود دارند).
+۲. `spec-check` اجرا شد: ۶...
+
+---
+
+### Task 2 of 4 — 2026-10-17 01:39:41
+- **Status:** DONE
+- **Conversation:** `e6348ca6-709c-45ac-b0ae-9fe707082b0a`
+- **Steps:** 106
+- **Duration:** 11m 17s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+Session 13 of 22 — Phase 3 DOM test: fleet and personnel notification navigation in NotificationCenterComponent
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- This session adds one test file only: `warehouse-front/src/app/shared/components/notification-center/notification-center.dom.spec.ts`. Do not change any application file, template, existing spec, config or script. If the application behaves differently from this task text, leave that assertion out and list the difference in the report.
+- No `fs`, `path` or `__dirname`; no `it.skip`, `it.only`, `it.todo`, `xit`. Every test must assert on the rendered DOM or on a mocked call.
+- Do not push. Stage only the new spec. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- `notification-center.component.ts` (inline template). Clicking an item runs `onNotificationClick(item)`: `markAsRead`, closes the panel, follows `item.url` if set, otherwise asks the handlers from `ModuleRegistryService.getExtensions('notificationHandlers')`.
+- The accounting handlers are `ACCOUNTING_NOTIFICATION_HANDLERS` in `src/app/modules/accounting/notification-handlers.ts`; the expected routes and query params per permission set are pinned in `notification-handlers.spec.ts`. Reuse those exact expectations; do not invent routes.
+- Spec style: `src/app/modules/common/components/health-dashboard/health-dashboard.dom.spec.ts`.
+
+3. Definitions:
+- "accounting registry" means a mocked `ModuleRegistryService` whose `getExtensions('notificationHandlers')` returns one entry whose `extension` is `ACCOUNTING_NOTIFICATION_HANDLERS` (use the entry shape the component reads), and `[]` for other keys.
+- "warehouse-only registry" means the same mock returning `[]` for `notificationHandlers`.
+
+4. Task: write the spec with at least 7 tests. Render the component, open the panel through its rendered button, and click the rendered item element (do not call `onNotificationClick` directly):
+- a) The list renders one row per notification and the unread badge shows the unread count.
+- b) Fleet: with the accounting registry and the manager permission set from `notification-handlers.spec.ts`, clicking a `fleet_change_request` item calls `Router.navigate` with the same arguments that spec expects.
+- c) A `VehicleDriverProfile` item for the accountant permission set: same arguments as the handler spec.
+- d) A `PersonnelProfile` item for the supervisor permission set and for a plain employee: same arguments as the handler spec.
+- e) An item with `url` calls `Router.navigateByUrl` with that url and no handler navigation.
+- f) Warehouse-only registry: clicking a `PersonnelProfile` item marks it read and closes the panel, calls neither `navigate` nor `navigateByUrl`, and throws nothing.
+- g) Every click marks the item read (visible read state in the DOM, or the mocked mark-read HTTP call the component makes today).
+- Mock `HttpClient`, `AuthService`, `WebSocketService` and `Router` with `vi.fn()`; no real HTTP.
+
+5. Tool policy: from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/shared/components/notification-center/notification-center.dom.spec.ts"`. If a run fails, read the log and change approach.
+
+6. Before finishing: `git status --short` shows only runner files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(dom): notification center fleet and personnel navigation
+- Short English report: tests added, the last ng-test-compare summary line, any behavior difference. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### پروتکل ۴ مرحله‌ای (گام‌های اجرایی)
+
+1. **توضیح ساده خواسته کاربر:**
+   کاربر خواستار افزودن یک فایل تست DOM (نوع اول / کامپوننت یونیت تست مبتنی بر Vitest و JSDOM) برای کامپوننت مرکز اعلان‌ها (`NotificationCenterComponent`) در مسیر `warehouse-front/src/app/shared/components/notification-center/notification-center.dom.spec.ts` بود تا ناوبری اعلان‌های ناوگان و پرسنل، تعامل با ماک‌های رجیستری ماژول (حسابداری یا فقط انبار)، باز شدن پنل از طریق دکمهٔ رندرشده، کلیک روی ردیف اعلان در دام و علامت‌گذاری خوانده‌شده با حداقل ۷ تست اعتبارسنجی شوند.
+
+2. **بررسی صحت فنی و انطباق با پایگاه‌کد:**
+   - وابستگی‌های کامپوننت (`HttpClient`، `Router`، `AuthService`، `WebSocketSe...
+
+---
+
+### Task 3 of 4 — 2026-10-17 01:56:50
+- **Status:** DONE
+- **Conversation:** `052341af-62c2-46ab-8d64-be900ea8d6d9`
+- **Steps:** 233
+- **Duration:** 17m 4s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/6 passed
+- **Task:**
+```
+Session 14 of 22 — Phase 3 DOM test: company finance tabs and the Google Drive tab with and without the accounting module
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7 and 10 apply.
+- This session adds two test files only: `warehouse-front/src/app/modules/common/components/operations/companies/company-finance-tabs.dom.spec.ts` and `warehouse-front/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.dom.spec.ts`. Do not change application files, templates, existing specs (including `companies.dom.spec.ts`), config or scripts. If the application behaves differently from this task text, leave that assertion out and list the difference in the report.
+- No `fs`, `path` or `__dirname`; no `it.skip`, `it.only`, `it.todo`, `xit`.
+- Do not push. Stage only the two new specs. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- `companies.ts` / `companies.html`: the accounting-only parts are guarded by `isAccountingInstalled`: the table columns «پروژه‌ها» and «سلامت مدارک», the modal tabs `treasury`, `governance` and `gdrive`, and the modal subtitle text. The existing `companies.dom.spec.ts` shows how to mock `CompanyApiService`, `ActiveCompanyService`, `AccountsHttpService`, `WebSocketService`, `ToastService`, `ConfirmDialogService` and `ModuleRegistryService`; copy its provider setup but not its `fs`/`path` usage (the builder resolves `templateUrl`).
+- `company-gdrive-tab.ts` (`@Input() companyId`) builds every URL with `this.companyApi?.getCompanyGdriveUrl(cid, subPath)` and sends nothing when it returns null. With the accounting module the URL is `${environment.apiUrl}/personnel/companies/<cid>/gdrive<subPath>` (pinned in `company-api-endpoints.spec.ts`).
+
+3. Definitions: "with accounting" means the mocked `ModuleRegistryService` reports the accounting module installed so the component sets `isAccountingInstalled` to true (read `companies.ts` for the registry method it uses); "without accounting" means it reports only the warehouse module.
+
+4. Task:
+- a) `company-finance-tabs.dom.spec.ts`, at least 5 tests: with accounting the two columns render and opening a company's studio modal through its rendered button shows the treasury, governance and gdrive tab buttons; without accounting none of them render and the subtitle is the non-accounting text; with accounting, clicking each of the three tab buttons renders its panel; without accounting the mocked bank-account and board-member loaders of `CompanyApiService` are not called.
+- b) `company-gdrive-tab.dom.spec.ts`, at least 5 tests: with a mocked `CompanyApiService.getCompanyGdriveUrl` that returns the real accounting URL, init with `companyId = 5` sends its first `HttpClient.get` to the URL under `${environment.apiUrl}/personnel/companies/5/gdrive`; the disconnect and trigger-sync actions, through their rendered buttons (confirm the mocked dialog if one opens), send requests to URLs ending in `/gdrive/disconnect/` and `/gdrive/trigger-sync/`; when `getCompanyGdriveUrl` returns null, no `HttpClient` method is called and the component renders without throwing.
+- Mock `HttpClient` with `vi.fn()` for every verb; no real HTTP.
+
+5. Tool policy: from the repo root, at most five runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "<spec path relative to warehouse-front>"` for these two specs. If a run fails, read the log and change approach.
+
+6. Before finishing: `git status --short` shows only runner files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(dom): company finance tabs and gdrive tab with and without accounting
+- Short English report: tests added, the last ng-test-compare summary line, any behavior difference. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خواسته کاربر (Simple Explanation)
+کاربر درخواست انجام نشست ۱۴ از ۲۲ مربوط به آزمون‌های DOM فاز ۳ برای تب‌های مالی شرکت‌ها (`company-finance-tabs`) و تب همگام‌سازی گوگل‌درایو (`company-gdrive-tab`) را داشت:
+- بررسی رفتار اجزا در دو حالت نصب ماژول حسابداری (With Accounting) و بدون نصب ماژول حسابداری (Without Accounting / فقط انبارداری).
+- ایجاد دو فایل تست مجزا شامل حداقل ۵ تست در هر کدام بدون دستکاری کدهای برنامه، تمپلیت‌ها یا فایل‌های آزمون موجود.
+- ماک کردن کامل `HttpClient` با `vi.fn()` و عدم استفاده از ماژول‌های فایل‌سیستم (`fs`، `path`، `__dirname`) و عدم استفاده از `skip` یا `only`.
+- اعتبارسنجی از طریق ابزار `verify_tools.py ng-test-comp...
+
+---
+
+### Task 4 of 4 — 2026-10-17 02:06:02
+- **Status:** DONE
+- **Conversation:** `9c6394ee-6448-435a-a693-393f37842a7a`
+- **Steps:** 112
+- **Duration:** 9m 8s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+Session 15 of 22 — Phase 3 DOM test: offline queue badge states, pending count and manual sync
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- No data may be lost: the spec must never call anything that clears, deletes or skips queue records or IndexedDB stores; use mocks only, never the real `OfflineDb`.
+- This session adds one test file only: `warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.dom.spec.ts`. Do not change application files, templates, the existing `offline-pending-badge.component.spec.ts`, config or scripts. If the application behaves differently from this task text, leave that assertion out and list the difference in the report.
+- No `fs`, `path` or `__dirname`; no `it.skip`, `it.only`, `it.todo`, `xit`.
+- Do not push. Stage only the new spec. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- `offline-pending-badge.component.ts` (inline template, `@Input() mode: 'header' | 'inline'`, fields `networkState`, `isSyncing`, `pendingCount`). Read the class to see which services feed those fields and mock them with `BehaviorSubject`s or signals so a test can change the state.
+- Texts today in `mode = 'header'`: «متصل» (online, idle, empty queue), «در حال ارسال (N)» (syncing), «آفلاین» (not online, empty queue), «صف ارسال (N)» (pending records). The details panel shows «N رکورد در انتظار» or «همگام و بدون صف». The manual sync button is disabled while syncing or when not online.
+
+3. Definitions: "pending" means the mocked source reports N queued records, N > 0.
+
+4. Task: write the spec with at least 7 tests in `mode = 'header'`:
+- a) online, idle, 0 pending: «متصل» renders.
+- b) online, 3 pending: «صف ارسال (3)» and the count badge 3 render.
+- c) syncing with 2 pending: «در حال ارسال (2)».
+- d) `networkState` offline with 0 pending: «آفلاین».
+- e) `networkState = 'server-unreachable'` with 1 pending: the `status-warning` icon and «صف ارسال (1)».
+- f) Clicking the badge opens the panel: «3 رکورد در انتظار» for 3 pending and «همگام و بدون صف» for 0.
+- g) The manual sync button is disabled when offline and enabled when online and idle; clicking it when enabled calls the mocked sync method once.
+- h) Changing the mocked pending count from 3 to 0 updates the DOM after change detection.
+
+5. Tool policy: from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/shared/components/offline-pending-badge/*.spec.ts"`. If a run fails, read the log and change approach.
+
+6. Before finishing: `git status --short` shows only runner files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(dom): offline queue badge states, pending count and manual sync
+- Short English report: tests added, the last ng-test-compare summary line, any behavior difference. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خواسته کاربر (Simple Explanation)
+کاربر درخواست پیاده‌سازی آزمون‌های DOM کامپوننت مرکز وضعیت و صف آفلاین (`OfflinePendingBadgeComponent`) را در فایل مجزای `warehouse-front/src/app/shared/components/offline-pending-badge/offline-pending-badge.dom.spec.ts` داشتند. این آزمون‌ها باید وضعیت‌های مختلف دکمه کپسولی در حالت `mode = 'header'` (آنلاین و بیکار، صف انتظار، در حال ارسال، آفلاین، قطع موقت سرور)، باز شدن پاپ‌اور و نمایش آمار رکوردها، فعال/غیرفعال بودن دکمه ارسال دستی و بروزرسانی واکنشی DOM پس از تغییر تعداد صف را با استفاده از ماک‌های ایزوله و بدون دستکاری یا خطر از دست رفتن داده‌های `OfflineDb` پوشش دهند.
+
+### ۲. اعتبارسنجی و درستی‌سنجی فنی ...
+
+---
