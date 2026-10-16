@@ -837,6 +837,37 @@ def remap_path_prefix(name: str, renames: dict) -> str:
     return renames.get(path, path) + sep + rest
 
 
+SPEC_FORBIDDEN = (
+    (re.compile(r"\b(?:it|describe|test)\s*\.\s*(?:skip|only|todo)\b"), "skip/only/todo"),
+    (re.compile(r"\bx(?:it|describe)\s*\("), "xit/xdescribe"),
+    (re.compile(r"""from\s+['"](?:node:)?(?:fs|path)['"]"""), "fs/path import"),
+    (re.compile(r"\b__dirname\b"), "__dirname"),
+)
+
+
+def cmd_spec_check(args) -> int:
+    """فایل spec فرانت: وجود، حداقل تعداد تست، رشته‌های لازم و نبود skip/only و import فایل‌سیستم."""
+    f = REPO_ROOT / args.file
+    if not f.is_file():
+        print(f"missing spec file: {args.file}")
+        return 1
+    text = f.read_text(encoding="utf-8")
+    problems = []
+    tests = len(re.findall(r"(?<![\w.])(?:it|test)\s*\(", text))
+    if tests < args.min_tests:
+        problems.append(f"{tests} tests, need at least {args.min_tests}")
+    for needle in args.require or []:
+        if needle not in text:
+            problems.append(f"missing required text: {needle}")
+    for rx, label in SPEC_FORBIDDEN:
+        if rx.search(text):
+            problems.append(f"forbidden: {label}")
+    print(f"{args.file}: {tests} tests")
+    for p in problems:
+        print(f"  - {p}")
+    return 1 if problems else 0
+
+
 def cmd_ng_test_compare(args) -> int:
     cleanup_stale_base_dirs()
     full_hash = git("rev-parse", args.base).strip()
@@ -960,6 +991,12 @@ def main(argv=None) -> int:
 
     p = sub.add_parser("sample-module", help="new_module.py builds a sample module in a HEAD copy without touching the core")
     p.set_defaults(func=cmd_sample_module)
+
+    p = sub.add_parser("spec-check", help="a front spec exists, has enough tests, contains required text, no skip/only/fs")
+    p.add_argument("--file", required=True)
+    p.add_argument("--min-tests", type=int, default=1)
+    p.add_argument("--require", action="append")
+    p.set_defaults(func=cmd_spec_check)
 
     p = sub.add_parser("ng-test-compare", help="ng test on HEAD has no new failure compared with BASE")
     p.add_argument("--base", required=True)
