@@ -16,7 +16,8 @@
   python scripts/automation/verify_tools.py migrate-empty [--modules all warehouse accounting]
   python scripts/automation/verify_tools.py sample-module
   python scripts/automation/verify_tools.py release-mark
-  python scripts/automation/verify_tools.py release-check [--frontend-only]
+  python scripts/automation/verify_tools.py release-check [--frontend-only | --backend-only]
+  python scripts/automation/verify_tools.py restart-backend
 
 هر فرمان در موفقیت کد ۰ و در شکست کد ۱ می‌دهد و علت را چاپ می‌کند.
 الگوهای ng-test-compare نسبت به warehouse-front هستند (مثل src/app/shared/icons/*.spec.ts).
@@ -194,6 +195,51 @@ def cmd_release_mark(args) -> int:
     return 0
 
 
+DAPHNE_TAB = ('wt.exe', '-w', '0', 'new-tab', '-d', str(REPO_ROOT / 'warehouse-backend'), '--title', 'Backend Daphne',
+              'cmd', '/k', r'.\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application')
+
+
+def cmd_restart_backend(args) -> int:
+    """daphne پورت ۸۰۰۰ را می‌بندد و در تب تازهٔ Windows Terminal بالا می‌آورد (از سمت runner، چون Antigravity نمی‌تواند تب باز کند)."""
+    import psutil
+
+    def is_daphne(p):
+        try:
+            cl = " ".join(p.cmdline())
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return False
+        return "-m daphne" in cl and "-p 8000" in cl
+
+    roots = set()
+    for p in psutil.process_iter():
+        if is_daphne(p):
+            top = p
+            for parent in p.parents():
+                if is_daphne(parent):
+                    top = parent
+                else:
+                    break
+            roots.add(top.pid)
+    for pid in sorted(roots):
+        r = subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, text=True,
+                           encoding="utf-8", errors="replace")
+        print(f"taskkill {pid}: {(r.stdout or r.stderr).strip()[:200]}")
+    deadline = time.time() + 20
+    while time.time() < deadline and any(c.laddr and c.laddr.port == 8000 and c.status == psutil.CONN_LISTEN
+                                         for c in psutil.net_connections(kind="tcp")):
+        time.sleep(1)
+    subprocess.run(list(DAPHNE_TAB))
+    deadline = time.time() + 90
+    while time.time() < deadline:
+        if any(c.laddr and c.laddr.port == 8000 and c.status == psutil.CONN_LISTEN
+               for c in psutil.net_connections(kind="tcp")):
+            print("Daphne listens on port 8000 again.")
+            return 0
+        time.sleep(2)
+    print("Daphne did not start listening on port 8000 within 90 s.")
+    return 1
+
+
 def cmd_release_check(args) -> int:
     """release روی app پس از release-mark: پشتیبان تازه، بیلد تازهٔ وصله‌شده، daphne و worker تازه، heartbeat و ۲۰۰."""
     import urllib.request
@@ -223,7 +269,7 @@ def cmd_release_check(args) -> int:
         else:
             problems.append(f"no non-empty .dump with .meta.json created in {probe['dir']} after the release mark")
 
-    for name in ("index.html", "ngsw.json", "ngsw-worker.js"):
+    for name in (() if args.backend_only else ("index.html", "ngsw.json", "ngsw-worker.js")):
         f = DIST_BROWSER / name
         if not f.is_file() or f.stat().st_mtime < start:
             problems.append(f"{f.relative_to(REPO_ROOT)} was not rebuilt after the release mark")
@@ -256,7 +302,7 @@ def cmd_release_check(args) -> int:
             workers.append(p)
     if not workers:
         problems.append("no GDrive sync worker python process is running")
-    elif restart_needed and not any(p.info["create_time"] >= start for p in workers):
+    elif restart_needed and not args.backend_only and not any(p.info["create_time"] >= start for p in workers):
         problems.append("GDrive sync worker was not restarted after the release mark")
     else:
         ok.append(f"gdrive worker pid(s) {[p.pid for p in workers]}")
@@ -849,7 +895,12 @@ def main(argv=None) -> int:
     p = sub.add_parser("release-check", help="app release after release-mark: backup, patched build, restarts, heartbeat, 200")
     p.add_argument("--frontend-only", action="store_true",
                    help="daphne and the worker must run but need not be restarted after the mark")
+    p.add_argument("--backend-only", action="store_true",
+                   help="no frontend build expected; daphne restarted after the mark; the worker must run")
     p.set_defaults(func=cmd_release_check)
+
+    p = sub.add_parser("restart-backend", help="restart daphne on port 8000 in a new Windows Terminal tab")
+    p.set_defaults(func=cmd_restart_backend)
 
     p = sub.add_parser("sample-module", help="new_module.py builds a sample module in a HEAD copy without touching the core")
     p.set_defaults(func=cmd_sample_module)
