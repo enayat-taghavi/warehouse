@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { of, Subject } from 'rxjs';
 import { AccountantPersonnelHubComponent } from './accountant-personnel';
-import { PersonnelProfile } from '../../../../../../core/models/personnel.model';
+import { PersonnelProfile } from '../../../../models/personnel.model';
 import { generateShebaFromAccount } from '../../../../../../core/utils/sheba-utils';
 
 describe('AccountantPersonnelHubComponent Phase 9 Tests', () => {

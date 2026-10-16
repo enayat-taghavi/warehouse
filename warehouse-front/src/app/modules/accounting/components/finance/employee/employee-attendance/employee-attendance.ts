@@ -18,7 +18,7 @@ import {
   MonthlyGridRow,
   MonthlyGridResponse,
   AttendanceAnomaly
-} from '../../../../../../core/models/personnel.model';
+} from '../../../../models/personnel.model';
 import { jalaliToGregorian, gregorianToJalali } from '../../../../../../core/utils/date-utils';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';

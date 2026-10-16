@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { of, Subject, throwError } from 'rxjs';
 import { EmployeeNewPersonnelHubComponent } from './employee-new-personnel';
-import { PersonnelProfile, WorkflowAuditLog } from '../../../../../../core/models/personnel.model';
+import { PersonnelProfile, WorkflowAuditLog } from '../../../../models/personnel.model';
 
 describe('EmployeeNewPersonnelHubComponent - Phase 7 Comprehensive Unit Tests', () => {
   let component: EmployeeNewPersonnelHubComponent;

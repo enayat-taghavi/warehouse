@@ -15,7 +15,7 @@ import {
   PersonnelChangeRequest,
   VehicleChangeRequest,
   PayrollYearlySettings
-} from '../../../../../core/models/personnel.model';
+} from '../../../models/personnel.model';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';

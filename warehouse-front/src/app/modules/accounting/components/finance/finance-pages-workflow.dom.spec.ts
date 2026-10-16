@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { of, throwError, Subject } from 'rxjs';
 import { EmployeeNewPersonnelHubComponent } from './employee/employee-new-personnel/employee-new-personnel';
 import { EmployeeNewVehicleHubComponent } from './employee/employee-new-vehicle/employee-new-vehicle';
-import { PersonnelProfile, VehicleDriverProfile, ProjectSection } from '../../../../core/models/personnel.model';
+import { PersonnelProfile, VehicleDriverProfile, ProjectSection } from '../../models/personnel.model';
 import { validateSheba, generateShebaFromAccount, extractShebaDigits } from '../../../../core/utils/sheba-utils';
 
 function createStorageMock() {

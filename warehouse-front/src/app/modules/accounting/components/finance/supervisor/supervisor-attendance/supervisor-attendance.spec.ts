@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { of, throwError } from 'rxjs';
 import { SupervisorAttendanceHubComponent } from './supervisor-attendance';
-import { ProjectSection } from '../../../../../../core/models/personnel.model';
+import { ProjectSection } from '../../../../models/personnel.model';
 
 describe('SupervisorAttendanceHubComponent Unit Tests', () => {
   let component: SupervisorAttendanceHubComponent;

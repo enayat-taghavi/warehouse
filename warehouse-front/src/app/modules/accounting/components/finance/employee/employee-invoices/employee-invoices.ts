@@ -3,7 +3,7 @@ import { ActiveCompanyService } from '../../../../../../core/services/active-com
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ProjectSection, Counterparty, ExpenseInvoice } from '../../../../../../core/models/personnel.model';
+import { ProjectSection, Counterparty, ExpenseInvoice } from '../../../../models/personnel.model';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';

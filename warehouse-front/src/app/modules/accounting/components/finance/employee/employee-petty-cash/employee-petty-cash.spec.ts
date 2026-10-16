@@ -8,7 +8,7 @@ import {
   PettyCashBalanceSummary,
   Counterparty,
   ProjectSection
-} from '../../../../../../core/models/personnel.model';
+} from '../../../../models/personnel.model';
 
 describe('EmployeePettyCashHubComponent Vitest Suite', () => {
   let component: EmployeePettyCashHubComponent;

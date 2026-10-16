@@ -9,7 +9,7 @@ import { ToastService } from '../../../../../../shared/components/toast/toast.co
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { WarehouseHttpService } from '../../../../../../core/http/warehouse-http.service';
 import { ModuleRegistryService } from '../../../../../../core/modules/module-registry.service';
-import { ProjectSection, VehicleDriverProfile, VehicleChangeRequest, VehicleBankAccount } from '../../../../../../core/models/personnel.model';
+import { ProjectSection, VehicleDriverProfile, VehicleChangeRequest, VehicleBankAccount } from '../../../../models/personnel.model';
 import {
   IRANIAN_BANKS,
   IranianBankInfo,

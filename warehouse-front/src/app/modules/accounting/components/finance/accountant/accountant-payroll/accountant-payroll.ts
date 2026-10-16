@@ -9,7 +9,7 @@ import { ToastService } from '../../../../../../shared/components/toast/toast.co
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { WarehouseHttpService } from '../../../../../../core/http/warehouse-http.service';
 import { ModuleRegistryService } from '../../../../../../core/modules/module-registry.service';
-import { AttendanceSummaryRow, ProjectSection } from '../../../../../../core/models/personnel.model';
+import { AttendanceSummaryRow, ProjectSection } from '../../../../models/personnel.model';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { LoadingSkeletonComponent } from '../../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';

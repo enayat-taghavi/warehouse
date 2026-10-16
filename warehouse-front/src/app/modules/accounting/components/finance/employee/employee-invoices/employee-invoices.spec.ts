@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EmployeeInvoicesHubComponent } from './employee-invoices';
 import { of, Subject } from 'rxjs';
-import { ExpenseInvoice, Counterparty, ProjectSection } from '../../../../../../core/models/personnel.model';
+import { ExpenseInvoice, Counterparty, ProjectSection } from '../../../../models/personnel.model';
 
 describe('EmployeeInvoicesHubComponent Vitest Suite (Phase 3)', () => {
   let component: EmployeeInvoicesHubComponent;

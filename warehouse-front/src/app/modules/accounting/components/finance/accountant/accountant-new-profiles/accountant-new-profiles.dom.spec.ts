@@ -27,7 +27,7 @@ import {
   PersonnelChangeRequest,
   VehicleChangeRequest,
   ProjectSection
-} from '../../../../../../core/models/personnel.model';
+} from '../../../../models/personnel.model';
 import { generateShebaFromAccount } from '../../../../../../core/utils/sheba-utils';
 
 try {

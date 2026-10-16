@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { of } from 'rxjs';
 import { SupervisorPeriodLockHubComponent } from './supervisor-period-lock';
-import { ProjectSection } from '../../../../../../core/models/personnel.model';
+import { ProjectSection } from '../../../../models/personnel.model';
 
 describe('SupervisorPeriodLockHubComponent Unit Tests', () => {
   let component: SupervisorPeriodLockHubComponent;

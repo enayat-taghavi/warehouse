@@ -7,7 +7,7 @@ import {
   Counterparty,
   PettyCashTransaction,
   PettyCashBalanceSummary
-} from '../../../../../../core/models/personnel.model';
+} from '../../../../models/personnel.model';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';

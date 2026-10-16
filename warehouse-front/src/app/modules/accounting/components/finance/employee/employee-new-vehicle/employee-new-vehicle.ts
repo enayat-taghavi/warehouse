@@ -10,7 +10,7 @@ import {
   VehicleBankAccount,
   VehicleDocument,
   WorkflowAuditLog
-} from '../../../../../../core/models/personnel.model';
+} from '../../../../models/personnel.model';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';

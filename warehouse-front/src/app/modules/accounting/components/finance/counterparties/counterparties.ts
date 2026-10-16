@@ -12,7 +12,7 @@ import { WebSocketService } from '../../../../../core/http/websocket.service';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
 import { ExcelImportModal } from '../../../../../shared/components/excel-import-modal/excel-import-modal';
-import { Counterparty } from '../../../../../core/models/personnel.model';
+import { Counterparty } from '../../../models/personnel.model';
 import {
   IRANIAN_BANKS,
   IranianBankInfo,

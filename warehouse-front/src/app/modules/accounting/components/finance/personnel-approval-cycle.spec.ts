@@ -5,7 +5,7 @@ import { of } from 'rxjs';
 import { SupervisorNewProfilesHubComponent } from './supervisor/supervisor-new-profiles/supervisor-new-profiles';
 import { AccountantPersonnelHubComponent } from './accountant/accountant-personnel/accountant-personnel';
 import { ManagerApprovals } from '../personnel/manager-approvals/manager-approvals';
-import { PersonnelChangeRequest } from '../../../../core/models/personnel.model';
+import { PersonnelChangeRequest } from '../../models/personnel.model';
 
 describe('Complete Personnel 3-Tier Lifecycle DOM & State Integration (Employee -> Supervisor -> Finance -> Manager)', () => {
   let mockAuth: any;

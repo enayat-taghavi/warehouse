@@ -16,7 +16,7 @@ import {
   PersonnelChangeRequest,
   PayrollYearlySettings,
   PersonnelCostEstimate
-} from '../../../../../../core/models/personnel.model';
+} from '../../../../models/personnel.model';
 import {
   IRANIAN_BANKS,
   IranianBankInfo,

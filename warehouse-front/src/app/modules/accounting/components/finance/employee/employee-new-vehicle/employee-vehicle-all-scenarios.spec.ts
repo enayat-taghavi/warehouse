@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EmployeeNewVehicleHubComponent } from './employee-new-vehicle';
 import { of, throwError, Subject } from 'rxjs';
-import { VehicleDriverProfile, ProjectSection, VehicleChangeRequest } from '../../../../../../core/models/personnel.model';
+import { VehicleDriverProfile, ProjectSection, VehicleChangeRequest } from '../../../../models/personnel.model';
 
 describe('آزمون‌های جامع تمامی سناریوهای ثبت خودرو، فیلدها، دکمه‌ها و چرخه حیات ناوگان (All Vehicle Scenarios, Fields, Buttons & Lifecycle Suite)', () => {
   let component: EmployeeNewVehicleHubComponent;

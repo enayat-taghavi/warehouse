@@ -17,7 +17,7 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../core/services/state.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../api/personnel-api.service';
-import { ProjectSection } from '../../../../../core/models/personnel.model';
+import { ProjectSection } from '../../../models/personnel.model';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());

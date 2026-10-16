@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { EmployeeNewPersonnelHubComponent } from './employee-new-personnel';
 import { of, throwError, Subject } from 'rxjs';
-import { PersonnelProfile, ProjectSection, PersonnelBankAccount, PersonnelDocument } from '../../../../../../core/models/personnel.model';
+import { PersonnelProfile, ProjectSection, PersonnelBankAccount, PersonnelDocument } from '../../../../models/personnel.model';
 
 describe('آزمون‌های جامع فاز ۶ - گردش کار ثبت پرسنل کارمند و مودال ۵ تب (Phase 6 Unit & DOM Tests)', () => {
   let component: EmployeeNewPersonnelHubComponent;

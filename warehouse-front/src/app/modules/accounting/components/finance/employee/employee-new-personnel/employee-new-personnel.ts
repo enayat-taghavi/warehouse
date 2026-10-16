@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject, Subscription, concat, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap, toArray } from 'rxjs/operators';
-import { ProjectSection, PersonnelProfile, PersonnelBankAccount, PersonnelDocument, WorkflowAuditLog } from '../../../../../../core/models/personnel.model';
+import { ProjectSection, PersonnelProfile, PersonnelBankAccount, PersonnelDocument, WorkflowAuditLog } from '../../../../models/personnel.model';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';

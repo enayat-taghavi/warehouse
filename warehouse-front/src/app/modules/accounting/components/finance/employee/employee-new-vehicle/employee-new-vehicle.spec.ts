@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EmployeeNewVehicleHubComponent } from './employee-new-vehicle';
 import { of, Subject } from 'rxjs';
-import { VehicleDriverProfile, ProjectSection } from '../../../../../../core/models/personnel.model';
+import { VehicleDriverProfile, ProjectSection } from '../../../../models/personnel.model';
 
 describe('EmployeeNewVehicleHubComponent Vitest Suite (Phase 4 & Refactor)', () => {
   let component: EmployeeNewVehicleHubComponent;

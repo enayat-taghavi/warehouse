@@ -7,7 +7,7 @@ import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
-import { ProjectSection, PersonnelProfile, PersonnelChangeRequest, PayrollYearlySettings, PersonnelCostEstimate } from '../../../../../../core/models/personnel.model';
+import { ProjectSection, PersonnelProfile, PersonnelChangeRequest, PayrollYearlySettings, PersonnelCostEstimate } from '../../../../models/personnel.model';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { SmartDeleteModalComponent } from '../../../../../../shared/components/smart-delete-modal/smart-delete-modal';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';

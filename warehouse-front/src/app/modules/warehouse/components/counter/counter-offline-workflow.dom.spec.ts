@@ -13,7 +13,7 @@ import { NetworkStatusService } from '../../../../core/services/network-status.s
 import { ItemPhotoService } from '../../services/item-photo.service';
 import { CountTaskStore } from '../../services/count-task-store';
 import { offlineDb, warehouseOfflineDb, financeOfflineDb } from '../../../../core/services/offline-db';
-import { CountTask } from '../../../../core/models/count-task.model';
+import { CountTask } from '../../models/count-task.model';
 import { ModuleRegistryService, getModuleRegistry } from '../../../../core/modules/module-registry.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';

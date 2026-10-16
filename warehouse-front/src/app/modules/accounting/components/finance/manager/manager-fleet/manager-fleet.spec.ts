@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { of, Subject } from 'rxjs';
 import { ManagerFleetHubComponent } from './manager-fleet';
-import { VehicleChangeRequest, VehicleDriverProfile } from '../../../../../../core/models/personnel.model';
+import { VehicleChangeRequest, VehicleDriverProfile } from '../../../../models/personnel.model';
 
 describe('ManagerFleetHubComponent Unit Tests', () => {
   let component: ManagerFleetHubComponent;

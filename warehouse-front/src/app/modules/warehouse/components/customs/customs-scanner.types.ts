@@ -1,4 +1,4 @@
-import { DocTask } from '../../../../core/models/doc-task.model';
+import { DocTask } from '../../models/doc-task.model';
 
 export type ParsedScanRowStatus = 'ready' | 'pool' | 'readonly' | 'not_found';
 

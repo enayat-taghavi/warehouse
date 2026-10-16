@@ -7,7 +7,7 @@ import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../api/personnel-api.service';
-import { PayrollYearlySettings, FinancialProject } from '../../../../../core/models/personnel.model';
+import { PayrollYearlySettings, FinancialProject } from '../../../models/personnel.model';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';

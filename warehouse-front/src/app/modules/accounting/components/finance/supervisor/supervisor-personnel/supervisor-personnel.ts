@@ -7,7 +7,7 @@ import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
-import { ProjectSection, PersonnelProfile, PersonnelChangeRequest } from '../../../../../../core/models/personnel.model';
+import { ProjectSection, PersonnelProfile, PersonnelChangeRequest } from '../../../../models/personnel.model';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';

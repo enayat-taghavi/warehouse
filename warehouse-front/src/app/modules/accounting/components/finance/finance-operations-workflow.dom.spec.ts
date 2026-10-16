@@ -8,7 +8,7 @@ import { EmployeePettyCashHubComponent } from './employee/employee-petty-cash/em
 import { EmployeeInvoicesHubComponent } from './employee/employee-invoices/employee-invoices';
 import { TreasurerDisbursementsComponent } from './treasurer/treasurer-disbursements/treasurer-disbursements';
 import { ProjectsAndSectionsComponent } from '../organization/projects-and-sections/projects-and-sections';
-import { ProjectSection, FinancialProject } from '../../../../core/models/personnel.model';
+import { ProjectSection, FinancialProject } from '../../models/personnel.model';
 import { OfflineSyncService } from '../../../../core/services/offline-sync.service';
 
 function createStorageMock() {

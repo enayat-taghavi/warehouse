@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { of, Subject } from 'rxjs';
 import { AccountantFleetHubComponent } from './accountant-fleet';
-import { VehicleDriverProfile } from '../../../../../../core/models/personnel.model';
+import { VehicleDriverProfile } from '../../../../models/personnel.model';
 import { generateShebaFromAccount } from '../../../../../../core/utils/sheba-utils';
 
 describe('AccountantFleetHubComponent Unit Tests', () => {

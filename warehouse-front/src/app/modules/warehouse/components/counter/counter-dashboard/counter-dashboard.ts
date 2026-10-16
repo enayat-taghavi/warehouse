@@ -5,7 +5,7 @@ import { CountTaskApiService } from '../../../api/count-task-api.service';
 import { ItemApiService } from '../../../api/item-api.service';
 import { DynamicFieldApiService } from '../../../api/dynamic-field-api.service';
 import { SettingsService } from '../../../../../core/services/settings';
-import { CountTask, CountTaskStatus, CountTaskHistory } from '../../../../../core/models/count-task.model';
+import { CountTask, CountTaskStatus, CountTaskHistory } from '../../../models/count-task.model';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { StateService } from '../../../../../core/services/state.service';

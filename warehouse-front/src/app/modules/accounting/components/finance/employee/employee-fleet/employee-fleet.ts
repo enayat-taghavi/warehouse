@@ -18,7 +18,7 @@ import {
   VehicleMonthlyGridRow,
   VehicleTripAuditLog,
   MonthlyGridDayMeta
-} from '../../../../../../core/models/personnel.model';
+} from '../../../../models/personnel.model';
 import { jalaliToGregorian, gregorianToJalali } from '../../../../../../core/utils/date-utils';
 import {
   IRANIAN_BANKS,

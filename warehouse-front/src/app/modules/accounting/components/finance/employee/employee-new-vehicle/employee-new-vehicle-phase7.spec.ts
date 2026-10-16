@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { EmployeeNewVehicleHubComponent } from './employee-new-vehicle';
 import { of, throwError, Subject } from 'rxjs';
-import { VehicleDriverProfile, ProjectSection, WorkflowAuditLog } from '../../../../../../core/models/personnel.model';
+import { VehicleDriverProfile, ProjectSection, WorkflowAuditLog } from '../../../../models/personnel.model';
 
 describe('EmployeeNewVehicleHubComponent - Phase 7 Suite (Employee Cartable & Hub)', () => {
   let component: EmployeeNewVehicleHubComponent;

@@ -4,7 +4,7 @@ import { offlineDb } from '../../../core/services/offline-db';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
 import { SyncPullService } from '../../../core/services/sync-pull.service';
 import { environment } from '../../../../environments/environment';
-import { CountTask, CountTaskStatus } from '../../../core/models/count-task.model';
+import { CountTask, CountTaskStatus } from '../models/count-task.model';
 
 /**
  * CountTaskStore — مخزن Local-First تسک‌های شمارش (فاز ۲)

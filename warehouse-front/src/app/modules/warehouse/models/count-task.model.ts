@@ -1,4 +1,4 @@
-import { Item } from './item.model';
+import { Item } from '../../../core/models/item.model';
 
 export type CountTaskStatus = 
   | 'PENDING_COUNT'

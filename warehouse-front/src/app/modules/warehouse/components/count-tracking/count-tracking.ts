@@ -5,7 +5,7 @@ import { Router, NavigationEnd } from '@angular/router';
 import { Subscription, Subject, filter } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { CountTaskApiService } from '../../api/count-task-api.service';
-import { CountTask } from '../../../../core/models/count-task.model';
+import { CountTask } from '../../models/count-task.model';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { StateService } from '../../../../core/services/state.service';

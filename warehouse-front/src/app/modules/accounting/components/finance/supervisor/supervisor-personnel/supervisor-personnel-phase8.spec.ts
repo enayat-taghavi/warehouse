@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { of, Subject, throwError } from 'rxjs';
 import { SupervisorPersonnelHubComponent } from './supervisor-personnel';
-import { PersonnelChangeRequest, PersonnelProfile } from '../../../../../../core/models/personnel.model';
+import { PersonnelChangeRequest, PersonnelProfile } from '../../../../models/personnel.model';
 
 describe('SupervisorPersonnelHubComponent - Phase 8 Comprehensive Tests', () => {
   let component: SupervisorPersonnelHubComponent;

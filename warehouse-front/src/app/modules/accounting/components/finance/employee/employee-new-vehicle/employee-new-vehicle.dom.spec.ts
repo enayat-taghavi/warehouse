@@ -17,7 +17,7 @@ import { AuthService } from '../../../../../../core/auth/auth.service';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
-import { VehicleDriverProfile, ProjectSection } from '../../../../../../core/models/personnel.model';
+import { VehicleDriverProfile, ProjectSection } from '../../../../models/personnel.model';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 
 try {

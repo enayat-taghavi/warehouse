@@ -4,7 +4,7 @@ import { offlineDb } from '../../../core/services/offline-db';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
 import { SyncPullService } from '../../../core/services/sync-pull.service';
 import { environment } from '../../../../environments/environment';
-import { DocTask } from '../../../core/models/doc-task.model';
+import { DocTask } from '../models/doc-task.model';
 
 /**
  * DocTaskStore — مخزن Local-First تسک‌های مالی/اسناد

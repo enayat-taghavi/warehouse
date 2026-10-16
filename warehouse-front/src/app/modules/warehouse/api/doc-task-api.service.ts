@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { ApiService } from '../../../core/api/api.service';
 import { Paginated } from '../../../core/models/api-response.model';
-import { DocTask } from '../../../core/models/doc-task.model';
+import { DocTask } from '../models/doc-task.model';
 import { environment } from '../../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })

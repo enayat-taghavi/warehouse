@@ -8,7 +8,7 @@ import { ItemApiService } from '../../api/item-api.service';
 import { DynamicFieldApiService } from '../../api/dynamic-field-api.service';
 import { SettingsService } from '../../../../core/services/settings';
 import { DocTaskStore } from '../../services/doc-task-store';
-import { DocTask, DocTaskStatus, INVOICE_TYPE_LABELS, CURRENCY_LABELS } from '../../../../core/models/doc-task.model';
+import { DocTask, DocTaskStatus, INVOICE_TYPE_LABELS, CURRENCY_LABELS } from '../../models/doc-task.model';
 import { 
   FieldPermissionConfig, 
   mergeDocFieldPermissions 
