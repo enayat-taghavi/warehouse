@@ -431,3 +431,40 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - Commit with this message, without push:
 feat(guardians): semantic core fences for module app references and hardcoded module API paths
 - Short English report: both counters with their values and file lists, self-test result, commands actually run with results, remaining doubts. End the turn after the commit and report.
+
+===
+
+[DONE] Session 10 of 10 — Phase 3 follow-up: test that the org-admin directory honors the company_id narrowing for section members
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys; s=pathlib.Path('warehouse-backend/integration_tests/test_company_extension_points.py').read_text(encoding='utf-8'); ok={'new_test':'def test_org_admin_directory_company_id_param_narrows_section_members' in s,'uses_param':'company_id=' in s}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
+verify: python -c "import subprocess,sys; ok={'warehouse-backend/integration_tests/test_company_extension_points.py'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts companies --known scripts/automation/known_backend_failures.txt --min-tests 150
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(org-directory): company_id narrowing for section members"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply (including the new rule: never alter, bypass or shadow a runner check).
+- Test-only session: change only `warehouse-backend/integration_tests/test_company_extension_points.py`. Do not change application code. If the new test fails, report the failure with the output and end the turn; do not change application code to make it pass.
+- Do not push. Stage only your changed file. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- `UserViewSet._org_admin_directory_queryset` in `warehouse-backend/core/accounts/views_domains/user_views.py` narrows `allowed_cids` to `{company_id}` when the `company_id` query parameter is given, then ORs the `company_member_q_builders` contributions (section members of projects of those companies).
+- The existing test `test_org_admin_directory_lists_active_section_member_of_allowed_company` covers an admin with access to one company only, so it would not catch a builder that ignored the narrowing.
+
+3. Definitions: "section member of company X" means a user with an active `UserSectionAssignment` in a `ProjectSection` of a `FinancialProject` of company X.
+
+4. Task: add `test_org_admin_directory_company_id_param_narrows_section_members` next to the existing test, reusing its setup style (new unique codes, usernames and phone numbers). The org admin has `perm_manage_projects_sections` and `workspace_full` access to both comp1 and comp2; there is one section member in each company. Assert: `GET /api/accounts/users/` lists both members; `GET /api/accounts/users/?company_id=<comp1.id>` lists the comp1 member and not the comp2 member; `GET /api/accounts/users/?company_id=<comp2.id>` lists the comp2 member and not the comp1 member.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_company_extension_points --noinput`. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the test file.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(org-directory): company_id narrowing for section members
+- Short English report: the test added, commands actually run with pass/fail counts. End the turn after the commit and report.

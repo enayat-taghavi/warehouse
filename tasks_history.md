@@ -5112,3 +5112,56 @@ feat(guardians): semantic core fences for module app references and hardcoded mo
 2. **نگهبان ۵۷ (فرانت‌اند):** اضافه کردن شمارنده `core_hardcoded_module_api_paths` برای شناسایی ...
 
 ---
+
+### Task 1 of 1 — 2026-10-17 00:30:17
+- **Status:** DONE
+- **Conversation:** `17681e1f-3f3a-4a7a-8708-cb0702fd3b55`
+- **Steps:** 66
+- **Duration:** 9m 17s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 7/7 passed
+- **Task:**
+```
+Session 10 of 10 — Phase 3 follow-up: test that the org-admin directory honors the company_id narrowing for section members
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply (including the new rule: never alter, bypass or shadow a runner check).
+- Test-only session: change only `warehouse-backend/integration_tests/test_company_extension_points.py`. Do not change application code. If the new test fails, report the failure with the output and end the turn; do not change application code to make it pass.
+- Do not push. Stage only your changed file. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- `UserViewSet._org_admin_directory_queryset` in `warehouse-backend/core/accounts/views_domains/user_views.py` narrows `allowed_cids` to `{company_id}` when the `company_id` query parameter is given, then ORs the `company_member_q_builders` contributions (section members of projects of those companies).
+- The existing test `test_org_admin_directory_lists_active_section_member_of_allowed_company` covers an admin with access to one company only, so it would not catch a builder that ignored the narrowing.
+
+3. Definitions: "section member of company X" means a user with an active `UserSectionAssignment` in a `ProjectSection` of a `FinancialProject` of company X.
+
+4. Task: add `test_org_admin_directory_company_id_param_narrows_section_members` next to the existing test, reusing its setup style (new unique codes, usernames and phone numbers). The org admin has `perm_manage_projects_sections` and `workspace_full` access to both comp1 and comp2; there is one section member in each company. Assert: `GET /api/accounts/users/` lists both members; `GET /api/accounts/users/?company_id=<comp1.id>` lists the comp1 member and not the comp2 member; `GET /api/accounts/users/?company_id=<comp2.id>` lists the comp2 member and not the comp1 member.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_company_extension_points --noinput`. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the test file.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(org-directory): company_id narrowing for section members
+- Short English report: the test added, commands actually run with pass/fail counts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام چهارم: حل مستقیم و اعتبارسنجی کامل (Solve Directly if Confirmed)
+
+تست درخواستی به فایل [test_company_extension_points.py](file:///E:/warehouse%20project/warehouse-backend/integration_tests/test_company_extension_points.py) اضافه گردید و با موفقیت اجرا و تایید شد. تغییرات بدون push در گیت کامیت شدند.
+
+</div>
+
+### Summary Report
+
+- **Test Added**:
+  - Added `test_org_admin_directory_company_id_param_narrows_section_members` in [test_company_extension_points.py](file:///E:/warehouse%20project/warehouse-backend/integration_tests/test_company_extension_points.py).
+  - Verifies that `UserViewSet._org_admin_directory_queryset` honors `company_id` query paramet...
+
+---
