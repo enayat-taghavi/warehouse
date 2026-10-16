@@ -73,6 +73,10 @@ from .helpers import (
     logger,
 )
 
+BULK_UPDATE_PROTECTED_FIELDS = {
+    'id', 'warehouse', 'created_by', 'modified_by', 'created_at', 'updated_at', 'sync_id', 'is_deleted'
+}
+
 class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
@@ -132,27 +136,51 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
 
         return super().create(request, *args, **kwargs)
 
-    def _ensure_target_warehouse_in_scope(self, warehouse):
-        from rest_framework.exceptions import PermissionDenied
-        from warehouses.models import Warehouse
-        from common.warehouse_scope import can_access_warehouse
+    def _allowed_warehouse_ids(self):
+        cached = getattr(self, '_cached_allowed_warehouse_ids', None)
+        if cached is not None:
+            return cached
         from common.tenant_scope import scope_tenant_queryset
-
+        from common.warehouse_scope import user_warehouse_ids
         request = getattr(self, 'request', None)
         user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            self._cached_allowed_warehouse_ids = set()
+            return self._cached_allowed_warehouse_ids
 
-        if warehouse is None:
-            if not can_access_warehouse(user, None):
-                raise PermissionDenied("دسترسی غیرمجاز: انبار انتخابشده خارج از محدودهٔ مجاز شماست.")
-            return
+        from companies.models import Company
+        has_active_companies = Company.objects.filter(is_active=True).exists()
+        if has_active_companies:
+            qs = scope_tenant_queryset(
+                Warehouse.objects.all(),
+                user,
+                company_field='company_id',
+                request=request
+            )
+        else:
+            qs = Warehouse.objects.all()
 
+        assigned = user_warehouse_ids(user)
+        if assigned is not None:
+            qs = qs.filter(id__in=assigned)
+        self._cached_allowed_warehouse_ids = set(qs.values_list('id', flat=True))
+        return self._cached_allowed_warehouse_ids
+
+    def _can_write_warehouse(self, warehouse_id):
+        if warehouse_id is None:
+            from common.warehouse_scope import can_access_warehouse
+            user = getattr(getattr(self, 'request', None), 'user', None)
+            return can_access_warehouse(user, None)
+        try:
+            target_id = getattr(warehouse_id, 'id', warehouse_id)
+            return int(target_id) in self._allowed_warehouse_ids()
+        except (ValueError, TypeError):
+            return False
+
+    def _ensure_target_warehouse_in_scope(self, warehouse):
+        from rest_framework.exceptions import PermissionDenied
         wh_id = getattr(warehouse, 'id', warehouse)
-        wh_pk = getattr(warehouse, 'pk', wh_id)
-
-        if not can_access_warehouse(user, wh_id):
-            raise PermissionDenied("دسترسی غیرمجاز: انبار انتخابشده خارج از محدودهٔ مجاز شماست.")
-
-        if not scope_tenant_queryset(Warehouse.objects.filter(pk=wh_pk), user, company_field='company_id', request=request).exists():
+        if not self._can_write_warehouse(wh_id):
             raise PermissionDenied("دسترسی غیرمجاز: انبار انتخابشده خارج از محدودهٔ مجاز شماست.")
 
     def perform_create(self, serializer):
@@ -489,7 +517,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 wh_id_val = int(warehouse_id)
             except (ValueError, TypeError):
                 return Response({'error': 'شناسه انبار نامعتبر است.'}, status=400)
-            if not can_access_warehouse(request.user, wh_id_val):
+            if not self._can_write_warehouse(wh_id_val):
                 return Response({'error': 'شما به این انبار دسترسی ندارید.'}, status=403)
             warehouse_id = wh_id_val
 
@@ -519,7 +547,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 wh_id_val = int(warehouse_id)
             except (ValueError, TypeError):
                 return Response({'error': 'شناسه انبار نامعتبر است.'}, status=400)
-            if not can_access_warehouse(request.user, wh_id_val):
+            if not self._can_write_warehouse(wh_id_val):
                 return Response({'error': 'شما به این انبار دسترسی ندارید.'}, status=403)
             warehouse_id = wh_id_val
 
@@ -700,7 +728,9 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                         }, status=400)
 
                 for key, value in record.items():
-                    if key in valid_fields and key != 'id':
+                    if key in BULK_UPDATE_PROTECTED_FIELDS:
+                        continue
+                    if key in valid_fields:
                         field = valid_fields[key]
                         if field.is_relation and field.many_to_one:
                             setattr(item, field.attname, value)
@@ -1157,7 +1187,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         if not file_obj:
             return Response({'error': 'هیچ فایلی ارسال نشده است.'}, status=400)
 
-        if warehouse_id and not can_access_warehouse(request.user, warehouse_id):
+        if warehouse_id and not self._can_write_warehouse(warehouse_id):
             return Response({'error': 'شما به این انبار دسترسی ندارید.'}, status=403)
             
         temp_path = None
@@ -1219,7 +1249,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             return Response({'error': 'شناسه فرآیند نامعتبر است.'}, status=400)
 
         import_log = ImportLog.objects.filter(import_id=import_id).first()
-        if import_log and not can_access_warehouse(request.user, import_log.warehouse_id):
+        if import_log and not self._can_write_warehouse(import_log.warehouse_id):
             return Response({'error': 'شما دسترسی لازم برای لغو این فرآیند را ندارید.'}, status=403)
 
         cache.set(f"cancel_import_{import_id}", True, timeout=3600)
@@ -1241,7 +1271,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
 
         # کنترل دسترسی کاربر به لاگ (سوپریوزر، ثبت‌کننده لاگ یا دسترسی مجاز به انبار)
         is_owner = (import_log.imported_by_id == request.user.id)
-        has_wh_access = can_access_warehouse(request.user, import_log.warehouse_id)
+        has_wh_access = self._can_write_warehouse(import_log.warehouse_id)
         if not (request.user.is_superuser or is_owner or has_wh_access):
             return Response({'error': 'شما دسترسی لازم برای دریافت این فایل لاگ را ندارید.'}, status=403)
 
@@ -1279,12 +1309,12 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             except (ValueError, TypeError):
                 return Response({'error': 'شناسه انبار نامعتبر است.'}, status=400)
 
-            if not can_access_warehouse(request.user, warehouse_id_val):
+            if not self._can_write_warehouse(warehouse_id_val):
                 return Response({'error': 'شما به این انبار دسترسی ندارید.'}, status=403)
             warehouse_id = warehouse_id_val
         else:
             warehouse_id = None
-            if not can_access_warehouse(request.user, None):
+            if not self._can_write_warehouse(None):
                 return Response({'error': 'تعیین انبار مجاز برای کاربران با دسترسی محدود الزامی است.'}, status=403)
 
         from warehouses.services import get_setting
@@ -1326,6 +1356,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 
         user_id = request.user.id if request.user.is_authenticated else None
         original_file_name = file_obj.name
+        allowed_warehouse_ids = self._allowed_warehouse_ids()
 
         def worker(q):
             try:
@@ -1596,8 +1627,18 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                             
                             if warehouse_str:
                                 wh_str = str(warehouse_str).strip()
-                                wh = Warehouse.objects.filter(Q(name__iexact=wh_str) | Q(code__iexact=wh_str)).first()
+                                wh = Warehouse.objects.filter(id__in=allowed_warehouse_ids).filter(Q(name__iexact=wh_str) | Q(code__iexact=wh_str)).first()
                                 if not wh:
+                                    if warehouse_id:
+                                        conflicting_wh = Warehouse.objects.filter(name__iexact=wh_str).first() or Warehouse.objects.filter(code__iexact=wh_str).first()
+                                        if conflicting_wh and conflicting_wh.id != int(warehouse_id):
+                                            failed += 1
+                                            err_msg = f"مغایرت انبار: فرآیند برای انبار شناسه {warehouse_id} آغاز شده اما این ردیف انبار '{conflicting_wh.name}' را مشخص کرده است."
+                                            error_details.append({"row": row_idx, "code": fa_unic_code, "error": err_msg})
+                                            append_colored_row(row, 'err', err_msg)
+                                            q.put(json.dumps({"type": "err", "msg": f"[ردیف {row_idx}] خطا در {fa_unic_code}: {err_msg}"}) + "\n")
+                                            continue
+
                                     failed += 1
                                     err_msg = f"انبار با نام یا کد '{wh_str}' یافت نشد."
                                     error_details.append({"row": row_idx, "code": fa_unic_code, "error": err_msg})
@@ -1616,7 +1657,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
 
                                 target_warehouse_id = wh.id
 
-                            if target_warehouse_id and not can_access_warehouse(request.user, target_warehouse_id):
+                            if target_warehouse_id and target_warehouse_id not in allowed_warehouse_ids:
                                 failed += 1
                                 err_msg = "شما دسترسی لازم به انبار مشخص‌شده در این ردیف را ندارید."
                                 error_details.append({"row": row_idx, "code": fa_unic_code, "error": err_msg})
@@ -1670,7 +1711,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                                         q.put(json.dumps({"type": "err", "msg": f"[ردیف {row_idx}] خطا: {err_msg}"}) + "\n")
                                         continue
 
-                                    if not can_access_warehouse(request.user, existing_item.warehouse_id):
+                                    if existing_item.warehouse_id not in allowed_warehouse_ids:
                                         failed += 1
                                         err_msg = f"عدم دسترسی: شما به انبار کالای شناسه {clean_id} دسترسی ندارید."
                                         error_details.append({"row": row_idx, "code": item_display_code, "error": err_msg})
@@ -2100,7 +2141,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         except ImportLog.DoesNotExist:
             return Response({'error': 'فرآیندی با این شناسه یافت نشد.'}, status=404)
 
-        if not can_access_warehouse(request.user, import_log.warehouse_id):
+        if not self._can_write_warehouse(import_log.warehouse_id):
             return Response({'error': 'شما به این انبار دسترسی ندارید.'}, status=403)
 
         if import_log.is_reverted:
@@ -2311,7 +2352,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         except (ValueError, TypeError):
             return Response({'error': 'شناسه انبار نامعتبر است.'}, status=400)
 
-        if not can_access_warehouse(request.user, warehouse_id_val):
+        if not self._can_write_warehouse(warehouse_id_val):
             return Response({'error': 'شما به این انبار دسترسی ندارید.'}, status=403)
         warehouse_id = warehouse_id_val
 
@@ -2390,7 +2431,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         except (ValueError, TypeError):
             return Response({'error': 'شناسه انبار نامعتبر است.'}, status=400)
 
-        if not can_access_warehouse(request.user, warehouse_id_val):
+        if not self._can_write_warehouse(warehouse_id_val):
             return Response({'error': 'شما به این انبار دسترسی ندارید.'}, status=403)
         warehouse_id = warehouse_id_val
 
@@ -2429,7 +2470,7 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         except (ValueError, TypeError):
             return Response({'error': 'شناسه انبار نامعتبر است.'}, status=400)
 
-        if not can_access_warehouse(request.user, warehouse_id_val):
+        if not self._can_write_warehouse(warehouse_id_val):
             return Response({'error': 'شما به این انبار دسترسی ندارید.'}, status=403)
         warehouse_id = warehouse_id_val
 
