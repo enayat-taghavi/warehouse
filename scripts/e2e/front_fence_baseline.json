@@ -3,11 +3,13 @@
   "counters": {
     "core_to_module_imports": 0,
     "cross_module_imports": 0,
-    "is_module_installed_outside_module": 0
+    "is_module_installed_outside_module": 0,
+    "core_hardcoded_module_api_paths": 0
   },
   "violations": {
     "core_to_module_imports": [],
     "cross_module_imports": [],
-    "is_module_installed_outside_module": []
+    "is_module_installed_outside_module": [],
+    "core_hardcoded_module_api_paths": []
   }
 }

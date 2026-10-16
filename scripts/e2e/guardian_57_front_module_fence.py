@@ -5,10 +5,11 @@
 
 مرجع: Documents/Modular_Middle_Path/implementation_plan_modular_middle_path.md §۵ (گام ۲)
 
-این نگهبان سه شمارندهٔ اصلی مرزبندی ماژول‌های فرانت را می‌سنجد و آچار یک‌طرفه را برقرار می‌کند:
+این نگهبان چهار شمارندهٔ اصلی مرزبندی ماژول‌های فرانت را می‌سنجد و آچار یک‌طرفه را برقرار می‌کند:
   (الف) core/، shared/ یا modules/common/ → modules/warehouse|accounting (core_to_module_imports)
   (ب) انبار ↔ مالی (cross_module_imports)
   (ج) isModuleInstalled('<کد ماژول>') بیرون از پوشهٔ همان ماژول (is_module_installed_outside_module)
+  (د) مسیرهای سخت‌کدشده API ماژول در هسته/مشترک (core_hardcoded_module_api_paths)
 
 ریشهٔ ترکیب (app.routes.ts، app.config.ts، app.component.ts و installed-modules.ts) مستثناست.
 مبنای آچاری در scripts/e2e/front_fence_baseline.json نگه‌داری می‌شود و فقط کاهش مجاز است.
@@ -48,6 +49,8 @@ COMPOSITION_ROOT_FILES = {
 
 IMPORT_RE = re.compile(r"""(?:from\s+|import\s*\(|import\s+)['"]([^'"]+)['"]""")
 IS_MODULE_INSTALLED_RE = re.compile(r"""isModuleInstalled\(\s*['"]([^'"]+)['"]\s*\)""")
+HARDCODED_MODULE_API_PATH_RE = re.compile(r"""['"`][^'"`\n]*/(?:personnel|inventory)/""")
+IMPORT_EXPORT_FROM_LINE_RE = re.compile(r"""^\s*(?:import|export)\b.*\bfrom\b""")
 
 
 def discover_module_names(app_dir):
@@ -132,6 +135,7 @@ def scan_front_fences(app_dir=FRONT_APP_DIR, extra_files=None):
         "core_to_module_imports": [],
         "cross_module_imports": [],
         "is_module_installed_outside_module": [],
+        "core_hardcoded_module_api_paths": [],
     }
 
     files_to_scan = []
@@ -206,10 +210,27 @@ def scan_front_fences(app_dir=FRONT_APP_DIR, extra_files=None):
                         "current_zone": zone,
                     })
 
+        # ۳) بررسی مسیرهای سخت‌کدشده API ماژول در فایل‌های غیرتست ناحیه core_common (د)
+        is_spec = rel_posix.endswith(".spec.ts") or file_path.name.endswith(".spec.ts")
+        if zone == "core_common" and not is_spec:
+            for line_idx, line in enumerate(lines, 1):
+                stripped = line.strip()
+                if stripped.startswith("//") or stripped.startswith("*") or stripped.startswith("/*"):
+                    continue
+                if IMPORT_EXPORT_FROM_LINE_RE.search(line):
+                    continue
+                for m in HARDCODED_MODULE_API_PATH_RE.finditer(line):
+                    violations["core_hardcoded_module_api_paths"].append({
+                        "file": rel_posix,
+                        "line": line_idx,
+                        "match": m.group(0),
+                    })
+
     counters = {
         "core_to_module_imports": len(violations["core_to_module_imports"]),
         "cross_module_imports": len(violations["cross_module_imports"]),
         "is_module_installed_outside_module": len(violations["is_module_installed_outside_module"]),
+        "core_hardcoded_module_api_paths": len(violations["core_hardcoded_module_api_paths"]),
     }
     return counters, violations
 
@@ -329,6 +350,7 @@ def run_self_test():
             '// فایل نقض ساختگی برای خودآزمایی نگهبان ۵۷\n'
             'import { test } from "../warehouse-front/src/app/modules/warehouse/warehouse-flags";\n'
             'export function check() {\n'
+            '  const syncUrl = `/api/personnel/sync/pull/?project_id=1`;\n'
             '  return isModuleInstalled("warehouse");\n'
             '}\n',
             encoding="utf-8",
@@ -337,6 +359,7 @@ def run_self_test():
         counters, violations = scan_front_fences(FRONT_APP_DIR, extra_files=[(dummy_file, "core_common")])
         found_import = any(v["file"] == dummy_file.name for v in violations["core_to_module_imports"])
         found_call = any(v["file"] == dummy_file.name for v in violations["is_module_installed_outside_module"])
+        found_api_path = any(v["file"] == dummy_file.name for v in violations["core_hardcoded_module_api_paths"])
 
         # آزمون قراردادهای ماژول
         contract_errors = check_module_contracts()
@@ -344,11 +367,14 @@ def run_self_test():
             print(f"❌ خودآزمایی قرارداد ماژول‌ها با خطا مواجه شد: {contract_errors}")
             return 1
 
-        if found_import and found_call:
+        if found_import and found_call and found_api_path:
             print("✅ خودآزمایی نگهبان ۵۷ (--self-test): نقض ساختگی و قراردادهای ماژول با موفقیت راستی‌آزمایی شدند.")
             return 0
         else:
-            print(f"❌ خودآزمایی شکست خورد: found_import={found_import}, found_call={found_call}")
+            print(
+                f"❌ خودآزمایی شکست خورد: found_import={found_import}, "
+                f"found_call={found_call}, found_api_path={found_api_path}"
+            )
             return 1
     finally:
         if dummy_file.exists():
@@ -386,6 +412,7 @@ def main():
         "core_to_module_imports": "ایمپورت از هسته/مشترک به ماژول (الف)",
         "cross_module_imports": "ایمپورت متقابل بین ماژول‌ها (ب)",
         "is_module_installed_outside_module": "فراخوانی isModuleInstalled بیرون از ماژول (ج)",
+        "core_hardcoded_module_api_paths": "مسیر سخت‌کدشده API ماژول در هسته/مشترک (د)",
     }
 
     for key, val in counters.items():

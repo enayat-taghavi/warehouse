@@ -402,18 +402,54 @@ def run_lint_imports(config_path=None):
     return {"kept": int(match.group(1)), "broken": int(match.group(2))}, output
 
 
+CORE_MODULE_APP_REF_RE = re.compile(
+    r"""apps\.(?:is_installed|get_model)\(\s*['"](?:personnel|warehouses|inventory)['"]|get_user_valid_roles_for_app\(\s*user\s*,\s*['"](?:personnel|warehouse)['"]"""
+)
+
+
+def scan_core_module_app_refs(backend_dir=BACKEND_DIR):
+    """
+    پویش ارجاعات معنایی به اپ‌های ماژول از داخل پوشه warehouse-backend/core/
+    فایل‌های تست (tests.py، test_*.py و هر فایل زیر tests/) و مایگریشن‌ها مستثنا هستند.
+    """
+    core_dir = backend_dir / "core"
+    if not core_dir.is_dir():
+        return []
+
+    findings = []
+    for p in sorted(core_dir.rglob("*.py")):
+        parts = p.parts
+        if "tests" in parts or "migrations" in parts or p.name == "tests.py" or p.name.startswith("test_"):
+            continue
+        try:
+            rel = p.relative_to(core_dir).as_posix()
+            text = p.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        for line_idx, line in enumerate(text.splitlines(), 1):
+            for m in CORE_MODULE_APP_REF_RE.finditer(line):
+                findings.append({
+                    "file": rel,
+                    "line": line_idx,
+                    "match": m.group(0),
+                })
+    return findings
+
+
 def build_snapshot(root_packages, rules, module_packages=None):
     data = collect_violations(root_packages, rules)
     composition = composition_root_counts(module_packages)
+    core_refs = scan_core_module_app_refs(BACKEND_DIR)
     counters = {
         "unique_direct_violations": len(data["unique_edges"]),
         "production_violations": len(data["production"]),
         "non_production_violations": len(data["non_production"]),
         "composition_root_hardcoded_lines": sum(len(v) for v in composition.values()),
+        "core_module_app_refs": len(core_refs),
     }
     for cid, edges in sorted(data["per_contract"].items()):
         counters["contract:" + cid] = len(edges)
-    return counters, data, composition
+    return counters, data, composition, core_refs
 
 
 def load_baseline():
@@ -454,7 +490,7 @@ def main():
     parser, scratch_config, module_pkgs = get_effective_importlinter_config()
     root_packages = as_list(parser["importlinter"].get("root_packages", ""))
     rules = build_contract_rules(parser)
-    counters, data, composition = build_snapshot(root_packages, rules, module_pkgs)
+    counters, data, composition, core_refs = build_snapshot(root_packages, rules, module_pkgs)
     lint_summary, lint_output = run_lint_imports(scratch_config)
     baseline = load_baseline()
 
@@ -518,6 +554,15 @@ def main():
     for importer, imported, line in data["production"]:
         print(f"   · {importer}:{line} → {imported}")
     print(f"🧪 نقض در تست/نگهبان/seed (غیرتولیدی): {len(data['non_production'])} یال")
+
+    print("-" * 74)
+    print(f"🔗 ارجاعات اپ ماژول در هسته (core_module_app_refs): {len(core_refs)} مورد")
+    core_refs_by_file = {}
+    for item in core_refs:
+        core_refs_by_file.setdefault(item["file"], []).append(item["line"])
+    for rel_f, lines in sorted(core_refs_by_file.items()):
+        shown = ", ".join(str(l) for l in lines)
+        print(f"   · {rel_f}: {len(lines)} مورد [سطرها: {shown}]")
 
     if baseline is None or args.update_baseline:
         save_baseline(counters, data, composition, lint_summary)
