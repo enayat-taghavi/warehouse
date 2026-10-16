@@ -4578,3 +4578,537 @@ Session 29 — Backend release on the local app environment after the import-log
 HTTPConnectionPool(host='127.0.0.1', port=55156): Read timed out. (read timeout=8)
 
 ---
+
+### Task 1 of 9 — 2026-10-16 18:42:42
+- **Status:** DONE
+- **Conversation:** `38e139b7-407a-4033-b8ac-e4f5bb8ade25`
+- **Steps:** 126
+- **Duration:** 32m 47s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 10/10 passed
+- **Task:**
+```
+Session 1 of 9 — Phase 3: registry helpers for JWT token scopes and WebSocket app-scope normalization (behavior unchanged)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Behavior must stay identical: the token `scopes` dict keeps exactly the keys `finance` and `warehouse` with the same role lists, `active_app` keeps the same priority, and the WebSocket consumer joins exactly the same groups as today. In particular `app=operations` must still join no app group (`app_group_name` stays None), because the operations cockpit relies on receiving every event.
+- Change only: `warehouse-backend/core/platform_core/registry.py`, `warehouse-backend/core/platform_core/tests.py`, `warehouse-backend/core/accounts/serializers.py`, `warehouse-backend/core/accounts/views_domains/auth_views.py`, `warehouse-backend/core/notifications/consumers.py`. Do not touch `config/asgi.py`.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan: `Documents/Deep_Modularization_Phase3/modular_architecture_phase3_plan.md`, heading `### گام ۱`.
+- `registry.py` already has the compatibility bridge `app_code_to_module`, `module_allowed_app_code` and `_MODULE_TO_ALLOWED_APP` (accounting appears as `finance` in tokens).
+- Hardcoded scope dicts today: `CustomTokenObtainPairSerializer.get_token` and `CustomTokenObtainPairSerializer.validate` in `serializers.py`, and `SwitchAppScopeView` in `auth_views.py`. `consumers.py` checks `in ('warehouse', 'finance', 'personnel')` in `connect` and in the `switch_app` branch of `receive`, and maps `personnel` to `finance` in `send_notification`.
+
+3. Definitions: "catalog modules" means the keys of `MODULE_CATALOG` from `platform_core.module_catalog` (all known modules, installed or not).
+
+4. Task:
+- a) In `registry.py`, next to the compatibility bridge, add:
+  - `build_user_token_scopes(user) -> dict[str, list[str]]`: for each catalog module code, `scopes[module_allowed_app_code(code)] = get_user_valid_roles_for_app(user, code)` (import `get_user_valid_roles_for_app` inside the function from `accounts.middleware`).
+  - `resolve_default_active_app(allowed_apps) -> str`: start with `allowed = set(allowed_apps or ())`; return `'finance'` if `'finance'` is allowed and `'warehouse'` is not; else `'warehouse'` if `'warehouse'` is allowed; else `'finance'`.
+  - `normalize_ws_app_scope(code) -> str | None`: return None for a falsy value; `module = app_code_to_module(code)`; return `module_allowed_app_code(module)` if `module` else None. No `.strip()` or `.lower()`.
+- b) Use `build_user_token_scopes(user)` and `resolve_default_active_app(allowed_apps)` in `get_token` and `validate`, and `build_user_token_scopes(user)` in `SwitchAppScopeView` (keep `refresh['active_app'] = target_app`).
+- c) In `consumers.py`, use `normalize_ws_app_scope(...)` in `connect`, in `switch_app`, and in `send_notification` as `normalize_ws_app_scope(event_app) or event_app`. Keep everything else in those methods unchanged.
+- d) Tests in `platform_core/tests.py` (plain `SimpleTestCase` or `TestCase`): `normalize_ws_app_scope` for `'warehouse'`, `'finance'`, `'personnel'`, `'accounting'`, `'operations'`, `None`, `'Warehouse'`, `'unknown'` (expected `'warehouse'`, `'finance'`, `'finance'`, `'finance'`, None, None, None, None); `resolve_default_active_app` for `['finance']`, `['warehouse']`, `['warehouse','finance']`, `[]`; `build_user_token_scopes` for a normal user returns exactly the keys `{'finance','warehouse'}` and values equal to `get_user_valid_roles_for_app(user, 'personnel')` and `get_user_valid_roles_for_app(user, 'warehouse')`.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test platform_core accounts notifications --noinput`, and `python scripts/e2e/guardian_modularization.py` at most twice. If a command fails, read the output and change approach; do not repeat it unchanged.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(core): build token scopes and websocket app groups from the module registry
+- Short English report: changed files, tests added, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### پروتکل ۴ مرحله‌ای (Mandatory 4-Step Protocol)
+
+#### ۱. توضیح ساده به فارسی (Explain Simply)
+کاربر درخواست اجرای **گام ۱ از فاز ۳ طرح جداسازی ماژولار** (Deep Modularization Phase 3) را دارد. هدف این گام حذف نام‌های سخت‌کدشدهٔ دامنه‌های کاربری (`finance` و `warehouse`) از داخل سریالایزر توکن JWT، ویوی سوئیچ قلمرو و کانسومر وب‌سوکت و انتقال آن‌ها به توابع کمکی درون رجیستری ماژول‌ها (`registry.py`) با حفظ ۱۰۰٪ رفتار قبلی سامانه است؛ به نحوی که:
+- دیکشنری `scopes` در توکن دقیقاً همان دو کلید `finance` و `warehouse` و نقش‌های متناظر را تولید کند.
+- اولویت تعیین `active_app` پیش‌فرض بدون تغییر بماند.
+- در کانسومر وب‌سوکت، مقدار `app=operations` وارد هیچ گروه اختصا...
+
+---
+
+### Task 2 of 9 — 2026-10-16 19:01:55
+- **Status:** DONE
+- **Conversation:** `4570fdb2-3382-4242-a8ca-09799394737a`
+- **Steps:** 52
+- **Duration:** 19m 9s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 8/8 passed
+- **Task:**
+```
+Session 2 of 9 — Phase 3: characterization test for SoD page-route and action-code inference (pure refactor)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Pure refactor: the resolved `(page_route, action_code)` for every request must stay exactly as today. Do not reorder, merge or simplify any condition.
+- Change only `warehouse-backend/core/accounts/permissions.py` and the new file `warehouse-backend/integration_tests/test_sod_context_resolution.py`.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan heading `### گام ۲`. In `SoDPolicyPermission.has_permission`, the block from `page_route = getattr(view, 'sod_page_route', None)` to the final `action_code = action_name or method.lower()` infers the page route from `request.path` (with the `'/attendance'` default) and then the action code, using the final page route.
+
+3. Definitions: "characterization test" means a test whose expected values are what the current code returns, written before the logic is moved, so a later move can prove it changed nothing.
+
+4. Task:
+- a) Move that block verbatim into a module-level function `resolve_sod_context(request, view) -> tuple[str, str]` placed above `SoDPolicyPermission`, and call `page_route, action_code = resolve_sod_context(request, view)` from `has_permission`. Nothing else in `has_permission` changes.
+- b) Create `integration_tests/test_sod_context_resolution.py` with a `SimpleTestCase` and a table of at least 14 cases, each with `path`, `method`, `data`, `action`, optional view attributes, `expected_route` and `expected_action`, checked with `assertEqual`. Requests are `types.SimpleNamespace(path=..., method=..., data=...)`; views are `types.SimpleNamespace(action=...)`. Compute every expected value by reading the current code. Cover: `attendance` + `create`; `attendance` + `lock_period`; a path without any keyword + `create` (fallback route `/attendance`, action `create_daily_attendance_entry`); a path without any keyword + `approve_period`; `profiles` + `approve_manager`; a path containing both `profiles` and `finance`; `monthly-payroll` + `disburse_period`; `treasury` + `list`; `manager` + `action=None` with GET; a path containing both `customs` and `manager`; `customs` + `create`; PATCH with `data={'base_wage': 1}` on a path without keywords; an uppercase path such as `/API/Personnel/Attendance/`; a view with `sod_page_route='/x'` and `sod_action_code='y'`.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_sod_context_resolution --noinput` and one run of `.\venv\Scripts\python.exe manage.py test integration_tests accounts --noinput`. If a case fails, fix the expected value only if your reading of the current code was wrong; never change the logic to fit a test.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(sod): extract resolve_sod_context and pin its behavior
+- Short English report: the case table, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### الگوی ۴ مرحله‌ای (Mandatory 4-Step Pattern)
+
+#### ۱. توضیح ساده به فارسی (Explain Simply)
+کاربر درخواست اجرای **گام ۲ از فاز ۳ طرح جداسازی ماژولار** (Deep Modularization Phase 3) را دارد. هدف این گام، استخراج منطق استنتاج مسیر صفحه (`page_route`) و کد عملیات (`action_code`) از متد `SoDPolicyPermission.has_permission` به یک تابع ماژولار خالص با نام `resolve_sod_context(request, view) -> tuple[str, str]` عیناً و بدون تغییر در تقدم، ادغام یا ساده‌سازی هیچ شرطی (Pure Refactor) است. همچنین نوشتن یک سوئیت تست مشخصه‌یابی (Characterization Test) با حداقل ۱۴ سناریو برای پین‌کردن دقیق رفتار فعلی و تضمین عدم تغییر خروجی در ریفکتورهای بعدی.
+
+#### ۲. اعتبارسنجی فنی (Ver...
+
+---
+
+### Task 3 of 9 — 2026-10-16 19:50:16
+- **Status:** DONE
+- **Conversation:** `c8d445fd-a4ac-4b76-8795-facd0e830c5a`
+- **Steps:** 178
+- **Duration:** 48m 17s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 12/12 passed
+- **Task:**
+```
+Session 3 of 9 — Phase 3: move module permission classes and SoD inference rules out of core/accounts/permissions.py
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Behavior must stay identical. `integration_tests/test_sod_context_resolution.py` must not change and must still pass.
+- `core/accounts/permissions.py` must not import from `personnel`, `inventory` or `warehouses`, and must not define a module-level `__getattr__`.
+- Change only the 13 files listed in the scope verify line of this session.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan heading `### گام ۳`. The function `resolve_sod_context` was added in the previous session.
+- The only importers of the moved classes (6 files): `personnel/cartable_views.py`, `personnel/phase_guardian_approval.py` (inside a function), `personnel/views_domains/hr_views.py` (multi-line import at the top), `personnel/views_domains/fleet_views.py` (multi-line import at the top), `inventory/views_photos.py` (module level) and `inventory/views_domains/item_views.py` (inside a method).
+- `personnel/permissions.py` already exists (it re-exports `companies.permissions` helpers). `inventory/permissions.py` does not exist.
+- Both apps already register SoD rules in `ready()` with `contribute('sod_rules', rule)`; follow that style.
+
+3. Definitions:
+- "route rule" is a tuple `(priority: int, keywords: tuple[str, ...], route: str)`. A rule matches when any keyword is a substring of `request.path.lower()`.
+- "action resolver" is a callable `(request, view, action_name, method, page_route) -> str | None`, where `method` is `request.method.upper()` and `page_route` is the final page route.
+
+4. Task:
+- a) Move the 9 accounting classes (`CanApprovePersonnelManager`, `CanApprovePersonnelFinance`, `CanApproveFleetManager`, `CanApproveFleetFinance`, `CanApprovePersonnelSupervisor`, `CanApproveFleetSupervisor`, `CanAuthorizePaymentManager`, `CanDisburseTreasury`, `CanViewTreasury`) verbatim to the end of `personnel/permissions.py`, and the 4 warehouse classes (`CanApproveDocuments`, `CanApproveFeeds`, `CanFinalizeInventory`, `CanManageItemPhotos`) verbatim to a new `inventory/permissions.py`. Update the 6 importers to import from `personnel.permissions` or `inventory.permissions`.
+- b) Rewrite `resolve_sod_context` in core: keep the `sod_page_route` and `sod_action_code` view attributes first. Page route: sort `contributions('sod_route_rules')` by priority and take the route of the first matching rule; if none matches, use `'/attendance'`. Action code: call each of `contributions('sod_action_resolvers')` in order and take the first non-None result; if none, `action_name or method.lower()`.
+- c) In `personnel/sod_rules.py`, define and in `PersonnelConfig.ready()` register the route rules `(10, ('attendance',), '/attendance')`, `(20, ('profiles',), '/profiles')`, `(30, ('finance', 'monthly-payroll'), '/finance-cartable')`, `(40, ('treasury',), '/treasury-cartable')`, `(50, ('manager',), '/manager-approvals')` and one action resolver containing today's five action rules in the same order. In `warehouses/sod_rules.py`, define and in `WarehousesConfig.ready()` register `(60, ('customs',), '/customs')`. Register outside any `try` block.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests accounts --noinput` and one run of `.\venv\Scripts\python.exe manage.py test personnel inventory warehouses --noinput`; `python scripts/e2e/guardian_modularization.py` at most twice. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files, and `test_sod_context_resolution.py` is unchanged.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(permissions): move module permission classes and SoD inference rules into modules
+- Short English report: moved classes, updated importers, registered rules, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده (Simple Explanation)
+درخواست مربوط به جلسه سوم از ۹ گام فاز ۳ ماژولارسازی بود: انتقال ۹ کلاس مجوز مالی و پرسنلی و ۴ کلاس مجوز انبار از `core/accounts/permissions.py` به ماژول‌های مقصد (`personnel/permissions.py` و `inventory/permissions.py`)، به‌روزرسانی ۶ ایمپورت‌کننده، بازنویسی `resolve_sod_context` در هسته برای استفاده از نقاط توسعه رجیستری (`sod_route_rules` و `sod_action_resolvers`) بدون باقی‌ماندن هیچ لیترال یا ایمپورت از ماژول‌ها در هسته، و ثبت قواعد مربوطه در `sod_rules.py` و `ready()` هر دو ماژول با حفظ کامل و ۱۰۰ درصدی رفتار تست‌های مشخصه‌یابی (`test_sod_context_resolution.py`).
+
+### ۲. اعتبارسنجی (Immediate Verification)
+کدبیس و ساخ...
+
+---
+
+### Task 4 of 9 — 2026-10-16 20:31:22
+- **Status:** DONE
+- **Conversation:** `f1b6da81-60a8-4d9a-b042-b5360a92f3b0`
+- **Steps:** 176
+- **Duration:** 41m 2s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 12/12 passed
+- **Task:**
+```
+Session 4 of 9 — Phase 3: company delete blockers, org-structure write permissions and UserViewSet module queries via registry contributions
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- No data may be lost: a company that has any of the six related records must still be impossible to delete, with the same Persian message as today. Register these contributions outside any `try` block, so a registration failure fails loudly instead of silently removing a blocker.
+- Tenant isolation: the org-admin user directory must return exactly the same users as today.
+- Change only the 8 files listed in the scope verify line of this session.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan heading `### گام ۴`.
+- `core/companies/views.py` has `COMPANY_DELETE_BLOCKERS` (6 tuples) used in `perform_destroy` with `hasattr` and `.exists()`.
+- `core/companies/permissions.py` `has_structure_write_permission` has a hardcoded list including `'accounts.perm_approve_personnel_manager'`.
+- `core/accounts/views_domains/user_views.py` uses `apps.is_installed('warehouses')` in `get_queryset` (prefetch `assigned_warehouses`) and `apps.is_installed('personnel')` in `_org_admin_directory_queryset` (section-assignment `Q`).
+- `warehouses/user_extension.py` already registers `WarehouseUserExtension()` with `contribute('user_extensions', ...)`.
+
+3. Definitions: "blocker" is a tuple `(order: int, related_name: str, message: str)`.
+
+4. Task:
+- a) Replace `COMPANY_DELETE_BLOCKERS` with `contributions('company_delete_blockers')` sorted by `order`, keeping the `hasattr` and `.exists()` logic. Register in `PersonnelConfig.ready()`: `(10,'projects',...)`, `(30,'personnel_profiles',...)`, `(40,'monthly_work_periods',...)`, `(50,'counterparties',...)`, `(60,'fiscal_periods',...)`; and in `WarehousesConfig.ready()`: `(20,'warehouses',...)`. Copy each Persian message exactly from the current tuple.
+- b) In `has_structure_write_permission`, remove `'accounts.perm_approve_personnel_manager'` from the core list and add `*contributions('org_structure_write_perms')`; register that permission string in `PersonnelConfig.ready()`.
+- c) In `get_queryset`, extend `prefetch_items` with `getattr(ext, 'user_prefetch_related', ())` for each `contributions('user_extensions')`, keeping the order `groups__customrole`, `user_permissions`, module items, `company_accesses__company`; add `user_prefetch_related = ('assigned_warehouses',)` to `WarehouseUserExtension`.
+- d) In `_org_admin_directory_queryset`, OR in the result of each `contributions('company_member_q_builders')` builder called with `allowed_cids` (skip None). In `personnel/company_access.py`, add `build_section_member_q(allowed_cids)` that returns today's `Q(section_assignments__is_active=True, section_assignments__section__project__company_id__in=allowed_cids)`, and register it in `PersonnelConfig.ready()`.
+- e) New `integration_tests/test_company_extension_points.py` (`TestCase`): the sorted `company_delete_blockers` related names equal `['projects','warehouses','personnel_profiles','monthly_work_periods','counterparties','fiscal_periods']`; a superuser DELETE on a company that has a warehouse returns 400 and the company still exists; the same for a company that has a project; a user with only `accounts.perm_approve_personnel_manager` passes `has_structure_write_permission`; in the org-admin directory, an active section member of a project of an allowed company is listed and a user of another company is not.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_company_extension_points --noinput`, one run of `.\venv\Scripts\python.exe manage.py test integration_tests companies accounts --noinput`, and `python scripts/e2e/guardian_modularization.py` at most twice. If an existing test fails, report it; do not weaken any check.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(core): company delete blockers and user directory queries via registry contributions
+- Short English report: each contribution point and where it is registered, tests added, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح سادهٔ اقدامات انجام‌شده
+
+در این نشست (گام ۴ از ۹ — فاز ۳):
+1. **مسدودکننده‌های حذف شرکت (`company_delete_blockers`):** لیست ثابت و سخت‌کدشدهٔ `COMPANY_DELETE_BLOCKERS` از هسته (`core/companies/views.py`) حذف شد و با متد `contributions('company_delete_blockers')` مرتب‌شده بر مبنای اولویت (`order`) جایگزین گردید. مشارکت‌های ماژول حسابداری برای ۵ موجودیت (`projects`, `personnel_profiles`, `monthly_work_periods`, `counterparties`, `fiscal_periods`) در `PersonnelConfig.ready()` و مشارکت ماژول انبار برای `warehouses` در `WarehousesConfig.ready()` همگی خارج از هرگونه بلوک `try` ثبت شدند.
+2. **مجوزهای نوشتن ساختار سازمانی (`org_structure_write_perms`):** ر...
+
+---
+
+### Task 5 of 9 — 2026-10-16 20:59:00
+- **Status:** STOPPED (could not send resume request)
+- **Conversation:** `dcf64781-9fc8-4f80-ab47-229255876910`
+- **Steps:** 196
+- **Duration:** 27m 34s
+- **Checks:**
+  - require: 1/1 passed
+- **Task:**
+```
+Session 5 of 9 — Phase 3: company sub-resource and Google Drive endpoints from the accounting module extension
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7 and 10 apply.
+- Every URL sent to the server must stay byte-for-byte the same as today when the accounting module is installed. Do not invent fallback endpoints: `/org/` has only `companies` and `user-company-access` on the backend.
+- Change only the 7 files listed in the scope verify line of this session. No `.html` template changes.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan heading `### گام ۵`.
+- `company-api.service.ts` already resolves `companiesEndpoint` and `accessEndpoint` from `this.moduleRegistry.getExtensions('companyApiEndpoints')[0]?.extension` with `/org/...` fallbacks (those two fallbacks are real and stay). `documentsEndpoint`, `bankAccountsEndpoint`, `boardMembersEndpoint` (top of the class) and `fiscalPeriodsEndpoint` (above `getFiscalPeriods`) are hardcoded `/personnel/...`.
+- `companies.ts` (subscription to `offlineSync.liveDataUpdates$`) matches URLs with `url.includes('/personnel/...')`. The accounting tabs are shown only when `isAccountingInstalled` is true.
+- `company-gdrive-tab.ts` has 9 hardcoded `${environment.apiUrl}/personnel/companies/${cid}/gdrive...` URLs; `settings-backup-tab.ts` has one in `toggleCompanyBackupSync`.
+
+3. Definitions: "missing extension" means `getExtensions('companyApiEndpoints')` returns no entry or the needed field is empty.
+
+4. Task:
+- a) In `module-contract.ts`, add optional `documentsEndpoint`, `bankAccountsEndpoint`, `boardMembersEndpoint`, `fiscalPeriodsEndpoint` (strings) and `companyGdriveBaseEndpoint?: (companyId: number | string) => string` to `companyApiEndpoints`. In `accounting/module.ts`, set them to `'/personnel/company-documents'`, `'/personnel/company-bank-accounts'`, `'/personnel/company-board-members'`, `'/personnel/company-fiscal-periods'` and `(cid) => '/personnel/companies/' + cid + '/gdrive'`.
+- b) In `company-api.service.ts`, resolve those four endpoints from the extension. When the extension is missing, each public method that needs one returns `throwError(() => new Error('accounting-module-not-installed'))` and sends no request. Add `getCompanyGdriveUrl(companyId: number | string, subPath = ''): string | null` (null when missing) and `matchesCompanyUrl(url: string, kind: 'companies' | 'bankAccounts' | 'boardMembers' | 'documents'): boolean`, where `'companies'` also accepts `/org/companies/` as today.
+- c) In `companies.ts`, replace the four `url.includes('/personnel/...')` checks with `this.companyApi.matchesCompanyUrl(url, ...)`; keep the branch order and bodies.
+- d) In `company-gdrive-tab.ts` and `settings-backup-tab.ts`, inject `CompanyApiService` where missing and build every gdrive URL with `getCompanyGdriveUrl(cid, '<same subpath and query as today>')`; if it returns null, show the existing error handling path for that call and send nothing.
+- e) In `company-api-endpoints.spec.ts`, add tests: with the accounting extension the four endpoints and `getCompanyGdriveUrl(5, '/queue/')` equal today's URLs; without it the methods error and no HTTP request is issued (the existing spec mocks `HttpClient` with `vi.fn()`; assert with `expect(http.get).not.toHaveBeenCalled()` and the same for the other verbs); `matchesCompanyUrl` for each kind.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` and one run of `python scripts/e2e/guardian_57_front_module_fence.py` from the repo root. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(company-api): company sub-resource and gdrive endpoints from the accounting module extension
+- Short English report: replaced call sites with their old and new URL expressions, tests added, commands actually run with results, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+I have launched the Angular build command with increased Node memory limit (`$env:NODE_OPTIONS="--max-old-space-size=8192"; npx ng build --output-path ../scratch/ng-build-agent`) in `warehouse-front` and will wait for it to complete.
+
+---
+
+### Task 1 of 5 — 2026-10-16 21:44:36
+- **Status:** DONE
+- **Conversation:** `dcf64781-9fc8-4f80-ab47-229255876910`
+- **Steps:** 303
+- **Duration:** 44m 19s
+- **Checks:**
+  - verify round 0: 14/14 passed
+- **Task:**
+```
+Session 5 of 9 — Phase 3: company sub-resource and Google Drive endpoints from the accounting module extension
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7 and 10 apply.
+- Every URL sent to the server must stay byte-for-byte the same as today when the accounting module is installed. Do not invent fallback endpoints: `/org/` has only `companies` and `user-company-access` on the backend.
+- Change only the 7 files listed in the scope verify line of this session. No `.html` template changes.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan heading `### گام ۵`.
+- `company-api.service.ts` already resolves `companiesEndpoint` and `accessEndpoint` from `this.moduleRegistry.getExtensions('companyApiEndpoints')[0]?.extension` with `/org/...` fallbacks (those two fallbacks are real and stay). `documentsEndpoint`, `bankAccountsEndpoint`, `boardMembersEndpoint` (top of the class) and `fiscalPeriodsEndpoint` (above `getFiscalPeriods`) are hardcoded `/personnel/...`.
+- `companies.ts` (subscription to `offlineSync.liveDataUpdates$`) matches URLs with `url.includes('/personnel/...')`. The accounting tabs are shown only when `isAccountingInstalled` is true.
+- `company-gdrive-tab.ts` has 9 hardcoded `${environment.apiUrl}/personnel/companies/${cid}/gdrive...` URLs; `settings-backup-tab.ts` has one in `toggleCompanyBackupSync`.
+
+3. Definitions: "missing extension" means `getExtensions('companyApiEndpoints')` returns no entry or the needed field is empty.
+
+4. Task:
+- a) In `module-contract.ts`, add optional `documentsEndpoint`, `bankAccountsEndpoint`, `boardMembersEndpoint`, `fiscalPeriodsEndpoint` (strings) and `companyGdriveBaseEndpoint?: (companyId: number | string) => string` to `companyApiEndpoints`. In `accounting/module.ts`, set them to `'/personnel/company-documents'`, `'/personnel/company-bank-accounts'`, `'/personnel/company-board-members'`, `'/personnel/company-fiscal-periods'` and `(cid) => '/personnel/companies/' + cid + '/gdrive'`.
+- b) In `company-api.service.ts`, resolve those four endpoints from the extension. When the extension is missing, each public method that needs one returns `throwError(() => new Error('accounting-module-not-installed'))` and sends no request. Add `getCompanyGdriveUrl(companyId: number | string, subPath = ''): string | null` (null when missing) and `matchesCompanyUrl(url: string, kind: 'companies' | 'bankAccounts' | 'boardMembers' | 'documents'): boolean`, where `'companies'` also accepts `/org/companies/` as today.
+- c) In `companies.ts`, replace the four `url.includes('/personnel/...')` checks with `this.companyApi.matchesCompanyUrl(url, ...)`; keep the branch order and bodies.
+- d) In `company-gdrive-tab.ts` and `settings-backup-tab.ts`, inject `CompanyApiService` where missing and build every gdrive URL with `getCompanyGdriveUrl(cid, '<same subpath and query as today>')`; if it returns null, show the existing error handling path for that call and send nothing.
+- e) In `company-api-endpoints.spec.ts`, add tests: with the accounting extension the four endpoints and `getCompanyGdriveUrl(5, '/queue/')` equal today's URLs; without it the methods error and no HTTP request is issued (the existing spec mocks `HttpClient` with `vi.fn()`; assert with `expect(http.get).not.toHaveBeenCalled()` and the same for the other verbs); `matchesCompanyUrl` for each kind.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent` and one run of `python scripts/e2e/guardian_57_front_module_fence.py` from the repo root. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(company-api): company sub-resource and gdrive endpoints from the accounting module extension
+- Short English report: replaced call sites with their old and new URL expressions, tests added, commands actually run with results, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام ۱: توضیح ساده درخواست
+در این گام (گام ۵ از فاز ۳ ساختار ماژولار عمیق)، هدف انتقال نشانی‌های فرعی شرکت‌ها (اسناد، حساب‌های بانکی، اعضای هیئت‌مدیره، دوره‌های مالی) و نشانی‌های گوگل‌درایو شرکت از مقادیر هاردکدشدهٔ `/personnel/...` به افزونه ماژول حسابداری (`companyApiEndpoints`) در فرانت‌اند بود؛ به طوری که در صورت نصب ماژول حسابداری نشانی‌ها بایت‌به‌بایت بدون تغییر بمانند و در صورت عدم نصب، متدهای مربوطه خطای صریح داده و هیچ درخواست شبکه‌ای ارسال نکنند و متدهای کمکی `getCompanyGdriveUrl` و `matchesCompanyUrl` جایگزین بررسی‌های مستقیم رشته‌ای شوند.
+
+### گام ۲: اعتبارسنجی فوری
+۱. درستی فنی: فیلدهای `documentsEndpoint`، `bankAccountsEndpoint`، `boardMembersE...
+
+---
+
+### Task 2 of 5 — 2026-10-16 22:15:00
+- **Status:** DONE
+- **Conversation:** `e712acf9-b6ed-4b1f-9af5-32b6686b56bb`
+- **Steps:** 185
+- **Duration:** 30m 20s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 16/16 passed
+- **Task:**
+```
+Session 6 of 9 — Phase 3: offline queue headers, deep-sync probe and tab scope detection from module sync config
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- No data may be lost. Queued offline records must be replayed with exactly the same headers as today, including when a module is missing from the cached installed list, so keep today's values as fallbacks. Never delete, clear or skip queue records, cache entries or IndexedDB stores. Do not modify `core/services/offline-db.ts`.
+- Change only the 8 files listed in the scope verify line of this session.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan heading `### گام ۶`.
+- `buildScopedHeaders(appScope)` in `offline-queue-runner.ts` hardcodes the token key suffix, default role and `X-Active-App` per scope.
+- `offline-sync.service.ts` (deep update, around line 625) builds a probe URL with hardcoded `/personnel/sync/pull/?project_id=` and `/inventory/sync/pull/?warehouse_id=`. `sync-pull.service.ts` already finds `syncConfig` with `getModuleRegistry().getExtensions('syncConfig').find(e => e.extension.scopeKind === scopeKind)`; reuse that lookup pattern.
+- `syncConfig` today: warehouse `{scopeKind:'warehouse', pullEndpoint:'/inventory/sync/pull/', scopeParamKey:'warehouse_id'}`, accounting `{scopeKind:'finance', pullEndpoint:'/personnel/sync/pull/', scopeParamKey:'project_id'}`. `launcherTile.appKey` is `'warehouse'` and `'personnel'`.
+- `SessionTabService.getActiveApp()` checks `path.includes('/app/operations')`, `'/app/warehouse'` and `'/app/finance'`.
+
+3. Definitions: "same URL" means the probe URL string is identical to today's for both scopes, including the trailing slash and the `&limit=1` query.
+
+4. Task:
+- a) Add optional `activeAppHeader`, `defaultOfflineRole` and `tokenScopeKey` to `syncConfig` in `module-contract.ts`; set them in `warehouse/module.ts` (`'warehouse'`, `'counter'`, `'warehouse'`) and `accounting/module.ts` (`'personnel'`, `'operator'`, `'finance'`).
+- b) In `buildScopedHeaders`, read those three values from the matching `syncConfig`, falling back to today's expressions when absent.
+- c) In `offline-sync.service.ts`, build the probe URL as `${environment.apiUrl}${syncConfig.pullEndpoint}?${syncConfig.scopeParamKey}=${testId}&limit=1`; if no `syncConfig` matches the scope, return `[]` before the probe. Do not change the error handling around the probe.
+- d) In `getActiveApp()`, keep the `/app/operations` check first, then loop over `getModuleRegistry().getInstalledModules()` and, when `path.includes(mod.routePrefix)` and `mod.extensions?.launcherTile?.appKey` exists, call `setActiveApp(appKey)` and return it. Keep the session-storage and local-storage fallbacks.
+- e) Tests: in `offline-queue-runner.spec.ts`, assert the exact headers for `'warehouse'` and `'finance'` with the real registry and with a registry whose `getExtensions` returns `[]`. New `session-tab.service.spec.ts`: `/app/warehouse/counter` gives `'warehouse'`, `/app/finance/x` gives `'personnel'`, `/app/operations/cockpit` gives `'operations'`.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, one run of `python scripts/e2e/guardian_34_offline_continuity.py` and one of `python scripts/e2e/guardian_57_front_module_fence.py`. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(offline-core): offline headers, deep-sync probe and tab scope from module sync config
+- Short English report: before and after expressions for each header and URL, tests added, commands actually run with results, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام ۱: توضیح ساده درخواست
+در این گام (گام ۶ از ۹، فاز ۳ مدولارسازی)، هدف حذف وابستگی‌های هاردکدشده به مسیرها و هدرهای ماژول‌های انبار و مالی در لایه‌های آفلاین و سشن فرانت‌اند است:
+۱. در قرارداد `module-contract.ts`، فیلدهای اختیاری `activeAppHeader`، `defaultOfflineRole` و `tokenScopeKey` به اکستنشن `syncConfig` اضافه شده و در مانیفست‌های `warehouse` و `accounting` مقداردهی شوند.
+۲. در `offline-queue-runner.ts` تابع `buildScopedHeaders` این مقادیر را از `syncConfig` ماژول تطبیق‌یافته استخراج کند و در صورت عدم وجود، مقادیر فعلی را به عنوان fallback حفظ کند تا هیچ داده یا رکوردی در صف آفلاین مخدوش نشود.
+۳. در `offline-sync.service.ts` ساخت آدرس پروب عمیق با ...
+
+---
+
+### Task 3 of 5 — 2026-10-16 23:39:47
+- **Status:** DONE
+- **Conversation:** `e83cf61a-509c-4d8f-9be7-53b83fce57f6`
+- **Steps:** 330
+- **Duration:** 84m 43s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 13/14 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer|employee-new-vehicle"`
+  - verify round 1: 13/14 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer|employee-new-vehicle"`
+  - verify round 2: 14/14 passed
+- **Task:**
+```
+Session 7 of 9 — Phase 3: accounting notification navigation moved out of the shared NotificationCenterComponent
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Navigation must stay identical: same target route, same query params, same HTTP lookups with the `SKIP_GLOBAL_ERROR_TOAST` header, same fallbacks on error, for every permission combination.
+- Change only the 5 files listed in the scope verify line of this session. The component template is inline in the `.ts` file; do not change it.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan heading `### گام ۷`.
+- `NotificationCenterComponent.onNotificationClick` handles `item.url`, then `notification_type === 'fleet_change_request'`, `target_model === 'VehicleDriverProfile'` and `target_model === 'PersonnelProfile'`, using the private helpers `userPerms`, `navigateToFleet`, `navigateByRoleForFleet`, `navigateToPersonnel` and `navigateByRole`.
+
+3. Definitions: "handler" is `{ canHandle: (item) => boolean; navigate: (ctx: NotificationNavigationContext) => void }`, where the context is `{ item, http: HttpClient, router: Router, userPerms: string[], isSuperuser: boolean }`.
+
+4. Task:
+- a) Add `NotificationNavigationContext` and `notificationHandlers?: Array<handler>` to `ExtensionMap` in `module-contract.ts`.
+- b) Create `modules/accounting/notification-handlers.ts` exporting `ACCOUNTING_NOTIFICATION_HANDLERS` (three handlers in today's order). Move the fleet and personnel navigation logic and the four helpers into it with identical conditions, using the context instead of `this`. Register it as `extensions.notificationHandlers` in `accounting/module.ts`.
+- c) In `onNotificationClick`, keep `markAsRead`, closing the panel and the `item.url` branch; then compute `userPerms()` once, iterate over `this.moduleRegistry.getExtensions('notificationHandlers')`, and for each entry iterate over `entry.extension` (an array of handlers); call `navigate(context)` on the first handler whose `canHandle(item)` is true and return. Inject `ModuleRegistryService` with `inject()`. Remove the moved private helpers and any now-unused imports.
+- d) `notification-handlers.spec.ts`: for each handler, the route and query params for the manager, accountant, supervisor and plain-employee permission sets, the invalid `target_id` fallback, and the HTTP-error fallback (mock `HttpClient` with `vi.fn()` returning `of(...)` or `throwError(...)`, and spy on `Router.navigate`).
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; one run of `python scripts/e2e/guardian_57_front_module_fence.py` from the repo root. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(notifications): accounting notification navigation via module notificationHandlers
+- Short English report: moved logic, tests added, commands actually run with results, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+دستور اعتبارسنجی مقایسه‌ای تست‌ها (`ng-test-compare`) در پس‌زمینه اجرا شد؛ منتظر اتمام آن هستم.
+
+</div>
+
+---
+
+### Task 4 of 5 — 2026-10-17 00:00:21
+- **Status:** DONE
+- **Conversation:** `4e161c1a-0586-418a-8ce8-351ab25da57b`
+- **Steps:** 134
+- **Duration:** 20m 29s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 12/12 passed
+- **Task:**
+```
+Session 8 of 9 — Phase 3: move module-only front models into their modules and remove the dead RecordHttpService
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Only file moves and import path updates; no type or logic changes. Do not move `core/models/item.model.ts` or `core/models/field-config.model.ts` (core files import them).
+- Changes are limited to the moved files, `core/models/index.ts`, the deleted `core/http/record-http.service.ts`, and import lines in files under `modules/accounting/` and `modules/warehouse/`.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context: plan heading `### گام ۸`. `personnel.model.ts` is imported only under `modules/accounting/`. `count-task.model.ts` and `doc-task.model.ts` are imported only under `modules/warehouse/` and re-exported by `core/models/index.ts`. `record-http.service.ts` has no importer.
+
+3. Definitions: "import update" means changing only the module specifier string of an existing import.
+
+4. Task:
+- a) `git mv` `core/models/personnel.model.ts` to `modules/accounting/models/personnel.model.ts` and update every import of it under `modules/accounting/` (components, `api/personnel-api.models.ts`, `.spec.ts` and `.dom.spec.ts` files).
+- b) `git mv` `core/models/count-task.model.ts` and `core/models/doc-task.model.ts` to `modules/warehouse/models/`, fix their own relative imports (for example `Item` from `../../../core/models/item.model`), remove both lines from `core/models/index.ts`, and update every import under `modules/warehouse/`, including imports that used the `core/models` barrel for these types.
+- c) `git rm` `core/http/record-http.service.ts`.
+
+5. Tool policy: in `warehouse-front`, at most three runs of `npx ng build --output-path ../scratch/ng-build-agent`; one run of `python scripts/e2e/guardian_57_front_module_fence.py` from the repo root. Use the Grep tool to find importers. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only renames, `index.ts`, the deletion and import-line edits.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(front-models): move module-only models into their modules and remove dead RecordHttpService
+- Short English report: moved files, number of updated imports per module, commands actually run with results, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۳ و ۴. اجرای مستقیم، اصلاحات و اعتبارسنجی
+- فایل `core/models/personnel.model.ts` به `modules/accounting/models/personnel.model.ts` منتقل شد و تمام ۶۳ فایل ایمپورت‌کننده در ماژول حسابداری با موفقیت به مسیرهای نسبی جدید به‌روز شدند.
+- فایل‌های `core/models/count-task.model.ts` و `core/models/doc-task.model.ts` به `modules/warehouse/models/` منتقل شدند، ایمپورت نسبی `Item` در `count-task.model.ts` اصلاح شد، خطوط re-export آن‌ها از `core/models/index.ts` حذف گردید و ۱۳ مورد ایمپورت در ۱۱ فایل ماژول انبار اصلاح شدند.
+- فایل بلااستفاده `core/http/record-http.service.ts` با دستور `git rm` حذف شد.
+- فرایند بیلد بدون هیچ خطایی اجرا گردید و نگهبان‌های ۵۶ و ۵۷ با موف...
+
+---
+
+### Task 5 of 5 — 2026-10-17 00:16:31
+- **Status:** DONE
+- **Conversation:** `5c3b1c2f-5b02-46ef-9458-bd8c8d4b1642`
+- **Steps:** 120
+- **Duration:** 16m 5s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 8/8 passed
+- **Task:**
+```
+Session 9 of 9 — Phase 3: semantic core fences in Guardian 29 (backend) and Guardian 57 (frontend)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Change only the two guardian scripts and their two baseline JSON files. Do not change application code to make a counter smaller.
+- Existing counters, their behavior and the existing self-test must keep working.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan heading `### گام ۹`.
+- Guardian 29 (`scripts/e2e/guardian_modularization.py`) fails only when a counter in `counters` exceeds `modularization_baseline.json`; `--update-baseline` records a new snapshot.
+- Guardian 57 (`scripts/e2e/guardian_57_front_module_fence.py`) classifies files with `get_file_zone(rel_posix, module_names)` (zones `composition_root`, a module name, or `core_common`; `modules/common` is `core_common`), counts in `scan_front_fences`, and has `run_self_test()` with a dummy file in zone `core_common`.
+
+3. Definitions:
+- "core module app reference" is one regex match in a non-test, non-migration `.py` file under `warehouse-backend/core/` (skip files named `tests.py`, `test_*.py` and anything under `tests/` or `migrations/`) of `apps\.(?:is_installed|get_model)\(\s*['"](?:personnel|warehouses|inventory)['"]` or `get_user_valid_roles_for_app\(\s*user\s*,\s*['"](?:personnel|warehouse)['"]`.
+- "hardcoded module API path" is one match of `['"\x60][^'"\x60\n]*/(?:personnel|inventory)/` in a non-spec `.ts` file of zone `core_common`, ignoring lines whose stripped text starts with `//`, `*` or `/*`, and lines matching `^\s*(import|export)\b.*\bfrom\b`. (`\x60` is the backtick character.)
+
+4. Task:
+- a) Guardian 29: add `scan_core_module_app_refs(backend_dir)` and record its count as `counters["core_module_app_refs"]`, with the per-file list in the report output. Run `--update-baseline`. Expected count: 14 (soft `warehouses` couplings in `accounts/admin.py`, `accounts/models.py`, `accounts/views_domains/audit_views.py`, `communications/models.py`, `communications/views.py`, `reports/registry.py`, `settings_core/models.py`). If you get a different number, report the list; do not edit application code.
+- b) Guardian 57: add the counter `core_hardcoded_module_api_paths` to `scan_front_fences` with file and line in `violations`. Extend `run_self_test()` so the dummy file also contains a literal with a query string, for example a template literal with `/api/personnel/sync/pull/?project_id=1`, and assert it is detected. Run `--update-baseline`; the count must be 0.
+
+5. Tool policy: from the repo root, `python scripts/e2e/guardian_modularization.py` and `python scripts/e2e/guardian_57_front_module_fence.py` (each with or without `--update-baseline`) at most three times each, and `--self-test` at most three times. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the four allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(guardians): semantic core fences for module app references and hardcoded module API paths
+- Short English report: both counters with their values and file lists, self-test result, commands actually run with results, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خواسته کاربر (Simple Explanation)
+در این جلسه (جلسه ۹ از ۹ — فاز ۳ ماژولارکردن عمیق)، هدف نصب دو حصار معنایی آچاری در اسکریپت‌های نگهبان و به‌روزرسانی بیس‌لاین‌های آن‌ها بود:
+1. **نگهبان ۲۹ (بک‌اند):** اضافه کردن تابع `scan_core_module_app_refs(backend_dir)` برای یافتن هرگونه ارجاع به اپ‌های ماژول (`personnel`، `warehouses`، `inventory`) یا نقش‌های ماژول از داخل کد غیراستثنای پوشه `warehouse-backend/core/`، ثبت شمارنده `core_module_app_refs` در بیس‌لاین با مقدار اولیه ۱۴ (مربوط به وابستگی‌های نرم `warehouses` در ۷ فایل هسته) و گزارش تفکیکی فایل‌ها.
+2. **نگهبان ۵۷ (فرانت‌اند):** اضافه کردن شمارنده `core_hardcoded_module_api_paths` برای شناسایی ...
+
+---

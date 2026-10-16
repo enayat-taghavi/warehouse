@@ -67,10 +67,16 @@ def git(*args) -> str:
 def cmd_clean_tree(args) -> int:
     allowed = set(RUNNER_FILES) | set(args.allow or [])
     bad = []
-    for line in git("status", "--porcelain").splitlines():
-        if not line.strip() or line.startswith("??"):
+    for line in git("status", "--porcelain", "--untracked-files=all").splitlines():
+        if not line.strip():
             continue
         path = line[3:].split(" -> ", 1)[-1].strip().strip('"')
+        if line.startswith("??"):
+            # فایل untracked پایتون یا هر فایل untracked زیر scripts/ می‌تواند ابزار بررسی را
+            # سایه بزند (مثل argparse.py ساختگی نشست ۷ فاز ۳، ۱۶ اکتبر ۲۰۲۶)؛ پس تمیز نیست.
+            if path.endswith(".py") or path.startswith("scripts/"):
+                bad.append(line)
+            continue
         if path not in allowed:
             bad.append(line)
     if bad:

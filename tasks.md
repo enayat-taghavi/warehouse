@@ -1,4 +1,4 @@
-Session 1 of 9 — Phase 3: registry helpers for JWT token scopes and WebSocket app-scope normalization (behavior unchanged)
+[DONE] Session 1 of 9 — Phase 3: registry helpers for JWT token scopes and WebSocket app-scope normalization (behavior unchanged)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -47,7 +47,7 @@ refactor(core): build token scopes and websocket app groups from the module regi
 
 ===
 
-Session 2 of 9 — Phase 3: characterization test for SoD page-route and action-code inference (pure refactor)
+[DONE] Session 2 of 9 — Phase 3: characterization test for SoD page-route and action-code inference (pure refactor)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -87,7 +87,7 @@ test(sod): extract resolve_sod_context and pin its behavior
 
 ===
 
-Session 3 of 9 — Phase 3: move module permission classes and SoD inference rules out of core/accounts/permissions.py
+[DONE] Session 3 of 9 — Phase 3: move module permission classes and SoD inference rules out of core/accounts/permissions.py
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -138,7 +138,7 @@ refactor(permissions): move module permission classes and SoD inference rules in
 
 ===
 
-Session 4 of 9 — Phase 3: company delete blockers, org-structure write permissions and UserViewSet module queries via registry contributions
+[DONE] Session 4 of 9 — Phase 3: company delete blockers, org-structure write permissions and UserViewSet module queries via registry contributions
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -190,7 +190,7 @@ refactor(core): company delete blockers and user directory queries via registry 
 
 ===
 
-Session 5 of 9 — Phase 3: company sub-resource and Google Drive endpoints from the accounting module extension
+[DONE] Session 5 of 9 — Phase 3: company sub-resource and Google Drive endpoints from the accounting module extension
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -242,7 +242,7 @@ refactor(company-api): company sub-resource and gdrive endpoints from the accoun
 
 ===
 
-Session 6 of 9 — Phase 3: offline queue headers, deep-sync probe and tab scope detection from module sync config
+[DONE] Session 6 of 9 — Phase 3: offline queue headers, deep-sync probe and tab scope detection from module sync config
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -297,7 +297,7 @@ refactor(offline-core): offline headers, deep-sync probe and tab scope from modu
 
 ===
 
-Session 7 of 9 — Phase 3: accounting notification navigation moved out of the shared NotificationCenterComponent
+[DONE] Session 7 of 9 — Phase 3: accounting notification navigation moved out of the shared NotificationCenterComponent
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -306,7 +306,7 @@ verify: python -c "import subprocess,sys; p='warehouse-front/src/app/'; ok={p+'c
 verify: cd warehouse-front && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
 verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"
 verify: cd warehouse-front && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
-verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer|employee-new-vehicle"
+verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer|app-employee-new-vehicle"
 verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_52_icon_registry.py
 verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
@@ -346,7 +346,7 @@ refactor(notifications): accounting notification navigation via module notificat
 
 ===
 
-Session 8 of 9 — Phase 3: move module-only front models into their modules and remove the dead RecordHttpService
+[DONE] Session 8 of 9 — Phase 3: move module-only front models into their modules and remove the dead RecordHttpService
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -390,7 +390,7 @@ refactor(front-models): move module-only models into their modules and remove de
 
 ===
 
-Session 9 of 9 — Phase 3: semantic core fences in Guardian 29 (backend) and Guardian 57 (frontend)
+[DONE] Session 9 of 9 — Phase 3: semantic core fences in Guardian 29 (backend) and Guardian 57 (frontend)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
