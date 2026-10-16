@@ -1675,7 +1675,8 @@ class ItemViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                                             mismatch_wh = same_co_qs.filter(Q(name__iexact=wh_str) | Q(code__iexact=wh_str)).first()
                                             if mismatch_wh and mismatch_wh.id != int(warehouse_id):
                                                 failed += 1
-                                                err_msg = f"مغایرت انبار: فرآیند برای انبار شناسه {warehouse_id} آغاز شده اما این ردیف انبار '{mismatch_wh.name}' را مشخص کرده است."
+                                                # نام انبار گزارش نمی‌شود: ممکن است خارج از انبارهای تخصیصی کاربر باشد.
+                                                err_msg = f"مغایرت انبار: فرآیند برای انبار شناسه {warehouse_id} آغاز شده اما این ردیف انبار دیگری را مشخص کرده است."
                                                 error_details.append({"row": row_idx, "code": fa_unic_code, "error": err_msg})
                                                 append_colored_row(row, 'err', err_msg)
                                                 q.put(json.dumps({"type": "err", "msg": f"[ردیف {row_idx}] خطا در {fa_unic_code}: {err_msg}"}) + "\n")
