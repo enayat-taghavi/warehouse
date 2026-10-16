@@ -24,8 +24,12 @@ function createStorageMock() {
   };
 }
 
-(globalThis as any).localStorage = createStorageMock();
-(globalThis as any).sessionStorage = createStorageMock();
+if (!(globalThis as any).localStorage) {
+  (globalThis as any).localStorage = createStorageMock();
+}
+if (!(globalThis as any).sessionStorage) {
+  (globalThis as any).sessionStorage = createStorageMock();
+}
 
 describe('OfflinePendingBadgeComponent: queue handling & data-loss prevention', () => {
   let component: OfflinePendingBadgeComponent;
@@ -38,7 +42,7 @@ describe('OfflinePendingBadgeComponent: queue handling & data-loss prevention', 
   let mockStateService: any;
 
   beforeEach(() => {
-    localStorage.clear();
+    localStorage.removeItem('wh_user_profile');
     syncService = OfflineSyncService.getInstance();
 
     mockConfirmDialog = {
@@ -112,11 +116,11 @@ describe('OfflinePendingBadgeComponent: queue handling & data-loss prevention', 
     mockConfirmDialog.open.mockResolvedValue(false);
     const cancelSpy = vi.spyOn(syncService, 'cancelQueueEntry');
 
-    await component.onCancelQueueItem(100);
+    await component.onCancelQueueItem({ id: 100, userId: 10 } as SyncQueueEntry);
 
     expect(mockConfirmDialog.open).toHaveBeenCalledWith({
       title: 'لغو این درخواست',
-      message: 'این تغییر هنوز به سرور ارسال نشده است. با لغو، برای همیشه از این دستگاه حذف میشود و قابل بازگشت نیست.',
+      message: 'این تغییر هنوز به سرور ارسال نشده است. با لغو، برای همیشه از این دستگاه حذف می\u200Cشود و قابل بازگشت نیست.',
       confirmText: 'لغو درخواست',
       cancelText: 'انصراف',
       type: 'danger',
@@ -128,14 +132,13 @@ describe('OfflinePendingBadgeComponent: queue handling & data-loss prevention', 
     mockConfirmDialog.open.mockResolvedValue(true);
     const cancelSpy = vi.spyOn(syncService, 'cancelQueueEntry').mockResolvedValue(true);
 
-    component.queueEntries = [
-      { id: 100, userId: 10 } as SyncQueueEntry,
-      { id: 200, userId: 10 } as SyncQueueEntry,
-    ];
+    const item1 = { id: 100, userId: 10 } as SyncQueueEntry;
+    const item2 = { id: 200, userId: 10 } as SyncQueueEntry;
+    component.queueEntries = [item1, item2];
 
-    await component.onCancelQueueItem(100);
+    await component.onCancelQueueItem(item1);
 
-    expect(cancelSpy).toHaveBeenCalledWith(100);
+    expect(cancelSpy).toHaveBeenCalledWith(100, undefined);
     expect(component.queueEntries.map((e) => e.id)).toEqual([200]);
     expect(mockCdr.markForCheck).toHaveBeenCalled();
   });
@@ -145,10 +148,38 @@ describe('OfflinePendingBadgeComponent: queue handling & data-loss prevention', 
     vi.spyOn(syncService, 'cancelQueueEntry').mockResolvedValue(false);
     const reloadSpy = vi.spyOn(component, 'loadQueueEntries').mockResolvedValue();
 
-    component.queueEntries = [{ id: 100, userId: 10 } as SyncQueueEntry];
+    const item = { id: 100, userId: 10 } as SyncQueueEntry;
+    component.queueEntries = [item];
 
-    await component.onCancelQueueItem(100);
+    await component.onCancelQueueItem(item);
 
     expect(reloadSpy).toHaveBeenCalled();
+  });
+
+  it('the badge passes appScope of the chosen row to cancelQueueEntry', async () => {
+    mockConfirmDialog.open.mockResolvedValue(true);
+    const cancelSpy = vi.spyOn(syncService, 'cancelQueueEntry').mockResolvedValue(true);
+
+    const itemFinance: SyncQueueEntry = { id: 5, appScope: 'finance', userId: 10 } as SyncQueueEntry;
+    const itemWarehouse: SyncQueueEntry = { id: 5, appScope: 'warehouse', userId: 10 } as SyncQueueEntry;
+    component.queueEntries = [itemFinance, itemWarehouse];
+
+    await component.onCancelQueueItem(itemFinance);
+
+    expect(cancelSpy).toHaveBeenCalledWith(5, 'finance');
+    expect(component.queueEntries).toEqual([itemWarehouse]);
+  });
+
+  it('the badge cancels nothing when no confirm dialog service is available (fail-closed)', async () => {
+    (component as any).confirmDialog = null;
+    const cancelSpy = vi.spyOn(syncService, 'cancelQueueEntry');
+
+    const item: SyncQueueEntry = { id: 100, appScope: 'warehouse', userId: 10 } as SyncQueueEntry;
+    component.queueEntries = [item];
+
+    await component.onCancelQueueItem(item);
+
+    expect(cancelSpy).not.toHaveBeenCalled();
+    expect(component.queueEntries).toEqual([item]);
   });
 });

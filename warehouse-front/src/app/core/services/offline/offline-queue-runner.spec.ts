@@ -16,8 +16,12 @@ function createStorageMock() {
   };
 }
 
-(globalThis as any).localStorage = createStorageMock();
-(globalThis as any).sessionStorage = createStorageMock();
+if (!(globalThis as any).localStorage) {
+  (globalThis as any).localStorage = createStorageMock();
+}
+if (!(globalThis as any).sessionStorage) {
+  (globalThis as any).sessionStorage = createStorageMock();
+}
 
 describe('offline-queue-runner: cancelQueueEntry data-loss protection', () => {
   const createMockEntry = (overrides: Partial<SyncQueueEntry> = {}): SyncQueueEntry => ({
@@ -34,7 +38,19 @@ describe('offline-queue-runner: cancelQueueEntry data-loss protection', () => {
   });
 
   beforeEach(() => {
-    localStorage.clear();
+    localStorage.removeItem('wh_user_profile');
+    vi.spyOn(warehouseOfflineDb.syncQueue, 'get').mockResolvedValue(undefined);
+    vi.spyOn(financeOfflineDb.syncQueue, 'get').mockResolvedValue(undefined);
+    vi.spyOn(warehouseOfflineDb.syncQueue, 'delete').mockResolvedValue(undefined as any);
+    vi.spyOn(financeOfflineDb.syncQueue, 'delete').mockResolvedValue(undefined as any);
+    vi.spyOn(warehouseOfflineDb as any, 'transaction').mockImplementation((_mode: any, ...args: any[]) => {
+      const fn = args[args.length - 1];
+      return Promise.resolve().then(() => fn());
+    });
+    vi.spyOn(financeOfflineDb as any, 'transaction').mockImplementation((_mode: any, ...args: any[]) => {
+      const fn = args[args.length - 1];
+      return Promise.resolve().then(() => fn());
+    });
   });
 
   afterEach(() => {
@@ -122,5 +138,43 @@ describe('offline-queue-runner: cancelQueueEntry data-loss protection', () => {
     vi.spyOn(warehouseOfflineDb.syncQueue, 'get').mockResolvedValue(sendingEntry);
     const resFalse = await service.cancelQueueEntry(51);
     expect(resFalse).toBe(false);
+  });
+
+  it('when finance and warehouse share the same id, cancel with scope finance deletes only the finance record', async () => {
+    localStorage.setItem('wh_user_profile', JSON.stringify({ id: 42 }));
+    const whEntry = createMockEntry({ id: 5, appScope: 'warehouse', status: 'pending', userId: 42 });
+    const finEntry = createMockEntry({ id: 5, appScope: 'finance', url: '/api/v1/finance/entries/5/', status: 'pending', userId: 42 });
+
+    vi.spyOn(warehouseOfflineDb.syncQueue, 'get').mockResolvedValue(whEntry);
+    vi.spyOn(financeOfflineDb.syncQueue, 'get').mockResolvedValue(finEntry);
+    const whDeleteSpy = vi.spyOn(warehouseOfflineDb.syncQueue, 'delete').mockResolvedValue(undefined as any);
+    const finDeleteSpy = vi.spyOn(financeOfflineDb.syncQueue, 'delete').mockResolvedValue(undefined as any);
+    const invalidateSpy = vi.fn().mockResolvedValue(undefined);
+
+    const result = await cancelQueueEntry(5, 'finance', invalidateSpy);
+
+    expect(result).toBe(true);
+    expect(finDeleteSpy).toHaveBeenCalledWith(5);
+    expect(whDeleteSpy).not.toHaveBeenCalled();
+    expect(invalidateSpy).toHaveBeenCalledWith('/api/v1/finance/entries/5/', 'finance');
+  });
+
+  it('when finance and warehouse share the same id, cancel without scope returns false and deletes nothing (ambiguous id)', async () => {
+    localStorage.setItem('wh_user_profile', JSON.stringify({ id: 42 }));
+    const whEntry = createMockEntry({ id: 5, appScope: 'warehouse', status: 'pending', userId: 42 });
+    const finEntry = createMockEntry({ id: 5, appScope: 'finance', url: '/api/v1/finance/entries/5/', status: 'pending', userId: 42 });
+
+    vi.spyOn(warehouseOfflineDb.syncQueue, 'get').mockResolvedValue(whEntry);
+    vi.spyOn(financeOfflineDb.syncQueue, 'get').mockResolvedValue(finEntry);
+    const whDeleteSpy = vi.spyOn(warehouseOfflineDb.syncQueue, 'delete').mockResolvedValue(undefined as any);
+    const finDeleteSpy = vi.spyOn(financeOfflineDb.syncQueue, 'delete').mockResolvedValue(undefined as any);
+    const invalidateSpy = vi.fn().mockResolvedValue(undefined);
+
+    const result = await cancelQueueEntry(5, undefined, invalidateSpy);
+
+    expect(result).toBe(false);
+    expect(whDeleteSpy).not.toHaveBeenCalled();
+    expect(finDeleteSpy).not.toHaveBeenCalled();
+    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 });

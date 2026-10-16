@@ -327,7 +327,7 @@ import { getStoredCurrentUserId } from '../../../core/services/sync-pull.service
                 <!-- Action: Cancel / Discard this item from queue -->
                 <button
                   type="button"
-                  (click)="onCancelQueueItem(item.id!)"
+                  (click)="onCancelQueueItem(item)"
                   class="min-w-[40px] sm:min-w-[36px] min-h-[40px] sm:min-h-[36px] px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-[11px] font-bold transition-all active:scale-95 shrink-0 cursor-pointer shadow-2xs flex items-center justify-center gap-1 tap-target"
                   title="لغو این عملیات و جلوگیری از ارسال آن به سرور"
                 >
@@ -678,24 +678,36 @@ export class OfflinePendingBadgeComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  async onCancelQueueItem(id: number): Promise<void> {
+  async onCancelQueueItem(item: SyncQueueEntry): Promise<void> {
     try {
-      if (this.confirmDialog) {
-        const confirmed = await this.confirmDialog.open({
-          title: 'لغو این درخواست',
-          message: 'این تغییر هنوز به سرور ارسال نشده است. با لغو، برای همیشه از این دستگاه حذف میشود و قابل بازگشت نیست.',
-          confirmText: 'لغو درخواست',
-          cancelText: 'انصراف',
-          type: 'danger',
-        });
-        if (confirmed !== true) {
-          return;
-        }
+      if (!this.confirmDialog) {
+        return;
       }
 
-      const success = await this.sync.cancelQueueEntry(id);
+      const confirmed = await this.confirmDialog.open({
+        title: 'لغو این درخواست',
+        message: 'این تغییر هنوز به سرور ارسال نشده است. با لغو، برای همیشه از این دستگاه حذف می\u200Cشود و قابل بازگشت نیست.',
+        confirmText: 'لغو درخواست',
+        cancelText: 'انصراف',
+        type: 'danger',
+      });
+      if (confirmed !== true) {
+        return;
+      }
+
+      const entryItem: SyncQueueEntry = typeof (item as any) === 'number'
+        ? (this.queueEntries.find((e) => e.id === (item as any)) || ({ id: item as any } as SyncQueueEntry))
+        : item;
+
+      if (!entryItem?.id) {
+        return;
+      }
+
+      const success = await this.sync.cancelQueueEntry(entryItem.id, entryItem.appScope);
       if (success) {
-        this.queueEntries = this.queueEntries.filter((item) => item.id !== id);
+        this.queueEntries = this.queueEntries.filter(
+          (entry) => !(entry === entryItem || (entry.id === entryItem.id && entry.appScope === entryItem.appScope))
+        );
       } else {
         await this.loadQueueEntries();
       }

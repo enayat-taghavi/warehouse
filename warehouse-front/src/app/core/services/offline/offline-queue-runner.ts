@@ -417,41 +417,82 @@ export async function cancelQueueEntry(
   scope?: AppScope,
   invalidateCacheFn?: (url: string, scope?: AppScope) => Promise<void>
 ): Promise<boolean> {
-  let entry: SyncQueueEntry | undefined;
-  let targetDb: OfflineDatabase | undefined;
+  let targetDb: OfflineDatabase;
+
   if (scope) {
     targetDb = getOfflineDb(scope);
-    entry = await targetDb.syncQueue.get(id);
   } else {
-    entry = await warehouseOfflineDb.syncQueue.get(id);
-    if (entry) {
+    const [whEntry, finEntry] = await Promise.all([
+      warehouseOfflineDb.syncQueue.get(id).catch(() => undefined),
+      financeOfflineDb.syncQueue.get(id).catch(() => undefined),
+    ]);
+
+    if (whEntry && finEntry) {
+      // شناسه مبهم در هر دو پایگاه‌داده وجود دارد؛ برای جلوگیری از حذف اشتباه لغو نمی‌شود
+      console.warn(`[OfflineSync] ⚠️ شناسه مبهم ${id}: در هر دو پایگاه‌داده انبار و مالی وجود دارد؛ لغو بدون قلمرو متوقف شد.`);
+      return false;
+    }
+
+    if (whEntry) {
       targetDb = warehouseOfflineDb;
+    } else if (finEntry) {
+      targetDb = financeOfflineDb;
     } else {
-      entry = await financeOfflineDb.syncQueue.get(id);
-      if (entry) targetDb = financeOfflineDb;
+      return false;
     }
   }
 
-  if (!entry || !targetDb) {
-    return false;
+  let deletedEntry: SyncQueueEntry | undefined;
+
+  const runInTransaction = async (action: () => Promise<void>) => {
+    try {
+      await targetDb.transaction('rw', targetDb.syncQueue, action);
+    } catch (err: any) {
+      if (
+        err?.name === 'MissingAPIError' ||
+        err?.name === 'DatabaseClosedError' ||
+        err?.message?.includes('IndexedDB API missing')
+      ) {
+        await action();
+      } else {
+        throw err;
+      }
+    }
+  };
+
+  await runInTransaction(async () => {
+    const entry = await targetDb.syncQueue.get(id);
+    if (!entry) {
+      return;
+    }
+
+    if (entry.status === 'sending') {
+      return;
+    }
+
+    const currentUserId = getStoredCurrentUserId();
+    const isOwnRecord = !entry.userId || entry.userId === currentUserId;
+    if (!isOwnRecord) {
+      return;
+    }
+
+    await targetDb.syncQueue.delete(id);
+    deletedEntry = entry;
+  });
+
+  if (deletedEntry) {
+    if (deletedEntry.url && invalidateCacheFn) {
+      try {
+        await invalidateCacheFn(deletedEntry.url, deletedEntry.appScope);
+      } catch (e) {
+        console.warn('[OfflineSync] Invalidate cache error on cancel:', e);
+      }
+    }
+    console.log(`[OfflineSync] 🗑️ درخواست با شناسه ${id} از صف انتظار محلی [${targetDb.dbScope}] لغو و حذف شد.`);
+    return true;
   }
 
-  if (entry.status === 'sending') {
-    return false;
-  }
-
-  const currentUserId = getStoredCurrentUserId();
-  const isOwnRecord = !entry.userId || entry.userId === currentUserId;
-  if (!isOwnRecord) {
-    return false;
-  }
-
-  await targetDb.syncQueue.delete(id);
-  if (entry?.url && invalidateCacheFn) {
-    await invalidateCacheFn(entry.url, entry.appScope);
-  }
-  console.log(`[OfflineSync] 🗑️ درخواست با شناسه ${id} از صف انتظار محلی لغو و حذف شد.`);
-  return true;
+  return false;
 }
 
 /**
