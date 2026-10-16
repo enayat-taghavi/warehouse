@@ -17,6 +17,7 @@ import { PhotoUploadQueueService, PhotoFlushOutcome } from './photo-upload-queue
 import { BehaviorSubject, Subject, Subscription, filter } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { getModuleRegistry } from '../modules/module-registry.service';
+import { isServerUnreachable } from './server-reachability';
 
 import {
   SyncOutcome,
@@ -631,12 +632,25 @@ export class OfflineSyncService {
 
       const res = await fetch(probeEndpoint, { headers });
       if (!res.ok) {
-        throw new Error(res.status === 401 ? 'auth-required' : 'server-unreachable');
+        if (res.status === 401) {
+          throw new Error('auth-required');
+        }
+        if (isServerUnreachable(res.status)) {
+          throw new Error('server-unreachable');
+        }
+        throw new Error(`server-rejected:${res.status}`);
       }
     } catch (err: any) {
       console.error(`[OfflineSync] ❌ سرور برای بروزرسانی عمیق در دسترس نیست.`);
-      const status = err.message || 'server-unreachable';
-      throw new Error(status === 'auth-required' ? 'نشست شما منقضی شده است. لطفا وارد شوید.' : 'سرور در دسترس نیست');
+      const status = err?.message || 'server-unreachable';
+      if (status === 'auth-required') {
+        throw new Error('نشست شما منقضی شده است. لطفا وارد شوید.');
+      }
+      if (typeof status === 'string' && status.startsWith('server-rejected:')) {
+        const code = status.slice('server-rejected:'.length);
+        throw new Error(`سرور درخواست بروزرسانی عمیق را نپذیرفت (کد ${code}).`);
+      }
+      throw new Error('سرور در دسترس نیست');
     }
 
     const { SyncPullService } = await import('./sync-pull.service');
