@@ -5438,3 +5438,119 @@ test(dom): offline queue badge states, pending count and manual sync
 ### ۲. اعتبارسنجی و درستی‌سنجی فنی ...
 
 ---
+
+### Task 1 of 2 — 2026-10-17 02:21:22
+- **Status:** DONE
+- **Conversation:** `52c25da9-dc36-4a9c-9da5-4ac3a1bc26de`
+- **Steps:** 104
+- **Duration:** 13m 45s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 10/10 passed
+- **Task:**
+```
+Session 16 of 23 — Deep-sync probe: classify a failed probe with isServerUnreachable() and keep aborting before any local change
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- No data may be lost. `performDeepUpdate` deletes cached rows per warehouse or project only after the probe succeeds. Every non-2xx probe response and every network failure must still throw before that point, exactly as today. Do not touch any line that deletes, clears or rewrites local data, the pull loop, or `core/services/offline-db.ts`.
+- Change only `warehouse-front/src/app/core/services/offline-sync.service.ts` (only the probe `try`/`catch` inside `performDeepUpdate` and the import line) and the new spec `warehouse-front/src/app/core/services/offline-sync.deep-update-probe.spec.ts`.
+- Do not push. Stage only those two files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase3/modular_architecture_phase3_plan.md`, heading `## ۴.`, row about the deep-sync probe.
+- Project rule (CLAUDE.md): HTTP status interpretation must use `isServerUnreachable()` from `core/services/server-reachability.ts`, never `status >= 500` or a blanket non-2xx. It returns true for 0, 502, 503, 504 and 520 to 530.
+- Today the probe throws `'auth-required'` for 401 and `'server-unreachable'` for every other non-2xx; the catch block turns that into «نشست شما منقضی شده است. لطفا وارد شوید.» or «سرور در دسترس نیست». So a 403, 404 or 500 is reported to the user as an unreachable server, which is wrong.
+
+3. Definitions:
+- "unreachable" means `fetch` rejected (network error) or `isServerUnreachable(res.status)` is true.
+- "rejected by the server" means any other non-2xx status except 401.
+
+4. Task:
+- a) In the probe block: 401 keeps the session-expired message; unreachable keeps «سرور در دسترس نیست»; rejected by the server throws an `Error` with the message «سرور درخواست بروزرسانی عمیق را نپذیرفت (کد <status>).» with the numeric status. All three paths throw before any code after the probe runs. Keep the `console.error` line.
+- b) New spec `offline-sync.deep-update-probe.spec.ts` (Vitest; stub `fetch` with `vi.stubGlobal`; give `getModuleRegistry().getExtensions('syncConfig')` a warehouse `syncConfig` through the real registry or a mock, as the existing specs in `core/services/` do). At least 6 tests: 401 gives the session-expired message; 530 and 503 give «سرور در دسترس نیست»; a network rejection gives «سرور در دسترس نیست»; 403 and 500 give the rejected message containing the status; in every failing case `fetch` was called exactly once (only the probe) and the deep-update state observable never reported `isActive: true`; an empty id list returns `[]` without calling `fetch`.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/services/offline-sync.deep-update-probe.spec.ts"`. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+fix(offline-sync): classify the deep-update probe failure with isServerUnreachable
+- Short English report: the new message mapping, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح سادهٔ درخواست
+درخواست مربوط به اصلاح منطق پروب بررسی سلامت سرور پیش از بروزرسانی عمیق (`performDeepUpdate`) در سرویس [offline-sync.service.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/services/offline-sync.service.ts) بود. تا پیش از این، هر وضعیت غیر 2xx غیر از 401 به‌عنوان خطای غیرقابل‌دسترس بودن سرور («سرور در دسترس نیست») در نظر گرفته می‌شد. طبق قوانین پروژه (`CLAUDE.md`) و ردیف ۴ سند معماری، بررسی دسترسی‌پذیری باید از تابع `isServerUnreachable` استفاده کند تا خطاهای رد صریح سرور (مانند 403 یا 500) با پیام متناسب تفکیک شده و مانع از حذف داده‌های محلی یا فعال‌شدن وضعیت همگام‌سازی گردد.
+
+### ۲. اعتبارسنجی و درستی‌سنجی
+- بررسی خط...
+
+---
+
+### Task 2 of 2 — 2026-10-17 02:27:53
+- **Status:** DONE
+- **Conversation:** `2cf8abeb-54d9-4779-8a4e-64d2e665f7a7`
+- **Steps:** 102
+- **Duration:** 6m 26s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 8/8 passed
+- **Task:**
+```
+Session 17 of 23 — Guardians 33 and 35: check the current module build and lazy routing mechanism instead of the removed accounting-only config and stub file
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Change only `scripts/e2e/guardian_33_bundle_isolation.py` and `scripts/e2e/guardian_35_route_matching.py`. Do not change application code, `angular.json`, `package.json` or any tool to make a guardian pass. Do not remove or loosen a check that is still valid; replace only the checks that refer to removed files.
+- Do not push. Stage only the two guardians. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase3/modular_architecture_phase3_plan.md`, heading `## ۴.`, row about guardians 33 and 35, and the last entry under `## گزارش پیشرفت`.
+- Both guardians fail on HEAD only because the architecture changed: guardian 33 looks for an `accounting-only` build configuration in `angular.json` and the file `modules/warehouse/warehouse.routes.stub.ts`, which no longer exist; guardian 35 looks for literal `path: 'app/warehouse'` and `path: 'app/finance'` routes with `loadChildren: () => import(`.
+- Current mechanism: `warehouse-front/tools/gen-installed-modules.js` writes `src/app/modules/installed-modules.ts` (the committed version lists every discovered module); `warehouse-front/tools/build-for-modules.js` (npm script `build:modules`) regenerates it for `WH_MODULES`, builds, and restores the committed version; each `src/app/modules/<name>/module.ts` declares `routes: () => import('./<name>.routes')...`; `app.routes.ts` builds `dynamicModuleRoutes` from `INSTALLED_MODULES` with `loadChildren: m.routes!`.
+- Guardian 33's existing dist loop asserts nothing (its body is `pass`). Real bundle isolation per profile is checked by the runner with separate `build:modules` builds and `verify_tools.py dist-free`.
+
+3. Definitions: "self-test" means the guardian runs its checks against small in-memory text fixtures (a good fixture that must pass and at least one bad fixture per check that must fail) and exits 0 only if every fixture gives the expected result. It must not write files outside a temporary directory.
+
+4. Task:
+- a) Guardian 33 checks: `package.json` has a `build:modules` script that runs `tools/build-for-modules.js`; `build-for-modules.js` requires `./gen-installed-modules` and restores the committed `installed-modules.ts` in a `finally` path and on signals; the committed `installed-modules.ts` imports every `src/app/modules/*/module.ts`; every `module.ts` that declares `routes` uses a dynamic `import(` (no static import of its routes file); and no file under `src/app/core` or `src/app/shared` statically imports a `*.routes` file of a module. Remove the no-op dist loop. Add `--self-test`.
+- b) Guardian 35 checks: replace check 1 with `app.routes.ts` imports `INSTALLED_MODULES`, builds routes from it with `loadChildren: m.routes` and a `canMatch` that calls `isModuleInstalled`; keep checks 2 (eager component imports), 3 (all `EXPECTED_LEGACY_REDIRECTS`, unchanged) and 4 unchanged. Add `--self-test`.
+- c) Keep the Persian console style of both guardians.
+
+5. Tool policy: from the repo root, run each guardian and its `--self-test` at most three times. If a command fails, read the output and change approach.
+
+6. Before finishing: both guardians exit 0 on HEAD and with `--self-test`; `git diff --stat` shows only the two files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(guardians): guardians 33 and 35 check the current module build and lazy routing
+- Short English report: each check before and after, the self-test fixtures, both exit codes. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گزارش کار نشست ۱۷ (Session 17 Report)
+
+تمام نیازمندی‌های خواسته شده برای نگهبان ۳۳ و نگهبان ۳۵ به صورت ۱۰۰٪ پیاده‌سازی، آزمایش و متعهد شدند.
+
+---
+
+### خلاصه اعتبارسنجی و اجرا (Verification Summary)
+
+۱. **اجرای مستقیم نگهبان‌ها:**
+   - `python scripts/e2e/guardian_33_bundle_isolation.py` -> خروج با کد `0` (PASS)
+   - `python scripts/e2e/guardian_33_bundle_isolation.py --self-test` -> خروج با کد `0` (PASS)
+   - `python scripts/e2e/guardian_35_route_matching.py` -> خروج با کد `0` (PASS)
+   - `python scripts/e2e/guardian_35_route_matching.py --self-test` -> خروج با کد `0` (PASS)
+
+۲. **بررسی عدم پس‌رفت و تطابق کامل شرط‌های Runner:**
+   - شرط `tasks.md`: `{'g33_n...
+
+---

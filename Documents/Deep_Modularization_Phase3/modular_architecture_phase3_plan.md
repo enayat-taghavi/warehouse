@@ -714,5 +714,22 @@ feat(guardians): semantic core fences for module app references and hardcoded mo
   - **بازبینی Claude:**
     - diff فقط همین ۵ فایل spec است و هیچ فایل untracked نماند.
     - assertionها واقعی‌اند: متن DOM، کلیک روی عنصرهای رندرشده و فراخوانی ماک‌ها.
+- **۲۶ مهر ۱۴۰۵ — دستهٔ B تمام شد:**
+  - **نشست ۱۶** (`dea0179`، دور ۰ سبز): probe همگام‌سازی عمیق حالا سه پیام جدا می‌دهد:
+    - ۴۰۱: نشست منقضی
+    - `isServerUnreachable()` یا خطای شبکه: «سرور در دسترس نیست»
+    - بقیه: «سرور درخواست بروزرسانی عمیق را نپذیرفت (کد N)»
+
+    هر پاسخ غیر ۲xx همچنان پیش از هر حذف یا pull متوقف می‌شود.
+    - `data-loss-reviewer`: بدون یافته. یک کمبود پوشش گزارش داد: spec نبودِ حذف را مستقیم نمی‌سنجد و فقط یک‌بار اجرای `fetch` و فعال‌نشدن وضعیت را می‌سنجد.
+  - **نشست ۱۷** (`8bf0de6`، دور ۰ سبز): نگهبان‌های ۳۳ و ۳۵ حالا سازوکار فعلی را بررسی می‌کنند:
+    - `build:modules` و `gen-installed-modules`
+    - بازگردانی `installed-modules.ts`
+    - `routes` با `import()` پویا
+    - `INSTALLED_MODULES` با `loadChildren` و `canMatch`
+
+    هر دو نگهبان `--self-test` دارند: یک fixture سالم و ۵ fixture معیوب.
+    - جدول ۳۸ ریدایرکت legacy تغییر نکرد.
+    - Claude هر دو نگهبان و self-test آن‌ها را جداگانه روی HEAD اجرا کرد و هر چهار اجرا سبز بود.
 
 </div>

@@ -682,3 +682,92 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - Commit with this message, without push:
 test(dom): offline queue badge states, pending count and manual sync
 - Short English report: tests added, the last ng-test-compare summary line, any behavior difference. End the turn after the commit and report.
+
+===
+
+[DONE] Session 16 of 23 — Deep-sync probe: classify a failed probe with isServerUnreachable() and keep aborting before any local change
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import pathlib,sys,re; s=pathlib.Path('warehouse-front/src/app/core/services/offline-sync.service.ts').read_text(encoding='utf-8'); i=s.find('async performDeepUpdate('); body=s[i:s.find('SyncPullService', i)]; ok={'uses_helper':'isServerUnreachable(' in body,'imports_helper':bool(re.search(r'import\s*\{[^}]*isServerUnreachable[^}]*\}\s*from', s)),'still_throws':'throw new Error' in body,'auth_kept':'401' in body}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "\.delete\(|\.clear\(|deleteProjectAttendance|bulkDelete" --path warehouse-front/src/app/core/services/offline-sync.service.ts
+verify: python -c "import subprocess,sys; p='warehouse-front/src/app/core/services/'; ok={p+'offline-sync.service.ts',p+'offline-sync.deep-update-probe.spec.ts'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline-sync.deep-update-probe.spec.ts --min-tests 6 --require "performDeepUpdate" --require "530" --require "403"
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_34_offline_continuity.py
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/core/services/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(offline-sync): classify the deep-update probe failure with isServerUnreachable"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- No data may be lost. `performDeepUpdate` deletes cached rows per warehouse or project only after the probe succeeds. Every non-2xx probe response and every network failure must still throw before that point, exactly as today. Do not touch any line that deletes, clears or rewrites local data, the pull loop, or `core/services/offline-db.ts`.
+- Change only `warehouse-front/src/app/core/services/offline-sync.service.ts` (only the probe `try`/`catch` inside `performDeepUpdate` and the import line) and the new spec `warehouse-front/src/app/core/services/offline-sync.deep-update-probe.spec.ts`.
+- Do not push. Stage only those two files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase3/modular_architecture_phase3_plan.md`, heading `## ۴.`, row about the deep-sync probe.
+- Project rule (CLAUDE.md): HTTP status interpretation must use `isServerUnreachable()` from `core/services/server-reachability.ts`, never `status >= 500` or a blanket non-2xx. It returns true for 0, 502, 503, 504 and 520 to 530.
+- Today the probe throws `'auth-required'` for 401 and `'server-unreachable'` for every other non-2xx; the catch block turns that into «نشست شما منقضی شده است. لطفا وارد شوید.» or «سرور در دسترس نیست». So a 403, 404 or 500 is reported to the user as an unreachable server, which is wrong.
+
+3. Definitions:
+- "unreachable" means `fetch` rejected (network error) or `isServerUnreachable(res.status)` is true.
+- "rejected by the server" means any other non-2xx status except 401.
+
+4. Task:
+- a) In the probe block: 401 keeps the session-expired message; unreachable keeps «سرور در دسترس نیست»; rejected by the server throws an `Error` with the message «سرور درخواست بروزرسانی عمیق را نپذیرفت (کد <status>).» with the numeric status. All three paths throw before any code after the probe runs. Keep the `console.error` line.
+- b) New spec `offline-sync.deep-update-probe.spec.ts` (Vitest; stub `fetch` with `vi.stubGlobal`; give `getModuleRegistry().getExtensions('syncConfig')` a warehouse `syncConfig` through the real registry or a mock, as the existing specs in `core/services/` do). At least 6 tests: 401 gives the session-expired message; 530 and 503 give «سرور در دسترس نیست»; a network rejection gives «سرور در دسترس نیست»; 403 and 500 give the rejected message containing the status; in every failing case `fetch` was called exactly once (only the probe) and the deep-update state observable never reported `isActive: true`; an empty id list returns `[]` without calling `fetch`.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/services/offline-sync.deep-update-probe.spec.ts"`. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+fix(offline-sync): classify the deep-update probe failure with isServerUnreachable
+- Short English report: the new message mapping, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+
+===
+
+[DONE] Session 17 of 23 — Guardians 33 and 35: check the current module build and lazy routing mechanism instead of the removed accounting-only config and stub file
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/e2e/guardian_33_bundle_isolation.py
+verify: python scripts/e2e/guardian_35_route_matching.py
+verify: python scripts/e2e/guardian_33_bundle_isolation.py --self-test
+verify: python scripts/e2e/guardian_35_route_matching.py --self-test
+verify: python -c "import pathlib,sys; g33=pathlib.Path('scripts/e2e/guardian_33_bundle_isolation.py').read_text(encoding='utf-8'); g35=pathlib.Path('scripts/e2e/guardian_35_route_matching.py').read_text(encoding='utf-8'); ok={'g33_no_old_config':'accounting-only' not in g33 and 'routes.stub' not in g33,'g33_new':'build-for-modules' in g33 and 'gen-installed-modules' in g33,'g35_redirects_kept':'EXPECTED_LEGACY_REDIRECTS' in g35,'g35_eager_kept':'eager_components' in g35,'g35_new':'INSTALLED_MODULES' in g35 and 'loadChildren' in g35}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
+verify: python -c "import subprocess,sys; ok={'scripts/e2e/guardian_33_bundle_isolation.py','scripts/e2e/guardian_35_route_matching.py'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(guardians): guardians 33 and 35 check the current module build and lazy routing"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Change only `scripts/e2e/guardian_33_bundle_isolation.py` and `scripts/e2e/guardian_35_route_matching.py`. Do not change application code, `angular.json`, `package.json` or any tool to make a guardian pass. Do not remove or loosen a check that is still valid; replace only the checks that refer to removed files.
+- Do not push. Stage only the two guardians. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase3/modular_architecture_phase3_plan.md`, heading `## ۴.`, row about guardians 33 and 35, and the last entry under `## گزارش پیشرفت`.
+- Both guardians fail on HEAD only because the architecture changed: guardian 33 looks for an `accounting-only` build configuration in `angular.json` and the file `modules/warehouse/warehouse.routes.stub.ts`, which no longer exist; guardian 35 looks for literal `path: 'app/warehouse'` and `path: 'app/finance'` routes with `loadChildren: () => import(`.
+- Current mechanism: `warehouse-front/tools/gen-installed-modules.js` writes `src/app/modules/installed-modules.ts` (the committed version lists every discovered module); `warehouse-front/tools/build-for-modules.js` (npm script `build:modules`) regenerates it for `WH_MODULES`, builds, and restores the committed version; each `src/app/modules/<name>/module.ts` declares `routes: () => import('./<name>.routes')...`; `app.routes.ts` builds `dynamicModuleRoutes` from `INSTALLED_MODULES` with `loadChildren: m.routes!`.
+- Guardian 33's existing dist loop asserts nothing (its body is `pass`). Real bundle isolation per profile is checked by the runner with separate `build:modules` builds and `verify_tools.py dist-free`.
+
+3. Definitions: "self-test" means the guardian runs its checks against small in-memory text fixtures (a good fixture that must pass and at least one bad fixture per check that must fail) and exits 0 only if every fixture gives the expected result. It must not write files outside a temporary directory.
+
+4. Task:
+- a) Guardian 33 checks: `package.json` has a `build:modules` script that runs `tools/build-for-modules.js`; `build-for-modules.js` requires `./gen-installed-modules` and restores the committed `installed-modules.ts` in a `finally` path and on signals; the committed `installed-modules.ts` imports every `src/app/modules/*/module.ts`; every `module.ts` that declares `routes` uses a dynamic `import(` (no static import of its routes file); and no file under `src/app/core` or `src/app/shared` statically imports a `*.routes` file of a module. Remove the no-op dist loop. Add `--self-test`.
+- b) Guardian 35 checks: replace check 1 with `app.routes.ts` imports `INSTALLED_MODULES`, builds routes from it with `loadChildren: m.routes` and a `canMatch` that calls `isModuleInstalled`; keep checks 2 (eager component imports), 3 (all `EXPECTED_LEGACY_REDIRECTS`, unchanged) and 4 unchanged. Add `--self-test`.
+- c) Keep the Persian console style of both guardians.
+
+5. Tool policy: from the repo root, run each guardian and its `--self-test` at most three times. If a command fails, read the output and change approach.
+
+6. Before finishing: both guardians exit 0 on HEAD and with `--self-test`; `git diff --stat` shows only the two files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(guardians): guardians 33 and 35 check the current module build and lazy routing
+- Short English report: each check before and after, the self-test fixtures, both exit codes. End the turn after the commit and report.
