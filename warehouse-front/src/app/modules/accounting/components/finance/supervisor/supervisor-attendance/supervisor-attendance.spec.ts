@@ -16,7 +16,7 @@ describe('SupervisorAttendanceHubComponent Unit Tests', () => {
   let mockCdr: any;
 
   const mockSections: ProjectSection[] = [
-    { id: 10, name: 'کارگاه مرکزی', project: 1, project_name: 'پروژه الف', is_active: true }
+    { id: 10, name: 'کارگاه مرکزی', code: 'SEC-10', project: 1, project_name: 'پروژه الف', is_active: true }
   ];
 
   const mockAttendanceData = [

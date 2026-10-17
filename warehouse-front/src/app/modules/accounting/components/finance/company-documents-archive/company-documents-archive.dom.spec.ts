@@ -55,13 +55,10 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       document_type: 'statute',
       document_type_display: 'اساسنامه شرکت',
       title: 'اساسنامه پاینده توان ساینا',
-      tracking_code: 'DOC-1001',
       file: '/media/company_docs/statute.pdf',
-      file_name: 'statute.pdf',
-      file_size_formatted: '1.2 MB',
+      file_size: 1200000,
       is_confidential: false,
-      is_valid: true,
-      days_to_expiry: null,
+      days_until_expiry: null,
       created_at: '2026-09-24T10:00:00Z',
       updated_at: '2026-09-24T10:00:00Z'
     },
@@ -71,13 +68,10 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       document_type: 'vat_certificate',
       document_type_display: 'گواهی ثبت‌نام ارزش افزوده',
       title: 'گواهی ارزش افزوده ۱۴۰۵',
-      tracking_code: 'DOC-1002',
       file: '/media/company_docs/vat.pdf',
-      file_name: 'vat.pdf',
-      file_size_formatted: '850 KB',
+      file_size: 850000,
       is_confidential: false,
-      is_valid: true,
-      days_to_expiry: 15,
+      days_until_expiry: 15,
       created_at: '2026-09-24T10:00:00Z',
       updated_at: '2026-09-24T10:00:00Z'
     }
@@ -234,6 +228,7 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       id: 5,
       name: 'شرکت فارس عالیش',
       code: 'FA01',
+      is_active: true,
       user_access_level: 'docs_read',
       has_warehouse_module: true
     };
@@ -402,7 +397,7 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       expect(externalLink).not.toBeNull();
 
       // بستن پیش‌نمایش با دکمه ✕
-      const closePreviewBtn = Array.from(compiled.querySelectorAll('.fixed.inset-0 button')).find(b => b.textContent?.trim() === '✕' || b.getAttribute('appaction') === 'close' || b.title === 'بستن') as HTMLButtonElement;
+      const closePreviewBtn = Array.from(compiled.querySelectorAll('.fixed.inset-0 button')).find(b => b.textContent?.trim() === '✕' || b.getAttribute('appaction') === 'close' || (b as HTMLElement).title === 'بستن') as HTMLButtonElement;
       expect(closePreviewBtn).not.toBeNull();
       closePreviewBtn.click();
       fixture.detectChanges();
@@ -415,10 +410,9 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
         title: 'تصویر کارت بازرگانی',
         document_type: 'commercial_card',
         file: '/media/docs/card.png',
-        file_size_formatted: '500 KB',
+        file_size: 500000,
         is_confidential: false,
-        is_valid: true,
-        days_to_expiry: 100,
+        days_until_expiry: 100,
         created_at: '2026-09-24T10:00:00Z',
         updated_at: '2026-09-24T10:00:00Z'
       };

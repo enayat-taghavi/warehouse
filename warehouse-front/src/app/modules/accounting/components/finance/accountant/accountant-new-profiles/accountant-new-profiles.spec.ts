@@ -34,6 +34,8 @@ describe('AccountantNewProfilesHubComponent Unit & DOM Tests', () => {
     section: 3,
     approval_status: 'pending_accountant',
     contract_type: 'daily',
+    marital_status: 'married',
+    job_title: 'کارگر',
     job_grade: '19',
     base_years_experience: 2,
     daily_base_wage: 6572696,
@@ -46,17 +48,19 @@ describe('AccountantNewProfilesHubComponent Unit & DOM Tests', () => {
     children_count: 1,
     bank_name: 'ملی ایران',
     account_number: '0101234567001',
-    sheba_number: 'IR120170000000101234567001'
+    sheba_number: 'IR120170000000101234567001',
+    is_active: true
   };
 
   const mockVehicle: VehicleDriverProfile = {
     id: 45,
     driver_name: 'بهرام رادان',
     plate_number: '21-789-10',
-    model_name: 'کامیونت ایسوزو',
+    vehicle_type: 'khavar',
     approval_status: 'pending_accountant',
     default_service_rate: 2500000,
-    sheba_number: 'IR980120000000001234567890'
+    sheba_number: 'IR980120000000001234567890',
+    is_active: true
   };
 
   const mockCrPersonnel: PersonnelChangeRequest = {
@@ -88,8 +92,8 @@ describe('AccountantNewProfilesHubComponent Unit & DOM Tests', () => {
   };
 
   const mockSections: ProjectSection[] = [
-    { id: 3, name: 'دالان کارگاه', project: 1, is_active: true },
-    { id: 4, name: 'انبار مرکزی', project: 1, is_active: true }
+    { id: 3, name: 'دالان کارگاه', code: 'SEC-01', project: 1, is_active: true },
+    { id: 4, name: 'انبار مرکزی', code: 'SEC-02', project: 1, is_active: true }
   ];
 
   beforeEach(() => {

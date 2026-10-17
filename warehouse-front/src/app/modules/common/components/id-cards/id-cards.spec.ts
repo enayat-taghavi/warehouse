@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { IdCards, DEFAULT_CARD_TEXTS } from './id-cards';
+import { IdCards } from './id-cards';
 import { AccountsHttpService, User, Role } from '../../../../core/http/accounts-http.service';
 import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
@@ -98,7 +98,13 @@ describe('IdCards Component Comprehensive Tests (Tab 3: ID Cards & Gate Pass)', 
         { provide: AccountsHttpService, useValue: mockAccountsHttp },
         { provide: WarehouseHttpService, useValue: mockWarehouseHttp },
         { provide: StateService, useValue: mockState },
-        { provide: ModuleRegistryService, useValue: { isModuleInstalled: vi.fn().mockReturnValue(true) } }
+        {
+          provide: ModuleRegistryService,
+          useValue: {
+            isModuleInstalled: vi.fn().mockReturnValue(true),
+            getExtensions: vi.fn().mockReturnValue([{ extension: { supported: true } }])
+          }
+        }
       ]
     }).compileComponents();
 
@@ -125,15 +131,8 @@ describe('IdCards Component Comprehensive Tests (Tab 3: ID Cards & Gate Pass)', 
       mockState.appState.roles = [...mockRolesList];
       mockState.appState.projects = [...mockWarehousesList];
 
-      const freshComp = new IdCards(
-        mockState,
-        mockAccountsHttp,
-        mockWarehouseHttp,
-        mockToast,
-        TestBed.inject(DomSanitizer),
-        (component as any).cdr,
-        { isModuleInstalled: vi.fn().mockReturnValue(true) } as any
-      );
+      const freshFixture = TestBed.createComponent(IdCards);
+      const freshComp = freshFixture.componentInstance;
       freshComp.ngOnInit();
 
       expect(freshComp.usersList.length).toBe(2);
@@ -221,7 +220,7 @@ describe('IdCards Component Comprehensive Tests (Tab 3: ID Cards & Gate Pass)', 
     it('باید ریست کردن متن‌ها به مقادیر پیش‌فرض سازمانی پیام موفقیت دهد', () => {
       component.idCardSettings.customTexts.companyName = 'شرکت متفرقه';
       component.resetToDefaultTexts();
-      expect(component.idCardSettings.customTexts.companyName).toBe(DEFAULT_CARD_TEXTS.companyName);
+      expect(component.idCardSettings.customTexts.companyName).toBe('فارس عــالیش');
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('بازنشانی'));
     });
   });

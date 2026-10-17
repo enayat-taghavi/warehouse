@@ -56,7 +56,7 @@ describe('آزمون‌های جامع تمامی سناریوهای ثبت خو
     activeVehicleCR = {
       id: 801,
       vehicle: 501,
-      vehicle_plate: '12 الف 345 ایران 63',
+      plate_number: '12 الف 345 ایران 63',
       status: 'pending_supervisor',
       status_display: 'در انتظار تایید سرپرست',
       proposed_changes: { default_service_rate: 6000000 },

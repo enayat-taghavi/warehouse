@@ -42,6 +42,7 @@ describe('آزمون‌های جامع مرورگر و DOM برای ۱۳ ویژ�
     national_code: '0010376488',
     father_name: 'علی',
     job_title: 'کارشناس فنی دالان',
+    contract_type: 'daily',
     daily_base_wage: 5000000,
     phone_number: '09121234567',
     bank_name: 'بانک ملی ایران',

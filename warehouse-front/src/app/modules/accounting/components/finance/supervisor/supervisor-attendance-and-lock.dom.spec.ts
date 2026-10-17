@@ -37,7 +37,7 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
   let mockRoute: any;
 
   const mockSections: ProjectSection[] = [
-    { id: 10, name: 'کارگاه مرکزی دالان', project: 1, project_name: 'پروژه قطار شهری', is_active: true }
+    { id: 10, name: 'کارگاه مرکزی دالان', code: 'SEC-10', project: 1, project_name: 'پروژه قطار شهری', is_active: true }
   ];
 
   const mockAttendanceList = [
@@ -404,7 +404,7 @@ describe('Fast Browser & DOM Verification (14 Comprehensive Audit Items)', () =>
 
     const rootEl: HTMLElement = periodLockFixture.nativeElement;
     // بنر هشدار کهربایی راهنما
-    const warningBanner = rootEl.querySelector('.bg-amber-50, .border-amber-200');
+    const warningBanner = rootEl.querySelector('div.bg-amber-50');
     expect(warningBanner).not.toBeNull();
     expect(warningBanner?.textContent).toContain('قفل دوره تا تایید تمامی کارکردها مسدود است');
 
