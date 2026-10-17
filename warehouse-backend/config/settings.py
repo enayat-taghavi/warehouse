@@ -407,3 +407,8 @@ GOOGLE_OAUTH_REDIRECT_URI = os.getenv(
     f'https://{WH_CANONICAL_DOMAIN}/api/accounts/gdrive/callback/' if WH_CANONICAL_DOMAIN else 'https://app.farsalish.ir/api/accounts/gdrive/callback/'
 )
 OUTBOUND_HTTP_PROXY = os.getenv('OUTBOUND_HTTP_PROXY', '')
+
+# ==============================================================================
+# Firebase Cloud Messaging (FCM) Push Notifications
+# ==============================================================================
+FIREBASE_CREDENTIALS_FILE = os.environ.get('FIREBASE_CREDENTIALS_FILE', '')
