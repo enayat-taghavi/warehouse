@@ -34,6 +34,7 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
+import { saveBlob } from '../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-users',
@@ -2314,12 +2315,7 @@ export class Users implements OnInit, OnDestroy {
 
   // ── Excel Import/Export ──────────────────────────────────────────
   private triggerDownload(blob: Blob, filename: string) {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    void saveBlob(blob, filename);
   }
 
   exportUsersExcel(ids?: number[]) {

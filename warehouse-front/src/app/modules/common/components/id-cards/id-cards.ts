@@ -23,6 +23,7 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
+import { printWindow, saveUrl } from '../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-id-cards',
@@ -632,7 +633,7 @@ export class IdCards implements OnInit {
     this.cdr.markForCheck();
     this.cdr.detectChanges();
     setTimeout(() => {
-      window.print();
+      printWindow();
     }, 250);
   }
 
@@ -736,10 +737,7 @@ export class IdCards implements OnInit {
       }
 
       // Download triggered
-      const a = document.createElement('a');
-      a.download = `ID_CARD_${cleanName}_${side.toUpperCase()}_${scale}X.png`;
-      a.href = canvas.toDataURL('image/png', 1.0);
-      a.click();
+      void saveUrl(canvas.toDataURL('image/png', 1.0), `ID_CARD_${cleanName}_${side.toUpperCase()}_${scale}X.png`);
 
       this.toast.show('success', `تصویر کارت دیجیتال با موفقیت دانلود شد.`);
       this.isExportModalOpen = false;

@@ -8,6 +8,7 @@ import { ToastService } from '../../../../../../shared/components/toast/toast.co
 import { finalize } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import { offlineDb, downloadLocalDatabaseSnapshotFile } from '../../../../../../core/services/offline-db';
+import { saveBlob } from '../../../../../../core/platform/file-output';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
@@ -282,17 +283,7 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
           }).format(now).replace(/[/\s:]/g, '-');
           const fileName = `warehouse_backup_${pDate}.wbak`;
 
-          // Firefox fix (Issue 5-5)
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => {
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-          }, 100);
+          void saveBlob(blob, fileName);
 
           this.toast.show('success', 'نسخه پشتیبان با موفقیت ساخته و دانلود شد.');
           this.backupPassword = '';

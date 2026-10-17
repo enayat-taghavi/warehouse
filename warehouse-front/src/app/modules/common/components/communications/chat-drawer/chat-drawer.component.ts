@@ -10,6 +10,7 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { ServerUrlPipe } from '../../../../../shared/pipes/server-url.pipe';
+import { saveUrl } from '../../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-chat-drawer',
@@ -417,6 +418,12 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       return d.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
     } catch {
       return '';
+    }
+  }
+
+  public downloadAttachment(att: { file_url?: string; file_name?: string }): void {
+    if (att?.file_url) {
+      void saveUrl(att.file_url, att.file_name);
     }
   }
 }

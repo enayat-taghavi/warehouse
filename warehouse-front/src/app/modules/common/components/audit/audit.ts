@@ -25,6 +25,7 @@ import { BarcodeScannerComponent } from '../../../../shared/components/barcode-s
 import { PersianDatePipe } from '../../../../shared/pipes/persian-date.pipe';
 import { parseSmartDate, formatToStandardShamsi } from '../../../../core/utils/date-utils';
 import { BRANDING } from '../../../../core/branding';
+import { saveBlob } from '../../../../core/platform/file-output';
 import {
   AuditLog,
   UserLoginLog,
@@ -1491,14 +1492,7 @@ export class Audit implements OnInit, OnDestroy {
   }
 
   private triggerDownload(blob: Blob, filename: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    void saveBlob(blob, filename);
   }
 
   trackByLogId(index: number, item: AuditLog): number {

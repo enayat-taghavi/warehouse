@@ -1,4 +1,5 @@
 import Dexie, { Table } from 'dexie';
+import { saveBlob } from '../platform/file-output';
 
 /**
  * مدل صف همگام‌سازی — هر تغییر آفلاین یک رکورد در این صف ذخیره می‌شود
@@ -650,16 +651,7 @@ export async function downloadLocalDatabaseSnapshotFile(): Promise<{ fileName: s
   const fileName = `warehouse_indexeddb_snapshot_${dateSlug}.json`;
 
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json;charset=utf-8' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  }, 100);
+  await saveBlob(blob, fileName);
 
   return { fileName, totalRecords: snapshot.metrics.totalRecords };
 }

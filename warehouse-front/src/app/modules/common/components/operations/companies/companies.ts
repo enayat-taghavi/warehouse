@@ -28,6 +28,7 @@ import { CompanyApiService } from '../../../../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
 import { AccountsHttpService, User } from '../../../../../core/http/accounts-http.service';
 import { resolveServerUrl } from '../../../../../core/platform/server-origin';
+import { saveBlob, saveUrl } from '../../../../../core/platform/file-output';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { WebSocketService } from '../../../../../core/http/websocket.service';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';
@@ -1462,6 +1463,12 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.openPreview(dummyDoc);
   }
 
+  downloadFile(url?: string | null, filename?: string): void {
+    if (url) {
+      void saveUrl(url, filename);
+    }
+  }
+
   closePreview(): void {
     if (this.pdfTimeoutId) {
       clearTimeout(this.pdfTimeoutId);
@@ -2418,14 +2425,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   exportExcel(): void {
     this.api.exportExcel().subscribe({
       next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `companies_${new Date().getTime()}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `companies_${new Date().getTime()}.xlsx`);
         this.toast.success('فایل اکسل با موفقیت دانلود شد.');
       },
       error: () => {
