@@ -5,6 +5,7 @@ import { ImageCompressorService } from './image-compressor.service';
 import { ConfigApiService } from '../api/config-api.service';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
+import { wsUrl } from '../platform/server-origin';
 
 export interface UserShort {
   id: number;
@@ -271,15 +272,12 @@ export class CommunicationService implements OnDestroy {
       this.commentWs = null;
     }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-
-    let chatUrl = `${protocol}//${host}/ws/chat/`;
+    let chatPath = '/ws/chat/';
     if (warehouseId) {
-      chatUrl += `?warehouse_id=${warehouseId}`;
+      chatPath += `?warehouse_id=${warehouseId}`;
     }
-
-    const commentUrl = `${protocol}//${host}/ws/comments/`;
+    const chatUrl = wsUrl(chatPath);
+    const commentUrl = wsUrl('/ws/comments/');
 
     this.initChatSocket(chatUrl, token);
     this.initCommentSocket(commentUrl, token);

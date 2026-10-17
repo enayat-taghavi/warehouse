@@ -1,5 +1,6 @@
 import { ApplicationConfig, provideZoneChangeDetection, provideBrowserGlobalErrorListeners, isDevMode, provideAppInitializer, ErrorHandler, inject } from '@angular/core';
 import { ActivatedRouteSnapshot, provideRouter, RouteReuseStrategy, withViewTransitions } from '@angular/router';
+import { IMAGE_LOADER, ImageLoaderConfig } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideServiceWorker } from '@angular/service-worker';
 import { firstValueFrom, of, catchError, timeout } from 'rxjs';
@@ -13,6 +14,7 @@ import { apiOriginInterceptor } from './core/interceptors/api-origin.interceptor
 import { CustomRouteReuseStrategy } from './core/strategies/custom-route-reuse-strategy';
 import { OfflineSyncService } from './core/services/offline-sync.service';
 import { ConfigApiService } from './core/api/config-api.service';
+import { resolveServerUrl } from './core/platform/server-origin';
 
 /** مسیر اصلی (بدون query و fragment) از ریشهٔ snapshot تا عمیق‌ترین فرزند. */
 function primaryPath(snapshot: ActivatedRouteSnapshot | null): string {
@@ -43,6 +45,10 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withInterceptors([authInterceptor, errorInterceptor, offlineInterceptor, apiOriginInterceptor])
     ),
+    {
+      provide: IMAGE_LOADER,
+      useValue: (config: ImageLoaderConfig) => resolveServerUrl(config.src)
+    },
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     { provide: RouteReuseStrategy, useClass: CustomRouteReuseStrategy },
     provideServiceWorker('ngsw-worker.js', {

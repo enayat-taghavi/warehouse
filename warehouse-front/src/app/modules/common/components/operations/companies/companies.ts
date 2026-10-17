@@ -1254,6 +1254,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     } else if (cleanUrl.startsWith('http://127.0.0.1:8000') || cleanUrl.startsWith('http://localhost:8000')) {
       cleanUrl = cleanUrl.replace(/^https?:\/\/(127\.0\.0\.1|localhost):8000/, '');
     }
+    cleanUrl = resolveServerUrl(cleanUrl);
 
     this.previewScale = 1.0;
     this.previewRotation = 0;

@@ -2,6 +2,7 @@ import { Injectable, OnDestroy } from '@angular/core';
 import { Subject, BehaviorSubject } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { ToastService } from '../../shared';
+import { wsUrl } from '../platform/server-origin';
 
 @Injectable({
   providedIn: 'root'
@@ -89,12 +90,10 @@ export class WebSocketService implements OnDestroy {
     this.stopPing();
 
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
       const activeApp = typeof window !== 'undefined' 
         ? (sessionStorage.getItem('active_app_module') || localStorage.getItem('active_app_module') || 'warehouse') 
         : 'warehouse';
-      const url = `${protocol}//${host}/ws/notifications/?app=${encodeURIComponent(activeApp)}&tab_id=${encodeURIComponent(this.tabId)}`;
+      const url = wsUrl(`/ws/notifications/?app=${encodeURIComponent(activeApp)}&tab_id=${encodeURIComponent(this.tabId)}`);
 
       this.ws = new WebSocket(url);
 

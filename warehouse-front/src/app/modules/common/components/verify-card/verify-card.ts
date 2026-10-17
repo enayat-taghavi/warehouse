@@ -6,6 +6,7 @@ import { SKIP_GLOBAL_ERROR_TOAST } from '../../../../core/error/error.intercepto
 import { environment } from '../../../../../environments/environment';
 import { BRANDING } from '../../../../core/branding';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { resolveServerUrl } from '../../../../core/platform/server-origin';
 
 export interface VerifiedPersonnel {
   valid: boolean;
@@ -133,8 +134,8 @@ export class VerifyCard implements OnInit {
     if (!avatar) return null;
     const mediaIdx = avatar.indexOf('/media/');
     if (mediaIdx !== -1) {
-      return avatar.substring(mediaIdx);
+      return resolveServerUrl(avatar.substring(mediaIdx));
     }
-    return avatar;
+    return resolveServerUrl(avatar);
   }
 }
