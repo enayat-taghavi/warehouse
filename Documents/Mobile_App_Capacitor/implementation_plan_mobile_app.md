@@ -193,6 +193,48 @@
 
 - هیچ (همهٔ تصمیم‌های لازم در بند ۲ ثبت شد). پرسش‌های تازهٔ هر گام پیش از نوشتن `tasks.md` همان گام از کاربر پرسیده می‌شود.
 
+## ۱۰. بازبینی Antigravity (۲۶ مهر، چت `9e4ba07c`) و تصمیم‌های Claude
+
+این بند بر بندهای بالا مقدم است.
+
+**اصلاح واقعیت‌های بند ۳:**
+- صف آفلاین و همگام‌سازی با `fetch` مستقیم کار می‌کنند، نه HttpClient؛ پس اینترسپتور به آن‌ها نمی‌رسد. فهرست فایل‌های دارای `fetch(` (بیرون از spec): `domain-migration.service.ts`، `network-status.service.ts`، `offline/offline-conflict-manager.ts`، `offline/offline-queue-runner.ts` (refresh توکن و ارسال صف)، `offline-sync.service.ts` (probe)، `photo-upload-queue.service.ts`، `sync-pull.service.ts`، `companies.facade.ts`، `companies.ts`، `item-api.service.ts` (ورود اکسل).
+- صف همگام‌سازی URL نسبی ذخیره می‌کند؛ صف عکس اصلاً URL ذخیره نمی‌کند و آن را هنگام ارسال می‌سازد.
+- `client-telemetry.service.ts` از HttpClient استفاده می‌کند، نه `fetch`/`sendBeacon`.
+- `window.location.origin` در `id-cards.ts` در سطرهای ۴۵۳، ۱۵۳۷ و ۱۵۴۰ است.
+- `target="_blank"` در ۱۱ قالب (۲۳ مورد) است. دانلود با `download` در ۳۷ فایل ts و دو قالب (`chat-drawer`، `companies`).
+- `navigator.storage.persist()` از قبل در `app.config.ts` هست؛ از گام ب-۱ حذف شد.
+- هدرهای سفارشی فعلی فرانت: `X-Active-App`، `X-Active-Role`، `X-Base-Updated-At`، `X-Client-Tab-Id`، `X-Company-ID`، `X-Entity-Sync-Id`، `X-Entity-Type`. همه باید همراه `X-App-Version` و `X-App-Platform` در `CORS_ALLOW_HEADERS` بیایند، وگرنه هر درخواست اپ در preflight رد می‌شود.
+- `version` در `package.json` امروز `0.0.0` است؛ در گام الف-۴ به `1.0.0` می‌رود.
+
+**تصمیم‌ها:**
+- **پذیرفته:** همهٔ `fetch`ها از `resolveServerUrl()` می‌گذرند (جلسهٔ جدا)؛ URL صف نسبی می‌ماند و فقط هنگام ارسال کامل می‌شود. `environment.mobile.ts` همان `apiUrl: '/api'` نسبی را نگه می‌دارد.
+- **پذیرفته با تغییر — صفحهٔ قفل نسخه:** دکمهٔ «ارسال اضطراری» صف را با همان قواعد امروز می‌فرستد (2xx حذف، 4xx به صندوق خطا، 5xx تلاش دوباره) و صفحه شمار رکوردهای ارسال‌نشده و هشدار «اپ را حذف نکنید؛ نسخهٔ جدید را روی همین نصب کنید» را نشان می‌دهد. ارسال خودکار صف در حالت قفل متوقف است.
+- **رد شد — پاک کردن کش هنگام تعویض سرور:** با قانون «کش هرگز پاک نمی‌شود» ناسازگار است. به‌جایش: نسخهٔ آزمایشی شناسهٔ جدا (`ir.comanage.soft.test`) و نام جدا دارد، پس دادهٔ `app` هرگز با دادهٔ `soft` در یک فضای اپ نمی‌نشیند. تعویض با `canonical_domain` فقط برای جابه‌جایی دامنهٔ همان سرور (همان پایگاه‌داده) است.
+- **پذیرفته:** نسخهٔ Capacitor همان آخرین نسخهٔ پایدار در npm در زمان گام ب-۱ است (همهٔ بسته‌های `@capacitor/*` روی یک نسخهٔ اصلی)، نه عدد ثابت.
+- **پذیرفته:** اگر دانلود Gradle یا Android SDK به‌خاطر محدودیت شبکه شکست خورد، گام ب-۱ می‌ایستد و گزارش می‌دهد؛ تنظیم mirror تصمیم Claude در همان لحظه است.
+- **OAuth گوگل‌درایو** (`window.open('about:blank', ...)` در `company-gdrive-tab.ts` و `settings-backup-tab.ts`) با popup و postMessage کار می‌کند و در اپ بومی قابل اجرا نیست؛ در اپ، این دکمه‌ها پیام فارسی «این کار را از نسخهٔ وب انجام دهید» نشان می‌دهند (گام ب-۲).
+
+**تقسیم فاز الف به نشست‌های صف:**
+
+| نشست | گام | محدوده |
+|---|---|---|
+| ۱ | الف-۰ | رفع خطای نوع در ۹ spec |
+| ۲ | الف-۰ | رفع ۱۸ شکست قدیمی (فقط فایل‌های spec) |
+| ۳ | الف-۱ | `PlatformService`، `ServerOriginService`، `api-origin.interceptor.ts` (آخر زنجیره) |
+| ۴ | الف-۱ | همهٔ `fetch`ها با `resolveServerUrl()` |
+| ۵ | الف-۱ | WebSocket با `wsUrl()`؛ پایپ `serverUrl` و `[src]`های رسانه |
+| ۶ | الف-۲ | `FileOutputService` و مهاجرت ماژول انبار |
+| ۷ | الف-۲ | مهاجرت ماژول مالی |
+| ۸ | الف-۲ | مهاجرت ماژول مشترک و چاپ |
+| ۹ | الف-۳ | `ExternalLinkService` و دایرکتیو؛ `window.open` و `target="_blank"` |
+| ۱۰ | الف-۳ | QR کارت و شاخهٔ بومی انتقال دامنه |
+| ۱۱ | الف-۴ | بک‌اند: کلیدهای نسخه و دانلود در `PublicConfigViewSet` |
+| ۱۲ | الف-۴ | فرانت: نسخه، `AppVersionService`، صفحهٔ قفل، `AppUpdateService` |
+| ۱۳ | الف-۵ | CORS و ALLOWED_HOSTS |
+| ۱۴ | الف-۶ | حاشیهٔ امن و PWA آیفون |
+| ۱۵ | — | release روی `app` |
+
 ## گزارش پیشرفت
 
 - ۲۶ مهر ۱۴۰۵: طرح نوشته شد؛ در انتظار تأیید تایپی کاربر. اقدام بعدی پس از تأیید: چت بازبینی طرح با Antigravity، سپس `tasks.md` گام الف-۰.

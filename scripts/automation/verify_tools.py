@@ -88,6 +88,25 @@ def cmd_clean_tree(args) -> int:
     return 0
 
 
+def cmd_scope(args) -> int:
+    # همهٔ فایل‌های تغییرکرده از BASE تا HEAD باید با یکی از الگوهای glob مجاز بخوانند (fnmatch روی مسیر کامل).
+    import fnmatch
+    changed = [f for f in git("diff", "--name-only", args.base, "HEAD").split() if f]
+    outside = sorted(f for f in changed if not any(fnmatch.fnmatch(f, pat) for pat in args.allow))
+    print(f"changed ({len(changed)}): {changed[:60]}")
+    if not changed:
+        print("No file changed since base.")
+        return 1
+    if outside:
+        print(f"Outside the allowed scope: {outside}")
+        return 1
+    if args.min_files and len(changed) < args.min_files:
+        print(f"Only {len(changed)} files changed; expected at least {args.min_files}.")
+        return 1
+    print("All changed files are inside the allowed scope.")
+    return 0
+
+
 def cmd_commit_exists(args) -> int:
     subjects = git("log", f"{args.base}..HEAD", "--format=%s").splitlines()
     hits = [s for s in subjects if args.grep in s]
@@ -975,6 +994,11 @@ def main(argv=None) -> int:
     p.add_argument("--allow", nargs="*", help="extra paths to ignore")
     p.set_defaults(func=cmd_clean_tree)
 
+    p = sub.add_parser("scope", help="every file changed since BASE matches one of the allowed glob patterns")
+    p.add_argument("--base", required=True)
+    p.add_argument("--allow", nargs="+", required=True)
+    p.add_argument("--min-files", type=int, default=0)
+    p.set_defaults(func=cmd_scope)
     p = sub.add_parser("commit-exists", help="a commit after BASE has a subject containing TEXT")
     p.add_argument("--base", required=True)
     p.add_argument("--grep", required=True)
