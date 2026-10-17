@@ -15,6 +15,7 @@ import { CustomRouteReuseStrategy } from './core/strategies/custom-route-reuse-s
 import { OfflineSyncService } from './core/services/offline-sync.service';
 import { ConfigApiService } from './core/api/config-api.service';
 import { resolveServerUrl } from './core/platform/server-origin';
+import { isNativePlatform } from './core/platform/platform';
 
 /** مسیر اصلی (بدون query و fragment) از ریشهٔ snapshot تا عمیق‌ترین فرزند. */
 function primaryPath(snapshot: ActivatedRouteSnapshot | null): string {
@@ -45,10 +46,14 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withInterceptors([authInterceptor, errorInterceptor, offlineInterceptor, apiOriginInterceptor])
     ),
-    {
-      provide: IMAGE_LOADER,
-      useValue: (config: ImageLoaderConfig) => resolveServerUrl(config.src)
-    },
+    ...(isNativePlatform()
+      ? [
+          {
+            provide: IMAGE_LOADER,
+            useValue: (config: ImageLoaderConfig) => resolveServerUrl(config.src)
+          }
+        ]
+      : []),
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     { provide: RouteReuseStrategy, useClass: CustomRouteReuseStrategy },
     provideServiceWorker('ngsw-worker.js', {
