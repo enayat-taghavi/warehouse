@@ -1,7 +1,7 @@
 import { Injectable, inject, ApplicationRef } from '@angular/core';
 import { PwaUpdateService } from '../services/pwa-update.service';
 import { isNativePlatform } from './platform';
-import { initLiveUpdate } from './live-update';
+import { liveUpdateController } from './live-update';
 
 /**
  * AppUpdateService — Wrapper service around PwaUpdateService.
@@ -24,7 +24,7 @@ export class AppUpdateService {
    */
   public init(): void {
     if (isNativePlatform()) {
-      initLiveUpdate(this.appRef ?? undefined);
+      liveUpdateController.init(this.appRef ?? undefined);
       return;
     }
     this.pwaUpdate.init();

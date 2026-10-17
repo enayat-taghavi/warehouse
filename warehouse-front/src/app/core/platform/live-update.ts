@@ -281,3 +281,10 @@ export function initLiveUpdate(appRef?: ApplicationRef): void {
     notifyAndCheck().catch(() => {});
   }
 }
+
+export const liveUpdateController = {
+  init: initLiveUpdate,
+  check: checkForLiveUpdate,
+  stop: stopLiveUpdate,
+  resetCheckTime: resetLiveUpdateCheckTime,
+};

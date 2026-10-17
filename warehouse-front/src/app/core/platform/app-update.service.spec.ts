@@ -5,8 +5,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AppUpdateService } from './app-update.service';
 import { PwaUpdateService } from '../services/pwa-update.service';
-
-import * as liveUpdateModule from './live-update';
+import { liveUpdateController } from './live-update';
 
 describe('AppUpdateService', () => {
   let mockPwaUpdate: any;
@@ -62,14 +61,14 @@ describe('AppUpdateService', () => {
     (globalThis as any).Capacitor = {
       isNativePlatform: () => true,
     };
-    const initLiveUpdateSpy = vi.spyOn(liveUpdateModule, 'initLiveUpdate').mockImplementation(() => {});
+    const initSpy = vi.spyOn(liveUpdateController, 'init').mockImplementation(() => {});
     try {
       const service = TestBed.inject(AppUpdateService);
       service.init();
       expect(mockPwaUpdate.init).not.toHaveBeenCalled();
-      expect(initLiveUpdateSpy).toHaveBeenCalled();
+      expect(initSpy).toHaveBeenCalled();
     } finally {
-      initLiveUpdateSpy.mockRestore();
+      initSpy.mockRestore();
       delete (globalThis as any).Capacitor;
     }
   });
