@@ -1,24 +1,32 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, ApplicationRef } from '@angular/core';
 import { PwaUpdateService } from '../services/pwa-update.service';
+import { isNativePlatform } from './platform';
+import { initLiveUpdate } from './live-update';
 
 /**
  * AppUpdateService — Wrapper service around PwaUpdateService.
  * Exposes identical public API needed by the application shell and user menu,
  * allowing web PWA updating to work unchanged while serving as the unified update contract.
+ * On native mobile platforms, initiates Capgo live update.
  */
 @Injectable({
   providedIn: 'root',
 })
 export class AppUpdateService {
   private pwaUpdate = inject(PwaUpdateService);
+  private appRef = inject(ApplicationRef, { optional: true });
 
   /** نشان‌دهنده وضعیت در حال استعلام دستی نسخه */
   public readonly isChecking = this.pwaUpdate.isChecking;
 
   /**
-   * مقداردهی اولیه و رجیستر کردن شنوندگان PWA
+   * مقداردهی اولیه و رجیستر کردن شنوندگان PWA / Live Update
    */
   public init(): void {
+    if (isNativePlatform()) {
+      initLiveUpdate(this.appRef ?? undefined);
+      return;
+    }
     this.pwaUpdate.init();
   }
 

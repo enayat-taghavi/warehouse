@@ -49,4 +49,17 @@ describe('AppUpdateService', () => {
     mockPwaUpdate.isChecking.set(true);
     expect(service.isChecking()).toBe(true);
   });
+
+  it('5. should call initLiveUpdate instead of PwaUpdateService on native platform', () => {
+    (globalThis as any).Capacitor = {
+      isNativePlatform: () => true,
+    };
+    try {
+      const service = TestBed.inject(AppUpdateService);
+      service.init();
+      expect(mockPwaUpdate.init).not.toHaveBeenCalled();
+    } finally {
+      delete (globalThis as any).Capacitor;
+    }
+  });
 });
