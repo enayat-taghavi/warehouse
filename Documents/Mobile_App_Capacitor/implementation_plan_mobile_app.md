@@ -246,5 +246,21 @@
   - **بازبینی‌ها:** `data-loss-reviewer` روی نشست‌های ۳ تا ۵ و ۱۲ و ۱۴ بی‌یافتهٔ از دست رفتن داده. یادداشت‌ها: `IMAGE_LOADER` فقط بومی شد (10b)؛ پیام «ارسال با موفقیت انجام شد» پس از ارسال اضطراری ممکن است وقتی تب دیگری قفل همگام‌سازی را دارد نادرست باشد. `ui-reviewer`: ۱۰ یافتهٔ دسترس‌پذیری و یکدستی (تمرکز و `inert` و `z-[100]` صفحهٔ قفل، توکن‌های رنگ، `text-start`، ارقام فارسی، `aria-label` دکمهٔ پیوست چت، حلقهٔ focus دکمه‌های دانلود). هر دو در نخستین نشست فاز ب رفع می‌شوند.
   - **release روی `app`:** پشتیبان `backup_20261017_175112.dump`، بیلد وصله‌شده، daphne و worker. Express روی 4200 و `cloudflared` خاموش بودند (530)؛ Claude هر دو را در تب‌های جدا دوباره راه انداخت. `release-check` سبز؛ `/api/public/config/` سه کلید تازه را برمی‌گرداند و preflight از `https://localhost` پذیرفته می‌شود. صفحهٔ ورود بی‌خطای کنسول بالا آمد.
   - **اقدام بعدی:** صف فاز ب (نشست اصلاحی بازبینی‌ها، سپس گام‌های ب-۱ تا ب-۶).
+- **۲۷ مهر ۱۴۰۵، Claude — فاز ب، نشست‌های ۱ تا ۶ از ۱۲ (تحویل در میانهٔ صف):**
+  - صف فاز ب در `tasks.md` (نسخهٔ پشتیبان: `scratch/tasks_mobile_phaseB.md`). نشست‌های ۱ تا ۶ `[DONE]`؛ کامیت‌ها `3235763` تا `5c755cb`.
+  - **انجام‌شده:**
+    - ۱: اصلاح یافته‌های بازبین UI (قفل نسخه: `z-[100]`، تمرکز، `inert`، توکن‌ها، پیام صادق ارسال اضطراری؛ برچسب دکمهٔ پیوست چت؛ حلقهٔ focus). Claude پذیرفت با دو `slate` باقی‌مانده (پردهٔ پشت مودال و hover یک دکمه؛ جزئی).
+    - ۲: Capacitor 8.5.3، پوشه‌های `android/` و `ios/`، پیکربندی‌های `mobile` و `mobile-test` (خروجی در `dist-mobile/`)، flavorهای `prod`/`staging` × `direct`/`bazaar`/`myket`.
+    - ۳: Android SDK در `E:\Android\Sdk` (مجوزها پذیرفته شد طبق تأیید طرح)، آیکون‌ها با `@capacitor/assets`، `apple-touch-icon-180.png`، اولین APK دیباگ `ir.comanage.soft.test`.
+    - ۴: شاخه‌های بومی ذخیرهٔ فایل (Filesystem + Share)، چاپ (`@capgo/capacitor-printer`)، `openExternal` (Browser)، دکمهٔ بازگشت، StatusBar، Splash، مجوز دوربین، پیام فارسی برای OAuth گوگل‌درایو. افزونه‌ها پشت «bridge» برای mock پایدار در آزمون‌ها (`a9f93c1`). Claude بررسی scope را نادیده گرفت (یک spec مرتبط دیگر هم عوض شده بود).
+    - ۵: بک‌اند `/api/public/mobile-update/` و `/api/public/mobile-files/<kind>/<name>` و فرمان‌های `publish_mobile_bundle` و `publish_mobile_apk` (بدون مایگریشن).
+    - ۶: Live Update با Capgo در حالت دستی + `tools/make-mobile-bundle.js`. نسخهٔ اول آزمون‌ها را با کمبود حافظه از کار می‌انداخت (تایمر/بررسی بی‌پایان)؛ با `94b313e` و `5c755cb` رفع شد. Claude خودش `ng-test-compare --base 73ef482` را اجرا کرد: بی‌regression (۱۴۱۲ پاس، ۲ شکست قدیمی) و بقیهٔ بررسی‌ها سبز.
+  - **درس‌ها:** Antigravity چند بار قطع یا بسته شد (یک بار Claude آن را با `Antigravity IDE.exe "E:\warehouse project"` باز کرد). کش پایهٔ `ng-test-compare` وقتی اجرای پایه نیمه‌کاره بماند (مثلاً ۷۷۰ آزمون به‌جای ~۱۴۰۰) باید پاک شود (`scratch/runner-cache/<hash>*`). در release فاز الف Express روی 4200 و `cloudflared` خاموش بودند؛ پیش از هر release بررسی شوند.
+  - **بازبینی‌های نشده:** diff نشست‌های ۴ تا ۶ هنوز با `data-loss-reviewer` (به‌ویژه Live Update: `next` فقط برای شروع سرد بعدی، توقف هنگام همگام‌سازی) و `ui-reviewer` بازبینی نشده است.
+  - **اقدام بعدی (نشست تازهٔ Claude):**
+    1. `data-loss-reviewer` روی `git diff 1ea9d32 5c755cb -- warehouse-front/src` و تأیید یافته‌ها با خواندن هدفمند؛ یافته‌های تأییدشده به یک تسک اصلاح پیش از نشست ۷.
+    2. اجرای ادامهٔ صف: `.\run_tasks.bat` در تب Windows Terminal (نشست‌های ۷ تا ۱۲: Push بک‌اند و فرانت، صفحهٔ `/download`، امضای APK با کلید در `E:\warehouse-secrets\comanage`، iOS، release روی `app` و انتشار APK آزمایشی).
+    3. پیش از نشست ۱۲: بررسی بالا بودن 4200 و `cloudflared`.
+    4. پایان: گزارش به کاربر با لینک دانلود APK آزمایشی و فهرست آزمون‌های دستی روی گوشی (ورود، اسکن، خروجی اکسل، چاپ، کار آفلاین، Live Update). Push تا وقتی کاربر فایل کلید Firebase ندهد خاموش است. انتشار روی `soft` فقط با تأیید کاربر.
 
 </div>
