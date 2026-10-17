@@ -9,6 +9,7 @@ import {
 import { Paginated } from '../../../core/models/api-response.model';
 import { ImportLog } from '../../../core/models/audit-log.model';
 import { environment } from '../../../../environments/environment';
+import { resolveServerUrl } from '../../../core/platform/server-origin';
 
 @Injectable({ providedIn: 'root' })
 export class ItemApiService {
@@ -95,7 +96,7 @@ export class ItemApiService {
     const cleanEndpoint = this.endpoint.replace(/^\/|\/$/g, '');
     const url = `${environment.apiUrl}/${cleanEndpoint}/import_excel/`;
     
-    return fetch(url, {
+    return fetch(resolveServerUrl(url), {
       method: 'POST',
       body: formData,
       headers: {

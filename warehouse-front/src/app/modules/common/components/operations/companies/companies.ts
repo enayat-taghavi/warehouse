@@ -27,6 +27,7 @@ import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { CompanyApiService } from '../../../../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
 import { AccountsHttpService, User } from '../../../../../core/http/accounts-http.service';
+import { resolveServerUrl } from '../../../../../core/platform/server-origin';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { WebSocketService } from '../../../../../core/http/websocket.service';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';
@@ -1292,7 +1293,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       if (this.http) {
         buffer = await firstValueFrom(this.http.get(url, { responseType: 'arraybuffer' }));
       } else {
-        const res = await fetch(url);
+        const res = await fetch(resolveServerUrl(url));
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         buffer = await res.arrayBuffer();
       }

@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { cancelQueueEntry, buildScopedHeaders } from './offline-queue-runner';
+import { cancelQueueEntry, buildScopedHeaders, sendEntry } from './offline-queue-runner';
 import { warehouseOfflineDb, financeOfflineDb, SyncQueueEntry } from '../offline-db';
 import { OfflineSyncService } from '../offline-sync.service';
 import { getModuleRegistry } from '../../modules/module-registry.service';
+import { SERVER_ORIGIN_STORAGE_KEY } from '../../platform/server-origin';
 
 function createStorageMock() {
   let store: Record<string, string> = {};
@@ -309,6 +310,116 @@ describe('offline-queue-runner: buildScopedHeaders', () => {
     });
 
     spy.mockRestore();
+  });
+});
+
+describe('offline-queue-runner: direct fetch server-origin resolution', () => {
+  const originalCapacitor = (globalThis as any).Capacitor;
+
+  const createMockEntry = (overrides: Partial<SyncQueueEntry> = {}): SyncQueueEntry => ({
+    id: 101,
+    url: '/api/v1/warehouse/items/',
+    method: 'POST',
+    body: { name: 'کالای تست' },
+    appScope: 'warehouse',
+    createdAt: Date.now(),
+    status: 'pending',
+    retryCount: 0,
+    userId: 42,
+    ...overrides,
+  });
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+    vi.spyOn(warehouseOfflineDb.syncQueue, 'update').mockResolvedValue(1);
+    vi.spyOn(warehouseOfflineDb.syncQueue, 'delete').mockResolvedValue(undefined as any);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    if (originalCapacitor !== undefined) {
+      (globalThis as any).Capacitor = originalCapacitor;
+    } else {
+      delete (globalThis as any).Capacitor;
+    }
+    localStorage.removeItem(SERVER_ORIGIN_STORAGE_KEY);
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('in native mobile with valid override origin, queued entry is sent with fetch to origin + url, and queued entry retains relative url', async () => {
+    (globalThis as any).Capacitor = {
+      isNativePlatform: () => true,
+      getPlatform: () => 'android',
+    };
+    localStorage.setItem(SERVER_ORIGIN_STORAGE_KEY, 'https://test.farsalish.ir');
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: 1 }),
+    } as any);
+
+    const entry = createMockEntry({ url: '/api/v1/warehouse/items/' });
+    const result = await sendEntry(entry, warehouseOfflineDb);
+
+    expect(result).toBe('sent');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://test.farsalish.ir/api/v1/warehouse/items/',
+      expect.objectContaining({ method: 'POST' })
+    );
+    expect(entry.url).toBe('/api/v1/warehouse/items/');
+  });
+
+  it('in native mobile on server error retry, queued entry retains relative url and update never stores resolved origin', async () => {
+    (globalThis as any).Capacitor = {
+      isNativePlatform: () => true,
+      getPlatform: () => 'android',
+    };
+    localStorage.setItem(SERVER_ORIGIN_STORAGE_KEY, 'https://test.farsalish.ir');
+
+    const updateSpy = vi.spyOn(warehouseOfflineDb.syncQueue, 'update').mockResolvedValue(1);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: 'server error' }),
+    } as any);
+
+    const entry = createMockEntry({ url: '/api/v1/warehouse/items/' });
+    const result = await sendEntry(entry, warehouseOfflineDb);
+
+    expect(result).toBe('server-error');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://test.farsalish.ir/api/v1/warehouse/items/',
+      expect.objectContaining({ method: 'POST' })
+    );
+    expect(entry.url).toBe('/api/v1/warehouse/items/');
+    expect(updateSpy).toHaveBeenCalledWith(
+      entry.id,
+      expect.not.objectContaining({ url: expect.stringContaining('https://') })
+    );
+  });
+
+  it('on the web platform, queued entry is fetched with relative url unchanged', async () => {
+    delete (globalThis as any).Capacitor;
+    localStorage.removeItem(SERVER_ORIGIN_STORAGE_KEY);
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: 1 }),
+    } as any);
+
+    const entry = createMockEntry({ url: '/api/v1/warehouse/items/' });
+    const result = await sendEntry(entry, warehouseOfflineDb);
+
+    expect(result).toBe('sent');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/api/v1/warehouse/items/',
+      expect.objectContaining({ method: 'POST' })
+    );
+    expect(entry.url).toBe('/api/v1/warehouse/items/');
   });
 });
 

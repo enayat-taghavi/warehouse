@@ -19,6 +19,7 @@ import {
   validateSheba,
   IRANIAN_BANKS
 } from '../../../../../core/utils/sheba-utils';
+import { resolveServerUrl } from '../../../../../core/platform/server-origin';
 
 @Injectable()
 export class CompaniesFacade {
@@ -132,7 +133,7 @@ export class CompaniesFacade {
     if (this.http) {
       return firstValueFrom(this.http.get(url, { responseType: 'arraybuffer' }));
     }
-    const res = await fetch(url);
+    const res = await fetch(resolveServerUrl(url));
     if (!res.ok) throw new Error(`HTTP error ${res.status}`);
     return res.arrayBuffer();
   }

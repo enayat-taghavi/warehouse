@@ -21,6 +21,7 @@ import {
 import { reconcileRejected } from './offline-local-patcher';
 import { extractServerErrorMessage } from './offline-conflict-manager';
 import { getModuleRegistry } from '../../modules/module-registry.service';
+import { resolveServerUrl } from '../../platform/server-origin';
 
 /**
  * ساخت هدرهای تفکیک‌شده قلمرو و شناسه تب
@@ -66,7 +67,7 @@ export async function refreshAccessToken(): Promise<boolean> {
   if (!refresh) return false;
 
   try {
-    const response = await fetch(`${environment.apiUrl}/auth/refresh/`, {
+    const response = await fetch(resolveServerUrl(`${environment.apiUrl}/auth/refresh/`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh }),
@@ -170,7 +171,7 @@ export async function sendEntry(
       fetchOptions.body = JSON.stringify(entry.body);
     }
 
-    const response = await fetch(entry.url, fetchOptions);
+    const response = await fetch(resolveServerUrl(entry.url), fetchOptions);
 
     // بررسی دسترس‌پذیری سرور
     if (isServerUnreachable(response.status)) {

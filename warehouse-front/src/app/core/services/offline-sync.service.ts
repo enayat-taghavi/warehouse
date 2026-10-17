@@ -18,6 +18,7 @@ import { BehaviorSubject, Subject, Subscription, filter } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { getModuleRegistry } from '../modules/module-registry.service';
 import { isServerUnreachable } from './server-reachability';
+import { resolveServerUrl } from '../platform/server-origin';
 
 import {
   SyncOutcome,
@@ -630,7 +631,7 @@ export class OfflineSyncService {
       const testId = warehouseIds[0];
       const probeEndpoint = `${environment.apiUrl}${syncConfig.pullEndpoint}?${syncConfig.scopeParamKey}=${testId}&limit=1`;
 
-      const res = await fetch(probeEndpoint, { headers });
+      const res = await fetch(resolveServerUrl(probeEndpoint), { headers });
       if (!res.ok) {
         if (res.status === 401) {
           throw new Error('auth-required');

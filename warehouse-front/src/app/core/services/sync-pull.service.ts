@@ -5,6 +5,7 @@ import { isServerUnreachable } from './server-reachability';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
+import { resolveServerUrl } from '../platform/server-origin';
 
 /**
  * SyncPullService — دانلود دلتای سرور به Dexie (نیمهٔ Pull معماری Local-First)
@@ -295,7 +296,7 @@ export class SyncPullService {
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
     try {
-      const res = await fetch(`${environment.apiUrl}${endpoint}?${params.toString()}`, { headers });
+      const res = await fetch(resolveServerUrl(`${environment.apiUrl}${endpoint}?${params.toString()}`), { headers });
       return { kind: 'http', res };
     } catch {
       return { kind: 'transport' };

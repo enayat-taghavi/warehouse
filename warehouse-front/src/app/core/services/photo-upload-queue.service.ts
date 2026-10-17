@@ -6,6 +6,7 @@ import { NetworkStatusService } from './network-status.service';
 import { offlineDb, PhotoQueueEntry } from './offline-db';
 import { isServerUnreachable } from './server-reachability';
 import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
+import { resolveServerUrl } from '../platform/server-origin';
 
 /**
  * نتیجه یک دور تخلیه صف عکس — با همان منطق سه‌حالته صف اصلی
@@ -378,7 +379,7 @@ export class PhotoUploadQueueService {
       const endpoint = photoUploadExt.itemPhotosEndpoint(entry.itemId);
       const url = endpoint.startsWith('http') ? endpoint : `${environment.apiUrl}${endpoint}`;
 
-      const response = await fetch(url, {
+      const response = await fetch(resolveServerUrl(url), {
         method: 'POST',
         headers,
         body: form,

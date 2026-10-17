@@ -1,5 +1,6 @@
 import { BehaviorSubject, distinctUntilChanged } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { resolveServerUrl } from '../platform/server-origin';
 
 /**
  * وضعیت اتصال — مدل سه‌حالته
@@ -137,7 +138,7 @@ export class NetworkStatusService {
     this.probeTimer = setInterval(async () => {
       if (!this._browserOnline) return;
       try {
-        const res = await fetch(`${environment.apiUrl}/public/config/`, {
+        const res = await fetch(resolveServerUrl(`${environment.apiUrl}/public/config/`), {
           method: 'GET',
           cache: 'no-store',
         });

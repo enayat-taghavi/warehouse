@@ -7,6 +7,7 @@ import {
   SyncErrorEntry
 } from '../offline-db';
 import { invalidateCache } from './offline-local-patcher';
+import { resolveServerUrl } from '../../platform/server-origin';
 
 /**
  * دریافت تمام خطاهای خوانده‌نشده از پایگاه‌های داده تفکیک‌شده
@@ -203,7 +204,7 @@ export async function resolveConflict(
       };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const res = await fetch(err.url, {
+      const res = await fetch(resolveServerUrl(err.url), {
         method: err.method || 'PATCH',
         headers,
         body: JSON.stringify(finalPayload),
