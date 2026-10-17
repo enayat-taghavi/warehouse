@@ -6,6 +6,7 @@ import { of, throwError } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 
 import { CompanyGdriveTabComponent, GDriveConfigResponse, MODEL_NAME_PERSIAN_MAP } from './company-gdrive-tab';
+import { CompanyApiService } from '../../../../../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
@@ -18,6 +19,7 @@ describe('CompanyGdriveTabComponent', () => {
   let activeCompanyServiceMock: any;
   let toastServiceMock: any;
   let confirmDialogMock: any;
+  let companyApiServiceMock: any;
 
   const mockConfig: GDriveConfigResponse = {
     company_id: 1,
@@ -64,6 +66,13 @@ describe('CompanyGdriveTabComponent', () => {
       post: vi.fn().mockReturnValue(of({ success: true, message: 'انجام شد' }))
     };
 
+    companyApiServiceMock = {
+      getCompanyGdriveUrl: vi.fn().mockImplementation((cid: any, subPath = '') => {
+        const cleanSub = subPath ? (subPath.startsWith('/') ? subPath : '/' + subPath) : '';
+        return `/personnel/companies/${cid}/gdrive${cleanSub}`;
+      })
+    };
+
     activeCompanyServiceMock = {
       activeCompany$: of({ id: 1, name: 'شرکت آزمایشی', code: 'COMP1' }),
       activeCompanySignal: signal({ id: 1, name: 'شرکت آزمایشی', code: 'COMP1' }),
@@ -91,6 +100,7 @@ describe('CompanyGdriveTabComponent', () => {
     const injector = Injector.create({
       providers: [
         { provide: HttpClient, useValue: httpMock },
+        { provide: CompanyApiService, useValue: companyApiServiceMock },
         { provide: ActiveCompanyService, useValue: activeCompanyServiceMock },
         { provide: ToastService, useValue: toastServiceMock },
         { provide: ConfirmDialogService, useValue: confirmDialogMock },
