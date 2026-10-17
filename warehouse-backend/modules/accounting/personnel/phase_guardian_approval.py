@@ -1373,6 +1373,9 @@ class ApprovalPhaseGuardian:
             auth_guard_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'core', 'auth', 'auth.guard.ts')
             with open(auth_guard_path, 'r', encoding='utf-8') as f:
                 ag_content = f.read()
+            acc_route_access_path = os.path.join(BASE_DIR, '..', 'warehouse-front', 'src', 'app', 'modules', 'accounting', 'route-access.ts')
+            with open(acc_route_access_path, 'r', encoding='utf-8') as f:
+                ag_content += f.read()
 
             if "'attendance':" in ag_content and "'finance-cartable':" in ag_content and "'treasury-cartable':" in ag_content:
                 checks.append(("پوشش ۱۰۰٪ روت‌های ماژولار در AuthGuard", True, "تمام روت‌های مالی، پرسنلی و انبارداری در ماتریس ROUTE_PERMISSIONS پوشش داده شده‌اند."))

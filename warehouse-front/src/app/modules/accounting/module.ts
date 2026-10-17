@@ -16,6 +16,7 @@ import {
 import { ACCOUNTING_ENTITY_ICONS } from './entity-icons';
 import { ACCOUNTING_NOTIFICATION_HANDLERS } from './notification-handlers';
 import { ACCOUNTING_PERSONAS } from './personas';
+import { ACCOUNTING_ROUTE_ACCESS } from './route-access';
 
 /**
  * مانیفست رسمی و مستقل ماژول مالی، حقوق و کارکرد (Front-End Module Manifest)
@@ -40,6 +41,7 @@ export const MODULE: WhFrontendModule = {
   ],
   roles: ['operator', 'supervisor', 'accountant', 'manager', 'treasury', 'org_admin'],
   personas: ACCOUNTING_PERSONAS,
+  routeAccess: ACCOUNTING_ROUTE_ACCESS,
   routes: () => import('./accounting.routes').then(m => m.ACCOUNTING_ROUTES),
   navItems: {
     orgAdminNavItems: ORG_ADMIN_NAV_ITEMS,

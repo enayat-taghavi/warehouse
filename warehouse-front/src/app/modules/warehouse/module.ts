@@ -2,6 +2,7 @@ import { WhFrontendModule } from '../../core/modules/module-contract';
 import { WAREHOUSE_SYSTEM_NAV_ITEMS, WAREHOUSE_CONTEXT_NAV_ITEMS } from './nav-items';
 import { WAREHOUSE_ENTITY_ICONS } from './entity-icons';
 import { WAREHOUSE_PERSONAS } from './personas';
+import { WAREHOUSE_ROUTE_ACCESS } from './route-access';
 
 /**
  * مانیفست رسمی و مستقل ماژول انبارداری و ره‌گیری کالا (Front-End Module Manifest)
@@ -29,6 +30,7 @@ export const MODULE: WhFrontendModule = {
   ],
   roles: ['counter', 'warehouse_supervisor', 'docs_specialist', 'manager_review'],
   personas: WAREHOUSE_PERSONAS,
+  routeAccess: WAREHOUSE_ROUTE_ACCESS,
   routes: () => import('./warehouse.routes').then(m => m.WAREHOUSE_ROUTES),
   navItems: {
     systemNavItems: WAREHOUSE_SYSTEM_NAV_ITEMS,

@@ -227,6 +227,17 @@ export interface NotificationHandler {
 }
 
 /**
+ * تعریف دسترسی روت‌ها، گارد و لاگین ماژول
+ */
+export interface ModuleRouteAccess {
+  guardAccessPermissions: string[];
+  pagePermissions: Record<string, string[]>;
+  loginPermissions: string[];
+  loginActiveAppModule: string;
+  resolveLoginRoute: (perms: string[]) => string;
+}
+
+/**
  * قرارداد ماژول فرانت‌اند پلتفرم
  */
 export interface WhFrontendModule extends FrontendModuleSpec {
@@ -238,6 +249,9 @@ export interface WhFrontendModule extends FrontendModuleSpec {
   entityIcons?: Record<string, string>;
   /** تعریف پرسوناها و قواعد احراز نقش‌های ماژول */
   personas?: ModulePersonas;
+  /** دسترسی روت‌ها، گارد و ورود ماژول */
+  routeAccess?: ModuleRouteAccess;
   /** مشارکت‌های ماژول در نقطه‌های توسعه پلتفرم */
   extensions?: ExtensionMap;
 }
+
