@@ -8,6 +8,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { AuthStore } from '../../../core/stores/auth.store';
 import { NetworkStatusService } from '../../../core/services/network-status.service';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
+import { PwaUpdateService } from '../../../core/services/pwa-update.service';
 import { AppUpdateService } from '../../../core/platform/app-update.service';
 import { PwaInstallService } from '../../../core/services/pwa-install.service';
 import { AccountsHttpService } from '../../../core/http/accounts-http.service';
@@ -68,7 +69,7 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   private moduleRegistry = inject(ModuleRegistryService);
   private toast = inject(ToastService);
   private confirmDialog = inject(ConfirmDialogService);
-  public pwaUpdate = inject(AppUpdateService);
+  public pwaUpdate = inject(AppUpdateService, { optional: true }) ?? inject(PwaUpdateService);
   public pwaInstall = inject(PwaInstallService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);

@@ -7,7 +7,6 @@ import { offlineDb, PhotoQueueEntry } from './offline-db';
 import { isServerUnreachable } from './server-reachability';
 import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 import { resolveServerUrl } from '../platform/server-origin';
-import { isAutoSendBlocked } from '../platform/app-version.service';
 
 /**
  * نتیجه یک دور تخلیه صف عکس — با همان منطق سه‌حالته صف اصلی
@@ -237,10 +236,7 @@ export class PhotoUploadQueueService {
    * هر عکس درخواست خودش را دارد (نه یک بسته مشترک): یک فایل خراب کل دسته را
    * زمین نمی‌زند و idempotency هم per-photo است.
    */
-  async flush(onProgress?: (percent: number) => void, bypassGate = false): Promise<PhotoFlushOutcome> {
-    if (!bypassGate && isAutoSendBlocked()) {
-      return { status: 'nothing-to-send' };
-    }
+  async flush(onProgress?: (percent: number) => void): Promise<PhotoFlushOutcome> {
     if (this.flushing) return { status: 'nothing-to-send' };
     if (!this.network.isBrowserOnline) {
       return { status: 'offline', remaining: await this.countPending() };

@@ -498,7 +498,7 @@ export class OfflineSyncService {
 
   private async executeProcessQueue(bypassGate = false): Promise<SyncOutcome> {
     const queueOutcome = await this.runQueue(bypassGate);
-    const outcome = await this.flushPhotoQueue(queueOutcome, bypassGate);
+    const outcome = await this.flushPhotoQueue(queueOutcome);
     this._syncOutcome$.next(outcome);
     return outcome;
   }
@@ -520,12 +520,12 @@ export class OfflineSyncService {
   /**
    * تخلیه صف عکس و ادغام نتیجه‌اش با نتیجه صف اصلی
    */
-  private async flushPhotoQueue(base: SyncOutcome, bypassGate = false): Promise<SyncOutcome> {
+  private async flushPhotoQueue(base: SyncOutcome): Promise<SyncOutcome> {
     if (!this.network.isBrowserOnline) return base;
 
     let photo: PhotoFlushOutcome;
     try {
-      photo = await this.photoQueue.flush(undefined, bypassGate);
+      photo = await this.photoQueue.flush();
     } catch (error) {
       console.error('[OfflineSync] ❌ خطا در تخلیه صف عکس:', error);
       return base;

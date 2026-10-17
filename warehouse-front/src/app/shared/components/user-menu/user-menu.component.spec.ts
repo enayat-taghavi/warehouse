@@ -13,7 +13,6 @@ import { ModuleRegistryService } from '../../../core/modules/module-registry.ser
 import { ToastService } from '../toast/toast.component';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { PwaUpdateService } from '../../../core/services/pwa-update.service';
-import { AppUpdateService } from '../../../core/platform/app-update.service';
 import { PwaInstallService } from '../../../core/services/pwa-install.service';
 import { Router } from '@angular/router';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
@@ -177,7 +176,6 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
         { provide: ToastService, useValue: mockToast },
         { provide: ConfirmDialogService, useValue: mockConfirmDialog },
         { provide: PwaUpdateService, useValue: mockPwaUpdate },
-        { provide: AppUpdateService, useValue: mockPwaUpdate },
         { provide: PwaInstallService, useValue: mockPwaInstall },
         { provide: Router, useValue: mockRouter },
         { provide: ChangeDetectorRef, useValue: mockCdr },
