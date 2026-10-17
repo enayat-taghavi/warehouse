@@ -2,7 +2,7 @@ import { ApplicationRef } from '@angular/core';
 import { firstValueFrom, isObservable } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { App } from '@capacitor/app';
-import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import type { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { isNativePlatform } from './platform';
 import { APP_VERSION } from './app-version';
 import { compareVersions } from './app-version.service';
@@ -30,20 +30,32 @@ export interface LiveUpdateBridge {
 
 export const liveUpdateBridge: LiveUpdateBridge = {
   notifyAppReady: () => {
-    const plugin = (globalThis as any).Capacitor?.Plugins?.CapacitorUpdater ?? CapacitorUpdater;
-    return plugin.notifyAppReady();
+    const plugin = (globalThis as any).Capacitor?.Plugins?.CapacitorUpdater;
+    if (plugin && typeof plugin.notifyAppReady === 'function') {
+      return plugin.notifyAppReady();
+    }
+    return Promise.resolve();
   },
   current: () => {
-    const plugin = (globalThis as any).Capacitor?.Plugins?.CapacitorUpdater ?? CapacitorUpdater;
-    return plugin.current();
+    const plugin = (globalThis as any).Capacitor?.Plugins?.CapacitorUpdater;
+    if (plugin && typeof plugin.current === 'function') {
+      return plugin.current();
+    }
+    return Promise.resolve({ bundle: { id: 'builtin', version: APP_VERSION } });
   },
   download: (opts) => {
-    const plugin = (globalThis as any).Capacitor?.Plugins?.CapacitorUpdater ?? CapacitorUpdater;
-    return plugin.download(opts);
+    const plugin = (globalThis as any).Capacitor?.Plugins?.CapacitorUpdater;
+    if (plugin && typeof plugin.download === 'function') {
+      return plugin.download(opts);
+    }
+    return Promise.reject(new Error('CapacitorUpdater plugin not available'));
   },
   next: (opts) => {
-    const plugin = (globalThis as any).Capacitor?.Plugins?.CapacitorUpdater ?? CapacitorUpdater;
-    return plugin.next(opts);
+    const plugin = (globalThis as any).Capacitor?.Plugins?.CapacitorUpdater;
+    if (plugin && typeof plugin.next === 'function') {
+      return plugin.next(opts);
+    }
+    return Promise.resolve();
   },
   getAppInfo: () => {
     const plugin = (globalThis as any).Capacitor?.Plugins?.App ?? App;
@@ -58,9 +70,31 @@ export const liveUpdateBridge: LiveUpdateBridge = {
 
 export const CHECK_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 let lastCheckTimestamp = 0;
+let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let appStateHandle: { remove: () => Promise<void> } | null = null;
 
 export function resetLiveUpdateCheckTime(): void {
   lastCheckTimestamp = 0;
+}
+
+/**
+ * Clears any pending timers and listeners to prevent memory leaks in test suites.
+ */
+export function stopLiveUpdate(): void {
+  if (fallbackTimer) {
+    clearTimeout(fallbackTimer);
+    fallbackTimer = null;
+  }
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+  if (appStateHandle) {
+    appStateHandle.remove().catch(() => {});
+    appStateHandle = null;
+  }
+  resetLiveUpdateCheckTime();
 }
 
 /**
@@ -70,6 +104,7 @@ export function resetLiveUpdateCheckTime(): void {
  * 1. Native only: executes only when isNativePlatform() is true.
  * 2. Throttled: at most once every 30 minutes unless force=true.
  * 3. Offline safety: skips when OfflineSyncService.isSyncing is true to prevent network contention.
+ *    Schedules a single bounded retry when syncing is in progress.
  * 4. Safe activation: only marks bundle for the NEXT restart via next({ id }); never set() or reload().
  * 5. Error resilience: errors are logged and swallowed without interrupting user operations.
  */
@@ -85,12 +120,28 @@ export async function checkForLiveUpdate(options?: { force?: boolean }): Promise
   }
 
   // 2. Offline sync check
+  let isSyncing = false;
   try {
-    if (OfflineSyncService.getInstance().isSyncing) {
-      return;
-    }
+    isSyncing = OfflineSyncService.getInstance().isSyncing;
   } catch {
     // ignore lookup error
+  }
+
+  if (isSyncing) {
+    // Schedule a single bounded retry if not already pending
+    if (!retryTimer) {
+      retryTimer = setTimeout(() => {
+        retryTimer = null;
+        checkForLiveUpdate().catch(() => {});
+      }, 60000);
+    }
+    return;
+  }
+
+  // Clear any existing retry timer once sync is clear
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
   }
 
   lastCheckTimestamp = now;
@@ -169,6 +220,8 @@ export function initLiveUpdate(appRef?: ApplicationRef): void {
     return;
   }
 
+  stopLiveUpdate();
+
   // 1. Listen for app foreground events
   try {
     liveUpdateBridge
@@ -178,6 +231,9 @@ export function initLiveUpdate(appRef?: ApplicationRef): void {
             console.warn('[LiveUpdate] Foreground check error:', err);
           });
         }
+      })
+      .then((handle) => {
+        appStateHandle = handle;
       })
       .catch((err) => {
         console.warn('[LiveUpdate] addAppStateListener error:', err);
@@ -201,17 +257,24 @@ export function initLiveUpdate(appRef?: ApplicationRef): void {
   };
 
   if (appRef && isObservable(appRef.isStable)) {
-    const fallbackTimer = setTimeout(() => {
+    fallbackTimer = setTimeout(() => {
+      fallbackTimer = null;
       notifyAndCheck().catch(() => {});
     }, 3000);
 
     firstValueFrom(appRef.isStable.pipe(filter(Boolean)))
       .then(() => {
-        clearTimeout(fallbackTimer);
+        if (fallbackTimer) {
+          clearTimeout(fallbackTimer);
+          fallbackTimer = null;
+        }
         return notifyAndCheck();
       })
       .catch(() => {
-        clearTimeout(fallbackTimer);
+        if (fallbackTimer) {
+          clearTimeout(fallbackTimer);
+          fallbackTimer = null;
+        }
         return notifyAndCheck();
       });
   } else {

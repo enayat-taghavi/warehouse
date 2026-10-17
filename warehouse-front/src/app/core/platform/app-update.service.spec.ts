@@ -6,10 +6,13 @@ import { TestBed } from '@angular/core/testing';
 import { AppUpdateService } from './app-update.service';
 import { PwaUpdateService } from '../services/pwa-update.service';
 
+import * as liveUpdateModule from './live-update';
+
 describe('AppUpdateService', () => {
   let mockPwaUpdate: any;
 
   beforeEach(() => {
+    delete (globalThis as any).Capacitor;
     mockPwaUpdate = {
       isChecking: signal(false),
       init: vi.fn(),
@@ -23,6 +26,11 @@ describe('AppUpdateService', () => {
         { provide: PwaUpdateService, useValue: mockPwaUpdate },
       ],
     });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete (globalThis as any).Capacitor;
   });
 
   it('1. should delegate init call to PwaUpdateService', () => {
@@ -54,11 +62,14 @@ describe('AppUpdateService', () => {
     (globalThis as any).Capacitor = {
       isNativePlatform: () => true,
     };
+    const initLiveUpdateSpy = vi.spyOn(liveUpdateModule, 'initLiveUpdate').mockImplementation(() => {});
     try {
       const service = TestBed.inject(AppUpdateService);
       service.init();
       expect(mockPwaUpdate.init).not.toHaveBeenCalled();
+      expect(initLiveUpdateSpy).toHaveBeenCalled();
     } finally {
+      initLiveUpdateSpy.mockRestore();
       delete (globalThis as any).Capacitor;
     }
   });

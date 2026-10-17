@@ -7,6 +7,7 @@ import {
   initLiveUpdate,
   liveUpdateBridge,
   resetLiveUpdateCheckTime,
+  stopLiveUpdate,
 } from './live-update';
 import { OfflineSyncService } from '../services/offline-sync.service';
 
@@ -21,7 +22,7 @@ describe('live-update', () => {
 
   beforeEach(() => {
     delete (globalThis as any).Capacitor;
-    resetLiveUpdateCheckTime();
+    stopLiveUpdate();
 
     notifySpy = vi.spyOn(liveUpdateBridge, 'notifyAppReady').mockResolvedValue(undefined as any);
     currentSpy = vi.spyOn(liveUpdateBridge, 'current').mockResolvedValue({
@@ -56,9 +57,9 @@ describe('live-update', () => {
   });
 
   afterEach(() => {
+    stopLiveUpdate();
     vi.restoreAllMocks();
     delete (globalThis as any).Capacitor;
-    resetLiveUpdateCheckTime();
   });
 
   it('1. web does nothing when isNativePlatform is false', async () => {
