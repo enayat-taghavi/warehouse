@@ -2,6 +2,17 @@ import { resolveServerUrl } from './server-origin';
 import { isNativePlatform } from './platform';
 import { Browser } from '@capacitor/browser';
 
+export interface ExternalLinkNativeBridge {
+  open(options: { url: string }): Promise<void>;
+}
+
+export const externalLinkNativeBridge: ExternalLinkNativeBridge = {
+  open: (opts) => {
+    const plugin = (globalThis as any).Capacitor?.Plugins?.Browser ?? Browser;
+    return plugin.open(opts);
+  },
+};
+
 /**
  * Opens an external URL or popup window.
  * - On web: resolves relative server URLs via resolveServerUrl and delegates to window.open.
@@ -13,9 +24,12 @@ export function openExternal(url: string, target: string = '_blank', features?: 
       return null;
     }
     const resolved = resolveServerUrl(url);
-    Browser.open({ url: resolved }).catch((err) => {
+    externalLinkNativeBridge.open({ url: resolved }).catch((err) => {
       console.warn('[ExternalLink] Failed to open URL via Browser plugin:', err);
     });
+    if (typeof window !== 'undefined' && typeof window.open === 'function') {
+      window.open(resolved, target);
+    }
     return null;
   }
 

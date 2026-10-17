@@ -5,6 +5,27 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Printer } from '@capgo/capacitor-printer';
 
+export interface FileOutputNativeBridge {
+  writeFile(options: { path: string; data: string; directory: Directory }): Promise<{ uri: string }>;
+  share(options: { title?: string; text?: string; url?: string }): Promise<any>;
+  printHtml(options: { html: string }): Promise<any>;
+}
+
+export const fileOutputNativeBridge: FileOutputNativeBridge = {
+  writeFile: (opts) => {
+    const plugin = (globalThis as any).Capacitor?.Plugins?.Filesystem ?? Filesystem;
+    return plugin.writeFile(opts);
+  },
+  share: (opts) => {
+    const plugin = (globalThis as any).Capacitor?.Plugins?.Share ?? Share;
+    return plugin.share(opts);
+  },
+  printHtml: (opts) => {
+    const plugin = (globalThis as any).Capacitor?.Plugins?.Printer ?? Printer;
+    return plugin.printHtml(opts);
+  },
+};
+
 /**
  * Converts a Blob to a base64-encoded string (without data URL prefix).
  */
@@ -41,12 +62,12 @@ export async function blobToBase64(blob: Blob): Promise<string> {
 export async function saveBlob(blob: Blob, filename: string): Promise<void> {
   if (isNativePlatform()) {
     const base64Data = await blobToBase64(blob);
-    const writeResult = await Filesystem.writeFile({
+    const writeResult = await fileOutputNativeBridge.writeFile({
       path: filename,
       data: base64Data,
       directory: Directory.Cache,
     });
-    await Share.share({
+    await fileOutputNativeBridge.share({
       title: filename,
       url: writeResult.uri,
     });
@@ -119,7 +140,7 @@ export async function printWindow(target?: Window | null): Promise<void> {
   if (isNativePlatform()) {
     const doc = (target ?? (typeof window !== 'undefined' ? window : null))?.document;
     const html = doc?.documentElement?.outerHTML || '';
-    await Printer.printHtml({ html });
+    await fileOutputNativeBridge.printHtml({ html });
     return;
   }
   (target ?? window).print();

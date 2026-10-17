@@ -7,37 +7,10 @@ import {
   saveUrl,
   printWindow,
   FileOutputService,
+  fileOutputNativeBridge,
 } from './file-output';
 import { SERVER_ORIGIN_STORAGE_KEY } from './server-origin';
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
-import { Printer } from '@capgo/capacitor-printer';
-
-vi.mock('@capacitor/filesystem', () => ({
-  Filesystem: {
-    writeFile: vi.fn().mockResolvedValue({ uri: 'file:///cache/default.bin' }),
-  },
-  Directory: {
-    Documents: 'DOCUMENTS',
-    Data: 'DATA',
-    Library: 'LIBRARY',
-    Cache: 'CACHE',
-    External: 'EXTERNAL',
-    ExternalStorage: 'EXTERNAL_STORAGE',
-  },
-}));
-
-vi.mock('@capacitor/share', () => ({
-  Share: {
-    share: vi.fn().mockResolvedValue({ activityType: undefined }),
-  },
-}));
-
-vi.mock('@capgo/capacitor-printer', () => ({
-  Printer: {
-    printHtml: vi.fn().mockResolvedValue(undefined),
-  },
-}));
+import { Directory } from '@capacitor/filesystem';
 
 function createStorageMock() {
   let store: Record<string, string> = {};
@@ -56,24 +29,23 @@ function createStorageMock() {
 
 describe('file-output', () => {
   const originalServerOrigin = environment.serverOrigin;
+  let writeFileSpy: ReturnType<typeof vi.spyOn>;
+  let shareSpy: ReturnType<typeof vi.spyOn>;
+  let printHtmlSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    vi.clearAllTimers();
-    vi.useFakeTimers();
     delete (globalThis as any).Capacitor;
     localStorage.removeItem(SERVER_ORIGIN_STORAGE_KEY);
     localStorage.clear();
     sessionStorage.clear();
     environment.serverOrigin = '';
 
-    vi.mocked(Filesystem.writeFile).mockReset().mockResolvedValue({ uri: 'file:///cache/default.bin' });
-    vi.mocked(Share.share).mockReset().mockResolvedValue({ activityType: undefined });
-    vi.mocked(Printer.printHtml).mockReset().mockResolvedValue(undefined);
+    writeFileSpy = vi.spyOn(fileOutputNativeBridge, 'writeFile').mockResolvedValue({ uri: 'file:///cache/default.bin' });
+    shareSpy = vi.spyOn(fileOutputNativeBridge, 'share').mockResolvedValue({ activityType: undefined });
+    printHtmlSpy = vi.spyOn(fileOutputNativeBridge, 'printHtml').mockResolvedValue(undefined);
   });
 
   afterEach(() => {
-    vi.clearAllTimers();
-    vi.useRealTimers();
     vi.restoreAllMocks();
     delete (globalThis as any).Capacitor;
     localStorage.removeItem(SERVER_ORIGIN_STORAGE_KEY);
@@ -114,7 +86,6 @@ describe('file-output', () => {
       });
 
       await saveBlob(dummyBlob, 'sample.txt');
-      vi.advanceTimersByTime(1000);
 
       expect(createdAnchor).not.toBeNull();
       expect(createdAnchor!.href).toBe('blob:http://localhost/test-uuid');
@@ -126,21 +97,25 @@ describe('file-output', () => {
     });
 
     it('2. web saveBlob revokes the object URL after 1000ms using fake timers', async () => {
-      vi.clearAllTimers();
-      const dummyBlob = new Blob(['data'], { type: 'application/octet-stream' });
-      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:http://localhost/timed-uuid');
-      const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-      revokeSpy.mockClear();
+      vi.useFakeTimers();
+      try {
+        const dummyBlob = new Blob(['data'], { type: 'application/octet-stream' });
+        vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:http://localhost/timed-uuid');
+        const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+        revokeSpy.mockClear();
 
-      await saveBlob(dummyBlob, 'test.bin');
+        await saveBlob(dummyBlob, 'test.bin');
 
-      expect(revokeSpy).not.toHaveBeenCalledWith('blob:http://localhost/timed-uuid');
+        expect(revokeSpy).not.toHaveBeenCalledWith('blob:http://localhost/timed-uuid');
 
-      vi.advanceTimersByTime(999);
-      expect(revokeSpy).not.toHaveBeenCalledWith('blob:http://localhost/timed-uuid');
+        vi.advanceTimersByTime(999);
+        expect(revokeSpy).not.toHaveBeenCalledWith('blob:http://localhost/timed-uuid');
 
-      vi.advanceTimersByTime(1);
-      expect(revokeSpy).toHaveBeenCalledWith('blob:http://localhost/timed-uuid');
+        vi.advanceTimersByTime(1);
+        expect(revokeSpy).toHaveBeenCalledWith('blob:http://localhost/timed-uuid');
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('3. native saveBlob writes file as base64 to Directory.Cache and invokes Share.share', async () => {
@@ -148,23 +123,23 @@ describe('file-output', () => {
         isNativePlatform: () => true,
         getPlatform: () => 'android',
       };
-      vi.mocked(Filesystem.writeFile).mockResolvedValue({
+      writeFileSpy.mockResolvedValue({
         uri: 'file:///cache/sample.pdf',
       });
 
       const dummyBlob = new Blob(['sample pdf content'], { type: 'application/pdf' });
       await saveBlob(dummyBlob, 'sample.pdf');
 
-      expect(Filesystem.writeFile).toHaveBeenCalledTimes(1);
-      expect(Filesystem.writeFile).toHaveBeenCalledWith(
+      expect(writeFileSpy).toHaveBeenCalledTimes(1);
+      expect(writeFileSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           path: 'sample.pdf',
           directory: Directory.Cache,
           data: expect.any(String),
         })
       );
-      expect(Share.share).toHaveBeenCalledTimes(1);
-      expect(Share.share).toHaveBeenCalledWith({
+      expect(shareSpy).toHaveBeenCalledTimes(1);
+      expect(shareSpy).toHaveBeenCalledWith({
         title: 'sample.pdf',
         url: 'file:///cache/sample.pdf',
       });
@@ -226,7 +201,7 @@ describe('file-output', () => {
       environment.serverOrigin = 'https://app.farsalish.ir';
       localStorage.setItem('wh_access_token', 'test_jwt_token_123');
 
-      vi.mocked(Filesystem.writeFile).mockResolvedValue({
+      writeFileSpy.mockResolvedValue({
         uri: 'file:///cache/export.xlsx',
       });
 
@@ -247,13 +222,13 @@ describe('file-output', () => {
           }),
         })
       );
-      expect(Filesystem.writeFile).toHaveBeenCalledWith(
+      expect(writeFileSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           path: 'export.xlsx',
           directory: Directory.Cache,
         })
       );
-      expect(Share.share).toHaveBeenCalledWith({
+      expect(shareSpy).toHaveBeenCalledWith({
         title: 'export.xlsx',
         url: 'file:///cache/export.xlsx',
       });
@@ -266,7 +241,7 @@ describe('file-output', () => {
       };
       environment.serverOrigin = 'https://app.farsalish.ir';
 
-      vi.mocked(Filesystem.writeFile).mockResolvedValue({
+      writeFileSpy.mockResolvedValue({
         uri: 'file:///cache/document.pdf',
       });
 
@@ -279,13 +254,13 @@ describe('file-output', () => {
 
       await saveUrl('/media/downloads/document.pdf?token=abc');
 
-      expect(Filesystem.writeFile).toHaveBeenCalledWith(
+      expect(writeFileSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           path: 'document.pdf',
           directory: Directory.Cache,
         })
       );
-      expect(Share.share).toHaveBeenCalledWith({
+      expect(shareSpy).toHaveBeenCalledWith({
         title: 'document.pdf',
         url: 'file:///cache/document.pdf',
       });
@@ -333,7 +308,7 @@ describe('file-output', () => {
 
       await printWindow(mockTarget);
 
-      expect(Printer.printHtml).toHaveBeenCalledWith({
+      expect(printHtmlSpy).toHaveBeenCalledWith({
         html: '<html><head><title>Print</title></head><body><h1>Invoice #123</h1></body></html>',
       });
       expect(mockTarget.print).not.toHaveBeenCalled();
@@ -347,7 +322,7 @@ describe('file-output', () => {
 
       await printWindow();
 
-      expect(Printer.printHtml).toHaveBeenCalledWith({
+      expect(printHtmlSpy).toHaveBeenCalledWith({
         html: expect.any(String),
       });
     });
@@ -375,7 +350,6 @@ describe('file-output', () => {
       });
 
       await service.saveBlob(blob, 'delegated.txt');
-      vi.advanceTimersByTime(1000);
       expect(clickCount).toBe(1);
 
       await service.saveUrl('/api/reports/1', 'delegated.pdf');
@@ -391,7 +365,7 @@ describe('file-output', () => {
         isNativePlatform: () => true,
         getPlatform: () => 'android',
       };
-      vi.mocked(Filesystem.writeFile).mockResolvedValue({
+      writeFileSpy.mockResolvedValue({
         uri: 'file:///cache/delegated_native.pdf',
       });
 
@@ -399,8 +373,8 @@ describe('file-output', () => {
 
       const blob = new Blob(['content']);
       await service.saveBlob(blob, 'delegated_native.pdf');
-      expect(Filesystem.writeFile).toHaveBeenCalledTimes(1);
-      expect(Share.share).toHaveBeenCalledTimes(1);
+      expect(writeFileSpy).toHaveBeenCalledTimes(1);
+      expect(shareSpy).toHaveBeenCalledTimes(1);
 
       const mockBlob = new Blob(['url content']);
       vi.spyOn(globalThis, 'fetch').mockResolvedValue({
@@ -410,10 +384,10 @@ describe('file-output', () => {
       } as unknown as Response);
 
       await service.saveUrl('/api/download/file.pdf', 'file.pdf');
-      expect(Filesystem.writeFile).toHaveBeenCalledTimes(2);
+      expect(writeFileSpy).toHaveBeenCalledTimes(2);
 
-      service.print();
-      expect(Printer.printHtml).toHaveBeenCalledTimes(1);
+      await service.print();
+      expect(printHtmlSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

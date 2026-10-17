@@ -1,15 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { openExternal } from './external-link';
+import { openExternal, externalLinkNativeBridge } from './external-link';
 import { SERVER_ORIGIN_STORAGE_KEY } from './server-origin';
 import { environment } from '../../../environments/environment';
-import { Browser } from '@capacitor/browser';
-
-vi.mock('@capacitor/browser', () => ({
-  Browser: {
-    open: vi.fn().mockResolvedValue(undefined),
-  },
-}));
 
 function createStorageMock() {
   let store: Record<string, string> = {};
@@ -28,6 +21,7 @@ function createStorageMock() {
 describe('openExternal', () => {
   const originalServerOrigin = environment.serverOrigin;
   let openSpy: ReturnType<typeof vi.spyOn>;
+  let browserOpenSpy: ReturnType<typeof vi.spyOn>;
   const mockWindow = { closed: false, focus: vi.fn(), close: vi.fn() } as unknown as Window;
 
   beforeEach(() => {
@@ -35,7 +29,7 @@ describe('openExternal', () => {
     localStorage.removeItem(SERVER_ORIGIN_STORAGE_KEY);
     environment.serverOrigin = '';
     openSpy = vi.spyOn(window, 'open').mockImplementation(() => mockWindow);
-    vi.mocked(Browser.open).mockClear();
+    browserOpenSpy = vi.spyOn(externalLinkNativeBridge, 'open').mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -77,10 +71,10 @@ describe('openExternal', () => {
     environment.serverOrigin = 'https://app.farsalish.ir';
 
     const result = openExternal('/media/reports/export.xlsx');
-    expect(Browser.open).toHaveBeenCalledWith({
+    expect(browserOpenSpy).toHaveBeenCalledWith({
       url: 'https://app.farsalish.ir/media/reports/export.xlsx',
     });
-    expect(openSpy).not.toHaveBeenCalled();
+    expect(openSpy).toHaveBeenCalledWith('https://app.farsalish.ir/media/reports/export.xlsx', '_blank');
     expect(result).toBeNull();
   });
 
@@ -91,7 +85,7 @@ describe('openExternal', () => {
     };
 
     const result = openExternal('about:blank', 'GoogleDriveAuth');
-    expect(Browser.open).not.toHaveBeenCalled();
+    expect(browserOpenSpy).not.toHaveBeenCalled();
     expect(openSpy).not.toHaveBeenCalled();
     expect(result).toBeNull();
   });

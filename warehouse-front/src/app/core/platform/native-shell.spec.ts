@@ -1,43 +1,22 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { initNativeShell } from './native-shell';
-import { App } from '@capacitor/app';
-import { StatusBar, Style } from '@capacitor/status-bar';
-import { SplashScreen } from '@capacitor/splash-screen';
+import { initNativeShell, nativeShellBridge } from './native-shell';
+import { Style } from '@capacitor/status-bar';
 import { ApplicationRef } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 
-vi.mock('@capacitor/app', () => ({
-  App: {
-    addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
-    minimizeApp: vi.fn().mockResolvedValue(undefined),
-  },
-}));
-
-vi.mock('@capacitor/status-bar', () => ({
-  StatusBar: {
-    setStyle: vi.fn().mockResolvedValue(undefined),
-  },
-  Style: {
-    Dark: 'DARK',
-    Light: 'LIGHT',
-    Default: 'DEFAULT',
-  },
-}));
-
-vi.mock('@capacitor/splash-screen', () => ({
-  SplashScreen: {
-    hide: vi.fn().mockResolvedValue(undefined),
-  },
-}));
-
 describe('native-shell', () => {
+  let addListenerSpy: ReturnType<typeof vi.spyOn>;
+  let minimizeAppSpy: ReturnType<typeof vi.spyOn>;
+  let setStyleSpy: ReturnType<typeof vi.spyOn>;
+  let hideSplashSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     delete (globalThis as any).Capacitor;
-    vi.mocked(App.addListener).mockClear();
-    vi.mocked(App.minimizeApp).mockClear();
-    vi.mocked(StatusBar.setStyle).mockClear();
-    vi.mocked(SplashScreen.hide).mockClear();
+    addListenerSpy = vi.spyOn(nativeShellBridge, 'addListener').mockResolvedValue({ remove: vi.fn() });
+    minimizeAppSpy = vi.spyOn(nativeShellBridge, 'minimizeApp').mockResolvedValue(undefined);
+    setStyleSpy = vi.spyOn(nativeShellBridge, 'setStyle').mockResolvedValue(undefined);
+    hideSplashSpy = vi.spyOn(nativeShellBridge, 'hideSplash').mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -48,9 +27,9 @@ describe('native-shell', () => {
   it('1. does nothing when isNativePlatform() is false', () => {
     initNativeShell();
 
-    expect(App.addListener).not.toHaveBeenCalled();
-    expect(StatusBar.setStyle).not.toHaveBeenCalled();
-    expect(SplashScreen.hide).not.toHaveBeenCalled();
+    expect(addListenerSpy).not.toHaveBeenCalled();
+    expect(setStyleSpy).not.toHaveBeenCalled();
+    expect(hideSplashSpy).not.toHaveBeenCalled();
   });
 
   it('2. sets up backButton listener, status bar style, and hides splash screen when native', async () => {
@@ -60,7 +39,7 @@ describe('native-shell', () => {
     };
 
     let backHandler: ((e: { canGoBack: boolean }) => void) | undefined;
-    vi.mocked(App.addListener).mockImplementation((event: string, handler: any) => {
+    addListenerSpy.mockImplementation((event: string, handler: any) => {
       if (event === 'backButton') {
         backHandler = handler;
       }
@@ -76,9 +55,9 @@ describe('native-shell', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(App.addListener).toHaveBeenCalledWith('backButton', expect.any(Function));
-    expect(StatusBar.setStyle).toHaveBeenCalledWith({ style: Style.Light });
-    expect(SplashScreen.hide).toHaveBeenCalled();
+    expect(addListenerSpy).toHaveBeenCalledWith('backButton', expect.any(Function));
+    expect(setStyleSpy).toHaveBeenCalledWith({ style: Style.Light });
+    expect(hideSplashSpy).toHaveBeenCalled();
 
     // Verify back button behavior: canGoBack true vs false
     const historyBackSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
@@ -88,6 +67,6 @@ describe('native-shell', () => {
     expect(historyBackSpy).toHaveBeenCalled();
 
     backHandler?.({ canGoBack: false });
-    expect(App.minimizeApp).toHaveBeenCalled();
+    expect(minimizeAppSpy).toHaveBeenCalled();
   });
 });
