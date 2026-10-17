@@ -474,7 +474,7 @@ export class OfflineSyncService {
   /**
    * پردازش صف همگام‌سازی — درخواست‌ها را به ترتیب ارسال می‌کند
    */
-  async processQueue(): Promise<SyncOutcome> {
+  async processQueue(options?: { bypassGate?: boolean }): Promise<SyncOutcome> {
     if (typeof navigator !== 'undefined' && 'locks' in navigator && (navigator as any).locks?.request) {
       try {
         return await (navigator as any).locks.request(
@@ -485,20 +485,20 @@ export class OfflineSyncService {
               console.log('[OfflineSync] 🔒 تب دیگری در حال پردازش صف است؛ این تب منصرف شد.');
               return { status: 'nothing-to-sync' };
             }
-            return await this.executeProcessQueue();
+            return await this.executeProcessQueue(options?.bypassGate);
           }
         );
       } catch (e) {
         console.warn('[OfflineSync] خطای Web Locks API؛ اجرای مستقیم صف:', e);
-        return await this.executeProcessQueue();
+        return await this.executeProcessQueue(options?.bypassGate);
       }
     }
-    return await this.executeProcessQueue();
+    return await this.executeProcessQueue(options?.bypassGate);
   }
 
-  private async executeProcessQueue(): Promise<SyncOutcome> {
-    const queueOutcome = await this.runQueue();
-    const outcome = await this.flushPhotoQueue(queueOutcome);
+  private async executeProcessQueue(bypassGate = false): Promise<SyncOutcome> {
+    const queueOutcome = await this.runQueue(bypassGate);
+    const outcome = await this.flushPhotoQueue(queueOutcome, bypassGate);
     this._syncOutcome$.next(outcome);
     return outcome;
   }
@@ -511,14 +511,21 @@ export class OfflineSyncService {
   }
 
   /**
+   * اجرای ارسال اضطراری صف‌ها با دور زدن گیت قفل نسخه
+   */
+  async emergencyFlush(): Promise<SyncOutcome> {
+    return this.processQueue({ bypassGate: true });
+  }
+
+  /**
    * تخلیه صف عکس و ادغام نتیجه‌اش با نتیجه صف اصلی
    */
-  private async flushPhotoQueue(base: SyncOutcome): Promise<SyncOutcome> {
+  private async flushPhotoQueue(base: SyncOutcome, bypassGate = false): Promise<SyncOutcome> {
     if (!this.network.isBrowserOnline) return base;
 
     let photo: PhotoFlushOutcome;
     try {
-      photo = await this.photoQueue.flush();
+      photo = await this.photoQueue.flush(undefined, bypassGate);
     } catch (error) {
       console.error('[OfflineSync] ❌ خطا در تخلیه صف عکس:', error);
       return base;
@@ -548,7 +555,7 @@ export class OfflineSyncService {
     return { status: 'completed', synced };
   }
 
-  private async runQueue(): Promise<SyncOutcome> {
+  private async runQueue(bypassGate = false): Promise<SyncOutcome> {
     if (this.isSyncing) return { status: 'nothing-to-sync' };
     if (!this.network.isBrowserOnline) return { status: 'offline' };
 
@@ -559,7 +566,8 @@ export class OfflineSyncService {
         this.network,
         async () => { await this.refreshCounts(); },
         async (rejectedErr) => { this._rejected$.next(rejectedErr); },
-        () => { this._lastSyncTime$.next(Date.now()); }
+        () => { this._lastSyncTime$.next(Date.now()); },
+        { bypassGate }
       );
     } finally {
       this._isSyncing$.next(false);

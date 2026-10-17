@@ -52,9 +52,11 @@ describe('apiOriginInterceptor', () => {
 
     expect(handledReq).toBe(originalReq);
     expect(handledReq?.url).toBe('/api/users');
+    expect(handledReq?.headers.has('X-App-Version')).toBe(false);
+    expect(handledReq?.headers.has('X-App-Platform')).toBe(false);
   });
 
-  it('2. should rewrite /api/ requests with server origin on native', () => {
+  it('2. should rewrite /api/ requests with server origin on native and attach headers', () => {
     setNativeStub();
     localStorage.setItem(SERVER_ORIGIN_STORAGE_KEY, 'https://api.farsalish.ir');
 
@@ -69,9 +71,11 @@ describe('apiOriginInterceptor', () => {
 
     expect(handledReq).not.toBe(originalReq);
     expect(handledReq?.url).toBe('https://api.farsalish.ir/api/v1/warehouses/');
+    expect(handledReq?.headers.get('X-App-Version')).toBe('1.0.0');
+    expect(handledReq?.headers.get('X-App-Platform')).toBe('android');
   });
 
-  it('3. should rewrite /media/ requests with server origin on native', () => {
+  it('3. should rewrite /media/ requests with server origin on native and attach headers', () => {
     setNativeStub();
     localStorage.setItem(SERVER_ORIGIN_STORAGE_KEY, 'https://api.farsalish.ir');
 
@@ -86,9 +90,11 @@ describe('apiOriginInterceptor', () => {
 
     expect(handledReq).not.toBe(originalReq);
     expect(handledReq?.url).toBe('https://api.farsalish.ir/media/attachments/doc.pdf');
+    expect(handledReq?.headers.get('X-App-Version')).toBe('1.0.0');
+    expect(handledReq?.headers.get('X-App-Platform')).toBe('android');
   });
 
-  it('4. should pass through absolute URLs untouched (exact same instance) on native', () => {
+  it('4. should pass through absolute URLs untouched (exact same instance, no headers) on native', () => {
     setNativeStub();
     localStorage.setItem(SERVER_ORIGIN_STORAGE_KEY, 'https://api.farsalish.ir');
 
@@ -103,9 +109,11 @@ describe('apiOriginInterceptor', () => {
 
     expect(handledReq).toBe(originalReq);
     expect(handledReq?.url).toBe('https://other-domain.com/api/test');
+    expect(handledReq?.headers.has('X-App-Version')).toBe(false);
+    expect(handledReq?.headers.has('X-App-Platform')).toBe(false);
   });
 
-  it('5. should pass through /assets/ URLs untouched (exact same instance) on native', () => {
+  it('5. should pass through /assets/ URLs untouched (exact same instance, no headers) on native', () => {
     setNativeStub();
     localStorage.setItem(SERVER_ORIGIN_STORAGE_KEY, 'https://api.farsalish.ir');
 
@@ -120,5 +128,7 @@ describe('apiOriginInterceptor', () => {
 
     expect(handledReq).toBe(originalReq);
     expect(handledReq?.url).toBe('/assets/i18n/fa.json');
+    expect(handledReq?.headers.has('X-App-Version')).toBe(false);
+    expect(handledReq?.headers.has('X-App-Platform')).toBe(false);
   });
 });

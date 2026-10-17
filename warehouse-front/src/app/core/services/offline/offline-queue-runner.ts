@@ -22,6 +22,7 @@ import { reconcileRejected } from './offline-local-patcher';
 import { extractServerErrorMessage } from './offline-conflict-manager';
 import { getModuleRegistry } from '../../modules/module-registry.service';
 import { resolveServerUrl } from '../../platform/server-origin';
+import { isAutoSendBlocked } from '../../platform/app-version.service';
 
 /**
  * ساخت هدرهای تفکیک‌شده قلمرو و شناسه تب
@@ -284,8 +285,15 @@ export async function runQueueSequential(
   networkStatus: NetworkStatusService,
   onProgress?: () => Promise<void>,
   onRejected?: (err: SyncErrorEntry) => Promise<void>,
-  onSyncSuccess?: () => void
+  onSyncSuccess?: () => void,
+  options?: { bypassGate?: boolean }
 ): Promise<SyncOutcome> {
+  // اگر ارسال خودکار مسدود باشد و ارسال اضطراری نباشد، پردازش متوقف می‌شود (skip بدون تغییر داده‌ها)
+  if (!options?.bypassGate && isAutoSendBlocked()) {
+    console.log('[OfflineSync] 🔒 ارسال خودکار صف به دلیل قفل بودن نسخه اپلیکیشن متوقف شد (داده‌ها محفوظ است).');
+    return { status: 'nothing-to-sync' };
+  }
+
   // بررسی پیش‌پرواز — آفلاین یعنی «تلاشی انجام نشد»، نه «شکست خورد»
   if (!networkStatus.isBrowserOnline) return { status: 'offline' };
 

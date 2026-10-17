@@ -70,8 +70,19 @@ export function setServerOriginOverride(origin: string): boolean {
   return false;
 }
 
-function isServerPath(url: string): boolean {
-  return url.startsWith('/api/') || url === '/api' || url.startsWith('/api?') || url.startsWith('/media/');
+export function isServerPath(url: string): boolean {
+  if (!url || typeof url !== 'string') {
+    return false;
+  }
+  if (url.startsWith('/api/') || url === '/api' || url.startsWith('/api?') || url.startsWith('/media/')) {
+    return true;
+  }
+  const origin = getServerOrigin();
+  if (origin && url.startsWith(origin)) {
+    const rest = url.slice(origin.length);
+    return rest.startsWith('/api/') || rest === '/api' || rest.startsWith('/api?') || rest.startsWith('/media/');
+  }
+  return false;
 }
 
 function isAbsoluteUrl(url: string): boolean {

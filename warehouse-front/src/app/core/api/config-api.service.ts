@@ -15,6 +15,14 @@ export interface PublicConfig {
   offline_cache_ttl_minutes?: number;
   chat_enabled?: boolean;
   chat_file_sharing?: boolean;
+  app_min_version?: string;
+  app_recommended_version?: string;
+  app_download_urls?: {
+    direct?: string;
+    bazaar?: string;
+    myket?: string;
+    [key: string]: string | undefined;
+  };
 }
 
 @Injectable({ providedIn: 'root' })
