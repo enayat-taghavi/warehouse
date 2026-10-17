@@ -35,6 +35,7 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { OverflowMenuComponent } from '../../../../../../shared/components/overflow-menu/overflow-menu.component';
+import { printWindow } from '../../../../../../core/platform/file-output';
 
 export interface FleetMatrixRow extends VehicleMatrixRow {
   _isDirty?: boolean;
@@ -845,7 +846,7 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
   }
 
   printFleetSheet(): void {
-    window.print();
+    printWindow();
   }
 
   get totalFleetMonthlyTrips(): number {

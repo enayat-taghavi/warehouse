@@ -19,6 +19,7 @@ import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { ServerUrlPipe } from '../../../../../../shared/pipes/server-url.pipe';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
+import { saveBlob } from '../../../../../../core/platform/file-output';
 
 export type PettyCashStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'approved' | 'allocation' | 'rejected';
 
@@ -673,14 +674,7 @@ export class EmployeePettyCashHubComponent implements OnInit {
     this.toast.show('info', 'در حال صدور فایل اکسل گردش تنخواه‌گردان...');
     this.personnelApi.exportPettyCashTransactionsExcel(params).subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `petty_cash_${this.selectedSection?.code || 'section'}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `petty_cash_${this.selectedSection?.code || 'section'}.xlsx`);
         this.toast.show('success', 'فایل اکسل گردش تنخواه با موفقیت دریافت شد.');
       },
       error: () => {

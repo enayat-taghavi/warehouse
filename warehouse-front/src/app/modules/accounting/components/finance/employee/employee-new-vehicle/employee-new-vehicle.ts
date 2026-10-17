@@ -35,6 +35,7 @@ import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ServerUrlPipe } from '../../../../../../shared/pipes/server-url.pipe';
+import { saveBlob } from '../../../../../../core/platform/file-output';
 
 export type VehicleStatusFilter = 'all' | 'draft' | 'pending_supervisor' | 'revision_required' | 'approved' | 'rejected';
 export type VehicleModalTab = 'technical' | 'driver' | 'owner' | 'banking' | 'documents_expiry';
@@ -913,14 +914,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
     this.personnelApi.exportVehiclesExcel({ section_id: this.selectedSectionId }).subscribe({
       next: (blob: Blob) => {
         this.isExportingExcel = false;
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `fleet_vehicles_section_${this.selectedSectionId}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `fleet_vehicles_section_${this.selectedSectionId}.xlsx`);
         this.toast.show('success', 'فایل اکسل ناوگان با موفقیت دانلود شد.');
       },
       error: (err: any) => {
@@ -955,14 +949,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   downloadExcelTemplate(): void {
     this.personnelApi.downloadVehicleTemplate().subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'vehicle_fleet_template.xlsx';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, 'vehicle_fleet_template.xlsx');
         this.toast.show('success', 'قالب استاندارد اکسل ناوگان با موفقیت دانلود شد.');
       },
       error: () => this.toast.show('error', 'خطا در دریافت قالب اکسل ناوگان')

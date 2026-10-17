@@ -25,6 +25,7 @@ import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.direct
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
+import { saveBlob, printWindow } from '../../../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-employee-attendance-hub',
@@ -1250,15 +1251,8 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
     this.personnelApi.exportMonthlyAttendanceExcel(this.selectedWarehouseId, this.selectedYearMonth, this.selectedSectionId).subscribe({
       next: (blob: Blob) => {
         this.isExportingMonthlyExcel = false;
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
         const secName = this.selectedSection?.name || 'all_sections';
-        a.download = `Timesheet_${this.selectedYearMonth.replace('/', '_')}_${secName}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `Timesheet_${this.selectedYearMonth.replace('/', '_')}_${secName}.xlsx`);
         this.toast.show('success', 'فایل اکسل تقویم کارکرد با موفقیت دانلود شد');
         this.cdr.detectChanges();
       },
@@ -1362,7 +1356,7 @@ export class EmployeeAttendanceHubComponent implements OnInit, OnDestroy {
   }
 
   triggerPrint(): void {
-    window.print();
+    printWindow();
   }
 
   focusAnomaly(anom: AttendanceAnomaly): void {

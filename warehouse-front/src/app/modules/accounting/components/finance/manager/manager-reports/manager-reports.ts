@@ -11,6 +11,7 @@ import { ProjectSection } from '../../../../models/personnel.model';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
+import { printWindow } from '../../../../../../core/platform/file-output';
 
 export interface LaborCostReportRow {
   section_name: string;
@@ -224,7 +225,7 @@ export class ManagerReportsComponent implements OnInit, OnDestroy {
   }
 
   printReport(): void {
-    window.print();
+    printWindow();
   }
 
   exportExcel(): void {

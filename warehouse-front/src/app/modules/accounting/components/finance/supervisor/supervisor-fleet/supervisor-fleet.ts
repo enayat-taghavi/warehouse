@@ -15,6 +15,7 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
+import { saveBlob } from '../../../../../../core/platform/file-output';
 
 export type SupervisorFleetSubTab = 'new' | 'work_logs' | 'changes' | 'all';
 
@@ -657,12 +658,7 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
     this.personnelApi.exportVehiclesExcel(params).subscribe({
       next: (blob: Blob) => {
         this.isExportingExcel = false;
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Fleet_Vehicles_${new Date().toISOString().slice(0, 10)}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `Fleet_Vehicles_${new Date().toISOString().slice(0, 10)}.xlsx`);
         this.toast.showSuccess('خروجی اکسل ناوگان با موفقیت صادر گردید.');
       },
       error: () => {

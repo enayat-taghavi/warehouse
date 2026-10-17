@@ -11,6 +11,7 @@ import { ProjectSection, PettyCashTransaction } from '../../../../models/personn
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
+import { saveBlob } from '../../../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-supervisor-petty-cash-hub',
@@ -242,12 +243,7 @@ export class SupervisorPettyCashHubComponent implements OnInit, OnDestroy {
       status: this.activeSubTab === 'pending' ? 'pending_supervisor' : undefined
     }).subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Petty_Cash_${this.selectedSectionId || 'all'}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `Petty_Cash_${this.selectedSectionId || 'all'}.xlsx`);
         this.toast.success('فایل اکسل اسناد تن‌خواه با موفقیت دریافت شد.');
       },
       error: () => {

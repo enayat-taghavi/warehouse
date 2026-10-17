@@ -12,6 +12,7 @@ import { CommandCenterComponent } from '../../../../../../shared/components/comm
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
+import { saveBlob } from '../../../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-supervisor-invoices-hub',
@@ -263,12 +264,7 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
       status: this.activeSubTab === 'pending' ? 'pending_supervisor' : undefined
     }).subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Expense_Invoices_${this.selectedSectionId || 'all'}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `Expense_Invoices_${this.selectedSectionId || 'all'}.xlsx`);
         this.toast.success('فایل اکسل فاکتورها با موفقیت دریافت شد.');
       },
       error: () => {

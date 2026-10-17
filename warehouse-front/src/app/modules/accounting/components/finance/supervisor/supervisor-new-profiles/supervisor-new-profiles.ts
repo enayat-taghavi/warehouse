@@ -14,6 +14,7 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
+import { saveBlob } from '../../../../../../core/platform/file-output';
 
 export type SupervisorNewProfilesSubTab = 'personnel' | 'vehicles' | 'change_requests' | 'all';
 
@@ -565,14 +566,7 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
 
     this.personnelApi.exportPersonnelExcel(params).subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'draft_personnel.xlsx';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, 'draft_personnel.xlsx');
         this.toast.success('فایل اکسل پیش‌نویس‌ها با موفقیت دانلود شد.');
       },
       error: () => {
@@ -584,14 +578,7 @@ export class SupervisorNewProfilesHubComponent implements OnInit, OnDestroy {
   importExcel(): void {
     this.personnelApi.downloadPersonnelTemplate().subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'personnel_template.xlsx';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, 'personnel_template.xlsx');
         this.toast.success('قالب اکسل پرسنل آماده بارگیری است.');
       },
       error: () => {

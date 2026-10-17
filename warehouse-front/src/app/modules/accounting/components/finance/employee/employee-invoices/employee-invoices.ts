@@ -15,6 +15,7 @@ import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { ServerUrlPipe } from '../../../../../../shared/pipes/server-url.pipe';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
+import { saveBlob, saveUrl } from '../../../../../../core/platform/file-output';
 
 export type InvoiceStatusTab = 'all' | 'draft' | 'pending_supervisor' | 'pending_accountant' | 'ready_to_pay' | 'paid' | 'rejected';
 
@@ -569,6 +570,12 @@ export class EmployeeInvoicesHubComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
+  downloadPreviewAttachment(): void {
+    if (this.previewAttachmentUrl) {
+      void saveUrl(this.previewAttachmentUrl);
+    }
+  }
+
   // ─── خروجی اکسل استاندارد فاکتورها ───
   exportExcel(): void {
     if (!this.selectedSectionId) {
@@ -583,14 +590,7 @@ export class EmployeeInvoicesHubComponent implements OnInit {
     this.toast.show('info', 'در حال تولید فایل اکسل فاکتورهای هزینه...');
     this.personnelApi.exportExpenseInvoicesExcel(params).subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `expense_invoices_${this.selectedSection?.code || 'section'}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `expense_invoices_${this.selectedSection?.code || 'section'}.xlsx`);
         this.toast.show('success', 'فایل اکسل با موفقیت دانلود شد.');
       },
       error: (err: any) => {

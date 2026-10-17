@@ -576,14 +576,13 @@
           class="max-w-full max-h-[70vh] rounded-xl shadow-md object-contain" />
       </div>
       <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs">
-        <a
+        <button
+          type="button"
           *ngIf="previewAttachmentUrl"
-          [href]="previewAttachmentUrl"
-          target="_blank"
-          download
+          (click)="downloadPreviewAttachment()"
           class="text-indigo-600 font-bold hover:underline">
           ⬇️ دانلود فایل اصلی
-        </a>
+        </button>
         <button
           type="button"
           appAction="close"

@@ -16,6 +16,7 @@ import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
+import { saveBlob } from '../../../../../../core/platform/file-output';
 
 export interface DisbursementQueueItem {
   id: number;
@@ -366,12 +367,7 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
       })
     ).subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${type.toUpperCase()}_${(period.year_month || '').replace('/', '')}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `${type.toUpperCase()}_${(period.year_month || '').replace('/', '')}.csv`);
         this.toast.success(`دیسکت ${type === 'paya' ? 'پایا' : 'ساتنا'} دوره ${period.year_month} دانلود شد.`);
       },
       error: () => {
@@ -427,12 +423,7 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
     this.toast.info('در حال تولید فایل انتقال وجه بین‌بانکی پایا...');
     this.personnelApi.exportTreasuryDiskette(this.currentPeriodId, 'paya').subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `PAYA_Batch_${this.currentPeriodId}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `PAYA_Batch_${this.currentPeriodId}.csv`);
         this.toast.success('فایل پایا با موفقیت دانلود شد.');
       },
       error: () => {
@@ -448,12 +439,7 @@ export class TreasurerDisbursementsComponent implements OnInit, OnDestroy {
     }
     this.personnelApi.exportMonthlyPayrollExcel(this.currentPeriodId).subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Treasury_Disbursements_${this.fiscalYear}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `Treasury_Disbursements_${this.fiscalYear}.xlsx`);
         this.toast.success('فایل اکسل پرداخت‌های خزانه‌داری صادر گردید.');
       },
       error: () => {
