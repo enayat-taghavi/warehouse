@@ -4,7 +4,7 @@ import { cancelQueueEntry, buildScopedHeaders, sendEntry } from './offline-queue
 import { warehouseOfflineDb, financeOfflineDb, SyncQueueEntry } from '../offline-db';
 import { OfflineSyncService } from '../offline-sync.service';
 import { getModuleRegistry } from '../../modules/module-registry.service';
-import { SERVER_ORIGIN_STORAGE_KEY } from '../../platform/server-origin';
+import { SERVER_ORIGIN_STORAGE_KEY, resolveServerUrl } from '../../platform/server-origin';
 
 function createStorageMock() {
   let store: Record<string, string> = {};
@@ -362,6 +362,7 @@ describe('offline-queue-runner: direct fetch server-origin resolution', () => {
     } as any);
 
     const entry = createMockEntry({ url: '/api/v1/warehouse/items/' });
+    expect(resolveServerUrl(entry.url)).toBe('https://test.farsalish.ir/api/v1/warehouse/items/');
     const result = await sendEntry(entry, warehouseOfflineDb);
 
     expect(result).toBe('sent');
@@ -412,6 +413,7 @@ describe('offline-queue-runner: direct fetch server-origin resolution', () => {
     } as any);
 
     const entry = createMockEntry({ url: '/api/v1/warehouse/items/' });
+    expect(resolveServerUrl(entry.url)).toBe('/api/v1/warehouse/items/');
     const result = await sendEntry(entry, warehouseOfflineDb);
 
     expect(result).toBe('sent');
