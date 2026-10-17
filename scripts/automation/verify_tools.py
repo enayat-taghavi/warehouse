@@ -107,6 +107,80 @@ def cmd_scope(args) -> int:
     return 0
 
 
+def cmd_tests_kept(args) -> int:
+    # هیچ spec نباید تست کمتری از BASE داشته باشد (رد پاک کردن تست شکست‌خورده به‌جای اصلاحش).
+    rx = re.compile(r"(?<![\w.])(?:it|test)\s*\(")
+    bad = []
+    for rel in args.file:
+        rel = rel.replace("\\", "/")
+        try:
+            before = len(rx.findall(git("show", f"{args.base}:{rel}")))
+        except RuntimeError:
+            before = 0
+        f = REPO_ROOT / rel
+        after = len(rx.findall(f.read_text(encoding="utf-8"))) if f.is_file() else 0
+        print(f"{rel}: {before} -> {after} tests")
+        if after < before:
+            bad.append(rel)
+    if bad:
+        print(f"Fewer tests than base in: {bad}")
+        return 1
+    return 0
+
+
+def cmd_text_check(args) -> int:
+    # متن یک فایل: رشته‌های لازم، رشته‌ها و الگوهای ممنوع، و کمینهٔ تکرار («N:TEXT»).
+    f = REPO_ROOT / args.file
+    if not f.is_file():
+        print(f"missing file: {args.file}")
+        return 1
+    text = f.read_text(encoding="utf-8")
+    problems = []
+    for needle in args.contains or []:
+        if needle not in text:
+            problems.append(f"missing text: {needle}")
+    for needle in args.absent or []:
+        if needle in text:
+            problems.append(f"forbidden text present: {needle}")
+    for rx in args.regex_absent or []:
+        m = re.search(rx, text)
+        if m:
+            line = text.count("\n", 0, m.start()) + 1
+            problems.append(f"forbidden pattern {rx} at line {line}: {m.group(0)[:80]}")
+    for spec in args.count or []:
+        n, _, needle = spec.partition(":")
+        found = text.count(needle)
+        if found < int(n):
+            problems.append(f"{needle} appears {found} times, need at least {n}")
+    print(f"{args.file}: " + ("ok" if not problems else f"{len(problems)} problem(s)"))
+    for pr in problems:
+        print(f"  - {pr}")
+    return 1 if problems else 0
+
+
+def cmd_glob_absent(args) -> int:
+    # هیچ فایلی زیر ROOT که با GLOB بخواند (جز استثناها و specها) الگو را ندارد.
+    root = REPO_ROOT / args.root
+    rx = re.compile(args.regex)
+    allowed = {e.replace("\\", "/") for e in (args.allow or [])}
+    hits = []
+    for pattern in args.glob:
+        for f in root.rglob(pattern):
+            rel = f.relative_to(REPO_ROOT).as_posix()
+            if rel in allowed or (args.skip_specs and rel.endswith(".spec.ts")):
+                continue
+            text = f.read_text(encoding="utf-8", errors="replace")
+            for m in rx.finditer(text):
+                hits.append(f"{rel}:{text.count(chr(10), 0, m.start()) + 1}: {m.group(0)[:80]}")
+    if hits:
+        print(f"Pattern {args.regex} still present ({len(hits)}):")
+        for h in hits[:60]:
+            print(f"  {h}")
+        return 1
+    print(f"Pattern {args.regex} absent under {args.root} ({', '.join(args.glob)}).")
+    return 0
+
+
 def cmd_commit_exists(args) -> int:
     subjects = git("log", f"{args.base}..HEAD", "--format=%s").splitlines()
     hits = [s for s in subjects if args.grep in s]
@@ -999,6 +1073,24 @@ def main(argv=None) -> int:
     p.add_argument("--allow", nargs="+", required=True)
     p.add_argument("--min-files", type=int, default=0)
     p.set_defaults(func=cmd_scope)
+    p = sub.add_parser("tests-kept", help="no listed spec has fewer it()/test() calls than at BASE")
+    p.add_argument("--base", required=True)
+    p.add_argument("--file", nargs="+", required=True)
+    p.set_defaults(func=cmd_tests_kept)
+    p = sub.add_parser("text-check", help="a file contains required texts, lacks forbidden texts/patterns, minimum counts")
+    p.add_argument("--file", required=True)
+    p.add_argument("--contains", action="append")
+    p.add_argument("--absent", action="append")
+    p.add_argument("--regex-absent", action="append")
+    p.add_argument("--count", action="append", help="N:TEXT, TEXT must appear at least N times")
+    p.set_defaults(func=cmd_text_check)
+    p = sub.add_parser("glob-absent", help="no file under ROOT matching GLOB contains REGEX (except --allow)")
+    p.add_argument("--root", required=True)
+    p.add_argument("--glob", nargs="+", required=True)
+    p.add_argument("--regex", required=True)
+    p.add_argument("--allow", nargs="*")
+    p.add_argument("--skip-specs", action="store_true")
+    p.set_defaults(func=cmd_glob_absent)
     p = sub.add_parser("commit-exists", help="a commit after BASE has a subject containing TEXT")
     p.add_argument("--base", required=True)
     p.add_argument("--grep", required=True)
