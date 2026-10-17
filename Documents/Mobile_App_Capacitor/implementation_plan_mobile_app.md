@@ -262,5 +262,18 @@
     2. اجرای ادامهٔ صف: `.\run_tasks.bat` در تب Windows Terminal (نشست‌های ۷ تا ۱۲: Push بک‌اند و فرانت، صفحهٔ `/download`، امضای APK با کلید در `E:\warehouse-secrets\comanage`، iOS، release روی `app` و انتشار APK آزمایشی).
     3. پیش از نشست ۱۲: بررسی بالا بودن 4200 و `cloudflared`.
     4. پایان: گزارش به کاربر با لینک دانلود APK آزمایشی و فهرست آزمون‌های دستی روی گوشی (ورود، اسکن، خروجی اکسل، چاپ، کار آفلاین، Live Update). Push تا وقتی کاربر فایل کلید Firebase ندهد خاموش است. انتشار روی `soft` فقط با تأیید کاربر.
+- **۲۷ مهر ۱۴۰۵، Claude — بازبینی نشست‌های ۴ تا ۶؛ توقف به‌خاطر سقف هفتگی (۹۷٪):**
+  - `data-loss-reviewer` و `ui-reviewer` روی `git diff 1ea9d32 5c755cb -- warehouse-front/src` اجرا شدند. Live Update سالم است: فقط `next`، توقف هنگام `isSyncing`، بی پاک‌سازی storage.
+  - **یافته‌های تأییدشده (با خواندن کد):**
+    - نوار وضعیت با `prefers-color-scheme` آیکون روشن روی صفحهٔ روشن می‌گذارد.
+    - دکمهٔ بازگشت با مودال باز صفحه را ترک می‌کند.
+    - `openExternal` بومی لینک را دوبار باز می‌کند (`window.open` اضافه).
+    - `saveBlob` بومی در `Directory.Cache` (پاک‌شدنی) می‌نویسد؛ مهم برای پشتیبان IndexedDB.
+    - حدود ۳۹ فراخوان `void saveBlob/saveUrl` خطای بومی را بی‌پیام می‌گذارند.
+    - نیم‌فاصلهٔ «گوگل‌درایو» در دو پیام.
+  - همه در تسک تازهٔ **Session 6b** پیش از نشست ۷ در `tasks.md` (پشتیبان به‌روز: `scratch/tasks_mobile_phaseB.md`).
+  - **رد یا تعویق:** خطر VersionError در Dexie پس از rollback (تأییدنشده؛ Dexie 4 پایین‌آوردن نسخه را می‌پذیرد) و بررسی `pendingCount` در Live Update (کم‌اهمیت، چون `next` فقط در شروع سرد اعمال می‌شود).
+  - **وضع پشته (۲۷ مهر):** Daphne (8000)، Express (4200) و `cloudflared` خاموش‌اند (530)؛ فقط PostgreSQL بالاست. پوشهٔ `E:\warehouse-secrets` هنوز ساخته نشده (نشست ۱۰ می‌سازد).
+  - **اقدام بعدی:** اجرای `.un_tasks.bat` (نشست‌های 6b و ۷ تا ۱۲). پیش از نشست ۱۲، Express و `cloudflared` بالا آورده شوند (`dev-manager.bat` → Full Stack). پس از صف: بازبینی diff نشست‌های 6b تا ۹ با `data-loss-reviewer`، `tenant-scope-reviewer` (نشست ۷) و `ui-reviewer` (نشست ۹).
 
 </div>
