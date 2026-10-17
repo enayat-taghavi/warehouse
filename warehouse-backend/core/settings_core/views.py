@@ -11,6 +11,8 @@ from .services import (
     compute_settings_etag,
     clear_setting_cache,
     get_installed_modules,
+    is_valid_app_version,
+    is_valid_download_url,
 )
 from .models import SystemSetting
 
@@ -114,6 +116,20 @@ class PublicConfigViewSet(viewsets.ViewSet):
             except (TypeError, ValueError):
                 return DEFAULT_SETTINGS[key]
 
+        def safe_version(key):
+            try:
+                val = get_setting(key)
+                return val if is_valid_app_version(val) else ''
+            except Exception:
+                return ''
+
+        def safe_url(key):
+            try:
+                val = get_setting(key)
+                return val if is_valid_download_url(val) else ''
+            except Exception:
+                return ''
+
         return Response({
             'system_version': get_setting('system_version'),
             'system_name': 'سامانه یکپارچه مدیریت شرکت ها',
@@ -124,4 +140,11 @@ class PublicConfigViewSet(viewsets.ViewSet):
             'chat_enabled': bool(get_setting('chat_enabled')),
             'chat_file_sharing': bool(get_setting('chat_file_sharing')),
             'installed_modules': get_installed_modules(),
+            'app_min_version': safe_version('app_min_version'),
+            'app_recommended_version': safe_version('app_recommended_version'),
+            'app_download_urls': {
+                'direct': safe_url('app_download_url_direct'),
+                'bazaar': safe_url('app_download_url_bazaar'),
+                'myket': safe_url('app_download_url_myket'),
+            },
         })

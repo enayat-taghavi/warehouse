@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 
 from django.core.cache import cache
 
@@ -16,6 +17,11 @@ DEFAULT_SETTINGS = {
     'offline_cache_ttl_minutes': 60,
     'chat_enabled': True,
     'chat_file_sharing': True,
+    'app_min_version': '',
+    'app_recommended_version': '',
+    'app_download_url_direct': '',
+    'app_download_url_bazaar': '',
+    'app_download_url_myket': '',
 }
 
 BOOLEAN_SETTINGS_KEYS = {
@@ -55,6 +61,31 @@ def is_strict_bool(val):
 
 def is_strict_str(val):
     return isinstance(val, str)
+
+
+APP_VERSION_PATTERN = re.compile(r'^\d{1,4}\.\d{1,4}\.\d{1,4}$')
+
+
+def is_valid_app_version(val):
+    if not is_strict_str(val):
+        return False
+    if val == '':
+        return True
+    return bool(APP_VERSION_PATTERN.match(val))
+
+
+def is_valid_download_url(val):
+    if not is_strict_str(val):
+        return False
+    if val == '':
+        return True
+    if len(val) > 500:
+        return False
+    if not val.startswith('https://'):
+        return False
+    if any(ch.isspace() for ch in val):
+        return False
+    return True
 
 
 def validate_settings_payload(data):
@@ -109,6 +140,12 @@ def validate_settings_payload(data):
                     if not isinstance(f_val, dict) or not is_strict_bool(f_val.get('visible')) or not is_strict_bool(f_val.get('editable')):
                         invalid_keys.append(key)
                         break
+        elif key in ['app_min_version', 'app_recommended_version']:
+            if not is_valid_app_version(value):
+                invalid_keys.append(key)
+        elif key in ['app_download_url_direct', 'app_download_url_bazaar', 'app_download_url_myket']:
+            if not is_valid_download_url(value):
+                invalid_keys.append(key)
         else:
             default_val = DEFAULT_SETTINGS.get(key)
             if isinstance(default_val, bool) and not is_strict_bool(value):
