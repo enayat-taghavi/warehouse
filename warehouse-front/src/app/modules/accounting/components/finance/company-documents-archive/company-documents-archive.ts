@@ -13,13 +13,14 @@ import { ToastService } from '../../../../../shared/components/toast/toast.compo
 import { Company, CompanyDocument, CompanyDocumentType, CompanyAccessLevel } from '../../../../../core/models/company.model';
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
+import { ServerUrlPipe } from '../../../../../shared/pipes/server-url.pipe';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
 import { PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons/semantic-icons';
 
 @Component({
   selector: 'app-company-documents-archive',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, TabBarComponent, ActionButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, TabBarComponent, ActionButtonComponent, ServerUrlPipe],
   templateUrl: './company-documents-archive.html',
   styleUrls: ['./company-documents-archive.css']
 })

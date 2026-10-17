@@ -192,7 +192,7 @@
           <div *ngIf="msg.attachments && msg.attachments.length > 0" class="mb-2 space-y-1.5">
             <div *ngFor="let att of msg.attachments">
               <a [href]="att.file_url" target="_blank" [download]="att.file_name" class="block rounded-lg overflow-hidden border border-white/20 hover:opacity-90 transition-opacity bg-black/5 dark:bg-white/5">
-                <img *ngIf="att.content_type.startsWith('image/')" [src]="att.file_url" class="max-h-48 w-full object-cover" />
+                <img *ngIf="att.content_type.startsWith('image/')" [src]="att.file_url | serverUrl" class="max-h-48 w-full object-cover" />
                 <div *ngIf="!att.content_type.startsWith('image/')" class="p-2.5 flex items-center justify-between gap-2">
                   <div class="flex items-center gap-1.5 truncate">
                     <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip"></svg>

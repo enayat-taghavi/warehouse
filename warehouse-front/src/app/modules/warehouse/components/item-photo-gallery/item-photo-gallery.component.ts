@@ -7,11 +7,12 @@ import { ItemPhotoService, PhotoUploadResult } from '../../services/item-photo.s
 import { PhotoQueueEntry } from '../../../../core/services/offline-db';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
 
 @Component({
   selector: 'app-item-photo-gallery',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ServerUrlPipe],
   templateUrl: './item-photo-gallery.component.html',
   styleUrls: ['./item-photo-gallery.component.css']
 })

@@ -957,7 +957,7 @@
                      class="p-2 bg-white border border-purple-200 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
                   <div class="flex items-center gap-2 min-w-0">
                     <img *ngIf="doc.previewUrl"
-                         [src]="doc.previewUrl"
+                         [src]="doc.previewUrl | serverUrl"
                          (click)="openLightbox(doc.previewUrl, doc.name)"
                          class="w-8 h-8 rounded-lg object-cover cursor-pointer hover:opacity-80 shrink-0 border"
                          alt="پیش‌نمایش" />
@@ -1796,7 +1796,7 @@
         </button>
       </div>
       <div class="p-2 overflow-auto flex items-center justify-center bg-slate-100 min-h-[250px]">
-        <img [src]="lightboxImageUrl" [alt]="lightboxTitle" class="max-h-[80vh] max-w-full rounded-xl object-contain shadow-sm" />
+        <img [src]="lightboxImageUrl | serverUrl" [alt]="lightboxTitle" class="max-h-[80vh] max-w-full rounded-xl object-contain shadow-sm" />
       </div>
     </div>
   </div>

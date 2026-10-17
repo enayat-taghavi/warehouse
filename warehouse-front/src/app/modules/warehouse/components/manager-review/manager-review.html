@@ -1053,7 +1053,7 @@
               <div class="relative w-7 h-7 rounded-lg overflow-hidden border border-indigo-200 bg-white flex items-center justify-center shrink-0">
                 <img 
                   *ngIf="selectedCountingDetailTask.item_details?.primary_thumbnail" 
-                  [src]="selectedCountingDetailTask.item_details?.primary_thumbnail" 
+                  [src]="selectedCountingDetailTask.item_details?.primary_thumbnail | serverUrl" 
                   alt="تصویر کالا" 
                   class="w-full h-full object-cover"
                 />

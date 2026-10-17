@@ -1506,7 +1506,7 @@
         </button>
       </div>
       <div class="p-2 overflow-auto flex items-center justify-center bg-surface-muted">
-        <img [src]="lightboxImageUrl" [alt]="lightboxTitle" class="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-sm" />
+        <img [src]="lightboxImageUrl | serverUrl" [alt]="lightboxTitle" class="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-sm" />
       </div>
     </div>
   </div>

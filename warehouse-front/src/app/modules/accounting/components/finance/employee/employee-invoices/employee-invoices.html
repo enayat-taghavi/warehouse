@@ -571,7 +571,7 @@
       <div class="p-4 overflow-auto flex items-center justify-center bg-slate-100 flex-1 min-h-[300px]">
         <img
           *ngIf="previewAttachmentUrl"
-          [src]="previewAttachmentUrl"
+          [src]="previewAttachmentUrl | serverUrl"
           alt="پیوست فاکتور"
           class="max-w-full max-h-[70vh] rounded-xl shadow-md object-contain" />
       </div>

@@ -424,7 +424,7 @@
 
           <div class="flex items-center gap-2.5">
             <div class="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100/80 text-indigo-600 flex items-center justify-center font-bold text-lg overflow-hidden shrink-0">
-              <img *ngIf="companyModal.data.logo" [src]="companyModal.data.logo" alt="لوگو" class="w-full h-full object-contain" />
+              <img *ngIf="companyModal.data.logo" [src]="companyModal.data.logo | serverUrl" alt="لوگو" class="w-full h-full object-contain" />
               <svg *ngIf="!companyModal.data.logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="building"></svg>
             </div>
             <div>
@@ -2725,7 +2725,7 @@
              [style.transform]="'translate(' + panX + 'px, ' + panY + 'px)'"
              class="transition-transform duration-75 flex items-center justify-center">
           <img 
-            [src]="previewModal.fileUrl" 
+            [src]="previewModal.fileUrl | serverUrl" 
             [style.transform]="'scale(' + previewScale + ') rotate(' + previewRotation + 'deg)'"
             class="max-h-[82vh] max-w-[85vw] rounded-2xl shadow-2xl object-contain transition-transform duration-100" 
             [alt]="previewModal.title" 

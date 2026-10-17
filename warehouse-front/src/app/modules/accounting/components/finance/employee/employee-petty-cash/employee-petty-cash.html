@@ -608,7 +608,7 @@
           <button type="button" appAction="close" display="icon" size="sm" (click)="closeAttachmentPreview()"></button>
         </div>
         <div class="p-4 flex items-center justify-center max-h-[75vh] overflow-auto bg-slate-100">
-          <img [src]="previewAttachmentUrl" alt="پیوست سند تنخواه" class="max-h-full max-w-full rounded-xl object-contain shadow-sm"/>
+          <img [src]="previewAttachmentUrl | serverUrl" alt="پیوست سند تنخواه" class="max-h-full max-w-full rounded-xl object-contain shadow-sm"/>
         </div>
       </div>
     </div>

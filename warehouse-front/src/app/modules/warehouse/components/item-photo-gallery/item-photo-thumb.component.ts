@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
 
 export type PhotoThumbSize = 'xs' | 'sm' | 'md' | 'lg';
 export type PhotoThumbAccent = 'indigo' | 'blue';
@@ -57,7 +58,7 @@ const ACCENT_BADGE_CLASSES: Record<PhotoThumbAccent, string> = {
 @Component({
   selector: 'app-item-photo-thumb',
   standalone: true,
-  imports: [CommonModule, SvgIconDirective],
+  imports: [CommonModule, SvgIconDirective, ServerUrlPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
@@ -72,7 +73,7 @@ const ACCENT_BADGE_CLASSES: Record<PhotoThumbAccent, string> = {
     >
       <img
         *ngIf="thumbUrl"
-        [src]="thumbUrl"
+        [src]="thumbUrl | serverUrl"
         alt="تصویر کالا"
         class="w-full h-full object-cover"
         loading="lazy"

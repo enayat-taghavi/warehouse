@@ -33,10 +33,11 @@ import { Company } from '../../../../core/models/company.model';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
 
 @Component({
   selector: 'app-users',
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent, TabBarComponent],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe],
   providers: [UsersFacade],
   templateUrl: './users.html',
   styleUrl: './users.css'

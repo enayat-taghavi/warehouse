@@ -152,7 +152,7 @@
           [style.transform]="'scale(' + zoomLevel() + ') rotate(' + rotation() + 'deg)'"
         >
           <img 
-            [src]="currentPhoto.image_url || currentPhoto.medium_url || currentPhoto._previewUrl" 
+            [src]="(currentPhoto.image_url || currentPhoto.medium_url || currentPhoto._previewUrl) | serverUrl" 
             [alt]="currentPhoto.caption || 'تصویر کالا'" 
             class="max-w-full max-h-[50vh] sm:max-h-[55vh] object-contain rounded-lg shadow-2xl pointer-events-none select-none"
           />
@@ -344,7 +344,7 @@
           [class.opacity-50]="selectedIndex() !== i"
         >
           <img
-            [src]="p.thumbnail_url || p.medium_url || p.image_url || p._previewUrl"
+            [src]="(p.thumbnail_url || p.medium_url || p.image_url || p._previewUrl) | serverUrl"
             [alt]="'تامب‌نیل ' + (i + 1)"
             class="w-full h-full object-cover"
             loading="lazy"

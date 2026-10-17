@@ -28,11 +28,12 @@ import { ContextualCommentsComponent } from '../../../common/components/communic
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
 
 @Component({
   selector: 'app-manager-review',
   standalone: true,
-  imports: [CommonModule, FormsModule, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, PersianDatePipe, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, ContextualCommentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent],
+  imports: [CommonModule, FormsModule, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, PersianDatePipe, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, ContextualCommentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe],
   templateUrl: './manager-review.html',
   styleUrl: './manager-review.css'
 })

@@ -55,7 +55,7 @@
             
             <!-- تصویر آواتار با حفظ رنگ نقش سازمانی -->
             <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-xs overflow-hidden shrink-0 shadow-2xs" [style.background]="getUserRole(u).color || '#4f46e5'">
-              <img *ngIf="u.avatar" [src]="u.avatar" class="w-full h-full object-cover" alt="avatar">
+              <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
               <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
             </div>
 
@@ -128,7 +128,7 @@
               <!-- عکس پرسنلی (با کنترل موقعیت) -->
               <div *ngIf="idCardSettings.fields.photo" class="flex -mt-9 relative z-20" [ngClass]="idCardSettings.photoPosition === 'right' ? 'justify-start px-4' : idCardSettings.photoPosition === 'left' ? 'justify-end px-4' : 'justify-center'">
                 <div class="w-20 h-24 bg-slate-100 rounded-xl border-4 border-white shadow-md flex items-center justify-center font-black text-slate-400 text-3xl overflow-hidden bg-cover bg-center">
-                  <img *ngIf="activeUser.avatar" [src]="activeUser.avatar" class="w-full h-full object-cover" alt="avatar">
+                  <img *ngIf="activeUser.avatar" [src]="activeUser.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                   <span *ngIf="!activeUser.avatar">{{getUserAvatarInitial(activeUser)}}</span>
                 </div>
               </div>
@@ -265,7 +265,7 @@
                 <div class="flex-1 flex gap-2.5 items-center" [ngClass]="idCardSettings.photoPosition === 'left' ? 'flex-row-reverse' : 'flex-row'">
                   <!-- تصویر پرسنلی -->
                   <div *ngIf="idCardSettings.fields.photo" class="w-16 h-20 bg-slate-100 rounded-xl border border-slate-200 shadow-xs flex items-center justify-center font-black text-slate-400 text-xl overflow-hidden shrink-0">
-                    <img *ngIf="activeUser.avatar" [src]="activeUser.avatar" class="w-full h-full object-cover" alt="avatar">
+                    <img *ngIf="activeUser.avatar" [src]="activeUser.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                     <span *ngIf="!activeUser.avatar">{{getUserAvatarInitial(activeUser)}}</span>
                   </div>
 
@@ -826,7 +826,7 @@
 
                 <div *ngIf="idCardSettings.fields.photo" class="flex -mt-7 relative z-20 shrink-0" [ngClass]="idCardSettings.photoPosition === 'right' ? 'justify-start px-3' : idCardSettings.photoPosition === 'left' ? 'justify-end px-3' : 'justify-center'">
                   <div class="w-14 h-16 bg-slate-100 rounded-lg border-2 border-white shadow-sm flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden bg-cover bg-center">
-                    <img *ngIf="u.avatar" [src]="u.avatar" class="w-full h-full object-cover" alt="avatar">
+                    <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                     <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
                   </div>
                 </div>
@@ -883,7 +883,7 @@
 
                   <div class="flex-1 flex gap-2 items-center" [ngClass]="idCardSettings.photoPosition === 'left' ? 'flex-row-reverse' : 'flex-row'">
                     <div *ngIf="idCardSettings.fields.photo" class="w-12 h-14 bg-slate-100 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden shrink-0">
-                      <img *ngIf="u.avatar" [src]="u.avatar" class="w-full h-full object-cover" alt="avatar">
+                      <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                       <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
                     </div>
 
@@ -1040,7 +1040,7 @@
 
                   <div *ngIf="idCardSettings.fields.photo" class="flex -mt-7 relative z-20 shrink-0" [ngClass]="idCardSettings.photoPosition === 'right' ? 'justify-start px-3' : idCardSettings.photoPosition === 'left' ? 'justify-end px-3' : 'justify-center'">
                     <div class="w-14 h-16 bg-slate-100 rounded-lg border-2 border-white shadow-sm flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden bg-cover bg-center">
-                      <img *ngIf="u.avatar" [src]="u.avatar" class="w-full h-full object-cover" alt="avatar">
+                      <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                       <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
                     </div>
                   </div>
@@ -1097,7 +1097,7 @@
 
                     <div class="flex-1 flex gap-2 items-center" [ngClass]="idCardSettings.photoPosition === 'left' ? 'flex-row-reverse' : 'flex-row'">
                       <div *ngIf="idCardSettings.fields.photo" class="w-12 h-14 bg-slate-100 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden shrink-0">
-                        <img *ngIf="u.avatar" [src]="u.avatar" class="w-full h-full object-cover" alt="avatar">
+                        <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                         <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
                       </div>
 
@@ -1281,7 +1281,7 @@
 
           <div *ngIf="idCardSettings.fields.photo" class="flex -mt-7 relative z-20 shrink-0" [ngClass]="idCardSettings.photoPosition === 'right' ? 'justify-start px-3' : idCardSettings.photoPosition === 'left' ? 'justify-end px-3' : 'justify-center'">
             <div class="w-14 h-16 bg-slate-100 rounded-lg border-2 border-white shadow-sm flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden bg-cover bg-center">
-              <img *ngIf="u.avatar" [src]="u.avatar" class="w-full h-full object-cover" alt="avatar">
+              <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
               <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
             </div>
           </div>
@@ -1338,7 +1338,7 @@
 
             <div class="flex-1 flex gap-2 items-center" [ngClass]="idCardSettings.photoPosition === 'left' ? 'flex-row-reverse' : 'flex-row'">
               <div *ngIf="idCardSettings.fields.photo" class="w-12 h-14 bg-slate-100 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden shrink-0">
-                <img *ngIf="u.avatar" [src]="u.avatar" class="w-full h-full object-cover" alt="avatar">
+                <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                 <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
               </div>
 
@@ -1496,7 +1496,7 @@
 
             <div *ngIf="idCardSettings.fields.photo" class="flex -mt-7 relative z-20 shrink-0" [ngClass]="idCardSettings.photoPosition === 'right' ? 'justify-start px-3' : idCardSettings.photoPosition === 'left' ? 'justify-end px-3' : 'justify-center'">
               <div class="w-14 h-16 bg-slate-100 rounded-lg border-2 border-white shadow-sm flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden bg-cover bg-center">
-                <img *ngIf="u.avatar" [src]="u.avatar" class="w-full h-full object-cover" alt="avatar">
+                <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                 <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
               </div>
             </div>
@@ -1553,7 +1553,7 @@
 
               <div class="flex-1 flex gap-2 items-center" [ngClass]="idCardSettings.photoPosition === 'left' ? 'flex-row-reverse' : 'flex-row'">
                 <div *ngIf="idCardSettings.fields.photo" class="w-12 h-14 bg-slate-100 rounded-lg border border-slate-200 shadow-xs flex items-center justify-center font-black text-slate-400 text-lg overflow-hidden shrink-0">
-                  <img *ngIf="u.avatar" [src]="u.avatar" class="w-full h-full object-cover" alt="avatar">
+                  <img *ngIf="u.avatar" [src]="u.avatar | serverUrl" class="w-full h-full object-cover" alt="avatar">
                   <span *ngIf="!u.avatar">{{getUserAvatarInitial(u)}}</span>
                 </div>
 

@@ -29,11 +29,12 @@ import { ActionButtonComponent } from '../../../../../shared/components/action-b
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ContextualCommentsComponent } from '../../../../common/components/communications/contextual-comments/contextual-comments.component';
+import { ServerUrlPipe } from '../../../../../shared/pipes/server-url.pipe';
 
 @Component({
   selector: 'app-supervisor-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, PersianDatePipe, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, ContextualCommentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent],
+  imports: [CommonModule, FormsModule, WarehouseSelectorComponent, OfflinePendingBadgeComponent, BarcodeScannerComponent, PersianDatePipe, ItemPhotoGalleryComponent, ItemPhotoThumbComponent, ContextualCommentsComponent, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe],
   templateUrl: './supervisor-dashboard.html',
   styleUrl: './supervisor-dashboard.css'
 })

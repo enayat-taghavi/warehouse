@@ -490,7 +490,7 @@
         <!-- Image Viewer -->
         <img 
           *ngIf="previewModal.isImage && previewModal.fileUrl" 
-          [src]="previewModal.fileUrl" 
+          [src]="previewModal.fileUrl | serverUrl" 
           [alt]="previewModal.title"
           class="max-w-full max-h-full object-contain rounded-2xl shadow-sm"
         />
