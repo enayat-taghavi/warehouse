@@ -7,7 +7,7 @@ import { AppLauncherComponent } from './app-launcher';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AppPersonaService } from '../../../../core/services/app-persona.service';
 import { AuthStore } from '../../../../core/stores/auth.store';
-import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
+import { ModuleRegistryService, getModuleRegistry } from '../../../../core/modules/module-registry.service';
 import { ConfigApiService } from '../../../../core/api/config-api.service';
 import { Router } from '@angular/router';
 
@@ -87,6 +87,7 @@ describe('AppLauncherComponent DOM & Modular Layout Tests', () => {
     try {
       localStorage.removeItem('wh_installed_modules');
     } catch {}
+    getModuleRegistry().setInstalledModules(['warehouse', 'accounting']);
     vi.restoreAllMocks();
   });
 

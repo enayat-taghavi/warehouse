@@ -15,7 +15,7 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { AppPersonaService } from '../../../../../core/services/app-persona.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { AccountsHttpService } from '../../../../../core/http/accounts-http.service';
-import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
+import { ModuleRegistryService, getModuleRegistry } from '../../../../../core/modules/module-registry.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -102,6 +102,7 @@ describe('OperationsRbacGovernanceComponent DOM & Browser Unit Test (Type 1 Vite
 
   afterEach(() => {
     localStorage.removeItem('wh_installed_modules');
+    getModuleRegistry().setInstalledModules(['warehouse', 'accounting']);
     TestBed.resetTestingModule();
   });
 

@@ -17,7 +17,7 @@ import { OfflineSyncService } from '../../../../../core/services/offline-sync.se
 import { WebSocketService } from '../../../../../core/http/websocket.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
+import { ModuleRegistryService, getModuleRegistry } from '../../../../../core/modules/module-registry.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -71,6 +71,7 @@ describe('OperationsSyncMonitorComponent DOM & Browser Unit Test (Type 1 Vitest 
 
   afterEach(() => {
     localStorage.removeItem('wh_installed_modules');
+    getModuleRegistry().setInstalledModules(['warehouse', 'accounting']);
     TestBed.resetTestingModule();
   });
 

@@ -13,7 +13,7 @@ import * as path from 'path';
 
 import { FirstBootWizardComponent } from './first-boot-wizard';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
-import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
+import { ModuleRegistryService, getModuleRegistry } from '../../../../../core/modules/module-registry.service';
 import { CompanyApiService } from '../../../../../core/api/company-api.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { Company } from '../../../../../core/models/company.model';
@@ -94,6 +94,7 @@ describe('FirstBootWizardComponent DOM & Browser Unit Test (Type 1 Vitest + JSDO
     try {
       localStorage.removeItem('wh_installed_modules');
     } catch {}
+    getModuleRegistry().setInstalledModules(['warehouse', 'accounting']);
   });
 
   it('۱. کامپوننت با موفقیت ایجاد می‌شود', () => {

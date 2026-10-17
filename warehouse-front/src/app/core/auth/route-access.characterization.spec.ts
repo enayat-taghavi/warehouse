@@ -7,7 +7,7 @@ import { AuthGuard, hasRoutePermission } from './auth.guard';
 import { AuthService } from './auth.service';
 import { AppPersonaService } from '../services/app-persona.service';
 import { ActiveCompanyService } from '../services/active-company.service';
-import { ModuleRegistryService } from '../modules/module-registry.service';
+import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 
 const ROUTE_PERMISSIONS_LITERAL: Record<string, string[]> = {
   'dashboard': ['view_sys_dashboard', 'view_wh_dashboard'],
@@ -94,6 +94,14 @@ describe('Route Access Characterization Spec', () => {
   // Section 1: hasRoutePermission for all 64 literal keys
   // =========================================================================
   describe('hasRoutePermission characterization', () => {
+    beforeEach(() => {
+      getModuleRegistry().setInstalledModules(['warehouse', 'accounting']);
+    });
+
+    afterEach(() => {
+      getModuleRegistry().setInstalledModules(['warehouse', 'accounting']);
+    });
+
     it('returns true for unknown route key regardless of permissions', () => {
       expect(hasRoutePermission('unknown-route-key', [])).toBe(true);
       expect(hasRoutePermission('unknown-route-key', ['unrelated_perm'])).toBe(true);
