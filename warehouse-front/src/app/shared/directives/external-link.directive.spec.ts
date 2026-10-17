@@ -5,7 +5,6 @@ import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ExternalLinkDirective } from './external-link.directive';
-import { externalLinkNativeBridge } from '../../core/platform/external-link';
 
 function createStorageMock() {
   let store: Record<string, string> = {};
@@ -41,12 +40,10 @@ class TestHostComponent {
 describe('ExternalLinkDirective', () => {
   let fixture: ComponentFixture<TestHostComponent>;
   let openSpy: ReturnType<typeof vi.spyOn>;
-  let bridgeOpenSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
     delete (globalThis as any).Capacitor;
     openSpy = vi.spyOn(window, 'open').mockImplementation(() => null as any);
-    bridgeOpenSpy = vi.spyOn(externalLinkNativeBridge, 'open').mockResolvedValue(undefined);
 
     await TestBed.configureTestingModule({
       imports: [TestHostComponent],
@@ -70,7 +67,6 @@ describe('ExternalLinkDirective', () => {
     link.dispatchEvent(event);
 
     expect(preventDefaultSpy).not.toHaveBeenCalled();
-    expect(bridgeOpenSpy).not.toHaveBeenCalled();
     expect(openSpy).not.toHaveBeenCalled();
   });
 
@@ -87,9 +83,8 @@ describe('ExternalLinkDirective', () => {
     link.dispatchEvent(event);
 
     expect(preventDefaultSpy).toHaveBeenCalledTimes(1);
-    expect(bridgeOpenSpy).toHaveBeenCalledTimes(1);
-    expect(bridgeOpenSpy).toHaveBeenCalledWith({ url: 'https://example.com/web' });
-    expect(openSpy).not.toHaveBeenCalled();
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(openSpy).toHaveBeenCalledWith('https://example.com/web', '_blank');
   });
 
   it('3. on native: bound input expression is passed to openExternal', () => {
@@ -105,9 +100,8 @@ describe('ExternalLinkDirective', () => {
     link.dispatchEvent(event);
 
     expect(preventDefaultSpy).toHaveBeenCalledTimes(1);
-    expect(bridgeOpenSpy).toHaveBeenCalledTimes(1);
-    expect(bridgeOpenSpy).toHaveBeenCalledWith({ url: 'https://example.com/bound' });
-    expect(openSpy).not.toHaveBeenCalled();
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(openSpy).toHaveBeenCalledWith('https://example.com/bound', '_blank');
   });
 
   it('4. on native: static appExternalLink falls back to anchor href', () => {
@@ -123,8 +117,7 @@ describe('ExternalLinkDirective', () => {
     link.dispatchEvent(event);
 
     expect(preventDefaultSpy).toHaveBeenCalledTimes(1);
-    expect(bridgeOpenSpy).toHaveBeenCalledTimes(1);
-    expect(bridgeOpenSpy).toHaveBeenCalledWith({ url: 'https://example.com/static' });
-    expect(openSpy).not.toHaveBeenCalled();
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(openSpy).toHaveBeenCalledWith('https://example.com/static', '_blank');
   });
 });
