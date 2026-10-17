@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from settings_core.views import SettingsViewSet, PublicConfigViewSet
+from settings_core.mobile_views import MobileUpdateManifestView, MobileFileDownloadView
 from config.views_backup import (
     BackupCreateView,
     BackupRestoreView,
@@ -22,6 +23,8 @@ urlpatterns = [
     path('api/org/', include('companies.urls')),
     path('api/settings/global/', SettingsViewSet.as_view({'get': 'global_settings', 'post': 'global_settings'})),
     path('api/public/config/', PublicConfigViewSet.as_view({'get': 'list'})),
+    re_path(r'^api/public/mobile-update/?$', MobileUpdateManifestView.as_view(), name='mobile-update-manifest'),
+    re_path(r'^api/public/mobile-files/(?P<kind>[^/]+)/(?P<name>.+?)/?$', MobileFileDownloadView.as_view(), name='mobile-file-download'),
     path('api/backup/create/', BackupCreateView.as_view()),
     path('api/backup/restore/', BackupRestoreView.as_view()),
     path('api/backup/snapshots/', SnapshotListView.as_view(), name='snapshot_list'),
