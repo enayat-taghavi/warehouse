@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 
 import os
+import socket
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,7 +44,27 @@ if os.environ.get('DJANGO_ENV') == 'production':
     if not os.environ.get('DJANGO_SECRET_KEY'):
         raise RuntimeError("DJANGO_SECRET_KEY must be set in production environment!")
 
-ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',') if h.strip()]
+DEFAULT_ALLOWED_HOSTS = [
+    'soft.farsalish.ir',
+    'app.farsalish.ir',
+    'soft.lalalorga.ir',
+    'soft.comanage.ir',
+    'localhost',
+    '127.0.0.1',
+    '[::1]',
+]
+try:
+    for _ip in socket.gethostbyname_ex(socket.gethostname())[2]:
+        if _ip and _ip not in DEFAULT_ALLOWED_HOSTS:
+            DEFAULT_ALLOWED_HOSTS.append(_ip)
+except Exception:
+    pass
+
+_env_allowed_hosts = os.environ.get('DJANGO_ALLOWED_HOSTS')
+if _env_allowed_hosts:
+    ALLOWED_HOSTS = [h.strip() for h in _env_allowed_hosts.split(',') if h.strip()]
+else:
+    ALLOWED_HOSTS = list(DEFAULT_ALLOWED_HOSTS)
 WH_CANONICAL_DOMAIN = os.environ.get('WH_CANONICAL_DOMAIN', '').strip()
 
 if os.environ.get('DJANGO_SECURE_PROXY_SSL') in ('1', 'true', 'True'):
@@ -296,12 +317,37 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
-CORS_ALLOW_ALL_ORIGINS = True
+DEFAULT_CORS_ALLOWED_ORIGINS = [
+    'https://soft.farsalish.ir',
+    'https://app.farsalish.ir',
+    'https://soft.lalalorga.ir',
+    'https://soft.comanage.ir',
+    'http://localhost:4200',
+    'http://localhost:4300',
+    'capacitor://localhost',
+    'https://localhost',
+]
+
+_env_cors_origins = os.environ.get('DJANGO_CORS_ALLOWED_ORIGINS')
+if _env_cors_origins:
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _env_cors_origins.split(',') if o.strip()]
+else:
+    CORS_ALLOWED_ORIGINS = list(DEFAULT_CORS_ALLOWED_ORIGINS)
+
 CORS_EXPOSE_HEADERS = ['ETag', 'etag', 'Content-Disposition']
 from corsheaders.defaults import default_headers
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'if-match',
     'If-Match',
+    'x-active-app',
+    'x-active-role',
+    'x-base-updated-at',
+    'x-client-tab-id',
+    'x-company-id',
+    'x-entity-sync-id',
+    'x-entity-type',
+    'x-app-version',
+    'x-app-platform',
 ]
 
 REST_FRAMEWORK = {
