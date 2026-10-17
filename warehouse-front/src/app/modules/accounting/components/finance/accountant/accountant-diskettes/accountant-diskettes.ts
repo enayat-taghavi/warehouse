@@ -14,6 +14,7 @@ import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
+import { saveBlob } from '../../../../../../core/platform/file-output';
 import {
   PAYROLL_MONTHS,
   defaultPayrollPeriod,
@@ -219,12 +220,7 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
   }
 
   private saveBlob(blob: Blob, filename: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    void saveBlob(blob, filename);
   }
 
   /**

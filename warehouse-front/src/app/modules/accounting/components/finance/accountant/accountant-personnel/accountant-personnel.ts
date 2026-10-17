@@ -34,6 +34,7 @@ import { ModalFocus } from '../../../../../../core/utils/modal-focus';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
+import { saveBlob } from '../../../../../../core/platform/file-output';
 
 export type AccountantPersonnelSubTab = 'new' | 'payroll' | 'changes' | 'all';
 export type AccountantPersonnelStatusFilter = 'ALL' | 'pending_accountant' | 'pending_manager' | 'approved' | 'revision_required' | 'rejected';
@@ -348,12 +349,7 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
     this.personnelApi.downloadMissingPrimaryShebaReport().subscribe({
       next: (blob: Blob) => {
         this.isDownloadingShebaReport = false;
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'Missing_Primary_Sheba_Report.xlsx';
-        a.click();
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, 'Missing_Primary_Sheba_Report.xlsx');
         this.toast.success('گزارش پرونده‌های فاقد شبا با موفقیت دانلود شد.');
         this.cdr.detectChanges();
       },

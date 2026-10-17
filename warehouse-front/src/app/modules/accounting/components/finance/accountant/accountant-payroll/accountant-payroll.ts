@@ -24,6 +24,7 @@ import {
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { STATUS_ICONS, PLATFORM_ENTITY_ICONS } from '../../../../../../shared/icons/semantic-icons';
+import { saveBlob, printWindow } from '../../../../../../core/platform/file-output';
 
 export type AccountantPayrollSubTab = 'ready_to_calculate' | 'calculated' | 'approved' | 'all' | 'work_summary';
 
@@ -551,12 +552,7 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
     this.toast.info('در حال تولید فایل اکسل ۵۸ ستونی حقوق دوره...');
     this.personnelApi.exportMonthlyPayrollExcel(this.currentPeriodId).subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Payroll_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `Payroll_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`);
         this.toast.success('فایل اکسل حقوق با موفقیت دانلود شد.');
       },
       error: () => {
@@ -600,7 +596,7 @@ export class AccountantPayrollHubComponent implements OnInit, OnDestroy {
   }
 
   printCurrentPayslip(): void {
-    window.print();
+    printWindow();
   }
 
   // ─── ورود مالیات دارایی (فایل اکسل یا چسباندن متن) ───

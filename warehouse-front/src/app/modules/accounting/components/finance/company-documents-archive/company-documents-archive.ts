@@ -16,6 +16,7 @@ import { ActionButtonComponent } from '../../../../../shared/components/action-b
 import { ServerUrlPipe } from '../../../../../shared/pipes/server-url.pipe';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
 import { PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons/semantic-icons';
+import { saveBlob } from '../../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-company-documents-archive',
@@ -391,15 +392,8 @@ export class CompanyDocumentsArchiveComponent implements OnInit, OnDestroy {
   downloadDocument(doc: CompanyDocument): void {
     this.api.downloadDocument(doc.id).subscribe({
       next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
         const ext = doc.file ? doc.file.split('.').pop() : 'pdf';
-        a.download = `${doc.title || 'document'}.${ext}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `${doc.title || 'document'}.${ext}`);
         this.toast.success('سند با موفقیت دریافت شد.');
       },
       error: (err) => {

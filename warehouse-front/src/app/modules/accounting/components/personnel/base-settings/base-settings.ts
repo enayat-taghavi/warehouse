@@ -12,6 +12,7 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
+import { saveBlob } from '../../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-base-settings',
@@ -519,12 +520,7 @@ export class BaseSettings implements OnInit, OnDestroy {
     ]);
     const csvContent = '﻿' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `job_grades_${this.fiscalYear}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    void saveBlob(blob, `job_grades_${this.fiscalYear}.csv`);
     this.toast.show('success', 'فایل اکسل/CSV جدول ۲۰ گروه شغلی دانلود شد.');
   }
 

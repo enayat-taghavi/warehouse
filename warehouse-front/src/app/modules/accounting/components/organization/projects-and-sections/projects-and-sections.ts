@@ -24,6 +24,7 @@ import { ActionButtonComponent } from '../../../../../shared/components/action-b
 import { CommandCenterComponent } from '../../../../../shared/components/command-center/command-center.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
 import { PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons/semantic-icons';
+import { saveBlob } from '../../../../../core/platform/file-output';
 
 export interface RoleDefinition {
   key: 'manager' | 'accountant' | 'supervisor' | 'treasury' | 'employee';
@@ -727,12 +728,7 @@ export class ProjectsAndSectionsComponent implements OnInit, OnDestroy {
 
   // --- ورودی و خروجی اکسل ---
   private triggerDownloadBlob(blob: Blob, filename: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    void saveBlob(blob, filename);
   }
 
   exportExcel(): void {

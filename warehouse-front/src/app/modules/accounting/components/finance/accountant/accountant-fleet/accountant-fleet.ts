@@ -32,6 +32,7 @@ import {
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
+import { saveBlob } from '../../../../../../core/platform/file-output';
 
 export type AccountantFleetSubTab = 'new' | 'settlement' | 'changes' | 'all';
 
@@ -417,12 +418,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     this.personnelApi.exportFleetBankExcel(this.selectedWarehouseId, this.yearMonth).subscribe({
       next: (blob: Blob) => {
         this.isExportingFleetBank = false;
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Fleet_Bank_Payment_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `Fleet_Bank_Payment_${this.fiscalYear}_${payrollMonthCode(this.selectedMonth)}.xlsx`);
         this.toast.showSuccess('فایل پرداخت بانکی تسویه ناوگان با موفقیت صادر گردید.');
         this.cdr.detectChanges();
       },
@@ -441,12 +437,7 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
     this.personnelApi.exportVehiclesExcel(params).subscribe({
       next: (blob: Blob) => {
         this.isExportingExcel = false;
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Fleet_Vehicles_${new Date().toISOString().slice(0, 10)}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `Fleet_Vehicles_${new Date().toISOString().slice(0, 10)}.xlsx`);
         this.toast.showSuccess('خروجی اکسل ناوگان با موفقیت صادر گردید.');
       },
       error: () => {

@@ -12,6 +12,7 @@ import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
+import { saveBlob } from '../../../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-accountant-invoices-hub',
@@ -268,12 +269,7 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
       status: this.activeSubTab === 'pending_audit' ? 'pending_accountant' : undefined
     }).subscribe({
       next: (blob: Blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Accountant_Invoices_${this.selectedSectionId || 'all'}.xlsx`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `Accountant_Invoices_${this.selectedSectionId || 'all'}.xlsx`);
         this.toast.success('فایل اکسل ممیزی فاکتورها دریافت شد.');
       },
       error: () => {

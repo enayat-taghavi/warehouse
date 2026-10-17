@@ -27,6 +27,7 @@ import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-ba
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { CommandCenterComponent } from '../../../../../shared/components/command-center/command-center.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
+import { saveBlob } from '../../../../../core/platform/file-output';
 
 export interface CounterpartyTypeOption {
   key: 'driver' | 'repair_shop' | 'fuel_station' | 'contractor' | 'other';
@@ -608,12 +609,7 @@ export class CounterpartiesComponent implements OnInit, OnDestroy {
 
   // ورودی و خروجی اکسل
   private triggerDownloadBlob(blob: Blob, filename: string): void {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    void saveBlob(blob, filename);
   }
 
   exportExcel(): void {
