@@ -5554,3 +5554,118 @@ test(guardians): guardians 33 and 35 check the current module build and lazy rou
    - شرط `tasks.md`: `{'g33_n...
 
 ---
+
+### Task 1 of 3 — 2026-10-17 02:41:53
+- **Status:** DONE
+- **Conversation:** `05527fd2-b9fb-413b-8c7e-fe33a2ea9ed5`
+- **Steps:** 90
+- **Duration:** 11m 15s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/6 passed
+- **Task:**
+```
+Session 18 of 23 — Persona characterization spec: pin availableRoles, the persona list, SoD prohibitions and role route isolation before moving them to the modules
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- This session adds one test file only: `warehouse-front/src/app/core/services/app-persona.characterization.spec.ts`. Do not change application code, existing specs, config or scripts.
+- The spec pins today's behavior. Expected values are literal arrays and objects written in the spec, taken from the behavior on HEAD; no snapshot files, no `toMatchSnapshot`. The spec must test only through public members of `AppPersonaService` (`availableRoles`, `isActionProhibited`, `canPerform`, `canAccessRoute`, `getDefaultRouteForRole`, `activeApp`, `activeRole`) and must not import `ALL_APP_ROLES` or `FRONTEND_SOD_PROHIBITIONS`, because the next sessions move those constants into the modules and this spec must keep passing unchanged.
+- Use the real `ModuleRegistryService` (not a mock) with `setInstalledModules(['warehouse', 'accounting'])`, because the next sessions read persona data from the registry.
+- No `fs`, `path` or `__dirname`; no `it.skip`, `it.only`, `it.todo`, `xit`.
+- Do not push. Stage only the new spec. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase3/modular_architecture_phase3_plan.md`, heading `## ۴.` (persona row) and the last entry under `## گزارش پیشرفت` (batch C).
+- `core/services/app-persona.service.ts`: `ALL_APP_ROLES`, `FRONTEND_SOD_PROHIBITIONS`, `availableRoles` (computed from `activeApp`, `isSuperuser()`, `auth.userPermissions()`, `auth.user()?.roles`, `hasWarehouseAccess`, `hasPersonnelAccess`), `isActionProhibited`, `canAccessRoute`.
+- Existing spec for setup ideas: `core/services/app-persona.generic-module.spec.ts` (storage mock). Construct the service with `TestBed` and mocks for `AuthService` (signals `user` and `userPermissions`), `Router` (`events` as a `Subject`, `navigate` as `vi.fn()`), `WebSocketService`, `SessionTabService` (`getActiveApp`, `getActiveRole`, setters as `vi.fn()`) and `ActiveCompanyService` (`hasWarehouseModule: true`, `hasCompanyDocumentsAccess()` returning false).
+
+3. Definitions:
+- "access user" means a non-superuser whose permissions give access to both modules through the real registry (include at least one `permissionMarkers` entry of each module from `modules/warehouse/module.ts` and `modules/accounting/module.ts`, plus `allowed_apps` if the registry needs it).
+- "role list" of a case means `availableRoles().map(r => r.code)` in order.
+
+4. Task: write the spec with at least 25 tests:
+- a) Superuser, `activeApp` `'personnel'`, `'warehouse'` and `'operations'`: the full persona objects (all seven fields) in order, as literals.
+- b) Non-superuser role lists for app `'personnel'`, one case per trigger in `availableRoles`: each permission and each user role that the personnel branch checks (including the operator rule with and without another explicit role, and `treasurer` as a user role), plus one case with all personnel triggers together. Each case adds the access user's base permissions.
+- c) The same for app `'warehouse'`: each permission and user role the warehouse branch checks, including `view_sys_supervisor` with and without `can_act_as_workshop_supervisor`, plus all warehouse triggers together.
+- d) A non-superuser with no access to the active app gets `[]` for `'personnel'` and for `'warehouse'`; app `'operations'` for a non-superuser gives `[]`.
+- e) `isActionProhibited` for every key of today's SoD map: set `activeApp` and `activeRole` from the key, call with the route prefixed by `/app/finance` (personnel keys) or `/app/warehouse` (warehouse keys), expect true for each listed action and false for an unlisted action; superuser always false.
+- f) `canAccessRoute` for the access user with `activeRole` set to each of `accountant`, `operator`, `supervisor`, `manager`, `treasury`, `org_admin` and `counter`, over this route list: `/app/finance/employee-attendance`, `/app/finance/supervisor-fleet`, `/app/finance/accountant-payroll`, `/app/finance/manager-dashboard`, `/app/finance/treasurer-cheques`, `/app/finance/finance-cartable`, `/app/finance/treasury-cartable`, `/app/finance/manager-approvals`, `/app/finance/attendance`, `/app/finance/fleet`, `/app/finance/projects-and-sections`, `/app/finance/company-documents`, `/app/finance/health`, `/app/warehouse/dashboard`. Record the boolean table as a literal and compare it in one test per role.
+- g) `getDefaultRouteForRole(code)` for every persona code plus `'treasurer'`, and for an unknown code with `activeApp` `'warehouse'` and with `activeApp` `'personnel'`.
+
+5. Tool policy: from the repo root, at most five runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/services/app-persona*.spec.ts"`. To learn today's values, you may temporarily log them in a scratch test, but the committed spec must contain only literal expectations. If a run fails, read the log and change approach.
+
+6. Before finishing: `git status --short` shows only runner files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(persona): characterization of available roles, persona list, SoD prohibitions and role route isolation
+- Short English report: number of tests per group (a to f), the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام‌های چهارگانه پروتکل اجباری (Mandatory Protocol)
+
+۱. **توضیح ساده (Explain Simply):**
+در نشست ۱۸ از ۲۳، فایل تست مشخصه‌یابی (Characterization Test) برای سرویس پرسونای فرانت‌اند (`AppPersonaService`) در مسیر `warehouse-front/src/app/core/services/app-persona.characterization.spec.ts` ایجاد شد تا رفتار فعلی سیستم قبل از انتقال ثابت‌ها و قوانین به درون ماژول‌های مستقل (انبار و مالی) به‌صورت دقیق با مقادیر واقعی و قطعی (Literal) پین و تثبیت گردد.
+
+۲. **بررسی و اعتبارسنجی (Verify Immediately):**
+- ساختار و رفتارهای کنونی `availableRoles`، ماتریس SoD در `isActionProhibited` و `canPerform`، ایزولاسیون روت‌های نقش‌ها در `canAccessRoute` و روت‌های پیش‌فرض در `get...
+
+---
+
+### Task 1 of 1 — 2026-10-17 03:52:37
+- **Status:** DONE
+- **Conversation:** `0b30e6cd-32b4-4ee6-bda7-d372fc76a8c1`
+- **Steps:** 131
+- **Duration:** 45m 37s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 11/12 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
+  - verify round 1: 11/12 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 81ab022 --include "src/**/*.spec.ts"`
+  - verify round 2: 12/12 passed
+- **Task:**
+```
+Session 20 of 23 — SoD prohibitions, role route isolation and role default routes come from the modules
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Behavior must stay identical with both modules installed: `app-persona.characterization.spec.ts` must pass without any change. Do not edit that spec.
+- Change only `core/modules/module-contract.ts`, `core/services/app-persona.service.ts`, `modules/accounting/personas.ts` and `modules/warehouse/personas.ts` (under `warehouse-front/src/app/`). The method names `switchApp`, `switchRole`, `canPerform`, `isActionProhibited` and `canAccessRoute` stay in `app-persona.service.ts` with the same signatures.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Session 19 added `ModulePersonas` and `modules/*/personas.ts`.
+- `FRONTEND_SOD_PROHIBITIONS` in `app-persona.service.ts` has `personnel:*` keys (accounting) and `warehouse:counter:*` keys (warehouse). `canAccessRoute` first checks app-level access by route prefix, then has one branch per accounting role (`accountant`, `operator`, `supervisor`, `manager`, `treasury`, `org_admin`) that denies routes by substring.
+
+3. Definitions: "role route rule" means `isRouteDeniedForRole?: (role: string, cleanRoute: string) => boolean`, returning true exactly when today's branch for that role returns false. "role default routes" means `defaultRouteForRole?: Record<string, string>` holding today's `case` targets of `getDefaultRouteForRole` for that module's role codes (accounting includes `'treasurer'`).
+
+4. Task:
+- a) Add `sodProhibitions?: Record<string, string[]>`, `isRouteDeniedForRole?` and `defaultRouteForRole?` to `ModulePersonas`.
+- b) Move each module's SoD keys (verbatim keys and action lists) into its `personas.ts`, and move the six accounting role branches of `canAccessRoute` (same substrings, same order, same `allowed` list for `org_admin`) into accounting's `isRouteDeniedForRole`.
+- c) In `app-persona.service.ts`: `isActionProhibited` looks up the key in the merged `sodProhibitions` of the installed modules, read at call time; `canAccessRoute` keeps the superuser shortcut and the app-level prefix checks unchanged, then returns false when any installed module's `isRouteDeniedForRole(role, cleanRoute)` is true. `getDefaultRouteForRole` keeps the `ops_commander` case and the `default` branch exactly as today and, before them, returns the first installed module's `defaultRouteForRole[role]` when defined. Keep exporting `FRONTEND_SOD_PROHIBITIONS` only if a file outside this session's scope imports it.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/services/app-persona*.spec.ts"` and one run of `python scripts/e2e/guardian_57_front_module_fence.py`. Do not run `phase_guardian_approval.py`; it writes to the database. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(persona): SoD prohibitions, role route isolation and role default routes from the module personas
+- Short English report: changed files, the last ng-test-compare summary line, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+تست `login-and-app-switching.dom.spec.ts` به تنهایی در حال اجراست تا مشخص شود آیا خطای مشاهده‌شده ناشی از اجرای ایزوله است یا تداخل وضعیت در تست‌های همزمان.
+
+</div>
+
+---

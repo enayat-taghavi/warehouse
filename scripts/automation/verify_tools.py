@@ -868,7 +868,47 @@ def cmd_spec_check(args) -> int:
     return 1 if problems else 0
 
 
+NG_TEST_LOCK = CACHE_DIR / "ng-test.lock"
+
+
+def acquire_ng_test_lock(timeout: float = 1800) -> bool:
+    """دو اجرای هم‌زمان ng-test-compare فایل tsconfig.runner.spec.json درخت کاری را از زیر هم می‌کشند؛ اجرای دوم صبر می‌کند."""
+    import psutil
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    deadline = time.time() + timeout
+    announced = False
+    while time.time() < deadline:
+        try:
+            fd = os.open(str(NG_TEST_LOCK), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode())
+            os.close(fd)
+            return True
+        except FileExistsError:
+            try:
+                holder = int(NG_TEST_LOCK.read_text().strip() or 0)
+            except (OSError, ValueError):
+                holder = 0
+            if not holder or not psutil.pid_exists(holder):
+                NG_TEST_LOCK.unlink(missing_ok=True)
+                continue
+            if not announced:
+                print(f"Another ng-test-compare (pid {holder}) is running; waiting for it to finish.")
+                announced = True
+            time.sleep(5)
+    print("Timed out waiting for the ng-test lock.")
+    return False
+
+
 def cmd_ng_test_compare(args) -> int:
+    if not acquire_ng_test_lock():
+        return 1
+    try:
+        return _ng_test_compare(args)
+    finally:
+        NG_TEST_LOCK.unlink(missing_ok=True)
+
+
+def _ng_test_compare(args) -> int:
     cleanup_stale_base_dirs()
     full_hash = git("rev-parse", args.base).strip()
     includes = [p for pattern in args.include for p in expand_braces(pattern)]

@@ -731,5 +731,19 @@ feat(guardians): semantic core fences for module app references and hardcoded mo
     هر دو نگهبان `--self-test` دارند: یک fixture سالم و ۵ fixture معیوب.
     - جدول ۳۸ ریدایرکت legacy تغییر نکرد.
     - Claude هر دو نگهبان و self-test آن‌ها را جداگانه روی HEAD اجرا کرد و هر چهار اجرا سبز بود.
+- **۲۶ مهر ۱۴۰۵ — دستهٔ C تمام شد (پرسونا):**
+  - **نشست ۱۸** (`8cb1408`): spec مشخصه‌نگار با ۷۰ تست و رجیستری واقعی. جدول‌های لفظی آن این‌ها را پوشش می‌دهند: هر ۱۸ کلید SoD، جدول ۷ نقش در ۱۴ مسیر، و مسیر پیش‌فرض هر نقش.
+  - **نشست ۱۹** (`81ab022`): پرسوناها و قاعده‌های `availableRoles` به `modules/*/personas.ts` رفتند. `getAllAppRoles()` فهرست را هر بار از رجیستری می‌خواند. spec مشخصه‌نگار بدون تغییر سبز ماند.
+    - **خطای بررسی‌های Claude در دور ۰:**
+      - یک بررسی متنی دنبال شرط انبار در `module.ts` می‌گشت، در حالی که تسک آن را در `personas.ts` گذاشته بود.
+      - الگوی `dist-free` (`can_act_as_wh_manager`) در `auth.guard.ts` هسته هم هست.
+
+      Claude runner را پیش از فرستادن این دو شکست به agent متوقف کرد و بررسی‌ها را اصلاح کرد. بررسی‌های اصلاح‌شده و `ng-test-compare` کامل (بدون پس‌رفت) را خودش اجرا کرد و نشست را دستی `[DONE]` زد.
+  - **نشست ۲۰** (`bda6b20`): کلیدهای SoD، قاعدهٔ مسیر هر نقش (`isRouteDeniedForRole`) و مسیر پیش‌فرض هر نقش (`defaultRouteForRole`) از پرسونای ماژول خوانده می‌شوند. الگوهای `dist-free` این نشست (`personnel:operator:/attendance` و `warehouse:counter:/customs`) پیش از اجرا روی منبع آزموده شدند و فقط در سرویس پرسونا بودند.
+    - **دور ۰:** فقط `clean-tree` شکست خورد، چون agent تغییر commit‌نشده‌ای در `notification-center.dom.spec.ts` گذاشته بود. agent آن را برگرداند.
+    - **دور ۱:** چهار شکست ظاهری در `session-tab.service.spec` و `login-and-app-switching.dom.spec` دیده شد. دور ۲ روی همان کد سبز بود.
+    - **علت شکست‌های دور ۱:** agent `ng test`ها را در پس‌زمینه اجرا می‌کرد و یکی از آن‌ها پس از پایان runner هم زنده بود. این اجراها با `ng-test-compare` خود runner روی فایل مشترک `tsconfig.runner.spec.json` تداخل می‌کردند.
+    - **سنجش جداگانه:** Claude همان دو spec را سه بار جدا اجرا کرد و هر سه بار ۷ از ۷ سبز بود.
+    - **اصلاح:** `ng-test-compare` حالا قفل `scratch/runner-cache/ng-test.lock` دارد و اجرای هم‌زمان دوم صبر می‌کند (با دو اجرای هم‌زمان آزموده شد). تسک‌های دستهٔ D هم صریحاً اجرای پس‌زمینه را منع می‌کنند.
 
 </div>
