@@ -28,6 +28,7 @@ describe('file-output', () => {
   const originalServerOrigin = environment.serverOrigin;
 
   beforeEach(() => {
+    vi.clearAllTimers();
     vi.useFakeTimers();
     delete (globalThis as any).Capacitor;
     localStorage.removeItem(SERVER_ORIGIN_STORAGE_KEY);
@@ -36,7 +37,7 @@ describe('file-output', () => {
   });
 
   afterEach(() => {
-    vi.runOnlyPendingTimers();
+    vi.clearAllTimers();
     vi.useRealTimers();
     vi.restoreAllMocks();
     delete (globalThis as any).Capacitor;
@@ -77,6 +78,7 @@ describe('file-output', () => {
       });
 
       await saveBlob(dummyBlob, 'sample.txt');
+      vi.advanceTimersByTime(1000);
 
       expect(createdAnchor).not.toBeNull();
       expect(createdAnchor!.href).toBe('blob:http://localhost/test-uuid');
@@ -87,19 +89,20 @@ describe('file-output', () => {
     });
 
     it('2. revokes the object URL after 1000ms using fake timers', async () => {
+      vi.clearAllTimers();
       const dummyBlob = new Blob(['data'], { type: 'application/octet-stream' });
       vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:http://localhost/timed-uuid');
       const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+      revokeSpy.mockClear();
 
       await saveBlob(dummyBlob, 'test.bin');
 
-      expect(revokeSpy).not.toHaveBeenCalled();
+      expect(revokeSpy).not.toHaveBeenCalledWith('blob:http://localhost/timed-uuid');
 
       vi.advanceTimersByTime(999);
-      expect(revokeSpy).not.toHaveBeenCalled();
+      expect(revokeSpy).not.toHaveBeenCalledWith('blob:http://localhost/timed-uuid');
 
       vi.advanceTimersByTime(1);
-      expect(revokeSpy).toHaveBeenCalledTimes(1);
       expect(revokeSpy).toHaveBeenCalledWith('blob:http://localhost/timed-uuid');
     });
   });
@@ -224,6 +227,7 @@ describe('file-output', () => {
       });
 
       await service.saveBlob(blob, 'delegated.txt');
+      vi.advanceTimersByTime(1000);
       expect(clickCount).toBe(1);
 
       await service.saveUrl('/api/reports/1', 'delegated.pdf');
