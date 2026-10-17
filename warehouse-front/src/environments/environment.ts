@@ -10,4 +10,5 @@ export const environment = {
   useMockData: false,
   // Local-First شمارش: false = برگشت فوری به مسیر سرور-محور قبلی (feature flag)
   useLocalFirstCounting: true,
+  serverOrigin: '',
 };

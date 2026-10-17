@@ -9,6 +9,7 @@ import { authInterceptor } from './core/auth/auth.interceptor';
 import { errorInterceptor } from './core/error/error.interceptor';
 import { GlobalErrorHandler } from './core/error/global-error-handler';
 import { offlineInterceptor } from './core/interceptors/offline.interceptor';
+import { apiOriginInterceptor } from './core/interceptors/api-origin.interceptor';
 import { CustomRouteReuseStrategy } from './core/strategies/custom-route-reuse-strategy';
 import { OfflineSyncService } from './core/services/offline-sync.service';
 import { ConfigApiService } from './core/api/config-api.service';
@@ -40,7 +41,7 @@ export const appConfig: ApplicationConfig = {
       }),
     ),
     provideHttpClient(
-      withInterceptors([authInterceptor, errorInterceptor, offlineInterceptor])
+      withInterceptors([authInterceptor, errorInterceptor, offlineInterceptor, apiOriginInterceptor])
     ),
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     { provide: RouteReuseStrategy, useClass: CustomRouteReuseStrategy },
