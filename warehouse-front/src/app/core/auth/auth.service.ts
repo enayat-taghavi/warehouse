@@ -15,6 +15,7 @@ import {
 import { detectClientDeviceModel } from '../utils/device-detector';
 import { SessionTabService } from '../services/session-tab.service';
 import { WebSocketService } from '../http/websocket.service';
+import { PushService } from '../platform/push.service';
 
 const TOKEN_KEY = 'wh_access_token';
 const REFRESH_KEY = 'wh_refresh_token';
@@ -29,6 +30,7 @@ export class AuthService {
   /** سیگنال‌های reactive */
   private readonly _user = signal<AuthUserProfile | null>(this.loadUserFromStorage());
   private readonly _isLoading = signal(false);
+  private pushService = inject(PushService, { optional: true });
 
   /** computed signals — قابل خواندن توسط تمام کامپوننت‌ها */
   readonly user = this._user.asReadonly();
@@ -109,6 +111,12 @@ export class AuthService {
         this.handleRemoteLogout();
       }
     });
+
+    if (this.isLoggedIn()) {
+      try {
+        this.pushService?.register();
+      } catch {}
+    }
   }
 
   private handleRemoteLogout(): void {
@@ -204,6 +212,11 @@ export class AuthService {
           context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true)
         }).subscribe({ error: () => {} });
       }
+    } catch {}
+
+    // ۳. حذف توکن پوش‌نوتیفیکیشن پیش از پاک شدن نشست (Native only)
+    try {
+      this.pushService?.deleteToken();
     } catch {}
 
     this.clearAuth();
@@ -411,6 +424,11 @@ export class AuthService {
     this.setItem(USER_KEY, JSON.stringify(response.user));
     this._user.set(response.user);
     this._isLoading.set(false);
+
+    // ثبت پوش‌نوتیفیکیشن کلاینت نیتیو پس از ورود موفق
+    try {
+      this.pushService?.register();
+    } catch {}
   }
 
   private clearAuth(): void {
