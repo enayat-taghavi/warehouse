@@ -62,7 +62,7 @@ export const appConfig: ApplicationConfig = {
       // نصب ممکن است وارد محیط بدون شبکه شود، این پنجره خطرناک است: اگر در آن
       // فاصله اتصال قطع شود، پوسته برنامه هرگز کش نمی‌شود و دفعه بعد به‌جای
       // حالت آفلاین، صفحه خطای مرورگر بالا می‌آید.
-      enabled: !isDevMode(),
+      enabled: !isDevMode() && !isNativePlatform(),
       registrationStrategy: 'registerImmediately'
     }),
     provideAppInitializer(() => {
