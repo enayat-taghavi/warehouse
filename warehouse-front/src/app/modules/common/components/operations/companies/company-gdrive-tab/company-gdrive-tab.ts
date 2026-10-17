@@ -29,6 +29,7 @@ import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pip
 import { LoadingSkeletonComponent } from '../../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { openExternal } from '../../../../../../core/platform/external-link';
+import { isNativePlatform } from '../../../../../../core/platform/platform';
 import { ExternalLinkDirective } from '../../../../../../shared/directives/external-link.directive';
 
 export interface GDriveConfigResponse {
@@ -590,6 +591,11 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
    * اتصال دوگانه Popup و Redirect بر اساس دسترسی و مسدود بودن پاپ‌آپ (GD-22)
    */
   public connectGoogleDrive(): void {
+    if (isNativePlatform()) {
+      this.toastService.info('اتصال گوگلدرایو را از نسخهٔ وب انجام دهید');
+      return;
+    }
+
     const cid = this.selectedCompanyId();
     if (!cid) return;
 

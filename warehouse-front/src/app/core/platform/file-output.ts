@@ -1,12 +1,58 @@
 import { Injectable } from '@angular/core';
 import { resolveServerUrl } from './server-origin';
+import { isNativePlatform } from './platform';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import { Printer } from '@capgo/capacitor-printer';
+
+/**
+ * Converts a Blob to a base64-encoded string (without data URL prefix).
+ */
+export async function blobToBase64(blob: Blob): Promise<string> {
+  if (typeof blob.arrayBuffer === 'function') {
+    const buffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    const CHUNK_SIZE = 0x8000;
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+      const chunk = bytes.subarray(i, i + CHUNK_SIZE);
+      binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
+    }
+    return btoa(binary);
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const res = reader.result as string;
+      const base64 = res ? res.substring(res.indexOf(',') + 1) : '';
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 
 /**
  * Downloads/saves a Blob as a file with the specified filename.
- * Web implementation creates an object URL, clicks an anchor element, and revokes the URL after 1000ms.
+ * - On web: creates an object URL, clicks an anchor element, and revokes the URL after 1000ms.
+ * - On native: writes the blob as base64 with Filesystem.writeFile to Directory.Cache under filename,
+ *   then invokes Share.share({ title: filename, url: fileUri }).
  */
-export function saveBlob(blob: Blob, filename: string): Promise<void> {
-  // Native branch (Filesystem + Share) will be added in step ب-۲
+export async function saveBlob(blob: Blob, filename: string): Promise<void> {
+  if (isNativePlatform()) {
+    const base64Data = await blobToBase64(blob);
+    const writeResult = await Filesystem.writeFile({
+      path: filename,
+      data: base64Data,
+      directory: Directory.Cache,
+    });
+    await Share.share({
+      title: filename,
+      url: writeResult.uri,
+    });
+    return;
+  }
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -17,30 +63,65 @@ export function saveBlob(blob: Blob, filename: string): Promise<void> {
   setTimeout(() => {
     URL.revokeObjectURL(url);
   }, 1000);
-  return Promise.resolve();
 }
 
 /**
  * Downloads/saves a file from a URL.
  * Resolves server paths via resolveServerUrl before triggering download.
+ * - On web: triggers anchor download.
+ * - On native: downloads the resolved URL with fetch using the Authorization header,
+ *   then forwards the downloaded blob to saveBlob.
  */
-export function saveUrl(url: string, filename?: string): Promise<void> {
-  // Native branch (Filesystem + Share) will be added in step ب-۲
+export async function saveUrl(url: string, filename?: string): Promise<void> {
   const resolved = resolveServerUrl(url);
+
+  if (isNativePlatform()) {
+    const headers: Record<string, string> = {};
+    const token =
+      (typeof sessionStorage !== 'undefined' && (
+        sessionStorage.getItem('wh_access_token_warehouse') ||
+        sessionStorage.getItem('wh_access_token_finance') ||
+        sessionStorage.getItem('wh_access_token')
+      )) ||
+      (typeof localStorage !== 'undefined' && (
+        localStorage.getItem('wh_access_token_warehouse') ||
+        localStorage.getItem('wh_access_token_finance') ||
+        localStorage.getItem('wh_access_token')
+      ));
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(resolved, { headers });
+    if (!response.ok) {
+      throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    const effectiveFilename = filename || url.split('/').pop()?.split('?')[0] || 'download';
+    return saveBlob(blob, effectiveFilename);
+  }
+
   const a = document.createElement('a');
   a.href = resolved;
   a.download = filename ?? '';
   document.body.appendChild(a);
   a.click();
   a.remove();
-  return Promise.resolve();
 }
 
 /**
  * Prints the target window (or the current window by default).
+ * - On web: calls target.print() (or window.print()).
+ * - On native: prints the HTML of the target document via Printer.printHtml.
  */
-export function printWindow(target?: Window | null): void {
-  // Native branch (Printer plugin) will be added in step ب-۲
+export async function printWindow(target?: Window | null): Promise<void> {
+  if (isNativePlatform()) {
+    const doc = (target ?? (typeof window !== 'undefined' ? window : null))?.document;
+    const html = doc?.documentElement?.outerHTML || '';
+    await Printer.printHtml({ html });
+    return;
+  }
   (target ?? window).print();
 }
 
@@ -54,7 +135,7 @@ export class FileOutputService {
     return saveUrl(url, filename);
   }
 
-  print(target?: Window | null): void {
-    printWindow(target);
+  print(target?: Window | null): Promise<void> | void {
+    return printWindow(target);
   }
 }

@@ -1,14 +1,25 @@
 import { resolveServerUrl } from './server-origin';
+import { isNativePlatform } from './platform';
+import { Browser } from '@capacitor/browser';
 
 /**
  * Opens an external URL or popup window.
  * - On web: resolves relative server URLs via resolveServerUrl and delegates to window.open.
- * - On native mobile (phase B-2): delegates to system browser / InAppBrowser / AppLauncher plugin.
+ * - On native mobile (phase B-2): delegates to Browser plugin; popups to about:blank are not supported and return null.
  */
 export function openExternal(url: string, target: string = '_blank', features?: string): Window | null {
-  const resolved = resolveServerUrl(url);
+  if (isNativePlatform()) {
+    if (url === 'about:blank') {
+      return null;
+    }
+    const resolved = resolveServerUrl(url);
+    Browser.open({ url: resolved }).catch((err) => {
+      console.warn('[ExternalLink] Failed to open URL via Browser plugin:', err);
+    });
+    return null;
+  }
 
-  // Native mobile branch (system browser / AppLauncher / InAppBrowser) goes here in phase B-2.
+  const resolved = resolveServerUrl(url);
 
   if (typeof window === 'undefined') {
     return null;

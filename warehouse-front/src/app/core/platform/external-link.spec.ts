@@ -3,6 +3,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { openExternal } from './external-link';
 import { SERVER_ORIGIN_STORAGE_KEY } from './server-origin';
 import { environment } from '../../../environments/environment';
+import { Browser } from '@capacitor/browser';
+
+vi.mock('@capacitor/browser', () => ({
+  Browser: {
+    open: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 
 function createStorageMock() {
   let store: Record<string, string> = {};
@@ -28,6 +35,7 @@ describe('openExternal', () => {
     localStorage.removeItem(SERVER_ORIGIN_STORAGE_KEY);
     environment.serverOrigin = '';
     openSpy = vi.spyOn(window, 'open').mockImplementation(() => mockWindow);
+    vi.mocked(Browser.open).mockClear();
   });
 
   afterEach(() => {
@@ -61,14 +69,30 @@ describe('openExternal', () => {
     expect(result).toBe(mockWindow);
   });
 
-  it('4. resolves relative server URL before calling window.open', () => {
+  it('4. native branch opens resolved URL via Browser.open and returns null', async () => {
     (globalThis as any).Capacitor = {
       isNativePlatform: () => true,
       getPlatform: () => 'android',
     };
     environment.serverOrigin = 'https://app.farsalish.ir';
 
-    openExternal('/media/reports/export.xlsx');
-    expect(openSpy).toHaveBeenCalledWith('https://app.farsalish.ir/media/reports/export.xlsx', '_blank');
+    const result = openExternal('/media/reports/export.xlsx');
+    expect(Browser.open).toHaveBeenCalledWith({
+      url: 'https://app.farsalish.ir/media/reports/export.xlsx',
+    });
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(result).toBeNull();
+  });
+
+  it('5. native branch returns null for about:blank popups without opening browser', () => {
+    (globalThis as any).Capacitor = {
+      isNativePlatform: () => true,
+      getPlatform: () => 'android',
+    };
+
+    const result = openExternal('about:blank', 'GoogleDriveAuth');
+    expect(Browser.open).not.toHaveBeenCalled();
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(result).toBeNull();
   });
 });

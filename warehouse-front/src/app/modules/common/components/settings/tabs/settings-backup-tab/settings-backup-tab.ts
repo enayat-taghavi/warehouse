@@ -16,6 +16,7 @@ import { ConfirmDialogService } from '../../../../../../shared/components/confir
 import { CompanyApiService } from '../../../../../../core/api/company-api.service';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { openExternal } from '../../../../../../core/platform/external-link';
+import { isNativePlatform } from '../../../../../../core/platform/platform';
 import { ExternalLinkDirective } from '../../../../../../shared/directives/external-link.directive';
 
 @Component({
@@ -507,6 +508,10 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
   }
 
   connectSystemGDrive() {
+    if (isNativePlatform()) {
+      this.toast.info('اتصال گوگلدرایو را از نسخهٔ وب انجام دهید');
+      return;
+    }
     this.isConnectingGDrive = true;
     const width = 600;
     const height = 700;

@@ -1,4 +1,4 @@
-import { Component, signal, effect, inject } from '@angular/core';
+import { Component, signal, effect, inject, ApplicationRef } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { ToastContainerComponent } from './shared/components/toast/toast.component';
 import { ConfirmDialogComponent } from './shared/components/confirm-dialog/confirm-dialog.component';
@@ -9,6 +9,7 @@ import { AuthService } from './core/auth/auth.service';
 import { WebSocketService } from './core/http/websocket.service';
 import { ClientTelemetryService } from './core/services/client-telemetry.service';
 import { AppUpdateService } from './core/platform/app-update.service';
+import { initNativeShell } from './core/platform/native-shell';
 
 @Component({
   selector: 'app-root',
@@ -24,6 +25,7 @@ export class App {
   private telemetry = inject(ClientTelemetryService);
   private appUpdate = inject(AppUpdateService);
   private domainMigration = inject(DomainMigrationService);
+  private appRef = inject(ApplicationRef);
 
   constructor() {
     // پشتیبانی از لینک‌های دارای هش استعلام
@@ -49,6 +51,7 @@ export class App {
 
     this.appUpdate.init();
     this.domainMigration.init();
+    initNativeShell(this.appRef);
   }
 }
 
