@@ -223,6 +223,7 @@
                   <span class="text-xs font-bold text-slate-800">{{ systemGDrive.root_folder_name || 'سامانه ابری پشتیبان پایگاه داده' }}</span>
                   <a *ngIf="systemGDrive.root_folder_url"
                      [href]="systemGDrive.root_folder_url"
+                     [appExternalLink]="systemGDrive.root_folder_url"
                      target="_blank"
                      rel="noopener noreferrer"
                      class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 transition-colors"

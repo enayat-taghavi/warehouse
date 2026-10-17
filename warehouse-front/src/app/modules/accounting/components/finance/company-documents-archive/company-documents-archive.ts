@@ -17,11 +17,13 @@ import { ServerUrlPipe } from '../../../../../shared/pipes/server-url.pipe';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
 import { PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons/semantic-icons';
 import { saveBlob } from '../../../../../core/platform/file-output';
+import { openExternal } from '../../../../../core/platform/external-link';
+import { ExternalLinkDirective } from '../../../../../shared/directives/external-link.directive';
 
 @Component({
   selector: 'app-company-documents-archive',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, TabBarComponent, ActionButtonComponent, ServerUrlPipe],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, TabBarComponent, ActionButtonComponent, ServerUrlPipe, ExternalLinkDirective],
   templateUrl: './company-documents-archive.html',
   styleUrls: ['./company-documents-archive.css']
 })
@@ -398,7 +400,7 @@ export class CompanyDocumentsArchiveComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         if (doc.file_url) {
-          window.open(doc.file_url, '_blank');
+          openExternal(doc.file_url, '_blank');
         } else {
           this.toast.error('خطا در دانلود ایمن سند رسمی');
         }

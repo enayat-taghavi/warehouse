@@ -989,7 +989,7 @@
                     <div class="min-w-0">
                       <p class="text-xs font-bold text-slate-800 truncate">{{ doc.doc_type_display || doc.doc_type }}</p>
                       <p *ngIf="doc.file_name" class="text-[10px] text-slate-500 truncate text-end" dir="ltr">{{ doc.file_name }}</p>
-                      <a *ngIf="doc.file" [href]="doc.file" target="_blank" class="text-[10px] text-purple-600 hover:underline">
+                      <a *ngIf="doc.file" [href]="doc.file" [appExternalLink]="doc.file" target="_blank" class="text-[10px] text-purple-600 hover:underline">
                         مشاهده فایل
                       </a>
                     </div>
@@ -1018,7 +1018,7 @@
 
             <!-- پیوست سنتی تک‌فایلی قبلی -->
             <div *ngIf="existingAttachmentUrl" class="pt-1">
-              <a [href]="existingAttachmentUrl" target="_blank" class="inline-flex items-center gap-1 text-xs text-purple-700 hover:underline font-bold">
+              <a [href]="existingAttachmentUrl" [appExternalLink]="existingAttachmentUrl" target="_blank" class="inline-flex items-center gap-1 text-xs text-purple-700 hover:underline font-bold">
                 <span>📎 مشاهده فایل پیوست تکمیلی قبلی</span>
               </a>
             </div>
@@ -1262,6 +1262,7 @@
                       title="بازبینی‌شده">✓</span>
                 <a *ngIf="p.attachment"
                    [href]="p.attachment"
+                   [appExternalLink]="p.attachment"
                    target="_blank"
                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 text-[10px] font-bold border border-purple-200/80 transition-all mr-1 active:scale-95 shadow-2xs"
                    title="مشاهده و دانلود مدارک هویتی پرسنل">
@@ -1510,6 +1511,7 @@
             <span *ngIf="p.father_name" class="text-[10px] text-slate-500 font-medium">({{ p.father_name }})</span>
             <a *ngIf="p.attachment"
                [href]="p.attachment"
+               [appExternalLink]="p.attachment"
                target="_blank"
                class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200 active:scale-95"
                title="دانلود مدارک">

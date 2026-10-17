@@ -14,6 +14,7 @@ import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.direct
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
+import { ExternalLinkDirective } from '../../../../../../shared/directives/external-link.directive';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 
@@ -30,6 +31,7 @@ export type SupervisorFleetSubTab = 'new' | 'work_logs' | 'changes' | 'all';
     ActionButtonComponent,
     TabBarComponent,
     CommandCenterComponent,
+    ExternalLinkDirective,
   ],
   templateUrl: './supervisor-fleet.html',
   styleUrl: './supervisor-fleet.css',

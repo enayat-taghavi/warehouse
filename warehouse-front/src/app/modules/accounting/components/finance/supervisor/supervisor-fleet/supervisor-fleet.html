@@ -800,7 +800,7 @@
                 <span class="font-bold text-fg block">{{ doc.title || doc.doc_type }}</span>
                 <span class="text-muted text-[10px]">انقضا: {{ doc.expiry_date || 'نامحدود' }}</span>
               </div>
-              <a *ngIf="doc.file" [href]="doc.file" target="_blank"
+              <a *ngIf="doc.file" [href]="doc.file" [appExternalLink]="doc.file" target="_blank"
                  class="px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold flex items-center gap-1">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download" class="w-3.5 h-3.5"></svg>
                 <span>مشاهده</span>

@@ -33,6 +33,7 @@ import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
+import { openExternal } from '../../../../../../core/platform/external-link';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { OverflowMenuComponent } from '../../../../../../shared/components/overflow-menu/overflow-menu.component';
 import { printWindow } from '../../../../../../core/platform/file-output';
@@ -801,7 +802,7 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
   downloadFleetMonthlyExcel(): void {
     if (!this.selectedYearMonth) return;
     const url = this.personnelApi.getFleetMonthlyExcelDownloadUrl(this.selectedWarehouseId, this.selectedYearMonth, this.selectedSectionId);
-    window.open(url, '_blank');
+    openExternal(url, '_blank');
   }
 
   onFleetExcelFileSelected(event: any): void {

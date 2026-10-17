@@ -15,11 +15,13 @@ import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pip
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { CompanyApiService } from '../../../../../../core/api/company-api.service';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
+import { openExternal } from '../../../../../../core/platform/external-link';
+import { ExternalLinkDirective } from '../../../../../../shared/directives/external-link.directive';
 
 @Component({
   selector: 'app-settings-backup-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, PersianDatePipe, ActionButtonComponent],
+  imports: [CommonModule, FormsModule, SvgIconDirective, PersianDatePipe, ActionButtonComponent, ExternalLinkDirective],
   templateUrl: './settings-backup-tab.html'
 })
 export class SettingsBackupTabComponent implements OnInit, OnDestroy {
@@ -513,7 +515,7 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
 
     let popup: Window | null = null;
     try {
-      popup = window.open('about:blank', 'GoogleDriveSystemAuth', `width=${width},height=${height},top=${top},left=${left},status=no,toolbar=no,menubar=no`);
+      popup = openExternal('about:blank', 'GoogleDriveSystemAuth', `width=${width},height=${height},top=${top},left=${left},status=no,toolbar=no,menubar=no`);
     } catch {
       popup = null;
     }

@@ -64,11 +64,12 @@ import { ActionButtonComponent } from '../../../../../shared/components/action-b
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { CompanyGdriveTabComponent } from './company-gdrive-tab/company-gdrive-tab';
 import { ServerUrlPipe } from '../../../../../shared/pipes/server-url.pipe';
+import { ExternalLinkDirective } from '../../../../../shared/directives/external-link.directive';
 
 @Component({
   selector: 'app-companies-management',
   standalone: true,
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, CompanyGdriveTabComponent, ServerUrlPipe],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, CompanyGdriveTabComponent, ServerUrlPipe, ExternalLinkDirective],
   providers: [CompaniesFacade],
   templateUrl: './companies.html',
   styleUrls: ['./companies.css']

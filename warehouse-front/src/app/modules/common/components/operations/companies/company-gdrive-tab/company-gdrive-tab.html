@@ -250,6 +250,7 @@
               <div class="flex items-center gap-2">
                 <a *ngIf="cfg.root_folder_url" 
                    [href]="cfg.root_folder_url" 
+                   [appExternalLink]="cfg.root_folder_url" 
                    target="_blank" 
                    rel="noopener noreferrer"
                    class="px-3 py-1.5 min-h-[40px] sm:min-h-[32px] rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all tap-target">

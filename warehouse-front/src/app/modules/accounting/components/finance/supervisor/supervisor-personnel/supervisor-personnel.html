@@ -936,7 +936,7 @@
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <div *ngFor="let doc of selectedViewProfile.documents" class="p-2 bg-white rounded-xl border border-slate-200 space-y-1">
               <div class="font-bold text-slate-700 text-[11px] truncate">{{ doc.doc_type_display || doc.doc_type }}</div>
-              <a *ngIf="doc.file" [href]="doc.file" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline text-[10px] flex items-center gap-1">
+              <a *ngIf="doc.file" [href]="doc.file" [appExternalLink]="doc.file" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline text-[10px] flex items-center gap-1">
                 <span>🔗 مشاهده مدرک</span>
               </a>
             </div>

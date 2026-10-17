@@ -39,6 +39,7 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ServerUrlPipe } from '../../../../../../shared/pipes/server-url.pipe';
 import { saveBlob } from '../../../../../../core/platform/file-output';
+import { ExternalLinkDirective } from '../../../../../../shared/directives/external-link.directive';
 
 export type PersonnelStatusFilter = 'all' | 'draft' | 'pending' | 'pending_supervisor' | 'manager_approved' | 'approved' | 'revision_required' | 'rejected';
 export type PersonnelModalTab = 'identity' | 'job' | 'banking' | 'address' | 'documents';
@@ -46,7 +47,7 @@ export type PersonnelModalTab = 'identity' | 'job' | 'banking' | 'address' | 'do
 @Component({
   selector: 'app-employee-new-personnel-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective, PersianDatePipe, ActionButtonComponent, TabBarComponent, ServerUrlPipe],
+  imports: [CommonModule, FormsModule, ExcelImportModal, SvgIconDirective, PersianDatePipe, ActionButtonComponent, TabBarComponent, ServerUrlPipe, ExternalLinkDirective],
   templateUrl: './employee-new-personnel.html',
   styleUrl: './employee-new-personnel.css'
 })

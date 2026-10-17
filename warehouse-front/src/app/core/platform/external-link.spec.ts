@@ -1,0 +1,74 @@
+// @vitest-environment jsdom
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { openExternal } from './external-link';
+import { SERVER_ORIGIN_STORAGE_KEY } from './server-origin';
+import { environment } from '../../../environments/environment';
+
+function createStorageMock() {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, val: string) => { store[key] = String(val); },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+    get length() { return Object.keys(store).length; },
+    key: (i: number) => Object.keys(store)[i] || null,
+  };
+}
+
+(globalThis as any).localStorage = createStorageMock();
+
+describe('openExternal', () => {
+  const originalServerOrigin = environment.serverOrigin;
+  let openSpy: ReturnType<typeof vi.spyOn>;
+  const mockWindow = { closed: false, focus: vi.fn(), close: vi.fn() } as unknown as Window;
+
+  beforeEach(() => {
+    delete (globalThis as any).Capacitor;
+    localStorage.removeItem(SERVER_ORIGIN_STORAGE_KEY);
+    environment.serverOrigin = '';
+    openSpy = vi.spyOn(window, 'open').mockImplementation(() => mockWindow);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete (globalThis as any).Capacitor;
+    localStorage.removeItem(SERVER_ORIGIN_STORAGE_KEY);
+    environment.serverOrigin = originalServerOrigin;
+  });
+
+  it('1. web passthrough and returned value with default target and without features', () => {
+    const result = openExternal('https://example.com/report');
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(openSpy).toHaveBeenCalledWith('https://example.com/report', '_blank');
+    expect(openSpy.mock.calls[0].length).toBe(2);
+    expect(result).toBe(mockWindow);
+  });
+
+  it('2. web passthrough with custom target and window features', () => {
+    const features = 'width=800,height=600,menubar=no';
+    const result = openExternal('https://example.com/form', '_self', features);
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(openSpy).toHaveBeenCalledWith('https://example.com/form', '_self', features);
+    expect(openSpy.mock.calls[0].length).toBe(3);
+    expect(result).toBe(mockWindow);
+  });
+
+  it('3. about:blank popup unchanged with OAuth popup dimensions', () => {
+    const popupFeatures = 'width=600,height=700,top=100,left=200,status=no,toolbar=no,menubar=no';
+    const result = openExternal('about:blank', 'GoogleDriveAuth', popupFeatures);
+    expect(openSpy).toHaveBeenCalledWith('about:blank', 'GoogleDriveAuth', popupFeatures);
+    expect(result).toBe(mockWindow);
+  });
+
+  it('4. resolves relative server URL before calling window.open', () => {
+    (globalThis as any).Capacitor = {
+      isNativePlatform: () => true,
+      getPlatform: () => 'android',
+    };
+    environment.serverOrigin = 'https://app.farsalish.ir';
+
+    openExternal('/media/reports/export.xlsx');
+    expect(openSpy).toHaveBeenCalledWith('https://app.farsalish.ir/media/reports/export.xlsx', '_blank');
+  });
+});

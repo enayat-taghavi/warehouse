@@ -9,6 +9,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { saveBlob } from '../../../../core/platform/file-output';
+import { openExternal } from '../../../../core/platform/external-link';
 
 @Component({
   selector: 'app-label-designer',
@@ -748,7 +749,7 @@ export class LabelDesigner implements OnInit, OnChanges, OnDestroy {
     this.labelApi.generatePdf(this.template.id, configPayload, this.customRemark, this.tempPrintSettings).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
-        const win = window.open(url, '_blank');
+        const win = openExternal(url, '_blank');
         
         this.isPrinting = false;
         this.printComplete.emit();

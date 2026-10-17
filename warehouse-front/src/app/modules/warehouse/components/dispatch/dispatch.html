@@ -416,7 +416,7 @@
             <div class="truncate max-w-[120px] text-[10px]" [title]="value">{{value || '-'}}</div>
           </ng-template>
           <ng-template appTableCol="hyperlink" label="هایپرلینک اسناد" [editable]="true" let-value="value">
-            <a *ngIf="value" [href]="value" target="_blank" class="text-indigo-600 hover:underline text-[10px] truncate max-w-[100px] inline-block" [title]="value">لینک سند ↗</a>
+            <a *ngIf="value" [href]="value" [appExternalLink]="value" target="_blank" class="text-indigo-600 hover:underline text-[10px] truncate max-w-[100px] inline-block" [title]="value">لینک سند ↗</a>
             <span *ngIf="!value" class="text-slate-300">-</span>
           </ng-template>
           <ng-template appTableCol="stamp" label="وضعیت مهر اسناد" [editable]="true" let-value="value"><span>{{value || '-'}}</span></ng-template>

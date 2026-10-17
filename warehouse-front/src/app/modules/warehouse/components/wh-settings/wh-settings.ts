@@ -16,6 +16,7 @@ import {
 } from '../../../../core/models/field-config.model';
 import { DynamicFieldApiService } from '../../api/dynamic-field-api.service';
 import { BackupApiService, DatabaseBackup, BackupVerifyResult } from '../../../../core/api/backup-api.service';
+import { openExternal } from '../../../../core/platform/external-link';
 
 @Component({
   selector: 'app-wh-settings',
@@ -532,7 +533,7 @@ export class WhSettings implements OnInit {
 
   downloadBackup(backup: DatabaseBackup) {
     const url = this.backupApi.downloadBackupUrl(backup.filename);
-    window.open(url, '_blank');
+    openExternal(url, '_blank');
   }
 
   formatFileSize(bytes: number): string {

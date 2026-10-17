@@ -28,6 +28,8 @@ import { isServerUnreachable } from '../../../../../../core/services/server-reac
 import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
 import { LoadingSkeletonComponent } from '../../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
+import { openExternal } from '../../../../../../core/platform/external-link';
+import { ExternalLinkDirective } from '../../../../../../shared/directives/external-link.directive';
 
 export interface GDriveConfigResponse {
   company_id: number;
@@ -99,7 +101,7 @@ export const MODEL_NAME_PERSIAN_MAP: Record<string, string> = {
 @Component({
   selector: 'app-company-gdrive-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, PersianDatePipe, LoadingSkeletonComponent, ActionButtonComponent],
+  imports: [CommonModule, FormsModule, SvgIconDirective, PersianDatePipe, LoadingSkeletonComponent, ActionButtonComponent, ExternalLinkDirective],
   templateUrl: './company-gdrive-tab.html'
 })
 export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
@@ -600,7 +602,7 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
 
     let popup: Window | null = null;
     try {
-      popup = window.open('about:blank', 'GoogleDriveAuth', `width=${width},height=${height},top=${top},left=${left},status=no,toolbar=no,menubar=no`);
+      popup = openExternal('about:blank', 'GoogleDriveAuth', `width=${width},height=${height},top=${top},left=${left},status=no,toolbar=no,menubar=no`);
     } catch {
       popup = null;
     }

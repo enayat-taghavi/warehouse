@@ -12,6 +12,7 @@ import { WebSocketService } from '../../../../../../core/http/websocket.service'
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
+import { ExternalLinkDirective } from '../../../../../../shared/directives/external-link.directive';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 
 export type SupervisorPersonnelSubTab = 'new' | 'attendance' | 'changes' | 'all';
@@ -26,6 +27,7 @@ export type SupervisorPersonnelSubTab = 'new' | 'attendance' | 'changes' | 'all'
     CommandCenterComponent,
     TabBarComponent,
     ActionButtonComponent,
+    ExternalLinkDirective,
   ],
   templateUrl: './supervisor-personnel.html',
   styleUrl: './supervisor-personnel.css'
