@@ -51,7 +51,7 @@ export class ToastService {
   standalone: true,
   imports: [CommonModule, SvgIconDirective],
   template: `
-    <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] flex flex-col gap-2 max-w-sm w-full px-4 select-none" id="toast-container">
+    <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] flex flex-col gap-2 max-w-sm w-full px-4 select-none" id="toast-container" style="padding-inline-start: max(1rem, calc(1rem + env(safe-area-inset-right, 0px))); padding-inline-end: max(1rem, calc(1rem + env(safe-area-inset-left, 0px)));">
       @for (toast of toastService.toasts(); track toast.id) {
         <div
           class="toast group relative flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-md shadow-xl text-xs font-bold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"

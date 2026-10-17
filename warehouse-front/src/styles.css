@@ -503,3 +503,48 @@ ng-persian-datepicker {
     height: calc(100vh - var(--domain-banner-h, 0px)) !important;
   }
 }
+
+/* ==========================================================================
+   SAFE-AREA INSET UTILITIES FOR NOTCHED DEVICES (AGENTS §7 / MOBILE PHASE A)
+   پشتیبانی از بریدگی ناچ، جزیره پویا (Dynamic Island) و نوار پایین در گوشی‌ها.
+   روی دستگاه‌های بدون ناچ، مقادیر صفر هستند و ظاهر دست‌نخورده باقی می‌ماند.
+   ========================================================================== */
+@layer utilities {
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .ps-safe {
+    padding-inline-start: env(safe-area-inset-left, 0px);
+  }
+  .pe-safe {
+    padding-inline-end: env(safe-area-inset-right, 0px);
+  }
+
+  [dir="rtl"] .ps-safe,
+  :root[dir="rtl"] .ps-safe {
+    padding-inline-start: env(safe-area-inset-right, 0px);
+  }
+  [dir="rtl"] .pe-safe,
+  :root[dir="rtl"] .pe-safe {
+    padding-inline-end: env(safe-area-inset-left, 0px);
+  }
+}
+
+/* Edge elements: mobile bottom navigation */
+.bottom-nav,
+.mobile-bottom-nav {
+  padding-bottom: max(0.5rem, calc(0.5rem + env(safe-area-inset-bottom, 0px)));
+  padding-inline-start: max(0.5rem, calc(0.5rem + env(safe-area-inset-right, 0px)));
+  padding-inline-end: max(0.5rem, calc(0.5rem + env(safe-area-inset-left, 0px)));
+}
+
+/* Edge elements: toast containers */
+#toast-container,
+.toast-container {
+  padding-inline-start: max(1rem, calc(1rem + env(safe-area-inset-right, 0px)));
+  padding-inline-end: max(1rem, calc(1rem + env(safe-area-inset-left, 0px)));
+}
+

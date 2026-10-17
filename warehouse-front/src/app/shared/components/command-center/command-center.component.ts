@@ -23,7 +23,7 @@ const ROW_SLOT_CLASSES: Record<'md' | 'lg', string> = {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
+    <header class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2" style="padding-top: max(0.25rem, calc(0.25rem + env(safe-area-inset-top, 0px))); padding-inline-start: max(0px, env(safe-area-inset-right, 0px)); padding-inline-end: max(0px, env(safe-area-inset-left, 0px));">
       <div [class]="containerClasses()">
         <div class="flex items-center overflow-x-auto min-w-0 max-w-full" [class]="slotClasses()">
           <ng-content select="[cc-tabs]" />

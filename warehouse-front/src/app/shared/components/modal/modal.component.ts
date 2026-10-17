@@ -27,6 +27,7 @@ import { ActionButtonComponent } from '../action-button/action-button.component'
         class="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-24"
         role="dialog"
         aria-modal="true"
+        style="padding-top: max(6rem, calc(1rem + env(safe-area-inset-top, 0px))); padding-bottom: max(1rem, calc(1rem + env(safe-area-inset-bottom, 0px))); padding-inline-start: max(1rem, calc(1rem + env(safe-area-inset-right, 0px))); padding-inline-end: max(1rem, calc(1rem + env(safe-area-inset-left, 0px)));"
       >
         <!-- Backdrop -->
         <div

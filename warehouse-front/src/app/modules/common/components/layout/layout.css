@@ -42,3 +42,23 @@
   border-bottom-color: #6366f1;
   color: #3730a3;
 }
+
+/* ==========================================================================
+   SAFE-AREA INSETS FOR LAYOUT HEADER (Notched phones & iPhone home-screen)
+   ========================================================================== */
+.layout-header {
+  padding-top: calc(0.5rem + env(safe-area-inset-top, 0px)) !important;
+  height: calc(64px + env(safe-area-inset-top, 0px)) !important;
+  padding-inline-start: max(0.5rem, calc(0.5rem + env(safe-area-inset-right, 0px))) !important;
+  padding-inline-end: max(0.5rem, calc(0.5rem + env(safe-area-inset-left, 0px))) !important;
+}
+
+@media (min-width: 640px) {
+  .layout-header {
+    padding-top: calc(1rem + env(safe-area-inset-top, 0px)) !important;
+    height: calc(70px + env(safe-area-inset-top, 0px)) !important;
+    padding-inline-start: max(1rem, calc(1rem + env(safe-area-inset-right, 0px))) !important;
+    padding-inline-end: max(1rem, calc(1rem + env(safe-area-inset-left, 0px))) !important;
+  }
+}
+
