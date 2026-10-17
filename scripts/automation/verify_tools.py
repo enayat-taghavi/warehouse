@@ -924,13 +924,17 @@ def _ng_test_compare(args) -> int:
                     skipped_specs=[renames.get(f, f) for f in base["skipped_specs"]])
     base_broken = set(base["type_errors"])
     try:
+        no_skip = getattr(args, "no_skip", False)
         head = run_suite(FRONT_DIR, "head", includes, excludes,
-                         {f for f in base_broken if f.endswith(".spec.ts")})
+                         set() if no_skip else {f for f in base_broken if f.endswith(".spec.ts")})
     finally:
         (FRONT_DIR / TSCONFIG_NAME).unlink(missing_ok=True)
 
     problems = []
-    new_type_errors = {f: e for f, e in head["type_errors"].items() if f not in base_broken}
+    if no_skip:
+        new_type_errors = dict(head["type_errors"])
+    else:
+        new_type_errors = {f: e for f, e in head["type_errors"].items() if f not in base_broken}
     for file, errs in new_type_errors.items():
         problems.append(f"new type errors in {file}: " + "; ".join(errs[:3]))
 
@@ -942,6 +946,9 @@ def _ng_test_compare(args) -> int:
     if (not new_failures and head["summary"] and base["summary"]
             and not head["failing"] and head["summary"]["failed"] > base["summary"]["failed"]):
         problems.append(f"more failing tests than base: {head['summary']['failed']} > {base['summary']['failed']}")
+    max_failed = getattr(args, "max_failed", None)
+    if max_failed is not None and head["summary"] and head["summary"]["failed"] > max_failed:
+        problems.append(f"failing tests on HEAD: {head['summary']['failed']} > allowed {max_failed}")
 
     if head["summary"] is None and base["summary"] is None:
         print("WARNING: tests could not run on base or on HEAD; nothing to compare.")
@@ -1042,6 +1049,9 @@ def main(argv=None) -> int:
     p.add_argument("--base", required=True)
     p.add_argument("--include", action="append", required=True)
     p.add_argument("--exclude", action="append")
+    p.add_argument("--no-skip", action="store_true",
+                   help="do not skip specs that failed to compile on base; any type error on HEAD fails")
+    p.add_argument("--max-failed", type=int, help="fail if HEAD has more failing tests than this")
     p.set_defaults(func=cmd_ng_test_compare)
 
     args = parser.parse_args(argv)
