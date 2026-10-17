@@ -46,6 +46,11 @@ export function initNativeShell(appRef?: ApplicationRef): void {
   // 1. Android Back Button handling
   try {
     nativeShellBridge.addListener('backButton', ({ canGoBack }) => {
+      const openModal = typeof document !== 'undefined' ? document.querySelector('[aria-modal="true"]') : null;
+      if (openModal) {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        return;
+      }
       if (canGoBack && typeof window !== 'undefined' && window.history.length > 1) {
         window.history.back();
       } else {
@@ -62,10 +67,7 @@ export function initNativeShell(appRef?: ApplicationRef): void {
 
   // 2. Status bar styling matching theme appearance
   try {
-    const isDark = typeof window !== 'undefined' && (
-      document.documentElement.classList.contains('dark') ||
-      window.matchMedia?.('(prefers-color-scheme: dark)').matches
-    );
+    const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
     nativeShellBridge.setStyle({
       style: isDark ? Style.Dark : Style.Light,
     }).catch((err) => {
@@ -78,7 +80,7 @@ export function initNativeShell(appRef?: ApplicationRef): void {
   // 3. Hide splash screen once the application is stable
   if (appRef && isObservable(appRef.isStable)) {
     const fallbackTimer = setTimeout(() => {
-      nativeShellBridge.hideSplash().catch(() => {});
+      nativeShellBridge.hideSplash().catch(() => { });
     }, 3000);
 
     firstValueFrom(appRef.isStable.pipe(filter(Boolean)))
@@ -88,9 +90,9 @@ export function initNativeShell(appRef?: ApplicationRef): void {
       })
       .catch(() => {
         clearTimeout(fallbackTimer);
-        nativeShellBridge.hideSplash().catch(() => {});
+        nativeShellBridge.hideSplash().catch(() => { });
       });
   } else {
-    nativeShellBridge.hideSplash().catch(() => {});
+    nativeShellBridge.hideSplash().catch(() => { });
   }
 }

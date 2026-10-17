@@ -592,7 +592,7 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
    */
   public connectGoogleDrive(): void {
     if (isNativePlatform()) {
-      this.toastService.info('اتصال گوگلدرایو را از نسخهٔ وب انجام دهید');
+      this.toastService.info('اتصال گوگل‌درایو را از نسخه وب انجام دهید.');
       return;
     }
 

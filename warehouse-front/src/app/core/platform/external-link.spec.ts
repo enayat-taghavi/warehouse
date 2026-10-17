@@ -63,7 +63,7 @@ describe('openExternal', () => {
     expect(result).toBe(mockWindow);
   });
 
-  it('4. native branch opens resolved URL via Browser.open and returns null', async () => {
+  it('4. native openExternal calls the Browser bridge once and never calls window.open', async () => {
     (globalThis as any).Capacitor = {
       isNativePlatform: () => true,
       getPlatform: () => 'android',
@@ -71,10 +71,11 @@ describe('openExternal', () => {
     environment.serverOrigin = 'https://app.farsalish.ir';
 
     const result = openExternal('/media/reports/export.xlsx');
+    expect(browserOpenSpy).toHaveBeenCalledTimes(1);
     expect(browserOpenSpy).toHaveBeenCalledWith({
       url: 'https://app.farsalish.ir/media/reports/export.xlsx',
     });
-    expect(openSpy).toHaveBeenCalledWith('https://app.farsalish.ir/media/reports/export.xlsx', '_blank');
+    expect(openSpy).not.toHaveBeenCalled();
     expect(result).toBeNull();
   });
 

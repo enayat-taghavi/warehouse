@@ -1,6 +1,6 @@
 import { Component, signal, effect, inject, ApplicationRef } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
-import { ToastContainerComponent } from './shared/components/toast/toast.component';
+import { ToastContainerComponent, ToastService } from './shared/components/toast/toast.component';
 import { ConfirmDialogComponent } from './shared/components/confirm-dialog/confirm-dialog.component';
 import { DomainMigrationBannerComponent } from './shared/components/domain-migration-banner/domain-migration-banner.component';
 import { AppVersionLockComponent } from './shared/components/app-version-lock/app-version-lock.component';
@@ -10,6 +10,7 @@ import { WebSocketService } from './core/http/websocket.service';
 import { ClientTelemetryService } from './core/services/client-telemetry.service';
 import { AppUpdateService } from './core/platform/app-update.service';
 import { initNativeShell } from './core/platform/native-shell';
+import { setFileOutputErrorNotifier } from './core/platform/file-output';
 
 @Component({
   selector: 'app-root',
@@ -26,8 +27,10 @@ export class App {
   private appUpdate = inject(AppUpdateService);
   private domainMigration = inject(DomainMigrationService);
   private appRef = inject(ApplicationRef);
+  private toast = inject(ToastService);
 
   constructor() {
+    setFileOutputErrorNotifier((m) => this.toast.error(m));
     // پشتیبانی از لینک‌های دارای هش استعلام
     if (typeof window !== 'undefined' && window.location.hash) {
       const hash = window.location.hash;

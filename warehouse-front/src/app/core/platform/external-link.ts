@@ -27,9 +27,6 @@ export function openExternal(url: string, target: string = '_blank', features?: 
     externalLinkNativeBridge.open({ url: resolved }).catch((err) => {
       console.warn('[ExternalLink] Failed to open URL via Browser plugin:', err);
     });
-    if (typeof window !== 'undefined' && typeof window.open === 'function') {
-      window.open(resolved, target);
-    }
     return null;
   }
 

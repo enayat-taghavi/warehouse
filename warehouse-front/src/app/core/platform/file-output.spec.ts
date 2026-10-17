@@ -8,6 +8,7 @@ import {
   printWindow,
   FileOutputService,
   fileOutputNativeBridge,
+  setFileOutputErrorNotifier,
 } from './file-output';
 import { SERVER_ORIGIN_STORAGE_KEY } from './server-origin';
 import { Directory } from '@capacitor/filesystem';
@@ -40,7 +41,7 @@ describe('file-output', () => {
     sessionStorage.clear();
     environment.serverOrigin = '';
 
-    writeFileSpy = vi.spyOn(fileOutputNativeBridge, 'writeFile').mockResolvedValue({ uri: 'file:///cache/default.bin' });
+    writeFileSpy = vi.spyOn(fileOutputNativeBridge, 'writeFile').mockResolvedValue({ uri: 'file:///documents/CoManage/default.bin' });
     shareSpy = vi.spyOn(fileOutputNativeBridge, 'share').mockResolvedValue({ activityType: undefined });
     printHtmlSpy = vi.spyOn(fileOutputNativeBridge, 'printHtml').mockResolvedValue(undefined);
   });
@@ -52,6 +53,7 @@ describe('file-output', () => {
     localStorage.clear();
     sessionStorage.clear();
     environment.serverOrigin = originalServerOrigin;
+    setFileOutputErrorNotifier(null);
   });
 
   describe('saveBlob', () => {
@@ -118,36 +120,104 @@ describe('file-output', () => {
       }
     });
 
-    it('3. native saveBlob writes file as base64 to Directory.Cache and invokes Share.share', async () => {
+    it('3. native saveBlob writes file as base64 with Directory.Documents and path CoManage/<filename> and invokes Share.share', async () => {
       (globalThis as any).Capacitor = {
         isNativePlatform: () => true,
         getPlatform: () => 'android',
       };
       writeFileSpy.mockResolvedValue({
-        uri: 'file:///cache/sample.pdf',
+        uri: 'file:///documents/CoManage/sample.pdf',
       });
 
       const dummyBlob = new Blob(['sample pdf content'], { type: 'application/pdf' });
       await saveBlob(dummyBlob, 'sample.pdf');
 
       expect(writeFileSpy).toHaveBeenCalledTimes(1);
-      expect(writeFileSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          path: 'sample.pdf',
-          directory: Directory.Cache,
-          data: expect.any(String),
-        })
-      );
+      expect(writeFileSpy).toHaveBeenCalledWith({
+        path: 'CoManage/sample.pdf',
+        directory: Directory.Documents,
+        recursive: true,
+        data: expect.any(String),
+      });
       expect(shareSpy).toHaveBeenCalledTimes(1);
       expect(shareSpy).toHaveBeenCalledWith({
         title: 'sample.pdf',
-        url: 'file:///cache/sample.pdf',
+        url: 'file:///documents/CoManage/sample.pdf',
       });
+    });
+
+    it('4. native saveBlob falls back to Directory.Data when write to Directory.Documents throws', async () => {
+      (globalThis as any).Capacitor = {
+        isNativePlatform: () => true,
+        getPlatform: () => 'android',
+      };
+      writeFileSpy
+        .mockRejectedValueOnce(new Error('Documents permission denied'))
+        .mockResolvedValueOnce({
+          uri: 'file:///data/CoManage/sample.pdf',
+        });
+
+      const dummyBlob = new Blob(['sample pdf content'], { type: 'application/pdf' });
+      await saveBlob(dummyBlob, 'sample.pdf');
+
+      expect(writeFileSpy).toHaveBeenCalledTimes(2);
+      expect(writeFileSpy).toHaveBeenNthCalledWith(1, {
+        path: 'CoManage/sample.pdf',
+        directory: Directory.Documents,
+        recursive: true,
+        data: expect.any(String),
+      });
+      expect(writeFileSpy).toHaveBeenNthCalledWith(2, {
+        path: 'CoManage/sample.pdf',
+        directory: Directory.Data,
+        recursive: true,
+        data: expect.any(String),
+      });
+      expect(shareSpy).toHaveBeenCalledWith({
+        title: 'sample.pdf',
+        url: 'file:///data/CoManage/sample.pdf',
+      });
+    });
+
+    it('5. native saveBlob a share cancel error resolves without notifying', async () => {
+      (globalThis as any).Capacitor = {
+        isNativePlatform: () => true,
+        getPlatform: () => 'android',
+      };
+      writeFileSpy.mockResolvedValue({
+        uri: 'file:///documents/CoManage/sample.pdf',
+      });
+      shareSpy.mockRejectedValue(new Error('User did cancel share'));
+
+      const notifierSpy = vi.fn();
+      setFileOutputErrorNotifier(notifierSpy);
+
+      const dummyBlob = new Blob(['sample pdf content'], { type: 'application/pdf' });
+      await expect(saveBlob(dummyBlob, 'sample.pdf')).resolves.toBeUndefined();
+
+      expect(notifierSpy).not.toHaveBeenCalled();
+    });
+
+    it('6. native saveBlob a write failure in both Directory.Documents and Directory.Data calls the notifier once and rejects', async () => {
+      (globalThis as any).Capacitor = {
+        isNativePlatform: () => true,
+        getPlatform: () => 'android',
+      };
+      writeFileSpy.mockRejectedValue(new Error('Disk full error'));
+
+      const notifierSpy = vi.fn();
+      setFileOutputErrorNotifier(notifierSpy);
+
+      const dummyBlob = new Blob(['sample pdf content'], { type: 'application/pdf' });
+      await expect(saveBlob(dummyBlob, 'sample.pdf')).rejects.toThrow('Disk full error');
+
+      expect(notifierSpy).toHaveBeenCalledTimes(1);
+      expect(notifierSpy).toHaveBeenCalledWith('ذخیره یا اشتراک فایل روی گوشی انجام نشد. دوباره تلاش کنید.');
     });
   });
 
   describe('saveUrl', () => {
-    it('4. web saveUrl creates anchor with resolved URL, download attribute, clicks and removes it', async () => {
+    it('7. web saveUrl creates anchor with resolved URL, download attribute, clicks and removes it', async () => {
       let createdAnchor: HTMLAnchorElement | null = null;
       let clickCalled = false;
       let removeCalled = false;
@@ -176,7 +246,7 @@ describe('file-output', () => {
       expect(removeCalled).toBe(true);
     });
 
-    it('5. web saveUrl uses empty download string if filename is omitted', async () => {
+    it('8. web saveUrl uses empty download string if filename is omitted', async () => {
       let createdAnchor: HTMLAnchorElement | null = null;
       const origCreate = document.createElement.bind(document);
       vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
@@ -193,7 +263,7 @@ describe('file-output', () => {
       expect(createdAnchor!.download).toBe('');
     });
 
-    it('6. native saveUrl downloads resolved URL with Authorization header and saves via native saveBlob', async () => {
+    it('9. native saveUrl downloads resolved URL with Authorization header and saves via native saveBlob', async () => {
       (globalThis as any).Capacitor = {
         isNativePlatform: () => true,
         getPlatform: () => 'android',
@@ -202,7 +272,7 @@ describe('file-output', () => {
       localStorage.setItem('wh_access_token', 'test_jwt_token_123');
 
       writeFileSpy.mockResolvedValue({
-        uri: 'file:///cache/export.xlsx',
+        uri: 'file:///documents/CoManage/export.xlsx',
       });
 
       const mockBlob = new Blob(['xlsx binary data'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -224,17 +294,18 @@ describe('file-output', () => {
       );
       expect(writeFileSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          path: 'export.xlsx',
-          directory: Directory.Cache,
+          path: 'CoManage/export.xlsx',
+          directory: Directory.Documents,
+          recursive: true,
         })
       );
       expect(shareSpy).toHaveBeenCalledWith({
         title: 'export.xlsx',
-        url: 'file:///cache/export.xlsx',
+        url: 'file:///documents/CoManage/export.xlsx',
       });
     });
 
-    it('7. native saveUrl falls back to extracting filename from URL when filename is not provided', async () => {
+    it('10. native saveUrl falls back to extracting filename from URL when filename is not provided', async () => {
       (globalThis as any).Capacitor = {
         isNativePlatform: () => true,
         getPlatform: () => 'android',
@@ -242,7 +313,7 @@ describe('file-output', () => {
       environment.serverOrigin = 'https://app.farsalish.ir';
 
       writeFileSpy.mockResolvedValue({
-        uri: 'file:///cache/document.pdf',
+        uri: 'file:///documents/CoManage/document.pdf',
       });
 
       const mockBlob = new Blob(['pdf data'], { type: 'application/pdf' });
@@ -256,19 +327,67 @@ describe('file-output', () => {
 
       expect(writeFileSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          path: 'document.pdf',
-          directory: Directory.Cache,
+          path: 'CoManage/document.pdf',
+          directory: Directory.Documents,
+          recursive: true,
         })
       );
       expect(shareSpy).toHaveBeenCalledWith({
         title: 'document.pdf',
-        url: 'file:///cache/document.pdf',
+        url: 'file:///documents/CoManage/document.pdf',
       });
+    });
+
+    it('11. native saveUrl with a 500 response calls the notifier once and rejects', async () => {
+      (globalThis as any).Capacitor = {
+        isNativePlatform: () => true,
+        getPlatform: () => 'android',
+      };
+      environment.serverOrigin = 'https://app.farsalish.ir';
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+      } as unknown as Response);
+
+      const notifierSpy = vi.fn();
+      setFileOutputErrorNotifier(notifierSpy);
+
+      await expect(saveUrl('/api/export/failed.xlsx', 'failed.xlsx')).rejects.toThrow('Failed to download file: 500 Internal Server Error');
+
+      expect(notifierSpy).toHaveBeenCalledTimes(1);
+      expect(notifierSpy).toHaveBeenCalledWith('ذخیره یا اشتراک فایل روی گوشی انجام نشد. دوباره تلاش کنید.');
+    });
+
+    it('12. native saveUrl calling saveBlob on write failure calls the notifier once and rejects', async () => {
+      (globalThis as any).Capacitor = {
+        isNativePlatform: () => true,
+        getPlatform: () => 'android',
+      };
+      environment.serverOrigin = 'https://app.farsalish.ir';
+
+      const mockBlob = new Blob(['pdf data'], { type: 'application/pdf' });
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        status: 200,
+        blob: () => Promise.resolve(mockBlob),
+      } as unknown as Response);
+
+      writeFileSpy.mockRejectedValue(new Error('Storage unavailable'));
+
+      const notifierSpy = vi.fn();
+      setFileOutputErrorNotifier(notifierSpy);
+
+      await expect(saveUrl('/media/downloads/file.pdf', 'file.pdf')).rejects.toThrow('Storage unavailable');
+
+      expect(notifierSpy).toHaveBeenCalledTimes(1);
+      expect(notifierSpy).toHaveBeenCalledWith('ذخیره یا اشتراک فایل روی گوشی انجام نشد. دوباره تلاش کنید.');
     });
   });
 
   describe('printWindow', () => {
-    it('8. web printWindow calls print on the given target window', () => {
+    it('13. web printWindow calls print on the given target window', () => {
       const mockTarget = {
         print: vi.fn(),
       } as unknown as Window;
@@ -277,7 +396,7 @@ describe('file-output', () => {
       expect(mockTarget.print).toHaveBeenCalledTimes(1);
     });
 
-    it('9. web printWindow calls print on window by default when target is not provided', () => {
+    it('14. web printWindow calls print on window by default when target is not provided', () => {
       const windowPrintSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
 
       printWindow();
@@ -290,7 +409,7 @@ describe('file-output', () => {
       expect(windowPrintSpy).toHaveBeenCalledTimes(3);
     });
 
-    it('10. native printWindow prints HTML of target document via Printer.printHtml', async () => {
+    it('15. native printWindow prints HTML of target document via Printer.printHtml', async () => {
       (globalThis as any).Capacitor = {
         isNativePlatform: () => true,
         getPlatform: () => 'android',
@@ -314,7 +433,7 @@ describe('file-output', () => {
       expect(mockTarget.print).not.toHaveBeenCalled();
     });
 
-    it('11. native printWindow prints current document when target is omitted', async () => {
+    it('16. native printWindow prints current document when target is omitted', async () => {
       (globalThis as any).Capacitor = {
         isNativePlatform: () => true,
         getPlatform: () => 'android',
@@ -326,10 +445,26 @@ describe('file-output', () => {
         html: expect.any(String),
       });
     });
+
+    it('17. native printWindow failure calls the notifier and rejects', async () => {
+      (globalThis as any).Capacitor = {
+        isNativePlatform: () => true,
+        getPlatform: () => 'android',
+      };
+      printHtmlSpy.mockRejectedValue(new Error('Printer service not available'));
+
+      const notifierSpy = vi.fn();
+      setFileOutputErrorNotifier(notifierSpy);
+
+      await expect(printWindow()).rejects.toThrow('Printer service not available');
+
+      expect(notifierSpy).toHaveBeenCalledTimes(1);
+      expect(notifierSpy).toHaveBeenCalledWith('چاپ روی گوشی انجام نشد. دوباره تلاش کنید.');
+    });
   });
 
   describe('FileOutputService', () => {
-    it('12. web FileOutputService delegates saveBlob, saveUrl, and print to standalone functions', async () => {
+    it('18. web FileOutputService delegates saveBlob, saveUrl, and print to standalone functions', async () => {
       const service = new FileOutputService();
 
       const blob = new Blob(['abc']);
@@ -360,13 +495,13 @@ describe('file-output', () => {
       expect(target.print).toHaveBeenCalledTimes(1);
     });
 
-    it('13. native FileOutputService delegates saveBlob, saveUrl, and print to native platform implementations', async () => {
+    it('19. native FileOutputService delegates saveBlob, saveUrl, and print to native platform implementations', async () => {
       (globalThis as any).Capacitor = {
         isNativePlatform: () => true,
         getPlatform: () => 'android',
       };
       writeFileSpy.mockResolvedValue({
-        uri: 'file:///cache/delegated_native.pdf',
+        uri: 'file:///documents/CoManage/delegated_native.pdf',
       });
 
       const service = new FileOutputService();
@@ -374,6 +509,13 @@ describe('file-output', () => {
       const blob = new Blob(['content']);
       await service.saveBlob(blob, 'delegated_native.pdf');
       expect(writeFileSpy).toHaveBeenCalledTimes(1);
+      expect(writeFileSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          path: 'CoManage/delegated_native.pdf',
+          directory: Directory.Documents,
+          recursive: true,
+        })
+      );
       expect(shareSpy).toHaveBeenCalledTimes(1);
 
       const mockBlob = new Blob(['url content']);

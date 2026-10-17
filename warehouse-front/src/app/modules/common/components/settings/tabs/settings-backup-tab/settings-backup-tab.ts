@@ -509,7 +509,7 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
 
   connectSystemGDrive() {
     if (isNativePlatform()) {
-      this.toast.info('اتصال گوگلدرایو را از نسخهٔ وب انجام دهید');
+      this.toast.info('اتصال گوگل‌درایو را از نسخه وب انجام دهید.');
       return;
     }
     this.isConnectingGDrive = true;

@@ -6,7 +6,7 @@ import { Share } from '@capacitor/share';
 import { Printer } from '@capgo/capacitor-printer';
 
 export interface FileOutputNativeBridge {
-  writeFile(options: { path: string; data: string; directory: Directory }): Promise<{ uri: string }>;
+  writeFile(options: { path: string; data: string; directory: Directory; recursive?: boolean }): Promise<{ uri: string }>;
   share(options: { title?: string; text?: string; url?: string }): Promise<any>;
   printHtml(options: { html: string }): Promise<any>;
 }
@@ -25,6 +25,29 @@ export const fileOutputNativeBridge: FileOutputNativeBridge = {
     return plugin.printHtml(opts);
   },
 };
+
+let fileOutputErrorNotifier: ((message: string) => void) | null = null;
+
+export function setFileOutputErrorNotifier(fn: ((message: string) => void) | null): void {
+  fileOutputErrorNotifier = fn;
+}
+
+const notifiedErrors = new WeakSet<object>();
+
+function notifyError(message: string, err?: unknown): void {
+  if (err && typeof err === 'object') {
+    if (notifiedErrors.has(err)) {
+      return;
+    }
+    notifiedErrors.add(err);
+  }
+  fileOutputErrorNotifier?.(message);
+}
+
+function isCancelError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err ?? '');
+  return message.toLowerCase().includes('cancel');
+}
 
 /**
  * Converts a Blob to a base64-encoded string (without data URL prefix).
@@ -56,21 +79,47 @@ export async function blobToBase64(blob: Blob): Promise<string> {
 /**
  * Downloads/saves a Blob as a file with the specified filename.
  * - On web: creates an object URL, clicks an anchor element, and revokes the URL after 1000ms.
- * - On native: writes the blob as base64 with Filesystem.writeFile to Directory.Cache under filename,
+ * - On native: writes the blob as base64 with Filesystem.writeFile to Directory.Documents under CoManage/<filename> (recursive: true),
+ *   falling back to Directory.Data if the first write fails,
  *   then invokes Share.share({ title: filename, url: fileUri }).
  */
 export async function saveBlob(blob: Blob, filename: string): Promise<void> {
   if (isNativePlatform()) {
-    const base64Data = await blobToBase64(blob);
-    const writeResult = await fileOutputNativeBridge.writeFile({
-      path: filename,
-      data: base64Data,
-      directory: Directory.Cache,
-    });
-    await fileOutputNativeBridge.share({
-      title: filename,
-      url: writeResult.uri,
-    });
+    try {
+      const base64Data = await blobToBase64(blob);
+      const filePath = `CoManage/${filename}`;
+      let writeResult: { uri: string };
+      try {
+        writeResult = await fileOutputNativeBridge.writeFile({
+          path: filePath,
+          data: base64Data,
+          directory: Directory.Documents,
+          recursive: true,
+        });
+      } catch {
+        writeResult = await fileOutputNativeBridge.writeFile({
+          path: filePath,
+          data: base64Data,
+          directory: Directory.Data,
+          recursive: true,
+        });
+      }
+
+      try {
+        await fileOutputNativeBridge.share({
+          title: filename,
+          url: writeResult.uri,
+        });
+      } catch (shareErr) {
+        if (isCancelError(shareErr)) {
+          return;
+        }
+        throw shareErr;
+      }
+    } catch (err) {
+      notifyError('ذخیره یا اشتراک فایل روی گوشی انجام نشد. دوباره تلاش کنید.', err);
+      throw err;
+    }
     return;
   }
 
@@ -97,30 +146,35 @@ export async function saveUrl(url: string, filename?: string): Promise<void> {
   const resolved = resolveServerUrl(url);
 
   if (isNativePlatform()) {
-    const headers: Record<string, string> = {};
-    const token =
-      (typeof sessionStorage !== 'undefined' && (
-        sessionStorage.getItem('wh_access_token_warehouse') ||
-        sessionStorage.getItem('wh_access_token_finance') ||
-        sessionStorage.getItem('wh_access_token')
-      )) ||
-      (typeof localStorage !== 'undefined' && (
-        localStorage.getItem('wh_access_token_warehouse') ||
-        localStorage.getItem('wh_access_token_finance') ||
-        localStorage.getItem('wh_access_token')
-      ));
+    try {
+      const headers: Record<string, string> = {};
+      const token =
+        (typeof sessionStorage !== 'undefined' && (
+          sessionStorage.getItem('wh_access_token_warehouse') ||
+          sessionStorage.getItem('wh_access_token_finance') ||
+          sessionStorage.getItem('wh_access_token')
+        )) ||
+        (typeof localStorage !== 'undefined' && (
+          localStorage.getItem('wh_access_token_warehouse') ||
+          localStorage.getItem('wh_access_token_finance') ||
+          localStorage.getItem('wh_access_token')
+        ));
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
-    const response = await fetch(resolved, { headers });
-    if (!response.ok) {
-      throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
+      const response = await fetch(resolved, { headers });
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
+      }
+      const blob = await response.blob();
+      const effectiveFilename = filename || url.split('/').pop()?.split('?')[0] || 'download';
+      return await saveBlob(blob, effectiveFilename);
+    } catch (err) {
+      notifyError('ذخیره یا اشتراک فایل روی گوشی انجام نشد. دوباره تلاش کنید.', err);
+      throw err;
     }
-    const blob = await response.blob();
-    const effectiveFilename = filename || url.split('/').pop()?.split('?')[0] || 'download';
-    return saveBlob(blob, effectiveFilename);
   }
 
   const a = document.createElement('a');
@@ -138,10 +192,15 @@ export async function saveUrl(url: string, filename?: string): Promise<void> {
  */
 export async function printWindow(target?: Window | null): Promise<void> {
   if (isNativePlatform()) {
-    const doc = (target ?? (typeof window !== 'undefined' ? window : null))?.document;
-    const html = doc?.documentElement?.outerHTML || '';
-    await fileOutputNativeBridge.printHtml({ html });
-    return;
+    try {
+      const doc = (target ?? (typeof window !== 'undefined' ? window : null))?.document;
+      const html = doc?.documentElement?.outerHTML || '';
+      await fileOutputNativeBridge.printHtml({ html });
+      return;
+    } catch (err) {
+      notifyError('چاپ روی گوشی انجام نشد. دوباره تلاش کنید.', err);
+      throw err;
+    }
   }
   (target ?? window).print();
 }
