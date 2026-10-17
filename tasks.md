@@ -917,3 +917,108 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - Commit with this message, without push:
 refactor(persona): SoD prohibitions, role route isolation and role default routes from the module personas
 - Short English report: changed files, the last ng-test-compare summary line, remaining doubts. End the turn after the commit and report.
+
+===
+
+[DONE] Session 21 of 23 — Characterization specs: login destination and route access (hasRoutePermission and AuthGuard decisions) before moving their module lists
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/modules/common/components/login/login-destination.characterization.spec.ts --min-tests 30 --require "navigateByUrl" --require "active_app_module" --require "returnUrl" --require "view_wh_labels" --require "can_act_as_operator"
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/auth/route-access.characterization.spec.ts --min-tests 20 --require "hasRoutePermission" --require "AuthGuard" --require "setInstalledModules" --require "treasurer-reconciliation" --require "feed_approvals" --require "count-tracking"
+verify: python -c "import pathlib,sys; a=pathlib.Path('warehouse-front/src/app/core/auth/route-access.characterization.spec.ts').read_text(encoding='utf-8'); l=pathlib.Path('warehouse-front/src/app/modules/common/components/login/login-destination.characterization.spec.ts').read_text(encoding='utf-8'); bad={'mock_registry':'provide: ModuleRegistryService' in a or 'provide: ModuleRegistryService' in l,'snapshot':'toMatchSnapshot' in a+l or 'toMatchInlineSnapshot' in a+l}; print(bad); sys.exit(1 if any(bad.values()) else 0)"
+verify: python -c "import subprocess,sys; ok={'warehouse-front/src/app/modules/common/components/login/login-destination.characterization.spec.ts','warehouse-front/src/app/core/auth/route-access.characterization.spec.ts'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/core/auth/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(route-access): characterization of login destination, hasRoutePermission and AuthGuard decisions"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session adds two test files only: `warehouse-front/src/app/modules/common/components/login/login-destination.characterization.spec.ts` and `warehouse-front/src/app/core/auth/route-access.characterization.spec.ts`. Do not change application code, existing specs, config or scripts.
+- The specs pin today's behavior with literal expectations taken from HEAD; no snapshot files. They test only through `Login` (rendered with `TestBed`, submitting its form), the exported `hasRoutePermission` and the exported `AuthGuard`, so they keep passing after session 22 moves the permission lists into the modules. Use the real `ModuleRegistryService` with `setInstalledModules(['warehouse', 'accounting'])`; do not provide a mock for it.
+- No `fs`, `path` or `__dirname`; no `it.skip`, `it.only`, `it.todo`, `xit`.
+- Do not push. Stage only the two new specs. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase3/modular_architecture_phase3_plan.md`, heading `## ۴.` (the `ROUTE_PERMISSIONS` row) and the last entry under `## گزارش پیشرفت` (batch D).
+- `modules/common/components/login/login.ts`: after a successful login it computes `hasWarehouse` and `hasFinance` from two literal permission lists (superuser counts as both), picks a target (`/app/launcher`, `/app/finance` with `active_app_module = 'personnel'`, or a warehouse page chosen by a priority chain with `active_app_module = 'warehouse'`), lets a `returnUrl` query param starting with `/app/` override it, and calls `router.navigateByUrl(target)`. A user with `requires_password_change` goes to `/change-password`. These lists differ from the modules' `permissionMarkers`; for example `view_wh_labels`, `view_sys_projects` or `can_act_as_operator` alone give neither module at login.
+- `core/auth/auth.guard.ts`: `ROUTE_PERMISSIONS`, `hasRoutePermission(path, perms)`, `WAREHOUSE_PERMISSIONS`, `PERSONNEL_PERMISSIONS`, `WAREHOUSE_ROUTE_KEYS`, `FINANCE_ROUTE_KEYS` and `AuthGuard`.
+- Existing login spec for setup: `modules/common/components/login/login.spec.ts`.
+
+3. Definitions:
+- "destination" of a case means the argument of `navigateByUrl` (or `navigate` for the password change) plus the value of `localStorage.active_app_module` after the login.
+- "guard result" means `true`, or the serialized `UrlTree` (`router.serializeUrl(result)`) returned by `AuthGuard` run with `TestBed.runInInjectionContext`, a route whose `routeConfig.path` is the page key, and a state whose `url` is the full URL. Mock `AuthService` (`isLoggedIn` true, `user`, `userPermissions`), `AppPersonaService` (`canAccessRoute` returning true, `getDefaultRouteForRole` returning `'/role-home'`, and `hasWarehouseAccess`, `hasPersonnelAccess`, `canAccessApp(code)` consistent with the case), and `ActiveCompanyService` (`hasCompanyDocumentsAccess` returning false). Use a real `Router` from `provideRouter([])`.
+
+4. Task:
+- a) Login destination spec, at least 30 tests: superuser; each of the 12 warehouse login permissions alone (the priority chain decides the page); each of the 10 finance login permissions alone; one warehouse plus one finance permission (launcher); no relevant permission; each of `view_wh_labels`, `view_wh_feed_approvals`, `view_sys_projects`, `can_act_as_operator`, `can_act_as_accountant` alone (they are module markers but not login permissions); `returnUrl=/app/finance/payroll` overriding a warehouse user; `returnUrl=/elsewhere` ignored; `requires_password_change`.
+- b) Route access spec, at least 20 tests:
+  - `hasRoutePermission`: for every key of today's `ROUTE_PERMISSIONS`, true with each listed permission alone and false with `['unrelated_perm']` (one test per key group is fine, but every key and every listed permission must be covered by literal data in the spec); an unknown key is true.
+  - `AuthGuard` results for these users: warehouse-only (`view_wh_docs`), finance-only (`view_sys_payroll`), both, neither (`['view_sys_users']`), and admin (`admin_all`); on these pages: `/app/warehouse/docs` (key `docs`), `/app/warehouse/count-tracking` (`count-tracking`), `/app/finance/payroll` (`payroll`), `/app/finance/treasurer-reconciliation` (`treasurer-reconciliation`), `/app/warehouse/feed_approvals` (`feed_approvals`) and `/app/operations/users` (`users`). Record the result table as a literal and compare it in one test per user.
+
+5. Tool policy: from the repo root, at most five runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/core/auth/*.spec.ts"`. To learn today's values you may temporarily log them, but the committed specs contain only literal expectations. If a run fails, read the log and change approach.
+
+6. Before finishing: `git status --short` shows only runner files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(route-access): characterization of login destination, hasRoutePermission and AuthGuard decisions
+- Short English report: number of tests per spec, the last ng-test-compare summary line. End the turn after the commit and report.
+
+===
+
+[DONE] Session 22 of 23 — Login entry lists, guard access lists and module page permissions come from the module contract
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python -c "import subprocess,sys; r=subprocess.run(['git','diff','--quiet','{base}','HEAD','--','warehouse-front/src/app/modules/common/components/login/login-destination.characterization.spec.ts','warehouse-front/src/app/core/auth/route-access.characterization.spec.ts']); print('characterization specs unchanged:',r.returncode==0); sys.exit(r.returncode)"
+verify: python -c "import pathlib,sys; app=pathlib.Path('warehouse-front/src/app'); g=(app/'core/auth/auth.guard.ts').read_text(encoding='utf-8'); l=(app/'modules/common/components/login/login.ts').read_text(encoding='utf-8'); ar=app/'modules/accounting/route-access.ts'; wr=app/'modules/warehouse/route-access.ts'; at=ar.read_text(encoding='utf-8') if ar.is_file() else ''; wt=wr.read_text(encoding='utf-8') if wr.is_file() else ''; bad={'guard_lists':any(x in g for x in ('WAREHOUSE_PERMISSIONS = [','PERSONNEL_PERMISSIONS = [','WAREHOUSE_ROUTE_KEYS = new Set([','FINANCE_ROUTE_KEYS = new Set([')),'guard_module_keys':any(x in g for x in (chr(39)+'treasurer-reconciliation'+chr(39)+':',chr(39)+'feed_approvals'+chr(39)+':',chr(39)+'employee-portal'+chr(39)+':',chr(39)+'count-tracking'+chr(39)+':')),'login_lists':any(x in l for x in ('view_wh_feeding','perm_treasury_disburse_action','/app/warehouse/counter')),'acct_file':'treasurer-reconciliation' not in at or 'perm_treasury_disburse_action' not in at,'wh_file':'count-tracking' not in wt or 'view_wh_feeding' not in wt,'has_route_perm_kept':'export function hasRoutePermission(path: string, userPerms: string[])' not in g}; print(bad); sys.exit(1 if any(bad.values()) else 0)"
+verify: python -c "import pathlib,sys; t=pathlib.Path('warehouse-backend/modules/accounting/personnel/phase_guardian_approval.py').read_text(encoding='utf-8'); ok={'reads_module_file':'route-access.ts' in t}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
+verify: python -c "import pathlib,sys; app=pathlib.Path('warehouse-front/src/app'); c=(app/'core/auth/auth.guard.ts').read_text(encoding='utf-8')+(app/'modules/accounting/route-access.ts').read_text(encoding='utf-8'); ok=all(k in c for k in (chr(39)+'attendance'+chr(39)+':',chr(39)+'finance-cartable'+chr(39)+':',chr(39)+'treasury-cartable'+chr(39)+':')); print('guardian 15 route coverage text present:',ok); sys.exit(0 if ok else 1)"
+verify: python -c "import subprocess,sys; p='warehouse-front/src/app/'; ok={p+'core/modules/module-contract.ts',p+'core/auth/auth.guard.ts',p+'modules/common/components/login/login.ts',p+'modules/accounting/module.ts',p+'modules/accounting/route-access.ts',p+'modules/warehouse/module.ts',p+'modules/warehouse/route-access.ts','warehouse-backend/modules/accounting/personnel/phase_guardian_approval.py'}; ch=set(subprocess.run(['git','diff','--name-only','{base}','HEAD'],capture_output=True,text=True).stdout.split()); bad=sorted(ch-ok); print('changed:',sorted(ch),'outside scope:',bad); sys.exit(1 if bad or not ch else 0)"
+verify: cd warehouse-front && set "WH_MODULES=accounting" && npm run build:modules -- --output-path ../scratch/ng-build-acc
+verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-acc/browser --pattern "app-counter-dashboard|app-count-tracking|app-feeding"
+verify: cd warehouse-front && set "WH_MODULES=warehouse" && npm run build:modules -- --output-path ../scratch/ng-build-wh
+verify: python scripts/automation/verify_tools.py dist-free --dist scratch/ng-build-wh/browser --pattern "app-accountant-payroll|app-treasurer"
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_35_route_matching.py
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(route-access): login entry, guard access lists and module page permissions from the module contract"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Behavior must stay identical with both modules installed: `login-destination.characterization.spec.ts` and `route-access.characterization.spec.ts` must pass without any change. Do not edit them. In particular the login lists stay separate from `permissionMarkers` (using the markers would change where users land).
+- Change only `core/modules/module-contract.ts`, `core/auth/auth.guard.ts`, `modules/common/components/login/login.ts`, `modules/accounting/module.ts`, the new `modules/accounting/route-access.ts`, `modules/warehouse/module.ts`, the new `modules/warehouse/route-access.ts` (all under `warehouse-front/src/app/`) and `warehouse-backend/modules/accounting/personnel/phase_guardian_approval.py`. Do not change `app.routes.ts`, `layout.ts` or `app-persona.service.ts`.
+- Never run `phase_guardian_approval.py`; it writes to the database. Only edit its text check.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Session 21 pinned the behavior. The scope checks in `AuthGuard` already find the modules with `installed.find(m => m.scopeKind === 'warehouse')` and `'finance'`; keep that pattern.
+- `phase_guardian_approval.py` (guardian 15), check 1, reads `auth.guard.ts` and requires the texts `'attendance':`, `'finance-cartable':` and `'treasury-cartable':`.
+
+3. Definitions:
+- "module route access" means `routeAccess?: { guardAccessPermissions: string[]; pagePermissions: Record<string, string[]>; loginPermissions: string[]; loginActiveAppModule: string; resolveLoginRoute: (perms: string[]) => string }` on `WhFrontendModule`.
+- Warehouse values: `guardAccessPermissions` = today's `WAREHOUSE_PERMISSIONS`; `pagePermissions` = the `ROUTE_PERMISSIONS` entries whose key is in `WAREHOUSE_ROUTE_KEYS` (lists copied verbatim, same order); `loginPermissions` = today's 12-item `hasWarehouse` list in `login.ts`; `loginActiveAppModule` = `'warehouse'`; `resolveLoginRoute` = today's priority chain.
+- Accounting values: `PERSONNEL_PERMISSIONS`, the entries whose key is in `FINANCE_ROUTE_KEYS`, the 10-item `hasFinance` list, `'personnel'`, and a function returning `'/app/finance'`.
+- Entries whose key is in neither set stay in the core `ROUTE_PERMISSIONS` of `auth.guard.ts`.
+
+4. Task:
+- a) Add the `routeAccess` type to `module-contract.ts`; create the two `route-access.ts` files with the values above and set `routeAccess` in each `module.ts`.
+- b) `auth.guard.ts`: `hasRoutePermission(path, userPerms)` keeps its signature and looks the key up in the core map first, then in the `pagePermissions` of the installed modules (read at call time through `getModuleRegistry()`). In `AuthGuard`, compute `hasWarehouseAccess` and `hasPersonnelAccess` from `whModule?.routeAccess?.guardAccessPermissions` and `accModule?.routeAccess?.guardAccessPermissions` (admin still true); replace `WAREHOUSE_ROUTE_KEYS.has(path)` and `FINANCE_ROUTE_KEYS.has(path)` with membership in the `pagePermissions` of `whModule` and `accModule`; the per-page required list comes from the same lookup as `hasRoutePermission`. Keep every redirect target and branch order unchanged.
+- c) `login.ts`: for each installed module with `routeAccess`, the user has it when superuser or when any `loginPermissions` entry is in the permissions. Two or more modules: `/app/launcher`. Exactly one: set `localStorage.active_app_module` to its `loginActiveAppModule` and use `resolveLoginRoute(perms)`. None: `/app/launcher`. Keep the password-change branch, the `returnUrl` override and the `navigateByUrl` failure handling unchanged.
+- d) `phase_guardian_approval.py` check 1: read `auth.guard.ts` and `modules/accounting/route-access.ts` together and require the same three texts in the combined content. Change nothing else in that file.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/core/auth/*.spec.ts"` and one run of `python scripts/e2e/guardian_57_front_module_fence.py`. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(route-access): login entry, guard access lists and module page permissions from the module contract
+- Short English report: changed files, which `ROUTE_PERMISSIONS` keys stayed in core, the last ng-test-compare summary line, remaining doubts. End the turn after the commit and report.
+

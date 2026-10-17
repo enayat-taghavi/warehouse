@@ -5669,3 +5669,123 @@ refactor(persona): SoD prohibitions, role route isolation and role default route
 </div>
 
 ---
+
+### Task 1 of 2 — 2026-10-17 04:24:01
+- **Status:** DONE
+- **Conversation:** `856cd673-d42e-4b44-bbc7-7c6f34d22c09`
+- **Steps:** 159
+- **Duration:** 10m 57s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 7/7 passed
+- **Task:**
+```
+Session 21 of 23 — Characterization specs: login destination and route access (hasRoutePermission and AuthGuard decisions) before moving their module lists
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session adds two test files only: `warehouse-front/src/app/modules/common/components/login/login-destination.characterization.spec.ts` and `warehouse-front/src/app/core/auth/route-access.characterization.spec.ts`. Do not change application code, existing specs, config or scripts.
+- The specs pin today's behavior with literal expectations taken from HEAD; no snapshot files. They test only through `Login` (rendered with `TestBed`, submitting its form), the exported `hasRoutePermission` and the exported `AuthGuard`, so they keep passing after session 22 moves the permission lists into the modules. Use the real `ModuleRegistryService` with `setInstalledModules(['warehouse', 'accounting'])`; do not provide a mock for it.
+- No `fs`, `path` or `__dirname`; no `it.skip`, `it.only`, `it.todo`, `xit`.
+- Do not push. Stage only the two new specs. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase3/modular_architecture_phase3_plan.md`, heading `## ۴.` (the `ROUTE_PERMISSIONS` row) and the last entry under `## گزارش پیشرفت` (batch D).
+- `modules/common/components/login/login.ts`: after a successful login it computes `hasWarehouse` and `hasFinance` from two literal permission lists (superuser counts as both), picks a target (`/app/launcher`, `/app/finance` with `active_app_module = 'personnel'`, or a warehouse page chosen by a priority chain with `active_app_module = 'warehouse'`), lets a `returnUrl` query param starting with `/app/` override it, and calls `router.navigateByUrl(target)`. A user with `requires_password_change` goes to `/change-password`. These lists differ from the modules' `permissionMarkers`; for example `view_wh_labels`, `view_sys_projects` or `can_act_as_operator` alone give neither module at login.
+- `core/auth/auth.guard.ts`: `ROUTE_PERMISSIONS`, `hasRoutePermission(path, perms)`, `WAREHOUSE_PERMISSIONS`, `PERSONNEL_PERMISSIONS`, `WAREHOUSE_ROUTE_KEYS`, `FINANCE_ROUTE_KEYS` and `AuthGuard`.
+- Existing login spec for setup: `modules/common/components/login/login.spec.ts`.
+
+3. Definitions:
+- "destination" of a case means the argument of `navigateByUrl` (or `navigate` for the password change) plus the value of `localStorage.active_app_module` after the login.
+- "guard result" means `true`, or the serialized `UrlTree` (`router.serializeUrl(result)`) returned by `AuthGuard` run with `TestBed.runInInjectionContext`, a route whose `routeConfig.path` is the page key, and a state whose `url` is the full URL. Mock `AuthService` (`isLoggedIn` true, `user`, `userPermissions`), `AppPersonaService` (`canAccessRoute` returning true, `getDefaultRouteForRole` returning `'/role-home'`, and `hasWarehouseAccess`, `hasPersonnelAccess`, `canAccessApp(code)` consistent with the case), and `ActiveCompanyService` (`hasCompanyDocumentsAccess` returning false). Use a real `Router` from `provideRouter([])`.
+
+4. Task:
+- a) Login destination spec, at least 30 tests: superuser; each of the 12 warehouse login permissions alone (the priority chain decides the page); each of the 10 finance login permissions alone; one warehouse plus one finance permission (launcher); no relevant permission; each of `view_wh_labels`, `view_wh_feed_approvals`, `view_sys_projects`, `can_act_as_operator`, `can_act_as_accountant` alone (they are module markers but not login permissions); `returnUrl=/app/finance/payroll` overriding a warehouse user; `returnUrl=/elsewhere` ignored; `requires_password_change`.
+- b) Route access spec, at least 20 tests:
+  - `hasRoutePermission`: for every key of today's `ROUTE_PERMISSIONS`, true with each listed permission alone and false with `['unrelated_perm']` (one test per key group is fine, but every key and every listed permission must be covered by literal data in the spec); an unknown key is true.
+  - `AuthGuard` results for these users: warehouse-only (`view_wh_docs`), finance-only (`view_sys_payroll`), both, neither (`['view_sys_users']`), and admin (`admin_all`); on these pages: `/app/warehouse/docs` (key `docs`), `/app/warehouse/count-tracking` (`count-tracking`), `/app/finance/payroll` (`payroll`), `/app/finance/treasurer-reconciliation` (`treasurer-reconciliation`), `/app/warehouse/feed_approvals` (`feed_approvals`) and `/app/operations/users` (`users`). Record the result table as a literal and compare it in one test per user.
+
+5. Tool policy: from the repo root, at most five runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/core/auth/*.spec.ts"`. To learn today's values you may temporarily log them, but the committed specs contain only literal expectations. If a run fails, read the log and change approach.
+
+6. Before finishing: `git status --short` shows only runner files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(route-access): characterization of login destination, hasRoutePermission and AuthGuard decisions
+- Short English report: number of tests per spec, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام ۴: حل کامل و گزارش پایانی (Execution & Verification Report)
+
+تست‌های مشخصه‌نگار مقصد ورود کاربر (`Login`)، بررسی مجوز مسیر (`hasRoutePermission`) و تصمیمات گارد دسترسی (`AuthGuard`) به همراه تمامی انتظارات لفظی (Literal Expectations) پیاده‌سازی و کامیت شدند.
+
+#### فایل‌های ایجادشده:
+1. [`warehouse-front/src/app/modules/common/components/login/login-destination.characterization.spec.ts`](file:///E:/warehouse%20project/warehouse-front/src/app/modules/common/components/login/login-destination.characterization.spec.ts)
+   - ۳۷ تست برای پوشش کامل ابرکاربر، ۱۲ مجوز ورود انبار به تفکیک زنجیره اولویت، ۱۰ مجوز ورود مالی، همزمانی انبار و مالی، کاربران بدون مجوز م...
+
+---
+
+### Task 2 of 2 — 2026-10-17 04:47:25
+- **Status:** DONE
+- **Conversation:** `bb95cccc-2383-40d2-a3c6-52d8f76d5f63`
+- **Steps:** 287
+- **Duration:** 23m 19s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 15/15 passed
+- **Task:**
+```
+Session 22 of 23 — Login entry lists, guard access lists and module page permissions come from the module contract
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Behavior must stay identical with both modules installed: `login-destination.characterization.spec.ts` and `route-access.characterization.spec.ts` must pass without any change. Do not edit them. In particular the login lists stay separate from `permissionMarkers` (using the markers would change where users land).
+- Change only `core/modules/module-contract.ts`, `core/auth/auth.guard.ts`, `modules/common/components/login/login.ts`, `modules/accounting/module.ts`, the new `modules/accounting/route-access.ts`, `modules/warehouse/module.ts`, the new `modules/warehouse/route-access.ts` (all under `warehouse-front/src/app/`) and `warehouse-backend/modules/accounting/personnel/phase_guardian_approval.py`. Do not change `app.routes.ts`, `layout.ts` or `app-persona.service.ts`.
+- Never run `phase_guardian_approval.py`; it writes to the database. Only edit its text check.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Session 21 pinned the behavior. The scope checks in `AuthGuard` already find the modules with `installed.find(m => m.scopeKind === 'warehouse')` and `'finance'`; keep that pattern.
+- `phase_guardian_approval.py` (guardian 15), check 1, reads `auth.guard.ts` and requires the texts `'attendance':`, `'finance-cartable':` and `'treasury-cartable':`.
+
+3. Definitions:
+- "module route access" means `routeAccess?: { guardAccessPermissions: string[]; pagePermissions: Record<string, string[]>; loginPermissions: string[]; loginActiveAppModule: string; resolveLoginRoute: (perms: string[]) => string }` on `WhFrontendModule`.
+- Warehouse values: `guardAccessPermissions` = today's `WAREHOUSE_PERMISSIONS`; `pagePermissions` = the `ROUTE_PERMISSIONS` entries whose key is in `WAREHOUSE_ROUTE_KEYS` (lists copied verbatim, same order); `loginPermissions` = today's 12-item `hasWarehouse` list in `login.ts`; `loginActiveAppModule` = `'warehouse'`; `resolveLoginRoute` = today's priority chain.
+- Accounting values: `PERSONNEL_PERMISSIONS`, the entries whose key is in `FINANCE_ROUTE_KEYS`, the 10-item `hasFinance` list, `'personnel'`, and a function returning `'/app/finance'`.
+- Entries whose key is in neither set stay in the core `ROUTE_PERMISSIONS` of `auth.guard.ts`.
+
+4. Task:
+- a) Add the `routeAccess` type to `module-contract.ts`; create the two `route-access.ts` files with the values above and set `routeAccess` in each `module.ts`.
+- b) `auth.guard.ts`: `hasRoutePermission(path, userPerms)` keeps its signature and looks the key up in the core map first, then in the `pagePermissions` of the installed modules (read at call time through `getModuleRegistry()`). In `AuthGuard`, compute `hasWarehouseAccess` and `hasPersonnelAccess` from `whModule?.routeAccess?.guardAccessPermissions` and `accModule?.routeAccess?.guardAccessPermissions` (admin still true); replace `WAREHOUSE_ROUTE_KEYS.has(path)` and `FINANCE_ROUTE_KEYS.has(path)` with membership in the `pagePermissions` of `whModule` and `accModule`; the per-page required list comes from the same lookup as `hasRoutePermission`. Keep every redirect target and branch order unchanged.
+- c) `login.ts`: for each installed module with `routeAccess`, the user has it when superuser or when any `loginPermissions` entry is in the permissions. Two or more modules: `/app/launcher`. Exactly one: set `localStorage.active_app_module` to its `loginActiveAppModule` and use `resolveLoginRoute(perms)`. None: `/app/launcher`. Keep the password-change branch, the `returnUrl` override and the `navigateByUrl` failure handling unchanged.
+- d) `phase_guardian_approval.py` check 1: read `auth.guard.ts` and `modules/accounting/route-access.ts` together and require the same three texts in the combined content. Change nothing else in that file.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/core/auth/*.spec.ts"` and one run of `python scripts/e2e/guardian_57_front_module_fence.py`. If a command fails, read the output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(route-access): login entry, guard access lists and module page permissions from the module contract
+- Short English report: changed files, which `ROUTE_PERMISSIONS` keys stayed in core, the last ng-test-compare summary line, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح سادهٔ درخواست (Simple Explanation)
+در نشست ۲۲ از ۲۳، هدف ماژولار کردن دسترسی به روت‌ها، فهرست‌های دسترسی گارد و فهرست‌های مجوز ورود (Login) و هدایت به صفحات مقصد بود؛ به گونه‌ای که این تعاریف مستقیماً از قرارداد هر ماژول (`WhFrontendModule.routeAccess`) خوانده شوند، مسیرهای متعلق به ماژول‌ها از هسته (`auth.guard.ts`) منتزع شوند و تنها مسیرهای عمومی و مستقل در هسته باقی بمانند؛ هم‌زمان رفتار سامانه با حفظ قبولی کامل آزمون‌های تعیین مشخصات (`route-access.characterization.spec.ts` و `login-destination.characterization.spec.ts`) بدون هیچ تغییری تثبیت گردد.
+
+---
+
+### ۲. اعتبارسنجی و بررسی فنی (Technical Verification)
+- **قرارداد ماژول (`module-contract....
+
+---
