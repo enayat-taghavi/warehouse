@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
+import '@angular/compiler';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SessionTabService } from './session-tab.service';
+import { getModuleRegistry } from '../modules/module-registry.service';
 
 function createStorageMock() {
   let store: Record<string, string> = {};
@@ -14,25 +16,25 @@ function createStorageMock() {
   };
 }
 
-if (!(globalThis as any).localStorage) {
-  (globalThis as any).localStorage = createStorageMock();
-}
-if (!(globalThis as any).sessionStorage) {
-  (globalThis as any).sessionStorage = createStorageMock();
-}
-
 describe('SessionTabService: getActiveApp', () => {
   let service: SessionTabService;
 
   beforeEach(() => {
-    sessionStorage.clear();
-    localStorage.clear();
+    const sMock = createStorageMock();
+    const lMock = createStorageMock();
+    try {
+      Object.defineProperty(window, 'sessionStorage', { value: sMock, writable: true, configurable: true });
+      Object.defineProperty(window, 'localStorage', { value: lMock, writable: true, configurable: true });
+    } catch {}
+    (globalThis as any).sessionStorage = sMock;
+    (globalThis as any).localStorage = lMock;
+
+    getModuleRegistry().setInstalledModules(['warehouse', 'accounting']);
     service = new SessionTabService();
   });
 
   afterEach(() => {
-    sessionStorage.clear();
-    localStorage.clear();
+    getModuleRegistry().setInstalledModules(['warehouse', 'accounting']);
     window.history.pushState({}, '', '/');
   });
 
