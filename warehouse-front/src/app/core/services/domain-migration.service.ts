@@ -6,9 +6,12 @@ import { PhotoUploadQueueService } from './photo-upload-queue.service';
 import { countPersonnelLocalDraftsStrict } from './offline-db';
 import { isServerUnreachable } from './server-reachability';
 import { firstValueFrom, timeout, catchError, of, interval, fromEvent, EMPTY } from 'rxjs';
+import { isNativePlatform } from '../platform/platform';
+import { getServerOrigin, setServerOriginOverride } from '../platform/server-origin';
 
 export interface LocationNavigator {
   replace(url: string): void;
+  reload(): void;
   getHost(): string;
   getHostname(): string;
   getPathname(): string;
@@ -22,6 +25,11 @@ export const LOCATION_NAVIGATOR = new InjectionToken<LocationNavigator>('LOCATIO
     replace: (url: string) => {
       if (typeof window !== 'undefined') {
         window.location.replace(url);
+      }
+    },
+    reload: () => {
+      if (typeof window !== 'undefined') {
+        window.location.reload();
       }
     },
     getHost: () => (typeof window !== 'undefined' ? window.location.host : ''),
@@ -94,6 +102,16 @@ export const DOMAIN_MIGRATION_RETRY_MS = 60_000;
 export const DOMAIN_MIGRATION_IDLE_MS = 120_000;
 
 const HOSTNAME_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/;
+
+function extractServerHost(origin: string): { host: string; hostname: string } {
+  try {
+    const u = new URL(origin);
+    return { host: u.host.toLowerCase(), hostname: u.hostname.toLowerCase() };
+  } catch {
+    const raw = origin.replace(/^https?:\/\//i, '').split('/')[0].toLowerCase();
+    return { host: raw, hostname: raw.split(':')[0] };
+  }
+}
 
 @Injectable({ providedIn: 'root' })
 export class DomainMigrationService {
@@ -198,11 +216,23 @@ export class DomainMigrationService {
     }
     this.canonicalDomain.set(canonical);
 
-    const currentHost = (this.navigator.getHost() || '').trim().toLowerCase();
-    const currentHostname = (this.navigator.getHostname() || '').trim().toLowerCase();
+    let isLegacy: boolean;
+    if (isNativePlatform()) {
+      const serverOrigin = getServerOrigin();
+      if (!serverOrigin) {
+        this.isLegacyDomain.set(false);
+        return;
+      }
+      const { host, hostname } = extractServerHost(serverOrigin);
+      isLegacy = host !== canonical && hostname !== canonical;
+    } else {
+      const currentHost = (this.navigator.getHost() || '').trim().toLowerCase();
+      const currentHostname = (this.navigator.getHostname() || '').trim().toLowerCase();
 
-    // مقایسه با دامنهٔ فعلی (هم با پورت و هم بدون پورت)
-    const isLegacy = currentHost !== canonical && currentHostname !== canonical;
+      // مقایسه با دامنهٔ فعلی (هم با پورت و هم بدون پورت)
+      isLegacy = currentHost !== canonical && currentHostname !== canonical;
+    }
+
     this.isLegacyDomain.set(isLegacy);
 
     if (isLegacy) {
@@ -322,6 +352,15 @@ export class DomainMigrationService {
     if (this.hasMigrated()) return;
     const targetDomain = this.canonicalDomain();
     if (!targetDomain) return;
+
+    if (isNativePlatform()) {
+      const ok = setServerOriginOverride('https://' + targetDomain);
+      if (ok) {
+        this.hasMigrated.set(true);
+        this.navigator.reload();
+      }
+      return;
+    }
 
     this.hasMigrated.set(true);
     const pathname = this.navigator.getPathname() || '/';

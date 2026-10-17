@@ -24,6 +24,7 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
 import { printWindow, saveUrl } from '../../../../core/platform/file-output';
+import { publicOrigin } from '../../../../core/platform/server-origin';
 
 @Component({
   selector: 'app-id-cards',
@@ -452,7 +453,7 @@ export class IdCards implements OnInit {
     const code = this.getUserPersonnelCode(user);
     let base = (this.idCardSettings.customDomain || '').trim();
     if (!base) {
-      base = typeof window !== 'undefined' ? window.location.origin : 'https://app.farsalish.ir';
+      base = publicOrigin() || 'https://app.farsalish.ir';
     }
     base = base.replace(/\/+$/, '');
     return `${base}/verify-card/${code}`;
@@ -1533,10 +1534,10 @@ export class IdCards implements OnInit {
       if (input.startsWith('http') || input.includes('/verify-card/')) {
         urlOrText = input;
       } else {
-        urlOrText = `${window.location.origin}/verify-card/${input}`;
+        urlOrText = `${publicOrigin()}/verify-card/${input}`;
       }
     } else {
-      urlOrText = `${window.location.origin}/verify-card/EMP-1001`;
+      urlOrText = `${publicOrigin()}/verify-card/EMP-1001`;
     }
 
     const cacheKey = '2D_' + urlOrText;

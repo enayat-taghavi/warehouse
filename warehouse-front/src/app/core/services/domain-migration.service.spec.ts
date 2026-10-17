@@ -15,6 +15,7 @@ import {
 import { ConfigApiService, PublicConfig } from '../api/config-api.service';
 import { OfflineSyncService } from './offline-sync.service';
 import { PhotoUploadQueueService } from './photo-upload-queue.service';
+import { SERVER_ORIGIN_STORAGE_KEY } from '../platform/server-origin';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -25,6 +26,28 @@ const CONFIG: PublicConfig = {
   system_name: 'Warehouse',
   canonical_domain: 'new.farsalish.ir',
 };
+
+function createStorageMock() {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, val: string) => {
+      store[key] = String(val);
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: (i: number) => Object.keys(store)[i] || null,
+  };
+}
+
+(globalThis as any).localStorage = createStorageMock();
 
 describe('DomainMigrationService (گام ۵: انتقال دامنه)', () => {
   let service: DomainMigrationService;
@@ -55,8 +78,11 @@ describe('DomainMigrationService (گام ۵: انتقال دامنه)', () => {
   }
 
   beforeEach(() => {
+    delete (globalThis as any).Capacitor;
+    localStorage.removeItem(SERVER_ORIGIN_STORAGE_KEY);
     fakeNavigator = {
       replace: vi.fn(),
+      reload: vi.fn(),
       getHost: vi.fn().mockReturnValue('old.farsalish.ir'),
       getHostname: vi.fn().mockReturnValue('old.farsalish.ir'),
       getPathname: vi.fn().mockReturnValue('/app/inventory'),
@@ -77,6 +103,8 @@ describe('DomainMigrationService (گام ۵: انتقال دامنه)', () => {
   });
 
   afterEach(() => {
+    delete (globalThis as any).Capacitor;
+    localStorage.removeItem(SERVER_ORIGIN_STORAGE_KEY);
     TestBed.resetTestingModule();
     vi.clearAllMocks();
     vi.useRealTimers();
@@ -241,5 +269,87 @@ describe('DomainMigrationService (گام ۵: انتقال دامنه)', () => {
     expect(service.isLegacyDomain()).toBe(true);
     await vi.advanceTimersByTimeAsync(0);
     expect(fakeNavigator.replace).toHaveBeenCalledTimes(1);
+  });
+
+  describe('مهاجرت دامنه در کانتینر نیتیو موبایل (Capacitor)', () => {
+    it('در حالت نیتیو: دامنه قدیمی با صف‌های خالی، اورراید سرور را ست کرده و reload را صدا می‌زند نه replace', async () => {
+      (globalThis as any).Capacitor = {
+        isNativePlatform: () => true,
+        getPlatform: () => 'android',
+      };
+      localStorage.setItem(SERVER_ORIGIN_STORAGE_KEY, 'https://old.farsalish.ir');
+      setup();
+      loadLegacyConfigWithoutAutoCheck();
+
+      expect(await service.evaluateAndMigrateIfReady(true)).toBe(true);
+      expect(service.hasMigrated()).toBe(true);
+      expect(localStorage.getItem(SERVER_ORIGIN_STORAGE_KEY)).toBe('https://new.farsalish.ir');
+      expect(fakeNavigator.reload).toHaveBeenCalledTimes(1);
+      expect(fakeNavigator.replace).not.toHaveBeenCalled();
+    });
+
+    it('در حالت نیتیو: با وجود رکوردهای در انتظار، هیچ کاری انجام نمی‌دهد و منتقل نمی‌شود', async () => {
+      (globalThis as any).Capacitor = {
+        isNativePlatform: () => true,
+        getPlatform: () => 'android',
+      };
+      localStorage.setItem(SERVER_ORIGIN_STORAGE_KEY, 'https://old.farsalish.ir');
+      mockOfflineSync.getUnsentCountStrict.mockResolvedValue(2);
+      setup();
+      loadLegacyConfigWithoutAutoCheck();
+
+      expect(await service.evaluateAndMigrateIfReady(true)).toBe(false);
+      expect(service.blockReason()).toBe('pending');
+      expect(service.hasMigrated()).toBe(false);
+      expect(fakeNavigator.reload).not.toHaveBeenCalled();
+      expect(fakeNavigator.replace).not.toHaveBeenCalled();
+      expect(localStorage.getItem(SERVER_ORIGIN_STORAGE_KEY)).toBe('https://old.farsalish.ir');
+    });
+
+    it('در حالت نیتیو: وقتی دامنه اصلی برابر با هاست سرور فعلی است، legacy نیست', () => {
+      (globalThis as any).Capacitor = {
+        isNativePlatform: () => true,
+        getPlatform: () => 'android',
+      };
+      localStorage.setItem(SERVER_ORIGIN_STORAGE_KEY, 'https://new.farsalish.ir');
+      setup();
+
+      service.handleConfig(CONFIG); // canonical_domain: 'new.farsalish.ir'
+      expect(service.isLegacyDomain()).toBe(false);
+      expect(service.showBanner()).toBe(false);
+      expect(fakeNavigator.reload).not.toHaveBeenCalled();
+      expect(fakeNavigator.replace).not.toHaveBeenCalled();
+      expect(localStorage.getItem(SERVER_ORIGIN_STORAGE_KEY)).toBe('https://new.farsalish.ir');
+    });
+
+    it('در حالت نیتیو: مبدأ سرور خالی، امکان تصمیم‌گیری مهاجرت ندارد و legacy تلقی نمی‌شود', () => {
+      (globalThis as any).Capacitor = {
+        isNativePlatform: () => true,
+        getPlatform: () => 'android',
+      };
+      // کلید ذخیره‌سازی ست نشده و مبدأ سرور خالی است
+      setup();
+
+      service.handleConfig(CONFIG);
+      expect(service.isLegacyDomain()).toBe(false);
+      expect(service.showBanner()).toBe(false);
+      expect(fakeNavigator.reload).not.toHaveBeenCalled();
+      expect(fakeNavigator.replace).not.toHaveBeenCalled();
+    });
+
+    it('در حالت نیتیو: handleConfig با سرور قدیمی وضعیت legacy را به درستی ست می‌کند', () => {
+      (globalThis as any).Capacitor = {
+        isNativePlatform: () => true,
+        getPlatform: () => 'android',
+      };
+      localStorage.setItem(SERVER_ORIGIN_STORAGE_KEY, 'https://old.farsalish.ir');
+      mockOfflineSync.getUnsentCountStrict.mockResolvedValue(1); // جلوگیری از انتقال خودکار در تست
+      setup();
+
+      service.handleConfig(CONFIG);
+      expect(service.isLegacyDomain()).toBe(true);
+      expect(service.canonicalDomain()).toBe('new.farsalish.ir');
+      expect(service.showBanner()).toBe(true);
+    });
   });
 });
