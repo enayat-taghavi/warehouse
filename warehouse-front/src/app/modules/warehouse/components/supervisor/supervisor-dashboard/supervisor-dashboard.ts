@@ -30,6 +30,7 @@ import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-ba
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ContextualCommentsComponent } from '../../../../common/components/communications/contextual-comments/contextual-comments.component';
 import { ServerUrlPipe } from '../../../../../shared/pipes/server-url.pipe';
+import { saveBlob } from '../../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-supervisor-dashboard',
@@ -2123,18 +2124,9 @@ export class SupervisorDashboard implements OnInit, OnDestroy {
 
     this.exportSubscription = api.exportExcel({ ...payload, ...params }).subscribe({
       next: (blob) => {
-        try {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `export_supervisor_${role}_${new Date().getTime()}.xlsx`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-        } catch(e) {
+        saveBlob(blob, `export_supervisor_${role}_${new Date().getTime()}.xlsx`).catch((e) => {
           console.error('File download error', e);
-        }
+        });
         
         this.isExporting = false;
         this.closeExportModal();

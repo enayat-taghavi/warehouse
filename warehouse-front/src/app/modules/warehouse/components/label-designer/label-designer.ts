@@ -8,6 +8,7 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { saveBlob } from '../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-label-designer',
@@ -778,14 +779,7 @@ export class LabelDesigner implements OnInit, OnChanges, OnDestroy {
 
     this.labelApi.generatePdf(this.template.id, configPayload, this.customRemark, this.tempPrintSettings).subscribe({
       next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `labels_${new Date().getTime()}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `labels_${new Date().getTime()}.pdf`);
 
         this.isPrinting = false;
         this.toast.show('success', `فایل PDF لیبل‌ها دانلود شد.`);

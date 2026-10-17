@@ -38,6 +38,7 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { OverflowMenuComponent } from '../../../../shared/components/overflow-menu/overflow-menu.component';
+import { saveBlob } from '../../../../core/platform/file-output';
 
 /**
  * صفحه گزارش‌ساز پویا — پوسته اصلی
@@ -884,12 +885,7 @@ export class Reports implements OnInit, OnDestroy {
       next: (outcome) => {
         exportSignal.set(false);
         if (outcome.kind === 'file') {
-          const url = URL.createObjectURL(outcome.blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${spec.report_name}.${format}`;
-          a.click();
-          URL.revokeObjectURL(url);
+          void saveBlob(outcome.blob, `${spec.report_name}.${format}`);
           this.toast.success(`فایل ${label} دانلود شد.`);
         } else {
           // فقط xlsx بزرگ به job می‌رسد؛ PDF همیشه sync است

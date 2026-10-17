@@ -29,6 +29,7 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
 import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
+import { saveBlob } from '../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-manager-review',
@@ -2150,18 +2151,9 @@ export class ManagerReview implements OnInit, OnDestroy {
 
     this.exportSubscription = api.exportExcel({ ...payload, ...params }).subscribe({
       next: (blob) => {
-        try {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `export_manager_${isCount ? 'count' : 'doc'}_${new Date().getTime()}.xlsx`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-        } catch(e) {
+        saveBlob(blob, `export_manager_${isCount ? 'count' : 'doc'}_${new Date().getTime()}.xlsx`).catch((e) => {
           console.error('File download error', e);
-        }
+        });
         
         this.isExporting = false;
         this.closeExportModal();

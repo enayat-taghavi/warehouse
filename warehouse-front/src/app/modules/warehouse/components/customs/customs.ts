@@ -37,6 +37,7 @@ import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { saveBlob } from '../../../../core/platform/file-output';
 
 const DOC_TASK_DIRECT_KEYS = new Set([
   'added_rti_no',
@@ -2307,18 +2308,9 @@ export class Customs implements OnInit, OnDestroy {
 
     this.exportSubscription = this.docTaskApi.exportExcel({ ...payload, ...params }).subscribe({
       next: (blob) => {
-        try {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `export_customs_${new Date().getTime()}.xlsx`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-        } catch(e) {
+        saveBlob(blob, `export_customs_${new Date().getTime()}.xlsx`).catch((e) => {
           console.error('File download error', e);
-        }
+        });
         
         this.isExporting = false;
         this.closeExportModal();
@@ -2358,20 +2350,11 @@ export class Customs implements OnInit, OnDestroy {
     this.isDownloadingTemplate = true;
     this.docTaskApi.downloadTemplate(this.activeWarehouseId).subscribe({
       next: (blob) => {
-        try {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `Customs_Doc_Template_${new Date().getTime()}.xlsx`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-          this.toast.success('قالب اکسل نمونه با موفقیت دانلود شد.');
-        } catch (e) {
+        saveBlob(blob, `Customs_Doc_Template_${new Date().getTime()}.xlsx`).catch((e) => {
           console.error('Template download error', e);
           this.toast.error('خطا در دانلود فایل نمونه');
-        }
+        });
+        this.toast.success('قالب اکسل نمونه با موفقیت دانلود شد.');
         this.isDownloadingTemplate = false;
         this.cdr.detectChanges();
       },

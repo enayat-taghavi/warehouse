@@ -6,6 +6,7 @@ import { ReportExportJob } from '../../../../core/models/report.model';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { saveBlob } from '../../../../core/platform/file-output';
 
 /**
  * نوار پیشرفت خروجی Excel بزرگ — poll هر ۲ ثانیه از /exports/<id>/
@@ -164,12 +165,7 @@ export class ExportProgressComponent implements OnInit, OnChanges, OnDestroy {
     this.api.downloadExportFile(this.jobId).subscribe({
       next: (blob) => {
         this.downloading = false;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = this.fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+        void saveBlob(blob, this.fileName);
       },
       error: () => {
         this.downloading = false;

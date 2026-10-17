@@ -13,6 +13,7 @@ import { Observable, Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { saveBlob } from '../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-projects',
@@ -362,12 +363,7 @@ export class Projects implements OnInit, OnDestroy {
 
   // ── Excel Import/Export ──────────────────────────────────────────
   private triggerDownloadBlob(blob: Blob, filename: string) {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    void saveBlob(blob, filename);
   }
 
   exportWarehousesExcel() {

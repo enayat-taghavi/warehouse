@@ -23,6 +23,7 @@ import { PhotoGalleryHost } from '../item-photo-gallery/photo-gallery-host';
 import { ContextualCommentsComponent } from '../../../common/components/communications/contextual-comments/contextual-comments.component';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { saveBlob } from '../../../../core/platform/file-output';
 import { OverflowMenuComponent } from '../../../../shared/components/overflow-menu/overflow-menu.component';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
@@ -1028,17 +1029,9 @@ export class CountTracking implements OnInit, OnDestroy {
 
     this.exportSubscription = this.countTaskApi.exportExcel(payload).subscribe({
       next: (blob) => {
-        try {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `count_tracking_${new Date().getTime()}.xlsx`;
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
-        } catch (e) {
+        saveBlob(blob, `count_tracking_${new Date().getTime()}.xlsx`).catch((e) => {
           console.error('File download error', e);
-        }
+        });
         this.isExporting = false;
         this.closeExportModal();
         this.toast.show('success', 'فایل اکسل با موفقیت دانلود شد.');

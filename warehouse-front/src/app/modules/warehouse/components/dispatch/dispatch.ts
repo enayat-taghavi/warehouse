@@ -22,6 +22,7 @@ import { ItemPhotoThumbComponent } from '../item-photo-gallery/item-photo-thumb.
 import { PhotoGalleryHost } from '../item-photo-gallery/photo-gallery-host';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { saveBlob } from '../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-dispatch',
@@ -1312,14 +1313,9 @@ export class Dispatch implements OnInit, OnDestroy {
         try {
           const isZip = blob.type === 'application/zip' || blob.type.includes('zip');
           const ext = isZip ? 'zip' : 'xlsx';
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `export_items_${new Date().getTime()}.${ext}`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
+          saveBlob(blob, `export_items_${new Date().getTime()}.${ext}`).catch((e) => {
+            console.error('File download error', e);
+          });
           
           const successMsg = isZip ? 'فایل فشرده حاوی بخش‌های اکسل با موفقیت دانلود شد.' : 'فایل اکسل با موفقیت دانلود شد.';
           this.toast.show('success', successMsg);

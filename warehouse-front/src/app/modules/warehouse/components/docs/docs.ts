@@ -14,6 +14,7 @@ import { environment } from '../../../../../environments/environment';
 import { isServerUnreachable } from '../../../../core/services/server-reachability';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
+import { saveBlob } from '../../../../core/platform/file-output';
 
 @Component({
   selector: 'app-docs',
@@ -231,14 +232,7 @@ export class Docs implements OnInit, OnDestroy, DoCheck {
 
     this.itemApi.downloadTemplate(wId).subscribe({
       next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'Warehouse_Template.xlsx';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, 'Warehouse_Template.xlsx');
       },
       error: () => {
         this.toast.show('error', 'خطا در دریافت قالب نمونه.');
@@ -262,14 +256,7 @@ export class Docs implements OnInit, OnDestroy, DoCheck {
 
     this.itemApi.downloadImportLog(importId).subscribe({
       next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `import_log_${importId}.xlsx`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        void saveBlob(blob, `import_log_${importId}.xlsx`);
       },
       error: () => {
         this.toast.show('error', 'خطا در دریافت فایل لاگ یا فایل منقضی شده است.');
