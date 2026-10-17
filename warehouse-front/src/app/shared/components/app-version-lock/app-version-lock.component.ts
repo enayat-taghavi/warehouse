@@ -1,12 +1,14 @@
-import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, inject, effect, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { AppVersionService } from '../../../core/platform/app-version.service';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
 import { openExternal } from '../../../core/platform/external-link';
+import { ModalFocus } from '../../../core/utils/modal-focus';
 
 const faNumber = new Intl.NumberFormat('fa-IR');
+export const EMERGENCY_SEND_ERROR_TEXT = 'خطا در ارسال اطلاعات به سرور؛ دوباره تلاش کنید';
 
 @Component({
   selector: 'app-version-lock',
@@ -17,9 +19,9 @@ const faNumber = new Intl.NumberFormat('fa-IR');
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="قفل نسخه اپلیکیشن"
-        class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-        <div class="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-slate-100 flex flex-col items-center text-center my-auto animate-fade-in">
+        aria-labelledby="version-lock-title"
+        class="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div id="version-lock-dialog" class="w-full max-w-md bg-surface rounded-3xl p-6 shadow-2xl border border-line-subtle flex flex-col items-center text-center my-auto fade-in">
           <!-- آیکون وضعیت قفل -->
           <div class="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center mb-4 shadow-xs">
             <svg
@@ -33,12 +35,12 @@ const faNumber = new Intl.NumberFormat('fa-IR');
           </div>
 
           <!-- عنوان اخطار -->
-          <h2 class="text-lg font-black text-slate-800 mb-2">
+          <h2 id="version-lock-title" class="text-lg font-black text-fg mb-2">
             نسخهٔ اپ قدیمی است و باید به‌روز شود
           </h2>
 
           <!-- تعداد رکوردهای ارسال‌نشده -->
-          <div class="w-full bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3.5 mb-4 text-right">
+          <div class="w-full bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3.5 mb-4 text-start">
             <div class="flex items-start gap-2.5">
               <span class="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
                 <svg
@@ -61,21 +63,22 @@ const faNumber = new Intl.NumberFormat('fa-IR');
           </div>
 
           <!-- پیام هشدار عدم حذف برنامه -->
-          <p class="text-xs text-slate-600 leading-relaxed mb-6 font-medium bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-right w-full">
+          <p class="text-xs text-fg-muted leading-relaxed mb-6 font-medium bg-surface-muted border border-line rounded-2xl p-3.5 text-start w-full">
             اپ را حذف نکنید؛ نسخهٔ جدید را روی همین نصب کنید تا داده‌های ارسال‌نشده حفظ شوند
           </p>
 
           <!-- دکمه‌ها -->
           <div class="w-full flex flex-col gap-2.5">
             <button
+              id="version-lock-update-btn"
               type="button"
               (click)="onUpdate()"
               title="دریافت و نصب نسخه جدید برنامه"
               aria-label="به‌روزرسانی برنامه"
-              class="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs transition cursor-pointer">
+              class="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs transition cursor-pointer">
               <svg
-                appIcon="cloud-upload"
-                class="w-4 h-4 text-white rotate-180"
+                appIcon="download"
+                class="w-4 h-4 text-white"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -90,10 +93,10 @@ const faNumber = new Intl.NumberFormat('fa-IR');
               [disabled]="isSendingEmergency()"
               title="تلاش برای ارسال رکوردهای باقیمانده به سرور"
               aria-label="ارسال اضطراری اطلاعات به سرور"
-              class="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-98 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+              class="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-surface-muted hover:bg-slate-200 active:scale-95 text-fg-muted font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-60 disabled:cursor-wait">
               <svg
                 appIcon="cloud-upload"
-                class="w-4 h-4 text-slate-600"
+                class="w-4 h-4 text-fg-muted"
                 [class.animate-bounce]="isSendingEmergency()"
                 viewBox="0 0 24 24"
                 fill="none"
@@ -109,7 +112,7 @@ const faNumber = new Intl.NumberFormat('fa-IR');
             <div
               role="status"
               aria-live="polite"
-              class="mt-3.5 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2 w-full animate-fade-in">
+              class="mt-3.5 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2 w-full fade-in">
               {{ emergencyStatusMessage() }}
             </div>
           }
@@ -148,8 +151,8 @@ const faNumber = new Intl.NumberFormat('fa-IR');
               aria-label="به‌روزرسانی برنامه"
               class="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs cursor-pointer flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-900 shadow-2xs">
               <svg
-                appIcon="cloud-upload"
-                class="w-3.5 h-3.5 text-white rotate-180"
+                appIcon="download"
+                class="w-3.5 h-3.5 text-white"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -180,15 +183,35 @@ const faNumber = new Intl.NumberFormat('fa-IR');
   `,
 })
 export class AppVersionLockComponent implements OnInit, OnDestroy {
-  protected readonly versionService = inject(AppVersionService);
+  public readonly versionService = inject(AppVersionService);
   private readonly offlineSync = inject(OfflineSyncService, { optional: true });
+  private readonly modalFocus = new ModalFocus();
+  private readonly el = inject(ElementRef);
 
-  protected readonly unsentCount = signal(0);
-  protected readonly isDismissed = signal(false);
-  protected readonly isSendingEmergency = signal(false);
-  protected readonly emergencyStatusMessage = signal<string | null>(null);
+  public readonly unsentCount = signal(0);
+  public readonly isDismissed = signal(false);
+  public readonly isSendingEmergency = signal(false);
+  public readonly emergencyStatusMessage = signal<string | null>(null);
 
   private sub: Subscription | null = null;
+
+  constructor() {
+    effect(() => {
+      const isLocked = this.versionService.state() === 'locked';
+      if (typeof document !== 'undefined') {
+        const contentEl = document.getElementById('app-main-content') ?? document.querySelector('router-outlet')?.parentElement;
+        if (isLocked) {
+          contentEl?.setAttribute('inert', '');
+          setTimeout(() => {
+            this.focusUpdateButton();
+          }, 0);
+        } else {
+          contentEl?.removeAttribute('inert');
+          this.modalFocus.close();
+        }
+      }
+    });
+  }
 
   ngOnInit(): void {
     // بررسی وضعیت رد شدن در نشست فعلی
@@ -207,55 +230,66 @@ export class AppVersionLockComponent implements OnInit, OnDestroy {
     }
   }
 
-  protected fa(n: number): string {
+  public fa(n: number): string {
     return faNumber.format(n);
   }
 
-  protected async updateUnsentCount(): Promise<void> {
+  public focusUpdateButton(): void {
+    if (typeof document === 'undefined') return;
+    const btn = (document.getElementById('version-lock-update-btn') as HTMLElement)
+      ?? this.el.nativeElement.querySelector('#version-lock-update-btn');
+    btn?.focus();
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeydown(event: KeyboardEvent): void {
+    if (this.versionService.state() === 'locked') {
+      this.modalFocus.trapTab(event, 'version-lock-dialog');
+    }
+  }
+
+  public async updateUnsentCount(): Promise<number> {
     if (this.offlineSync) {
       try {
         const count = await this.offlineSync.getUnsentCountStrict();
         this.unsentCount.set(count);
+        return count;
       } catch {
         // نادیده گرفتن خطا
       }
     }
+    return this.unsentCount();
   }
 
-  protected onUpdate(): void {
+  public onUpdate(): void {
     const url = this.versionService.downloadUrl;
     if (url) {
       openExternal(url);
     }
   }
 
-  protected async onEmergencySend(): Promise<void> {
+  public async onEmergencySend(): Promise<void> {
     if (this.isSendingEmergency()) return;
     this.isSendingEmergency.set(true);
     this.emergencyStatusMessage.set('در حال ارسال داده‌ها به سرور...');
 
     try {
-      const outcome = await this.versionService.emergencySend();
-      if (outcome?.status === 'completed' || outcome?.status === 'nothing-to-sync') {
-        this.emergencyStatusMessage.set('ارسال با موفقیت انجام شد.');
-      } else if (outcome?.status === 'offline') {
-        this.emergencyStatusMessage.set('دستگاه آفلاین است. لطفاً اتصال اینترنت را بررسی کنید.');
-      } else if (outcome?.status === 'server-unreachable') {
-        this.emergencyStatusMessage.set('سرور موقتاً در دسترس نیست. بعداً مجدداً تلاش کنید.');
-      } else if (outcome?.status === 'partial') {
-        this.emergencyStatusMessage.set(`بخشی از داده‌ها ارسال شد (${outcome.synced || 0} ارسال‌شده).`);
-      } else {
-        this.emergencyStatusMessage.set('عملیات ارسال انجام شد.');
-      }
+      await this.versionService.emergencySend();
       await this.updateUnsentCount();
-    } catch (err: any) {
-      this.emergencyStatusMessage.set('خطا در ارسال: ' + (err?.message || 'مشکل ارتباطی'));
+      const count = this.unsentCount();
+      if (count === 0) {
+        this.emergencyStatusMessage.set('ارسال با موفقیت انجام شد.');
+      } else {
+        this.emergencyStatusMessage.set(`هنوز ${this.fa(count)} رکورد ارسال نشده است؛ دوباره تلاش کنید`);
+      }
+    } catch {
+      this.emergencyStatusMessage.set(EMERGENCY_SEND_ERROR_TEXT);
     } finally {
       this.isSendingEmergency.set(false);
     }
   }
 
-  protected dismissRecommend(): void {
+  public dismissRecommend(): void {
     this.isDismissed.set(true);
     try {
       if (typeof sessionStorage !== 'undefined') {
@@ -266,5 +300,11 @@ export class AppVersionLockComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    if (typeof document !== 'undefined') {
+      const contentEl = document.getElementById('app-main-content') ?? document.querySelector('router-outlet')?.parentElement;
+      contentEl?.removeAttribute('inert');
+    }
+    this.modalFocus.close();
   }
 }
+

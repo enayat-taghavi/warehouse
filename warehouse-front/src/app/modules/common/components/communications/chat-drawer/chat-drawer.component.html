@@ -194,18 +194,20 @@
               <button
                 type="button"
                 (click)="downloadAttachment(att)"
+                [attr.aria-label]="'دانلود ' + att.file_name"
+                [attr.title]="'دانلود ' + att.file_name"
                 class="block w-full text-start rounded-lg overflow-hidden border border-white/20 hover:opacity-90 transition-opacity bg-black/5 dark:bg-white/5 cursor-pointer">
                 <img *ngIf="att.content_type.startsWith('image/')" [src]="att.file_url | serverUrl" class="max-h-48 w-full object-cover" />
-                <div *ngIf="!att.content_type.startsWith('image/')" class="p-2.5 flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-1.5 truncate">
+                <span *ngIf="!att.content_type.startsWith('image/')" class="block p-2.5 flex items-center justify-between gap-2">
+                  <span class="block flex items-center gap-1.5 truncate">
                     <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip"></svg>
                     <span class="truncate text-[11px] font-bold">{{ att.file_name }}</span>
-                  </div>
+                  </span>
                   <span class="text-[10px] bg-black/10 dark:bg-white/10 px-2 py-0.5 rounded font-bold shrink-0 flex items-center gap-1">
                     <span>دانلود</span>
                     <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-download"></svg>
                   </span>
-                </div>
+                </span>
               </button>
             </div>
           </div>

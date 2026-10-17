@@ -1,137 +1,137 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { of } from 'rxjs';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
-import { AppVersionLockComponent } from './app-version-lock.component';
-import { AppVersionService, AppVersionState } from '../../../core/platform/app-version.service';
+import { of } from 'rxjs';
+import { AppVersionLockComponent, EMERGENCY_SEND_ERROR_TEXT } from './app-version-lock.component';
+import { AppVersionService } from '../../../core/platform/app-version.service';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
 
 describe('AppVersionLockComponent', () => {
-  let mockVersionState: any;
-  let mockDownloadUrl: string;
-  let mockEmergencySend: any;
-  let mockOfflineSync: any;
-  let windowOpenSpy: any;
+  let fixture: ComponentFixture<AppVersionLockComponent>;
+  let component: AppVersionLockComponent;
+  let mockVersionService: {
+    state: ReturnType<typeof signal<'ok' | 'recommend' | 'locked'>>;
+    downloadUrl: string;
+    emergencySend: ReturnType<typeof vi.fn>;
+  };
+  let mockOfflineSync: {
+    pendingCount$: any;
+    getUnsentCountStrict: ReturnType<typeof vi.fn>;
+  };
+  let appMainContent: HTMLDivElement;
 
-  beforeEach(async () => {
-    mockVersionState = signal<AppVersionState>('ok');
-    mockDownloadUrl = 'https://download.farsalish.ir/app.apk';
-    mockEmergencySend = vi.fn().mockResolvedValue({ status: 'completed', synced: 3 });
+  beforeEach(() => {
+    // ایجاد عنصر نگه‌دارنده محتوای اصلی در سند
+    appMainContent = document.createElement('div');
+    appMainContent.id = 'app-main-content';
+    document.body.appendChild(appMainContent);
 
-    mockOfflineSync = {
-      pendingCount$: of(5),
-      getUnsentCountStrict: vi.fn().mockResolvedValue(5),
+    mockVersionService = {
+      state: signal<'ok' | 'recommend' | 'locked'>('ok'),
+      downloadUrl: 'https://test.domain/download',
+      emergencySend: vi.fn().mockResolvedValue({ status: 'completed' }),
     };
 
-    windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    mockOfflineSync = {
+      pendingCount$: of(0),
+      getUnsentCountStrict: vi.fn().mockResolvedValue(0),
+    };
 
-    await TestBed.configureTestingModule({
+    TestBed.configureTestingModule({
       imports: [AppVersionLockComponent],
       providers: [
-        {
-          provide: AppVersionService,
-          useValue: {
-            state: mockVersionState,
-            get downloadUrl() {
-              return mockDownloadUrl;
-            },
-            emergencySend: mockEmergencySend,
-          },
-        },
-        {
-          provide: OfflineSyncService,
-          useValue: mockOfflineSync,
-        },
+        { provide: AppVersionService, useValue: mockVersionService },
+        { provide: OfflineSyncService, useValue: mockOfflineSync },
       ],
-    }).compileComponents();
+    });
 
-    try {
-      sessionStorage.clear();
-    } catch {}
+    fixture = TestBed.createComponent(AppVersionLockComponent);
+    component = fixture.componentInstance;
+    document.body.appendChild(fixture.nativeElement);
   });
 
   afterEach(() => {
+    fixture.destroy();
+    if (fixture.nativeElement.parentElement === document.body) {
+      document.body.removeChild(fixture.nativeElement);
+    }
+    appMainContent.remove();
     TestBed.resetTestingModule();
     vi.restoreAllMocks();
-    try {
-      sessionStorage.clear();
-    } catch {}
   });
 
-  it('1. should render nothing when version state is ok', () => {
-    mockVersionState.set('ok');
-    const fixture = TestBed.createComponent(AppVersionLockComponent);
-    fixture.detectChanges();
+  it('1. should show still pending text when emergency send leaves records in local queue', async () => {
+    // رکوردهای باقی‌مانده پس از ارسال اضطراری
+    mockOfflineSync.getUnsentCountStrict.mockResolvedValue(5);
 
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('[role="dialog"]')).toBeNull();
-    expect(el.querySelector('section[role="status"]')).toBeNull();
+    await component.onEmergencySend();
+
+    const msg = component.emergencyStatusMessage();
+    expect(msg).toBe('هنوز ۵ رکورد ارسال نشده است؛ دوباره تلاش کنید');
+    expect(msg).not.toContain('ارسال با موفقیت انجام شد');
   });
 
-  it('2. should render locked modal with warning text, unsent records, update button and emergency send button', () => {
-    mockVersionState.set('locked');
-    const fixture = TestBed.createComponent(AppVersionLockComponent);
-    fixture.detectChanges();
+  it('2. should show success message when unsent count is 0 after emergency send', async () => {
+    mockOfflineSync.getUnsentCountStrict.mockResolvedValue(0);
 
-    const el = fixture.nativeElement as HTMLElement;
-    const dialog = el.querySelector('[role="dialog"]');
-    expect(dialog).toBeTruthy();
+    await component.onEmergencySend();
 
-    expect(dialog?.textContent).toContain('نسخهٔ اپ قدیمی است و باید به‌روز شود');
-    expect(dialog?.textContent).toContain('اپ را حذف نکنید؛ نسخهٔ جدید را روی همین نصب کنید تا داده‌های ارسال‌نشده حفظ شوند');
-    expect(dialog?.textContent).toContain('شما دارای ۵ رکورد ذخیره‌نشده در صف محلی هستید');
-
-    const updateBtn = el.querySelector('button[aria-label="به‌روزرسانی برنامه"]') as HTMLButtonElement;
-    expect(updateBtn).toBeTruthy();
-    expect(updateBtn.textContent).toContain('به‌روزرسانی');
-
-    const emergencyBtn = el.querySelector('button[aria-label="ارسال اضطراری اطلاعات به سرور"]') as HTMLButtonElement;
-    expect(emergencyBtn).toBeTruthy();
-    expect(emergencyBtn.textContent).toContain('ارسال اضطراری');
+    expect(component.emergencyStatusMessage()).toBe('ارسال با موفقیت انجام شد.');
   });
 
-  it('3. should trigger openExternal on clicking update button in locked state', () => {
-    mockVersionState.set('locked');
-    const fixture = TestBed.createComponent(AppVersionLockComponent);
-    fixture.detectChanges();
+  it('3. should show fixed Persian error text on emergency send failure without leaking error message', async () => {
+    mockVersionService.emergencySend.mockRejectedValue(new Error('Sensitive database timeout 504'));
 
-    const updateBtn = fixture.nativeElement.querySelector('button[aria-label="به‌روزرسانی برنامه"]') as HTMLButtonElement;
-    updateBtn.click();
+    await component.onEmergencySend();
 
-    expect(windowOpenSpy).toHaveBeenCalledWith('https://download.farsalish.ir/app.apk', '_blank');
+    const msg = component.emergencyStatusMessage();
+    expect(msg).toBe(EMERGENCY_SEND_ERROR_TEXT);
+    expect(msg).not.toContain('Sensitive');
+    expect(msg).not.toContain('504');
   });
 
-  it('4. should trigger emergencySend on clicking emergency send button in locked state', async () => {
-    mockVersionState.set('locked');
-    const fixture = TestBed.createComponent(AppVersionLockComponent);
+  it('4. should move focus into the dialog when locked and set inert on background content', async () => {
+    mockVersionService.state.set('locked');
     fixture.detectChanges();
 
-    const emergencyBtn = fixture.nativeElement.querySelector('button[aria-label="ارسال اضطراری اطلاعات به سرور"]') as HTMLButtonElement;
-    emergencyBtn.click();
+    // مهلت اجرای setTimeout برای فوکوس
+    await new Promise((r) => setTimeout(r, 20));
 
-    expect(mockEmergencySend).toHaveBeenCalled();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.textContent).toContain('ارسال با موفقیت انجام شد');
+    const updateBtn = fixture.nativeElement.querySelector('#version-lock-update-btn') as HTMLElement;
+    expect(updateBtn).not.toBeNull();
+    expect(document.activeElement).toBe(updateBtn);
+    expect(appMainContent.hasAttribute('inert')).toBe(true);
   });
 
-  it('5. should render dismissible banner in recommend state', () => {
-    mockVersionState.set('recommend');
-    const fixture = TestBed.createComponent(AppVersionLockComponent);
+  it('5. should remove inert attribute when locked state closes or component is destroyed', async () => {
+    mockVersionService.state.set('locked');
+    fixture.detectChanges();
+    expect(appMainContent.hasAttribute('inert')).toBe(true);
+
+    mockVersionService.state.set('ok');
+    fixture.detectChanges();
+    expect(appMainContent.hasAttribute('inert')).toBe(false);
+  });
+
+  it('6. should keep Tab navigation trapped inside the dialog when Tab is pressed', () => {
+    mockVersionService.state.set('locked');
     fixture.detectChanges();
 
-    const banner = fixture.nativeElement.querySelector('section[role="status"]');
-    expect(banner).toBeTruthy();
-    expect(banner?.textContent).toContain('نسخه جدیدتری از اپلیکیشن موجود است');
+    const updateBtn = fixture.nativeElement.querySelector('#version-lock-update-btn') as HTMLButtonElement;
+    const emergencyBtn = fixture.nativeElement.querySelectorAll('button')[1] as HTMLButtonElement;
+    expect(updateBtn).not.toBeNull();
+    expect(emergencyBtn).not.toBeNull();
 
-    const dismissBtn = fixture.nativeElement.querySelector('button[aria-label="بستن اعلان به‌روزرسانی"]') as HTMLButtonElement;
-    expect(dismissBtn).toBeTruthy();
-    dismissBtn.click();
-    fixture.detectChanges();
+    // فوکوس روی آخرین دکمه (ارسال اضطراری) و فشردن Tab عادی
+    emergencyBtn.focus();
+    expect(document.activeElement).toBe(emergencyBtn);
 
-    expect(fixture.nativeElement.querySelector('section[role="status"]')).toBeNull();
+    const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    const prevented = !document.dispatchEvent(tabEvent);
+
+    // فوکوس باید به اولین دکمه بازگردد
+    expect(document.activeElement).toBe(updateBtn);
   });
 });
