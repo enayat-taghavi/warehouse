@@ -5789,3 +5789,53 @@ refactor(route-access): login entry, guard access lists and module page permissi
 - **قرارداد ماژول (`module-contract....
 
 ---
+
+### Task 1 of 1 — 2026-10-17 04:55:28
+- **Status:** DONE
+- **Conversation:** `c813fcff-c73b-4a23-a025-c75033782187`
+- **Steps:** 16
+- **Duration:** 2m 42s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 4/4 passed
+- **Task:**
+```
+Session 23 of 23 — Release the end of phase 3 on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+
+2. Context: sessions 12 to 22 changed frontend code, frontend specs and guardian scripts, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 3 end'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
+- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the `showmigrations` result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده به زبان فارسی (Explain Simply)
+کاربر درخواست انتشار پایان فاز ۳ روی محیط محلی `app` را دارد که شامل اجرای پشتیبان‌گیری از پایگاه داده بدون از دست رفتن داده، بررسی عدم وجود مایگریشن معلق در جنگو، ساخت پروداکشن فرانت‌اند بدون حذف دایرکتوری خروجی، اعمال اسکریپت پچ `ngsw-530` و در نهایت بررسی تمیز بودن وضعیت مخزن گیت می‌باشد.
+
+### ۲. بررسی صحت فنی (Technical Verification)
+- نسخه پشتیبان پایگاه داده توسط تابع رسمی `create_database_backup` با موفقیت ایجاد شد و اندازه فایل بزرگتر از صفر تایید گردید.
+- برنامه مایگریشن‌ها بررسی شد و تمامی مایگریشن‌ها از پیش اعمال شده بودند (`[X]`) و هیچ مایگریشن معلقی (`[ ]`) وجود نداشت.
+- فرآیند ساخت فرانت‌اند توسط `n...
+
+---
