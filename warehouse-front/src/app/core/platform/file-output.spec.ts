@@ -198,6 +198,28 @@ describe('file-output', () => {
       expect(notifierSpy).not.toHaveBeenCalled();
     });
 
+    it('5b. native saveBlob a share cancel after Directory.Data fallback notifies once and rejects', async () => {
+      (globalThis as any).Capacitor = {
+        isNativePlatform: () => true,
+        getPlatform: () => 'android',
+      };
+      writeFileSpy
+        .mockRejectedValueOnce(new Error('Documents permission denied'))
+        .mockResolvedValueOnce({
+          uri: 'file:///data/CoManage/sample.pdf',
+        });
+      shareSpy.mockRejectedValue(new Error('User did cancel share'));
+
+      const notifierSpy = vi.fn();
+      setFileOutputErrorNotifier(notifierSpy);
+
+      const dummyBlob = new Blob(['sample pdf content'], { type: 'application/pdf' });
+      await expect(saveBlob(dummyBlob, 'sample.pdf')).rejects.toThrow('User did cancel share');
+
+      expect(notifierSpy).toHaveBeenCalledTimes(1);
+      expect(notifierSpy).toHaveBeenCalledWith('ذخیره یا اشتراک فایل روی گوشی انجام نشد. دوباره تلاش کنید.');
+    });
+
     it('6. native saveBlob a write failure in both Directory.Documents and Directory.Data calls the notifier once and rejects', async () => {
       (globalThis as any).Capacitor = {
         isNativePlatform: () => true,

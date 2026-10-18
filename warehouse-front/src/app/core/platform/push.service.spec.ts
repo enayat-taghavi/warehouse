@@ -250,4 +250,53 @@ describe('PushService', () => {
     expect(pushNotificationBridge.register).not.toHaveBeenCalled();
     expect(mockHttp.post).not.toHaveBeenCalled();
   });
+
+  it('7. remote logout: token is deleted and push listeners unregistered', async () => {
+    (globalThis as any).Capacitor = {
+      isNativePlatform: () => true,
+      getPlatform: () => 'android',
+    };
+
+    localStorage.setItem(PUSH_TOKEN_STORAGE_KEY, 'fcm-token-remote-logout-test');
+    const push = TestBed.inject(PushService);
+    expect(push.getToken()).toBe('fcm-token-remote-logout-test');
+
+    await push.deleteToken();
+
+    expect(mockHttp.delete).toHaveBeenCalledWith(
+      `${environment.apiUrl}/notifications/devices/`,
+      expect.objectContaining({
+        body: { token: 'fcm-token-remote-logout-test' },
+      })
+    );
+    expect(push.getToken()).toBeNull();
+    expect(localStorage.getItem(PUSH_TOKEN_STORAGE_KEY)).toBeNull();
+    expect(pushNotificationBridge.removeAllListeners).toHaveBeenCalled();
+  });
+
+  it('8. listeners flag is reset only after removeAllListeners resolves or fails', async () => {
+    (globalThis as any).Capacitor = {
+      isNativePlatform: () => true,
+      getPlatform: () => 'android',
+    };
+
+    await service.register();
+    expect((service as any).listenersRegistered).toBe(true);
+
+    let resolveRemove: () => void = () => {};
+    vi.spyOn(pushNotificationBridge, 'removeAllListeners').mockImplementation(
+      () => new Promise<void>((resolve) => { resolveRemove = resolve; })
+    );
+
+    const deletePromise = service.deleteToken();
+
+    // While removeAllListeners is in flight, flag must remain true
+    expect((service as any).listenersRegistered).toBe(true);
+
+    resolveRemove();
+    await deletePromise;
+
+    // Once removeAllListeners resolves, flag must be reset to false
+    expect((service as any).listenersRegistered).toBe(false);
+  });
 });

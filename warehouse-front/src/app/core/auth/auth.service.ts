@@ -120,6 +120,10 @@ export class AuthService {
   }
 
   private handleRemoteLogout(): void {
+    try {
+      this.pushService?.deleteToken();
+    } catch {}
+
     this.sessionTab.clearTabSession();
     this.removeItem(TOKEN_KEY);
     this.removeItem(REFRESH_KEY);

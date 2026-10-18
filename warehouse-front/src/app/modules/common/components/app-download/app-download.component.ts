@@ -26,8 +26,16 @@ export class AppDownloadComponent implements OnInit, OnDestroy {
   recommendedVersion = '';
   directUrl: string | null = null;
   isLoading = true;
+  hasError = false;
 
   ngOnInit(): void {
+    this.loadConfig();
+  }
+
+  loadConfig(): void {
+    this.isLoading = true;
+    this.hasError = false;
+    this.configSub?.unsubscribe();
     this.configSub = this.configApi.getPublicConfig().subscribe({
       next: (config: PublicConfig) => {
         if (config) {
@@ -36,10 +44,12 @@ export class AppDownloadComponent implements OnInit, OnDestroy {
           this.systemName = config.system_name || '';
         }
         this.isLoading = false;
+        this.hasError = false;
         this.cdr.detectChanges();
       },
       error: () => {
         this.isLoading = false;
+        this.hasError = true;
         this.cdr.detectChanges();
       }
     });

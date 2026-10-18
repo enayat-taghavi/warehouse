@@ -89,6 +89,7 @@ export async function saveBlob(blob: Blob, filename: string): Promise<void> {
       const base64Data = await blobToBase64(blob);
       const filePath = `CoManage/${filename}`;
       let writeResult: { uri: string };
+      let usedFallback = false;
       try {
         writeResult = await fileOutputNativeBridge.writeFile({
           path: filePath,
@@ -97,6 +98,7 @@ export async function saveBlob(blob: Blob, filename: string): Promise<void> {
           recursive: true,
         });
       } catch {
+        usedFallback = true;
         writeResult = await fileOutputNativeBridge.writeFile({
           path: filePath,
           data: base64Data,
@@ -112,6 +114,9 @@ export async function saveBlob(blob: Blob, filename: string): Promise<void> {
         });
       } catch (shareErr) {
         if (isCancelError(shareErr)) {
+          if (usedFallback) {
+            throw shareErr;
+          }
           return;
         }
         throw shareErr;

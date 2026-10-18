@@ -143,12 +143,13 @@ export class PushService {
 
     this.clearStoredToken();
     this.currentToken = null;
-    this.listenersRegistered = false;
 
     try {
       await pushNotificationBridge.removeAllListeners();
     } catch (err) {
       console.warn('[PushService] removeAllListeners error:', err);
+    } finally {
+      this.listenersRegistered = false;
     }
   }
 

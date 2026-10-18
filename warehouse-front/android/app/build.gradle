@@ -6,6 +6,17 @@ if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
 }
 
+def googleServicesFile = file('google-services.json')
+boolean isReleaseRequested = gradle.startParameter.taskNames.any { it.contains('Release') }
+if (isReleaseRequested) {
+    if (!googleServicesFile.exists()) {
+        throw new GradleException("Release build requires 'google-services.json' in android/app directory for Firebase Push Notifications.")
+    }
+    if (!keystorePropertiesFile.exists()) {
+        throw new GradleException("Release build requires keystore properties file at: " + keystorePropertiesFile.absolutePath)
+    }
+}
+
 android {
     namespace = "ir.comanage.soft"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -13,8 +24,8 @@ android {
         applicationId "ir.comanage.soft"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.0.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

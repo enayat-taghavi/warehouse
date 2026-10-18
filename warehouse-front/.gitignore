@@ -49,4 +49,4 @@ testsprite_tests/tmp/config.json
 # Signing secrets
 *.jks
 keystore.properties
-
+google-services.json

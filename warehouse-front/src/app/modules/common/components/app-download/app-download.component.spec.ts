@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError, NEVER } from 'rxjs';
 import { AppDownloadComponent } from './app-download.component';
 import { ConfigApiService, PublicConfig } from '../../../../core/api/config-api.service';
 
@@ -88,6 +88,40 @@ describe('AppDownloadComponent', () => {
     expect(btn).toBeTruthy();
     expect(btn.disabled).toBe(true);
     expect(btn.textContent).toContain('به‌زودی');
+    expect(fixture.nativeElement.textContent).toContain('لینک دانلود هنوز منتشر نشده است');
+  });
+
+  it('shows loading text on button while config is loading', () => {
+    mockConfigApi.getPublicConfig.mockReturnValue(NEVER);
+    fixture = TestBed.createComponent(AppDownloadComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    const btn = fixture.nativeElement.querySelector('#btn-download-android') as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+    expect(btn.disabled).toBe(true);
+    expect(btn.textContent).toContain('در حال بارگذاری…');
+  });
+
+  it('shows error line and retry button when config request fails, and retrying re-fetches config', () => {
+    mockConfigApi.getPublicConfig.mockReturnValueOnce(throwError(() => new Error('Server error')));
+    fixture = TestBed.createComponent(AppDownloadComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('خطا در دریافت اطلاعات دانلود.');
+    const retryBtn = fixture.nativeElement.querySelector('button[type="button"]:not(#btn-download-android)') as HTMLButtonElement;
+    expect(retryBtn).toBeTruthy();
+    expect(retryBtn.textContent).toContain('تلاش مجدد');
+
+    mockConfigApi.getPublicConfig.mockReturnValueOnce(of(sampleConfigWithUrl));
+    retryBtn.click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('خطا در دریافت اطلاعات دانلود.');
+    const downloadBtn = fixture.nativeElement.querySelector('#btn-download-android') as HTMLButtonElement;
+    expect(downloadBtn.disabled).toBe(false);
+    expect(downloadBtn.textContent).toContain('دانلود نسخهٔ اندروید');
   });
 
   it('iPhone guide rendered', () => {
