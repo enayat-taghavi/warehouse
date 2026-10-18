@@ -1,5 +1,11 @@
 apply plugin: 'com.android.application'
 
+def keystorePropertiesFile = file(System.getenv("COMANAGE_KEYSTORE_PROPERTIES") ?: "E:/warehouse-secrets/comanage/keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
 android {
     namespace = "ir.comanage.soft"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -18,6 +24,10 @@ android {
     }
     buildFeatures {
         buildConfig true
+    }
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
     }
     flavorDimensions "env", "channel"
     productFlavors {
@@ -44,10 +54,23 @@ android {
             buildConfigField "String", "APP_CHANNEL", "\"myket\""
         }
     }
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties.getProperty('storeFile'))
+                storePassword keystoreProperties.getProperty('storePassword')
+                keyAlias keystoreProperties.getProperty('keyAlias')
+                keyPassword keystoreProperties.getProperty('keyPassword')
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

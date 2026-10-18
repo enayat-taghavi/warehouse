@@ -45,3 +45,8 @@ __screenshots__/
 Thumbs.db
 testsprite_tests/tmp/
 testsprite_tests/tmp/config.json
+
+# Signing secrets
+*.jks
+keystore.properties
+
