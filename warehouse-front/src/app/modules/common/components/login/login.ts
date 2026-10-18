@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -16,7 +16,7 @@ import { BRANDING } from '../../../../core/branding';
 import { ModuleRegistryService, getModuleRegistry } from '../../../../core/modules/module-registry.service';
 @Component({
   selector: 'app-login',
-  imports: [CommonModule, FormsModule, SvgIconDirective],
+  imports: [CommonModule, FormsModule, RouterLink, SvgIconDirective],
   templateUrl: './login.html',
   styleUrl: './login.css'
 })

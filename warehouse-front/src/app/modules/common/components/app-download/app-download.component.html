@@ -1,0 +1,104 @@
+<div class="min-h-screen bg-surface-canvas dark:bg-slate-950 text-fg dark:text-slate-100 flex flex-col justify-between p-4 sm:p-6 transition-colors">
+  <!-- نوار بازگشت بالا -->
+  <header class="w-full max-w-md mx-auto mb-4">
+    <a
+      routerLink="/login"
+      class="inline-flex items-center gap-1.5 text-xs font-bold text-fg-muted hover:text-fg dark:text-slate-400 dark:hover:text-white transition-colors min-h-[40px] px-2 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+      title="بازگشت به صفحه ورود"
+      aria-label="بازگشت به صفحه ورود"
+    >
+      <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-right"></svg>
+      <span>بازگشت به صفحه ورود</span>
+    </a>
+  </header>
+
+  <main class="w-full max-w-md mx-auto flex-1 flex flex-col gap-5">
+    <!-- بخش معرفی برنامه و برندینگ -->
+    <div class="bg-surface dark:bg-slate-900 rounded-3xl border border-line dark:border-slate-800 shadow-sm p-6 text-center">
+      <div class="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center shadow-lg mb-3" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" appIcon="logo-cube"></svg>
+      </div>
+      <h1 class="text-2xl font-black text-fg dark:text-white tracking-tight">{{ appName }}</h1>
+      <p class="text-xs text-fg-muted dark:text-slate-400 mt-1 leading-relaxed">{{ systemName || branding.systemName }}</p>
+
+      <div *ngIf="recommendedVersion" class="inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-[11px] font-medium">
+        <span>نسخه پیشنهادی:</span>
+        <span class="font-mono font-bold">{{ recommendedVersion }}</span>
+      </div>
+    </div>
+
+    <!-- کارت نسخه اندروید و راهنمای نصب -->
+    <div class="bg-surface dark:bg-slate-900 rounded-3xl border border-line dark:border-slate-800 shadow-sm p-6 flex flex-col gap-4">
+      <div class="flex items-center gap-2.5 pb-3 border-b border-line dark:border-slate-800">
+        <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="smartphone"></svg>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-fg dark:text-white">نسخهٔ اندروید</h2>
+          <p class="text-[11px] text-fg-muted dark:text-slate-400">دانلود مستقیم فایل نصبی (APK)</p>
+        </div>
+      </div>
+
+      <!-- دکمه دانلود -->
+      <button
+        id="btn-download-android"
+        type="button"
+        (click)="downloadApk()"
+        [disabled]="!directUrl"
+        class="w-full min-h-[48px] py-3 px-4 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+        [ngClass]="directUrl ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/25' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 opacity-80'"
+        [attr.aria-label]="directUrl ? 'دانلود نسخهٔ اندروید' : 'به‌زودی'"
+        [title]="directUrl ? 'دانلود نسخهٔ اندروید' : 'به‌زودی'"
+      >
+        <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
+        <span>{{ directUrl ? 'دانلود نسخهٔ اندروید' : 'به‌زودی' }}</span>
+      </button>
+
+      <!-- راهنمای نصب اندروید -->
+      <div class="bg-surface-muted dark:bg-slate-800/60 rounded-2xl p-4 text-xs text-fg-muted dark:text-slate-300 leading-relaxed space-y-2 border border-line-subtle dark:border-slate-800">
+        <div class="font-bold text-fg dark:text-white flex items-center gap-1.5 mb-2">
+          <svg class="w-4 h-4 text-indigo-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="info"></svg>
+          <span>راهنمای نصب فایل نصبی اندروید:</span>
+        </div>
+        <ol class="list-decimal list-inside space-y-1.5 text-start pr-1">
+          <li>روی دکمه «دانلود نسخهٔ اندروید» کلیک کنید تا فایل APK دریافت شود.</li>
+          <li>پس از اتمام دانلود، فایل را از نوار اعلان‌ها یا پوشه Downloads گوشی باز کنید.</li>
+          <li>در صورت نمایش پیام امنیتی، به بخش تنظیمات (Settings) رفته و اجازه «نصب برنامه‌های ناشناخته» (Install unknown apps) را برای مرورگر فعال کنید.</li>
+          <li>دکمه «نصب» (Install) را لمس کنید تا برنامه نصب شود.</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- کارت راهنمای آیفون و آیپد (iOS) -->
+    <div class="bg-surface dark:bg-slate-900 rounded-3xl border border-line dark:border-slate-800 shadow-sm p-6 flex flex-col gap-4">
+      <div class="flex items-center gap-2.5 pb-3 border-b border-line dark:border-slate-800">
+        <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="smartphone"></svg>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-fg dark:text-white">کاربران آیفون و آیپد (iOS)</h2>
+          <p class="text-[11px] text-fg-muted dark:text-slate-400">نصب به عنوان وب‌اپلیکیشن (PWA)</p>
+        </div>
+      </div>
+
+      <!-- راهنمای نصب آیفون -->
+      <div class="bg-surface-muted dark:bg-slate-800/60 rounded-2xl p-4 text-xs text-fg-muted dark:text-slate-300 leading-relaxed space-y-2 border border-line-subtle dark:border-slate-800">
+        <div class="font-bold text-fg dark:text-white flex items-center gap-1.5 mb-2">
+          <svg class="w-4 h-4 text-blue-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="info"></svg>
+          <span>راهنمای نصب روی آیفون:</span>
+        </div>
+        <ol class="list-decimal list-inside space-y-1.5 text-start pr-1">
+          <li>آدرس سامانه را در مرورگر <strong>Safari</strong> باز کنید.</li>
+          <li>در نوار ابزار پایین مرورگر، دکمه اشتراک‌گذاری <strong>Share</strong> را لمس کنید.</li>
+          <li>از منوی بازشده، گزینه <strong>«Add to Home Screen»</strong> (افزودن به صفحه اصلی) را انتخاب نمایید.</li>
+          <li>در بالای صفحه روی <strong>«Add»</strong> کلیک کنید تا آیکون {{ appName }} روی صفحه اصلی گوشی شما قرار گیرد.</li>
+        </ol>
+      </div>
+    </div>
+  </main>
+
+  <!-- پاورقی -->
+  <footer class="w-full max-w-md mx-auto mt-6 text-center text-[11px] text-fg-subtle dark:text-slate-500 py-2">
+    <p>{{ branding.organizationName || branding.systemName }}</p>
+  </footer>
+</div>

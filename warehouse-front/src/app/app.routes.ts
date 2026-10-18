@@ -53,6 +53,10 @@ const dynamicModuleRoutes: Routes = INSTALLED_MODULES.filter(m => typeof m.route
 export const routes: Routes = [
   // ─── احراز هویت و صفحات عمومی ─────────────────────────
   { path: 'login', component: Login },
+  {
+    path: 'download',
+    loadComponent: () => import('./modules/common/components/app-download/app-download.component').then(m => m.AppDownloadComponent),
+  },
   { path: 'verify-card/:code', component: VerifyCard },
   { path: 'verify-card', component: VerifyCard },
   { path: 'change-password', component: ChangePassword, canActivate: [AuthGuard] },
