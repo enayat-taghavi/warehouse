@@ -282,5 +282,17 @@ un_tasks.bat` (نشست‌های 6b و ۷ تا ۱۲). پیش از نشست ۱۲�
   - **حادثه:** هنگام verify `restart-backend` پنجرهٔ Windows Terminal با همهٔ تب‌ها بسته شد: runner، Daphne، Express و تونل. Claude سرویس‌ها و worker را دوباره راه انداخت و بقیهٔ verifyها را دستی اجرا کرد: `release-check` سبز، HEAD APK ۲۰۰، `clean-tree` سبز. برچسب `[DONE]` نشست ۱۲ را Claude گذاشت. علت بسته شدن پنجره در `restart-backend` باید بررسی شود.
   - **بازبینی‌های نشده (سقف هفتگی ۹۸٪):** diff `5c755cb..1419ba1` با `data-loss-reviewer` (6b و ۸)، `tenant-scope-reviewer` (۷: هر کاربر فقط توکن خودش) و `ui-reviewer` (۹: صفحهٔ `/download`).
   - **اقدام بعدی:** همان سه بازبینی، تسک اصلاح برای یافته‌های تأییدشده، بررسی `restart-backend`. انتشار روی `soft` فقط با تأیید کاربر.
+- **۲۷ مهر ۱۴۰۵ (۱۸ اکتبر)، Claude — بازبینی 6b تا ۹، صف ۱۳ تا ۱۵:**
+  - **باگ گوشی:** با دادن اجازهٔ اعلان، اپ از کار می‌افتاد. `register()` بدون `google-services.json` بود؛ این حلقهٔ crash می‌سازد و تنها راه خروج، پاک کردن دادهٔ اپ و از دست رفتن صف آفلاین است.
+  - **فایل‌های Firebase:** کاربر هر دو را داد. هر دو در `E:\warehouse-secrets\comanage\` هستند: `google-services.json` و کلید سرویس `comanage-d1099-firebase-adminsdk-...json`. `FIREBASE_CREDENTIALS_FILE` به `warehouse-backend/.env` افزوده شد. `FcmPushProvider` فعال می‌شود و گوگل از این ماشین بدون پراکسی در دسترس است.
+  - **بازبینی‌ها** (data-loss، tenant-scope، ui): یافته‌ها در نشست‌های ۱۳ (فرانت و gradle) و ۱۴ (بک‌اند) در `tasks.md`.
+  - **نشست ۱۵:** release با APK آزمایشی 1.0.1 که فایل Firebase را دارد.
+  - **رفع runner:** `restart-backend` خود `WindowsTerminal.exe` را هم (که cmdline تب daphne را داشت) می‌کشت. اکنون فقط python و cmd را می‌کشد (`a753a7c`).
+  - **نشست ۱۳:** `[DONE]` (`a359aad`). verify آزمون‌ها بار اول با کمبود حافظه افتاد و اتصال Antigravity هم قطع شد. Claude آزمون را دوباره اجرا کرد: regression ندارد (۲ شکست قدیمی). **باز:** روی HEAD ۱۳۸۷ آزمون اجرا شد و روی پایه ۱۴۳۶؛ علت این ۴۹ آزمونِ کمتر بررسی شود (`scratch/logs/runner/ngtest-head.log`).
+  - **اقدام بعدی:**
+    1. وضعیت صف را از `scratch/logs/runner/status.json` بخوان. اگر نشست ۱۴ یا ۱۵ `[DONE]` نیست، علت را از لاگ runner بیاب و صف را با `.un_tasks.bat` در تب تازهٔ Windows Terminal ادامه بده.
+    2. پس از نشست ۱۵، لینک APK 1.0.1 را از `/api/public/config/` بگیر و به کاربر بده. کاربر باید اعلان را روی گوشی آزمایش کند (اجازه، دریافت اعلان چت).
+    3. بررسی کمبود ۴۹ آزمون.
+    4. diff نشست ۱۴ را با `tenant-scope-reviewer` بازبینی کن.
 
 </div>
