@@ -282,5 +282,6 @@ un_tasks.bat` (نشست‌های 6b و ۷ تا ۱۲). پیش از نشست ۱۲�
   - **حادثه:** هنگام verify `restart-backend` پنجرهٔ Windows Terminal با همهٔ تب‌ها بسته شد: runner، Daphne، Express و تونل. Claude سرویس‌ها و worker را دوباره راه انداخت و بقیهٔ verifyها را دستی اجرا کرد: `release-check` سبز، HEAD APK ۲۰۰، `clean-tree` سبز. برچسب `[DONE]` نشست ۱۲ را Claude گذاشت. علت بسته شدن پنجره در `restart-backend` باید بررسی شود.
   - **بازبینی‌های نشده (سقف هفتگی ۹۸٪):** diff `5c755cb..1419ba1` با `data-loss-reviewer` (6b و ۸)، `tenant-scope-reviewer` (۷: هر کاربر فقط توکن خودش) و `ui-reviewer` (۹: صفحهٔ `/download`).
   - **اقدام بعدی:** همان سه بازبینی، تسک اصلاح برای یافته‌های تأییدشده، بررسی `restart-backend`. انتشار روی `soft` فقط با تأیید کاربر.
+- **۱۸ اکتبر، ادامه:** نشست ۱۴ (`d444ad8`) و نشست ۱۵ (release) `[DONE]` شدند و همهٔ verifyها سبز بودند، از جمله `restart-backend` اصلاح‌شده. APK آزمایشی 1.0.1 همراه Firebase در `https://app.farsalish.ir/api/public/mobile-files/apk/CoManage-1.0.1-direct-test.apk` منتشر شد. اقدام‌های بعدی ۱ و ۲ یادداشت قبل انجام شده‌اند. **مانده:** آزمون اعلان روی گوشی به‌دست کاربر، بررسی کمبود ۴۹ آزمون، بازبینی diff نشست ۱۴ با `tenant-scope-reviewer`. انتشار روی `soft` فقط با تأیید کاربر.
 
 </div>
