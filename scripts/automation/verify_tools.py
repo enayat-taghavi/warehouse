@@ -304,8 +304,13 @@ def cmd_restart_backend(args) -> int:
 
     def is_daphne(p):
         try:
+            name = p.name().lower()
             cl = " ".join(p.cmdline())
         except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return False
+        # فقط پایتون و پوستهٔ cmd؛ WindowsTerminal.exe هم وقتی با تب daphne باز شده همین cmdline را دارد
+        # و کشتن درخت آن همهٔ تب‌ها (runner، Express، تونل) را می‌بندد (۲۷ مهر ۱۴۰۵).
+        if name not in ("python.exe", "pythonw.exe", "cmd.exe"):
             return False
         return "-m daphne" in cl and "-p 8000" in cl
 
