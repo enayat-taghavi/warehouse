@@ -274,6 +274,13 @@
   - همه در تسک تازهٔ **Session 6b** پیش از نشست ۷ در `tasks.md` (پشتیبان به‌روز: `scratch/tasks_mobile_phaseB.md`).
   - **رد یا تعویق:** خطر VersionError در Dexie پس از rollback (تأییدنشده؛ Dexie 4 پایین‌آوردن نسخه را می‌پذیرد) و بررسی `pendingCount` در Live Update (کم‌اهمیت، چون `next` فقط در شروع سرد اعمال می‌شود).
   - **وضع پشته (۲۷ مهر):** Daphne (8000)، Express (4200) و `cloudflared` خاموش‌اند (530)؛ فقط PostgreSQL بالاست. پوشهٔ `E:\warehouse-secrets` هنوز ساخته نشده (نشست ۱۰ می‌سازد).
-  - **اقدام بعدی:** اجرای `.un_tasks.bat` (نشست‌های 6b و ۷ تا ۱۲). پیش از نشست ۱۲، Express و `cloudflared` بالا آورده شوند (`dev-manager.bat` → Full Stack). پس از صف: بازبینی diff نشست‌های 6b تا ۹ با `data-loss-reviewer`، `tenant-scope-reviewer` (نشست ۷) و `ui-reviewer` (نشست ۹).
+  - **اقدام بعدی:** اجرای `.
+un_tasks.bat` (نشست‌های 6b و ۷ تا ۱۲). پیش از نشست ۱۲، Express و `cloudflared` بالا آورده شوند (`dev-manager.bat` → Full Stack). پس از صف: بازبینی diff نشست‌های 6b تا ۹ با `data-loss-reviewer`، `tenant-scope-reviewer` (نشست ۷) و `ui-reviewer` (نشست ۹).
+- **۲۷ مهر ۱۴۰۵، Claude — صف فاز ب تمام شد؛ APK آزمایشی روی `app` منتشر شد:**
+  - نشست‌های 6b تا ۱۲ `[DONE]`؛ کامیت‌ها `ceb34ac` تا `1419ba1` (6b دو کامیت اصلاحی spec لینک بیرونی هم داشت: `3ce8074`، `0f55918`).
+  - **نشست ۱۲:** پشتیبان `backup_20261018_042333.dump` (۱٫۱ مگابایت)، مایگریشن `notifications`، بیلد وصله‌شده، APK آزمایشی `CoManage-1.0.0-direct-test.apk` (۷٫۹ مگابایت). نشانی دانلود در `/api/public/config/` ثبت شد و HEAD آن ۲۰۰ می‌دهد.
+  - **حادثه:** هنگام verify `restart-backend` پنجرهٔ Windows Terminal با همهٔ تب‌ها بسته شد: runner، Daphne، Express و تونل. Claude سرویس‌ها و worker را دوباره راه انداخت و بقیهٔ verifyها را دستی اجرا کرد: `release-check` سبز، HEAD APK ۲۰۰، `clean-tree` سبز. برچسب `[DONE]` نشست ۱۲ را Claude گذاشت. علت بسته شدن پنجره در `restart-backend` باید بررسی شود.
+  - **بازبینی‌های نشده (سقف هفتگی ۹۸٪):** diff `5c755cb..1419ba1` با `data-loss-reviewer` (6b و ۸)، `tenant-scope-reviewer` (۷: هر کاربر فقط توکن خودش) و `ui-reviewer` (۹: صفحهٔ `/download`).
+  - **اقدام بعدی:** همان سه بازبینی، تسک اصلاح برای یافته‌های تأییدشده، بررسی `restart-backend`. انتشار روی `soft` فقط با تأیید کاربر.
 
 </div>
