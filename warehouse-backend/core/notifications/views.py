@@ -2,7 +2,7 @@ from rest_framework import viewsets, permissions, status, views
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Notification, DeviceToken
-from .serializers import NotificationSerializer, DeviceTokenSerializer
+from .serializers import NotificationSerializer, DeviceTokenSerializer, DeviceTokenRegisterSerializer
 
 
 class NotificationViewSet(viewsets.ModelViewSet):
@@ -45,15 +45,28 @@ class DeviceTokenView(views.APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        token = request.data.get('token')
-        if not token or not str(token).strip():
-            return Response({'error': 'token is required'}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(request.data, dict):
+            return Response(
+                {'detail': 'داده‌های ارسالی باید به صورت شیء (JSON Object) باشند.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        token = str(token).strip()
-        platform = request.data.get('platform', 'android')
-        if platform not in ('android', 'ios'):
-            platform = 'android'
-        app_version = request.data.get('app_version', '')
+        serializer = DeviceTokenRegisterSerializer(data=request.data)
+        if not serializer.is_valid():
+            first_err = None
+            for field, errors in serializer.errors.items():
+                if errors and isinstance(errors, list):
+                    first_err = str(errors[0])
+                    break
+            msg = first_err or 'اطلاعات وارد شده نامعتبر است.'
+            return Response(
+                {'detail': msg, 'error': msg, 'errors': serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        token = serializer.validated_data['token']
+        platform = serializer.validated_data.get('platform', 'android')
+        app_version = serializer.validated_data.get('app_version', '')
 
         # Upsert: if token exists, move to current user and update details
         device_token, created = DeviceToken.objects.update_or_create(
@@ -64,9 +77,8 @@ class DeviceTokenView(views.APIView):
                 'app_version': app_version,
             }
         )
-        serializer = DeviceTokenSerializer(device_token)
         return Response(
-            serializer.data,
+            DeviceTokenSerializer(device_token).data,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
         )
 
@@ -78,18 +90,18 @@ class DeviceTokenView(views.APIView):
             token_str = request.query_params.get('token')
 
         if not token_str or not str(token_str).strip():
-            return Response({'error': 'token is required'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'توکن یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
         token_str = str(token_str).strip()
         try:
             device_token = DeviceToken.objects.get(token=token_str)
         except DeviceToken.DoesNotExist:
-            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'توکن یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
 
         if device_token.user_id != request.user.id:
             return Response(
-                {'detail': 'Cannot delete another user\'s token.'},
-                status=status.HTTP_403_FORBIDDEN
+                {'detail': 'توکن یافت نشد.'},
+                status=status.HTTP_404_NOT_FOUND
             )
 
         device_token.delete()

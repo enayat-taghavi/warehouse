@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock, patch
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -155,7 +155,7 @@ class NotificationAPITestCase(TestCase):
         DeviceToken.objects.create(user=self.user1, token='fcm-user1-protected-token')
         self.client.force_authenticate(user=self.user2)
         res = self.client.delete('/api/notifications/devices/', {'token': 'fcm-user1-protected-token'}, format='json')
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
         self.assertTrue(DeviceToken.objects.filter(token='fcm-user1-protected-token', user=self.user1).exists())
 
     def test_unauthenticated_device_endpoints_rejected(self):
@@ -178,6 +178,7 @@ class NotificationAPITestCase(TestCase):
         self.assertIn('u1-token', tokens)
         self.assertNotIn('u2-token', tokens)
 
+    @override_settings(FIREBASE_CREDENTIALS_FILE='')
     def test_disabled_provider_sends_nothing(self):
         provider = push.get_push_provider()
         self.assertFalse(provider.is_enabled)
@@ -263,3 +264,107 @@ class NotificationAPITestCase(TestCase):
         provider._handle_fcm_error(bad_token, mock_resp)
 
         self.assertFalse(DeviceToken.objects.filter(token=bad_token).exists())
+
+    def test_delete_missing_token_returns_404(self):
+        self.client.force_authenticate(user=self.user1)
+        res = self.client.delete('/api/notifications/devices/', {}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+        res_empty = self.client.delete('/api/notifications/devices/?token=', format='json')
+        self.assertEqual(res_empty.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_post_token_too_long_returns_400(self):
+        self.client.force_authenticate(user=self.user1)
+        long_token = 'x' * 600
+        res = self.client.post('/api/notifications/devices/', {
+            'token': long_token,
+            'platform': 'android'
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(DeviceToken.objects.filter(token=long_token).exists())
+
+    def test_post_json_array_returns_400(self):
+        self.client.force_authenticate(user=self.user1)
+        res = self.client.post('/api/notifications/devices/', [
+            {'token': 'array-token', 'platform': 'android'}
+        ], format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_receiver_failure_does_not_break_notification_creation(self):
+        with patch.object(DeviceToken.objects, 'filter', side_effect=RuntimeError("Token query DB error")):
+            with self.captureOnCommitCallbacks(execute=True):
+                notif = Notification.objects.create(
+                    recipient=self.user1,
+                    title='تست مقاومت در برابر خطای توکن',
+                    message='ایجاد اعلان حتی با خطای کوئری توکن باید موفق باشد'
+                )
+            self.assertIsNotNone(notif.id)
+
+    def test_tokens_are_read_at_commit_time(self):
+        with patch('notifications.push.get_push_provider') as mock_get_provider:
+            mock_provider = MagicMock()
+            mock_get_provider.return_value = mock_provider
+
+            # User1 starts with no tokens
+            with self.captureOnCommitCallbacks(execute=False) as callbacks:
+                Notification.objects.create(
+                    recipient=self.user1,
+                    title='اعلان تست زمان کامیت',
+                    message='بررسی زمان خواندن توکن'
+                )
+
+            # Token is registered after create but before commit callbacks execute
+            DeviceToken.objects.create(user=self.user1, token='late-commit-token')
+
+            # Run on_commit callbacks
+            for cb in callbacks:
+                cb()
+
+            if push._last_push_thread:
+                push._last_push_thread.join(timeout=5)
+
+            mock_provider.send.assert_called_once()
+            call_kwargs = mock_provider.send.call_args.kwargs
+            call_args = mock_provider.send.call_args.args
+            tokens = call_kwargs.get('tokens') if 'tokens' in call_kwargs else (call_args[0] if call_args else [])
+            self.assertIn('late-commit-token', tokens)
+
+    def test_fcm_provider_credential_caching_and_refresh_only_when_expired(self):
+        provider = push.FcmPushProvider(credentials_file=__file__)
+        mock_creds = MagicMock()
+        mock_creds.valid = True
+        mock_creds.expired = False
+        mock_creds.token = 'mock-access-token'
+
+        with patch.object(provider, '_load_credentials', return_value=(mock_creds, 'test-project')), \
+             patch('requests.post') as mock_post:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_post.return_value = mock_resp
+
+            # First send with valid cached creds
+            provider.send(tokens=['t1'], title='T', body='B')
+            mock_creds.refresh.assert_not_called()
+
+            # Second send with valid cached creds
+            provider.send(tokens=['t2'], title='T', body='B')
+            mock_creds.refresh.assert_not_called()
+
+            # Now set to expired
+            mock_creds.valid = False
+            mock_creds.expired = True
+            provider.send(tokens=['t3'], title='T', body='B')
+            mock_creds.refresh.assert_called_once()
+
+    def test_worker_calls_close_old_connections_before_and_after(self):
+        with patch('notifications.push.close_old_connections') as mock_close:
+            with patch('notifications.push.get_push_provider') as mock_provider:
+                mock_provider.return_value = MagicMock()
+                push._send_push_worker(
+                    notification_id=self.notif1.id,
+                    tokens=['tok1'],
+                    title='T',
+                    message='M'
+                )
+                self.assertGreaterEqual(mock_close.call_count, 2)
+

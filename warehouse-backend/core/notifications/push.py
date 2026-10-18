@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, Future
 import json
 import logging
 import os
@@ -5,7 +6,7 @@ import threading
 from typing import Any
 
 from django.conf import settings
-from django.db import transaction
+from django.db import transaction, close_old_connections
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from google.auth.transport.requests import Request
@@ -14,8 +15,26 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-# Reference to the most recently spawned background push thread (useful for deterministic tests)
-_last_push_thread: threading.Thread | None = None
+# Bounded thread pool executor for push notifications (max 2 workers)
+_push_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="push_worker")
+
+
+class _FutureThreadAdapter:
+    """Adapter wrapping a Future to provide a .join(timeout=...) interface for deterministic tests."""
+
+    def __init__(self, future: Future):
+        self._future = future
+
+    def join(self, timeout: float | None = None) -> Any:
+        try:
+            return self._future.result(timeout=timeout)
+        except Exception:
+            return None
+
+
+# References to the most recently submitted background push task (useful for deterministic tests)
+_last_push_future: Future | None = None
+_last_push_thread: Any | None = None
 
 
 class PushProvider:
@@ -69,17 +88,31 @@ class FcmPushProvider(PushProvider):
     FCM_ENDPOINT_TEMPLATE = "https://fcm.googleapis.com/v1/projects/{project_id}/messages:send"
     SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"]
 
+    # Class-level credential cache
+    _cached_credentials: Any | None = None
+    _cached_project_id: str | None = None
+    _cached_file_path: str | None = None
+
     def __init__(self, credentials_file: str | None = None):
         self.credentials_file = credentials_file or getattr(settings, 'FIREBASE_CREDENTIALS_FILE', '')
+        self._credentials: Any | None = None
+        self._project_id: str | None = None
+        self._lock = threading.Lock()
 
     @property
     def is_enabled(self) -> bool:
         return bool(self.credentials_file and os.path.isfile(self.credentials_file))
 
     def _load_credentials(self) -> tuple[Any | None, str | None]:
-        """Load service account credentials and extract project_id."""
+        """Load service account credentials and extract project_id (cached)."""
         if not self.is_enabled:
             return None, None
+        if self._credentials is not None and self._project_id is not None:
+            return self._credentials, self._project_id
+        if FcmPushProvider._cached_file_path == self.credentials_file and FcmPushProvider._cached_credentials is not None:
+            self._credentials = FcmPushProvider._cached_credentials
+            self._project_id = FcmPushProvider._cached_project_id
+            return self._credentials, self._project_id
         try:
             with open(self.credentials_file, 'r', encoding='utf-8') as f:
                 cred_dict = json.load(f)
@@ -88,6 +121,11 @@ class FcmPushProvider(PushProvider):
                 self.credentials_file,
                 scopes=self.SCOPES,
             )
+            self._credentials = credentials
+            self._project_id = project_id
+            FcmPushProvider._cached_credentials = credentials
+            FcmPushProvider._cached_project_id = project_id
+            FcmPushProvider._cached_file_path = self.credentials_file
             return credentials, project_id
         except Exception as exc:
             logger.error("Failed to load Firebase credentials from %s: %s", self.credentials_file, exc)
@@ -98,13 +136,16 @@ class FcmPushProvider(PushProvider):
             return
 
         try:
-            credentials, project_id = self._load_credentials()
-            if not credentials or not project_id:
-                logger.warning("FCM credentials or project_id missing; cannot send push.")
-                return
+            with self._lock:
+                credentials, project_id = self._load_credentials()
+                if not credentials or not project_id:
+                    logger.warning("FCM credentials or project_id missing; cannot send push.")
+                    return
 
-            credentials.refresh(Request())
-            access_token = credentials.token
+                # Refresh only when expired or not yet valid
+                if not getattr(credentials, 'valid', False) or getattr(credentials, 'expired', False):
+                    credentials.refresh(Request())
+                access_token = credentials.token
 
             url = self.FCM_ENDPOINT_TEMPLATE.format(project_id=project_id)
             headers = {
@@ -188,12 +229,23 @@ class FcmPushProvider(PushProvider):
             )
 
 
+_provider_instance: PushProvider | None = None
+_cached_cred_file: str | None = None
+
+
 def get_push_provider() -> PushProvider:
     """Return configured PushProvider or DisabledPushProvider if unconfigured."""
+    global _provider_instance, _cached_cred_file
     cred_file = getattr(settings, 'FIREBASE_CREDENTIALS_FILE', '')
     if cred_file and os.path.isfile(cred_file):
-        return FcmPushProvider(credentials_file=cred_file)
-    return DisabledPushProvider()
+        if _provider_instance is None or not isinstance(_provider_instance, FcmPushProvider) or _cached_cred_file != cred_file:
+            _provider_instance = FcmPushProvider(credentials_file=cred_file)
+            _cached_cred_file = cred_file
+        return _provider_instance
+    if _provider_instance is None or not isinstance(_provider_instance, DisabledPushProvider) or _cached_cred_file != cred_file:
+        _provider_instance = DisabledPushProvider()
+        _cached_cred_file = cred_file
+    return _provider_instance
 
 
 def _send_push_worker(
@@ -204,7 +256,8 @@ def _send_push_worker(
     target_model: str | None = None,
     target_id: str | None = None,
 ) -> None:
-    """Worker task executed in background thread to dispatch push for a notification."""
+    """Worker task executed in background thread pool to dispatch push for a notification."""
+    close_old_connections()
     try:
         from .models import Notification, DeviceToken
 
@@ -238,6 +291,8 @@ def _send_push_worker(
         )
     except Exception as exc:
         logger.exception("Failed to dispatch push notification %s: %s", notification_id, exc)
+    finally:
+        close_old_connections()
 
 
 def _schedule_push(
@@ -247,18 +302,21 @@ def _schedule_push(
     message: str | None = None,
     target_model: str | None = None,
     target_id: str | None = None,
-) -> threading.Thread:
-    """Spawn a background daemon thread to send push notification."""
-    global _last_push_thread
-    thread = threading.Thread(
-        target=_send_push_worker,
-        args=(notification_id, tokens, title, message, target_model, target_id),
-        daemon=True,
-        name=f"PushNotification-{notification_id}"
+) -> Future:
+    """Submit worker task to the module-level ThreadPoolExecutor."""
+    global _last_push_thread, _last_push_future
+    future = _push_executor.submit(
+        _send_push_worker,
+        notification_id,
+        tokens,
+        title,
+        message,
+        target_model,
+        target_id,
     )
-    _last_push_thread = thread
-    thread.start()
-    return thread
+    _last_push_future = future
+    _last_push_thread = _FutureThreadAdapter(future)
+    return future
 
 
 @receiver(post_save, sender='notifications.Notification', dispatch_uid='notifications_push_on_notification_created')
@@ -267,27 +325,34 @@ def on_notification_created(sender, instance, created, **kwargs):
     if not created:
         return
 
-    notification_id = instance.id
-    recipient_id = instance.recipient_id
-    title = instance.title
-    message = instance.message
-    target_model = instance.target_model
-    target_id = instance.target_id
+    try:
+        notification_id = instance.id
+        recipient_id = instance.recipient_id
+        title = instance.title
+        message = instance.message
+        target_model = instance.target_model
+        target_id = instance.target_id
 
-    from .models import DeviceToken
-    tokens = list(
-        DeviceToken.objects.filter(user_id=recipient_id).values_list('token', flat=True)
-    )
-    if not tokens:
-        return
+        def _on_commit_callback():
+            try:
+                from .models import DeviceToken
+                tokens = list(
+                    DeviceToken.objects.filter(user_id=recipient_id).values_list('token', flat=True)
+                )
+                if not tokens:
+                    return
 
-    transaction.on_commit(
-        lambda: _schedule_push(
-            notification_id=notification_id,
-            tokens=tokens,
-            title=title,
-            message=message,
-            target_model=target_model,
-            target_id=target_id,
-        )
-    )
+                _schedule_push(
+                    notification_id=notification_id,
+                    tokens=tokens,
+                    title=title,
+                    message=message,
+                    target_model=target_model,
+                    target_id=target_id,
+                )
+            except Exception:
+                logger.exception("Failed to schedule push on commit for notification %s", notification_id)
+
+        transaction.on_commit(_on_commit_callback)
+    except Exception:
+        logger.exception("Failed to register on_commit push handler for notification %s", getattr(instance, 'id', None))
