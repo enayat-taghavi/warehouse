@@ -5839,3 +5839,2097 @@ Session 23 of 23 — Release the end of phase 3 on the local app environment: ba
 - فرآیند ساخت فرانت‌اند توسط `n...
 
 ---
+
+### Task 1 of 17 — 2026-10-17 07:02:31
+- **Status:** STOPPED (no new step for 20 minutes)
+- **Conversation:** `08da802d-c671-4e2b-a17a-7fdebec28c37`
+- **Steps:** 327
+- **Duration:** 37m 12s
+- **Checks:**
+  - require: 1/1 passed
+- **Task:**
+```
+Session 1 of 17 — Mobile phase A: make the 9 non-compiling frontend specs compile and pass (spec files only)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only these 9 spec files (all under `warehouse-front/src/app/`): `modules/accounting/components/finance/accountant/accountant-new-profiles/accountant-new-profiles.spec.ts`, `modules/accounting/components/finance/company-documents-archive/company-documents-archive.dom.spec.ts`, `modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel-13-items.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle-phase7.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-vehicle-all-scenarios.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-attendance-and-lock.dom.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.spec.ts`, `modules/common/components/id-cards/id-cards.spec.ts`. Never change application code, models or tsconfig files.
+- Never delete, skip (`it.skip`, `xit`, `describe.skip`, `.only`, `.todo`) or empty a test.
+- Do not push. Stage only your changed files with `git add <file>`. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan: `Documents/Mobile_App_Capacitor/implementation_plan_mobile_app.md`, heading `#### گام الف-۰` and heading `## ۱۰.`.
+- These 9 specs do not compile today, so the runner skips them. The TypeScript errors (from `tsc` on HEAD):
+  - `accountant-new-profiles.spec.ts`: TS2739 line 29 (fixture missing required personnel fields), TS2353 line 56 (`model_name` no longer exists on `VehicleDriverProfile`), TS2741 line 91 (`code` missing on a project section).
+  - `company-documents-archive.dom.spec.ts`: TS2353 lines 58 and 74 (`tracking_code` no longer on `CompanyDocument`), TS2741 line 233 (`is_active` missing).
+  - `employee-new-personnel-13-items.spec.ts`: TS2741 line 37 (`contract_type` missing).
+  - `employee-new-vehicle-phase7.spec.ts`: TS2741 lines 38, 49, 60 and more (`default_service_rate` missing).
+  - `employee-vehicle-all-scenarios.spec.ts`: TS2353 line 59 (`vehicle_plate` not on `VehicleChangeRequest`).
+  - `supervisor-attendance-and-lock.dom.spec.ts` line 40, `supervisor-attendance.spec.ts` line 19, `supervisor-period-lock.spec.ts` line 19: TS2741 (`code` missing on `ProjectSection`).
+  - `id-cards.spec.ts`: TS2459 line 4 (`DEFAULT_CARD_TEXTS` is declared in `id-cards.ts` but not exported), TS2554 line 129 (a call passes 7 arguments to a function that now takes none).
+
+3. Definitions: "stale fixture" means a test object literal whose fields no longer match the current TypeScript interface. Read the interface in its model file before changing the literal.
+
+4. Task:
+- a) Update each stale fixture to the current interface: add the missing required fields with realistic values, and remove or rename fields that no longer exist. If an assertion reads a removed field, move it to the field that replaced it; if nothing replaced it, remove only that assertion line and name it in the report.
+- b) `id-cards.spec.ts`: do not import `DEFAULT_CARD_TEXTS`; read the default texts through the component instance or define the expected values inside the spec. Fix the 7-argument call to match the current signature of that function in `id-cards.ts` (read it first) while keeping what the test checks.
+- c) After the specs compile, every test in these 9 files must pass. If one fails, fix the spec setup (providers, mocks, fixture values). Do not change application code.
+
+5. Tool policy: from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/accounting/components/finance/**/*.spec.ts" --include "src/app/modules/common/components/id-cards/*.spec.ts" --no-skip`. If a command fails, read its output and change approach; do not repeat it unchanged.
+
+6. Before finishing: `git diff --stat` shows only the allowed spec files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(front): make the 9 non-compiling specs compile against the current models
+- Short English report: per file, what was stale and what you changed; any assertion you removed and why; the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+
+
+---
+
+### Task 1 of 17 — 2026-10-17 08:19:55
+- **Status:** DONE
+- **Conversation:** `08da802d-c671-4e2b-a17a-7fdebec28c37`
+- **Steps:** 449
+- **Duration:** 13m 50s
+- **Checks:**
+  - verify round 0: 6/6 passed
+- **Task:**
+```
+Session 1 of 17 — Mobile phase A: make the 9 non-compiling frontend specs compile and pass (spec files only)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only these 9 spec files (all under `warehouse-front/src/app/`): `modules/accounting/components/finance/accountant/accountant-new-profiles/accountant-new-profiles.spec.ts`, `modules/accounting/components/finance/company-documents-archive/company-documents-archive.dom.spec.ts`, `modules/accounting/components/finance/employee/employee-new-personnel/employee-new-personnel-13-items.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle-phase7.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-vehicle-all-scenarios.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-attendance-and-lock.dom.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-attendance/supervisor-attendance.spec.ts`, `modules/accounting/components/finance/supervisor/supervisor-period-lock/supervisor-period-lock.spec.ts`, `modules/common/components/id-cards/id-cards.spec.ts`. Never change application code, models or tsconfig files.
+- Never delete, skip (`it.skip`, `xit`, `describe.skip`, `.only`, `.todo`) or empty a test.
+- Do not push. Stage only your changed files with `git add <file>`. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan: `Documents/Mobile_App_Capacitor/implementation_plan_mobile_app.md`, heading `#### گام الف-۰` and heading `## ۱۰.`.
+- These 9 specs do not compile today, so the runner skips them. The TypeScript errors (from `tsc` on HEAD):
+  - `accountant-new-profiles.spec.ts`: TS2739 line 29 (fixture missing required personnel fields), TS2353 line 56 (`model_name` no longer exists on `VehicleDriverProfile`), TS2741 line 91 (`code` missing on a project section).
+  - `company-documents-archive.dom.spec.ts`: TS2353 lines 58 and 74 (`tracking_code` no longer on `CompanyDocument`), TS2741 line 233 (`is_active` missing).
+  - `employee-new-personnel-13-items.spec.ts`: TS2741 line 37 (`contract_type` missing).
+  - `employee-new-vehicle-phase7.spec.ts`: TS2741 lines 38, 49, 60 and more (`default_service_rate` missing).
+  - `employee-vehicle-all-scenarios.spec.ts`: TS2353 line 59 (`vehicle_plate` not on `VehicleChangeRequest`).
+  - `supervisor-attendance-and-lock.dom.spec.ts` line 40, `supervisor-attendance.spec.ts` line 19, `supervisor-period-lock.spec.ts` line 19: TS2741 (`code` missing on `ProjectSection`).
+  - `id-cards.spec.ts`: TS2459 line 4 (`DEFAULT_CARD_TEXTS` is declared in `id-cards.ts` but not exported), TS2554 line 129 (a call passes 7 arguments to a function that now takes none).
+
+3. Definitions: "stale fixture" means a test object literal whose fields no longer match the current TypeScript interface. Read the interface in its model file before changing the literal.
+
+4. Task:
+- a) Update each stale fixture to the current interface: add the missing required fields with realistic values, and remove or rename fields that no longer exist. If an assertion reads a removed field, move it to the field that replaced it; if nothing replaced it, remove only that assertion line and name it in the report.
+- b) `id-cards.spec.ts`: do not import `DEFAULT_CARD_TEXTS`; read the default texts through the component instance or define the expected values inside the spec. Fix the 7-argument call to match the current signature of that function in `id-cards.ts` (read it first) while keeping what the test checks.
+- c) After the specs compile, every test in these 9 files must pass. If one fails, fix the spec setup (providers, mocks, fixture values). Do not change application code.
+
+5. Tool policy: from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/accounting/components/finance/**/*.spec.ts" --include "src/app/modules/common/components/id-cards/*.spec.ts" --no-skip`. If a command fails, read its output and change approach; do not repeat it unchanged.
+
+6. Before finishing: `git diff --stat` shows only the allowed spec files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(front): make the 9 non-compiling specs compile against the current models
+- Short English report: per file, what was stale and what you changed; any assertion you removed and why; the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام اول: توضیح ساده خواسته کاربر (Explain Simply)
+کاربر درخواست داشت در فاز ۱ از ۱۷ (گام الف-۰ اپلیکیشن موبایل)، ۹ فایل تست فرانت‌اند (`*.spec.ts`) که پیش‌تر به دلیل مغایرت با مدل‌ها و اینترفیس‌های به‌روزشده تایپ‌اسکریپت کامپایل نمی‌شدند، بدون تغییر کدهای اصلی برنامه یا رد کردن/اسکیپ تست‌ها، دقیقاً با تایپ‌های جدید منطبق شده، با موفقیت کامپایل شوند و کلیه تست‌های آن‌ها با اجرای ابزار راستی‌آزمایی `verify_tools.py ng-test-compare` پاس شوند.
+
+### گام دوم: اعتبارسنجی (Verify Immediately)
+۱. خطاهای تایپ‌اسکریپت روی کدهای تست تأیید شدند (`TS2739`، `TS2353`، `TS2741`، `TS2459` و `TS2554`).
+۲. مدل‌های مرجع در `warehouse-front` استعلام و فیلدهای الزامی جدید (`code`...
+
+---
+
+### Task 2 of 17 — 2026-10-17 09:26:31
+- **Status:** FAILED (verify still failing)
+- **Conversation:** `9366b1f2-ed12-4f15-be9e-692ddf368d8c`
+- **Steps:** 946
+- **Duration:** 66m 32s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/6 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 0409e22 --include "src/**/*.spec.ts" --no-skip --max-failed 3`
+  - verify round 1: 5/6 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 0409e22 --include "src/**/*.spec.ts" --no-skip --max-failed 3`
+  - verify round 2: 5/6 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 0409e22 --include "src/**/*.spec.ts" --no-skip --max-failed 3`
+- **Task:**
+```
+Session 2 of 17 — Mobile phase A: fix the 18 pre-existing failing frontend tests in their spec files
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only these 10 spec files under `warehouse-front/src/app/`: `app.spec.ts`, `modules/accounting/components/finance/employee/employee-new-vehicle/employee-new-vehicle.dom.spec.ts`, `modules/common/components/layout/layout.spec.ts`, `modules/common/components/login/login.spec.ts`, `modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.spec.ts`, `modules/warehouse/components/dashboard/dashboard.spec.ts`, `modules/warehouse/components/dispatch/dispatch.spec.ts`, `modules/warehouse/components/feeding/feeding.spec.ts`, `modules/warehouse/components/placeholders/placeholders.spec.ts`, `modules/warehouse/components/projects/projects.spec.ts`. Never change application code.
+- Never delete, skip or empty a test, and never weaken an assertion to make it pass.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan heading `#### گام الف-۰`.
+- The 18 failing tests on HEAD: `app.spec.ts` (should create the app, should render title); `employee-new-vehicle.dom.spec.ts` (tests 1 and 2); `layout.spec.ts`, `login.spec.ts`, `dashboard.spec.ts`, `dispatch.spec.ts`, `feeding.spec.ts`, `placeholders.spec.ts`, `projects.spec.ts` (should create); `company-gdrive-tab.spec.ts` (7 tests).
+- The full log of the last base run is `scratch/logs/runner/ngtest-base.log`; read the error of each failing test there first.
+
+3. Definitions: "spec setup defect" means the failure comes from the test itself: missing providers (`provideHttpClient()`, `provideHttpClientTesting()`, `provideRouter([])`, `provideZonelessChangeDetection()` and similar), mocks that do not match the current service API, stale expected texts, or fixtures that do not match the current models. "Application defect" means the component itself behaves wrongly.
+
+4. Task:
+- a) For each failing test, find the cause in the log, then fix the spec setup defect.
+- b) If a failure is an application defect, leave that test failing, change nothing for it, and describe it in the report (file, line, expected and actual behavior). At most 3 tests may stay failing.
+- c) `app.spec.ts` "should render title": `app.html` renders no title text (only the toast, the confirm dialog, the domain-migration banner and `router-outlet`); `title` is only the signal `title = signal('warehouse-app')` in `app.ts`. Keep the test name and assert that the component's `title()` equals `'warehouse-app'` and that the rendered root contains a `router-outlet` element.
+
+5. Tool policy: from the repo root, at most five runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/**/*.spec.ts" --no-skip`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed spec files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(front): repair the pre-existing failing specs
+- Short English report: per failing test, the cause and the fix, or the application defect left open; the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده درخواست (Explanation)
+اجراکننده خودکار (`runner`) اعلام کرده بود که در دور اعتبارسنجی دوم، دستور مقایسه آزمون‌های فرانت‌اند با پایه (`ng-test-compare`) با خطای خروج ۱ و رگرسیون تداخلی مواجه شده است. وظیفه ما تثبیت و اجرای دقیق اصلاحات در محدوده ۱۰ فایل مجاز `spec`، اطمینان از پاکیزگی درخت کاری و قبولی قطعی دستورات اعتبارسنجی رانر است.
+
+---
+
+### ۲. بررسی فنی و تحلیل ریشه‌ای (Verification & Root Cause)
+۱. **تداخل تصادفی ناشی از محیط اجرای تست‌ها:** 
+در محیط اجرای چندنخی تست‌های Vitest با `@angular/build:unit-test` در Node 22، اشیای سراسری و حافظه‌های ذخیره‌سازی مانند `localStorage` و رجیستری سینگلتون ماژول‌ها بین کارگران به اشتراک گذاشته می‌شدند...
+
+---
+
+### Task 1 of 16 — 2026-10-17 09:53:53
+- **Status:** DONE
+- **Conversation:** `39d02c80-7e8b-4f74-992a-ffec9393c116`
+- **Steps:** 318
+- **Duration:** 25m 15s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/6 passed
+- **Task:**
+```
+Session 2b of 17 — Mobile phase A: make route-access.characterization.spec.ts independent of module-registry state left by other specs
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never change application code. In `route-access.characterization.spec.ts` do not change any expected value, any `ROUTE_PERMISSIONS_LITERAL` entry or any assertion; only add setup and cleanup.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- After session 2 (commit `148af7d`), the specs `dashboard`, `projects`, `dispatch`, `feeding`, `placeholders`, `layout`, `login` and `app` really run. Since then 11 tests of `src/app/core/auth/route-access.characterization.spec.ts` (describe "hasRoutePermission characterization", Groups 7 to 17, all accounting routes) fail: `hasRoutePermission(<accounting key>, ['unrelated_perm'])` returns true. The full log is `scratch/logs/runner/ngtest-head.log`.
+- `hasRoutePermission` reads the singleton from `getModuleRegistry()` (`src/app/core/modules/module-registry.service.ts:218`). The singleton survives between spec files, and its initial installed modules come from `localStorage['wh_installed_modules']`. When the accounting module is not installed, unknown keys pass. The "hasRoutePermission characterization" describe sets no installed modules; only the later AuthGuard describe calls `setInstalledModules(['warehouse', 'accounting'])`.
+- Some specs replace `globalThis.localStorage` with a mock at module level or leave the registry with fewer modules.
+
+3. Definitions: "self-contained" means the describe sets the state it relies on in `beforeEach` and restores it in `afterEach`.
+
+4. Task:
+- a) In `route-access.characterization.spec.ts`, make the "hasRoutePermission characterization" describe self-contained: in `beforeEach` call `getModuleRegistry().setInstalledModules(['warehouse', 'accounting'])` (import `getModuleRegistry` from `../modules/module-registry.service`).
+- b) Find which spec leaves the registry or `localStorage['wh_installed_modules']` reduced, and add cleanup in that spec's `afterEach` (restore with `getModuleRegistry().setInstalledModules(['warehouse', 'accounting'])` or remove the key). Only spec files may change.
+
+5. Tool policy: from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/**/*.spec.ts" --max-failed 3`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only spec files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(front): isolate module-registry state in specs
+- Short English report: which spec polluted the state, what you added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام اول: توضیح ساده خواسته کاربر (Simple Explanation)
+پس از سشن ۲ (کامیت `148af7d`)، با برطرف شدن مشکلات کامپایل و اجرای واقعی فایل‌های تست قبلی، ۱۱ تست در فایل `route-access.characterization.spec.ts` در بلوک `hasRoutePermission characterization` (گروه‌های ۷ تا ۱۷ مربوط به مسیرهای حسابداری) با خطا مواجه می‌شدند؛ زیرا تابع `hasRoutePermission` برای اعتبارسنجی مسیرها به تکین سراسری `getModuleRegistry()` متکی است و در صورتی که تست‌های قبلی این تکین سراسری را با ماژول‌های تقلیل‌یافته (بدون `accounting`) ترک کنند و در `afterEach` آن را پاکسازی نکنند، دسترسی به این روت‌ها به اشتباه آزاد فرض شده و `true` برمی‌گرداند.
+
+---
+
+### گام دوم: راستی‌آزمایی فنی و ریشه‌یابی...
+
+---
+
+### Task 2 of 16 — 2026-10-17 10:14:26
+- **Status:** DONE
+- **Conversation:** `e2aec7c4-39df-4b43-b5f4-63f139089ba5`
+- **Steps:** 282
+- **Duration:** 20m 29s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 15/15 passed
+- **Task:**
+```
+Session 3 of 17 — Mobile phase A: platform detection, server origin helpers and the api-origin interceptor (web behavior unchanged)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 9 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Web behavior must stay identical. On the web (no native Capacitor runtime) the server origin is always the empty string, and every helper must then return its input unchanged (except `wsUrl` and `publicOrigin`, which must return exactly what the current code builds from `window.location`).
+- Do not install any npm package. Do not import `@capacitor/*`; detect the runtime only through `globalThis.Capacitor`.
+- Change only: new files under `warehouse-front/src/app/core/platform/`, the new `core/interceptors/api-origin.interceptor.ts` and its spec, `app.config.ts`, `src/environments/environment.ts`, `src/environments/environment.development.ts`.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `### ۴-ب.`, `#### گام الف-۱` and `## ۱۰.` (the section 10 decisions override older text).
+- `app.config.ts` registers `withInterceptors([authInterceptor, errorInterceptor, offlineInterceptor])`. `offlineInterceptor` only handles requests whose URL starts with `environment.apiUrl` or `/api`, builds cache keys from the URL, and enqueues mutations with `req.url`. Therefore the new interceptor must be the LAST entry, so the offline interceptor, its cache keys and the sync queue keep relative URLs.
+- `environment.apiUrl` is `'/api'` and stays relative.
+
+3. Definitions:
+- "native" means `(globalThis as any).Capacitor?.isNativePlatform?.() === true`.
+- "valid server origin" means it matches `/^https:\/\/[a-z0-9.-]+(:\d{1,5})?$/i` (no path, no trailing slash).
+- "server path" means a URL string that starts with `/api/`, equals `/api`, starts with `/api?`, or starts with `/media/`.
+
+4. Task:
+- a) `core/platform/platform.ts`: `export type AppPlatform = 'web' | 'android' | 'ios'`; `isNativePlatform(): boolean`; `getAppPlatform(): AppPlatform` (`'web'` when not native, else `Capacitor.getPlatform()` when it is `'android'` or `'ios'`, else `'web'`).
+- b) `core/platform/server-origin.ts`:
+  - `SERVER_ORIGIN_STORAGE_KEY = 'wh_server_origin'`.
+  - `isValidServerOrigin(origin: string): boolean`.
+  - `getServerOrigin(): string`: `''` when not native; when native, the value stored under the key if valid, else `environment.serverOrigin` with any trailing slash removed if valid, else `''`.
+  - `setServerOriginOverride(origin: string): boolean`: when not native or the origin is invalid, store nothing and return false; else store it and return true.
+  - `resolveServerUrl(url: string): string`: returns `url` unchanged when the origin is empty, when `url` is not a server path, or when `url` is absolute (`http:`, `https:`, `blob:`, `data:`, `ws:`, `wss:`); otherwise origin + url.
+  - `wsUrl(path: string): string`: with an empty origin, exactly `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}${path}`; otherwise the origin with `https:` replaced by `wss:` (and `http:` by `ws:`) + path.
+  - `publicOrigin(): string`: the origin when not empty, else `window.location.origin`.
+- c) `core/interceptors/api-origin.interceptor.ts`: `export const apiOriginInterceptor: HttpInterceptorFn` that clones the request with `resolveServerUrl(req.url)` only when the result differs; otherwise passes the same request object through. Register it last in `app.config.ts`.
+- d) Add `serverOrigin: ''` to both environment files.
+- e) Specs with Vitest: `core/platform/server-origin.spec.ts` with at least 12 tests (web: every helper unchanged; native via a stubbed `globalThis.Capacitor`: environment fallback, valid override, invalid override rejected, `http://` rejected, absolute and `/assets/` URLs untouched, `/api/x` and `/media/x` prefixed, `wsUrl` scheme mapping, `publicOrigin`); remove the stub and clear the storage key after each test. `core/interceptors/api-origin.interceptor.spec.ts` with at least 5 tests (web passthrough is the same object; native `/api/` and `/media/` rewritten; absolute and `/assets/` untouched).
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(platform): server origin helpers and api-origin interceptor
+- Short English report: files added, exported API, tests added, the last ng-test-compare summary line, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گزارش اجرای گام ۳ از ۱۷ (Mobile Phase A)
+
+#### ۱. توضیح ساده تغییرات اعمال‌شده:
+- تشخیص پلتفرم موبایل به صورت خالص از طریق `globalThis.Capacitor` بدون ایمپورت هیچ پکیج اضافی پیاده‌سازی شد.
+- توابع کمکی برای آدرس و اوریجین سرور (`server-origin.ts`) پیاده‌سازی شدند تا در وب رفتار سیستم ۱۰۰٪ بدون تغییر و دست‌نخورده باقی بماند (برگرداندن رشته خالی و آدرس‌های نسبی) و در موبایل آدرس‌های `/api` و `/media` به اوریجین تنظیم‌شده متصل شوند.
+- اینترسپتور `apiOriginInterceptor` ایجاد و در انتهای آرایه `withInterceptors` در `app.config.ts` اضافه شد تا صف و کش آفلاین همچنان بر مبنای URLهای نسبی کار کنند.
+- خصوصیت `serverOrigin: ''` به فایل‌های `environment.ts` و `environm...
+
+---
+
+### Task 3 of 16 — 2026-10-17 10:42:22
+- **Status:** DONE
+- **Conversation:** `406d2b02-f50e-4bf1-b385-1cb09af3d961`
+- **Steps:** 398
+- **Duration:** 27m 51s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 17/18 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline/offline-queue-runner.spec.ts --require "Capacitor" --require "resolveServerUrl"`
+  - verify round 1: 18/18 passed
+- **Task:**
+```
+Session 4 of 17 — Mobile phase A: every direct fetch() call resolves its URL through resolveServerUrl (queued URLs stay relative)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- No data may ever be lost. Queued sync records must keep storing the RELATIVE url exactly as today; resolve the URL only in the argument passed to `fetch`. Never write a resolved URL into IndexedDB, into a queue entry, into a cache key or into an error-inbox record. Do not change how a response status decides delete, retry or error-inbox.
+- On the web `resolveServerUrl` returns its input unchanged, so web behavior must stay identical.
+- Change only the files in section 4 and the three named specs.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan heading `## ۱۰.` (first decision: all `fetch` calls go through `resolveServerUrl()`).
+- `resolveServerUrl` is exported by `warehouse-front/src/app/core/platform/server-origin.ts` (session 3).
+- The direct `fetch(` calls today: `network-status.service.ts:140`, `offline/offline-conflict-manager.ts:206`, `offline/offline-queue-runner.ts:69` (token refresh) and `:173` (queued mutation), `offline-sync.service.ts:633` (deep-sync probe), `photo-upload-queue.service.ts:381`, `sync-pull.service.ts:298`, `companies.facade.ts:135`, `companies.ts:1295`, `modules/warehouse/api/item-api.service.ts:98` (Excel import). `domain-migration.service.ts:55` fetches an absolute URL of another origin on purpose; do not change it.
+
+3. Definitions: "resolve at the call" means the code becomes `fetch(resolveServerUrl(<same expression as before>), <same options>)` or an equivalent local `const` used only for that call.
+
+4. Task:
+- a) Apply "resolve at the call" to each `fetch(` listed in section 2 in: `core/services/network-status.service.ts`, `core/services/offline/offline-conflict-manager.ts`, `core/services/offline/offline-queue-runner.ts`, `core/services/offline-sync.service.ts`, `core/services/photo-upload-queue.service.ts`, `core/services/sync-pull.service.ts`, `modules/common/components/operations/companies/companies.facade.ts`, `modules/common/components/operations/companies/companies.ts`, `modules/warehouse/api/item-api.service.ts`.
+- b) Tests in `core/services/offline/offline-queue-runner.spec.ts` (add at least 2): with a stubbed native `globalThis.Capacitor` and a stored valid override origin, a queued entry with url `/api/v1/...` is sent with `fetch` to `<origin>/api/v1/...`, and the entry stored in the queue still has the relative url afterwards; on the web the same entry is fetched with the relative url. Clean the stub and the storage key after each test. Update `photo-upload-queue.service.spec.ts` or `sync-pull.service.spec.ts` only if an existing test breaks because of the change.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files; re-read every changed `fetch(` line and confirm no resolved URL is stored anywhere.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+fix(platform): resolve direct fetch URLs through the server origin
+- Short English report: each changed call (file:line), the tests added, the last ng-test-compare summary line, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام‌های چهارگانه اجرایی (4-Step Protocol)
+
+۱. **توضیح ساده (Explain Simply):**
+دستور اعتبارسنجی خودکار (`spec-check`) بررسی کرد که فایل تست `offline-queue-runner.spec.ts` دارای هر دو رشته مشخص‌شده یعنی `"Capacitor"` و `"resolveServerUrl"` باشد. در نسخه قبل تابع `resolveServerUrl` به‌صورت غیرمستقیم از طریق `sendEntry` تست شده بود، اما صراحتاً در این فایل تست ایمپورت یا استفاده نشده بود و به همین دلیل بررسی با خطای `missing required text: resolveServerUrl` مواجه شد.
+
+۲. **بررسی و اعتبارسنجی فوری (Verify Immediately):**
+با بررسی خطای لاگ در `task03-r0-verify12.log` و اجرای دستور:
+`python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/...
+
+---
+
+### Task 4 of 16 — 2026-10-17 11:04:21
+- **Status:** DONE
+- **Conversation:** `57a6a9a6-5bc8-40b2-a78e-2f23b5bd5109`
+- **Steps:** 208
+- **Duration:** 21m 54s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 13/13 passed
+- **Task:**
+```
+Session 5 of 17 — Mobile phase A: WebSocket URLs through wsUrl, the serverUrl pipe, a global image loader, and media URLs in verify-card and companies
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 9 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Web behavior must stay identical: on the web `wsUrl(path)` returns exactly the URL the current code builds, and `resolveServerUrl` returns its input unchanged.
+- Keep the WebSocket query strings, reconnect logic, echo filtering and `warehouse_id` checks exactly as they are (AGENTS.md section 3, WebSocket rules).
+- Change only the files in the runner scope list. Do not touch templates in this session.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `### ۴-ب.` and `## ۱۰.`. Helpers from session 3 live in `core/platform/server-origin.ts`.
+- `core/http/websocket.service.ts:92-97` builds `${protocol}//${host}/ws/notifications/?...` from `window.location`; `core/services/communication.service.ts:274-282` builds `/ws/chat/` and `/ws/comments/` the same way.
+- `modules/common/components/verify-card/verify-card.ts:134-138` and `modules/common/components/operations/companies/companies.ts:1250-1255` strip the origin of a media URL to a relative `/media/...` path that is later bound to `[src]` (and to an `<iframe>` through the sanitizer in companies).
+- `NgOptimizedImage` (`[ngSrc]`) is used for server images in `users.html`, `companies.html`, `verify-card.html` and `user-menu.component.html`; no `IMAGE_LOADER` is provided today.
+
+3. Definitions: "media URL" means a value that may be a relative `/media/...` path or an absolute server URL.
+
+4. Task:
+- a) Replace the URL building in `websocket.service.ts` and `communication.service.ts` with `wsUrl('/ws/...')` keeping the same path and query.
+- b) New standalone pure pipe `shared/pipes/server-url.pipe.ts`: class `ServerUrlPipe`, `name: 'serverUrl'`, `transform(value: string | null | undefined): string | null | undefined` returning `resolveServerUrl(value)` for non-empty strings and the input otherwise. Spec with at least 4 tests (web unchanged, native `/media/x` prefixed, null and undefined passthrough, `blob:` untouched).
+- c) In `app.config.ts` provide `IMAGE_LOADER` with a loader that returns `resolveServerUrl(config.src)` (no width parameters added), so every `[ngSrc]` resolves server paths. Keep the interceptor array unchanged.
+- d) In `verify-card.ts` and `companies.ts`, wherever the stripped relative `/media/...` path is produced for display, pass it through `resolveServerUrl` before it reaches the sanitizer or the template.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/shared/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(platform): websocket and media URLs through the server origin
+- Short English report: changed lines per file, tests added, the last ng-test-compare summary line, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح شفاف درخواست (Explanation)
+کاربر درخواست اجرای **سشن ۵ از ۱۷ (فاز A اپلیکیشن موبایل / Capacitor)** را دارد که اهداف زیر را شامل می‌شود:
+- بازنویسی ساخت نشانی‌های وب‌سوکت در [websocket.service.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/http/websocket.service.ts) و [communication.service.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/services/communication.service.ts) با متد `wsUrl('/ws/...')` جهت حذف وابستگی سخت‌افزاری به `window.location.host` با حفظ کامل پارامترهای query و لاجیک‌های وصل مجدد و فیلتر اکو.
+- ایجاد یک پایپ مستقل و خالص با نام `serverUrl` در [server-url.pipe.ts](file:///E:/warehouse%20project/ware...
+
+---
+
+### Task 5 of 16 — 2026-10-17 11:27:15
+- **Status:** DONE
+- **Conversation:** `21c1ec08-e312-4d1b-bb28-40211578e5db`
+- **Steps:** 247
+- **Duration:** 22m 50s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 21/21 passed
+- **Task:**
+```
+Session 6 of 17 — Mobile phase A: server media [src] bindings in templates use the serverUrl pipe
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 9 and 10 apply (section 3 Template Integrity: no accidental removal).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Only add `| serverUrl` to `[src]` bindings and add `ServerUrlPipe` to the `imports` of the owning standalone components. Change nothing else in the templates or components. Do not touch `[ngSrc]` bindings (the global image loader from session 5 covers them) and do not touch `<iframe>` bindings that go through the sanitizer.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Pipe: `ServerUrlPipe` in `warehouse-front/src/app/shared/pipes/server-url.pipe.ts` (session 5). On the web it returns its input unchanged; `blob:` and `data:` values are untouched.
+- `[src]` bindings that can receive a server media URL (all under `warehouse-front/src/app/`): `modules/common/components/users/users.html:1415`; `modules/common/components/operations/companies/companies.html:427` and the `<img [src]>` near line 2728; `modules/common/components/id-cards/id-cards.html` lines 58, 131, 268, 829, 886, 1043, 1100, 1284, 1341, 1499, 1556; `modules/common/components/communications/chat-drawer/chat-drawer.component.html:195`; `modules/accounting/components/finance/employee/employee-petty-cash/employee-petty-cash.html:611`; `.../employee-invoices/employee-invoices.html:574`; `.../employee-new-vehicle/employee-new-vehicle.html:1509`; `.../employee-new-personnel/employee-new-personnel.html:960` and `:1799`; `modules/accounting/components/finance/company-documents-archive/company-documents-archive.html:493`; `modules/warehouse/components/supervisor/supervisor-dashboard/supervisor-dashboard.html:1032`; `modules/warehouse/components/manager-review/manager-review.html:1056`; `modules/warehouse/components/item-photo-gallery/item-photo-gallery.component.html:155` and `:347`, and the inline template of `item-photo-thumb.component.ts` if it binds a server URL. Line numbers are approximate; find the binding by its expression.
+
+3. Definitions: none beyond section 2.
+
+4. Task: add `| serverUrl` to each binding listed in section 2 (for example `[src]="u.avatar | serverUrl"`) and import `ServerUrlPipe` in each owning component. If a listed binding only ever receives `blob:`/`data:` values, still add the pipe (it is harmless) and mention it in the report.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; after your commit, from the repo root, at most two runs of `python scripts/e2e/guardian_56_change_integrity.py --base HEAD~1 --head HEAD`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files and no file has a net deletion.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(platform): server media bindings use the serverUrl pipe
+- Short English report: bindings changed per file, components whose imports changed, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام‌های چهارگانه پروتکل اجباری
+
+#### ۱. توضیح ساده درخواست (Explain Simply)
+کاربر درخواست کرد که در نشست ۶ از فاز موبایل (Mobile phase A)، پایپ `ServerUrlPipe` به بایندینگ‌های `[src]` در قالب‌هایی که آدرس مدیا و فایل‌های سرور را دریافت می‌کنند اضافه شود (`| serverUrl`) و این پایپ در آرایهٔ `imports` کامپوننت‌های مستقل مربوطه ایمپورت گردد، تا در محیط موبایل نیتیو (Android/Capacitor) آدرس‌های نسبی سرور با اوریجین فعال سرور Resolve شوند و در محیط وب یا برای مقادیر `blob:` و `data:` بدون تغییر بمانند.
+
+#### ۲. اعتبارسنجی فنی (Verify Immediately)
+تمام فایل‌ها و خطوط اعلام‌شده بررسی شدند:
+- پایپ `ServerUrlPipe` در مسیر `warehouse-front/src/app/shared/pipes/server...
+
+---
+
+### Task 6 of 16 — 2026-10-17 12:06:28
+- **Status:** DONE
+- **Conversation:** `5c547a8a-2b1e-4e7f-a74d-5a2653792a8c`
+- **Steps:** 341
+- **Duration:** 39m 8s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 8/10 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/platform/file-output.ts --contains "export function saveBlob" --contains "export function saveUrl" --contains "export function printWindow" --contains "export class FileOutputService"`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 46a21da --include "src/**/*.spec.ts"`
+  - verify round 1: 10/10 passed
+- **Task:**
+```
+Session 7 of 17 — Mobile phase A: FileOutputService (save and print) and the warehouse module migrated to it
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply (section 3 Excel and export standards stay untouched: only the final "save the file" step moves).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Web behavior must stay identical: same file name, same MIME type, same content, same moment of download, same print behavior.
+- `URL.createObjectURL` used for previews (`<img>`, `<iframe>`, lightbox) is NOT a download; leave those untouched.
+- Change only `core/platform/file-output.ts`, its spec, and non-spec `.ts` files under `warehouse-front/src/app/modules/warehouse/`.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `### ۴-الف.`, `#### گام الف-۲` and `## ۱۰.`.
+- Download code in the warehouse module today (anchor with `.download =` or `setAttribute('download'`): `count-tracking.ts`, `counter-dashboard.ts` (2), `customs.ts` (2), `dispatch.ts`, `docs.ts` (2), `label-designer.ts`, `manager-review.ts`, `projects.ts`, `reports/export-progress.component.ts`, `reports/reports.ts`, `supervisor-dashboard.ts`.
+- `resolveServerUrl` is in `core/platform/server-origin.ts`.
+
+3. Definitions:
+- `saveBlob(blob: Blob, filename: string): Promise<void>`: web implementation = create an object URL, create an `<a>` with `href` and `download = filename`, append it to `document.body`, click it, remove it, and revoke the object URL after 1000 ms.
+- `saveUrl(url: string, filename?: string): Promise<void>`: same anchor technique with `href = resolveServerUrl(url)` and `download = filename ?? ''`.
+- `printWindow(target?: Window | null): void`: `(target ?? window).print()`.
+- `FileOutputService`: `@Injectable({ providedIn: 'root' })` with methods `saveBlob`, `saveUrl`, `print` that delegate to the three functions.
+- Native branches come later (plan step ب-۲); for now each function has a single web implementation and a short comment marking where the native branch will go.
+
+4. Task:
+- a) Create `core/platform/file-output.ts` per section 3 and `file-output.spec.ts` with at least 5 tests (anchor created with the right `download` and `href`, appended and removed, object URL revoked later with fake timers, `saveUrl` resolves server paths on a stubbed native runtime, `printWindow` calls `print` on the given target and on `window` by default).
+- b) Replace every download block in the warehouse module with `saveBlob(...)`/`saveUrl(...)` (or the injected service). Keep the surrounding logic (export requests, toasts, progress state, file names) unchanged.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts" --include "src/app/modules/warehouse/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files and no file has an unexpected net deletion.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(platform): FileOutputService; warehouse module downloads through it
+- Short English report: each migrated call (file:line), anything left untouched on purpose, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده به فارسی (Explain Simply)
+رانر گزارش داد که دو مشکل در فرآیند بررسی پیش آمده است:
+۱. در ابزار `text-check`، به دلیل تعریف توابع به شکل `export async function saveBlob` و `export async function saveUrl`، عبارت دقیق متنی `export function saveBlob` و `export function saveUrl` یافت نشد.
+۲. در اجرای تمام تست‌ها (`src/**/*.spec.ts`)، تست شماره ۲ در `file-output.spec.ts` به دلیل تداخل فراخوانی‌های `URL.revokeObjectURL` در صف سراسری تایمرهای ساختگی Vitest با سایر تست‌ها دچار شکست شده بود.
+
+### ۲. بررسی و راستی‌آزمایی فنی (Verify Immediately)
+۱. امضای توابع در `warehouse-front/src/app/core/platform/file-output.ts` مستقیماً به `export function saveBlob`...
+
+---
+
+### Task 7 of 16 — 2026-10-17 12:31:19
+- **Status:** DONE
+- **Conversation:** `9789912f-4fdb-4ba9-9241-2c4afbab3e6a`
+- **Steps:** 294
+- **Duration:** 24m 46s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 12/12 passed
+- **Task:**
+```
+Session 8 of 17 — Mobile phase A: accountant, documents archive, counterparties, organization and personnel settings downloads and print through file-output
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 6 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Web behavior must stay identical (file names, MIME types, content, print output). Previews through `URL.createObjectURL` are not downloads; leave them.
+- Change only non-spec `.ts` files in the five folders of the runner scope. Do not change templates or `core/platform/file-output.ts`.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Helpers in `warehouse-front/src/app/core/platform/file-output.ts` (session 7): `saveBlob`, `saveUrl`, `printWindow`, and the injectable `FileOutputService`. Read the file first.
+- Files with download or print code today: `accountant-diskettes.ts`, `accountant-fleet.ts` (2), `accountant-invoices.ts`, `accountant-payroll.ts` (download and print), `accountant-personnel.ts`, `accountant-petty-cash.ts`, `company-documents-archive.ts`, `counterparties.ts`, `organization/projects-and-sections/projects-and-sections.ts`, `personnel/base-settings/base-settings.ts`.
+
+3. Definitions: a print call `X.print()` becomes `printWindow(X)`; `window.print()` becomes `printWindow()`.
+
+4. Task: replace every download block with `saveBlob`/`saveUrl` and every print call with `printWindow`, keeping the surrounding logic unchanged.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/accounting/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(platform): accountant, archive, counterparties, organization and personnel files through file-output
+- Short English report: each migrated call (file:line), the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خواسته کاربر (Simple Persian Explanation)
+در نشست ۸ از ۱۷ (فاز موبایل A)، هدف جایگزینی کلیهٔ بلوک‌های سنتی دانلود و فراخوانی‌های چاپ مرورگر (`URL.createObjectURL`، تگ‌های `<a>` و `window.print()`) در بخش‌های حسابدار، آرشیو مدارک شرکت، طرف‌حساب‌ها، ساختار سازمانی و تنظیمات پایه پرسنل با توابع ارائه‌شده در پلتفرم مشترک (`saveBlob` و `printWindow` از مسیر `core/platform/file-output`) بود، به‌طوری که رفتار مرورگر و اسامی فایل‌ها دقیقاً بدون تغییر باقی بماند و فایل‌های خارج از اسکوپ، قالب‌ها و فایل‌های spec دست‌نخورده باقی بمانند.
+
+### ۲. اعتبارسنجی فنی (Immediate Technical Verification)
+- تمامی فایل‌های ۱۰ گانه و فراخوانی‌های دانلود و پرینت مورد ب...
+
+---
+
+### Task 8 of 16 — 2026-10-17 12:58:43
+- **Status:** DONE
+- **Conversation:** `6804ae5b-6d65-4aa2-87f2-949c715da0e9`
+- **Steps:** 268
+- **Duration:** 27m 20s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 10/10 passed
+- **Task:**
+```
+Session 9 of 17 — Mobile phase A: employee, supervisor, treasurer and manager downloads and print through file-output
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 6, 7 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Web behavior must stay identical (file names, MIME types, content, print output, button look). Previews through `URL.createObjectURL` are not downloads; leave them.
+- Change only files under the four folders of the runner scope. Do not change `core/platform/file-output.ts`.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Helpers in `warehouse-front/src/app/core/platform/file-output.ts`: `saveBlob`, `saveUrl`, `printWindow`, `FileOutputService`. Read the file first.
+- `.ts` files with download or print code today: `employee-attendance.ts` (download and print), `employee-fleet.ts` (print), `employee-invoices.ts`, `employee-new-personnel.ts` (2), `employee-new-vehicle.ts` (2), `employee-petty-cash.ts`, `supervisor-fleet.ts`, `supervisor-invoices.ts`, `supervisor-new-profiles.ts` (2), `supervisor-petty-cash.ts`, `treasurer-disbursements.ts` (3), `manager-reports.ts` (print).
+- Template anchor with a `download` attribute: `employee/employee-invoices/employee-invoices.html` near line 579 (`<a [href]="previewAttachmentUrl" ... download>`).
+
+3. Definitions: same as session 8. For the template anchor: replace the `download` anchor with a `button type="button"` (or keep the `<a>` without `href`/`download`) whose `(click)` calls a new component method that runs `saveUrl(previewAttachmentUrl, <the same file name the anchor used, if any>)`. Keep the same classes, icon, text, `title` and `aria-label`.
+
+4. Task: replace every download block with `saveBlob`/`saveUrl`, every print call with `printWindow`, and the template anchor as defined above.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/accounting/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(platform): employee, supervisor, treasurer and manager files through file-output
+- Short English report: each migrated call (file:line), the template change, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده به فارسی (Persian Explanation)
+در این نشست (نشست ۹ از ۱۷ — فاز موبایل الف)، هدف مهاجرت کلیه فراخوانی‌های دانلود فایل و چاپ (Print) در ماژول‌های کارمند (Employee)، سرپرست/ناظر (Supervisor)، خزانه‌دار (Treasurer) و مدیر (Manager) به توابع استاندارد لایه پلتفرم (`saveBlob` ،`saveUrl` و `printWindow`) در مسیر `core/platform/file-output.ts` بود. علاوه بر این، در قالب HTML ماژول فاکتورهای کارمند (`employee-invoices.html`)، تگ لینک دانلود تصویر پیوست به دکمه استاندارد متصل به متد کامپوننت با استفاده از `saveUrl` تبدیل گردید.
+
+### ۲. بررسی و اعتبارسنجی فنی (Verification)
+کلیه فایل‌های هدف، متدهای دانلود و پرینت، و تگ لینک قالب بررسی شدند و صحت نیازمند...
+
+---
+
+### Task 9 of 16 — 2026-10-17 14:02:48
+- **Status:** FAILED (verify still failing)
+- **Conversation:** `ba1301d0-c74d-4685-be89-d705db315e09`
+- **Steps:** 566
+- **Duration:** 64m 1s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 10/11 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 4716d05 --include "src/**/*.spec.ts"`
+  - verify round 1: 10/11 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 4716d05 --allow warehouse-front/src/app/modules/common/components/audit/* warehouse-front/src/app/modules/common/components/id-cards/* warehouse-front/src/app/modules/common/components/operations/companies/* warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/* warehouse-front/src/app/modules/common/components/users/* warehouse-front/src/app/core/services/offline-db.ts warehouse-front/src/app/modules/common/components/communications/chat-drawer/*`
+  - verify round 2: 10/11 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 4716d05 --include "src/**/*.spec.ts"`
+- **Task:**
+```
+Session 10 of 17 — Mobile phase A: common and core downloads and print through file-output; no download or print code left outside it
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7, 9 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Web behavior must stay identical (file names, MIME types, content, print output, button look). Previews through `URL.createObjectURL` are not downloads; leave them.
+- `core/services/offline-db.ts` holds the offline database. Change only its download step; do not touch tables, versions, queries or delete logic.
+- Change only the files of the runner scope. Do not change `core/platform/file-output.ts`.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Helpers in `warehouse-front/src/app/core/platform/file-output.ts`: `saveBlob`, `saveUrl`, `printWindow`, `FileOutputService`. Read the file first.
+- `.ts` files with download or print code today: `modules/common/components/audit/audit.ts`, `id-cards/id-cards.ts` (download and print), `operations/companies/companies.ts`, `settings/tabs/settings-backup-tab/settings-backup-tab.ts`, `users/users.ts`, `core/services/offline-db.ts:656`.
+- Template anchors with a `download` attribute: `operations/companies/companies.html` near lines 1822, 1875, 2676 and 2739. `communications/chat-drawer/chat-drawer.component.html` near line 194 has a download link too; check it.
+
+3. Definitions: same as sessions 8 and 9. A template anchor with `download` becomes a `button type="button"` (or an `<a>` without `href`/`download`) whose `(click)` calls a component method that runs `saveUrl(<same url>, <same file name if any>)`. Keep classes, icons, text, `title`, `aria-label` and `target` behavior for links that only open (not download).
+
+4. Task: migrate every remaining download block, print call and template download anchor in these files.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/**/*.spec.ts" --include "src/app/core/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(platform): common and core files through file-output
+- Short English report: each migrated call and anchor (file:line), the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح شفاف مسئله (Explain Simply)
+رانر در دور دوم اصلاح به دلیل وجود فایل خارج از دامنه مجاز وظیفه متوقف شده بود:
+`Outside the allowed scope: ['warehouse-front/src/app/core/services/session-tab.service.spec.ts']`
+علت این بود که در دور اول اصلاح، برای ایزوله‌سازی تست‌ها، فایل `session-tab.service.spec.ts` ویرایش و کامیت شده بود، اما این فایل در فهرست مسیرهای مجاز (`--allow`) تعریف نشده بود.
+
+---
+
+### ۲. اعتبارسنجی فنی و حل مسئله (Verify & Solve Directly)
+۱. فایل `session-tab.service.spec.ts` دقیقاً به وضعیت پایه (`4716d05`) بازگردانده و کامیت شد (`e73e336`).
+۲. بررسی دامنه تغییرات نسبت به پایه (`4716d05`) اجرا شد؛ تنها ۹ فایل در دامنه مجاز باقی مانده‌اند:...
+
+---
+
+### Task 1 of 8 — 2026-10-17 14:25:04
+- **Status:** DONE
+- **Conversation:** `d8265e6c-cb68-4861-919c-b5548f1af318`
+- **Steps:** 118
+- **Duration:** 17m 39s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 7/7 passed
+- **Task:**
+```
+Session 10b of 17 — Mobile phase A: session-tab spec independent of state left by other specs; global image loader only on native
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Do not change any expected value or assertion in `session-tab.service.spec.ts`; only add setup and cleanup. Do not change `session-tab.service.ts`.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- `src/app/core/services/session-tab.service.spec.ts` passes when run alone, but in the full suite the tests "/app/warehouse/counter gives warehouse" and "/app/operations/cockpit gives operations" receive `'personnel'`: state left by an earlier spec (storage keys, the `getModuleRegistry()` singleton in `core/modules/module-registry.service.ts`, or an active-app override) leaks in. Log: `scratch/logs/runner/task09-r2-verify9.log` and `scratch/logs/runner/ngtest-head.log`.
+- `app.config.ts` provides `IMAGE_LOADER` for every platform. On the web it should keep Angular's default behavior.
+
+3. Task:
+- a) Read `session-tab.service.ts` `getActiveApp()` to see which state it reads, then make the spec self-contained: in `beforeEach` reset every piece of that state to a known value (for example clear the related `localStorage`/`sessionStorage` keys and call `getModuleRegistry().setInstalledModules(['warehouse', 'accounting'])`), and restore it in `afterEach`.
+- b) In `app.config.ts`, provide `IMAGE_LOADER` only when `isNativePlatform()` (from `core/platform/platform.ts`) is true, for example by spreading `...(isNativePlatform() ? [{ provide: IMAGE_LOADER, useValue: ... }] : [])`. Keep the interceptor array unchanged.
+
+4. Tool policy: in `warehouse-front`, at most one run of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base 4716d05 --include "src/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+test(front): self-contained session-tab spec; image loader only on native
+- Short English report: the leaking state, what you added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح شفاف مسئله (Explain Simply)
+تست‌های `session-tab.service.spec.ts` هنگام اجرای تکی پاس می‌شدند، اما در مجموعه کامل تست‌ها، به دلیل نشت وضعیت تست‌های قبلی (مقادیر باقی‌مانده در `sessionStorage`/`localStorage` مانند `active_app_module` و نیز سینگلتون `getModuleRegistry()` که در تست‌های دیگر ماژول `warehouse` از آن خارج شده بود)، متد `getActiveApp()` برای مسیرهای `/app/warehouse/counter` و `/app/operations/cockpit` مقدار پیش‌فرض `'personnel'` دریافت می‌کرد و با خطا مواجه می‌شد. همچنین در `app.config.ts`، لودر سراسری تصاویر (`IMAGE_LOADER`) برای همه پلتفرم‌ها تزریق شده بود، در حالی که در نسخه وب باید رفتار پیش‌فرض خود انگولار حفظ شود و تنها در محیط بومی...
+
+---
+
+### Task 2 of 8 — 2026-10-17 15:02:29
+- **Status:** DONE
+- **Conversation:** `9d70bd8e-9664-46c8-9c38-e26aebcc0a0d`
+- **Steps:** 339
+- **Duration:** 37m 21s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 15/15 passed
+- **Task:**
+```
+Session 11 of 17 — Mobile phase A: external links and popups through openExternal and the appExternalLink directive
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 9 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Web behavior must stay identical: same URL, same target, same window features, same returned `Window` object for popups (the Google Drive OAuth popups rely on it), same anchor navigation.
+- In templates only add the directive attribute to anchors and the directive to the component `imports`. Change nothing else in the templates.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `### ۴-الف.`, `#### گام الف-۳` and `## ۱۰.` (Google Drive OAuth stays web-only; its native message comes later in step ب-۲).
+- `window.open(` today: `company-documents-archive.ts:406`, `employee-fleet.ts:803`, `company-gdrive-tab.ts:603` (OAuth popup `about:blank`), `settings-backup-tab.ts:525` (OAuth popup), `label-designer.ts:750`, `wh-settings.ts:535`.
+- `target="_blank"` anchors: 23 in 10 templates (`companies.html`, `chat-drawer.component.html`, `supervisor-personnel.html`, `supervisor-fleet.html`, `employee-new-personnel.html`, `employee-invoices.html`, `company-documents-archive.html`, `company-gdrive-tab.html`, `settings-backup-tab.html`, `dispatch.html`).
+- `resolveServerUrl` and `isNativePlatform` are in `core/platform/`.
+
+3. Definitions:
+- `openExternal(url: string, target: string = '_blank', features?: string): Window | null` in `core/platform/external-link.ts`: web implementation = `window.open(resolveServerUrl(url), target, features)` and return its result (when `features` is undefined, call `window.open` with two arguments exactly as before). Mark with a short comment where the native branch (system browser) goes later.
+- Directive `ExternalLinkDirective` in `shared/directives/external-link.directive.ts`: standalone, selector `a[appExternalLink]`, optional input `appExternalLink` (string, null or undefined). On the web it does nothing at all (the browser follows `href` and `target` as today). When native, a click calls `preventDefault()` and `openExternal(<input value or the element href>)`.
+
+4. Task:
+- a) Create `openExternal` and the directive with specs (at least 3 tests each: web passthrough and returned value; `about:blank` popup unchanged; native click prevented and routed; web click not prevented).
+- b) Replace each `window.open(` in the six files with `openExternal(...)` with the same arguments.
+- c) Add `appExternalLink` (bound to the same expression as `[href]` when `href` is bound, or plain when static) to every anchor with `target="_blank"`, and add `ExternalLinkDirective` to the owning components' `imports`.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts" --include "src/app/shared/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files and no template has a net deletion.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(platform): external links and popups through openExternal
+- Short English report: changed calls and anchors per file, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خواسته کاربر (Explain Simply)
+کاربر درخواست اجرای سشن ۱۱ از ۱۷ از فاز موبایل (گام الف-۳) را دارد:
+۱. پیاده‌سازی تابع `openExternal` در `core/platform/external-link.ts` برای باز کردن لینک‌ها و پاپ‌آپ‌ها با رفتار یکسان در وب و تفکیک برای حالت بومی موبایل.
+۲. پیاده‌سازی دایرکتیو مستقل `ExternalLinkDirective` با سلکتور `a[appExternalLink]` در `shared/directives/external-link.directive.ts`.
+۳. ایجاد آزمون‌های واحد جامع (حداقل ۳ تست برای هر کدام) با vitest.
+۴. جایگزینی تمام ۶ فراخوانی مستقیم `window.open` در کدهای تایپ‌اسکریپت با `openExternal`.
+۵. افزودن ویژگی `appExternalLink` (متصل به همان متغیر `[href]` یا ایستا) به تمام لینک‌های دارای `target="...
+
+---
+
+### Task 3 of 8 — 2026-10-17 15:25:50
+- **Status:** DONE
+- **Conversation:** `65fa0df4-1a29-47ab-9198-f97b78164532`
+- **Steps:** 122
+- **Duration:** 23m 16s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 12/12 passed
+- **Task:**
+```
+Session 12 of 17 — Mobile phase A: id-card QR uses publicOrigin, and domain migration switches the server origin on native instead of navigating away
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- No data may ever be lost. Domain migration must keep its current gate exactly: it acts only when the sync queue, the photo queue and the local drafts are all empty and nothing is being sent. Never clear, delete or purge any cache, table or database.
+- Web behavior must stay identical: on the web the service keeps comparing `window.location` and navigating with `LocationNavigator.replace` exactly as today.
+- Change only the three files of the runner scope.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `### ۴-ب.` and `## ۱۰.` (cache purge on server change was rejected; the test build will use a separate app id instead).
+- `id-cards.ts` uses `window.location.origin` at lines 453, 1537 and 1540.
+- `domain-migration.service.ts`: `handleConfig` (around line 192) compares `canonical_domain` with `getHost()`/`getHostname()` of `LOCATION_NAVIGATOR`; `evaluateAndMigrateIfReady` gates on pending counts; `performMigration` (around line 321) calls `this.navigator.replace(targetUrl)`. Inside the native app `window.location.hostname` is `localhost`, so today it would navigate the WebView away to the web domain.
+- Helpers: `isNativePlatform` in `core/platform/platform.ts`; `getServerOrigin`, `setServerOriginOverride`, `publicOrigin` in `core/platform/server-origin.ts`.
+
+3. Definitions: "current server host" means, when native, the host part of `getServerOrigin()` (empty origin means no migration decision is possible: treat as not legacy); on the web it stays the current `getHost()`/`getHostname()` logic.
+
+4. Task:
+- a) `id-cards.ts`: replace the three `window.location.origin` uses with `publicOrigin()` (keep the existing fallback text where the code had one).
+- b) `domain-migration.service.ts`: when native, `isLegacy` compares `canonical_domain` with the current server host; `performMigration` calls `setServerOriginOverride('https://' + canonical)` and, only if it returned true, reloads the app with `window.location.reload()` through a new `reload()` member of `LocationNavigator` (default factory implementation `window.location.reload()`). Never call `replace` with an external URL when native. All gates stay as they are.
+- c) Specs in `domain-migration.service.spec.ts` (keep every existing test; add at least 3): native + legacy + empty queues sets the override and calls `reload` but not `replace`; native + pending records does nothing; native with the canonical equal to the current server host is not legacy. Stub `globalThis.Capacitor` and clean the stub and the storage key after each test.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/services/domain-migration.service.spec.ts" --include "src/app/modules/common/components/id-cards/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(platform): QR public origin and native domain migration
+- Short English report: changed lines, tests added, the last ng-test-compare summary line, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده به فارسی (Explain Simply)
+کاربر درخواست کرد که در برنامهٔ کلاینت (به ویژه فاز اپلیکیشن بومی / Native Capacitor):
+۱. در کامپوننت کارت شناسایی پرسنل (`id-cards.ts`) به جای استفاده از مبدأ لوکال مرورگر (`window.location.origin`) که در اپ نیتیو به آدرس محلی اشاره دارد، از تابع کمکی `publicOrigin()` استفاده شود تا لینک‌های اعتبارسنجی QR Code به نشانی معتبر عمومی سرور ارجاع دهند.
+۲. در سرویس انتقال دامنه (`domain-migration.service.ts`)، در محیط نیتیو وب‌ویو به یک دامنهٔ خارجی هدایت (`replace`) نشود؛ بلکه با استخراج هاست سرور فعلی از `getServerOrigin()` و مقایسه با دامنهٔ رسمی (`canonical_domain`)، در صورت نیاز به مهاجرت و خالی بودن تمام صف‌ها و پیش‌...
+
+---
+
+### Task 4 of 8 — 2026-10-17 15:42:02
+- **Status:** DONE
+- **Conversation:** `48c34c92-4e8f-407e-95ae-aa97d492f59d`
+- **Steps:** 150
+- **Duration:** 16m 8s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 10/10 passed
+- **Task:**
+```
+Session 13 of 17 — Mobile phase A backend: app version and download settings in the public config
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- No migration: `SystemSetting` rows are key/value; adding default keys needs no schema change. Never run `makemigrations` or `migrate`.
+- `/api/public/config/` is a sensitive boot endpoint for every client: a bad stored value must never make it fail; return the empty default instead.
+- Run `manage.py test` only with labels. Change only the three files of the runner scope.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `### ۴-ج.`, `#### گام الف-۴` and `## ۱۰.`.
+- `warehouse-backend/core/settings_core/services.py`: `DEFAULT_SETTINGS` (line 13), `validate_settings_payload(data)` (line 60) with per-key rules (see the `system_version` rule), `get_setting`.
+- `warehouse-backend/core/settings_core/views.py:104` `PublicConfigViewSet.list` (AllowAny) builds the boot config; `clamped_minutes` shows the "never 500" pattern.
+
+3. Definitions:
+- "app version" is `MAJOR.MINOR.PATCH` matching `^\d{1,4}\.\d{1,4}\.\d{1,4}$`, or the empty string (meaning "no rule").
+- "download URL" is an `https://` URL of at most 500 characters without whitespace, or the empty string.
+
+4. Task:
+- a) Add to `DEFAULT_SETTINGS`: `'app_min_version': ''`, `'app_recommended_version': ''`, `'app_download_url_direct': ''`, `'app_download_url_bazaar': ''`, `'app_download_url_myket': ''`.
+- b) In `validate_settings_payload`, reject a non-string or an invalid app version for the two version keys and a non-string or invalid download URL for the three URL keys.
+- c) In `PublicConfigViewSet.list`, add `'app_min_version'`, `'app_recommended_version'` and `'app_download_urls': {'direct': ..., 'bazaar': ..., 'myket': ...}`; each value is read with `get_setting` and replaced by `''` when it is not valid by the definitions above.
+- d) New `warehouse-backend/core/settings_core/test_mobile_app_config.py` with at least 8 tests: defaults present; anonymous GET returns 200 with the three new keys and empty defaults; stored valid values are returned; a stored invalid version or `http://` URL comes back as `''`; validation accepts valid values and rejects invalid versions, `http://` URLs, URLs with spaces and non-strings.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test settings_core --noinput` and one run of `.\venv\Scripts\python.exe manage.py check`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(settings): app version and download links in the public config
+- Short English report: the keys and rules added, tests added with the pass count, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خواسته کاربر (Explanation)
+کاربر درخواست پیاده‌سازی گام ۱۳ از ۱۷ (بک‌اند فاز A موبایل) را دارد:
+- افزودن ۵ کلید جدید به `DEFAULT_SETTINGS` در تنظیمات هسته (`settings_core`):
+  - نسخه حداقل مجاز اپلیکیشن (`app_min_version`) با مقدار اولیه رشته خالی.
+  - نسخه پیشنهادی اپلیکیشن (`app_recommended_version`) با مقدار اولیه رشته خالی.
+  - لینک دانلود مستقیم (`app_download_url_direct`) با مقدار اولیه رشته خالی.
+  - لینک دانلود کافه‌بازار (`app_download_url_bazaar`) با مقدار اولیه رشته خالی.
+  - لینک دانلود مایکت (`app_download_url_myket`) با مقدار اولیه رشته خالی.
+- اعتبارسنجی در `validate_settings_payload`:
+  - فرمت نسخه اپلیکیشن باید به شکل `MAJOR.M...
+
+---
+
+### Task 5 of 8 — 2026-10-17 16:34:00
+- **Status:** STOPPED (no new step for 20 minutes)
+- **Conversation:** `2f87982c-8488-4ce6-8fcf-610057f398d0`
+- **Steps:** 274
+- **Duration:** 51m 54s
+- **Checks:**
+  - require: 1/1 passed
+- **Task:**
+```
+Session 14 of 17 — Mobile phase A frontend: app version, the two-level update notice with a lock screen and emergency send, and the update service wrapper
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7, 9 and 10 apply. The `design-system` rules in `.agents/AGENTS.md` section 9 apply to the new component (semantic color tokens, `<svg appIcon>` icons only, Persian text, touch targets at least 40x40 px, Persian `title` and `aria-label`).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- No data may ever be lost. The lock state only stops the AUTOMATIC sending of the sync queue and the photo queue; it never deletes, clears or rewrites any record. The emergency send runs the normal flush with the normal rules (2xx removes, 4xx goes to the error inbox, 5xx and network errors retry).
+- Web behavior must stay identical: on the web the version state is always `ok`, no notice, no lock, no new headers, and `PwaUpdateService` behaves exactly as today.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `### ۴-ج.`, `#### گام الف-۴` and `## ۱۰.` (lock screen decision).
+- Backend (session 13): `/api/public/config/` returns `app_min_version`, `app_recommended_version` and `app_download_urls: { direct, bazaar, myket }`; `''` means "no rule". `PublicConfig` is in `core/api/config-api.service.ts`.
+- `core/services/offline/offline-queue-runner.ts` runs the automatic flush; `core/services/offline-sync.service.ts` and `core/services/photo-upload-queue.service.ts` expose pending counts. `PwaUpdateService` is used by `app.ts` and `shared/components/user-menu/user-menu.component.ts`.
+- `warehouse-front/package.json` has `"version": "0.0.0"`.
+
+3. Definitions:
+- `APP_VERSION` is a constant in `core/platform/app-version.ts` equal to the `version` of `package.json`, which becomes `1.0.0`.
+- `APP_CHANNEL` in the environment files: `appChannel: 'direct'` (values later: `direct`, `bazaar`, `myket`).
+- `compareVersions(a, b)`: numeric comparison of `MAJOR.MINOR.PATCH`; returns -1, 0 or 1; an empty or invalid string is treated as "no rule" by the callers.
+- Version state: `locked` when native and `app_min_version` is set and `APP_VERSION` is lower; `recommend` when native, not locked, and `app_recommended_version` is set and higher; otherwise `ok`.
+- "Emergency send": a method that runs the existing manual flush of the sync queue and the photo queue once, bypassing only the lock gate.
+
+4. Task:
+- a) Set `package.json` version to `1.0.0`; create `core/platform/app-version.ts` with `APP_VERSION`; add `appChannel: 'direct'` to both environment files.
+- b) `core/platform/app-version.service.ts`: `compareVersions`; `AppVersionService` (`providedIn: 'root'`) with a `state` signal, `downloadUrl` (the URL of the current channel), `isAutoSendBlocked()`, `emergencySend()`; it reads the public config through `ConfigApiService` once at start and again when the app returns online.
+- c) Gate the automatic flush in `offline-queue-runner.ts` (and the photo queue auto flush if separate) on `isAutoSendBlocked()`; the gate is only a skip, nothing else changes.
+- d) New standalone `shared/components/app-version-lock/` component shown from `app.html`: when `locked`, a full-screen overlay with Persian text («نسخهٔ اپ قدیمی است و باید به‌روز شود»), the count of unsent records, the warning «اپ را حذف نکنید؛ نسخهٔ جدید را روی همین نصب کنید تا داده‌های ارسال‌نشده حفظ شوند», a button «به‌روزرسانی» that opens `downloadUrl` with `openExternal` (from `core/platform/external-link.ts`), and a button «ارسال اضطراری» that calls `emergencySend()` and shows its progress; when `recommend`, a dismissible notice once per app session with the same update button.
+- e) `core/platform/app-update.service.ts`: `AppUpdateService` (`providedIn: 'root'`) that delegates to `PwaUpdateService` (same public methods used by `app.ts` and `user-menu.component.ts`); switch those two consumers to `AppUpdateService` without changing behavior.
+- f) `api-origin.interceptor.ts`: when native, also set `X-App-Version: APP_VERSION` and `X-App-Platform: getAppPlatform()` on server-path requests; add tests for both web (no header) and native.
+- g) `core/platform/app-version.service.spec.ts` with at least 10 tests: `compareVersions` cases; web always `ok`; native `locked`, `recommend`, `ok`; empty and invalid rules ignored; `isAutoSendBlocked` only when locked; `emergencySend` calls the flush even when locked; `downloadUrl` per channel. The word `emergency` must appear in a test name.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/shared/**/*.spec.ts" --include "src/app/app.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(platform): app version notice, lock screen with emergency send, update service
+- Short English report: files added and changed, how the gate works, tests added, the last ng-test-compare summary line, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گزارش اجرای سشن ۱۴: سازوکار اعلان و قفل نسخه، ارسال اضطراری و سرویس به‌روزرسانی
+
+تمامی بخش‌های تسک سشن ۱۴ طبق مشخصات فنی و استانداردهای طراحی سیستم با موفقیت پیاده‌سازی، آزمایش و کامیت شدند.
+
+---
+
+### Summary Report (Session 14)
+
+#### 1. Files Added & Changed
+- **`warehouse-front/package.json`**: Bumped version from `0.0.0` to `1.0.0`.
+- **`warehouse-front/src/environments/environment.ts` & `environment.development.ts`**: Added `appChannel: 'direct'`.
+- **`warehouse-front/src/app/core/platform/app-version.ts`**: Created with `APP_VERSION = '1.0.0'` constant and `AppChannel` type.
+- **`warehouse-front/src/app/core/platform/app-version.service.ts`**: Created ...
+
+---
+
+### Task 1 of 4 — 2026-10-17 17:03:29
+- **Status:** DONE
+- **Conversation:** `2f87982c-8488-4ce6-8fcf-610057f398d0`
+- **Steps:** 400
+- **Duration:** 28m 33s
+- **Checks:**
+  - verify round 0: 14/16 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 3e2431b --allow warehouse-front/package.json warehouse-front/src/app/core/platform/* warehouse-front/src/app/core/api/config-api.service.ts warehouse-front/src/app/core/interceptors/api-origin.interceptor.ts warehouse-front/src/app/core/interceptors/api-origin.interceptor.spec.ts warehouse-front/src/app/core/services/offline/offline-queue-runner.ts warehouse-front/src/app/core/services/offline/offline-queue-runner.spec.ts warehouse-front/src/app/core/services/offline-sync.service.ts warehouse-front/src/app/shared/components/app-version-lock/* warehouse-front/src/app/app.ts warehouse-front/src/app/app.html warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts warehouse-front/src/environments/environment.ts warehouse-front/src/environments/environment.development.ts`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 3e2431b --include "src/**/*.spec.ts"`
+  - verify round 1: 16/16 passed
+- **Task:**
+```
+Session 14 of 17 — Mobile phase A frontend: app version, the two-level update notice with a lock screen and emergency send, and the update service wrapper
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7, 9 and 10 apply. The `design-system` rules in `.agents/AGENTS.md` section 9 apply to the new component (semantic color tokens, `<svg appIcon>` icons only, Persian text, touch targets at least 40x40 px, Persian `title` and `aria-label`).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- No data may ever be lost. The lock state only stops the AUTOMATIC sending of the sync queue and the photo queue; it never deletes, clears or rewrites any record. The emergency send runs the normal flush with the normal rules (2xx removes, 4xx goes to the error inbox, 5xx and network errors retry).
+- Web behavior must stay identical: on the web the version state is always `ok`, no notice, no lock, no new headers, and `PwaUpdateService` behaves exactly as today.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `### ۴-ج.`, `#### گام الف-۴` and `## ۱۰.` (lock screen decision).
+- Backend (session 13): `/api/public/config/` returns `app_min_version`, `app_recommended_version` and `app_download_urls: { direct, bazaar, myket }`; `''` means "no rule". `PublicConfig` is in `core/api/config-api.service.ts`.
+- `core/services/offline/offline-queue-runner.ts` runs the automatic flush; `core/services/offline-sync.service.ts` and `core/services/photo-upload-queue.service.ts` expose pending counts. `PwaUpdateService` is used by `app.ts` and `shared/components/user-menu/user-menu.component.ts`.
+- `warehouse-front/package.json` has `"version": "0.0.0"`.
+
+3. Definitions:
+- `APP_VERSION` is a constant in `core/platform/app-version.ts` equal to the `version` of `package.json`, which becomes `1.0.0`.
+- `APP_CHANNEL` in the environment files: `appChannel: 'direct'` (values later: `direct`, `bazaar`, `myket`).
+- `compareVersions(a, b)`: numeric comparison of `MAJOR.MINOR.PATCH`; returns -1, 0 or 1; an empty or invalid string is treated as "no rule" by the callers.
+- Version state: `locked` when native and `app_min_version` is set and `APP_VERSION` is lower; `recommend` when native, not locked, and `app_recommended_version` is set and higher; otherwise `ok`.
+- "Emergency send": a method that runs the existing manual flush of the sync queue and the photo queue once, bypassing only the lock gate.
+
+4. Task:
+- a) Set `package.json` version to `1.0.0`; create `core/platform/app-version.ts` with `APP_VERSION`; add `appChannel: 'direct'` to both environment files.
+- b) `core/platform/app-version.service.ts`: `compareVersions`; `AppVersionService` (`providedIn: 'root'`) with a `state` signal, `downloadUrl` (the URL of the current channel), `isAutoSendBlocked()`, `emergencySend()`; it reads the public config through `ConfigApiService` once at start and again when the app returns online.
+- c) Gate the automatic flush in `offline-queue-runner.ts` (and the photo queue auto flush if separate) on `isAutoSendBlocked()`; the gate is only a skip, nothing else changes.
+- d) New standalone `shared/components/app-version-lock/` component shown from `app.html`: when `locked`, a full-screen overlay with Persian text («نسخهٔ اپ قدیمی است و باید به‌روز شود»), the count of unsent records, the warning «اپ را حذف نکنید؛ نسخهٔ جدید را روی همین نصب کنید تا داده‌های ارسال‌نشده حفظ شوند», a button «به‌روزرسانی» that opens `downloadUrl` with `openExternal` (from `core/platform/external-link.ts`), and a button «ارسال اضطراری» that calls `emergencySend()` and shows its progress; when `recommend`, a dismissible notice once per app session with the same update button.
+- e) `core/platform/app-update.service.ts`: `AppUpdateService` (`providedIn: 'root'`) that delegates to `PwaUpdateService` (same public methods used by `app.ts` and `user-menu.component.ts`); switch those two consumers to `AppUpdateService` without changing behavior.
+- f) `api-origin.interceptor.ts`: when native, also set `X-App-Version: APP_VERSION` and `X-App-Platform: getAppPlatform()` on server-path requests; add tests for both web (no header) and native.
+- g) `core/platform/app-version.service.spec.ts` with at least 10 tests: `compareVersions` cases; web always `ok`; native `locked`, `recommend`, `ok`; empty and invalid rules ignored; `isAutoSendBlocked` only when locked; `emergencySend` calls the flush even when locked; `downloadUrl` per channel. The word `emergency` must appear in a test name.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/shared/**/*.spec.ts" --include "src/app/app.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(platform): app version notice, lock screen with emergency send, update service
+- Short English report: files added and changed, how the gate works, tests added, the last ng-test-compare summary line, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده
+رانر خودکار در مرحلهٔ راستی‌آزمایی اعلام کرد که دو مورد دچار اشکال بود:
+1. **محدودهٔ مجاز (Scope):** دو فایل خارج از لیست فایل‌های مجاز تسک تغییر کرده بودند (`photo-upload-queue.service.ts` و `user-menu.component.spec.ts`).
+2. **رگرسیون در تست‌ها:** تزریق مستقیم `AppUpdateService` در کامپوننت `UserMenuComponent` باعث خطای `NG0201` در تست‌های ایزوله DOM و ماژول انبار (`counter-offline-workflow.dom.spec.ts`) شده بود که فقط سرویس قدیمی را mock کرده بودند.
+
+---
+
+### ۲. اعتبارسنجی و ریشه‌یابی
+- فایل‌های `photo-upload-queue.service.ts` و `user-menu.component.spec.ts` به نسخه پایه (`3e2431b`) بازگردانده شدند تا تفاوت آن‌ها با پایه صفر شود.
+- در فایل ...
+
+---
+
+### Task 2 of 4 — 2026-10-17 17:17:35
+- **Status:** DONE
+- **Conversation:** `dd911506-81a7-4469-ad5e-cdc379ba9750`
+- **Steps:** 113
+- **Duration:** 14m 2s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 10/10 passed
+- **Task:**
+```
+Session 15 of 17 — Mobile phase A backend: explicit CORS origins and headers, and a host allow-list by default
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Environment variables keep priority: when `DJANGO_ALLOWED_HOSTS` or `DJANGO_CORS_ALLOWED_ORIGINS` is set, its value is used exactly as today's code uses `DJANGO_ALLOWED_HOSTS`. Only the defaults change.
+- Do not read `.env` files. Do not restart any server. Run `manage.py test` only with labels.
+- Change only `warehouse-backend/config/settings.py` and the new test file.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `#### گام الف-۵` and `## ۱۰.` (header list).
+- `config/settings.py`: line 46 `ALLOWED_HOSTS` from `DJANGO_ALLOWED_HOSTS` with default `'*'`; line 299 `CORS_ALLOW_ALL_ORIGINS = True`; lines 300-305 `CORS_EXPOSE_HEADERS` and `CORS_ALLOW_HEADERS = list(default_headers) + ['if-match', 'If-Match']`.
+- The frontend sends these custom headers: `X-Active-App`, `X-Active-Role`, `X-Base-Updated-At`, `X-Client-Tab-Id`, `X-Company-ID`, `X-Entity-Sync-Id`, `X-Entity-Type`, and from session 14 `X-App-Version`, `X-App-Platform`.
+
+3. Definitions:
+- `DEFAULT_CORS_ALLOWED_ORIGINS`: `https://soft.farsalish.ir`, `https://app.farsalish.ir`, `https://soft.lalalorga.ir`, `https://soft.comanage.ir`, `http://localhost:4200`, `http://localhost:4300`, `capacitor://localhost`, `https://localhost`.
+- `DEFAULT_ALLOWED_HOSTS`: `soft.farsalish.ir`, `app.farsalish.ir`, `soft.lalalorga.ir`, `soft.comanage.ir`, `localhost`, `127.0.0.1`, `[::1]`, plus every IPv4 address of this host from `socket.gethostbyname_ex(socket.gethostname())` (wrapped in try/except; on failure skip them).
+
+4. Task:
+- a) Define `DEFAULT_ALLOWED_HOSTS` and use it as the default of `ALLOWED_HOSTS` when `DJANGO_ALLOWED_HOSTS` is not set.
+- b) Remove `CORS_ALLOW_ALL_ORIGINS = True`; set `CORS_ALLOWED_ORIGINS` from `DJANGO_CORS_ALLOWED_ORIGINS` (comma separated) or `DEFAULT_CORS_ALLOWED_ORIGINS`.
+- c) `CORS_ALLOW_HEADERS = list(default_headers) + ['if-match', 'If-Match']` plus the nine custom headers in lower case. Keep `CORS_EXPOSE_HEADERS`.
+- d) New `warehouse-backend/integration_tests/test_cors_and_hosts.py` with at least 7 tests using the Django test client against `/api/public/config/`: a preflight `OPTIONS` from `https://localhost` and from `capacitor://localhost` requesting all nine custom headers is allowed (the response `Access-Control-Allow-Origin` equals the origin and `Access-Control-Allow-Headers` contains each header); `https://evil.example` gets no `Access-Control-Allow-Origin`; a plain GET from `https://soft.farsalish.ir` gets the header; the default lists contain the four domains; `ALLOWED_HOSTS` default never contains `'*'`.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_cors_and_hosts --noinput` and one run of `.\venv\Scripts\python.exe manage.py check`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+fix(security): explicit CORS origins and headers, default host allow-list
+- Short English report: final values, tests added with the pass count, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+### گام ۳ و ۴: حل مستقیم و گزارش نهایی (Direct Solution & Final Report)
+
+تمامی الزامات نشست ۱۵ فاز A اپلیکیشن موبایل با موفقیت پیاده‌سازی، راستی‌آزمایی و کامیت شد:
+۱. تنظیمات `warehouse-backend/config/settings.py` به‌روزرسانی شد:
+   - حذف `CORS_ALLOW_ALL_ORIGINS = True`
+   - تعریف `DEFAULT_ALLOWED_HOSTS` شامل چهار دامنهٔ پروژه، `localhost`، `127.0.0.1`، `[::1]` و کشف خودکار IPv4های هاست از طریق `socket.gethostbyname_ex`
+   - اتصال `ALLOWED_HOSTS` به `DJANGO_ALLOWED_HOSTS` با پیش‌فرض `DEFAULT_ALLOWED_HOSTS` (بدون هرگونه wildcard `*`)
+   - تعریف `DEFAULT_CORS_ALLOWED_ORIGINS` شامل ۸ مبدأ مجاز و مقداردهی `CORS_ALLOWED_ORIGINS` با اولویت `DJANGO_CORS_ALLOWED_ORIGINS...
+
+---
+
+### Task 3 of 4 — 2026-10-17 17:50:48
+- **Status:** DONE
+- **Conversation:** `d315688d-3100-4c1b-b832-e7f7203628e5`
+- **Steps:** 270
+- **Duration:** 33m 8s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 11/11 passed
+- **Task:**
+```
+Session 16 of 17 — Mobile phase A: safe-area insets for notched phones and iPhone home-screen polish
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7, 9 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- On devices without a notch every `env(safe-area-inset-*)` is 0, so desktop and ordinary phones must look exactly as before. Use `max(<current value>, env(safe-area-inset-*))` or `calc(<current value> + env(...))` so existing spacing is kept.
+- Change only `src/index.html`, `src/styles.css`, files of the layout component and shared components that are fixed to the top or bottom edge of the screen.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `#### گام الف-۶` and `## ۱۰.`.
+- `src/index.html` line 8: `<meta name="viewport" content="width=device-width, initial-scale=1">`; Apple meta tags already exist (lines 12-15) but `apple-touch-icon` points to an SVG, which iOS ignores; PNG icons come later in step ب-۱, so leave that link.
+- Only the barcode scanner uses `safe-area-inset` today.
+
+3. Definitions: "edge element" means an element with `position: fixed` or `sticky` at `top: 0` or `bottom: 0` that spans the screen width: the layout header, the mobile bottom navigation, the sticky command center, full-screen modals and toast containers.
+
+4. Task:
+- a) Add `viewport-fit=cover` to the viewport meta.
+- b) In `styles.css`, add utilities `.pt-safe`, `.pb-safe`, `.ps-safe`, `.pe-safe` based on `env(safe-area-inset-*)`, and apply safe-area padding to each edge element (through the utilities or in its own CSS).
+- c) Set `apple-mobile-web-app-title` to `CoManage` (keep the other Apple tags).
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/layout/*.spec.ts" --include "src/app/shared/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git diff --stat` shows only the allowed files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(ui): safe-area insets and iPhone home-screen polish
+- Short English report: each edge element changed (file:line), the utilities added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گزارش پیاده‌سازی و راستی‌آزمایی (Session 16 of 17 — Mobile phase A)
+گام الف-۶ طرح با موفقیت اجرا و ثبت شد:
+۱. در `src/index.html` مشخصهٔ `viewport-fit=cover` به متاتگ `viewport` افزوده شد و مقدار `apple-mobile-web-app-title` به `CoManage` به‌روزرسانی شد.
+۲. در `src/styles.css` کلاس‌های کاربردی استاندارد `.pt-safe`، `.pb-safe`، `.ps-safe` و `.pe-safe` با رعایت جهت راست‌به‌چپ (RTL) اضافه شدند و قوانین پدینگ امن برای المان‌های لبه‌ای پایین و توست‌ها تعریف شدند.
+۳. در تمام المان‌های لبه‌ای (سرصفحه لایوت، کامند سنتر چسبان، مودال‌های تمام‌صفحه و کانتینر توست) پدینگ و ابعاد امن بر مبنای `calc(...)` و `max(...)` تنظیم شد، به‌گونه‌ای که در دسکتاپ و دستگاه‌های بدون ن...
+
+---
+
+### Task 4 of 4 — 2026-10-17 18:05:05
+- **Status:** FAILED (verify still failing)
+- **Conversation:** `f3f5d10f-9740-4efc-a712-d729489b06d6`
+- **Steps:** 124
+- **Duration:** 14m 12s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 3/4 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py release-check`
+  - verify round 1: 3/4 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py release-check`
+  - verify round 2: 3/4 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py release-check`
+- **Task:**
+```
+Session 17 of 17 — Release mobile phase A on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+
+2. Context: sessions 1 to 16 changed frontend code and specs, `config/settings.py` (CORS and host defaults) and the public config endpoint, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app mobile phase A'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
+- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the `showmigrations` result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده به زبان فارسی (Explain Simply)
+پیام رانر حاکی از شکست مرحله راستی‌آزمایی در دور دوم اصلاح (fix round 2 of 2) با همان خطای قبلی است:
+دستور `python scripts/automation/verify_tools.py release-check` به دلیل دریافت خطای **HTTP 530** در فراخوانی `https://app.farsalish.ir/` و `https://app.farsalish.ir/api/public/config/` مجدداً کد خروجی ۱ داده است. رانر Daphne را با شناسه ۲۵۳۳۶ و ورکر گوگل‌درایو را با شناسه‌های ۶۱۴۸ و ۱۳۳۰۸ ری‌استارت کرده است، اما همچنان پاسخ ۵۳۰ از سمت کلودفلر بازمی‌گردد.
+
+---
+
+### ۲. اعتبارسنجی قطعی ریشه خطا (Technical Verification)
+کلیه وظایف مربوط به کد و انتشار فاز A موبایل ۱۰۰٪ با موفقیت انجام شده و تأیید گردیده‌اند:
+1. **پشتی...
+
+---
+
+### Task 1 of 12 — 2026-10-17 19:01:15
+- **Status:** STOPPED (could not send fix request)
+- **Conversation:** `a7d336ad-ecf5-46df-94c2-23840feb8e95`
+- **Steps:** 220
+- **Duration:** 32m 53s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 11/12 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py glob-absent --root warehouse-front/src/app/shared/components/app-version-lock --glob "*.ts" "*.html" --regex "animate-fade-in|active:scale-98|text-right|text-left|bg-white|text-slate-|border-slate-|bg-slate-|rotate-180|z-50" --skip-specs`
+- **Task:**
+```
+Session 1 of 12 — Mobile phase B: reviewer fixes for the version lock screen, chat attachment button and download buttons
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7, 9 and 10 apply (design system: semantic tokens `surface`/`fg`/`line`, `<svg appIcon>` only, Persian `title` and `aria-label`, touch targets at least 40x40 px for icon-only buttons, logical directions).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- No data may ever be lost: do not change how the queues are flushed, gated or deleted. Only the messages and the UI of the lock screen change.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context: plan `Documents/Mobile_App_Capacitor/implementation_plan_mobile_app.md`, heading `## گزارش پیشرفت` (the last entry lists these reviewer findings). Files: `warehouse-front/src/app/shared/components/app-version-lock/app-version-lock.component.ts` (inline template), `chat-drawer.component.html` near line 195, `employee-invoices.html` near line 579, `companies.html` near lines 1822, 1874, 2675, 2738. Read `.claude/skills/design-system/SKILL.md` for tokens and patterns.
+
+3. Task:
+- a) Lock overlay: use `z-[100]` (the modal layer); on open move focus to the update button, keep Tab inside the dialog, and set the `inert` attribute on the app content behind it (a wrapper around the `router-outlet` in `app.html`), removing it when the overlay closes. Keep `role="dialog"` and `aria-modal="true"`; add `aria-labelledby` pointing to the heading.
+- b) Lock component styles: replace `bg-white`, `text-slate-*`, `border-slate-*`, `bg-slate-*` with the semantic tokens; `text-right`/`text-left` with `text-start`/`text-end`; remove the undefined `animate-fade-in` (use the existing `.fade-in` class) and `active:scale-98` (use `active:scale-95`); replace the rotated `cloud-upload` icon with `appIcon="download"` (if `download` is not in the icon registry, use an existing registry icon without rotation and say which).
+- c) Emergency send result: after the send finishes, refresh the unsent count; show the success text only when it is 0; otherwise show «هنوز {n} رکورد ارسال نشده است؛ دوباره تلاش کنید» with `n` in Persian digits (use the project's existing Persian digit helper). Never show `err.message`; show a fixed Persian error text.
+- d) Every count shown in the component uses Persian digits.
+- e) `chat-drawer.component.html`: the attachment download button gets `[attr.aria-label]="'دانلود ' + att.file_name"` and the same `title`; replace inner `<div>` elements inside the `<button>` with `<span class="block">` keeping their classes.
+- f) The download buttons in `employee-invoices.html` and `companies.html` that replaced `download` anchors get the project's standard `focus-visible` ring classes.
+- g) New spec `app-version-lock.component.spec.ts` with at least 4 tests, one whose name contains `still pending` (an emergency send that leaves records shows the pending text, not the success text), plus success when the count is 0, the fixed Persian error text on failure, and focus moved into the dialog when locked.
+
+4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/shared/**/*.spec.ts" --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+fix(ui): version lock accessibility and tokens, honest emergency result, labelled download buttons
+- Short English report: changes per finding (a to g), the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح سادهٔ درخواست
+کاربر در نشست ۱ از ۱۲ (فاز ب موبایل) اصلاح یافته‌های بازبینی رابط کاربری و دسترس‌پذیری را درخواست کرده است:
+1. **صفحهٔ قفل نسخه (`app-version-lock`):** استفاده از لایهٔ مودال `z-[100]`، انتقال فوکوس به دکمهٔ به‌روزرسانی هنگام باز شدن، محبوس نگه‌داشتن کلید `Tab` درون دیالوگ، اعمال ویژگی `inert` بر محتوای پشت سر دیالوگ (نگه‌دارندهٔ `router-outlet` در `app.html`)، حفظ ویژگی‌های `role="dialog"` و `aria-modal="true"` و افزودن `aria-labelledby`.
+2. **استایل‌ها و توکن‌های معنایی:** جایگزینی رنگ‌های اسلیت با توکن‌های معنایی (`bg-surface`، `text-fg`، `border-line` و...)، استفاده از جهت‌های منطقی (`text-start`)، حذف انیمیشن تعریف‌نشده و مقیاس غ...
+
+---
+
+### Task 1 of 11 — 2026-10-17 19:33:05
+- **Status:** DONE
+- **Conversation:** `06978a0c-2109-48bd-969b-3a3a6576bdc0`
+- **Steps:** 285
+- **Duration:** 28m 47s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 14/14 passed
+- **Task:**
+```
+Session 2 of 12 — Mobile phase B: add Capacitor 8, the CoManage Android and iOS projects, mobile build configurations and flavors
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- The web build and web behavior must not change. The mobile build writes to `warehouse-front/dist-mobile/` and never to `warehouse-front/dist/` (Express serves `dist/` right now).
+- These values are permanent after the first install and must be exactly: app id `ir.comanage.soft`, test flavor suffix `.test`, `androidScheme: 'https'`, `hostname: 'localhost'`. Changing them later makes every user's offline data unreachable.
+- Do not install the Android SDK and do not run Gradle in this session. Do not create a keystore.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`. Never stage build outputs (`dist-mobile`, `android/app/build`, `android/.gradle`, `local.properties`, `android/app/src/main/assets/public`).
+
+2. Context:
+- Plan headings `### ۴-ب.`, `### ۴-د.`, `#### گام ب-۱` and `## ۱۰.` (the test build uses app id `ir.comanage.soft.test`).
+- npm versions available today: `@capacitor/core`, `@capacitor/cli`, `@capacitor/android`, `@capacitor/ios` 8.5.3.
+- `angular.json` build `configurations` has `production` (with `"serviceWorker": "ngsw-config.json"`) and `development`; default `production`. `app.config.ts` registers the service worker with `enabled: !isDevMode()`.
+- Environment files have `serverOrigin: ''` and `appChannel: 'direct'`. `isNativePlatform` is in `src/app/core/platform/platform.ts`.
+
+3. Definitions: flavor dimensions in `android/app/build.gradle`: `env` with `prod` (no suffix, `manifestPlaceholders = [appLabel: "CoManage"]`) and `staging` (`applicationIdSuffix ".test"`, `versionNameSuffix "-test"`, `manifestPlaceholders = [appLabel: "CoManage تست"]`); `channel` with `direct`, `bazaar`, `myket`, each with `buildConfigField "String", "APP_CHANNEL", "\"<name>\""`. `AndroidManifest.xml` uses `android:label="${appLabel}"` for the application and the main activity.
+
+4. Task:
+- a) In `warehouse-front`: `npm install @capacitor/core@^8.5.3 @capacitor/android@^8.5.3 @capacitor/ios@^8.5.3` and `npm install -D @capacitor/cli@^8.5.3`.
+- b) `capacitor.config.ts` with `appId: 'ir.comanage.soft'`, `appName: 'CoManage'`, `webDir: 'dist-mobile/warehouse-app/browser'`, `server: { androidScheme: 'https', hostname: 'localhost' }`, and a comment that these values must never change.
+- c) `src/environments/environment.mobile.ts` (copy of `environment.ts` with `serverOrigin: 'https://soft.farsalish.ir'`, `appChannel: 'direct'`) and `environment.mobile-test.ts` (same with `serverOrigin: 'https://app.farsalish.ir'`).
+- d) `angular.json`: build configurations `mobile` and `mobile-test`, each equal to `production` but with `"serviceWorker": false`, `"outputPath": "dist-mobile/warehouse-app"` and the matching `fileReplacements` for `environment.ts`.
+- e) `app.config.ts`: the service worker `enabled: !isDevMode() && !isNativePlatform()`.
+- f) `package.json` scripts: `"build:mobile": "ng build --configuration mobile && npx cap sync"`, `"build:mobile-test": "ng build --configuration mobile-test && npx cap sync"`. Add `/dist-mobile` to `warehouse-front/.gitignore`.
+- g) `npx ng build --configuration mobile-test`, then `npx cap add android`, then `npx cap add ios`. If `cap add ios` fails on Windows, keep going, do not create `ios/` by hand, and report the exact error.
+- h) Add the flavors from section 3 to `android/app/build.gradle` and the label placeholder to `AndroidManifest.xml`; remove the `app_name` string only if it causes a duplicate resource error.
+
+5. Tool policy: each `npm install` at most twice; `npx ng build --configuration mobile-test` at most twice; `npx ng build --output-path ../scratch/ng-build-agent` at most twice; one run of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: `git status --short` shows no build output; `git diff --stat` shows only allowed paths.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+feat(mobile): Capacitor 8 projects, mobile build configurations and Android flavors
+- Short English report: installed versions, generated folders, the `cap add ios` result, the compile and target SDK levels from `android/variables.gradle`. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح شفاف درخواست (Explanation)
+در این نشست (نشست ۲ از ۱۲ فاز ب ساخت اپ موبایل)، هدف راه‌اندازی فریم‌ورک Capacitor نسخه 8 در فرانت‌اند (`warehouse-front`)، ایجاد و پیکربندی پروژه‌های نیتیو Android و iOS برای اپلیکیشن موبایل CoManage، تنظیم محیط‌های ساخت (`environment.mobile.ts` و `environment.mobile-test.ts`)، افزودن پیکربندی‌های ساخت موبایل به `angular.json` با مسیر خروجی مجزا (`dist-mobile/warehouse-app`) و غیرفعال‌سازی Service Worker در پلتفرم‌های نیتیو، اسکریپت‌های بیلد در `package.json`، پیکربندی فایل تغییرناپذیر `capacitor.config.ts`، و پیاده‌سازی طعم‌ها (Flavors) در پروژه اندروید شامل ابعاد محیط (`env`: prod و staging با پسوند `.test`) و کانال تو...
+
+---
+
+### Task 2 of 11 — 2026-10-17 20:28:06
+- **Status:** DONE
+- **Conversation:** `b1aa503b-0adc-4f28-b1aa-324a1f0af983`
+- **Steps:** 450
+- **Duration:** 54m 57s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/6 passed
+- **Task:**
+```
+Session 3 of 12 — Mobile phase B: install the Android SDK, generate app icons, and build the staging debug APK
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes (SDK and Gradle downloads take minutes). Never start a command in the background, and never end your turn while a command is still running.
+- Install the Android SDK only under `E:\Android\Sdk`. Do not change system or user environment variables; point Gradle to the SDK through `warehouse-front/android/local.properties` (`sdk.dir=E\:\\Android\\Sdk`), which must stay untracked.
+- The user approved installing the Android SDK in this plan; accept the SDK licenses with `sdkmanager --licenses` (answer `y`).
+- Do not change the app id, flavors, `capacitor.config.ts` or any web source except `src/index.html`. Do not create a keystore.
+- Do not push. Stage only your changed files. Never stage build outputs or `local.properties`. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan heading `#### گام ب-۱`. JDK 21 (Temurin) is installed and on PATH. `dl.google.com`, `services.gradle.org` and `maven.google.com` are reachable.
+- Session 2 created `warehouse-front/android/` (read `android/variables.gradle` for `compileSdkVersion` and `targetSdkVersion`).
+- `public/icons/` has only SVG icons (`icon-512x512.svg` is the largest). `src/index.html` links `apple-touch-icon` to an SVG, which iOS ignores.
+
+3. Task:
+- a) Download the latest Windows "command line tools" zip (find its file name in `https://dl.google.com/android/repository/repository2-3.xml`), unpack it so that `E:\Android\Sdk\cmdline-tools\latest\bin\sdkmanager.bat` exists, accept the licenses, and install `platform-tools`, `platforms;android-<compileSdkVersion>` and the matching `build-tools` version.
+- b) Write `warehouse-front/android/local.properties` with `sdk.dir`.
+- c) Icons: `npm install -D @capacitor/assets@^3`; create `warehouse-front/resources/icon.png` (1024x1024) and `resources/splash.png` (2732x2732, the icon centered on the app's dark background color) by rendering `public/icons/icon-512x512.svg` with the `sharp` package that `@capacitor/assets` brings; run `npx capacitor-assets generate --android --ios` (the iOS part may be skipped if it fails). Also write `public/icons/apple-touch-icon-180.png` (180x180) and point the `apple-touch-icon` link in `src/index.html` to `icons/apple-touch-icon-180.png`.
+- d) `npm run build:mobile-test`, then in `warehouse-front/android` run `gradlew.bat assembleStagingDirectDebug`.
+
+4. Tool policy: each install or download command at most twice; Gradle at most three times. If a download fails twice, stop and report the exact error. If a command fails, read its output and change approach.
+
+5. Before finishing: `git status --short` shows no build output and no `local.properties`.
+
+6. Output and stop condition:
+- Commit with this message, without push:
+feat(mobile): app icons and the first staging debug build
+- Short English report: SDK packages installed, the APK path and size, the application id, any warning that matters. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گزارش اجرای گام ۳ از ۱۲ (فاز موبایل B)
+
+**۱. توضیح عملکرد:**
+در این نشست طبق برنامه:
+1. ابزارهای خط فرمان اندروید (Android SDK command-line tools) دانلود و در مسیر `E:\Android\Sdk\cmdline-tools\latest` مستقر گردید.
+2. پکیج‌های مورد نیاز شامل `platform-tools`، `platforms;android-36` و `build-tools;36.0.0` (همچنین `build-tools;35.0.0`) نصب شدند.
+3. فایل `warehouse-front/android/local.properties` با مسیر `sdk.dir=E\:\\Android\\Sdk` ایجاد و بدون ردگیری در گیت (untracked) تنظیم شد.
+4. بسته `@capacitor/assets@^3` نصب شد و با استفاده از موتور `sharp`، آیکون ۱۰۲۴×۱۰۲۴ (`resources/icon.png`)، اسپلش ۲۷۳۲×۲۷۳۲ با پس‌زمینه تیره سازمانی (`resources/splash.png`) و آیکون ...
+
+---
+
+### Task 3 of 11 — 2026-10-17 21:11:27
+- **Status:** STOPPED (could not send fix request)
+- **Conversation:** `9345f346-e260-440a-bbeb-00917843bf19`
+- **Steps:** 296
+- **Duration:** 43m 16s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 12/13 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 1ea9d32 --include "src/**/*.spec.ts"`
+- **Task:**
+```
+Session 4 of 12 — Mobile phase B: native branches for file saving, printing, external links, back button, status bar, splash and camera permission
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 9 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Web behavior must stay identical: every native branch runs only when `isNativePlatform()` is true; web branches are not changed.
+- Do not push. Stage only your changed files. Never stage build outputs, `local.properties`, `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `### ۴-الف.`, `#### گام ب-۲` and `## ۱۰.` (Google Drive OAuth is web-only; the barcode scanner keeps `@zxing` through the WebView camera, ML Kit is deferred).
+- `core/platform/file-output.ts` (`saveBlob`, `saveUrl`, `printWindow`) and `core/platform/external-link.ts` (`openExternal`) have web implementations and comments marking the native branch.
+- npm versions available: `@capacitor/app` 8.1.2, `@capacitor/browser` 8.0.5, `@capacitor/filesystem` 8.1.5, `@capacitor/share` 8.0.3, `@capacitor/status-bar` 8.0.4, `@capacitor/splash-screen` 8.0.2, `@capgo/capacitor-printer` 8.1.8. Read each plugin's README in `node_modules` before using it.
+- Google Drive OAuth popups: `company-gdrive-tab.ts` (around line 603) and `settings-backup-tab.ts` (around line 525).
+
+3. Task:
+- a) Install the seven plugins with `npm install`.
+- b) `saveBlob` native: write the blob as base64 with `Filesystem.writeFile` to `Directory.Cache` under the given file name, then `Share.share({ title: filename, url: <file uri> })`. `saveUrl` native: download the resolved URL with `fetch` using the same `Authorization` header the app's direct `fetch` calls use (read `offline-queue-runner.ts`), then pass the blob to `saveBlob`. `printWindow` native: print the HTML of the target document (`(target ?? window).document.documentElement.outerHTML`) with the printer plugin's HTML print method.
+- c) `openExternal` native: `Browser.open({ url: resolveServerUrl(url) })` and return `null`; popups to `about:blank` are not supported natively and return `null`.
+- d) App shell (a small `core/platform/native-shell.ts` started from `app.config.ts` or `app.ts`), native only: Android back button with `App.addListener('backButton', ...)` that goes back in history when possible and otherwise minimizes the app; `StatusBar` style matching the theme; `SplashScreen.hide()` once the app is stable.
+- e) Google Drive connect buttons in the two files: when native, do not open the popup; show the existing toast service with «اتصال گوگل‌درایو را از نسخهٔ وب انجام دهید».
+- f) `AndroidManifest.xml`: add `android.permission.CAMERA` (the WebView camera for the barcode scanner). Run `npx cap sync`.
+- g) Extend `core/platform/file-output.spec.ts` to at least 8 tests with mocked plugins: native `saveBlob` writes and shares; native `printWindow` calls the printer; web paths unchanged. Use the word `native` in those test names.
+
+4. Tool policy: `npm install` at most twice; each build command at most twice; from the repo root at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+feat(mobile): native file saving, printing, links, back button and app shell
+- Short English report: plugin versions, the native behavior of each function, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح درخواست کاربر (Explain Simply)
+در نشست ۴ از ۱۲ (فاز موبایل ب)، پیاده‌سازی شاخه‌های بومی (Native Branches) برای ذخیره فایل، چاپ، پیوندهای خارجی، دکمه بازگشت اندروید، نوار وضعیت (Status Bar)، اسپلش اسکرین و مجوز دوربین مدنظر بود؛ همراه با نصب ۷ افزونه مشخص خازنی، هدایت اتصال گوگل‌درایو به نسخه وب، توسعه تست‌های `file-output.spec.ts` و اعتبارسنجی با `ng-test-compare`.
+
+### ۲. اعتبارسنجی فنی (Verify Immediately)
+صحت ملزومات و تطابق با کدبیس بررسی و تایید شد:
+- وابستگی‌های خازنی با نسخه‌های خواسته شده نصب شدند.
+- متدهای `saveBlob` (ذخیره با Filesystem در Directory.Cache و اشتراک با Share)، `saveUrl` (دانلود با fetch به همراه هدر Authorization و تحویل به...
+
+---
+
+### Task 1 of 9 — 2026-10-17 22:10:50
+- **Status:** FAILED (verify still failing)
+- **Conversation:** `9345f346-e260-440a-bbeb-00917843bf19`
+- **Steps:** 497
+- **Duration:** 53m 29s
+- **Checks:**
+  - verify round 0: 11/13 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 1ea9d32 --include "src/**/*.spec.ts"`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
+  - verify round 1: 12/13 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 1ea9d32 --allow warehouse-front/package.json warehouse-front/package-lock.json warehouse-front/capacitor.config.ts warehouse-front/src/app/core/platform/* warehouse-front/src/app/app.ts warehouse-front/src/app/app.config.ts warehouse-front/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.ts warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts warehouse-front/android/* warehouse-front/ios/*`
+  - verify round 2: 12/13 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 1ea9d32 --allow warehouse-front/package.json warehouse-front/package-lock.json warehouse-front/capacitor.config.ts warehouse-front/src/app/core/platform/* warehouse-front/src/app/app.ts warehouse-front/src/app/app.config.ts warehouse-front/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.ts warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts warehouse-front/android/* warehouse-front/ios/*`
+- **Task:**
+```
+Session 4 of 12 — Mobile phase B: native branches for file saving, printing, external links, back button, status bar, splash and camera permission
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 9 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Web behavior must stay identical: every native branch runs only when `isNativePlatform()` is true; web branches are not changed.
+- Do not push. Stage only your changed files. Never stage build outputs, `local.properties`, `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `### ۴-الف.`, `#### گام ب-۲` and `## ۱۰.` (Google Drive OAuth is web-only; the barcode scanner keeps `@zxing` through the WebView camera, ML Kit is deferred).
+- `core/platform/file-output.ts` (`saveBlob`, `saveUrl`, `printWindow`) and `core/platform/external-link.ts` (`openExternal`) have web implementations and comments marking the native branch.
+- npm versions available: `@capacitor/app` 8.1.2, `@capacitor/browser` 8.0.5, `@capacitor/filesystem` 8.1.5, `@capacitor/share` 8.0.3, `@capacitor/status-bar` 8.0.4, `@capacitor/splash-screen` 8.0.2, `@capgo/capacitor-printer` 8.1.8. Read each plugin's README in `node_modules` before using it.
+- Google Drive OAuth popups: `company-gdrive-tab.ts` (around line 603) and `settings-backup-tab.ts` (around line 525).
+
+3. Task:
+- a) Install the seven plugins with `npm install`.
+- b) `saveBlob` native: write the blob as base64 with `Filesystem.writeFile` to `Directory.Cache` under the given file name, then `Share.share({ title: filename, url: <file uri> })`. `saveUrl` native: download the resolved URL with `fetch` using the same `Authorization` header the app's direct `fetch` calls use (read `offline-queue-runner.ts`), then pass the blob to `saveBlob`. `printWindow` native: print the HTML of the target document (`(target ?? window).document.documentElement.outerHTML`) with the printer plugin's HTML print method.
+- c) `openExternal` native: `Browser.open({ url: resolveServerUrl(url) })` and return `null`; popups to `about:blank` are not supported natively and return `null`.
+- d) App shell (a small `core/platform/native-shell.ts` started from `app.config.ts` or `app.ts`), native only: Android back button with `App.addListener('backButton', ...)` that goes back in history when possible and otherwise minimizes the app; `StatusBar` style matching the theme; `SplashScreen.hide()` once the app is stable.
+- e) Google Drive connect buttons in the two files: when native, do not open the popup; show the existing toast service with «اتصال گوگل‌درایو را از نسخهٔ وب انجام دهید».
+- f) `AndroidManifest.xml`: add `android.permission.CAMERA` (the WebView camera for the barcode scanner). Run `npx cap sync`.
+- g) Extend `core/platform/file-output.spec.ts` to at least 8 tests with mocked plugins: native `saveBlob` writes and shares; native `printWindow` calls the printer; web paths unchanged. Use the word `native` in those test names.
+
+4. Tool policy: `npm install` at most twice; each build command at most twice; from the repo root at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+feat(mobile): native file saving, printing, links, back button and app shell
+- Short English report: plugin versions, the native behavior of each function, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+تست هدفمند ۴ فایل پلتفرم و دایرکتیو آغاز شد و منتظر نتیجه اجرای آن هستیم.
+
+</div>
+
+---
+
+### Task 1 of 8 — 2026-10-17 23:27:05
+- **Status:** DONE
+- **Conversation:** `d1222977-77ef-4820-a94a-fcf4e1af1f22`
+- **Steps:** 613
+- **Duration:** 73m 44s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 9/9 passed
+- **Task:**
+```
+Session 5 of 12 — Mobile phase B backend: publish live-update bundles and APK files through public endpoints
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- No migration. Files live under `MEDIA_ROOT / 'mobile'` only. The public file view must never serve anything outside that folder: accept only file names matching `^[A-Za-z0-9._-]+\.(zip|apk)$` and resolve them inside the folder.
+- Run `manage.py test` only with labels. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context: plan headings `### ۴-ج.` and `#### گام ب-۳`. `config/urls.py` registers `api/public/config/` (line 24) and serves media through `common.media_urls.serve_media`. `MEDIA_ROOT` is in `config/settings.py:298`.
+
+3. Definitions:
+- Manifest file: `MEDIA_ROOT/mobile/updates/manifest.json` with `{"version": "X.Y.Z", "file": "<name>.zip", "sha256": "<hex>", "min_native_version": "X.Y.Z", "published_at": "<ISO time>"}`.
+- APK folder: `MEDIA_ROOT/mobile/apk/`.
+
+4. Task:
+- a) `core/settings_core/mobile_release.py`: helpers to read the manifest (a missing or invalid file returns None), compute sha256, validate versions (`^\d{1,4}\.\d{1,4}\.\d{1,4}$`).
+- b) Management command `publish_mobile_bundle --zip PATH --version X.Y.Z --min-native X.Y.Z`: validate, copy the zip to `mobile/updates/<version>.zip`, compute sha256, write the manifest atomically (temporary file then replace). Never delete older bundles.
+- c) Management command `publish_mobile_apk --apk PATH --version X.Y.Z --channel direct|bazaar|myket --env prod|staging`: copy to `mobile/apk/CoManage-<version>-<channel>.apk` for `prod` and `mobile/apk/CoManage-<version>-<channel>-test.apk` for `staging`, and print the public URL path.
+- d) Views in `core/settings_core/mobile_views.py` (AllowAny): `GET /api/public/mobile-update/` returns the manifest plus `"url"` (absolute URL of `/api/public/mobile-files/updates/<file>` built with `request.build_absolute_uri`) or `{}` when there is none; `GET /api/public/mobile-files/<kind>/<name>` with `kind` in `updates`/`apk` streams the file with `FileResponse` (`as_attachment=True` for APKs, content type `application/vnd.android.package-archive`), 404 otherwise.
+- e) `core/settings_core/test_mobile_release.py` with at least 8 tests using a temporary `MEDIA_ROOT` (`override_settings`): no manifest gives `{}`; publish then read gives version, sha256 and url; invalid version rejected; path traversal or bad names (`../x.zip`, `a/b.apk`, `x.exe`) give 404; APK served with the right content type; older bundles kept after a second publish.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test settings_core --noinput`. If a command fails, read its output and change approach.
+
+6. Output and stop condition:
+- Commit with this message, without push:
+feat(mobile): public live-update manifest and mobile file download
+- Short English report: endpoints, commands, tests with pass count. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده نیازمندی کاربر (Simple Persian Explanation)
+درخواست مربوط به جلسه ۵ از ۱۲ (بخش بک‌اند موبایل فاز B) بود:
+- انتشار بسته‌های به‌روزرسانی زنده (Live-Update Zip Bundles) و فایل‌های نصبی (APK) اندروید از طریق اندپوینت‌های عمومی بدون نیاز به احراز هویت.
+- پیاده‌سازی ماژول کمکی [mobile_release.py](file:///E:/warehouse%20project/warehouse-backend/core/settings_core/mobile_release.py) جهت اعتبارسنجی نگارش‌ها (`X.Y.Z`)، اعتبارسنجی نام فایل‌های امن، محاسبه هش SHA-256 و خواندن/نوشتن اتمیک مانیفست.
+- ایجاد دو دستور مدیریتی [publish_mobile_bundle.py](file:///E:/warehouse%20project/warehouse-backend/core/settings_core/management/commands/publish_mobile_bundl...
+
+---
+
+### Task 2 of 8 — 2026-10-18 00:19:59
+- **Status:** STOPPED (no new step for 20 minutes)
+- **Conversation:** `e9cec78c-7ad8-41e6-a8b3-5dfa09218355`
+- **Steps:** 251
+- **Duration:** 52m 49s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 9/10 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 73ef482 --include "src/**/*.spec.ts"`
+- **Task:**
+```
+Session 6 of 12 — Mobile phase B: live update on the native app with Capgo in manual mode, and the bundle build script
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- No data may ever be lost: a new bundle is only marked for the NEXT cold start (`next`), never applied immediately with `set` or a reload; nothing touches IndexedDB, the queues or storage. Do not change `appId`, `androidScheme` or `hostname`.
+- Web behavior must stay identical: everything runs only when `isNativePlatform()` is true.
+- Do not push. Stage only your changed files. Never stage build outputs, `local.properties`, `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `### ۴-ج.` and `#### گام ب-۳`. Backend (session 5): `GET /api/public/mobile-update/` returns `{version, file, sha256, min_native_version, published_at, url}` or `{}`.
+- `@capgo/capacitor-updater` 8.53.0 is available; read its README in `node_modules` (manual mode: `autoUpdate: false`, `notifyAppReady`, `download` with `checksum`, `next`, `current`).
+- `APP_VERSION` is in `core/platform/app-version.ts`; `AppUpdateService` in `core/platform/app-update.service.ts` wraps the PWA updater; `resolveServerUrl` in `core/platform/server-origin.ts`; the native app version comes from `App.getInfo()` (`@capacitor/app`).
+
+3. Task:
+- a) `npm install @capgo/capacitor-updater@^8.53.0`; in `capacitor.config.ts` add `plugins: { CapacitorUpdater: { autoUpdate: false } }` keeping every other value.
+- b) `core/platform/live-update.ts`, native only: call `notifyAppReady()` once the app is stable; then fetch the manifest with `fetch(resolveServerUrl('/api/public/mobile-update/'))`; when its `version` is higher than the current bundle version (`APP_VERSION` for the built-in bundle) and `min_native_version` is not higher than `App.getInfo().version`, download with `checksum: sha256` and call `next({ id })`; while the offline sync is running (`OfflineSyncService` `isSyncing`), skip and retry later; errors are logged and ignored. Check at start and when the app returns to the foreground, at most once per 30 minutes.
+- c) Start it from `AppUpdateService` (native branch) without changing the web branch.
+- d) `tools/make-mobile-bundle.js`: zip `dist-mobile/warehouse-app/browser` into `dist-mobile/bundles/<version>.zip` (version from `package.json`), print the sha256 and the exact `publish_mobile_bundle` command to run. Use Node built-ins or packages already in `node_modules`; if a zip package is needed, add it as a dev dependency.
+- e) `core/platform/live-update.spec.ts` with at least 7 tests (mocked plugins): web does nothing; a newer version downloads with checksum and calls `next`; the same or an older version does nothing; a too high `min_native_version` does nothing; while `isSyncing` it does not download (the test name contains `isSyncing`); errors are swallowed; `notifyAppReady` is called.
+- f) `npx cap sync`.
+
+4. Tool policy: `npm install` at most twice; each build at most twice; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+feat(mobile): live update with Capgo in manual mode
+- Short English report: the update flow, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+
+
+---
+
+### Task 1 of 7 — 2026-10-18 01:27:12
+- **Status:** STOPPED (no new step for 20 minutes)
+- **Conversation:** `e9cec78c-7ad8-41e6-a8b3-5dfa09218355`
+- **Steps:** 430
+- **Duration:** 42m 5s
+- **Checks:**
+  - (none)
+- **Task:**
+```
+Session 6 of 12 — Mobile phase B: live update on the native app with Capgo in manual mode, and the bundle build script
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- No data may ever be lost: a new bundle is only marked for the NEXT cold start (`next`), never applied immediately with `set` or a reload; nothing touches IndexedDB, the queues or storage. Do not change `appId`, `androidScheme` or `hostname`.
+- Web behavior must stay identical: everything runs only when `isNativePlatform()` is true.
+- Do not push. Stage only your changed files. Never stage build outputs, `local.properties`, `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan headings `### ۴-ج.` and `#### گام ب-۳`. Backend (session 5): `GET /api/public/mobile-update/` returns `{version, file, sha256, min_native_version, published_at, url}` or `{}`.
+- `@capgo/capacitor-updater` 8.53.0 is available; read its README in `node_modules` (manual mode: `autoUpdate: false`, `notifyAppReady`, `download` with `checksum`, `next`, `current`).
+- `APP_VERSION` is in `core/platform/app-version.ts`; `AppUpdateService` in `core/platform/app-update.service.ts` wraps the PWA updater; `resolveServerUrl` in `core/platform/server-origin.ts`; the native app version comes from `App.getInfo()` (`@capacitor/app`).
+
+3. Task:
+- a) `npm install @capgo/capacitor-updater@^8.53.0`; in `capacitor.config.ts` add `plugins: { CapacitorUpdater: { autoUpdate: false } }` keeping every other value.
+- b) `core/platform/live-update.ts`, native only: call `notifyAppReady()` once the app is stable; then fetch the manifest with `fetch(resolveServerUrl('/api/public/mobile-update/'))`; when its `version` is higher than the current bundle version (`APP_VERSION` for the built-in bundle) and `min_native_version` is not higher than `App.getInfo().version`, download with `checksum: sha256` and call `next({ id })`; while the offline sync is running (`OfflineSyncService` `isSyncing`), skip and retry later; errors are logged and ignored. Check at start and when the app returns to the foreground, at most once per 30 minutes.
+- c) Start it from `AppUpdateService` (native branch) without changing the web branch.
+- d) `tools/make-mobile-bundle.js`: zip `dist-mobile/warehouse-app/browser` into `dist-mobile/bundles/<version>.zip` (version from `package.json`), print the sha256 and the exact `publish_mobile_bundle` command to run. Use Node built-ins or packages already in `node_modules`; if a zip package is needed, add it as a dev dependency.
+- e) `core/platform/live-update.spec.ts` with at least 7 tests (mocked plugins): web does nothing; a newer version downloads with checksum and calls `next`; the same or an older version does nothing; a too high `min_native_version` does nothing; while `isSyncing` it does not download (the test name contains `isSyncing`); errors are swallowed; `notifyAppReady` is called.
+- f) `npx cap sync`.
+
+4. Tool policy: `npm install` at most twice; each build at most twice; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+feat(mobile): live update with Capgo in manual mode
+- Short English report: the update flow, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+در حال بررسی پردازه‌های node برای پایش حافظه هستم.
+</div>
+
+---
+
+### Task 1 of 7 — 2026-10-18 02:49:30
+- **Status:** DONE
+- **Conversation:** `171a0010-90d0-4608-a28d-5a540ba642ea`
+- **Steps:** 503
+- **Duration:** 40m 54s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 13/14 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base f2844e1 --include "src/**/*.spec.ts"`
+  - verify round 1: 13/14 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base f2844e1 --allow warehouse-front/src/app/core/platform/* warehouse-front/src/app/app.ts warehouse-front/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.ts warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts`
+  - verify round 2: 14/14 passed
+- **Task:**
+```
+Session 6b of 12 — Mobile phase B: reviewer fixes for the native back button, status bar, external links and native file output
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Web behavior must stay identical: every change below is inside the `isNativePlatform()` branch, except the two message texts in section 4 f.
+- No data may ever be lost: a file the user exports on the phone must be written to persistent storage, never to an evictable cache.
+- Do not push. Stage only your changed files. Never stage build outputs, `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`. Never remove or weaken an existing test; update assertions only where this task changes the behavior.
+
+2. Context:
+- Files: `warehouse-front/src/app/core/platform/native-shell.ts`, `external-link.ts`, `file-output.ts` and their `.spec.ts` files; `warehouse-front/src/app/app.ts` (it already calls `initNativeShell(this.appRef)` in the constructor); `ToastService` is in `shared/components/toast/toast.component.ts` (`error(message)`).
+- Modal components (`shared/components/modal/modal.component.ts`, `confirm-dialog`, and others) close on `@HostListener('document:keydown.escape')` and render an element with `aria-modal="true"`.
+- In Capacitor `StatusBar`, `Style.Light` means dark icons for a light background and `Style.Dark` means light icons. The app is always light unless `document.documentElement` has the class `dark`.
+- `@capacitor/share` rejects with a message containing `cancel` (any case) when the user closes the share sheet.
+- About 39 callers use `void saveBlob(...)`, `void saveUrl(...)` or `printWindow(...)` without handling errors; `offline-db.ts` `downloadLocalDatabaseSnapshotFile` awaits `saveBlob` and its callers show their own error toast.
+
+3. Definitions:
+- "Open modal" means `document.querySelector('[aria-modal="true"]')` returns an element.
+- "Cancel error" means an error whose message, lowercased, contains `cancel`.
+
+4. Task:
+- a) `native-shell.ts`, back button: when a modal is open, dispatch `new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })` on `document` and do nothing else; otherwise keep the current `history.back()` / `minimizeApp()` behavior.
+- b) `native-shell.ts`, status bar: remove the `prefers-color-scheme` check; use `Style.Dark` only when `document.documentElement.classList.contains('dark')`, otherwise `Style.Light`.
+- c) `external-link.ts`, native branch: remove the `window.open` call so the link opens only once, through the Browser plugin. Leave the web branch unchanged (it keeps its single `window.open(resolved, target)` line).
+- d) `file-output.ts`, native branch of `saveBlob`:
+  - Write the file with `Directory.Documents`, path `CoManage/<filename>`, `recursive: true` (extend the bridge `writeFile` options type with `recursive?: boolean`). If that write throws, write it again with `Directory.Data` and the same path and options. Remove `Directory.Cache`.
+  - Then share the written file `uri` as today. If the share throws a cancel error, return normally (the file is already saved); any other share error is rethrown.
+- e) `file-output.ts`, error notifier:
+  - Export `setFileOutputErrorNotifier(fn: ((message: string) => void) | null): void` storing the function in a module variable.
+  - In the native branches of `saveBlob`, `saveUrl` and `printWindow`, wrap the work in try/catch: on any error that `saveBlob` does not treat as success, call the stored notifier (if set) with `ذخیره یا اشتراک فایل روی گوشی انجام نشد. دوباره تلاش کنید.` (for `printWindow` use `چاپ روی گوشی انجام نشد. دوباره تلاش کنید.`), then rethrow the error. When `saveUrl` calls `saveBlob`, notify only once.
+  - In `app.ts` constructor, inject `ToastService` and call `setFileOutputErrorNotifier((m) => toast.error(m))`.
+- f) Messages: in `company-gdrive-tab.ts` and `settings-backup-tab.ts` replace `اتصال گوگلدرایو را از نسخهٔ وب انجام دهید` with `اتصال گوگل‌درایو را از نسخه وب انجام دهید.` (with the zero-width non-joiner in گوگل‌درایو and a final period).
+- g) Tests (mocked bridges, as the existing specs do):
+  - `native-shell.spec.ts` (at least 6 tests in total): with an element `aria-modal="true"` in the document, the back button dispatches an Escape keydown on `document` and does not call `history.back` or `minimizeApp` (the test name contains `aria-modal`); with OS dark mode mocked (`matchMedia` returning `matches: true`) and no `dark` class, `setStyle` gets `Style.Light`.
+  - `external-link.spec.ts`: native `openExternal` calls the Browser bridge once and never calls `window.open`.
+  - `file-output.spec.ts` (at least 12 tests in total): native `saveBlob` writes with `Directory.Documents` and path `CoManage/<filename>`; falls back to `Directory.Data` when the first write throws (test names contain `Directory.Documents` and `Directory.Data`); a share cancel error resolves without notifying (test name contains `cancel`); a write failure in both directories calls the notifier once and rejects; native `saveUrl` with a 500 response calls the notifier once and rejects; native `printWindow` failure calls the notifier and rejects. Reset the notifier with `setFileOutputErrorNotifier(null)` after each test.
+
+5. Tool policy: in `warehouse-front`, each build at most twice; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Output and stop condition:
+- Commit with this message, without push:
+fix(mobile): reviewer fixes for native shell, links and file output
+- Short English report: what changed per file, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+گزارش نهایی مقایسه تست‌ها (`ng-test-compare`):
+- بدون هیچ‌گونه پس‌رفت نسبت به نسخه پایه (`No regression against base.`)
+- تست‌های پاس‌شده: +۱۱ تست نسبت به پایه
+- وضعیت درخت کاری: تمیز و آماده ارزیابی نهایی رانر
+
+</div>
+
+---
+
+### Task 2 of 7 — 2026-10-18 03:07:40
+- **Status:** DONE
+- **Conversation:** `827923ff-2426-4a06-8d2c-af1784ad858b`
+- **Steps:** 308
+- **Duration:** 18m 6s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 9/9 passed
+- **Task:**
+```
+Session 7 of 12 — Mobile phase B backend: device tokens and FCM push for new notifications (disabled until a Firebase key exists)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- One new additive migration in `core/notifications/migrations/` created with `makemigrations notifications`; never edit existing migrations; do not run `migrate` on the local database (the release session does that after a backup).
+- Each user registers, lists and deletes only their own tokens. A push goes only to the tokens of the notification's `recipient`.
+- Push must never break or slow down notification creation: send after commit (`transaction.on_commit`), in a background thread with a 10-second timeout, catch and log every error. When `FIREBASE_CREDENTIALS_FILE` is not set or the file is missing, the provider is disabled and does nothing.
+- No new pip package: use `google-auth` (already installed) for the OAuth token and `requests` for the FCM HTTP v1 call. Never log or commit credentials.
+- Run `manage.py test` only with labels. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context: plan heading `#### گام ب-۴`. `core/notifications/models.py` has `Notification` (`recipient`, `title`, `message`, `notification_type`, `target_model`, `target_id`, `created_at`); routes under `api/notifications/` (`core/notifications/urls.py`, router). Notifications are created with `Notification.objects.create` in `communications/views.py`, `personnel/lifecycle_services.py` and `personnel/fleet_lifecycle_services.py`.
+
+3. Task:
+- a) Model `DeviceToken`: `user` (FK to `settings.AUTH_USER_MODEL`, CASCADE), `token` (unique, max 512), `platform` (`android`/`ios`), `app_version` (blank), `created_at`, `last_seen_at`. Migration.
+- b) `core/notifications/push.py`: `PushProvider` interface, `FcmPushProvider` (reads `settings.FIREBASE_CREDENTIALS_FILE`, project id from the credentials file, sends `title`, `body`, and data `notification_id`, `target_model`, `target_id`), `get_push_provider()` returning a disabled provider when not configured; tokens rejected by FCM as unregistered are deleted.
+- c) A `post_save` receiver on `Notification` (created only) that schedules the push with `transaction.on_commit`.
+- d) Endpoints under `api/notifications/devices/`: `POST` register or refresh (upsert by token; a token moves to the current user), `DELETE` by token (own only). Authenticated only.
+- e) `config/settings.py`: `FIREBASE_CREDENTIALS_FILE = os.environ.get('FIREBASE_CREDENTIALS_FILE', '')`.
+- f) Tests in `core/notifications/tests.py` (at least 10 new `test_` methods): register, refresh, move to another user, delete own, cannot delete another user's token, unauthenticated rejected, disabled provider sends nothing, a created notification schedules exactly one send to the recipient's tokens (mock the provider, use `captureOnCommitCallbacks`), provider errors do not raise, unregistered token deleted.
+
+4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`: `.\venv\Scripts\python.exe manage.py makemigrations notifications` once, at most three runs of `.\venv\Scripts\python.exe manage.py test notifications --noinput`. If a command fails, read its output and change approach.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+feat(notifications): device tokens and FCM push
+- Short English report: model, migration name, endpoints, tests with pass count. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده به فارسی (Simple Explanation)
+درخواست مربوط به نشست ۷ از ۱۲ از فاز موبایل (بخش B بک‌اند) است: پیاده‌سازی زیرساخت ثبت توکن‌های دستگاه (Device Tokens) و ارسال اعلان‌های پوش Firebase Cloud Messaging (FCM) برای اعلان‌های جدید، به‌طوری که تا زمان تنظیم نبودن کلید Firebase در محیط، سیستم پوش به صورت امن غیرفعال بماند و هیچ اختلال یا تاخیری در ایجاد اعلان‌ها ایجاد نکند.
+
+### ۲. اعتبارسنجی فنی (Technical Verification)
+- مدل `DeviceToken` در [models.py](file:///E:/warehouse%20project/warehouse-backend/core/notifications/models.py) با فیلدهای مشخص‌شده (`user` با رفتار CASCADE، `token` یکتا تا ۵۱۲ نویسه، `platform` با گزینه‌های android/ios، `app_version`...
+
+---
+
+### Task 3 of 7 — 2026-10-18 03:35:41
+- **Status:** DONE
+- **Conversation:** `2e3acefb-5167-4966-8dfd-ed8e2fdfe298`
+- **Steps:** 321
+- **Duration:** 27m 57s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 8/8 passed
+- **Task:**
+```
+Session 8 of 12 — Mobile phase B frontend: register for push notifications on the native app
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Web behavior must stay identical (native only). Push must never block login or logout: every push call is wrapped and its failure ignored. Without `google-services.json` the Android registration fails at runtime; that must be caught and logged only.
+- Do not push. Stage only your changed files. Never stage build outputs, `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`. Do not add `google-services.json`.
+
+2. Context: plan heading `#### گام ب-۴`. Backend (session 7): `POST /api/notifications/devices/` `{token, platform, app_version}` and `DELETE /api/notifications/devices/` `{token}`, authenticated. `@capacitor/push-notifications` 8.1.3 is available. The WebSocket notification stream stays the main channel while the app is open.
+
+3. Task:
+- a) `npm install @capacitor/push-notifications@^8.1.3`; `npx cap sync`.
+- b) `core/platform/push.service.ts` (`providedIn: 'root'`), native only: after a successful login (hook into `AuthService` where the session starts) request permission, register, and send the token to the backend through `HttpClient`; on logout delete the token before the session is cleared; on a notification tap navigate to the target the existing notification center would open for the same `target_model`/`target_id`, or to the notifications page.
+- c) `core/platform/push.service.spec.ts` with at least 5 tests (mocked plugin and HTTP): web does nothing; native registers and posts the token; logout deletes it; a registration error is swallowed; a tap navigates.
+
+4. Tool policy: `npm install` at most twice; each build at most twice; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+feat(mobile): push notification registration
+- Short English report: hooks used in AuthService, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+### Summary Report: Mobile Phase B Push Notification Registration
+
+#### 1. Hooks Used in `AuthService`
+- **`handleLoginSuccess(response)`**: After the user profile and JWT tokens are saved and the session begins, `this.pushService?.register()` is invoked inside a guarded `try / catch` block. On native platforms, this checks/requests permissions, registers with FCM/APNs, and posts the device token to `POST /api/notifications/devices/` (`{ token, platform, app_version }`).
+- **`constructor`**: On app cold-start, if an active session is already present (`this.isLoggedIn()`), `this.pushService?.register()` is safely invoked to re-verify registration and keep the token synchronized.
+- **`logout()...
+
+---
+
+### Task 4 of 7 — 2026-10-18 03:56:32
+- **Status:** DONE
+- **Conversation:** `ad497371-8c6a-40b4-8b6c-f62ebd5d0fe5`
+- **Steps:** 188
+- **Duration:** 20m 46s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 11/11 passed
+- **Task:**
+```
+Session 9 of 12 — Mobile phase B: public download page for the Android app with iPhone install guidance
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7, 9 and 10 apply (design system, Persian text, RTL, accessibility).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- The page is public (no login, no guard) and lazy-loaded. Do not change any existing route or the login flow except one small link.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context: plan heading `#### گام ب-۵`. `/api/public/config/` returns `app_download_urls.direct`, `system_name` and `app_recommended_version`; `ConfigApiService` (`core/api/config-api.service.ts`) reads it. `openExternal` and `saveUrl` are in `core/platform/`.
+
+3. Task:
+- a) Standalone component `modules/common/components/app-download/` at route `download` (public, lazy): app name CoManage, a «دانلود نسخهٔ اندروید» button using `app_download_urls.direct` (disabled with «به‌زودی» when empty), a short Persian guide for installing an Android app from a file, and a short iPhone guide (open the site in Safari, Share, «Add to Home Screen»). Light and dark themes, mobile first.
+- b) A small link «دریافت اپ موبایل» to `/download` on the login page, below the form, matching existing link styles.
+- c) Spec with at least 4 tests: button enabled with a URL, disabled text without one, iPhone guide rendered, the page renders without login.
+
+4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/app-download/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`. If a command fails, read its output and change approach.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+feat(mobile): public app download page
+- Short English report: route, component, tests, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده (Explanation)
+نشست ۹ از ۱۲ (فاز ب موبایل) به‌طور کامل پیاده‌سازی و اعتبارسنجی شد:
+- کامپوننت مستقل و عمومی `AppDownloadComponent` در مسیر `download` به‌صورت lazy-loaded بدون نیاز به احراز هویت ایجاد شد.
+- نام سامانه (CoManage)، دکمه دانلود نسخه مستقیم APK بر اساس `app_download_urls.direct` (با وضعیت غیرفعال و متن «به‌زودی» در صورت نبود لینک)، راهنمای گام‌به‌گام نصب فایل APK اندروید و راهنمای نصب PWA در آیفون (Safari، Share، Add to Home Screen) با رعایت استایل‌های تم روشن و تیره و اصول دسترس‌پذیری پیاده‌سازی شدند.
+- لینک دسترسی «دریافت اپ موبایل» به فرم ورود (`login.html`) افزوده شد.
+- آزمون‌های واحد جامع (۵ تست) ایجاد شده و تمامی نگهبان‌ها و ب...
+
+---
+
+### Task 5 of 7 — 2026-10-18 04:19:52
+- **Status:** DONE
+- **Conversation:** `38c63fe1-fa31-4732-82a4-ed314eb62ac9`
+- **Steps:** 521
+- **Duration:** 23m 15s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/6 passed
+- **Task:**
+```
+Session 10 of 12 — Mobile phase B: release signing with a keystore outside the repository; signed prod and staging direct APKs
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Secrets never enter the repository: the keystore and its passwords live only in `E:\warehouse-secrets\comanage\`. Never print the passwords in your report or in any file you write outside that folder; never commit `keystore.properties`, `*.jks` or `local.properties`.
+- Do not change the app id, flavors or any web source. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context: plan headings `### ۴-د.`, `#### گام ب-۵` and `## ۱۰.` (the staging flavor `ir.comanage.soft.test` talks to `app.farsalish.ir`; the prod flavor talks to `soft.farsalish.ir`). JDK 21 `keytool` is on PATH. The Android SDK is at `E:\Android\Sdk`; `android/local.properties` exists (untracked).
+
+3. Task:
+- a) Create `E:\warehouse-secrets\comanage\` and generate `release.jks` with `keytool -genkeypair` (RSA 4096, validity 10000 days, alias `comanage`, distinguished name `CN=CoManage, O=CoManage, C=IR`) with a random 32-character store and key password generated by a script (for example Python `secrets.token_urlsafe`), never typed into your report.
+- b) Write `E:\warehouse-secrets\comanage\keystore.properties` with `storeFile`, `storePassword`, `keyAlias`, `keyPassword`, and a `README.txt` there in Persian saying this folder must be backed up and that losing it makes app updates impossible.
+- c) `android/app/build.gradle`: a `release` signing config that reads the properties file at `E:/warehouse-secrets/comanage/keystore.properties` when it exists (path overridable by the environment variable `COMANAGE_KEYSTORE_PROPERTIES`), used by the `release` build type; builds without the file still work unsigned. Add `*.jks` and `keystore.properties` to `warehouse-front/.gitignore`.
+- d) `npm run build:mobile`, then in `warehouse-front/android` `gradlew.bat assembleProdDirectRelease`; then `npm run build:mobile-test`, then `gradlew.bat assembleStagingDirectRelease`.
+
+4. Tool policy: `keytool` once; Gradle at most four times; each mobile build at most twice. If a command fails, read its output and change approach.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+build(mobile): release signing from a keystore outside the repository
+- Short English report: both APK paths and sizes, the keystore folder (no passwords), the signing certificate SHA-256 fingerprint from `keytool -list -v`. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده درخواست (Explanation)
+کاربر در نشست ۱۰ از ۱۲ (فاز ب موبایل) خواسته است فرآیند امضای نسخه ریلیز (`Release Signing`) برای اپلیکیشن اندروید را پیکربندی کنیم؛ به گونه‌ای که:
+1. کلید خصوصی و مشخصات احراز هویت خارج از مخزن گیت و در مسیر امن `E:\warehouse-secrets\comanage\` ایجاد و نگهداری شود و هیچ رمز عبوری در مخزن گیت یا گزارش درج نشود.
+2. فایل‌های `release.jks` و `keystore.properties` و یادداشت راهنمای فارسی `README.txt` ساخته شوند.
+3. در `build.gradle` تنظیمات `signingConfigs.release` تعریف شود تا در صورت وجود فایل تنظیمات را بخواند (با قابلیت بازتعریف از طریق متغیر محیطی `COMANAGE_KEYSTORE_PROPERTIES`) و بیلد ریلیز را امضا کند، و در صورت عدم وج...
+
+---
+
+### Task 6 of 7 — 2026-10-18 04:22:22
+- **Status:** DONE
+- **Conversation:** `47fd5ccf-6615-4bde-9bed-210090902507`
+- **Steps:** 58
+- **Duration:** 2m 26s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 3/3 passed
+- **Task:**
+```
+Session 11 of 12 — Mobile phase B: iOS project synced with all plugins and Persian permission texts (build later on a Mac)
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only `warehouse-front/ios/` (and package files only if the sync requires it). Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context: plan heading `#### گام ب-۶`. Session 2 tried `npx cap add ios`; read its commit to see whether `ios/` exists.
+
+3. Task:
+- a) If `ios/` does not exist, run `npx cap add ios` once; if it fails on Windows, make an empty commit (`git commit --allow-empty`) with the message below and report the error (the iOS project is then created later on a Mac).
+- b) If it exists: `npx cap sync ios` (CocoaPods or SPM errors on Windows are expected; report them), and add Persian `NSCameraUsageDescription` («برای اسکن بارکد و عکس کالا به دوربین نیاز است») and `NSPhotoLibraryAddUsageDescription` («برای ذخیرهٔ فایل‌های خروجی») to `ios/App/App/Info.plist`.
+
+4. Tool policy: each `npx cap` command at most twice.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+chore(mobile): iOS project synced
+- Short English report. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خواستهٔ کاربر (Explain Simply)
+کاربر درخواست کرد پروژهٔ iOS در دایرکتوری `warehouse-front/ios/` با تمامی افزونه‌های Capacitor همگام‌سازی (`npx cap sync ios`) شده و متن‌های فارسی مجوز دسترسی به دوربین (`NSCameraUsageDescription`) و ذخیره‌سازی در گالری/عکس‌ها (`NSPhotoLibraryAddUsageDescription`) به فایل `ios/App/App/Info.plist` اضافه شوند تا پروژه برای ساخت آتی روی سیستم‌عامل مک یا Codemagic آماده باشد، و در پایان تغییرات تنها در همان فایل stage شده و بدون push با پیام مشخص کامیت گردند.
+
+---
+
+### ۲. اعتبارسنجی فنی و بررسی مخزن (Verify Immediately)
+۱. بررسی تاریخچهٔ گیت (کامیت `3687353`) و ساختار فایل‌های پروژه نشان داد که پوشهٔ `warehouse-front...
+
+---
+
+### Task 1 of 3 — 2026-10-18 12:33:42
+- **Status:** STOPPED (could not send fix request)
+- **Conversation:** `11666573-828c-40c3-8f7f-b7992d5b4c04`
+- **Steps:** 181
+- **Duration:** 27m 2s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 17/18 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base a753a7c --include "src/**/*.spec.ts"`
+- **Task:**
+```
+Session 13 of 15 — Mobile phase B review fixes: push registration guard in release builds, file output fallback, push token cleanup, download page states and accessibility
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7, 9 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Web behavior must stay identical except the download page and the login link styling. Push must never block login or logout.
+- Never add, copy or stage `google-services.json`, keystores or `keystore.properties`. Do not run Gradle in this session.
+- Do not push. Stage only your changed files. Never stage build outputs, `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`. Never remove or weaken an existing test.
+
+2. Context:
+- Bug seen on a phone: after the user grants notification permission the Android app crashes, because `PushNotifications.register()` (`core/platform/push.service.ts`) runs while the APK was built without `android/app/google-services.json`, so Firebase is not initialized (native crash, JavaScript cannot catch it). `android/app/build.gradle` applies the google-services plugin only when that file exists, and signs release builds only when the keystore properties file exists; otherwise it silently builds without them.
+- `push.service.ts` is called from `core/auth/auth.service.ts` (constructor when logged in, successful login, `logout`). `deleteToken()` runs only in `logout`; `handleRemoteLogout` does not call it. `deleteToken()` resets its listeners flag before `removeAllListeners()` resolves.
+- `core/platform/file-output.ts` native `saveBlob` writes to `Directory.Documents` and falls back to `Directory.Data`; a share cancel then returns as success even when the only copy is in app-private `Directory.Data`.
+- Download page: `modules/common/components/app-download/` (html, ts, spec). The `dark` class is never set in this app, so `dark:` classes are dead code.
+
+3. Task:
+- a) `android/app/build.gradle`: when any requested Gradle task name contains `Release` (`gradle.startParameter.taskNames`), throw `GradleException` with a clear English message if `google-services.json` is missing in the app folder or the keystore properties file is missing. Debug builds keep working without them. Set `versionCode 2` and `versionName "1.0.1"`.
+- b) `warehouse-front/.gitignore`: add `google-services.json`.
+- c) `file-output.ts`: when the file was written to `Directory.Data` (fallback) and the share is cancelled, treat it as a failure: notify once with the existing message and reject. Cancel after a successful `Directory.Documents` write stays a success.
+- d) `push.service.ts` and `auth.service.ts`: call the push token deletion in `handleRemoteLogout` before the session is cleared (wrapped, failure ignored, never blocking). In `deleteToken()` reset the listeners flag only after `removeAllListeners()` has resolved (or failed).
+- e) Download page html/ts:
+  - Show «در حال بارگذاری…» on the button while the config loads.
+  - When the request fails, show a short Persian error line and a retry button.
+  - When the URL is empty, keep the disabled «به‌زودی» button and add the hint «لینک دانلود هنوز منتشر نشده است».
+  - Replace `text-fg-subtle` with `text-fg-muted`.
+  - Remove every `dark:` class.
+  - Replace the inline gradient style with `bg-gradient-to-br from-indigo-600 to-violet-600`.
+  - Replace `pr-1` with `ps-1`.
+  - Wrap the Latin words (Safari, Share, Add to Home Screen, Add, Settings) in `<bdi>`.
+  - Add `dir="ltr"` to the version badge.
+- f) `login.html`: add `focus-visible:ring-2 focus-visible:ring-indigo-500` to the «دریافت اپ موبایل» link.
+- g) Tests:
+  - `push.service.spec.ts`, at least 7 tests in total: one whose name contains `remote logout` (the token is deleted), and one for the listeners flag after `removeAllListeners`.
+  - `file-output.spec.ts`, at least 13 tests in total: a share cancel after the `Directory.Data` fallback notifies and rejects.
+  - `app-download.component.spec.ts`, at least 6 tests in total: loading text, and error line with retry.
+
+4. Tool policy: in `warehouse-front`, each build at most twice; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/app-download/*.spec.ts"`. If a command fails, read its output and change approach.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+fix(mobile): review fixes for push, file output and download page
+- Short English report per file, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح سادهٔ درخواست (Simple Explanation)
+درخواست این نشست (Session 13 of 15) شامل اصلاحات تکمیلی بازبینی فاز موبایل (Mobile Phase B) بود:
+1. **جلوگیری از کرش و بیلد نامعتبر نیتیو (Push Registration & Release Build Guard):** در فایل `android/app/build.gradle`، چنانچه هر تسک بیلد Release درخواست شود ولی فایل‌های `google-services.json` یا کی‌استور موجود نباشند، بیلد با پرتاب `GradleException` با پیام شفاف متوقف شود (بیلدهای Debug همچنان بدون نیاز به آن‌ها کار کنند)، و نسخه روی `versionCode 2` و `versionName "1.0.1"` تنظیم گردد.
+2. **نادیده‌گیری فایل کانفیگ فایربیس (.gitignore):** افزودن `google-services.json` به فایل `warehouse-front/.gitignore`.
+3. **مدیری...
+
+---
+
+### Task 1 of 2 — 2026-10-18 13:16:46
+- **Status:** DONE
+- **Conversation:** `eb2e61d7-18a9-414c-8140-bdbfd3a9456d`
+- **Steps:** 168
+- **Duration:** 37m 53s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 6/7 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base a359aad --allow warehouse-backend/core/notifications/push.py warehouse-backend/core/notifications/views.py warehouse-backend/core/notifications/serializers.py warehouse-backend/core/notifications/tests.py`
+  - verify round 1: 7/7 passed
+- **Task:**
+```
+Session 14 of 15 — Mobile phase B backend review fixes: push never breaks notification creation, bounded push threads, device token input validation
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- No new migration and no model change. Never log credentials or full tokens. Run `manage.py test` only with labels. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context: `core/notifications/push.py` (FCM provider, `post_save` receiver on `Notification`, `transaction.on_commit`, one daemon thread per notification, token lookup at save time); `core/notifications/views.py` `DeviceTokenView` (POST register/refresh, DELETE by token). A real Firebase credentials file is now configured on this machine, so tests must mock every network call.
+
+3. Task:
+- a) The `post_save` receiver must never raise: move the recipient token lookup inside the `on_commit` callback, and wrap the whole callback body in try/except with `logger.exception` (no token values in the message).
+- b) Replace the per-notification thread with one module-level `ThreadPoolExecutor(max_workers=2)`; cache the loaded credentials object in the provider and refresh only when expired; the worker calls `django.db.close_old_connections()` before and after its work.
+- c) `views.py` POST: validate with a serializer: `token` a non-empty string of at most 512 characters, `platform` one of `android`/`ios`, `app_version` optional string of at most 50 characters; invalid input or a non-object body returns 400 with a Persian message. DELETE returns 404 both for a missing token and for another user's token.
+- d) Tests in `core/notifications/tests.py` (keep all existing tests): a receiver failure (mock the token query to raise) does not break `Notification.objects.create`; tokens are read at commit time; POST with a 600-character token returns 400; POST with a JSON array returns 400; DELETE of another user's token returns 404 and keeps the token.
+
+4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test notifications --noinput`. If a command fails, read its output and change approach.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+fix(notifications): safer push sending and device token validation
+- Short English report: changes and test pass count. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام اول: توضیح ساده خواسته کاربر (Explain Simply)
+رانر سیستم گزارش داد که بررسی محدوده فایل‌های تغییریافته نسبت به کامیت پایه (`scope --base a359aad`) به دلیل تغییر فایل برنامه اجرایی (`Documents/Mobile_App_Capacitor/implementation_plan_mobile_app.md`) با خطا مواجه شده است. این فایل نباید در محدوده تغییرات تسک نشست ۱۴ (که صرفاً متمرکز بر فایل‌های بک‌اند نوتیفیکیشن‌ها بود) قرار می‌گرفت.
+
+---
+
+### گام دوم: اعتبارسنجی فنی (Verify Immediately)
+بررسی لاگ و تاریخچه گیت نشان داد:
+- کامیت پیشین `fb10e5d` تغییراتی روی فایل `Documents/Mobile_App_Capacitor/implementation_plan_mobile_app.md` ایجاد کرده بود که خارج از پارامترهای مجاز `--allow` تسک ۱۴ بود.
+- محتوای برنام...
+
+---
+
+### Task 2 of 2 — 2026-10-18 13:31:14
+- **Status:** DONE
+- **Conversation:** `1abdd7f8-626b-493f-839e-d37ff1a2caed`
+- **Steps:** 76
+- **Duration:** 14m 23s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 6/6 passed
+- **Task:**
+```
+Session 15 of 15 — Release on the local app environment: staging APK 1.0.1 with Firebase, patched web build; the runner restarts Daphne and the worker
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Release only. Do not edit, create, stage or commit any tracked file. Never print the content of any file in `E:\warehouse-secrets\`.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`; do not kill any `node` process. The runner restarts Daphne and the worker after your turn.
+- Only the local `app` environment. Never connect to `soft.farsalish.ir`. Do not run `deploy.ps1`. Publish only the STAGING APK (`ir.comanage.soft.test`).
+- Do not run `run_auto_backup`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/`, `warehouse-backend/media/` or `warehouse-front/dist/`.
+
+2. Context: sessions 13 and 14 changed frontend, `android/app/build.gradle` (versionCode 2, versionName 1.0.1; release builds now require `android/app/google-services.json` and the keystore) and backend push code. No new migration. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup (stop if it fails or the size is 0), in `warehouse-backend`:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app mobile 1.0.1'); print(m['filename'], m['size'])"`
+- b) `.\venv\Scripts\python.exe manage.py showmigrations --plan`: if any line has `[ ]`, stop and report.
+- c) Copy `E:\warehouse-secrets\comanage\google-services.json` to `warehouse-front\android\app\google-services.json` (it is git-ignored; confirm with `git status --short` that it does not appear).
+- d) In `warehouse-front`: `npm run build:mobile-test`, then in `warehouse-front\android` `.\gradlew.bat assembleStagingDirectRelease`.
+- e) Web build in `warehouse-front`: `npx ng build --delete-output-path=false`, then `node tools/patch-ngsw-530.js`.
+- f) In `warehouse-backend`: `.\venv\Scripts\python.exe manage.py publish_mobile_apk --apk "<path of the new staging direct release APK>" --version 1.0.1 --channel direct --env staging`; then set the setting `app_download_url_direct` to `https://app.farsalish.ir` + the printed path, the same way as the previous release (validate with `validate_settings_payload`, then save as the settings API does).
+
+4. Tool policy: only the commands above, `git status --short`, `Copy-Item`, and reading files outside `E:\warehouse-secrets\`. Gradle at most twice, each build at most twice. If a step fails, stop and report the exact error.
+
+5. Output and stop condition: a short English report with the backup file and size, the APK path and size, the build result and patch line, and the published APK URL. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده درخواست (Explain Simply)
+کاربر درخواست اجرای نشست ۱۵ از ۱۵ برای انتشار نهایی روی محیط محلی آزمایشی (`app.farsalish.ir`) را دارد: تهیه نسخه پشتیبان دیتابیس، بررسی اعمال کامل مایگریشن‌ها، کپی پیکربندی فایربیس (`google-services.json`)، بیلد نسخه موبایل و ساخت APK استیجینگ نسخه 1.0.1 با گریدل، بیلد وب و اعمال وصله Service Worker برای کلودفلر، و نهایتاً انتشار فایل APK و به‌روزرسانی آدرس دانلود مستقیم اپلیکیشن در تنظیمات سیستم.
+
+### ۲. اعتبارسنجی فنی (Verify Immediately)
+تمامی مراحل و الزامات شامل عدم ویرایش فایل‌های ردگیری‌شده در گیت، عدم حذف مسیرهای رسانه‌ای و بیلد، وضعیت مایگریشن‌ها و صحت بیلدها بررسی و بدون خطا با کدهای خروج صفر (Exit Code 0) ت...
+
+---

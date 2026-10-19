@@ -188,7 +188,8 @@
       "Bash(./venv/Scripts/python.exe manage.py showmigrations)",
       "Bash(echo \"EXIT_CODE=$?\")",
       "WebFetch(domain:graphify-labs-inc.mintlify.app)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(python -X utf8 -I -)"
     ],
     "defaultMode": "bypassPermissions"
   }
