@@ -72,15 +72,6 @@ def _register_platform_entities():
     from django.apps import apps
     if apps.is_installed('accounts'):
         from accounts.models import CustomUser
-        user_extra = {}
-        # فیلدهای اضافه کاربری ارائه‌شده توسط ماژول‌های فعال (نظیر انبارداری)
-        from platform_core.registry import contributions
-        for extra in contributions('user_report_extra_fields'):
-            field = extra() if callable(extra) else extra
-            if hasattr(field, 'key'):
-                user_extra[field.key] = field
-            elif isinstance(field, tuple) and len(field) == 2:
-                user_extra[field[0]] = field[1]
         from accounts.scope import get_visible_users_for_user
         register_entity(
             EntityConfig(
@@ -90,7 +81,7 @@ def _register_platform_entities():
                 scope_resolver=lambda qs, user: get_visible_users_for_user(user, qs=qs),
                 include=('id', 'username', 'first_name', 'last_name', 'phone_number',
                          'operational_zone', 'is_active', 'date_joined'),
-                extra=user_extra,
+                extra_fields_point='user_report_extra_fields',
                 module_code='platform',
             ),
             module_code='platform'

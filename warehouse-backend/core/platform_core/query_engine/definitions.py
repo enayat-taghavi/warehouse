@@ -207,6 +207,7 @@ class EntityConfig:
         dynamic_fields_factory: Optional[Callable] = None,
         sensitive_keys_resolver: Optional[Callable] = None,
         scope_resolver: Optional[Callable] = None,
+        extra_fields_point: str = '',
     ):
         self.key = key
         self.label = label
@@ -224,6 +225,7 @@ class EntityConfig:
         self.dynamic_fields_factory = dynamic_fields_factory
         self.sensitive_keys_resolver = sensitive_keys_resolver
         self.scope_resolver = scope_resolver
+        self.extra_fields_point = extra_fields_point
 
     @property
     def warehouse_path(self) -> Optional[str]:
@@ -267,6 +269,15 @@ class EntityConfig:
         )
         fields.update(self.related)
         fields.update(self.extra)
+
+        if self.extra_fields_point:
+            from platform_core.registry import contributions
+            for item in contributions(self.extra_fields_point):
+                val = item() if callable(item) else item
+                if hasattr(val, 'key'):
+                    fields[val.key] = val
+                elif isinstance(val, tuple) and len(val) == 2:
+                    fields[val[0]] = val[1]
 
         if self.dynamic_fields_factory and target_scope:
             fields.update(self.dynamic_fields_factory(target_scope))

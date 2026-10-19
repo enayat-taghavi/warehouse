@@ -69,11 +69,6 @@ class WarehousesConfig(AppConfig):
 
         from warehouses.report_entities import get_user_report_extra_fields
         contribute('user_report_extra_fields', get_user_report_extra_fields())
-        try:
-            from reports.registry import _register_platform_entities
-            _register_platform_entities()
-        except Exception:
-            pass
 
         # ثبت اکستنشن انبار برای کاربران پلتفرم (گام ۳-ب)
         from warehouses.user_extension import register_user_extension
