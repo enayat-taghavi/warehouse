@@ -293,6 +293,22 @@ def module_scope_codes(module_code):
     return (module_allowed_app_code(module_code),)
 
 
+def module_for_scope_code(code: str):
+    """
+    یافتن مشخصات ماژول کاتالوگ (ModuleSpec) بر اساس scope_codes.
+    برای مثال 'warehouse' ماژول warehouse و 'finance' یا 'personnel' ماژول accounting را برمی‌گرداند.
+    برای 'accounting'، 'all' یا مقادیر خالی/ناشناخته، None برمی‌گرداند.
+    """
+    if not code:
+        return None
+    clean_code = str(code).lower().strip()
+    from platform_core.module_catalog import MODULE_CATALOG
+    for spec in MODULE_CATALOG.values():
+        if clean_code in getattr(spec, 'scope_codes', ()):
+            return spec
+    return None
+
+
 def audit_scope_keys(module_code: str) -> tuple[str, ...]:
     """
     برگرداندن کلیدهای دامنه ممیزی (audit_scope_keys) برای یک ماژول از کاتالوگ (حتی اگر نصب نباشد).

@@ -100,4 +100,10 @@ class WarehousesConfig(AppConfig):
         from warehouses.role_resolver import resolve_warehouse_roles
         contribute('role_resolver', ('warehouse', resolve_warehouse_roles))
 
+        # ثبت فیلتر قلمرو و محدودیت کاربری لاگ‌های ممیزی (گام ۲)
+        from warehouses.audit_scope import warehouse_audit_scope_filter, warehouse_audit_user_restriction
+        contribute('audit_app_scope_filters', ('warehouse', warehouse_audit_scope_filter))
+        contribute('audit_user_restrictions', warehouse_audit_user_restriction)
+
+
 

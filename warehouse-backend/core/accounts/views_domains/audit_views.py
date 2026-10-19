@@ -21,6 +21,7 @@ from common.excel_utils import sanitize_excel_row
 from ..models import UserLoginLog, AuditLog
 from ..serializers import UserLoginLogSerializer, AuditLogSerializer, AuditLogListSerializer
 from ..audit_utils import log_login_event
+from ..audit_scope import apply_audit_app_scope, restrict_audit_for_user
 
 def _parse_query_date(date_str, is_end_of_day=False):
     if not date_str:
@@ -735,21 +736,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Warehouse restriction: non-superusers without perm_sys_logs only see assigned warehouses
         if user and user.is_authenticated and not (user.is_superuser or user.has_perm('accounts.perm_sys_logs')):
-            if hasattr(user, 'assigned_warehouses'):
-                from django.db.models import Q
-                assigned_wh_ids = list(user.assigned_warehouses.values_list('id', flat=True))
-                app_scope_param = str(params.get('app_scope', '')).lower().strip()
-                if app_scope_param in ['finance', 'personnel']:
-                    qs = qs.filter(Q(warehouse_id__in=assigned_wh_ids) | Q(warehouse_id__isnull=True))
-                elif app_scope_param == 'warehouse':
-                    qs = qs.filter(warehouse_id__in=assigned_wh_ids)
-                else:
-                    # در نمای جامع، لاگ‌های مالی با شناسه انبار تهی نیز برای حسابداران/کاربران مجاز نمایش داده می‌شوند
-                    from platform_core.registry import audit_scope_keys
-                    qs = qs.filter(
-                        Q(warehouse_id__in=assigned_wh_ids) |
-                        Q(warehouse_id__isnull=True, module__in=audit_scope_keys('accounting'))
-                    )
+            qs = restrict_audit_for_user(qs, user, params.get('app_scope'))
 
 
         module = params.get('module')
@@ -798,33 +785,16 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         app_scope = params.get('app_scope')
         if app_scope and str(app_scope).lower().strip() != 'all':
             app_scope = str(app_scope).lower().strip()
-            from django.db.models import Q
-            from platform_core.registry import audit_scope_keys
-            if app_scope == 'warehouse':
-                qs = qs.filter(
-                    Q(module__in=audit_scope_keys('warehouse')) |
-                    Q(warehouse_id__isnull=False)
-                ).exclude(
-                    Q(details__event='CROSS_APP_DENIED') |
-                    Q(details__event='APP_SCOPE_SWITCH') |
-                    Q(module__in=audit_scope_keys('accounting'))
-                )
-            elif app_scope in ['finance', 'personnel']:
-                qs = qs.filter(
-                    Q(module__in=audit_scope_keys('accounting')) |
-                    Q(target_model__in=['PersonnelProfile', 'MonthlyPayrollRecord', 'VehicleDriverProfile', 'VehicleTripLog', 'MonthlyWorkPeriod', 'AttendanceDailyRecord']) |
-                    Q(details__target_module='finance')
-                ).exclude(
-                    Q(details__event='CROSS_APP_DENIED') |
-                    Q(details__event='APP_SCOPE_SWITCH')
-                )
-            elif app_scope in ['security', 'incidents']:
+            if app_scope in ['security', 'incidents']:
+                from django.db.models import Q
                 qs = qs.filter(
                     Q(details__event__in=['CROSS_APP_DENIED', 'APP_SCOPE_SWITCH', 'ROLE_BREACH_ATTEMPT']) |
                     Q(module__in=['security', 'users']) |
                     Q(action='ROLLBACK') |
                     Q(severity='critical')
                 )
+            else:
+                qs = apply_audit_app_scope(qs, app_scope)
 
         event_param = params.get('event')
         if event_param:
@@ -885,24 +855,8 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         cross_app_denied_count = base_qs.filter(details__event='CROSS_APP_DENIED').count()
         app_switch_count = base_qs.filter(details__event='APP_SCOPE_SWITCH').count()
 
-        from platform_core.registry import audit_scope_keys
-        warehouse_logs_count = base_qs.filter(
-            Q(module__in=audit_scope_keys('warehouse')) |
-            Q(warehouse_id__isnull=False)
-        ).exclude(
-            Q(details__event='CROSS_APP_DENIED') |
-            Q(details__event='APP_SCOPE_SWITCH') |
-            Q(module__in=audit_scope_keys('accounting'))
-        ).count()
-
-        finance_logs_count = base_qs.filter(
-            Q(module__in=audit_scope_keys('accounting')) |
-            Q(target_model__in=['PersonnelProfile', 'MonthlyPayrollRecord', 'VehicleDriverProfile', 'VehicleTripLog', 'MonthlyWorkPeriod', 'AttendanceDailyRecord']) |
-            Q(details__target_module='finance')
-        ).exclude(
-            Q(details__event='CROSS_APP_DENIED') |
-            Q(details__event='APP_SCOPE_SWITCH')
-        ).count()
+        warehouse_logs_count = apply_audit_app_scope(base_qs, 'warehouse').count()
+        finance_logs_count = apply_audit_app_scope(base_qs, 'finance').count()
 
         module_breakdown = dict(
             base_qs.filter(created_at__gte=last_24h)
@@ -971,33 +925,16 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
             app_scope = data.get('app_scope')
             if app_scope and str(app_scope).lower().strip() != 'all':
                 app_scope = str(app_scope).lower().strip()
-                from django.db.models import Q
-                from platform_core.registry import audit_scope_keys
-                if app_scope == 'warehouse':
-                    qs = qs.filter(
-                        Q(module__in=audit_scope_keys('warehouse')) |
-                        Q(warehouse_id__isnull=False)
-                    ).exclude(
-                        Q(details__event='CROSS_APP_DENIED') |
-                        Q(details__event='APP_SCOPE_SWITCH') |
-                        Q(module__in=audit_scope_keys('accounting'))
-                    )
-                elif app_scope in ['finance', 'personnel']:
-                    qs = qs.filter(
-                        Q(module__in=audit_scope_keys('accounting')) |
-                        Q(target_model__in=['PersonnelProfile', 'MonthlyPayrollRecord', 'VehicleDriverProfile', 'VehicleTripLog', 'MonthlyWorkPeriod', 'AttendanceDailyRecord']) |
-                        Q(details__target_module='finance')
-                    ).exclude(
-                        Q(details__event='CROSS_APP_DENIED') |
-                        Q(details__event='APP_SCOPE_SWITCH')
-                    )
-                elif app_scope in ['security', 'incidents']:
+                if app_scope in ['security', 'incidents']:
+                    from django.db.models import Q
                     qs = qs.filter(
                         Q(details__event__in=['CROSS_APP_DENIED', 'APP_SCOPE_SWITCH', 'ROLE_BREACH_ATTEMPT']) |
                         Q(module__in=['security', 'users']) |
                         Q(action='ROLLBACK') |
                         Q(severity='critical')
                     )
+                else:
+                    qs = apply_audit_app_scope(qs, app_scope)
             event_param = data.get('event')
             if event_param:
                 qs = qs.filter(details__event=event_param)

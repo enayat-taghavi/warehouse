@@ -99,5 +99,6 @@ class PersonnelConfig(AppConfig):
         from personnel.company_access import build_section_member_q
         contribute('company_member_q_builders', build_section_member_q)
 
-
-
+        # ثبت فیلتر قلمرو لاگ‌های ممیزی (گام ۲)
+        from personnel.audit_scope import accounting_audit_scope_filter
+        contribute('audit_app_scope_filters', ('accounting', accounting_audit_scope_filter))
