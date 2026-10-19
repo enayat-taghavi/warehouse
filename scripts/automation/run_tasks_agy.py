@@ -6,7 +6,8 @@ Task runner on top of the Antigravity CLI (`agy`, headless stream-json mode). Pl
 Documents/Antigravity_Parallel_Runner/implementation_plan_antigravity_parallel_runner.md
 
 صف (پیش‌فرض):   python scripts/automation/run_tasks_agy.py [--tasks FILE] [--project DIR] [--model SLUG] [--agy PATH]
-                              [--resume CONVERSATION_ID --base HASH [--nudge [FILE]]]
+                              [--max-parallel N] [--worktree-root DIR]
+                              [--resume CONVERSATION_ID --base HASH [--worktree DIR] [--nudge [FILE]]]
 گفتگو:          python scripts/automation/run_tasks_agy.py ask (--new | --conversation ID) --message-file FILE
                               [--model SLUG] [--out FILE]
 
@@ -18,13 +19,23 @@ Documents/Antigravity_Parallel_Runner/implementation_plan_antigravity_parallel_r
     verify: <فرمان>         پس از پایان نشست؛ همه باید کد ۰ بدهند تا تسک [DONE] شود
     verify-merged: <فرمان>  مثل verify (در اجرای ترتیبی بلافاصله پس از verify؛ در گروه موازی پس از ادغام)
     model: <slug>           مدل همین تسک (پیش‌فرض --model؛ فهرست: agy models)
-    parallel: <گروه>        اجرای هم‌زمان تسک‌های پیاپیِ هم‌گروه (هنوز پیاده‌سازی نشده؛ فعلاً ترتیبی)
+    parallel: <گروه>        اجرای هم‌زمان تسک‌های پیاپیِ هم‌گروه، هر کدام در git worktree جدا
     -->
 
-{base} با hash کوتاه HEAD درست پیش از شروع تسک و {root} با مسیر پروژه جای‌گذاری می‌شود.
+{base} با hash کوتاه HEAD درست پیش از شروع تسک و {root} با مسیر کار (پروژه یا worktree) جای‌گذاری می‌شود.
 اگر verify شکست بخورد، خروجی‌اش در همان نشست برای ایجنت فرستاده می‌شود (حداکثر MAX_FIX_ROUNDS بار) و بعد صف می‌ایستد.
 اگر نوبت ایجنت با خطای سرویس، قطع فرایند یا بی‌حرکتی بریده شود، با `--conversation` ادامه داده می‌شود (حداکثر MAX_RESUMES).
 برچسب [DONE] را فقط خود اجراکننده روی خط عنوان تسک می‌گذارد.
+
+گروه موازی: فقط وقتی هم‌زمان اجرا می‌شود که هر تسک خط `verify: ... scope --allow <globها>` داشته باشد و دامنه‌ها
+هم‌پوشانی نداشته باشند؛ وگرنه ترتیبی روی پروژه. هر تسک در `<worktree-root>/<run-id>/task-NN` روی شاخهٔ
+`runner/<run-id>/task-NN` از HEAD لحظهٔ شروع گروه کار می‌کند (node_modules و venv با junction، .env کپی).
+کار فقط با همهٔ تغییرها کامیت‌شده پذیرفته می‌شود. پس از پایان همه، تسک‌های سالم به ترتیب فایل با cherry-pick روی
+پروژه ادغام و [DONE] می‌شوند و worktreeشان حذف می‌شود؛ سپس verify-merged روی پروژه. worktree تسک ناموفق یا
+ادغام‌نشده می‌ماند و با `--resume ID --base HASH --worktree DIR` در همان‌جا ادامه می‌یابد. runner هرگز reset،
+checkout --، stash یا حذف بازگشتی نمی‌کند؛ ادغامی که با تغییر کامیت‌نشدهٔ پروژه هم‌پوشانی دارد انجام نمی‌شود.
+تعداد هم‌زمان: حداکثر --max-parallel، به شرط RAM آزاد (RAM_RESERVE_MB + RAM_PER_AGENT_MB برای هر ایجنت تازه)؛
+خطای سهمیه/نرخ سقف را موقتاً پایین می‌آورد. فرمان‌های سنگین (HEAVY_COMMAND_RE) یکی‌یکی اجرا می‌شوند.
 """
 
 import argparse
@@ -32,6 +43,7 @@ import json
 import os
 import queue
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -54,6 +66,8 @@ REPO_DIR = SCRIPT_DIR.parent.parent
 PROJECT_DIR = REPO_DIR
 LOG_DIR = PROJECT_DIR / "scratch" / "logs" / "runner"
 STATUS_FILE = LOG_DIR / "status.json"
+WORKTREE_ROOT = REPO_DIR.parent / "warehouse-worktrees"
+RUN_ID = ""
 
 DEFAULT_MODEL = "gemini-3.8-flash-high"
 # بدون هیچ رویدادی از agy تا این مدت یعنی نوبت گیر کرده؛ فرایند کشته و در همان چت ادامه داده می‌شود
@@ -66,6 +80,20 @@ FEEDBACK_TAIL_LINES = 40
 FEEDBACK_MAX_CHARS = 6000
 CLOSE_WAIT_SECONDS = 60
 
+# اجرای موازی (اندازه‌گیری spike: هر ایجنت حدود ۴۵۰MB از RAM آزاد کم می‌کند)
+DEFAULT_MAX_PARALLEL = 10
+RAM_RESERVE_MB = 1500
+RAM_PER_AGENT_MB = 550
+LAUNCH_STAGGER_SECONDS = 20
+THROTTLE_COOLDOWN_SECONDS = 5 * 60
+QUOTA_ERROR_RE = re.compile(r"quota|rate.?limit|resource.?exhausted|too many requests|\b429\b", re.IGNORECASE)
+# فرمان‌های require/verify سنگین با یک قفل سراسری یکی‌یکی اجرا می‌شوند
+HEAVY_COMMAND_RE = re.compile(r"\bng\s+(build|test)\b|ng-test-compare|gradlew|guardian|manage\.py\s+(migrate|test)\b|"
+                              r"\bnpm\s+(ci|install|i|run\s+build)\b", re.IGNORECASE)
+# پوشه‌های ignore‌شده‌ای که در worktree با junction به پروژه وصل یا کپی می‌شوند
+WORKTREE_LINKS = ("warehouse-front/node_modules", "warehouse-backend/venv")
+WORKTREE_COPIES = ("warehouse-backend/.env",)
+
 RESUME_MESSAGE = ("[RUNNER] Your previous turn ended because of a service error or a lost process, not because of "
                   "your work. Run `git status` to see what is already done, finish the task, commit, and end your turn.")
 
@@ -74,20 +102,25 @@ ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 DONE_PREFIXES = ("[x]", "[DONE]", "[SKIP]")
 
 _io_lock = threading.RLock()
+_heavy_lock = threading.Lock()
+_tls = threading.local()
 _log_stream = sys.stdout
 _log_file = None
 _queue_mode = False
 _engines: list = []
 
 
-def configure(project_dir: Path):
-    global PROJECT_DIR, LOG_DIR, STATUS_FILE
+def configure(project_dir: Path, worktree_root: Path | None = None):
+    global PROJECT_DIR, LOG_DIR, STATUS_FILE, WORKTREE_ROOT
     PROJECT_DIR = project_dir
     LOG_DIR = project_dir / "scratch" / "logs" / "runner"
     STATUS_FILE = LOG_DIR / "status.json"
+    WORKTREE_ROOT = worktree_root or project_dir.parent / "warehouse-worktrees"
 
 
 def log(message: str = ""):
+    # در اجرای موازی هر رشته پیشوند تسک خودش را دارد
+    message = getattr(_tls, "prefix", "") + message
     with _io_lock:
         _log_stream.write(message + "\n")
         _log_stream.flush()
@@ -99,6 +132,8 @@ def log(message: str = ""):
 def open_run_log():
     global _log_file
     LOG_DIR.mkdir(parents=True, exist_ok=True)
+    if _log_file:
+        _log_file.close()
     _log_file = open(LOG_DIR / f"run-agy-{datetime.now():%Y%m%d-%H%M%S}.log", "a", encoding="utf-8")
 
 
@@ -170,6 +205,54 @@ def load_tasks(tasks_path: Path) -> list[Task]:
     return tasks
 
 
+def task_scope(task: Task) -> list[str]:
+    """الگوهای glob خطوط `verify: ... scope ... --allow <الگوها>`؛ فهرست خالی یعنی دامنهٔ فایل تسک معلوم نیست."""
+    globs = []
+    for cmd in task.verifies:
+        try:
+            parts = shlex.split(cmd)
+        except ValueError:
+            parts = cmd.split()
+        if "scope" not in parts or "--allow" not in parts:
+            continue
+        for value in parts[parts.index("--allow") + 1:]:
+            if value.startswith("--"):
+                break
+            globs.append(value.replace("\\", "/"))
+    return globs
+
+
+def glob_prefix(pattern: str) -> str:
+    m = re.search(r"[*?\[]", pattern)
+    return pattern[: m.start()] if m else pattern
+
+
+def scopes_overlap(a: list, b: list) -> bool:
+    # محافظه‌کارانه: دو الگو هم‌پوشان‌اند اگر بخش ثابت پیش از اولین wildcard یکی پیشوند دیگری باشد
+    # (fnmatch در verify_tools.py `*` را روی / هم تطبیق می‌دهد، پس فقط پیشوند ثابت قابل اتکاست).
+    for x in a:
+        for y in b:
+            px, py = glob_prefix(x), glob_prefix(y)
+            if px.startswith(py) or py.startswith(px):
+                return True
+    return False
+
+
+def group_blocker(tasks: list) -> str:
+    """دلیل اجرای ترتیبی گروه، یا '' اگر اجرای موازی امن است."""
+    scopes = []
+    for t in tasks:
+        s = task_scope(t)
+        if not s:
+            return f"task '{t.title[:60]}' has no `verify: ... scope --allow` line"
+        scopes.append(s)
+    for i in range(len(scopes)):
+        for j in range(i + 1, len(scopes)):
+            if scopes_overlap(scopes[i], scopes[j]):
+                return f"scopes of '{tasks[i].title[:50]}' and '{tasks[j].title[:50]}' overlap"
+    return ""
+
+
 def mark_task_done(tasks_path: Path, title: str) -> bool:
     """فقط خط عنوان همان تسک را با [DONE] پیشوند می‌دهد؛ بقیه فایل و پایان خط‌ها دست نمی‌خورد."""
     with _io_lock:
@@ -179,7 +262,14 @@ def mark_task_done(tasks_path: Path, title: str) -> bool:
             if body.strip() == title:
                 indent = body[: len(body) - len(body.lstrip())]
                 lines[i] = f"{indent}[DONE] {body.strip()}{line[len(body):]}"
-                tasks_path.write_bytes("".join(lines).encode("utf-8"))
+                # جایگزینی اتمی: فایل نیمه‌نوشته هرگز دیده نمی‌شود (فایل کامیت‌نشده و ویرایش هم‌زمان دیگران)
+                tmp = tasks_path.with_name(f".{tasks_path.name}.runner-tmp")
+                tmp.write_bytes("".join(lines).encode("utf-8"))
+                try:
+                    os.replace(tmp, tasks_path)
+                except OSError:
+                    tasks_path.write_bytes(tmp.read_bytes())
+                    tmp.unlink(missing_ok=True)
                 return True
     return False
 
@@ -234,6 +324,16 @@ def git(*args, cwd: Path | None = None) -> str | None:
     return r.stdout.strip() if r.returncode == 0 else None
 
 
+def git_run(*args, cwd: Path | None = None, timeout: int = 300) -> tuple[int, str]:
+    """git با کد خروج؛ خروجی بدون strip (برای -z و porcelain)، و در شکست همراه stderr."""
+    try:
+        r = subprocess.run(["git", "-c", "core.quotepath=false", *args], cwd=cwd or PROJECT_DIR, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace", timeout=timeout)
+    except Exception as e:
+        return -1, f"{e!r}"
+    return r.returncode, r.stdout if r.returncode == 0 else (r.stdout + r.stderr)
+
+
 def git_head(cwd: Path | None = None) -> str:
     return git("rev-parse", "--short", "HEAD", cwd=cwd) or ""
 
@@ -257,6 +357,23 @@ def run_command(cmd: str, log_path: Path, cwd: Path) -> tuple[int, str]:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
     timed_out = False
+    heavy = bool(HEAVY_COMMAND_RE.search(cmd))
+    if heavy and not _heavy_lock.acquire(blocking=False):
+        log("    waiting for the heavy-command lock...")
+        _heavy_lock.acquire()
+    try:
+        rc, timed_out = _run_logged(cmd, log_path, cwd, env)
+    finally:
+        if heavy:
+            _heavy_lock.release()
+    output = log_path.read_bytes().decode("utf-8", errors="replace")
+    if timed_out:
+        output += f"\n[runner] command killed after {COMMAND_TIMEOUT_SECONDS // 60} minutes\n"
+    return rc, output
+
+
+def _run_logged(cmd: str, log_path: Path, cwd: Path, env: dict) -> tuple[int, bool]:
+    timed_out = False
     with open(log_path, "wb") as out:
         out.write(f"$ {cmd}\n\n".encode("utf-8"))
         out.flush()
@@ -270,10 +387,7 @@ def run_command(cmd: str, log_path: Path, cwd: Path) -> tuple[int, str]:
         except KeyboardInterrupt:
             kill_tree(proc.pid)
             raise
-    output = log_path.read_bytes().decode("utf-8", errors="replace")
-    if timed_out:
-        output += f"\n[runner] command killed after {COMMAND_TIMEOUT_SECONDS // 60} minutes\n"
-    return rc, output
+    return rc, timed_out
 
 
 def run_checks(kind: str, commands: list, base: str, task_no: int, round_no: int | str, cwd: Path) -> list[dict]:
@@ -361,6 +475,30 @@ def agy_models(agy: str) -> list[str] | None:
     return slugs or None
 
 
+def agent_env() -> dict:
+    """محیط agy: هوک‌ها با cmd و python و فرمان‌های shell با PowerShell اجرا می‌شوند و agy فقط PATH را می‌گردد
+    (آزمون زندهٔ ۲۸ مهر از Bash: PATH بی System32 → `exec: "cmd"/"powershell": executable file not found`
+    و ایجنت به‌جای تسک سرگرم اشکال محیط شد)."""
+    env = dict(os.environ)
+    parts = [p for p in env.get("PATH", "").split(os.pathsep) if p]
+    known = {p.lower().rstrip("\\/") for p in parts}
+    extra = [str(Path(sys.executable).parent)]
+    if sys.platform == "win32":
+        root = os.environ.get("SystemRoot", r"C:\Windows")
+        system32 = os.path.join(root, "System32")
+        extra += [system32, root, os.path.join(system32, "Wbem"), os.path.join(system32, "WindowsPowerShell", "v1.0")]
+    env["PATH"] = os.pathsep.join(parts + [p for p in extra if p.lower().rstrip("\\/") not in known])
+    return env
+
+
+def missing_agent_tools() -> list[str]:
+    """ابزارهایی که agy و هوک‌ها لازم دارند و در PATH ایجنت پیدا نمی‌شوند. با مجوز خودکار، ایجنتِ محیط خراب
+    خودش «تعمیر» می‌کند (آزمون زنده: ساخت powershell.cmd در پوشه‌های PATH کاربر)؛ پس صف پیش از شروع می‌ایستد."""
+    path = agent_env()["PATH"]
+    need = ["git", "python"] + (["cmd", "powershell"] if sys.platform == "win32" else [])
+    return [name for name in need if not shutil.which(name, path=path)]
+
+
 def short_params(name: str, params) -> str:
     if isinstance(params, dict):
         for key in ("CommandLine", "TargetFile", "AbsolutePath", "Path"):
@@ -396,18 +534,26 @@ class AgyEngine:
         self._queue = queue.Queue()
         self._prev_tokens = 0
         self._proc = subprocess.Popen(args, cwd=self.workdir, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                      stderr=err, text=True, encoding="utf-8", errors="replace", bufsize=1)
+                                      stderr=err, text=True, encoding="utf-8", errors="replace", bufsize=1,
+                                      env=agent_env())
         err.close()
         _engines.append(self)
         q, proc = self._queue, self._proc
 
         def reader():
-            for line in proc.stdout:
-                q.put(line)
+            try:
+                for line in proc.stdout:
+                    q.put(line)
+            except (OSError, ValueError):
+                pass
             q.put(None)
         threading.Thread(target=reader, daemon=True).start()
-        log(f"  [{self.tag}] agy started (pid {proc.pid}, model {self.model}"
-            f"{', conversation ' + self.conversation_id if self.conversation_id else ''})")
+        self._say(f"agy started (pid {proc.pid}, model {self.model}"
+                  f"{', conversation ' + self.conversation_id if self.conversation_id else ''})")
+
+    def _say(self, message: str):
+        # در اجرای موازی پیشوند رشته همان تسک را نشان می‌دهد
+        log(f"  {message}" if getattr(_tls, "prefix", "") else f"  [{self.tag}] {message}")
 
     def alive(self) -> bool:
         return self._proc is not None and self._proc.poll() is None
@@ -462,7 +608,7 @@ class AgyEngine:
         info = su.get("tool_info") or {}
         if su.get("step_type") == "tool" and su.get("state") == "DONE" and info.get("name"):
             failed = f" ERROR: {(info.get('error') or {}).get('message', '')[:100]}" if info.get("error") else ""
-            log(f"  [{self.tag}] step {idx}: {short_params(info['name'], info.get('parameters'))}{failed}")
+            self._say(f"step {idx}: {short_params(info['name'], info.get('parameters'))}{failed}")
 
     def _on_result(self, r: dict, started: float) -> TurnResult:
         if r.get("conversation_id"):
@@ -471,9 +617,9 @@ class AgyEngine:
         self.tokens_total += total - self._prev_tokens if total >= self._prev_tokens else total
         self._prev_tokens = total
         res = TurnResult(r.get("status") or "UNKNOWN", r.get("response") or "", r.get("error") or "")
-        log(f"  [{self.tag}] turn {res.status} in {int(time.time() - started)}s "
-            f"(steps {self.steps_total}, tokens {self.tokens_total})"
-            f"{': ' + res.error[:160] if res.error else ''}")
+        self._say(f"turn {res.status} in {int(time.time() - started)}s "
+                  f"(steps {self.steps_total}, tokens {self.tokens_total})"
+                  f"{': ' + res.error[:160] if res.error else ''}")
         return res
 
     def close(self):
@@ -488,6 +634,10 @@ class AgyEngine:
         except subprocess.TimeoutExpired:
             kill_tree(self._proc.pid)
             self._proc.wait()
+        try:
+            self._proc.stdout.close()
+        except OSError:
+            pass
         if self._raw:
             self._raw.close()
             self._raw = None
@@ -506,6 +656,7 @@ def agent_turn(engine: AgyEngine, text: str, gate=None, resume_message: str = RE
     res = engine.send(text)
     resumes = 0
     while res.status != "SUCCESS":
+        _throttle.note(res.error)
         if gate and gate():
             log(f"Verify passed although the turn ended with {res.status}; accepting the work.")
             return TurnResult("SUCCESS", res.response, f"accepted after {res.status}")
@@ -523,100 +674,551 @@ def agent_turn(engine: AgyEngine, text: str, gate=None, resume_message: str = RE
 
 # ---------------------------------------------------------------- queue
 
-def run_one_task(agy: str, model: str, tasks_path: Path, history: Path, task_no: int, total: int,
-                 task: Task, resume: tuple | None = None) -> bool:
-    """resume=(شناسه چت، hash پایه، پیام ادامه): تسکِ صفِ ایستاده در همان چت ادامه می‌یابد؛ require رد می‌شود.
-    بی پیام ادامه، فرض بر این است که نوبت ایجنت تمام شده و مستقیم verify اجرا می‌شود."""
-    log("=" * 70)
-    log(f"[Task {task_no}/{total}] {task.title[:100]}")
-    log("=" * 70)
-    write_status("running", task=task_no, total=total, title=task.title)
-    started = time.time()
-    checks: list = []
-    workdir = PROJECT_DIR
-    engine = AgyEngine(agy, task.model or model, workdir, f"task{task_no:02d}", resume[0] if resume else "")
-    state = {"reply": ""}
+@dataclass
+class TaskRun:
+    """وضعیت اجرای یک تسک (در پروژه یا در worktree)."""
+    no: int
+    total: int
+    task: Task
+    workdir: Path
+    branch: str = ""
+    base: str = ""
+    ok: bool = False
+    status: str = ""
+    reason: str = ""
+    note: str = ""
+    conversation: str = ""
+    steps: int = 0
+    tokens: int = 0
+    reply: str = ""
+    checks: list = field(default_factory=list)
+    started: float = field(default_factory=time.time)
 
-    def record(status: str):
-        append_history(history, task_no, total, task, engine.conversation_id or "-", status, engine.steps_total,
-                       engine.tokens_total, int(time.time() - started), state["reply"], checks)
+    @property
+    def tag(self) -> str:
+        return f"task{self.no:02d}"
 
-    def conv_extra() -> dict:
-        return {"conversation": engine.conversation_id} if engine.conversation_id else {}
+    def conv_extra(self) -> dict:
+        return {"conversation": self.conversation} if self.conversation else {}
 
-    try:
-        if resume:
-            _, base, nudge = resume
-            log(f"Resuming conversation {engine.conversation_id} with base commit {base}.")
-            first = nudge
-        else:
-            if task.requires:
-                log(f"Running {len(task.requires)} require command(s)...")
-                failures = run_checks("require", task.requires, git_head(workdir), task_no, 0, workdir)
-                checks.append(checks_summary("require", task.requires, failures))
-                if failures:
-                    record("STOPPED (require failed)")
-                    return stop_queue(f"task {task_no}: require failed: {failures[0]['cmd']}")
-            base = git_head(workdir)
-            first = task.text
-        if base:
-            log(f"Base commit: {base}")
 
-        verifies = task.verifies + task.merged
-        gates = {"count": 0, "passed": False}
+def record(history: Path, run: TaskRun, status: str):
+    append_history(history, run.no, run.total, run.task, run.conversation or "-", status, run.steps, run.tokens,
+                   int(time.time() - run.started), run.reply, run.checks)
 
-        def gate() -> bool:
-            if not verifies:
-                return False
-            gates["count"] += 1
-            log("The agent turn did not end cleanly; running verify to see whether the work is already complete...")
-            failures = run_checks("verify", verifies, base, task_no, f"g{gates['count']}", workdir)
-            checks.append(checks_summary(f"verify gate {gates['count']}", verifies, failures))
-            gates["passed"] = not failures
-            return gates["passed"]
 
-        res = agent_turn(engine, first, gate) if first else TurnResult("SUCCESS")
-        write_status("running", task=task_no, total=total, title=task.title, **conv_extra())
-        fix_round = 0
-        while True:
-            state["reply"] = res.response or state["reply"]
-            if res.status != "SUCCESS":
-                record(f"STOPPED ({res.status})")
-                return stop_queue(f"task {task_no}: agent turn ended with {res.status}: {res.error[:200]}; "
-                                  f"conversation {engine.conversation_id or '-'}", **conv_extra())
-            if not verifies:
-                break
-            if gates["passed"]:
-                gates["passed"] = False
-                state["note"] = f" ({res.error})" if res.error else ""
-                break
-            log(f"Running {len(verifies)} verify command(s), round {fix_round}...")
-            failures = run_checks("verify", verifies, base, task_no, fix_round, workdir)
-            checks.append(checks_summary(f"verify round {fix_round}", verifies, failures))
-            if not failures:
-                break
-            if fix_round >= MAX_FIX_ROUNDS:
-                record("FAILED (verify still failing)")
-                return stop_queue(f"task {task_no}: verify still failing after {MAX_FIX_ROUNDS} fix round(s)",
-                                  **conv_extra())
-            fix_round += 1
-            log(f"Sending {len(failures)} failure(s) back to the agent (fix round {fix_round}/{MAX_FIX_ROUNDS})...")
-            res = agent_turn(engine, feedback_message(failures, fix_round), gate)
-    finally:
-        engine.close()
-
-    if mark_task_done(tasks_path, task.title):
+def finish_task(tasks_path: Path, history: Path, run: TaskRun, status: str):
+    if mark_task_done(tasks_path, run.task.title):
         log("Marked [DONE] in the tasks file.")
     else:
         log("WARNING: title line not found in the tasks file; [DONE] not written.")
-    record("DONE" + state.get("note", ""))
-    log(f"[Task {task_no}] DONE in {int(time.time() - started) // 60} min.")
+    record(history, run, status)
+    log(f"[Task {run.no}] DONE in {int(time.time() - run.started) // 60} min.")
+
+
+def uncommitted_failure(workdir: Path) -> list[dict]:
+    # در worktree فقط کامیت‌ها ادغام می‌شوند؛ تغییر کامیت‌نشده با حذف worktree از دست می‌رفت
+    rc, out = git_run("status", "--porcelain", "--untracked-files=all", cwd=workdir)
+    if rc == 0 and not out.strip():
+        return []
+    text = (f"git status failed: {out.strip()[-300:]}" if rc else
+            "Your working copy has uncommitted changes. The runner merges only commits, so commit these files "
+            "(or delete them if they are not part of the task):\n" + out.rstrip())
+    return [{"cmd": "git status --porcelain --untracked-files=all", "rc": rc or 1, "output": text, "log": "-"}]
+
+
+def work_on_task(agy: str, model: str, run: TaskRun, verifies: list, resume: tuple | None = None,
+                 on_update=None, isolated: bool = False):
+    """require، نوبت ایجنت، verify و دورهای اصلاح در run.workdir؛ نتیجه در run.ok/status/reason.
+    [DONE]، history و توقف صف با فراخواننده است.
+    resume=(شناسه چت، hash پایه، پیام ادامه): ادامهٔ همان چت؛ require رد می‌شود و بی پیام ادامه مستقیم verify اجرا می‌شود.
+    isolated: مسیر کار worktree است؛ کار فقط با درخت تمیز (همه‌چیز کامیت‌شده) پذیرفته می‌شود."""
+    task, workdir = run.task, run.workdir
+    engine = AgyEngine(agy, task.model or model, workdir, run.tag, resume[0] if resume else "")
+    notify = on_update or (lambda r: None)
+
+    def sync():
+        run.conversation = engine.conversation_id or run.conversation
+        run.steps, run.tokens = engine.steps_total, engine.tokens_total
+
+    def verify(label: str, round_no) -> list:
+        failures = run_checks("verify", verifies, run.base, run.no, round_no, workdir) if verifies else []
+        if verifies:
+            run.checks.append(checks_summary(label, verifies, failures))
+        if isolated and not failures:
+            failures = uncommitted_failure(workdir)
+            if failures:
+                log("    -> the worktree has uncommitted changes")
+                run.checks.append(f"  - {label}: uncommitted changes in the worktree")
+        return failures
+
+    def fail(status: str, reason: str):
+        run.ok, run.status, run.reason = False, status, reason
+
+    try:
+        if resume:
+            _, run.base, first = resume
+            log(f"Resuming conversation {engine.conversation_id} with base commit {run.base} in {workdir}.")
+        else:
+            if task.requires:
+                log(f"Running {len(task.requires)} require command(s)...")
+                failures = run_checks("require", task.requires, git_head(workdir), run.no, 0, workdir)
+                run.checks.append(checks_summary("require", task.requires, failures))
+                if failures:
+                    return fail("STOPPED (require failed)", f"task {run.no}: require failed: {failures[0]['cmd']}")
+            run.base = git_head(workdir)
+            first = task.text
+        if run.base:
+            log(f"Base commit: {run.base}")
+
+        must_check = bool(verifies) or isolated
+        gates = {"count": 0, "passed": False}
+
+        def gate() -> bool:
+            if not must_check:
+                return False
+            gates["count"] += 1
+            log("The agent turn did not end cleanly; running verify to see whether the work is already complete...")
+            gates["passed"] = not verify(f"verify gate {gates['count']}", f"g{gates['count']}")
+            return gates["passed"]
+
+        res = agent_turn(engine, first, gate) if first else TurnResult("SUCCESS")
+        sync()
+        notify(run)
+        fix_round = 0
+        while True:
+            run.reply = res.response or run.reply
+            if res.status != "SUCCESS":
+                return fail(f"STOPPED ({res.status})", f"task {run.no}: agent turn ended with {res.status}: "
+                                                       f"{res.error[:200]}; conversation {run.conversation or '-'}")
+            if not must_check:
+                break
+            if gates["passed"]:
+                gates["passed"] = False
+                run.note = f" ({res.error})" if res.error else ""
+                break
+            log(f"Running {len(verifies)} verify command(s), round {fix_round}...")
+            failures = verify(f"verify round {fix_round}", fix_round)
+            if not failures:
+                break
+            if fix_round >= MAX_FIX_ROUNDS:
+                return fail("FAILED (verify still failing)",
+                            f"task {run.no}: verify still failing after {MAX_FIX_ROUNDS} fix round(s)")
+            fix_round += 1
+            log(f"Sending {len(failures)} failure(s) back to the agent (fix round {fix_round}/{MAX_FIX_ROUNDS})...")
+            res = agent_turn(engine, feedback_message(failures, fix_round), gate)
+            sync()
+            notify(run)
+        run.ok = True
+    finally:
+        engine.close()
+        sync()
+
+
+def run_one_task(agy: str, model: str, tasks_path: Path, history: Path, run: TaskRun,
+                 resume: tuple | None = None) -> bool:
+    """اجرای ترتیبی روی خود پروژه (رفتار گام ۱)."""
+    log("=" * 70)
+    log(f"[Task {run.no}/{run.total}] {run.task.title[:100]}")
+    log("=" * 70)
+
+    def update(r: TaskRun):
+        write_status("running", task=r.no, total=r.total, title=r.task.title, **r.conv_extra())
+
+    update(run)
+    work_on_task(agy, model, run, run.task.verifies + run.task.merged, resume, update)
+    if not run.ok:
+        record(history, run, run.status)
+        return stop_queue(run.reason, **run.conv_extra())
+    finish_task(tasks_path, history, run, "DONE" + run.note)
     return True
 
 
-def run_queue(tasks_path: Path, agy: str, model: str, resume: tuple | None = None) -> bool:
-    global _queue_mode
+# ---------------------------------------------------------------- parallel groups
+
+class Throttle:
+    """سقف پویای هم‌زمانی: خطای سهمیه/نرخ سقف را تا یکی کمتر از تعداد در حال اجرا پایین می‌آورد
+    (تسک در حال اجرا کشته نمی‌شود) و پس از هر THROTTLE_COOLDOWN_SECONDS بی‌خطا یک پله برمی‌گرداند."""
+
+    def __init__(self):
+        self.cap = None
+        self.until = 0.0
+        self.active = 0
+        self._lock = threading.Lock()
+
+    def note(self, error: str):
+        if not QUOTA_ERROR_RE.search(error or ""):
+            return
+        with self._lock:
+            self.cap = max(1, self.active - 1)
+            self.until = time.time() + THROTTLE_COOLDOWN_SECONDS
+            cap = self.cap
+        log(f"Quota or rate error from agy; parallel limit lowered to {cap} for "
+            f"{THROTTLE_COOLDOWN_SECONDS // 60} min.")
+
+    def limit(self, maximum: int) -> int:
+        with self._lock:
+            if self.cap is not None and time.time() >= self.until:
+                self.cap += 1
+                self.until = time.time() + THROTTLE_COOLDOWN_SECONDS
+                if self.cap >= maximum:
+                    self.cap = None
+            return maximum if self.cap is None else min(maximum, self.cap)
+
+
+_throttle = Throttle()
+
+
+def available_mb() -> int | None:
+    try:
+        import psutil
+        return int(psutil.virtual_memory().available / 2 ** 20)
+    except Exception:
+        pass
+    if sys.platform == "win32":
+        import ctypes
+
+        class MemoryStatus(ctypes.Structure):
+            _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong)] + [
+                (n, ctypes.c_ulonglong) for n in ("total", "avail", "page_total", "page_avail", "virt_total",
+                                                  "virt_avail", "ext_avail")]
+        s = MemoryStatus()
+        s.dwLength = ctypes.sizeof(s)
+        if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(s)):
+            return int(s.avail / 2 ** 20)
+    return None
+
+
+def is_link(path: Path) -> bool:
+    return os.path.isjunction(path) or os.path.islink(path)
+
+
+def make_link(src: Path, dst: Path):
+    if sys.platform == "win32":
+        import _winapi
+        _winapi.CreateJunction(str(src), str(dst))
+    else:
+        os.symlink(src, dst, target_is_directory=True)
+
+
+def remove_links(path: Path) -> bool:
+    """فقط خود junctionها حذف می‌شوند (rmdir بدون /s؛ هرگز حذف بازگشتی). False یعنی هنوز junction مانده است."""
+    ok = True
+    for rel in WORKTREE_LINKS:
+        p = path / rel
+        if is_link(p):
+            if sys.platform == "win32":
+                subprocess.run(["cmd", "/c", "rmdir", str(p)], capture_output=True)
+            else:
+                os.unlink(p)
+        if is_link(p):
+            ok = False
+    return ok
+
+
+def create_worktree(path: Path, branch: str, base: str) -> str:
+    """worktree تازه روی شاخهٔ تازه از base، با junction پوشه‌های سنگین ignore‌شده و کپی .env. خروجی: خطا یا ''."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rc, out = git_run("worktree", "add", "-b", branch, str(path), base)
+    if rc:
+        return f"git worktree add failed: {out.strip()[-300:]}"
+    for rel in WORKTREE_LINKS:
+        src, dst = PROJECT_DIR / rel, path / rel
+        if src.is_dir() and dst.parent.is_dir() and not dst.exists():
+            try:
+                make_link(src, dst)
+            except OSError as e:
+                return f"cannot link {rel}: {e}"
+    for rel in WORKTREE_COPIES:
+        src, dst = PROJECT_DIR / rel, path / rel
+        if src.is_file() and dst.parent.is_dir() and not dst.exists():
+            shutil.copy2(src, dst)
+    return ""
+
+
+def remove_worktree(path: Path, branch: str):
+    """فقط برای worktree بی‌کار یا ادغام‌شده: اول junctionها، سپس `git worktree remove` بدون --force
+    (اگر فایل کامیت‌نشده یا untracked داشته باشد git نمی‌پذیرد و worktree می‌ماند)، سپس حذف شاخه.
+    اگر شاخه کامیتی دارد که معادلش روی پروژه نیست، هیچ چیز حذف نمی‌شود."""
+    if branch and git("rev-parse", "-q", "--verify", branch) and unmerged_commits(branch):
+        log(f"WARNING: {branch} has commits that are not in the project; kept {path} and the branch.")
+        return
+    if not path.exists():
+        git_run("worktree", "prune")
+    elif not remove_links(path):
+        log(f"WARNING: a junction in {path} could not be removed; the worktree is kept.")
+        return
+    else:
+        rc, out = git_run("worktree", "remove", str(path))
+        if rc:
+            log(f"WARNING: git worktree remove failed; kept {path}: {out.strip()[-200:]}")
+            return
+    if branch:
+        git_run("branch", "-D", branch)
+    try:
+        path.parent.rmdir()
+    except OSError:
+        pass
+
+
+def dirty_paths(cwd: Path | None = None) -> set | None:
+    """مسیر فایل‌های کامیت‌نشده (تغییر، staged، untracked)؛ None یعنی git status شکست خورد."""
+    rc, out = git_run("status", "--porcelain", "-z", "--untracked-files=all", cwd=cwd)
+    if rc:
+        return None
+    paths, items, i = set(), out.split("\0"), 0
+    while i < len(items):
+        item = items[i]
+        i += 1
+        if len(item) < 4:
+            continue
+        paths.add(item[3:])
+        if item[0] in "RC" and i < len(items):
+            paths.add(items[i])
+            i += 1
+    return paths
+
+
+def cherry_pick_in_progress() -> bool:
+    if git_run("rev-parse", "-q", "--verify", "CHERRY_PICK_HEAD")[0] == 0:
+        return True
+    rc, out = git_run("rev-parse", "--git-path", "sequencer")
+    return rc == 0 and (PROJECT_DIR / out.strip()).exists()
+
+
+def unmerged_commits(branch: str) -> list[str]:
+    """کامیت‌های شاخه که معادلشان (patch-id) روی HEAD پروژه نیست؛ در خطای git شاخه ادغام‌نشده فرض می‌شود."""
+    rc, out = git_run("cherry", "HEAD", branch)
+    if rc:
+        return ["(git cherry failed)"]
+    return [ln[2:] for ln in out.splitlines() if ln.startswith("+")]
+
+
+def merge_run(run: TaskRun, base_full: str) -> str:
+    """کامیت‌های base..branch را با cherry-pick روی شاخهٔ جاری پروژه می‌گذارد. خروجی: خطا یا ''.
+    هرگز reset، checkout --، stash یا دور ریختن تغییر کامیت‌نشده؛ در تداخل فقط `cherry-pick --abort`."""
+    rc, out = git_run("rev-list", "--reverse", f"{base_full}..{run.branch}")
+    if rc:
+        return f"git rev-list failed: {out.strip()[-200:]}"
+    commits = out.split()
+    if not commits:
+        log(f"Task {run.no}: no commits on {run.branch}; nothing to merge.")
+        return ""
+    if cherry_pick_in_progress():
+        return "a cherry-pick is already in progress in the project; finish or abort it by hand"
+    # مسیرهای هر کامیت جدا و بی تشخیص rename: مسیر قدیم rename و ویرایشِ برگشت‌خورده هم دیده شود
+    changed = set()
+    for c in commits:
+        rc, out = git_run("diff-tree", "-r", "--root", "--no-commit-id", "--no-renames", "--name-only", "-z", c)
+        if rc:
+            return f"git diff-tree failed: {out.strip()[-200:]}"
+        changed |= {p for p in out.split("\0") if p}
+    dirty = dirty_paths()
+    if dirty is None:
+        return "git status failed in the project"
+    overlap = sorted(changed & dirty)
+    if overlap:
+        return f"the project has uncommitted changes in files this task changed: {overlap[:10]}"
+    if git_run("diff", "--cached", "--quiet")[0] != 0:
+        return "the project has staged changes; the runner does not cherry-pick onto a staged index"
+    rc, out = git_run("cherry-pick", *commits)
+    if rc:
+        note = ""
+        # شکست وسط دنباله (مثلاً «local changes would be overwritten») CHERRY_PICK_HEAD نمی‌سازد ولی sequencer می‌ماند
+        if cherry_pick_in_progress():
+            arc, aout = git_run("cherry-pick", "--abort")
+            note = " (cherry-pick aborted)" if arc == 0 else \
+                f" (cherry-pick --abort FAILED, resolve by hand: {aout.strip()[-200:]})"
+        return f"git cherry-pick failed{note}: {out.strip()[-400:]}"
+    log(f"Task {run.no}: merged {len(commits)} commit(s) from {run.branch}.")
+    return ""
+
+
+def resume_hint(run: TaskRun, base: str) -> str:
+    if not run.conversation:
+        return f"worktree kept: {run.workdir}"
+    return (f"continue with: run_tasks_agy.bat --resume {run.conversation} --base {base} "
+            f"--worktree \"{run.workdir}\" (first pending task only)")
+
+
+def run_merged_checks(runs: list, base: str) -> str:
+    commands = list(dict.fromkeys(c for r in runs for c in r.task.merged))
+    if not commands:
+        return ""
+    log(f"Running {len(commands)} verify-merged command(s) in the project...")
+    failures = run_checks("verify-merged", commands, base, runs[0].no, "m", PROJECT_DIR)
+    return f"verify-merged failed: {failures[0]['cmd']}" if failures else ""
+
+
+def can_launch(active: int, max_parallel: int, last_launch: float, waits: dict) -> bool:
+    if active == 0:
+        return True
+    if active >= _throttle.limit(max_parallel) or time.time() - last_launch < LAUNCH_STAGGER_SECONDS:
+        return False
+    free = available_mb()
+    if free is None or free - RAM_RESERVE_MB >= RAM_PER_AGENT_MB:
+        return True
+    if time.time() - waits.get("ram", 0) > 60:
+        waits["ram"] = time.time()
+        log(f"Waiting for free RAM ({free} MB free; need {RAM_RESERVE_MB + RAM_PER_AGENT_MB} MB) before the next agent.")
+    return False
+
+
+def run_group(agy: str, model: str, tasks_path: Path, history: Path, runs: list, max_parallel: int) -> bool:
+    """تسک‌های یک گروه موازی، هر کدام در worktree خودش؛ سپس ادغام تسک‌های سالم به ترتیب فایل."""
+    name = runs[0].task.group
+    log("=" * 70)
+    log(f"[Parallel group '{name}'] tasks {', '.join(str(r.no) for r in runs)} of {runs[0].total} "
+        f"(max {max_parallel} at once)")
+    log("=" * 70)
+    head_ref = git("rev-parse", "--abbrev-ref", "HEAD")
+    base_full = git("rev-parse", "HEAD")
+    if not base_full or not head_ref or head_ref == "HEAD":
+        return stop_queue(f"group {name}: the project HEAD is not on a branch")
+    base = git_head()
+    dirty = dirty_paths()
+    if dirty:
+        log(f"WARNING: the project has {len(dirty)} uncommitted file(s); the worktrees start from {base} "
+            f"and do not see them.")
+
+    group_root = WORKTREE_ROOT / RUN_ID
+    for run in runs:
+        run.workdir = group_root / f"task-{run.no:02d}"
+        run.branch = f"runner/{RUN_ID}/task-{run.no:02d}"
+        err = create_worktree(run.workdir, run.branch, base_full)
+        if err:
+            for r in runs[: runs.index(run) + 1]:
+                remove_worktree(r.workdir, r.branch)
+            return stop_queue(f"group {name}: task {run.no}: {err}")
+        log(f"  task {run.no}: worktree {run.workdir} (branch {run.branch})")
+
+    states = {r.no: "waiting" for r in runs}
+
+    def publish(_=None):
+        write_status("running", task=runs[0].no, total=runs[0].total, title=f"parallel group {name}", group=name,
+                     base=base, parallel=[{"task": r.no, "title": r.task.title, "state": states[r.no],
+                                           "conversation": r.conversation, "workdir": str(r.workdir)} for r in runs])
+
+    def worker(run: TaskRun):
+        _tls.prefix = f"[{run.tag}] "
+        log(f"[Task {run.no}/{run.total}] {run.task.title[:100]}")
+        run.started = time.time()
+        states[run.no] = "running"
+        publish()
+        try:
+            work_on_task(agy, model, run, run.task.verifies, None, publish, isolated=True)
+        except Exception as e:
+            run.ok, run.status, run.reason = False, "STOPPED (runner error)", f"task {run.no}: runner error {e!r}"
+        states[run.no] = "verified" if run.ok else "failed"
+        publish()
+        log("verified; waiting for the group to finish." if run.ok else f"FAILED: {run.reason}")
+
+    pending, active, last_launch, waits = list(runs), [], 0.0, {}
+    while pending or active:
+        active = [t for t in active if t.is_alive()]
+        _throttle.active = len(active)
+        if pending and any(s == "failed" for s in states.values()):
+            log(f"A task of the group failed; {len(pending)} task(s) not started (they stay pending).")
+            for r in pending:
+                states[r.no] = "not started"
+            pending = []
+            publish()
+        if pending and can_launch(len(active), max_parallel, last_launch, waits):
+            t = threading.Thread(target=worker, args=(pending.pop(0),), daemon=True)
+            t.start()
+            active.append(t)
+            last_launch = time.time()
+            continue
+        time.sleep(1)
+    _throttle.active = 0
+
+    log(f"[Parallel group '{name}'] all agents finished; merging in file order...")
+    problems, merged = [], []
+    branch_ok = git("rev-parse", "--abbrev-ref", "HEAD") == head_ref
+    if not branch_ok:
+        problems.append(f"the project branch changed from {head_ref} during the group; nothing merged")
+    for run in runs:
+        if states[run.no] == "not started":
+            remove_worktree(run.workdir, run.branch)
+            continue
+        if states[run.no] != "verified" or not branch_ok:
+            record(history, run, run.status or "VERIFIED, NOT MERGED")
+            problems.append(f"{run.reason or f'task {run.no}: not merged'}; {resume_hint(run, base)}")
+            continue
+        err = merge_run(run, base_full)
+        if err:
+            states[run.no] = "merge failed"
+            record(history, run, "VERIFIED, NOT MERGED")
+            problems.append(f"task {run.no}: merge failed: {err}; worktree kept: {run.workdir}")
+            continue
+        states[run.no] = "merged"
+        finish_task(tasks_path, history, run, f"DONE (parallel group {name}{run.note})")
+        remove_worktree(run.workdir, run.branch)
+        merged.append(run)
+    publish()
+    if merged:
+        err = run_merged_checks(merged, base)
+        if err:
+            problems.append(err)
+    if problems:
+        return stop_queue(f"group {name}: " + " | ".join(problems), group=name)
+    log(f"[Parallel group '{name}'] {len(merged)} task(s) merged.")
+    return True
+
+
+def run_worktree_resume(agy: str, model: str, tasks_path: Path, history: Path, run: TaskRun, resume: tuple) -> bool:
+    """ادامهٔ تسکِ گروه موازیِ ایستاده در worktree خودش؛ سپس ادغام روی پروژه مثل گروه."""
+    log("=" * 70)
+    log(f"[Task {run.no}/{run.total}] {run.task.title[:100]} (resumed in {run.workdir})")
+    log("=" * 70)
+    branch = git("rev-parse", "--abbrev-ref", "HEAD", cwd=run.workdir)
+    base_full = git("rev-parse", resume[1])
+    if not branch or not branch.startswith("runner/") or not base_full:
+        return stop_queue(f"task {run.no}: {run.workdir} is not a runner worktree on a runner/ branch, "
+                          f"or base {resume[1]} is unknown")
+    if not run.workdir.resolve().is_relative_to(WORKTREE_ROOT.resolve()):
+        return stop_queue(f"task {run.no}: {run.workdir} is not under the worktree root {WORKTREE_ROOT}")
+    if git_run("merge-base", "--is-ancestor", base_full, branch)[0] != 0:
+        return stop_queue(f"task {run.no}: base {resume[1]} is not an ancestor of {branch}; pass the group's base "
+                          f"commit from the stop reason")
+    run.branch = branch
+
+    def update(r: TaskRun):
+        write_status("running", task=r.no, total=r.total, title=r.task.title, workdir=str(r.workdir), **r.conv_extra())
+
+    update(run)
+    work_on_task(agy, model, run, run.task.verifies, resume, update, isolated=True)
+    if not run.ok:
+        record(history, run, run.status)
+        return stop_queue(run.reason, **run.conv_extra())
+    err = merge_run(run, base_full)
+    if err:
+        record(history, run, "VERIFIED, NOT MERGED")
+        return stop_queue(f"task {run.no}: merge failed: {err}; worktree kept: {run.workdir}", **run.conv_extra())
+    finish_task(tasks_path, history, run, f"DONE (resumed in worktree{run.note})")
+    remove_worktree(run.workdir, run.branch)
+    err = run_merged_checks([run], resume[1])
+    return stop_queue(f"task {run.no}: {err}") if err else True
+
+
+def plan_segments(runs: list, resume: tuple | None) -> list[list]:
+    """تسک‌های پیاپیِ هم‌گروه یک بخش می‌شوند؛ تسکِ ادامه‌یافته همیشه جدا اجرا می‌شود."""
+    segments: list[list] = []
+    for run in runs:
+        prev = segments[-1] if segments else None
+        if (run.task.group and prev and prev[0].task.group == run.task.group
+                and not (resume and prev[0].no == 1)):
+            prev.append(run)
+        else:
+            segments.append([run])
+    return segments
+
+
+def run_queue(tasks_path: Path, agy: str, model: str, resume: tuple | None = None,
+              max_parallel: int = DEFAULT_MAX_PARALLEL, resume_worktree: Path | None = None) -> bool:
+    global _queue_mode, RUN_ID
     _queue_mode = True
+    RUN_ID = f"{datetime.now():%Y%m%d-%H%M%S}"
     open_run_log()
     log("=" * 70)
     log("Antigravity task runner (agy engine)")
@@ -625,6 +1227,9 @@ def run_queue(tasks_path: Path, agy: str, model: str, resume: tuple | None = Non
     log(f"agy:     {agy} (version {agy_version(agy)})")
     log("=" * 70)
     write_status("running", tasks=str(tasks_path))
+    missing = missing_agent_tools()
+    if missing:
+        return stop_queue(f"not found on the agent PATH: {', '.join(missing)}")
 
     slugs = agy_models(agy)
     if slugs is not None and model not in slugs:
@@ -639,20 +1244,39 @@ def run_queue(tasks_path: Path, agy: str, model: str, resume: tuple | None = Non
         log("No pending tasks.")
         write_status("finished", done=0)
         return True
-    if any(t.group for t in tasks):
-        log("NOTE: `parallel:` groups are not implemented yet; every task runs sequentially.")
     for t in tasks:
         if t.model and slugs is not None and t.model not in slugs:
             return stop_queue(f"task model {t.model} is not in `agy models`: {t.title[:80]}")
 
     total = len(tasks)
-    log(f"{total} pending task(s). Stall limit: {STALL_TIMEOUT_SECONDS // 60} min. Fix rounds: {MAX_FIX_ROUNDS}.")
+    log(f"{total} pending task(s). Stall limit: {STALL_TIMEOUT_SECONDS // 60} min. Fix rounds: {MAX_FIX_ROUNDS}. "
+        f"Max parallel: {max_parallel}.")
     history = history_path(tasks_path)
-    for task_no, task in enumerate(tasks, start=1):
-        if not run_one_task(agy, model, tasks_path, history, task_no, total, task,
-                            resume if task_no == 1 else None):
+    runs = [TaskRun(no, total, t, PROJECT_DIR) for no, t in enumerate(tasks, start=1)]
+    plan = []
+    for seg in plan_segments(runs, resume):
+        if len(seg) > 1:
+            why = "--max-parallel is below 2" if max_parallel < 2 else group_blocker([r.task for r in seg])
+            if why:
+                log(f"NOTE: group '{seg[0].task.group}' runs sequentially: {why}.")
+                plan += [[r] for r in seg]
+                continue
+            log(f"Group '{seg[0].task.group}': tasks {', '.join(str(r.no) for r in seg)} run in parallel worktrees "
+                f"under {WORKTREE_ROOT / RUN_ID}.")
+        plan.append(seg)
+
+    for seg in plan:
+        if len(seg) > 1:
+            ok = run_group(agy, model, tasks_path, history, seg, max_parallel)
+        elif resume and seg[0].no == 1 and resume_worktree:
+            seg[0].workdir = resume_worktree
+            ok = run_worktree_resume(agy, model, tasks_path, history, seg[0], resume)
+        else:
+            seg[0].started = time.time()
+            ok = run_one_task(agy, model, tasks_path, history, seg[0], resume if seg[0].no == 1 else None)
+        if not ok:
             return False
-        if task_no < total:
+        if seg[-1].no < total:
             time.sleep(4)
 
     log("=" * 70)
@@ -669,6 +1293,10 @@ def run_ask(args, agy: str) -> int:
     message = Path(args.message_file).read_text(encoding="utf-8").strip()
     if not message:
         log("The message file is empty.")
+        return 2
+    missing = missing_agent_tools()
+    if missing:
+        log(f"Not found on the agent PATH: {', '.join(missing)}.")
         return 2
     slugs = agy_models(agy)
     if slugs is not None and args.model not in slugs:
@@ -699,6 +1327,8 @@ def run_ask(args, agy: str) -> int:
 def cleanup_engines():
     for engine in list(_engines):
         try:
+            if engine.alive():
+                kill_tree(engine._proc.pid)
             engine.close()
         except Exception:
             pass
@@ -715,6 +1345,14 @@ def main(argv=None) -> int:
                         help="continue the first pending task in this conversation (skips require; verifies directly "
                              "unless --nudge sends a message first)")
     parser.add_argument("--base", help="base commit of the resumed task (required with --resume)")
+    parser.add_argument("--worktree", metavar="DIR",
+                        help="with --resume: the task's worktree from a stopped parallel group; the task continues "
+                             "there and is merged into the project afterwards")
+    parser.add_argument("--max-parallel", type=int, default=DEFAULT_MAX_PARALLEL,
+                        help=f"upper limit of agents running at once in a `parallel:` group "
+                             f"(default: {DEFAULT_MAX_PARALLEL}; free RAM lowers it)")
+    parser.add_argument("--worktree-root", help="folder for the parallel worktrees "
+                                                "(default: warehouse-worktrees next to the project)")
     parser.add_argument("--nudge", nargs="?", const="", metavar="FILE",
                         help="with --resume: first send a continue message (default text, or FILE: a UTF-8 file)")
     sub = parser.add_subparsers(dest="command")
@@ -727,7 +1365,7 @@ def main(argv=None) -> int:
     ask.add_argument("--out", help="also write the reply to this file")
     args = parser.parse_args(argv)
 
-    configure(Path(args.project).resolve())
+    configure(Path(args.project).resolve(), Path(args.worktree_root).resolve() if args.worktree_root else None)
     agy = find_agy(args.agy)
     if not agy:
         print("agy executable not found; install Antigravity or pass --agy PATH.", file=sys.stderr)
@@ -739,6 +1377,10 @@ def main(argv=None) -> int:
         parser.error("--resume needs --base (the commit the task started from)")
     if args.nudge is not None and not args.resume:
         parser.error("--nudge works only with --resume")
+    if args.worktree and not args.resume:
+        parser.error("--worktree works only with --resume")
+    if args.worktree and not Path(args.worktree).is_dir():
+        parser.error(f"--worktree folder not found: {args.worktree}")
     nudge = ""
     if args.nudge is not None:
         nudge = no_question_marks(RESUME_MESSAGE)
@@ -747,7 +1389,9 @@ def main(argv=None) -> int:
             if not nudge:
                 parser.error(f"--nudge file is empty: {args.nudge}")
     resume = (args.resume, args.base, nudge) if args.resume else None
-    return 0 if run_queue(Path(args.tasks).resolve(), agy, args.model, resume) else 1
+    worktree = Path(args.worktree).resolve() if args.worktree else None
+    return 0 if run_queue(Path(args.tasks).resolve(), agy, args.model, resume, max(1, args.max_parallel),
+                          worktree) else 1
 
 
 if __name__ == "__main__":
