@@ -39,6 +39,8 @@ class ModuleSpec:
     scope_codes: tuple[str, ...] = ()
     default_priority: int = 100
     active_priority: int = 100
+    public_read_prefixes: tuple[str, ...] = ()
+    reports_fallback: bool = False
 
 
 PLATFORM_VERSION = '1.0.0'

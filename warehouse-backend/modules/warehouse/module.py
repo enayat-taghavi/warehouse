@@ -47,6 +47,8 @@ WAREHOUSE_SPEC = ModuleSpec(
     scope_codes=('warehouse',),
     default_priority=20,
     active_priority=10,
+    public_read_prefixes=('/api/warehouses/',),
+    reports_fallback=True,
 )
 
 MODULE_SPEC = WAREHOUSE_SPEC

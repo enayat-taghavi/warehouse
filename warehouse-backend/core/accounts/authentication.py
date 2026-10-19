@@ -67,10 +67,13 @@ class CustomJWTAuthentication(JWTAuthentication):
         rel_path = path.lstrip('/')
         if rel_path.startswith('api/reports/'):
             from platform_core.query_engine import get_reporting_modules
-            from platform_core.registry import installed_modules, module_scope_codes
+            from platform_core.registry import _REGISTRY, installed_modules, module_scope_codes
             active_reporting_modules = [m for m in get_reporting_modules() if m in installed_modules()]
-            if not active_reporting_modules and 'warehouse' in installed_modules():
-                active_reporting_modules = ['warehouse']
+            if not active_reporting_modules:
+                active_reporting_modules = [
+                    m for m in installed_modules()
+                    if getattr(_REGISTRY.get(m), 'reports_fallback', False)
+                ]
 
             if not active_reporting_modules:
                 msg = 'سامانه گزارش‌ساز در این نصب فعال نیست.'
@@ -98,11 +101,11 @@ class CustomJWTAuthentication(JWTAuthentication):
                 raise NotFound(msg, code='cross_app_not_found')
             return  # مسیرِ غیرماژول؛ هیچ محدودیت قلمرویی اعمال نمی‌شود.
 
-        # GET/HEAD/OPTIONS روی پیشوند /api/warehouses/ عمداً بدون محدودیت قلمرو
-        # (رفتار پیشین؛ خواندن فهرست انبارها برای همگانِ دارای توکن مجاز است).
-        if (module.code == 'warehouse'
-                and path.startswith('/api/warehouses/')
-                and getattr(request, 'method', 'GET') in ('GET', 'HEAD', 'OPTIONS')):
+        # GET/HEAD/OPTIONS روی پیشوندهای خواندن عمومی بدون محدودیت قلمرو
+        # (بر اساس فیلد public_read_prefixes در مشخصات ماژول حل‌شده).
+        public_read_prefixes = getattr(module, 'public_read_prefixes', ())
+        if (getattr(request, 'method', 'GET') in ('GET', 'HEAD', 'OPTIONS')
+                and any(path.startswith(prefix) for prefix in public_read_prefixes)):
             return
 
         scope_codes = module_scope_codes(module.code)
