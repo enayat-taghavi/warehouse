@@ -38,6 +38,7 @@ class ModuleSpec:
     allowed_app_code: str = ''
     scope_codes: tuple[str, ...] = ()
     default_priority: int = 100
+    active_priority: int = 100
 
 
 PLATFORM_VERSION = '1.0.0'
@@ -223,26 +224,9 @@ def is_module_installed(code):
     return code in _REGISTRY
 
 
-# ── پلِ سازگاری با کدهای قدیمی توکن/هدر ─────────────────────────────
-# کد ماژول در رجیستری ('warehouse'/'accounting') با کدهایی که در JWT/هدر در
-# گردش‌اند ('warehouse'/'finance'/'personnel') یکسان نیست. این نگاشت‌ها رفتار
-# امروز را عیناً حفظ می‌کنند تا فرانت‌اند (فاز ۶) بدون تغییر بماند.
-_APP_CODE_TO_MODULE = {
-    'warehouse': 'warehouse',
-    'finance': 'accounting',
-    'personnel': 'accounting',
-}
-_MODULE_TO_ALLOWED_APP = {
-    'warehouse': 'warehouse',
-    'accounting': 'finance',
-}
-
-
 def app_code_to_module(app_code):
     """
-    نگاشت کد قدیمیِ توکن/هدر ('warehouse'/'finance'/'personnel') به کد ماژول.
-    ابتدا مشخصات ماژول‌ها در _REGISTRY و MODULE_CATALOG (فیلدهای aliases و scope_codes)
-    بررسی می‌شود و در صورت نبود، از نگاشت پل سازگاری رو به عقب استفاده می‌گردد.
+    نگاشت کد توکن یا هدر به کد ماژول بر اساس مشخصات ماژول‌ها.
     """
     if not app_code:
         return None
@@ -257,8 +241,6 @@ def app_code_to_module(app_code):
             return spec.code
         if app_code in getattr(spec, 'scope_codes', ()):
             return spec.code
-    if app_code in _APP_CODE_TO_MODULE:
-        return _APP_CODE_TO_MODULE[app_code]
     return None
 
 
@@ -278,7 +260,6 @@ def default_module():
 def app_code_for_sod(module_code):
     """
     کدِ `app_module` که برای جدول SoD باید استفاده شود (مطابق `spec.sod_app_module`).
-    برای ماژول 'accounting' این همان 'personnel' است تا دادهٔ قدیمی SoD سازگار بماند.
     """
     spec = _REGISTRY.get(module_code)
     if spec and spec.sod_app_module:
@@ -288,35 +269,26 @@ def app_code_for_sod(module_code):
 
 def module_allowed_app_code(module_code):
     """
-    کدِ `allowed_apps` که در توکن برای یک ماژول درج می‌شود.
-    (مثلاً ماژول 'accounting' در توکن با کد قدیمی 'finance' ظاهر می‌شود.)
+    کدِ مجاز که در توکن برای یک ماژول درج می‌شود.
     """
     spec = _REGISTRY.get(module_code)
     if not spec:
         from platform_core.module_catalog import MODULE_CATALOG
         spec = MODULE_CATALOG.get(module_code)
-    if spec and getattr(spec, 'allowed_app_code', ''):
-        return spec.allowed_app_code
-    return _MODULE_TO_ALLOWED_APP.get(module_code, module_code)
-
-
-# کدهای مجازِ `allowed_apps` برای هر ماژول (برای بررسی قلمرو در احراز هویت).
-# ماژول 'accounting' از دیرباز هم 'finance' و هم 'personnel' را می‌پذیرد.
-_MODULE_SCOPE_CODES = {
-    'warehouse': ('warehouse',),
-    'accounting': ('finance', 'personnel'),
-}
+    if spec:
+        return spec.allowed_app_code if getattr(spec, 'allowed_app_code', '') else spec.code
+    return module_code
 
 
 def module_scope_codes(module_code):
-    """کدهای مجازِ `allowed_apps` برای بررسی قلمروِ یک ماژول."""
+    """کدهای مجاز برای بررسی قلمروِ یک ماژول."""
     spec = _REGISTRY.get(module_code)
     if not spec:
         from platform_core.module_catalog import MODULE_CATALOG
         spec = MODULE_CATALOG.get(module_code)
     if spec and getattr(spec, 'scope_codes', ()):
         return spec.scope_codes
-    return _MODULE_SCOPE_CODES.get(module_code, (module_allowed_app_code(module_code),))
+    return (module_allowed_app_code(module_code),)
 
 
 def audit_scope_keys(module_code: str) -> tuple[str, ...]:
@@ -345,29 +317,31 @@ def build_user_token_scopes(user) -> dict[str, list[str]]:
 
 def resolve_default_active_app(allowed_apps) -> str:
     """
-    تعیین قلمرو فعال پیش‌فرض بر اساس فهرست قلمروهای مجاز کاربر.
-    اولویت: اگر warehouse مجاز باشد warehouse، اگر finance مجاز باشد finance، وگرنه پیش‌فرض کاتالوگ/finance.
+    تعیین قلمرو فعال پیش‌فرض بر اساس فهرست قلمروهای مجاز کاربر و اولویت مشخصات ماژول‌ها.
     """
     allowed = set(allowed_apps or ())
     from platform_core.module_catalog import MODULE_CATALOG
     all_specs = {**MODULE_CATALOG, **_REGISTRY}
 
-    wh_spec = all_specs.get('warehouse')
-    wh_code = wh_spec.allowed_app_code if (wh_spec and wh_spec.allowed_app_code) else 'warehouse'
-    if wh_code in allowed:
-        return wh_code
-
-    acct_spec = all_specs.get('accounting')
-    acct_code = acct_spec.allowed_app_code if (acct_spec and acct_spec.allowed_app_code) else 'finance'
-    if acct_code in allowed:
-        return acct_code
-
+    matching = []
     for spec in all_specs.values():
-        code = getattr(spec, 'allowed_app_code', spec.code)
-        if code in allowed:
-            return code
+        app_code = spec.allowed_app_code if getattr(spec, 'allowed_app_code', '') else spec.code
+        if app_code in allowed:
+            matching.append((getattr(spec, 'active_priority', 100), app_code))
 
-    return acct_code
+    if matching:
+        matching.sort(key=lambda x: x[0])
+        return matching[0][1]
+
+    catalog_specs = sorted(
+        (MODULE_CATALOG.values() if MODULE_CATALOG else all_specs.values()),
+        key=lambda s: getattr(s, 'default_priority', 100)
+    )
+    if catalog_specs:
+        best_spec = catalog_specs[0]
+        return best_spec.allowed_app_code if getattr(best_spec, 'allowed_app_code', '') else best_spec.code
+
+    return ''
 
 
 def normalize_ws_app_scope(code) -> str | None:

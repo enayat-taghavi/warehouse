@@ -185,7 +185,7 @@ def check_sod_prohibition(request, page_route: str, action_code: str, app_module
     # فاز ۳ §۳.۵ — `active_app` اکنون کدِ ماژول است؛ برای جستجو در ماتریس SoD به
     # کدِ سازگار (sod_app_module، مثلاً 'personnel') نرمال می‌شود.
     from platform_core.registry import app_code_for_sod
-    app = app_code_for_sod(app_module or getattr(request, 'active_app', None) or get_current_active_app() or 'accounting')
+    app = app_code_for_sod(app_module or getattr(request, 'active_app', None) or get_current_active_app())
 
     is_prohibited, reason = SoDCacheService.is_action_prohibited(app, role, page_route, action_code)
     if is_prohibited:
@@ -252,7 +252,7 @@ class SoDPolicyPermission(permissions.BasePermission):
         role = getattr(request, 'active_role', None) or get_current_active_role() or 'operator'
         # فاز ۳ §۳.۵ — `active_app` کدِ ماژول است؛ برای SoD به کدِ سازگار نرمال می‌شود.
         from platform_core.registry import app_code_for_sod
-        app = app_code_for_sod(getattr(request, 'active_app', None) or get_current_active_app() or 'accounting')
+        app = app_code_for_sod(getattr(request, 'active_app', None) or get_current_active_app())
 
         # استخراج مسیر صفحه و کد عملیات از ویو یا مسیر درخواست
         page_route, action_code = resolve_sod_context(request, view)

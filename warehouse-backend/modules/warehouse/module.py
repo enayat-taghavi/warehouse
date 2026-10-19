@@ -46,6 +46,7 @@ WAREHOUSE_SPEC = ModuleSpec(
     allowed_app_code='warehouse',
     scope_codes=('warehouse',),
     default_priority=20,
+    active_priority=10,
 )
 
 MODULE_SPEC = WAREHOUSE_SPEC

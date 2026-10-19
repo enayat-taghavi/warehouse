@@ -48,6 +48,7 @@ ACCOUNTING_SPEC = ModuleSpec(
     allowed_app_code='finance',
     scope_codes=('finance', 'personnel'),
     default_priority=10,
+    active_priority=20,
 )
 
 MODULE_SPEC = ACCOUNTING_SPEC

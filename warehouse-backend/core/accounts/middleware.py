@@ -8,8 +8,7 @@ _current_ip_var = contextvars.ContextVar('current_ip', default=None)
 _current_user_agent_var = contextvars.ContextVar('current_user_agent', default=None)
 _current_warehouse_var = contextvars.ContextVar('current_warehouse', default=None)
 _current_active_role_var = contextvars.ContextVar('current_active_role', default=None)
-# فاز ۳ §۳.۵ — مقدار پیش‌فرضِ `active_app` اکنون کدِ ماژول است (نه 'personnel').
-_current_active_app_var = contextvars.ContextVar('current_active_app', default='accounting')
+_current_active_app_var = contextvars.ContextVar('current_active_app', default='')
 _current_client_tab_id_var = contextvars.ContextVar('current_client_tab_id', default=None)
 _current_company_var = contextvars.ContextVar('current_company', default=None)
 _current_allowed_companies_cache = contextvars.ContextVar('current_allowed_companies_cache', default=None)
@@ -55,7 +54,11 @@ def set_current_active_role(role):
     return _current_active_role_var.set(role)
 
 def get_current_active_app():
-    return _current_active_app_var.get()
+    val = _current_active_app_var.get()
+    if val:
+        return val
+    from platform_core.registry import default_module
+    return default_module()
 
 def set_current_active_app(app_module):
     return _current_active_app_var.set(app_module)
