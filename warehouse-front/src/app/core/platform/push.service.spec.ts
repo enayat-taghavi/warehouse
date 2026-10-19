@@ -8,6 +8,7 @@ import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { PushService, pushNotificationBridge, PUSH_TOKEN_STORAGE_KEY } from './push.service';
 import { ModuleRegistryService } from '../modules/module-registry.service';
+import { CommunicationService } from '../services/communication.service';
 import { APP_VERSION } from './app-version';
 import { environment } from '../../../environments/environment';
 
@@ -34,6 +35,7 @@ describe('PushService', () => {
   let mockHttp: { post: any; delete: any; get: any };
   let mockRouter: { navigate: any; navigateByUrl: any };
   let mockModuleRegistry: { getExtensions: any };
+  let mockCommService: { isChatDrawerOpen: any };
   let listeners: Record<string, (arg: any) => void>;
 
   beforeEach(() => {
@@ -66,6 +68,10 @@ describe('PushService', () => {
       getExtensions: vi.fn().mockReturnValue([]),
     };
 
+    mockCommService = {
+      isChatDrawerOpen: Object.assign(vi.fn().mockReturnValue(false), { set: vi.fn() }),
+    };
+
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
@@ -73,6 +79,7 @@ describe('PushService', () => {
         { provide: HttpClient, useValue: mockHttp },
         { provide: Router, useValue: mockRouter },
         { provide: ModuleRegistryService, useValue: mockModuleRegistry },
+        { provide: CommunicationService, useValue: mockCommService },
       ],
     });
 
@@ -225,7 +232,7 @@ describe('PushService', () => {
       })
     );
 
-    // 5c. Fallback navigation when no handler matches
+    // 5c. Fallback navigation when no handler matches -> redirects to /app
     mockModuleRegistry.getExtensions.mockReturnValue([]);
     service.handleNotificationTap({
       actionId: 'tap',
@@ -234,7 +241,17 @@ describe('PushService', () => {
         data: { target_model: 'UnknownModel' },
       } as any,
     });
-    expect(mockRouter.navigate).toHaveBeenCalledWith(['/notifications']);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app']);
+
+    // 5d. Conversation target_model opens chat drawer
+    service.handleNotificationTap({
+      actionId: 'tap',
+      notification: {
+        id: '4',
+        data: { target_model: 'Conversation', target_id: '42' },
+      } as any,
+    });
+    expect(mockCommService.isChatDrawerOpen.set).toHaveBeenCalledWith(true);
   });
 
   it('6. permission denied gracefully skips registration without throwing', async () => {
@@ -298,5 +315,26 @@ describe('PushService', () => {
 
     // Once removeAllListeners resolves, flag must be reset to false
     expect((service as any).listenersRegistered).toBe(false);
+  });
+
+  it('9. cached token in storage is immediately registered to backend upon register()', async () => {
+    (globalThis as any).Capacitor = {
+      isNativePlatform: () => true,
+      getPlatform: () => 'android',
+    };
+    localStorage.setItem(PUSH_TOKEN_STORAGE_KEY, 'cached-fcm-token');
+    const push = TestBed.inject(PushService);
+
+    await push.register();
+
+    expect(mockHttp.post).toHaveBeenCalledWith(
+      `${environment.apiUrl}/notifications/devices/`,
+      expect.objectContaining({
+        token: 'cached-fcm-token',
+        platform: 'android',
+        app_version: APP_VERSION,
+      }),
+      expect.anything()
+    );
   });
 });

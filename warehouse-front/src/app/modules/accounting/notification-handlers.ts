@@ -1,5 +1,6 @@
-import { HttpHeaders } from '@angular/common/http';
+import { HttpContext } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { SKIP_GLOBAL_ERROR_TOAST } from '../../core/error/error.interceptor';
 import { NotificationHandler, NotificationNavigationContext } from '../../core/modules/module-contract';
 
 function navigateToFleet(ctx: NotificationNavigationContext, v: any): void {
@@ -120,8 +121,8 @@ export const ACCOUNTING_NOTIFICATION_HANDLERS: NotificationHandler[] = [
         navigateByRoleForFleet(ctx);
         return;
       }
-      const headers = new HttpHeaders({ SKIP_GLOBAL_ERROR_TOAST: 'true' });
-      ctx.http.get<any>(`${environment.apiUrl}/personnel/vehicles/${targetId}/`, { headers }).subscribe({
+      const context = new HttpContext().set(SKIP_GLOBAL_ERROR_TOAST, true);
+      ctx.http.get<any>(`${environment.apiUrl}/personnel/vehicles/${targetId}/`, { context }).subscribe({
         next: (v) => navigateToFleet(ctx, v),
         error: () => navigateByRoleForFleet(ctx)
       });
@@ -137,8 +138,8 @@ export const ACCOUNTING_NOTIFICATION_HANDLERS: NotificationHandler[] = [
         navigateByRole(ctx);
         return;
       }
-      const headers = new HttpHeaders({ SKIP_GLOBAL_ERROR_TOAST: 'true' });
-      ctx.http.get<any>(`${environment.apiUrl}/personnel/profiles/${targetId}/`, { headers }).subscribe({
+      const context = new HttpContext().set(SKIP_GLOBAL_ERROR_TOAST, true);
+      ctx.http.get<any>(`${environment.apiUrl}/personnel/profiles/${targetId}/`, { context }).subscribe({
         next: (p) => navigateToPersonnel(ctx, p),
         error: () => navigateByRole(ctx)
       });

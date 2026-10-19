@@ -1,5 +1,5 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpContext } from '@angular/common/http';
+import { Injectable, inject, Injector } from '@angular/core';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -18,6 +18,7 @@ import { isNativePlatform, getAppPlatform } from './platform';
 import { APP_VERSION } from './app-version';
 import { ModuleRegistryService } from '../modules/module-registry.service';
 import { NotificationNavigationContext } from '../modules/module-contract';
+import { CommunicationService } from '../services/communication.service';
 
 export const PUSH_TOKEN_STORAGE_KEY = 'wh_push_device_token';
 
@@ -64,6 +65,7 @@ export class PushService {
   private http = inject(HttpClient);
   private router = inject(Router);
   private moduleRegistry = inject(ModuleRegistryService);
+  private injector = inject(Injector);
 
   private currentToken: string | null = null;
   private listenersRegistered = false;
@@ -91,6 +93,12 @@ export class PushService {
 
     try {
       this.setupListeners();
+
+      // اگر توکن از قبل در حافظه محلی ذخیره شده است، بلافاصله آن را به بک‌اند بفرست
+      const cachedToken = this.currentToken || this.getStoredToken();
+      if (cachedToken) {
+        this.handleRegistrationSuccess(cachedToken);
+      }
 
       let permStatus = await pushNotificationBridge.checkPermissions();
       if (permStatus.receive === 'prompt' || permStatus.receive === 'prompt-with-rationale') {
@@ -120,13 +128,11 @@ export class PushService {
     const token = this.currentToken || this.getStoredToken();
     if (token) {
       try {
-        const headers = new HttpHeaders({ SKIP_GLOBAL_ERROR_TOAST: 'true' });
         const context = new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true);
 
         this.http
           .delete(`${environment.apiUrl}/notifications/devices/`, {
             body: { token },
-            headers,
             context,
           })
           .pipe(
@@ -214,11 +220,10 @@ export class PushService {
       app_version: APP_VERSION,
     };
 
-    const headers = new HttpHeaders({ SKIP_GLOBAL_ERROR_TOAST: 'true' });
     const context = new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true);
 
     this.http
-      .post(`${environment.apiUrl}/notifications/devices/`, payload, { headers, context })
+      .post(`${environment.apiUrl}/notifications/devices/`, payload, { context })
       .pipe(
         catchError((err) => {
           console.warn('[PushService] Backend device token registration error:', err);
@@ -240,7 +245,14 @@ export class PushService {
         return;
       }
 
-      // ۲. بررسی هندلرهای ماژولار اعلان (target_model و target_id)
+      // ۲. اعلان چت و گفتگو: باز کردن کشوی گفتگو
+      if (data.target_model === 'Conversation' || data.notification_type === 'chat_message') {
+        const comm = this.injector.get(CommunicationService, null);
+        comm?.isChatDrawerOpen.set(true);
+        return;
+      }
+
+      // ۳. بررسی هندلرهای ماژولار اعلان (target_model و target_id)
       const item: any = {
         id: data.notification_id ? Number(data.notification_id) : undefined,
         target_model: data.target_model || null,
@@ -249,6 +261,12 @@ export class PushService {
         message: notif?.body || '',
         ...data,
       };
+
+      if (item.target_model === 'Conversation' || item.notification_type === 'chat_message') {
+        const comm = this.injector.get(CommunicationService, null);
+        comm?.isChatDrawerOpen.set(true);
+        return;
+      }
 
       let userPerms: string[] = [];
       let isSuperuser = false;
@@ -281,14 +299,14 @@ export class PushService {
         }
       }
 
-      // ۳. در غیر این صورت، هدایت به صفحه اعلان‌ها
+      // ۴. در غیر این صورت، هدایت به داشبورد سامانه (/app)
       if (!handled) {
-        this.router.navigate(['/notifications']);
+        this.router.navigate(['/app']);
       }
     } catch (err) {
       console.warn('[PushService] handleNotificationTap error:', err);
       try {
-        this.router.navigate(['/notifications']);
+        this.router.navigate(['/app']);
       } catch {}
     }
   }

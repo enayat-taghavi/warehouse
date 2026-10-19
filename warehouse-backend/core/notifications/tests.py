@@ -368,3 +368,52 @@ class NotificationAPITestCase(TestCase):
                 )
                 self.assertGreaterEqual(mock_close.call_count, 2)
 
+    def test_fcm_provider_payload_includes_android_priority_high(self):
+        provider = push.FcmPushProvider(credentials_file=__file__)
+        mock_creds = MagicMock()
+        mock_creds.valid = True
+        mock_creds.token = 'mock-token'
+
+        with patch.object(provider, '_load_credentials', return_value=(mock_creds, 'test-project')), \
+             patch('requests.post') as mock_post:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_post.return_value = mock_resp
+
+            provider.send(tokens=['device-token-xyz'], title='عنوان', body='متن')
+
+            mock_post.assert_called_once()
+            call_kwargs = mock_post.call_args.kwargs
+            payload = call_kwargs.get('json', {})
+            msg_obj = payload.get('message', {})
+            self.assertEqual(msg_obj.get('android', {}).get('priority'), 'HIGH')
+
+    @override_settings(OUTBOUND_HTTP_PROXY='http://127.0.0.1:8080')
+    def test_fcm_provider_uses_outbound_http_proxy(self):
+        provider = push.FcmPushProvider(credentials_file=__file__)
+        mock_creds = MagicMock()
+        mock_creds.valid = False
+        mock_creds.expired = True
+        mock_creds.token = 'mock-token'
+
+        with patch.object(provider, '_load_credentials', return_value=(mock_creds, 'test-project')), \
+             patch('requests.post') as mock_post:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_post.return_value = mock_resp
+
+            provider.send(tokens=['device-token-xyz'], title='عنوان', body='متن')
+
+            # Verify refresh was called with a Request using proxy session
+            mock_creds.refresh.assert_called_once()
+            req_arg = mock_creds.refresh.call_args.args[0]
+            self.assertIsNotNone(req_arg.session)
+            self.assertEqual(req_arg.session.proxies.get('http'), 'http://127.0.0.1:8080')
+
+            # Verify requests.post received proxies
+            mock_post.assert_called_once()
+            call_kwargs = mock_post.call_args.kwargs
+            proxies = call_kwargs.get('proxies')
+            self.assertEqual(proxies.get('http'), 'http://127.0.0.1:8080')
+            self.assertEqual(proxies.get('https'), 'http://127.0.0.1:8080')
+

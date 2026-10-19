@@ -12,6 +12,7 @@ import { INSTALLED_MODULES } from '../../../modules/installed-modules';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { WebSocketService } from '../../../core/http/websocket.service';
+import { CommunicationService } from '../../../core/services/communication.service';
 import { NotificationHandler } from '../../../core/modules/module-contract';
 
 try {
@@ -31,6 +32,7 @@ describe('NotificationCenterComponent DOM & Browser Unit Test (Type 1 Vitest + J
   let mockAuth: { user: ReturnType<typeof vi.fn> };
   let mockWs: { notifications$: Subject<any> };
   let mockRegistry: { getExtensions: ReturnType<typeof vi.fn> };
+  let mockCommService: { isChatDrawerOpen: { set: ReturnType<typeof vi.fn> } };
 
   let currentUnreadCount: number;
   let currentNotifications: NotificationItem[];
@@ -90,6 +92,12 @@ describe('NotificationCenterComponent DOM & Browser Unit Test (Type 1 Vitest + J
       notifications$: new Subject<any>()
     };
 
+    mockCommService = {
+      isChatDrawerOpen: {
+        set: vi.fn()
+      }
+    };
+
     mockRegistry = {
       getExtensions: vi.fn().mockImplementation((point: string) => {
         if (point === 'notificationHandlers') {
@@ -110,7 +118,8 @@ describe('NotificationCenterComponent DOM & Browser Unit Test (Type 1 Vitest + J
         { provide: Router, useValue: mockRouter },
         { provide: AuthService, useValue: mockAuth },
         { provide: WebSocketService, useValue: mockWs },
-        { provide: ModuleRegistryService, useValue: mockRegistry }
+        { provide: ModuleRegistryService, useValue: mockRegistry },
+        { provide: CommunicationService, useValue: mockCommService }
       ]
     }).compileComponents();
 
@@ -445,5 +454,32 @@ describe('NotificationCenterComponent DOM & Browser Unit Test (Type 1 Vitest + J
     const rowAfter = getNotificationRow('اعلان نیازمند مطالعه');
     const markBtnAfter = rowAfter.querySelector('button[title="علامت‌گذاری به عنوان خوانده‌شده"]');
     expect(markBtnAfter).toBeNull();
+  });
+
+  it('h) Clicking a chat notification (target_model === Conversation or notification_type === chat_message) opens the chat drawer', () => {
+    const chatItem: NotificationItem = {
+      id: 801,
+      title: 'پیام چت جدید',
+      message: 'سلام، لطفاً بررسی کنید',
+      notification_type: 'chat_message',
+      target_model: 'Conversation',
+      target_id: 'conv-123',
+      is_read: false,
+      created_at: '2026-10-16T10:00:00Z'
+    };
+    currentUnreadCount = 1;
+    currentNotifications = [chatItem];
+
+    fixture.detectChanges();
+    openPanel();
+
+    const row = getNotificationRow('پیام چت جدید');
+    row.click();
+    fixture.detectChanges();
+
+    expect(mockCommService.isChatDrawerOpen.set).toHaveBeenCalledWith(true);
+    expect(mockRouter.navigate).not.toHaveBeenCalled();
+    expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+    expect(component.isOpen()).toBe(false);
   });
 });

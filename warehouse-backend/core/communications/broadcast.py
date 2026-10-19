@@ -11,32 +11,79 @@ def broadcast_message_ws(msg, request=None):
     """
     برودکست بلادرنگ پیام جدید به کانال‌های وب‌سوکت مرتبط
     ارسال تک‌مقصدی به کانال اختصاصی هر یک از اعضا جهت جلوگیری از تکثیر فریم
+    و ایجاد اعلان و اعزام پوش نوتیفیکیشن برای اعضای فعال غیر بی‌صدا
     """
-    channel_layer = get_channel_layer()
-    if not channel_layer:
-        return
-
-    # سریالایز بی‌طرفانه پیام بدون کانتکست اختصاصی کاربر فرستنده تا is_me به صورت اشتباه برای سایرین True نشود
-    data = MessageSerializer(msg).data
-    data['is_me'] = False
-
-    # ارسال اختصاصی به روم شخصی هر یک از اعضای گفتگو (غیر از فرستنده)
     participant_ids = list(msg.conversation.participants.values_list('id', flat=True))
-    for p_id in participant_ids:
-        if p_id == msg.sender_id:
-            continue
-        user_room = f"chat_user_{p_id}"
+
+    channel_layer = get_channel_layer()
+    if channel_layer:
+        # سریالایز بی‌طرفانه پیام بدون کانتکست اختصاصی کاربر فرستنده تا is_me به صورت اشتباه برای سایرین True نشود
+        data = MessageSerializer(msg).data
+        data['is_me'] = False
+
+        # ارسال اختصاصی به روم شخصی هر یک از اعضای گفتگو (غیر از فرستنده)
+        for p_id in participant_ids:
+            if p_id == msg.sender_id:
+                continue
+            user_room = f"chat_user_{p_id}"
+            try:
+                async_to_sync(channel_layer.group_send)(
+                    user_room,
+                    {
+                        "type": "chat_message_broadcast",
+                        "event": "chat.message.new",
+                        "data": data
+                    }
+                )
+            except Exception as e:
+                logger.debug(f"[WS Broadcast] Error sending to user room {user_room}: {e}")
+
+    # ایجاد اعلان پایدار و اعزام پوش‌نوتیفیکیشن (سیگنال post_save خودکار پوش را با commit زمان‌بندی می‌کند)
+    if not getattr(msg, 'is_system', False):
         try:
-            async_to_sync(channel_layer.group_send)(
-                user_room,
-                {
-                    "type": "chat_message_broadcast",
-                    "event": "chat.message.new",
-                    "data": data
-                }
+            from notifications.models import Notification
+            from .models import ConversationParticipant
+
+            conv = msg.conversation
+            muted_user_ids = set(
+                ConversationParticipant.objects.filter(
+                    conversation=conv,
+                    is_muted=True
+                ).values_list('user_id', flat=True)
             )
-        except Exception as e:
-            logger.debug(f"[WS Broadcast] Error sending to user room {user_room}: {e}")
+
+            sender = getattr(msg, 'sender', None)
+            sender_display = (
+                f"{sender.first_name or ''} {sender.last_name or ''}".strip()
+                if sender else ''
+            ) or (getattr(sender, 'username', '') if sender else '') or 'کاربر'
+
+            if getattr(conv, 'conv_type', 'direct') == 'direct':
+                title = f"پیام جدید از {sender_display}"
+            else:
+                title = f"{sender_display} در {conv.title or 'گفتگو'}"
+
+            msg_preview = (msg.text or '').strip()
+            if not msg_preview:
+                has_attachments = hasattr(msg, 'attachments') and msg.attachments.exists()
+                msg_preview = '[فایل ضمیمه]' if has_attachments else 'پیام جدید'
+            elif len(msg_preview) > 120:
+                msg_preview = msg_preview[:117] + '...'
+
+            for p_id in participant_ids:
+                if p_id == msg.sender_id or p_id in muted_user_ids:
+                    continue
+                Notification.objects.create(
+                    recipient_id=p_id,
+                    title=title,
+                    message=msg_preview,
+                    notification_type='chat_message',
+                    target_model='Conversation',
+                    target_id=str(conv.id),
+                    is_read=False
+                )
+        except Exception as exc:
+            logger.exception(f"[Chat Push] Error creating notifications for message {getattr(msg, 'id', None)}: {exc}")
 
 
 def broadcast_message_updated_ws(msg, request=None):

@@ -113,9 +113,11 @@ export class AuthService {
     });
 
     if (this.isLoggedIn()) {
-      try {
-        this.pushService?.register();
-      } catch {}
+      setTimeout(() => {
+        try {
+          this.pushService?.register();
+        } catch {}
+      }, 300);
     }
   }
 

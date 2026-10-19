@@ -136,6 +136,15 @@ class FcmPushProvider(PushProvider):
             return
 
         try:
+            proxy_url = getattr(settings, 'OUTBOUND_HTTP_PROXY', '') or os.environ.get('OUTBOUND_HTTP_PROXY', '')
+            session = requests.Session()
+            if proxy_url:
+                session.proxies = {
+                    'http': proxy_url,
+                    'https': proxy_url,
+                }
+            auth_request = Request(session=session)
+
             with self._lock:
                 credentials, project_id = self._load_credentials()
                 if not credentials or not project_id:
@@ -144,7 +153,7 @@ class FcmPushProvider(PushProvider):
 
                 # Refresh only when expired or not yet valid
                 if not getattr(credentials, 'valid', False) or getattr(credentials, 'expired', False):
-                    credentials.refresh(Request())
+                    credentials.refresh(auth_request)
                 access_token = credentials.token
 
             url = self.FCM_ENDPOINT_TEMPLATE.format(project_id=project_id)
@@ -158,8 +167,9 @@ class FcmPushProvider(PushProvider):
                 for k, v in data.items():
                     clean_data[str(k)] = str(v) if v is not None else ""
 
+            proxies = {'http': proxy_url, 'https': proxy_url} if proxy_url else None
             for token in tokens:
-                self._send_single_message(url, headers, token, title, body, clean_data)
+                self._send_single_message(url, headers, token, title, body, clean_data, proxies=proxies)
 
         except Exception as exc:
             logger.exception("Unexpected error in FcmPushProvider.send: %s", exc)
@@ -172,6 +182,7 @@ class FcmPushProvider(PushProvider):
         title: str,
         body: str,
         data: dict[str, str],
+        proxies: dict[str, str] | None = None,
     ) -> None:
         payload = {
             "message": {
@@ -180,13 +191,16 @@ class FcmPushProvider(PushProvider):
                     "title": title,
                     "body": body,
                 },
+                "android": {
+                    "priority": "HIGH",
+                },
             }
         }
         if data:
             payload["message"]["data"] = data
 
         try:
-            response = requests.post(url, json=payload, headers=headers, timeout=10)
+            response = requests.post(url, json=payload, headers=headers, timeout=10, proxies=proxies)
             if response.status_code == 200:
                 logger.info("FCM push successfully delivered to token %s...", token[:12])
             else:

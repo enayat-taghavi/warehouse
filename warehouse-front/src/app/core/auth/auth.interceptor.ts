@@ -1,4 +1,4 @@
-import { inject } from '@angular/core';
+import { inject, Injector } from '@angular/core';
 import {
   HttpInterceptorFn,
   HttpRequest,
@@ -26,8 +26,8 @@ export const authInterceptor: HttpInterceptorFn = (
   req: HttpRequest<unknown>,
   next: HttpHandlerFn
 ) => {
-  const auth = inject(AuthService);
   const sessionTab = inject(SessionTabService);
+  const injector = inject(Injector);
 
   // فقط روی request‌های API اعمال شود (نه CDN، font و...)
   if (!req.url.startsWith(environment.apiUrl)) {
@@ -40,7 +40,14 @@ export const authInterceptor: HttpInterceptorFn = (
     return next(req);
   }
 
-  const token = auth.getAccessToken();
+  let auth: AuthService | null = null;
+  try {
+    auth = injector.get(AuthService, null);
+  } catch {
+    // جلوگیری از خطای وابستگی چرخه‌ای NG0200 در زمان ساخت اولیه AuthService
+  }
+
+  const token = auth?.getAccessToken() || (typeof window !== 'undefined' ? (sessionStorage.getItem('wh_access_token') || localStorage.getItem('wh_access_token')) : null);
   const authReq = token ? addToken(req, token, sessionTab) : req;
 
   return next(authReq).pipe(
@@ -59,6 +66,9 @@ export const authInterceptor: HttpInterceptorFn = (
         }
 
         // اولین درخواست 401 — شروع رفرش
+        if (!auth) {
+          return throwError(() => error);
+        }
         isRefreshing = true;
         refreshTokenSubject.next(null);
 

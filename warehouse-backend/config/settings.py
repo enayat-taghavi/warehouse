@@ -348,6 +348,8 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-entity-type',
     'x-app-version',
     'x-app-platform',
+    'skip-global-error-toast',
+    'skip_global_error_toast',
 ]
 
 REST_FRAMEWORK = {

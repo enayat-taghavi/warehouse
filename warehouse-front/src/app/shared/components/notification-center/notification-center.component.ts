@@ -1,13 +1,15 @@
 import { Component, OnInit, OnDestroy, ElementRef, HostListener, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { SKIP_GLOBAL_ERROR_TOAST } from '../../../core/error/error.interceptor';
 import { WebSocketService } from '../../../core/http/websocket.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 import { NotificationNavigationContext } from '../../../core/modules/module-contract';
+import { CommunicationService } from '../../../core/services/communication.service';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 export interface NotificationItem {
@@ -126,6 +128,7 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
   private ws = inject(WebSocketService);
   private el = inject(ElementRef);
   private moduleRegistry = inject(ModuleRegistryService);
+  private commService = inject(CommunicationService, { optional: true });
 
   isOpen = signal<boolean>(false);
   isLoading = signal<boolean>(false);
@@ -164,8 +167,8 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
   }
 
   loadUnreadCount(): void {
-    const headers = new HttpHeaders({ SKIP_GLOBAL_ERROR_TOAST: 'true' });
-    this.http.get<{ unread_count: number }>(`${environment.apiUrl}/notifications/unread-count/`, { headers }).subscribe({
+    const context = new HttpContext().set(SKIP_GLOBAL_ERROR_TOAST, true);
+    this.http.get<{ unread_count: number }>(`${environment.apiUrl}/notifications/unread-count/`, { context }).subscribe({
       next: (res) => {
         this.unreadCount.set(res.unread_count || 0);
       },
@@ -175,9 +178,9 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
 
   loadNotifications(): void {
     this.isLoading.set(true);
-    const headers = new HttpHeaders({ SKIP_GLOBAL_ERROR_TOAST: 'true' });
+    const context = new HttpContext().set(SKIP_GLOBAL_ERROR_TOAST, true);
     // اندپوینت صفحه‌بندی‌شده است و {count, results} برمی‌گرداند (DEF-12)
-    this.http.get<NotificationItem[] | { results: NotificationItem[] }>(`${environment.apiUrl}/notifications/`, { headers }).subscribe({
+    this.http.get<NotificationItem[] | { results: NotificationItem[] }>(`${environment.apiUrl}/notifications/`, { context }).subscribe({
       next: (res) => {
         const items = Array.isArray(res) ? res : (res?.results ?? []);
         this.notifications.set(items);
@@ -198,8 +201,8 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
     item.is_read = true;
     this.unreadCount.update((cnt) => Math.max(0, cnt - 1));
 
-    const headers = new HttpHeaders({ SKIP_GLOBAL_ERROR_TOAST: 'true' });
-    this.http.post(`${environment.apiUrl}/notifications/${item.id}/mark-read/`, {}, { headers }).subscribe({
+    const context = new HttpContext().set(SKIP_GLOBAL_ERROR_TOAST, true);
+    this.http.post(`${environment.apiUrl}/notifications/${item.id}/mark-read/`, {}, { context }).subscribe({
       error: () => {}
     });
   }
@@ -213,8 +216,8 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
     this.notifications.set([...currentItems]);
     this.unreadCount.set(0);
 
-    const headers = new HttpHeaders({ SKIP_GLOBAL_ERROR_TOAST: 'true' });
-    this.http.post(`${environment.apiUrl}/notifications/mark-all-read/`, {}, { headers }).subscribe({
+    const context = new HttpContext().set(SKIP_GLOBAL_ERROR_TOAST, true);
+    this.http.post(`${environment.apiUrl}/notifications/mark-all-read/`, {}, { context }).subscribe({
       error: () => {}
     });
   }
@@ -226,6 +229,12 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
     // اگر آدرس مستقیم در پی‌لود اعلان وجود داشته باشد
     if (item.url) {
       this.router.navigateByUrl(item.url);
+      return;
+    }
+
+    // اعلان گفتگو / چت: باز کردن کشوی گفتگو
+    if (item.target_model === 'Conversation' || item.notification_type === 'chat_message') {
+      this.commService?.isChatDrawerOpen.set(true);
       return;
     }
 
