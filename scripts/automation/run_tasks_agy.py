@@ -89,7 +89,9 @@ THROTTLE_COOLDOWN_SECONDS = 5 * 60
 QUOTA_ERROR_RE = re.compile(r"quota|rate.?limit|resource.?exhausted|too many requests|\b429\b", re.IGNORECASE)
 # فرمان‌های require/verify سنگین با یک قفل سراسری یکی‌یکی اجرا می‌شوند
 HEAVY_COMMAND_RE = re.compile(r"\bng\s+(build|test)\b|ng-test-compare|gradlew|guardian|manage\.py\s+(migrate|test)\b|"
-                              r"\bnpm\s+(ci|install|i|run\s+build)\b", re.IGNORECASE)
+                              r"\bnpm\s+(ci|install|i|run\s+build)\b|"
+                              # زیرفرمان‌های verify_tools.py که آزمون، DB آزمون یا ساخت اجرا می‌کنند
+                              r"django-tests|migrate-empty|sample-module|release-check", re.IGNORECASE)
 # پوشه‌های ignore‌شده‌ای که در worktree با junction به پروژه وصل یا کپی می‌شوند
 WORKTREE_LINKS = ("warehouse-front/node_modules", "warehouse-backend/venv")
 WORKTREE_COPIES = ("warehouse-backend/.env",)
@@ -916,6 +918,17 @@ def remove_links(path: Path) -> bool:
     return ok
 
 
+def links_inside(root: Path) -> list[str]:
+    """junction یا symlink پوشه‌ای در هر عمق؛ هرگز وارد خود پیوند نمی‌شود."""
+    found = []
+    for dirpath, dirnames, _ in os.walk(root):
+        for d in list(dirnames):
+            if is_link(Path(dirpath) / d):
+                found.append(str(Path(dirpath) / d))
+                dirnames.remove(d)
+    return found
+
+
 def create_worktree(path: Path, branch: str, base: str) -> str:
     """worktree تازه روی شاخهٔ تازه از base، با junction پوشه‌های سنگین ignore‌شده و کپی .env. خروجی: خطا یا ''."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -947,6 +960,10 @@ def remove_worktree(path: Path, branch: str):
         git_run("worktree", "prune")
     elif not remove_links(path):
         log(f"WARNING: a junction in {path} could not be removed; the worktree is kept.")
+        return
+    elif links_inside(path):
+        # مثلاً junction جامانده از verify کشته‌شده (verify_tools.py زیر scratch/runner-base می‌سازد)
+        log(f"WARNING: links remain inside {path} ({links_inside(path)[:3]}); the worktree is kept.")
         return
     else:
         rc, out = git_run("worktree", "remove", str(path))

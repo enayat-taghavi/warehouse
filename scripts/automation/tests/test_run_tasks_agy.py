@@ -192,6 +192,23 @@ class RunnerCase(unittest.TestCase):
             t.join()
         self.assertGreaterEqual(time.time() - started, 3.0)
 
+    def test_leftover_link_keeps_worktree(self):
+        R.configure(self.repo, self.wt_root)
+        path, branch = self.wt_root / "run" / "task-01", "runner/run/task-01"
+        self.assertEqual(R.create_worktree(path, branch, git(self.repo, "rev-parse", "HEAD")), "")
+        self.assertTrue(R.is_link(path / "warehouse-front" / "node_modules"))
+        (path / "scratch").mkdir()
+        R.make_link(self.repo / "b", path / "scratch" / "leftover")
+        R.remove_worktree(path, branch)
+        self.assertTrue(path.exists())
+        self.assertTrue((self.repo / "b" / ".keep").exists())
+        self.assert_clean_shared_dirs()
+        subprocess.run(["cmd", "/c", "rmdir", str(path / "scratch" / "leftover")], check=True)
+        R.remove_worktree(path, branch)
+        self.assertFalse(path.exists())
+        self.assertEqual(git(self.repo, "branch", "--list", "runner/*"), "")
+        self.assert_clean_shared_dirs()
+
     # ------------------------------------------------------------ sequential (step 1 behaviour)
 
     def test_sequential_task_runs_in_project(self):
