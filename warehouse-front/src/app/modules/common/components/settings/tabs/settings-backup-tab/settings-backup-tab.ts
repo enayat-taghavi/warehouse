@@ -7,7 +7,7 @@ import { SettingsService } from '../../../../../../core/services/settings';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { finalize } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
-import { offlineDb, downloadLocalDatabaseSnapshotFile } from '../../../../../../core/services/offline-db';
+import { offlineDb, warehouseOfflineDb, financeOfflineDb, downloadLocalDatabaseSnapshotFile } from '../../../../../../core/services/offline-db';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
@@ -190,10 +190,18 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
       });
   }
 
+  private async countTotalSyncQueueEntries(): Promise<number> {
+    const [whItems, finItems] = await Promise.all([
+      warehouseOfflineDb.syncQueue.toArray(),
+      financeOfflineDb.syncQueue.toArray()
+    ]);
+    return (whItems?.length || 0) + (finItems?.length || 0);
+  }
+
   async openRollbackConfirm(snapshot: any) {
-    const q = await offlineDb.syncQueue.toArray();
-    if (q.length > 0) {
-      this.toast.show('error', `صف آفلاین شامل ${q.length} رکورد همگام‌نشده است. جهت جلوگیری از نابودی داده‌ها، ابتدا باید آنها را به سرور ارسال کنید.`);
+    const pendingCount = await this.countTotalSyncQueueEntries();
+    if (pendingCount > 0) {
+      this.toast.show('error', `صف آفلاین شامل ${pendingCount} رکورد همگام‌نشده است. جهت جلوگیری از نابودی داده‌ها، ابتدا باید آنها را به سرور ارسال کنید.`);
       return;
     }
 
@@ -321,9 +329,9 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const q = await offlineDb.syncQueue.toArray();
-    if (q.length > 0) {
-      this.toast.show('error', `صف آفلاین شامل ${q.length} رکورد همگام‌نشده است. جهت جلوگیری از نابودی داده‌ها، ابتدا باید آنها را به سرور ارسال کنید.`);
+    const pendingCount = await this.countTotalSyncQueueEntries();
+    if (pendingCount > 0) {
+      this.toast.show('error', `صف آفلاین شامل ${pendingCount} رکورد همگام‌نشده است. جهت جلوگیری از نابودی داده‌ها، ابتدا باید آنها را به سرور ارسال کنید.`);
       return;
     }
 

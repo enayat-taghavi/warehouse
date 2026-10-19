@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { runInInjectionContext, Injector, ChangeDetectorRef } from '@angular/core';
 import { of, throwError } from 'rxjs';
 
-import { offlineDb } from '../../../../../../core/services/offline-db';
+import { offlineDb, warehouseOfflineDb, financeOfflineDb } from '../../../../../../core/services/offline-db';
 import { SettingsBackupTabComponent } from './settings-backup-tab';
 import { SettingsService } from '../../../../../../core/services/settings';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
@@ -22,6 +22,8 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
     vi.useFakeTimers();
     clearCachesSpy = vi.spyOn(offlineDb, 'clearServerDerivedCaches').mockResolvedValue(undefined as any);
     vi.spyOn(offlineDb.syncQueue, 'toArray').mockResolvedValue([]);
+    vi.spyOn(warehouseOfflineDb.syncQueue, 'toArray').mockResolvedValue([]);
+    vi.spyOn(financeOfflineDb.syncQueue, 'toArray').mockResolvedValue([]);
 
     settingsServiceMock = {
       downloadBackup: vi.fn().mockReturnValue(of(new Blob(['test-dump']))),
@@ -104,7 +106,21 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
 
   describe('Restore Backup Flow & Modal (Items 3-4, 5-7)', () => {
     it('should block restore modal if sync queue has pending offline items', async () => {
+      vi.spyOn(warehouseOfflineDb.syncQueue, 'toArray').mockResolvedValue([{ id: 1, action: 'save' }] as any);
       vi.spyOn(offlineDb.syncQueue, 'toArray').mockResolvedValue([{ id: 1, action: 'save' }] as any);
+
+      component.restoreFile = new File(['dump'], 'test.wbak');
+      component.restorePassword = 'secretPassword123';
+
+      await component.openRestoreConfirm();
+
+      expect(toastServiceMock.show).toHaveBeenCalledWith('error', expect.stringMatching('صف آفلاین'));
+      expect(component.showRestoreConfirm).toBe(false);
+    });
+
+    it('should block restore modal when only the finance queue has a record and warehouse queue is empty', async () => {
+      vi.spyOn(warehouseOfflineDb.syncQueue, 'toArray').mockResolvedValue([]);
+      vi.spyOn(financeOfflineDb.syncQueue, 'toArray').mockResolvedValue([{ id: 2, action: 'pay' }] as any);
 
       component.restoreFile = new File(['dump'], 'test.wbak');
       component.restorePassword = 'secretPassword123';
@@ -205,6 +221,31 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
       expect(toastServiceMock.show).toHaveBeenCalledWith('error', 'خطای بازگردانی');
       expect(toastServiceMock.show).toHaveBeenCalledWith('error', expect.stringMatching('فایل نجات'), 10000);
       expect(component.showRestoreConfirm).toBe(false);
+    });
+  });
+
+  describe('Server Rollback Flow & Offline Queue Gate', () => {
+    it('should block rollback modal when only the finance queue has a record and warehouse queue is empty', async () => {
+      vi.spyOn(warehouseOfflineDb.syncQueue, 'toArray').mockResolvedValue([]);
+      vi.spyOn(financeOfflineDb.syncQueue, 'toArray').mockResolvedValue([{ id: 10, action: 'payroll' }] as any);
+
+      const fakeSnapshot = { filename: 'snap_1.dump' };
+      await component.openRollbackConfirm(fakeSnapshot);
+
+      expect(toastServiceMock.show).toHaveBeenCalledWith('error', expect.stringMatching('صف آفلاین'));
+      expect(component.showRollbackConfirm).toBe(false);
+      expect(component.selectedRollbackSnapshot).toBeNull();
+    });
+
+    it('should open rollback modal when both offline queues are clear', async () => {
+      vi.spyOn(warehouseOfflineDb.syncQueue, 'toArray').mockResolvedValue([]);
+      vi.spyOn(financeOfflineDb.syncQueue, 'toArray').mockResolvedValue([]);
+
+      const fakeSnapshot = { filename: 'snap_1.dump' };
+      await component.openRollbackConfirm(fakeSnapshot);
+
+      expect(component.showRollbackConfirm).toBe(true);
+      expect(component.selectedRollbackSnapshot).toBe(fakeSnapshot);
     });
   });
 });
