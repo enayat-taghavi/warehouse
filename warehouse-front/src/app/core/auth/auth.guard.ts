@@ -180,11 +180,14 @@ export const AuthGuard: CanActivateFn = (route, state) => {
       if (mod.scopeKind === 'warehouse' || mod.scopeKind === 'finance') {
         continue;
       }
+      const modRouteAccess = getModuleRouteAccess(mod);
+      if (!modRouteAccess) {
+        continue;
+      }
       const cleanPrefix = (mod.routePrefix || '').replace(/^\//, '');
       const isModScope = (mod.routePrefix && state.url.startsWith(mod.routePrefix)) || route.routeConfig?.path === cleanPrefix;
       if (isModScope) {
-        const modRouteAccess = getModuleRouteAccess(mod);
-        let hasModAccess = isAdmin || Boolean(modRouteAccess?.guardAccessPermissions?.some(p => userPerms.includes(p)));
+        let hasModAccess = isAdmin || Boolean(modRouteAccess.guardAccessPermissions?.some(p => userPerms.includes(p)));
 
         if (mod.extensions?.companies?.hasWarehouseModuleToggle) {
           const activeCompany = inject(ActiveCompanyService, { optional: true });

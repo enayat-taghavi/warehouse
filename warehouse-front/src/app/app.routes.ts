@@ -103,9 +103,6 @@ export const routes: Routes = [
         return 'app/launcher';
       }
 
-      const whMarkers = registry.permissionMarkers('warehouse');
-      const acctMarkers = registry.permissionMarkers('accounting');
-
       const installed = registry.getInstalledModules();
       const accessibleModules = installed.filter(mod => {
         const markers = registry.permissionMarkers(mod.code);
@@ -220,9 +217,6 @@ export const routes: Routes = [
       if (isSuper) {
         return 'app/launcher';
       }
-
-      const whMarkers = registry.permissionMarkers('warehouse');
-      const acctMarkers = registry.permissionMarkers('accounting');
 
       const installed = registry.getInstalledModules();
       const accessibleModules = installed.filter(mod => {
