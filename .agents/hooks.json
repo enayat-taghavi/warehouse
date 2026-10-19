@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"E:/warehouse project/.claude/hooks/guard.py\"",
+            "command": "python ../.claude/hooks/guard.py",
             "timeout": 10
           }
         ]
