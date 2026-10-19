@@ -175,6 +175,39 @@ export const AuthGuard: CanActivateFn = (route, state) => {
       }
     }
 
+    // بررسی تعمیم‌یافته برای هر ماژول نصب‌شده دیگر (N ماژول)
+    for (const mod of installed) {
+      if (mod.scopeKind === 'warehouse' || mod.scopeKind === 'finance') {
+        continue;
+      }
+      const cleanPrefix = (mod.routePrefix || '').replace(/^\//, '');
+      const isModScope = (mod.routePrefix && state.url.startsWith(mod.routePrefix)) || route.routeConfig?.path === cleanPrefix;
+      if (isModScope) {
+        const modRouteAccess = getModuleRouteAccess(mod);
+        let hasModAccess = isAdmin || Boolean(modRouteAccess?.guardAccessPermissions?.some(p => userPerms.includes(p)));
+
+        if (mod.extensions?.companies?.hasWarehouseModuleToggle) {
+          const activeCompany = inject(ActiveCompanyService, { optional: true });
+          if (activeCompany?.activeCompany && activeCompany.activeCompany.has_warehouse_module === false) {
+            hasModAccess = false;
+          }
+        }
+
+        if (isCompanyDocsRoute && mod.extensions?.layoutNav?.hasCompanyDocumentsArchive) {
+          const activeCompanyService = inject(ActiveCompanyService);
+          hasModAccess = isAdmin || activeCompanyService.hasCompanyDocumentsAccess();
+        }
+
+        if (!hasModAccess) {
+          const fallbackMod = installed.find(m => m.code !== mod.code && (isAdmin || Boolean(getModuleRouteAccess(m)?.guardAccessPermissions?.some(p => userPerms.includes(p)))));
+          if (fallbackMod) {
+            return router.parseUrl(fallbackMod.defaultRoute);
+          }
+          return router.parseUrl('/login');
+        }
+      }
+    }
+
     // بررسی دسترسی دقیق بر اساس نقش فعال SoD (Segregation of Duties)
     const personaService = inject(AppPersonaService);
     // مقصد جایگزین نقش؛ اگر همان مسیرِ ردشده باشد (حلقهٔ ریدایرکت) به لانچر برو
@@ -192,20 +225,20 @@ export const AuthGuard: CanActivateFn = (route, state) => {
     const requiredPerms = path ? getRequiredRoutePermissions(path) : undefined;
     if (path && requiredPerms) {
       if (!isAdmin) {
-        const isWhRoute = Boolean(whRouteAccess?.pagePermissions && path in whRouteAccess.pagePermissions);
-        if (!hasWarehouseAccess && isWhRoute) {
-          if (hasPersonnelAccess) {
-            return roleHome();
+        // پیمایش تعمیم‌یافته روی کلیه ماژول‌های نصب‌شده برای بررسی دسترسی ماژول در صورت نیاز به روت
+        for (const mod of installed) {
+          const modRouteAccess = getModuleRouteAccess(mod);
+          const isModRoute = Boolean(modRouteAccess?.pagePermissions && path in modRouteAccess.pagePermissions);
+          if (isModRoute) {
+            const hasModAccess = Boolean(modRouteAccess?.guardAccessPermissions?.some(p => userPerms.includes(p)));
+            if (!hasModAccess) {
+              const otherAccessible = installed.find(m => m.code !== mod.code && Boolean(getModuleRouteAccess(m)?.guardAccessPermissions?.some(p => userPerms.includes(p))));
+              if (otherAccessible) {
+                return mod.scopeKind === 'warehouse' ? roleHome() : router.parseUrl(otherAccessible.defaultRoute);
+              }
+              return router.parseUrl('/login');
+            }
           }
-          return router.parseUrl('/login');
-        }
-
-        const isFinanceRoute = Boolean(accRouteAccess?.pagePermissions && path in accRouteAccess.pagePermissions);
-        if (!hasPersonnelAccess && isFinanceRoute) {
-          if (hasWarehouseAccess) {
-            return router.parseUrl('/app/warehouse/dashboard');
-          }
-          return router.parseUrl('/login');
         }
 
         const hasAccess = requiredPerms.some(p => userPerms.includes(p));

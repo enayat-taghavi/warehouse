@@ -42,6 +42,10 @@ WAREHOUSE_SPEC = ModuleSpec(
     ),
     audit_scope_keys=('docs', 'dispatch', 'customs', 'feeding', 'labels', 'counter', 'supervisor', 'manager', 'warehouses'),
     sod_app_module='warehouse',
+    aliases=(),
+    allowed_app_code='warehouse',
+    scope_codes=('warehouse',),
+    default_priority=20,
 )
 
 MODULE_SPEC = WAREHOUSE_SPEC

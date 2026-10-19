@@ -39,7 +39,6 @@ from .broadcast import (
     broadcast_message_updated_ws, broadcast_read_receipt_ws
 )
 from common.warehouse_scope import can_access_warehouse
-from django.apps import apps
 from settings_core.services import get_setting
 
 logger = logging.getLogger(__name__)
@@ -517,19 +516,17 @@ class GenericCommentViewSet(viewsets.ModelViewSet):
         if not can_access_comment_target(user, ct, object_id):
             raise PermissionDenied('شما به موجودیت هدف این کامنت دسترسی ندارید')
 
-        # استخراج انبار مرتبط در صورت وجود — فقط اگر اپ انبار نصب باشد.
-        # در نصب حسابداری‌تنها این بلوک بی‌صدا رد می‌شود تا چت خنثی بماند.
+        # استخراج انبار مرتبط در صورت وجود (بدون وابستگی مستقیم به اپ انبار)
         wh = None
-        if apps.is_installed('warehouses'):
-            model_cls = ct.model_class()
-            if model_cls:
-                target = model_cls.objects.filter(id=object_id).first()
-                if target:
-                    if hasattr(target, 'warehouse') and target.warehouse:
-                        wh = target.warehouse
-                    elif hasattr(target, 'warehouse_id') and target.warehouse_id:
-                        Warehouse = apps.get_model('warehouses', 'Warehouse')
-                        wh = Warehouse.objects.filter(id=target.warehouse_id).first()
+        model_cls = ct.model_class()
+        if model_cls:
+            target = model_cls.objects.filter(id=object_id).first()
+            if target:
+                if hasattr(target, 'warehouse') and target.warehouse:
+                    wh = target.warehouse
+                elif hasattr(target, 'warehouse_id') and target.warehouse_id:
+                    from platform_core.registry import resolve_entity
+                    wh = resolve_entity('warehouse', target.warehouse_id)
 
         comment = serializer.save(author=user, warehouse_id=getattr(wh, 'id', wh) if wh else None)
 

@@ -9,6 +9,20 @@ from platform_core.query_engine import (
 )
 
 
+def get_user_report_extra_fields():
+    """فیلد اضافه تعداد انبارهای تخصیص‌یافته روی موجودیت کاربران پلتفرم."""
+    from django.db.models import Count
+    return FieldDef(
+        key='assigned_warehouses_count', source='assigned_warehouses_count',
+        label='تعداد انبارهای تخصیص‌یافته', type='number',
+        groupable=False, aggregatable=False,
+        annotation=lambda base_prefix=None: Count(
+            f'{base_prefix}__assigned_warehouses' if base_prefix else 'assigned_warehouses',
+            distinct=True,
+        ),
+    )
+
+
 def build_warehouse_entities():
     """ساخت تعریف موجودیت انبارها."""
     from warehouses.models import Warehouse

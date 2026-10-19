@@ -145,7 +145,7 @@ assert 'accounting' in mods, "accounting must be installed"
 assert 'warehouse' not in mods, "warehouse must NOT be installed in accounting-only"
 print("✓ ماژول‌های نصب‌شده: accounting (بدون انبار)")
 
-client = Client()
+client = Client(HTTP_HOST='localhost')
 r_conf = client.get('/api/public/config/')
 assert r_conf.status_code == 200
 pub_mods = r_conf.json().get('installed_modules', [])
@@ -181,7 +181,7 @@ assert 'warehouse' in mods, "warehouse must be installed"
 assert 'accounting' not in mods, "accounting must NOT be installed in warehouse-only"
 print("✓ ماژول‌های نصب‌شده: warehouse (بدون پرسنل)")
 
-client = Client()
+client = Client(HTTP_HOST='localhost')
 r_conf = client.get('/api/public/config/')
 assert r_conf.status_code == 200
 pub_mods = r_conf.json().get('installed_modules', [])
@@ -214,7 +214,7 @@ mods = installed_modules()
 assert 'warehouse' in mods and 'accounting' in mods, "Both modules must be installed in Full suite"
 print("✓ ماژول‌های نصب‌شده: همزمان warehouse و accounting")
 
-client = Client()
+client = Client(HTTP_HOST='localhost')
 r_conf = client.get('/api/public/config/')
 assert r_conf.status_code == 200
 pub_mods = r_conf.json().get('installed_modules', [])

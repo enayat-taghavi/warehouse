@@ -73,17 +73,14 @@ def _register_platform_entities():
     if apps.is_installed('accounts'):
         from accounts.models import CustomUser
         user_extra = {}
-        # فیلد اضافه تعداد انبارهای تخصیص‌یافته در صورت فعال بودن انبار
-        if apps.is_installed('warehouses'):
-            user_extra['assigned_warehouses_count'] = FieldDef(
-                key='assigned_warehouses_count', source='assigned_warehouses_count',
-                label='تعداد انبارهای تخصیص‌یافته', type='number',
-                groupable=False, aggregatable=False,
-                annotation=lambda base_prefix=None: Count(
-                    f'{base_prefix}__assigned_warehouses' if base_prefix else 'assigned_warehouses',
-                    distinct=True,
-                ),
-            )
+        # فیلدهای اضافه کاربری ارائه‌شده توسط ماژول‌های فعال (نظیر انبارداری)
+        from platform_core.registry import contributions
+        for extra in contributions('user_report_extra_fields'):
+            field = extra() if callable(extra) else extra
+            if hasattr(field, 'key'):
+                user_extra[field.key] = field
+            elif isinstance(field, tuple) and len(field) == 2:
+                user_extra[field[0]] = field[1]
         from accounts.scope import get_visible_users_for_user
         register_entity(
             EntityConfig(

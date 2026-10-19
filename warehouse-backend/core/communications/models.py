@@ -56,11 +56,8 @@ class Conversation(SyncModelMixin):
         """سازگاری رو به عقب — خواندن انبار مرتبط بدون وابستگی به اپ انبار."""
         if not self.warehouse_id:
             return None
-        from django.apps import apps
-        if apps.is_installed('warehouses'):
-            Warehouse = apps.get_model('warehouses', 'Warehouse')
-            return Warehouse.objects.filter(id=self.warehouse_id).first()
-        return None
+        from platform_core.registry import resolve_entity
+        return resolve_entity('warehouse', self.warehouse_id)
 
     @warehouse.setter
     def warehouse(self, val):
@@ -267,11 +264,8 @@ class GenericComment(SyncModelMixin):
         """سازگاری رو به عقب — خواندن انبار مرتبط بدون وابستگی به اپ انبار."""
         if not self.warehouse_id:
             return None
-        from django.apps import apps
-        if apps.is_installed('warehouses'):
-            Warehouse = apps.get_model('warehouses', 'Warehouse')
-            return Warehouse.objects.filter(id=self.warehouse_id).first()
-        return None
+        from platform_core.registry import resolve_entity
+        return resolve_entity('warehouse', self.warehouse_id)
 
     @warehouse.setter
     def warehouse(self, val):

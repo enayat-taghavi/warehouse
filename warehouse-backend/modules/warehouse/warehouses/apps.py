@@ -61,6 +61,20 @@ class WarehousesConfig(AppConfig):
 
         contribute('company_of:warehouse', _warehouse_company_resolver)
 
+        # حل موجودیت‌های انبار و فیلدهای اختصاصی برای هسته (بدون وابستگی معکوس هسته به انبار)
+        from warehouses.models import Warehouse
+        contribute('entity_resolver:warehouse', lambda wid: Warehouse.objects.filter(id=wid).first())
+        contribute('entity_map_resolver:warehouse', lambda wids: dict(Warehouse.objects.filter(id__in=wids).values_list('id', 'name')))
+        contribute('user_admin_fields', 'assigned_warehouses')
+
+        from warehouses.report_entities import get_user_report_extra_fields
+        contribute('user_report_extra_fields', get_user_report_extra_fields())
+        try:
+            from reports.registry import _register_platform_entities
+            _register_platform_entities()
+        except Exception:
+            pass
+
         # ثبت اکستنشن انبار برای کاربران پلتفرم (گام ۳-ب)
         from warehouses.user_extension import register_user_extension
         register_user_extension()

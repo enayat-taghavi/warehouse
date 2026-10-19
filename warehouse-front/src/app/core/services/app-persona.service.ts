@@ -93,17 +93,19 @@ export class AppPersonaService {
   });
 
   public canAccessApp(app: AppModuleType): boolean {
-    // اگر سامانه انبارداری است و شرکت فعال فاقد ماژول انبارداری است، دسترسی مسدود می‌شود
-    if (app === 'warehouse' && this.activeCompanyService && !this.activeCompanyService.hasWarehouseModule) {
+    const spec = this.moduleRegistry.getSpec(app);
+    if (!spec) return false;
+
+    // اگر ماژول وابسته به پرچم ماژول انبارداری شرکت است و شرکت فعال فاقد ماژول است، دسترسی مسدود می‌شود
+    if (spec.extensions?.companies?.hasWarehouseModuleToggle && this.activeCompanyService && !this.activeCompanyService.hasWarehouseModule) {
       return false;
     }
 
-    if ((app === 'accounting' || app === 'personnel') && this.activeCompanyService?.hasCompanyDocumentsAccess()) {
+    // اگر ماژول آرشیو اسناد شرکت دارد و کاربر به اسناد شرکت فعال دسترسی دارد، مجاز است
+    if (spec.extensions?.layoutNav?.hasCompanyDocumentsArchive && this.activeCompanyService?.hasCompanyDocumentsAccess()) {
       return true;
     }
 
-    const spec = this.moduleRegistry.getSpec(app);
-    if (!spec) return false;
     return this.moduleRegistry.userHasAccessToModule(
       spec.code,
       this.auth.userPermissions() || [],

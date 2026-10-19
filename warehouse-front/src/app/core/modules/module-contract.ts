@@ -35,7 +35,7 @@ export interface FrontendModuleSpec {
   icon: string;
   routePrefix: string;
   defaultRoute: string;
-  scopeKind: 'warehouse' | 'finance' | 'operations';
+  scopeKind: 'warehouse' | 'finance' | 'operations' | string;
   permissionMarkers: string[];
   roles: string[];
   isSuperuserOnly?: boolean;
@@ -78,7 +78,7 @@ export interface ExtensionMap {
       label: string;
       count: number;
     };
-    deepSyncScope?: 'warehouse' | 'finance';
+    deepSyncScope?: 'warehouse' | 'finance' | string;
   };
 
   /**

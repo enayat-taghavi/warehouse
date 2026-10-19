@@ -44,6 +44,10 @@ ACCOUNTING_SPEC = ModuleSpec(
     ),
     audit_scope_keys=('personnel', 'payroll', 'attendance', 'fleet', 'treasury', 'finance'),
     sod_app_module='personnel',
+    aliases=('finance', 'personnel'),
+    allowed_app_code='finance',
+    scope_codes=('finance', 'personnel'),
+    default_priority=10,
 )
 
 MODULE_SPEC = ACCOUNTING_SPEC

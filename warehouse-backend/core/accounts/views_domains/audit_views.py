@@ -1025,10 +1025,8 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         wh_ids = {item.warehouse_id for item in qs if getattr(item, 'warehouse_id', None)}
         wh_map = {}
         if wh_ids:
-            from django.apps import apps
-            if apps.is_installed('warehouses'):
-                Warehouse = apps.get_model('warehouses', 'Warehouse')
-                wh_map = dict(Warehouse.objects.filter(id__in=wh_ids).values_list('id', 'name'))
+            from platform_core.registry import resolve_entity_map
+            wh_map = resolve_entity_map('warehouse', wh_ids)
 
         all_cols_def = [
             ('index', 'ردیف', 8),

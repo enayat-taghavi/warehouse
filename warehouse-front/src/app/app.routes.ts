@@ -25,6 +25,7 @@ import { INSTALLED_MODULES } from './modules/installed-modules';
 
 const dynamicModuleRoutes: Routes = INSTALLED_MODULES.filter(m => typeof m.routes === 'function').map(m => {
   const cleanPrefix = m.routePrefix.replace(/^\//, '');
+  const hasWarehouseToggle = Boolean(m.extensions?.companies?.hasWarehouseModuleToggle);
   return {
     path: cleanPrefix,
     component: Layout,
@@ -32,7 +33,7 @@ const dynamicModuleRoutes: Routes = INSTALLED_MODULES.filter(m => typeof m.route
       () => {
         const reg = inject(ModuleRegistryService);
         if (!reg.isModuleInstalled(m.code)) return false;
-        if (m.code === 'warehouse') {
+        if (hasWarehouseToggle) {
           const activeCompany = inject(ActiveCompanyService, { optional: true });
           if (activeCompany?.activeCompany && activeCompany.activeCompany.has_warehouse_module === false) {
             return false;
@@ -43,7 +44,7 @@ const dynamicModuleRoutes: Routes = INSTALLED_MODULES.filter(m => typeof m.route
     ],
     canActivate: [
       AuthGuard,
-      ...(m.code === 'warehouse' ? [WarehouseCompanyGuard] : [])
+      ...(hasWarehouseToggle ? [WarehouseCompanyGuard] : [])
     ],
     canActivateChild: [AuthGuardChild],
     loadChildren: m.routes!
@@ -105,24 +106,22 @@ export const routes: Routes = [
       const whMarkers = registry.permissionMarkers('warehouse');
       const acctMarkers = registry.permissionMarkers('accounting');
 
-      const hasWh = registry.isModuleInstalled('warehouse') && whMarkers.some(p => perms.includes(p));
-      const hasFin = registry.isModuleInstalled('accounting') && acctMarkers.some(p => perms.includes(p));
+      const installed = registry.getInstalledModules();
+      const accessibleModules = installed.filter(mod => {
+        const markers = registry.permissionMarkers(mod.code);
+        return registry.isModuleInstalled(mod.code) && markers.some(p => perms.includes(p));
+      });
 
-      if (hasWh && hasFin) {
+      if (accessibleModules.length > 1) {
         return 'app/launcher';
       }
-      if (hasWh && !hasFin) {
-        return 'app/warehouse/dashboard';
+      if (accessibleModules.length === 1) {
+        return accessibleModules[0].defaultRoute.replace(/^\//, '');
       }
-      if (!hasWh && hasFin) {
-        // خانهٔ نقش را ریشهٔ سامانه مالی بر اساس پرسونای فعال تعیین می‌کند (accounting.routes)
-        return 'app/finance';
-      }
-      if (!hasWh && !hasFin) {
-        const activeCompanyService = inject(ActiveCompanyService);
-        if (activeCompanyService.hasCompanyDocumentsAccess()) {
-          return 'app/finance/company-documents';
-        }
+
+      const activeCompanyService = inject(ActiveCompanyService);
+      if (activeCompanyService.hasCompanyDocumentsAccess()) {
+        return 'app/finance/company-documents';
       }
       return 'app/launcher';
     },
@@ -225,23 +224,22 @@ export const routes: Routes = [
       const whMarkers = registry.permissionMarkers('warehouse');
       const acctMarkers = registry.permissionMarkers('accounting');
 
-      const hasWh = registry.isModuleInstalled('warehouse') && whMarkers.some(p => perms.includes(p));
-      const hasFin = registry.isModuleInstalled('accounting') && acctMarkers.some(p => perms.includes(p));
+      const installed = registry.getInstalledModules();
+      const accessibleModules = installed.filter(mod => {
+        const markers = registry.permissionMarkers(mod.code);
+        return registry.isModuleInstalled(mod.code) && markers.some(p => perms.includes(p));
+      });
 
-      if (hasWh && hasFin) {
+      if (accessibleModules.length > 1) {
         return 'app/launcher';
       }
-      if (hasWh && !hasFin) {
-        return 'app/warehouse/dashboard';
+      if (accessibleModules.length === 1) {
+        return accessibleModules[0].defaultRoute.replace(/^\//, '');
       }
-      if (!hasWh && hasFin) {
-        return 'app/finance';
-      }
-      if (!hasWh && !hasFin) {
-        const activeCompanyService = inject(ActiveCompanyService);
-        if (activeCompanyService.hasCompanyDocumentsAccess()) {
-          return 'app/finance/company-documents';
-        }
+
+      const activeCompanyService = inject(ActiveCompanyService);
+      if (activeCompanyService.hasCompanyDocumentsAccess()) {
+        return 'app/finance/company-documents';
       }
       return 'app/launcher';
     },

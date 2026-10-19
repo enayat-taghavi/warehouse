@@ -5,7 +5,7 @@ import { StateService } from '../../../../core/services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../shared';
 import { DynamicFieldApiService } from '../../api/dynamic-field-api.service';
-import { DynamicFieldDefinition } from '../../../../core/models';
+import { DynamicFieldDefinition } from '../../models/dynamic-field.model';
 import { AuthStore } from '../../../../core/stores/auth.store';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';

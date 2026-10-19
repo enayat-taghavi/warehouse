@@ -392,11 +392,8 @@ class AuditLog(models.Model):
         """
         if not self.warehouse_id:
             return None
-        from django.apps import apps
-        if apps.is_installed('warehouses'):
-            Warehouse = apps.get_model('warehouses', 'Warehouse')
-            return Warehouse.objects.filter(id=self.warehouse_id).first()
-        return None
+        from platform_core.registry import resolve_entity
+        return resolve_entity('warehouse', self.warehouse_id)
 
     def __str__(self):
         return f"[{self.get_module_display()}] {self.get_action_display()} - {self.target_repr or self.target_object_id} ({self.created_at.strftime('%Y-%m-%d %H:%M') if self.created_at else ''})"

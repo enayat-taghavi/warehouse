@@ -1,12 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from django.apps import apps
+from platform_core.registry import contributions
 from .models import CustomUser, CustomRole
-
-# فاز ۲ §۲.۳ — اپ انبار اختیاری است؛ فیلد `assigned_warehouses` فقط در نصبِ
-# دارای انبار در ادمین کاربر نمایش داده می‌شود (وگرنه `check` در حسابداری‌تنها
-# با FieldError رد می‌شود).
-_WH_INSTALLED = apps.is_installed('warehouses')
 
 @admin.register(CustomRole)
 class CustomRoleAdmin(admin.ModelAdmin):
@@ -23,8 +18,8 @@ class CustomUserAdmin(UserAdmin):
 
     def get_filter_horizontal(self, request):
         fh = ['groups', 'user_permissions']
-        if _WH_INSTALLED:
-            fh.append('assigned_warehouses')
+        for f in contributions('user_admin_fields'):
+            fh.append(f)
         return fh
 
     def get_fieldsets(self, request, obj=None):
@@ -35,8 +30,8 @@ class CustomUserAdmin(UserAdmin):
             'operational_zone',
             'supervisor',
         ]
-        if _WH_INSTALLED:
-            custom_fields.append('assigned_warehouses')
+        for f in contributions('user_admin_fields'):
+            custom_fields.append(f)
         custom_fields += ['ui_preferences', 'requires_password_change']
         return fieldsets + (
             ('اطلاعات سازمانی و هویتی (سفارشی)', {'fields': tuple(custom_fields)}),

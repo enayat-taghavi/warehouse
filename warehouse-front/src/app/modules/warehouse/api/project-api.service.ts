@@ -6,7 +6,7 @@ import {
   ProjectCreatePayload,
   ProjectUpdatePayload,
   ProjectStats,
-} from '../../../core/models/project.model';
+} from '../models/project.model';
 import { Paginated } from '../../../core/models/api-response.model';
 
 @Injectable({ providedIn: 'root' })
