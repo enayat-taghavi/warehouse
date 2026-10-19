@@ -1,2 +1,4 @@
 # Backend tests failing on HEAD 59d5e3d (16 Oct 2026). One test per line; used by verify_tools.py django-tests --known.
 # (none)
+# 19 Oct 2026: fails since b00b604 (chat messages create one Notification per participant in broadcast_message_ws); push follow-up, outside phase 4.
+integration_tests.communications.test_performance.ReadStateAndPerformanceTestCase.test_broadcast_query_count_independent_of_participants
