@@ -479,3 +479,304 @@ verify: python scripts/automation/verify_tools.py clean-tree
 5. Before finishing: `git status --short` shows nothing except runner files.
 
 6. Output and stop condition: a short English report with the backup filename and size, the `showmigrations` result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+
+===
+
+Session 25 of 30 — Close modularization: backend core defaults from the module registry; audit export POST reads app_scope from one source
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/accounts/views_domains/audit_views.py warehouse-backend/core/accounts/middleware.py warehouse-backend/core/accounts/views_domains/backup_views.py warehouse-backend/core/accounts/views_domains/session_views.py warehouse-backend/core/platform_core/query_engine/definitions.py "warehouse-backend/integration_tests/*" "warehouse-backend/core/accounts/tests/*" "warehouse-backend/core/platform_core/tests/*"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/middleware.py --absent "app_module: str = 'personnel'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/platform_core/query_engine/definitions.py --absent "module_code: str = 'warehouse'" --absent "scope_kind: str = 'warehouse'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/views_domains/backup_views.py --absent "getattr(request, 'active_app', 'warehouse') or 'warehouse'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/views_domains/session_views.py --absent "data.get('app_scope', 'warehouse')"
+verify: python scripts/automation/verify_tools.py guardian29-max --max core_module_literals=55
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 900
+verify: python scripts/e2e/guardian_modularization.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(core): registry defaults instead of module literals; audit export app_scope from one source"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only files matching the scope verify line. No migration, no model field change, no change to any stored value or choice value.
+- A user must never see audit rows outside their scope. The restriction for non-superusers stays at least as strict as today.
+- Backend tests only with app labels, never an unlabeled `manage.py test`. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۶`, paragraph for session 25.
+- `default_module()` is in `warehouse-backend/core/platform_core/registry.py`; read it and how `accounts/middleware.py` and `accounts/permissions.py` already derive the default active app from it (phase 4 session 3).
+- `export_excel` in `warehouse-backend/core/accounts/views_domains/audit_views.py` (around line 904): with POST, filters read `request.data`, but `get_queryset()` (around line 739) calls `restrict_audit_for_user(qs, user, params.get('app_scope'))` with the query string.
+- Literal defaults to replace: `app_module: str = 'personnel'` in `get_user_valid_roles_for_app` and `resolve_effective_role` (`middleware.py`); `getattr(request, 'active_app', 'warehouse') or 'warehouse'` (`backup_views.py` around line 130); `data.get('app_scope', 'warehouse')` (`session_views.py` around line 30); the `scope_kind: str = 'warehouse'` and `module_code: str = 'warehouse'` defaults in `query_engine/definitions.py` (lines 57, 199, 206, 315, 321).
+
+3. Definitions: "registry default" means the value derived from `default_module()` exactly the way `middleware.py` already derives the default active app (reuse that existing code path; do not write a new module-name mapping). For `query_engine`, the default parameter becomes `None` and is resolved inside the function from the registry, so callers in `warehouse-backend/modules` keep working without edits.
+
+4. Task:
+- a) `export_excel`: when the request is POST with a body, the user restriction uses the body's `app_scope` (the same value the filter uses). Pass the effective `app_scope` into the restriction; do not duplicate `restrict_audit_for_user`. GET behaviour stays the same.
+- b) Replace the literal defaults of section 2 with the registry default. In the full profile (both modules installed) every result must be identical to today.
+- c) Add tests (new test methods in an existing test module of `accounts`, `platform_core` or `integration_tests`): the POST export for a restricted non-superuser with body `app_scope` applies the same restriction as GET with that query parameter; each replaced default returns today's value in the full profile.
+
+5. Tool policy: from `warehouse-backend`, run tests only with labels, for example `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test accounts platform_core --keepdb`, at most four times; from the repo root, `python scripts/automation/verify_tools.py guardian29-max --max core_module_literals=55` at most twice. If a command fails, read its output and change approach.
+
+6. Before finishing: the labelled tests above pass except the known failure listed in `scripts/automation/known_backend_failures.txt`, and `git diff --stat` shows only files from the scope line.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(core): registry defaults instead of module literals; audit export app_scope from one source
+- Short English report: each change with one line, the tests added, the guardian 29 `core_module_literals` value. End the turn after the commit and the report.
+
+===
+
+Session 26 of 30 — Close modularization: legacy redirects and route permissions move into their modules; persona code without module lists
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/warehouse/module.ts warehouse-front/src/app/modules/warehouse/warehouse.routes.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/modules/accounting/accounting.routes.ts warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/modules/legacy-redirects.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/app.routes.ts --absent "redirectTo: 'app/finance/" --absent "redirectTo: 'app/warehouse/" --contains legacyRedirects
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/warehouse/warehouse.routes.ts --absent /app/finance/
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/auth/auth.guard.ts --absent "'finance-audit'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/app-persona.service.ts --absent "['warehouse', 'personnel', 'accounting', 'finance', 'operations']" --absent "app: 'personnel',"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/accounting/module.ts --contains legacyRedirects --contains "'app/finance/accountant-payroll'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/warehouse/module.ts --contains legacyRedirects --contains "'app/warehouse/counter'"
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/modules/legacy-redirects.spec.ts --min-tests 4 --require legacyRedirects
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(front): legacy redirects and route permissions in their modules"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only the files in the scope verify line; create only `legacy-redirects.spec.ts`. Do not edit any existing spec. The characterization specs `src/app/core/auth/route-access.characterization.spec.ts`, `src/app/core/services/app-persona.characterization.spec.ts` and `src/app/core/services/app-persona.generic-module.spec.ts` must pass unchanged: they define correct behaviour.
+- Every old URL that redirects today must redirect to the same target when its module is installed, and route order must not change.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۶`, paragraph for session 26.
+- `warehouse-front/src/app/app.routes.ts`: root-level redirects to `app/warehouse/...` (from `path: 'users'` to `path: 'feed_approvals'`) and to `app/finance/...` (the block from `finance-cartable` to `fleet-settlement`, plus `finance-audit`). The `operations` and `cockpit` redirects are core and stay. `dynamicModuleRoutes` is built from `INSTALLED_MODULES`.
+- `warehouse-front/src/app/modules/warehouse/warehouse.routes.ts` line 60: `attendance` redirects to `/app/finance/employee-attendance` (a link from the warehouse module into the accounting module).
+- `warehouse-front/src/app/core/auth/auth.guard.ts`: `ROUTE_PERMISSIONS` has `'finance-audit'`; module pages get permissions from `routeAccess.pagePermissions`.
+- `warehouse-front/src/app/core/services/app-persona.service.ts`: `isGenericModuleApp` uses a hard-coded list of names; `CORE_SUPERUSER.app` is `'personnel'`, but every reader of `app` on that persona short-circuits with `r.code === 'superuser'`.
+
+3. Definitions:
+- "Scoped module": a module with `extensions.syncConfig`, or whose `scopeKind` has a locked offline DB (`resolveOfflineDbStrict(spec.scopeKind)` from `core/services/offline-db.ts` is not `null`).
+- "Generic module app": an installed spec found with `getSpec(app)` (which also resolves aliases) that is not `operations` and not a scoped module.
+
+4. Task:
+- a) Contract: add an optional top-level field `legacyRedirects?: Routes` to the frontend module type in `module-contract.ts`, with a Persian doc comment.
+- b) Move every `app/warehouse/...` root redirect into `legacyRedirects` of `modules/warehouse/module.ts`, and every `app/finance/...` root redirect (including `finance-audit`) into `legacyRedirects` of `modules/accounting/module.ts`, keeping path, target and `pathMatch`. Remove the warehouse-module `attendance` redirect and add `{ path: 'app/warehouse/attendance', redirectTo: 'app/finance/employee-attendance', pathMatch: 'full' }` to the accounting module's `legacyRedirects`.
+- c) `app.routes.ts`: spread `INSTALLED_MODULES.flatMap(m => m.legacyRedirects ?? [])` exactly where the moved redirects were, before the `app` routes, so a URL like `/app/warehouse/attendance` still reaches the redirect.
+- d) `auth.guard.ts`: remove `'finance-audit'` from `ROUTE_PERMISSIONS`; add `'finance-audit': ['view_sys_payroll', 'perm_sys_logs', 'admin_all']` to `routeAccess.pagePermissions` of the accounting module.
+- e) `app-persona.service.ts`: `isGenericModuleApp` follows the definition in section 3 without a list of module names; `CORE_SUPERUSER.app` becomes `OPERATIONS_APP`.
+- f) Spec `core/modules/legacy-redirects.spec.ts` (at least 4 `it(`): every redirect formerly in `app.routes.ts` appears exactly once in the combined `legacyRedirects` with the same target; `app/warehouse/attendance` targets the finance page; the core redirects `operations` and `cockpit` are still in the root routes; `isGenericModuleApp` is false for `warehouse`, `accounting`, `personnel`, `finance` and `operations`.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/layout/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: the three characterization specs pass unchanged, the ng-test-compare run reports no new failing test, and `git diff --stat` shows only files from the scope line.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(front): legacy redirects and route permissions in their modules
+- Short English report: what moved, the number of redirects per module, the ng-test-compare summary line. End the turn after the commit and the report.
+
+===
+
+Session 27 of 30 — Close modularization: token keys, X-Active-App and offline roles from syncConfig; fault-tolerant drain
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/offline-db.ts warehouse-front/src/app/core/services/offline/offline-queue-runner.ts warehouse-front/src/app/core/services/offline/offline-conflict-manager.ts warehouse-front/src/app/core/services/photo-upload-queue.service.ts warehouse-front/src/app/core/auth/auth.service.ts warehouse-front/src/app/core/services/session-tab.service.ts warehouse-front/src/app/core/http/websocket.service.ts warehouse-front/src/app/core/services/sync-pull.service.ts warehouse-front/src/app/core/services/offline-sync.service.ts warehouse-front/src/app/core/services/offline/scope-sync-profile.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline-db.ts --contains "export function getScopeSyncProfile" --contains "export const DEFAULT_OFFLINE_SCOPE"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-queue-runner.ts --contains getScopeSyncProfile --absent "'wh_access_token_finance' : 'wh_access_token_warehouse'" --absent "? 'operator' : 'counter'" --absent "? 'personnel' : 'warehouse'" --contains allSettled
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-conflict-manager.ts --contains getScopeSyncProfile --absent "'wh_access_token_finance' : 'wh_access_token_warehouse'" --absent "? 'personnel' : 'warehouse'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/photo-upload-queue.service.ts --absent "'X-Active-App': 'warehouse'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/session-tab.service.ts --absent "norm === 'finance' ? 'finance' : 'warehouse'"
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline/scope-sync-profile.spec.ts --min-tests 6 --require getScopeSyncProfile --require registerModule
+verify: python scripts/e2e/guardian_34_offline_continuity.py
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(offline): scope sync profile from syncConfig; fault-tolerant drain"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only the files in the scope verify line; create only `scope-sync-profile.spec.ts`. Do not edit any existing spec. All phase 4 step 4 specs (`offline-scope.characterization.spec.ts`, `offline-scope.registry.spec.ts`, `offline-n-scope.readers.spec.ts`, `offline-n-scope.writers.spec.ts`, `offline-queue-runner.spec.ts`, `session-tab.service.spec.ts`) must pass unchanged: for `warehouse` and `finance`, every token key, header value and role stays exactly as today, under every installed-module subset.
+- A queue record is deleted only on explicit 2xx or 4xx. Do not change any status-code rule. Never change an IndexedDB name or a `version()`/`stores()` line.
+- The storage keys `wh_access_token_warehouse` and `wh_access_token_finance` must not change.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۶` (session 27) and heading `#### ۴.۱` (invariants and the paragraph that starts with `**بیرون از این گام`).
+- The `syncConfig` extension (`scopeKind`, `activeAppHeader`, `defaultOfflineRole`, `tokenScopeKey`) is defined in `core/modules/module-contract.ts`, with values in `modules/warehouse/module.ts` and `modules/accounting/module.ts`.
+- Hard-coded per-scope values today: `buildScopedHeaders` and `refreshAccessToken` in `offline-queue-runner.ts`; `resolveConflict` in `offline-conflict-manager.ts` (around line 242); `'X-Active-App': 'warehouse'` in `photo-upload-queue.service.ts`; the scope-to-token mapping in `session-tab.service.ts` and `auth.service.ts` (around lines 276, 319 and 421); `normalizedApp` in `websocket.service.ts` (around line 183); `'warehouse'` default parameters in `sync-pull.service.ts` and `offline-sync.service.ts`.
+- `runQueueSequential`, `getPendingCount` and `refreshCounts` use `Promise.all` over `getAllOfflineDbs()`; one DB that fails to open rejects the whole drain.
+
+3. Definitions:
+- "Scope sync profile" of a scope: `{ scope, tokenKey, activeAppHeader, defaultOfflineRole }`, read from the `syncConfig` of a module in `getModuleRegistry().getAllModules()` whose `scopeKind` equals `normalizeScope(scope)` (build-static source, like `getOfflineSyncSpecs`). When no module provides it (for example a warehouse-only build asked for `finance`), use a locked fallback table inside `offline-db.ts` with today's values: warehouse is `wh_access_token_warehouse`, `warehouse`, `counter`; finance is `wh_access_token_finance`, `personnel`, `operator`. An unknown scope uses the warehouse profile, as today.
+- "Default offline scope": a constant `DEFAULT_OFFLINE_SCOPE` exported from `offline-db.ts` with the value of the existing `WH_SCOPE`.
+
+4. Task:
+- a) `offline-db.ts`: export `getScopeSyncProfile(scope)` and `DEFAULT_OFFLINE_SCOPE` per section 3. Registry errors fall back to the locked table.
+- b) Use `getScopeSyncProfile` for the token key, `X-Active-App` and default role in `buildScopedHeaders`, `refreshAccessToken` (scoped key of the active scope), `resolveConflict`, photo uploads (photos belong to the scope of the DB that holds the photo queue, today warehouse), and the token functions of `session-tab.service.ts` and `auth.service.ts` (around line 421, loop over the profiles of the scopes the user is allowed for, instead of two `if` blocks). In `websocket.service.ts`, map the app code with `normalizeScope`.
+- c) Replace the `'warehouse'` default parameters in `sync-pull.service.ts` and `offline-sync.service.ts` with `DEFAULT_OFFLINE_SCOPE`, and widen their `'warehouse' | 'finance'` parameter types to `AppScope`.
+- d) Fault-tolerant drain: in `runQueueSequential` read the queues with `Promise.allSettled`, log a rejected DB with `console.warn` and continue with the others; `getPendingCount` and `refreshCounts` the same. `getUnsentCountStrict` keeps `Promise.all` (it guards restores and must fail closed).
+- e) `exportLocalDatabaseSnapshot`: `metrics.pendingSyncCount` also counts pending/failed rows of the `others` DBs.
+- f) Spec `scope-sync-profile.spec.ts` (at least 6 `it(`): today's values for `warehouse`, `finance`, `personnel`, `accounting` and `xyz` under the three installed subsets; a registered fake module `qa_mod` with its own `syncConfig` gets its own token key and header; a drain where one DB's `where` rejects still sends the entries of the other DB; `getUnsentCountStrict` rejects in that case.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/shared/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: the phase 4 step 4 specs pass unchanged, the ng-test-compare run reports no new failing test, and `git diff --stat` shows only files from the scope line.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(offline): scope sync profile from syncConfig; fault-tolerant drain
+- Short English report: each changed place with one line, the tests added, the guardian 57 `core_module_literals` value, the ng-test-compare summary line. End the turn after the commit and the report.
+
+===
+
+Session 28 of 30 — Close modularization: deep update dialog sections come from the modules' userMenu extension
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/warehouse/module.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.ts warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.spec.ts warehouse-front/src/app/shared/components/user-menu/user-menu.component.spec.ts warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-sections.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.ts --absent "activeOpsTab.set('warehouse')" --absent "activeOpsTab.set('finance')" --absent "effectiveContext === 'finance'" --absent "effectiveContext === 'warehouse'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts --absent "deepSyncScope === 'warehouse'" --absent "deepSyncScope === 'finance'" --absent "performDeepUpdate(targetWarehouseIds, warehousesMap, 'warehouse')"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/accounting/module.ts --contains deepSync:
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/warehouse/module.ts --contains deepSync:
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-sections.spec.ts --min-tests 5 --require registerModule
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.spec.ts warehouse-front/src/app/shared/components/user-menu/user-menu.component.spec.ts
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(front): deep update sections from module userMenu extensions"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5, 7 and 10 apply, and the design rules in `.claude/skills/design-system/SKILL.md`: Persian UI text, RTL, icons only through `<svg appIcon="...">`, Persian `title` and `aria-label` on icon buttons, touch targets at least 40x40px.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only the files in the scope verify line; create only `deep-sync-sections.spec.ts`. In the two existing specs, change only the setup that mocks the `userMenu` extension or the modal inputs; never delete or weaken a test (`tests-kept` checks the count).
+- With the two current modules installed, the dialog must look and behave exactly as today: same Persian texts, same order (warehouses section first, projects section second), same colours, same tab bar in the operations context, same events (`startSync`, and `startSyncMulti` with `warehouseIds` and `projectIds`). Do not change `performDeepUpdate` itself.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۶`, paragraph for session 28.
+- `warehouse-front/src/app/shared/components/deep-sync-modal/deep-sync-modal.component.ts`: two hard-coded sections (warehouses, projects) with Persian titles and banners, `contextMode` `warehouse`/`finance`/`operations`, and tabs in the operations context.
+- `warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts`: `openDeepSync` (around line 490) and the deep update run (around lines 555 to 670) load warehouses through `whService` and projects through the `projectLookup` extension, check `userMenu.deepSyncScope`, and call `performDeepUpdate(ids, map, scope)` per scope.
+- `userMenu` and `projectLookup` extensions are defined in `core/modules/module-contract.ts`.
+
+3. Definitions: a "deep sync section" is `{ scope: AppScope; order: number; tabLabel: string; sectionTitle: string; bannerTitle: string; bannerDescription: string; emptyText: string; accent: string; loadItems: (injector: Injector) => Promise<{ id: number; name: string }[]> }`, contributed by a module as `extensions.userMenu.deepSync`. `loadItems` gets services through the injector so module code does not import from `shared/`.
+
+4. Task:
+- a) Contract: add `deepSync?: DeepSyncSectionSpec` to the `userMenu` extension type, with a Persian doc comment. Keep `deepSyncScope` for compatibility.
+- b) Warehouse and accounting modules: contribute their section with today's exact Persian texts, order and accent, and a `loadItems` that does what `user-menu` does today for that scope.
+- c) `deep-sync-modal`: render sections from an input `sections` array in `order`; in the operations context the tab bar shows `همه` plus one tab per section; selection state is a map from scope to selected ids. `startSyncMulti` keeps `warehouseIds` and `projectIds` for the two current scopes and adds `idsByScope`.
+- d) `user-menu`: build the sections from `getExtensions('userMenu')`, pick the context section with `currentScopeContext`, and run `performDeepUpdate(ids, map, section.scope)` for each section that has a selection.
+- e) Spec `deep-sync-sections.spec.ts` (at least 5 `it(`): the two real modules give sections in today's order with today's titles; a registered fake module `qa_mod` with a `deepSync` section adds a third tab in the operations context; selecting ids in it emits them under `idsByScope.qa_mod`; with no `deepSync` contribution the dialog shows no section.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/shared/**/*.spec.ts" --include "src/app/modules/common/components/layout/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: the ng-test-compare run reports no new failing test, and `git diff --stat` shows only files from the scope line.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(front): deep update sections from module userMenu extensions
+- Short English report: what changed, the tests added, the guardian 57 `core_module_literals` value, the ng-test-compare summary line. End the turn after the commit and the report.
+
+===
+
+Session 29 of 30 — Close modularization: guardians 29 and 57 enforce an exact allowlist of core module literals and core module route paths
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow scripts/e2e/guardian_modularization.py scripts/e2e/guardian_57_front_module_fence.py scripts/e2e/core_literal_allowlist.json scripts/e2e/modularization_baseline.json scripts/e2e/front_fence_baseline.json
+verify: python -c "import json;d=json.load(open('scripts/e2e/core_literal_allowlist.json',encoding='utf-8'));e=d['entries'];c={x['category'] for x in e};assert c<={'data-field','stored-value','protocol','offline-lock','dev-tooling'},c;assert all(x.get('reason') and x.get('file') and x.get('text') for x in e);print(len(e),'entries',sorted(c))"
+verify: python scripts/e2e/guardian_modularization.py
+verify: python scripts/e2e/guardian_modularization.py --self-test
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/e2e/guardian_57_front_module_fence.py --self-test
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(guardians): exact allowlist for core module literals and route paths"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only the files in the scope verify line. This session changes guardian scripts and their data only; never edit application code to make a guardian pass.
+- Never add an allowlist entry for a literal that is a plain module reference (routing, choosing a module, a default module, a label or a type union). If such a literal remains in core, list it in your report, do not commit, and end the turn.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۶`: the closing criterion and the paragraph for session 29.
+- Guardian 29 `scripts/e2e/guardian_modularization.py`: `scan_core_module_literals()` (backend `warehouse-backend/core`, ast string constants) with a "no increase over baseline" rule. Guardian 57 `scripts/e2e/guardian_57_front_module_fence.py`: `find_module_literals` and the counter `core_module_literals` for `core/` and `shared/`, with the same rule.
+
+3. Definitions (allowlist categories):
+- `data-field`: a model field, column, serializer field, kwarg or request parameter named `warehouse`/`warehouse_id` (including compatibility shims such as `kwargs.pop('warehouse')`), and Django permission content-type model names.
+- `stored-value`: a value stored in the database, localStorage or sessionStorage whose change would break existing data (`app_module` choices, persisted `app_scope` defaults, `active_app_module` values).
+- `protocol`: a value sent to or expected from the server or another tab (token key suffix, `X-Active-App` value, WebSocket channel, URL query parameter name).
+- `offline-lock`: the locked offline scopes, the fallback sync profile table and the DB names in `core/services/offline-db.ts`.
+- `dev-tooling`: `accounts/concurrency_stress_service.py` and `accounts/concurrency_stress_test.py`.
+
+4. Task:
+- a) Create `scripts/e2e/core_literal_allowlist.json` as `{ "entries": [ { "side": "backend" or "front", "file": path as the guardian prints it, "text": stripped source line, "literal": the literal, "count": occurrences on that line, "category": one of section 3, "reason": one short English sentence } ] }`, one entry per distinct (file, text, literal) found by the current scanners.
+- b) Both guardians: replace the "no increase" rule of `core_module_literals` with an exact match against the allowlist entries of their side. Any literal occurrence not covered by an entry fails (print `file:line` and the line), and any entry no longer found fails as stale. Matching uses file, stripped line text and literal, never line numbers.
+- c) Guardian 57: add a counter `core_module_route_paths` for string literals in `core/`, `shared/` and `app.routes.ts` that contain `app/warehouse` or `app/finance`. It must be 0 and has no allowlist.
+- d) Extend `--self-test` of both guardians: an extra unlisted literal fails, a stale entry fails, and the unchanged fixture passes. The self-test never writes the real allowlist or baselines.
+- e) Update the baselines only through each guardian's existing update mechanism, and only if the counter set changed.
+
+5. Tool policy: each guardian at most six runs, each self-test at most three runs. If a command fails, read its output and change approach.
+
+6. Before finishing: both guardians and both self-tests pass, and every allowlist entry has a category from section 3 and a reason.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+test(guardians): exact allowlist for core module literals and route paths
+- Short English report: entries per side and per category, and any literal you refused to allowlist. End the turn after the commit and the report.
+
+===
+
+Session 30 of 30 — Release the modularization close-out on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py restart-worker
+verify: python scripts/automation/verify_tools.py release-check
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+
+2. Context: sessions 25 to 29 changed backend core defaults, frontend routing, offline, deep-update and guardian code, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app modularization close-out'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
+- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the `showmigrations` result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.

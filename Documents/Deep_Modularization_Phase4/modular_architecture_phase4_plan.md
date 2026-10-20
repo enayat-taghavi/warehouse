@@ -162,6 +162,50 @@
 - **نشست ۱۴:** شمارندهٔ `core_module_literals` در نگهبان ۲۹ (بک‌اند) و ۵۷ (فرانت) با قانون «افزایش ممنوع».
 - **نشست ۱۵:** انتشار روی `app` (پشتیبان، بررسی مایگریشن، بیلد وصله‌شده؛ runner ری‌استارت می‌کند).
 
+### گام ۶ — بستن پرونده ماژولارسازی (۲۹ مهر ۱۴۰۵)
+
+به درخواست کاربر: همهٔ کارهای باقی‌مانده انجام شود و پرونده برای همیشه بسته شود. اجرا با Antigravity و `run_tasks.py`، نشست‌های ۲۵ تا ۳۰.
+
+**معیار بستن پرونده:**
+- لیترال نام ماژول (`warehouse`، `finance`، `personnel`، `accounting`) در هستهٔ بک‌اند (`warehouse-backend/core`) و فرانت (`core/` و `shared/`) فقط در دو حالت می‌ماند:
+  - **قفل داده یا پروتکل:** نام فیلد و ستون (`warehouse`، `warehouse_id`)، مقدار ذخیره‌شده در دیتابیس (`app_module`، `app_scope`)، کلید توکن (`wh_access_token_*`)، مقدار هدر `X-Active-App`، و قفل نام دیتابیس‌های آفلاین.
+  - **ابزار توسعه:** فقط `concurrency_stress_*`.
+- بقیه از راه رجیستری و extension ماژول‌ها خوانده می‌شوند.
+- نگهبان‌های ۲۹ و ۵۷ به‌جای «شمارش کمتر یا مساوی مبنا»، **فهرست مجاز دقیق** (`scripts/e2e/core_literal_allowlist.json`) را می‌سنجند:
+  - هر ورودی فایل، متن خط، دسته و دلیل دارد.
+  - لیترال بیرون از فهرست و ورودی کهنه هر دو شکست‌اند.
+- مسیرهای ماژول (`app/finance/...`، `app/warehouse/...`) در `app.routes.ts` و هسته نمی‌مانند.
+- پیش‌شرط‌های ماژول سوم بخش ۴.۱ بسته می‌شوند، جز `syncCursors` و `photoQueue` که دادهٔ دامنهٔ انبارند.
+
+**نشست‌ها:**
+- **۲۵ — بک‌اند:**
+  - `export_excel` با POST، `app_scope` محدودیت کاربر را از همان بدنه بخواند.
+  - پیش‌فرض‌های `'personnel'`/`'warehouse'` در `middleware.py`، `backup_views.py`، `session_views.py` و `query_engine/definitions.py` از `default_module()` رجیستری بیایند.
+  - بازبین: `tenant-scope-reviewer`.
+- **۲۶ — مسیرها و پرسونا (فرانت):**
+  - تغییر مسیرهای قدیمی `app.routes.ts` و `warehouse.routes.ts` به فیلد تازهٔ `legacyRedirects` در قرارداد ماژول، در هر ماژول خودش.
+  - `finance-audit` از `ROUTE_PERMISSIONS` هسته به `routeAccess` حسابداری.
+  - `isGenericModuleApp` بدون فهرست سخت‌کد.
+  - `CORE_SUPERUSER.app` از ماژول پیش‌فرض.
+  - specهای مشخصه‌نگار گارد و پرسونا بدون تغییر سبز بمانند.
+- **۲۷ — توکن، هدر و صف آفلاین (فرانت):**
+  - تابع مشترک `getScopeSyncProfile(scope)` روی `syncConfig` (کلید توکن، `X-Active-App`، نقش پیش‌فرض) در `offline-queue-runner`، `offline-conflict-manager`، `refreshAccessToken`، `photo-upload-queue`، `auth.service`، `session-tab` و `websocket`.
+  - مقادیر خروجی برای دو قلمرو فعلی عیناً همان امروز می‌ماند.
+  - تخلیهٔ صف با `allSettled`: خرابی یک دیتابیس، بقیه را متوقف نمی‌کند.
+  - `pendingSyncCount` خروجی پشتیبان، `others` را هم بشمارد.
+  - بازبین: `data-loss-reviewer`.
+- **۲۸ — بروزرسانی عمیق N-قلمرویی (فرانت، رابط):**
+  - `deep-sync-modal` و بخش بروزرسانی عمیق `user-menu` بخش‌ها را از extension `userMenu` هر ماژول می‌سازند: قلمرو، عنوان‌ها و متن‌های فارسی، بارگذار فهرست.
+  - ظاهر برای دو ماژول فعلی عیناً همان می‌ماند.
+  - بازبین: `ui-reviewer`.
+- **۲۹ — نگهبان‌ها:**
+  - فهرست مجاز دقیق در نگهبان‌های ۲۹ و ۵۷، با دسته‌بندی همهٔ لیترال‌های باقی‌مانده.
+  - شمارندهٔ تازهٔ مسیر ماژول در هستهٔ فرانت.
+  - `--self-test` هر دو.
+- **۳۰ — انتشار روی `app`.**
+
+**بیرون از پرونده:** انتشار روی `soft` جداست و تأیید صریح کاربر را لازم دارد.
+
 ## ۳. روند نظارت
 
 - runner از `run_tasks_agy.bat` در تب Windows Terminal اجرا می‌شود.
