@@ -36,9 +36,11 @@ def apply_audit_app_scope(qs, app_scope):
     else:
         qs = qs.filter(module__in=audit_scope_keys(mod_code))
 
+    # has_key is required: without it, `NOT (details -> 'event' = ...)` is SQL NULL for rows that have
+    # no event key, and PostgreSQL drops every such row (the scope filter returned nothing).
     return qs.exclude(
-        Q(details__event='CROSS_APP_DENIED') |
-        Q(details__event='APP_SCOPE_SWITCH')
+        Q(details__has_key='event') &
+        Q(details__event__in=['CROSS_APP_DENIED', 'APP_SCOPE_SWITCH'])
     )
 
 

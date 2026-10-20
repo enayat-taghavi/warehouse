@@ -137,36 +137,33 @@ class AuditAppScopeCharacterizationTests(TestCase):
 
     def test_superuser_list_warehouse_scope(self):
         """
-        Superuser list with app_scope=warehouse.
-        Current behaviour: returns empty set because exclude(details__event=...)
-        on PostgreSQL evaluates to SQL NULL for rows lacking 'event' in details.
+        Superuser list with app_scope=warehouse: warehouse-module rows and rows with a
+        warehouse id, minus accounting-module keys and the CROSS_APP_DENIED/APP_SCOPE_SWITCH events.
         """
         self.client.force_authenticate(self.superuser)
         res = self.client.get('/api/accounts/audit-logs/?app_scope=warehouse')
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(self._extract_ids(res), set())
+        self.assertEqual(self._extract_ids(res), {self.wh_log_wh1.id, self.unassigned_wh_log.id})
 
     def test_superuser_list_finance_scope(self):
         """
-        Superuser list with app_scope=finance.
-        Current behaviour: returns empty set because exclude(details__event=...)
-        on PostgreSQL evaluates to SQL NULL for rows lacking 'event' in details.
+        Superuser list with app_scope=finance: accounting-module keys, accounting target models
+        and details.target_module=finance, minus the two scope events.
         """
         self.client.force_authenticate(self.superuser)
         res = self.client.get('/api/accounts/audit-logs/?app_scope=finance')
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(self._extract_ids(res), set())
+        self.assertEqual(self._extract_ids(res), {self.acct_log_nowh.id, self.acct_log_wh1.id, self.target_model_log.id, self.details_finance_log.id})
 
     def test_superuser_list_personnel_scope(self):
         """
-        Superuser list with app_scope=personnel.
-        Current behaviour: returns empty set because exclude(details__event=...)
-        on PostgreSQL evaluates to SQL NULL for rows lacking 'event' in details.
+        Superuser list with app_scope=personnel: accounting-module keys, accounting target models
+        and details.target_module=finance, minus the two scope events.
         """
         self.client.force_authenticate(self.superuser)
         res = self.client.get('/api/accounts/audit-logs/?app_scope=personnel')
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(self._extract_ids(res), set())
+        self.assertEqual(self._extract_ids(res), {self.acct_log_nowh.id, self.acct_log_wh1.id, self.target_model_log.id, self.details_finance_log.id})
 
     def test_superuser_list_all_scope(self):
         """Superuser list with app_scope=all: returns all 8 rows."""
@@ -184,23 +181,23 @@ class AuditAppScopeCharacterizationTests(TestCase):
 
     def test_nonsuperuser_list_warehouse_scope(self):
         """
-        Non-superuser (assigned to wh1 only) list with app_scope=warehouse.
-        Current behaviour: returns empty set due to SQL NULL on exclude(details__event=...).
+        Non-superuser (assigned to wh1 only) list with app_scope=warehouse: only the wh1
+        warehouse-module row; accounting keys and the two scope events are excluded.
         """
         self.client.force_authenticate(self.non_superuser)
         res = self.client.get('/api/accounts/audit-logs/?app_scope=warehouse')
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(self._extract_ids(res), set())
+        self.assertEqual(self._extract_ids(res), {self.wh_log_wh1.id})
 
     def test_nonsuperuser_list_finance_scope(self):
         """
-        Non-superuser (assigned to wh1 only) list with app_scope=finance.
-        Current behaviour: returns empty set due to SQL NULL on exclude(details__event=...).
+        Non-superuser (assigned to wh1 only) list with app_scope=finance: the four accounting rows
+        (wh1 or no warehouse); the two scope events are excluded.
         """
         self.client.force_authenticate(self.non_superuser)
         res = self.client.get('/api/accounts/audit-logs/?app_scope=finance')
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(self._extract_ids(res), set())
+        self.assertEqual(self._extract_ids(res), {self.acct_log_nowh.id, self.acct_log_wh1.id, self.target_model_log.id, self.details_finance_log.id})
 
     def test_nonsuperuser_list_absent_scope(self):
         """
@@ -228,18 +225,18 @@ class AuditAppScopeCharacterizationTests(TestCase):
     def test_superuser_stats_counts(self):
         """
         Stats action for superuser: warehouse_logs_count and finance_logs_count.
-        Current behaviour: returns 0 and 0 due to SQL NULL on exclude(details__event=...).
+        The counts equal the superuser warehouse (2) and finance (4) list sets.
         """
         self.client.force_authenticate(self.superuser)
         res = self.client.get('/api/accounts/audit-logs/stats/')
         self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.data.get('warehouse_logs_count'), 0)
-        self.assertEqual(res.data.get('finance_logs_count'), 0)
+        self.assertEqual(res.data.get('warehouse_logs_count'), 2)
+        self.assertEqual(res.data.get('finance_logs_count'), 4)
 
     def test_superuser_export_excel_warehouse_scope(self):
         """
         Excel export for superuser with app_scope=warehouse in request data.
-        Current behaviour: 0 data rows due to SQL NULL on exclude(details__event=...).
+        Same rows as the superuser list for that scope: 2 data rows.
         """
         self.client.force_authenticate(self.superuser)
         res = self.client.post('/api/accounts/audit-logs/export_excel/', {'app_scope': 'warehouse'}, format='json')
@@ -248,12 +245,12 @@ class AuditAppScopeCharacterizationTests(TestCase):
         wb = openpyxl.load_workbook(io.BytesIO(res.content))
         ws = wb.active
         data_rows = [row for row in ws.iter_rows(min_row=3, values_only=True) if any(cell is not None for cell in row)]
-        self.assertEqual(len(data_rows), 0)
+        self.assertEqual(len(data_rows), 2)
 
     def test_superuser_export_excel_finance_scope(self):
         """
         Excel export for superuser with app_scope=finance in request data.
-        Current behaviour: 0 data rows due to SQL NULL on exclude(details__event=...).
+        Same rows as the superuser list for that scope: 4 data rows.
         """
         self.client.force_authenticate(self.superuser)
         res = self.client.post('/api/accounts/audit-logs/export_excel/', {'app_scope': 'finance'}, format='json')
@@ -262,12 +259,12 @@ class AuditAppScopeCharacterizationTests(TestCase):
         wb = openpyxl.load_workbook(io.BytesIO(res.content))
         ws = wb.active
         data_rows = [row for row in ws.iter_rows(min_row=3, values_only=True) if any(cell is not None for cell in row)]
-        self.assertEqual(len(data_rows), 0)
+        self.assertEqual(len(data_rows), 4)
 
     def test_superuser_export_excel_query_param(self):
         """
         Excel export with app_scope=warehouse via GET query parameter.
-        Current behaviour: 0 data rows due to SQL NULL on exclude(details__event=...).
+        Same rows as the superuser list for that scope: 2 data rows.
         """
         self.client.force_authenticate(self.superuser)
         res = self.client.get('/api/accounts/audit-logs/export_excel/?app_scope=warehouse')
@@ -275,4 +272,4 @@ class AuditAppScopeCharacterizationTests(TestCase):
         wb = openpyxl.load_workbook(io.BytesIO(res.content))
         ws = wb.active
         data_rows = [row for row in ws.iter_rows(min_row=3, values_only=True) if any(cell is not None for cell in row)]
-        self.assertEqual(len(data_rows), 0)
+        self.assertEqual(len(data_rows), 2)
