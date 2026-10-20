@@ -200,6 +200,65 @@ describe('Offline N-Scope Readers (Session 19)', () => {
     expect(finDeleteSpy).toHaveBeenCalledWith(30);
   });
 
+  it('1b. a 401 in one scope keeps only that DB queued; the other scopes still drain', async () => {
+    localStorage.setItem('wh_user_profile', JSON.stringify({ id: 42 }));
+    // بدون refresh token: refresh ناموفق و رکورد qa_mod در صف می‌ماند
+    const qaDb = getOfflineDb('qa_mod');
+    const mk = (id: number, url: string, createdAt: number, appScope: string): SyncQueueEntry => ({
+      id, url, method: 'POST', body: {}, createdAt, status: 'pending', retryCount: 0, userId: 42, appScope,
+    });
+    let whItems = [mk(10, '/api/v1/warehouse/item/1', 300, 'warehouse')];
+    let qaItems = [mk(20, '/api/qa-mod/check/1', 100, 'qa_mod'), mk(21, '/api/qa-mod/check/2', 150, 'qa_mod')];
+    let finItems = [mk(30, '/api/v1/personnel/user/1', 200, 'finance')];
+
+    const fakeTable = (get: () => SyncQueueEntry[], set: (v: SyncQueueEntry[]) => void) => ({
+      del: async (id: any) => set(get().filter((e) => e.id !== id)),
+      where: () => ({
+        anyOf: vi.fn(() => ({
+          sortBy: vi.fn(async () => [...get()].sort((a, b) => a.createdAt - b.createdAt)),
+          toArray: vi.fn(async () => [...get()]),
+          count: vi.fn(async () => get().length),
+        })),
+      }) as any,
+    });
+    const wh = fakeTable(() => whItems, (v) => (whItems = v));
+    const qa = fakeTable(() => qaItems, (v) => (qaItems = v));
+    const fin = fakeTable(() => finItems, (v) => (finItems = v));
+    vi.spyOn(warehouseOfflineDb.syncQueue, 'delete').mockImplementation(wh.del as any);
+    const qaDeleteSpy = vi.spyOn(qaDb.syncQueue, 'delete').mockImplementation(qa.del as any);
+    vi.spyOn(financeOfflineDb.syncQueue, 'delete').mockImplementation(fin.del as any);
+    vi.spyOn(warehouseOfflineDb.syncQueue, 'update').mockResolvedValue(1);
+    vi.spyOn(qaDb.syncQueue, 'update').mockResolvedValue(1);
+    vi.spyOn(financeOfflineDb.syncQueue, 'update').mockResolvedValue(1);
+    vi.spyOn(warehouseOfflineDb.syncQueue, 'where').mockImplementation(wh.where);
+    vi.spyOn(qaDb.syncQueue, 'where').mockImplementation(qa.where);
+    vi.spyOn(financeOfflineDb.syncQueue, 'where').mockImplementation(fin.where);
+
+    const sentUrls: string[] = [];
+    globalThis.fetch = vi.fn().mockImplementation(async (url: any) => {
+      sentUrls.push(String(url));
+      const unauthorized = String(url).includes('/qa-mod/');
+      return { ok: !unauthorized, status: unauthorized ? 401 : 200, json: async () => ({}) };
+    });
+    const mockNetwork = {
+      isBrowserOnline: true,
+      reportServerUnreachable: vi.fn(),
+      reportServerReachable: vi.fn(),
+    } as unknown as NetworkStatusService;
+
+    const outcome = await runQueueSequential(mockNetwork);
+
+    expect(outcome.status).toBe('auth-required');
+    // فقط نخستین رکورد qa_mod فرستاده شد؛ دومی بی‌ارسال در صف ماند
+    expect(sentUrls.filter((u) => u.includes('/qa-mod/')).length).toBe(1);
+    expect(sentUrls.some((u) => u.includes('/api/v1/personnel/user/1'))).toBe(true);
+    expect(sentUrls.some((u) => u.includes('/api/v1/warehouse/item/1'))).toBe(true);
+    expect(qaDeleteSpy).not.toHaveBeenCalled();
+    expect(qaItems.map((e) => e.id)).toEqual([20, 21]);
+    expect(whItems.length).toBe(0);
+    expect(finItems.length).toBe(0);
+  });
+
   it('2. getPendingCount includes qa_mod in total when scope is all or omitted', async () => {
     const qaDb = getOfflineDb('qa_mod');
 

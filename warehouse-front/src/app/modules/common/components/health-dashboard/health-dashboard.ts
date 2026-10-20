@@ -263,7 +263,7 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
               <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs flex items-center justify-between">
                 <span class="text-slate-400 text-[11px]">رکوردهای کش و صف:</span>
                 <span class="font-mono font-bold text-slate-700 dark:text-slate-200 text-[11px]" dir="ltr">
-                  <ng-container *ngIf="isWarehouseInstalled && (appScope !== 'finance' || !isAccountingInstalled)">انبار: {{ storage?.warehouseRecords || 0 }}<ng-container *ngIf="isAccountingInstalled"> | </ng-container></ng-container><ng-container *ngIf="isAccountingInstalled">مالی: {{ storage?.financeRecords || 0 }}</ng-container>
+                  <ng-container *ngIf="isWarehouseInstalled && (appScope !== 'finance' || !isAccountingInstalled)">انبار: {{ storage?.warehouseRecords || 0 }}<ng-container *ngIf="isAccountingInstalled"> | </ng-container></ng-container><ng-container *ngIf="isAccountingInstalled">مالی: {{ storage?.financeRecords || 0 }}</ng-container><ng-container *ngIf="storage?.otherRecords"> | سایر: {{ storage?.otherRecords }}</ng-container>
                 </span>
               </div>
             </div>

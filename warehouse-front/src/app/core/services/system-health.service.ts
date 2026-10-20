@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { warehouseOfflineDb, financeOfflineDb, getCurrentActiveAppScope } from './offline-db';
+import { warehouseOfflineDb, financeOfflineDb, getAllOfflineDbs, getCurrentActiveAppScope } from './offline-db';
 import { NetworkStatusService } from './network-status.service';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
@@ -40,6 +40,8 @@ export interface ClientStorageHealth {
   formattedTotal: string;
   warehouseRecords: number;
   financeRecords: number;
+  /** صف و کش دیتابیس‌های آفلاین ماژول‌های دیگر (غیر از دو دیتابیس قفل‌شده) */
+  otherRecords: number;
   status: 'healthy' | 'warning' | 'critical';
 }
 
@@ -241,6 +243,7 @@ export class SystemHealthService {
     // شمارش رکوردهای کش و صف در دیتابیس‌های تفکیک‌شده
     let whCount = 0;
     let finCount = 0;
+    let otherCount = 0;
 
     try {
       const [whQ, whC, finQ, finC] = await Promise.all([
@@ -251,6 +254,12 @@ export class SystemHealthService {
       ]);
       whCount = whQ + whC;
       finCount = finQ + finC;
+      const others = getAllOfflineDbs().filter(db => db !== warehouseOfflineDb && db !== financeOfflineDb);
+      const otherCounts = await Promise.all(others.map(db => Promise.all([
+        db.syncQueue.count().catch(() => 0),
+        db.apiCache.count().catch(() => 0),
+      ])));
+      otherCount = otherCounts.reduce((acc, [q, c]) => acc + q + c, 0);
     } catch {}
 
     const percent = total > 0 ? Math.round((used / total) * 100) : 0;
@@ -264,6 +273,7 @@ export class SystemHealthService {
       formattedTotal: this.formatBytes(total),
       warehouseRecords: whCount,
       financeRecords: finCount,
+      otherRecords: otherCount,
       status,
     };
   }

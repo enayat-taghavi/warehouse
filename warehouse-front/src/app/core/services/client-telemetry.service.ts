@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { SessionTabService, TabSessionMessage } from './session-tab.service';
 import { detectClientDeviceModel, formatDeviceModelName } from '../utils/device-detector';
-import { warehouseOfflineDb, financeOfflineDb, DEFAULT_OFFLINE_SCOPE } from './offline-db';
+import { getAllOfflineDbs, DEFAULT_OFFLINE_SCOPE } from './offline-db';
 import { NetworkStatusService } from './network-status.service';
 import { ToastService } from '../../shared/components/toast/toast.component';
 import { WebSocketService } from '../http/websocket.service';
@@ -248,13 +248,13 @@ export class ClientTelemetryService {
     try {
       const deviceInfo = await this.getDeviceInfo();
 
-      // شمارش صف‌ها و تداخل‌های هر دو دیتابیس انبار و مالی
-      const [wQueue, fQueue, wErrors, fErrors] = await Promise.all([
-        warehouseOfflineDb.syncQueue.where('status').anyOf(['pending', 'failed']).count().catch(() => 0),
-        financeOfflineDb.syncQueue.where('status').anyOf(['pending', 'failed']).count().catch(() => 0),
-        warehouseOfflineDb.syncErrors.where('dismissed').equals(0).count().catch(() => 0),
-        financeOfflineDb.syncErrors.where('dismissed').equals(0).count().catch(() => 0),
-      ]);
+      // شمارش صف‌ها و تداخل‌های همهٔ دیتابیس‌های آفلاین (دو دیتابیس قفل‌شده و ماژول‌های دیگر)
+      const perDb = await Promise.all(getAllOfflineDbs().map(db => Promise.all([
+        db.syncQueue.where('status').anyOf(['pending', 'failed']).count().catch(() => 0),
+        db.syncErrors.where('dismissed').equals(0).count().catch(() => 0),
+      ])));
+      const queueCount = perDb.reduce((acc, [q]) => acc + q, 0);
+      const errorCount = perDb.reduce((acc, [, e]) => acc + e, 0);
 
       const payload = {
         tab_id: this.sessionTab.tabId,
@@ -263,8 +263,8 @@ export class ClientTelemetryService {
         browser_name: deviceInfo.browser,
         app_scope: this.sessionTab.getActiveApp(),
         active_role: this.sessionTab.getActiveRole(),
-        pending_queue_count: wQueue + fQueue,
-        conflict_count: wErrors + fErrors
+        pending_queue_count: queueCount,
+        conflict_count: errorCount
       };
 
       const res = await firstValueFrom(

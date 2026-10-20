@@ -494,6 +494,22 @@ describe('Offline Scope Characterization & Dual-Queue Invariants (Session 16)', 
     expect(sessionStorage.getItem('wh_access_token_finance')).toBeNull();
   });
 
+  it('(h-4) refreshAccessToken(scope) also writes the token key of the given scope', async () => {
+    localStorage.setItem('wh_refresh_token', 'REFRESH_TEST');
+    sessionStorage.setItem('active_app_module', 'warehouse');
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ access: 'NEW_TOKEN' }),
+    });
+
+    const refreshed = await refreshAccessToken('finance');
+    expect(refreshed).toBe(true);
+    expect(sessionStorage.getItem('wh_access_token_warehouse')).toBe('NEW_TOKEN');
+    expect(sessionStorage.getItem('wh_access_token_finance')).toBe('NEW_TOKEN');
+    expect(localStorage.getItem('wh_access_token_finance')).toBe('NEW_TOKEN');
+  });
+
   // ─────────────────────────────────────────────────────────────
   // (i) dismissError and deleteError first-found priority
   // ─────────────────────────────────────────────────────────────

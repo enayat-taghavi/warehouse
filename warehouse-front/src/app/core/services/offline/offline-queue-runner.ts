@@ -55,7 +55,7 @@ export function buildScopedHeaders(appScope: AppScope): Record<string, string> {
 /**
  * تلاش برای تازه‌سازی access token با استفاده از refresh token
  */
-export async function refreshAccessToken(): Promise<boolean> {
+export async function refreshAccessToken(scope?: AppScope): Promise<boolean> {
   const refresh = localStorage.getItem('wh_refresh_token');
   if (!refresh) return false;
 
@@ -74,10 +74,14 @@ export async function refreshAccessToken(): Promise<boolean> {
     localStorage.setItem('wh_access_token', data.access);
     sessionStorage.setItem('wh_access_token', data.access);
 
-    const currentScope = getCurrentActiveAppScope();
-    const scopedKey = getScopeSyncProfile(currentScope).tokenKey;
-    sessionStorage.setItem(scopedKey, data.access);
-    localStorage.setItem(scopedKey, data.access);
+    // کلید قلمرو فعال، و اگر فراخواننده قلمرو رکورد را داد کلید همان قلمرو؛
+    // وگرنه ارسال دوبارهٔ رکورد قلمرو دیگر باز با توکن کهنهٔ خودش ۴۰۱ می‌گیرد
+    const scopedKeys = new Set([getScopeSyncProfile(getCurrentActiveAppScope()).tokenKey]);
+    if (scope) scopedKeys.add(getScopeSyncProfile(scope).tokenKey);
+    for (const scopedKey of scopedKeys) {
+      sessionStorage.setItem(scopedKey, data.access);
+      localStorage.setItem(scopedKey, data.access);
+    }
 
     // ذخیره refresh token جدید
     if (data.refresh) {
@@ -209,7 +213,7 @@ export async function sendEntry(
       return 'sent';
     } else if (response.status === 401) {
       // توکن منقضی — تلاش برای refresh و ارسال مجدد (فقط یک بار)
-      if (!hasRetriedAuth && (await refreshAccessToken())) {
+      if (!hasRetriedAuth && (await refreshAccessToken(appScope))) {
         return sendEntry(entry, db, true, networkStatus, onRejected);
       }
       // refresh ناموفق — رکورد در صف بماند تا بعد از login مجدد ارسال شود
@@ -337,7 +341,8 @@ export async function runQueueSequential(
   let synced = 0;
   let rejected = 0;
   let transportAborted = false;
-  let authRequired = false;
+  // ۴۰۱ پس از refresh فقط صف همان دیتابیس را نگه می‌دارد؛ صف قلمروهای دیگر ادامه می‌یابد
+  const authBlockedDbs = new Set<OfflineDatabase>();
   // دیتابیسی که خوانده نشد ممکن است رکورد ارسال‌نشده داشته باشد؛ نتیجه هرگز «کامل» گزارش نمی‌شود
   let unreadableDbs = 0;
 
@@ -349,7 +354,7 @@ export async function runQueueSequential(
     const MAX_DRAIN_PASSES = 5;
 
     // تخلیه چندمرحله‌ای (Drain Loop) جهت جلوگیری از جا ماندن تغییرات همزمان (تسک ۱۱)
-    while (drainPass < MAX_DRAIN_PASSES && !transportAborted && !authRequired && networkStatus.isBrowserOnline) {
+    while (drainPass < MAX_DRAIN_PASSES && !transportAborted && networkStatus.isBrowserOnline) {
       drainPass++;
 
       const allDbs = getAllOfflineDbs();
@@ -366,6 +371,7 @@ export async function runQueueSequential(
       for (let i = 0; i < allDbs.length; i++) {
         const db = allDbs[i];
         const entries = entriesPerDb[i] ?? [];
+        if (authBlockedDbs.has(db)) continue;
         for (const e of entries) {
           queueJobs.push({ entry: e, db });
         }
@@ -401,6 +407,8 @@ export async function runQueueSequential(
           break;
         }
 
+        if (authBlockedDbs.has(db)) continue;
+
         // امنیت چندکاربری (تسک ۴): اگر رکورد متعلق به کاربر دیگری است، با توکن کاربر جاری ارسال نشود
         if (entry.userId && currentUserId && entry.userId !== currentUserId) {
           console.warn(
@@ -422,8 +430,9 @@ export async function runQueueSequential(
           continue;
         }
         if (result === 'auth-failed') {
-          authRequired = true;
-          break;
+          // رکورد در صف ماند؛ بقیهٔ رکوردهای همین دیتابیس هم تا ورود دوباره می‌مانند
+          authBlockedDbs.add(db);
+          continue;
         }
         if (result === 'server-error') {
           // رفع Head-of-line Blocking (تسک ۱): اگر رکورد به سقف تلاش رسیده، متوقف نشو و مانع کارهای بعدی نشو
@@ -460,7 +469,7 @@ export async function runQueueSequential(
 
   // ─── تعیین نتیجه ───
   if (!networkStatus.isBrowserOnline) return { status: 'offline' };
-  if (authRequired) return { status: 'auth-required', synced };
+  if (authBlockedDbs.size > 0) return { status: 'auth-required', synced };
   if (transportAborted) return { status: 'server-unreachable', synced };
 
   const remaining = await getPendingCount();
