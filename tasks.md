@@ -697,7 +697,7 @@ refactor(front): deep update sections from module userMenu extensions
 
 ===
 
-Session 29 of 30 — Close modularization: guardians 29 and 57 enforce an exact allowlist of core module literals and core module route paths
+[DONE] Session 29 of 30 — Close modularization: guardians 29 and 57 enforce an exact allowlist of core module literals and core module route paths
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -747,7 +747,7 @@ test(guardians): exact allowlist for core module literals and route paths
 
 ===
 
-Session 30 of 30 — Release the modularization close-out on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+[DONE] Session 30 of 30 — Release the modularization close-out on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
