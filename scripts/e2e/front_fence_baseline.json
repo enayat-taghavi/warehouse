@@ -4,12 +4,960 @@
     "core_to_module_imports": 0,
     "cross_module_imports": 0,
     "is_module_installed_outside_module": 0,
-    "core_hardcoded_module_api_paths": 0
+    "core_hardcoded_module_api_paths": 0,
+    "core_module_literals": 189
   },
   "violations": {
     "core_to_module_imports": [],
     "cross_module_imports": [],
     "is_module_installed_outside_module": [],
-    "core_hardcoded_module_api_paths": []
+    "core_hardcoded_module_api_paths": [],
+    "core_module_literals": [
+      {
+        "file": "core/auth/auth.interceptor.ts",
+        "line": 103,
+        "match": "personnel"
+      },
+      {
+        "file": "core/auth/auth.service.ts",
+        "line": 276,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/auth/auth.service.ts",
+        "line": 276,
+        "match": "finance"
+      },
+      {
+        "file": "core/auth/auth.service.ts",
+        "line": 319,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/auth/auth.service.ts",
+        "line": 319,
+        "match": "finance"
+      },
+      {
+        "file": "core/auth/auth.service.ts",
+        "line": 421,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/auth/auth.service.ts",
+        "line": 422,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/auth/auth.service.ts",
+        "line": 424,
+        "match": "finance"
+      },
+      {
+        "file": "core/auth/auth.service.ts",
+        "line": 424,
+        "match": "personnel"
+      },
+      {
+        "file": "core/auth/auth.service.ts",
+        "line": 425,
+        "match": "finance"
+      },
+      {
+        "file": "core/error/error.interceptor.ts",
+        "line": 96,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/http/warehouse-http.service.ts",
+        "line": 42,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/http/websocket.service.ts",
+        "line": 94,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/http/websocket.service.ts",
+        "line": 95,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/http/websocket.service.ts",
+        "line": 183,
+        "match": "personnel"
+      },
+      {
+        "file": "core/http/websocket.service.ts",
+        "line": 183,
+        "match": "finance"
+      },
+      {
+        "file": "core/interceptors/offline.interceptor.ts",
+        "line": 133,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/models/audit-log.model.ts",
+        "line": 164,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/models/audit-log.model.ts",
+        "line": 164,
+        "match": "finance"
+      },
+      {
+        "file": "core/modules/module-contract.ts",
+        "line": 6,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/modules/module-contract.ts",
+        "line": 6,
+        "match": "personnel"
+      },
+      {
+        "file": "core/modules/module-contract.ts",
+        "line": 42,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/modules/module-contract.ts",
+        "line": 42,
+        "match": "finance"
+      },
+      {
+        "file": "core/modules/module-contract.ts",
+        "line": 56,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/modules/module-contract.ts",
+        "line": 56,
+        "match": "accounting"
+      },
+      {
+        "file": "core/modules/module-contract.ts",
+        "line": 85,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/modules/module-contract.ts",
+        "line": 85,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/app-persona.service.ts",
+        "line": 32,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/app-persona.service.ts",
+        "line": 86,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/app-persona.service.ts",
+        "line": 91,
+        "match": "accounting"
+      },
+      {
+        "file": "core/services/app-persona.service.ts",
+        "line": 268,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/app-persona.service.ts",
+        "line": 268,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/app-persona.service.ts",
+        "line": 268,
+        "match": "accounting"
+      },
+      {
+        "file": "core/services/app-persona.service.ts",
+        "line": 268,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/client-telemetry.service.ts",
+        "line": 156,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline/offline-conflict-manager.ts",
+        "line": 17,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline/offline-conflict-manager.ts",
+        "line": 24,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline/offline-conflict-manager.ts",
+        "line": 43,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline/offline-conflict-manager.ts",
+        "line": 46,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline/offline-conflict-manager.ts",
+        "line": 188,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline/offline-conflict-manager.ts",
+        "line": 197,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline/offline-conflict-manager.ts",
+        "line": 201,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline/offline-conflict-manager.ts",
+        "line": 201,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/offline/offline-conflict-manager.ts",
+        "line": 201,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline/offline-local-patcher.ts",
+        "line": 122,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline/offline-local-patcher.ts",
+        "line": 122,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline/offline-local-patcher.ts",
+        "line": 122,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline/offline-local-patcher.ts",
+        "line": 169,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline/offline-local-patcher.ts",
+        "line": 224,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline/offline-queue-runner.ts",
+        "line": 37,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline/offline-queue-runner.ts",
+        "line": 47,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline/offline-queue-runner.ts",
+        "line": 49,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline/offline-queue-runner.ts",
+        "line": 49,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/offline/offline-queue-runner.ts",
+        "line": 49,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline/offline-queue-runner.ts",
+        "line": 86,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline/offline-queue-runner.ts",
+        "line": 259,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline/offline-queue-runner.ts",
+        "line": 262,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline/offline-queue-runner.ts",
+        "line": 317,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline/offline-queue-runner.ts",
+        "line": 317,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline/offline-queue-runner.ts",
+        "line": 317,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline/offline-queue-runner.ts",
+        "line": 542,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline/offline-queue-runner.ts",
+        "line": 548,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 34,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 34,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 50,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 50,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 76,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 76,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 152,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 152,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 177,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 179,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 179,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 179,
+        "match": "accounting"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 179,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 180,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 187,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 201,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 204,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 211,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 213,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 234,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 236,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 252,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 256,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 364,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 375,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 378,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 393,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-db.ts",
+        "line": 400,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-sync.service.ts",
+        "line": 623,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-sync.service.ts",
+        "line": 623,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-sync.service.ts",
+        "line": 623,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/offline-sync.service.ts",
+        "line": 678,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-sync.service.ts",
+        "line": 682,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-sync.service.ts",
+        "line": 707,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/offline-sync.service.ts",
+        "line": 720,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/photo-upload-queue.service.ts",
+        "line": 360,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 4,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 4,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 73,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 76,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 76,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 95,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 99,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 149,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 149,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 149,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 153,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 153,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 153,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 153,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 177,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 177,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 177,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 184,
+        "match": "personnel"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 184,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 184,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/session-tab.service.ts",
+        "line": 184,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/sync-pull.service.ts",
+        "line": 47,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/sync-pull.service.ts",
+        "line": 66,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/sync-pull.service.ts",
+        "line": 69,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/sync-pull.service.ts",
+        "line": 131,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/sync-pull.service.ts",
+        "line": 131,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/sync-pull.service.ts",
+        "line": 131,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/sync-pull.service.ts",
+        "line": 134,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/sync-pull.service.ts",
+        "line": 134,
+        "match": "finance"
+      },
+      {
+        "file": "core/services/sync-pull.service.ts",
+        "line": 134,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/sync-pull.service.ts",
+        "line": 208,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/sync-pull.service.ts",
+        "line": 229,
+        "match": "warehouse"
+      },
+      {
+        "file": "core/services/sync-pull.service.ts",
+        "line": 382,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/conflict-resolution-modal/conflict-resolution-modal.component.ts",
+        "line": 65,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/conflict-resolution-modal/conflict-resolution-modal.component.ts",
+        "line": 304,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/conflict-resolution-modal/conflict-resolution-modal.component.ts",
+        "line": 306,
+        "match": "personnel"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 7,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 7,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 46,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 48,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 52,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 59,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 61,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 65,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 198,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 207,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 207,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 211,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 224,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 224,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 230,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 244,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 254,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 261,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 263,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 269,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 271,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 285,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 286,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 307,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 314,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 394,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/deep-sync-modal/deep-sync-modal.component.ts",
+        "line": 396,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 98,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 122,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 131,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 139,
+        "match": "personnel"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 139,
+        "match": "accounting"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 139,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 140,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 142,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 143,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 148,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 149,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 152,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 155,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 158,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 509,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 523,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 524,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 526,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 542,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 567,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 593,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 593,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 603,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 606,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 616,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 619,
+        "match": "finance"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 640,
+        "match": "warehouse"
+      },
+      {
+        "file": "shared/components/user-menu/user-menu.component.ts",
+        "line": 675,
+        "match": "finance"
+      }
+    ]
   }
 }

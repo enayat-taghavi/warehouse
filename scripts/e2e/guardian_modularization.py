@@ -436,20 +436,92 @@ def scan_core_module_app_refs(backend_dir=BACKEND_DIR):
     return findings
 
 
+CORE_MODULE_LITERALS = frozenset({"warehouse", "finance", "personnel", "accounting"})
+
+
+def _docstring_nodes(tree):
+    """گره‌های رشتهٔ docstring ماژول، کلاس‌ها و توابع (در شمارش لیترال حساب نمی‌شوند)."""
+    import ast
+    ids = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            body = getattr(node, "body", None) or []
+            first = body[0] if body else None
+            if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant) and isinstance(first.value.value, str):
+                ids.add(id(first.value))
+    return ids
+
+
+def scan_core_module_literals(core_dir=None):
+    """
+    لیترال رشته‌ای دقیقاً برابر با نام یک ماژول ('warehouse'، 'finance'، 'personnel'، 'accounting')
+    در کد هسته؛ با ast، پس توضیح‌ها و docstringها شمرده نمی‌شوند. تست‌ها و مایگریشن‌ها مستثنا هستند.
+    """
+    import ast
+    core_dir = core_dir or (BACKEND_DIR / "core")
+    if not core_dir.is_dir():
+        return []
+    findings = []
+    for p in sorted(core_dir.rglob("*.py")):
+        parts = p.parts
+        if "tests" in parts or "migrations" in parts or p.name == "tests.py" or p.name.startswith("test_"):
+            continue
+        try:
+            tree = ast.parse(p.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        docstrings = _docstring_nodes(tree)
+        rel = p.relative_to(core_dir).as_posix()
+        for node in ast.walk(tree):
+            if (isinstance(node, ast.Constant) and isinstance(node.value, str)
+                    and node.value in CORE_MODULE_LITERALS and id(node) not in docstrings):
+                findings.append({"file": rel, "line": node.lineno, "match": node.value})
+    findings.sort(key=lambda f: (f["file"], f["line"]))
+    return findings
+
+
+def run_literal_self_test():
+    """
+    روی fixture موقت: یک لیترال اضافه باید شکست بدهد و fixture بدون تغییر باید قبول شود.
+    baseline واقعی هرگز نوشته نمی‌شود.
+    """
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        core = Path(tmp) / "core"
+        (core / "app").mkdir(parents=True)
+        (core / "app" / "tests").mkdir()
+        (core / "app" / "a.py").write_text(
+            '"""warehouse"""\n# \'finance\' in a comment\nX = \'warehouse\'\n\n'
+            'def f():\n    """accounting"""\n    return "personnel"\n',
+            encoding="utf-8",
+        )
+        (core / "app" / "tests" / "t.py").write_text("Y = 'warehouse'\n", encoding="utf-8")
+        baseline = len(scan_core_module_literals(core))
+        unchanged_ok = len(scan_core_module_literals(core)) <= baseline
+        (core / "app" / "b.py").write_text("Z = 'accounting'\n", encoding="utf-8")
+        extra_fails = len(scan_core_module_literals(core)) > baseline
+    ok = baseline == 2 and unchanged_ok and extra_fails
+    print(f"self-test core_module_literals: fixture={baseline} (expected 2), unchanged passes={unchanged_ok}, "
+          f"extra literal fails={extra_fails} -> {'PASS' if ok else 'FAIL'}")
+    return 0 if ok else 1
+
+
 def build_snapshot(root_packages, rules, module_packages=None):
     data = collect_violations(root_packages, rules)
     composition = composition_root_counts(module_packages)
     core_refs = scan_core_module_app_refs(BACKEND_DIR)
+    core_literals = scan_core_module_literals()
     counters = {
         "unique_direct_violations": len(data["unique_edges"]),
         "production_violations": len(data["production"]),
         "non_production_violations": len(data["non_production"]),
         "composition_root_hardcoded_lines": sum(len(v) for v in composition.values()),
         "core_module_app_refs": len(core_refs),
+        "core_module_literals": len(core_literals),
     }
     for cid, edges in sorted(data["per_contract"].items()):
         counters["contract:" + cid] = len(edges)
-    return counters, data, composition, core_refs
+    return counters, data, composition, core_refs, core_literals
 
 
 def load_baseline():
@@ -484,13 +556,17 @@ def main():
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--update-baseline", action="store_true", help="ثبت snapshot جدید پس از پیشرفت")
     ap.add_argument("--json", action="store_true", help="خروجی ماشین‌خوان به‌جای گزارش فارسی")
+    ap.add_argument("--self-test", action="store_true", help="آزمون شمارندهٔ core_module_literals روی fixture موقت")
     args = ap.parse_args()
+
+    if args.self_test:
+        return run_literal_self_test()
 
     ensure_engine()
     parser, scratch_config, module_pkgs = get_effective_importlinter_config()
     root_packages = as_list(parser["importlinter"].get("root_packages", ""))
     rules = build_contract_rules(parser)
-    counters, data, composition, core_refs = build_snapshot(root_packages, rules, module_pkgs)
+    counters, data, composition, core_refs, core_literals = build_snapshot(root_packages, rules, module_pkgs)
     lint_summary, lint_output = run_lint_imports(scratch_config)
     baseline = load_baseline()
 
@@ -563,6 +639,11 @@ def main():
     for rel_f, lines in sorted(core_refs_by_file.items()):
         shown = ", ".join(str(l) for l in lines)
         print(f"   · {rel_f}: {len(lines)} مورد [سطرها: {shown}]")
+
+    print("-" * 74)
+    print(f"🔤 لیترال نام ماژول در هسته (core_module_literals): {len(core_literals)} مورد")
+    for item in core_literals:
+        print(f"   · core/{item['file']}:{item['line']} '{item['match']}'")
 
     if baseline is None or args.update_baseline:
         save_baseline(counters, data, composition, lint_summary)

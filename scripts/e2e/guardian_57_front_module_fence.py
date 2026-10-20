@@ -51,6 +51,21 @@ IMPORT_RE = re.compile(r"""(?:from\s+|import\s*\(|import\s+)['"]([^'"]+)['"]""")
 IS_MODULE_INSTALLED_RE = re.compile(r"""isModuleInstalled\(\s*['"]([^'"]+)['"]\s*\)""")
 HARDCODED_MODULE_API_PATH_RE = re.compile(r"""['"`][^'"`\n]*/(?:personnel|inventory)/""")
 IMPORT_EXPORT_FROM_LINE_RE = re.compile(r"""^\s*(?:import|export)\b.*\bfrom\b""")
+MODULE_LITERAL_RE = re.compile(r"""(['"])(warehouse|finance|personnel|accounting)\1""")
+IMPORT_LINE_RE = re.compile(r"""^\s*import\b""")
+LITERAL_SCAN_ROOTS = ("core/", "shared/")
+
+
+def find_module_literals(text):
+    """(سطر، لیترال) برای هر لیترال نقل‌قول‌شدهٔ نام ماژول؛ سطرهای توضیح و ایمپورت شمرده نمی‌شوند."""
+    found = []
+    for line_idx, line in enumerate(text.splitlines(), 1):
+        stripped = line.strip()
+        if stripped.startswith(("//", "*", "/*")) or IMPORT_LINE_RE.match(line):
+            continue
+        for m in MODULE_LITERAL_RE.finditer(line):
+            found.append((line_idx, m.group(2)))
+    return found
 
 
 def discover_module_names(app_dir):
@@ -136,6 +151,7 @@ def scan_front_fences(app_dir=FRONT_APP_DIR, extra_files=None):
         "cross_module_imports": [],
         "is_module_installed_outside_module": [],
         "core_hardcoded_module_api_paths": [],
+        "core_module_literals": [],
     }
 
     files_to_scan = []
@@ -226,11 +242,22 @@ def scan_front_fences(app_dir=FRONT_APP_DIR, extra_files=None):
                         "match": m.group(0),
                     })
 
+        # ۴) لیترال نام ماژول در core/ و shared/ (بدون spec، توضیح و ایمپورت) (هـ)
+        in_literal_roots = rel_posix.startswith(LITERAL_SCAN_ROOTS) or simulated_zone == "core_common"
+        if in_literal_roots and not is_spec:
+            for line_idx, literal in find_module_literals(text):
+                violations["core_module_literals"].append({
+                    "file": rel_posix,
+                    "line": line_idx,
+                    "match": literal,
+                })
+
     counters = {
         "core_to_module_imports": len(violations["core_to_module_imports"]),
         "cross_module_imports": len(violations["cross_module_imports"]),
         "is_module_installed_outside_module": len(violations["is_module_installed_outside_module"]),
         "core_hardcoded_module_api_paths": len(violations["core_hardcoded_module_api_paths"]),
+        "core_module_literals": len(violations["core_module_literals"]),
     }
     return counters, violations
 
@@ -360,6 +387,21 @@ def run_self_test():
         found_import = any(v["file"] == dummy_file.name for v in violations["core_to_module_imports"])
         found_call = any(v["file"] == dummy_file.name for v in violations["is_module_installed_outside_module"])
         found_api_path = any(v["file"] == dummy_file.name for v in violations["core_hardcoded_module_api_paths"])
+        found_literal = any(v["file"] == dummy_file.name for v in violations["core_module_literals"])
+
+        # شمارندهٔ core_module_literals با قانون «افزایش ممنوع»: fixture بدون تغییر قبول، یک لیترال اضافه رد
+        fixture = (
+            "// 'warehouse' in a comment\n"
+            "import { X } from './finance';\n"
+            " * 'accounting' in a doc comment\n"
+            "const a = 'personnel';\n"
+        )
+        literal_baseline = len(find_module_literals(fixture))
+        unchanged_ok = len(find_module_literals(fixture)) <= literal_baseline
+        extra_fails = len(find_module_literals(fixture + 'const b = "warehouse";\n')) > literal_baseline
+        literal_ok = literal_baseline == 1 and unchanged_ok and extra_fails
+        print(f"self-test core_module_literals: fixture={literal_baseline} (expected 1), "
+              f"unchanged passes={unchanged_ok}, extra literal fails={extra_fails}")
 
         # آزمون قراردادهای ماژول
         contract_errors = check_module_contracts()
@@ -367,13 +409,14 @@ def run_self_test():
             print(f"❌ خودآزمایی قرارداد ماژول‌ها با خطا مواجه شد: {contract_errors}")
             return 1
 
-        if found_import and found_call and found_api_path:
+        if found_import and found_call and found_api_path and found_literal and literal_ok:
             print("✅ خودآزمایی نگهبان ۵۷ (--self-test): نقض ساختگی و قراردادهای ماژول با موفقیت راستی‌آزمایی شدند.")
             return 0
         else:
             print(
                 f"❌ خودآزمایی شکست خورد: found_import={found_import}, "
-                f"found_call={found_call}, found_api_path={found_api_path}"
+                f"found_call={found_call}, found_api_path={found_api_path}, "
+                f"found_literal={found_literal}, literal_ok={literal_ok}"
             )
             return 1
     finally:
@@ -413,6 +456,7 @@ def main():
         "cross_module_imports": "ایمپورت متقابل بین ماژول‌ها (ب)",
         "is_module_installed_outside_module": "فراخوانی isModuleInstalled بیرون از ماژول (ج)",
         "core_hardcoded_module_api_paths": "مسیر سخت‌کدشده API ماژول در هسته/مشترک (د)",
+        "core_module_literals": "لیترال نام ماژول در core/ و shared/ (هـ)",
     }
 
     for key, val in counters.items():
