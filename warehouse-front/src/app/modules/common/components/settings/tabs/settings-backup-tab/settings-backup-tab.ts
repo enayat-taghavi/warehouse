@@ -7,7 +7,8 @@ import { SettingsService } from '../../../../../../core/services/settings';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { finalize } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
-import { warehouseOfflineDb, financeOfflineDb, clearAllScopedCaches, downloadLocalDatabaseSnapshotFile } from '../../../../../../core/services/offline-db';
+import { downloadLocalDatabaseSnapshotFile } from '../../../../../../core/services/offline-db';
+import { isUnsentQueueEmpty, clearCachesThenLogout } from '../../../../../../core/services/server-restore-gate';
 import { PhotoUploadQueueService } from '../../../../../../core/services/photo-upload-queue.service';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { AuthService } from '../../../../../../core/auth/auth.service';
@@ -192,47 +193,13 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** همهٔ داده‌های ارسال‌نشده: صف همگام‌سازی هر دو قلمرو و عکس‌های در انتظار؛ خطای خواندن پرتاب می‌شود */
-  private async countUnsentEntries(): Promise<number> {
-    const [whItems, finItems, photos] = await Promise.all([
-      warehouseOfflineDb.syncQueue.toArray(),
-      financeOfflineDb.syncQueue.toArray(),
-      this.photoQueue ? this.photoQueue.countPendingStrict() : Promise.resolve(0),
-    ]);
-    return (whItems?.length || 0) + (finItems?.length || 0) + (photos || 0);
+  /** گیت مشترک بازگردانی/بازیابی سرور (core/services/server-restore-gate.ts) */
+  private isUnsentQueueEmpty(): Promise<boolean> {
+    return isUnsentQueueEmpty(this.toast, this.photoQueue);
   }
 
-  /**
-   * گیت بازگردانی و بازیابی سرور: فقط وقتی هیچ دادهٔ ارسال‌نشده‌ای نیست true می‌دهد.
-   * اگر صف‌ها خوانده نشوند، مسدود می‌ماند (fail closed).
-   */
-  private async isUnsentQueueEmpty(): Promise<boolean> {
-    let pendingCount: number;
-    try {
-      pendingCount = await this.countUnsentEntries();
-    } catch {
-      this.toast.show('error', 'امکان بررسی صف آفلاین وجود ندارد؛ بازگردانی متوقف شد.');
-      return false;
-    }
-    if (pendingCount > 0) {
-      this.toast.show('error', `صف آفلاین شامل ${pendingCount} رکورد همگام‌نشده است. جهت جلوگیری از نابودی داده‌ها، ابتدا باید آنها را به سرور ارسال کنید.`);
-      return false;
-    }
-    return true;
-  }
-
-  /** پاک‌سازی کش‌های مشتق از سرورِ هر دو قلمرو؛ خروج در هر حال انجام می‌شود */
-  private async clearCachesThenLogout(beforeLogout?: () => void): Promise<void> {
-    try {
-      await clearAllScopedCaches();
-    } catch (e) {
-      console.warn('[SettingsBackupTab] پاک‌سازی کش‌ها پس از بازگردانی ناموفق بود:', e);
-    } finally {
-      setTimeout(() => {
-        beforeLogout?.();
-        this.auth.logout();
-      }, 1500);
-    }
+  private clearCachesThenLogout(beforeLogout?: () => void): Promise<void> {
+    return clearCachesThenLogout(this.auth, beforeLogout);
   }
 
   async openRollbackConfirm(snapshot: any) {

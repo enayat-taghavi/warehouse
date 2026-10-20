@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, effect, computed } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, effect, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../../../core/services/settings';
@@ -17,6 +17,8 @@ import {
 import { DynamicFieldApiService } from '../../api/dynamic-field-api.service';
 import { BackupApiService, DatabaseBackup, BackupVerifyResult } from '../../../../core/api/backup-api.service';
 import { openExternal } from '../../../../core/platform/external-link';
+import { isUnsentQueueEmpty, clearCachesThenLogout } from '../../../../core/services/server-restore-gate';
+import { PhotoUploadQueueService } from '../../../../core/services/photo-upload-queue.service';
 
 @Component({
   selector: 'app-wh-settings',
@@ -65,6 +67,8 @@ export class WhSettings implements OnInit {
     this.auth.user()?.roles?.includes('admin') ||
     this.auth.user()?.department === 'admin'
   ));
+  private photoQueue = inject(PhotoUploadQueueService, { optional: true });
+
   canRestoreDatabase = computed(() => !!(
     this.auth.user()?.is_superuser ||
     this.auth.user()?.permissions?.includes('perm_sys_backup_restore')
@@ -508,20 +512,26 @@ export class WhSettings implements OnInit {
     this.isRestoringDatabase = false;
   }
 
-  executeRestore() {
+  async executeRestore() {
     if (!this.selectedBackupForRestore) return;
     if (this.restoreConfirmInput.trim() !== 'RESTORE_DATABASE_CONFIRM') {
       this.toast.show('error', 'لطفاً عبارت تاییدیه امنیتی RESTORE_DATABASE_CONFIRM را به صورت دقیق تایپ نمایید.');
       return;
     }
 
+    // داده‌های ارسال‌نشدهٔ آفلاین نباید پس از جایگزینی پایگاه‌دادهٔ سرور از دست بروند؛ پرچم پیش از گیت، تا کلیک دوم درخواست نفرستد
+    if (this.isRestoringDatabase) return;
     this.isRestoringDatabase = true;
+    if (!(await isUnsentQueueEmpty(this.toast, this.photoQueue))) {
+      this.isRestoringDatabase = false;
+      return;
+    }
     this.backupApi.restoreBackup(this.selectedBackupForRestore.filename, this.restoreConfirmInput.trim()).subscribe({
-      next: (res) => {
+      next: async (res) => {
         this.isRestoringDatabase = false;
         this.toast.show('success', res.message || 'پایگاه داده با موفقیت بازیابی شد.');
         this.closeRestoreModal();
-        this.loadBackups();
+        await clearCachesThenLogout(this.auth);
       },
       error: (err) => {
         this.isRestoringDatabase = false;
