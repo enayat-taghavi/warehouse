@@ -26,7 +26,6 @@ export const WarehouseCompanyGuard: CanActivateFn = () => {
  */
 const ROUTE_PERMISSIONS: Record<string, string[]> = {
   'users': ['view_sys_users'],
-  'finance-audit': ['view_sys_payroll', 'perm_sys_logs', 'admin_all'],
 };
 
 function getModuleRouteAccess(mod?: WhFrontendModule | null): ModuleRouteAccess | undefined {

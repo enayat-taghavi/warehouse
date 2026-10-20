@@ -269,6 +269,11 @@ export interface WhFrontendModule extends FrontendModuleSpec {
   personas?: ModulePersonas;
   /** دسترسی روت‌ها، گارد و ورود ماژول */
   routeAccess?: ModuleRouteAccess;
+  /**
+   * ریدایرکت‌های مسیرهای قدیمی ریشه (پیش از /app/...) که به صفحه‌های همین ماژول می‌روند.
+   * پوسته آن‌ها را در جای ثابت خود در روت‌های ریشه پهن می‌کند؛ ماژول نصب‌نشده ریدایرکتی هم ندارد.
+   */
+  legacyRedirects?: Routes;
   /** مشارکت‌های ماژول در نقطه‌های توسعه پلتفرم */
   extensions?: ExtensionMap;
 }

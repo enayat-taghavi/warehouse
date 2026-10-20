@@ -12,6 +12,7 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
     'can_act_as_accountant', 'can_act_as_operator', 'can_act_as_workshop_supervisor', 'can_act_as_company_manager'
   ],
   pagePermissions: {
+    'finance-audit': ['view_sys_payroll', 'perm_sys_logs', 'admin_all'],
     'personnel': ['view_sys_payroll', 'admin_all'],
     'payroll': ['view_sys_payroll', 'admin_all'],
     'fleet-settlement': ['view_sys_fleet_settlement', 'view_sys_payroll', 'admin_all'],

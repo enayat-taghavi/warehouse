@@ -6,6 +6,7 @@ import { SessionTabService } from './session-tab.service';
 import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 import { findCompanyDocumentsRoute, isCompanyDocumentsUrl } from '../modules/documents-archive-route';
 import { ActiveCompanyService } from './active-company.service';
+import { resolveOfflineDbStrict } from './offline-db';
 import { filter } from 'rxjs';
 
 import { ROLE_ICONS } from '../../shared/icons/semantic-icons';
@@ -263,10 +264,13 @@ export class AppPersonaService {
     }
   }
 
-  /** ماژولی غیر از انبار، مالی و عملیات که تبادل قلمرو توکن و کانال وب‌سوکت ویژهٔ خودش را ندارد */
+  /** ماژولی بدون قلمرو (نه syncConfig، نه پایگاه آفلاین قفل‌شده) که تبادل قلمرو توکن و کانال وب‌سوکت ویژهٔ خودش را ندارد */
   public isGenericModuleApp(app: AppModuleType): boolean {
-    if (['warehouse', 'personnel', 'accounting', 'finance', 'operations'].includes(app)) return false;
-    return !!this.moduleRegistry.getSpec(app);
+    if (!app || app === OPERATIONS_APP) return false;
+    const spec = this.moduleRegistry.getSpec(app);
+    if (!spec || spec.code === OPERATIONS_APP) return false;
+    if (spec.extensions?.syncConfig) return false;
+    return resolveOfflineDbStrict(app) === null && resolveOfflineDbStrict(spec.scopeKind) === null;
   }
 
   public sanitizeActiveRole(): void {
