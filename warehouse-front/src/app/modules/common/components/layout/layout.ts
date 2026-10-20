@@ -870,7 +870,12 @@ export class Layout implements OnInit, OnDestroy {
       // (هم برای همگام‌سازی دستی هم خودکار) تا پیام دوتایی نشود.
 
       case 'partial':
-        if (outcome.rejected > 0) {
+        if (outcome.unreadableDbs) {
+          this.toast.show(
+            'warning',
+            `${outcome.synced} مورد ارسال شد؛ یکی از پایگاه‌های دادهٔ آفلاین باز نشد و رکوردهای آن دست‌نخورده ماند. دوباره تلاش می‌شود.`
+          );
+        } else if (outcome.rejected > 0) {
           this.toast.show(
             'error',
             `${outcome.synced} مورد ارسال شد، ${outcome.rejected} مورد توسط سرور رد شد — به صندوق خطاها مراجعه کنید.`

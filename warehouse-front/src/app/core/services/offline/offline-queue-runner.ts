@@ -338,6 +338,8 @@ export async function runQueueSequential(
   let rejected = 0;
   let transportAborted = false;
   let authRequired = false;
+  // دیتابیسی که خوانده نشد ممکن است رکورد ارسال‌نشده داشته باشد؛ نتیجه هرگز «کامل» گزارش نمی‌شود
+  let unreadableDbs = 0;
 
   console.log('[OfflineSync] 🔄 شروع پردازش صف همگام‌سازی تفکیک‌شده...');
 
@@ -357,6 +359,7 @@ export async function runQueueSequential(
         'runQueueSequential'
       );
       const someDbUnreadable = entriesPerDb.some((e) => e === null);
+      unreadableDbs = Math.max(unreadableDbs, entriesPerDb.filter((e) => e === null).length);
 
       let queueJobs: { entry: SyncQueueEntry; db: OfflineDatabase }[] = [];
       const countsLog: string[] = [];
@@ -448,7 +451,7 @@ export async function runQueueSequential(
     }
 
     // زمان آخرین همگام‌سازی فقط وقتی معنا دارد که واقعاً با سرور حرف زده باشیم
-    if (!transportAborted && synced > 0) {
+    if (!transportAborted && synced > 0 && unreadableDbs === 0) {
       if (onSyncSuccess) onSyncSuccess();
     }
   } catch (error) {
@@ -461,8 +464,10 @@ export async function runQueueSequential(
   if (transportAborted) return { status: 'server-unreachable', synced };
 
   const remaining = await getPendingCount();
-  if (rejected > 0 || remaining > 0) {
-    return { status: 'partial', synced, rejected, remaining };
+  if (rejected > 0 || remaining > 0 || unreadableDbs > 0) {
+    return unreadableDbs > 0
+      ? { status: 'partial', synced, rejected, remaining, unreadableDbs }
+      : { status: 'partial', synced, rejected, remaining };
   }
   if (synced === 0) return { status: 'nothing-to-sync' };
   return { status: 'completed', synced };

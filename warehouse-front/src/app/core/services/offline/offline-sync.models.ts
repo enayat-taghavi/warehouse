@@ -23,7 +23,7 @@ export type SyncOutcome =
   /** همه چیز با موفقیت ارسال شد */
   | { status: 'completed'; synced: number }
   /** بخشی ارسال شد؛ بخشی رد شد یا باقی ماند */
-  | { status: 'partial'; synced: number; rejected: number; remaining: number };
+  | { status: 'partial'; synced: number; rejected: number; remaining: number; unreadableDbs?: number };
 
 /**
  * نتیجه ارسال یک رکورد از صف

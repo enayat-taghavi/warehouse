@@ -171,7 +171,11 @@ describe('Scope sync profile from syncConfig (step 6, session 27)', () => {
     expect(sentUrls.length).toBe(1);
     expect(sentUrls[0]).toContain('/api/v1/personnel/user/1');
     expect(finDelete).toHaveBeenCalledWith(30);
-    expect(outcome.status).toBe('completed');
+    expect(outcome.status).toBe('partial');
+    if (outcome.status === 'partial') {
+      expect(outcome.synced).toBe(1);
+      expect(outcome.unreadableDbs).toBe(1);
+    }
     expect(warn).toHaveBeenCalled();
     await expect(getPendingCount()).resolves.toBe(0);
   });
