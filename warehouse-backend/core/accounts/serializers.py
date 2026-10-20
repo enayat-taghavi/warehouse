@@ -272,8 +272,9 @@ class UserSerializer(serializers.ModelSerializer):
         return fields
 
     def get_assigned_warehouses(self, obj):
-        if hasattr(obj, 'assigned_warehouses'):
-            return list(obj.assigned_warehouses.values_list('id', flat=True))
+        wh_ext = _get_user_warehouse_extension()
+        if wh_ext is not None:
+            return wh_ext.get_assigned_ids(obj)
         return []
 
     def validate_email(self, value):
@@ -517,8 +518,8 @@ class UserSerializer(serializers.ModelSerializer):
                 user.groups.set(group_objs)
 
             user.user_permissions.set(user_permissions)
-            if assigned_warehouses:
-                user.assigned_warehouses.set(assigned_warehouses)
+            if assigned_warehouses and wh_ext is not None:
+                wh_ext.set_assigned(user, assigned_warehouses)
 
             _sync_user_company_access(
                 user, company_ids, default_company_id, company_accesses_data,
@@ -585,8 +586,8 @@ class UserSerializer(serializers.ModelSerializer):
             if user_permissions is not None:
                 instance.user_permissions.set(user_permissions)
 
-            if assigned_warehouses is not None and hasattr(instance, 'assigned_warehouses'):
-                instance.assigned_warehouses.set(assigned_warehouses)
+            if assigned_warehouses is not None and wh_ext is not None:
+                wh_ext.set_assigned(instance, assigned_warehouses)
             
             user = super().update(instance, validated_data)
 

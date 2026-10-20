@@ -26,12 +26,45 @@ class WarehouseUserExtension:
         from warehouses.models import Warehouse
         return list(Warehouse.objects.values_list('id', flat=True))
 
+    def get_assigned_ids(self, user) -> list[int]:
+        """فهرست شناسه انبارهای انتساب‌یافته به کاربر."""
+        if not user or not hasattr(user, 'assigned_warehouses'):
+            return []
+        try:
+            return list(user.assigned_warehouses.values_list('id', flat=True))
+        except Exception:
+            return []
+
+    def get_assigned_names(self, user) -> list[str]:
+        """فهرست نام انبارهای انتساب‌یافته به کاربر."""
+        if not user or not hasattr(user, 'assigned_warehouses'):
+            return []
+        try:
+            return list(user.assigned_warehouses.values_list('name', flat=True))
+        except Exception:
+            return []
+
+    def get_assigned(self, user) -> list:
+        """فهرست اشیاء انبارهای انتساب‌یافته به کاربر."""
+        if not user or not hasattr(user, 'assigned_warehouses'):
+            return []
+        try:
+            return list(user.assigned_warehouses.all())
+        except Exception:
+            return []
+
+    def set_assigned(self, user, warehouses) -> None:
+        """انتساب انبارها به کاربر."""
+        if not user or not hasattr(user, 'assigned_warehouses'):
+            return
+        if warehouses is None:
+            warehouses = []
+        user.assigned_warehouses.set(warehouses)
+
     def format_excel_warehouses(self, user):
         """قالب‌بندی متن انبارها برای ستون اکسل کاربران و کارت تردد."""
-        if not hasattr(user, 'assigned_warehouses'):
-            return ''
         wh_items = []
-        for w in user.assigned_warehouses.all():
+        for w in self.get_assigned(user):
             wh_items.append(f"{w.name} ({w.code})" if w.code else w.name)
         return '، '.join(wh_items)
 

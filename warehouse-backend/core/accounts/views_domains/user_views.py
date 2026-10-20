@@ -24,6 +24,14 @@ from ..models import CustomUser, UserTableViewState
 from ..serializers import UserSerializer, UserDirectorySerializer, UserTableViewStateSerializer
 from .helpers import OptionalPageNumberPagination
 
+
+def _get_user_warehouse_extension():
+    """دریافت اکستنشن انبار از نقطه توسعه user_extensions."""
+    for ext in contributions('user_extensions'):
+        if getattr(ext, 'name', '') == 'warehouses' or hasattr(ext, 'get_serializer_field'):
+            return ext
+    return None
+
 class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
@@ -209,10 +217,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 roles.append(g.name)
         roles.sort()
 
-        warehouses = []
-        if hasattr(user, 'assigned_warehouses'):
-            warehouses = list(user.assigned_warehouses.values_list('name', flat=True))
-            warehouses.sort()
+        wh_ext = _get_user_warehouse_extension()
+        warehouses = sorted(wh_ext.get_assigned_names(user)) if wh_ext else []
 
         direct_perms = list(user.user_permissions.values_list('codename', flat=True))
         direct_perms.sort()
@@ -677,10 +683,10 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                         user.save()
                         # همگام‌سازی قطعی دسترسی‌ها (خالی بودن ستون در اکسل باعث پاک شدن دسترسی‌ها می‌شود)
                         user.groups.set(roles)
-                        if hasattr(user, 'assigned_warehouses'):
+                        if wh_ext:
                             # فقط بخشِ درون دامنهٔ سازنده جایگزین می‌شود؛ انبارهای بیرون از دامنهٔ او دست‌نخورده می‌مانند
-                            kept = [w for w in user.assigned_warehouses.all() if wh_ext and w not in allowed_warehouses]
-                            user.assigned_warehouses.set(kept + list(warehouses))
+                            kept = [w for w in wh_ext.get_assigned(user) if w not in allowed_warehouses]
+                            wh_ext.set_assigned(user, kept + list(warehouses))
                         updated_count += 1
                         continue
 
@@ -698,8 +704,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                     user.save()
 
                     user.groups.set(roles)
-                    if hasattr(user, 'assigned_warehouses'):
-                        user.assigned_warehouses.set(warehouses)
+                    if wh_ext:
+                        wh_ext.set_assigned(user, warehouses)
 
                     # ایجاد دسترسی شرکت برای کاربر جدید
                     if cid:
@@ -789,12 +795,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             except Exception:
                 roles.append({'id': g.id, 'title': g.name, 'color': '#4f46e5'})
 
-        wh_names = []
-        if hasattr(user, 'assigned_warehouses'):
-            try:
-                wh_names = list(user.assigned_warehouses.values_list('name', flat=True))
-            except Exception:
-                wh_names = []
+        wh_ext = _get_user_warehouse_extension()
+        wh_names = wh_ext.get_assigned_names(user) if wh_ext else []
 
         avatar_url = user.avatar.url if user.avatar else None
 
