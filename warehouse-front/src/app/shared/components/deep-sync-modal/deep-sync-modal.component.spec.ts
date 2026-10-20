@@ -102,6 +102,51 @@ describe('DeepSyncModalComponent DOM & Behavior Tests', () => {
     expect(sectionTitle).toContain('لیست انبارها');
   });
 
+  function openEmptyWarehouse(loading: string[], failed: string[]) {
+    component.isOpen = true;
+    component.contextMode = 'warehouse';
+    component.warehouses = [];
+    component.loadingScopes = loading;
+    component.failedScopes = failed;
+    component.ngOnChanges({ isOpen: { currentValue: true, previousValue: false, firstChange: true, isFirstChange: () => true } });
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('shows a loading status, not the empty text, while the list is loading', () => {
+    const el = openEmptyWarehouse(['warehouse'], []);
+    const status = el.querySelector('[role="status"]');
+    expect(status?.textContent).toContain('در حال دریافت فهرست');
+    expect(el.textContent).not.toContain('انباری برای بروزرسانی یافت نشد.');
+  });
+
+  it('shows a failure message and a retry button that emits the scope when the fetch failed', () => {
+    const el = openEmptyWarehouse([], ['warehouse']);
+    expect(el.querySelector('[role="status"]')?.textContent).toContain('دریافت فهرست ناموفق بود');
+    expect(el.textContent).not.toContain('انباری برای بروزرسانی یافت نشد.');
+    const retry = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('تلاش دوباره')) as HTMLButtonElement;
+    expect(retry).toBeTruthy();
+    expect(retry.disabled).toBe(false);
+    let emitted: string | null = null;
+    component.retryLoad.subscribe((scope: string) => (emitted = scope));
+    retry.click();
+    expect(emitted).toBe('warehouse');
+  });
+
+  it('keeps the retry button (disabled) while a retry is loading', () => {
+    const el = openEmptyWarehouse(['warehouse'], ['warehouse']);
+    const retry = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('تلاش دوباره')) as HTMLButtonElement;
+    expect(retry).toBeTruthy();
+    expect(retry.disabled).toBe(true);
+    expect(el.querySelector('[role="status"]')?.textContent).toContain('در حال دریافت فهرست');
+  });
+
+  it('shows the module empty text only after a successful empty response', () => {
+    const el = openEmptyWarehouse([], []);
+    expect(el.querySelector('[role="status"]')?.textContent).toContain('انباری برای بروزرسانی یافت نشد.');
+    expect(Array.from(el.querySelectorAll('button')).some(b => b.textContent?.includes('تلاش دوباره'))).toBe(false);
+  });
+
   it('should render projects and adapt DOM text in finance/accounting mode', () => {
     component.isOpen = true;
     component.contextMode = 'finance';

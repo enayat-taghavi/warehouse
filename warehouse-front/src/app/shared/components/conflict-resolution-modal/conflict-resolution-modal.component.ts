@@ -13,7 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../modal/modal.component';
 import { ActionButtonComponent } from '../action-button/action-button.component';
 import { OfflineSyncService } from '../../../core/services/offline-sync.service';
-import { SyncErrorEntry } from '../../../core/services/offline-db';
+import { SyncErrorEntry, isSensitiveConflictScope, resolveScopeFromUrl } from '../../../core/services/offline-db';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 
 export interface ConflictingField {
@@ -301,11 +301,9 @@ export class ConflictResolutionModalComponent implements OnChanges {
   get isFinanceOrSensitive(): boolean {
     if (!this.errorEntry) return false;
     return (
-      this.errorEntry.appScope === 'finance' ||
       this.errorEntry.entityType === 'doc_task' ||
-      (this.errorEntry.url?.includes('personnel') ?? false) ||
-      (this.errorEntry.url?.includes('payroll') ?? false) ||
-      (this.errorEntry.url?.includes('treasury') ?? false)
+      isSensitiveConflictScope(this.errorEntry.appScope) ||
+      (!!this.errorEntry.url && isSensitiveConflictScope(resolveScopeFromUrl(this.errorEntry.url)))
     );
   }
 

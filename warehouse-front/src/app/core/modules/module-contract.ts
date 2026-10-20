@@ -60,6 +60,9 @@ export interface ModuleNavItem {
   route?: string;
 }
 
+/** رنگ‌های پایه‌ای که کلاس‌های کاملشان در کامپوننت‌های مشترک تعریف شده است */
+export type ModuleAccent = 'indigo' | 'emerald';
+
 /**
  * بخش یک ماژول در دیالوگ بروزرسانی عمیق؛ همهٔ متن‌ها فارسی و از خود ماژول است.
  * loadItems و بقیهٔ تابع‌ها سرویس‌ها را از injector می‌گیرند تا کد ماژول از shared ایمپورت نکند.
@@ -89,8 +92,8 @@ export interface DeepSyncSectionSpec {
   itemLabel: string;
   /** برچسب سامانه در گزارش یکپارچهٔ مرکز عملیات */
   summaryLabel: string;
-  /** رنگ پایهٔ بخش (indigo یا emerald) */
-  accent: string;
+  /** رنگ پایهٔ بخش */
+  accent: ModuleAccent;
   /** فهرست فوری پیش از پاسخ سرور (اختیاری) */
   initialItems?: (injector: Injector) => { id: number; name: string }[];
   /** شناسهٔ پیش‌انتخاب هنگام باز شدن دیالوگ (اختیاری) */
@@ -111,6 +114,15 @@ export interface ExtensionMap {
     themeColor: 'indigo' | 'emerald' | 'cyan' | 'amber' | 'rose' | 'sky' | 'violet' | string;
     tags: string[];
     appKey?: string;
+    /** گزینهٔ این ماژول در منوی تعویض سامانهٔ هدر (app-role-switcher) */
+    switcher?: {
+      /** ترتیب نمایش (کوچک‌تر بالاتر) */
+      order: number;
+      labelFa: string;
+      descriptionFa: string;
+      icon: IconName;
+      accent: ModuleAccent;
+    };
   };
 
   /**
@@ -226,6 +238,14 @@ export interface ExtensionMap {
     activeAppHeader?: string;
     defaultOfflineRole?: string;
     tokenScopeKey?: string;
+    /** برچسب فارسی هدف در گزارش بروزرسانی عمیق وقتی نامش در دست نیست (مثلاً «انبار» → «انبار ۱۲») */
+    targetLabelFa?: string;
+    /** کرسر این قلمرو کلید قدیمی `${userId}:${scopeId}` هم دارد (سازگاری پیشین؛ خوانده و ارتقا داده می‌شود) */
+    legacyCursorKey?: boolean;
+    /** پاکسازی دادهٔ محلی یک هدف پیش از دانلود کامل در بروزرسانی عمیق (درخواست صریح کاربر) */
+    purgeBeforeDeepUpdate?: (scopeId: number, userId: number | null) => Promise<void>;
+    /** پاکسازی دادهٔ محلی یک هدف وقتی سرور دسترسی به آن را با ۴۰۳ ابطال کرد */
+    purgeOnAccessRevoked?: (scopeId: number) => Promise<void>;
   };
 
   /**
@@ -238,6 +258,8 @@ export interface ExtensionMap {
     queueUrlPatterns: string[];
     activePathPatterns: string[];
     appRoutePrefixes: string[];
+    /** تداخل همگام‌سازی این قلمرو حساس است: نقش‌های ثبت (operator/counter) حق حل آن را ندارند (تفکیک وظایف) */
+    sensitiveConflicts?: boolean;
   };
 
   /**

@@ -104,6 +104,8 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   public deepSyncPreselectByScope: Record<string, number | null> = {};
   /** قلمروهایی که فهرستشان در حال دریافت است */
   public deepSyncLoadingScopes: string[] = [];
+  /** قلمروهایی که دریافت فهرستشان شکست خورد */
+  public deepSyncFailedScopes: string[] = [];
 
   // سازگاری پیشین: دو قلمرو قفل‌شده با نام‌های قدیمی
   public get deepSyncWarehouses(): any[] {
@@ -561,31 +563,47 @@ export class UserMenuComponent implements OnInit, OnDestroy {
     this.deepSyncItemsByScope = items;
     this.deepSyncPreselectByScope = preselect;
     this.deepSyncLoadingScopes = relevant.map(sec => sec.scope);
+    this.deepSyncFailedScopes = [];
 
     // ۲. باز کردن فوری مودال برای پاسخ‌دهی سریع رابط کاربری
     this.isDeepSyncModalOpen = true;
     this.cdr.detectChanges();
 
     // ۳. واکشی فهرست زندهٔ هر بخش با بارگذار خود ماژول
-    const fetchPromises = relevant.map(sec =>
-      sec.loadItems(this.injector)
-        .then((data) => {
-          this.deepSyncItemsByScope = { ...this.deepSyncItemsByScope, [sec.scope]: data || [] };
-          if (sec.preselectId) {
-            this.deepSyncPreselectByScope = { ...this.deepSyncPreselectByScope, [sec.scope]: sec.preselectId(this.injector) };
-          }
-        })
-        .catch((err) => {
-          console.warn(`[UserMenu] خطا در دریافت فهرست «${sec.tabLabel}» برای بروزرسانی عمیق:`, err);
-        })
-        .finally(() => {
-          this.deepSyncLoadingScopes = this.deepSyncLoadingScopes.filter(scope => scope !== sec.scope);
-          this.cdr.detectChanges();
-        })
-    );
-
-    await Promise.allSettled(fetchPromises);
+    await Promise.allSettled(relevant.map(sec => this.loadDeepSyncSection(sec)));
     this.cdr.detectChanges();
+  }
+
+  /** واکشی فهرست زندهٔ یک بخش؛ شکست، قلمرو را در deepSyncFailedScopes می‌گذارد */
+  private loadDeepSyncSection(sec: DeepSyncSectionSpec): Promise<void> {
+    return sec.loadItems(this.injector)
+      .then((data) => {
+        this.deepSyncItemsByScope = { ...this.deepSyncItemsByScope, [sec.scope]: data || [] };
+        this.deepSyncFailedScopes = this.deepSyncFailedScopes.filter(s => s !== sec.scope);
+        if (sec.preselectId) {
+          this.deepSyncPreselectByScope = { ...this.deepSyncPreselectByScope, [sec.scope]: sec.preselectId(this.injector) };
+        }
+      })
+      .catch((err) => {
+        console.warn(`[UserMenu] خطا در دریافت فهرست «${sec.tabLabel}» برای بروزرسانی عمیق:`, err);
+        if (!this.deepSyncFailedScopes.includes(sec.scope)) {
+          this.deepSyncFailedScopes = [...this.deepSyncFailedScopes, sec.scope];
+        }
+      })
+      .finally(() => {
+        this.deepSyncLoadingScopes = this.deepSyncLoadingScopes.filter(scope => scope !== sec.scope);
+        this.cdr.detectChanges();
+      });
+  }
+
+  /** تلاش دوباره برای دریافت فهرست یک بخش از دیالوگ بروزرسانی عمیق */
+  public retryDeepSyncSection(scope: string): void {
+    const sec = this.deepSyncSectionSpecs.find(s => s.scope === scope);
+    if (!sec || this.deepSyncLoadingScopes.includes(scope)) return;
+    // قلمرو تا پاسخ موفق در فهرست شکست می‌ماند تا دکمهٔ تلاش دوباره (و فوکوس آن) سر جایش بماند
+    this.deepSyncLoadingScopes = [...this.deepSyncLoadingScopes, scope];
+    this.cdr.detectChanges();
+    void this.loadDeepSyncSection(sec);
   }
 
   public async startDeepSync(payload: any): Promise<void> {
@@ -656,13 +674,14 @@ export class UserMenuComponent implements OnInit, OnDestroy {
       allSummaries.forEach(s => {
         totalRecords += s.records;
         totalBytes += s.bytes;
-        const safeName = (s.name || '').replace(/[&<>"']/g, (m) => ({
+        const esc = (v: string) => v.replace(/[&<>"']/g, (m) => ({
           '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
         }[m] || m));
+        const safeName = esc(s.name || '');
 
         const sec = sectionOf(s.scopeKind);
         const badgeClass = SUMMARY_BADGE_CLASSES[sec?.accent || ''] || SUMMARY_BADGE_CLASSES['indigo'];
-        const badgeHtml = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black ${badgeClass}">${sec?.summaryLabel || s.scopeKind}</span>`;
+        const badgeHtml = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black ${badgeClass}">${esc(sec?.summaryLabel || s.scopeKind)}</span>`;
 
         if (isOperationsContext) {
           tableRows += `

@@ -150,7 +150,7 @@ export interface SyncCursorEntry {
  * قاعده: هیچ جدولی هرگز Clear نمی‌شود مگر صف خالی باشد و کاربر صریحاً تأیید کند.
  */
 
-export type AppScope = 'warehouse' | 'finance' | (string & {});
+export type AppScope = string;
 
 /**
  * فاز ۶ §۶.۹ (تسک ۶۰) — قفل مطلق نام دو دیتابیس فعلی IndexedDB
@@ -175,6 +175,7 @@ interface ValidOfflineSyncSpec {
   queueUrlPatterns: string[];
   activePathPatterns: string[];
   appRoutePrefixes: string[];
+  sensitiveConflicts?: boolean;
 }
 
 const reportedInvalidExtensions = new WeakSet<object>();
@@ -232,6 +233,7 @@ function getOfflineSyncSpecs(): ValidOfflineSyncSpec[] {
           queueUrlPatterns: Array.isArray(ext.queueUrlPatterns) ? ext.queueUrlPatterns : [],
           activePathPatterns: Array.isArray(ext.activePathPatterns) ? ext.activePathPatterns : [],
           appRoutePrefixes: Array.isArray(ext.appRoutePrefixes) ? ext.appRoutePrefixes : [],
+          sensitiveConflicts: ext.sensitiveConflicts === true,
         });
       }
     }
@@ -302,8 +304,8 @@ export interface ScopeSyncProfile {
  * تا نشست و صف کاربران فعلی در هر زیرمجموعهٔ ماژول نصب‌شده دست‌نخورده بماند.
  */
 const LOCKED_SYNC_PROFILES: Record<string, Omit<ScopeSyncProfile, 'scope'>> = {
-  warehouse: { tokenKey: 'wh_access_token_warehouse', activeAppHeader: 'warehouse', defaultOfflineRole: 'counter' },
-  finance: { tokenKey: 'wh_access_token_finance', activeAppHeader: 'personnel', defaultOfflineRole: 'operator' },
+  [WH_SCOPE]: { tokenKey: 'wh_access_token_warehouse', activeAppHeader: 'warehouse', defaultOfflineRole: 'counter' },
+  [FIN_SCOPE]: { tokenKey: 'wh_access_token_finance', activeAppHeader: 'personnel', defaultOfflineRole: 'operator' },
 };
 
 /**
@@ -412,6 +414,13 @@ export function resolveScopeFromUrl(url?: string | null): AppScope {
   return WH_SCOPE;
 }
 
+/** تداخل همگام‌سازی این قلمرو (یا نام مستعارش) حساس است؛ از offlineSync.sensitiveConflicts ماژول صاحب قلمرو */
+export function isSensitiveConflictScope(scope?: string | null): boolean {
+  if (!scope) return false;
+  const norm = normalizeScope(scope);
+  return getOfflineSyncSpecs().some(spec => spec.scopeKind === norm && spec.sensitiveConflicts === true);
+}
+
 export class OfflineDatabase extends Dexie {
   syncQueue!: Table<SyncQueueEntry, number>;
   apiCache!: Table<ApiCacheEntry, string>;
@@ -425,11 +434,11 @@ export class OfflineDatabase extends Dexie {
   attendanceRecords!: Table<any, string>;
   public readonly dbScope: AppScope;
 
-  constructor(dbName: string = 'WarehouseOfflineDB_warehouse', scope: AppScope = 'warehouse') {
+  constructor(dbName: string = SCOPED_DB_NAMES[WH_SCOPE], scope: AppScope = WH_SCOPE) {
     super(dbName);
     this.dbScope = scope;
 
-    if (scope === 'finance') {
+    if (scope === FIN_SCOPE) {
       // ساختار دیتابیس قلمرو مالی و پرسنلی (Finance & Personnel DB)
       this.version(1).stores({
         syncQueue: '++id, status, createdAt, userId, entitySyncId, appScope',
@@ -537,7 +546,7 @@ const dbInstances = new Map<string, OfflineDatabase>();
 /**
  * دریافت یا ایجاد نمونه پایگاه‌داده متناسب با قلمرو درخواستی
  */
-export function getOfflineDb(scope?: AppScope | 'personnel' | null): OfflineDatabase {
+export function getOfflineDb(scope?: AppScope | null): OfflineDatabase {
   const normScope = normalizeScope(scope || getCurrentActiveAppScope());
   const dbName = SCOPED_DB_NAMES[normScope] || getScopedDbName(normScope);
   if (!dbInstances.has(dbName)) {
@@ -548,10 +557,10 @@ export function getOfflineDb(scope?: AppScope | 'personnel' | null): OfflineData
 }
 
 /** نمونه صریح دیتابیس آفلاین انبارداری */
-export const warehouseOfflineDb: OfflineDatabase = getOfflineDb('warehouse');
+export const warehouseOfflineDb: OfflineDatabase = getOfflineDb(WH_SCOPE);
 
 /** نمونه صریح دیتابیس آفلاین مالی و پرسنلی */
-export const financeOfflineDb: OfflineDatabase = getOfflineDb('finance');
+export const financeOfflineDb: OfflineDatabase = getOfflineDb(FIN_SCOPE);
 
 /**
  * حل دقیق و سخت‌گیرانه دیتابیس بر اساس قلمرو درخواستی — فاز ۴ (گام ۴)
@@ -611,14 +620,14 @@ export const offlineDb: OfflineDatabase = new Proxy({} as OfflineDatabase, {
 
     // ۱. جداول اختصاصی دامنه انبارداری
     if (['countTasks', 'items', 'dynamicFields', 'photoQueue', 'docTasks'].includes(prop as string)) {
-      const whDb = getOfflineDb('warehouse');
+      const whDb = getOfflineDb(WH_SCOPE);
       const val = (whDb as any)[prop];
       return typeof val === 'function' ? val.bind(whDb) : val;
     }
 
     // ۲. جداول اختصاصی دامنه مالی
     if (prop === 'attendanceRecords') {
-      const finDb = getOfflineDb('finance');
+      const finDb = getOfflineDb(FIN_SCOPE);
       const val = (finDb as any)[prop];
       return typeof val === 'function' ? val.bind(finDb) : val;
     }

@@ -2,7 +2,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
 import { Router, NavigationEnd } from '@angular/router';
 import { WebSocketService } from '../http/websocket.service';
-import { SessionTabService } from './session-tab.service';
+import { SessionTabService, DEFAULT_ACTIVE_APP_MODULE } from './session-tab.service';
 import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 import { findCompanyDocumentsRoute, isCompanyDocumentsUrl } from '../modules/documents-archive-route';
 import { ActiveCompanyService } from './active-company.service';
@@ -10,9 +10,19 @@ import { resolveOfflineDbStrict } from './offline-db';
 import { filter } from 'rxjs';
 
 import { ROLE_ICONS } from '../../shared/icons/semantic-icons';
-import { RolePersona, AppModuleType, ModulePersonas, FrontendModuleSpec, WhFrontendModule } from '../modules/module-contract';
+import { RolePersona, AppModuleType, ModulePersonas, FrontendModuleSpec, WhFrontendModule, ModuleAccent } from '../modules/module-contract';
+import { IconName } from '../../shared/icons/icon-registry';
 
 export type { RolePersona, AppModuleType, ModulePersonas };
+
+/** گزینهٔ یک ماژول در منوی تعویض سامانه (از launcherTile.switcher همان ماژول) */
+export interface AppSwitcherOption {
+  app: AppModuleType;
+  labelFa: string;
+  descriptionFa: string;
+  icon: IconName;
+  accent: ModuleAccent;
+}
 
 /** پوستهٔ هستهٔ مرکز عملیات؛ ماژول نیست و قلمرو توکن جدا ندارد */
 const OPERATIONS_APP = 'operations';
@@ -30,7 +40,7 @@ export const CORE_OPS_COMMANDER: RolePersona = {
 export const CORE_SUPERUSER: RolePersona = {
   code: 'superuser',
   title: 'مدیر ارشد',
-  app: 'personnel',
+  app: DEFAULT_ACTIVE_APP_MODULE,
   badgeColor: '#e11d48',
   bgClass: 'bg-rose-600',
   icon: ROLE_ICONS.superuser,
@@ -82,14 +92,22 @@ export class AppPersonaService {
     );
   }
 
-  // بررسی دسترسی کاربر به سامانه انبارداری (وارونه‌سازی — فاز ۶، تسک ۵۴)
-  public hasWarehouseAccess = computed<boolean>(() => {
-    return this.canAccessApp('warehouse');
-  });
-
-  // بررسی دسترسی کاربر به سامانه مالی و کارکرد پرسنل
-  public hasPersonnelAccess = computed<boolean>(() => {
-    return this.canAccessApp('accounting');
+  // گزینه‌های ماژول‌های در دسترس کاربر در منوی تعویض سامانه، به ترتیب switcher.order
+  public switcherApps = computed<AppSwitcherOption[]>(() => {
+    const options: Array<AppSwitcherOption & { order: number }> = [];
+    for (const spec of this.moduleRegistry.getInstalledModules()) {
+      const sw = spec.extensions?.launcherTile?.switcher;
+      if (!sw || !this.canAccessApp(spec.code)) continue;
+      options.push({
+        app: this.appCodeOf(spec),
+        labelFa: sw.labelFa,
+        descriptionFa: sw.descriptionFa,
+        icon: sw.icon,
+        accent: sw.accent,
+        order: sw.order,
+      });
+    }
+    return options.sort((a, b) => a.order - b.order).map(({ order, ...o }) => o);
   });
 
   // بررسی دسترسی کاربر به مرکز عملیات و زیرساخت سازمان (ویژه سوپریوزر)

@@ -39,7 +39,8 @@ export class WarehouseHttpService {
   private moduleRegistry = inject(ModuleRegistryService);
 
   private get isWarehouseAvailable(): boolean {
-    return this.moduleRegistry.getInstalledModules().some(m => m.scopeKind === 'warehouse');
+    // ماژول صاحب فهرست انبارها همان ماژولی است که فیلتر انبار بین‌ماژولی را عرضه می‌کند
+    return this.moduleRegistry.getExtensions('crossModuleFilters').some(e => !!e.extension.warehouseScopeFilter);
   }
 
   constructor(private http: HttpClient) {}

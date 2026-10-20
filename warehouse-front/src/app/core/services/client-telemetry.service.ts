@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { SessionTabService, TabSessionMessage } from './session-tab.service';
 import { detectClientDeviceModel, formatDeviceModelName } from '../utils/device-detector';
-import { warehouseOfflineDb, financeOfflineDb } from './offline-db';
+import { warehouseOfflineDb, financeOfflineDb, DEFAULT_OFFLINE_SCOPE } from './offline-db';
 import { NetworkStatusService } from './network-status.service';
 import { ToastService } from '../../shared/components/toast/toast.component';
 import { WebSocketService } from '../http/websocket.service';
@@ -153,7 +153,7 @@ export class ClientTelemetryService {
         this.localTabsMap.set(msg.sourceTabId, {
           tabId: msg.sourceTabId,
           deviceModel: msg.payload.deviceModel || 'این سیستم',
-          appScope: msg.payload.appScope || 'warehouse',
+          appScope: msg.payload.appScope || DEFAULT_OFFLINE_SCOPE,
           activeRole: msg.payload.activeRole || 'counter',
           isCurrentTab: false,
           lastSeen: Date.now()

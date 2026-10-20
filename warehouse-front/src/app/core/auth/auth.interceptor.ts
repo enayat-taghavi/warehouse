@@ -7,7 +7,7 @@ import {
 } from '@angular/common/http';
 import { catchError, switchMap, throwError, BehaviorSubject, filter, take } from 'rxjs';
 import { AuthService } from './auth.service';
-import { SessionTabService } from '../services/session-tab.service';
+import { SessionTabService, DEFAULT_ACTIVE_APP_MODULE } from '../services/session-tab.service';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -100,7 +100,7 @@ function addToken(req: HttpRequest<unknown>, token: string, sessionTab?: Session
     : ((typeof window !== 'undefined' && (sessionStorage.getItem('active_role_persona') || localStorage.getItem('active_role_persona'))) || 'operator');
   const activeApp = sessionTab
     ? sessionTab.getActiveApp()
-    : ((typeof window !== 'undefined' && (sessionStorage.getItem('active_app_module') || localStorage.getItem('active_app_module'))) || 'personnel');
+    : ((typeof window !== 'undefined' && (sessionStorage.getItem('active_app_module') || localStorage.getItem('active_app_module'))) || DEFAULT_ACTIVE_APP_MODULE);
   const clientTabId = sessionTab
     ? sessionTab.tabId
     : ((typeof window !== 'undefined' && sessionStorage.getItem('wh_tab_session_id')) || 'tab_main');

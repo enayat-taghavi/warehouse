@@ -3,7 +3,7 @@ import { Subject, BehaviorSubject } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { ToastService } from '../../shared';
 import { wsUrl } from '../platform/server-origin';
-import { normalizeScope, resolveOfflineDbStrict } from '../services/offline-db';
+import { normalizeScope, resolveOfflineDbStrict, DEFAULT_OFFLINE_SCOPE } from '../services/offline-db';
 
 @Injectable({
   providedIn: 'root'
@@ -92,8 +92,8 @@ export class WebSocketService implements OnDestroy {
 
     try {
       const activeApp = typeof window !== 'undefined' 
-        ? (sessionStorage.getItem('active_app_module') || localStorage.getItem('active_app_module') || 'warehouse') 
-        : 'warehouse';
+        ? (sessionStorage.getItem('active_app_module') || localStorage.getItem('active_app_module') || DEFAULT_OFFLINE_SCOPE) 
+        : DEFAULT_OFFLINE_SCOPE;
       const url = wsUrl(`/ws/notifications/?app=${encodeURIComponent(activeApp)}&tab_id=${encodeURIComponent(this.tabId)}`);
 
       this.ws = new WebSocket(url);

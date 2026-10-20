@@ -98,6 +98,8 @@
   [sections]="deepSyncSectionViews"
   [preselectByScope]="deepSyncPreselectByScope"
   [loadingScopes]="deepSyncLoadingScopes"
+  [failedScopes]="deepSyncFailedScopes"
+  (retryLoad)="retryDeepSyncSection($event)"
   (closed)="isDeepSyncModalOpen = false"
   (startSyncMulti)="startDeepSync($event)">
 </app-deep-sync-modal>

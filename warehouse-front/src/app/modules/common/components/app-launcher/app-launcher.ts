@@ -270,11 +270,11 @@ export class AppLauncherComponent implements OnInit {
 
   // سازگاری رو به عقب (Backward-compatibility)
   get hasWarehouse(): boolean {
-    return this.persona.hasWarehouseAccess();
+    return this.persona.canAccessApp('warehouse');
   }
 
   get hasFinance(): boolean {
-    return this.persona.hasPersonnelAccess();
+    return this.persona.canAccessApp('accounting');
   }
 
   get hasOperations(): boolean {

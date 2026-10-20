@@ -116,7 +116,14 @@ export const MODULE: WhFrontendModule = {
     launcherTile: {
       themeColor: 'emerald',
       tags: ['کارتابل مالی', 'ثبت کارکرد', 'خزانه‌داری'],
-      appKey: 'personnel'
+      appKey: 'personnel',
+      switcher: {
+        order: 20,
+        labelFa: 'مالی و کارکرد',
+        descriptionFa: 'حقوق، دستمزد و کارکرد پرسنل',
+        icon: 'credit-card',
+        accent: 'emerald'
+      }
     },
     userMenu: {
       deepSyncScope: 'finance',
@@ -187,7 +194,42 @@ export const MODULE: WhFrontendModule = {
       scopeParamKey: 'project_id',
       activeAppHeader: 'personnel',
       defaultOfflineRole: 'operator',
-      tokenScopeKey: 'finance'
+      tokenScopeKey: 'finance',
+      targetLabelFa: 'پروژه',
+      purgeBeforeDeepUpdate: async (id, userId) => {
+        const { financeOfflineDb } = await import('../../core/services/offline-db');
+        const { buildCursorKey } = await import('../../core/services/sync-pull.service');
+        const deleteProjectAttendance = async () => {
+          try {
+            if (financeOfflineDb.attendanceRecords) {
+              const hasIndex = (financeOfflineDb.attendanceRecords.schema as any)?.indexes?.some(
+                (idx: any) => idx.name === 'project_id'
+              );
+              if (hasIndex) {
+                await financeOfflineDb.attendanceRecords.where('project_id').equals(id).delete();
+              } else {
+                await financeOfflineDb.attendanceRecords.filter((entry: any) => entry?.project_id === id).delete();
+              }
+            }
+          } catch (err) {
+            try {
+              await financeOfflineDb.attendanceRecords.filter((entry: any) => entry?.project_id === id).delete();
+            } catch (fallbackErr) {
+              console.warn('[OfflineSync] عدم امکان پاکسازی محلی attendanceRecords:', fallbackErr);
+            }
+          }
+        };
+
+        await Promise.all([
+          deleteProjectAttendance(),
+          financeOfflineDb.syncCursors.where('warehouseId').equals(id).delete(),
+          userId ? financeOfflineDb.syncCursors.delete(buildCursorKey(userId, id, 'finance')) : Promise.resolve(),
+          userId ? financeOfflineDb.syncCursors.delete(`${userId}:${id}`) : Promise.resolve()
+        ]);
+        try {
+          await financeOfflineDb.apiCache.filter((entry) => entry.url.includes(`project_id=${id}`)).delete();
+        } catch {}
+      }
     },
     offlineSync: {
       scopeKind: 'finance',
@@ -215,7 +257,8 @@ export const MODULE: WhFrontendModule = {
         '/app/payroll',
         '/app/treasury',
         '/app/projects'
-      ]
+      ],
+      sensitiveConflicts: true
     },
     projectLookup: {
       financialProjectsEndpoint: FINANCIAL_PROJECTS_ENDPOINT

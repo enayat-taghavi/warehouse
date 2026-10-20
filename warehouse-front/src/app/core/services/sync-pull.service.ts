@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { offlineDb, warehouseOfflineDb, financeOfflineDb, getAllOfflineDbs, SyncCursorEntry, AppScope, DEFAULT_OFFLINE_SCOPE } from './offline-db';
+import { offlineDb, getAllOfflineDbs, SyncCursorEntry, AppScope, DEFAULT_OFFLINE_SCOPE } from './offline-db';
 import { NetworkStatusService } from './network-status.service';
 import { isServerUnreachable } from './server-reachability';
 import { BehaviorSubject, Subject } from 'rxjs';
@@ -63,10 +63,10 @@ export function getStoredCurrentUserId(): number | null {
 /**
  * دریافت وضعیت کرسر به روش expand-contract (ابتدا کلید جدید، سپس fallback به کلید قدیمی)
  */
-async function getCursorState(userId: number, scopeId: number, scopeKind: AppScope = DEFAULT_OFFLINE_SCOPE): Promise<any> {
+async function getCursorState(userId: number, scopeId: number, scopeKind: AppScope = DEFAULT_OFFLINE_SCOPE, hasLegacyKey = false): Promise<any> {
   const newKey = buildCursorKey(userId, scopeId, scopeKind);
   let state = await offlineDb.syncCursors.get(newKey);
-  if (!state && scopeKind === 'warehouse') {
+  if (!state && hasLegacyKey) {
     // خواندن کلید قدیمی جهت تداوم نشست کاربر بدون نیاز به full resync
     const legacyKey = `${userId}:${scopeId}`;
     state = await offlineDb.syncCursors.get(legacyKey);
@@ -158,7 +158,7 @@ export class SyncPullService {
 
     try {
       const cursorKey = buildCursorKey(userId, scopeId, scopeKind);
-      let state = await getCursorState(userId, scopeId, scopeKind);
+      let state = await getCursorState(userId, scopeId, scopeKind, !!syncConfig.legacyCursorKey);
       if (!state) {
         state = {
           key: cursorKey, userId, warehouseId: scopeId, scopeKind,
@@ -205,13 +205,8 @@ export class SyncPullService {
             // ابطال دسترسی کاربر به این قلمرو — پاکسازی فوری داده‌های محلی جهت جلوگیری از نشت اطلاعات (تسک ۲۱)
             console.warn(`[SyncPull] ⛔ دسترسی ۴۰۳ برای قلمرو ${scopeKind} (${scopeId}) — پاکسازی داده‌های محلی`);
             try {
-              if (scopeKind === 'warehouse') {
-                await Promise.all([
-                  warehouseOfflineDb.items.where('warehouse_id').equals(scopeId).delete(),
-                  warehouseOfflineDb.countTasks.where('warehouse_id').equals(scopeId).delete(),
-                  warehouseOfflineDb.docTasks.where('warehouse_id').equals(scopeId).delete(),
-                  warehouseOfflineDb.dynamicFields.where('warehouse_id').equals(scopeId).delete(),
-                ]);
+              if (syncConfig.purgeOnAccessRevoked) {
+                await syncConfig.purgeOnAccessRevoked(scopeId);
               }
             } catch (clearErr) {
               console.warn('[SyncPull] خطا در پاکسازی داده‌های قلمرو ابطال‌شده:', clearErr);
@@ -226,7 +221,7 @@ export class SyncPullService {
             // کلاینت قدیمی‌تر از عمر tombstoneها → Full Resync (فقط یک بار)
             console.warn(`[SyncPull] ⏳ 410 — Full Resync قلمرو ${scopeKind}:`, scopeId);
             await offlineDb.syncCursors.delete(cursorKey);
-            if (scopeKind === 'warehouse') {
+            if (syncConfig.legacyCursorKey) {
               await offlineDb.syncCursors.delete(`${userId}:${scopeId}`);
             }
             this.inFlight = false;
@@ -382,7 +377,10 @@ export class SyncPullService {
   async getLastServerTime(warehouseId: number, scopeKind: AppScope = DEFAULT_OFFLINE_SCOPE): Promise<string | null> {
     const userId = this.getCurrentUserId();
     if (userId === null) return null;
-    const state = await getCursorState(userId, warehouseId, scopeKind);
+    const legacy = !!this.moduleRegistry
+      .getExtensions('syncConfig')
+      .find(e => e.extension.scopeKind === scopeKind)?.extension.legacyCursorKey;
+    const state = await getCursorState(userId, warehouseId, scopeKind, legacy);
     return state?.lastServerTime ?? null;
   }
 }

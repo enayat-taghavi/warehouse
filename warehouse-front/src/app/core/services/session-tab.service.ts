@@ -2,7 +2,13 @@ import { Injectable, signal } from '@angular/core';
 import { getModuleRegistry } from '../modules/module-registry.service';
 import { getScopeSyncProfile } from './offline-db';
 
-export type AppModuleScope = 'warehouse' | 'personnel' | 'operations' | string;
+export type AppModuleScope = string;
+
+/**
+ * مقدار پیش‌فرض ذخیره‌شدهٔ `active_app_module` (و هدر X-Active-App) وقتی تب و حافظهٔ سراسری مقداری ندارند؛
+ * قفل پروتکل: سرور و نشست‌های فعلی همین مقدار را می‌شناسند.
+ */
+export const DEFAULT_ACTIVE_APP_MODULE: AppModuleScope = 'personnel';
 
 export interface TabSessionMessage {
   type: 'AUTH_LOGOUT' | 'PROFILE_UPDATED' | 'SCOPE_CHANGED' | 'PING' | 'PONG';
@@ -67,14 +73,20 @@ export class SessionTabService {
     return newId;
   }
 
+  /** کد اپ معتبر برای `active_app_module`: کلید اپ کاشی لانچر ماژول‌های این بیلد، یا پوستهٔ عملیات */
+  private isKnownAppCode(code: string): boolean {
+    if (code === 'operations') return true;
+    return getModuleRegistry().getAllModules().some(m => m.extensions?.launcherTile?.appKey === code);
+  }
+
   /**
    * دریافت قلمرو فعال تب با اولویت حافظه تب، سپس کانتکست آدرس صفحه و نهایتاً پیش‌فرض سراسری
    */
   public getActiveApp(): AppModuleScope {
-    if (typeof window === 'undefined') return 'personnel';
+    if (typeof window === 'undefined') return DEFAULT_ACTIVE_APP_MODULE;
     try {
       const tabScoped = sessionStorage.getItem(this.APP_MODULE_KEY) as AppModuleScope | null;
-      if (tabScoped && (tabScoped === 'warehouse' || tabScoped === 'personnel' || tabScoped === 'operations')) {
+      if (tabScoped && this.isKnownAppCode(tabScoped)) {
         return tabScoped;
       }
 
@@ -93,11 +105,11 @@ export class SessionTabService {
         }
       }
 
-      const globalFallback = (localStorage.getItem(this.APP_MODULE_KEY) as AppModuleScope) || 'personnel';
+      const globalFallback = (localStorage.getItem(this.APP_MODULE_KEY) as AppModuleScope) || DEFAULT_ACTIVE_APP_MODULE;
       sessionStorage.setItem(this.APP_MODULE_KEY, globalFallback);
       return globalFallback;
     } catch {
-      return 'personnel';
+      return DEFAULT_ACTIVE_APP_MODULE;
     }
   }
 
@@ -147,7 +159,7 @@ export class SessionTabService {
    * استخراج توکن دسترسی متناسب با قلمرو فعال تب (Domain-Isolated Token Extraction)
    * از نشت توکن مالی به درخواست‌های انبار یا برعکس در تب‌های همزمان جلوگیری می‌کند.
    */
-  public getScopedAccessToken(targetScope?: 'warehouse' | 'finance' | 'personnel' | string): string | null {
+  public getScopedAccessToken(targetScope?: string): string | null {
     if (typeof window === 'undefined') return null;
     try {
       const scope = targetScope || this.getActiveApp();
@@ -175,7 +187,7 @@ export class SessionTabService {
   /**
    * ذخیره‌سازی توکن تفکیک‌شده برای قلمرو بدون اختلال در سایر تب‌های مرورگر
    */
-  public setScopedAccessToken(token: string, scope?: 'warehouse' | 'finance' | 'personnel' | string): void {
+  public setScopedAccessToken(token: string, scope?: string): void {
     if (typeof window === 'undefined') return;
     try {
       sessionStorage.setItem(this.TOKEN_KEY, token);

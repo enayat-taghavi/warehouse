@@ -105,48 +105,24 @@
       </div>
 
       <div class="p-1.5 space-y-1">
-        <!-- ۱. ماژول انبارگردانی -->
+        <!-- ۱. ماژول‌های نصب‌شده (از launcherTile.switcher هر ماژول) -->
         <button
-          *ngIf="persona.hasWarehouseAccess()"
+          *ngFor="let opt of persona.switcherApps()"
           type="button"
-          (click)="selectApp('warehouse')"
-          [class.bg-indigo-50]="persona.activeApp() === 'warehouse'"
-          [class.dark:bg-indigo-950/60]="persona.activeApp() === 'warehouse'"
+          (click)="selectApp(opt.app)"
+          [ngClass]="persona.activeApp() === opt.app ? accentClasses(opt.accent).active : ''"
           class="w-full text-right flex items-center justify-between px-3 py-2 min-h-[44px] rounded-xl text-xs font-bold transition-all hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer group"
         >
           <div class="flex items-center gap-2 min-w-0">
-            <span class="shrink-0 p-1 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="package" aria-hidden="true"></svg>
+            <span class="shrink-0 p-1 rounded-lg flex items-center justify-center" [ngClass]="accentClasses(opt.accent).iconBox">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="opt.icon" aria-hidden="true"></svg>
             </span>
             <div class="flex flex-col min-w-0">
-              <span class="truncate text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 font-extrabold">انبارگردانی</span>
-              <span class="text-[10px] text-slate-400 font-normal">مدیریت و شمارش موجودی انبار</span>
+              <span class="truncate text-slate-800 dark:text-slate-200 font-extrabold" [ngClass]="accentClasses(opt.accent).labelHover">{{ opt.labelFa }}</span>
+              <span class="text-[10px] text-slate-400 font-normal">{{ opt.descriptionFa }}</span>
             </div>
           </div>
-          <span *ngIf="persona.activeApp() === 'warehouse'" class="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-confirm" aria-hidden="true"></svg>
-          </span>
-        </button>
-
-        <!-- ۲. سامانه مالی و کارکرد -->
-        <button
-          *ngIf="persona.hasPersonnelAccess()"
-          type="button"
-          (click)="selectApp('personnel')"
-          [class.bg-emerald-50]="persona.activeApp() === 'personnel'"
-          [class.dark:bg-emerald-950/60]="persona.activeApp() === 'personnel'"
-          class="w-full text-right flex items-center justify-between px-3 py-2 min-h-[44px] rounded-xl text-xs font-bold transition-all hover:bg-slate-100/80 dark:hover:bg-slate-800/80 cursor-pointer group"
-        >
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="shrink-0 p-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card" aria-hidden="true"></svg>
-            </span>
-            <div class="flex flex-col min-w-0">
-              <span class="truncate text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-300 font-extrabold">مالی و کارکرد</span>
-              <span class="text-[10px] text-slate-400 font-normal">حقوق، دستمزد و کارکرد پرسنل</span>
-            </div>
-          </div>
-          <span *ngIf="persona.activeApp() === 'personnel'" class="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+          <span *ngIf="persona.activeApp() === opt.app" class="w-4 h-4 rounded-full text-white flex items-center justify-center shrink-0" [ngClass]="accentClasses(opt.accent).check">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" appIcon="action-confirm" aria-hidden="true"></svg>
           </span>
         </button>

@@ -161,7 +161,7 @@ export interface AuditFilters {
   action_type?: string;
   severity?: string;
   warehouse?: number | string;
-  app_scope?: 'all' | 'warehouse' | 'finance' | 'security' | string;
+  app_scope?: string;
   event?: string;
   from_date?: string;
   to_date?: string;

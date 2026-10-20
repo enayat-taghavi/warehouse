@@ -401,7 +401,7 @@ describe('Segregation of Duties (SoD) & DOM Verification for All 12 Database Use
         expect(apps).not.toContain('warehouse');
         expect(personaService.canAccessApp('warehouse')).toBe(false);
       }
-      expect(personaService.hasWarehouseAccess()).toBe(user.canAccessWarehouse);
+      expect(personaService.canAccessApp('warehouse')).toBe(user.canAccessWarehouse);
 
       // 3. تک‌نقشی بودن (SoD سخت‌گیرانه)
       const roleCodes = personaService.availableRoles().map((r: any) => r.code);

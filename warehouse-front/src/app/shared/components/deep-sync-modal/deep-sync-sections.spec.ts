@@ -132,3 +132,28 @@ describe('Deep update sections from module userMenu extensions (step 6, session 
     expect(text).not.toContain('کل سازمان');
   });
 });
+
+describe('module syncConfig hooks and app switcher options (registry contributions)', () => {
+  const byCode = (code: string) => getModuleRegistry().getAllModules().find(m => m.code === code);
+
+  it('warehouse keeps the legacy cursor key and both purge hooks; accounting purges only before a deep update', () => {
+    const wh = byCode('warehouse')?.extensions?.syncConfig;
+    const acc = byCode('accounting')?.extensions?.syncConfig;
+    expect(wh?.legacyCursorKey).toBe(true);
+    expect(typeof wh?.purgeBeforeDeepUpdate).toBe('function');
+    expect(typeof wh?.purgeOnAccessRevoked).toBe('function');
+    expect(acc?.legacyCursorKey).toBeFalsy();
+    expect(typeof acc?.purgeBeforeDeepUpdate).toBe('function');
+    expect(acc?.purgeOnAccessRevoked).toBeUndefined();
+  });
+
+  it('switcher options keep the old order and app keys (warehouse, then personnel)', () => {
+    const opts = getModuleRegistry().getAllModules()
+      .map(m => ({ appKey: m.extensions?.launcherTile?.appKey, sw: m.extensions?.launcherTile?.switcher }))
+      .filter(o => !!o.sw)
+      .sort((a, b) => a.sw!.order - b.sw!.order);
+    expect(opts.map(o => o.appKey)).toEqual(['warehouse', 'personnel']);
+    expect(opts.map(o => o.sw!.icon)).toEqual(['package', 'credit-card']);
+    expect(opts.map(o => o.sw!.accent)).toEqual(['indigo', 'emerald']);
+  });
+});

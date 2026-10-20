@@ -1,8 +1,6 @@
 import { Injectable } from '@angular/core';
 import {
   offlineDb,
-  warehouseOfflineDb,
-  financeOfflineDb,
   getOfflineDb,
   getAllOfflineDbs,
   resolveScopeFromUrl,
@@ -13,7 +11,7 @@ import {
   SyncQueueEntry,
   SyncErrorEntry,
 } from './offline-db';
-import { SyncPullService, getStoredCurrentUserId, buildCursorKey } from './sync-pull.service';
+import { SyncPullService, getStoredCurrentUserId } from './sync-pull.service';
 import { NetworkStatusService } from './network-status.service';
 import { PhotoUploadQueueService, PhotoFlushOutcome } from './photo-upload-queue.service';
 import { BehaviorSubject, Subject, Subscription, filter } from 'rxjs';
@@ -677,54 +675,12 @@ export class OfflineSyncService {
 
       for (let i = 0; i < warehouseIds.length; i++) {
         const id = warehouseIds[i];
-        const defaultName = scopeKind === 'finance' ? `پروژه ${id}` : `انبار ${id}`;
+        const defaultName = syncConfig.targetLabelFa ? `${syncConfig.targetLabelFa} ${id}` : String(id);
         const targetName = warehousesMap[id] || defaultName;
         this._deepUpdateState$.next({ ...this._deepUpdateState$.value!, currentIndex: i + 1, currentWarehouseName: targetName });
 
-        if (scopeKind === 'finance') {
-          const deleteProjectAttendance = async () => {
-            try {
-              if (financeOfflineDb.attendanceRecords) {
-                const hasIndex = (financeOfflineDb.attendanceRecords.schema as any)?.indexes?.some(
-                  (idx: any) => idx.name === 'project_id'
-                );
-                if (hasIndex) {
-                  await financeOfflineDb.attendanceRecords.where('project_id').equals(id).delete();
-                } else {
-                  await financeOfflineDb.attendanceRecords.filter((entry: any) => entry?.project_id === id).delete();
-                }
-              }
-            } catch (err) {
-              try {
-                await financeOfflineDb.attendanceRecords.filter((entry: any) => entry?.project_id === id).delete();
-              } catch (fallbackErr) {
-                console.warn('[OfflineSync] عدم امکان پاکسازی محلی attendanceRecords:', fallbackErr);
-              }
-            }
-          };
-
-          await Promise.all([
-            deleteProjectAttendance(),
-            financeOfflineDb.syncCursors.where('warehouseId').equals(id).delete(),
-            userId ? financeOfflineDb.syncCursors.delete(buildCursorKey(userId, id, 'finance')) : Promise.resolve(),
-            userId ? financeOfflineDb.syncCursors.delete(`${userId}:${id}`) : Promise.resolve()
-          ]);
-          try {
-            await financeOfflineDb.apiCache.filter((entry) => entry.url.includes(`project_id=${id}`)).delete();
-          } catch {}
-        } else {
-          await Promise.all([
-            warehouseOfflineDb.items.where('warehouse_id').equals(id).delete(),
-            warehouseOfflineDb.docTasks.where('warehouse_id').equals(id).delete(),
-            warehouseOfflineDb.countTasks.where('warehouse_id').equals(id).delete(),
-            warehouseOfflineDb.dynamicFields.where('warehouse_id').equals(id).delete(),
-            warehouseOfflineDb.syncCursors.where('warehouseId').equals(id).delete(),
-            userId ? warehouseOfflineDb.syncCursors.delete(buildCursorKey(userId, id, 'warehouse')) : Promise.resolve(),
-            userId ? warehouseOfflineDb.syncCursors.delete(`${userId}:${id}`) : Promise.resolve()
-          ]);
-          try {
-            await warehouseOfflineDb.apiCache.filter((entry) => entry.url.includes(`warehouse_id=${id}`)).delete();
-          } catch {}
+        if (syncConfig.purgeBeforeDeepUpdate) {
+          await syncConfig.purgeBeforeDeepUpdate(id, userId);
         }
 
         const outcome = await pullService.pullChanges(id, scopeKind);

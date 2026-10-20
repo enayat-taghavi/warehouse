@@ -7,6 +7,7 @@ import {
   resolveOfflineDbStrict,
   resolveScopeFromUrl,
   AppScope,
+  DEFAULT_OFFLINE_SCOPE,
   OfflineDatabase,
   SyncQueueEntry,
   SyncErrorEntry
@@ -239,7 +240,7 @@ export async function applyOptimisticUpdate(
   tableName: 'countTasks' | 'items' | 'dynamicFields' | 'docTasks',
   syncId: string,
   patch: Record<string, any>,
-  scope: AppScope = 'warehouse'
+  scope: AppScope = DEFAULT_OFFLINE_SCOPE
 ): Promise<void> {
   const db = scope ? resolveOfflineDbStrict(scope) : getOfflineDb(scope);
   if (!db) {

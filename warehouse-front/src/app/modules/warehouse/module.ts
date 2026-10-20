@@ -67,7 +67,14 @@ export const MODULE: WhFrontendModule = {
     launcherTile: {
       themeColor: 'indigo',
       tags: ['کارتابل انبارگردان', 'مدیریت کالا'],
-      appKey: 'warehouse'
+      appKey: 'warehouse',
+      switcher: {
+        order: 10,
+        labelFa: 'انبارگردانی',
+        descriptionFa: 'مدیریت و شمارش موجودی انبار',
+        icon: 'package',
+        accent: 'indigo'
+      }
     },
     userMenu: {
       shortcutsCategory: {
@@ -139,7 +146,34 @@ export const MODULE: WhFrontendModule = {
       scopeParamKey: 'warehouse_id',
       activeAppHeader: 'warehouse',
       defaultOfflineRole: 'counter',
-      tokenScopeKey: 'warehouse'
+      tokenScopeKey: 'warehouse',
+      targetLabelFa: 'انبار',
+      legacyCursorKey: true,
+      purgeBeforeDeepUpdate: async (id, userId) => {
+        const { warehouseOfflineDb } = await import('../../core/services/offline-db');
+        const { buildCursorKey } = await import('../../core/services/sync-pull.service');
+        await Promise.all([
+          warehouseOfflineDb.items.where('warehouse_id').equals(id).delete(),
+          warehouseOfflineDb.docTasks.where('warehouse_id').equals(id).delete(),
+          warehouseOfflineDb.countTasks.where('warehouse_id').equals(id).delete(),
+          warehouseOfflineDb.dynamicFields.where('warehouse_id').equals(id).delete(),
+          warehouseOfflineDb.syncCursors.where('warehouseId').equals(id).delete(),
+          userId ? warehouseOfflineDb.syncCursors.delete(buildCursorKey(userId, id, 'warehouse')) : Promise.resolve(),
+          userId ? warehouseOfflineDb.syncCursors.delete(`${userId}:${id}`) : Promise.resolve()
+        ]);
+        try {
+          await warehouseOfflineDb.apiCache.filter((entry) => entry.url.includes(`warehouse_id=${id}`)).delete();
+        } catch {}
+      },
+      purgeOnAccessRevoked: async (id) => {
+        const { warehouseOfflineDb } = await import('../../core/services/offline-db');
+        await Promise.all([
+          warehouseOfflineDb.items.where('warehouse_id').equals(id).delete(),
+          warehouseOfflineDb.countTasks.where('warehouse_id').equals(id).delete(),
+          warehouseOfflineDb.docTasks.where('warehouse_id').equals(id).delete(),
+          warehouseOfflineDb.dynamicFields.where('warehouse_id').equals(id).delete(),
+        ]);
+      }
     },
     offlineSync: {
       scopeKind: 'warehouse',

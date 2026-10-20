@@ -5,7 +5,7 @@ import { Observable, of, from, throwError, tap, catchError, map, switchMap } fro
 import { environment } from '../../../environments/environment';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
-import { offlineDb, getScopeSyncProfile, resolveOfflineDbStrict } from '../services/offline-db';
+import { offlineDb, getScopeSyncProfile, resolveOfflineDbStrict, AppScope } from '../services/offline-db';
 import {
   AuthTokens,
   LoginPayload,
@@ -273,7 +273,7 @@ export class AuthService {
    * تبادل زنده قلمرو فعال توکن (Live App-Scope Token Exchange)
    * صدور و جایگزینی آنی توکن امضاشده برای سامانه مقصد (warehouse یا finance)
    */
-  switchAppScope(targetApp: 'warehouse' | 'finance'): Observable<any> {
+  switchAppScope(targetApp: AppScope): Observable<any> {
     if (environment.useMockData) {
       return of({ success: true, active_app: targetApp });
     }
@@ -316,7 +316,7 @@ export class AuthService {
   }
 
   /** دریافت access token فعلی متناسب با قلمرو فعال تب (Multi-Tab Multi-App Isolation) */
-  getAccessToken(preferredScope?: 'warehouse' | 'finance'): string | null {
+  getAccessToken(preferredScope?: AppScope): string | null {
     return this.sessionTab.getScopedAccessToken(preferredScope) || this.getItem(TOKEN_KEY);
   }
 

@@ -116,8 +116,35 @@ type LegacySelection = (() => number[]) & { set: (ids: number[]) => void };
               </button>
             </div>
 
-            @if (itemsOf(sec).length === 0 && !loadingScopes.includes(sec.scope)) {
-              <p class="text-xs text-slate-500 py-2">{{ sec.emptyText }}</p>
+            @if (itemsOf(sec).length === 0) {
+              <div class="flex flex-wrap items-center gap-2 py-2">
+                <p
+                  class="text-xs"
+                  role="status"
+                  aria-live="polite"
+                  [class.text-rose-600]="failedScopes.includes(sec.scope) && !loadingScopes.includes(sec.scope)"
+                  [class.text-slate-500]="!failedScopes.includes(sec.scope) || loadingScopes.includes(sec.scope)"
+                >
+                  @if (loadingScopes.includes(sec.scope)) {
+                    در حال دریافت فهرست…
+                  } @else if (failedScopes.includes(sec.scope)) {
+                    دریافت فهرست ناموفق بود؛ اتصال را بررسی کنید.
+                  } @else {
+                    {{ sec.emptyText }}
+                  }
+                </p>
+                @if (failedScopes.includes(sec.scope)) {
+                  <button
+                    type="button"
+                    (click)="retryLoad.emit(sec.scope)"
+                    [disabled]="loadingScopes.includes(sec.scope)"
+                    [attr.aria-busy]="loadingScopes.includes(sec.scope)"
+                    class="text-xs font-bold px-3 py-1.5 min-h-[40px] rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 disabled:opacity-60 disabled:cursor-wait transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  >
+                    تلاش دوباره
+                  </button>
+                }
+              </div>
             }
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -198,6 +225,8 @@ export class DeepSyncModalComponent implements OnChanges {
   @Input() preselectByScope: Record<string, number | null> = {};
   /** قلمروهایی که فهرستشان هنوز از سرور نرسیده (متن خالی بودن نشان داده نمی‌شود) */
   @Input() loadingScopes: string[] = [];
+  /** قلمروهایی که دریافت فهرستشان شکست خورد (به‌جای «یافت نشد» پیام خطا و دکمهٔ تلاش دوباره) */
+  @Input() failedScopes: string[] = [];
 
   // سازگاری پیشین: فهرست و پیش‌انتخاب دو قلمرو قفل‌شده
   @Input() set warehouses(items: { id: number; name: string }[]) {
@@ -230,6 +259,8 @@ export class DeepSyncModalComponent implements OnChanges {
   }
 
   @Output() closed = new EventEmitter<void>();
+  /** درخواست دریافت دوبارهٔ فهرست یک قلمرو */
+  @Output() retryLoad = new EventEmitter<string>();
   @Output() startSync = new EventEmitter<any>();
   /** warehouseIds و projectIds برای دو قلمرو قفل‌شده؛ idsByScope وقتی قلمرو دیگری هم انتخاب شده باشد */
   @Output() startSyncMulti = new EventEmitter<{ warehouseIds: number[]; projectIds: number[]; idsByScope?: Record<string, number[]> }>();

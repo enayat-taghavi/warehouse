@@ -5,6 +5,7 @@ import {
   resolveOfflineDbStrict,
   resolveScopeFromUrl,
   AppScope,
+  DEFAULT_OFFLINE_SCOPE,
   OfflineDatabase,
   SyncQueueEntry,
   SyncErrorEntry,
@@ -175,7 +176,7 @@ export async function retryError(
 
   if (!err || !db) return null;
 
-  const targetScope: AppScope = db.dbScope || err.appScope || 'warehouse';
+  const targetScope: AppScope = db.dbScope || err.appScope || DEFAULT_OFFLINE_SCOPE;
   await enqueueFn(err.method, err.url, err.body, {
     userId: err.userId,
     entityType: err.entityType,
