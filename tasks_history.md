@@ -9059,3 +9059,113 @@ Session 22 of 22 — Release phase 4 step 4 on the local app environment: backup
 - **Clean Working Tree:** `git status --short` ...
 
 ---
+
+### Task 1 of 2 — 2026-10-20 20:17:11
+- **Status:** DONE
+- **Conversation:** `cceb0913-70b7-40f5-89c6-551ee2754f1d`
+- **Steps:** 100
+- **Duration:** 19m 6s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 12/12 passed
+- **Task:**
+```
+Session 23 of 24 — Phase 4 step 4 review fixes: explicit locked scope constants; legacy queue migration without duplicate send
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only the 2 files in the scope verify line. In the spec, add tests and adjust only expectations that test the old order of `add` and `update`; do not delete tests. All other specs must pass unchanged.
+- Do not change any `version()`/`stores()` line or any IndexedDB name. Never delete or clear the legacy IndexedDB `WarehouseOfflineDB` or any of its rows.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, invariants `ن۲` and `ن۸`.
+- `warehouse-front/src/app/core/services/offline-db.ts` defines `WH_SCOPE`, `FIN_SCOPE`, `ACCT_SCOPE` and `PERS_SCOPE` by position from `Object.keys(SCOPED_DB_NAMES)`. Reordering that table would silently change which DB a record goes to.
+- `migrateLegacyData` in the same file, queue part: it checks for an existing copy, then `add`s, then sets `migratedAt` on the legacy row. Two defects:
+  - Two tabs opened at the same time both run it, both find no copy, and both add the same row, so the request is sent twice.
+  - When `add` succeeds but the `migratedAt` update fails, the marker stays unset; after the added copy is sent and deleted, the next start finds no copy and adds the row again, so it is sent twice.
+
+3. Definitions:
+- "Claim" means writing `migratedAt` on the legacy row before adding its copy to the target queue.
+- "Release a claim" means `update(item.id, { migratedAt: undefined })` on the legacy row.
+
+4. Task:
+- a) Replace the 4 positional constants with explicit ones: `const WH_SCOPE: AppScope = 'warehouse';`, `FIN_SCOPE` = `'finance'`, `ACCT_SCOPE` = `'accounting'`, `PERS_SCOPE` = `'personnel'`. Remove `SCOPE_KEYS`. Change nothing else in the resolvers.
+- b) Cross-tab lock: `migrateLegacyDatabaseIfNeeded` runs the whole migration inside `navigator.locks.request('wh-legacy-offline-migration', { mode: 'exclusive' }, callback)` when `navigator.locks` exists, otherwise directly. Inside the lock, check the localStorage marker again before reading anything.
+- c) Claim-first per queue row: skip a row without `id` (log it). Claim the row; if the claim fails, skip the row and set the error flag. Then check for an existing copy and `add` when there is none (unchanged rules). If the check or `add` throws, release the claim; if the release also fails, log it and keep the error flag. The row is never deleted from the legacy DB.
+- d) Spec: add at least 4 tests: the claim `update` happens before `add`; a failing `add` releases the claim and leaves the marker unset; a failing claim adds nothing; with a mocked `navigator.locks.request` the migration body runs inside it, and without `navigator.locks` it still runs.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/services/**/*.spec.ts"` and at most two runs of `python scripts/e2e/guardian_57_front_module_fence.py` (never with `--update-baseline`). If a command fails, read its output and change approach.
+
+6. Before finishing: the ng-test-compare run reports no new failing test, guardian 57 passes, and `git diff --stat` shows only the 2 files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+fix(offline): explicit locked scope constants and claim-first legacy queue migration
+- Short English report: what changed, the tests added, the guardian 57 counter, the ng-test-compare summary line. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح شفاف درخواست کاربر
+کاربر در نشست ۲۳ از ۲۴ (بازبینی‌های گام ۴ فاز ۴) درخواست اصلاح موارد زیر را داشت:
+1. **صریح‌سازی ثابت‌های قلمرو:** جایگزینی ثابت‌های وابسته به اندیس موقعیتی با ثابت‌های صریح (`WH_SCOPE = 'warehouse'`، `FIN_SCOPE = 'finance'`، `ACCT_SCOPE = 'accounting'`، `PERS_SCOPE = 'personnel'`) و حذف `SCOPE_KEYS` به منظور پیشگیری از خطای ناشی از تغییر احتمالی ترتیب کلیدها.
+2. **قفل سراسری بین‌تبی (Cross-tab lock):** اجرای مهاجرت در `migrateLegacyDatabaseIfNeeded` درون `navigator.locks.request('wh-legacy-offline-migration', { mode: 'exclusive' }, callback)` در صورت وجود `navigator.locks` و بررسی مجدد نشانگر `localStorage` پس از اخذ قفل.
+3. **ا...
+
+---
+
+### Task 2 of 2 — 2026-10-20 20:20:53
+- **Status:** DONE
+- **Conversation:** `8ab60459-781c-46ff-8f04-3df11549f169`
+- **Steps:** 16
+- **Duration:** 3m 38s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 4/4 passed
+- **Task:**
+```
+Session 24 of 24 — Release phase 4 step 4 review fixes on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+
+2. Context: sessions 16 to 21 and 23 of phase 4 changed frontend offline code and tests only, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 4 step 4 fixes'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
+- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the `showmigrations` result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح درخواست کاربر (User Request Explanation)
+کاربر درخواست انتشار اصلاحات مرحله ۴ گام ۴ (Phase 4 Step 4 Review Fixes) روی محیط لوکال `app` را ارائه کرده است شامل:
+- تهیه نسخه پشتیبان پایگاه داده (`backup_service.create_database_backup`)
+- بررسی وضعیت مهاجرت‌های جنگو و اطمینان از عدم وجود مهاجرت معلق (`showmigrations --plan`)
+- بیلد فرانت‌اند با حفظ مسیر خروجی (`ng build --delete-output-path=false`) و اعمال پچ سرویس‌ورکر (`patch-ngsw-530.js`)
+- بررسی وضعیت گیت (`git status --short`) بدون دستکاری یا کامیت فایل‌ها
+
+### ۲. اعتبارسنجی و تأیید فنی (Verification)
+کلیه مراحل به‌صورت متوالی و با موفقیت کامل در محیط محلی اجرا شدند: پشتیبان با حجم معتبر ایجاد شد،...
+
+---

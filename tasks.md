@@ -393,7 +393,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-Session 23 of 24 — Phase 4 step 4 review fixes: explicit locked scope constants; legacy queue migration without duplicate send
+[DONE] Session 23 of 24 — Phase 4 step 4 review fixes: explicit locked scope constants; legacy queue migration without duplicate send
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -446,7 +446,7 @@ fix(offline): explicit locked scope constants and claim-first legacy queue migra
 
 ===
 
-Session 24 of 24 — Release phase 4 step 4 review fixes on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+[DONE] Session 24 of 24 — Release phase 4 step 4 review fixes on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
