@@ -51,10 +51,112 @@
 - **نشست ۱۳:** تعویض اپ بر اساس پیشوند مسیر در `app-persona.service.ts` از رجیستری؛ spec مشخصه‌نگار پرسونا قفل است.
 
 ### گام ۴ — صف آفلاین N-قلمرویی (معوق؛ صف جدا)
-پرخطر و حساس به داده. پس از بازبینی نتیجهٔ این صف، طراحی آن جدا با `data-loss-reviewer` بررسی می‌شود و در صف بعدی اجرا می‌شود:
+پرخطر و حساس به داده. طرح اولیه:
 - extension تازه با نام `offlineSync` در هر ماژول: الگوهای URL (جای `resolveScopeFromUrl`) و نام دیتابیس. نام دو دیتابیس فعلی هرگز عوض نمی‌شود.
 - حلقهٔ تخلیهٔ `offline-queue-runner` همهٔ دیتابیس‌ها را بخواند، نه فقط «جاری و دیگری».
 - `user-menu` و `deep-sync-modal` و `session-tab` از همین extension بخوانند.
+
+#### ۴.۱ طرح تفصیلی (۲۹ مهر ۱۴۰۵)
+
+**درس تلاش ناموفق** (`scratch/offline-db-modular-attempt-2026-10-19.patch`، اعمال نمی‌شود):
+- `normalizeScope` هر نام ناشناخته را خودش برمی‌گرداند. مسیر `/app/operations` و هر کد ماژول دیگر دیتابیس تازه می‌ساخت و رکوردها میان دو دیتابیس پخش می‌شد.
+- رجیستری ماژول‌ها در خود `getCurrentActiveAppScope` و هنگام ساخت نمونه‌ها خوانده می‌شد. خطر import چرخه‌ای در زمان بارگذاری.
+- هدف `Proxy` عوض شد و رفتار `offlineDb` بی‌تست تغییر کرد.
+
+**ناوردایی‌ها (نقض هر کدام یعنی مسیر از دست رفتن داده):**
+- **ن۱. قفل نام و نسخه:** `WarehouseOfflineDB_warehouse` و `WarehouseOfflineDB_finance` و زنجیرهٔ `version()` هر دو دست نمی‌خورند. هیچ نمونهٔ دومی از `OfflineDatabase` با یکی از این دو نام ساخته نمی‌شود.
+- **ن۲. قفل قلمروهای موجود مستقل از ماژول‌های نصب‌شده:** `warehouse` و `finance` و نام‌های مستعار `personnel`/`accounting` همیشه به همان دو نمونهٔ قفل‌شده می‌رسند، حتی در بیلد تک‌ماژولی. جدول `SCOPED_DB_NAMES` در هسته می‌ماند. دلیل: در بیلد فقط‌انبار، رکورد `appScope: 'finance'` اگر به دیتابیس انبار برسد، `markSent`/`handleRetry` با همان `id` روی رکورد دیگری از دیتابیس انبار کار می‌کنند.
+- **ن۳. پیش‌فرض:** قلمرو ناشناخته یا ثبت‌نشده (مثل `operations`) همان `warehouse` می‌ماند، مثل امروز. فقط قلمرویی دیتابیس تازه می‌گیرد که ماژولی آن را با `offlineSync` ثبت کرده باشد.
+- **ن۴. هم‌ارزی:** با هر دو ماژول نصب‌شده، خروجی `normalizeScope`، `getScopedDbName`، `resolveScopeFromUrl`، `getCurrentActiveAppScope` و `getOfflineDb` برای همهٔ ورودی‌های جدول مشخصه‌نگار عیناً همان HEAD است.
+- **ن۵. خواندن تنبل رجیستری:** رجیستری فقط داخل توابع و در زمان اجرا خوانده می‌شود، داخل `try/catch`. بازگشت به دو دیتابیس قفل‌شده و پیش‌فرض `warehouse` هنگام خطا فقط برای خواندن فهرست و مسیریابی رکورد تازه مجاز است، نه برای نوشتن روی رکورد موجود (ن۹).
+- **ن۶. تخلیه و شمارش:** تخلیه، شمارش‌ها، گیت بازگردانی و مجموعه‌های محافظت (`pendingSyncIds`، `protectedIds`) همیشه دو دیتابیس قفل‌شده را می‌خوانند، به‌علاوهٔ دیتابیس‌های ثبت‌شده. ترتیب ارسال همان مرتب‌سازی سراسری امروز است (سقف تلاش، سپس `createdAt`).
+- **ن۷. شناسهٔ مبهم:** `id` در هر دیتابیس جدا شمرده می‌شود. لغو بدون قلمرو اگر شناسه در بیش از یک دیتابیس باشد، رد می‌شود (مثل امروز). جست‌وجوی خطاها در `offline-conflict-manager` همان ترتیب «اولین یافته» امروز را نگه می‌دارد: انبار، مالی، سپس بقیه.
+- **ن۸. مهاجرت دیتابیس قدیمی:** `migrateLegacyDatabaseIfNeeded` تابع ثابت `resolveLegacyScopeFromUrl` (رونوشت منطق امروز) را به‌کار می‌برد، نه الگوهای رجیستری. وگرنه در بیلد تک‌ماژولی رکورد قدیمی‌ای که قبلاً به مالی رفته، دوباره به انبار اضافه و دوبار ارسال می‌شود.
+- **ن۹. نوشتن با شناسه:** هر نوشتن یا حذف با `id` (لغو، `handleRetry`، `markTransportFailure`، `reconcileRejected`، به‌روزرسانی خوش‌بینانه، API خطاها) یا دستهٔ دیتابیس منبع را دارد، یا قلمرو را با تابع سخت‌گیر `resolveOfflineDbStrict(scope)` حل می‌کند. این تابع برای قلمرو غیرتهیِ ناشناخته `null` می‌دهد و نوشتن انجام نمی‌شود. هرگز به `warehouse` نمی‌افتد. امروز همهٔ رکوردهای ذخیره‌شده `appScope` برابر `warehouse`، `finance` یا تهی دارند، پس رفتار فعلی عوض نمی‌شود.
+- **ن۱۰. منبع ثابت بیلد:** الگوها و فهرست دیتابیس‌ها از `getModuleRegistry().getAllModules()` خوانده می‌شوند (ماژول‌های داخل بیلد)، نه `getExtensions`/`getInstalledModules`. دلیل: فهرست «نصب‌شده» را سرور و کش localStorage تعیین می‌کنند و قطعی سرور یا خاموش کردن ماژول نباید دیتابیس مقصد را وسط کار عوض کند. جدول قفل همیشه پیش از رجیستری خوانده می‌شود. اعتبارسنجی `dbName` فقط جدول قفل و الگوی `WarehouseOfflineDB_<scopeKind>` را می‌خواند، نه رجیستری (بدون بازگشت حلقوی). `scopeKind` باید با `^[a-z][a-z0-9_]*$` جور باشد.
+- **ن۱۱. گیت بسته‌شونده:** گیت بازگردانی (`server-restore-gate.ts`) علاوه بر `getAllOfflineDbs()`، دیتابیس‌های روی دستگاه با پیشوند `WarehouseOfflineDB_` را از `Dexie.getDatabaseNames()` هم می‌شمارد. خطای خواندن یعنی گیت بسته.
+- **ن۱۲. بدون حذف تازه با الگوی URL:** `purgeEphemeralQueueEntries` و رها کردن رکورد گذرا در `enqueue` همان دو دیتابیس قفل‌شده و همان الگوها را نگه می‌دارند و به دیتابیس‌های تازه گسترش نمی‌یابند.
+
+**قرارداد `offlineSync`** (در `module-contract.ts`):
+
+| فیلد | معنا | انبار | حسابداری |
+| :--- | :--- | :--- | :--- |
+| `scopeKind` | قلمرو صف | `warehouse` | `finance` |
+| `dbName` | باید برابر `getScopedDbName(scopeKind)` باشد؛ ناهمخوان یعنی extension نادیده گرفته و خطا در کنسول | `WarehouseOfflineDB_warehouse` | `WarehouseOfflineDB_finance` |
+| `scopeAliases` | نام‌های مستعار | — | `personnel`، `accounting` |
+| `queueUrlPatterns` | زیررشته‌های URL اندپوینت (جای `resolveScopeFromUrl`) | `[]` (پیش‌فرض است) | هشت الگوی امروز |
+| `activePathPatterns` | زیررشته‌های مسیر صفحه (گام ۲ `getCurrentActiveAppScope`) | `/app/warehouse`، `/warehouse` | `/app/finance`، `/finance`، `/personnel`، `/payroll` |
+| `appRoutePrefixes` | پیشوند مسیر برای `currentScopeContext` در `user-menu` (`startsWith`) | پنج پیشوند امروز | پنج پیشوند امروز |
+
+- ترتیب تطبیق: قلمروهای غیرپیش‌فرض به ترتیب رجیستری، سپس `warehouse`. این همان ترتیب امروز است (مالی پیش از انبار).
+- `AppScope` به `'warehouse' | 'finance' | (string & {})` باز می‌شود، مثل `scopeKind`. این تصمیم جدول ۱ را برای این گام عوض می‌کند. ایمنی آن از ن۲ و ن۳ می‌آید، نه از نوع بسته.
+- `getAllOfflineDbs()`: دو نمونهٔ قفل‌شده، سپس دیتابیس قلمروهای ثبت‌شدهٔ غیرقفل.
+- `offlineSync.scopeKind` با `syncConfig.scopeKind` همان ماژول برابر است (spec این را می‌سنجد).
+
+**نشست‌ها (هر کدام یک commit؛ انتشار فقط پس از همه، نه پس از نشست ۱۸ به تنهایی):**
+- **نشست ۱۶ — تست مشخصه‌نگار، بدون تغییر کد:** spec تازهٔ `core/services/offline/offline-scope.characterization.spec.ts` که روی HEAD سبز است و این‌ها را قفل می‌کند:
+  - جدول `normalizeScope`/`getScopedDbName` و جدول دست‌کم ۲۰ URL برای `resolveScopeFromUrl` (هر الگوی مالی، `doc-tasks`، `inventory`، `warehouses`، چت، اعلان، `null`).
+  - حالت‌های `getCurrentActiveAppScope` (کلید سشن، مسیر، localStorage) و هویت نمونه‌ها (`toBe`) در `getOfflineDb`. هر ردیف یک بار با فهرست نصب‌شدهٔ سرور برابر «هر دو»، «فقط انبار» و «فقط حسابداری» اجرا می‌شود (ن۴ و ن۱۰).
+  - مسیریابی `enqueue` (دیتابیس مقصد و `appScope`)، رها کردن رکورد گذرا، و `purgeEphemeralQueueEntries`.
+  - `runQueueSequential` رکوردهای هر دو دیتابیس را با دیتابیس خودشان و به ترتیب `createdAt` می‌فرستد. شمارش‌ها و `getQueueEntries('all')` هر دو را جمع می‌کنند.
+  - `buildScopedHeaders` و کلیدهای توکن `refreshAccessToken`.
+  - API خطاها (`dismissError`، `deleteError`، `retryError`) با شناسهٔ تکراری در دو دیتابیس: رفتار «اولین یافته» امروز ثبت می‌شود.
+  - ردیف‌های `currentScopeContext` در `user-menu` و کلید توکن `session-tab`، اگر specهای موجود ندارند.
+- **نشست ۱۷ — دو مسیر ازدست‌رفتن داده که از قبل بوده است (یافتهٔ `data-loss-reviewer`):**
+  - **`migrateLegacyDatabaseIfNeeded`:** `where('url')` روی ستون بی‌ایندکس خطای Schema می‌دهد، پس صف قدیمی هرگز منتقل نمی‌شود. `docTasks.bulkPut` هم در هر بار باز شدن برنامه نسخهٔ قدیمی را روی ویرایش‌های محلی تازه می‌نویسد.
+    - اصلاح: مهاجرت تکرارپذیر. `docTasks` فقط کلیدهای نبوده اضافه می‌شوند و رکورد موجود هرگز بازنویسی نمی‌شود.
+    - تکراری بودن رکورد صف با `filter` روی `url` و `method` و `createdAt` سنجیده می‌شود.
+    - دیتابیس قدیمی حذف نمی‌شود.
+    - قلمرو با `resolveLegacyScopeFromUrl` (ن۸) تعیین می‌شود.
+  - **`operations-sync-monitor.ts`:** «نادیده گرفتن» و «حذف» خطا با همان `id` در هر دو دیتابیس اجرا می‌شوند و خطای بی‌ربط دیتابیس دیگر را پاک می‌کنند؛ این خطا تنها نسخهٔ بدنهٔ ردشده است.
+    - اصلاح: هنگام بارگذاری، دیتابیس منبع هر خطا ثبت و فقط روی همان نوشته می‌شود.
+- **نشست ۱۸ — قرارداد، ثبت و حل‌کننده:**
+  - فیلد `offlineSync`، و ثبت آن در `modules/warehouse/module.ts` و `modules/accounting/module.ts`.
+  - بازنویسی `normalizeScope`، `resolveScopeFromUrl`، `getCurrentActiveAppScope` و `getOfflineDb` با منبع `getAllModules()` (ن۱۰).
+  - توابع تازهٔ `getAllOfflineDbs()`، `resolveOfflineDbStrict()` و `resolveLegacyScopeFromUrl`.
+  - spec نشست ۱۶ بدون تغییر سبز می‌ماند.
+  - spec تازه با ماژول ساختگی سوم (`registerModule`) این‌ها را می‌سنجد:
+    - ماژول سوم دیتابیس خودش را می‌گیرد.
+    - `dbName` ناهمخوان یا `scopeKind` نامعتبر نادیده گرفته می‌شود.
+    - ماژولی که `finance` یا یکی از نام‌های قفل‌شده را با نام دیگری ادعا کند، نادیده گرفته می‌شود.
+    - رکورد `finance` بدون ماژول حسابداری همچنان به `financeOfflineDb` می‌رسد.
+    - `resolveOfflineDbStrict('xyz')` مقدار `null` می‌دهد.
+- **نشست ۱۹ — خواننده‌ها:** فهرست ثابت دو دیتابیس با `getAllOfflineDbs()` جایگزین می‌شود:
+  - `offline-queue-runner.ts`: حلقهٔ تخلیه، `getPendingCount`، `getUnsentCountStrict` و `getQueueEntries`.
+  - `offline-sync.service.ts`: `initialize` (`sending` به `pending`) و `refreshCounts`.
+  - مجموعهٔ `pendingSyncIds` در `sync-pull.service.ts` و `protectedIds` در `pruneOldLocalData`.
+  - `clearAllScopedCaches`.
+  - کلید تازهٔ `others` در `exportLocalDatabaseSnapshot`. کلیدهای `warehouse` و `finance` عوض نمی‌شوند.
+  - `server-restore-gate.ts` طبق ن۱۱.
+  - پاک‌سازی گذرا طبق ن۱۲ دست نمی‌خورد.
+  - spec تازه: تخلیه، شمارش و گیت رکورد دیتابیس سوم را می‌بینند.
+- **نشست ۲۰ — نویسنده‌ها (ن۹):**
+  - `cancelQueueEntry`: بدون قلمرو در همهٔ دیتابیس‌ها جست‌وجو می‌کند. یافته در بیش از یکی یعنی رد.
+  - `handleRetry` و `markTransportFailure` بدون `targetDb`.
+  - `reconcileRejected`، `applyOptimisticUpdate`، `getCachedEntry` و `invalidateCache` در `offline-local-patcher.ts`.
+  - API خطاها در `offline-conflict-manager.ts` قلمروی اختیاری می‌گیرند. بدون قلمرو، همان ترتیب «اولین یافته» نشست ۱۶ حفظ می‌شود.
+  - spec نشست ۱۶ سبز؛ spec تازه: قلمرو ناشناخته هیچ نوشتنی انجام نمی‌دهد.
+- **نشست ۲۱ — `user-menu` و `session-tab`:**
+  - گام ۱ و ۲ `currentScopeContext` از `appRoutePrefixes` و `normalizeScope` خوانده می‌شود.
+  - نرمال‌سازی قلمرو در `getScopedAccessToken`/`setScopedAccessToken` با `normalizeScope` انجام می‌شود.
+  - کلیدهای `wh_access_token_finance` و `wh_access_token_warehouse` عوض نمی‌شوند.
+  - specهای موجود و نشست ۱۶ سبز می‌مانند.
+- **نشست ۲۲ — انتشار روی `app`:** پشتیبان و بیلد وصله‌شده؛ بدون مایگریشن.
+
+**بیرون از این گام؛ پیش‌شرط ثبت یک ماژول واقعی سوم با `offlineSync`:**
+- توکن و هدر برای قلمرو سوم:
+  - `refreshAccessToken` فقط کلید توکن قلمرو فعال را می‌نویسد.
+  - `resolveConflict` کلید توکن و `X-Active-App` را سخت‌کد دارد.
+  - با ۴۰۱ یک قلمرو، تخلیهٔ همهٔ دیتابیس‌ها متوقف می‌شود.
+- `deep-sync-modal`: دو بخش «انبارها» و «پروژه‌ها» با متن‌های خودشان، طراحی رابط است نه صف.
+- `syncCursors` از راه پروکسی `offlineDb`، و `photoQueue` که به انبار سنجاق است.
+- شمارش‌های نمایشی در `system-health` و `client-telemetry`.
+- **محدودیت پذیرفته:** اگر ماژول سومی بعداً از بیلد حذف شود، دیتابیسش دیگر تخلیه نمی‌شود. داده حذف نمی‌شود و گیت بازگردانی (ن۱۱) آن را می‌بیند.
+
+**بازبینی:**
+- `data-loss-reviewer` روی طرح انجام شد (۲۹ مهر). یافته‌ها پذیرفته شدند: ن۹ تا ن۱۲، نشست ۱۷، و تقسیم نشست مصرف‌کننده‌ها به ۱۹ و ۲۰.
+- پس از صف، `data-loss-reviewer` روی diff نشست‌های ۱۷ تا ۲۰ اجرا می‌شود.
+- `ui-reviewer` لازم نیست، چون قالبی عوض نمی‌شود.
 
 ### گام ۵ — نگهبان‌ها و انتشار
 - **نشست ۱۴:** شمارندهٔ `core_module_literals` در نگهبان ۲۹ (بک‌اند) و ۵۷ (فرانت) با قانون «افزایش ممنوع».

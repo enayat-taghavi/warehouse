@@ -1,620 +1,363 @@
-[DONE] Session 1 of 15 — Phase 4: AuthGuard generic module loop only for modules with routeAccess; unused markers removed from app.routes; open scopeKind type and closed deepSyncScope
+Session 16 of 22 — Phase 4 step 4: characterization spec for offline scope routing and both queues (tests only, no production change)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/modules/module-contract.ts
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/modules/module-contract.ts --contains "scopeKind: 'warehouse' | 'finance' | 'operations' | (string & {});" --contains "deepSyncScope?: 'warehouse' | 'finance';"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/app.routes.ts --absent "registry.permissionMarkers('warehouse')" --absent "registry.permissionMarkers('accounting')"
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
-verify: python scripts/e2e/guardian_57_front_module_fence.py
-verify: python scripts/automation/verify_tools.py ng-test-compare --base ef99e43 --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(guard): generic module loop only for modules with routeAccess"
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/offline/offline-scope.characterization.spec.ts warehouse-front/src/app/shared/components/user-menu/user-menu.component.spec.ts
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/shared/components/user-menu/user-menu.component.spec.ts
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline/offline-scope.characterization.spec.ts --min-tests 14 --require normalizeScope --require getScopedDbName --require resolveScopeFromUrl --require getCurrentActiveAppScope --require setInstalledModules --require runQueueSequential --require getPendingCount --require getUnsentCountStrict --require getQueueEntries --require purgeEphemeralQueueEntries --require buildScopedHeaders --require refreshAccessToken --require dismissError --require deleteError --require SessionTabService --require doc-tasks
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/shared/components/user-menu/user-menu.component.spec.ts --contains /app/treasury --contains /app/tag-templates
+verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(offline): characterize scope routing and both queues"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- Change only the 3 files listed in the scope verify line of this session. Do not edit any spec file.
+- This session writes tests only. Do not change any production `.ts` file. Change only the 2 files in the scope verify line: create the new spec, and append tests to `user-menu.component.spec.ts` without changing or deleting any existing test there.
+- The tests must lock what the code does today. When a test fails, fix the test expectation to match today's behaviour, never the production code.
 - Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+- Do not install packages. There is no `fake-indexeddb`: mock Dexie tables with `vi.spyOn` the way `warehouse-front/src/app/core/services/offline/offline-queue-runner.spec.ts` does.
 
 2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, headings `## ۱.` and `### گام ۰`.
-- Commit `30648fb` added a generic loop to `AuthGuard` in `warehouse-front/src/app/core/auth/auth.guard.ts` (the loop that starts with `for (const mod of installed)` and skips `scopeKind` `warehouse` and `finance`). `ModuleRegistryService` always adds the built-in `OPERATIONS_SPEC` (`scopeKind: 'operations'`, `routePrefix: '/app/operations'`) and it has no `routeAccess`. The loop therefore denies every non-admin user on `/app/operations/*`.
-- Evidence: `src/app/core/auth/route-access.characterization.spec.ts`, tests 2 to 5 of the `AuthGuard characterization` block, fail on HEAD and pass on commit `ef99e43`. Example: a user with only `view_sys_users` must get `true` for `/app/operations/users`.
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱` under `### گام ۴`. Read the invariants (lines starting with `ن۱` to `ن۱۲`) and the paragraph for session 16.
+- Code under test: `warehouse-front/src/app/core/services/offline-db.ts` (`normalizeScope`, `getScopedDbName`, `resolveScopeFromUrl`, `getCurrentActiveAppScope`, `getOfflineDb`, `warehouseOfflineDb`, `financeOfflineDb`); `warehouse-front/src/app/core/services/offline/offline-queue-runner.ts` (`runQueueSequential`, `getPendingCount`, `getUnsentCountStrict`, `getQueueEntries`, `buildScopedHeaders`, `refreshAccessToken`); `offline-local-patcher.ts` (`purgeEphemeralQueueEntries`); `offline-conflict-manager.ts` (`dismissError`, `deleteError`); `warehouse-front/src/app/core/services/session-tab.service.ts` (`getScopedAccessToken`, `setScopedAccessToken`); `warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts` (getter `currentScopeContext`).
+- The server-installed module list is set with `getModuleRegistry().setInstalledModules(codes)` and read with `getInstalledCodes()` in `warehouse-front/src/app/core/modules/module-registry.service.ts`.
 
-3. Definitions: "module with routeAccess" means `getModuleRouteAccess(mod)` in `auth.guard.ts` returns a value.
+3. Definitions:
+- "Both DBs" means the two instances `warehouseOfflineDb` (IndexedDB name `WarehouseOfflineDB_warehouse`) and `financeOfflineDb` (`WarehouseOfflineDB_finance`).
+- "Installed subsets" means three runs of the same table: `setInstalledModules(['warehouse', 'accounting'])`, `setInstalledModules(['warehouse'])` and `setInstalledModules(['accounting'])`. Save `getInstalledCodes()` in `beforeEach` and restore it in `afterEach`.
 
-4. Task:
-- a) In that generic loop, skip every module without routeAccess, in addition to the existing `warehouse`/`finance` skip. Do not change any other branch of `AuthGuard`.
-- b) In `app.routes.ts`, delete the two unused constants `whMarkers` and `acctMarkers` in both redirect functions (path `app` and path `''`). Change nothing else there.
-- c) In `module-contract.ts`, set `scopeKind: 'warehouse' | 'finance' | 'operations' | (string & {});` and set `deepSyncScope?: 'warehouse' | 'finance';` (the offline system has exactly two scopes).
+4. Task: create `warehouse-front/src/app/core/services/offline/offline-scope.characterization.spec.ts` (first line `// @vitest-environment jsdom`, like the other specs) with at least 14 plain `it(` blocks covering:
+- a) `normalizeScope` and `getScopedDbName` for `undefined`, `null`, `''`, `'warehouse'`, `'WAREHOUSE'`, `'finance'`, `'personnel'`, `'accounting'`, `'operations'`, `'xyz'`.
+- b) `resolveScopeFromUrl` for at least 20 URLs, each run under the three installed subsets with identical expected values: one URL for each of the 8 finance patterns in the function, plus URLs containing `/doc-tasks/`, `/inventory/`, `/warehouses/`, `/chat/`, `/notifications/`, `/auth/refresh/`, an absolute `https://` URL, an uppercase URL, and `null` (which returns the current scope).
+- c) `getCurrentActiveAppScope`: sessionStorage `active_app_module` = `personnel`, `warehouse`, `operations`; sessionStorage `wh_active_app` = `finance`; no session key with `window.history.pushState` to `/app/finance/x`, `/app/warehouse/x`, `/app/operations/users`, `/`; localStorage `active_app_module` = `accounting` on path `/`. Clear both storages between tests.
+- d) `getOfflineDb(scope)` returns exactly (`toBe`) `warehouseOfflineDb` or `financeOfflineDb` for every value in a), and `.name` of both DBs equals the two locked names.
+- e) `runQueueSequential` with a mocked online `NetworkStatusService` (`isBrowserOnline: true`, `reportServerUnreachable` spy) and a global `fetch` mock returning status 201: entries in both DBs (pending, different `createdAt`, interleaved) are sent in ascending `createdAt` order across both DBs, and each `syncQueue.delete` is called on the DB that holds the entry with that entry's id. Mock `syncQueue.where` to return an object whose `anyOf` returns `{ sortBy, toArray, count }` for the test data. Use ids that exist in both DBs (for example id 1 in each) to prove the DB handle, not the id, decides the target.
+- f) `getPendingCount()` and `getUnsentCountStrict()` return the sum of both DBs; `getQueueEntries('all')` returns entries of both DBs sorted by `createdAt`.
+- g) `purgeEphemeralQueueEntries` deletes only matching ephemeral URLs, from both DBs, and leaves every other entry.
+- h) `buildScopedHeaders('warehouse')` and `buildScopedHeaders('finance')`: values of `X-Active-App` and `X-Active-Role`, and which token key is read, under the three installed subsets. `refreshAccessToken` with a `fetch` mock returning `{ access: 'NEW' }`: the scoped key written is `wh_access_token_finance` when sessionStorage `active_app_module` is `personnel`, and `wh_access_token_warehouse` when it is `warehouse`.
+- i) `dismissError(7)` and `deleteError(7)` when id 7 exists in both DBs' `syncErrors`: record which DB is written today (the code updates or deletes only the first DB where `get` finds it).
+- j) `SessionTabService`: `setScopedAccessToken('T', 'personnel')` writes `wh_access_token_finance`; with `'warehouse'` it writes `wh_access_token_warehouse`; `getScopedAccessToken('personnel')` reads the finance key first.
+- k) In `user-menu.component.spec.ts`, append one `describe` block that reuses the existing setup and checks `currentScopeContext` for router URLs `/app/finance/x`, `/app/personnel/x`, `/app/payroll/x`, `/app/treasury/x`, `/app/projects/x`, `/app/warehouse/x`, `/app/inventory/x`, `/app/counting/x`, `/app/items/x`, `/app/tag-templates/x`, `/app/operations/x`.
 
-5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base ef99e43 --include "src/app/core/auth/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/services/**/*.spec.ts" --include "src/app/shared/components/user-menu/*.spec.ts"`. Reading files is unrestricted. If a command fails, read its output and change approach; do not repeat the same call unchanged.
 
-6. Before finishing: the ng-test-compare run above reports no new failing test, and `git diff --stat` shows only the 3 files.
+6. Before finishing: the ng-test-compare run above reports no new failing test and no new type error, and `git diff --stat` shows only the 2 files.
 
 7. Output and stop condition:
 - Commit with this message, without push:
-fix(guard): generic module loop only for modules with routeAccess
-- Short English report: the change per item a to c, the last ng-test-compare summary line. End the turn after the commit and report.
+test(offline): characterize scope routing and both queues
+- Short English report: the number of tests in each file, any behaviour you found surprising (state it as a fact, do not fix it), and the ng-test-compare summary line. End the turn after the commit and the report.
 
 ===
 
-[DONE] Session 2 of 15 — Phase 4: the server rollback and restore gates count the unsent offline queue of both IndexedDB scopes
+Session 17 of 22 — Phase 4 step 4: fix two pre-existing data-loss paths (legacy DB migration, sync monitor writes to both DBs)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.spec.ts
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts --contains "warehouseOfflineDb.syncQueue" --contains "financeOfflineDb.syncQueue" --absent "offlineDb.syncQueue"
-verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.spec.ts
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.spec.ts --min-tests 13 --require "finance queue"
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/offline-db.ts warehouse-front/src/app/core/services/offline-db.legacy-migration.spec.ts warehouse-front/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts warehouse-front/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.error-source.spec.ts
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --path warehouse-front/src/app/core/services/offline-db.ts --pattern "this\.version\(|\.stores\(|\+\+id|WarehouseOfflineDB_warehouse|WarehouseOfflineDB_finance|export function resolveScopeFromUrl|export function normalizeScope"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline-db.ts --absent "where('url')" --absent "docTasks.bulkPut(legacyDocs)" --contains wh_legacy_offline_db_migrated_v1 --contains migratedAt
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts --absent "await financeOfflineDb.syncErrors.update(errorId" --absent "await financeOfflineDb.syncErrors.delete(errorId"
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline-db.legacy-migration.spec.ts --min-tests 6 --require migratedAt --require docTasks
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.error-source.spec.ts --min-tests 3
+verify: python scripts/e2e/guardian_34_offline_continuity.py
 verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(backup): rollback and restore gates count both offline queues"
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(offline): idempotent legacy migration and single-DB error writes in sync monitor"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- No data may ever be lost. These two gates stop a server rollback or restore while unsent offline records exist. The gate may only become stricter; it must never let a rollback or restore start while either queue holds a record.
-- Do not change `offline-db.ts` or any queue, sync or delete logic. Only the two gate checks and their spec change.
-- Run every command in the foreground and wait until it finishes. Never end your turn while a command is still running.
-- Change only the 2 files listed in the scope verify line. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only the 4 files in the scope verify line. Do not edit any existing spec, including `offline-scope.characterization.spec.ts` from session 16.
+- In `offline-db.ts`, change only `migrateLegacyDatabaseIfNeeded` and add helpers next to it. Do not change any `version()`/`stores()` line, any DB name, `normalizeScope`, `resolveScopeFromUrl`, `getCurrentActiveAppScope`, `getOfflineDb` or the `offlineDb` Proxy.
+- Never delete, clear or close-and-delete the legacy IndexedDB `WarehouseOfflineDB`, and never delete any row from it. Never call `bulkPut`, `put` or `clear` on any table of `warehouseOfflineDb` or `financeOfflineDb` in this session.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
 2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۰`.
-- `settings-backup-tab.ts` reads `await offlineDb.syncQueue.toArray()` in `openRollbackConfirm` and in `openRestoreConfirm`. `offlineDb` is a proxy that resolves to the database of the active scope only, so unsent records in the other scope (`WarehouseOfflineDB_finance` or `WarehouseOfflineDB_warehouse`) are not counted.
-- `warehouseOfflineDb` and `financeOfflineDb` are exported by `core/services/offline-db.ts`.
-
-3. Task:
-- a) Add one private async method in the component that returns the total number of entries in `warehouseOfflineDb.syncQueue` plus `financeOfflineDb.syncQueue` (use `toArray()` on both, any status counts, as today). Use it in both gates; the Persian toast text keeps today's wording with the total count.
-- b) Update the spec so the existing tests mock both queues (empty by default). Keep every existing test.
-- c) Add at least two tests: one whose name contains `finance queue` (rollback blocked when only the finance queue has a record and the warehouse queue is empty), and one for restore blocked when only the finance queue has a record. Each asserts the error toast and that the confirm modal stays closed.
-
-4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/settings/**/*.spec.ts"`.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-fix(backup): rollback and restore gates count both offline queues
-- Short English report: the change, the tests added, the last ng-test-compare summary line. End the turn after the commit and report.
-
-===
-
-[DONE] Session 3 of 15 — Phase 4 backend: module spec is the only source for app codes; active_priority picks the default active app; default active app from default_module()
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/platform_core/registry.py warehouse-backend/core/platform_core/tests.py warehouse-backend/core/accounts/middleware.py warehouse-backend/core/accounts/permissions.py warehouse-backend/modules/warehouse/module.py warehouse-backend/modules/accounting/module.py
-verify: python -c "import ast,pathlib,sys; p=pathlib.Path('warehouse-backend/core/platform_core/registry.py'); src=p.read_text(encoding='utf-8'); t=ast.parse(src); fs={'resolve_default_active_app','app_code_to_module','module_allowed_app_code','module_scope_codes','default_module'}; names={'warehouse','finance','accounting','personnel'}; bad=[(f.name,c.value) for f in ast.walk(t) if isinstance(f,ast.FunctionDef) and f.name in fs for c in ast.walk(f) if isinstance(c,ast.Constant) and c.value in names]; legacy=[n for n in ('_APP_CODE_TO_MODULE','_MODULE_TO_ALLOWED_APP','_MODULE_SCOPE_CODES') if n in src]; ok='active_priority' in src; print('literals:',bad,'legacy:',legacy,'active_priority:',ok); sys.exit(1 if bad or legacy or not ok else 0)"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/permissions.py --absent "or 'accounting')"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/middleware.py --absent "default='accounting'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/module.py --contains "active_priority=10"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/accounting/module.py --contains "active_priority=20"
-verify: python -c "import pathlib,re,sys; s=pathlib.Path('warehouse-backend/core/platform_core/tests.py').read_text(encoding='utf-8'); n=len(re.findall(r'def test_', s)); print('tests:',n); sys.exit(0 if n>=7 else 1)"
-verify: python scripts/automation/verify_tools.py django-check
-verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
-verify: python scripts/e2e/guardian_modularization.py
-verify: python scripts/e2e/guardian_31_install_profiles.py
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(registry): module spec is the only source for app codes"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Behaviour must stay identical in the full profile (both modules installed). The existing tests in `core/platform_core/tests.py` must pass unchanged; do not edit or delete them.
-- Change only the 6 files listed in the scope verify line.
-- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
-
-2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, headings `## ۱.` and `### گام ۱`.
-- `core/platform_core/registry.py` still has three legacy dicts (`_APP_CODE_TO_MODULE`, `_MODULE_TO_ALLOWED_APP`, `_MODULE_SCOPE_CODES`) used only as fallbacks. `MODULE_CATALOG` (`platform_core/module_catalog.py`) loads every `modules/*/module.py` on disk regardless of `WH_MODULES`, so uninstalled modules are in it; `app_code_to_module`, `module_allowed_app_code` and `module_scope_codes` already read it.
-- `resolve_default_active_app` hardcodes `'warehouse'` and `'accounting'`. Its contract is fixed by `test_resolve_default_active_app`: `['finance']` gives `finance`, `['warehouse']` gives `warehouse`, both give `warehouse`, `[]` gives `finance`. `default_module()` (lowest `default_priority` among installed modules, accounting 10, warehouse 20) must keep returning `accounting` in the full profile. One priority field cannot express both rules, so a second field is added.
-- `core/accounts/middleware.py` declares `_current_active_app_var` with `default='accounting'`. `core/accounts/permissions.py` ends two expressions with `or 'accounting')`.
-
-3. Definitions: "app code of a spec" means `spec.allowed_app_code` when it is not empty, otherwise `spec.code`. "All specs" means `{**MODULE_CATALOG, **_REGISTRY}`.
-
-4. Task:
-- a) Delete the three legacy dicts and every line that reads them. `module_allowed_app_code(code)` returns the app code of the spec from `_REGISTRY` or else `MODULE_CATALOG`, or `code` when no spec exists. `module_scope_codes(code)` returns `spec.scope_codes` when not empty, else `(module_allowed_app_code(code),)`. `app_code_to_module` keeps its current lookup over all specs and returns `None` when nothing matches.
-- b) Add `active_priority: int = 100` to `ModuleSpec`; set `active_priority=10` in `modules/warehouse/module.py` and `active_priority=20` in `modules/accounting/module.py`.
-- c) Rewrite `resolve_default_active_app(allowed_apps)` without any module name: among all specs whose app code is in `allowed_apps`, return the app code of the one with the lowest `active_priority`; if none, return the app code of the catalog spec with the lowest `default_priority`; if there are no specs, return `''`. This also removes the current bug where `getattr(spec, 'allowed_app_code', spec.code)` returns `''`.
-- d) In `middleware.py`, change the ContextVar default to `''` and make `get_current_active_app()` return the variable value or, when empty, `default_module()` (import inside the function). In `permissions.py`, remove the trailing `or 'accounting'` from both expressions.
-- e) Add at least three tests to `core/platform_core/tests.py`: with `accounting` removed from `_REGISTRY` (use `patch.dict` as the existing test does), `app_code_to_module('personnel') == 'accounting'` and `module_scope_codes('accounting') == ('finance', 'personnel')`; with an extra catalog spec `ModuleSpec(code='zeta', title_fa='زتا', allowed_app_code='zeta', active_priority=5)` patched into `MODULE_CATALOG`, `resolve_default_active_app(['zeta', 'warehouse']) == 'zeta'`; `get_current_active_app()` outside a request equals `default_module()`.
-
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test platform_core --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`, and `python scripts/e2e/guardian_31_install_profiles.py` at most twice. If an existing test fails, report it; do not weaken any check.
-
-6. Output and stop condition:
-- Commit with this message, without push:
-refactor(registry): module spec is the only source for app codes; active_priority for the default active app
-- Short English report: changes per item a to e, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
-
-===
-
-[DONE] Session 4 of 15 — Phase 4 backend: public read prefixes and the reports fallback come from module spec fields instead of hardcoded names in authentication.py
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/accounts/authentication.py warehouse-backend/core/platform_core/registry.py warehouse-backend/modules/warehouse/module.py warehouse-backend/integration_tests/test_module_spec_auth_fields.py
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/authentication.py --absent "'warehouse'" --absent "module.code ==" --contains "public_read_prefixes" --contains "reports_fallback"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/module.py --contains "public_read_prefixes=('/api/warehouses/',)" --contains "reports_fallback=True"
-verify: python -c "import pathlib,re,sys; p=pathlib.Path('warehouse-backend/integration_tests/test_module_spec_auth_fields.py'); s=p.read_text(encoding='utf-8') if p.is_file() else ''; n=len(re.findall(r'def test_', s)); print('tests:',n); sys.exit(0 if n>=4 else 1)"
-verify: python scripts/automation/verify_tools.py django-check
-verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
-verify: python scripts/e2e/guardian_modularization.py
-verify: python scripts/e2e/guardian_31_install_profiles.py
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(auth): public read prefixes and reports fallback from module spec"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Tenant and app-scope isolation: every request that is allowed or denied today must get the same result. Only where the module-specific values come from changes.
-- Change only the 4 files listed in the scope verify line.
-- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
-
-2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۱`.
-- `core/accounts/authentication.py`, method `CustomJWTAuthentication.enforce_token_app_scope`:
-  - For `api/reports/`, when `get_reporting_modules()` gives no installed module, it falls back to `['warehouse']` if `'warehouse' in installed_modules()`.
-  - For a path of an installed module, `GET`/`HEAD`/`OPTIONS` on `/api/warehouses/` return early (no scope check) through `module.code == 'warehouse' and path.startswith('/api/warehouses/')`.
-
-3. Task:
-- a) Add to `ModuleSpec` in `registry.py`: `public_read_prefixes: tuple[str, ...] = ()` and `reports_fallback: bool = False`. In `modules/warehouse/module.py` set `public_read_prefixes=('/api/warehouses/',)` and `reports_fallback=True`.
-- b) Reports fallback: when no installed reporting module exists, use the installed modules whose spec (from `_REGISTRY`) has `reports_fallback` true.
-- c) Read exemption: return early when the method is `GET`, `HEAD` or `OPTIONS` and the path starts with any prefix in `module.public_read_prefixes` of the resolved module spec. Update the nearby comment so it no longer names the warehouse module.
-- d) New `integration_tests/test_module_spec_auth_fields.py` (`TestCase`, at least 4 tests). Call `CustomJWTAuthentication().enforce_token_app_scope(request, user, token)` directly with a `RequestFactory` request, a non-superuser user and a dict token such as `{'allowed_apps': ['finance']}`:
-  - `GET /api/warehouses/` with only `finance` passes.
-  - `POST /api/warehouses/` with only `finance` raises `PermissionDenied`.
-  - With `get_reporting_modules` patched to return `[]`, `GET /api/reports/entities/` passes with `['warehouse']` and raises `PermissionDenied` with `['finance']`.
-  - With the warehouse spec's `public_read_prefixes` patched to `()`, `GET /api/warehouses/` with only `finance` raises `PermissionDenied`.
-
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_module_spec_auth_fields --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`, and `python scripts/e2e/guardian_31_install_profiles.py` at most twice.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-refactor(auth): public read prefixes and reports fallback from module spec
-- Short English report: changes per item a to d, commands actually run with pass/fail counts. End the turn after the commit and report.
-
-===
-
-[DONE] Session 5 of 15 — Phase 4 backend: users report entity reads module extra fields lazily in the query engine; the warehouse app no longer calls the reports registry
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/platform_core/query_engine/definitions.py warehouse-backend/core/reports/registry.py warehouse-backend/core/reports/tests.py warehouse-backend/modules/warehouse/warehouses/apps.py
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/warehouses/apps.py --absent "_register_platform_entities" --absent "reports.registry" --contains "contribute('user_report_extra_fields'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/reports/registry.py --absent "contributions('user_report_extra_fields')" --contains "extra_fields_point='user_report_extra_fields'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/platform_core/query_engine/definitions.py --contains "extra_fields_point"
-verify: python -c "import pathlib,re,sys; s=pathlib.Path('warehouse-backend/core/reports/tests.py').read_text(encoding='utf-8'); n=len(re.findall(r'def test_', s)); ok='assigned_warehouses_count' in s; print('tests:',n,'field named:',ok); sys.exit(0 if n>=4 and ok else 1)"
-verify: python scripts/automation/verify_tools.py django-check
-verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
-verify: python scripts/e2e/guardian_modularization.py
-verify: python scripts/e2e/guardian_31_install_profiles.py
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(reports): lazy module extra fields on the users entity"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Tenant isolation: do not change `scope_resolver`, permissions or any field other than how module extra fields reach the `users` entity.
-- Change only the 4 files listed in the scope verify line.
-- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
-
-2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, headings `## ۱.` (row about the report field) and `### گام ۱`.
-- `PLATFORM_APPS` come before `MODULE_APPS` in `config/settings.py`, so `ReportsConfig.ready()` registers the `users` entity before `WarehousesConfig.ready()` contributes `user_report_extra_fields`. To work around this, `WarehousesConfig.ready()` calls the private `reports.registry._register_platform_entities()` inside `try/except: pass`.
-- `ReportEngine` reads entities through `get_entity()` (`platform_core/query_engine/engine.py`) and `EntityConfig.get_fields()` (`definitions.py`); the export job in `core/reports/excel.py` does not go through `reports.registry.get_registry()`.
-
-3. Task:
-- a) Add an optional constructor argument `extra_fields_point: str = ''` to `EntityConfig`. In `get_fields()`, right after `fields.update(self.extra)`, when the point is set, read `contributions(point)` at call time and add each item: a `FieldDef` by its `key`; a callable is called first; a `(key, FieldDef)` tuple by its key.
-- b) In `_register_platform_entities()`, remove the contributions loop and pass `extra_fields_point='user_report_extra_fields'` to the `users` `EntityConfig`.
-- c) In `WarehousesConfig.ready()`, delete the `try` block that imports and calls `_register_platform_entities`; keep `contribute('user_report_extra_fields', get_user_report_extra_fields())`.
-- d) Add at least three tests to `core/reports/tests.py`: `get_entity('users').get_fields()` contains `assigned_warehouses_count` in the full profile without calling `get_registry()` or `register_warehouse_reports()`; an `EntityConfig` built with a test point gets a `FieldDef` contributed after it was built (patch `platform_core.registry._CONTRIBUTIONS` with `patch.dict` so nothing leaks); a `ReportEngine` run on `users` that selects `assigned_warehouses_count` returns the correct count for a user with two assigned warehouses (follow the spec format of existing report tests in `integration_tests/test_reports_integration.py`).
-
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test reports --noinput`, one run of `.\venv\Scripts\python.exe manage.py test integration_tests reports platform_core --noinput`.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-refactor(reports): lazy module extra fields on the users entity
-- Short English report: changes per item a to d, commands actually run with pass/fail counts. End the turn after the commit and report.
-
-===
-
-[DONE] Session 6 of 15 — Phase 4 backend: characterization tests for the audit log app-scope filters (list, stats and Excel export) on the current code
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/integration_tests/test_audit_app_scope_characterization.py
-verify: python -c "import pathlib,re,sys; p=pathlib.Path('warehouse-backend/integration_tests/test_audit_app_scope_characterization.py'); s=p.read_text(encoding='utf-8') if p.is_file() else ''; n=len(re.findall(r'def test_', s)); need=['app_scope','stats','export_excel','warehouse_logs_count','finance_logs_count','CROSS_APP_DENIED','personnel','assigned']; miss=[w for w in need if w not in s]; print('tests:',n,'missing:',miss); sys.exit(0 if n>=10 and not miss else 1)"
-verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests.test_audit_app_scope_characterization --min-tests 10
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(audit): characterization of app-scope filters"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- This session adds tests only. Do not change any application file. The tests describe today's behaviour exactly and must pass on the current code; if a result looks wrong, still assert today's result and mention it in the report.
-- Change only the one file listed in the scope verify line.
-- Run every command in the foreground. Do not push. Stage only your changed file. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
-
-2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
-- `core/accounts/views_domains/audit_views.py`, `AuditLogViewSet` (router `audit-logs` under `/api/accounts/`):
-  - `get_queryset`: for a non-superuser without `accounts.perm_sys_logs`, restricts by `user.assigned_warehouses` with three branches of the `app_scope` query parameter (`finance`/`personnel`, `warehouse`, anything else), then applies the app-scope filter (`warehouse`; `finance`/`personnel`; `all` or absent means no filter).
-  - `stats` action: `warehouse_logs_count` and `finance_logs_count` use the same two filters.
-  - `export_excel` action: the same app-scope filter on `app_scope` from the request data.
-- The filters use `audit_scope_keys('warehouse')`, `audit_scope_keys('accounting')`, `warehouse_id`, a list of six `target_model` names, `details__target_module='finance'`, and exclude the events `CROSS_APP_DENIED` and `APP_SCOPE_SWITCH`.
-
-3. Task: new `integration_tests/test_audit_app_scope_characterization.py` (`TestCase`, at least 10 tests). Build a fixed set of `AuditLog` rows that covers: a warehouse-module key with a warehouse id; an accounting-module key with no warehouse id; an accounting key with a warehouse id; a row with `target_model='PersonnelProfile'` and a non-accounting module; a row with `details={'target_module': 'finance'}`; a `CROSS_APP_DENIED` row; an `APP_SCOPE_SWITCH` row; a row of a warehouse the user is not assigned to. Assert exact id sets (not only counts) for:
-- superuser list with `app_scope` `warehouse`, `finance`, `personnel`, `all` and absent;
-- a non-superuser who can list audit logs, without `perm_sys_logs`, assigned to one warehouse, with `app_scope` `warehouse`, `finance` and absent;
-- `stats` for the superuser: `warehouse_logs_count` and `finance_logs_count`;
-- `export_excel` for the superuser with `app_scope` `warehouse` and `finance`: the number of data rows (read the workbook with `openpyxl`; data starts at row 3).
-Find the permission the list needs from `get_permissions` and the existing permission classes; give the non-superuser only what is needed.
-
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most five runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_audit_app_scope_characterization --noinput`.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-test(audit): characterization of app-scope filters for list, stats and export
-- Short English report: the fixture rows, each test and its expected id set, any result that looked wrong. End the turn after the commit and report.
-
-===
-
-[DONE] Session 7 of 15 — Phase 4 backend: audit log app-scope filters and the assigned-warehouse restriction come from module contributions
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/accounts/views_domains/audit_views.py warehouse-backend/core/accounts/audit_scope.py warehouse-backend/core/platform_core/registry.py warehouse-backend/modules/warehouse/warehouses/apps.py warehouse-backend/modules/warehouse/warehouses/audit_scope.py warehouse-backend/modules/accounting/personnel/apps.py warehouse-backend/modules/accounting/personnel/audit_scope.py
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/views_domains/audit_views.py --absent "assigned_warehouses" --absent "'PersonnelProfile'" --absent "app_scope == 'warehouse'" --absent "in ['finance', 'personnel']" --absent "app_scope_param in" --contains "apply_audit_app_scope"
-verify: python -c "import pathlib,re,sys; s=pathlib.Path('warehouse-backend/core/accounts/audit_scope.py').read_text(encoding='utf-8'); bad=re.findall(r'[\x27\x22](warehouse|finance|personnel|accounting|PersonnelProfile)[\x27\x22]', s); print('module literals in core helper:',bad); sys.exit(1 if bad else 0)"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/warehouses/apps.py --contains "audit_app_scope_filters" --contains "audit_user_restrictions"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/accounting/personnel/apps.py --contains "audit_app_scope_filters"
-verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests.test_audit_app_scope_characterization --min-tests 10
-verify: python scripts/automation/verify_tools.py django-check
-verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
-verify: python scripts/e2e/guardian_modularization.py
-verify: python scripts/e2e/guardian_31_install_profiles.py
-verify: python scripts/e2e/guardian_54_module_independence.py
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(audit): app-scope filters and user restriction via module contributions"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Tenant isolation: every user must see exactly the same audit rows as today. `integration_tests/test_audit_app_scope_characterization.py` (session 6) is the contract: it must pass unchanged, and you must not edit it.
-- Register the contributions outside any `try` block, so a registration failure fails loudly instead of silently widening what users see.
-- Change only the 7 files listed in the scope verify line.
-- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
-
-2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
-- `audit_views.py` repeats the same app-scope filter in `get_queryset`, `stats` and `export_excel`, and restricts non-superusers through `user.assigned_warehouses` in `get_queryset`. Read the three blocks and the session 6 test before changing anything.
-- `audit_scope_keys(code)` in `registry.py` reads `MODULE_CATALOG`, so it works for uninstalled modules.
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, the invariants `ن۸` and `ن۹` and the paragraph for session 17.
+- `migrateLegacyDatabaseIfNeeded` in `warehouse-front/src/app/core/services/offline-db.ts` runs on every app start (called from `initialize()` in `offline-sync.service.ts`). Its defects today:
+  - `targetDb.syncQueue.where('url')` throws a Dexie `SchemaError`, because `url` is not an index in any `syncQueue` schema. The outer `catch` swallows it, so no legacy queue row is ever migrated.
+  - `warehouseOfflineDb.docTasks.bulkPut(legacyDocs)` runs on every start and overwrites newer local `docTasks` rows (including rows with `_offlinePending`) with the old legacy copies.
+  - `add({ ...item, appScope: scope })` keeps the legacy `id`, which collides with existing auto-increment ids in the target DB.
+- `warehouse-front/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts`: errors are loaded from both DBs (around line 185) and merged. The "discard" strategy updates and the "server" strategy deletes `syncErrors` rows with the same `errorId` in both DBs (around lines 298 and 319). Ids are per DB, so this also dismisses or deletes an unrelated error row of the other DB, which holds the only copy of a rejected request body.
 
 3. Definitions:
-- "Scope module" of an `app_scope` value: the catalog spec whose `scope_codes` contains the value (`warehouse` gives `warehouse`; `finance` and `personnel` give `accounting`; `accounting`, `all`, empty or unknown give `None`). Add a registry helper `module_for_scope_code(code)` for it.
-- "Other modules' keys" of module M: the union of `audit_scope_keys(c)` for every catalog module `c` other than M.
+- "Source DB" of an error is the DB instance the row was read from.
+- "Migrated legacy row" is a row of the legacy `syncQueue` whose `migratedAt` field is set.
 
 4. Task:
-- a) New `core/accounts/audit_scope.py` with `apply_audit_app_scope(qs, app_scope)`: no scope module, return `qs` unchanged; otherwise apply the filter function contributed for that module through point `audit_app_scope_filters` (items are `(module_code, fn)`, `fn(qs) -> qs`), or `qs.filter(module__in=audit_scope_keys(module))` when the module contributed none; then exclude `CROSS_APP_DENIED` and `APP_SCOPE_SWITCH` as today. Also `restrict_audit_for_user(qs, user, app_scope)`: call every function contributed through `audit_user_restrictions` as `fn(qs, user, scope_module)` and return the result. No module name may appear in this file.
-- b) `modules/warehouse/warehouses/audit_scope.py`: the warehouse filter (`module__in` own keys or `warehouse_id__isnull=False`, excluding other modules' keys) and the user restriction with today's three branches, using the user's assigned warehouse ids (no restriction when the user has no `assigned_warehouses` attribute): scope module is `warehouse` gives ids only; another module gives ids or null warehouse; `None` gives ids or (null warehouse and module in other modules' keys). `modules/accounting/personnel/audit_scope.py`: the accounting filter (own keys, the six `target_model` names, `details__target_module='finance'`). Register both in their `ready()`.
-- c) In `audit_views.py`, replace the three filter blocks with `apply_audit_app_scope` and the restriction block with `restrict_audit_for_user`, keeping the superuser and `perm_sys_logs` check in the view. `stats` keeps the response keys `warehouse_logs_count` and `finance_logs_count`, computed with `apply_audit_app_scope(base_qs, 'warehouse')` and `apply_audit_app_scope(base_qs, 'finance')`.
+- a) Split the migration so it is testable: an exported function `migrateLegacyData(legacy, targets)` that takes a legacy object with `tables: { name: string }[]` and `table(name)` (returning an object with `toArray()` and `update(key, changes)`), and the target DBs. `migrateLegacyDatabaseIfNeeded` keeps its current guard (`Dexie.getDatabaseNames()`, `new Dexie('WarehouseOfflineDB')`, `open()`) and calls it.
+- b) Run-once marker: when localStorage key `wh_legacy_offline_db_migrated_v1` is set, return immediately. Set it only after the whole migration finished without an error.
+- c) `docTasks`: add only rows whose primary key `sync_id` is not already present in `warehouseOfflineDb.docTasks` (check with `get` or `bulkGet`, then `bulkAdd` the missing rows). Never overwrite an existing row.
+- d) Queue: skip legacy rows that already have `migratedAt`. For each other row, the target scope is `resolveScopeFromUrl(item.url)` as today. Detect an existing copy with `targetDb.syncQueue.filter(e => e.url === item.url && e.method === item.method && e.createdAt === item.createdAt).first()`. If no copy exists, `add` the row without its `id` field and with `appScope` set. In both cases, then call `update(item.id, { migratedAt: Date.now() })` on the legacy table. A failure on one row is logged and does not stop the other rows; any failure means the marker of b) is not set.
+- e) Sync monitor: when errors are loaded, remember the source DB of each error (for example a `Map` from the error object or a `{ error, db }` pair). Every `syncErrors.update` or `syncErrors.delete` in that component for one selected error uses only its source DB. The bulk action around line 425 that runs per DB keeps working per DB. Do not change the template.
+- f) Spec `offline-db.legacy-migration.spec.ts` (at least 6 `it(`): marker set means nothing is read; existing `docTasks` row is not overwritten and a missing one is added; a legacy queue row is added once without its legacy `id` and gets `migratedAt`; a row with `migratedAt` is skipped; a second run with an existing copy adds nothing; a failing row leaves the marker unset. Use plain objects and `vi.spyOn` on the target tables.
+- g) Spec `operations-sync-monitor.error-source.spec.ts` (at least 3 `it(`): with id 5 in both DBs, discarding the warehouse error updates only `warehouseOfflineDb.syncErrors`; the server strategy without `server_record` deletes only in the source DB; same for a finance error.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most four runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_audit_app_scope_characterization --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`.
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/services/**/*.spec.ts" --include "src/app/modules/common/components/operations/**/*.spec.ts"`. If a command fails, read its output and change approach.
 
-6. Output and stop condition:
+6. Before finishing: the ng-test-compare run above reports no new failing test, `offline-scope.characterization.spec.ts` passes unchanged, and `git diff --stat` shows only the 4 files.
+
+7. Output and stop condition:
 - Commit with this message, without push:
-refactor(audit): app-scope filters and user restriction via module contributions
-- Short English report: where each contribution is registered, the characterization test result, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
+fix(offline): idempotent legacy migration and single-DB error writes in sync monitor
+- Short English report: what changed per defect, the tests added, the ng-test-compare summary line, and remaining uncertainty. End the turn after the commit and the report.
 
 ===
 
-[DONE] Session 8 of 15 — Phase 4 backend: comment target models come from module contributions instead of a hardcoded set in communications
+Session 18 of 22 — Phase 4 step 4: offlineSync module extension and registry-driven scope resolution with the two locked DBs
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/communications/serializers.py warehouse-backend/modules/warehouse/inventory/apps.py warehouse-backend/modules/warehouse/warehouses/apps.py warehouse-backend/integration_tests/test_comment_target_models.py
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/communications/serializers.py --absent "ALLOWED_COMMENT_MODELS = {" --absent "'counttask'" --contains "comment_target_models"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/inventory/apps.py --contains "comment_target_models"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/warehouses/apps.py --contains "comment_target_models"
-verify: python -c "import pathlib,re,sys; p=pathlib.Path('warehouse-backend/integration_tests/test_comment_target_models.py'); s=p.read_text(encoding='utf-8') if p.is_file() else ''; n=len(re.findall(r'def test_', s)); print('tests:',n); sys.exit(0 if n>=3 else 1)"
-verify: python scripts/automation/verify_tools.py django-check
-verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
-verify: python scripts/e2e/guardian_modularization.py
-verify: python scripts/e2e/guardian_31_install_profiles.py
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(comments): comment target models via module contributions"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Do not change `can_access_comment_target` or any access check; only the allow-list source changes.
-- Change only the 4 files listed in the scope verify line.
-- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
-
-2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
-- `core/communications/serializers.py` has `ALLOWED_COMMENT_MODELS = {'item', 'counttask', 'doctask', 'warehouse', 'document', 'financialdocument'}` used in `validate`. `Item`, `CountTask` and `DocTask` are in `modules/warehouse/inventory`, `Warehouse` in `modules/warehouse/warehouses`. No model named `Document` or `FinancialDocument` exists in the project, so those two entries are dropped.
-
-3. Task:
-- a) Replace the constant with a function that returns the set of lowercase model names from `contributions('comment_target_models')`, read at validation time.
-- b) Register `'item'`, `'counttask'` and `'doctask'` in `InventoryConfig.ready()` and `'warehouse'` in `WarehousesConfig.ready()`, outside any `try` block.
-- c) New `integration_tests/test_comment_target_models.py` (`TestCase`, at least 3 tests): the contributed set equals `{'item', 'counttask', 'doctask', 'warehouse'}`; the comment serializer accepts `content_type_str='inventory.item'` past the allow-list check; it rejects `content_type_str='personnel.personneldocument'` with the existing Persian «مجاز نیست» error.
-
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_comment_target_models --noinput`, one run of `.\venv\Scripts\python.exe manage.py test communications integration_tests --noinput`.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-refactor(comments): comment target models via module contributions
-- Short English report: changes, commands actually run with pass/fail counts. End the turn after the commit and report.
-
-===
-
-[DONE] Session 9 of 15 — Phase 4 backend: user serializers and user views reach assigned warehouses only through WarehouseUserExtension
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/accounts/serializers.py warehouse-backend/core/accounts/views_domains/user_views.py warehouse-backend/modules/warehouse/warehouses/user_extension.py warehouse-backend/integration_tests/test_user_warehouse_extension_calls.py
-verify: python -c "import pathlib,re,sys; fs=['warehouse-backend/core/accounts/serializers.py','warehouse-backend/core/accounts/views_domains/user_views.py']; pat=re.compile(r'''assigned_warehouses\.(set|values_list|all)\(|hasattr\(\w+, ?'assigned_warehouses'\)'''); bad=[(f,m.group(0)) for f in fs for m in pat.finditer(pathlib.Path(f).read_text(encoding='utf-8'))]; print('direct uses:',bad); sys.exit(1 if bad else 0)"
-verify: python -c "import pathlib,re,sys; p=pathlib.Path('warehouse-backend/integration_tests/test_user_warehouse_extension_calls.py'); s=p.read_text(encoding='utf-8') if p.is_file() else ''; n=len(re.findall(r'def test_', s)); print('tests:',n); sys.exit(0 if n>=4 else 1)"
-verify: python scripts/automation/verify_tools.py django-check
-verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
-verify: python scripts/e2e/guardian_modularization.py
-verify: python scripts/e2e/guardian_31_install_profiles.py
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(users): assigned warehouses through the warehouse user extension"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Tenant isolation and no data loss: the Excel import must still replace only the warehouses inside the importer's own scope and keep the warehouses outside it (the `kept` logic in `user_views.py`). API field names (`assigned_warehouses`) and responses stay the same.
-- Change only the 4 files listed in the scope verify line. Do not change `core/common/warehouse_scope.py`.
-- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
-
-2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
-- `WarehouseUserExtension` (`modules/warehouse/warehouses/user_extension.py`) is registered under `user_extensions`; core finds it with `_get_user_warehouse_extension()` (defined in `accounts/serializers.py`, `accounts/excel_utils.py`, and inline in `user_views.py`).
-- Direct uses left in core: `serializers.py` (`get_assigned_warehouses`, `create`, `update`) and `user_views.py` (the export row near `warehouses = list(user.assigned_warehouses...`, the Excel import update and create paths, and the user detail/card near `wh_names`).
-
-3. Task:
-- a) Add to `WarehouseUserExtension`: `get_assigned_ids(user) -> list[int]`, `get_assigned_names(user) -> list[str]`, `get_assigned(user) -> list` and `set_assigned(user, warehouses) -> None`, each tolerant of a user without the attribute (empty result, no-op).
-- b) Replace every direct use listed above with the extension methods; when the extension is `None` (no warehouse module), keep today's result for that install (empty list, nothing set). Keep the order of operations in the import code.
-- c) New `integration_tests/test_user_warehouse_extension_calls.py` (`TestCase`, at least 4 tests): creating a user through the user API with `assigned_warehouses` sets them; the user detail returns the same ids; updating with a new list replaces them; with `contributions('user_extensions')` patched to return no extension, the user serializer has no `assigned_warehouses` field and create still works.
-
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_user_warehouse_extension_calls --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-refactor(users): assigned warehouses through the warehouse user extension
-- Short English report: each replaced use and the method used, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
-
-===
-
-[DONE] Session 10 of 15 — Phase 4 backend: warehouse scope rules of the report query engine come from a module scope handler
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/platform_core/query_engine/engine.py warehouse-backend/core/platform_core/query_engine/definitions.py warehouse-backend/core/platform_core/query_engine/__init__.py warehouse-backend/modules/warehouse/warehouses/apps.py warehouse-backend/modules/warehouse/warehouses/report_scope.py warehouse-backend/integration_tests/test_report_scope_handlers.py
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/platform_core/query_engine/engine.py --absent "scope_kind == 'warehouse'" --absent "common.warehouse_scope" --contains "report_scope_handlers"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/platform_core/query_engine/definitions.py --absent "self.scope_kind == 'warehouse'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/warehouses/apps.py --contains "report_scope_handlers"
-verify: python -c "import pathlib,re,sys; p=pathlib.Path('warehouse-backend/integration_tests/test_report_scope_handlers.py'); s=p.read_text(encoding='utf-8') if p.is_file() else ''; n=len(re.findall(r'def test_', s)); print('tests:',n); sys.exit(0 if n>=4 else 1)"
-verify: python scripts/automation/verify_tools.py django-check
-verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
-verify: python scripts/e2e/guardian_modularization.py
-verify: python scripts/e2e/guardian_31_install_profiles.py
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(reports): warehouse scope rules via a module scope handler"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Tenant isolation: every report must return exactly the same rows to every user as today. A scope kind with a `scope_path` and no handler must be denied (`ReportError`, status 403), never left unscoped.
-- Keep the `company` scope rules in core unchanged. Keep the default values of `scope_kind` and `module_code` parameters unchanged.
-- Register the handler outside any `try` block.
-- Change only the files listed in the scope verify line.
-- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
-
-2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
-- `platform_core/query_engine/engine.py` has `scope_kind == 'warehouse'` branches in `_build_join_scope_q`, `_check_scope_access` and `_scope_queryset`, using `common.warehouse_scope` (`can_access_warehouse`, `user_warehouse_ids`, `scope_queryset`). `definitions.py` `EntityConfig.get_fields()` reads the `blind_counting` setting per warehouse when `self.scope_kind == 'warehouse'`.
-- The platform `users` entity keeps the default `scope_kind='warehouse'` with `scope_path=None` and a `scope_resolver`; it must work in every install profile.
-
-3. Definitions: a "scope handler" is an object contributed through `report_scope_handlers` with attribute `kind` (str), attribute `per_scope_settings` (bool), and methods `check_access(user, scope_id) -> assigned_ids or None` (raises `ReportError` 403 when the user may not access `scope_id`), `scope_queryset(qs, user, path, scope_id) -> qs`, and `join_q(user, assigned_ids, path, scope_id) -> Q`.
-
-4. Task:
-- a) In core, look up the handler for an entity's `scope_kind` at call time. In `_check_scope_access`, `_scope_queryset` and `_build_join_scope_q`, replace each `warehouse` branch with the handler call, keeping the exact logic (including the superuser rule in `_build_join_scope_q`). When no handler exists: `scope_path` is `None`, or the kind is `company`, behave as today's non-warehouse path; otherwise raise `ReportError(..., status=403)` with a Persian message.
-- b) In `get_fields()`, read the per-scope `blind_counting` setting when the entity's handler has `per_scope_settings` true, instead of comparing the kind with `'warehouse'`.
-- c) New `modules/warehouse/warehouses/report_scope.py` with the warehouse handler (`kind='warehouse'`, `per_scope_settings=True`) using `common.warehouse_scope` exactly as the engine does today; register it in `WarehousesConfig.ready()`.
-- d) New `integration_tests/test_report_scope_handlers.py` (`TestCase`, at least 4 tests): exactly one handler with kind `warehouse` is registered; a non-superuser assigned to one warehouse gets only that warehouse's rows from a warehouse-scoped entity (follow `integration_tests/test_reports_integration.py`); requesting another warehouse id gives 403; an entity with a made-up kind and a `scope_path` raises `ReportError` with status 403.
-
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_report_scope_handlers --noinput`, one run of `.\venv\Scripts\python.exe manage.py test reports integration_tests --noinput`.
-
-6. Output and stop condition:
-- Commit with this message, without push:
-refactor(reports): warehouse scope rules via a module scope handler
-- Short English report: changes per item a to d, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
-
-===
-
-[DONE] Session 11 of 15 — Phase 4: one generic module loop in AuthGuard replaces the hardcoded warehouse and finance blocks
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/warehouse/route-access.ts warehouse-front/src/app/modules/accounting/route-access.ts
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/auth/auth.guard.ts --absent "scopeKind === 'warehouse'" --absent "scopeKind === 'finance'" --absent "'/app/warehouse'" --absent "'/app/finance'" --absent "hasWarehouseAccess" --absent "hasPersonnelAccess" --absent "routeConfig?.path === 'warehouse'" --absent "routeConfig?.path === 'finance'"
-verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/core/auth/route-access.characterization.spec.ts warehouse-front/src/app/core/auth/auth.guard.spec.ts warehouse-front/src/app/modules/common/components/login/login-destination.characterization.spec.ts
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "." --path warehouse-front/src/app/core/auth/route-access.characterization.spec.ts warehouse-front/src/app/core/auth/auth.guard.spec.ts
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/warehouse/module.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/core/services/offline-db.ts warehouse-front/src/app/core/services/offline/offline-scope.registry.spec.ts
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --path warehouse-front/src/app/core/services/offline-db.ts --pattern "this\.version\(|\.stores\(|\+\+id|warehouse: 'WarehouseOfflineDB_warehouse'|finance: 'WarehouseOfflineDB_finance'|accounting: 'WarehouseOfflineDB_finance'|personnel: 'WarehouseOfflineDB_finance'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline-db.ts --contains "export type AppScope = 'warehouse' | 'finance' | (string & {});" --contains "export function getAllOfflineDbs" --contains "export function resolveOfflineDbStrict" --contains "function resolveLegacyScopeFromUrl" --contains "getAllModules()" --absent "getInstalledModules" --absent "getExtensions("
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/modules/module-contract.ts --contains "offlineSync?:" --contains queueUrlPatterns --contains activePathPatterns --contains appRoutePrefixes --contains scopeAliases
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/accounting/module.ts --contains "offlineSync:" --contains "'WarehouseOfflineDB_finance'" --contains "'/treasury'" --contains "'/attendance'" --contains "'/paya'" --contains "'/slips'" --contains "'/fiscal'" --contains "'/app/projects'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/warehouse/module.ts --contains "offlineSync:" --contains "'WarehouseOfflineDB_warehouse'" --contains "'/app/tag-templates'"
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline/offline-scope.registry.spec.ts --min-tests 8 --require registerModule --require resolveOfflineDbStrict --require getAllOfflineDbs --require WarehouseOfflineDB_
+verify: python scripts/e2e/guardian_34_offline_continuity.py
 verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
 verify: python scripts/e2e/guardian_57_front_module_fence.py
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(guard): one generic module loop in AuthGuard"
+verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(offline): offlineSync extension and registry-driven scope resolution"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Every guard decision must stay the same. `route-access.characterization.spec.ts`, `auth.guard.spec.ts` and `login-destination.characterization.spec.ts` are the contract: do not edit them; they must pass.
-- Change only the 4 files listed in the scope verify line. Do not change the company-documents logic in this session beyond moving it unchanged (session 12 handles it).
-- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only the 5 files in the scope verify line. Do not edit any existing spec. `offline-scope.characterization.spec.ts` must pass unchanged: it is the definition of correct behaviour.
+- Never change an IndexedDB name, the `SCOPED_DB_NAMES` lines, or any `version()`/`stores()` line. Never construct a second `OfflineDatabase` for a name that already has an instance.
+- Do not change `migrateLegacyDatabaseIfNeeded`/`migrateLegacyData` except replacing its call of `resolveScopeFromUrl` with `resolveLegacyScopeFromUrl`.
+- Do not touch the `offlineDb` Proxy, `offline-queue-runner.ts` or any other consumer; those are sessions 19 to 21.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
 2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۳`.
-- `auth.guard.ts` `AuthGuard` has: a warehouse scope block (`isWarehouseScope`), a finance scope block (`isFinanceScope`, with the company-documents exception), a generic loop for other modules with routeAccess (session 1), and a page-permission loop whose fallback is `roleHome()` for warehouse pages and the other module's `defaultRoute` for other pages.
-- Today's asymmetric rules that must survive: a module that is not installed redirects to the first other installed module with routeAccess, else `/app/launcher`; a user without access to a module's scope goes to another accessible module's `defaultRoute`, else `/login`; on a page of a module the user cannot access, warehouse pages go to `roleHome()` and finance pages go to the other module's `defaultRoute`.
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`: the failed-attempt paragraph, invariants `ن۱` to `ن۱۲`, the `offlineSync` contract table, and the paragraph for session 18.
+- `scratch/offline-db-modular-attempt-2026-10-19.patch` is a failed earlier attempt. Read it as a list of mistakes to avoid; do not apply it.
+- Existing pattern: the `syncConfig` extension in `module-contract.ts` and its values in `modules/warehouse/module.ts` and `modules/accounting/module.ts`.
+- `ModuleRegistryService.getAllModules()` returns every module compiled into the build. `getInstalledModules()` and `getExtensions()` filter by the server-provided list, which can change at runtime; they must not be used for offline scope resolution.
 
-3. Task:
-- a) Add one optional field to `ModuleRouteAccess` in `module-contract.ts`: `deniedPageFallback?: 'roleHome' | 'otherModuleDefault'`; set `'roleHome'` in `modules/warehouse/route-access.ts` and `'otherModuleDefault'` in `modules/accounting/route-access.ts`.
-- b) Replace the warehouse block, the finance block and both loops with one loop over all known module specs that have routeAccess (installed and not installed, so the not-installed redirect still works; find how the registry exposes them), detecting the module by `routePrefix` or `route.routeConfig?.path` equal to the prefix without its leading slash. Use `extensions.layoutNav.hasCompanyDocumentsArchive` to apply the company-documents exception only to the module that owns the archive, keeping today's checks exactly.
-- c) No module name, route prefix or scope kind literal remains in `auth.guard.ts` except inside the company-documents expressions that session 12 replaces.
-
-4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/auth/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/core/services/app-persona*.spec.ts"`.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-refactor(guard): one generic module loop in AuthGuard
-- Short English report: the new loop, how each asymmetric rule is kept, the last ng-test-compare summary line. End the turn after the commit and report.
-
-===
-
-[DONE] Session 12 of 15 — Phase 4: the company documents route comes from the layoutNav extension of the module that owns the archive
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/auth/company-documents-route.spec.ts
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/app.routes.ts --absent "app/finance/company-documents"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/auth/auth.guard.ts --absent "company-documents" --absent "'/documents'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/app-persona.service.ts --absent "company-documents" --absent "'/documents'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/accounting/module.ts --contains "companyDocumentsRoute: '/app/finance/company-documents'"
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/auth/company-documents-route.spec.ts --min-tests 4 --require "without the archive module"
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
-verify: python scripts/e2e/guardian_57_front_module_fence.py
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(routes): company documents route from the layoutNav extension"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Every redirect and access decision stays the same in the full profile. Do not edit existing spec files.
-- Change only the 6 files listed in the scope verify line.
-- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
-
-2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۳`.
-- Hardcoded uses: `app.routes.ts` (the two root redirect functions and the legacy redirects for paths `company-documents` and `documents`), `auth.guard.ts` (`isCompanyDocsRoute`), `app-persona.service.ts` (`getDefaultRouteForRole` and `canAccessRoute`). The accounting module already declares `extensions.layoutNav.hasCompanyDocumentsArchive: true`; its route is `company-documents` under `/app/finance`, with a legacy alias `documents`.
-
-3. Task:
-- a) Add `companyDocumentsRoute?: string` to the `layoutNav` extension in `module-contract.ts`, and set `companyDocumentsRoute: '/app/finance/company-documents'` in `modules/accounting/module.ts`.
-- b) Read the route from the installed module whose `layoutNav` has `hasCompanyDocumentsArchive` true, through the module registry, in all the places above. A URL counts as a company-documents URL when it starts with that route or with the same parent path plus `/documents`. The two legacy redirects use a function that returns the route without its leading slash, or `app/launcher` when no module owns the archive.
-- c) New `core/auth/company-documents-route.spec.ts` (at least 4 tests, one name containing `without the archive module`): the root redirect sends a user with company-documents access and no module access to the archive route; the guard allows that user on the archive route; the legacy `documents` redirect resolves to the archive route; without the archive module installed the redirect goes to `app/launcher`.
-
-4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/*.spec.ts"`.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-refactor(routes): company documents route from the layoutNav extension
-- Short English report: each replaced use, the tests added, the last ng-test-compare summary line. End the turn after the commit and report.
-
-===
-
-[DONE] Session 13 of 15 — Phase 4: app switching in AppPersonaService uses module specs for warehouse and accounting like any other module
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/warehouse/module.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/modules/warehouse/route-access.ts warehouse-front/src/app/modules/accounting/route-access.ts warehouse-front/src/app/modules/warehouse/personas.ts warehouse-front/src/app/modules/accounting/personas.ts
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/app-persona.service.ts --absent "'/app/warehouse" --absent "'/app/finance" --absent "spec.code === 'accounting'"
-verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/core/services/app-persona.characterization.spec.ts warehouse-front/src/app/core/services/app-persona.generic-module.spec.ts
-verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "." --path warehouse-front/src/app/core/services/app-persona.characterization.spec.ts warehouse-front/src/app/core/services/app-persona.generic-module.spec.ts
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
-verify: python scripts/e2e/guardian_57_front_module_fence.py
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(persona): app switching from module specs"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Behaviour must stay identical: `app-persona.characterization.spec.ts` (70 tests) and `app-persona.generic-module.spec.ts` are the contract; do not edit them; they must pass.
-- Storage values stay as today: `active_app_module` is still `warehouse` or `personnel`, the token scope is still `warehouse` or `finance`, the WebSocket channel is still `warehouse`, `finance` or `operations`.
-- Change only the files listed in the scope verify line.
-- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
-
-2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۳`.
-- `core/services/app-persona.service.ts` has hardcoded warehouse/finance branches in `syncScopeFromUrl`, `sanitizeActiveRole`, `switchApp` (token scope, channel and default navigation), `getDefaultRouteForRole` and `canAccessRoute`, next to a generic path for other modules (`isGenericModuleApp`).
-- Values already in the module contract: `routePrefix`, `defaultRoute`, `scopeKind` (equals the token scope and the channel), `routeAccess.loginActiveAppModule` (`warehouse` and `personnel`, the persona app code).
-
-3. Task:
-- a) Use the persona app code `routeAccess.loginActiveAppModule ?? spec.code`, the token scope and channel `spec.scopeKind`, and the prefix `spec.routePrefix` for warehouse and accounting through the same code path as other modules. Keep the `operations` shell handling as it is.
-- b) Where a module-specific value has no contract field yet (for example the finance fallback role route `/app/finance/accountant-payroll` or the warehouse dashboard used by `switchApp`), add an optional field to the module contract, personas or route access, and set it in the module that owns the value.
-- c) Remove `isGenericModuleApp`'s hardcoded list only if the characterization specs stay green; otherwise keep it and say why in the report.
-
-4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/services/app-persona*.spec.ts" --include "src/app/core/auth/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-refactor(persona): app switching from module specs
-- Short English report: each replaced branch, the fields added, the last ng-test-compare summary line. End the turn after the commit and report.
-
-===
-
-[DONE] Session 14 of 15 — Phase 4: guardians 29 and 57 count module-name literals in the core with the no-increase rule
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow scripts/e2e/guardian_modularization.py scripts/e2e/modularization_baseline.json scripts/e2e/guardian_57_front_module_fence.py scripts/e2e/front_fence_baseline.json
-verify: python scripts/automation/verify_tools.py text-check --file scripts/e2e/modularization_baseline.json --contains "core_module_literals"
-verify: python scripts/automation/verify_tools.py text-check --file scripts/e2e/guardian_modularization.py --contains "core_module_literals" --contains "self-test"
-verify: python scripts/automation/verify_tools.py text-check --file scripts/e2e/guardian_57_front_module_fence.py --contains "core_module_literals" --contains "self-test"
-verify: python scripts/e2e/guardian_modularization.py
-verify: python scripts/e2e/guardian_modularization.py --self-test
-verify: python scripts/e2e/guardian_57_front_module_fence.py
-verify: python scripts/e2e/guardian_57_front_module_fence.py --self-test
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(guardians): module-name literal counters in core"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
-- This session changes only guardian scripts and their baseline files. Do not change application code. Do not lower any existing counter or relax any existing rule.
-- Change only files listed in the scope verify line (use only the baseline file each guardian already uses).
-- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
-
-2. Context:
-- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۵`.
-- Guardian 29 (`scripts/e2e/guardian_modularization.py`) already counts `core_module_app_refs` in `warehouse-backend/core` (skipping tests and migrations) and fails when a counter rises above `modularization_baseline.json`. Guardian 57 (`scripts/e2e/guardian_57_front_module_fence.py`) does the same for the frontend core and shared code.
-
-3. Definitions: a "module-name literal" is a quoted string literal exactly equal to `warehouse`, `finance`, `personnel` or `accounting` (single or double quotes). Comment lines and docstrings do not count.
+3. Definitions:
+- "Locked scope": `warehouse`, `finance`, and the aliases `personnel`, `accounting` (both map to `finance`), as in `SCOPED_DB_NAMES`. They always resolve to `warehouseOfflineDb`/`financeOfflineDb`, whatever modules are installed or compiled.
+- "Registered scope": a lowercase `scopeKind` matching `^[a-z][a-z0-9_]*$` from a valid `offlineSync` extension of a module in `getAllModules()`.
+- "Valid extension": `dbName` equals `SCOPED_DB_NAMES[scopeKind]` for a locked scope, or `` `WarehouseOfflineDB_${scopeKind}` `` otherwise; a non-locked `scopeKind` must not be an alias of a locked scope and its `dbName` must not be a locked name. An invalid extension is ignored and reported once with `console.error`. Validation reads only `SCOPED_DB_NAMES` and the scopeKind string, never the registry.
+- "Default scope": `warehouse`. Matching order: registered non-default scopes in `getAllModules()` order, then the default.
 
 4. Task:
-- a) Guardian 29: add counter `core_module_literals` = number of module-name literals in `.py` files under `warehouse-backend/core`, skipping tests and migrations (use `ast` string constants, so comments and docstrings are skipped). Print each finding as `file:line`.
-- b) Guardian 57: add counter `core_module_literals` for `.ts` files under `warehouse-front/src/app/core` and `warehouse-front/src/app/shared`, skipping `*.spec.ts`, comment lines and import lines.
-- c) Record the current values in each guardian's baseline with its existing update mechanism; the rule is "no increase".
-- d) Add `--self-test` to both guardians: it runs the counter on a temporary fixture with one extra literal and confirms the guardian would fail, then on the unchanged fixture and confirms it would pass; it exits 0 only when both hold and never writes the real baseline.
+- a) `module-contract.ts`: add `offlineSync?: { scopeKind: string; dbName: string; scopeAliases?: string[]; queueUrlPatterns: string[]; activePathPatterns: string[]; appRoutePrefixes: string[] }` with a Persian doc comment like the other extension points.
+- b) `modules/accounting/module.ts`: `offlineSync` with `scopeKind: 'finance'`, `dbName: 'WarehouseOfflineDB_finance'`, `scopeAliases: ['personnel', 'accounting']`, `queueUrlPatterns`: the 8 patterns of today's `resolveScopeFromUrl` in the same order, `activePathPatterns`: the 4 finance paths of today's `getCurrentActiveAppScope`, `appRoutePrefixes`: the 5 finance prefixes of `currentScopeContext` in `user-menu.component.ts`.
+- c) `modules/warehouse/module.ts`: `offlineSync` with `scopeKind: 'warehouse'`, `dbName: 'WarehouseOfflineDB_warehouse'`, `queueUrlPatterns: []`, `activePathPatterns`: the 2 warehouse paths, `appRoutePrefixes`: the 5 warehouse prefixes of `currentScopeContext`.
+- d) `offline-db.ts`:
+  - `AppScope` becomes `'warehouse' | 'finance' | (string & {})`.
+  - Private helper `getOfflineSyncSpecs()`: reads `getModuleRegistry().getAllModules()` lazily inside a `try/catch`, keeps valid extensions only, and returns `[]` on any error. Never call it at module evaluation time; `warehouseOfflineDb` and `financeOfflineDb` must still be created without reading the registry.
+  - `normalizeScope(scope)`: empty means `warehouse`; lowercase it; locked scopes and aliases first (same result as today); then registered scopes and their `scopeAliases`; anything else returns `warehouse`.
+  - `getScopedDbName(scope)`: `SCOPED_DB_NAMES` for locked scopes, `` `WarehouseOfflineDB_${scope}` `` for registered scopes, otherwise the warehouse name.
+  - `resolveScopeFromUrl(url)`: no url means `getCurrentActiveAppScope()` as today; otherwise the first registered non-default scope with a `queueUrlPatterns` entry contained in the lowercased url, else `warehouse`. Keep the function name and the `export function resolveScopeFromUrl` declaration, and do not mention `doc-tasks` in its body (guardian 34 reads it).
+  - `resolveLegacyScopeFromUrl(url)`: not exported or exported, your choice; an exact copy of today's `resolveScopeFromUrl` body with the 8 hard-coded patterns, used only by the legacy migration.
+  - `getCurrentActiveAppScope()`: same order as today (session keys, then path, then localStorage); the path step uses `activePathPatterns` in matching order; on any registry error it falls through to the localStorage step.
+  - `getOfflineDb(scope)`: same signature and results as today for every locked or unknown scope; for a registered non-locked scope it creates the DB once (key = DB name in `dbInstances`) and reuses it.
+  - `resolveOfflineDbStrict(scope)`: returns the locked instance for a locked scope or alias, the registered DB for a registered scope, and `null` for empty, unknown or invalid scopes. Never falls back to warehouse.
+  - `getAllOfflineDbs()`: `[warehouseOfflineDb, financeOfflineDb, ...registered non-locked DBs]` without duplicates; on registry error only the two locked DBs.
+- e) Spec `offline-scope.registry.spec.ts` (at least 8 `it(`), registering a fake third module with `getModuleRegistry().registerModule(...)` only inside this file:
+  - a valid third module `qa_mod` with `dbName: 'WarehouseOfflineDB_qa_mod'` and pattern `/qa-mod/`: `resolveScopeFromUrl('/api/qa-mod/x/')` is `qa_mod`, `getOfflineDb('qa_mod')` has that name and is the same instance on a second call, `getAllOfflineDbs()` has 3 entries with the locked two first;
+  - an invalid `dbName`, an uppercase `scopeKind`, and a module claiming `scopeKind: 'personnel'` or `dbName: 'WarehouseOfflineDB_finance'` for another scope are ignored;
+  - with `setInstalledModules(['warehouse'])`, `getOfflineDb('finance')` is still `financeOfflineDb` and `resolveScopeFromUrl('/api/payroll/x/')` is still `finance` (build-static source);
+  - `resolveOfflineDbStrict('xyz')`, `resolveOfflineDbStrict('')` and `resolveOfflineDbStrict(undefined)` are `null`; `resolveOfflineDbStrict('personnel')` is `financeOfflineDb`;
+  - for both real modules, `offlineSync.scopeKind` equals `syncConfig.scopeKind`.
+  Do not open IndexedDB in tests: assert names and instance identity only.
 
-5. Tool policy: each guardian at most four runs; the baseline update at most once per guardian.
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/shared/components/user-menu/*.spec.ts"` and at most two runs each of `python scripts/e2e/guardian_34_offline_continuity.py` and `python scripts/e2e/guardian_57_front_module_fence.py`. Guardian 57 must not report an increase; never run it with `--update-baseline`. If a command fails, read its output and change approach.
 
-6. Output and stop condition:
+6. Before finishing: the characterization spec of session 16 passes unchanged, the ng-test-compare run reports no new failing test, guardians 34 and 57 pass, and `git diff --stat` shows only the 5 files.
+
+7. Output and stop condition:
 - Commit with this message, without push:
-test(guardians): module-name literal counters in core
-- Short English report: the recorded value of each counter, the self-test result. End the turn after the commit and report.
+refactor(offline): offlineSync extension and registry-driven scope resolution
+- Short English report: the new functions with one line each, the guardian 57 counter before and after, the ng-test-compare summary line, remaining uncertainty. End the turn after the commit and the report.
 
 ===
 
-[DONE] Session 15 of 15 — Release phase 4 on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+Session 19 of 22 — Phase 4 step 4: queue readers use every offline DB (drain, counts, protection sets, restore gate)
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/offline/offline-queue-runner.ts warehouse-front/src/app/core/services/offline-sync.service.ts warehouse-front/src/app/core/services/sync-pull.service.ts warehouse-front/src/app/core/services/offline/offline-local-patcher.ts warehouse-front/src/app/core/services/offline-db.ts warehouse-front/src/app/core/services/server-restore-gate.ts warehouse-front/src/app/core/services/offline/offline-n-scope.readers.spec.ts
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --path warehouse-front/src/app/core/services/offline-db.ts --pattern "this\.version\(|\.stores\(|\+\+id|WarehouseOfflineDB_warehouse'|WarehouseOfflineDB_finance'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-queue-runner.ts --contains getAllOfflineDbs --absent otherScope --absent "financeOfflineDb.syncQueue.where('status').anyOf(['pending', 'failed']).count()"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/server-restore-gate.ts --contains getAllOfflineDbs --contains getDatabaseNames --contains WarehouseOfflineDB_
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/sync-pull.service.ts --contains getAllOfflineDbs
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-local-patcher.ts --contains getAllOfflineDbs --contains "for (const db of [warehouseOfflineDb, financeOfflineDb])"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline-db.ts --contains "others:" --contains "warehouse: { [tableName: string]: any[] };" --contains "finance: { [tableName: string]: any[] };"
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline/offline-n-scope.readers.spec.ts --min-tests 7 --require registerModule --require runQueueSequential --require countUnsentEntries --require getDatabaseNames
+verify: python scripts/e2e/guardian_34_offline_continuity.py
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(offline): queue readers cover every offline database"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only the 7 files in the scope verify line. Do not edit any existing spec. `offline-scope.characterization.spec.ts` and `offline-scope.registry.spec.ts` must pass unchanged.
+- This session changes readers only. Do not change how any single record is written, retried, cancelled or deleted (`sendEntry`, `handleRetry`, `markTransportFailure`, `cancelQueueEntry`, `reconcileRejected`, `applyOptimisticUpdate`, conflict-manager functions): those are session 20.
+- `purgeEphemeralQueueEntries` keeps its loop over exactly `[warehouseOfflineDb, financeOfflineDb]` (invariant `ن۱۲`). Do not extend any URL-based deletion to other DBs.
+- The JSON keys `warehouse` and `finance` of `exportLocalDatabaseSnapshot` and their content stay exactly as they are; only a new key is added.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, invariants `ن۶`, `ن۱۱`, `ن۱۲` and the paragraph for session 19.
+- `getAllOfflineDbs()` in `warehouse-front/src/app/core/services/offline-db.ts` (session 18) returns the two locked DBs first, then registered DBs.
+- Places that read both queues with a fixed pair today:
+  - `offline-queue-runner.ts`: the drain loop in `runQueueSequential` (`currentScope`/`otherScope`), `getPendingCount`, `getUnsentCountStrict`, `getQueueEntries`.
+  - `offline-sync.service.ts`: `initialize()` (`sending` back to `pending`) and `refreshCounts()`.
+  - `sync-pull.service.ts`: the `pendingSyncIds` set (around line 318).
+  - `offline-local-patcher.ts`: the `protectedIds` set in `pruneOldLocalData`.
+  - `offline-db.ts`: `clearAllScopedCaches`, `exportLocalDatabaseSnapshot`.
+  - `server-restore-gate.ts`: `countUnsentEntries`.
+
+3. Definitions:
+- "Every DB" means `getAllOfflineDbs()`.
+- "Unknown device DB" means a name from `Dexie.getDatabaseNames()` that starts with `WarehouseOfflineDB_` and is not the name of any DB in `getAllOfflineDbs()`.
+
+4. Task:
+- a) `runQueueSequential`: read pending/failed entries of every DB, pair each entry with its own DB, keep the existing global sort (retry ceiling first, then `createdAt`) and every existing rule (user check, transport abort, auth stop, head-of-line rule). Replace the log text that names the current and other scope with per-DB counts.
+- b) `getPendingCount(scope)`: `'all'` or no argument sums every DB; a scope argument counts only `resolveOfflineDbStrict(scope)` and returns 0 when it is `null`. `getUnsentCountStrict()` sums every DB. `getQueueEntries(scope)`: same scope rule, merged and sorted by `createdAt`.
+- c) `offline-sync.service.ts`: `initialize()` resets `sending` to `pending` in every DB; `refreshCounts()` sums pending and undismissed errors over every DB. Keep the photo queue part unchanged.
+- d) `sync-pull.service.ts` `pendingSyncIds` and `pruneOldLocalData` `protectedIds`: built from the queues of every DB.
+- e) `clearAllScopedCaches`: every DB.
+- f) `exportLocalDatabaseSnapshot`: add key `others: { [dbName: string]: { [tableName: string]: any[] } }` with every DB after the locked two (empty object when there are none) and include their records in `metrics.totalRecords`.
+- g) `countUnsentEntries` in `server-restore-gate.ts`: count every DB, plus the `syncQueue` rows of every unknown device DB, opened read-only with `new Dexie(name)` and `open()` (dynamic mode, no `version()` call), counted, then `close()`d. Skip a DB without a `syncQueue` table. Any error while listing or reading must propagate so the gate stays closed, exactly like today's read errors.
+- h) Spec `offline-n-scope.readers.spec.ts` (at least 7 `it(`), registering a fake module `qa_mod` (as in `offline-scope.registry.spec.ts`) and spying on the tables of its DB: the drain sends a `qa_mod` entry with its own DB handle in global `createdAt` order; `getPendingCount()`, `getUnsentCountStrict()` and `getQueueEntries('all')` include it; `getPendingCount('xyz')` is 0; `countUnsentEntries` counts a `qa_mod` row and a row from an unknown device DB returned by a mocked `Dexie.getDatabaseNames`; a rejected `getDatabaseNames` makes `countUnsentEntries` reject; `purgeEphemeralQueueEntries` does not touch the `qa_mod` DB.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/modules/**/settings-backup-tab/*.spec.ts" --include "src/app/modules/warehouse/components/wh-settings/*.spec.ts" --include "src/app/shared/components/offline-pending-badge/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: the specs of sessions 16 and 18 pass unchanged, the ng-test-compare run reports no new failing test, and `git diff --stat` shows only files from the scope line.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(offline): queue readers cover every offline database
+- Short English report: each reader changed with one line, the tests added, the ng-test-compare summary line, remaining uncertainty. End the turn after the commit and the report.
+
+===
+
+Session 20 of 22 — Phase 4 step 4: record writers never fall back to the warehouse DB for an unknown scope
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/offline/offline-queue-runner.ts warehouse-front/src/app/core/services/offline/offline-local-patcher.ts warehouse-front/src/app/core/services/offline/offline-conflict-manager.ts warehouse-front/src/app/core/services/offline-sync.service.ts warehouse-front/src/app/modules/common/components/operations/operations-sync-monitor/operations-sync-monitor.ts warehouse-front/src/app/core/services/offline/offline-n-scope.writers.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-queue-runner.ts --contains resolveOfflineDbStrict --absent "targetDb || getOfflineDb(entry.appScope)" --absent "targetDb || getOfflineDb(appScope)"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-local-patcher.ts --contains resolveOfflineDbStrict --absent "const otherScope"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline/offline-conflict-manager.ts --contains getAllOfflineDbs --contains resolveOfflineDbStrict
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline/offline-n-scope.writers.spec.ts --min-tests 8 --require cancelQueueEntry --require handleRetry --require reconcileRejected --require dismissError --require resolveOfflineDbStrict
+verify: python scripts/e2e/guardian_34_offline_continuity.py
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(offline): id-keyed queue and error writes resolve their database strictly"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only the 6 files in the scope verify line. Do not edit any existing spec. The specs of sessions 16, 17, 18 and 19 must pass unchanged, including the "first found" results of `dismissError`/`deleteError` locked in session 16.
+- A queue record is deleted only after explicit server acceptance (2xx) or explicit rejection (4xx); 5xx means retry. Do not change any status-code rule in `sendEntry`.
+- An id-keyed write whose DB cannot be resolved is skipped and logged with `console.warn`; it never falls back to `warehouseOfflineDb`.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, invariants `ن۷` and `ن۹` and the paragraph for session 20.
+- Queue and error ids are numbered separately in each DB, so the same id can exist in several DBs. `resolveOfflineDbStrict(scope)` and `getAllOfflineDbs()` are in `offline-db.ts`.
+- Writers today:
+  - `offline-queue-runner.ts`: `handleRetry` and `markTransportFailure` use `targetDb || getOfflineDb(entry.appScope)`; `sendEntry` uses `targetDb || getOfflineDb(appScope)`; `cancelQueueEntry` checks the two DBs when no scope is given and refuses an id found in both.
+  - `offline-local-patcher.ts`: `getCachedEntry` falls back to the "other" scope; `invalidateCache` without scope uses the fixed pair; `reconcileRejected` and `applyOptimisticUpdate` use `getOfflineDb(scope)`.
+  - `offline-conflict-manager.ts`: `getErrors`, `getAllErrors`, `dismissError`, `deleteError`, `dismissAllErrors`, `clearAllErrors`, `retryError`, `resolveConflict` use the fixed pair, and look up a bare id in warehouse first, then finance.
+  - `offline-sync.service.ts`: wrappers that call the conflict-manager functions.
+  - `operations-sync-monitor.ts`: since session 17 it knows the source DB of each error; its `resolveConflict` call still passes only the id.
+
+3. Definitions:
+- "Strict DB" of a record: the DB handle passed by the caller when there is one; otherwise `resolveOfflineDbStrict(record.appScope)` when `appScope` is non-empty; otherwise (no `appScope`) the existing lookup rule of that function.
+- "First found" order: every DB in `getAllOfflineDbs()` order (warehouse, finance, then others).
+
+4. Task:
+- a) `handleRetry`, `markTransportFailure`, `sendEntry`: use the strict DB; when it is `null`, skip the write, log, and return the same result type the function returns for a missing id today.
+- b) `cancelQueueEntry(id, scope)`: with a scope, use `resolveOfflineDbStrict(scope)` and return `false` when it is `null`; without a scope, search every DB and refuse when the id exists in more than one, as today for two.
+- c) `offline-local-patcher.ts`: `reconcileRejected` and `applyOptimisticUpdate` use the strict DB and do nothing when it is `null`; `getCachedEntry` falls back over every other DB in order; `invalidateCache` without scope covers every DB.
+- d) `offline-conflict-manager.ts`: list and bulk functions cover every DB; each single-error function (`dismissError`, `deleteError`, `retryError`, `resolveConflict`) gets an optional last parameter `scope`. With `scope`, it uses only `resolveOfflineDbStrict(scope)` (nothing when `null`); without `scope`, it keeps the "first found" rule over every DB. In `retryError` and `resolveConflict`, the re-queued entry keeps the scope of the DB it came from.
+- e) `offline-sync.service.ts`: pass the optional `scope` through its wrappers. `operations-sync-monitor.ts`: pass the source DB's `dbScope` to `resolveConflict`.
+- f) Spec `offline-n-scope.writers.spec.ts` (at least 8 `it(`): an entry with `appScope: 'xyz'` makes `handleRetry` and `markTransportFailure` write nothing in any DB; `cancelQueueEntry(7, 'xyz')` returns `false` and deletes nothing; `cancelQueueEntry(7)` with id 7 in the warehouse DB and in a registered `qa_mod` DB returns `false`; `reconcileRejected` with `appScope: 'xyz'` writes nothing; `dismissError(7, 'finance')` with id 7 in both locked DBs updates only the finance DB; `dismissError(7)` without scope keeps the session 16 result; `resolveOfflineDbStrict` is used for `qa_mod` entries (its DB handle receives the write).
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/operations/**/*.spec.ts" --include "src/app/shared/components/offline-pending-badge/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: the specs of sessions 16 to 19 pass unchanged, the ng-test-compare run reports no new failing test, and `git diff --stat` shows only files from the scope line.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+fix(offline): id-keyed queue and error writes resolve their database strictly
+- Short English report: each writer changed with one line, the tests added, the ng-test-compare summary line, remaining uncertainty. End the turn after the commit and the report.
+
+===
+
+Session 21 of 22 — Phase 4 step 4: user-menu scope context and session-tab token scope read the offlineSync extension
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts warehouse-front/src/app/core/services/session-tab.service.ts
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts --contains appRoutePrefixes --contains normalizeScope --absent "url.startsWith('/app/treasury')" --absent "url.startsWith('/app/tag-templates')"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/session-tab.service.ts --contains normalizeScope --absent "scope === 'personnel' || scope === 'finance' ? 'finance' : 'warehouse'"
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --path warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts --pattern "\(click\)|\[ngClass\]|class="
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(offline): user-menu and session-tab scopes from offlineSync"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only the 2 files in the scope verify line. Do not change any template, style or spec. The specs of sessions 16 to 20 and the existing `user-menu.component.spec.ts` and `session-tab.service.spec.ts` must pass unchanged.
+- The token storage keys `wh_access_token_finance` and `wh_access_token_warehouse` must not change.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, the `offlineSync` table and the paragraph for session 21.
+- `currentScopeContext` in `warehouse-front/src/app/shared/components/user-menu/user-menu.component.ts` (around lines 110 to 160): step 1 checks hard-coded `startsWith` prefixes, step 2 maps `activeApp` names, step 3 checks installed `scopeKind`s.
+- `getScopedAccessToken` and `setScopedAccessToken` in `warehouse-front/src/app/core/services/session-tab.service.ts` map `personnel`/`finance` to `finance` and everything else to `warehouse`.
+- `normalizeScope` and the `offlineSync` extension (session 18) are in `offline-db.ts` and the two module files.
+
+3. Definitions: "route scope" is the `scopeKind` of the first module in `getModuleRegistry().getAllModules()` whose `offlineSync.appRoutePrefixes` contains a prefix the router url starts with.
+
+4. Task:
+- a) `currentScopeContext`: keep the `/app/operations` check first and unchanged. Replace the hard-coded finance and warehouse prefix lists with the route scope. Replace the `activeApp` name mapping with `normalizeScope(activeApp)` for any non-empty `activeApp` other than `operations`. Keep step 3 and the final default unchanged. The return type stays the same; a route scope or normalized scope that is neither `warehouse` nor `finance` returns `warehouse` (the deep-sync modal has only these two sections).
+- b) `session-tab.service.ts`: in both token functions, compute the scoped key suffix with `normalizeScope(scope)` and keep only `warehouse` or `finance` as the suffix (anything else uses `warehouse`, as today).
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/shared/components/user-menu/*.spec.ts" --include "src/app/core/services/**/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: the ng-test-compare run reports no new failing test, and `git diff --stat` shows only the 2 files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(offline): user-menu and session-tab scopes from offlineSync
+- Short English report: what changed, the ng-test-compare summary line, remaining uncertainty. End the turn after the commit and the report.
+
+===
+
+Session 22 of 22 — Release phase 4 step 4 on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -633,11 +376,11 @@ verify: python scripts/automation/verify_tools.py clean-tree
 - Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
 - Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
 
-2. Context: sessions 1 to 14 of phase 4 changed backend and frontend code, tests and guardian scripts, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+2. Context: sessions 16 to 21 of phase 4 changed frontend offline code and tests only, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
 
 3. Task, in this order:
 - a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
-  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 4'); print(m['filename'], m['size'])"`
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 4 step 4'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
 - b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
 - c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
