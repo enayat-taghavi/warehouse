@@ -1,6 +1,7 @@
 import { ModuleRouteAccess } from '../../core/modules/module-contract';
 
 export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
+  deniedPageFallback: 'otherModuleDefault',
   guardAccessPermissions: [
     'view_sys_personnel', 'view_sys_personnel_attendance', 'view_sys_fleet_attendance',
     'view_sys_payroll', 'view_sys_fleet_settlement', 'view_sys_treasury',

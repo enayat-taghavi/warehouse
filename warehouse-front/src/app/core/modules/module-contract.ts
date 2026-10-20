@@ -235,6 +235,7 @@ export interface ModuleRouteAccess {
   loginPermissions: string[];
   loginActiveAppModule: string;
   resolveLoginRoute: (perms: string[]) => string;
+  deniedPageFallback?: 'roleHome' | 'otherModuleDefault';
 }
 
 /**

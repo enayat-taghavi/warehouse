@@ -1,6 +1,7 @@
 import { ModuleRouteAccess } from '../../core/modules/module-contract';
 
 export const WAREHOUSE_ROUTE_ACCESS: ModuleRouteAccess = {
+  deniedPageFallback: 'roleHome',
   guardAccessPermissions: [
     'view_sys_dashboard', 'view_wh_dashboard', 'view_sys_counter',
     'view_sys_supervisor', 'can_act_as_wh_supervisor', 'view_sys_manager_review',
