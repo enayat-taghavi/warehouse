@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import Dexie from 'dexie';
 import {
   migrateLegacyData,
+  migrateLegacyDatabaseIfNeeded,
   LEGACY_MIGRATION_MARKER,
   LegacyDatabaseLike,
   LegacyMigrationTargets
@@ -269,10 +271,203 @@ describe('Legacy Database Migration (Session 17)', () => {
 
     await migrateLegacyData(legacy, targets);
 
-    expect(targetQueue.add).toHaveBeenCalledTimes(2);
+    expect(targetQueue.add).toHaveBeenCalledTimes(1);
     expect(legacyTable.update).toHaveBeenCalledWith(301, expect.any(Object));
     expect(legacyTable.update).toHaveBeenCalledWith(302, expect.any(Object));
     // Marker must NOT be set when any row fails
     expect(localStorage.getItem(LEGACY_MIGRATION_MARKER)).toBeNull();
+  });
+
+  it('۷. the claim update happens before targetQueue.add', async () => {
+    const callOrder: string[] = [];
+    const legacyQueue = [
+      { id: 401, url: '/api/warehouse/items/', method: 'POST', createdAt: 1600000000000 }
+    ];
+    const legacyTable = {
+      toArray: vi.fn().mockResolvedValue(legacyQueue),
+      update: vi.fn().mockImplementation(async (id: number, changes: any) => {
+        callOrder.push(`claim-${id}-${changes.migratedAt != null}`);
+        return 1;
+      })
+    };
+    const legacy: LegacyDatabaseLike = {
+      tables: [{ name: 'syncQueue' }],
+      table: vi.fn().mockReturnValue(legacyTable)
+    };
+    const targetQueue = {
+      filter: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(null)
+      }),
+      add: vi.fn().mockImplementation(async () => {
+        callOrder.push('target-add');
+        return 1;
+      })
+    };
+    const targets: LegacyMigrationTargets = {
+      warehouse: { syncQueue: targetQueue },
+      finance: { syncQueue: { filter: vi.fn() as any, add: vi.fn() } }
+    };
+
+    await migrateLegacyData(legacy, targets);
+
+    expect(callOrder).toEqual(['claim-401-true', 'target-add']);
+    expect(localStorage.getItem(LEGACY_MIGRATION_MARKER)).toBe('true');
+  });
+
+  it('۸. a failing add releases the claim and leaves the marker unset', async () => {
+    const legacyQueue = [
+      { id: 501, url: '/api/warehouse/items/', method: 'POST', createdAt: 1600000000000 }
+    ];
+    const updateCalls: Array<{ id: number; changes: any }> = [];
+    const legacyTable = {
+      toArray: vi.fn().mockResolvedValue(legacyQueue),
+      update: vi.fn().mockImplementation(async (id: number, changes: any) => {
+        updateCalls.push({ id, changes });
+        return 1;
+      })
+    };
+    const legacy: LegacyDatabaseLike = {
+      tables: [{ name: 'syncQueue' }],
+      table: vi.fn().mockReturnValue(legacyTable)
+    };
+    const targetQueue = {
+      filter: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(null)
+      }),
+      add: vi.fn().mockRejectedValue(new Error('Simulated add failure'))
+    };
+    const targets: LegacyMigrationTargets = {
+      warehouse: { syncQueue: targetQueue },
+      finance: { syncQueue: { filter: vi.fn() as any, add: vi.fn() } }
+    };
+
+    await migrateLegacyData(legacy, targets);
+
+    expect(updateCalls).toHaveLength(2);
+    expect(updateCalls[0]).toEqual({
+      id: 501,
+      changes: expect.objectContaining({ migratedAt: expect.any(Number) })
+    });
+    expect(updateCalls[1]).toEqual({
+      id: 501,
+      changes: { migratedAt: undefined }
+    });
+    expect(localStorage.getItem(LEGACY_MIGRATION_MARKER)).toBeNull();
+  });
+
+  it('۹. a failing claim adds nothing', async () => {
+    const legacyQueue = [
+      { id: 601, url: '/api/warehouse/items/', method: 'POST', createdAt: 1600000000000 }
+    ];
+    const legacyTable = {
+      toArray: vi.fn().mockResolvedValue(legacyQueue),
+      update: vi.fn().mockRejectedValue(new Error('Simulated claim update disk error'))
+    };
+    const legacy: LegacyDatabaseLike = {
+      tables: [{ name: 'syncQueue' }],
+      table: vi.fn().mockReturnValue(legacyTable)
+    };
+    const targetQueue = {
+      filter: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(null)
+      }),
+      add: vi.fn().mockResolvedValue(1)
+    };
+    const targets: LegacyMigrationTargets = {
+      warehouse: { syncQueue: targetQueue },
+      finance: { syncQueue: { filter: vi.fn() as any, add: vi.fn() } }
+    };
+
+    await migrateLegacyData(legacy, targets);
+
+    expect(legacyTable.update).toHaveBeenCalledWith(601, expect.objectContaining({
+      migratedAt: expect.any(Number)
+    }));
+    expect(targetQueue.filter).not.toHaveBeenCalled();
+    expect(targetQueue.add).not.toHaveBeenCalled();
+    expect(localStorage.getItem(LEGACY_MIGRATION_MARKER)).toBeNull();
+  });
+
+  it('۱۰. with a mocked navigator.locks.request the migration body runs inside it, and without navigator.locks it still runs', async () => {
+    const originalNavigatorLocks = (navigator as any).locks;
+    const getDbsSpy = vi.spyOn(Dexie, 'getDatabaseNames').mockResolvedValue([]);
+
+    try {
+      // الف) با وجود navigator.locks.request، مهاجرت درون قفل اختصاصی اجرا می‌شود
+      const lockExecutionOrder: string[] = [];
+      const mockRequest = vi.fn().mockImplementation(async (name: string, options: any, callback: () => Promise<any>) => {
+        lockExecutionOrder.push(`lock-acquired:${name}:${options?.mode}`);
+        const result = await callback();
+        lockExecutionOrder.push('lock-released');
+        return result;
+      });
+
+      Object.defineProperty(navigator, 'locks', {
+        value: { request: mockRequest },
+        configurable: true,
+        writable: true
+      });
+
+      await migrateLegacyDatabaseIfNeeded();
+
+      expect(mockRequest).toHaveBeenCalledTimes(1);
+      expect(mockRequest).toHaveBeenCalledWith(
+        'wh-legacy-offline-migration',
+        { mode: 'exclusive' },
+        expect.any(Function)
+      );
+      expect(getDbsSpy).toHaveBeenCalledTimes(1);
+      expect(lockExecutionOrder).toEqual([
+        'lock-acquired:wh-legacy-offline-migration:exclusive',
+        'lock-released'
+      ]);
+
+      // ب) بدون navigator.locks نیز بدنه مهاجرت به شکل مستقیم اجرا می‌شود
+      Object.defineProperty(navigator, 'locks', {
+        value: undefined,
+        configurable: true,
+        writable: true
+      });
+
+      getDbsSpy.mockClear();
+      await migrateLegacyDatabaseIfNeeded();
+
+      expect(getDbsSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      getDbsSpy.mockRestore();
+      Object.defineProperty(navigator, 'locks', {
+        value: originalNavigatorLocks,
+        configurable: true,
+        writable: true
+      });
+    }
+  });
+
+  it('۱۱. a row without id is skipped and logged without calling claim or add', async () => {
+    const legacyQueue = [
+      { url: '/api/warehouse/tasks/1/', method: 'POST', createdAt: 1600000000000 }
+    ];
+    const legacyTable = {
+      toArray: vi.fn().mockResolvedValue(legacyQueue),
+      update: vi.fn()
+    };
+    const legacy: LegacyDatabaseLike = {
+      tables: [{ name: 'syncQueue' }],
+      table: vi.fn().mockReturnValue(legacyTable)
+    };
+    const targetQueue = {
+      filter: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+      add: vi.fn()
+    };
+    const targets: LegacyMigrationTargets = {
+      warehouse: { syncQueue: targetQueue },
+      finance: { syncQueue: { filter: vi.fn() as any, add: vi.fn() } }
+    };
+
+    await migrateLegacyData(legacy, targets);
+
+    expect(legacyTable.update).not.toHaveBeenCalled();
+    expect(targetQueue.add).not.toHaveBeenCalled();
+    expect(localStorage.getItem(LEGACY_MIGRATION_MARKER)).toBe('true');
   });
 });

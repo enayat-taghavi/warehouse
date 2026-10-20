@@ -163,11 +163,10 @@ export const SCOPED_DB_NAMES: Record<string, string> = {
   personnel: 'WarehouseOfflineDB_finance',
 };
 
-const SCOPE_KEYS = Object.keys(SCOPED_DB_NAMES);
-const WH_SCOPE = SCOPE_KEYS[0] as AppScope;
-const FIN_SCOPE = SCOPE_KEYS[1] as AppScope;
-const ACCT_SCOPE = SCOPE_KEYS[2] as AppScope;
-const PERS_SCOPE = SCOPE_KEYS[3] as AppScope;
+const WH_SCOPE: AppScope = 'warehouse';
+const FIN_SCOPE: AppScope = 'finance';
+const ACCT_SCOPE: AppScope = 'accounting';
+const PERS_SCOPE: AppScope = 'personnel';
 
 interface ValidOfflineSyncSpec {
   scopeKind: string;
@@ -794,7 +793,7 @@ export async function migrateLegacyData(
     }
   }
 
-  // d) انتقال صف همگام‌سازی: صرف‌نظر کردن از رکوردهایی که migratedAt دارند
+  // d) انتقال صف همگام‌سازی: صرف‌نظر کردن از رکوردهایی که migratedAt دارند (Claim-first)
   if (tableNames.includes('syncQueue')) {
     try {
       const legacyQueueTable = legacy.table('syncQueue');
@@ -803,6 +802,20 @@ export async function migrateLegacyData(
         if ((item as any).migratedAt) {
           continue;
         }
+
+        if (item.id == null) {
+          console.warn('[OfflineDB Migration] رکورد صف قدیمی فاقد id است و نادیده گرفته شد:', item);
+          continue;
+        }
+
+        try {
+          await legacyQueueTable.update(item.id, { migratedAt: Date.now() });
+        } catch (claimErr) {
+          hasError = true;
+          console.warn(`[OfflineDB Migration] خطا در ثبت ادعای رکورد صف (id: ${item.id}):`, claimErr);
+          continue;
+        }
+
         try {
           const scope = resolveLegacyScopeFromUrl(item.url);
           const targetDb = targets[scope] || targets.warehouse;
@@ -818,13 +831,14 @@ export async function migrateLegacyData(
               appScope: scope,
             });
           }
-
-          if (item.id != null) {
-            await legacyQueueTable.update(item.id, { migratedAt: Date.now() });
-          }
-        } catch (rowErr) {
+        } catch (opErr) {
           hasError = true;
-          console.warn(`[OfflineDB Migration] خطا در مهاجرت رکورد صف (id: ${item?.id}):`, rowErr);
+          console.warn(`[OfflineDB Migration] خطا در بررسی یا اضافه کردن رکورد صف (id: ${item.id}):`, opErr);
+          try {
+            await legacyQueueTable.update(item.id, { migratedAt: undefined });
+          } catch (releaseErr) {
+            console.warn(`[OfflineDB Migration] خطا در آزادسازی ادعای رکورد صف (id: ${item.id}):`, releaseErr);
+          }
         }
       }
     } catch (err) {
@@ -854,13 +868,28 @@ export async function migrateLegacyDatabaseIfNeeded(): Promise<void> {
     if (typeof localStorage !== 'undefined' && localStorage.getItem(LEGACY_MIGRATION_MARKER)) {
       return;
     }
-    const dbs = await Dexie.getDatabaseNames();
-    if (!dbs.includes('WarehouseOfflineDB')) return;
 
-    const legacyDb = new Dexie('WarehouseOfflineDB');
-    await legacyDb.open();
-    await migrateLegacyData(legacyDb, { warehouse: warehouseOfflineDb, finance: financeOfflineDb });
-    legacyDb.close();
+    const runMigration = async () => {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem(LEGACY_MIGRATION_MARKER)) {
+        return;
+      }
+      const dbs = await Dexie.getDatabaseNames();
+      if (!dbs.includes('WarehouseOfflineDB')) return;
+
+      const legacyDb = new Dexie('WarehouseOfflineDB');
+      await legacyDb.open();
+      try {
+        await migrateLegacyData(legacyDb, { warehouse: warehouseOfflineDb, finance: financeOfflineDb });
+      } finally {
+        legacyDb.close();
+      }
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.locks && typeof navigator.locks.request === 'function') {
+      await navigator.locks.request('wh-legacy-offline-migration', { mode: 'exclusive' }, runMigration);
+    } else {
+      await runMigration();
+    }
   } catch (err) {
     console.warn('[OfflineDB Migration] عدم اجرای مهاجرت دیتابیس قبلی:', err);
   }
