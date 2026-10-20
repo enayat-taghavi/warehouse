@@ -1,4 +1,4 @@
-Session 16 of 22 — Phase 4 step 4: characterization spec for offline scope routing and both queues (tests only, no production change)
+[DONE] Session 16 of 22 — Phase 4 step 4: characterization spec for offline scope routing and both queues (tests only, no production change)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -52,7 +52,7 @@ test(offline): characterize scope routing and both queues
 
 ===
 
-Session 17 of 22 — Phase 4 step 4: fix two pre-existing data-loss paths (legacy DB migration, sync monitor writes to both DBs)
+[DONE] Session 17 of 22 — Phase 4 step 4: fix two pre-existing data-loss paths (legacy DB migration, sync monitor writes to both DBs)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -111,7 +111,7 @@ fix(offline): idempotent legacy migration and single-DB error writes in sync mon
 
 ===
 
-Session 18 of 22 — Phase 4 step 4: offlineSync module extension and registry-driven scope resolution with the two locked DBs
+[DONE] Session 18 of 22 — Phase 4 step 4: offlineSync module extension and registry-driven scope resolution with the two locked DBs
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -186,7 +186,7 @@ refactor(offline): offlineSync extension and registry-driven scope resolution
 
 ===
 
-Session 19 of 22 — Phase 4 step 4: queue readers use every offline DB (drain, counts, protection sets, restore gate)
+[DONE] Session 19 of 22 — Phase 4 step 4: queue readers use every offline DB (drain, counts, protection sets, restore gate)
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -252,7 +252,7 @@ refactor(offline): queue readers cover every offline database
 
 ===
 
-Session 20 of 22 — Phase 4 step 4: record writers never fall back to the warehouse DB for an unknown scope
+[DONE] Session 20 of 22 — Phase 4 step 4: record writers never fall back to the warehouse DB for an unknown scope
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -311,7 +311,7 @@ fix(offline): id-keyed queue and error writes resolve their database strictly
 
 ===
 
-Session 21 of 22 — Phase 4 step 4: user-menu scope context and session-tab token scope read the offlineSync extension
+[DONE] Session 21 of 22 — Phase 4 step 4: user-menu scope context and session-tab token scope read the offlineSync extension
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -357,7 +357,7 @@ refactor(offline): user-menu and session-tab scopes from offlineSync
 
 ===
 
-Session 22 of 22 — Release phase 4 step 4 on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+[DONE] Session 22 of 22 — Release phase 4 step 4 on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -381,6 +381,95 @@ verify: python scripts/automation/verify_tools.py clean-tree
 3. Task, in this order:
 - a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
   `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 4 step 4'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
+- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the `showmigrations` result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+
+===
+
+Session 23 of 24 — Phase 4 step 4 review fixes: explicit locked scope constants; legacy queue migration without duplicate send
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/offline-db.ts warehouse-front/src/app/core/services/offline-db.legacy-migration.spec.ts
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/core/services/offline-db.legacy-migration.spec.ts
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --path warehouse-front/src/app/core/services/offline-db.ts --pattern "this\.version\(|\.stores\(|\+\+id|: 'WarehouseOfflineDB_"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/offline-db.ts --absent "SCOPE_KEYS[" --absent "Object.keys(SCOPED_DB_NAMES)" --contains "navigator.locks" --contains wh-legacy-offline-migration
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/services/offline-db.legacy-migration.spec.ts --min-tests 10 --require locks
+verify: python scripts/e2e/guardian_34_offline_continuity.py
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(offline): explicit locked scope constants and claim-first legacy queue migration"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only the 2 files in the scope verify line. In the spec, add tests and adjust only expectations that test the old order of `add` and `update`; do not delete tests. All other specs must pass unchanged.
+- Do not change any `version()`/`stores()` line or any IndexedDB name. Never delete or clear the legacy IndexedDB `WarehouseOfflineDB` or any of its rows.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `#### ۴.۱`, invariants `ن۲` and `ن۸`.
+- `warehouse-front/src/app/core/services/offline-db.ts` defines `WH_SCOPE`, `FIN_SCOPE`, `ACCT_SCOPE` and `PERS_SCOPE` by position from `Object.keys(SCOPED_DB_NAMES)`. Reordering that table would silently change which DB a record goes to.
+- `migrateLegacyData` in the same file, queue part: it checks for an existing copy, then `add`s, then sets `migratedAt` on the legacy row. Two defects:
+  - Two tabs opened at the same time both run it, both find no copy, and both add the same row, so the request is sent twice.
+  - When `add` succeeds but the `migratedAt` update fails, the marker stays unset; after the added copy is sent and deleted, the next start finds no copy and adds the row again, so it is sent twice.
+
+3. Definitions:
+- "Claim" means writing `migratedAt` on the legacy row before adding its copy to the target queue.
+- "Release a claim" means `update(item.id, { migratedAt: undefined })` on the legacy row.
+
+4. Task:
+- a) Replace the 4 positional constants with explicit ones: `const WH_SCOPE: AppScope = 'warehouse';`, `FIN_SCOPE` = `'finance'`, `ACCT_SCOPE` = `'accounting'`, `PERS_SCOPE` = `'personnel'`. Remove `SCOPE_KEYS`. Change nothing else in the resolvers.
+- b) Cross-tab lock: `migrateLegacyDatabaseIfNeeded` runs the whole migration inside `navigator.locks.request('wh-legacy-offline-migration', { mode: 'exclusive' }, callback)` when `navigator.locks` exists, otherwise directly. Inside the lock, check the localStorage marker again before reading anything.
+- c) Claim-first per queue row: skip a row without `id` (log it). Claim the row; if the claim fails, skip the row and set the error flag. Then check for an existing copy and `add` when there is none (unchanged rules). If the check or `add` throws, release the claim; if the release also fails, log it and keep the error flag. The row is never deleted from the legacy DB.
+- d) Spec: add at least 4 tests: the claim `update` happens before `add`; a failing `add` releases the claim and leaves the marker unset; a failing claim adds nothing; with a mocked `navigator.locks.request` the migration body runs inside it, and without `navigator.locks` it still runs.
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base 64b2c17 --include "src/app/core/services/**/*.spec.ts"` and at most two runs of `python scripts/e2e/guardian_57_front_module_fence.py` (never with `--update-baseline`). If a command fails, read its output and change approach.
+
+6. Before finishing: the ng-test-compare run reports no new failing test, guardian 57 passes, and `git diff --stat` shows only the 2 files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+fix(offline): explicit locked scope constants and claim-first legacy queue migration
+- Short English report: what changed, the tests added, the guardian 57 counter, the ng-test-compare summary line. End the turn after the commit and the report.
+
+===
+
+Session 24 of 24 — Release phase 4 step 4 review fixes on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+require: python scripts/automation/verify_tools.py release-mark
+verify: python scripts/automation/verify_tools.py restart-backend
+verify: python scripts/automation/verify_tools.py restart-worker
+verify: python scripts/automation/verify_tools.py release-check
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
+
+2. Context: sessions 16 to 21 and 23 of phase 4 changed frontend offline code and tests only, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 4 step 4 fixes'); print(m['filename'], m['size'])"`
   Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
 - b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
 - c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
