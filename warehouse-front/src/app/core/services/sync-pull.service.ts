@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { offlineDb, warehouseOfflineDb, financeOfflineDb, SyncCursorEntry } from './offline-db';
+import { offlineDb, warehouseOfflineDb, financeOfflineDb, getAllOfflineDbs, SyncCursorEntry } from './offline-db';
 import { NetworkStatusService } from './network-status.service';
 import { isServerUnreachable } from './server-reachability';
 import { BehaviorSubject, Subject } from 'rxjs';
@@ -315,13 +315,13 @@ export class SyncPullService {
     let upserted = 0;
     let deleted = 0;
 
-    // sync_id هایی که تغییر ارسال‌نشده در صف هر دو قلمرو دارند — رکوردشان هرگز پاک نمی‌شود (تسک ۲)
-    const [whPending, finPending] = await Promise.all([
-      warehouseOfflineDb.syncQueue.where('status').anyOf(['pending', 'sending', 'failed']).toArray(),
-      financeOfflineDb.syncQueue.where('status').anyOf(['pending', 'sending', 'failed']).toArray(),
-    ]);
+    // sync_id هایی که تغییر ارسال‌نشده در صف تمامی قلمروها دارند — رکوردشان هرگز پاک نمی‌شود (تسک ۲)
+    const allDbs = getAllOfflineDbs();
+    const pendingEntriesPerDb = await Promise.all(
+      allDbs.map((db) => db.syncQueue.where('status').anyOf(['pending', 'sending', 'failed']).toArray())
+    );
     const pendingSyncIds = new Set(
-      [...whPending, ...finPending].map((e) => e.entitySyncId).filter((s): s is string => !!s)
+      pendingEntriesPerDb.flat().map((e) => e.entitySyncId).filter((s): s is string => !!s)
     );
 
     for (const [modelKey, rows] of Object.entries(results)) {

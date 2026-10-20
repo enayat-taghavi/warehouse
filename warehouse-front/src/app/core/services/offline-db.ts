@@ -684,10 +684,8 @@ export async function deletePersonnelLocalDraft(key: string): Promise<void> {
  * پاکسازی کش‌های مشتق‌شده از سرور در تمامی دیتابیس‌های تفکیک‌شده
  */
 export async function clearAllScopedCaches(): Promise<void> {
-  await Promise.all([
-    warehouseOfflineDb.clearServerDerivedCaches(),
-    financeOfflineDb.clearServerDerivedCaches(),
-  ]);
+  const dbs = getAllOfflineDbs();
+  await Promise.all(dbs.map(db => db.clearServerDerivedCaches()));
 }
 
 export const LEGACY_MIGRATION_MARKER = 'wh_legacy_offline_db_migrated_v1';
@@ -877,6 +875,7 @@ export async function exportLocalDatabaseSnapshot(): Promise<{
   exportedAtUnix: number;
   warehouse: { [tableName: string]: any[] };
   finance: { [tableName: string]: any[] };
+  others: { [dbName: string]: { [tableName: string]: any[] } };
   /** پیش‌نویس‌های محلی فرم پرسنل (پایگاه‌دادهٔ جدای FinancePersonnelDraftsDB) */
   personnelDrafts: { [tableName: string]: any[] };
   metrics: {
@@ -898,12 +897,20 @@ export async function exportLocalDatabaseSnapshot(): Promise<{
     return result;
   };
 
+  const allDbs = getAllOfflineDbs();
+  const otherDbs = allDbs.slice(2);
   const draftDb = getPersonnelDraftDb();
-  const [whData, finData, draftData] = await Promise.all([
+  const [whData, finData, draftData, otherEntries] = await Promise.all([
     exportTable(warehouseOfflineDb),
     exportTable(financeOfflineDb),
-    draftDb ? exportTable(draftDb) : Promise.resolve({} as { [tableName: string]: any[] })
+    draftDb ? exportTable(draftDb) : Promise.resolve({} as { [tableName: string]: any[] }),
+    Promise.all(otherDbs.map(async (db) => ({ name: db.name, data: await exportTable(db) }))),
   ]);
+
+  const others: { [dbName: string]: { [tableName: string]: any[] } } = {};
+  for (const entry of otherEntries) {
+    others[entry.name] = entry.data;
+  }
 
   const countRecords = (data: { [k: string]: any[] }) =>
     Object.values(data).reduce((acc, arr) => acc + (arr?.length || 0), 0);
@@ -911,6 +918,10 @@ export async function exportLocalDatabaseSnapshot(): Promise<{
   const whCount = countRecords(whData);
   const finCount = countRecords(finData);
   const draftCount = countRecords(draftData);
+  let otherCount = 0;
+  for (const data of Object.values(others)) {
+    otherCount += countRecords(data);
+  }
   const pendingSync = (whData['syncQueue']?.length || 0) + (finData['syncQueue']?.length || 0);
 
   const now = new Date();
@@ -934,9 +945,10 @@ export async function exportLocalDatabaseSnapshot(): Promise<{
     exportedAtUnix: Date.now(),
     warehouse: whData,
     finance: finData,
+    others,
     personnelDrafts: draftData,
     metrics: {
-      totalRecords: whCount + finCount + draftCount,
+      totalRecords: whCount + finCount + draftCount + otherCount,
       warehouseRecords: whCount,
       financeRecords: finCount,
       pendingSyncCount: pendingSync,

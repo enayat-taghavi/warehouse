@@ -3,6 +3,7 @@ import {
   warehouseOfflineDb,
   financeOfflineDb,
   getOfflineDb,
+  getAllOfflineDbs,
   resolveScopeFromUrl,
   AppScope,
   SyncQueueEntry,
@@ -62,12 +63,10 @@ export async function pruneOldLocalData(): Promise<number> {
   localStorage.setItem(PRUNE_STORAGE_KEY, String(Date.now()));
 
   const cutoffIso = new Date(Date.now() - 180 * ONE_DAY).toISOString();
-  // خواندن صف هر دو قلمرو تا هیچ رکورد معلقی چه در انبار و چه در مالی هرگز پاک نشود (تسک ۲)
-  const [whPending, finPending] = await Promise.all([
-    warehouseOfflineDb.syncQueue.toArray(),
-    financeOfflineDb.syncQueue.toArray(),
-  ]);
-  const pendingEntries = [...whPending, ...finPending];
+  // خواندن صف تمامی قلمروها تا هیچ رکورد معلقی هرگز پاک نشود (تسک ۲)
+  const allDbs = getAllOfflineDbs();
+  const queueEntriesPerDb = await Promise.all(allDbs.map((db) => db.syncQueue.toArray()));
+  const pendingEntries = queueEntriesPerDb.flat();
   const protectedIds = new Set(pendingEntries.map((e) => e.entitySyncId).filter(Boolean));
 
   let pruned = 0;

@@ -3,6 +3,8 @@ import {
   warehouseOfflineDb,
   financeOfflineDb,
   getOfflineDb,
+  getAllOfflineDbs,
+  resolveOfflineDbStrict,
   resolveScopeFromUrl,
   getCurrentActiveAppScope,
   AppScope,
@@ -256,26 +258,23 @@ export async function sendEntry(
 /** دریافت تعداد درخواست‌های در صف */
 export async function getPendingCount(scope?: AppScope | 'all'): Promise<number> {
   const targetScope = scope || 'all';
-  if (targetScope === 'warehouse') {
-    return warehouseOfflineDb.syncQueue.where('status').anyOf(['pending', 'failed']).count();
+  if (targetScope === 'all') {
+    const dbs = getAllOfflineDbs();
+    const counts = await Promise.all(
+      dbs.map((db) => db.syncQueue.where('status').anyOf(['pending', 'failed']).count())
+    );
+    return counts.reduce((acc, c) => acc + c, 0);
   }
-  if (targetScope === 'finance') {
-    return financeOfflineDb.syncQueue.where('status').anyOf(['pending', 'failed']).count();
-  }
-  const [wh, fin] = await Promise.all([
-    warehouseOfflineDb.syncQueue.where('status').anyOf(['pending', 'failed']).count(),
-    financeOfflineDb.syncQueue.where('status').anyOf(['pending', 'failed']).count(),
-  ]);
-  return wh + fin;
+  const db = resolveOfflineDbStrict(targetScope);
+  if (!db) return 0;
+  return db.syncQueue.where('status').anyOf(['pending', 'failed']).count();
 }
 
-/** همهٔ رکوردهای صف هر دو پایگاه‌داده، با هر وضعیتی */
+/** همهٔ رکوردهای صف تمامی پایگاه‌های داده، با هر وضعیتی */
 export async function getUnsentCountStrict(): Promise<number> {
-  const [wh, fin] = await Promise.all([
-    warehouseOfflineDb.syncQueue.count(),
-    financeOfflineDb.syncQueue.count(),
-  ]);
-  return wh + fin;
+  const dbs = getAllOfflineDbs();
+  const counts = await Promise.all(dbs.map((db) => db.syncQueue.count()));
+  return counts.reduce((acc, c) => acc + c, 0);
 }
 
 /**
@@ -313,25 +312,25 @@ export async function runQueueSequential(
     while (drainPass < MAX_DRAIN_PASSES && !transportAborted && !authRequired && networkStatus.isBrowserOnline) {
       drainPass++;
 
-      const currentScope = getCurrentActiveAppScope();
-      const otherScope: AppScope = currentScope === 'warehouse' ? 'finance' : 'warehouse';
+      const allDbs = getAllOfflineDbs();
+      const entriesPerDb = await Promise.all(
+        allDbs.map((db) => db.syncQueue.where('status').anyOf(['pending', 'failed']).sortBy('createdAt'))
+      );
 
-      const currentDb = getOfflineDb(currentScope);
-      const otherDb = getOfflineDb(otherScope);
-
-      const [currentEntries, otherEntries] = await Promise.all([
-        currentDb.syncQueue.where('status').anyOf(['pending', 'failed']).sortBy('createdAt'),
-        otherDb.syncQueue.where('status').anyOf(['pending', 'failed']).sortBy('createdAt'),
-      ]);
-
-      let queueJobs: { entry: SyncQueueEntry; db: OfflineDatabase }[] = [
-        ...currentEntries.map((e) => ({ entry: e, db: currentDb })),
-        ...otherEntries.map((e) => ({ entry: e, db: otherDb })),
-      ];
+      let queueJobs: { entry: SyncQueueEntry; db: OfflineDatabase }[] = [];
+      const countsLog: string[] = [];
+      for (let i = 0; i < allDbs.length; i++) {
+        const db = allDbs[i];
+        const entries = entriesPerDb[i];
+        for (const e of entries) {
+          queueJobs.push({ entry: e, db });
+        }
+        countsLog.push(`${entries.length} در ${db.dbScope || db.name}`);
+      }
 
       if (queueJobs.length === 0) {
         if (drainPass === 1) {
-          console.log('[OfflineSync] ✅ صف‌های هر دو قلمرو خالی هستند');
+          console.log('[OfflineSync] ✅ صف‌های تمامی قلمروها خالی هستند');
           if (onSyncSuccess) onSyncSuccess();
         }
         break;
@@ -346,7 +345,7 @@ export async function runQueueSequential(
       });
 
       console.log(
-        `[OfflineSync] 📋 دور ${drainPass}: ${queueJobs.length} درخواست در صف‌های تفکیک‌شده (${currentEntries.length} در ${currentScope}، ${otherEntries.length} در ${otherScope})`
+        `[OfflineSync] 📋 دور ${drainPass}: ${queueJobs.length} درخواست در صف‌های تفکیک‌شده (${countsLog.join('، ')})`
       );
 
       let passProcessed = 0;
@@ -539,21 +538,18 @@ export async function cancelQueueEntry(
  */
 export async function getQueueEntries(scope?: AppScope | 'all'): Promise<SyncQueueEntry[]> {
   const targetScope = scope || 'all';
-  if (targetScope === 'warehouse') {
-    return warehouseOfflineDb.syncQueue
-      .where('status')
-      .anyOf(['pending', 'failed'])
-      .sortBy('createdAt');
+  if (targetScope === 'all') {
+    const dbs = getAllOfflineDbs();
+    const entriesPerDb = await Promise.all(
+      dbs.map((db) => db.syncQueue.where('status').anyOf(['pending', 'failed']).toArray())
+    );
+    const allEntries = entriesPerDb.flat();
+    return allEntries.sort((a, b) => a.createdAt - b.createdAt);
   }
-  if (targetScope === 'finance') {
-    return financeOfflineDb.syncQueue
-      .where('status')
-      .anyOf(['pending', 'failed'])
-      .sortBy('createdAt');
-  }
-  const [wh, fin] = await Promise.all([
-    warehouseOfflineDb.syncQueue.where('status').anyOf(['pending', 'failed']).toArray(),
-    financeOfflineDb.syncQueue.where('status').anyOf(['pending', 'failed']).toArray(),
-  ]);
-  return [...wh, ...fin].sort((a, b) => a.createdAt - b.createdAt);
+  const db = resolveOfflineDbStrict(targetScope);
+  if (!db) return [];
+  return db.syncQueue
+    .where('status')
+    .anyOf(['pending', 'failed'])
+    .sortBy('createdAt');
 }

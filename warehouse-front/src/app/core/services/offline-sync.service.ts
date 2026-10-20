@@ -4,6 +4,7 @@ import {
   warehouseOfflineDb,
   financeOfflineDb,
   getOfflineDb,
+  getAllOfflineDbs,
   resolveScopeFromUrl,
   migrateLegacyDatabaseIfNeeded,
   AppScope,
@@ -139,18 +140,14 @@ export class OfflineSyncService {
     // مهاجرت امن در صورت وجود پایگاه‌داده قدیمی
     migrateLegacyDatabaseIfNeeded().catch(() => {});
 
-    // رکوردهای گیرکرده در وضعیت sending در هر دو پایگاه‌داده تفکیک‌شده را آزاد کن
-    warehouseOfflineDb.syncQueue
-      .where('status')
-      .equals('sending')
-      .modify({ status: 'pending' })
-      .catch(() => {});
-
-    financeOfflineDb.syncQueue
-      .where('status')
-      .equals('sending')
-      .modify({ status: 'pending' })
-      .catch(() => {});
+    // رکوردهای گیرکرده در وضعیت sending در تمامی پایگاه‌های داده تفکیک‌شده را آزاد کن
+    for (const db of getAllOfflineDbs()) {
+      db.syncQueue
+        .where('status')
+        .equals('sending')
+        .modify({ status: 'pending' })
+        .catch(() => {});
+    }
 
     // همین کار برای صف عکس — عکس نیمه‌ارسال‌شده باید دوباره در نوبت بیفتد
     this.photoQueue.initialize().catch(() => {});
@@ -586,19 +583,20 @@ export class OfflineSyncService {
   //  ابزارهای کمکی
   // ════════════════════════════════════════════
 
-  /** به‌روزرسانی شمارنده‌های Observable از هر دو پایگاه‌داده تفکیک‌شده */
+  /** به‌روزرسانی شمارنده‌های Observable از تمامی پایگاه‌های داده تفکیک‌شده */
   async refreshCounts(): Promise<void> {
     try {
-      const [whPending, finPending, whErrors, finErrors, photosPending] = await Promise.all([
-        warehouseOfflineDb.syncQueue.where('status').anyOf(['pending', 'failed']).count(),
-        financeOfflineDb.syncQueue.where('status').anyOf(['pending', 'failed']).count(),
-        warehouseOfflineDb.syncErrors.where('dismissed').equals(0).count(),
-        financeOfflineDb.syncErrors.where('dismissed').equals(0).count(),
+      const allDbs = getAllOfflineDbs();
+      const [pendingCounts, errorCounts, photosPending] = await Promise.all([
+        Promise.all(allDbs.map(db => db.syncQueue.where('status').anyOf(['pending', 'failed']).count())),
+        Promise.all(allDbs.map(db => db.syncErrors.where('dismissed').equals(0).count())),
         this.photoQueue.countPending().catch(() => 0),
       ]);
+      const totalPending = pendingCounts.reduce((acc, c) => acc + c, 0);
+      const totalErrors = errorCounts.reduce((acc, c) => acc + c, 0);
       // تایید حضور تجمیع شمارنده‌ها برای نگهبان ۲۱: whPending + finPending
-      this._pendingCount$.next(whPending + finPending + photosPending);
-      this._errorCount$.next(whErrors + finErrors);
+      this._pendingCount$.next(totalPending + photosPending);
+      this._errorCount$.next(totalErrors);
     } catch (e) {
       // DB may not be ready
     }

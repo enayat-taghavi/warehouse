@@ -1,4 +1,5 @@
-import { warehouseOfflineDb, financeOfflineDb, clearAllScopedCaches } from './offline-db';
+import Dexie from 'dexie';
+import { getAllOfflineDbs, clearAllScopedCaches } from './offline-db';
 import type { PhotoUploadQueueService } from './photo-upload-queue.service';
 
 /**
@@ -15,14 +16,57 @@ interface LogoutLike {
   logout(): void;
 }
 
-/** همهٔ داده‌های ارسال‌نشده: صف همگام‌سازی هر دو قلمرو و عکس‌های در انتظار؛ خطای خواندن پرتاب می‌شود */
+/** همهٔ داده‌های ارسال‌نشده: صف همگام‌سازی تمامی پایگاه‌های داده و عکس‌های در انتظار؛ خطای خواندن پرتاب می‌شود */
 export async function countUnsentEntries(photoQueue: PhotoUploadQueueService | null | undefined): Promise<number> {
-  const [whItems, finItems, photos] = await Promise.all([
-    warehouseOfflineDb.syncQueue.toArray(),
-    financeOfflineDb.syncQueue.toArray(),
-    photoQueue ? photoQueue.countPendingStrict() : Promise.resolve(0),
-  ]);
-  return (whItems?.length || 0) + (finItems?.length || 0) + (photos || 0);
+  const allDbs = getAllOfflineDbs();
+  const knownNames = new Set(allDbs.map((db) => db.name));
+
+  const knownCounts = await Promise.all(
+    allDbs.map(async (db) => {
+      try {
+        const items = await db.syncQueue.toArray();
+        if (Array.isArray(items)) {
+          return items.length;
+        }
+      } catch (err: any) {
+        if (err?.name !== 'MissingAPIError' && !err?.message?.includes('IndexedDB API missing')) {
+          throw err;
+        }
+      }
+      return await db.syncQueue.count();
+    })
+  );
+  let total = knownCounts.reduce((acc, c) => acc + c, 0);
+
+  let dbNames: string[] = [];
+  try {
+    dbNames = await Dexie.getDatabaseNames();
+  } catch (err: any) {
+    if (err?.name === 'MissingAPIError' || err?.message?.includes('IndexedDB API missing')) {
+      dbNames = [];
+    } else {
+      throw err;
+    }
+  }
+
+  for (const name of dbNames) {
+    if (name.startsWith('WarehouseOfflineDB_') && !knownNames.has(name)) {
+      const db = new Dexie(name);
+      try {
+        await db.open();
+        if (db.tables.some((t) => t.name === 'syncQueue')) {
+          const count = await db.table('syncQueue').count();
+          total += count;
+        }
+      } finally {
+        db.close();
+      }
+    }
+  }
+
+  const photos = photoQueue ? await photoQueue.countPendingStrict() : 0;
+  total += photos;
+  return total;
 }
 
 /**
