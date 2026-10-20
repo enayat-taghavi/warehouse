@@ -9,6 +9,7 @@ import { SettingsBackupTabComponent } from './settings-backup-tab';
 import { SettingsService } from '../../../../../../core/services/settings';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { AuthService } from '../../../../../../core/auth/auth.service';
+import { PhotoUploadQueueService } from '../../../../../../core/services/photo-upload-queue.service';
 
 describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
   let component: SettingsBackupTabComponent;
@@ -17,10 +18,13 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
   let authServiceMock: any;
   let cdrMock: any;
   let clearCachesSpy: any;
+  let financeClearCachesSpy: any;
+  let photoQueueMock: any;
 
   beforeEach(() => {
     vi.useFakeTimers();
-    clearCachesSpy = vi.spyOn(offlineDb, 'clearServerDerivedCaches').mockResolvedValue(undefined as any);
+    clearCachesSpy = vi.spyOn(warehouseOfflineDb, 'clearServerDerivedCaches').mockResolvedValue(undefined as any);
+    financeClearCachesSpy = vi.spyOn(financeOfflineDb, 'clearServerDerivedCaches').mockResolvedValue(undefined as any);
     vi.spyOn(offlineDb.syncQueue, 'toArray').mockResolvedValue([]);
     vi.spyOn(warehouseOfflineDb.syncQueue, 'toArray').mockResolvedValue([]);
     vi.spyOn(financeOfflineDb.syncQueue, 'toArray').mockResolvedValue([]);
@@ -28,6 +32,11 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
     settingsServiceMock = {
       downloadBackup: vi.fn().mockReturnValue(of(new Blob(['test-dump']))),
       restoreBackup: vi.fn().mockReturnValue(of({ message: 'بازیابی موفق' })),
+      rollbackSnapshot: vi.fn().mockReturnValue(of({ message: 'بازگردانی موفق' })),
+    };
+
+    photoQueueMock = {
+      countPendingStrict: vi.fn().mockResolvedValue(0),
     };
 
     toastServiceMock = {
@@ -50,6 +59,7 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
         { provide: ToastService, useValue: toastServiceMock },
         { provide: ChangeDetectorRef, useValue: cdrMock },
         { provide: AuthService, useValue: authServiceMock },
+        { provide: PhotoUploadQueueService, useValue: photoQueueMock },
       ],
     });
 
@@ -168,12 +178,12 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
       expect(component.showRestoreConfirm).toBe(true);
     });
 
-    it('should reject restore if confirmation text is not RESTORE_DATABASE_CONFIRM', () => {
+    it('should reject restore if confirmation text is not RESTORE_DATABASE_CONFIRM', async () => {
       component.restoreFile = new File(['dump'], 'test.wbak');
       component.restorePassword = 'secretPassword123';
       component.restoreConfirmInput = 'INCORRECT_TEXT';
 
-      component.restoreBackup();
+      await component.restoreBackup();
 
       expect(toastServiceMock.show).toHaveBeenCalledWith('error', expect.stringMatching('متن تایید'));
       expect(settingsServiceMock.restoreBackup).not.toHaveBeenCalled();
@@ -185,7 +195,7 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
       component.restorePassword = 'secretPassword123';
       component.restoreConfirmInput = 'RESTORE_DATABASE_CONFIRM';
 
-      component.restoreBackup();
+      await component.restoreBackup();
 
       expect(settingsServiceMock.restoreBackup).toHaveBeenCalledWith(
         mockFile,
@@ -193,15 +203,14 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
         'RESTORE_DATABASE_CONFIRM'
       );
       // Flush microtasks and advance timer to allow the 1500ms delay to complete
-      await Promise.resolve();
-      vi.advanceTimersByTime(2000);
-      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(2000);
 
       expect(clearCachesSpy).toHaveBeenCalled();
+      expect(financeClearCachesSpy).toHaveBeenCalled();
       expect(authServiceMock.logout).toHaveBeenCalled();
     });
 
-    it('should handle restore error and show structured rollback failure if present', () => {
+    it('should handle restore error and show structured rollback failure if present', async () => {
       const mockFile = new File(['dump'], 'test.wbak');
       component.restoreFile = mockFile;
       component.restorePassword = 'secretPassword123';
@@ -216,7 +225,7 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
         }))
       );
 
-      component.restoreBackup();
+      await component.restoreBackup();
 
       expect(toastServiceMock.show).toHaveBeenCalledWith('error', 'خطای بازگردانی');
       expect(toastServiceMock.show).toHaveBeenCalledWith('error', expect.stringMatching('فایل نجات'), 10000);
@@ -246,6 +255,100 @@ describe('SettingsBackupTabComponent (Real Backup & Restore Path)', () => {
 
       expect(component.showRollbackConfirm).toBe(true);
       expect(component.selectedRollbackSnapshot).toBe(fakeSnapshot);
+    });
+  });
+
+  describe('Unsent data gate at confirm time, photos and read errors', () => {
+    const queueRecord = [{ id: 7, action: 'save' }] as any;
+
+    it('blocks the rollback at confirm time when a record was queued after the modal opened', async () => {
+      await component.openRollbackConfirm({ filename: 'snap_2.dump' });
+      expect(component.showRollbackConfirm).toBe(true);
+
+      vi.spyOn(financeOfflineDb.syncQueue, 'toArray').mockResolvedValue(queueRecord);
+      component.rollbackConfirmInput = 'ROLLBACK_CONFIRM';
+      await component.confirmRollback();
+
+      expect(settingsServiceMock.rollbackSnapshot).not.toHaveBeenCalled();
+      expect(toastServiceMock.show).toHaveBeenCalledWith('error', expect.stringMatching('صف آفلاین'));
+      expect(component.isRollingBack).toBe(false);
+    });
+
+    it('blocks the restore at confirm time when a record was queued after the modal opened', async () => {
+      component.restoreFile = new File(['dump'], 'test.wbak');
+      component.restorePassword = 'secretPassword123';
+      await component.openRestoreConfirm();
+      expect(component.showRestoreConfirm).toBe(true);
+
+      vi.spyOn(warehouseOfflineDb.syncQueue, 'toArray').mockResolvedValue(queueRecord);
+      component.restoreConfirmInput = 'RESTORE_DATABASE_CONFIRM';
+      await component.restoreBackup();
+
+      expect(settingsServiceMock.restoreBackup).not.toHaveBeenCalled();
+      expect(component.isRestoreLoading).toBe(false);
+    });
+
+    it('a pending photo blocks both the rollback and the restore modal', async () => {
+      photoQueueMock.countPendingStrict.mockResolvedValue(2);
+
+      await component.openRollbackConfirm({ filename: 'snap_3.dump' });
+      expect(component.showRollbackConfirm).toBe(false);
+
+      component.restoreFile = new File(['dump'], 'test.wbak');
+      component.restorePassword = 'secretPassword123';
+      await component.openRestoreConfirm();
+      expect(component.showRestoreConfirm).toBe(false);
+      expect(toastServiceMock.show).toHaveBeenCalledWith('error', expect.stringMatching('2 رکورد'));
+    });
+
+    it('cannot read the offline queues: both gates stay blocked and show a message', async () => {
+      vi.spyOn(warehouseOfflineDb.syncQueue, 'toArray').mockRejectedValue(new Error('VersionError'));
+
+      await component.openRollbackConfirm({ filename: 'snap_4.dump' });
+      expect(component.showRollbackConfirm).toBe(false);
+
+      component.restoreFile = new File(['dump'], 'test.wbak');
+      component.restorePassword = 'secretPassword123';
+      await component.openRestoreConfirm();
+      expect(component.showRestoreConfirm).toBe(false);
+      expect(toastServiceMock.show).toHaveBeenCalledWith('error', 'امکان بررسی صف آفلاین وجود ندارد؛ بازگردانی متوقف شد.');
+    });
+
+    it('runs the rollback at confirm time when nothing is unsent and clears both scopes before logout', async () => {
+      const snapshot = { filename: 'snap_5.dump' };
+      await component.openRollbackConfirm(snapshot);
+      component.rollbackConfirmInput = 'ROLLBACK_CONFIRM';
+      await component.confirmRollback();
+
+      expect(settingsServiceMock.rollbackSnapshot).toHaveBeenCalledWith('snap_5.dump', 'ROLLBACK_CONFIRM');
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(clearCachesSpy).toHaveBeenCalled();
+      expect(financeClearCachesSpy).toHaveBeenCalled();
+      expect(authServiceMock.logout).toHaveBeenCalled();
+    });
+
+    it('logout still runs when clearing the caches fails after a successful rollback', async () => {
+      financeClearCachesSpy.mockRejectedValue(new Error('QuotaExceeded'));
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      await component.openRollbackConfirm({ filename: 'snap_6.dump' });
+      component.rollbackConfirmInput = 'ROLLBACK_CONFIRM';
+      await component.confirmRollback();
+
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(authServiceMock.logout).toHaveBeenCalled();
+    });
+
+    it('a second confirm click while the confirm time gate runs sends no second request', async () => {
+      await component.openRollbackConfirm({ filename: 'snap_7.dump' });
+      component.rollbackConfirmInput = 'ROLLBACK_CONFIRM';
+      await Promise.all([component.confirmRollback(), component.confirmRollback()]);
+      expect(settingsServiceMock.rollbackSnapshot).toHaveBeenCalledTimes(1);
+
+      component.restoreFile = new File(['dump'], 'test.wbak');
+      component.restorePassword = 'secretPassword123';
+      component.restoreConfirmInput = 'RESTORE_DATABASE_CONFIRM';
+      await Promise.all([component.restoreBackup(), component.restoreBackup()]);
+      expect(settingsServiceMock.restoreBackup).toHaveBeenCalledTimes(1);
     });
   });
 });

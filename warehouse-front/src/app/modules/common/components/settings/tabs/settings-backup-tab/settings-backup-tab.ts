@@ -7,7 +7,8 @@ import { SettingsService } from '../../../../../../core/services/settings';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { finalize } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
-import { offlineDb, warehouseOfflineDb, financeOfflineDb, downloadLocalDatabaseSnapshotFile } from '../../../../../../core/services/offline-db';
+import { warehouseOfflineDb, financeOfflineDb, clearAllScopedCaches, downloadLocalDatabaseSnapshotFile } from '../../../../../../core/services/offline-db';
+import { PhotoUploadQueueService } from '../../../../../../core/services/photo-upload-queue.service';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
@@ -33,6 +34,7 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
   private router = inject(Router, { optional: true });
   private route = inject(ActivatedRoute, { optional: true });
   private companyApi = inject(CompanyApiService, { optional: true });
+  private photoQueue = inject(PhotoUploadQueueService, { optional: true });
 
   // ─── اسنپ‌شات‌های سرور و بازگشت سریع ───
   snapshots: any[] = [];
@@ -190,18 +192,51 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
       });
   }
 
-  private async countTotalSyncQueueEntries(): Promise<number> {
-    const [whItems, finItems] = await Promise.all([
+  /** همهٔ داده‌های ارسال‌نشده: صف همگام‌سازی هر دو قلمرو و عکس‌های در انتظار؛ خطای خواندن پرتاب می‌شود */
+  private async countUnsentEntries(): Promise<number> {
+    const [whItems, finItems, photos] = await Promise.all([
       warehouseOfflineDb.syncQueue.toArray(),
-      financeOfflineDb.syncQueue.toArray()
+      financeOfflineDb.syncQueue.toArray(),
+      this.photoQueue ? this.photoQueue.countPendingStrict() : Promise.resolve(0),
     ]);
-    return (whItems?.length || 0) + (finItems?.length || 0);
+    return (whItems?.length || 0) + (finItems?.length || 0) + (photos || 0);
+  }
+
+  /**
+   * گیت بازگردانی و بازیابی سرور: فقط وقتی هیچ دادهٔ ارسال‌نشده‌ای نیست true می‌دهد.
+   * اگر صف‌ها خوانده نشوند، مسدود می‌ماند (fail closed).
+   */
+  private async isUnsentQueueEmpty(): Promise<boolean> {
+    let pendingCount: number;
+    try {
+      pendingCount = await this.countUnsentEntries();
+    } catch {
+      this.toast.show('error', 'امکان بررسی صف آفلاین وجود ندارد؛ بازگردانی متوقف شد.');
+      return false;
+    }
+    if (pendingCount > 0) {
+      this.toast.show('error', `صف آفلاین شامل ${pendingCount} رکورد همگام‌نشده است. جهت جلوگیری از نابودی داده‌ها، ابتدا باید آنها را به سرور ارسال کنید.`);
+      return false;
+    }
+    return true;
+  }
+
+  /** پاک‌سازی کش‌های مشتق از سرورِ هر دو قلمرو؛ خروج در هر حال انجام می‌شود */
+  private async clearCachesThenLogout(beforeLogout?: () => void): Promise<void> {
+    try {
+      await clearAllScopedCaches();
+    } catch (e) {
+      console.warn('[SettingsBackupTab] پاک‌سازی کش‌ها پس از بازگردانی ناموفق بود:', e);
+    } finally {
+      setTimeout(() => {
+        beforeLogout?.();
+        this.auth.logout();
+      }, 1500);
+    }
   }
 
   async openRollbackConfirm(snapshot: any) {
-    const pendingCount = await this.countTotalSyncQueueEntries();
-    if (pendingCount > 0) {
-      this.toast.show('error', `صف آفلاین شامل ${pendingCount} رکورد همگام‌نشده است. جهت جلوگیری از نابودی داده‌ها، ابتدا باید آنها را به سرور ارسال کنید.`);
+    if (!(await this.isUnsentQueueEmpty())) {
       return;
     }
 
@@ -219,15 +254,22 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  confirmRollback() {
+  async confirmRollback() {
     if (this.rollbackConfirmInput.trim() !== 'ROLLBACK_CONFIRM') {
       this.toast.show('error', 'جهت تایید، عبارت ROLLBACK_CONFIRM را به درستی وارد کنید.');
       return;
     }
     if (!this.selectedRollbackSnapshot) return;
-
+    // دوباره در لحظهٔ تایید: رکوردی که پس از باز شدن پنجره صف شده است، نباید از دست برود
+    // پرچم پیش از گیت روشن می‌شود تا کلیک دوم در حین بررسی، درخواست دوم نفرستد
+    if (this.isRollingBack) return;
     this.isRollingBack = true;
     this.cdr.detectChanges();
+    if (!(await this.isUnsentQueueEmpty())) {
+      this.isRollingBack = false;
+      this.cdr.detectChanges();
+      return;
+    }
 
     this.settingsService.rollbackSnapshot(this.selectedRollbackSnapshot.filename, this.rollbackConfirmInput.trim())
       .pipe(finalize(() => {
@@ -241,10 +283,7 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
           this.selectedRollbackSnapshot = null;
           this.rollbackConfirmInput = '';
 
-          await offlineDb.clearServerDerivedCaches();
-          setTimeout(() => {
-            this.auth.logout();
-          }, 1500);
+          await this.clearCachesThenLogout();
         },
         error: (err) => {
           this.toast.show('error', err?.error?.error || 'خطا در بازگردانی اسنپ‌شات.');
@@ -329,9 +368,7 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const pendingCount = await this.countTotalSyncQueueEntries();
-    if (pendingCount > 0) {
-      this.toast.show('error', `صف آفلاین شامل ${pendingCount} رکورد همگام‌نشده است. جهت جلوگیری از نابودی داده‌ها، ابتدا باید آنها را به سرور ارسال کنید.`);
+    if (!(await this.isUnsentQueueEmpty())) {
       return;
     }
 
@@ -427,13 +464,22 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
     this.cancelRollback();
   }
 
-  restoreBackup() {
+  async restoreBackup() {
     if (this.restoreConfirmInput.trim() !== 'RESTORE_DATABASE_CONFIRM') {
       this.toast.show('error', 'متن تایید به درستی وارد نشده است.');
       return;
     }
-
+    // دوباره در لحظهٔ تایید: رکوردی که پس از باز شدن پنجره صف شده است، نباید از دست برود
+    // پرچم پیش از گیت روشن می‌شود تا کلیک دوم در حین بررسی، درخواست دوم نفرستد
+    if (this.isRestoreLoading) return;
     this.isRestoreLoading = true;
+    this.cdr.detectChanges();
+    if (!(await this.isUnsentQueueEmpty())) {
+      this.isRestoreLoading = false;
+      this.cdr.detectChanges();
+      return;
+    }
+
     this.startRestoreProgress();
     this.cdr.detectChanges();
 
@@ -451,16 +497,13 @@ export class SettingsBackupTabComponent implements OnInit, OnDestroy {
 
           this.toast.show('success', 'بازیابی پایگاه‌داده با موفقیت انجام شد. سیستم در حال انتقال به صفحه ورود است...');
 
-          await offlineDb.clearServerDerivedCaches();
-
-          setTimeout(() => {
+          await this.clearCachesThenLogout(() => {
             this.showRestoreConfirm = false;
             this.restoreFile = null;
             this.restoreFileName = '';
             this.restorePassword = '';
             this.restoreConfirmInput = '';
-            this.auth.logout();
-          }, 1500);
+          });
         },
         error: (err: any) => {
           this.stopRestoreProgress();
