@@ -5,9 +5,7 @@ import { TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { Router, ActivatedRouteSnapshot, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { 
-  WarehouseModuleMatchGuard, 
   WarehouseCompanyGuard, 
-  AccountingModuleMatchGuard,
   AuthGuard 
 } from './auth.guard';
 import { AuthService } from './auth.service';
@@ -68,41 +66,6 @@ describe('AuthGuards & Warehouse Routing Integrity', () => {
         { provide: AppPersonaService, useValue: personaServiceMock },
         { provide: Router, useValue: routerMock }
       ]
-    });
-  });
-
-  describe('WarehouseModuleMatchGuard', () => {
-    it('should match route when activeCompany is null on initial boot', () => {
-      activeCompanyMock.activeCompany = null;
-      const result = TestBed.runInInjectionContext(() => WarehouseModuleMatchGuard({} as any, [], {} as any));
-      expect(result).toBe(true);
-    });
-
-    it('should match route when company has warehouse module', () => {
-      activeCompanyMock.activeCompany = { id: 1, name: 'شرکت ۱', has_warehouse_module: true };
-      const result = TestBed.runInInjectionContext(() => WarehouseModuleMatchGuard({} as any, [], {} as any));
-      expect(result).toBe(true);
-    });
-
-    it('should reject route ONLY when company explicitly disables warehouse module', () => {
-      activeCompanyMock.activeCompany = { id: 2, name: 'شرکت ۲', has_warehouse_module: false };
-      const result = TestBed.runInInjectionContext(() => WarehouseModuleMatchGuard({} as any, [], {} as any));
-      expect(result).toBe(false);
-    });
-
-    it('should reject route when the warehouse module is not installed even though other modules are', () => {
-      moduleRegistryMock.isModuleInstalled.mockImplementation((code: string) => code !== 'warehouse');
-      const result = TestBed.runInInjectionContext(() => WarehouseModuleMatchGuard({} as any, [], {} as any));
-      expect(result).toBe(false);
-    });
-  });
-
-  describe('AccountingModuleMatchGuard', () => {
-    it('should match only when the accounting module is installed', () => {
-      moduleRegistryMock.isModuleInstalled.mockImplementation((code: string) => code === 'accounting');
-      expect(TestBed.runInInjectionContext(() => AccountingModuleMatchGuard({} as any, [], {} as any))).toBe(true);
-      moduleRegistryMock.isModuleInstalled.mockImplementation((code: string) => code !== 'accounting');
-      expect(TestBed.runInInjectionContext(() => AccountingModuleMatchGuard({} as any, [], {} as any))).toBe(false);
     });
   });
 

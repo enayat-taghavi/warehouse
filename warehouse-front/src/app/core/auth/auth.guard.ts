@@ -1,28 +1,11 @@
 import { inject } from '@angular/core';
-import { Router, CanActivateFn, CanActivateChildFn, CanMatchFn } from '@angular/router';
+import { Router, CanActivateFn, CanActivateChildFn } from '@angular/router';
 import { AuthService } from './auth.service';
 import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 import { ModuleRouteAccess, WhFrontendModule } from '../modules/module-contract';
 import { findCompanyDocumentsRoute, isCompanyDocumentsUrl } from '../modules/documents-archive-route';
 import { AppPersonaService } from '../services/app-persona.service';
 import { ActiveCompanyService } from '../services/active-company.service';
-
-/**
- * گارد تطبیق ماژول انبارداری — در صورت عدم نصب یا عدم فعال بودن ماژول برای شرکت، از روت عبور می‌کند
- * @deprecated روت‌های ماژول‌ها canMatch خود را از `dynamicModuleRoutes` در app.routes.ts می‌گیرند.
- */
-export const WarehouseModuleMatchGuard: CanMatchFn = () => {
-  const moduleRegistry = inject(ModuleRegistryService);
-  const activeCompany = inject(ActiveCompanyService, { optional: true });
-
-  if (!moduleRegistry.isModuleInstalled('warehouse')) {
-    return false;
-  }
-  if (activeCompany?.activeCompany && activeCompany.activeCompany.has_warehouse_module === false) {
-    return false;
-  }
-  return true;
-};
 
 /**
  * گارد فعال بودن ماژول انبارداری برای شرکت فعال — هدایت مستقیم به پرتال لانچر
@@ -36,15 +19,6 @@ export const WarehouseCompanyGuard: CanActivateFn = () => {
     return false;
   }
   return true;
-};
-
-/**
- * گارد تطبیق ماژول مالی و پرسنلی — در صورت عدم نصب، از روت عبور می‌کند
- * @deprecated روت‌های ماژول‌ها canMatch خود را از `dynamicModuleRoutes` در app.routes.ts می‌گیرند.
- */
-export const AccountingModuleMatchGuard: CanMatchFn = () => {
-  const moduleRegistry = inject(ModuleRegistryService);
-  return moduleRegistry.isModuleInstalled('accounting');
 };
 
 /**
