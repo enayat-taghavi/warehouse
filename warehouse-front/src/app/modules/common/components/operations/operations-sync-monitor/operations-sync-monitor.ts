@@ -173,6 +173,16 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
     }
   }
 
+  private errorSourceMap = new Map<SyncErrorEntry, typeof warehouseOfflineDb>();
+
+  getSourceDb(err: SyncErrorEntry | null): typeof warehouseOfflineDb {
+    if (!err) return warehouseOfflineDb;
+    const fromMap = this.errorSourceMap.get(err);
+    if (fromMap) return fromMap;
+    if (err.appScope === 'finance') return financeOfflineDb;
+    return warehouseOfflineDb;
+  }
+
   /**
    * بازخوانی کامل تله‌متری صف‌های آفلاین، تداخل‌ها و ناوگان دستگاه‌های متصل
    */
@@ -192,6 +202,14 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
       this.financeQueueCount.set(fQueue.length);
 
       // تجمیع صف‌ها و خطاها
+      this.errorSourceMap.clear();
+      for (const err of wErrors) {
+        this.errorSourceMap.set(err, warehouseOfflineDb);
+      }
+      for (const err of fErrors) {
+        this.errorSourceMap.set(err, financeOfflineDb);
+      }
+
       const combinedQueue = [...wQueue, ...fQueue];
       const combinedErrors = [...wErrors, ...fErrors];
 
@@ -291,12 +309,12 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
   async resolveConflict(strategy: 'client' | 'server' | 'discard'): Promise<void> {
     if (!this.selectedConflict || !this.selectedConflict.id) return;
     const errorId = this.selectedConflict.id;
+    const sourceDb = this.getSourceDb(this.selectedConflict);
 
     try {
       if (strategy === 'discard') {
-        // نادیده گرفتن خطا در هر دو دیتابیس
-        await warehouseOfflineDb.syncErrors.update(errorId, { dismissed: 1 }).catch(() => {});
-        await financeOfflineDb.syncErrors.update(errorId, { dismissed: 1 }).catch(() => {});
+        // نادیده گرفتن خطا فقط در دیتابیس منبع
+        await sourceDb.syncErrors.update(errorId, { dismissed: 1 }).catch(() => {});
         this.toast.show('info', 'تداخل از صف خطاها نادیده گرفته و حذف شد.');
       } else if (strategy === 'client') {
         // استفاده از متد واقعی OfflineSyncService برای ارسال نسخه کلاینت با زمان بروزرسانی سرور
@@ -316,8 +334,7 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
             this.toast.show('success', 'نسخه سرور پذیرفته شد و دیتابیس محلی همگام گردید.');
           }
         } else {
-          await warehouseOfflineDb.syncErrors.delete(errorId).catch(() => {});
-          await financeOfflineDb.syncErrors.delete(errorId).catch(() => {});
+          await sourceDb.syncErrors.delete(errorId).catch(() => {});
           this.toast.show('success', 'نسخه سرور تایید و خطای تداخل پاکسازی شد.');
         }
       }

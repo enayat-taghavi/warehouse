@@ -525,41 +525,178 @@ export async function clearAllScopedCaches(): Promise<void> {
   ]);
 }
 
+export const LEGACY_MIGRATION_MARKER = 'wh_legacy_offline_db_migrated_v1';
+
+export interface LegacyTableLike {
+  toArray(): Promise<any[]>;
+  update(key: any, changes: any): Promise<any>;
+  [key: string]: any;
+}
+
+export interface LegacyDatabaseLike {
+  tables: Array<{ name: string }>;
+  table(name: string): LegacyTableLike;
+  [key: string]: any;
+}
+
+export interface LegacyMigrationTargets {
+  warehouse: {
+    docTasks?: {
+      get?: (key: any) => Promise<any>;
+      bulkGet?: (keys: any[]) => Promise<any[]>;
+      bulkAdd: (rows: any[]) => Promise<any>;
+      [key: string]: any;
+    };
+    syncQueue: {
+      filter: (predicate: (item: any) => boolean) => { first: () => Promise<any> };
+      add: (item: any) => Promise<any>;
+      [key: string]: any;
+    };
+    [key: string]: any;
+  };
+  finance: {
+    syncQueue: {
+      filter: (predicate: (item: any) => boolean) => { first: () => Promise<any> };
+      add: (item: any) => Promise<any>;
+      [key: string]: any;
+    };
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
+/**
+ * مهاجرت داده‌های قدیمی از پایگاه داده موروثی WarehouseOfflineDB به پایگاه‌های داده تفکیک‌شده
+ */
+export async function migrateLegacyData(
+  legacy: LegacyDatabaseLike,
+  targets: LegacyMigrationTargets = { warehouse: warehouseOfflineDb, finance: financeOfflineDb }
+): Promise<void> {
+  // b) Run-once marker: وقتی کلید wh_legacy_offline_db_migrated_v1 تنظیم شده است، بلافاصله بازمی‌گردد
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage.getItem(LEGACY_MIGRATION_MARKER)) {
+      return;
+    }
+  } catch {
+    // دسترسی به localStorage ممکن است در برخی محیط‌ها محدود باشد
+  }
+
+  let hasError = false;
+  const tableNames = legacy.tables.map(t => t.name);
+
+  // c) انتقال docTasks: فقط رکوردهایی که primary key آنها (sync_id) در warehouseOfflineDb.docTasks نیست اضافه می‌شوند
+  if (tableNames.includes('docTasks')) {
+    try {
+      const legacyDocTable = legacy.table('docTasks');
+      const legacyDocs = await legacyDocTable.toArray();
+      if (Array.isArray(legacyDocs) && legacyDocs.length > 0) {
+        const targetDocTasks = targets.warehouse?.docTasks;
+        if (targetDocTasks) {
+          const missingDocs: any[] = [];
+          if (typeof targetDocTasks.bulkGet === 'function') {
+            const syncIds = legacyDocs.map((d: any) => d.sync_id).filter((id: any) => id != null);
+            const foundRecords = await targetDocTasks.bulkGet(syncIds);
+            const existingIds = new Set(
+              (foundRecords || []).filter(Boolean).map((d: any) => d.sync_id)
+            );
+            for (const doc of legacyDocs) {
+              if (doc.sync_id == null || !existingIds.has(doc.sync_id)) {
+                missingDocs.push(doc);
+              }
+            }
+          } else if (typeof targetDocTasks.get === 'function') {
+            for (const doc of legacyDocs) {
+              if (doc.sync_id != null) {
+                const found = await targetDocTasks.get(doc.sync_id);
+                if (!found) {
+                  missingDocs.push(doc);
+                }
+              } else {
+                missingDocs.push(doc);
+              }
+            }
+          } else {
+            missingDocs.push(...legacyDocs);
+          }
+
+          if (missingDocs.length > 0) {
+            await targetDocTasks.bulkAdd(missingDocs);
+            console.log(`[OfflineDB Migration] 🚚 ${missingDocs.length} سند انبار به دیتابیس انبارداری اضافه شد.`);
+          }
+        }
+      }
+    } catch (err) {
+      hasError = true;
+      console.warn('[OfflineDB Migration] خطا در مهاجرت اسناد انبار (docTasks):', err);
+    }
+  }
+
+  // d) انتقال صف همگام‌سازی: صرف‌نظر کردن از رکوردهایی که migratedAt دارند
+  if (tableNames.includes('syncQueue')) {
+    try {
+      const legacyQueueTable = legacy.table('syncQueue');
+      const legacyQueue: SyncQueueEntry[] = await legacyQueueTable.toArray();
+      for (const item of legacyQueue) {
+        if ((item as any).migratedAt) {
+          continue;
+        }
+        try {
+          const scope = resolveScopeFromUrl(item.url);
+          const targetDb = targets[scope] || targets.warehouse;
+          const targetQueue = targetDb.syncQueue;
+          const existing = await targetQueue
+            .filter((e: any) => e.url === item.url && e.method === item.method && e.createdAt === item.createdAt)
+            .first();
+
+          if (!existing) {
+            const { id: _legacyId, ...itemWithoutId } = item as any;
+            await targetQueue.add({
+              ...itemWithoutId,
+              appScope: scope,
+            });
+          }
+
+          if (item.id != null) {
+            await legacyQueueTable.update(item.id, { migratedAt: Date.now() });
+          }
+        } catch (rowErr) {
+          hasError = true;
+          console.warn(`[OfflineDB Migration] خطا در مهاجرت رکورد صف (id: ${item?.id}):`, rowErr);
+        }
+      }
+    } catch (err) {
+      hasError = true;
+      console.warn('[OfflineDB Migration] خطا در خواندن جدول صف قدیمی:', err);
+    }
+  }
+
+  // تنظیم نشانگر تنها در صورتی که کل فرایند بدون خطا تکمیل شده باشد
+  if (!hasError) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(LEGACY_MIGRATION_MARKER, 'true');
+      }
+    } catch {
+      // نادیده گرفتن خطاهای احتمالی حافظه محلی
+    }
+  }
+}
+
 /**
  * مهاجرت خودکار و امن داده‌ها از پایگاه داده قدیمی WarehouseOfflineDB در صورت وجود
  */
 export async function migrateLegacyDatabaseIfNeeded(): Promise<void> {
   if (typeof window === 'undefined') return;
   try {
+    if (typeof localStorage !== 'undefined' && localStorage.getItem(LEGACY_MIGRATION_MARKER)) {
+      return;
+    }
     const dbs = await Dexie.getDatabaseNames();
     if (!dbs.includes('WarehouseOfflineDB')) return;
 
     const legacyDb = new Dexie('WarehouseOfflineDB');
     await legacyDb.open();
-    const tableNames = legacyDb.tables.map(t => t.name);
-
-    // ۱. انتقال رکوردهای اسناد انبار (docTasks) به دیتابیس انبارداری
-    if (tableNames.includes('docTasks')) {
-      const legacyDocs = await legacyDb.table('docTasks').toArray();
-      if (legacyDocs.length > 0) {
-        await warehouseOfflineDb.docTasks.bulkPut(legacyDocs);
-        console.log(`[OfflineDB Migration] 🚚 ${legacyDocs.length} سند انبار به دیتابیس انبارداری منتقل شد.`);
-      }
-    }
-
-    // ۲. انتقال صف همگام‌سازی بر اساس تفکیک URL
-    if (tableNames.includes('syncQueue')) {
-      const legacyQueue: SyncQueueEntry[] = await legacyDb.table('syncQueue').toArray();
-      for (const item of legacyQueue) {
-        const scope = resolveScopeFromUrl(item.url);
-        const targetDb = getOfflineDb(scope);
-        const exists = await targetDb.syncQueue.where('url').equals(item.url).first();
-        if (!exists) {
-          await targetDb.syncQueue.add({ ...item, appScope: scope });
-        }
-      }
-    }
-
+    await migrateLegacyData(legacyDb, { warehouse: warehouseOfflineDb, finance: financeOfflineDb });
     legacyDb.close();
   } catch (err) {
     console.warn('[OfflineDB Migration] عدم اجرای مهاجرت دیتابیس قبلی:', err);
