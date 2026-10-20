@@ -10,6 +10,9 @@
   (ب) انبار ↔ مالی (cross_module_imports)
   (ج) isModuleInstalled('<کد ماژول>') بیرون از پوشهٔ همان ماژول (is_module_installed_outside_module)
   (د) مسیرهای سخت‌کدشده API ماژول در هسته/مشترک (core_hardcoded_module_api_paths)
+  (هـ) لیترال نام ماژول در core/ و shared/ (core_module_literals): به‌جای آچار، فهرست مجاز دقیق
+       scripts/e2e/core_literal_allowlist.json (بخش front)؛ لیترال بیرون از فهرست و ورودی کهنه هر دو شکست‌اند.
+  (و) مسیر صفحهٔ ماژول (/app/<پیشوند ماژول>) در core/، shared/ و ریشهٔ ترکیب (core_module_route_paths): باید صفر بماند.
 
 ریشهٔ ترکیب (app.routes.ts، app.config.ts، app.component.ts و installed-modules.ts) مستثناست.
 مبنای آچاری در scripts/e2e/front_fence_baseline.json نگه‌داری می‌شود و فقط کاهش مجاز است.
@@ -27,6 +30,9 @@ import os
 import pathlib
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import core_literal_allowlist  # noqa: E402
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -65,6 +71,48 @@ def find_module_literals(text):
             continue
         for m in MODULE_LITERAL_RE.finditer(line):
             found.append((line_idx, m.group(2)))
+    return found
+
+
+ROUTE_PREFIX_RE = re.compile(r"""['"](/app/[a-z][a-z0-9-]*)""")
+
+
+def discover_module_route_prefixes(app_dir):
+    """پیشوندهای مسیر صفحهٔ ماژول‌ها (/app/<بخش>) از routePrefix، defaultRoute و appRoutePrefixes هر module.ts."""
+    prefixes = set()
+    modules_dir = app_dir / "modules"
+    if not modules_dir.exists():
+        return prefixes
+    for mod_file in sorted(modules_dir.glob("*/module.ts")):
+        if mod_file.parent.name == "common":
+            continue
+        try:
+            content = mod_file.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        for key in ("routePrefix", "defaultRoute"):
+            m = re.search(key + r"""\s*:\s*['"](/app/[a-z][a-z0-9-]*)""", content)
+            if m:
+                prefixes.add(m.group(1))
+        m = re.search(r"""appRoutePrefixes\s*:\s*\[(.*?)\]""", content, re.DOTALL)
+        if m:
+            prefixes.update(ROUTE_PREFIX_RE.findall(m.group(1)))
+    return prefixes
+
+
+def find_module_route_paths(text, prefixes):
+    """(سطر، مسیر) برای هر رشته‌ای که با پیشوند مسیر یک ماژول آغاز شود؛ توضیح و ایمپورت شمرده نمی‌شوند."""
+    if not prefixes:
+        return []
+    alt = "|".join(re.escape(p) for p in sorted(prefixes, key=len, reverse=True))
+    route_re = re.compile(r"""['"`](?:""" + alt + r""")(?![a-z0-9-])""")
+    found = []
+    for line_idx, line in enumerate(text.splitlines(), 1):
+        stripped = line.strip()
+        if stripped.startswith(("//", "*", "/*", "<!--")) or IMPORT_LINE_RE.match(line):
+            continue
+        for m in route_re.finditer(line):
+            found.append((line_idx, m.group(0)[1:]))
     return found
 
 
@@ -152,9 +200,14 @@ def scan_front_fences(app_dir=FRONT_APP_DIR, extra_files=None):
         "is_module_installed_outside_module": [],
         "core_hardcoded_module_api_paths": [],
         "core_module_literals": [],
+        "core_module_route_paths": [],
     }
+    route_prefixes = discover_module_route_prefixes(app_dir)
 
     files_to_scan = []
+    if app_dir.exists():
+        # قالب‌های html فقط برای شمارندهٔ مسیر (و)
+        files_to_scan.extend(sorted(p for p in app_dir.rglob("*.html") if p.name != "index.html"))
     if app_dir.exists():
         files_to_scan.extend(sorted(app_dir.rglob("*.ts")))
 
@@ -178,12 +231,23 @@ def scan_front_fences(app_dir=FRONT_APP_DIR, extra_files=None):
                 rel_posix = file_path.as_posix()
 
         zone = simulated_zone or get_file_zone(rel_posix, module_names)
-        if zone == "composition_root":
-            continue
+        is_spec = rel_posix.endswith(".spec.ts") or file_path.name.endswith(".spec.ts")
 
         try:
             text = file_path.read_text(encoding="utf-8")
         except Exception:
+            continue
+
+        # ۵) مسیر صفحهٔ ماژول در هسته، مشترک و ریشهٔ ترکیب (و)
+        if not is_spec and (zone in ("composition_root", "core_common") and not rel_posix.startswith("modules/")):
+            for line_idx, route in find_module_route_paths(text, route_prefixes):
+                violations["core_module_route_paths"].append({
+                    "file": rel_posix,
+                    "line": line_idx,
+                    "match": route,
+                })
+
+        if zone == "composition_root" or file_path.suffix == ".html":
             continue
 
         # بررسی سطرهای فایل برای شماره خط دقیق
@@ -227,7 +291,6 @@ def scan_front_fences(app_dir=FRONT_APP_DIR, extra_files=None):
                     })
 
         # ۳) بررسی مسیرهای سخت‌کدشده API ماژول در فایل‌های غیرتست ناحیه core_common (د)
-        is_spec = rel_posix.endswith(".spec.ts") or file_path.name.endswith(".spec.ts")
         if zone == "core_common" and not is_spec:
             for line_idx, line in enumerate(lines, 1):
                 stripped = line.strip()
@@ -245,11 +308,13 @@ def scan_front_fences(app_dir=FRONT_APP_DIR, extra_files=None):
         # ۴) لیترال نام ماژول در core/ و shared/ (بدون spec، توضیح و ایمپورت) (هـ)
         in_literal_roots = rel_posix.startswith(LITERAL_SCAN_ROOTS) or simulated_zone == "core_common"
         if in_literal_roots and not is_spec:
+            lines_cache = text.splitlines()
             for line_idx, literal in find_module_literals(text):
                 violations["core_module_literals"].append({
                     "file": rel_posix,
                     "line": line_idx,
                     "match": literal,
+                    "text": lines_cache[line_idx - 1].strip(),
                 })
 
     counters = {
@@ -258,8 +323,18 @@ def scan_front_fences(app_dir=FRONT_APP_DIR, extra_files=None):
         "is_module_installed_outside_module": len(violations["is_module_installed_outside_module"]),
         "core_hardcoded_module_api_paths": len(violations["core_hardcoded_module_api_paths"]),
         "core_module_literals": len(violations["core_module_literals"]),
+        "core_module_route_paths": len(violations["core_module_route_paths"]),
     }
     return counters, violations
+
+
+def check_literal_allowlist(violations, allowlist=None):
+    """(ok, پیام‌ها): لیترال‌های core/ و shared/ دقیقاً برابر بخش front فهرست مجاز."""
+    try:
+        data = allowlist if allowlist is not None else core_literal_allowlist.load_allowlist()
+    except Exception as e:
+        return False, [f"فهرست مجاز خوانده نشد: {e}"]
+    return core_literal_allowlist.check(violations["core_module_literals"], data.get("front", []))
 
 
 def load_baseline():
@@ -403,6 +478,28 @@ def run_self_test():
         print(f"self-test core_module_literals: fixture={literal_baseline} (expected 1), "
               f"unchanged passes={unchanged_ok}, extra literal fails={extra_fails}")
 
+        # شمارندهٔ مسیر صفحهٔ ماژول (و): پیشوند ماژول شناخته شود، مسیر هسته و توضیح شمرده نشوند
+        route_fixture = (
+            "// '/app/finance/x' in a comment\n"
+            "const a = '/app/operations/dashboard';\n"
+            "const b = '/app/finance-like';\n"
+            "const c = `/app/finance/payroll`;\n"
+        )
+        routes = find_module_route_paths(route_fixture, {"/app/finance"})
+        route_ok = [r for _, r in routes] == ["/app/finance"] and bool(discover_module_route_prefixes(FRONT_APP_DIR))
+        print(f"self-test core_module_route_paths: found={[r for _, r in routes]} (expected ['/app/finance']), "
+              f"module prefixes discovered={sorted(discover_module_route_prefixes(FRONT_APP_DIR))}")
+
+        # فهرست مجاز دقیق (هـ): منطق مشترک و اعمال روی violations
+        allow_logic_ok = core_literal_allowlist.self_test()
+        sample = {"core_module_literals": [{"file": "x.ts", "line": 1, "match": "warehouse", "text": "a = 'warehouse';"}]}
+        entry = {"file": "x.ts", "text": "a = 'warehouse';", "match": "warehouse", "category": "data_field", "reason": "نمونه"}
+        allow_apply_ok = (check_literal_allowlist(sample, {"front": [entry]})[0]
+                          and not check_literal_allowlist(sample, {"front": []})[0]
+                          and not check_literal_allowlist({"core_module_literals": []}, {"front": [entry]})[0])
+        print(f"self-test allowlist on guardian 57 violations: {allow_apply_ok}")
+        literal_ok = literal_ok and route_ok and allow_logic_ok and allow_apply_ok
+
         # آزمون قراردادهای ماژول
         contract_errors = check_module_contracts()
         if contract_errors:
@@ -456,13 +553,18 @@ def main():
         "cross_module_imports": "ایمپورت متقابل بین ماژول‌ها (ب)",
         "is_module_installed_outside_module": "فراخوانی isModuleInstalled بیرون از ماژول (ج)",
         "core_hardcoded_module_api_paths": "مسیر سخت‌کدشده API ماژول در هسته/مشترک (د)",
-        "core_module_literals": "لیترال نام ماژول در core/ و shared/ (هـ)",
+        "core_module_literals": "لیترال نام ماژول در core/ و shared/ (هـ) — سنجش با فهرست مجاز دقیق",
+        "core_module_route_paths": "مسیر صفحهٔ ماژول در هسته/مشترک/ریشهٔ ترکیب (و) — باید صفر باشد",
     }
+    # این دو شمارنده آچار مبنا ندارند: (هـ) با فهرست مجاز و (و) با صفر مطلق سنجیده می‌شوند
+    exact_keys = {"core_module_literals", "core_module_route_paths"}
 
     for key, val in counters.items():
         title = labels.get(key, key)
         prev = base_counters.get(key)
-        if prev is None:
+        if key in exact_keys:
+            mark, note = "📏", "سنجش دقیق (پایین)"
+        elif prev is None:
             mark, note = "🆕", "مبنای جدید"
         elif val > prev:
             mark, note = "🔴", f"پس‌رفت! از {prev} به {val}"
@@ -489,6 +591,21 @@ def main():
     passed = True
     if contract_errors:
         passed = False
+
+    allow_ok, allow_msgs = check_literal_allowlist(violations)
+    print("📜 فهرست مجاز دقیق لیترال‌ها (core_literal_allowlist.json، بخش front):")
+    if allow_ok:
+        print(f"   🟢 {counters['core_module_literals']} لیترال، همه در فهرست مجاز با دسته و دلیل؛ ورودی کهنه نیست.")
+    else:
+        passed = False
+        for msg in allow_msgs:
+            print(f"   ❌ {msg}")
+    if counters["core_module_route_paths"]:
+        passed = False
+        print("🚫 مسیر صفحهٔ ماژول در هسته/مشترک/ریشهٔ ترکیب (باید از extension ماژول خوانده شود):")
+        for v in violations["core_module_route_paths"]:
+            print(f"   ❌ {v['file']}:{v['line']} {v['match']}")
+    print("-" * 74)
 
     if baseline is None or args.update_baseline:
         save_baseline(counters, violations)

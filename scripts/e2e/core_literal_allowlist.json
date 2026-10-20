@@ -1,0 +1,469 @@
+{
+  "_readme": "فهرست مجاز دقیق لیترال نام ماژول در هستهٔ بک‌اند (نگهبان ۲۹، مسیر نسبت به warehouse-backend/core) و core/ و shared/ فرانت (نگهبان ۵۷، مسیر نسبت به warehouse-front/src/app). تطبیق با فایل + متن خط + لیترال؛ لیترال بیرون از فهرست و ورودی کهنه هر دو شکست‌اند. ورودی تازه فقط با یکی از دسته‌های categories و دلیل روشن؛ بقیه باید از رجیستری و extension ماژول خوانده شوند.",
+  "categories": {
+    "data_field": "نام فیلد، ستون یا کلید داده (warehouse، warehouse_id) در مدل، سریالایزر، payload یا خروجی",
+    "stored_value": "مقدار ذخیره‌شده در دیتابیس یا storage (app_module، app_scope، active_app_module، content type)",
+    "protocol": "مقدار پروتکل سرور: هدر X-Active-App، کلید توکن wh_access_token_*، پارامتر query",
+    "offline_db_lock": "قفل نام و قلمرو دیتابیس‌های آفلاین فعلی (IndexedDB) تا کش و صف کاربران از دست نرود",
+    "dev_tooling": "ابزار توسعه؛ فقط concurrency_stress_*"
+  },
+  "backend": [
+    {
+      "file": "accounts/concurrency_stress_service.py",
+      "text": "scenario = scenario if scenario in ['combined', 'treasury', 'warehouse'] else 'combined'",
+      "match": "warehouse",
+      "category": "dev_tooling",
+      "reason": "سناریوی ابزار تست بار هم‌زمانی (فقط توسعه)"
+    },
+    {
+      "file": "accounts/concurrency_stress_service.py",
+      "text": "app_module='personnel',",
+      "match": "personnel",
+      "category": "dev_tooling",
+      "reason": "سناریوی ابزار تست بار هم‌زمانی (فقط توسعه)"
+    },
+    {
+      "file": "accounts/concurrency_stress_service.py",
+      "text": "app_module='warehouse',",
+      "match": "warehouse",
+      "category": "dev_tooling",
+      "reason": "سناریوی ابزار تست بار هم‌زمانی (فقط توسعه)"
+    },
+    {
+      "file": "accounts/concurrency_stress_service.py",
+      "text": "return {'worker_id': worker_id, 'type': 'warehouse', 'success': True, 'latency_ms': latency, 'error': None}",
+      "match": "warehouse",
+      "category": "dev_tooling",
+      "reason": "سناریوی ابزار تست بار هم‌زمانی (فقط توسعه)"
+    },
+    {
+      "file": "accounts/concurrency_stress_service.py",
+      "text": "return {'worker_id': worker_id, 'type': 'warehouse', 'success': False, 'latency_ms': latency, 'error': str(ex), 'is_deadlock': is_deadlock}",
+      "match": "warehouse",
+      "category": "dev_tooling",
+      "reason": "سناریوی ابزار تست بار هم‌زمانی (فقط توسعه)"
+    },
+    {
+      "file": "accounts/concurrency_stress_service.py",
+      "text": "warehouse_workers = concurrency_level if scenario in ['combined', 'warehouse'] else 0",
+      "match": "warehouse",
+      "category": "dev_tooling",
+      "reason": "سناریوی ابزار تست بار هم‌زمانی (فقط توسعه)"
+    },
+    {
+      "file": "accounts/concurrency_stress_test.py",
+      "text": "parser.add_argument('--scenario', '-s', type=str, default='combined', choices=['combined', 'treasury', 'warehouse'], help=\"نوع سناریو (combined, treasury, warehouse)\")",
+      "match": "warehouse",
+      "category": "dev_tooling",
+      "reason": "سناریوی ابزار تست بار هم‌زمانی (فقط توسعه)"
+    },
+    {
+      "file": "accounts/models.py",
+      "text": "if 'warehouse' in kwargs:",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "accounts/models.py",
+      "text": "wh = kwargs.pop('warehouse')",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "accounts/models.py",
+      "text": "return resolve_entity('warehouse', self.warehouse_id)",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "کلید resolver همان ستون warehouse_id (resolve_entity) برای نام انبار بدون ایمپورت ماژول"
+    },
+    {
+      "file": "accounts/models.py",
+      "text": "('warehouse', 'سامانه انبارداری و انبارگردانی'),",
+      "match": "warehouse",
+      "category": "stored_value",
+      "reason": "مقدار ذخیره‌شدهٔ AuditLog.app_module در دیتابیس (choices/پیش‌فرض)"
+    },
+    {
+      "file": "accounts/models.py",
+      "text": "('personnel', 'سامانه کارکرد، مالی و خزانه‌داری'),",
+      "match": "personnel",
+      "category": "stored_value",
+      "reason": "مقدار ذخیره‌شدهٔ AuditLog.app_module در دیتابیس (choices/پیش‌فرض)"
+    },
+    {
+      "file": "accounts/models.py",
+      "text": "seen = {'warehouse', 'personnel'}",
+      "match": "warehouse",
+      "category": "stored_value",
+      "reason": "مقدار ذخیره‌شدهٔ AuditLog.app_module در دیتابیس (choices/پیش‌فرض)"
+    },
+    {
+      "file": "accounts/models.py",
+      "text": "seen = {'warehouse', 'personnel'}",
+      "match": "personnel",
+      "category": "stored_value",
+      "reason": "مقدار ذخیره‌شدهٔ AuditLog.app_module در دیتابیس (choices/پیش‌فرض)"
+    },
+    {
+      "file": "accounts/models.py",
+      "text": "app_module = models.CharField(max_length=50, choices=get_app_module_choices, default='personnel', db_index=True, verbose_name=\"ماژول کلان\")",
+      "match": "personnel",
+      "category": "stored_value",
+      "reason": "مقدار ذخیره‌شدهٔ AuditLog.app_module در دیتابیس (choices/پیش‌فرض)"
+    },
+    {
+      "file": "accounts/models.py",
+      "text": "app_scope = models.CharField(max_length=50, default=\"warehouse\", verbose_name=\"قلمرو فعال (انبار/مالی)\")",
+      "match": "warehouse",
+      "category": "stored_value",
+      "reason": "مقدار ذخیره‌شدهٔ app_scope (قلمرو فعال) در دیتابیس"
+    },
+    {
+      "file": "accounts/rollback_service.py",
+      "text": "warehouse=getattr(instance, 'warehouse', None) or log_entry.warehouse,",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "accounts/rollback_service.py",
+      "text": "warehouse=getattr(instance, 'warehouse', None) or log_entry.warehouse,",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "accounts/serializers.py",
+      "text": "'warehouse', 'warehouse_id', 'warehouse_name', 'company_id',",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "accounts/serializers.py",
+      "text": "wh = getattr(obj, 'warehouse', None)",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "accounts/serializers.py",
+      "text": "'warehouse', 'warehouse_id', 'warehouse_name',",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "accounts/signals.py",
+      "text": "'warehouse': instance.warehouse_id,",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "warehouse_id = params.get('warehouse')",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام پارامتر یا فیلد ورودی که کلاینت‌ها و خروجی‌ها می‌فرستند"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "warehouse_logs_count = apply_audit_app_scope(base_qs, 'warehouse').count()",
+      "match": "warehouse",
+      "category": "stored_value",
+      "reason": "مقدار app_scope ذخیره‌شده در فیلتر ممیزی (apply_audit_app_scope)"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "finance_logs_count = apply_audit_app_scope(base_qs, 'finance').count()",
+      "match": "finance",
+      "category": "stored_value",
+      "reason": "مقدار app_scope ذخیره‌شده در فیلتر ممیزی (apply_audit_app_scope)"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "warehouse_id = data.get('warehouse') or data.get('warehouse_id')",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام پارامتر یا فیلد ورودی که کلاینت‌ها و خروجی‌ها می‌فرستند"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "wh_map = resolve_entity_map('warehouse', wh_ids)",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "کلید resolver همان ستون warehouse_id (resolve_entity) برای نام انبار بدون ایمپورت ماژول"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "('warehouse', 'انبار', 18),",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "کلید ستون خروجی اکسل/PDF گزارش ممیزی"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "'warehouse_name': 'warehouse',",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "کلید ستون خروجی اکسل/PDF گزارش ممیزی"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "wh_name = wh_map.get(item.warehouse_id) or (item.warehouse.name if getattr(item, 'warehouse', None) else \"عمومی / سیستم\")",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "elif col_key in ('warehouse', 'warehouse_name'):",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "کلید ستون خروجی اکسل/PDF گزارش ممیزی"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "wh_name = wh_map.get(item.warehouse_id) or (item.warehouse.name if getattr(item, 'warehouse', None) else \"عمومی / سیستم\")",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "elif col_key in ('warehouse', 'warehouse_name'):",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "کلید ستون خروجی اکسل/PDF گزارش ممیزی"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "warehouse_id = data.get('warehouse') or data.get('warehouse_id')",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام پارامتر یا فیلد ورودی که کلاینت‌ها و خروجی‌ها می‌فرستند"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "'warehouse': warehouse_id,",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "warehouse_id = data.get('warehouse') or data.get('warehouse_id')",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام پارامتر یا فیلد ورودی که کلاینت‌ها و خروجی‌ها می‌فرستند"
+    },
+    {
+      "file": "accounts/views_domains/audit_views.py",
+      "text": "warehouse_id = data.get('warehouse') or data.get('warehouse_id')",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام پارامتر یا فیلد ورودی که کلاینت‌ها و خروجی‌ها می‌فرستند"
+    },
+    {
+      "file": "accounts/views_domains/role_views.py",
+      "text": "qs = Permission.objects.filter(content_type__model__in=['customuser', 'group', 'warehouse', 'record'])",
+      "match": "warehouse",
+      "category": "stored_value",
+      "reason": "نام مدل در django_content_type (مقدار ذخیره‌شده)"
+    },
+    {
+      "file": "communications/access.py",
+      "text": "if hasattr(target, 'warehouse') and target.warehouse:",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "communications/models.py",
+      "text": "if 'warehouse' in kwargs:",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "communications/models.py",
+      "text": "wh = kwargs.pop('warehouse')",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "communications/models.py",
+      "text": "return resolve_entity('warehouse', self.warehouse_id)",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "کلید resolver همان ستون warehouse_id (resolve_entity) برای نام انبار بدون ایمپورت ماژول"
+    },
+    {
+      "file": "communications/models.py",
+      "text": "if 'warehouse' in kwargs:",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "communications/models.py",
+      "text": "wh = kwargs.pop('warehouse')",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "communications/models.py",
+      "text": "return resolve_entity('warehouse', self.warehouse_id)",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "کلید resolver همان ستون warehouse_id (resolve_entity) برای نام انبار بدون ایمپورت ماژول"
+    },
+    {
+      "file": "communications/permissions.py",
+      "text": "wh_id = request.data.get('warehouse')",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام پارامتر یا فیلد ورودی که کلاینت‌ها و خروجی‌ها می‌فرستند"
+    },
+    {
+      "file": "communications/permissions.py",
+      "text": "elif hasattr(obj, 'warehouse') and obj.warehouse:",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "communications/serializers.py",
+      "text": "'id', 'title', 'conv_type', 'warehouse', 'participants', 'target_user_id',",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "communications/serializers.py",
+      "text": "'warehouse', 'author', 'author_details', 'parent', 'text',",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "communications/views.py",
+      "text": "if hasattr(target, 'warehouse') and target.warehouse:",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "communications/views.py",
+      "text": "wh = resolve_entity('warehouse', target.warehouse_id)",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "کلید resolver همان ستون warehouse_id (resolve_entity) برای نام انبار بدون ایمپورت ماژول"
+    },
+    {
+      "file": "reports/serializers.py",
+      "text": "'warehouse', 'owner', 'owner_username', 'is_owner',",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "settings_core/models.py",
+      "text": "if 'warehouse' in kwargs:",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "settings_core/models.py",
+      "text": "wh = kwargs.pop('warehouse')",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد/کلید داده‌ای که ستون warehouse_id یا FK انبار را می‌سازد یا می‌خواند"
+    },
+    {
+      "file": "settings_core/models.py",
+      "text": "return resolve_entity('warehouse', self.warehouse_id)",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "کلید resolver همان ستون warehouse_id (resolve_entity) برای نام انبار بدون ایمپورت ماژول"
+    }
+  ],
+  "front": [
+    {
+      "file": "core/error/error.interceptor.ts",
+      "text": "(firstField === 'warehouse' || firstField === 'warehouse_id') &&",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد خطای اعتبارسنجی سرور (warehouse/warehouse_id)"
+    },
+    {
+      "file": "core/interceptors/offline.interceptor.ts",
+      "text": "const reqWarehouseId = parsedUrl.searchParams.get('warehouse_id') || parsedUrl.searchParams.get('warehouse');",
+      "match": "warehouse",
+      "category": "protocol",
+      "reason": "نام پارامتر query سرور برای شناسهٔ انبار"
+    },
+    {
+      "file": "core/services/offline-db.ts",
+      "text": "const WH_SCOPE: AppScope = 'warehouse';",
+      "match": "warehouse",
+      "category": "offline_db_lock",
+      "reason": "نام قلمرو یا نام مستعار دیتابیس آفلاین قفل‌شده (WarehouseOfflineDB_*)"
+    },
+    {
+      "file": "core/services/offline-db.ts",
+      "text": "const FIN_SCOPE: AppScope = 'finance';",
+      "match": "finance",
+      "category": "offline_db_lock",
+      "reason": "نام قلمرو یا نام مستعار دیتابیس آفلاین قفل‌شده (WarehouseOfflineDB_*)"
+    },
+    {
+      "file": "core/services/offline-db.ts",
+      "text": "const ACCT_SCOPE: AppScope = 'accounting';",
+      "match": "accounting",
+      "category": "offline_db_lock",
+      "reason": "نام قلمرو یا نام مستعار دیتابیس آفلاین قفل‌شده (WarehouseOfflineDB_*)"
+    },
+    {
+      "file": "core/services/offline-db.ts",
+      "text": "const PERS_SCOPE: AppScope = 'personnel';",
+      "match": "personnel",
+      "category": "offline_db_lock",
+      "reason": "نام قلمرو یا نام مستعار دیتابیس آفلاین قفل‌شده (WarehouseOfflineDB_*)"
+    },
+    {
+      "file": "core/services/offline-db.ts",
+      "text": "[WH_SCOPE]: { tokenKey: 'wh_access_token_warehouse', activeAppHeader: 'warehouse', defaultOfflineRole: 'counter' },",
+      "match": "warehouse",
+      "category": "protocol",
+      "reason": "مقدار هدر X-Active-App قلمرو قفل‌شده (کلید توکن هم در همین سطر است)"
+    },
+    {
+      "file": "core/services/offline-db.ts",
+      "text": "[FIN_SCOPE]: { tokenKey: 'wh_access_token_finance', activeAppHeader: 'personnel', defaultOfflineRole: 'operator' },",
+      "match": "personnel",
+      "category": "protocol",
+      "reason": "مقدار هدر X-Active-App قلمرو قفل‌شده (کلید توکن هم در همین سطر است)"
+    },
+    {
+      "file": "core/services/session-tab.service.ts",
+      "text": "export const DEFAULT_ACTIVE_APP_MODULE: AppModuleScope = 'personnel';",
+      "match": "personnel",
+      "category": "stored_value",
+      "reason": "پیش‌فرض ذخیره‌شدهٔ active_app_module و هدر X-Active-App که سرور و نشست‌های فعلی می‌شناسند"
+    },
+    {
+      "file": "shared/components/conflict-resolution-modal/conflict-resolution-modal.component.ts",
+      "text": "'warehouse',",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "نام فیلد FK انبار که در مقایسهٔ سه‌طرفهٔ تداخل نادیده گرفته می‌شود"
+    }
+  ]
+}

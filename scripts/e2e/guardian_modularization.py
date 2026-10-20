@@ -477,7 +477,23 @@ def scan_core_module_literals(core_dir=None):
                     and node.value in CORE_MODULE_LITERALS and id(node) not in docstrings):
                 findings.append({"file": rel, "line": node.lineno, "match": node.value})
     findings.sort(key=lambda f: (f["file"], f["line"]))
+    texts = {}
+    for f in findings:
+        if f["file"] not in texts:
+            texts[f["file"]] = (core_dir / f["file"]).read_text(encoding="utf-8").splitlines()
+        f["text"] = texts[f["file"]][f["line"] - 1].strip()
     return findings
+
+
+def check_core_literal_allowlist(core_literals, allowlist=None):
+    """(ok, پیام‌ها): لیترال‌های هستهٔ بک‌اند دقیقاً برابر بخش backend فهرست مجاز."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import core_literal_allowlist
+    try:
+        data = allowlist if allowlist is not None else core_literal_allowlist.load_allowlist()
+    except Exception as e:
+        return False, [f"فهرست مجاز خوانده نشد: {e}"]
+    return core_literal_allowlist.check(core_literals, data.get("backend", []))
 
 
 def run_literal_self_test():
@@ -500,9 +516,22 @@ def run_literal_self_test():
         unchanged_ok = len(scan_core_module_literals(core)) <= baseline
         (core / "app" / "b.py").write_text("Z = 'accounting'\n", encoding="utf-8")
         extra_fails = len(scan_core_module_literals(core)) > baseline
-    ok = baseline == 2 and unchanged_ok and extra_fails
+        # فهرست مجاز دقیق روی همین fixture: فهرست کامل قبول، لیترال اضافه و ورودی کهنه رد
+        found = scan_core_module_literals(core)
+        entries = [{"file": f["file"], "text": f["text"], "match": f["match"], "category": "data_field",
+                    "reason": "نمونه"} for f in found if f["file"] != "app/b.py"]
+        extra_unlisted = not check_core_literal_allowlist(found, {"backend": entries})[0]
+        exact_ok = check_core_literal_allowlist([f for f in found if f["file"] != "app/b.py"], {"backend": entries})[0]
+        stale_fails = not check_core_literal_allowlist(found[:1], {"backend": entries})[0]
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import core_literal_allowlist
+    logic_ok = core_literal_allowlist.self_test()
+    allow_ok = exact_ok and extra_unlisted and stale_fails and logic_ok
+    ok = baseline == 2 and unchanged_ok and extra_fails and allow_ok
     print(f"self-test core_module_literals: fixture={baseline} (expected 2), unchanged passes={unchanged_ok}, "
-          f"extra literal fails={extra_fails} -> {'PASS' if ok else 'FAIL'}")
+          f"extra literal fails={extra_fails} -> {'PASS' if baseline == 2 and unchanged_ok and extra_fails else 'FAIL'}")
+    print(f"self-test allowlist: exact passes={exact_ok}, unlisted fails={extra_unlisted}, stale fails={stale_fails}, "
+          f"shared logic={logic_ok} -> {'PASS' if allow_ok else 'FAIL'}")
     return 0 if ok else 1
 
 
@@ -607,7 +636,10 @@ def main():
     regressions, improvements = [], []
     for key, value in counters.items():
         previous = (baseline or {}).get("counters", {}).get(key)
-        if previous is None:
+        if key == "core_module_literals":
+            # آچار مبنا ندارد: با فهرست مجاز دقیق سنجیده می‌شود (پایین)
+            mark, note = "📏", "سنجش با فهرست مجاز دقیق"
+        elif previous is None:
             mark, note = "🆕", "مبنای جدید"
         elif value > previous:
             mark, note = "🔴", f"پس‌رفت! از {previous} به {value}"
@@ -642,8 +674,13 @@ def main():
 
     print("-" * 74)
     print(f"🔤 لیترال نام ماژول در هسته (core_module_literals): {len(core_literals)} مورد")
-    for item in core_literals:
-        print(f"   · core/{item['file']}:{item['line']} '{item['match']}'")
+    allow_ok, allow_msgs = check_core_literal_allowlist(core_literals)
+    if allow_ok:
+        print("   🟢 همه در scripts/e2e/core_literal_allowlist.json (بخش backend) با دسته و دلیل؛ ورودی کهنه نیست.")
+    else:
+        passed = False
+        for msg in allow_msgs:
+            print(f"   ❌ {msg}")
 
     if baseline is None or args.update_baseline:
         save_baseline(counters, data, composition, lint_summary)
