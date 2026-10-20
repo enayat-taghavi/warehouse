@@ -110,7 +110,13 @@ export async function handleRetry(
   targetDb?: OfflineDatabase
 ): Promise<void> {
   if (!entry.id) return;
-  const db = targetDb || getOfflineDb(entry.appScope);
+  const db = targetDb || (entry.appScope ? resolveOfflineDbStrict(entry.appScope) : getOfflineDb(entry.appScope));
+  if (!db) {
+    console.warn(
+      `[OfflineSync] ⚠️ دیتابیس برای قلمرو ناشناخته [${entry.appScope}] یافت نشد؛ عملیات handleRetry برای شناسه ${entry.id} متوقف شد.`
+    );
+    return;
+  }
   const newRetryCount = entry.retryCount + 1;
 
   await db.syncQueue.update(entry.id, {
@@ -136,7 +142,13 @@ export async function markTransportFailure(
   targetDb?: OfflineDatabase
 ): Promise<void> {
   if (!entry.id) return;
-  const db = targetDb || getOfflineDb(entry.appScope);
+  const db = targetDb || (entry.appScope ? resolveOfflineDbStrict(entry.appScope) : getOfflineDb(entry.appScope));
+  if (!db) {
+    console.warn(
+      `[OfflineSync] ⚠️ دیتابیس برای قلمرو ناشناخته [${entry.appScope}] یافت نشد؛ عملیات markTransportFailure برای شناسه ${entry.id} متوقف شد.`
+    );
+    return;
+  }
   await db.syncQueue.update(entry.id, {
     status: 'pending',
     lastError: `در انتظار اتصال: ${errorMessage}`,
@@ -156,8 +168,25 @@ export async function sendEntry(
 ): Promise<EntryResult> {
   if (!entry.id) return 'rejected';
 
-  const appScope: AppScope = entry.appScope || resolveScopeFromUrl(entry.url);
-  const db = targetDb || getOfflineDb(appScope);
+  let db: OfflineDatabase | null = targetDb || null;
+  let appScope: AppScope;
+
+  if (targetDb) {
+    db = targetDb;
+    appScope = entry.appScope || db.dbScope || resolveScopeFromUrl(entry.url);
+  } else if (entry.appScope) {
+    db = resolveOfflineDbStrict(entry.appScope);
+    if (!db) {
+      console.warn(
+        `[OfflineSync] ⚠️ دیتابیس برای قلمرو ناشناخته [${entry.appScope}] یافت نشد؛ عملیات sendEntry برای شناسه ${entry.id} متوقف شد.`
+      );
+      return 'rejected';
+    }
+    appScope = entry.appScope;
+  } else {
+    appScope = resolveScopeFromUrl(entry.url);
+    db = getOfflineDb(appScope);
+  }
 
   try {
     // علامت‌گذاری به عنوان در حال ارسال در دیتابیس اختصاصی قلمرو
@@ -438,16 +467,28 @@ export async function cancelQueueEntry(
   let targetDb: OfflineDatabase;
 
   if (scope) {
-    targetDb = getOfflineDb(scope);
+    const resolvedDb = resolveOfflineDbStrict(scope);
+    if (!resolvedDb) {
+      console.warn(`[OfflineSync] ⚠️ دیتابیس برای قلمرو ناشناخته [${scope}] یافت نشد؛ لغو شناسه ${id} متوقف شد.`);
+      return false;
+    }
+    targetDb = resolvedDb;
   } else {
-    let whEntry: SyncQueueEntry | undefined;
-    let finEntry: SyncQueueEntry | undefined;
+    const allDbs = getAllOfflineDbs();
+    const matches: { db: OfflineDatabase; entry: SyncQueueEntry }[] = [];
 
     try {
-      [whEntry, finEntry] = await Promise.all([
-        warehouseOfflineDb.syncQueue.get(id),
-        financeOfflineDb.syncQueue.get(id),
-      ]);
+      const results = await Promise.all(
+        allDbs.map(async (db) => {
+          const entry = await db.syncQueue.get(id);
+          return { db, entry };
+        })
+      );
+      for (const res of results) {
+        if (res.entry) {
+          matches.push(res as { db: OfflineDatabase; entry: SyncQueueEntry });
+        }
+      }
     } catch (readErr) {
       console.warn(
         `[OfflineSync] ⚠️ خطا در خواندن صف پایگاه‌های داده هنگام لغو بدون قلمرو شناسه ${id}; عملیات لغو متوقف شد:`,
@@ -456,16 +497,16 @@ export async function cancelQueueEntry(
       return false;
     }
 
-    if (whEntry && finEntry) {
-      // شناسه مبهم در هر دو پایگاه‌داده وجود دارد؛ برای جلوگیری از حذف اشتباه لغو نمی‌شود
-      console.warn(`[OfflineSync] ⚠️ شناسه مبهم ${id}: در هر دو پایگاه‌داده انبار و مالی وجود دارد؛ لغو بدون قلمرو متوقف شد.`);
+    if (matches.length > 1) {
+      // شناسه مبهم در بیش از یک پایگاه‌داده وجود دارد؛ برای جلوگیری از حذف اشتباه لغو نمی‌شود
+      console.warn(
+        `[OfflineSync] ⚠️ شناسه مبهم ${id}: در بیش از یک پایگاه‌داده وجود دارد (${matches.map((m) => m.db.dbScope).join(', ')}); لغو بدون قلمرو متوقف شد.`
+      );
       return false;
     }
 
-    if (whEntry) {
-      targetDb = warehouseOfflineDb;
-    } else if (finEntry) {
-      targetDb = financeOfflineDb;
+    if (matches.length === 1) {
+      targetDb = matches[0].db;
     } else {
       return false;
     }

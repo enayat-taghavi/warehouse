@@ -414,8 +414,8 @@ export class OfflineSyncService {
     return managerGetAllErrors(scope);
   }
 
-  async dismissError(id: number): Promise<void> {
-    await managerDismissError(id);
+  async dismissError(id: number, scope?: AppScope): Promise<void> {
+    await managerDismissError(id, scope);
     await this.refreshCounts();
   }
 
@@ -424,8 +424,8 @@ export class OfflineSyncService {
     await this.refreshCounts();
   }
 
-  async deleteError(id: number): Promise<void> {
-    await managerDeleteError(id);
+  async deleteError(id: number, scope?: AppScope): Promise<void> {
+    await managerDeleteError(id, scope);
     await this.refreshCounts();
   }
 
@@ -437,8 +437,8 @@ export class OfflineSyncService {
   /**
    * تلاش مجدد یک درخواست ردشده — از Inbox خطاها
    */
-  async retryError(errorId: number): Promise<void> {
-    const err = await managerRetryError(errorId, this.enqueue.bind(this));
+  async retryError(errorId: number, scope?: AppScope): Promise<void> {
+    const err = await managerRetryError(errorId, this.enqueue.bind(this), scope);
     if (err) {
       await this.refreshCounts();
       this.processQueue();
@@ -452,13 +452,15 @@ export class OfflineSyncService {
    */
   async resolveConflict(
     errorId: number,
-    mergedBody: any
+    mergedBody: any,
+    scope?: AppScope
   ): Promise<{ success: boolean; message: string; online: boolean }> {
     const res = await managerResolveConflict(
       errorId,
       mergedBody,
       this.network.isBrowserOnline,
-      this.enqueue.bind(this)
+      this.enqueue.bind(this),
+      scope
     );
     await this.refreshCounts();
     return res;

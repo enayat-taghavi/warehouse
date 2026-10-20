@@ -1,8 +1,11 @@
 import {
   warehouseOfflineDb,
   financeOfflineDb,
+  getAllOfflineDbs,
+  resolveOfflineDbStrict,
   resolveScopeFromUrl,
   AppScope,
+  OfflineDatabase,
   SyncQueueEntry,
   SyncErrorEntry
 } from '../offline-db';
@@ -14,25 +17,20 @@ import { resolveServerUrl } from '../../platform/server-origin';
  */
 export async function getErrors(scope?: AppScope | 'all'): Promise<SyncErrorEntry[]> {
   const targetScope = scope || 'all';
-  if (targetScope === 'warehouse') {
-    const errors = await warehouseOfflineDb.syncErrors
+  if (targetScope !== 'all') {
+    const db = resolveOfflineDbStrict(targetScope);
+    if (!db) return [];
+    const errors = await db.syncErrors
       .where('dismissed')
       .equals(0)
       .sortBy('failedAt');
     return errors.reverse();
   }
-  if (targetScope === 'finance') {
-    const errors = await financeOfflineDb.syncErrors
-      .where('dismissed')
-      .equals(0)
-      .sortBy('failedAt');
-    return errors.reverse();
-  }
-  const [wh, fin] = await Promise.all([
-    warehouseOfflineDb.syncErrors.where('dismissed').equals(0).toArray(),
-    financeOfflineDb.syncErrors.where('dismissed').equals(0).toArray(),
-  ]);
-  return [...wh, ...fin].sort((a, b) => b.failedAt - a.failedAt);
+  const allDbs = getAllOfflineDbs();
+  const errorsPerDb = await Promise.all(
+    allDbs.map((db) => db.syncErrors.where('dismissed').equals(0).toArray())
+  );
+  return errorsPerDb.flat().sort((a, b) => b.failedAt - a.failedAt);
 }
 
 /**
@@ -40,28 +38,38 @@ export async function getErrors(scope?: AppScope | 'all'): Promise<SyncErrorEntr
  */
 export async function getAllErrors(scope?: AppScope | 'all'): Promise<SyncErrorEntry[]> {
   const targetScope = scope || 'all';
-  if (targetScope === 'warehouse') {
-    return warehouseOfflineDb.syncErrors.reverse().sortBy('failedAt');
+  if (targetScope !== 'all') {
+    const db = resolveOfflineDbStrict(targetScope);
+    if (!db) return [];
+    return db.syncErrors.reverse().sortBy('failedAt');
   }
-  if (targetScope === 'finance') {
-    return financeOfflineDb.syncErrors.reverse().sortBy('failedAt');
-  }
-  const [wh, fin] = await Promise.all([
-    warehouseOfflineDb.syncErrors.toArray(),
-    financeOfflineDb.syncErrors.toArray(),
-  ]);
-  return [...wh, ...fin].sort((a, b) => b.failedAt - a.failedAt);
+  const allDbs = getAllOfflineDbs();
+  const errorsPerDb = await Promise.all(
+    allDbs.map((db) => db.syncErrors.toArray())
+  );
+  return errorsPerDb.flat().sort((a, b) => b.failedAt - a.failedAt);
 }
 
 /**
  * حذف (Dismiss) یک خطا از دیتابیس مربوطه
  */
-export async function dismissError(id: number): Promise<void> {
-  const whErr = await warehouseOfflineDb.syncErrors.get(id);
-  if (whErr) {
-    await warehouseOfflineDb.syncErrors.update(id, { dismissed: 1 });
-  } else {
-    await financeOfflineDb.syncErrors.update(id, { dismissed: 1 });
+export async function dismissError(id: number, scope?: AppScope): Promise<void> {
+  if (scope) {
+    const db = resolveOfflineDbStrict(scope);
+    if (!db) {
+      console.warn(`[OfflineSync] ⚠️ دیتابیس برای قلمرو [${scope}] یافت نشد؛ dismissError برای شناسه ${id} متوقف شد.`);
+      return;
+    }
+    await db.syncErrors.update(id, { dismissed: 1 });
+    return;
+  }
+
+  for (const db of getAllOfflineDbs()) {
+    const err = await db.syncErrors.get(id);
+    if (err) {
+      await db.syncErrors.update(id, { dismissed: 1 });
+      return;
+    }
   }
 }
 
@@ -69,21 +77,32 @@ export async function dismissError(id: number): Promise<void> {
  * حذف تمام خطاها از هر دو دیتابیس
  */
 export async function dismissAllErrors(): Promise<void> {
-  await Promise.all([
-    warehouseOfflineDb.syncErrors.toCollection().modify({ dismissed: 1 }),
-    financeOfflineDb.syncErrors.toCollection().modify({ dismissed: 1 }),
-  ]);
+  const allDbs = getAllOfflineDbs();
+  await Promise.all(
+    allDbs.map((db) => db.syncErrors.toCollection().modify({ dismissed: 1 }))
+  );
 }
 
 /**
  * حذف دائمی یک خطا از دیتابیس
  */
-export async function deleteError(id: number): Promise<void> {
-  const whErr = await warehouseOfflineDb.syncErrors.get(id);
-  if (whErr) {
-    await warehouseOfflineDb.syncErrors.delete(id);
-  } else {
-    await financeOfflineDb.syncErrors.delete(id);
+export async function deleteError(id: number, scope?: AppScope): Promise<void> {
+  if (scope) {
+    const db = resolveOfflineDbStrict(scope);
+    if (!db) {
+      console.warn(`[OfflineSync] ⚠️ دیتابیس برای قلمرو [${scope}] یافت نشد؛ deleteError برای شناسه ${id} متوقف شد.`);
+      return;
+    }
+    await db.syncErrors.delete(id);
+    return;
+  }
+
+  for (const db of getAllOfflineDbs()) {
+    const err = await db.syncErrors.get(id);
+    if (err) {
+      await db.syncErrors.delete(id);
+      return;
+    }
   }
 }
 
@@ -91,10 +110,10 @@ export async function deleteError(id: number): Promise<void> {
  * حذف دائمی تمام خطاها از هر دو دیتابیس
  */
 export async function clearAllErrors(): Promise<void> {
-  await Promise.all([
-    warehouseOfflineDb.syncErrors.clear(),
-    financeOfflineDb.syncErrors.clear(),
-  ]);
+  const allDbs = getAllOfflineDbs();
+  await Promise.all(
+    allDbs.map((db) => db.syncErrors.clear())
+  );
 }
 
 /**
@@ -128,21 +147,39 @@ export async function retryError(
     url: string,
     body: any,
     meta?: { userId?: number; entityType?: string; entitySyncId?: string; baseUpdatedAt?: string; appScope?: AppScope }
-  ) => Promise<SyncQueueEntry>
+  ) => Promise<SyncQueueEntry>,
+  scope?: AppScope
 ): Promise<SyncErrorEntry | null> {
-  let err = await warehouseOfflineDb.syncErrors.get(errorId);
-  let db = warehouseOfflineDb;
-  if (!err) {
-    err = await financeOfflineDb.syncErrors.get(errorId);
-    db = financeOfflineDb;
-  }
-  if (!err) return null;
+  let err: SyncErrorEntry | undefined;
+  let db: OfflineDatabase | undefined;
 
+  if (scope) {
+    const resolvedDb = resolveOfflineDbStrict(scope);
+    if (!resolvedDb) {
+      console.warn(`[OfflineSync] ⚠️ دیتابیس برای قلمرو [${scope}] یافت نشد؛ retryError برای شناسه ${errorId} متوقف شد.`);
+      return null;
+    }
+    err = await resolvedDb.syncErrors.get(errorId);
+    db = resolvedDb;
+  } else {
+    for (const d of getAllOfflineDbs()) {
+      const found = await d.syncErrors.get(errorId);
+      if (found) {
+        err = found;
+        db = d;
+        break;
+      }
+    }
+  }
+
+  if (!err || !db) return null;
+
+  const targetScope: AppScope = db.dbScope || err.appScope || 'warehouse';
   await enqueueFn(err.method, err.url, err.body, {
     userId: err.userId,
     entityType: err.entityType,
     entitySyncId: err.entitySyncId,
-    appScope: err.appScope,
+    appScope: targetScope,
   });
   await db.syncErrors.delete(errorId);
   console.log(`[OfflineSync] 🔁 خطای ${errorId} به صف برگشت (${err.method} ${err.url})`);
@@ -163,19 +200,36 @@ export async function resolveConflict(
     url: string,
     body: any,
     meta?: { userId?: number; entityType?: string; entitySyncId?: string; baseUpdatedAt?: string; appScope?: AppScope }
-  ) => Promise<SyncQueueEntry>
+  ) => Promise<SyncQueueEntry>,
+  scope?: AppScope
 ): Promise<{ success: boolean; message: string; online: boolean }> {
-  let err = await warehouseOfflineDb.syncErrors.get(errorId);
-  let db = warehouseOfflineDb;
-  if (!err) {
-    err = await financeOfflineDb.syncErrors.get(errorId);
-    db = financeOfflineDb;
+  let err: SyncErrorEntry | undefined;
+  let db: OfflineDatabase | undefined;
+
+  if (scope) {
+    const resolvedDb = resolveOfflineDbStrict(scope);
+    if (!resolvedDb) {
+      console.warn(`[OfflineSync] ⚠️ دیتابیس برای قلمرو [${scope}] یافت نشد؛ resolveConflict برای شناسه ${errorId} متوقف شد.`);
+      return { success: false, message: 'دیتابیس قلمرو درخواستی یافت نشد.', online: isBrowserOnline };
+    }
+    err = await resolvedDb.syncErrors.get(errorId);
+    db = resolvedDb;
+  } else {
+    for (const d of getAllOfflineDbs()) {
+      const found = await d.syncErrors.get(errorId);
+      if (found) {
+        err = found;
+        db = d;
+        break;
+      }
+    }
   }
-  if (!err) {
+
+  if (!err || !db) {
     return { success: false, message: 'رکورد تداخل یافت نشد.', online: isBrowserOnline };
   }
 
-  const appScope: AppScope = err.appScope || resolveScopeFromUrl(err.url);
+  const appScope: AppScope = db.dbScope || err.appScope || resolveScopeFromUrl(err.url);
   const serverRecord = err.serverResponse?.server_record;
   const finalPayload = {
     ...mergedBody,

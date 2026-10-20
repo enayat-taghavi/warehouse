@@ -319,7 +319,7 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
       } else if (strategy === 'client') {
         // استفاده از متد واقعی OfflineSyncService برای ارسال نسخه کلاینت با زمان بروزرسانی سرور
         const body = this.selectedConflict.body || {};
-        const res = await this.offlineSync.resolveConflict(errorId, body);
+        const res = await this.offlineSync.resolveConflict(errorId, body, sourceDb.dbScope);
         if (res.success) {
           this.toast.show('success', 'تغییر نسخه کلاینت با موفقیت در سرور اعمال شد.');
         } else {
@@ -329,7 +329,7 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
         // پذیرش نسخه سرور
         const serverRecord = this.selectedConflict.serverResponse?.server_record;
         if (serverRecord) {
-          const res = await this.offlineSync.resolveConflict(errorId, serverRecord);
+          const res = await this.offlineSync.resolveConflict(errorId, serverRecord, sourceDb.dbScope);
           if (res.success) {
             this.toast.show('success', 'نسخه سرور پذیرفته شد و دیتابیس محلی همگام گردید.');
           }

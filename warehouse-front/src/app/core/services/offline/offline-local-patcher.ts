@@ -4,8 +4,10 @@ import {
   financeOfflineDb,
   getOfflineDb,
   getAllOfflineDbs,
+  resolveOfflineDbStrict,
   resolveScopeFromUrl,
   AppScope,
+  OfflineDatabase,
   SyncQueueEntry,
   SyncErrorEntry
 } from '../offline-db';
@@ -115,11 +117,15 @@ export async function getCachedEntry(
   scope?: AppScope
 ): Promise<{ response: any; cachedAt: number; isStale: boolean } | null> {
   const appScope = scope || resolveScopeFromUrl(url);
-  let entry = await getOfflineDb(appScope).apiCache.get(url);
+  const primaryDb = getOfflineDb(appScope);
+  let entry = await primaryDb.apiCache.get(url);
   if (!entry) {
-    // جستجو در قلمرو دیگر به عنوان پشتیبان در صورت اشتراک اندپوینت‌ها
-    const otherScope: AppScope = appScope === 'warehouse' ? 'finance' : 'warehouse';
-    entry = await getOfflineDb(otherScope).apiCache.get(url);
+    const allDbs = getAllOfflineDbs();
+    for (const db of allDbs) {
+      if (db === primaryDb) continue;
+      entry = await db.apiCache.get(url);
+      if (entry) break;
+    }
   }
   if (!entry) return null;
   return {
@@ -135,7 +141,13 @@ export async function getCachedEntry(
  */
 export async function invalidateCache(urlPatternOrExact: string, scope?: AppScope): Promise<void> {
   try {
-    const dbs = scope ? [getOfflineDb(scope)] : [warehouseOfflineDb, financeOfflineDb];
+    let dbs: OfflineDatabase[];
+    if (scope) {
+      const resolved = resolveOfflineDbStrict(scope);
+      dbs = resolved ? [resolved] : [];
+    } else {
+      dbs = getAllOfflineDbs();
+    }
     for (const db of dbs) {
       await db.apiCache.delete(urlPatternOrExact);
       const matchingKeys = await db.apiCache
@@ -157,6 +169,12 @@ export async function invalidateCache(urlPatternOrExact: string, scope?: AppScop
  * وگرنه فقط پرچم pending پاک می‌شود و نسخهٔ تازه با Pull بعدی می‌رسد.
  */
 export async function reconcileRejected(err: SyncErrorEntry): Promise<void> {
+  const db = err.appScope ? resolveOfflineDbStrict(err.appScope) : getOfflineDb(err.appScope);
+  if (!db) {
+    console.warn(`[OfflineSync] ⚠️ دیتابیس برای قلمرو [${err.appScope}] یافت نشد؛ عملیات reconcileRejected متوقف شد.`);
+    return;
+  }
+
   // ۱. ابطال کش متناظر در apiCache برای دریافت نسخه تازه از سرور
   if (err.url) {
     const baseUrl = err.url.split('?')[0];
@@ -165,8 +183,9 @@ export async function reconcileRejected(err: SyncErrorEntry): Promise<void> {
 
   if (err.entityType === 'count_task_bulk') {
     try {
-      const db = getOfflineDb('warehouse');
-      await db.countTasks.where('status').equals('SENDING').modify({ status: 'PENDING_COUNT' });
+      if (db.countTasks) {
+        await db.countTasks.where('status').equals('SENDING').modify({ status: 'PENDING_COUNT' });
+      }
     } catch (bulkErr) {
       console.warn('[OfflineSync] خطا در reconciliation تسک‌های گروهی:', bulkErr);
     }
@@ -182,8 +201,8 @@ export async function reconcileRejected(err: SyncErrorEntry): Promise<void> {
   };
   const tableName = tableMap[err.entityType];
   if (!tableName) return;
-  const db = getOfflineDb(err.appScope);
-  const table = (db as any)[tableName] || (warehouseOfflineDb as any)[tableName] || (offlineDb as any)[tableName];
+  const table = (db as any)[tableName];
+  if (!table) return;
 
   try {
     // آیا تغییر دیگری از همین رکورد هنوز در صف است؟ اگر بله پرچم می‌ماند.
@@ -222,7 +241,11 @@ export async function applyOptimisticUpdate(
   patch: Record<string, any>,
   scope: AppScope = 'warehouse'
 ): Promise<void> {
-  const db = getOfflineDb(scope);
+  const db = scope ? resolveOfflineDbStrict(scope) : getOfflineDb(scope);
+  if (!db) {
+    console.warn(`[OfflineSync] ⚠️ دیتابیس برای قلمرو [${scope}] یافت نشد؛ applyOptimisticUpdate متوقف شد.`);
+    return;
+  }
   const table = (db as any)[tableName];
   if (!table) return;
   const existing = await table.get(syncId);
