@@ -733,12 +733,8 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         user = getattr(req, 'user', None) if req else None
         qs = super().get_queryset()
         params = getattr(req, 'query_params', getattr(req, 'GET', {})) if req else {}
-        if app_scope is not None:
-            effective_app_scope = app_scope
-        elif req and req.method == 'POST' and getattr(req, 'data', None) and isinstance(req.data, dict) and 'app_scope' in req.data:
-            effective_app_scope = req.data.get('app_scope')
-        else:
-            effective_app_scope = params.get('app_scope')
+        # فقط export_excel قلمرو بدنهٔ POST را صریح می‌دهد؛ اکشن‌های نوشتنی (revert) همیشه از query string می‌خوانند
+        effective_app_scope = app_scope if app_scope is not None else params.get('app_scope')
 
         # Warehouse restriction: non-superusers without perm_sys_logs only see assigned warehouses
         if user and user.is_authenticated and not (user.is_superuser or user.has_perm('accounts.perm_sys_logs')):

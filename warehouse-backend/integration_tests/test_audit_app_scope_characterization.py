@@ -318,6 +318,37 @@ class AuditAppScopeCharacterizationTests(TestCase):
         self.assertEqual(len(data_rows_post), 4)
         self.assertEqual(len(data_rows_get), len(data_rows_post))
 
+    def test_post_body_app_scope_does_not_relax_write_action_restriction(self):
+        """
+        Write actions (revert, bulk_revert) share get_queryset(); a body app_scope must not
+        change the non-superuser restriction there. Only export_excel passes it explicitly.
+        """
+        from rest_framework.test import APIRequestFactory, force_authenticate
+        from accounts.views_domains.audit_views import AuditLogViewSet
+
+        raw = APIRequestFactory().post(
+            '/api/accounts/audit-logs/bulk_revert/',
+            {'log_ids': [self.target_model_log.id], 'app_scope': 'finance'},
+            format='json',
+        )
+        force_authenticate(raw, user=self.non_superuser)
+        view = AuditLogViewSet(action_map={'post': 'bulk_revert'}, args=(), kwargs={})
+        view.format_kwarg = None
+        view.request = view.initialize_request(raw)
+
+        ids = set(view.get_queryset().values_list('id', flat=True))
+        self.assertEqual(
+            ids,
+            {
+                self.wh_log_wh1.id,
+                self.acct_log_nowh.id,
+                self.acct_log_wh1.id,
+                self.cross_app_denied_log.id,
+                self.app_scope_switch_log.id,
+            }
+        )
+        self.assertNotIn(self.target_model_log.id, ids)
+
     def test_replaced_defaults_match_registry_default_in_full_profile(self):
         """
         Verify each replaced default in section 2 returns the registry default
