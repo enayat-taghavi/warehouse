@@ -192,5 +192,6 @@ export const ACCOUNTING_PERSONAS: ModulePersonas = {
   resolveRoleCodes: resolveAccountingRoleCodes,
   sodProhibitions: ACCOUNTING_SOD_PROHIBITIONS,
   isRouteDeniedForRole: isAccountingRouteDeniedForRole,
-  defaultRouteForRole: ACCOUNTING_DEFAULT_ROUTES
+  defaultRouteForRole: ACCOUNTING_DEFAULT_ROUTES,
+  lastResortRoute: '/app/finance/accountant-payroll'
 };

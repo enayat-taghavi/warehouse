@@ -77,5 +77,6 @@ export const WAREHOUSE_PERSONAS: ModulePersonas = {
   roles: WAREHOUSE_ROLES,
   resolveRoleCodes: resolveWarehouseRoleCodes,
   sodProhibitions: WAREHOUSE_SOD_PROHIBITIONS,
-  defaultRouteForRole: WAREHOUSE_DEFAULT_ROUTES
+  defaultRouteForRole: WAREHOUSE_DEFAULT_ROUTES,
+  homeIsModuleDefault: true
 };

@@ -21,6 +21,10 @@ export interface ModulePersonas {
   sodProhibitions?: Record<string, string[]>;
   isRouteDeniedForRole?: (role: string, cleanRoute: string) => boolean;
   defaultRouteForRole?: Record<string, string>;
+  /** صفحهٔ خانهٔ این ماژول همان `defaultRoute` آن است: مقصد تعویض اپ به این ماژول، و مسیر پیش‌فرض نقشِ بی‌مسیر وقتی این ماژول فعال است */
+  homeIsModuleDefault?: boolean;
+  /** آخرین مقصد پیش‌فرض نقش، وقتی هیچ قاعدهٔ دیگری مسیری نداد */
+  lastResortRoute?: string;
 }
 
 /**

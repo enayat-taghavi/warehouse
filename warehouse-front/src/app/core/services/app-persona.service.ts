@@ -9,9 +9,12 @@ import { ActiveCompanyService } from './active-company.service';
 import { filter } from 'rxjs';
 
 import { ROLE_ICONS } from '../../shared/icons/semantic-icons';
-import { RolePersona, AppModuleType, ModulePersonas } from '../modules/module-contract';
+import { RolePersona, AppModuleType, ModulePersonas, FrontendModuleSpec, WhFrontendModule } from '../modules/module-contract';
 
 export type { RolePersona, AppModuleType, ModulePersonas };
+
+/** پوستهٔ هستهٔ مرکز عملیات؛ ماژول نیست و قلمرو توکن جدا ندارد */
+const OPERATIONS_APP = 'operations';
 
 export const CORE_OPS_COMMANDER: RolePersona = {
   code: 'ops_commander',
@@ -115,14 +118,40 @@ export class AppPersonaService {
     );
   }
 
+  /** کد اپ پرسونا (مقدار `active_app_module`) برای یک ماژول؛ مثلاً ماژول حسابداری با کد قدیمی `personnel` */
+  private appCodeOf(spec: FrontendModuleSpec): AppModuleType {
+    return (spec as WhFrontendModule).routeAccess?.loginActiveAppModule ?? spec.code;
+  }
+
+  /**
+   * ماژول‌هایی که قلمرو توکن و کانال وب‌سوکت خودشان را دارند: همهٔ ماژول‌های شناخته‌شدهٔ این بیلد
+   * به‌جز پوستهٔ عملیات و ماژول‌های عمومی. مانند `canAccessApp`، نصب‌بودن را خود بررسی دسترسی می‌سنجد.
+   */
+  private scopedModules(): WhFrontendModule[] {
+    const reg = this.moduleRegistry;
+    const all = typeof reg.getAllModules === 'function' ? reg.getAllModules() : reg.getInstalledSpecs();
+    return (all as WhFrontendModule[]).filter(s =>
+      !!s.routePrefix && s.code !== OPERATIONS_APP && !this.isGenericModuleApp(s.code));
+  }
+
+  /** ماژول دارای قلمروِ یک کد اپ (کد پرسونا، کد ماژول یا نام مستعار آن) */
+  private scopedModuleFor(app: AppModuleType): WhFrontendModule | undefined {
+    return this.scopedModules().find(s => this.appCodeOf(s) === app || s.code === app || !!s.aliases?.includes(app));
+  }
+
+  private setActiveAppCode(app: AppModuleType): void {
+    this.activeApp.set(app);
+    this.sessionTab.setActiveApp(app);
+    localStorage.setItem('active_app_module', app);
+  }
+
   // فهرست سامانه‌های مجاز در دسترس کاربر بر پایه رجیستری پویا
   public accessibleApps = computed<AppModuleType[]>(() => {
     const specs = this.moduleRegistry.getInstalledSpecs();
     const apps: AppModuleType[] = [];
     for (const spec of specs) {
       if (this.canAccessApp(spec.code)) {
-        // برای سازگاری عقبگرد با کدهای موجود که 'personnel' را چک می‌کنند
-        const code = spec.code === 'accounting' ? 'personnel' : spec.code;
+        const code = this.appCodeOf(spec);
         if (!apps.includes(code)) apps.push(code);
       }
     }
@@ -143,10 +172,8 @@ export class AppPersonaService {
       return getAllAppRoles().filter(r => r.app === app || r.code === 'superuser');
     }
 
-    if (app === 'warehouse' && !this.hasWarehouseAccess()) {
-      return [];
-    }
-    if (app === 'personnel' && !this.hasPersonnelAccess()) {
+    const appModule = this.scopedModuleFor(app);
+    if (appModule && !this.canAccessApp(appModule.code)) {
       return [];
     }
 
@@ -214,17 +241,14 @@ export class AppPersonaService {
       localStorage.setItem('active_app_module', 'operations');
       try { this.ws.switchAppChannel('operations'); } catch {}
       this.sanitizeActiveRole();
-    } else if (cleanUrl.startsWith('/app/warehouse') && this.activeApp() !== 'warehouse' && this.hasWarehouseAccess()) {
-      this.activeApp.set('warehouse');
-      this.sessionTab.setActiveApp('warehouse');
-      localStorage.setItem('active_app_module', 'warehouse');
-      try { this.ws.switchAppChannel('warehouse'); } catch {}
-      this.sanitizeActiveRole();
-    } else if (cleanUrl.startsWith('/app/finance') && this.activeApp() !== 'personnel' && this.hasPersonnelAccess()) {
-      this.activeApp.set('personnel');
-      this.sessionTab.setActiveApp('personnel');
-      localStorage.setItem('active_app_module', 'personnel');
-      try { this.ws.switchAppChannel('finance'); } catch {}
+      return;
+    }
+
+    const scoped = this.scopedModules().find(s =>
+      cleanUrl.startsWith(s.routePrefix) && this.activeApp() !== this.appCodeOf(s) && this.canAccessApp(s.code));
+    if (scoped) {
+      this.setActiveAppCode(this.appCodeOf(scoped));
+      try { this.ws.switchAppChannel(scoped.scopeKind); } catch {}
       this.sanitizeActiveRole();
     } else {
       // ماژول‌های دیگر (ساخته‌شده از قالب) از روی routePrefix خودشان
@@ -246,19 +270,12 @@ export class AppPersonaService {
   }
 
   public sanitizeActiveRole(): void {
-    const hasWh = this.hasWarehouseAccess();
-    const hasPers = this.hasPersonnelAccess();
-
-    if (this.isGenericModuleApp(this.activeApp())) {
-      // ماژول دیگرِ فعال به انبار یا مالی برگردانده نشود
-    } else if (!hasWh && hasPers && this.activeApp() !== 'personnel') {
-      this.activeApp.set('personnel');
-      this.sessionTab.setActiveApp('personnel');
-      localStorage.setItem('active_app_module', 'personnel');
-    } else if (!hasPers && hasWh && this.activeApp() !== 'warehouse') {
-      this.activeApp.set('warehouse');
-      this.sessionTab.setActiveApp('warehouse');
-      localStorage.setItem('active_app_module', 'warehouse');
+    if (!this.isGenericModuleApp(this.activeApp())) {
+      // ماژول دیگرِ فعال به انبار یا مالی برگردانده نشود؛ کاربرِ تنها یک ماژولِ دارای قلمرو به همان می‌رود
+      const accessible = this.scopedModules().filter(s => this.canAccessApp(s.code));
+      if (accessible.length === 1 && this.activeApp() !== this.appCodeOf(accessible[0])) {
+        this.setActiveAppCode(this.appCodeOf(accessible[0]));
+      }
     }
 
     const roles = this.availableRoles();
@@ -286,10 +303,12 @@ export class AppPersonaService {
       return;
     }
 
+    // ماژول مقصد؛ scopeKind آن همان قلمرو توکن و کانال وب‌سوکت است
+    const target = this.scopedModuleFor(app);
+
     // تبادل زنده قلمرو فعال توکن در بک‌اند (Live Token Exchange)
-    const targetScope: 'warehouse' | 'finance' = app === 'warehouse' ? 'warehouse' : 'finance';
-    if (app !== 'operations') {
-      this.auth.switchAppScope(targetScope).subscribe({
+    if (app !== 'operations' && target) {
+      this.auth.switchAppScope(target.scopeKind as Parameters<AuthService['switchAppScope']>[0]).subscribe({
         next: () => {},
         error: (err) => console.warn('[AppPersonaService] خطا در تبادل زنده توکن:', err)
       });
@@ -299,8 +318,8 @@ export class AppPersonaService {
     try {
       if (app === 'operations') {
         this.ws.switchAppChannel('operations');
-      } else {
-        this.ws.switchAppChannel(targetScope);
+      } else if (target) {
+        this.ws.switchAppChannel(target.scopeKind);
       }
     } catch (e) {
       console.warn('[AppPersonaService] خطا در تغییر کانال وب‌سوکت:', e);
@@ -313,8 +332,8 @@ export class AppPersonaService {
     }
 
     // ریدایرکت خودکار به صفحه پیش‌فرض اپلیکیشن و نقش مقصد
-    if (app === 'warehouse') {
-      this.router.navigate(['/app/warehouse/dashboard']);
+    if (target?.personas?.homeIsModuleDefault) {
+      this.router.navigate([target.defaultRoute]);
     } else if (app === 'operations') {
       this.router.navigate(['/app/operations/cockpit']);
     } else {
@@ -335,9 +354,10 @@ export class AppPersonaService {
     switch (role) {
       case 'ops_commander':
         return '/app/operations/cockpit';
-      default:
-        if (this.activeApp() === 'warehouse') {
-          return '/app/warehouse/dashboard';
+      default: {
+        const active = this.scopedModuleFor(this.activeApp());
+        if (active?.personas?.homeIsModuleDefault) {
+          return active.defaultRoute;
         }
         if (this.activeCompanyService?.hasCompanyDocumentsAccess()) {
           const archiveRoute = findCompanyDocumentsRoute(this.moduleRegistry);
@@ -345,7 +365,9 @@ export class AppPersonaService {
             return archiveRoute;
           }
         }
-        return '/app/finance/accountant-payroll';
+        const lastResort = this.scopedModules().find(s => s.personas?.lastResortRoute)?.personas?.lastResortRoute;
+        return lastResort ?? '/app/launcher';
+      }
     }
   }
 
@@ -383,8 +405,9 @@ export class AppPersonaService {
     }
 
     // بررسی قلمرو کلان اپلیکیشن‌ها
-    if (cleanRoute.startsWith('/app/warehouse') && !this.hasWarehouseAccess()) return false;
-    if (cleanRoute.startsWith('/app/finance') && !this.hasPersonnelAccess()) return false;
+    for (const mod of this.scopedModules()) {
+      if (cleanRoute.startsWith(mod.routePrefix) && !this.canAccessApp(mod.code)) return false;
+    }
     if (cleanRoute.startsWith('/app/operations') && !this.hasOperationsAccess()) return false;
 
     // بررسی قوانین ایزولاسیون مسیر نقش‌ها در ماژول‌های نصب‌شده
@@ -403,8 +426,9 @@ export class AppPersonaService {
     }
     const app = this.activeApp();
     const role = this.activeRole();
-    // نرمال‌سازی پیشوند ماژولار /app/warehouse یا /app/finance به مسیر نسبی پایه
-    const normalizedRoute = pageRoute.replace(/^\/app\/(warehouse|finance)/, '') || pageRoute;
+    // نرمال‌سازی پیشوند ماژول دارای قلمرو به مسیر نسبی پایه
+    const owner = this.scopedModules().find(s => pageRoute.startsWith(s.routePrefix));
+    const normalizedRoute = (owner ? pageRoute.slice(owner.routePrefix.length) : pageRoute) || pageRoute;
     const key = `${app}:${role}:${normalizedRoute}`;
 
     const mergedProhibitions: Record<string, string[]> = {};
