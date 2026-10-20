@@ -95,6 +95,7 @@ export interface ExtensionMap {
     showWarehouseSwitcher?: boolean;
     defaultExitRoute?: string;
     hasCompanyDocumentsArchive?: boolean;
+    companyDocumentsRoute?: string;
   };
 
   /**

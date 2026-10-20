@@ -4,6 +4,7 @@ import { Router, NavigationEnd } from '@angular/router';
 import { WebSocketService } from '../http/websocket.service';
 import { SessionTabService } from './session-tab.service';
 import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
+import { findCompanyDocumentsRoute, isCompanyDocumentsUrl } from '../modules/documents-archive-route';
 import { ActiveCompanyService } from './active-company.service';
 import { filter } from 'rxjs';
 
@@ -339,7 +340,10 @@ export class AppPersonaService {
           return '/app/warehouse/dashboard';
         }
         if (this.activeCompanyService?.hasCompanyDocumentsAccess()) {
-          return '/app/finance/company-documents';
+          const archiveRoute = findCompanyDocumentsRoute(this.moduleRegistry);
+          if (archiveRoute) {
+            return archiveRoute;
+          }
         }
         return '/app/finance/accountant-payroll';
     }
@@ -374,17 +378,13 @@ export class AppPersonaService {
     const cleanRoute = routePath.split('?')[0];
     const role = this.activeRole();
 
+    if (isCompanyDocumentsUrl(cleanRoute, findCompanyDocumentsRoute(this.moduleRegistry))) {
+      return !!this.activeCompanyService?.hasCompanyDocumentsAccess();
+    }
+
     // بررسی قلمرو کلان اپلیکیشن‌ها
     if (cleanRoute.startsWith('/app/warehouse') && !this.hasWarehouseAccess()) return false;
-    if (cleanRoute.startsWith('/app/finance')) {
-      const isDocs = cleanRoute.includes('company-documents') || cleanRoute.includes('/documents');
-      if (isDocs) {
-        return !!this.activeCompanyService?.hasCompanyDocumentsAccess();
-      }
-      if (!this.hasPersonnelAccess()) {
-        return false;
-      }
-    }
+    if (cleanRoute.startsWith('/app/finance') && !this.hasPersonnelAccess()) return false;
     if (cleanRoute.startsWith('/app/operations') && !this.hasOperationsAccess()) return false;
 
     // بررسی قوانین ایزولاسیون مسیر نقش‌ها در ماژول‌های نصب‌شده

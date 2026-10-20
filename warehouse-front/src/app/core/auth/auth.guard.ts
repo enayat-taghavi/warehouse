@@ -3,6 +3,7 @@ import { Router, CanActivateFn, CanActivateChildFn, CanMatchFn } from '@angular/
 import { AuthService } from './auth.service';
 import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 import { ModuleRouteAccess, WhFrontendModule } from '../modules/module-contract';
+import { findCompanyDocumentsRoute, isCompanyDocumentsUrl } from '../modules/documents-archive-route';
 import { AppPersonaService } from '../services/app-persona.service';
 import { ActiveCompanyService } from '../services/active-company.service';
 
@@ -159,7 +160,7 @@ export const AuthGuard: CanActivateFn = (route, state) => {
       return router.parseUrl(fallback === current ? '/app/launcher' : fallback);
     };
 
-    const isCompanyDocsRoute = state.url.includes('company-documents') || state.url.includes('/documents') || route.routeConfig?.path === 'company-documents' || route.routeConfig?.path === 'documents';
+    const isCompanyDocsRoute = isCompanyDocumentsUrl(state.url, findCompanyDocumentsRoute(moduleRegistry));
 
     const path = route.routeConfig?.path;
 

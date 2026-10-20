@@ -18,7 +18,8 @@ import { Users } from './modules/common/components/users/users';
 import { CompaniesManagementComponent } from './modules/common/components/operations/companies/companies';
 import { Audit } from './modules/common/components/audit/audit';
 import { HealthDashboardComponent } from './modules/common/components/health-dashboard/health-dashboard';
-import { ModuleRegistryService } from './core/modules/module-registry.service';
+import { ModuleRegistryService, getModuleRegistry } from './core/modules/module-registry.service';
+import { findCompanyDocumentsRoute } from './core/modules/documents-archive-route';
 import { ActiveCompanyService } from './core/services/active-company.service';
 
 import { INSTALLED_MODULES } from './modules/installed-modules';
@@ -50,6 +51,12 @@ const dynamicModuleRoutes: Routes = INSTALLED_MODULES.filter(m => typeof m.route
     loadChildren: m.routes!
   };
 });
+
+export function getCompanyDocumentsRedirect(): string {
+  const registry = inject(ModuleRegistryService, { optional: true }) ?? getModuleRegistry();
+  const route = findCompanyDocumentsRoute(registry);
+  return route ? route.replace(/^\//, '') : 'app/launcher';
+}
 
 export const routes: Routes = [
   // ─── احراز هویت و صفحات عمومی ─────────────────────────
@@ -118,7 +125,7 @@ export const routes: Routes = [
 
       const activeCompanyService = inject(ActiveCompanyService);
       if (activeCompanyService.hasCompanyDocumentsAccess()) {
-        return 'app/finance/company-documents';
+        return getCompanyDocumentsRedirect();
       }
       return 'app/launcher';
     },
@@ -159,8 +166,8 @@ export const routes: Routes = [
   { path: 'personnel-profiles', redirectTo: 'app/finance/personnel-profiles', pathMatch: 'full' },
   { path: 'base-settings', redirectTo: 'app/finance/base-settings', pathMatch: 'full' },
   { path: 'projects-and-sections', redirectTo: 'app/finance/projects-and-sections', pathMatch: 'full' },
-  { path: 'company-documents', redirectTo: 'app/finance/company-documents', pathMatch: 'full' },
-  { path: 'documents', redirectTo: 'app/finance/company-documents', pathMatch: 'full' },
+  { path: 'company-documents', redirectTo: getCompanyDocumentsRedirect, pathMatch: 'full' },
+  { path: 'documents', redirectTo: getCompanyDocumentsRedirect, pathMatch: 'full' },
   { path: 'employee-portal', redirectTo: 'app/finance/employee-attendance', pathMatch: 'full' },
   { path: 'employee-attendance', redirectTo: 'app/finance/employee-attendance', pathMatch: 'full' },
   { path: 'employee-fleet', redirectTo: 'app/finance/employee-fleet', pathMatch: 'full' },
@@ -233,7 +240,7 @@ export const routes: Routes = [
 
       const activeCompanyService = inject(ActiveCompanyService);
       if (activeCompanyService.hasCompanyDocumentsAccess()) {
-        return 'app/finance/company-documents';
+        return getCompanyDocumentsRedirect();
       }
       return 'app/launcher';
     },

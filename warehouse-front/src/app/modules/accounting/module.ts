@@ -63,6 +63,7 @@ export const MODULE: WhFrontendModule = {
     },
     layoutNav: {
       hasCompanyDocumentsArchive: true,
+      companyDocumentsRoute: '/app/finance/company-documents',
       roleMenus: [
         { role: 'org_admin', items: ORG_ADMIN_NAV_ITEMS, roleMarkers: ORG_ADMIN_ROLE_MARKERS },
         { role: 'operator', items: EMPLOYEE_NAV_ITEMS, roleMarkers: EMPLOYEE_ROLE_MARKERS },
