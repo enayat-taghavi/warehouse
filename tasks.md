@@ -1,698 +1,649 @@
-[DONE] Session 1 of 12 — Mobile phase B: reviewer fixes for the version lock screen, chat attachment button and download buttons
+[DONE] Session 1 of 15 — Phase 4: AuthGuard generic module loop only for modules with routeAccess; unused markers removed from app.routes; open scopeKind type and closed deepSyncScope
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/shared/components/app-version-lock/* warehouse-front/src/app/core/platform/app-version.service.ts warehouse-front/src/app/core/platform/app-version.service.spec.ts warehouse-front/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.* warehouse-front/src/app/modules/accounting/components/finance/employee/employee-invoices/employee-invoices.html warehouse-front/src/app/modules/common/components/operations/companies/companies.html warehouse-front/src/app/app.html
-verify: python scripts/automation/verify_tools.py glob-absent --root warehouse-front/src/app/shared/components/app-version-lock --glob "*.ts" "*.html" --regex "animate-fade-in|active:scale-98|text-right|text-left|bg-white|text-slate-|border-slate-|bg-slate-|rotate-180|z-50" --skip-specs
-verify: python scripts/automation/verify_tools.py glob-absent --root warehouse-front/src/app/shared/components/app-version-lock --glob "*.ts" --regex "err\.message" --skip-specs
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/shared/components/app-version-lock/app-version-lock.component.spec.ts --min-tests 4 --require "still pending"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.html --contains "[attr.aria-label]"
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/modules/module-contract.ts
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/modules/module-contract.ts --contains "scopeKind: 'warehouse' | 'finance' | 'operations' | (string & {});" --contains "deepSyncScope?: 'warehouse' | 'finance';"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/app.routes.ts --absent "registry.permissionMarkers('warehouse')" --absent "registry.permissionMarkers('accounting')"
 verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(ui): version lock accessibility and tokens, honest emergency result, labelled download buttons"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5, 7, 9 and 10 apply (design system: semantic tokens `surface`/`fg`/`line`, `<svg appIcon>` only, Persian `title` and `aria-label`, touch targets at least 40x40 px for icon-only buttons, logical directions).
-- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- No data may ever be lost: do not change how the queues are flushed, gated or deleted. Only the messages and the UI of the lock screen change.
-- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
-
-2. Context: plan `Documents/Mobile_App_Capacitor/implementation_plan_mobile_app.md`, heading `## گزارش پیشرفت` (the last entry lists these reviewer findings). Files: `warehouse-front/src/app/shared/components/app-version-lock/app-version-lock.component.ts` (inline template), `chat-drawer.component.html` near line 195, `employee-invoices.html` near line 579, `companies.html` near lines 1822, 1874, 2675, 2738. Read `.claude/skills/design-system/SKILL.md` for tokens and patterns.
-
-3. Task:
-- a) Lock overlay: use `z-[100]` (the modal layer); on open move focus to the update button, keep Tab inside the dialog, and set the `inert` attribute on the app content behind it (a wrapper around the `router-outlet` in `app.html`), removing it when the overlay closes. Keep `role="dialog"` and `aria-modal="true"`; add `aria-labelledby` pointing to the heading.
-- b) Lock component styles: replace `bg-white`, `text-slate-*`, `border-slate-*`, `bg-slate-*` with the semantic tokens; `text-right`/`text-left` with `text-start`/`text-end`; remove the undefined `animate-fade-in` (use the existing `.fade-in` class) and `active:scale-98` (use `active:scale-95`); replace the rotated `cloud-upload` icon with `appIcon="download"` (if `download` is not in the icon registry, use an existing registry icon without rotation and say which).
-- c) Emergency send result: after the send finishes, refresh the unsent count; show the success text only when it is 0; otherwise show «هنوز {n} رکورد ارسال نشده است؛ دوباره تلاش کنید» with `n` in Persian digits (use the project's existing Persian digit helper). Never show `err.message`; show a fixed Persian error text.
-- d) Every count shown in the component uses Persian digits.
-- e) `chat-drawer.component.html`: the attachment download button gets `[attr.aria-label]="'دانلود ' + att.file_name"` and the same `title`; replace inner `<div>` elements inside the `<button>` with `<span class="block">` keeping their classes.
-- f) The download buttons in `employee-invoices.html` and `companies.html` that replaced `download` anchors get the project's standard `focus-visible` ring classes.
-- g) New spec `app-version-lock.component.spec.ts` with at least 4 tests, one whose name contains `still pending` (an emergency send that leaves records shows the pending text, not the success text), plus success when the count is 0, the fixed Persian error text on failure, and focus moved into the dialog when locked.
-
-4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/shared/**/*.spec.ts" --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-fix(ui): version lock accessibility and tokens, honest emergency result, labelled download buttons
-- Short English report: changes per finding (a to g), the last ng-test-compare summary line. End the turn after the commit and report.
-
-===
-
-[DONE] Session 2 of 12 — Mobile phase B: add Capacitor 8, the CoManage Android and iOS projects, mobile build configurations and flavors
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/package.json warehouse-front/package-lock.json warehouse-front/capacitor.config.ts warehouse-front/angular.json warehouse-front/.gitignore warehouse-front/src/environments/* warehouse-front/src/app/app.config.ts warehouse-front/android/* warehouse-front/ios/*
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/capacitor.config.ts --contains "appId: 'ir.comanage.soft'" --contains "appName: 'CoManage'" --contains "webDir: 'dist-mobile/warehouse-app/browser'" --contains "androidScheme: 'https'" --contains "hostname: 'localhost'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/environments/environment.mobile.ts --contains "serverOrigin: 'https://soft.farsalish.ir'" --contains "apiUrl: '/api'" --contains "appChannel: 'direct'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/environments/environment.mobile-test.ts --contains "serverOrigin: 'https://app.farsalish.ir'" --contains "apiUrl: '/api'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/angular.json --contains "mobile-test" --contains "dist-mobile"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/android/app/build.gradle --contains "applicationId \"ir.comanage.soft\"" --contains "applicationIdSuffix \".test\"" --contains "productFlavors" --contains "direct" --contains "bazaar" --contains "myket" --contains "APP_CHANNEL"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/package.json --contains "@capacitor/core" --contains "@capacitor/android" --contains "build:mobile" --contains "build:mobile-test"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/app.config.ts --contains "isNativePlatform()" --contains "withInterceptors([authInterceptor, errorInterceptor, offlineInterceptor, apiOriginInterceptor])"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/.gitignore --contains "/dist-mobile"
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: cd warehouse-front && npx ng build --configuration mobile-test
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(mobile): Capacitor 8 projects, mobile build configurations and Android flavors"
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base ef99e43 --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(guard): generic module loop only for modules with routeAccess"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
 - Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- The web build and web behavior must not change. The mobile build writes to `warehouse-front/dist-mobile/` and never to `warehouse-front/dist/` (Express serves `dist/` right now).
-- These values are permanent after the first install and must be exactly: app id `ir.comanage.soft`, test flavor suffix `.test`, `androidScheme: 'https'`, `hostname: 'localhost'`. Changing them later makes every user's offline data unreachable.
-- Do not install the Android SDK and do not run Gradle in this session. Do not create a keystore.
-- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`. Never stage build outputs (`dist-mobile`, `android/app/build`, `android/.gradle`, `local.properties`, `android/app/src/main/assets/public`).
+- Change only the 3 files listed in the scope verify line of this session. Do not edit any spec file.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
 
 2. Context:
-- Plan headings `### ۴-ب.`, `### ۴-د.`, `#### گام ب-۱` and `## ۱۰.` (the test build uses app id `ir.comanage.soft.test`).
-- npm versions available today: `@capacitor/core`, `@capacitor/cli`, `@capacitor/android`, `@capacitor/ios` 8.5.3.
-- `angular.json` build `configurations` has `production` (with `"serviceWorker": "ngsw-config.json"`) and `development`; default `production`. `app.config.ts` registers the service worker with `enabled: !isDevMode()`.
-- Environment files have `serverOrigin: ''` and `appChannel: 'direct'`. `isNativePlatform` is in `src/app/core/platform/platform.ts`.
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, headings `## ۱.` and `### گام ۰`.
+- Commit `30648fb` added a generic loop to `AuthGuard` in `warehouse-front/src/app/core/auth/auth.guard.ts` (the loop that starts with `for (const mod of installed)` and skips `scopeKind` `warehouse` and `finance`). `ModuleRegistryService` always adds the built-in `OPERATIONS_SPEC` (`scopeKind: 'operations'`, `routePrefix: '/app/operations'`) and it has no `routeAccess`. The loop therefore denies every non-admin user on `/app/operations/*`.
+- Evidence: `src/app/core/auth/route-access.characterization.spec.ts`, tests 2 to 5 of the `AuthGuard characterization` block, fail on HEAD and pass on commit `ef99e43`. Example: a user with only `view_sys_users` must get `true` for `/app/operations/users`.
 
-3. Definitions: flavor dimensions in `android/app/build.gradle`: `env` with `prod` (no suffix, `manifestPlaceholders = [appLabel: "CoManage"]`) and `staging` (`applicationIdSuffix ".test"`, `versionNameSuffix "-test"`, `manifestPlaceholders = [appLabel: "CoManage تست"]`); `channel` with `direct`, `bazaar`, `myket`, each with `buildConfigField "String", "APP_CHANNEL", "\"<name>\""`. `AndroidManifest.xml` uses `android:label="${appLabel}"` for the application and the main activity.
+3. Definitions: "module with routeAccess" means `getModuleRouteAccess(mod)` in `auth.guard.ts` returns a value.
 
 4. Task:
-- a) In `warehouse-front`: `npm install @capacitor/core@^8.5.3 @capacitor/android@^8.5.3 @capacitor/ios@^8.5.3` and `npm install -D @capacitor/cli@^8.5.3`.
-- b) `capacitor.config.ts` with `appId: 'ir.comanage.soft'`, `appName: 'CoManage'`, `webDir: 'dist-mobile/warehouse-app/browser'`, `server: { androidScheme: 'https', hostname: 'localhost' }`, and a comment that these values must never change.
-- c) `src/environments/environment.mobile.ts` (copy of `environment.ts` with `serverOrigin: 'https://soft.farsalish.ir'`, `appChannel: 'direct'`) and `environment.mobile-test.ts` (same with `serverOrigin: 'https://app.farsalish.ir'`).
-- d) `angular.json`: build configurations `mobile` and `mobile-test`, each equal to `production` but with `"serviceWorker": false`, `"outputPath": "dist-mobile/warehouse-app"` and the matching `fileReplacements` for `environment.ts`.
-- e) `app.config.ts`: the service worker `enabled: !isDevMode() && !isNativePlatform()`.
-- f) `package.json` scripts: `"build:mobile": "ng build --configuration mobile && npx cap sync"`, `"build:mobile-test": "ng build --configuration mobile-test && npx cap sync"`. Add `/dist-mobile` to `warehouse-front/.gitignore`.
-- g) `npx ng build --configuration mobile-test`, then `npx cap add android`, then `npx cap add ios`. If `cap add ios` fails on Windows, keep going, do not create `ios/` by hand, and report the exact error.
-- h) Add the flavors from section 3 to `android/app/build.gradle` and the label placeholder to `AndroidManifest.xml`; remove the `app_name` string only if it causes a duplicate resource error.
+- a) In that generic loop, skip every module without routeAccess, in addition to the existing `warehouse`/`finance` skip. Do not change any other branch of `AuthGuard`.
+- b) In `app.routes.ts`, delete the two unused constants `whMarkers` and `acctMarkers` in both redirect functions (path `app` and path `''`). Change nothing else there.
+- c) In `module-contract.ts`, set `scopeKind: 'warehouse' | 'finance' | 'operations' | (string & {});` and set `deepSyncScope?: 'warehouse' | 'finance';` (the offline system has exactly two scopes).
 
-5. Tool policy: each `npm install` at most twice; `npx ng build --configuration mobile-test` at most twice; `npx ng build --output-path ../scratch/ng-build-agent` at most twice; one run of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts"`. If a command fails, read its output and change approach.
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base ef99e43 --include "src/app/core/auth/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`. If a command fails, read its output and change approach.
 
-6. Before finishing: `git status --short` shows no build output; `git diff --stat` shows only allowed paths.
+6. Before finishing: the ng-test-compare run above reports no new failing test, and `git diff --stat` shows only the 3 files.
 
 7. Output and stop condition:
 - Commit with this message, without push:
-feat(mobile): Capacitor 8 projects, mobile build configurations and Android flavors
-- Short English report: installed versions, generated folders, the `cap add ios` result, the compile and target SDK levels from `android/variables.gradle`. End the turn after the commit and report.
+fix(guard): generic module loop only for modules with routeAccess
+- Short English report: the change per item a to c, the last ng-test-compare summary line. End the turn after the commit and report.
 
 ===
 
-[DONE] Session 3 of 12 — Mobile phase B: install the Android SDK, generate app icons, and build the staging debug APK
+[DONE] Session 2 of 15 — Phase 4: the server rollback and restore gates count the unsent offline queue of both IndexedDB scopes
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/package.json warehouse-front/package-lock.json warehouse-front/resources/* warehouse-front/android/* warehouse-front/ios/* warehouse-front/public/icons/* warehouse-front/src/index.html
-verify: python -c "import pathlib,sys; s=pathlib.Path('E:/Android/Sdk'); ok={'adb':(s/'platform-tools/adb.exe').is_file(),'platforms':any((s/'platforms').glob('android-*')),'build_tools':any((s/'build-tools').glob('*')),'apkanalyzer':(s/'cmdline-tools/latest/bin/apkanalyzer.bat').is_file()}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
-verify: python -c "import pathlib,subprocess,sys; apks=[p for p in pathlib.Path('warehouse-front/android/app/build/outputs/apk').rglob('*.apk') if all(k in p.name.lower() for k in ('staging','direct','debug'))]; print('apks:',[str(a) for a in apks]); r=subprocess.run(['cmd','/c','E:\\Android\\Sdk\\cmdline-tools\\latest\\bin\\apkanalyzer.bat','manifest','application-id',str(apks[0])],capture_output=True,text=True) if apks else None; out=r.stdout.strip() if r else ''; print('application-id:',out); sys.exit(0 if out=='ir.comanage.soft.test' else 1)"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/index.html --contains "apple-touch-icon-180.png"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(mobile): app icons and the first staging debug build"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Run every command in the foreground and wait until it finishes (SDK and Gradle downloads take minutes). Never start a command in the background, and never end your turn while a command is still running.
-- Install the Android SDK only under `E:\Android\Sdk`. Do not change system or user environment variables; point Gradle to the SDK through `warehouse-front/android/local.properties` (`sdk.dir=E\:\\Android\\Sdk`), which must stay untracked.
-- The user approved installing the Android SDK in this plan; accept the SDK licenses with `sdkmanager --licenses` (answer `y`).
-- Do not change the app id, flavors, `capacitor.config.ts` or any web source except `src/index.html`. Do not create a keystore.
-- Do not push. Stage only your changed files. Never stage build outputs or `local.properties`. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
-
-2. Context:
-- Plan heading `#### گام ب-۱`. JDK 21 (Temurin) is installed and on PATH. `dl.google.com`, `services.gradle.org` and `maven.google.com` are reachable.
-- Session 2 created `warehouse-front/android/` (read `android/variables.gradle` for `compileSdkVersion` and `targetSdkVersion`).
-- `public/icons/` has only SVG icons (`icon-512x512.svg` is the largest). `src/index.html` links `apple-touch-icon` to an SVG, which iOS ignores.
-
-3. Task:
-- a) Download the latest Windows "command line tools" zip (find its file name in `https://dl.google.com/android/repository/repository2-3.xml`), unpack it so that `E:\Android\Sdk\cmdline-tools\latest\bin\sdkmanager.bat` exists, accept the licenses, and install `platform-tools`, `platforms;android-<compileSdkVersion>` and the matching `build-tools` version.
-- b) Write `warehouse-front/android/local.properties` with `sdk.dir`.
-- c) Icons: `npm install -D @capacitor/assets@^3`; create `warehouse-front/resources/icon.png` (1024x1024) and `resources/splash.png` (2732x2732, the icon centered on the app's dark background color) by rendering `public/icons/icon-512x512.svg` with the `sharp` package that `@capacitor/assets` brings; run `npx capacitor-assets generate --android --ios` (the iOS part may be skipped if it fails). Also write `public/icons/apple-touch-icon-180.png` (180x180) and point the `apple-touch-icon` link in `src/index.html` to `icons/apple-touch-icon-180.png`.
-- d) `npm run build:mobile-test`, then in `warehouse-front/android` run `gradlew.bat assembleStagingDirectDebug`.
-
-4. Tool policy: each install or download command at most twice; Gradle at most three times. If a download fails twice, stop and report the exact error. If a command fails, read its output and change approach.
-
-5. Before finishing: `git status --short` shows no build output and no `local.properties`.
-
-6. Output and stop condition:
-- Commit with this message, without push:
-feat(mobile): app icons and the first staging debug build
-- Short English report: SDK packages installed, the APK path and size, the application id, any warning that matters. End the turn after the commit and report.
-
-===
-
-[DONE] Session 4 of 12 — Mobile phase B: native branches for file saving, printing, external links, back button, status bar, splash and camera permission
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/package.json warehouse-front/package-lock.json warehouse-front/capacitor.config.ts warehouse-front/src/app/core/platform/* warehouse-front/src/app/app.ts warehouse-front/src/app/app.config.ts warehouse-front/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.ts warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts warehouse-front/android/* warehouse-front/ios/*
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/platform/file-output.ts --contains "@capacitor/filesystem" --contains "@capacitor/share" --contains "@capgo/capacitor-printer" --contains "isNativePlatform"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/platform/external-link.ts --contains "@capacitor/browser" --contains "isNativePlatform"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/android/app/src/main/AndroidManifest.xml --contains "android.permission.CAMERA"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.ts --contains "isNativePlatform"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts --contains "isNativePlatform"
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/platform/file-output.spec.ts --min-tests 8 --require "native"
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts --contains "warehouseOfflineDb.syncQueue" --contains "financeOfflineDb.syncQueue" --absent "offlineDb.syncQueue"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.spec.ts
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.spec.ts --min-tests 13 --require "finance queue"
 verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: cd warehouse-front && npx ng build --configuration mobile-test
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
 verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(mobile): native file saving, printing, links, back button and app shell"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(backup): rollback and restore gates count both offline queues"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
 1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5, 9 and 10 apply.
-- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- Web behavior must stay identical: every native branch runs only when `isNativePlatform()` is true; web branches are not changed.
-- Do not push. Stage only your changed files. Never stage build outputs, `local.properties`, `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- No data may ever be lost. These two gates stop a server rollback or restore while unsent offline records exist. The gate may only become stricter; it must never let a rollback or restore start while either queue holds a record.
+- Do not change `offline-db.ts` or any queue, sync or delete logic. Only the two gate checks and their spec change.
+- Run every command in the foreground and wait until it finishes. Never end your turn while a command is still running.
+- Change only the 2 files listed in the scope verify line. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
 2. Context:
-- Plan headings `### ۴-الف.`, `#### گام ب-۲` and `## ۱۰.` (Google Drive OAuth is web-only; the barcode scanner keeps `@zxing` through the WebView camera, ML Kit is deferred).
-- `core/platform/file-output.ts` (`saveBlob`, `saveUrl`, `printWindow`) and `core/platform/external-link.ts` (`openExternal`) have web implementations and comments marking the native branch.
-- npm versions available: `@capacitor/app` 8.1.2, `@capacitor/browser` 8.0.5, `@capacitor/filesystem` 8.1.5, `@capacitor/share` 8.0.3, `@capacitor/status-bar` 8.0.4, `@capacitor/splash-screen` 8.0.2, `@capgo/capacitor-printer` 8.1.8. Read each plugin's README in `node_modules` before using it.
-- Google Drive OAuth popups: `company-gdrive-tab.ts` (around line 603) and `settings-backup-tab.ts` (around line 525).
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۰`.
+- `settings-backup-tab.ts` reads `await offlineDb.syncQueue.toArray()` in `openRollbackConfirm` and in `openRestoreConfirm`. `offlineDb` is a proxy that resolves to the database of the active scope only, so unsent records in the other scope (`WarehouseOfflineDB_finance` or `WarehouseOfflineDB_warehouse`) are not counted.
+- `warehouseOfflineDb` and `financeOfflineDb` are exported by `core/services/offline-db.ts`.
 
 3. Task:
-- a) Install the seven plugins with `npm install`.
-- b) `saveBlob` native: write the blob as base64 with `Filesystem.writeFile` to `Directory.Cache` under the given file name, then `Share.share({ title: filename, url: <file uri> })`. `saveUrl` native: download the resolved URL with `fetch` using the same `Authorization` header the app's direct `fetch` calls use (read `offline-queue-runner.ts`), then pass the blob to `saveBlob`. `printWindow` native: print the HTML of the target document (`(target ?? window).document.documentElement.outerHTML`) with the printer plugin's HTML print method.
-- c) `openExternal` native: `Browser.open({ url: resolveServerUrl(url) })` and return `null`; popups to `about:blank` are not supported natively and return `null`.
-- d) App shell (a small `core/platform/native-shell.ts` started from `app.config.ts` or `app.ts`), native only: Android back button with `App.addListener('backButton', ...)` that goes back in history when possible and otherwise minimizes the app; `StatusBar` style matching the theme; `SplashScreen.hide()` once the app is stable.
-- e) Google Drive connect buttons in the two files: when native, do not open the popup; show the existing toast service with «اتصال گوگل‌درایو را از نسخهٔ وب انجام دهید».
-- f) `AndroidManifest.xml`: add `android.permission.CAMERA` (the WebView camera for the barcode scanner). Run `npx cap sync`.
-- g) Extend `core/platform/file-output.spec.ts` to at least 8 tests with mocked plugins: native `saveBlob` writes and shares; native `printWindow` calls the printer; web paths unchanged. Use the word `native` in those test names.
+- a) Add one private async method in the component that returns the total number of entries in `warehouseOfflineDb.syncQueue` plus `financeOfflineDb.syncQueue` (use `toArray()` on both, any status counts, as today). Use it in both gates; the Persian toast text keeps today's wording with the total count.
+- b) Update the spec so the existing tests mock both queues (empty by default). Keep every existing test.
+- c) Add at least two tests: one whose name contains `finance queue` (rollback blocked when only the finance queue has a record and the warehouse queue is empty), and one for restore blocked when only the finance queue has a record. Each asserts the error toast and that the confirm modal stays closed.
 
-4. Tool policy: `npm install` at most twice; each build command at most twice; from the repo root at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
+4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/settings/**/*.spec.ts"`.
 
 5. Output and stop condition:
 - Commit with this message, without push:
-feat(mobile): native file saving, printing, links, back button and app shell
-- Short English report: plugin versions, the native behavior of each function, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+fix(backup): rollback and restore gates count both offline queues
+- Short English report: the change, the tests added, the last ng-test-compare summary line. End the turn after the commit and report.
 
 ===
 
-[DONE] Session 5 of 12 — Mobile phase B backend: publish live-update bundles and APK files through public endpoints
+[DONE] Session 3 of 15 — Phase 4 backend: module spec is the only source for app codes; active_priority picks the default active app; default active app from default_module()
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/settings_core/mobile_release.py warehouse-backend/core/settings_core/views.py warehouse-backend/core/settings_core/mobile_views.py warehouse-backend/core/settings_core/management/commands/publish_mobile_bundle.py warehouse-backend/core/settings_core/management/commands/publish_mobile_apk.py warehouse-backend/core/settings_core/test_mobile_release.py warehouse-backend/config/urls.py
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/config/urls.py --contains "api/public/mobile-update/" --contains "api/public/mobile-files/"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/settings_core/test_mobile_release.py --count "8:def test_"
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/platform_core/registry.py warehouse-backend/core/platform_core/tests.py warehouse-backend/core/accounts/middleware.py warehouse-backend/core/accounts/permissions.py warehouse-backend/modules/warehouse/module.py warehouse-backend/modules/accounting/module.py
+verify: python -c "import ast,pathlib,sys; p=pathlib.Path('warehouse-backend/core/platform_core/registry.py'); src=p.read_text(encoding='utf-8'); t=ast.parse(src); fs={'resolve_default_active_app','app_code_to_module','module_allowed_app_code','module_scope_codes','default_module'}; names={'warehouse','finance','accounting','personnel'}; bad=[(f.name,c.value) for f in ast.walk(t) if isinstance(f,ast.FunctionDef) and f.name in fs for c in ast.walk(f) if isinstance(c,ast.Constant) and c.value in names]; legacy=[n for n in ('_APP_CODE_TO_MODULE','_MODULE_TO_ALLOWED_APP','_MODULE_SCOPE_CODES') if n in src]; ok='active_priority' in src; print('literals:',bad,'legacy:',legacy,'active_priority:',ok); sys.exit(1 if bad or legacy or not ok else 0)"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/permissions.py --absent "or 'accounting')"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/middleware.py --absent "default='accounting'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/module.py --contains "active_priority=10"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/accounting/module.py --contains "active_priority=20"
+verify: python -c "import pathlib,re,sys; s=pathlib.Path('warehouse-backend/core/platform_core/tests.py').read_text(encoding='utf-8'); n=len(re.findall(r'def test_', s)); print('tests:',n); sys.exit(0 if n>=7 else 1)"
 verify: python scripts/automation/verify_tools.py django-check
 verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python scripts/automation/verify_tools.py django-tests --labels settings_core integration_tests --known scripts/automation/known_backend_failures.txt --min-tests 40
+verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
 verify: python scripts/e2e/guardian_modularization.py
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(mobile): public live-update manifest and mobile file download"
+verify: python scripts/e2e/guardian_31_install_profiles.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(registry): module spec is the only source for app codes"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- No migration. Files live under `MEDIA_ROOT / 'mobile'` only. The public file view must never serve anything outside that folder: accept only file names matching `^[A-Za-z0-9._-]+\.(zip|apk)$` and resolve them inside the folder.
-- Run `manage.py test` only with labels. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+- Behaviour must stay identical in the full profile (both modules installed). The existing tests in `core/platform_core/tests.py` must pass unchanged; do not edit or delete them.
+- Change only the 6 files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
 
-2. Context: plan headings `### ۴-ج.` and `#### گام ب-۳`. `config/urls.py` registers `api/public/config/` (line 24) and serves media through `common.media_urls.serve_media`. `MEDIA_ROOT` is in `config/settings.py:298`.
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, headings `## ۱.` and `### گام ۱`.
+- `core/platform_core/registry.py` still has three legacy dicts (`_APP_CODE_TO_MODULE`, `_MODULE_TO_ALLOWED_APP`, `_MODULE_SCOPE_CODES`) used only as fallbacks. `MODULE_CATALOG` (`platform_core/module_catalog.py`) loads every `modules/*/module.py` on disk regardless of `WH_MODULES`, so uninstalled modules are in it; `app_code_to_module`, `module_allowed_app_code` and `module_scope_codes` already read it.
+- `resolve_default_active_app` hardcodes `'warehouse'` and `'accounting'`. Its contract is fixed by `test_resolve_default_active_app`: `['finance']` gives `finance`, `['warehouse']` gives `warehouse`, both give `warehouse`, `[]` gives `finance`. `default_module()` (lowest `default_priority` among installed modules, accounting 10, warehouse 20) must keep returning `accounting` in the full profile. One priority field cannot express both rules, so a second field is added.
+- `core/accounts/middleware.py` declares `_current_active_app_var` with `default='accounting'`. `core/accounts/permissions.py` ends two expressions with `or 'accounting')`.
 
-3. Definitions:
-- Manifest file: `MEDIA_ROOT/mobile/updates/manifest.json` with `{"version": "X.Y.Z", "file": "<name>.zip", "sha256": "<hex>", "min_native_version": "X.Y.Z", "published_at": "<ISO time>"}`.
-- APK folder: `MEDIA_ROOT/mobile/apk/`.
+3. Definitions: "app code of a spec" means `spec.allowed_app_code` when it is not empty, otherwise `spec.code`. "All specs" means `{**MODULE_CATALOG, **_REGISTRY}`.
 
 4. Task:
-- a) `core/settings_core/mobile_release.py`: helpers to read the manifest (a missing or invalid file returns None), compute sha256, validate versions (`^\d{1,4}\.\d{1,4}\.\d{1,4}$`).
-- b) Management command `publish_mobile_bundle --zip PATH --version X.Y.Z --min-native X.Y.Z`: validate, copy the zip to `mobile/updates/<version>.zip`, compute sha256, write the manifest atomically (temporary file then replace). Never delete older bundles.
-- c) Management command `publish_mobile_apk --apk PATH --version X.Y.Z --channel direct|bazaar|myket --env prod|staging`: copy to `mobile/apk/CoManage-<version>-<channel>.apk` for `prod` and `mobile/apk/CoManage-<version>-<channel>-test.apk` for `staging`, and print the public URL path.
-- d) Views in `core/settings_core/mobile_views.py` (AllowAny): `GET /api/public/mobile-update/` returns the manifest plus `"url"` (absolute URL of `/api/public/mobile-files/updates/<file>` built with `request.build_absolute_uri`) or `{}` when there is none; `GET /api/public/mobile-files/<kind>/<name>` with `kind` in `updates`/`apk` streams the file with `FileResponse` (`as_attachment=True` for APKs, content type `application/vnd.android.package-archive`), 404 otherwise.
-- e) `core/settings_core/test_mobile_release.py` with at least 8 tests using a temporary `MEDIA_ROOT` (`override_settings`): no manifest gives `{}`; publish then read gives version, sha256 and url; invalid version rejected; path traversal or bad names (`../x.zip`, `a/b.apk`, `x.exe`) give 404; APK served with the right content type; older bundles kept after a second publish.
+- a) Delete the three legacy dicts and every line that reads them. `module_allowed_app_code(code)` returns the app code of the spec from `_REGISTRY` or else `MODULE_CATALOG`, or `code` when no spec exists. `module_scope_codes(code)` returns `spec.scope_codes` when not empty, else `(module_allowed_app_code(code),)`. `app_code_to_module` keeps its current lookup over all specs and returns `None` when nothing matches.
+- b) Add `active_priority: int = 100` to `ModuleSpec`; set `active_priority=10` in `modules/warehouse/module.py` and `active_priority=20` in `modules/accounting/module.py`.
+- c) Rewrite `resolve_default_active_app(allowed_apps)` without any module name: among all specs whose app code is in `allowed_apps`, return the app code of the one with the lowest `active_priority`; if none, return the app code of the catalog spec with the lowest `default_priority`; if there are no specs, return `''`. This also removes the current bug where `getattr(spec, 'allowed_app_code', spec.code)` returns `''`.
+- d) In `middleware.py`, change the ContextVar default to `''` and make `get_current_active_app()` return the variable value or, when empty, `default_module()` (import inside the function). In `permissions.py`, remove the trailing `or 'accounting'` from both expressions.
+- e) Add at least three tests to `core/platform_core/tests.py`: with `accounting` removed from `_REGISTRY` (use `patch.dict` as the existing test does), `app_code_to_module('personnel') == 'accounting'` and `module_scope_codes('accounting') == ('finance', 'personnel')`; with an extra catalog spec `ModuleSpec(code='zeta', title_fa='زتا', allowed_app_code='zeta', active_priority=5)` patched into `MODULE_CATALOG`, `resolve_default_active_app(['zeta', 'warehouse']) == 'zeta'`; `get_current_active_app()` outside a request equals `default_module()`.
 
-5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test settings_core --noinput`. If a command fails, read its output and change approach.
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test platform_core --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`, and `python scripts/e2e/guardian_31_install_profiles.py` at most twice. If an existing test fails, report it; do not weaken any check.
 
 6. Output and stop condition:
 - Commit with this message, without push:
-feat(mobile): public live-update manifest and mobile file download
-- Short English report: endpoints, commands, tests with pass count. End the turn after the commit and report.
+refactor(registry): module spec is the only source for app codes; active_priority for the default active app
+- Short English report: changes per item a to e, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
 
 ===
 
-[DONE] Session 6 of 12 — Mobile phase B: live update on the native app with Capgo in manual mode, and the bundle build script
+[DONE] Session 4 of 15 — Phase 4 backend: public read prefixes and the reports fallback come from module spec fields instead of hardcoded names in authentication.py
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/package.json warehouse-front/package-lock.json warehouse-front/capacitor.config.ts warehouse-front/tools/make-mobile-bundle.js warehouse-front/src/app/core/platform/* warehouse-front/src/app/app.config.ts warehouse-front/src/app/app.ts warehouse-front/android/* warehouse-front/ios/*
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/capacitor.config.ts --contains "CapacitorUpdater" --contains "autoUpdate: false" --contains "appId: 'ir.comanage.soft'" --contains "androidScheme: 'https'" --contains "hostname: 'localhost'"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/platform/live-update.ts --contains "notifyAppReady" --contains "checksum" --contains "/api/public/mobile-update/" --contains "min_native_version"
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/platform/live-update.spec.ts --min-tests 7 --require "isSyncing"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/tools/make-mobile-bundle.js --contains "sha256" --contains "dist-mobile"
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: cd warehouse-front && npx ng build --configuration mobile-test
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(mobile): live update with Capgo in manual mode"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- No data may ever be lost: a new bundle is only marked for the NEXT cold start (`next`), never applied immediately with `set` or a reload; nothing touches IndexedDB, the queues or storage. Do not change `appId`, `androidScheme` or `hostname`.
-- Web behavior must stay identical: everything runs only when `isNativePlatform()` is true.
-- Do not push. Stage only your changed files. Never stage build outputs, `local.properties`, `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
-
-2. Context:
-- Plan headings `### ۴-ج.` and `#### گام ب-۳`. Backend (session 5): `GET /api/public/mobile-update/` returns `{version, file, sha256, min_native_version, published_at, url}` or `{}`.
-- `@capgo/capacitor-updater` 8.53.0 is available; read its README in `node_modules` (manual mode: `autoUpdate: false`, `notifyAppReady`, `download` with `checksum`, `next`, `current`).
-- `APP_VERSION` is in `core/platform/app-version.ts`; `AppUpdateService` in `core/platform/app-update.service.ts` wraps the PWA updater; `resolveServerUrl` in `core/platform/server-origin.ts`; the native app version comes from `App.getInfo()` (`@capacitor/app`).
-
-3. Task:
-- a) `npm install @capgo/capacitor-updater@^8.53.0`; in `capacitor.config.ts` add `plugins: { CapacitorUpdater: { autoUpdate: false } }` keeping every other value.
-- b) `core/platform/live-update.ts`, native only: call `notifyAppReady()` once the app is stable; then fetch the manifest with `fetch(resolveServerUrl('/api/public/mobile-update/'))`; when its `version` is higher than the current bundle version (`APP_VERSION` for the built-in bundle) and `min_native_version` is not higher than `App.getInfo().version`, download with `checksum: sha256` and call `next({ id })`; while the offline sync is running (`OfflineSyncService` `isSyncing`), skip and retry later; errors are logged and ignored. Check at start and when the app returns to the foreground, at most once per 30 minutes.
-- c) Start it from `AppUpdateService` (native branch) without changing the web branch.
-- d) `tools/make-mobile-bundle.js`: zip `dist-mobile/warehouse-app/browser` into `dist-mobile/bundles/<version>.zip` (version from `package.json`), print the sha256 and the exact `publish_mobile_bundle` command to run. Use Node built-ins or packages already in `node_modules`; if a zip package is needed, add it as a dev dependency.
-- e) `core/platform/live-update.spec.ts` with at least 7 tests (mocked plugins): web does nothing; a newer version downloads with checksum and calls `next`; the same or an older version does nothing; a too high `min_native_version` does nothing; while `isSyncing` it does not download (the test name contains `isSyncing`); errors are swallowed; `notifyAppReady` is called.
-- f) `npx cap sync`.
-
-4. Tool policy: `npm install` at most twice; each build at most twice; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-feat(mobile): live update with Capgo in manual mode
-- Short English report: the update flow, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
-
-===
-
-[DONE] Session 6b of 12 — Mobile phase B: reviewer fixes for the native back button, status bar, external links and native file output
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/platform/* warehouse-front/src/app/app.ts warehouse-front/src/app/modules/common/components/operations/companies/company-gdrive-tab/company-gdrive-tab.ts warehouse-front/src/app/modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab.ts
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/platform/native-shell.ts --absent "prefers-color-scheme" --contains "aria-modal" --contains "Escape"
-verify: python -c "import pathlib,sys; t=pathlib.Path('warehouse-front/src/app/core/platform/external-link.ts').read_text(encoding='utf-8'); n=t.count('window.open(resolved, target)'); print('window.open(resolved, target) count:', n); sys.exit(0 if n==1 else 1)"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/platform/file-output.ts --absent "Directory.Cache" --contains "Directory.Documents" --contains "Directory.Data" --contains "setFileOutputErrorNotifier"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/app.ts --contains "setFileOutputErrorNotifier"
-verify: python -c "import pathlib,sys; b=pathlib.Path('warehouse-front/src/app/modules/common/components'); fs=[b/'operations/companies/company-gdrive-tab/company-gdrive-tab.ts', b/'settings/tabs/settings-backup-tab/settings-backup-tab.ts']; new='\u0627\u062a\u0635\u0627\u0644 \u06af\u0648\u06af\u0644\u200c\u062f\u0631\u0627\u06cc\u0648 \u0631\u0627 \u0627\u0632 \u0646\u0633\u062e\u0647 \u0648\u0628 \u0627\u0646\u062c\u0627\u0645 \u062f\u0647\u06cc\u062f.'; old='\u06af\u0648\u06af\u0644\u062f\u0631\u0627\u06cc\u0648 \u0631\u0627 \u0627\u0632'; ok={f.name:(new in f.read_text(encoding='utf-8') and old not in f.read_text(encoding='utf-8')) for f in fs}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
-verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/core/platform/native-shell.spec.ts warehouse-front/src/app/core/platform/external-link.spec.ts warehouse-front/src/app/core/platform/file-output.spec.ts
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/platform/native-shell.spec.ts --min-tests 6 --require "aria-modal"
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/platform/file-output.spec.ts --min-tests 12 --require "Directory.Documents" --require "Directory.Data" --require "cancel"
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: cd warehouse-front && npx ng build --configuration mobile-test
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(mobile): reviewer fixes for native shell, links and file output"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- Web behavior must stay identical: every change below is inside the `isNativePlatform()` branch, except the two message texts in section 4 f.
-- No data may ever be lost: a file the user exports on the phone must be written to persistent storage, never to an evictable cache.
-- Do not push. Stage only your changed files. Never stage build outputs, `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`. Never remove or weaken an existing test; update assertions only where this task changes the behavior.
-
-2. Context:
-- Files: `warehouse-front/src/app/core/platform/native-shell.ts`, `external-link.ts`, `file-output.ts` and their `.spec.ts` files; `warehouse-front/src/app/app.ts` (it already calls `initNativeShell(this.appRef)` in the constructor); `ToastService` is in `shared/components/toast/toast.component.ts` (`error(message)`).
-- Modal components (`shared/components/modal/modal.component.ts`, `confirm-dialog`, and others) close on `@HostListener('document:keydown.escape')` and render an element with `aria-modal="true"`.
-- In Capacitor `StatusBar`, `Style.Light` means dark icons for a light background and `Style.Dark` means light icons. The app is always light unless `document.documentElement` has the class `dark`.
-- `@capacitor/share` rejects with a message containing `cancel` (any case) when the user closes the share sheet.
-- About 39 callers use `void saveBlob(...)`, `void saveUrl(...)` or `printWindow(...)` without handling errors; `offline-db.ts` `downloadLocalDatabaseSnapshotFile` awaits `saveBlob` and its callers show their own error toast.
-
-3. Definitions:
-- "Open modal" means `document.querySelector('[aria-modal="true"]')` returns an element.
-- "Cancel error" means an error whose message, lowercased, contains `cancel`.
-
-4. Task:
-- a) `native-shell.ts`, back button: when a modal is open, dispatch `new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })` on `document` and do nothing else; otherwise keep the current `history.back()` / `minimizeApp()` behavior.
-- b) `native-shell.ts`, status bar: remove the `prefers-color-scheme` check; use `Style.Dark` only when `document.documentElement.classList.contains('dark')`, otherwise `Style.Light`.
-- c) `external-link.ts`, native branch: remove the `window.open` call so the link opens only once, through the Browser plugin. Leave the web branch unchanged (it keeps its single `window.open(resolved, target)` line).
-- d) `file-output.ts`, native branch of `saveBlob`:
-  - Write the file with `Directory.Documents`, path `CoManage/<filename>`, `recursive: true` (extend the bridge `writeFile` options type with `recursive?: boolean`). If that write throws, write it again with `Directory.Data` and the same path and options. Remove `Directory.Cache`.
-  - Then share the written file `uri` as today. If the share throws a cancel error, return normally (the file is already saved); any other share error is rethrown.
-- e) `file-output.ts`, error notifier:
-  - Export `setFileOutputErrorNotifier(fn: ((message: string) => void) | null): void` storing the function in a module variable.
-  - In the native branches of `saveBlob`, `saveUrl` and `printWindow`, wrap the work in try/catch: on any error that `saveBlob` does not treat as success, call the stored notifier (if set) with `ذخیره یا اشتراک فایل روی گوشی انجام نشد. دوباره تلاش کنید.` (for `printWindow` use `چاپ روی گوشی انجام نشد. دوباره تلاش کنید.`), then rethrow the error. When `saveUrl` calls `saveBlob`, notify only once.
-  - In `app.ts` constructor, inject `ToastService` and call `setFileOutputErrorNotifier((m) => toast.error(m))`.
-- f) Messages: in `company-gdrive-tab.ts` and `settings-backup-tab.ts` replace `اتصال گوگلدرایو را از نسخهٔ وب انجام دهید` with `اتصال گوگل‌درایو را از نسخه وب انجام دهید.` (with the zero-width non-joiner in گوگل‌درایو and a final period).
-- g) Tests (mocked bridges, as the existing specs do):
-  - `native-shell.spec.ts` (at least 6 tests in total): with an element `aria-modal="true"` in the document, the back button dispatches an Escape keydown on `document` and does not call `history.back` or `minimizeApp` (the test name contains `aria-modal`); with OS dark mode mocked (`matchMedia` returning `matches: true`) and no `dark` class, `setStyle` gets `Style.Light`.
-  - `external-link.spec.ts`: native `openExternal` calls the Browser bridge once and never calls `window.open`.
-  - `file-output.spec.ts` (at least 12 tests in total): native `saveBlob` writes with `Directory.Documents` and path `CoManage/<filename>`; falls back to `Directory.Data` when the first write throws (test names contain `Directory.Documents` and `Directory.Data`); a share cancel error resolves without notifying (test name contains `cancel`); a write failure in both directories calls the notifier once and rejects; native `saveUrl` with a 500 response calls the notifier once and rejects; native `printWindow` failure calls the notifier and rejects. Reset the notifier with `setFileOutputErrorNotifier(null)` after each test.
-
-5. Tool policy: in `warehouse-front`, each build at most twice; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/platform/*.spec.ts"`. If a command fails, read its output and change approach.
-
-6. Output and stop condition:
-- Commit with this message, without push:
-fix(mobile): reviewer fixes for native shell, links and file output
-- Short English report: what changed per file, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
-
-===
-
-[DONE] Session 7 of 12 — Mobile phase B backend: device tokens and FCM push for new notifications (disabled until a Firebase key exists)
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/notifications/* warehouse-backend/config/settings.py
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/notifications/models.py --contains "class DeviceToken"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/notifications/push.py --contains "class PushProvider" --contains "FIREBASE_CREDENTIALS_FILE" --contains "on_commit"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/notifications/tests.py --count "10:def test_"
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/accounts/authentication.py warehouse-backend/core/platform_core/registry.py warehouse-backend/modules/warehouse/module.py warehouse-backend/integration_tests/test_module_spec_auth_fields.py
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/authentication.py --absent "'warehouse'" --absent "module.code ==" --contains "public_read_prefixes" --contains "reports_fallback"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/module.py --contains "public_read_prefixes=('/api/warehouses/',)" --contains "reports_fallback=True"
+verify: python -c "import pathlib,re,sys; p=pathlib.Path('warehouse-backend/integration_tests/test_module_spec_auth_fields.py'); s=p.read_text(encoding='utf-8') if p.is_file() else ''; n=len(re.findall(r'def test_', s)); print('tests:',n); sys.exit(0 if n>=4 else 1)"
 verify: python scripts/automation/verify_tools.py django-check
-verify: python scripts/automation/verify_tools.py django-tests --labels notifications communications accounts integration_tests --known scripts/automation/known_backend_failures.txt --min-tests 100
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
 verify: python scripts/e2e/guardian_modularization.py
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(notifications): device tokens and FCM push"
+verify: python scripts/e2e/guardian_31_install_profiles.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(auth): public read prefixes and reports fallback from module spec"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- One new additive migration in `core/notifications/migrations/` created with `makemigrations notifications`; never edit existing migrations; do not run `migrate` on the local database (the release session does that after a backup).
-- Each user registers, lists and deletes only their own tokens. A push goes only to the tokens of the notification's `recipient`.
-- Push must never break or slow down notification creation: send after commit (`transaction.on_commit`), in a background thread with a 10-second timeout, catch and log every error. When `FIREBASE_CREDENTIALS_FILE` is not set or the file is missing, the provider is disabled and does nothing.
-- No new pip package: use `google-auth` (already installed) for the OAuth token and `requests` for the FCM HTTP v1 call. Never log or commit credentials.
-- Run `manage.py test` only with labels. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+- Tenant and app-scope isolation: every request that is allowed or denied today must get the same result. Only where the module-specific values come from changes.
+- Change only the 4 files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
 
-2. Context: plan heading `#### گام ب-۴`. `core/notifications/models.py` has `Notification` (`recipient`, `title`, `message`, `notification_type`, `target_model`, `target_id`, `created_at`); routes under `api/notifications/` (`core/notifications/urls.py`, router). Notifications are created with `Notification.objects.create` in `communications/views.py`, `personnel/lifecycle_services.py` and `personnel/fleet_lifecycle_services.py`.
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۱`.
+- `core/accounts/authentication.py`, method `CustomJWTAuthentication.enforce_token_app_scope`:
+  - For `api/reports/`, when `get_reporting_modules()` gives no installed module, it falls back to `['warehouse']` if `'warehouse' in installed_modules()`.
+  - For a path of an installed module, `GET`/`HEAD`/`OPTIONS` on `/api/warehouses/` return early (no scope check) through `module.code == 'warehouse' and path.startswith('/api/warehouses/')`.
 
 3. Task:
-- a) Model `DeviceToken`: `user` (FK to `settings.AUTH_USER_MODEL`, CASCADE), `token` (unique, max 512), `platform` (`android`/`ios`), `app_version` (blank), `created_at`, `last_seen_at`. Migration.
-- b) `core/notifications/push.py`: `PushProvider` interface, `FcmPushProvider` (reads `settings.FIREBASE_CREDENTIALS_FILE`, project id from the credentials file, sends `title`, `body`, and data `notification_id`, `target_model`, `target_id`), `get_push_provider()` returning a disabled provider when not configured; tokens rejected by FCM as unregistered are deleted.
-- c) A `post_save` receiver on `Notification` (created only) that schedules the push with `transaction.on_commit`.
-- d) Endpoints under `api/notifications/devices/`: `POST` register or refresh (upsert by token; a token moves to the current user), `DELETE` by token (own only). Authenticated only.
-- e) `config/settings.py`: `FIREBASE_CREDENTIALS_FILE = os.environ.get('FIREBASE_CREDENTIALS_FILE', '')`.
-- f) Tests in `core/notifications/tests.py` (at least 10 new `test_` methods): register, refresh, move to another user, delete own, cannot delete another user's token, unauthenticated rejected, disabled provider sends nothing, a created notification schedules exactly one send to the recipient's tokens (mock the provider, use `captureOnCommitCallbacks`), provider errors do not raise, unregistered token deleted.
+- a) Add to `ModuleSpec` in `registry.py`: `public_read_prefixes: tuple[str, ...] = ()` and `reports_fallback: bool = False`. In `modules/warehouse/module.py` set `public_read_prefixes=('/api/warehouses/',)` and `reports_fallback=True`.
+- b) Reports fallback: when no installed reporting module exists, use the installed modules whose spec (from `_REGISTRY`) has `reports_fallback` true.
+- c) Read exemption: return early when the method is `GET`, `HEAD` or `OPTIONS` and the path starts with any prefix in `module.public_read_prefixes` of the resolved module spec. Update the nearby comment so it no longer names the warehouse module.
+- d) New `integration_tests/test_module_spec_auth_fields.py` (`TestCase`, at least 4 tests). Call `CustomJWTAuthentication().enforce_token_app_scope(request, user, token)` directly with a `RequestFactory` request, a non-superuser user and a dict token such as `{'allowed_apps': ['finance']}`:
+  - `GET /api/warehouses/` with only `finance` passes.
+  - `POST /api/warehouses/` with only `finance` raises `PermissionDenied`.
+  - With `get_reporting_modules` patched to return `[]`, `GET /api/reports/entities/` passes with `['warehouse']` and raises `PermissionDenied` with `['finance']`.
+  - With the warehouse spec's `public_read_prefixes` patched to `()`, `GET /api/warehouses/` with only `finance` raises `PermissionDenied`.
 
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`: `.\venv\Scripts\python.exe manage.py makemigrations notifications` once, at most three runs of `.\venv\Scripts\python.exe manage.py test notifications --noinput`. If a command fails, read its output and change approach.
+4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_module_spec_auth_fields --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`, and `python scripts/e2e/guardian_31_install_profiles.py` at most twice.
 
 5. Output and stop condition:
 - Commit with this message, without push:
-feat(notifications): device tokens and FCM push
-- Short English report: model, migration name, endpoints, tests with pass count. End the turn after the commit and report.
+refactor(auth): public read prefixes and reports fallback from module spec
+- Short English report: changes per item a to d, commands actually run with pass/fail counts. End the turn after the commit and report.
 
 ===
 
-[DONE] Session 8 of 12 — Mobile phase B frontend: register for push notifications on the native app
+[DONE] Session 5 of 15 — Phase 4 backend: users report entity reads module extra fields lazily in the query engine; the warehouse app no longer calls the reports registry
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/package.json warehouse-front/package-lock.json warehouse-front/src/app/core/platform/* warehouse-front/src/app/core/auth/auth.service.ts warehouse-front/src/app/app.config.ts warehouse-front/src/app/app.ts warehouse-front/android/* warehouse-front/ios/*
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/platform/push.service.ts --contains "@capacitor/push-notifications" --contains "isNativePlatform" --contains "/notifications/devices/"
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/platform/push.service.spec.ts --min-tests 5
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: cd warehouse-front && npx ng build --configuration mobile-test
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(mobile): push notification registration"
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/platform_core/query_engine/definitions.py warehouse-backend/core/reports/registry.py warehouse-backend/core/reports/tests.py warehouse-backend/modules/warehouse/warehouses/apps.py
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/warehouses/apps.py --absent "_register_platform_entities" --absent "reports.registry" --contains "contribute('user_report_extra_fields'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/reports/registry.py --absent "contributions('user_report_extra_fields')" --contains "extra_fields_point='user_report_extra_fields'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/platform_core/query_engine/definitions.py --contains "extra_fields_point"
+verify: python -c "import pathlib,re,sys; s=pathlib.Path('warehouse-backend/core/reports/tests.py').read_text(encoding='utf-8'); n=len(re.findall(r'def test_', s)); ok='assigned_warehouses_count' in s; print('tests:',n,'field named:',ok); sys.exit(0 if n>=4 and ok else 1)"
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
+verify: python scripts/e2e/guardian_modularization.py
+verify: python scripts/e2e/guardian_31_install_profiles.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(reports): lazy module extra fields on the users entity"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- Web behavior must stay identical (native only). Push must never block login or logout: every push call is wrapped and its failure ignored. Without `google-services.json` the Android registration fails at runtime; that must be caught and logged only.
-- Do not push. Stage only your changed files. Never stage build outputs, `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`. Do not add `google-services.json`.
+- Tenant isolation: do not change `scope_resolver`, permissions or any field other than how module extra fields reach the `users` entity.
+- Change only the 4 files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
 
-2. Context: plan heading `#### گام ب-۴`. Backend (session 7): `POST /api/notifications/devices/` `{token, platform, app_version}` and `DELETE /api/notifications/devices/` `{token}`, authenticated. `@capacitor/push-notifications` 8.1.3 is available. The WebSocket notification stream stays the main channel while the app is open.
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, headings `## ۱.` (row about the report field) and `### گام ۱`.
+- `PLATFORM_APPS` come before `MODULE_APPS` in `config/settings.py`, so `ReportsConfig.ready()` registers the `users` entity before `WarehousesConfig.ready()` contributes `user_report_extra_fields`. To work around this, `WarehousesConfig.ready()` calls the private `reports.registry._register_platform_entities()` inside `try/except: pass`.
+- `ReportEngine` reads entities through `get_entity()` (`platform_core/query_engine/engine.py`) and `EntityConfig.get_fields()` (`definitions.py`); the export job in `core/reports/excel.py` does not go through `reports.registry.get_registry()`.
 
 3. Task:
-- a) `npm install @capacitor/push-notifications@^8.1.3`; `npx cap sync`.
-- b) `core/platform/push.service.ts` (`providedIn: 'root'`), native only: after a successful login (hook into `AuthService` where the session starts) request permission, register, and send the token to the backend through `HttpClient`; on logout delete the token before the session is cleared; on a notification tap navigate to the target the existing notification center would open for the same `target_model`/`target_id`, or to the notifications page.
-- c) `core/platform/push.service.spec.ts` with at least 5 tests (mocked plugin and HTTP): web does nothing; native registers and posts the token; logout deletes it; a registration error is swallowed; a tap navigates.
+- a) Add an optional constructor argument `extra_fields_point: str = ''` to `EntityConfig`. In `get_fields()`, right after `fields.update(self.extra)`, when the point is set, read `contributions(point)` at call time and add each item: a `FieldDef` by its `key`; a callable is called first; a `(key, FieldDef)` tuple by its key.
+- b) In `_register_platform_entities()`, remove the contributions loop and pass `extra_fields_point='user_report_extra_fields'` to the `users` `EntityConfig`.
+- c) In `WarehousesConfig.ready()`, delete the `try` block that imports and calls `_register_platform_entities`; keep `contribute('user_report_extra_fields', get_user_report_extra_fields())`.
+- d) Add at least three tests to `core/reports/tests.py`: `get_entity('users').get_fields()` contains `assigned_warehouses_count` in the full profile without calling `get_registry()` or `register_warehouse_reports()`; an `EntityConfig` built with a test point gets a `FieldDef` contributed after it was built (patch `platform_core.registry._CONTRIBUTIONS` with `patch.dict` so nothing leaks); a `ReportEngine` run on `users` that selects `assigned_warehouses_count` returns the correct count for a user with two assigned warehouses (follow the spec format of existing report tests in `integration_tests/test_reports_integration.py`).
 
-4. Tool policy: `npm install` at most twice; each build at most twice; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts"`. If a command fails, read its output and change approach.
+4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test reports --noinput`, one run of `.\venv\Scripts\python.exe manage.py test integration_tests reports platform_core --noinput`.
 
 5. Output and stop condition:
 - Commit with this message, without push:
-feat(mobile): push notification registration
-- Short English report: hooks used in AuthService, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+refactor(reports): lazy module extra fields on the users entity
+- Short English report: changes per item a to d, commands actually run with pass/fail counts. End the turn after the commit and report.
 
 ===
 
-[DONE] Session 9 of 12 — Mobile phase B: public download page for the Android app with iPhone install guidance
+[DONE] Session 6 of 15 — Phase 4 backend: characterization tests for the audit log app-scope filters (list, stats and Excel export) on the current code
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/app.routes.ts warehouse-front/src/app/modules/common/components/app-download/* warehouse-front/src/app/modules/common/components/login/login.html warehouse-front/src/app/modules/common/components/login/login.ts
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/app.routes.ts --contains "'download'"
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/modules/common/components/app-download/app-download.component.spec.ts --min-tests 4
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/integration_tests/test_audit_app_scope_characterization.py
+verify: python -c "import pathlib,re,sys; p=pathlib.Path('warehouse-backend/integration_tests/test_audit_app_scope_characterization.py'); s=p.read_text(encoding='utf-8') if p.is_file() else ''; n=len(re.findall(r'def test_', s)); need=['app_scope','stats','export_excel','warehouse_logs_count','finance_logs_count','CROSS_APP_DENIED','personnel','assigned']; miss=[w for w in need if w not in s]; print('tests:',n,'missing:',miss); sys.exit(0 if n>=10 and not miss else 1)"
+verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests.test_audit_app_scope_characterization --min-tests 10
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(audit): characterization of app-scope filters"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- This session adds tests only. Do not change any application file. The tests describe today's behaviour exactly and must pass on the current code; if a result looks wrong, still assert today's result and mention it in the report.
+- Change only the one file listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed file. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
+- `core/accounts/views_domains/audit_views.py`, `AuditLogViewSet` (router `audit-logs` under `/api/accounts/`):
+  - `get_queryset`: for a non-superuser without `accounts.perm_sys_logs`, restricts by `user.assigned_warehouses` with three branches of the `app_scope` query parameter (`finance`/`personnel`, `warehouse`, anything else), then applies the app-scope filter (`warehouse`; `finance`/`personnel`; `all` or absent means no filter).
+  - `stats` action: `warehouse_logs_count` and `finance_logs_count` use the same two filters.
+  - `export_excel` action: the same app-scope filter on `app_scope` from the request data.
+- The filters use `audit_scope_keys('warehouse')`, `audit_scope_keys('accounting')`, `warehouse_id`, a list of six `target_model` names, `details__target_module='finance'`, and exclude the events `CROSS_APP_DENIED` and `APP_SCOPE_SWITCH`.
+
+3. Task: new `integration_tests/test_audit_app_scope_characterization.py` (`TestCase`, at least 10 tests). Build a fixed set of `AuditLog` rows that covers: a warehouse-module key with a warehouse id; an accounting-module key with no warehouse id; an accounting key with a warehouse id; a row with `target_model='PersonnelProfile'` and a non-accounting module; a row with `details={'target_module': 'finance'}`; a `CROSS_APP_DENIED` row; an `APP_SCOPE_SWITCH` row; a row of a warehouse the user is not assigned to. Assert exact id sets (not only counts) for:
+- superuser list with `app_scope` `warehouse`, `finance`, `personnel`, `all` and absent;
+- a non-superuser who can list audit logs, without `perm_sys_logs`, assigned to one warehouse, with `app_scope` `warehouse`, `finance` and absent;
+- `stats` for the superuser: `warehouse_logs_count` and `finance_logs_count`;
+- `export_excel` for the superuser with `app_scope` `warehouse` and `finance`: the number of data rows (read the workbook with `openpyxl`; data starts at row 3).
+Find the permission the list needs from `get_permissions` and the existing permission classes; give the non-superuser only what is needed.
+
+4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most five runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_audit_app_scope_characterization --noinput`.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+test(audit): characterization of app-scope filters for list, stats and export
+- Short English report: the fixture rows, each test and its expected id set, any result that looked wrong. End the turn after the commit and report.
+
+===
+
+[DONE] Session 7 of 15 — Phase 4 backend: audit log app-scope filters and the assigned-warehouse restriction come from module contributions
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/accounts/views_domains/audit_views.py warehouse-backend/core/accounts/audit_scope.py warehouse-backend/core/platform_core/registry.py warehouse-backend/modules/warehouse/warehouses/apps.py warehouse-backend/modules/warehouse/warehouses/audit_scope.py warehouse-backend/modules/accounting/personnel/apps.py warehouse-backend/modules/accounting/personnel/audit_scope.py
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/accounts/views_domains/audit_views.py --absent "assigned_warehouses" --absent "'PersonnelProfile'" --absent "app_scope == 'warehouse'" --absent "in ['finance', 'personnel']" --absent "app_scope_param in" --contains "apply_audit_app_scope"
+verify: python -c "import pathlib,re,sys; s=pathlib.Path('warehouse-backend/core/accounts/audit_scope.py').read_text(encoding='utf-8'); bad=re.findall(r'[\x27\x22](warehouse|finance|personnel|accounting|PersonnelProfile)[\x27\x22]', s); print('module literals in core helper:',bad); sys.exit(1 if bad else 0)"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/warehouses/apps.py --contains "audit_app_scope_filters" --contains "audit_user_restrictions"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/accounting/personnel/apps.py --contains "audit_app_scope_filters"
+verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests.test_audit_app_scope_characterization --min-tests 10
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
+verify: python scripts/e2e/guardian_modularization.py
+verify: python scripts/e2e/guardian_31_install_profiles.py
+verify: python scripts/e2e/guardian_54_module_independence.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(audit): app-scope filters and user restriction via module contributions"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Tenant isolation: every user must see exactly the same audit rows as today. `integration_tests/test_audit_app_scope_characterization.py` (session 6) is the contract: it must pass unchanged, and you must not edit it.
+- Register the contributions outside any `try` block, so a registration failure fails loudly instead of silently widening what users see.
+- Change only the 7 files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
+- `audit_views.py` repeats the same app-scope filter in `get_queryset`, `stats` and `export_excel`, and restricts non-superusers through `user.assigned_warehouses` in `get_queryset`. Read the three blocks and the session 6 test before changing anything.
+- `audit_scope_keys(code)` in `registry.py` reads `MODULE_CATALOG`, so it works for uninstalled modules.
+
+3. Definitions:
+- "Scope module" of an `app_scope` value: the catalog spec whose `scope_codes` contains the value (`warehouse` gives `warehouse`; `finance` and `personnel` give `accounting`; `accounting`, `all`, empty or unknown give `None`). Add a registry helper `module_for_scope_code(code)` for it.
+- "Other modules' keys" of module M: the union of `audit_scope_keys(c)` for every catalog module `c` other than M.
+
+4. Task:
+- a) New `core/accounts/audit_scope.py` with `apply_audit_app_scope(qs, app_scope)`: no scope module, return `qs` unchanged; otherwise apply the filter function contributed for that module through point `audit_app_scope_filters` (items are `(module_code, fn)`, `fn(qs) -> qs`), or `qs.filter(module__in=audit_scope_keys(module))` when the module contributed none; then exclude `CROSS_APP_DENIED` and `APP_SCOPE_SWITCH` as today. Also `restrict_audit_for_user(qs, user, app_scope)`: call every function contributed through `audit_user_restrictions` as `fn(qs, user, scope_module)` and return the result. No module name may appear in this file.
+- b) `modules/warehouse/warehouses/audit_scope.py`: the warehouse filter (`module__in` own keys or `warehouse_id__isnull=False`, excluding other modules' keys) and the user restriction with today's three branches, using the user's assigned warehouse ids (no restriction when the user has no `assigned_warehouses` attribute): scope module is `warehouse` gives ids only; another module gives ids or null warehouse; `None` gives ids or (null warehouse and module in other modules' keys). `modules/accounting/personnel/audit_scope.py`: the accounting filter (own keys, the six `target_model` names, `details__target_module='finance'`). Register both in their `ready()`.
+- c) In `audit_views.py`, replace the three filter blocks with `apply_audit_app_scope` and the restriction block with `restrict_audit_for_user`, keeping the superuser and `perm_sys_logs` check in the view. `stats` keeps the response keys `warehouse_logs_count` and `finance_logs_count`, computed with `apply_audit_app_scope(base_qs, 'warehouse')` and `apply_audit_app_scope(base_qs, 'finance')`.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most four runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_audit_app_scope_characterization --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`.
+
+6. Output and stop condition:
+- Commit with this message, without push:
+refactor(audit): app-scope filters and user restriction via module contributions
+- Short English report: where each contribution is registered, the characterization test result, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
+
+===
+
+[DONE] Session 8 of 15 — Phase 4 backend: comment target models come from module contributions instead of a hardcoded set in communications
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/communications/serializers.py warehouse-backend/modules/warehouse/inventory/apps.py warehouse-backend/modules/warehouse/warehouses/apps.py warehouse-backend/integration_tests/test_comment_target_models.py
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/communications/serializers.py --absent "ALLOWED_COMMENT_MODELS = {" --absent "'counttask'" --contains "comment_target_models"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/inventory/apps.py --contains "comment_target_models"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/warehouses/apps.py --contains "comment_target_models"
+verify: python -c "import pathlib,re,sys; p=pathlib.Path('warehouse-backend/integration_tests/test_comment_target_models.py'); s=p.read_text(encoding='utf-8') if p.is_file() else ''; n=len(re.findall(r'def test_', s)); print('tests:',n); sys.exit(0 if n>=3 else 1)"
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
+verify: python scripts/e2e/guardian_modularization.py
+verify: python scripts/e2e/guardian_31_install_profiles.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(comments): comment target models via module contributions"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Do not change `can_access_comment_target` or any access check; only the allow-list source changes.
+- Change only the 4 files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
+- `core/communications/serializers.py` has `ALLOWED_COMMENT_MODELS = {'item', 'counttask', 'doctask', 'warehouse', 'document', 'financialdocument'}` used in `validate`. `Item`, `CountTask` and `DocTask` are in `modules/warehouse/inventory`, `Warehouse` in `modules/warehouse/warehouses`. No model named `Document` or `FinancialDocument` exists in the project, so those two entries are dropped.
+
+3. Task:
+- a) Replace the constant with a function that returns the set of lowercase model names from `contributions('comment_target_models')`, read at validation time.
+- b) Register `'item'`, `'counttask'` and `'doctask'` in `InventoryConfig.ready()` and `'warehouse'` in `WarehousesConfig.ready()`, outside any `try` block.
+- c) New `integration_tests/test_comment_target_models.py` (`TestCase`, at least 3 tests): the contributed set equals `{'item', 'counttask', 'doctask', 'warehouse'}`; the comment serializer accepts `content_type_str='inventory.item'` past the allow-list check; it rejects `content_type_str='personnel.personneldocument'` with the existing Persian «مجاز نیست» error.
+
+4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_comment_target_models --noinput`, one run of `.\venv\Scripts\python.exe manage.py test communications integration_tests --noinput`.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+refactor(comments): comment target models via module contributions
+- Short English report: changes, commands actually run with pass/fail counts. End the turn after the commit and report.
+
+===
+
+[DONE] Session 9 of 15 — Phase 4 backend: user serializers and user views reach assigned warehouses only through WarehouseUserExtension
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/accounts/serializers.py warehouse-backend/core/accounts/views_domains/user_views.py warehouse-backend/modules/warehouse/warehouses/user_extension.py warehouse-backend/integration_tests/test_user_warehouse_extension_calls.py
+verify: python -c "import pathlib,re,sys; fs=['warehouse-backend/core/accounts/serializers.py','warehouse-backend/core/accounts/views_domains/user_views.py']; pat=re.compile(r'''assigned_warehouses\.(set|values_list|all)\(|hasattr\(\w+, ?'assigned_warehouses'\)'''); bad=[(f,m.group(0)) for f in fs for m in pat.finditer(pathlib.Path(f).read_text(encoding='utf-8'))]; print('direct uses:',bad); sys.exit(1 if bad else 0)"
+verify: python -c "import pathlib,re,sys; p=pathlib.Path('warehouse-backend/integration_tests/test_user_warehouse_extension_calls.py'); s=p.read_text(encoding='utf-8') if p.is_file() else ''; n=len(re.findall(r'def test_', s)); print('tests:',n); sys.exit(0 if n>=4 else 1)"
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
+verify: python scripts/e2e/guardian_modularization.py
+verify: python scripts/e2e/guardian_31_install_profiles.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(users): assigned warehouses through the warehouse user extension"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Tenant isolation and no data loss: the Excel import must still replace only the warehouses inside the importer's own scope and keep the warehouses outside it (the `kept` logic in `user_views.py`). API field names (`assigned_warehouses`) and responses stay the same.
+- Change only the 4 files listed in the scope verify line. Do not change `core/common/warehouse_scope.py`.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
+- `WarehouseUserExtension` (`modules/warehouse/warehouses/user_extension.py`) is registered under `user_extensions`; core finds it with `_get_user_warehouse_extension()` (defined in `accounts/serializers.py`, `accounts/excel_utils.py`, and inline in `user_views.py`).
+- Direct uses left in core: `serializers.py` (`get_assigned_warehouses`, `create`, `update`) and `user_views.py` (the export row near `warehouses = list(user.assigned_warehouses...`, the Excel import update and create paths, and the user detail/card near `wh_names`).
+
+3. Task:
+- a) Add to `WarehouseUserExtension`: `get_assigned_ids(user) -> list[int]`, `get_assigned_names(user) -> list[str]`, `get_assigned(user) -> list` and `set_assigned(user, warehouses) -> None`, each tolerant of a user without the attribute (empty result, no-op).
+- b) Replace every direct use listed above with the extension methods; when the extension is `None` (no warehouse module), keep today's result for that install (empty list, nothing set). Keep the order of operations in the import code.
+- c) New `integration_tests/test_user_warehouse_extension_calls.py` (`TestCase`, at least 4 tests): creating a user through the user API with `assigned_warehouses` sets them; the user detail returns the same ids; updating with a new list replaces them; with `contributions('user_extensions')` patched to return no extension, the user serializer has no `assigned_warehouses` field and create still works.
+
+4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_user_warehouse_extension_calls --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+refactor(users): assigned warehouses through the warehouse user extension
+- Short English report: each replaced use and the method used, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
+
+===
+
+[DONE] Session 10 of 15 — Phase 4 backend: warehouse scope rules of the report query engine come from a module scope handler
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/platform_core/query_engine/engine.py warehouse-backend/core/platform_core/query_engine/definitions.py warehouse-backend/core/platform_core/query_engine/__init__.py warehouse-backend/modules/warehouse/warehouses/apps.py warehouse-backend/modules/warehouse/warehouses/report_scope.py warehouse-backend/integration_tests/test_report_scope_handlers.py
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/platform_core/query_engine/engine.py --absent "scope_kind == 'warehouse'" --absent "common.warehouse_scope" --contains "report_scope_handlers"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/platform_core/query_engine/definitions.py --absent "self.scope_kind == 'warehouse'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/modules/warehouse/warehouses/apps.py --contains "report_scope_handlers"
+verify: python -c "import pathlib,re,sys; p=pathlib.Path('warehouse-backend/integration_tests/test_report_scope_handlers.py'); s=p.read_text(encoding='utf-8') if p.is_file() else ''; n=len(re.findall(r'def test_', s)); print('tests:',n); sys.exit(0 if n>=4 else 1)"
+verify: python scripts/automation/verify_tools.py django-check
+verify: python scripts/automation/verify_tools.py migrations-unchanged
+verify: python scripts/automation/verify_tools.py django-tests --labels integration_tests accounts warehouses inventory reports platform_core personnel companies communications settings_core notifications common --known scripts/automation/known_backend_failures.txt --min-tests 860
+verify: python scripts/e2e/guardian_modularization.py
+verify: python scripts/e2e/guardian_31_install_profiles.py
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(reports): warehouse scope rules via a module scope handler"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Tenant isolation: every report must return exactly the same rows to every user as today. A scope kind with a `scope_path` and no handler must be denied (`ReportError`, status 403), never left unscoped.
+- Keep the `company` scope rules in core unchanged. Keep the default values of `scope_kind` and `module_code` parameters unchanged.
+- Register the handler outside any `try` block.
+- Change only the files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
+- `platform_core/query_engine/engine.py` has `scope_kind == 'warehouse'` branches in `_build_join_scope_q`, `_check_scope_access` and `_scope_queryset`, using `common.warehouse_scope` (`can_access_warehouse`, `user_warehouse_ids`, `scope_queryset`). `definitions.py` `EntityConfig.get_fields()` reads the `blind_counting` setting per warehouse when `self.scope_kind == 'warehouse'`.
+- The platform `users` entity keeps the default `scope_kind='warehouse'` with `scope_path=None` and a `scope_resolver`; it must work in every install profile.
+
+3. Definitions: a "scope handler" is an object contributed through `report_scope_handlers` with attribute `kind` (str), attribute `per_scope_settings` (bool), and methods `check_access(user, scope_id) -> assigned_ids or None` (raises `ReportError` 403 when the user may not access `scope_id`), `scope_queryset(qs, user, path, scope_id) -> qs`, and `join_q(user, assigned_ids, path, scope_id) -> Q`.
+
+4. Task:
+- a) In core, look up the handler for an entity's `scope_kind` at call time. In `_check_scope_access`, `_scope_queryset` and `_build_join_scope_q`, replace each `warehouse` branch with the handler call, keeping the exact logic (including the superuser rule in `_build_join_scope_q`). When no handler exists: `scope_path` is `None`, or the kind is `company`, behave as today's non-warehouse path; otherwise raise `ReportError(..., status=403)` with a Persian message.
+- b) In `get_fields()`, read the per-scope `blind_counting` setting when the entity's handler has `per_scope_settings` true, instead of comparing the kind with `'warehouse'`.
+- c) New `modules/warehouse/warehouses/report_scope.py` with the warehouse handler (`kind='warehouse'`, `per_scope_settings=True`) using `common.warehouse_scope` exactly as the engine does today; register it in `WarehousesConfig.ready()`.
+- d) New `integration_tests/test_report_scope_handlers.py` (`TestCase`, at least 4 tests): exactly one handler with kind `warehouse` is registered; a non-superuser assigned to one warehouse gets only that warehouse's rows from a warehouse-scoped entity (follow `integration_tests/test_reports_integration.py`); requesting another warehouse id gives 403; an entity with a made-up kind and a `scope_path` raises `ReportError` with status 403.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_report_scope_handlers --noinput`, one run of `.\venv\Scripts\python.exe manage.py test reports integration_tests --noinput`.
+
+6. Output and stop condition:
+- Commit with this message, without push:
+refactor(reports): warehouse scope rules via a module scope handler
+- Short English report: changes per item a to d, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
+
+===
+
+[DONE] Session 11 of 15 — Phase 4: one generic module loop in AuthGuard replaces the hardcoded warehouse and finance blocks
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/warehouse/route-access.ts warehouse-front/src/app/modules/accounting/route-access.ts
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/auth/auth.guard.ts --absent "scopeKind === 'warehouse'" --absent "scopeKind === 'finance'" --absent "'/app/warehouse'" --absent "'/app/finance'" --absent "hasWarehouseAccess" --absent "hasPersonnelAccess" --absent "routeConfig?.path === 'warehouse'" --absent "routeConfig?.path === 'finance'"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/core/auth/route-access.characterization.spec.ts warehouse-front/src/app/core/auth/auth.guard.spec.ts warehouse-front/src/app/modules/common/components/login/login-destination.characterization.spec.ts
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "." --path warehouse-front/src/app/core/auth/route-access.characterization.spec.ts warehouse-front/src/app/core/auth/auth.guard.spec.ts
 verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
 verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
 verify: python scripts/e2e/guardian_57_front_module_fence.py
 verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "feat(mobile): public app download page"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5, 7, 9 and 10 apply (design system, Persian text, RTL, accessibility).
-- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- The page is public (no login, no guard) and lazy-loaded. Do not change any existing route or the login flow except one small link.
-- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
-
-2. Context: plan heading `#### گام ب-۵`. `/api/public/config/` returns `app_download_urls.direct`, `system_name` and `app_recommended_version`; `ConfigApiService` (`core/api/config-api.service.ts`) reads it. `openExternal` and `saveUrl` are in `core/platform/`.
-
-3. Task:
-- a) Standalone component `modules/common/components/app-download/` at route `download` (public, lazy): app name CoManage, a «دانلود نسخهٔ اندروید» button using `app_download_urls.direct` (disabled with «به‌زودی» when empty), a short Persian guide for installing an Android app from a file, and a short iPhone guide (open the site in Safari, Share, «Add to Home Screen»). Light and dark themes, mobile first.
-- b) A small link «دریافت اپ موبایل» to `/download` on the login page, below the form, matching existing link styles.
-- c) Spec with at least 4 tests: button enabled with a URL, disabled text without one, iPhone guide rendered, the page renders without login.
-
-4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/app-download/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`. If a command fails, read its output and change approach.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-feat(mobile): public app download page
-- Short English report: route, component, tests, the last ng-test-compare summary line. End the turn after the commit and report.
-
-===
-
-[DONE] Session 10 of 12 — Mobile phase B: release signing with a keystore outside the repository; signed prod and staging direct APKs
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/android/* warehouse-front/.gitignore
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/android/app/build.gradle --contains "signingConfigs" --contains "keystore.properties"
-verify: python -c "import pathlib,subprocess,sys; ks=pathlib.Path('E:/warehouse-secrets/comanage'); apk=lambda env: [p for p in pathlib.Path('warehouse-front/android/app/build/outputs/apk').rglob('*.apk') if all(k in p.name.lower() for k in (env,'direct','release')) and 'unsigned' not in p.name.lower()]; aid=lambda p: subprocess.run(['cmd','/c','E:\\Android\\Sdk\\cmdline-tools\\latest\\bin\\apkanalyzer.bat','manifest','application-id',str(p)],capture_output=True,text=True).stdout.strip(); pr=apk('prod'); st=apk('staging'); ok={'keystore':(ks/'release.jks').is_file(),'props':(ks/'keystore.properties').is_file(),'prod_apk':bool(pr) and aid(pr[0])=='ir.comanage.soft','staging_apk':bool(st) and aid(st[0])=='ir.comanage.soft.test'}; print(ok); sys.exit(0 if all(ok.values()) else 1)"
-verify: python -c "import subprocess,sys; out=subprocess.run(['git','ls-files'],capture_output=True,text=True).stdout; bad=[l for l in out.splitlines() if l.endswith(('.jks','.keystore','keystore.properties','local.properties','google-services.json'))]; print('tracked secrets:',bad); sys.exit(1 if bad else 0)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "build(mobile): release signing from a keystore outside the repository"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(guard): one generic module loop in AuthGuard"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- Secrets never enter the repository: the keystore and its passwords live only in `E:\warehouse-secrets\comanage\`. Never print the passwords in your report or in any file you write outside that folder; never commit `keystore.properties`, `*.jks` or `local.properties`.
-- Do not change the app id, flavors or any web source. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
-
-2. Context: plan headings `### ۴-د.`, `#### گام ب-۵` and `## ۱۰.` (the staging flavor `ir.comanage.soft.test` talks to `app.farsalish.ir`; the prod flavor talks to `soft.farsalish.ir`). JDK 21 `keytool` is on PATH. The Android SDK is at `E:\Android\Sdk`; `android/local.properties` exists (untracked).
-
-3. Task:
-- a) Create `E:\warehouse-secrets\comanage\` and generate `release.jks` with `keytool -genkeypair` (RSA 4096, validity 10000 days, alias `comanage`, distinguished name `CN=CoManage, O=CoManage, C=IR`) with a random 32-character store and key password generated by a script (for example Python `secrets.token_urlsafe`), never typed into your report.
-- b) Write `E:\warehouse-secrets\comanage\keystore.properties` with `storeFile`, `storePassword`, `keyAlias`, `keyPassword`, and a `README.txt` there in Persian saying this folder must be backed up and that losing it makes app updates impossible.
-- c) `android/app/build.gradle`: a `release` signing config that reads the properties file at `E:/warehouse-secrets/comanage/keystore.properties` when it exists (path overridable by the environment variable `COMANAGE_KEYSTORE_PROPERTIES`), used by the `release` build type; builds without the file still work unsigned. Add `*.jks` and `keystore.properties` to `warehouse-front/.gitignore`.
-- d) `npm run build:mobile`, then in `warehouse-front/android` `gradlew.bat assembleProdDirectRelease`; then `npm run build:mobile-test`, then `gradlew.bat assembleStagingDirectRelease`.
-
-4. Tool policy: `keytool` once; Gradle at most four times; each mobile build at most twice. If a command fails, read its output and change approach.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-build(mobile): release signing from a keystore outside the repository
-- Short English report: both APK paths and sizes, the keystore folder (no passwords), the signing certificate SHA-256 fingerprint from `keytool -list -v`. End the turn after the commit and report.
-
-===
-
-[DONE] Session 11 of 12 — Mobile phase B: iOS project synced with all plugins and Persian permission texts (build later on a Mac)
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python -c "import pathlib,sys; p=pathlib.Path('warehouse-front/ios/App/App/Info.plist'); t=p.read_text(encoding='utf-8') if p.is_file() else ''; ok={'plist':p.is_file(),'camera':'NSCameraUsageDescription' in t,'photos':'NSPhotoLibraryAddUsageDescription' in t}; print(ok); sys.exit(0 if all(ok.values()) or not pathlib.Path('warehouse-front/ios').exists() else 1)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "chore(mobile): iOS project synced"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- Change only `warehouse-front/ios/` (and package files only if the sync requires it). Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
-
-2. Context: plan heading `#### گام ب-۶`. Session 2 tried `npx cap add ios`; read its commit to see whether `ios/` exists.
-
-3. Task:
-- a) If `ios/` does not exist, run `npx cap add ios` once; if it fails on Windows, make an empty commit (`git commit --allow-empty`) with the message below and report the error (the iOS project is then created later on a Mac).
-- b) If it exists: `npx cap sync ios` (CocoaPods or SPM errors on Windows are expected; report them), and add Persian `NSCameraUsageDescription` («برای اسکن بارکد و عکس کالا به دوربین نیاز است») and `NSPhotoLibraryAddUsageDescription` («برای ذخیرهٔ فایل‌های خروجی») to `ios/App/App/Info.plist`.
-
-4. Tool policy: each `npx cap` command at most twice.
-
-5. Output and stop condition:
-- Commit with this message, without push:
-chore(mobile): iOS project synced
-- Short English report. End the turn after the commit and report.
-
-===
-
-[DONE] Session 12 of 12 — Release mobile phase B on the local app environment: backup, migrate the notifications table, patched web build, publish the staging APK; the runner restarts Daphne and the worker
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-require: python scripts/automation/verify_tools.py release-mark
-verify: python scripts/automation/verify_tools.py restart-backend
-verify: python scripts/automation/verify_tools.py restart-worker
-verify: python scripts/automation/verify_tools.py release-check
-verify: python -c "import json,sys,urllib.request; h={'User-Agent':'release-check'}; d=json.load(urllib.request.urlopen(urllib.request.Request('https://app.farsalish.ir/api/public/config/',headers=h),timeout=30)); u=d.get('app_download_urls',{}).get('direct',''); print('direct url:',u); r=urllib.request.urlopen(urllib.request.Request(u,method='HEAD',headers=h),timeout=60) if u else None; print('status:', r.status if r else None); sys.exit(0 if r is not None and r.status==200 else 1)"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
-- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- This session is a release only. Do not edit, create, stage or commit any tracked file.
-- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`; do not kill any `node` process. The runner restarts Daphne and the worker after your turn.
-- Only the local `app` environment on this Windows machine is in scope. Never connect to `soft.farsalish.ir`. Do not run `deploy.ps1`. Publish only the STAGING APK (app id `ir.comanage.soft.test`, talks to `app.farsalish.ir`); never publish the prod APK here.
-- Do not run `run_auto_backup`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/`, `warehouse-backend/media/` or `warehouse-front/dist/`.
-
-2. Context: phase B added one migration in `notifications` (device tokens), public mobile endpoints and commands (`publish_mobile_apk`), and frontend code. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
-
-3. Task, in this order:
-- a) Backup (stop if it fails or the size is 0), in `warehouse-backend`:
-  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app mobile phase B'); print(m['filename'], m['size'])"`
-- b) `.\venv\Scripts\python.exe manage.py showmigrations --plan`: the only `[ ]` lines may be in `notifications`. If any other app has `[ ]`, stop and report. Then `.\venv\Scripts\python.exe manage.py migrate notifications`.
-- c) Web build in `warehouse-front`: `npx ng build --delete-output-path=false`, then `node tools/patch-ngsw-530.js`.
-- d) `.\venv\Scripts\python.exe manage.py publish_mobile_apk --apk "<path of the staging direct release APK from session 10>" --version 1.0.0 --channel direct --env staging`; then set the setting `app_download_url_direct` to the absolute URL `https://app.farsalish.ir` + the printed path, through `manage.py shell` with the project's settings service (validate with `validate_settings_payload` first, then save the same way the settings API does).
-
-4. Tool policy: only the commands above, `git status --short`, and reading files. The web build at most twice. If a step fails, stop and report the exact error.
-
-5. Output and stop condition: a short English report with the backup file and size, the migration applied, the build result and patch line, and the published APK URL. No commit. End the turn after the report.
-
-===
-
-[DONE] Session 13 of 15 — Mobile phase B review fixes: push registration guard in release builds, file output fallback, push token cleanup, download page states and accessibility
-
-<!-- runner
-require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/.gitignore warehouse-front/android/app/build.gradle warehouse-front/src/app/core/platform/* warehouse-front/src/app/core/auth/auth.service.ts warehouse-front/src/app/modules/common/components/app-download/* warehouse-front/src/app/modules/common/components/login/login.html
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/.gitignore --contains "google-services.json"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/android/app/build.gradle --contains "GradleException" --contains "versionCode 2" --contains "versionName \"1.0.1\""
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/common/components/app-download/app-download.component.html --regex-absent "dark:" --regex-absent "linear-gradient" --regex-absent "\bpr-1\b" --regex-absent "text-fg-subtle" --contains "<bdi>"
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/common/components/login/login.html --contains "focus-visible:ring-2"
-verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/core/platform/push.service.spec.ts warehouse-front/src/app/core/platform/file-output.spec.ts warehouse-front/src/app/modules/common/components/app-download/app-download.component.spec.ts
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/platform/push.service.spec.ts --min-tests 7 --require "remote logout"
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/platform/file-output.spec.ts --min-tests 13 --require "Directory.Data"
-verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/modules/common/components/app-download/app-download.component.spec.ts --min-tests 6
-verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
-verify: cd warehouse-front && npx ng build --configuration mobile-test
-verify: python scripts/e2e/guardian_52_icon_registry.py
-verify: python scripts/e2e/guardian_55_clickable_ergonomics.py
-verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
-verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
-verify: python -c "import subprocess,sys; out=subprocess.run(['git','ls-files'],capture_output=True,text=True).stdout; bad=[l for l in out.splitlines() if l.endswith(('.jks','.keystore','keystore.properties','local.properties','google-services.json'))]; print('tracked secrets:',bad); sys.exit(1 if bad else 0)"
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(mobile): review fixes for push, file output and download page"
-verify: python scripts/automation/verify_tools.py clean-tree
--->
-
-1. Critical rules:
-- `.agents/AGENTS.md` sections 3, 5, 7, 9 and 10 apply.
-- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- Web behavior must stay identical except the download page and the login link styling. Push must never block login or logout.
-- Never add, copy or stage `google-services.json`, keystores or `keystore.properties`. Do not run Gradle in this session.
-- Do not push. Stage only your changed files. Never stage build outputs, `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`. Never remove or weaken an existing test.
+- Every guard decision must stay the same. `route-access.characterization.spec.ts`, `auth.guard.spec.ts` and `login-destination.characterization.spec.ts` are the contract: do not edit them; they must pass.
+- Change only the 4 files listed in the scope verify line. Do not change the company-documents logic in this session beyond moving it unchanged (session 12 handles it).
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
 2. Context:
-- Bug seen on a phone: after the user grants notification permission the Android app crashes, because `PushNotifications.register()` (`core/platform/push.service.ts`) runs while the APK was built without `android/app/google-services.json`, so Firebase is not initialized (native crash, JavaScript cannot catch it). `android/app/build.gradle` applies the google-services plugin only when that file exists, and signs release builds only when the keystore properties file exists; otherwise it silently builds without them.
-- `push.service.ts` is called from `core/auth/auth.service.ts` (constructor when logged in, successful login, `logout`). `deleteToken()` runs only in `logout`; `handleRemoteLogout` does not call it. `deleteToken()` resets its listeners flag before `removeAllListeners()` resolves.
-- `core/platform/file-output.ts` native `saveBlob` writes to `Directory.Documents` and falls back to `Directory.Data`; a share cancel then returns as success even when the only copy is in app-private `Directory.Data`.
-- Download page: `modules/common/components/app-download/` (html, ts, spec). The `dark` class is never set in this app, so `dark:` classes are dead code.
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۳`.
+- `auth.guard.ts` `AuthGuard` has: a warehouse scope block (`isWarehouseScope`), a finance scope block (`isFinanceScope`, with the company-documents exception), a generic loop for other modules with routeAccess (session 1), and a page-permission loop whose fallback is `roleHome()` for warehouse pages and the other module's `defaultRoute` for other pages.
+- Today's asymmetric rules that must survive: a module that is not installed redirects to the first other installed module with routeAccess, else `/app/launcher`; a user without access to a module's scope goes to another accessible module's `defaultRoute`, else `/login`; on a page of a module the user cannot access, warehouse pages go to `roleHome()` and finance pages go to the other module's `defaultRoute`.
 
 3. Task:
-- a) `android/app/build.gradle`: when any requested Gradle task name contains `Release` (`gradle.startParameter.taskNames`), throw `GradleException` with a clear English message if `google-services.json` is missing in the app folder or the keystore properties file is missing. Debug builds keep working without them. Set `versionCode 2` and `versionName "1.0.1"`.
-- b) `warehouse-front/.gitignore`: add `google-services.json`.
-- c) `file-output.ts`: when the file was written to `Directory.Data` (fallback) and the share is cancelled, treat it as a failure: notify once with the existing message and reject. Cancel after a successful `Directory.Documents` write stays a success.
-- d) `push.service.ts` and `auth.service.ts`: call the push token deletion in `handleRemoteLogout` before the session is cleared (wrapped, failure ignored, never blocking). In `deleteToken()` reset the listeners flag only after `removeAllListeners()` has resolved (or failed).
-- e) Download page html/ts:
-  - Show «در حال بارگذاری…» on the button while the config loads.
-  - When the request fails, show a short Persian error line and a retry button.
-  - When the URL is empty, keep the disabled «به‌زودی» button and add the hint «لینک دانلود هنوز منتشر نشده است».
-  - Replace `text-fg-subtle` with `text-fg-muted`.
-  - Remove every `dark:` class.
-  - Replace the inline gradient style with `bg-gradient-to-br from-indigo-600 to-violet-600`.
-  - Replace `pr-1` with `ps-1`.
-  - Wrap the Latin words (Safari, Share, Add to Home Screen, Add, Settings) in `<bdi>`.
-  - Add `dir="ltr"` to the version badge.
-- f) `login.html`: add `focus-visible:ring-2 focus-visible:ring-indigo-500` to the «دریافت اپ موبایل» link.
-- g) Tests:
-  - `push.service.spec.ts`, at least 7 tests in total: one whose name contains `remote logout` (the token is deleted), and one for the listeners flag after `removeAllListeners`.
-  - `file-output.spec.ts`, at least 13 tests in total: a share cancel after the `Directory.Data` fallback notifies and rejects.
-  - `app-download.component.spec.ts`, at least 6 tests in total: loading text, and error line with retry.
+- a) Add one optional field to `ModuleRouteAccess` in `module-contract.ts`: `deniedPageFallback?: 'roleHome' | 'otherModuleDefault'`; set `'roleHome'` in `modules/warehouse/route-access.ts` and `'otherModuleDefault'` in `modules/accounting/route-access.ts`.
+- b) Replace the warehouse block, the finance block and both loops with one loop over all known module specs that have routeAccess (installed and not installed, so the not-installed redirect still works; find how the registry exposes them), detecting the module by `routePrefix` or `route.routeConfig?.path` equal to the prefix without its leading slash. Use `extensions.layoutNav.hasCompanyDocumentsArchive` to apply the company-documents exception only to the module that owns the archive, keeping today's checks exactly.
+- c) No module name, route prefix or scope kind literal remains in `auth.guard.ts` except inside the company-documents expressions that session 12 replaces.
 
-4. Tool policy: in `warehouse-front`, each build at most twice; at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/app-download/*.spec.ts"`. If a command fails, read its output and change approach.
+4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/auth/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/core/services/app-persona*.spec.ts"`.
 
 5. Output and stop condition:
 - Commit with this message, without push:
-fix(mobile): review fixes for push, file output and download page
-- Short English report per file, tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+refactor(guard): one generic module loop in AuthGuard
+- Short English report: the new loop, how each asymmetric rule is kept, the last ng-test-compare summary line. End the turn after the commit and report.
 
 ===
 
-[DONE] Session 14 of 15 — Mobile phase B backend review fixes: push never breaks notification creation, bounded push threads, device token input validation
+[DONE] Session 12 of 15 — Phase 4: the company documents route comes from the layoutNav extension of the module that owns the archive
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
-verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-backend/core/notifications/push.py warehouse-backend/core/notifications/views.py warehouse-backend/core/notifications/serializers.py warehouse-backend/core/notifications/tests.py
-verify: python scripts/automation/verify_tools.py text-check --file warehouse-backend/core/notifications/push.py --contains "ThreadPoolExecutor" --contains "close_old_connections"
-verify: python scripts/automation/verify_tools.py migrations-unchanged
-verify: python scripts/automation/verify_tools.py django-check
-verify: python scripts/automation/verify_tools.py django-tests --labels notifications communications accounts integration_tests --known scripts/automation/known_backend_failures.txt --min-tests 100
-verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "fix(notifications): safer push sending and device token validation"
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/auth/company-documents-route.spec.ts
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/app.routes.ts --absent "app/finance/company-documents"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/auth/auth.guard.ts --absent "company-documents" --absent "'/documents'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/app-persona.service.ts --absent "company-documents" --absent "'/documents'"
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/modules/accounting/module.ts --contains "companyDocumentsRoute: '/app/finance/company-documents'"
+verify: python scripts/automation/verify_tools.py spec-check --file warehouse-front/src/app/core/auth/company-documents-route.spec.ts --min-tests 4 --require "without the archive module"
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(routes): company documents route from the layoutNav extension"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 5 and 10 apply.
-- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- No new migration and no model change. Never log credentials or full tokens. Run `manage.py test` only with labels. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+- Every redirect and access decision stays the same in the full profile. Do not edit existing spec files.
+- Change only the 6 files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
 
-2. Context: `core/notifications/push.py` (FCM provider, `post_save` receiver on `Notification`, `transaction.on_commit`, one daemon thread per notification, token lookup at save time); `core/notifications/views.py` `DeviceTokenView` (POST register/refresh, DELETE by token). A real Firebase credentials file is now configured on this machine, so tests must mock every network call.
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۳`.
+- Hardcoded uses: `app.routes.ts` (the two root redirect functions and the legacy redirects for paths `company-documents` and `documents`), `auth.guard.ts` (`isCompanyDocsRoute`), `app-persona.service.ts` (`getDefaultRouteForRole` and `canAccessRoute`). The accounting module already declares `extensions.layoutNav.hasCompanyDocumentsArchive: true`; its route is `company-documents` under `/app/finance`, with a legacy alias `documents`.
 
 3. Task:
-- a) The `post_save` receiver must never raise: move the recipient token lookup inside the `on_commit` callback, and wrap the whole callback body in try/except with `logger.exception` (no token values in the message).
-- b) Replace the per-notification thread with one module-level `ThreadPoolExecutor(max_workers=2)`; cache the loaded credentials object in the provider and refresh only when expired; the worker calls `django.db.close_old_connections()` before and after its work.
-- c) `views.py` POST: validate with a serializer: `token` a non-empty string of at most 512 characters, `platform` one of `android`/`ios`, `app_version` optional string of at most 50 characters; invalid input or a non-object body returns 400 with a Persian message. DELETE returns 404 both for a missing token and for another user's token.
-- d) Tests in `core/notifications/tests.py` (keep all existing tests): a receiver failure (mock the token query to raise) does not break `Notification.objects.create`; tokens are read at commit time; POST with a 600-character token returns 400; POST with a JSON array returns 400; DELETE of another user's token returns 404 and keeps the token.
+- a) Add `companyDocumentsRoute?: string` to the `layoutNav` extension in `module-contract.ts`, and set `companyDocumentsRoute: '/app/finance/company-documents'` in `modules/accounting/module.ts`.
+- b) Read the route from the installed module whose `layoutNav` has `hasCompanyDocumentsArchive` true, through the module registry, in all the places above. A URL counts as a company-documents URL when it starts with that route or with the same parent path plus `/documents`. The two legacy redirects use a function that returns the route without its leading slash, or `app/launcher` when no module owns the archive.
+- c) New `core/auth/company-documents-route.spec.ts` (at least 4 tests, one name containing `without the archive module`): the root redirect sends a user with company-documents access and no module access to the archive route; the guard allows that user on the archive route; the legacy `documents` redirect resolves to the archive route; without the archive module installed the redirect goes to `app/launcher`.
 
-4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test notifications --noinput`. If a command fails, read its output and change approach.
+4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/*.spec.ts"`.
 
 5. Output and stop condition:
 - Commit with this message, without push:
-fix(notifications): safer push sending and device token validation
-- Short English report: changes and test pass count. End the turn after the commit and report.
+refactor(routes): company documents route from the layoutNav extension
+- Short English report: each replaced use, the tests added, the last ng-test-compare summary line. End the turn after the commit and report.
 
 ===
 
-[DONE] Session 15 of 15 — Release on the local app environment: staging APK 1.0.1 with Firebase, patched web build; the runner restarts Daphne and the worker
+[DONE] Session 13 of 15 — Phase 4: app switching in AppPersonaService uses module specs for warehouse and accounting like any other module
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/warehouse/module.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/modules/warehouse/route-access.ts warehouse-front/src/app/modules/accounting/route-access.ts warehouse-front/src/app/modules/warehouse/personas.ts warehouse-front/src/app/modules/accounting/personas.ts
+verify: python scripts/automation/verify_tools.py text-check --file warehouse-front/src/app/core/services/app-persona.service.ts --absent "'/app/warehouse" --absent "'/app/finance" --absent "spec.code === 'accounting'"
+verify: python scripts/automation/verify_tools.py tests-kept --base {base} --file warehouse-front/src/app/core/services/app-persona.characterization.spec.ts warehouse-front/src/app/core/services/app-persona.generic-module.spec.ts
+verify: python scripts/automation/verify_tools.py diff-free --base {base} --pattern "." --path warehouse-front/src/app/core/services/app-persona.characterization.spec.ts warehouse-front/src/app/core/services/app-persona.generic-module.spec.ts
+verify: cd warehouse-front && npx ng build --output-path ../scratch/ng-build-check
+verify: python scripts/e2e/guardian_56_change_integrity.py --base {base} --head HEAD
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/automation/verify_tools.py ng-test-compare --base {base} --include "src/**/*.spec.ts"
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "refactor(persona): app switching from module specs"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Behaviour must stay identical: `app-persona.characterization.spec.ts` (70 tests) and `app-persona.generic-module.spec.ts` are the contract; do not edit them; they must pass.
+- Storage values stay as today: `active_app_module` is still `warehouse` or `personnel`, the token scope is still `warehouse` or `finance`, the WebSocket channel is still `warehouse`, `finance` or `operations`.
+- Change only the files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۳`.
+- `core/services/app-persona.service.ts` has hardcoded warehouse/finance branches in `syncScopeFromUrl`, `sanitizeActiveRole`, `switchApp` (token scope, channel and default navigation), `getDefaultRouteForRole` and `canAccessRoute`, next to a generic path for other modules (`isGenericModuleApp`).
+- Values already in the module contract: `routePrefix`, `defaultRoute`, `scopeKind` (equals the token scope and the channel), `routeAccess.loginActiveAppModule` (`warehouse` and `personnel`, the persona app code).
+
+3. Task:
+- a) Use the persona app code `routeAccess.loginActiveAppModule ?? spec.code`, the token scope and channel `spec.scopeKind`, and the prefix `spec.routePrefix` for warehouse and accounting through the same code path as other modules. Keep the `operations` shell handling as it is.
+- b) Where a module-specific value has no contract field yet (for example the finance fallback role route `/app/finance/accountant-payroll` or the warehouse dashboard used by `switchApp`), add an optional field to the module contract, personas or route access, and set it in the module that owns the value.
+- c) Remove `isGenericModuleApp`'s hardcoded list only if the characterization specs stay green; otherwise keep it and say why in the report.
+
+4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/services/app-persona*.spec.ts" --include "src/app/core/auth/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+refactor(persona): app switching from module specs
+- Short English report: each replaced branch, the fields added, the last ng-test-compare summary line. End the turn after the commit and report.
+
+===
+
+[DONE] Session 14 of 15 — Phase 4: guardians 29 and 57 count module-name literals in the core with the no-increase rule
+
+<!-- runner
+require: python scripts/automation/verify_tools.py clean-tree
+verify: python scripts/automation/verify_tools.py scope --base {base} --allow scripts/e2e/guardian_modularization.py scripts/e2e/modularization_baseline.json scripts/e2e/guardian_57_front_module_fence.py scripts/e2e/front_fence_baseline.json
+verify: python scripts/automation/verify_tools.py text-check --file scripts/e2e/modularization_baseline.json --contains "core_module_literals"
+verify: python scripts/automation/verify_tools.py text-check --file scripts/e2e/guardian_modularization.py --contains "core_module_literals" --contains "self-test"
+verify: python scripts/automation/verify_tools.py text-check --file scripts/e2e/guardian_57_front_module_fence.py --contains "core_module_literals" --contains "self-test"
+verify: python scripts/e2e/guardian_modularization.py
+verify: python scripts/e2e/guardian_modularization.py --self-test
+verify: python scripts/e2e/guardian_57_front_module_fence.py
+verify: python scripts/e2e/guardian_57_front_module_fence.py --self-test
+verify: python scripts/automation/verify_tools.py commit-exists --base {base} --grep "test(guardians): module-name literal counters in core"
+verify: python scripts/automation/verify_tools.py clean-tree
+-->
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- This session changes only guardian scripts and their baseline files. Do not change application code. Do not lower any existing counter or relax any existing rule.
+- Change only files listed in the scope verify line (use only the baseline file each guardian already uses).
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۵`.
+- Guardian 29 (`scripts/e2e/guardian_modularization.py`) already counts `core_module_app_refs` in `warehouse-backend/core` (skipping tests and migrations) and fails when a counter rises above `modularization_baseline.json`. Guardian 57 (`scripts/e2e/guardian_57_front_module_fence.py`) does the same for the frontend core and shared code.
+
+3. Definitions: a "module-name literal" is a quoted string literal exactly equal to `warehouse`, `finance`, `personnel` or `accounting` (single or double quotes). Comment lines and docstrings do not count.
+
+4. Task:
+- a) Guardian 29: add counter `core_module_literals` = number of module-name literals in `.py` files under `warehouse-backend/core`, skipping tests and migrations (use `ast` string constants, so comments and docstrings are skipped). Print each finding as `file:line`.
+- b) Guardian 57: add counter `core_module_literals` for `.ts` files under `warehouse-front/src/app/core` and `warehouse-front/src/app/shared`, skipping `*.spec.ts`, comment lines and import lines.
+- c) Record the current values in each guardian's baseline with its existing update mechanism; the rule is "no increase".
+- d) Add `--self-test` to both guardians: it runs the counter on a temporary fixture with one extra literal and confirms the guardian would fail, then on the unchanged fixture and confirms it would pass; it exits 0 only when both hold and never writes the real baseline.
+
+5. Tool policy: each guardian at most four runs; the baseline update at most once per guardian.
+
+6. Output and stop condition:
+- Commit with this message, without push:
+test(guardians): module-name literal counters in core
+- Short English report: the recorded value of each counter, the self-test result. End the turn after the commit and report.
+
+===
+
+[DONE] Session 15 of 15 — Release phase 4 on the local app environment: backup, migration check, patched frontend build; the runner restarts Daphne and the GDrive worker and runs the health checks
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
 require: python scripts/automation/verify_tools.py release-mark
-verify: python -c "import subprocess,sys,pathlib; p=pathlib.Path('warehouse-front/android/app/google-services.json'); tracked=subprocess.run(['git','ls-files','--error-unmatch',str(p)],capture_output=True).returncode==0; print('exists',p.is_file(),'tracked',tracked); sys.exit(0 if p.is_file() and not tracked else 1)"
 verify: python scripts/automation/verify_tools.py restart-backend
 verify: python scripts/automation/verify_tools.py restart-worker
 verify: python scripts/automation/verify_tools.py release-check
-verify: python -c "import json,sys,urllib.request; h={'User-Agent':'release-check'}; d=json.load(urllib.request.urlopen(urllib.request.Request('https://app.farsalish.ir/api/public/config/',headers=h),timeout=30)); u=d.get('app_download_urls',{}).get('direct',''); print('direct url:',u); r=urllib.request.urlopen(urllib.request.Request(u,method='HEAD',headers=h),timeout=60) if u else None; print('status:', r.status if r else None); sys.exit(0 if r is not None and r.status==200 and '1.0.1' in u else 1)"
 verify: python scripts/automation/verify_tools.py clean-tree
 -->
 
 1. Critical rules:
 - `.agents/AGENTS.md` sections 3, 8 and 10 apply.
 - Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
-- Release only. Do not edit, create, stage or commit any tracked file. Never print the content of any file in `E:\warehouse-secrets\`.
-- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`; do not kill any `node` process. The runner restarts Daphne and the worker after your turn.
-- Only the local `app` environment. Never connect to `soft.farsalish.ir`. Do not run `deploy.ps1`. Publish only the STAGING APK (`ir.comanage.soft.test`).
-- Do not run `run_auto_backup`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/`, `warehouse-backend/media/` or `warehouse-front/dist/`.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. The runner restarts Daphne and the GDrive worker itself after your turn.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir`. Do not run `deploy.ps1`.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `warehouse-backend/backups/` or `warehouse-front/dist/`.
 
-2. Context: sessions 13 and 14 changed frontend, `android/app/build.gradle` (versionCode 2, versionName 1.0.1; release builds now require `android/app/google-services.json` and the keystore) and backend push code. No new migration. Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';`.
+2. Context: sessions 1 to 14 of phase 4 changed backend and frontend code, tests and guardian scripts, and added no migration. Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
 
 3. Task, in this order:
-- a) Backup (stop if it fails or the size is 0), in `warehouse-backend`:
-  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app mobile 1.0.1'); print(m['filename'], m['size'])"`
-- b) `.\venv\Scripts\python.exe manage.py showmigrations --plan`: if any line has `[ ]`, stop and report.
-- c) Copy `E:\warehouse-secrets\comanage\google-services.json` to `warehouse-front\android\app\google-services.json` (it is git-ignored; confirm with `git status --short` that it does not appear).
-- d) In `warehouse-front`: `npm run build:mobile-test`, then in `warehouse-front\android` `.\gradlew.bat assembleStagingDirectRelease`.
-- e) Web build in `warehouse-front`: `npx ng build --delete-output-path=false`, then `node tools/patch-ngsw-530.js`.
-- f) In `warehouse-backend`: `.\venv\Scripts\python.exe manage.py publish_mobile_apk --apk "<path of the new staging direct release APK>" --version 1.0.1 --channel direct --env staging`; then set the setting `app_download_url_direct` to `https://app.farsalish.ir` + the printed path, the same way as the previous release (validate with `validate_settings_payload`, then save as the settings API does).
+- a) Backup. In `warehouse-backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app phase 4'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Migration check. `.\venv\Scripts\python.exe manage.py showmigrations --plan` must show no `[ ]` line. If any `[ ]` line appears, stop and report it; do not migrate.
+- c) Frontend build. In `warehouse-front`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
 
-4. Tool policy: only the commands above, `git status --short`, `Copy-Item`, and reading files outside `E:\warehouse-secrets\`. Gradle at most twice, each build at most twice. If a step fails, stop and report the exact error.
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
 
-5. Output and stop condition: a short English report with the backup file and size, the APK path and size, the build result and patch line, and the published APK URL. No commit. End the turn after the report.
+5. Before finishing: `git status --short` shows nothing except runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the `showmigrations` result, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.

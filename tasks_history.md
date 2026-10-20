@@ -7933,3 +7933,671 @@ Session 15 of 15 — Release on the local app environment: staging APK 1.0.1 wit
 تمامی مراحل و الزامات شامل عدم ویرایش فایل‌های ردگیری‌شده در گیت، عدم حذف مسیرهای رسانه‌ای و بیلد، وضعیت مایگریشن‌ها و صحت بیلدها بررسی و بدون خطا با کدهای خروج صفر (Exit Code 0) ت...
 
 ---
+
+### Task 1 of 15 — 2026-10-20 00:30:37
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `ee8ad975-2bb4-4b95-a273-62df1b28e193`
+- **Steps:** 84
+- **Tokens:** 465147
+- **Duration:** 26m 39s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 9/9 passed
+- **Task:**
+```
+Session 1 of 15 — Phase 4: AuthGuard generic module loop only for modules with routeAccess; unused markers removed from app.routes; open scopeKind type and closed deepSyncScope
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only the 3 files listed in the scope verify line of this session. Do not edit any spec file.
+- Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, headings `## ۱.` and `### گام ۰`.
+- Commit `30648fb` added a generic loop to `AuthGuard` in `warehouse-front/src/app/core/auth/auth.guard.ts` (the loop that starts with `for (const mod of installed)` and skips `scopeKind` `warehouse` and `finance`). `ModuleRegistryService` always adds the built-in `OPERATIONS_SPEC` (`scopeKind: 'operations'`, `routePrefix: '/app/operations'`) and it has no `routeAccess`. The loop therefore denies every non-admin user on `/app/operations/*`.
+- Evidence: `src/app/core/auth/route-access.characterization.spec.ts`, tests 2 to 5 of the `AuthGuard characterization` block, fail on HEAD and pass on commit `ef99e43`. Example: a user with only `view_sys_users` must get `true` for `/app/operations/users`.
+
+3. Definitions: "module with routeAccess" means `getModuleRouteAccess(mod)` in `auth.guard.ts` returns a value.
+
+4. Task:
+- a) In that generic loop, skip every module without routeAccess, in addition to the existing `warehouse`/`finance` skip. Do not change any other branch of `AuthGuard`.
+- b) In `app.routes.ts`, delete the two unused constants `whMarkers` and `acctMarkers` in both redirect functions (path `app` and path `''`). Change nothing else there.
+- c) In `module-contract.ts`, set `scopeKind: 'warehouse' | 'finance' | 'operations' | (string & {});` and set `deepSyncScope?: 'warehouse' | 'finance';` (the offline system has exactly two scopes).
+
+5. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most two runs of `python scripts/automation/verify_tools.py ng-test-compare --base ef99e43 --include "src/app/core/auth/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts"`. If a command fails, read its output and change approach.
+
+6. Before finishing: the ng-test-compare run above reports no new failing test, and `git diff --stat` shows only the 3 files.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+fix(guard): generic module loop only for modules with routeAccess
+- Short English report: the change per item a to c, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### پروتکل ۴ مرحله‌ای (Mandatory 4-Step Protocol)
+
+#### ۱. توضیح ساده (Explain Simply)
+کاربر درخواست کرده است که باگ مسدود شدن کاربران غیرادمین در مسیرهای مرکز عملیات (`/app/operations/*`) که پس از اضافه شدن حلقه عمومی گارد دسترسی ماژول‌ها در [auth.guard.ts](file:///E:/warehouse%20project/warehouse-front/src/app/core/auth/auth.guard.ts) رخ داده بود، برطرف شود؛ به این صورت که ماژول‌هایی که فاقد تنظیمات دسترسی روت (`routeAccess`) هستند در این حلقه نادیده گرفته شوند. همچنین متغیرهای بدون استفاده در [app.routes.ts](file:///E:/warehouse%20project/warehouse-front/src/app/app.routes.ts) حذف شده و تایپ‌های قلمرو در [module-contract.ts](file:///E:/warehouse%20project/wa...
+
+---
+
+### Task 2 of 15 — 2026-10-20 01:14:35
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `46593a57-18bd-4f02-b1a3-697e753bf80e`
+- **Steps:** 121
+- **Tokens:** 792330
+- **Duration:** 43m 54s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 9/9 passed
+- **Task:**
+```
+Session 2 of 15 — Phase 4: the server rollback and restore gates count the unsent offline queue of both IndexedDB scopes
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- No data may ever be lost. These two gates stop a server rollback or restore while unsent offline records exist. The gate may only become stricter; it must never let a rollback or restore start while either queue holds a record.
+- Do not change `offline-db.ts` or any queue, sync or delete logic. Only the two gate checks and their spec change.
+- Run every command in the foreground and wait until it finishes. Never end your turn while a command is still running.
+- Change only the 2 files listed in the scope verify line. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۰`.
+- `settings-backup-tab.ts` reads `await offlineDb.syncQueue.toArray()` in `openRollbackConfirm` and in `openRestoreConfirm`. `offlineDb` is a proxy that resolves to the database of the active scope only, so unsent records in the other scope (`WarehouseOfflineDB_finance` or `WarehouseOfflineDB_warehouse`) are not counted.
+- `warehouseOfflineDb` and `financeOfflineDb` are exported by `core/services/offline-db.ts`.
+
+3. Task:
+- a) Add one private async method in the component that returns the total number of entries in `warehouseOfflineDb.syncQueue` plus `financeOfflineDb.syncQueue` (use `toArray()` on both, any status counts, as today). Use it in both gates; the Persian toast text keeps today's wording with the total count.
+- b) Update the spec so the existing tests mock both queues (empty by default). Keep every existing test.
+- c) Add at least two tests: one whose name contains `finance queue` (rollback blocked when only the finance queue has a record and the warehouse queue is empty), and one for restore blocked when only the finance queue has a record. Each asserts the error toast and that the confirm modal stays closed.
+
+4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most three runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/settings/**/*.spec.ts"`.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+fix(backup): rollback and restore gates count both offline queues
+- Short English report: the change, the tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+I have launched `npx ng build --output-path ../scratch/ng-build-agent` in `warehouse-front` to verify that there are no compilation or template errors, and will wait for it to complete.
+I have launched the test comparison verification:
+`python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/modules/common/components/settings/**/*.spec.ts"`
+and will wait for the test results.
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده (Explain Simply)
+کاربر درخواست کرد که گیت‌های ایمنی بازگشت سرور (Server Rollback) و بازگردانی پایگاه‌داده (Database Restore) در برگهٔ پشتیبان‌گیری تنظیمات (`settings-backup-tab.ts`)، صف‌های آفلاین همگام‌نشده را در هر دو قلمرو دیتابیس لوکال...
+
+---
+
+### Task 3 of 15 — 2026-10-20 01:48:46
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `c121089d-ca5b-455b-82ed-cc47a371a14f`
+- **Steps:** 168
+- **Tokens:** 340450
+- **Duration:** 34m 6s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 14/14 passed
+- **Task:**
+```
+Session 3 of 15 — Phase 4 backend: module spec is the only source for app codes; active_priority picks the default active app; default active app from default_module()
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Behaviour must stay identical in the full profile (both modules installed). The existing tests in `core/platform_core/tests.py` must pass unchanged; do not edit or delete them.
+- Change only the 6 files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, headings `## ۱.` and `### گام ۱`.
+- `core/platform_core/registry.py` still has three legacy dicts (`_APP_CODE_TO_MODULE`, `_MODULE_TO_ALLOWED_APP`, `_MODULE_SCOPE_CODES`) used only as fallbacks. `MODULE_CATALOG` (`platform_core/module_catalog.py`) loads every `modules/*/module.py` on disk regardless of `WH_MODULES`, so uninstalled modules are in it; `app_code_to_module`, `module_allowed_app_code` and `module_scope_codes` already read it.
+- `resolve_default_active_app` hardcodes `'warehouse'` and `'accounting'`. Its contract is fixed by `test_resolve_default_active_app`: `['finance']` gives `finance`, `['warehouse']` gives `warehouse`, both give `warehouse`, `[]` gives `finance`. `default_module()` (lowest `default_priority` among installed modules, accounting 10, warehouse 20) must keep returning `accounting` in the full profile. One priority field cannot express both rules, so a second field is added.
+- `core/accounts/middleware.py` declares `_current_active_app_var` with `default='accounting'`. `core/accounts/permissions.py` ends two expressions with `or 'accounting')`.
+
+3. Definitions: "app code of a spec" means `spec.allowed_app_code` when it is not empty, otherwise `spec.code`. "All specs" means `{**MODULE_CATALOG, **_REGISTRY}`.
+
+4. Task:
+- a) Delete the three legacy dicts and every line that reads them. `module_allowed_app_code(code)` returns the app code of the spec from `_REGISTRY` or else `MODULE_CATALOG`, or `code` when no spec exists. `module_scope_codes(code)` returns `spec.scope_codes` when not empty, else `(module_allowed_app_code(code),)`. `app_code_to_module` keeps its current lookup over all specs and returns `None` when nothing matches.
+- b) Add `active_priority: int = 100` to `ModuleSpec`; set `active_priority=10` in `modules/warehouse/module.py` and `active_priority=20` in `modules/accounting/module.py`.
+- c) Rewrite `resolve_default_active_app(allowed_apps)` without any module name: among all specs whose app code is in `allowed_apps`, return the app code of the one with the lowest `active_priority`; if none, return the app code of the catalog spec with the lowest `default_priority`; if there are no specs, return `''`. This also removes the current bug where `getattr(spec, 'allowed_app_code', spec.code)` returns `''`.
+- d) In `middleware.py`, change the ContextVar default to `''` and make `get_current_active_app()` return the variable value or, when empty, `default_module()` (import inside the function). In `permissions.py`, remove the trailing `or 'accounting'` from both expressions.
+- e) Add at least three tests to `core/platform_core/tests.py`: with `accounting` removed from `_REGISTRY` (use `patch.dict` as the existing test does), `app_code_to_module('personnel') == 'accounting'` and `module_scope_codes('accounting') == ('finance', 'personnel')`; with an extra catalog spec `ModuleSpec(code='zeta', title_fa='زتا', allowed_app_code='zeta', active_priority=5)` patched into `MODULE_CATALOG`, `resolve_default_active_app(['zeta', 'warehouse']) == 'zeta'`; `get_current_active_app()` outside a request equals `default_module()`.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test platform_core --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`, and `python scripts/e2e/guardian_31_install_profiles.py` at most twice. If an existing test fails, report it; do not weaken any check.
+
+6. Output and stop condition:
+- Commit with this message, without push:
+refactor(registry): module spec is the only source for app codes; active_priority for the default active app
+- Short English report: changes per item a to e, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+I have launched the `platform_core` tests in the background and am waiting for the execution to complete.
+I have launched the `accounts` and `integration_tests` suite in the background and am waiting for the execution to finish.
+Waiting for the `accounts` and `integration_tests` execution to complete.
+Waiting for the test execution to complete.
+Still running tests, waiting for the process to complete.
+Waiting for the `accounts` and `integration_tests` suite to complete.
+Waiting for task completion.
+Waiting for the test task to complete.
+Waiting for task completion.
+Waiting for task completion.
+Waiting for test completion.
+Waiting for test completion.
+Waiting for the tests to finish.
+<div dir...
+
+---
+
+### Task 4 of 15 — 2026-10-20 02:16:41
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `cd287f0b-eedb-4402-ade3-59865d584083`
+- **Steps:** 89
+- **Tokens:** 279371
+- **Duration:** 27m 51s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 11/11 passed
+- **Task:**
+```
+Session 4 of 15 — Phase 4 backend: public read prefixes and the reports fallback come from module spec fields instead of hardcoded names in authentication.py
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Tenant and app-scope isolation: every request that is allowed or denied today must get the same result. Only where the module-specific values come from changes.
+- Change only the 4 files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۱`.
+- `core/accounts/authentication.py`, method `CustomJWTAuthentication.enforce_token_app_scope`:
+  - For `api/reports/`, when `get_reporting_modules()` gives no installed module, it falls back to `['warehouse']` if `'warehouse' in installed_modules()`.
+  - For a path of an installed module, `GET`/`HEAD`/`OPTIONS` on `/api/warehouses/` return early (no scope check) through `module.code == 'warehouse' and path.startswith('/api/warehouses/')`.
+
+3. Task:
+- a) Add to `ModuleSpec` in `registry.py`: `public_read_prefixes: tuple[str, ...] = ()` and `reports_fallback: bool = False`. In `modules/warehouse/module.py` set `public_read_prefixes=('/api/warehouses/',)` and `reports_fallback=True`.
+- b) Reports fallback: when no installed reporting module exists, use the installed modules whose spec (from `_REGISTRY`) has `reports_fallback` true.
+- c) Read exemption: return early when the method is `GET`, `HEAD` or `OPTIONS` and the path starts with any prefix in `module.public_read_prefixes` of the resolved module spec. Update the nearby comment so it no longer names the warehouse module.
+- d) New `integration_tests/test_module_spec_auth_fields.py` (`TestCase`, at least 4 tests). Call `CustomJWTAuthentication().enforce_token_app_scope(request, user, token)` directly with a `RequestFactory` request, a non-superuser user and a dict token such as `{'allowed_apps': ['finance']}`:
+  - `GET /api/warehouses/` with only `finance` passes.
+  - `POST /api/warehouses/` with only `finance` raises `PermissionDenied`.
+  - With `get_reporting_modules` patched to return `[]`, `GET /api/reports/entities/` passes with `['warehouse']` and raises `PermissionDenied` with `['finance']`.
+  - With the warehouse spec's `public_read_prefixes` patched to `()`, `GET /api/warehouses/` with only `finance` raises `PermissionDenied`.
+
+4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_module_spec_auth_fields --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`, and `python scripts/e2e/guardian_31_install_profiles.py` at most twice.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+refactor(auth): public read prefixes and reports fallback from module spec
+- Short English report: changes per item a to d, commands actually run with pass/fail counts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+دستور تست در پس‌زمینه اجرا شد و منتظر اتمام آن هستیم.
+</div>
+<div dir="rtl" align="right">
+دستور اجرای مجموعه آزمون‌های `accounts` و `integration_tests` در پس‌زمینه آغاز شد و منتظر نتیجه آن هستیم.
+</div>
+<div dir="rtl" align="right">
+
+### توضیح اولیه (ساده و شفاف)
+در این نشست، وابستگی‌های سخت‌کد شده به نام ماژول انبار (`warehouse`) در متد `enforce_token_app_scope` فایل [authentication.py](file:///E:/warehouse%20project/warehouse-backend/core/accounts/authentication.py) حذف شدند. پیشوندهای خواندن عمومی (`public_read_prefixes`) و پرچم ماژول پشتیبان گزارش‌ساز (`reports_fallback`) به عنوان فیلدهایی در [registry.py](file:///E:/warehouse%20project/warehouse-backend/co...
+
+---
+
+### Task 5 of 15 — 2026-10-20 02:40:37
+- **Status:** DONE
+- **Conversation:** `02a95b02-8303-4937-9f7b-c050a8b03a15`
+- **Steps:** 130
+- **Tokens:** 252252
+- **Duration:** 23m 52s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 12/12 passed
+- **Task:**
+```
+Session 5 of 15 — Phase 4 backend: users report entity reads module extra fields lazily in the query engine; the warehouse app no longer calls the reports registry
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Tenant isolation: do not change `scope_resolver`, permissions or any field other than how module extra fields reach the `users` entity.
+- Change only the 4 files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, headings `## ۱.` (row about the report field) and `### گام ۱`.
+- `PLATFORM_APPS` come before `MODULE_APPS` in `config/settings.py`, so `ReportsConfig.ready()` registers the `users` entity before `WarehousesConfig.ready()` contributes `user_report_extra_fields`. To work around this, `WarehousesConfig.ready()` calls the private `reports.registry._register_platform_entities()` inside `try/except: pass`.
+- `ReportEngine` reads entities through `get_entity()` (`platform_core/query_engine/engine.py`) and `EntityConfig.get_fields()` (`definitions.py`); the export job in `core/reports/excel.py` does not go through `reports.registry.get_registry()`.
+
+3. Task:
+- a) Add an optional constructor argument `extra_fields_point: str = ''` to `EntityConfig`. In `get_fields()`, right after `fields.update(self.extra)`, when the point is set, read `contributions(point)` at call time and add each item: a `FieldDef` by its `key`; a callable is called first; a `(key, FieldDef)` tuple by its key.
+- b) In `_register_platform_entities()`, remove the contributions loop and pass `extra_fields_point='user_report_extra_fields'` to the `users` `EntityConfig`.
+- c) In `WarehousesConfig.ready()`, delete the `try` block that imports and calls `_register_platform_entities`; keep `contribute('user_report_extra_fields', get_user_report_extra_fields())`.
+- d) Add at least three tests to `core/reports/tests.py`: `get_entity('users').get_fields()` contains `assigned_warehouses_count` in the full profile without calling `get_registry()` or `register_warehouse_reports()`; an `EntityConfig` built with a test point gets a `FieldDef` contributed after it was built (patch `platform_core.registry._CONTRIBUTIONS` with `patch.dict` so nothing leaks); a `ReportEngine` run on `users` that selects `assigned_warehouses_count` returns the correct count for a user with two assigned warehouses (follow the spec format of existing report tests in `integration_tests/test_reports_integration.py`).
+
+4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test reports --noinput`, one run of `.\venv\Scripts\python.exe manage.py test integration_tests reports platform_core --noinput`.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+refactor(reports): lazy module extra fields on the users entity
+- Short English report: changes per item a to d, commands actually run with pass/fail counts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+دستور اجرای تست‌های ماژول گزارش‌ها (`reports`) در بک‌اند اجرا شد و منتظر اتمام آن هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+تست‌های ترکیبی `integration_tests`، `reports` و `platform_core` اجرا شدند و منتظر نتیجهٔ اجرای تست‌ها هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+تست‌های ماژول `reports` با تنظیم جدید فراخوانی شدند و منتظر نتیجهٔ اجرای تست‌ها هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+### گام‌های ۱ تا ۴ پروتکل اجرایی
+
+#### ۱. توضیح ساده به فارسی
+در معماری فعلی، به دلیل اولویت بارگذاری اپ‌های پلتفرم نسبت به ماژول‌ها در `settings.py`، اپ گزارش‌ساز (`reports`) در متد `ready()` موجودیت `users` را پیش از آنکه ماژول انبار (`warehouses`) اکستنشن‌های فیلد...
+
+---
+
+### Task 6 of 15 — 2026-10-20 02:54:57
+- **Status:** DONE
+- **Conversation:** `1869c2aa-cd8a-4527-ae43-f5c73e0e9078`
+- **Steps:** 177
+- **Tokens:** 377383
+- **Duration:** 14m 16s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+Session 6 of 15 — Phase 4 backend: characterization tests for the audit log app-scope filters (list, stats and Excel export) on the current code
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- This session adds tests only. Do not change any application file. The tests describe today's behaviour exactly and must pass on the current code; if a result looks wrong, still assert today's result and mention it in the report.
+- Change only the one file listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed file. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
+- `core/accounts/views_domains/audit_views.py`, `AuditLogViewSet` (router `audit-logs` under `/api/accounts/`):
+  - `get_queryset`: for a non-superuser without `accounts.perm_sys_logs`, restricts by `user.assigned_warehouses` with three branches of the `app_scope` query parameter (`finance`/`personnel`, `warehouse`, anything else), then applies the app-scope filter (`warehouse`; `finance`/`personnel`; `all` or absent means no filter).
+  - `stats` action: `warehouse_logs_count` and `finance_logs_count` use the same two filters.
+  - `export_excel` action: the same app-scope filter on `app_scope` from the request data.
+- The filters use `audit_scope_keys('warehouse')`, `audit_scope_keys('accounting')`, `warehouse_id`, a list of six `target_model` names, `details__target_module='finance'`, and exclude the events `CROSS_APP_DENIED` and `APP_SCOPE_SWITCH`.
+
+3. Task: new `integration_tests/test_audit_app_scope_characterization.py` (`TestCase`, at least 10 tests). Build a fixed set of `AuditLog` rows that covers: a warehouse-module key with a warehouse id; an accounting-module key with no warehouse id; an accounting key with a warehouse id; a row with `target_model='PersonnelProfile'` and a non-accounting module; a row with `details={'target_module': 'finance'}`; a `CROSS_APP_DENIED` row; an `APP_SCOPE_SWITCH` row; a row of a warehouse the user is not assigned to. Assert exact id sets (not only counts) for:
+- superuser list with `app_scope` `warehouse`, `finance`, `personnel`, `all` and absent;
+- a non-superuser who can list audit logs, without `perm_sys_logs`, assigned to one warehouse, with `app_scope` `warehouse`, `finance` and absent;
+- `stats` for the superuser: `warehouse_logs_count` and `finance_logs_count`;
+- `export_excel` for the superuser with `app_scope` `warehouse` and `finance`: the number of data rows (read the workbook with `openpyxl`; data starts at row 3).
+Find the permission the list needs from `get_permissions` and the existing permission classes; give the non-superuser only what is needed.
+
+4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most five runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_audit_app_scope_characterization --noinput`.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+test(audit): characterization of app-scope filters for list, stats and export
+- Short English report: the fixture rows, each test and its expected id set, any result that looked wrong. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+دستور اجرای تست‌های مشخصه‌نگار فیلترهای قلمرو لاگ‌های ممیزی در پس‌زمینه اجرا شد و منتظر پایان آن هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+اجرای آزمون در پس‌زمینه آغاز شد و منتظر نتیجه آن هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+### ۱. توضیح شفاف درخواست کاربر (Explain Simply)
+کاربر در نشست ۶ از ۱۵ (فاز ۴ بک‌اند ماژولارسازی)، ایجاد آزمون‌های مشخصه‌نگار (Characterization Tests) برای رفتار فیلترهای قلمرو نرم‌افزار (`app_scope`) در ویوست لاگ‌های ممیزی (`AuditLogViewSet`) شامل متدهای فهرست (`list`)، آمار (`stats`) و خروجی اکسل (`export_excel`) را بر روی کد فعلی درخواست نمود. هدف این نشست، قفل‌کردن دقیق رفتار وضع موجود (شامل نتایج غیرمنتظره و باگ‌های فعلی) ...
+
+---
+
+### Task 7 of 15 — 2026-10-20 03:32:45
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `ab2e3f5e-9bab-4562-bb51-ba2a1245c113`
+- **Steps:** 145
+- **Tokens:** 747067
+- **Duration:** 37m 43s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 11/14 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 7116a7d --allow warehouse-backend/core/accounts/views_domains/audit_views.py warehouse-backend/core/accounts/audit_scope.py warehouse-backend/core/platform_core/registry.py warehouse-backend/modules/warehouse/warehouses/apps.py warehouse-backend/modules/warehouse/warehouses/audit_scope.py warehouse-backend/modules/accounting/personnel/apps.py warehouse-backend/modules/accounting/personnel/audit_scope.py`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py commit-exists --base 7116a7d --grep "refactor(audit): app-scope filters and user restriction via module contributions"`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
+  - verify gate 2: 14/14 passed
+- **Task:**
+```
+Session 7 of 15 — Phase 4 backend: audit log app-scope filters and the assigned-warehouse restriction come from module contributions
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Tenant isolation: every user must see exactly the same audit rows as today. `integration_tests/test_audit_app_scope_characterization.py` (session 6) is the contract: it must pass unchanged, and you must not edit it.
+- Register the contributions outside any `try` block, so a registration failure fails loudly instead of silently widening what users see.
+- Change only the 7 files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
+- `audit_views.py` repeats the same app-scope filter in `get_queryset`, `stats` and `export_excel`, and restricts non-superusers through `user.assigned_warehouses` in `get_queryset`. Read the three blocks and the session 6 test before changing anything.
+- `audit_scope_keys(code)` in `registry.py` reads `MODULE_CATALOG`, so it works for uninstalled modules.
+
+3. Definitions:
+- "Scope module" of an `app_scope` value: the catalog spec whose `scope_codes` contains the value (`warehouse` gives `warehouse`; `finance` and `personnel` give `accounting`; `accounting`, `all`, empty or unknown give `None`). Add a registry helper `module_for_scope_code(code)` for it.
+- "Other modules' keys" of module M: the union of `audit_scope_keys(c)` for every catalog module `c` other than M.
+
+4. Task:
+- a) New `core/accounts/audit_scope.py` with `apply_audit_app_scope(qs, app_scope)`: no scope module, return `qs` unchanged; otherwise apply the filter function contributed for that module through point `audit_app_scope_filters` (items are `(module_code, fn)`, `fn(qs) -> qs`), or `qs.filter(module__in=audit_scope_keys(module))` when the module contributed none; then exclude `CROSS_APP_DENIED` and `APP_SCOPE_SWITCH` as today. Also `restrict_audit_for_user(qs, user, app_scope)`: call every function contributed through `audit_user_restrictions` as `fn(qs, user, scope_module)` and return the result. No module name may appear in this file.
+- b) `modules/warehouse/warehouses/audit_scope.py`: the warehouse filter (`module__in` own keys or `warehouse_id__isnull=False`, excluding other modules' keys) and the user restriction with today's three branches, using the user's assigned warehouse ids (no restriction when the user has no `assigned_warehouses` attribute): scope module is `warehouse` gives ids only; another module gives ids or null warehouse; `None` gives ids or (null warehouse and module in other modules' keys). `modules/accounting/personnel/audit_scope.py`: the accounting filter (own keys, the six `target_model` names, `details__target_module='finance'`). Register both in their `ready()`.
+- c) In `audit_views.py`, replace the three filter blocks with `apply_audit_app_scope` and the restriction block with `restrict_audit_for_user`, keeping the superuser and `perm_sys_logs` check in the view. `stats` keeps the response keys `warehouse_logs_count` and `finance_logs_count`, computed with `apply_audit_app_scope(base_qs, 'warehouse')` and `apply_audit_app_scope(base_qs, 'finance')`.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most four runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_audit_app_scope_characterization --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`.
+
+6. Output and stop condition:
+- Commit with this message, without push:
+refactor(audit): app-scope filters and user restriction via module contributions
+- Short English report: where each contribution is registered, the characterization test result, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+دستور اجرای تست‌های پکیج‌های `accounts` و `integration_tests` در پس‌زمینه اجرا شده است و در انتظار اتمام اجرای تست‌ها می‌باشیم. پس از اتمام تست‌ها، نتایج بررسی و کامیت ثبت خواهد شد.
+
+</div>
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده (Explain Simply)
+در نشست ۷ از فاز ۴ ماژولارکردن بک‌اند، فیلترهای قلمرو سامانه (`app_scope`) و محدودیت دسترسی کاربران غیرمدیر بر مبنای انبارهای مجاز در لاگ‌های ممیزی (`AuditLog`)، از حالت سخت‌کد در فایل هسته (`audit_views.py`) خارج شدند و به صورت مشارکت در نقطه‌های توسعه (`audit_app_scope_filters` و `audit_user_restrictions`) از سوی ماژول‌های انبار (`warehouse`) و حسابداری (`accounting`) درآمدند. فایل کمکی هسته (`core/accounts/...
+
+---
+
+### Task 8 of 15 — 2026-10-20 04:02:06
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `e4cd90c2-7b65-45ca-a8ec-c916616e02ec`
+- **Steps:** 177
+- **Tokens:** 455925
+- **Duration:** 29m 17s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 11/11 passed
+- **Task:**
+```
+Session 8 of 15 — Phase 4 backend: comment target models come from module contributions instead of a hardcoded set in communications
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Do not change `can_access_comment_target` or any access check; only the allow-list source changes.
+- Change only the 4 files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
+- `core/communications/serializers.py` has `ALLOWED_COMMENT_MODELS = {'item', 'counttask', 'doctask', 'warehouse', 'document', 'financialdocument'}` used in `validate`. `Item`, `CountTask` and `DocTask` are in `modules/warehouse/inventory`, `Warehouse` in `modules/warehouse/warehouses`. No model named `Document` or `FinancialDocument` exists in the project, so those two entries are dropped.
+
+3. Task:
+- a) Replace the constant with a function that returns the set of lowercase model names from `contributions('comment_target_models')`, read at validation time.
+- b) Register `'item'`, `'counttask'` and `'doctask'` in `InventoryConfig.ready()` and `'warehouse'` in `WarehousesConfig.ready()`, outside any `try` block.
+- c) New `integration_tests/test_comment_target_models.py` (`TestCase`, at least 3 tests): the contributed set equals `{'item', 'counttask', 'doctask', 'warehouse'}`; the comment serializer accepts `content_type_str='inventory.item'` past the allow-list check; it rejects `content_type_str='personnel.personneldocument'` with the existing Persian «مجاز نیست» error.
+
+4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_comment_target_models --noinput`, one run of `.\venv\Scripts\python.exe manage.py test communications integration_tests --noinput`.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+refactor(comments): comment target models via module contributions
+- Short English report: changes, commands actually run with pass/fail counts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده
+در نشست ۸ از فاز ۴ ماژولارسازی، هدف این بود که لیست مدل‌های مجاز برای درج نظر (کامنت) چندریختی که قبلاً به صورت یک متغیر هاردکدشده ثابت (`ALLOWED_COMMENT_MODELS`) در هستهٔ `communications` قرار داشت، با یک تابع پویا که مدل‌ها را از نقطهٔ مشارکت (`contributions('comment_target_models')`) می‌خواند جایگزین شود. همچنین ورودی‌های غیرواقعی `document` و `financialdocument` که در سیستم وجود خارجی نداشتند حذف شدند و هر ماژول مدل‌های مرتبط با خود را در متد `ready()` خود ثبت کرد (`inventory` مدل‌های `'item'`, `'counttask'`, `'doctask'` و `warehouses` مدل `'warehouse'`).
+
+### ۲. اعتبارسنجی فوری
+- بررسی کدهای `warehouse-backend/core/communications/serializ...
+
+---
+
+### Task 9 of 15 — 2026-10-20 04:36:57
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `8c0b33e6-2b17-47dd-9cff-2b21bd3fe137`
+- **Steps:** 273
+- **Tokens:** 651691
+- **Duration:** 34m 46s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 10/10 passed
+- **Task:**
+```
+Session 9 of 15 — Phase 4 backend: user serializers and user views reach assigned warehouses only through WarehouseUserExtension
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Tenant isolation and no data loss: the Excel import must still replace only the warehouses inside the importer's own scope and keep the warehouses outside it (the `kept` logic in `user_views.py`). API field names (`assigned_warehouses`) and responses stay the same.
+- Change only the 4 files listed in the scope verify line. Do not change `core/common/warehouse_scope.py`.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
+- `WarehouseUserExtension` (`modules/warehouse/warehouses/user_extension.py`) is registered under `user_extensions`; core finds it with `_get_user_warehouse_extension()` (defined in `accounts/serializers.py`, `accounts/excel_utils.py`, and inline in `user_views.py`).
+- Direct uses left in core: `serializers.py` (`get_assigned_warehouses`, `create`, `update`) and `user_views.py` (the export row near `warehouses = list(user.assigned_warehouses...`, the Excel import update and create paths, and the user detail/card near `wh_names`).
+
+3. Task:
+- a) Add to `WarehouseUserExtension`: `get_assigned_ids(user) -> list[int]`, `get_assigned_names(user) -> list[str]`, `get_assigned(user) -> list` and `set_assigned(user, warehouses) -> None`, each tolerant of a user without the attribute (empty result, no-op).
+- b) Replace every direct use listed above with the extension methods; when the extension is `None` (no warehouse module), keep today's result for that install (empty list, nothing set). Keep the order of operations in the import code.
+- c) New `integration_tests/test_user_warehouse_extension_calls.py` (`TestCase`, at least 4 tests): creating a user through the user API with `assigned_warehouses` sets them; the user detail returns the same ids; updating with a new list replaces them; with `contributions('user_extensions')` patched to return no extension, the user serializer has no `assigned_warehouses` field and create still works.
+
+4. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_user_warehouse_extension_calls --noinput`, one run of `.\venv\Scripts\python.exe manage.py test accounts integration_tests --noinput`.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+refactor(users): assigned warehouses through the warehouse user extension
+- Short English report: each replaced use and the method used, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده و شفاف (Explain Simply)
+در نشست ۹ از فاز ۴ ماژولارسازی، تمام دسترسی‌ها و انتساب‌های مستقیم مدل‌های کاربری به فیلد رابطهٔ انبارها (`assigned_warehouses`) در هسته پلتفرم (شامل `serializers.py` و `user_views.py`) از میان برداشته شد و به اکستنشن رسمی انبار (`WarehouseUserExtension`) منتقل گردید؛ به طوری که در نبود ماژول انبارداری هیچ خطایی رخ ندهد و در صورت وجود، متدهای `get_assigned_ids`، `get_assigned_names`، `get_assigned` و `set_assigned` مسئولیت خواندن و نوشتن رابطه را بر عهده داشته باشند. همچنین منطق تفکیک مستأجران و نگهداری انبارهای خارج از قلمرو (`kept`) در ورود اکسل دقیقاً حفظ شد.
+
+### ۲. اعتبارسنجی فوری و کدبیس (Verify Immediately)
+کدبیس...
+
+---
+
+### Task 10 of 15 — 2026-10-20 05:24:16
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `703b0bea-a8ce-4247-b0ce-45d0ad115a8f`
+- **Steps:** 195
+- **Tokens:** 655573
+- **Duration:** 47m 15s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 12/12 passed
+- **Task:**
+```
+Session 10 of 15 — Phase 4 backend: warehouse scope rules of the report query engine come from a module scope handler
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Tenant isolation: every report must return exactly the same rows to every user as today. A scope kind with a `scope_path` and no handler must be denied (`ReportError`, status 403), never left unscoped.
+- Keep the `company` scope rules in core unchanged. Keep the default values of `scope_kind` and `module_code` parameters unchanged.
+- Register the handler outside any `try` block.
+- Change only the files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Run `manage.py test` only with labels.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۲`.
+- `platform_core/query_engine/engine.py` has `scope_kind == 'warehouse'` branches in `_build_join_scope_q`, `_check_scope_access` and `_scope_queryset`, using `common.warehouse_scope` (`can_access_warehouse`, `user_warehouse_ids`, `scope_queryset`). `definitions.py` `EntityConfig.get_fields()` reads the `blind_counting` setting per warehouse when `self.scope_kind == 'warehouse'`.
+- The platform `users` entity keeps the default `scope_kind='warehouse'` with `scope_path=None` and a `scope_resolver`; it must work in every install profile.
+
+3. Definitions: a "scope handler" is an object contributed through `report_scope_handlers` with attribute `kind` (str), attribute `per_scope_settings` (bool), and methods `check_access(user, scope_id) -> assigned_ids or None` (raises `ReportError` 403 when the user may not access `scope_id`), `scope_queryset(qs, user, path, scope_id) -> qs`, and `join_q(user, assigned_ids, path, scope_id) -> Q`.
+
+4. Task:
+- a) In core, look up the handler for an entity's `scope_kind` at call time. In `_check_scope_access`, `_scope_queryset` and `_build_join_scope_q`, replace each `warehouse` branch with the handler call, keeping the exact logic (including the superuser rule in `_build_join_scope_q`). When no handler exists: `scope_path` is `None`, or the kind is `company`, behave as today's non-warehouse path; otherwise raise `ReportError(..., status=403)` with a Persian message.
+- b) In `get_fields()`, read the per-scope `blind_counting` setting when the entity's handler has `per_scope_settings` true, instead of comparing the kind with `'warehouse'`.
+- c) New `modules/warehouse/warehouses/report_scope.py` with the warehouse handler (`kind='warehouse'`, `per_scope_settings=True`) using `common.warehouse_scope` exactly as the engine does today; register it in `WarehousesConfig.ready()`.
+- d) New `integration_tests/test_report_scope_handlers.py` (`TestCase`, at least 4 tests): exactly one handler with kind `warehouse` is registered; a non-superuser assigned to one warehouse gets only that warehouse's rows from a warehouse-scoped entity (follow `integration_tests/test_reports_integration.py`); requesting another warehouse id gives 403; an entity with a made-up kind and a `scope_path` raises `ReportError` with status 403.
+
+5. Tool policy: in `warehouse-backend` with `PYTHONUTF8=1`, at most three runs of `.\venv\Scripts\python.exe manage.py test integration_tests.test_report_scope_handlers --noinput`, one run of `.\venv\Scripts\python.exe manage.py test reports integration_tests --noinput`.
+
+6. Output and stop condition:
+- Commit with this message, without push:
+refactor(reports): warehouse scope rules via a module scope handler
+- Short English report: changes per item a to d, commands actually run with pass/fail counts, remaining doubts. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+تست‌های مربوط به `integration_tests.test_report_scope_handlers` در پس‌زمینه در حال اجرا هستند و به محض اتمام، وضعیت و خروجی دقیق آن بررسی خواهد شد.
+تست‌های `reports` و `integration_tests` (مجموعاً ۲۶۱ تست) در حال اجرا هستند. به محض پایان اجرای آن‌ها گزارش کامل ارائه می‌شود.
+در حال اجرای ۲۶۱ تست مربوط به مجموعه‌های `reports` و `integration_tests`؛ سیستم پس از اتمام تست‌ها به صورت خودکار پیام پایان را دریافت خواهد کرد.
+منتظر اتمام اجرای آزمون‌های `reports` و `integration_tests` می‌مانیم.
+آزمون‌ها در حال پیشرفت هستند (۳۹ آزمون پاس شده تا این لحظه). پس از اتمام اجرای کلیه آزمون‌ها ادامه فرایند طی خواهد شد.
+در حال ادامه آزمون‌ها...
+در حال اجرای تست‌های ارتباطات و مابقی آزمون‌ها...
+آزمون‌ها به مرا...
+
+---
+
+### Task 11 of 15 — 2026-10-20 08:58:49
+- **Status:** DONE (accepted after ERROR)
+- **Conversation:** `7c733622-1991-4b94-b648-dd8a76c049e9`
+- **Steps:** 283
+- **Tokens:** 5561514
+- **Duration:** 214m 28s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 10/10 passed
+- **Task:**
+```
+Session 11 of 15 — Phase 4: one generic module loop in AuthGuard replaces the hardcoded warehouse and finance blocks
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Every guard decision must stay the same. `route-access.characterization.spec.ts`, `auth.guard.spec.ts` and `login-destination.characterization.spec.ts` are the contract: do not edit them; they must pass.
+- Change only the 4 files listed in the scope verify line. Do not change the company-documents logic in this session beyond moving it unchanged (session 12 handles it).
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۳`.
+- `auth.guard.ts` `AuthGuard` has: a warehouse scope block (`isWarehouseScope`), a finance scope block (`isFinanceScope`, with the company-documents exception), a generic loop for other modules with routeAccess (session 1), and a page-permission loop whose fallback is `roleHome()` for warehouse pages and the other module's `defaultRoute` for other pages.
+- Today's asymmetric rules that must survive: a module that is not installed redirects to the first other installed module with routeAccess, else `/app/launcher`; a user without access to a module's scope goes to another accessible module's `defaultRoute`, else `/login`; on a page of a module the user cannot access, warehouse pages go to `roleHome()` and finance pages go to the other module's `defaultRoute`.
+
+3. Task:
+- a) Add one optional field to `ModuleRouteAccess` in `module-contract.ts`: `deniedPageFallback?: 'roleHome' | 'otherModuleDefault'`; set `'roleHome'` in `modules/warehouse/route-access.ts` and `'otherModuleDefault'` in `modules/accounting/route-access.ts`.
+- b) Replace the warehouse block, the finance block and both loops with one loop over all known module specs that have routeAccess (installed and not installed, so the not-installed redirect still works; find how the registry exposes them), detecting the module by `routePrefix` or `route.routeConfig?.path` equal to the prefix without its leading slash. Use `extensions.layoutNav.hasCompanyDocumentsArchive` to apply the company-documents exception only to the module that owns the archive, keeping today's checks exactly.
+- c) No module name, route prefix or scope kind literal remains in `auth.guard.ts` except inside the company-documents expressions that session 12 replaces.
+
+4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/auth/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/core/services/app-persona*.spec.ts"`.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+refactor(guard): one generic module loop in AuthGuard
+- Short English report: the new loop, how each asymmetric rule is kept, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### گام‌های اجرایی نشست ۱۱
+
+۱. **توضیح درخواست:** جایگزینی بلوک‌های سخت‌کد انبارداری و مالی در `AuthGuard` با یک حلقه واحد و تعمیم‌یافته ماژولار بر اساس قرارداد ماژول (`ModuleRouteAccess`) و حفظ دقیق کلیه رفتارهای نامتقارن (مانند هدایت ماژول نصب‌نشده، عدم دسترسی به ماژول، و رفتار صفحات رد دسترسی).
+
+۲. **بررسی و اعتبارسنجی:** ساختار ماژول‌ها و فیلد اختیاری `deniedPageFallback` در قرارداد ماژول و فایل‌های دسترسی روت انبار (`roleHome`) و مالی (`otherModuleDefault`) اعمال شد؛ همچنین ارجاعات سخت‌کد در گاردها بازنویسی شد و نگهبان‌های ۵۶ و ۵۷ بدون خطا پاس شدند.
+
+۳. **وضعیت اجرا:** دستور کامپایل و بیلد `ng build` فرانت در پس‌زمینه در حال اجراست و به محض اتمام نتیجه اعت...
+
+---
+
+### Task 12 of 15 — 2026-10-20 11:37:35
+- **Status:** STOPPED (ERROR)
+- **Conversation:** `22dc3ebe-0c64-4794-a472-06ad688b5894`
+- **Steps:** 223
+- **Tokens:** 10400460
+- **Duration:** 158m 42s
+- **Checks:**
+  - require: 1/1 passed
+  - verify gate 1: 8/12 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 946e4b6 --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/auth/company-documents-route.spec.ts`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py ng-test-compare --base 946e4b6 --include "src/**/*.spec.ts"`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py commit-exists --base 946e4b6 --grep "refactor(routes): company documents route from the layoutNav extension"`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
+  - verify gate 2: 9/12 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 946e4b6 --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/auth/company-documents-route.spec.ts`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py commit-exists --base 946e4b6 --grep "refactor(routes): company documents route from the layoutNav extension"`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
+  - verify gate 3: 9/12 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 946e4b6 --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/auth/company-documents-route.spec.ts`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py commit-exists --base 946e4b6 --grep "refactor(routes): company documents route from the layoutNav extension"`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
+  - verify gate 4: 9/12 passed
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py scope --base 946e4b6 --allow warehouse-front/src/app/core/modules/module-contract.ts warehouse-front/src/app/modules/accounting/module.ts warehouse-front/src/app/app.routes.ts warehouse-front/src/app/core/auth/auth.guard.ts warehouse-front/src/app/core/services/app-persona.service.ts warehouse-front/src/app/core/auth/company-documents-route.spec.ts`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py commit-exists --base 946e4b6 --grep "refactor(routes): company documents route from the layoutNav extension"`
+    - FAILED (exit 1): `python scripts/automation/verify_tools.py clean-tree`
+- **Task:**
+```
+Session 12 of 15 — Phase 4: the company documents route comes from the layoutNav extension of the module that owns the archive
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Every redirect and access decision stays the same in the full profile. Do not edit existing spec files.
+- Change only the 6 files listed in the scope verify line.
+- Run every command in the foreground. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۳`.
+- Hardcoded uses: `app.routes.ts` (the two root redirect functions and the legacy redirects for paths `company-documents` and `documents`), `auth.guard.ts` (`isCompanyDocsRoute`), `app-persona.service.ts` (`getDefaultRouteForRole` and `canAccessRoute`). The accounting module already declares `extensions.layoutNav.hasCompanyDocumentsArchive: true`; its route is `company-documents` under `/app/finance`, with a legacy alias `documents`.
+
+3. Task:
+- a) Add `companyDocumentsRoute?: string` to the `layoutNav` extension in `module-contract.ts`, and set `companyDocumentsRoute: '/app/finance/company-documents'` in `modules/accounting/module.ts`.
+- b) Read the route from the installed module whose `layoutNav` has `hasCompanyDocumentsArchive` true, through the module registry, in all the places above. A URL counts as a company-documents URL when it starts with that route or with the same parent path plus `/documents`. The two legacy redirects use a function that returns the route without its leading slash, or `app/launcher` when no module owns the archive.
+- c) New `core/auth/company-documents-route.spec.ts` (at least 4 tests, one name containing `without the archive module`): the root redirect sends a user with company-documents access and no module access to the archive route; the guard allows that user on the archive route; the legacy `documents` redirect resolves to the archive route; without the archive module installed the redirect goes to `app/launcher`.
+
+4. Tool policy: in `warehouse-front`, at most two runs of `npx ng build --output-path ../scratch/ng-build-agent`; from the repo root, at most four runs of `python scripts/automation/verify_tools.py ng-test-compare --base HEAD --include "src/app/core/**/*.spec.ts" --include "src/app/modules/common/components/login/*.spec.ts" --include "src/app/*.spec.ts"`.
+
+5. Output and stop condition:
+- Commit with this message, without push:
+refactor(routes): company documents route from the layoutNav extension
+- Short English report: each replaced use, the tests added, the last ng-test-compare summary line. End the turn after the commit and report.
+```
+- **Agent's last reply:**
+
+
+---
