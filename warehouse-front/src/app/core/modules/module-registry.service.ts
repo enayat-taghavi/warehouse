@@ -118,6 +118,13 @@ export class ModuleRegistryService {
   }
 
   /**
+   * همهٔ ماژول‌های شناخته‌شده در این بیلد، نصب‌شده یا نه
+   */
+  public getAllModules(): WhFrontendModule[] {
+    return [...this.modules];
+  }
+
+  /**
    * دریافت فهرست ماژول‌های فعال
    */
   public getInstalledModules(): WhFrontendModule[] {

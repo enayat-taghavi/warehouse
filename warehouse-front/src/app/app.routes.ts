@@ -7,7 +7,7 @@ import { Layout } from './modules/common/components/layout/layout';
 import { AppLauncherComponent } from './modules/common/components/app-launcher/app-launcher';
 import { ChangePassword } from './modules/common/components/change-password/change-password';
 import { VerifyCard } from './modules/common/components/verify-card/verify-card';
-import { AuthGuard, AuthGuardChild, WarehouseModuleMatchGuard, WarehouseCompanyGuard, AccountingModuleMatchGuard } from './core/auth/auth.guard';
+import { AuthGuard, AuthGuardChild, WarehouseCompanyGuard } from './core/auth/auth.guard';
 import { OperationsGuard, OperationsGuardChild } from './core/guards/operations.guard';
 import { OperationsLayoutComponent } from './modules/common/components/operations/operations-layout/operations-layout';
 import { OperationsCockpitComponent } from './modules/common/components/operations/operations-cockpit/operations-cockpit';

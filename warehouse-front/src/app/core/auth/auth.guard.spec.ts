@@ -7,6 +7,7 @@ import { Router, ActivatedRouteSnapshot, RouterStateSnapshot, UrlTree } from '@a
 import { 
   WarehouseModuleMatchGuard, 
   WarehouseCompanyGuard, 
+  AccountingModuleMatchGuard,
   AuthGuard 
 } from './auth.guard';
 import { AuthService } from './auth.service';
@@ -87,6 +88,21 @@ describe('AuthGuards & Warehouse Routing Integrity', () => {
       activeCompanyMock.activeCompany = { id: 2, name: 'شرکت ۲', has_warehouse_module: false };
       const result = TestBed.runInInjectionContext(() => WarehouseModuleMatchGuard({} as any, [], {} as any));
       expect(result).toBe(false);
+    });
+
+    it('should reject route when the warehouse module is not installed even though other modules are', () => {
+      moduleRegistryMock.isModuleInstalled.mockImplementation((code: string) => code !== 'warehouse');
+      const result = TestBed.runInInjectionContext(() => WarehouseModuleMatchGuard({} as any, [], {} as any));
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('AccountingModuleMatchGuard', () => {
+    it('should match only when the accounting module is installed', () => {
+      moduleRegistryMock.isModuleInstalled.mockImplementation((code: string) => code === 'accounting');
+      expect(TestBed.runInInjectionContext(() => AccountingModuleMatchGuard({} as any, [], {} as any))).toBe(true);
+      moduleRegistryMock.isModuleInstalled.mockImplementation((code: string) => code !== 'accounting');
+      expect(TestBed.runInInjectionContext(() => AccountingModuleMatchGuard({} as any, [], {} as any))).toBe(false);
     });
   });
 

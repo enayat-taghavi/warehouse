@@ -9,13 +9,13 @@ import { ActiveCompanyService } from '../services/active-company.service';
 
 /**
  * گارد تطبیق ماژول انبارداری — در صورت عدم نصب یا عدم فعال بودن ماژول برای شرکت، از روت عبور می‌کند
+ * @deprecated روت‌های ماژول‌ها canMatch خود را از `dynamicModuleRoutes` در app.routes.ts می‌گیرند.
  */
 export const WarehouseModuleMatchGuard: CanMatchFn = () => {
   const moduleRegistry = inject(ModuleRegistryService);
   const activeCompany = inject(ActiveCompanyService, { optional: true });
 
-  const hasMod = moduleRegistry.getInstalledModules().length > 0;
-  if (!hasMod) {
+  if (!moduleRegistry.isModuleInstalled('warehouse')) {
     return false;
   }
   if (activeCompany?.activeCompany && activeCompany.activeCompany.has_warehouse_module === false) {
@@ -40,10 +40,11 @@ export const WarehouseCompanyGuard: CanActivateFn = () => {
 
 /**
  * گارد تطبیق ماژول مالی و پرسنلی — در صورت عدم نصب، از روت عبور می‌کند
+ * @deprecated روت‌های ماژول‌ها canMatch خود را از `dynamicModuleRoutes` در app.routes.ts می‌گیرند.
  */
 export const AccountingModuleMatchGuard: CanMatchFn = () => {
   const moduleRegistry = inject(ModuleRegistryService);
-  return moduleRegistry.getInstalledModules().length > 0;
+  return moduleRegistry.isModuleInstalled('accounting');
 };
 
 /**
@@ -130,24 +131,19 @@ export const AuthGuard: CanActivateFn = (route, state) => {
     }
 
     const moduleRegistry = inject(ModuleRegistryService);
-    const regAny = moduleRegistry as any;
-    const globalRegAny = getModuleRegistry() as any;
-    const allKnownSpecs: WhFrontendModule[] =
-      (Array.isArray(regAny?.modules) ? regAny.modules : undefined) ??
-      (Array.isArray(globalRegAny?.modules) ? globalRegAny.modules : undefined) ??
-      moduleRegistry.getInstalledModules();
+    // ماژول‌های نصب‌نشده هم لازم‌اند تا ریدایرکت «ماژول نصب نیست» کار کند؛ mock ناقص رجیستری به رجیستری سراسری برمی‌گردد
+    const allKnownSpecs = typeof moduleRegistry.getAllModules === 'function'
+      ? moduleRegistry.getAllModules()
+      : getModuleRegistry().getAllModules();
 
     const installed = moduleRegistry.getInstalledModules();
     const installedWithRouteAccess = installed.filter(m => Boolean(getModuleRouteAccess(m)));
+    const hasModuleAccess = (m: WhFrontendModule) =>
+      Boolean(getModuleRouteAccess(m)?.guardAccessPermissions?.some(p => userPerms.includes(p)));
 
     const specMap = new Map<string, WhFrontendModule>();
-    for (const m of allKnownSpecs) {
-      if (m?.code) specMap.set(m.code, m);
-    }
-    for (const m of installed) {
-      if (m?.code && !specMap.has(m.code)) {
-        specMap.set(m.code, m);
-      }
+    for (const m of [...allKnownSpecs, ...installed]) {
+      if (m?.code && !specMap.has(m.code)) specMap.set(m.code, m);
     }
     const candidateModules = Array.from(specMap.values()).filter(m => Boolean(getModuleRouteAccess(m)));
 
@@ -164,17 +160,8 @@ export const AuthGuard: CanActivateFn = (route, state) => {
 
     const path = route.routeConfig?.path;
 
-    const matchingScopeMod = candidateModules.find(m => {
-      const cleanPrefix = (m.routePrefix || '').replace(/^\//, '');
-      return (m.routePrefix && state.url.startsWith(m.routePrefix)) || path === cleanPrefix;
-    });
-
-    // بررسی تعمیم‌یافته برای هر ماژول شناخته‌شده دارای routeAccess (حلقه واحد ماژولار)
+    // قلمرو ماژول: یک حلقه برای همهٔ ماژول‌های شناخته‌شده دارای routeAccess
     for (const mod of candidateModules) {
-      const modRouteAccess = getModuleRouteAccess(mod);
-      if (!modRouteAccess) {
-        continue;
-      }
       const cleanPrefix = (mod.routePrefix || '').replace(/^\//, '');
       const isModScope = (mod.routePrefix && state.url.startsWith(mod.routePrefix)) || path === cleanPrefix;
 
@@ -184,7 +171,7 @@ export const AuthGuard: CanActivateFn = (route, state) => {
           return router.parseUrl(fallbackInstalled ? fallbackInstalled.defaultRoute : '/app/launcher');
         }
 
-        let hasModAccess = isAdmin || Boolean(modRouteAccess.guardAccessPermissions?.some(p => userPerms.includes(p)));
+        let hasModAccess = isAdmin || hasModuleAccess(mod);
 
         if (mod.extensions?.companies?.hasWarehouseModuleToggle) {
           const activeCompany = inject(ActiveCompanyService, { optional: true });
@@ -199,7 +186,7 @@ export const AuthGuard: CanActivateFn = (route, state) => {
         }
 
         if (!hasModAccess) {
-          const fallbackMod = installedWithRouteAccess.find(m => m.code !== mod.code && (isAdmin || Boolean(getModuleRouteAccess(m)?.guardAccessPermissions?.some(p => userPerms.includes(p)))));
+          const fallbackMod = installedWithRouteAccess.find(m => m.code !== mod.code && (isAdmin || hasModuleAccess(m)));
           if (fallbackMod) {
             return router.parseUrl(fallbackMod.defaultRoute);
           }
@@ -208,22 +195,6 @@ export const AuthGuard: CanActivateFn = (route, state) => {
             : router.parseUrl('/login');
         }
         break;
-      }
-
-      if (!matchingScopeMod && path && !isAdmin) {
-        const isModRoute = Boolean(modRouteAccess.pagePermissions && path in modRouteAccess.pagePermissions);
-        if (isModRoute) {
-          const hasModAccess = Boolean(modRouteAccess.guardAccessPermissions?.some(p => userPerms.includes(p)));
-          if (!hasModAccess) {
-            const otherAccessible = installedWithRouteAccess.find(m => m.code !== mod.code && Boolean(getModuleRouteAccess(m)?.guardAccessPermissions?.some(p => userPerms.includes(p))));
-            if (otherAccessible) {
-              return modRouteAccess.deniedPageFallback === 'roleHome'
-                ? roleHome()
-                : router.parseUrl(otherAccessible.defaultRoute);
-            }
-            return router.parseUrl('/login');
-          }
-        }
       }
     }
 
@@ -235,6 +206,21 @@ export const AuthGuard: CanActivateFn = (route, state) => {
     const requiredPerms = path ? getRequiredRoutePermissions(path) : undefined;
     if (path && requiredPerms) {
       if (!isAdmin) {
+        // صفحهٔ متعلق به ماژولی که کاربر به آن دسترسی ندارد: مقصد را خود ماژول تعیین می‌کند (deniedPageFallback)
+        for (const mod of installedWithRouteAccess) {
+          const modRouteAccess = getModuleRouteAccess(mod)!;
+          const isModRoute = Boolean(modRouteAccess.pagePermissions && path in modRouteAccess.pagePermissions);
+          if (isModRoute && !hasModuleAccess(mod)) {
+            const otherAccessible = installedWithRouteAccess.find(m => m.code !== mod.code && hasModuleAccess(m));
+            if (otherAccessible) {
+              return modRouteAccess.deniedPageFallback === 'roleHome'
+                ? roleHome()
+                : router.parseUrl(otherAccessible.defaultRoute);
+            }
+            return router.parseUrl('/login');
+          }
+        }
+
         const hasAccess = requiredPerms.some(p => userPerms.includes(p));
         if (!hasAccess) {
           return roleHome();
