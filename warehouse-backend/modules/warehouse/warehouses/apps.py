@@ -89,6 +89,10 @@ class WarehousesConfig(AppConfig):
         register_warehouse_report_entities()
         contribute('report_registrars', register_warehouse_report_entities)
 
+        # هندلر قلمرو انبار در موتور گزارش پلتفرم (فاز ۴ گام ۲)
+        from warehouses.report_scope import WarehouseScopeHandler
+        contribute('report_scope_handlers', WarehouseScopeHandler())
+
         # قوانین تفکیک وظایف (SoD) ماژول انبار
         from warehouses.sod_rules import SOD_RULES, SOD_ROUTE_RULES
         for rule in SOD_RULES:

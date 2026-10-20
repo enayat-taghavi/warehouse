@@ -68,6 +68,15 @@ class ReportError(Exception):
         self.status = status
 
 
+def get_report_scope_handler(kind: str):
+    """یافتن هندلر قلمرو از مشارکت‌های report_scope_handlers."""
+    from platform_core.registry import contributions
+    for handler in contributions('report_scope_handlers'):
+        if getattr(handler, 'kind', None) == kind:
+            return handler
+    return None
+
+
 class ReportEngine:
     def __init__(self, user, spec: dict):
         self.user = user
@@ -202,33 +211,30 @@ class ReportEngine:
             return Q()
         if jd.path_to_base and (path.startswith(f'{jd.path_to_base}__') or path == jd.path_to_base):
             return Q()
-        scope_q = Q()
-        if jd.scope_kind == 'warehouse':
-            if not self.user.is_superuser:
-                assigned = getattr(self, '_assigned_ids', None)
-                if assigned is not None:
-                    scope_q &= Q(**{f'{path}__in': assigned})
-            if self.warehouse_id:
-                scope_q &= Q(**{f'{path}': self.warehouse_id})
-        return scope_q
+        handler = get_report_scope_handler(jd.scope_kind)
+        if handler:
+            assigned = getattr(self, '_assigned_ids', None)
+            return handler.join_q(self.user, assigned, path, self.scope_id)
+        if jd.scope_kind == 'company':
+            return Q()
+        raise ReportError(f'قلمرو «{jd.scope_kind}» پشتیبانی نمی‌شود یا ماژول مربوطه فعال نیست.', status=403)
 
     # ------------------------------------------------------------------ scope
     def _check_scope_access(self):
         """اعتبارسنجی دسترسی به قلمرو انتخابی."""
-        if self.config.scope_kind == 'warehouse':
-            from common.warehouse_scope import can_access_warehouse, user_warehouse_ids
-            target_wh = int(self.warehouse_id) if self.warehouse_id else None
-            if target_wh is not None and not can_access_warehouse(self.user, target_wh):
-                raise ReportError('به این انبار دسترسی ندارید.', status=403)
-            self._assigned_ids = user_warehouse_ids(self.user)
+        handler = get_report_scope_handler(self.config.scope_kind)
+        if handler:
+            self._assigned_ids = handler.check_access(self.user, self.scope_id)
         elif self.config.scope_kind == 'company':
             target_scope = int(self.scope_id) if self.scope_id else None
             if target_scope is not None:
                 from companies.access import validate_user_company_access
                 validate_user_company_access(self.user, target_scope)
             self._assigned_ids = None
-        else:
+        elif not self.config.scope_path:
             self._assigned_ids = None
+        else:
+            raise ReportError(f'قلمرو «{self.config.scope_kind}» پشتیبانی نمی‌شود یا ماژول مربوطه فعال نیست.', status=403)
 
     def _check_warehouse_access(self):
         """نام مستعار سازگار رو به عقب."""
@@ -241,11 +247,10 @@ class ReportEngine:
         path = self.config.scope_path
         if not path:
             return qs
-        if self.config.scope_kind == 'warehouse':
-            from common.warehouse_scope import scope_queryset
-            qs = scope_queryset(qs, self.user, field=path)
-            if self.warehouse_id:
-                qs = qs.filter(**{path: self.warehouse_id})
+
+        handler = get_report_scope_handler(self.config.scope_kind)
+        if handler:
+            return handler.scope_queryset(qs, self.user, path, self.scope_id)
         elif self.config.scope_kind == 'company':
             if self.user.is_superuser:
                 return qs
@@ -255,7 +260,8 @@ class ReportEngine:
                 if allowed_cids:
                     return qs.filter(**{f'{path}__in': allowed_cids})
             return qs.none()
-        return qs
+        else:
+            raise ReportError(f'قلمرو «{self.config.scope_kind}» پشتیبانی نمی‌شود یا ماژول مربوطه فعال نیست.', status=403)
 
     # ------------------------------------------------------------- validation
     def _field(self, key: str, usage='فیلد') -> FieldDef:

@@ -253,7 +253,8 @@ class EntityConfig:
         elif self.blind_sensitive:
             from settings_core.services import get_setting
             from settings_core.models import SystemSetting
-            if target_scope and self.scope_kind == 'warehouse':
+            handler = get_report_scope_handler(self.scope_kind)
+            if target_scope and getattr(handler, 'per_scope_settings', False):
                 is_blind = get_setting('blind_counting', target_scope) == 'blind'
             else:
                 is_blind = (
@@ -348,6 +349,15 @@ def get_all_joins() -> Dict[str, Dict[str, JoinDef]]:
 def get_reporting_modules() -> Tuple[str, ...]:
     """فهرست ماژول‌هایی که قابلیت گزارش‌دهی یا JOIN ثبت کرده‌اند (تسک ۴۶)."""
     return tuple(_REPORTING_MODULES)
+
+
+def get_report_scope_handler(kind: str):
+    """یافتن هندلر قلمرو از مشارکت‌های report_scope_handlers."""
+    from platform_core.registry import contributions
+    for handler in contributions('report_scope_handlers'):
+        if getattr(handler, 'kind', None) == kind:
+            return handler
+    return None
 
 
 def clear_registry() -> None:
