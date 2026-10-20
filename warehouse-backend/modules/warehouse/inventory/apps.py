@@ -17,3 +17,8 @@ class InventoryConfig(AppConfig):
         from inventory.report_entities import register_inventory_report_entities
         register_inventory_report_entities()
         contribute('report_registrars', register_inventory_report_entities)
+
+        # ثبت مدل‌های هدف نظر در هسته ارتباطات (فاز ۴ گام ۲)
+        contribute('comment_target_models', 'item')
+        contribute('comment_target_models', 'counttask')
+        contribute('comment_target_models', 'doctask')

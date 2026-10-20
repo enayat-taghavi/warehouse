@@ -2,11 +2,26 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from common.media_urls import signed_media_url
+from platform_core.registry import contributions
 from .models import Conversation, ConversationParticipant, Message, MessageAttachment, GenericComment, ConversationType
 
 User = get_user_model()
 
-ALLOWED_COMMENT_MODELS = {'item', 'counttask', 'doctask', 'warehouse', 'document', 'financialdocument'}
+
+def get_allowed_comment_models() -> set[str]:
+    """
+    دریافت مدل‌های مجاز برای ارسال نظر از مشارکت ماژول‌ها (Extension Point: comment_target_models).
+    """
+    models = set()
+    for item in contributions('comment_target_models'):
+        if isinstance(item, (set, list, tuple)):
+            models.update(str(m).lower() for m in item)
+        else:
+            models.add(str(item).lower())
+    return models
+
+
+allowed_comment_models = get_allowed_comment_models
 
 
 class UserShortSerializer(serializers.ModelSerializer):
@@ -204,7 +219,7 @@ class GenericCommentSerializer(serializers.ModelSerializer):
             app_label, model = content_type_str.split('.', 1)
             model_lower = model.lower()
 
-            if model_lower not in ALLOWED_COMMENT_MODELS:
+            if model_lower not in get_allowed_comment_models():
                 raise serializers.ValidationError({'content_type_str': f'ارسال نظر روی مدل {model} مجاز نیست'})
 
             ct = ContentType.objects.filter(app_label=app_label, model=model_lower).first()

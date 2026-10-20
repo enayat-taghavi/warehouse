@@ -105,5 +105,8 @@ class WarehousesConfig(AppConfig):
         contribute('audit_app_scope_filters', ('warehouse', warehouse_audit_scope_filter))
         contribute('audit_user_restrictions', warehouse_audit_user_restriction)
 
+        # ثبت مدل هدف نظر در هسته ارتباطات (فاز ۴ گام ۲)
+        contribute('comment_target_models', 'warehouse')
+
 
 
