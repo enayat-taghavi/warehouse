@@ -1,10 +1,51 @@
-import { Component, Input, Output, EventEmitter, signal, computed, OnChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ModalComponent } from '../modal/modal.component';
 import { ActionButtonComponent } from '../action-button/action-button.component';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
+import { DeepSyncSectionSpec } from '../../../core/modules/module-contract';
+import { LOCKED_OFFLINE_SCOPES } from '../../../core/services/offline-db';
 
-export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
+/** زمینهٔ دیالوگ: قلمرو یک بخش، یا مرکز عملیات برای همهٔ بخش‌ها */
+export type DeepSyncContextMode = string;
+
+const OPERATIONS_CONTEXT = 'operations';
+
+/** بخش آمادهٔ نمایش: مشخصات ماژول به‌اضافهٔ فهرست هدف‌ها */
+export type DeepSyncSectionView =
+  Omit<DeepSyncSectionSpec, 'loadItems' | 'initialItems' | 'preselectId'> & { items?: { id: number; name: string }[] };
+
+/** کلاس‌های هر رنگ پایه؛ کلاس‌ها کامل نوشته شده‌اند تا Tailwind آن‌ها را بسازد */
+interface AccentClasses {
+  iconColor: string;
+  tabActive: string;
+  tabCountActive: string;
+  selectAllActive: string;
+  cardSelected: string;
+  radioSelected: string;
+}
+
+const ACCENT_CLASSES: Record<string, AccentClasses> = {
+  indigo: {
+    iconColor: 'text-indigo-600',
+    tabActive: 'bg-white text-indigo-600 shadow-xs',
+    tabCountActive: 'bg-indigo-100 text-indigo-700',
+    selectAllActive: 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100',
+    cardSelected: 'border-indigo-500 bg-indigo-50/40 shadow-xs',
+    radioSelected: 'border-indigo-600 bg-indigo-600',
+  },
+  emerald: {
+    iconColor: 'text-emerald-600',
+    tabActive: 'bg-white text-emerald-600 shadow-xs',
+    tabCountActive: 'bg-emerald-100 text-emerald-700',
+    selectAllActive: 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100',
+    cardSelected: 'border-emerald-500 bg-emerald-50/40 shadow-xs',
+    radioSelected: 'border-emerald-600 bg-emerald-600',
+  },
+};
+
+/** فراخوان‌پذیر مثل signal با set، برای سازگاری با selectedWarehouseIds/selectedProjectIds پیشین */
+type LegacySelection = (() => number[]) & { set: (ids: number[]) => void };
 
 @Component({
   selector: 'app-deep-sync-modal',
@@ -13,7 +54,7 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
   template: `
     <app-modal [isOpen]="isOpen" (closed)="close()" [title]="modalTitle" sizeClass="max-w-2xl">
       <div class="px-6 py-4 flex flex-col gap-4 max-h-[72vh] overflow-y-auto" dir="rtl">
-        
+
         <!-- Header Banner & Info -->
         <div class="flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-l from-indigo-50/80 to-blue-50/40 border border-indigo-100 shadow-xs">
           <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-200">
@@ -28,7 +69,7 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
         </div>
 
         <!-- Operations Navigation Tabs (فقط در حالت مرکز عملیات فعال می‌شود) -->
-        <div *ngIf="effectiveContext === 'operations'" class="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-bold">
+        <div *ngIf="isOperations" class="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-bold">
           <button
             type="button"
             (click)="activeOpsTab.set('all')"
@@ -40,117 +81,66 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
               {{ totalSelectedCount() }}
             </span>
           </button>
-          <button
-            *ngIf="warehouses.length > 0"
-            type="button"
-            (click)="activeOpsTab.set('warehouse')"
-            class="flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer min-h-[36px]"
-            [ngClass]="activeOpsTab() === 'warehouse' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
-          >
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="package"></svg>
-            <span>انبارداری</span>
-            <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black" [ngClass]="activeOpsTab() === 'warehouse' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'">
-              {{ selectedWarehouseIds().length }}/{{ warehouses.length }}
-            </span>
-          </button>
-          <button
-            *ngIf="projects.length > 0"
-            type="button"
-            (click)="activeOpsTab.set('finance')"
-            class="flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer min-h-[36px]"
-            [ngClass]="activeOpsTab() === 'finance' ? 'bg-white text-emerald-600 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
-          >
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="credit-card"></svg>
-            <span>مالی و پرسنلی</span>
-            <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black" [ngClass]="activeOpsTab() === 'finance' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'">
-              {{ selectedProjectIds().length }}/{{ projects.length }}
-            </span>
-          </button>
-        </div>
-
-        <!-- ══════════ ۱. بخش انبارها (Warehouse Section) ══════════ -->
-        <div *ngIf="showWarehouseSection" class="flex flex-col gap-2.5">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-black text-slate-800 flex items-center gap-1.5">
-              <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="package"></svg>
-              <span>{{ effectiveContext === 'operations' ? 'انبارهای فعال سازمان' : 'لیست انبارها' }}</span>
-              <span class="text-slate-500 font-mono text-[11px]">({{ selectedWarehouseIds().length }} از {{ warehouses.length }})</span>
-            </span>
-            <button 
+          @for (sec of tabSections; track sec.scope) {
+            <button
               type="button"
-              (click)="toggleSelectAllWarehouses()"
-              class="text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
-              [ngClass]="allWarehousesSelected() ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100' : 'text-slate-600 bg-slate-100 hover:bg-slate-200'"
+              (click)="activeOpsTab.set(sec.scope)"
+              class="flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer min-h-[36px]"
+              [ngClass]="activeOpsTab() === sec.scope ? accentOf(sec).tabActive : 'text-slate-600 hover:text-slate-900'"
             >
-              {{ allWarehousesSelected() ? 'لغو انتخاب انبارها' : 'انتخاب همه انبارها' }}
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" [appIcon]="sec.icon"></svg>
+              <span>{{ sec.tabLabel }}</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black" [ngClass]="activeOpsTab() === sec.scope ? accentOf(sec).tabCountActive : 'bg-slate-200 text-slate-600'">
+                {{ idsOf(sec.scope).length }}/{{ itemsOf(sec).length }}
+              </span>
             </button>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            @for (wh of warehouses; track wh.id) {
-              <div 
-                (click)="toggleWarehouse(wh.id)"
-                class="relative flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all cursor-pointer group select-none"
-                [ngClass]="{
-                  'border-indigo-500 bg-indigo-50/40 shadow-xs': isWarehouseSelected(wh.id),
-                  'border-slate-200 bg-white hover:border-slate-300': !isWarehouseSelected(wh.id)
-                }"
-              >
-                <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors"
-                     [ngClass]="isWarehouseSelected(wh.id) ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 bg-slate-50 group-hover:border-slate-400'">
-                  @if (isWarehouseSelected(wh.id)) {
-                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="hero-check-bold"></svg>
-                  }
-                </div>
-                <div class="flex-1 min-w-0">
-                  <h4 class="text-xs font-bold text-slate-800 truncate">{{ wh.name }}</h4>
-                </div>
-              </div>
-            }
-          </div>
+          }
         </div>
 
-        <!-- ══════════ ۲. بخش پروژه‌ها و کارگاه‌ها (Finance Section) ══════════ -->
-        <div *ngIf="showFinanceSection" class="flex flex-col gap-2.5">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-black text-slate-800 flex items-center gap-1.5">
-              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="credit-card"></svg>
-              <span>{{ effectiveContext === 'operations' ? 'پروژه‌ها و کارگاه‌های مالی' : 'لیست پروژه‌ها / کارگاه‌ها' }}</span>
-              <span class="text-slate-500 font-mono text-[11px]">({{ selectedProjectIds().length }} از {{ projects.length }})</span>
-            </span>
-            <button 
-              type="button"
-              (click)="toggleSelectAllProjects()"
-              class="text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
-              [ngClass]="allProjectsSelected() ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100' : 'text-slate-600 bg-slate-100 hover:bg-slate-200'"
-            >
-              {{ allProjectsSelected() ? 'لغو انتخاب پروژه‌ها' : 'انتخاب همه پروژه‌ها' }}
-            </button>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            @for (prj of projects; track prj.id) {
-              <div 
-                (click)="toggleProject(prj.id)"
-                class="relative flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all cursor-pointer group select-none"
-                [ngClass]="{
-                  'border-emerald-500 bg-emerald-50/40 shadow-xs': isProjectSelected(prj.id),
-                  'border-slate-200 bg-white hover:border-slate-300': !isProjectSelected(prj.id)
-                }"
+        <!-- ══════════ بخش‌های قلمرو (از extension منوی کاربر هر ماژول) ══════════ -->
+        @for (sec of visibleSections; track sec.scope) {
+          <div class="flex flex-col gap-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                <svg class="w-4 h-4" [ngClass]="accentOf(sec).iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24" [appIcon]="sec.icon"></svg>
+                <span>{{ isOperations ? sec.opsSectionTitle : sec.sectionTitle }}</span>
+                <span class="text-slate-500 font-mono text-[11px]">({{ idsOf(sec.scope).length }} از {{ itemsOf(sec).length }})</span>
+              </span>
+              <button
+                type="button"
+                (click)="toggleSelectAll(sec)"
+                class="text-xs font-bold px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                [ngClass]="allSelectedIn(sec) ? accentOf(sec).selectAllActive : 'text-slate-600 bg-slate-100 hover:bg-slate-200'"
               >
-                <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors"
-                     [ngClass]="isProjectSelected(prj.id) ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 bg-slate-50 group-hover:border-slate-400'">
-                  @if (isProjectSelected(prj.id)) {
-                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="hero-check-bold"></svg>
-                  }
-                </div>
-                <div class="flex-1 min-w-0">
-                  <h4 class="text-xs font-bold text-slate-800 truncate">{{ prj.name }}</h4>
-                </div>
-              </div>
+                {{ allSelectedIn(sec) ? sec.clearAllLabel : sec.selectAllLabel }}
+              </button>
+            </div>
+
+            @if (itemsOf(sec).length === 0 && !loadingScopes.includes(sec.scope)) {
+              <p class="text-xs text-slate-500 py-2">{{ sec.emptyText }}</p>
             }
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              @for (item of itemsOf(sec); track item.id) {
+                <div
+                  (click)="toggleItem(sec.scope, item.id)"
+                  class="relative flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all cursor-pointer group select-none"
+                  [ngClass]="isSelected(sec.scope, item.id) ? accentOf(sec).cardSelected : 'border-slate-200 bg-white hover:border-slate-300'"
+                >
+                  <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors"
+                       [ngClass]="isSelected(sec.scope, item.id) ? accentOf(sec).radioSelected : 'border-slate-300 bg-slate-50 group-hover:border-slate-400'">
+                    @if (isSelected(sec.scope, item.id)) {
+                      <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" appIcon="hero-check-bold"></svg>
+                    }
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <h4 class="text-xs font-bold text-slate-800 truncate">{{ item.name }}</h4>
+                  </div>
+                </div>
+              }
+            </div>
           </div>
-        </div>
+        }
 
       </div>
 
@@ -158,7 +148,7 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
       <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3" dir="rtl">
         <div>
           <button
-            *ngIf="effectiveContext === 'operations'"
+            *ngIf="isOperations"
             type="button"
             (click)="toggleSelectEntireOrganization()"
             title="انتخاب یا لغو انتخاب کل سازمان"
@@ -195,20 +185,44 @@ export type DeepSyncContextMode = 'warehouse' | 'finance' | 'operations';
 })
 export class DeepSyncModalComponent implements OnChanges {
   @Input() isOpen = false;
-  @Input() contextMode: DeepSyncContextMode = 'warehouse';
-  @Input() warehouses: { id: number; name: string }[] = [];
-  @Input() projects: { id: number; name: string }[] = [];
+  /** قلمرو یک بخش یا operations؛ خالی یعنی نخستین بخش */
+  @Input() contextMode: DeepSyncContextMode = '';
+  /** بخش‌ها از extension منوی کاربر ماژول‌ها */
+  @Input() set sections(val: DeepSyncSectionView[] | null | undefined) {
+    this._sections.set([...(val || [])].sort((a, b) => a.order - b.order));
+  }
+  get sections(): DeepSyncSectionView[] {
+    return this._sections();
+  }
+  /** شناسهٔ پیش‌انتخاب هر قلمرو */
+  @Input() preselectByScope: Record<string, number | null> = {};
+  /** قلمروهایی که فهرستشان هنوز از سرور نرسیده (متن خالی بودن نشان داده نمی‌شود) */
+  @Input() loadingScopes: string[] = [];
+
+  // سازگاری پیشین: فهرست و پیش‌انتخاب دو قلمرو قفل‌شده
+  @Input() set warehouses(items: { id: number; name: string }[]) {
+    this.setLegacyItems(LOCKED_OFFLINE_SCOPES[0], items);
+  }
+  get warehouses(): { id: number; name: string }[] {
+    return this._legacyItems()[LOCKED_OFFLINE_SCOPES[0]] || [];
+  }
+  @Input() set projects(items: { id: number; name: string }[]) {
+    this.setLegacyItems(LOCKED_OFFLINE_SCOPES[1], items);
+  }
+  get projects(): { id: number; name: string }[] {
+    return this._legacyItems()[LOCKED_OFFLINE_SCOPES[1]] || [];
+  }
   @Input() preselectWarehouseId: number | null = null;
   @Input() preselectProjectId: number | null = null;
 
   // عقب‌گرد سازگار برای کدهای موجود قبلی
   @Input() set isWarehouseScope(val: boolean) {
     if (!this.explicitContextModeSet) {
-      this.contextMode = val ? 'warehouse' : 'finance';
+      this.contextMode = val ? LOCKED_OFFLINE_SCOPES[0] : LOCKED_OFFLINE_SCOPES[1];
     }
   }
   @Input() set preselectId(id: number | null) {
-    if (this.contextMode === 'finance') {
+    if (this.contextMode === LOCKED_OFFLINE_SCOPES[1]) {
       this.preselectProjectId = id;
     } else {
       this.preselectWarehouseId = id;
@@ -217,81 +231,86 @@ export class DeepSyncModalComponent implements OnChanges {
 
   @Output() closed = new EventEmitter<void>();
   @Output() startSync = new EventEmitter<any>();
-  @Output() startSyncMulti = new EventEmitter<{ warehouseIds: number[]; projectIds: number[] }>();
+  /** warehouseIds و projectIds برای دو قلمرو قفل‌شده؛ idsByScope وقتی قلمرو دیگری هم انتخاب شده باشد */
+  @Output() startSyncMulti = new EventEmitter<{ warehouseIds: number[]; projectIds: number[]; idsByScope?: Record<string, number[]> }>();
 
   private explicitContextModeSet = false;
+  private readonly _sections = signal<DeepSyncSectionView[]>([]);
+  private readonly _legacyItems = signal<Record<string, { id: number; name: string }[]>>({});
 
-  public activeOpsTab = signal<'all' | 'warehouse' | 'finance'>('all');
+  /** 'all' یا قلمرو یک بخش */
+  public activeOpsTab = signal<string>('all');
 
-  public selectedWarehouseIds = signal<number[]>([]);
-  public selectedProjectIds = signal<number[]>([]);
+  /** شناسه‌های انتخاب‌شدهٔ هر قلمرو */
+  public readonly selectedByScope = signal<Record<string, number[]>>({});
+
+  public readonly selectedWarehouseIds: LegacySelection = this.legacySelection(LOCKED_OFFLINE_SCOPES[0]);
+  public readonly selectedProjectIds: LegacySelection = this.legacySelection(LOCKED_OFFLINE_SCOPES[1]);
 
   public get effectiveContext(): DeepSyncContextMode {
-    return this.contextMode || 'warehouse';
+    return this.contextMode || this.sections[0]?.scope || LOCKED_OFFLINE_SCOPES[0];
+  }
+
+  public get isOperations(): boolean {
+    return this.effectiveContext === OPERATIONS_CONTEXT;
+  }
+
+  /** بخش زمینهٔ جاری وقتی دیالوگ فقط یک قلمرو را نشان می‌دهد */
+  public get contextSection(): DeepSyncSectionView | undefined {
+    return this.sections.find(s => s.scope === this.effectiveContext);
   }
 
   public get modalTitle(): string {
-    if (this.effectiveContext === 'operations') {
+    if (this.isOperations) {
       return 'بروزرسانی عمیق مرکز عملیات';
     }
     return 'بروزرسانی عمیق';
   }
 
   public get bannerTitle(): string {
-    if (this.effectiveContext === 'operations') {
+    if (this.isOperations) {
       return 'همگام‌سازی و بازخوانی یکپارچه سازمان';
     }
-    if (this.effectiveContext === 'finance') {
-      return 'انتخاب پروژه‌ها و کارگاه‌های هدف';
-    }
-    return 'انتخاب انبارهای هدف';
+    return this.contextSection?.bannerTitle || '';
   }
 
   public get bannerDescription(): string {
-    if (this.effectiveContext === 'operations') {
+    if (this.isOperations) {
       return 'با بروزرسانی عمیق در مرکز عملیات، پایگاه‌های داده محلی برای تمامی سامانه‌های انتخاب‌شده از نو همگام‌سازی می‌شوند. این فرآیند رکوردهای شبح (Ghosts) را پاکسازی می‌کند.';
     }
-    if (this.effectiveContext === 'finance') {
-      return 'با بروزرسانی عمیق، اطلاعات آفلاین ذخیره‌شده برای پروژه‌ها و کارگاه‌های انتخاب‌شده کاملاً پاک شده و از نو دریافت می‌شود.';
-    }
-    return 'با بروزرسانی عمیق، اطلاعات آفلاین ذخیره‌شده برای انبارهای انتخاب‌شده کاملاً پاک شده و از نو دریافت می‌شود.';
+    return this.contextSection?.bannerDescription || '';
   }
 
-  public get showWarehouseSection(): boolean {
-    if (this.effectiveContext === 'warehouse') return true;
-    if (this.effectiveContext === 'operations') {
-      return (this.activeOpsTab() === 'all' || this.activeOpsTab() === 'warehouse') && this.warehouses.length > 0;
-    }
-    return false;
+  /** زبانه‌های مرکز عملیات: فقط بخش‌هایی که هدفی دارند */
+  public get tabSections(): DeepSyncSectionView[] {
+    return this.sections.filter(s => this.itemsOf(s).length > 0);
   }
 
-  public get showFinanceSection(): boolean {
-    if (this.effectiveContext === 'finance') return true;
-    if (this.effectiveContext === 'operations') {
-      return (this.activeOpsTab() === 'all' || this.activeOpsTab() === 'finance') && this.projects.length > 0;
+  public get visibleSections(): DeepSyncSectionView[] {
+    if (!this.isOperations) {
+      const sec = this.contextSection;
+      return sec ? [sec] : [];
     }
-    return false;
+    const tab = this.activeOpsTab();
+    return this.tabSections.filter(s => tab === 'all' || tab === s.scope);
   }
 
-  public allWarehousesSelected = computed(() => {
-    return this.warehouses.length > 0 && this.selectedWarehouseIds().length === this.warehouses.length;
-  });
+  /** متد ساده، نه computed: به contextMode که signal نیست وابسته است */
+  public totalSelectedCount(): number {
+    const sel = this.selectedByScope();
+    if (!this.isOperations) return (sel[this.effectiveContext] || []).length;
+    return this.sections.reduce((acc, s) => acc + (sel[s.scope] || []).length, 0);
+  }
 
-  public allProjectsSelected = computed(() => {
-    return this.projects.length > 0 && this.selectedProjectIds().length === this.projects.length;
-  });
-
-  public totalSelectedCount = computed(() => {
-    if (this.effectiveContext === 'warehouse') return this.selectedWarehouseIds().length;
-    if (this.effectiveContext === 'finance') return this.selectedProjectIds().length;
-    return this.selectedWarehouseIds().length + this.selectedProjectIds().length;
-  });
-
-  public allOrganizationSelected = computed(() => {
-    const whOk = this.warehouses.length === 0 || this.selectedWarehouseIds().length === this.warehouses.length;
-    const prjOk = this.projects.length === 0 || this.selectedProjectIds().length === this.projects.length;
-    return whOk && prjOk && (this.warehouses.length > 0 || this.projects.length > 0);
-  });
+  public allOrganizationSelected(): boolean {
+    const secs = this.sections;
+    const sel = this.selectedByScope();
+    const anyItems = secs.some(s => this.itemsOf(s).length > 0);
+    return anyItems && secs.every(s => {
+      const total = this.itemsOf(s).length;
+      return total === 0 || (sel[s.scope] || []).length === total;
+    });
+  }
 
   ngOnChanges(changes: any) {
     if (changes.contextMode) {
@@ -303,80 +322,43 @@ export class DeepSyncModalComponent implements OnChanges {
     }
   }
 
-  private initSelections(): void {
-    if (this.effectiveContext === 'warehouse') {
-      if (this.preselectWarehouseId) {
-        this.selectedWarehouseIds.set([this.preselectWarehouseId]);
-      } else {
-        this.selectedWarehouseIds.set([]);
-      }
-      this.selectedProjectIds.set([]);
-    } else if (this.effectiveContext === 'finance') {
-      if (this.preselectProjectId) {
-        this.selectedProjectIds.set([this.preselectProjectId]);
-      } else {
-        this.selectedProjectIds.set([]);
-      }
-      this.selectedWarehouseIds.set([]);
-    } else {
-      // Operations: پیش‌گزینی هر دو
-      const whInit = this.preselectWarehouseId ? [this.preselectWarehouseId] : [];
-      const prjInit = this.preselectProjectId ? [this.preselectProjectId] : [];
-      this.selectedWarehouseIds.set(whInit);
-      this.selectedProjectIds.set(prjInit);
-    }
+  public accentOf(sec: DeepSyncSectionView): AccentClasses {
+    return ACCENT_CLASSES[sec.accent] || ACCENT_CLASSES['indigo'];
   }
 
-  public isWarehouseSelected(id: number): boolean {
-    return this.selectedWarehouseIds().includes(id);
+  public itemsOf(sec: DeepSyncSectionView): { id: number; name: string }[] {
+    return sec.items ?? this._legacyItems()[sec.scope] ?? [];
   }
 
-  public isProjectSelected(id: number): boolean {
-    return this.selectedProjectIds().includes(id);
+  public idsOf(scope: string): number[] {
+    return this.selectedByScope()[scope] || [];
   }
 
-  public toggleWarehouse(id: number): void {
-    const current = this.selectedWarehouseIds();
-    if (current.includes(id)) {
-      this.selectedWarehouseIds.set(current.filter(x => x !== id));
-    } else {
-      this.selectedWarehouseIds.set([...current, id]);
-    }
+  public isSelected(scope: string, id: number): boolean {
+    return this.idsOf(scope).includes(id);
   }
 
-  public toggleProject(id: number): void {
-    const current = this.selectedProjectIds();
-    if (current.includes(id)) {
-      this.selectedProjectIds.set(current.filter(x => x !== id));
-    } else {
-      this.selectedProjectIds.set([...current, id]);
-    }
+  public allSelectedIn(sec: DeepSyncSectionView): boolean {
+    const total = this.itemsOf(sec).length;
+    return total > 0 && this.idsOf(sec.scope).length === total;
   }
 
-  public toggleSelectAllWarehouses(): void {
-    if (this.allWarehousesSelected()) {
-      this.selectedWarehouseIds.set([]);
-    } else {
-      this.selectedWarehouseIds.set(this.warehouses.map(w => w.id));
-    }
+  public toggleItem(scope: string, id: number): void {
+    const current = this.idsOf(scope);
+    this.setIds(scope, current.includes(id) ? current.filter(x => x !== id) : [...current, id]);
   }
 
-  public toggleSelectAllProjects(): void {
-    if (this.allProjectsSelected()) {
-      this.selectedProjectIds.set([]);
-    } else {
-      this.selectedProjectIds.set(this.projects.map(p => p.id));
-    }
+  public toggleSelectAll(sec: DeepSyncSectionView): void {
+    this.setIds(sec.scope, this.allSelectedIn(sec) ? [] : this.itemsOf(sec).map(i => i.id));
   }
 
   public toggleSelectEntireOrganization(): void {
-    if (this.allOrganizationSelected()) {
-      this.selectedWarehouseIds.set([]);
-      this.selectedProjectIds.set([]);
-    } else {
-      this.selectedWarehouseIds.set(this.warehouses.map(w => w.id));
-      this.selectedProjectIds.set(this.projects.map(p => p.id));
+    const selectAll = !this.allOrganizationSelected();
+    const next: Record<string, number[]> = {};
+    for (const sec of this.sections) {
+      next[sec.scope] = selectAll ? this.itemsOf(sec).map(i => i.id) : [];
     }
+    this.selectedByScope.set(next);
   }
 
   public close(): void {
@@ -384,21 +366,59 @@ export class DeepSyncModalComponent implements OnChanges {
   }
 
   public confirm(): void {
-    const whIds = this.selectedWarehouseIds();
-    const prjIds = this.selectedProjectIds();
+    const sel = this.selectedByScope();
+    const scopes = this.isOperations ? this.sections.map(s => s.scope) : [this.effectiveContext];
+    const idsByScope: Record<string, number[]> = {};
+    for (const scope of scopes) {
+      if ((sel[scope] || []).length > 0) idsByScope[scope] = [...sel[scope]];
+    }
+    if (Object.keys(idsByScope).length === 0) return;
 
-    if (whIds.length === 0 && prjIds.length === 0) return;
+    const payload: { warehouseIds: number[]; projectIds: number[]; idsByScope?: Record<string, number[]> } = {
+      warehouseIds: idsByScope[LOCKED_OFFLINE_SCOPES[0]] || [],
+      projectIds: idsByScope[LOCKED_OFFLINE_SCOPES[1]] || [],
+    };
+    if (Object.keys(idsByScope).some(scope => !LOCKED_OFFLINE_SCOPES.includes(scope))) {
+      payload.idsByScope = idsByScope;
+    }
+    this.startSyncMulti.emit(payload);
 
-    this.startSyncMulti.emit({ warehouseIds: whIds, projectIds: prjIds });
-
-    if (this.effectiveContext === 'warehouse') {
-      this.startSync.emit(whIds);
-    } else if (this.effectiveContext === 'finance') {
-      this.startSync.emit(prjIds);
+    if (this.isOperations) {
+      this.startSync.emit(payload);
     } else {
-      this.startSync.emit({ warehouseIds: whIds, projectIds: prjIds });
+      this.startSync.emit(idsByScope[this.effectiveContext] || []);
     }
 
     this.close();
+  }
+
+  private initSelections(): void {
+    const preselect = (scope: string): number | null => {
+      if (this.preselectByScope[scope] != null) return this.preselectByScope[scope];
+      if (scope === LOCKED_OFFLINE_SCOPES[0]) return this.preselectWarehouseId;
+      if (scope === LOCKED_OFFLINE_SCOPES[1]) return this.preselectProjectId;
+      return null;
+    };
+    const scopes = new Set<string>([...LOCKED_OFFLINE_SCOPES, ...this.sections.map(s => s.scope)]);
+    const next: Record<string, number[]> = {};
+    for (const scope of scopes) {
+      const id = this.isOperations || scope === this.effectiveContext ? preselect(scope) : null;
+      next[scope] = id ? [id] : [];
+    }
+    this.selectedByScope.set(next);
+  }
+
+  private setIds(scope: string, ids: number[]): void {
+    this.selectedByScope.set({ ...this.selectedByScope(), [scope]: ids });
+  }
+
+  private setLegacyItems(scope: string, items: { id: number; name: string }[]): void {
+    this._legacyItems.set({ ...this._legacyItems(), [scope]: items || [] });
+  }
+
+  private legacySelection(scope: string): LegacySelection {
+    const fn = (() => this.idsOf(scope)) as LegacySelection;
+    fn.set = (ids: number[]) => this.setIds(scope, ids);
+    return fn;
   }
 }

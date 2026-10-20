@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
-import { DeepSyncModalComponent } from './deep-sync-modal.component';
+import { DeepSyncModalComponent, DeepSyncSectionView } from './deep-sync-modal.component';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -24,6 +24,28 @@ describe('DeepSyncModalComponent DOM & Behavior Tests', () => {
     { id: 11, name: 'کارگاه ساختمانی سپهر' }
   ];
 
+  // بخش‌های دو ماژول فعلی، همان مشارکت extension منوی کاربر (فهرست هدف‌ها از warehouses/projects)
+  const sampleSections: DeepSyncSectionView[] = [
+    {
+      scope: 'warehouse', order: 10, tabLabel: 'انبارداری', icon: 'package',
+      sectionTitle: 'لیست انبارها', opsSectionTitle: 'انبارهای فعال سازمان',
+      bannerTitle: 'انتخاب انبارهای هدف',
+      bannerDescription: 'با بروزرسانی عمیق، اطلاعات آفلاین ذخیره‌شده برای انبارهای انتخاب‌شده کاملاً پاک شده و از نو دریافت می‌شود.',
+      emptyText: 'انباری برای بروزرسانی یافت نشد.',
+      selectAllLabel: 'انتخاب همه انبارها', clearAllLabel: 'لغو انتخاب انبارها',
+      itemLabel: 'انبار', summaryLabel: '📦 انبارداری', accent: 'indigo'
+    },
+    {
+      scope: 'finance', order: 20, tabLabel: 'مالی و پرسنلی', icon: 'credit-card',
+      sectionTitle: 'لیست پروژه‌ها / کارگاه‌ها', opsSectionTitle: 'پروژه‌ها و کارگاه‌های مالی',
+      bannerTitle: 'انتخاب پروژه‌ها و کارگاه‌های هدف',
+      bannerDescription: 'با بروزرسانی عمیق، اطلاعات آفلاین ذخیره‌شده برای پروژه‌ها و کارگاه‌های انتخاب‌شده کاملاً پاک شده و از نو دریافت می‌شود.',
+      emptyText: 'پروژه یا کارگاهی برای بروزرسانی یافت نشد.',
+      selectAllLabel: 'انتخاب همه پروژه‌ها', clearAllLabel: 'لغو انتخاب پروژه‌ها',
+      itemLabel: 'پروژه / کارگاه', summaryLabel: '💳 مالی', accent: 'emerald'
+    }
+  ];
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [DeepSyncModalComponent]
@@ -31,6 +53,7 @@ describe('DeepSyncModalComponent DOM & Behavior Tests', () => {
 
     fixture = TestBed.createComponent(DeepSyncModalComponent);
     component = fixture.componentInstance;
+    component.sections = sampleSections;
   });
 
   afterEach(() => {

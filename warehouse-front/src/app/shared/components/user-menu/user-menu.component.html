@@ -95,10 +95,9 @@
 <app-deep-sync-modal
   [isOpen]="isDeepSyncModalOpen"
   [contextMode]="currentScopeContext"
-  [warehouses]="deepSyncWarehouses"
-  [projects]="deepSyncProjects"
-  [preselectWarehouseId]="deepSyncPreselectWarehouseId"
-  [preselectProjectId]="deepSyncPreselectProjectId"
+  [sections]="deepSyncSectionViews"
+  [preselectByScope]="deepSyncPreselectByScope"
+  [loadingScopes]="deepSyncLoadingScopes"
   (closed)="isDeepSyncModalOpen = false"
   (startSyncMulti)="startDeepSync($event)">
 </app-deep-sync-modal>

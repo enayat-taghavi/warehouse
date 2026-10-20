@@ -1,9 +1,10 @@
-import { Type } from '@angular/core';
+import { Injector, Type } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router, Routes } from '@angular/router';
 import { IconName } from '../../shared/icons/icon-registry';
 
-export type AppModuleType = 'warehouse' | 'personnel' | 'operations' | string;
+/** کد اپ (کد ماژول، نام مستعار آن یا operations) */
+export type AppModuleType = string;
 
 export interface RolePersona {
   code: string;
@@ -39,7 +40,7 @@ export interface FrontendModuleSpec {
   icon: string;
   routePrefix: string;
   defaultRoute: string;
-  scopeKind: 'warehouse' | 'finance' | 'operations' | (string & {});
+  scopeKind: string;
   permissionMarkers: string[];
   roles: string[];
   isSuperuserOnly?: boolean;
@@ -53,10 +54,49 @@ export interface ModuleNavItem {
   label: string;
   icon: string;
   permission: string;
-  module?: 'warehouse' | 'accounting' | 'platform' | string;
+  module?: string;
   isAccounting?: boolean;
   isPending?: boolean;
   route?: string;
+}
+
+/**
+ * بخش یک ماژول در دیالوگ بروزرسانی عمیق؛ همهٔ متن‌ها فارسی و از خود ماژول است.
+ * loadItems و بقیهٔ تابع‌ها سرویس‌ها را از injector می‌گیرند تا کد ماژول از shared ایمپورت نکند.
+ */
+export interface DeepSyncSectionSpec {
+  /** قلمرو آفلاین همین بخش؛ همان مقداری که به performDeepUpdate می‌رود */
+  scope: string;
+  /** ترتیب نمایش بخش و زبانه (کوچک‌تر بالاتر) */
+  order: number;
+  /** برچسب زبانهٔ بخش در زمینهٔ مرکز عملیات */
+  tabLabel: string;
+  /** آیکون زبانه و عنوان بخش */
+  icon: IconName;
+  /** عنوان بخش وقتی دیالوگ فقط همین قلمرو را نشان می‌دهد */
+  sectionTitle: string;
+  /** عنوان بخش در زمینهٔ مرکز عملیات */
+  opsSectionTitle: string;
+  /** عنوان و توضیح بنر بالای دیالوگ وقتی فقط همین قلمرو فعال است */
+  bannerTitle: string;
+  bannerDescription: string;
+  /** متن وقتی فهرست هدف این بخش خالی است */
+  emptyText: string;
+  /** برچسب دکمهٔ انتخاب همه و لغو آن */
+  selectAllLabel: string;
+  clearAllLabel: string;
+  /** برچسب ستون هدف در گزارش پایانی (مثلاً «انبار») */
+  itemLabel: string;
+  /** برچسب سامانه در گزارش یکپارچهٔ مرکز عملیات */
+  summaryLabel: string;
+  /** رنگ پایهٔ بخش (indigo یا emerald) */
+  accent: string;
+  /** فهرست فوری پیش از پاسخ سرور (اختیاری) */
+  initialItems?: (injector: Injector) => { id: number; name: string }[];
+  /** شناسهٔ پیش‌انتخاب هنگام باز شدن دیالوگ (اختیاری) */
+  preselectId?: (injector: Injector) => number | null;
+  /** فهرست زندهٔ هدف‌ها از سرور */
+  loadItems: (injector: Injector) => Promise<{ id: number; name: string }[]>;
 }
 
 /**
@@ -82,7 +122,10 @@ export interface ExtensionMap {
       label: string;
       count: number;
     };
-    deepSyncScope?: 'warehouse' | 'finance';
+    /** قلمرو بروزرسانی عمیق (سازگاری پیشین؛ منبع اصلی deepSync است) */
+    deepSyncScope?: string;
+    /** بخش این ماژول در دیالوگ بروزرسانی عمیق: عنوان‌ها، رنگ و بارگذار فهرست هدف‌ها */
+    deepSync?: DeepSyncSectionSpec;
   };
 
   /**

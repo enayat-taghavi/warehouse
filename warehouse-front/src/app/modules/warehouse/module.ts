@@ -1,4 +1,7 @@
 import { WhFrontendModule } from '../../core/modules/module-contract';
+import { firstValueFrom } from 'rxjs';
+import { AuthStore } from '../../core/stores/auth.store';
+import { StateService } from '../../core/services/state.service';
 import { WAREHOUSE_SYSTEM_NAV_ITEMS, WAREHOUSE_CONTEXT_NAV_ITEMS } from './nav-items';
 import { WAREHOUSE_ENTITY_ICONS } from './entity-icons';
 import { WAREHOUSE_PERSONAS } from './personas';
@@ -72,7 +75,35 @@ export const MODULE: WhFrontendModule = {
         label: 'انبارگردانی و اسکنر',
         count: 5
       },
-      deepSyncScope: 'warehouse'
+      deepSyncScope: 'warehouse',
+      deepSync: {
+        scope: 'warehouse',
+        order: 10,
+        tabLabel: 'انبارداری',
+        icon: 'package',
+        sectionTitle: 'لیست انبارها',
+        opsSectionTitle: 'انبارهای فعال سازمان',
+        bannerTitle: 'انتخاب انبارهای هدف',
+        bannerDescription: 'با بروزرسانی عمیق، اطلاعات آفلاین ذخیره‌شده برای انبارهای انتخاب‌شده کاملاً پاک شده و از نو دریافت می‌شود.',
+        emptyText: 'انباری برای بروزرسانی یافت نشد.',
+        selectAllLabel: 'انتخاب همه انبارها',
+        clearAllLabel: 'لغو انتخاب انبارها',
+        itemLabel: 'انبار',
+        summaryLabel: '📦 انبارداری',
+        accent: 'indigo',
+        initialItems: (injector) => injector.get(StateService, null)?.appState?.projects || [],
+        preselectId: (injector) => {
+          const id = injector.get(AuthStore, null)?.activeWarehouseId();
+          return id && id !== 'ALL' ? Number(id) : null;
+        },
+        loadItems: async (injector) => {
+          // ایمپورت تنبل: سرویس انبار گراف آفلاین را می‌کشد و نباید هنگام ساخت INSTALLED_MODULES بارگذاری شود
+          const { WarehouseHttpService } = await import('../../core/http/warehouse-http.service');
+          const whService = injector.get(WarehouseHttpService, null);
+          if (!whService) return [];
+          return (await firstValueFrom(whService.getAll())) || [];
+        }
+      }
     },
     layoutNav: {
       primaryItems: WAREHOUSE_SYSTEM_NAV_ITEMS,

@@ -283,6 +283,12 @@ export function normalizeScope(scope?: string | null): AppScope {
 /** قلمرو پیش‌فرض آفلاین (همان دیتابیس قفل‌شدهٔ انبار) برای فراخواننده‌هایی که قلمرو نمی‌دهند */
 export const DEFAULT_OFFLINE_SCOPE: AppScope = WH_SCOPE;
 
+/**
+ * دو قلمرو قفل‌شدهٔ فعلی به ترتیب ثابت؛ فقط برای قراردادهای سازگاری پیشین دوقلمرویی
+ * (مثل warehouseIds/projectIds در payload بروزرسانی عمیق). کد تازه باید قلمرو را از رجیستری بگیرد.
+ */
+export const LOCKED_OFFLINE_SCOPES: readonly [AppScope, AppScope] = [WH_SCOPE, FIN_SCOPE];
+
 /** نمایهٔ همگام‌سازی یک قلمرو: کلید توکن، مقدار X-Active-App و نقش پیش‌فرض آفلاین */
 export interface ScopeSyncProfile {
   scope: AppScope;

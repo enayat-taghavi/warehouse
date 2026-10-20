@@ -1,4 +1,6 @@
 import { WhFrontendModule } from '../../core/modules/module-contract';
+import { firstValueFrom } from 'rxjs';
+import { ApiService } from '../../core/api/api.service';
 import {
   ORG_ADMIN_NAV_ITEMS,
   EMPLOYEE_NAV_ITEMS,
@@ -17,6 +19,9 @@ import { ACCOUNTING_ENTITY_ICONS } from './entity-icons';
 import { ACCOUNTING_NOTIFICATION_HANDLERS } from './notification-handlers';
 import { ACCOUNTING_PERSONAS } from './personas';
 import { ACCOUNTING_ROUTE_ACCESS } from './route-access';
+
+/** فهرست پروژه‌های مالی فعال (هم projectLookup و هم بروزرسانی عمیق) */
+const FINANCIAL_PROJECTS_ENDPOINT = '/personnel/financial-projects';
 
 /**
  * مانیفست رسمی و مستقل ماژول مالی، حقوق و کارکرد (Front-End Module Manifest)
@@ -114,7 +119,28 @@ export const MODULE: WhFrontendModule = {
       appKey: 'personnel'
     },
     userMenu: {
-      deepSyncScope: 'finance'
+      deepSyncScope: 'finance',
+      deepSync: {
+        scope: 'finance',
+        order: 20,
+        tabLabel: 'مالی و پرسنلی',
+        icon: 'credit-card',
+        sectionTitle: 'لیست پروژه‌ها / کارگاه‌ها',
+        opsSectionTitle: 'پروژه‌ها و کارگاه‌های مالی',
+        bannerTitle: 'انتخاب پروژه‌ها و کارگاه‌های هدف',
+        bannerDescription: 'با بروزرسانی عمیق، اطلاعات آفلاین ذخیره‌شده برای پروژه‌ها و کارگاه‌های انتخاب‌شده کاملاً پاک شده و از نو دریافت می‌شود.',
+        emptyText: 'پروژه یا کارگاهی برای بروزرسانی یافت نشد.',
+        selectAllLabel: 'انتخاب همه پروژه‌ها',
+        clearAllLabel: 'لغو انتخاب پروژه‌ها',
+        itemLabel: 'پروژه / کارگاه',
+        summaryLabel: '💳 مالی',
+        accent: 'emerald',
+        loadItems: async (injector) => {
+          const api = injector.get(ApiService, null);
+          if (!api) return [];
+          return (await firstValueFrom(api.get<any[]>(FINANCIAL_PROJECTS_ENDPOINT, { is_active: true }))) || [];
+        }
+      }
     },
     layoutNav: {
       hasCompanyDocumentsArchive: true,
@@ -192,7 +218,7 @@ export const MODULE: WhFrontendModule = {
       ]
     },
     projectLookup: {
-      financialProjectsEndpoint: '/personnel/financial-projects'
+      financialProjectsEndpoint: FINANCIAL_PROJECTS_ENDPOINT
     },
     notificationHandlers: ACCOUNTING_NOTIFICATION_HANDLERS
   }

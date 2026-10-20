@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef, HostListener, inject } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ChangeDetectorRef, HostListener, Injector, inject } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -15,11 +15,12 @@ import { AccountsHttpService } from '../../../core/http/accounts-http.service';
 import { WarehouseHttpService } from '../../../core/http/warehouse-http.service';
 import { StateService } from '../../../core/services/state.service';
 import { ModuleRegistryService, getModuleRegistry } from '../../../core/modules/module-registry.service';
-import { normalizeScope } from '../../../core/services/offline-db';
+import { normalizeScope, DEFAULT_OFFLINE_SCOPE, LOCKED_OFFLINE_SCOPES } from '../../../core/services/offline-db';
+import { DeepSyncSectionSpec } from '../../../core/modules/module-contract';
 import { ToastService } from '../toast/toast.component';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { AvatarCropperModal } from '../avatar-cropper-modal/avatar-cropper-modal';
-import { DeepSyncContextMode, DeepSyncModalComponent } from '../deep-sync-modal/deep-sync-modal.component';
+import { DeepSyncContextMode, DeepSyncModalComponent, DeepSyncSectionView } from '../deep-sync-modal/deep-sync-modal.component';
 import { AppPersonaService } from '../../../core/services/app-persona.service';
 import { ApiService } from '../../../core/api/api.service';
 import { ActiveCompanyService } from '../../../core/services/active-company.service';
@@ -43,6 +44,12 @@ export interface ShortcutItem {
   keys: string[];
   altKeys: string[] | null;
 }
+
+/** کلاس نشان سامانه در گزارش بروزرسانی عمیق برای هر رنگ پایهٔ بخش */
+const SUMMARY_BADGE_CLASSES: Record<string, string> = {
+  indigo: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+  emerald: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+};
 
 @Component({
   selector: 'app-user-menu',
@@ -76,6 +83,7 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   private personaService = inject(AppPersonaService, { optional: true });
   private api = inject(ApiService, { optional: true });
+  private injector = inject(Injector);
   public activeCompanyService = inject(ActiveCompanyService, { optional: true });
   public readonly BRANDING = BRANDING;
 
@@ -90,18 +98,71 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   public isSyncing = false;
   public pendingCount = 0;
   public isDeepSyncModalOpen = false;
-  public deepSyncWarehouses: any[] = [];
-  public deepSyncProjects: any[] = [];
-  public deepSyncPreselectWarehouseId: number | null = null;
-  public deepSyncPreselectProjectId: number | null = null;
+  /** فهرست هدف‌های بروزرسانی عمیق هر قلمرو */
+  public deepSyncItemsByScope: Record<string, { id: number; name: string }[]> = {};
+  /** شناسهٔ پیش‌انتخاب هر قلمرو */
+  public deepSyncPreselectByScope: Record<string, number | null> = {};
+  /** قلمروهایی که فهرستشان در حال دریافت است */
+  public deepSyncLoadingScopes: string[] = [];
+
+  // سازگاری پیشین: دو قلمرو قفل‌شده با نام‌های قدیمی
+  public get deepSyncWarehouses(): any[] {
+    return this.deepSyncItemsByScope[LOCKED_OFFLINE_SCOPES[0]] || [];
+  }
+  public set deepSyncWarehouses(items: any[]) {
+    this.deepSyncItemsByScope = { ...this.deepSyncItemsByScope, [LOCKED_OFFLINE_SCOPES[0]]: items || [] };
+  }
+  public get deepSyncProjects(): any[] {
+    return this.deepSyncItemsByScope[LOCKED_OFFLINE_SCOPES[1]] || [];
+  }
+  public set deepSyncProjects(items: any[]) {
+    this.deepSyncItemsByScope = { ...this.deepSyncItemsByScope, [LOCKED_OFFLINE_SCOPES[1]]: items || [] };
+  }
+  public get deepSyncPreselectWarehouseId(): number | null {
+    return this.deepSyncPreselectByScope[LOCKED_OFFLINE_SCOPES[0]] ?? null;
+  }
+  public set deepSyncPreselectWarehouseId(val: number | null) {
+    this.deepSyncPreselectByScope = { ...this.deepSyncPreselectByScope, [LOCKED_OFFLINE_SCOPES[0]]: val };
+  }
+  public get deepSyncPreselectProjectId(): number | null {
+    return this.deepSyncPreselectByScope[LOCKED_OFFLINE_SCOPES[1]] ?? null;
+  }
+  public set deepSyncPreselectProjectId(val: number | null) {
+    this.deepSyncPreselectByScope = { ...this.deepSyncPreselectByScope, [LOCKED_OFFLINE_SCOPES[1]]: val };
+  }
 
   public get deepSyncPreselectId(): number | null {
-    return this.currentScopeContext === 'finance' ? this.deepSyncPreselectProjectId : this.deepSyncPreselectWarehouseId;
+    const ctx = this.currentScopeContext;
+    return this.deepSyncPreselectByScope[ctx] ?? this.deepSyncPreselectWarehouseId;
   }
   public set deepSyncPreselectId(val: number | null) {
-    this.deepSyncPreselectWarehouseId = val;
-    this.deepSyncPreselectProjectId = val;
+    const next: Record<string, number | null> = {};
+    for (const scope of [...LOCKED_OFFLINE_SCOPES, ...this.deepSyncSectionSpecs.map(s => s.scope)]) next[scope] = val;
+    this.deepSyncPreselectByScope = next;
   }
+
+  /** بخش‌های بروزرسانی عمیق از extension منوی کاربر ماژول‌های نصب‌شده، به ترتیب order */
+  public get deepSyncSectionSpecs(): DeepSyncSectionSpec[] {
+    return this.moduleRegistry
+      .getExtensions('userMenu')
+      .map(e => e.extension.deepSync)
+      .filter((d): d is DeepSyncSectionSpec => !!d && typeof d.scope === 'string')
+      .sort((a, b) => a.order - b.order);
+  }
+
+  /** بخش‌های آمادهٔ نمایش برای دیالوگ (بدون تابع‌های بارگذار)؛ تا عوض نشدن فهرست‌ها همان آرایه برمی‌گردد */
+  public get deepSyncSectionViews(): DeepSyncSectionView[] {
+    if (this.deepSyncViewsCache?.items === this.deepSyncItemsByScope) {
+      return this.deepSyncViewsCache.views;
+    }
+    const views = this.deepSyncSectionSpecs.map(({ loadItems, initialItems, preselectId, ...view }) => ({
+      ...view,
+      items: this.deepSyncItemsByScope[view.scope] || []
+    }));
+    this.deepSyncViewsCache = { items: this.deepSyncItemsByScope, views };
+    return views;
+  }
+  private deepSyncViewsCache: { items: Record<string, unknown>; views: DeepSyncSectionView[] } | null = null;
 
   public get currentScopeContext(): DeepSyncContextMode {
     const rawUrl = (this.router?.url && this.router.url !== '/')
@@ -118,7 +179,7 @@ export class UserMenuComponent implements OnInit, OnDestroy {
       .find(m => m.extensions?.offlineSync?.appRoutePrefixes?.some(p => url.startsWith(p)))
       ?.scopeKind;
     if (routeScope) {
-      return routeScope === 'finance' ? 'finance' : 'warehouse';
+      return routeScope;
     }
 
     // ۲. بررسی بر اساس پرسونا / ماژول فعال در تب جاری
@@ -127,23 +188,20 @@ export class UserMenuComponent implements OnInit, OnDestroy {
       return 'operations';
     }
     if (activeApp) {
-      const norm = normalizeScope(activeApp);
-      return norm === 'finance' ? 'finance' : 'warehouse';
+      return normalizeScope(activeApp);
     }
 
-    // ۳. بررسی بر اساس ماژول‌های فعال نصب‌شده
-    const installed = this.moduleRegistry.getInstalledModules();
-    const hasWarehouse = installed.some(m => m.scopeKind === 'warehouse');
-    const hasPersonnel = installed.some(m => m.scopeKind === 'finance');
-
-    if (hasWarehouse && !hasPersonnel) {
-      return 'warehouse';
-    }
-    if (!hasWarehouse && hasPersonnel) {
-      return 'finance';
+    // ۳. بررسی بر اساس ماژول‌های فعال نصب‌شدهٔ دارای قلمرو همگام‌سازی: اگر فقط یکی هست همان
+    const scopedKinds = new Set(
+      this.moduleRegistry.getInstalledModules()
+        .filter(m => !!m.extensions?.syncConfig)
+        .map(m => m.scopeKind)
+    );
+    if (scopedKinds.size === 1) {
+      return [...scopedKinds][0];
     }
 
-    return 'warehouse';
+    return DEFAULT_OFFLINE_SCOPE;
   }
 
   private subs: Subscription[] = [];
@@ -489,56 +547,42 @@ export class UserMenuComponent implements OnInit, OnDestroy {
     }
 
     const context = this.currentScopeContext;
-    const currentWhId = this.store.activeWarehouseId();
-    this.deepSyncPreselectWarehouseId = currentWhId && currentWhId !== 'ALL' ? Number(currentWhId) : null;
-    this.deepSyncPreselectProjectId = null;
+    const sections = this.deepSyncSectionSpecs;
+    // بخش‌های زمینهٔ جاری: در مرکز عملیات همه، وگرنه فقط بخش همان قلمرو
+    const relevant = context === 'operations' ? sections : sections.filter(sec => sec.scope === context);
 
-    // ۱. آماده‌سازی لیست‌های پیش‌فرض
-    if (context === 'warehouse' || context === 'operations') {
-      this.deepSyncWarehouses = this.state.appState.projects || [];
-    } else {
-      this.deepSyncWarehouses = [];
+    // ۱. آماده‌سازی فهرست‌های فوری و پیش‌انتخاب هر بخش
+    const items: Record<string, { id: number; name: string }[]> = {};
+    const preselect: Record<string, number | null> = {};
+    for (const sec of sections) {
+      items[sec.scope] = relevant.includes(sec) && sec.initialItems ? (sec.initialItems(this.injector) || []) : [];
+      preselect[sec.scope] = sec.preselectId ? sec.preselectId(this.injector) : null;
     }
-    this.deepSyncProjects = [];
+    this.deepSyncItemsByScope = items;
+    this.deepSyncPreselectByScope = preselect;
+    this.deepSyncLoadingScopes = relevant.map(sec => sec.scope);
 
     // ۲. باز کردن فوری مودال برای پاسخ‌دهی سریع رابط کاربری
     this.isDeepSyncModalOpen = true;
     this.cdr.detectChanges();
 
-    // ۳. واکشی داده‌های زنده و تازه‌سازی فهرست‌ها متناسب با قلمرو فعال از طریق اکستنشن‌های ثبت‌شده
-    const fetchPromises: Promise<any>[] = [];
-    const userMenuExts = this.moduleRegistry.getExtensions('userMenu');
-    const hasWarehouseSync = userMenuExts.some(e => e.extension.deepSyncScope === 'warehouse');
-    const hasFinanceSync = userMenuExts.some(e => e.extension.deepSyncScope === 'finance');
-
-    if ((context === 'warehouse' || context === 'operations') && hasWarehouseSync && this.whService) {
-      fetchPromises.push(
-        firstValueFrom(this.whService.getAll())
-          .then((data) => {
-            this.deepSyncWarehouses = data || [];
-            const refreshedId = this.store.activeWarehouseId();
-            this.deepSyncPreselectWarehouseId = refreshedId && refreshedId !== 'ALL' ? Number(refreshedId) : null;
-            this.cdr.detectChanges();
-          })
-          .catch((err) => {
-            console.warn('[UserMenu] خطا در دریافت لیست انبارها برای بروزرسانی عمیق:', err);
-          })
-      );
-    }
-
-    const projectLookupExt = this.moduleRegistry.getExtensions('projectLookup')[0]?.extension;
-    if ((context === 'finance' || context === 'operations') && hasFinanceSync && projectLookupExt?.financialProjectsEndpoint && this.api) {
-      fetchPromises.push(
-        firstValueFrom(this.api.get<any[]>(projectLookupExt.financialProjectsEndpoint, { is_active: true }))
-          .then((projects) => {
-            this.deepSyncProjects = projects || [];
-            this.cdr.detectChanges();
-          })
-          .catch((err) => {
-            console.warn('[UserMenu] خطا در دریافت لیست پروژه‌های مالی برای بروزرسانی عمیق:', err);
-          })
-      );
-    }
+    // ۳. واکشی فهرست زندهٔ هر بخش با بارگذار خود ماژول
+    const fetchPromises = relevant.map(sec =>
+      sec.loadItems(this.injector)
+        .then((data) => {
+          this.deepSyncItemsByScope = { ...this.deepSyncItemsByScope, [sec.scope]: data || [] };
+          if (sec.preselectId) {
+            this.deepSyncPreselectByScope = { ...this.deepSyncPreselectByScope, [sec.scope]: sec.preselectId(this.injector) };
+          }
+        })
+        .catch((err) => {
+          console.warn(`[UserMenu] خطا در دریافت فهرست «${sec.tabLabel}» برای بروزرسانی عمیق:`, err);
+        })
+        .finally(() => {
+          this.deepSyncLoadingScopes = this.deepSyncLoadingScopes.filter(scope => scope !== sec.scope);
+          this.cdr.detectChanges();
+        })
+    );
 
     await Promise.allSettled(fetchPromises);
     this.cdr.detectChanges();
@@ -548,21 +592,27 @@ export class UserMenuComponent implements OnInit, OnDestroy {
     if (this.isSyncing) return;
     this.isDeepSyncModalOpen = false;
 
-    let targetWarehouseIds: number[] = [];
-    let targetProjectIds: number[] = [];
-
+    // شناسه‌های هدف هر قلمرو: آرایه یعنی قلمرو زمینهٔ جاری، شیء یعنی idsByScope یا دو کلید سازگاری پیشین
+    let idsByScope: Record<string, number[]> = {};
     if (Array.isArray(payload)) {
-      if (this.currentScopeContext === 'finance') {
-        targetProjectIds = payload;
-      } else {
-        targetWarehouseIds = payload;
-      }
+      const ctx = this.currentScopeContext;
+      idsByScope[ctx === 'operations' ? LOCKED_OFFLINE_SCOPES[0] : ctx] = payload;
     } else if (payload && typeof payload === 'object') {
-      targetWarehouseIds = Array.isArray(payload.warehouseIds) ? payload.warehouseIds : [];
-      targetProjectIds = Array.isArray(payload.projectIds) ? payload.projectIds : [];
+      if (payload.idsByScope && typeof payload.idsByScope === 'object') {
+        idsByScope = { ...payload.idsByScope };
+      } else {
+        idsByScope[LOCKED_OFFLINE_SCOPES[0]] = Array.isArray(payload.warehouseIds) ? payload.warehouseIds : [];
+        idsByScope[LOCKED_OFFLINE_SCOPES[1]] = Array.isArray(payload.projectIds) ? payload.projectIds : [];
+      }
     }
 
-    if (targetWarehouseIds.length === 0 && targetProjectIds.length === 0) {
+    const sections = this.deepSyncSectionSpecs;
+    const orderOf = (scope: string) => sections.find(sec => sec.scope === scope)?.order ?? Number.MAX_SAFE_INTEGER;
+    const targetScopes = Object.keys(idsByScope)
+      .filter(scope => (idsByScope[scope] || []).length > 0)
+      .sort((a, b) => orderOf(a) - orderOf(b));
+
+    if (targetScopes.length === 0) {
       return;
     }
 
@@ -571,14 +621,9 @@ export class UserMenuComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
 
       const syncService = OfflineSyncService.getInstance();
-      const warehousesMap: Record<number, string> = {};
-      this.deepSyncWarehouses.forEach(w => warehousesMap[w.id] = w.name);
-
-      const projectsMap: Record<number, string> = {};
-      this.deepSyncProjects.forEach(p => projectsMap[p.id] = p.name);
 
       interface SummaryItem {
-        scopeKind: 'warehouse' | 'finance';
+        scopeKind: string;
         name: string;
         records: number;
         bytes: number;
@@ -586,28 +631,17 @@ export class UserMenuComponent implements OnInit, OnDestroy {
 
       const allSummaries: SummaryItem[] = [];
 
-      // ۱. اجرای بروزرسانی عمیق انبارها (در صورت وجود شناسه‌های هدف)
-      if (targetWarehouseIds.length > 0) {
-        const whSummaries = await syncService.performDeepUpdate(targetWarehouseIds, warehousesMap, 'warehouse');
-        whSummaries.forEach(s => {
+      // اجرای بروزرسانی عمیق هر قلمرو به ترتیب بخش‌ها
+      for (const scope of targetScopes) {
+        const namesMap: Record<number, string> = {};
+        (this.deepSyncItemsByScope[scope] || []).forEach(item => namesMap[item.id] = item.name);
+        const summaries = await syncService.performDeepUpdate(idsByScope[scope], namesMap, scope);
+        summaries.forEach(sum => {
           allSummaries.push({
-            scopeKind: 'warehouse',
-            name: s.warehouseName,
-            records: s.records,
-            bytes: s.bytes
-          });
-        });
-      }
-
-      // ۲. اجرای بروزرسانی عمیق پروژه‌ها و کارگاه‌های مالی (در صورت وجود شناسه‌های هدف)
-      if (targetProjectIds.length > 0) {
-        const finSummaries = await syncService.performDeepUpdate(targetProjectIds, projectsMap, 'finance');
-        finSummaries.forEach(s => {
-          allSummaries.push({
-            scopeKind: 'finance',
-            name: s.warehouseName,
-            records: s.records,
-            bytes: s.bytes
+            scopeKind: scope,
+            name: sum.warehouseName,
+            records: sum.records,
+            bytes: sum.bytes
           });
         });
       }
@@ -616,7 +650,8 @@ export class UserMenuComponent implements OnInit, OnDestroy {
       let totalBytes = 0;
       let tableRows = '';
 
-      const isOperationsContext = this.currentScopeContext === 'operations' || (targetWarehouseIds.length > 0 && targetProjectIds.length > 0);
+      const isOperationsContext = this.currentScopeContext === 'operations' || targetScopes.length > 1;
+      const sectionOf = (scope: string) => sections.find(sec => sec.scope === scope);
 
       allSummaries.forEach(s => {
         totalRecords += s.records;
@@ -625,9 +660,9 @@ export class UserMenuComponent implements OnInit, OnDestroy {
           '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
         }[m] || m));
 
-        const badgeHtml = s.scopeKind === 'warehouse'
-          ? '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200">📦 انبارداری</span>'
-          : '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">💳 مالی</span>';
+        const sec = sectionOf(s.scopeKind);
+        const badgeClass = SUMMARY_BADGE_CLASSES[sec?.accent || ''] || SUMMARY_BADGE_CLASSES['indigo'];
+        const badgeHtml = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black ${badgeClass}">${sec?.summaryLabel || s.scopeKind}</span>`;
 
         if (isOperationsContext) {
           tableRows += `
@@ -660,7 +695,7 @@ export class UserMenuComponent implements OnInit, OnDestroy {
         `
         : `
           <tr>
-            <th class="py-2.5 px-3 text-right font-black">${this.currentScopeContext === 'finance' ? 'پروژه / کارگاه' : 'انبار'}</th>
+            <th class="py-2.5 px-3 text-right font-black">${sectionOf(targetScopes[0])?.itemLabel || ''}</th>
             <th class="py-2.5 px-3 text-center font-black">رکوردها</th>
             <th class="py-2.5 px-3 text-left font-black">حجم</th>
           </tr>

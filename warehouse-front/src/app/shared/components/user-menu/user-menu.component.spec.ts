@@ -2,7 +2,7 @@
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Injector, runInInjectionContext, ChangeDetectorRef } from '@angular/core';
-import { of } from 'rxjs';
+import { of, firstValueFrom } from 'rxjs';
 import { UserMenuComponent } from './user-menu.component';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AuthStore } from '../../../core/stores/auth.store';
@@ -95,13 +95,35 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
               moduleCode: 'warehouse',
               extension: {
                 shortcutsCategory: { id: 'counting', label: 'انبارگردانی و اسکنر', count: 5 },
-                deepSyncScope: 'warehouse'
+                deepSyncScope: 'warehouse',
+                deepSync: {
+                  scope: 'warehouse', order: 10, tabLabel: 'انبارداری', icon: 'package',
+                  sectionTitle: 'لیست انبارها', opsSectionTitle: 'انبارهای فعال سازمان',
+                  bannerTitle: 'انتخاب انبارهای هدف', bannerDescription: '', emptyText: '',
+                  selectAllLabel: 'انتخاب همه انبارها', clearAllLabel: 'لغو انتخاب انبارها',
+                  itemLabel: 'انبار', summaryLabel: '📦 انبارداری', accent: 'indigo',
+                  initialItems: (inj: Injector) => inj.get(StateService).appState.projects || [],
+                  preselectId: (inj: Injector) => {
+                    const id = inj.get(AuthStore).activeWarehouseId();
+                    return id && id !== 'ALL' ? Number(id) : null;
+                  },
+                  loadItems: async (inj: Injector) => (await firstValueFrom(inj.get(WarehouseHttpService).getAll())) || []
+                }
               }
             },
             {
               moduleCode: 'accounting',
               extension: {
-                deepSyncScope: 'finance'
+                deepSyncScope: 'finance',
+                deepSync: {
+                  scope: 'finance', order: 20, tabLabel: 'مالی و پرسنلی', icon: 'credit-card',
+                  sectionTitle: 'لیست پروژه‌ها / کارگاه‌ها', opsSectionTitle: 'پروژه‌ها و کارگاه‌های مالی',
+                  bannerTitle: 'انتخاب پروژه‌ها و کارگاه‌های هدف', bannerDescription: '', emptyText: '',
+                  selectAllLabel: 'انتخاب همه پروژه‌ها', clearAllLabel: 'لغو انتخاب پروژه‌ها',
+                  itemLabel: 'پروژه / کارگاه', summaryLabel: '💳 مالی', accent: 'emerald',
+                  loadItems: async (inj: Injector) =>
+                    (await firstValueFrom(inj.get(ApiService).get<any[]>('/personnel/financial-projects', { is_active: true }))) || []
+                }
               }
             }
           ];
