@@ -108,6 +108,34 @@ export const MODULE: WhFrontendModule = {
       defaultOfflineRole: 'operator',
       tokenScopeKey: 'finance'
     },
+    offlineSync: {
+      scopeKind: 'finance',
+      dbName: 'WarehouseOfflineDB_finance',
+      scopeAliases: ['personnel', 'accounting'],
+      queueUrlPatterns: [
+        '/personnel',
+        '/payroll',
+        '/finance',
+        '/treasury',
+        '/attendance',
+        '/paya',
+        '/slips',
+        '/fiscal'
+      ],
+      activePathPatterns: [
+        '/app/finance',
+        '/finance',
+        '/personnel',
+        '/payroll'
+      ],
+      appRoutePrefixes: [
+        '/app/finance',
+        '/app/personnel',
+        '/app/payroll',
+        '/app/treasury',
+        '/app/projects'
+      ]
+    },
     projectLookup: {
       financialProjectsEndpoint: '/personnel/financial-projects'
     },

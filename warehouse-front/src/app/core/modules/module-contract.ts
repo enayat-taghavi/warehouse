@@ -186,6 +186,18 @@ export interface ExtensionMap {
   };
 
   /**
+   * ۱۴-ب. پیکربندی همگام‌سازی آفلاین، الگوهای URL صف و قلمرو پایگاه داده — مصرف در offline-db.ts
+   */
+  offlineSync?: {
+    scopeKind: string;
+    dbName: string;
+    scopeAliases?: string[];
+    queueUrlPatterns: string[];
+    activePathPatterns: string[];
+    appRoutePrefixes: string[];
+  };
+
+  /**
    * ۱۵. جستجو و استعلام پروژه‌های مالی — مصرف در users.ts و user-menu.component.ts
    */
   projectLookup?: {

@@ -1,5 +1,6 @@
 import Dexie, { Table } from 'dexie';
 import { saveBlob } from '../platform/file-output';
+import { getModuleRegistry } from '../modules/module-registry.service';
 
 /**
  * مدل صف همگام‌سازی — هر تغییر آفلاین یک رکورد در این صف ذخیره می‌شود
@@ -30,8 +31,8 @@ export interface SyncQueueEntry {
   /** updated_at نسخه‌ای که تغییر رویش اعمال شده (تشخیص تداخل 409) */
   baseUpdatedAt?: string;
   // ─── تفکیک قلمرو برنامه (Domain-Segregated Local Storage) ───
-  /** قلمرو برنامه: warehouse یا finance */
-  appScope?: 'warehouse' | 'finance';
+  /** قلمرو برنامه */
+  appScope?: AppScope;
 }
 
 /**
@@ -47,7 +48,7 @@ export interface ApiCacheEntry {
   /** زمان انقضا */
   expiresAt: number;
   /** قلمرو برنامه */
-  appScope?: 'warehouse' | 'finance';
+  appScope?: AppScope;
 }
 
 /**
@@ -73,7 +74,7 @@ export interface SyncErrorEntry {
   entitySyncId?: string;
   serverResponse?: any;
   /** قلمرو برنامه */
-  appScope?: 'warehouse' | 'finance';
+  appScope?: AppScope;
 }
 
 /**
@@ -149,7 +150,7 @@ export interface SyncCursorEntry {
  * قاعده: هیچ جدولی هرگز Clear نمی‌شود مگر صف خالی باشد و کاربر صریحاً تأیید کند.
  */
 
-export type AppScope = 'warehouse' | 'finance';
+export type AppScope = 'warehouse' | 'finance' | (string & {});
 
 /**
  * فاز ۶ §۶.۹ (تسک ۶۰) — قفل مطلق نام دو دیتابیس فعلی IndexedDB
@@ -162,29 +163,129 @@ export const SCOPED_DB_NAMES: Record<string, string> = {
   personnel: 'WarehouseOfflineDB_finance',
 };
 
+const SCOPE_KEYS = Object.keys(SCOPED_DB_NAMES);
+const WH_SCOPE = SCOPE_KEYS[0] as AppScope;
+const FIN_SCOPE = SCOPE_KEYS[1] as AppScope;
+const ACCT_SCOPE = SCOPE_KEYS[2] as AppScope;
+const PERS_SCOPE = SCOPE_KEYS[3] as AppScope;
+
+interface ValidOfflineSyncSpec {
+  scopeKind: string;
+  dbName: string;
+  scopeAliases?: string[];
+  queueUrlPatterns: string[];
+  activePathPatterns: string[];
+  appRoutePrefixes: string[];
+}
+
+const reportedInvalidExtensions = new WeakSet<object>();
+
+function isValidOfflineSyncExtension(ext: any): boolean {
+  if (!ext || typeof ext !== 'object') return false;
+  const { scopeKind, dbName } = ext;
+  if (typeof scopeKind !== 'string' || typeof dbName !== 'string') return false;
+  if (!/^[a-z][a-z0-9_]*$/.test(scopeKind)) return false;
+
+  const lockedDbForScope = SCOPED_DB_NAMES[scopeKind];
+  if (lockedDbForScope) {
+    const isPrimaryLockedScope = lockedDbForScope === `WarehouseOfflineDB_${scopeKind}`;
+    if (!isPrimaryLockedScope) {
+      return false;
+    }
+    return dbName === lockedDbForScope;
+  }
+
+  const lockedDbNames = new Set(Object.values(SCOPED_DB_NAMES));
+  if (lockedDbNames.has(dbName)) {
+    return false;
+  }
+
+  return dbName === `WarehouseOfflineDB_${scopeKind}`;
+}
+
+function validateOfflineSyncExtension(ext: any): boolean {
+  const valid = isValidOfflineSyncExtension(ext);
+  if (!valid) {
+    if (ext && typeof ext === 'object') {
+      if (!reportedInvalidExtensions.has(ext)) {
+        reportedInvalidExtensions.add(ext);
+        console.error('[OfflineDB] Invalid offlineSync extension ignored:', ext);
+      }
+    } else {
+      console.error('[OfflineDB] Invalid offlineSync extension ignored:', ext);
+    }
+  }
+  return valid;
+}
+
+function getOfflineSyncSpecs(): ValidOfflineSyncSpec[] {
+  try {
+    const modules = getModuleRegistry().getAllModules();
+    const specs: ValidOfflineSyncSpec[] = [];
+    for (const mod of modules) {
+      const ext = mod.extensions?.offlineSync;
+      if (!ext) continue;
+      if (validateOfflineSyncExtension(ext)) {
+        specs.push({
+          scopeKind: ext.scopeKind,
+          dbName: ext.dbName,
+          scopeAliases: Array.isArray(ext.scopeAliases) ? ext.scopeAliases : [],
+          queueUrlPatterns: Array.isArray(ext.queueUrlPatterns) ? ext.queueUrlPatterns : [],
+          activePathPatterns: Array.isArray(ext.activePathPatterns) ? ext.activePathPatterns : [],
+          appRoutePrefixes: Array.isArray(ext.appRoutePrefixes) ? ext.appRoutePrefixes : [],
+        });
+      }
+    }
+    return specs;
+  } catch {
+    return [];
+  }
+}
+
 /**
  * دریافت نام قطعی دیتابیس بر اساس کد ماژول (با قفل نام دو دیتابیس فعلی)
  */
 export function getScopedDbName(scope?: string | null): string {
-  const norm = normalizeScope(scope);
-  return SCOPED_DB_NAMES[norm] || `WarehouseOfflineDB_${norm}`;
+  if (!scope) return SCOPED_DB_NAMES[WH_SCOPE];
+  const s = scope.toLowerCase();
+  if (s in SCOPED_DB_NAMES) {
+    return SCOPED_DB_NAMES[s];
+  }
+  const norm = normalizeScope(s);
+  if (norm !== WH_SCOPE) {
+    return `WarehouseOfflineDB_${norm}`;
+  }
+  return SCOPED_DB_NAMES[WH_SCOPE];
 }
 
 /**
- * نرمال‌سازی نام قلمرو به یکی از دو قلمرو استاندارد: warehouse یا finance
+ * نرمال‌سازی نام قلمرو به یکی از دو قلمرو استاندارد یا ماژول‌های ثبت‌شده
  */
 export function normalizeScope(scope?: string | null): AppScope {
-  if (!scope) return 'warehouse';
+  if (!scope) return WH_SCOPE;
   const s = scope.toLowerCase();
-  if (s === 'finance' || s === 'personnel' || s === 'accounting') return 'finance';
-  return 'warehouse';
+  if (s === WH_SCOPE) return WH_SCOPE;
+  if (s === FIN_SCOPE || s === PERS_SCOPE || s === ACCT_SCOPE) return FIN_SCOPE;
+
+  const specs = getOfflineSyncSpecs();
+  for (const spec of specs) {
+    if (spec.scopeKind in SCOPED_DB_NAMES) continue;
+    if (spec.scopeKind.toLowerCase() === s) {
+      return spec.scopeKind;
+    }
+    if (spec.scopeAliases && spec.scopeAliases.some(a => a.toLowerCase() === s)) {
+      return spec.scopeKind;
+    }
+  }
+
+  return WH_SCOPE;
 }
 
 /**
  * دریافت قلمرو فعال برنامه از روی سشن تب، URL یا حافظه محلی
  */
 export function getCurrentActiveAppScope(): AppScope {
-  if (typeof window === 'undefined') return 'warehouse';
+  if (typeof window === 'undefined') return WH_SCOPE;
   try {
     // ۱. اولویت سشن اختصاصی تب جاری
     const tabApp = sessionStorage.getItem('active_app_module') || sessionStorage.getItem('wh_active_app');
@@ -192,33 +293,36 @@ export function getCurrentActiveAppScope(): AppScope {
 
     // ۲. کانتکست آدرس مرورگر
     const path = window.location.pathname.toLowerCase();
-    if (
-      path.includes('/app/finance') ||
-      path.includes('/finance') ||
-      path.includes('/personnel') ||
-      path.includes('/payroll')
-    ) {
-      return 'finance';
-    }
-    if (path.includes('/app/warehouse') || path.includes('/warehouse')) {
-      return 'warehouse';
+    try {
+      const specs = getOfflineSyncSpecs();
+      for (const spec of specs) {
+        if (spec.scopeKind === WH_SCOPE) continue;
+        if (spec.activePathPatterns && spec.activePathPatterns.some(p => path.includes(p.toLowerCase()))) {
+          return spec.scopeKind;
+        }
+      }
+      const defaultSpec = specs.find(s => s.scopeKind === WH_SCOPE);
+      if (defaultSpec && defaultSpec.activePathPatterns && defaultSpec.activePathPatterns.some(p => path.includes(p.toLowerCase()))) {
+        return WH_SCOPE;
+      }
+    } catch {
+      // در صورت خطای رجیستری، به حافظه محلی سقوط می‌کند
     }
 
     // ۳. حافظه سراسری محلی
     const globalApp = localStorage.getItem('active_app_module') || localStorage.getItem('wh_active_app');
     if (globalApp) return normalizeScope(globalApp);
 
-    return 'warehouse';
+    return WH_SCOPE;
   } catch {
-    return 'warehouse';
+    return WH_SCOPE;
   }
 }
 
 /**
- * تشخیص هوشمند قلمرو از روی URL مسیر اندپوینت سرور — فاز ۶ (تسک ۶۱)
- * موجودیت‌های doc-tasks متعلق به انبار هستند و نباید به finance مپ شوند.
+ * رونوشت منطق قلمرویاب پیشین برای مهاجرت امن دیتابیس قدیمی
  */
-export function resolveScopeFromUrl(url?: string | null): AppScope {
+function resolveLegacyScopeFromUrl(url?: string | null): AppScope {
   if (!url) return getCurrentActiveAppScope();
   const u = url.toLowerCase();
   if (
@@ -231,9 +335,25 @@ export function resolveScopeFromUrl(url?: string | null): AppScope {
     u.includes('/slips') ||
     u.includes('/fiscal')
   ) {
-    return 'finance';
+    return FIN_SCOPE;
   }
-  return 'warehouse';
+  return WH_SCOPE;
+}
+
+/**
+ * تشخیص هوشمند قلمرو از روی URL مسیر اندپوینت سرور بر اساس مشارکت‌های offlineSync ماژول‌ها
+ */
+export function resolveScopeFromUrl(url?: string | null): AppScope {
+  if (!url) return getCurrentActiveAppScope();
+  const u = url.toLowerCase();
+  const specs = getOfflineSyncSpecs();
+  for (const spec of specs) {
+    if (spec.scopeKind === WH_SCOPE) continue;
+    if (spec.queueUrlPatterns && spec.queueUrlPatterns.some(p => u.includes(p.toLowerCase()))) {
+      return spec.scopeKind;
+    }
+  }
+  return WH_SCOPE;
 }
 
 export class OfflineDatabase extends Dexie {
@@ -363,7 +483,7 @@ const dbInstances = new Map<string, OfflineDatabase>();
  */
 export function getOfflineDb(scope?: AppScope | 'personnel' | null): OfflineDatabase {
   const normScope = normalizeScope(scope || getCurrentActiveAppScope());
-  const dbName = SCOPED_DB_NAMES[normScope];
+  const dbName = SCOPED_DB_NAMES[normScope] || getScopedDbName(normScope);
   if (!dbInstances.has(dbName)) {
     const db = new OfflineDatabase(dbName, normScope);
     dbInstances.set(dbName, db);
@@ -376,6 +496,51 @@ export const warehouseOfflineDb: OfflineDatabase = getOfflineDb('warehouse');
 
 /** نمونه صریح دیتابیس آفلاین مالی و پرسنلی */
 export const financeOfflineDb: OfflineDatabase = getOfflineDb('finance');
+
+/**
+ * حل دقیق و سخت‌گیرانه دیتابیس بر اساس قلمرو درخواستی — فاز ۴ (گام ۴)
+ * برای قلمروهای قفل یا ثبت‌شده نمونه دیتابیس را برمی‌گرداند و برای موارد ناشناخته null. هرگز fallback به انبار ندارد.
+ */
+export function resolveOfflineDbStrict(scope?: string | null): OfflineDatabase | null {
+  if (!scope) return null;
+  const s = scope.toLowerCase();
+  if (s === WH_SCOPE) return warehouseOfflineDb;
+  if (s === FIN_SCOPE || s === PERS_SCOPE || s === ACCT_SCOPE) return financeOfflineDb;
+
+  const specs = getOfflineSyncSpecs();
+  for (const spec of specs) {
+    if (spec.scopeKind in SCOPED_DB_NAMES) continue;
+    if (spec.scopeKind.toLowerCase() === s) {
+      return getOfflineDb(spec.scopeKind);
+    }
+    if (spec.scopeAliases && spec.scopeAliases.some(a => a.toLowerCase() === s)) {
+      return getOfflineDb(spec.scopeKind);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * دریافت کلیه نمونه‌های دیتابیس‌های آفلاین فعال در سامانه — فاز ۴ (گام ۴)
+ * شامل دو دیتابیس قفل‌شده به همراه کلیه دیتابیس‌های ماژول‌های ثبت‌شده بدون تکرار.
+ */
+export function getAllOfflineDbs(): OfflineDatabase[] {
+  const result: OfflineDatabase[] = [warehouseOfflineDb, financeOfflineDb];
+  try {
+    const specs = getOfflineSyncSpecs();
+    for (const spec of specs) {
+      if (spec.scopeKind in SCOPED_DB_NAMES) continue;
+      const db = getOfflineDb(spec.scopeKind);
+      if (!result.includes(db)) {
+        result.push(db);
+      }
+    }
+  } catch {
+    // on registry error only the two locked DBs
+  }
+  return result;
+}
 
 /**
  * پروکسی هوشمند و شفاف offlineDb — سازگاری ۱۰۰٪ با کدهای پیشین بدون نیاز به تغییر ایمپورت‌ها
@@ -641,7 +806,7 @@ export async function migrateLegacyData(
           continue;
         }
         try {
-          const scope = resolveScopeFromUrl(item.url);
+          const scope = resolveLegacyScopeFromUrl(item.url);
           const targetDb = targets[scope] || targets.warehouse;
           const targetQueue = targetDb.syncQueue;
           const existing = await targetQueue

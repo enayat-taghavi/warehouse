@@ -87,6 +87,22 @@ export const MODULE: WhFrontendModule = {
       defaultOfflineRole: 'counter',
       tokenScopeKey: 'warehouse'
     },
+    offlineSync: {
+      scopeKind: 'warehouse',
+      dbName: 'WarehouseOfflineDB_warehouse',
+      queueUrlPatterns: [],
+      activePathPatterns: [
+        '/app/warehouse',
+        '/warehouse'
+      ],
+      appRoutePrefixes: [
+        '/app/warehouse',
+        '/app/inventory',
+        '/app/counting',
+        '/app/items',
+        '/app/tag-templates'
+      ]
+    },
     dynamicFields: {
       fieldsEndpoint: '/inventory/dynamic-fields/'
     },
