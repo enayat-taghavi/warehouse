@@ -728,15 +728,21 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         from ..permissions import HasMenuAccess
         return [HasMenuAccess('perm_sys_logs') | HasMenuAccess('view_wh_audit') | HasMenuAccess('perm_sys_audit_export') | HasMenuAccess('perm_sys_purge_logs')]
 
-    def get_queryset(self):
+    def get_queryset(self, app_scope=None):
         req = getattr(self, 'request', None)
         user = getattr(req, 'user', None) if req else None
         qs = super().get_queryset()
         params = getattr(req, 'query_params', getattr(req, 'GET', {})) if req else {}
+        if app_scope is not None:
+            effective_app_scope = app_scope
+        elif req and req.method == 'POST' and getattr(req, 'data', None) and isinstance(req.data, dict) and 'app_scope' in req.data:
+            effective_app_scope = req.data.get('app_scope')
+        else:
+            effective_app_scope = params.get('app_scope')
 
         # Warehouse restriction: non-superusers without perm_sys_logs only see assigned warehouses
         if user and user.is_authenticated and not (user.is_superuser or user.has_perm('accounts.perm_sys_logs')):
-            qs = restrict_audit_for_user(qs, user, params.get('app_scope'))
+            qs = restrict_audit_for_user(qs, user, effective_app_scope)
 
 
         module = params.get('module')
@@ -905,7 +911,8 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         self._check_export_permission(request)
         data = request.data if request.method == 'POST' and request.data else request.query_params
 
-        qs = self.get_queryset()
+        effective_app_scope = data.get('app_scope') if request.method == 'POST' and request.data else None
+        qs = self.get_queryset(app_scope=effective_app_scope)
         if request.method == 'POST' and request.data:
             module = data.get('module')
             if module:

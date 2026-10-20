@@ -54,7 +54,7 @@ class JoinDef:
         warehouse_path: Optional[str] = None,
         path_to_base: str = '',
         allowed_types: Tuple[str, ...] = ('left', 'inner'),
-        scope_kind: str = 'warehouse',
+        scope_kind: Optional[str] = None,
     ):
         self.target = target
         self.label = label
@@ -63,6 +63,9 @@ class JoinDef:
         self.scope_path = scope_path if scope_path is not None else (warehouse_path or '')
         self.path_to_base = path_to_base
         self.allowed_types = tuple(allowed_types)
+        if scope_kind is None:
+            from platform_core.registry import default_module
+            scope_kind = default_module()
         self.scope_kind = scope_kind
 
     @property
@@ -196,14 +199,14 @@ class EntityConfig:
         permissions: Tuple[str, ...],
         scope_path: Optional[str] = None,
         warehouse_path: Optional[str] = None,
-        scope_kind: str = 'warehouse',
+        scope_kind: Optional[str] = None,
         exclude=(),
         include=None,
         related=None,
         extra=None,
         select_related=(),
         blind_sensitive=(),
-        module_code: str = 'warehouse',
+        module_code: Optional[str] = None,
         dynamic_fields_factory: Optional[Callable] = None,
         sensitive_keys_resolver: Optional[Callable] = None,
         scope_resolver: Optional[Callable] = None,
@@ -214,6 +217,9 @@ class EntityConfig:
         self.model = model
         self.permissions = tuple(permissions)
         self.scope_path = scope_path if scope_path is not None else warehouse_path
+        if scope_kind is None:
+            from platform_core.registry import default_module
+            scope_kind = default_module()
         self.scope_kind = scope_kind
         self.exclude = tuple(exclude)
         self.include = include
@@ -221,6 +227,9 @@ class EntityConfig:
         self.extra = extra or {}
         self.select_related = tuple(select_related)
         self.blind_sensitive = tuple(blind_sensitive)
+        if module_code is None:
+            from platform_core.registry import default_module
+            module_code = default_module()
         self.module_code = module_code
         self.dynamic_fields_factory = dynamic_fields_factory
         self.sensitive_keys_resolver = sensitive_keys_resolver
@@ -312,14 +321,20 @@ _JOINS: Dict[str, Dict[str, JoinDef]] = {}
 _REPORTING_MODULES: Set[str] = set()
 
 
-def register_entity(config: EntityConfig, module_code: str = 'warehouse') -> None:
+def register_entity(config: EntityConfig, module_code: Optional[str] = None) -> None:
     """ثبت یک موجودیت در رجیستری گزارش‌ساز."""
+    if module_code is None:
+        from platform_core.registry import default_module
+        module_code = default_module()
     _ENTITIES[config.key] = config
     _REPORTING_MODULES.add(module_code)
 
 
-def register_joins(entity_key: str, joins: Dict[str, JoinDef], module_code: str = 'warehouse') -> None:
+def register_joins(entity_key: str, joins: Dict[str, JoinDef], module_code: Optional[str] = None) -> None:
     """ثبت روابط JOIN مجاز برای یک موجودیت."""
+    if module_code is None:
+        from platform_core.registry import default_module
+        module_code = default_module()
     if entity_key not in _JOINS:
         _JOINS[entity_key] = {}
     _JOINS[entity_key].update(joins)

@@ -121,13 +121,14 @@ class SystemHealthView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from accounts.middleware import get_current_active_app
         t0_total = time.time()
         health_data = {
             'status': 'healthy',
             'health_score': 100,
             'timestamp': timezone.now().isoformat(),
             'server_time': timezone.localtime(timezone.now()).strftime('%Y/%m/%d %H:%M:%S'),
-            'app_scope': getattr(request, 'active_app', 'warehouse') or 'warehouse',
+            'app_scope': getattr(request, 'active_app', None) or get_current_active_app(),
             'components': {},
             'diagnostics': {}
         }

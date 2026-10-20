@@ -273,3 +273,121 @@ class AuditAppScopeCharacterizationTests(TestCase):
         ws = wb.active
         data_rows = [row for row in ws.iter_rows(min_row=3, values_only=True) if any(cell is not None for cell in row)]
         self.assertEqual(len(data_rows), 2)
+
+    def test_nonsuperuser_export_excel_post_matches_get_warehouse_scope(self):
+        """
+        POST export for restricted non-superuser with body app_scope=warehouse
+        applies the exact same restriction as GET with ?app_scope=warehouse (1 row: wh1).
+        """
+        perm_export = Permission.objects.get(codename='perm_sys_audit_export', content_type__app_label='accounts')
+        self.non_superuser.user_permissions.add(perm_export)
+        self.client.force_authenticate(self.non_superuser)
+        res_get = self.client.get('/api/accounts/audit-logs/export_excel/?app_scope=warehouse')
+        self.assertEqual(res_get.status_code, 200)
+        wb_get = openpyxl.load_workbook(io.BytesIO(res_get.content))
+        data_rows_get = [row for row in wb_get.active.iter_rows(min_row=3, values_only=True) if any(c is not None for c in row)]
+
+        res_post = self.client.post('/api/accounts/audit-logs/export_excel/', {'app_scope': 'warehouse'}, format='json')
+        self.assertEqual(res_post.status_code, 200)
+        wb_post = openpyxl.load_workbook(io.BytesIO(res_post.content))
+        data_rows_post = [row for row in wb_post.active.iter_rows(min_row=3, values_only=True) if any(c is not None for c in row)]
+
+        self.assertEqual(len(data_rows_get), 1)
+        self.assertEqual(len(data_rows_post), 1)
+        self.assertEqual(len(data_rows_get), len(data_rows_post))
+
+    def test_nonsuperuser_export_excel_post_matches_get_finance_scope(self):
+        """
+        POST export for restricted non-superuser with body app_scope=finance
+        applies the exact same restriction as GET with ?app_scope=finance (4 rows).
+        """
+        perm_export = Permission.objects.get(codename='perm_sys_audit_export', content_type__app_label='accounts')
+        self.non_superuser.user_permissions.add(perm_export)
+        self.client.force_authenticate(self.non_superuser)
+        res_get = self.client.get('/api/accounts/audit-logs/export_excel/?app_scope=finance')
+        self.assertEqual(res_get.status_code, 200)
+        wb_get = openpyxl.load_workbook(io.BytesIO(res_get.content))
+        data_rows_get = [row for row in wb_get.active.iter_rows(min_row=3, values_only=True) if any(c is not None for c in row)]
+
+        res_post = self.client.post('/api/accounts/audit-logs/export_excel/', {'app_scope': 'finance'}, format='json')
+        self.assertEqual(res_post.status_code, 200)
+        wb_post = openpyxl.load_workbook(io.BytesIO(res_post.content))
+        data_rows_post = [row for row in wb_post.active.iter_rows(min_row=3, values_only=True) if any(c is not None for c in row)]
+
+        self.assertEqual(len(data_rows_get), 4)
+        self.assertEqual(len(data_rows_post), 4)
+        self.assertEqual(len(data_rows_get), len(data_rows_post))
+
+    def test_replaced_defaults_match_registry_default_in_full_profile(self):
+        """
+        Verify each replaced default in section 2 returns the registry default
+        (default_module()) in the full profile.
+        """
+        from accounts.middleware import get_user_valid_roles_for_app, resolve_effective_role
+        from platform_core.registry import default_module
+        from platform_core.query_engine.definitions import (
+            JoinDef,
+            EntityConfig,
+            register_entity,
+            register_joins,
+            _ENTITIES,
+            _JOINS,
+            _REPORTING_MODULES,
+        )
+
+        # 1. middleware defaults
+        self.assertEqual(
+            get_user_valid_roles_for_app(self.superuser),
+            get_user_valid_roles_for_app(self.superuser, 'personnel')
+        )
+        self.assertEqual(
+            resolve_effective_role(self.non_superuser, 'operator'),
+            resolve_effective_role(self.non_superuser, 'operator', 'personnel')
+        )
+
+        # 2. query_engine defaults
+        jd = JoinDef(target='t', label='l', path='p', cardinality='one')
+        self.assertEqual(jd.scope_kind, default_module())
+
+        cfg = EntityConfig(key='test_cfg_defaults', label='l', model=User, permissions=())
+        self.assertEqual(cfg.scope_kind, default_module())
+        self.assertEqual(cfg.module_code, default_module())
+
+        try:
+            register_entity(cfg)
+            self.assertIn(default_module(), _REPORTING_MODULES)
+            self.assertIn('test_cfg_defaults', _ENTITIES)
+
+            register_joins('test_cfg_defaults', {'j': jd})
+            self.assertIn('test_cfg_defaults', _JOINS)
+            self.assertIn(default_module(), _REPORTING_MODULES)
+        finally:
+            _ENTITIES.pop('test_cfg_defaults', None)
+            _JOINS.pop('test_cfg_defaults', None)
+
+        # 3. backup_views SystemHealthView default
+        from accounts.views_domains.backup_views import SystemHealthView
+        from rest_framework.test import APIRequestFactory, force_authenticate
+        factory = APIRequestFactory()
+        req = factory.get('/api/accounts/backup/health/')
+        force_authenticate(req, user=self.superuser)
+        res = SystemHealthView.as_view()(req)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data['app_scope'], default_module())
+
+        # 4. session_views DeviceHeartbeatView default
+        from accounts.views_domains.session_views import DeviceHeartbeatView
+        from accounts.models import UserDeviceSession
+        req_hb = factory.post(
+            '/api/accounts/telemetry/heartbeat/',
+            {'tab_id': 'test_tab_defaults'},
+            format='json'
+        )
+        force_authenticate(req_hb, user=self.superuser)
+        res_hb = DeviceHeartbeatView.as_view()(req_hb)
+        self.assertEqual(res_hb.status_code, 200)
+        sess = UserDeviceSession.objects.filter(session_key=f"{self.superuser.id}_test_tab_defaults").first()
+        self.assertIsNotNone(sess)
+        self.assertEqual(sess.app_scope, default_module())
+
+

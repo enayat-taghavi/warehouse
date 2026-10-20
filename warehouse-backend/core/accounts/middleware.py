@@ -105,7 +105,7 @@ def get_user_allowed_apps(user) -> list[str]:
     return result
 
 
-def get_user_valid_roles_for_app(user, app_module: str = 'personnel') -> list[str]:
+def get_user_valid_roles_for_app(user, app_module: str | None = None) -> list[str]:
     """
     محاسبه لیست نقش‌های معتبر و مجاز کاربر در ماژول انتخاب‌شده جهت جلوگیری از جعل نقش (Anti Role-Spoofing).
 
@@ -113,10 +113,13 @@ def get_user_valid_roles_for_app(user, app_module: str = 'personnel') -> list[st
     ('personnel'/'finance') را می‌پذیرد؛ با `app_code_to_module` به ماژولِ رجیستری
     نرمال می‌شود و نقش‌های مجاز از `spec.roles` برای سوپریوزر برگرفته می‌شود.
     """
-    from platform_core.registry import app_code_to_module, get_module, installed_modules
+    from platform_core.registry import app_code_to_module, get_module, installed_modules, default_module
 
     if not user or not user.is_authenticated:
         return []
+
+    if app_module is None:
+        app_module = default_module()
 
     module_code = app_code_to_module(app_module)
     if not module_code or module_code not in installed_modules():
@@ -140,12 +143,16 @@ def get_user_valid_roles_for_app(user, app_module: str = 'personnel') -> list[st
 
 
 
-def resolve_effective_role(user, requested_role: str, app_module: str = 'personnel') -> str:
+def resolve_effective_role(user, requested_role: str, app_module: str | None = None) -> str:
     """
     اعتبارسنجی نقش درخواستی در برابر اختیارات واقعی کاربر؛ در صورت عدم صلاحیت، بالاترین نقش معتبر جایگزین می‌شود.
     """
     if not user or not user.is_authenticated:
         return 'anonymous'
+
+    if app_module is None:
+        from platform_core.registry import default_module
+        app_module = default_module()
 
     valid_roles = get_user_valid_roles_for_app(user, app_module)
     if user.is_superuser:

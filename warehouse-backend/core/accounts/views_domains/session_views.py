@@ -27,7 +27,11 @@ class DeviceHeartbeatView(APIView):
         device_model = str(data.get('device_model', 'ناشناخته')).strip()
         os_name = str(data.get('os_name', 'Unknown')).strip()
         browser_name = str(data.get('browser_name', 'Unknown')).strip()
-        app_scope = str(data.get('app_scope', 'warehouse')).strip()
+        from accounts.middleware import get_current_active_app
+        raw_scope = data.get('app_scope')
+        if not raw_scope:
+            raw_scope = getattr(request, 'active_app', None) or get_current_active_app()
+        app_scope = str(raw_scope).strip()
         active_role = str(data.get('active_role', 'counter')).strip()
         pending_queue_count = max(0, int(data.get('pending_queue_count', 0)))
         conflict_count = max(0, int(data.get('conflict_count', 0)))
