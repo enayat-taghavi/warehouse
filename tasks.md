@@ -482,7 +482,7 @@ verify: python scripts/automation/verify_tools.py clean-tree
 
 ===
 
-Session 25 of 30 — Close modularization: backend core defaults from the module registry; audit export POST reads app_scope from one source
+[DONE] Session 25 of 30 — Close modularization: backend core defaults from the module registry; audit export POST reads app_scope from one source
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -531,7 +531,7 @@ refactor(core): registry defaults instead of module literals; audit export app_s
 
 ===
 
-Session 26 of 30 — Close modularization: legacy redirects and route permissions move into their modules; persona code without module lists
+[DONE] Session 26 of 30 — Close modularization: legacy redirects and route permissions move into their modules; persona code without module lists
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -588,7 +588,7 @@ refactor(front): legacy redirects and route permissions in their modules
 
 ===
 
-Session 27 of 30 — Close modularization: token keys, X-Active-App and offline roles from syncConfig; fault-tolerant drain
+[DONE] Session 27 of 30 — Close modularization: token keys, X-Active-App and offline roles from syncConfig; fault-tolerant drain
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree
@@ -645,7 +645,7 @@ refactor(offline): scope sync profile from syncConfig; fault-tolerant drain
 
 ===
 
-Session 28 of 30 — Close modularization: deep update dialog sections come from the modules' userMenu extension
+[DONE] Session 28 of 30 — Close modularization: deep update dialog sections come from the modules' userMenu extension
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree

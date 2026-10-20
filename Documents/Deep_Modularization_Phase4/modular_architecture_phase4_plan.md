@@ -282,4 +282,30 @@
     - کارهای کوچک باقی‌مانده: `export_excel` (POST)، فهرست `isGenericModuleApp`، `CORE_SUPERUSER.app`، تغییر مسیرهای قدیمی `app/finance`، `finance-audit` در `ROUTE_PERMISSIONS`.
     - کاهش شمارنده‌های لیترال، که فاز جداگانه است.
 
+- **گام ۶ — نشست‌های ۲۵ تا ۲۸ (۲۹–۳۰ مهر ۱۴۰۵):**
+  - **روند:** runner نشست ۲۵ را با Antigravity اجرا کرد (`c42e3f3`). به درخواست کاربر، Claude نشست‌های ۲۶ تا ۲۸ را خودش انجام داد تا کار سریع‌تر پیش برود. runner درست پس از `[DONE]` نشست ۲۵ متوقف شد. نشست‌های ۲۶ تا ۲۸ در `tasks.md` با دست `[DONE]` شدند.
+  - **۲۵ (بک‌اند):** `tenant-scope-reviewer` دو یافته داشت:
+    - **تأییدشده و اصلاح‌شده (`978050c`):** شاخهٔ POST در `get_queryset` مشترک بود، پس `revert` و `bulk_revert` هم `app_scope` را از بدنه می‌خواندند و محدودیت کاربر غیرسوپریوزر شُل می‌شد. حالا فقط `export_excel` قلمرو بدنه را صریح می‌دهد. یک تست رگرسیون اضافه شد که روی کد قبلی شکست می‌خورد.
+    - **انحراف آگاهانه:** در پروفایل کامل `default_module()` برابر `accounting` است، نه `warehouse`. اثرش فقط دو چیز است: اعتبارسنجی بی‌معنای `scope_id` انبار روی گزارش‌های مالی و `users` حذف شد (داده همان است، چون `scope_resolver` دارند)، و fallback قلمرو در heartbeat و system-health از active app درخواست پیروی می‌کند (کلاینت همیشه `app_scope` می‌فرستد).
+  - **۲۶ (`c5551da`):**
+    - ۲۰ ریدایرکت انبار و ۵۱ ریدایرکت مالی، به‌اضافهٔ `app/warehouse/attendance`، به `legacyRedirects` ماژول‌ها رفتند. `finance-audit` به `pagePermissions` حسابداری رفت. `isGenericModuleApp` حالا بر پایهٔ `syncConfig` و دیتابیس قفل‌شده است.
+    - **انحراف:** `CORE_SUPERUSER.app` همان `'personnel'` ماند، چون spec مشخصه‌نگار پرسونا آن را قفل کرده است.
+    - spec در `src/app/app.legacy-redirects.spec.ts` است (ریشهٔ ترکیب)، چون نگهبان ۵۷ ایمپورت از `core/` به ماژول را حتی در spec رد می‌کند. یک تست هم ثابت می‌کند Angular پس از ناکامی فرزندان ماژول انبار به ریدایرکت ریشه برمی‌گردد.
+  - **۲۷ (`32bbee9`، اصلاح بازبینی `1e769c0`):**
+    - `getScopeSyncProfile` و `DEFAULT_OFFLINE_SCOPE`: دو قلمرو قفل از جدول ثابت می‌آیند و ماژول نمی‌تواند کلید توکن قفل را بگیرد. drain و شمارنده‌ها با `allSettled` کار می‌کنند و `getUnsentCountStrict` بسته-در-خطا ماند.
+    - `data-loss-reviewer` هیچ مسیر داده‌سوزی پیدا نکرد. یک یافتهٔ متوسط داشت: با یک دیتابیس ناخوانا، نتیجهٔ drain «کامل» گزارش می‌شد. اصلاح شد: نتیجه `partial` با `unreadableDbs` است و پیام هشدار در layout نشان داده می‌شود.
+  - **۲۸ (`21626d9`):**
+    - `DeepSyncSectionSpec` در `userMenu.deepSync` اضافه شد. هر ماژول متن‌ها، رنگ، `initialItems`، `preselectId` و `loadItems` خودش را دارد. `WarehouseHttpService` تنبل ایمپورت می‌شود تا چرخهٔ ایمپورت ساخته نشود.
+    - دیالوگ و منوی کاربر عمومی شدند. API قدیمی (`warehouses`، `projects`، `selectedWarehouseIds`، `warehouseIds`/`projectIds`) روی `LOCKED_OFFLINE_SCOPES` تازهٔ `offline-db.ts` ماند تا specهای موجود فقط در setup عوض شوند (`tests-kept`: ۱۴ و ۱۷ تست، بدون کاهش). `idsByScope` فقط وقتی قلمرو سومی انتخاب شده باشد فرستاده می‌شود.
+    - spec تازه `deep-sync-sections.spec.ts` پنج تست دارد.
+  - **آزمون‌ها:** `ng-test-compare` روی core، shared، offline و layout بدون پس‌رفت بود. build و نگهبان‌های ۳۴، ۵۶ و ۵۷ سبز بودند. تست‌های بک‌اند audit (۱۶) هم سبز بودند. شمارندهٔ لیترال فرانت از ۱۸۹ به ۵۶ رسید.
+  - **باز:**
+    - `ui-reviewer` روی `21626d9` و بررسی دیداری دیالوگ روی `localhost:4300` (با حساب موقت `qa_*`) هنوز انجام نشده است.
+    - معیار بستن پرونده هنوز برآورده نیست. ۵۶ لیترال فرانت باقی مانده است: بخشی قفل داده یا پروتکل‌اند (`offline-db.ts`، مقدار ذخیره‌شدهٔ `active_app_module` در `session-tab`، نام پارامتر `warehouse_id`) و بقیه ارجاع سادهٔ ماژول‌اند. ارجاع‌های ساده: union نوع در `auth.service` و `session-tab` و `audit-log.model`، پیش‌فرض در `websocket` و `client-telemetry` و `offline-conflict-manager` و `offline-local-patcher` و `auth.interceptor`، `canAccessApp('warehouse'|'accounting')` در `app-persona`، `scopeKind === 'warehouse'` در `warehouse-http.service`، شاخه‌های قلمرو در `performDeepUpdate` و `sync-pull` (۲۰۸ و ۲۲۹)، و `conflict-resolution-modal`. فهرست کامل با خط در `scratch/s28_literals2.txt` است. ۵۵ لیترال بک‌اند همه فیلد داده، مقدار ذخیره‌شده، پروتکل یا ابزار توسعه‌اند.
+  - **اقدام بعدی:**
+    1. `ui-reviewer` روی `21626d9` و بررسی دیداری.
+    2. یک نشست پاک‌سازی برای ارجاع‌های سادهٔ باقی‌مانده در فرانت.
+    3. نشست ۲۹ (فهرست مجاز دقیق؛ متن آن در `tasks.md` باید با فهرست نهایی هم‌خوان شود).
+    4. انتشار روی `app` و بستن پرونده.
+
 </div>

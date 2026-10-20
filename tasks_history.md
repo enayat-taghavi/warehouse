@@ -9169,3 +9169,56 @@ Session 24 of 24 — Release phase 4 step 4 review fixes on the local app enviro
 کلیه مراحل به‌صورت متوالی و با موفقیت کامل در محیط محلی اجرا شدند: پشتیبان با حجم معتبر ایجاد شد،...
 
 ---
+
+### Task 1 of 6 — 2026-10-20 23:20:44
+- **Status:** DONE
+- **Conversation:** `9261df63-6546-44e1-9d37-fd093bdf44c2`
+- **Steps:** 343
+- **Duration:** 43m 48s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 12/12 passed
+- **Task:**
+```
+Session 25 of 30 — Close modularization: backend core defaults from the module registry; audit export POST reads app_scope from one source
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 5 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Change only files matching the scope verify line. No migration, no model field change, no change to any stored value or choice value.
+- A user must never see audit rows outside their scope. The restriction for non-superusers stays at least as strict as today.
+- Backend tests only with app labels, never an unlabeled `manage.py test`. Do not push. Stage only your changed files. Never stage `tasks.md`, `tasks_history.md`, `run_tasks.py` or `run_tasks.bat`. Do not edit the plan document or anything under `scripts/`.
+
+2. Context:
+- Plan `Documents/Deep_Modularization_Phase4/modular_architecture_phase4_plan.md`, heading `### گام ۶`, paragraph for session 25.
+- `default_module()` is in `warehouse-backend/core/platform_core/registry.py`; read it and how `accounts/middleware.py` and `accounts/permissions.py` already derive the default active app from it (phase 4 session 3).
+- `export_excel` in `warehouse-backend/core/accounts/views_domains/audit_views.py` (around line 904): with POST, filters read `request.data`, but `get_queryset()` (around line 739) calls `restrict_audit_for_user(qs, user, params.get('app_scope'))` with the query string.
+- Literal defaults to replace: `app_module: str = 'personnel'` in `get_user_valid_roles_for_app` and `resolve_effective_role` (`middleware.py`); `getattr(request, 'active_app', 'warehouse') or 'warehouse'` (`backup_views.py` around line 130); `data.get('app_scope', 'warehouse')` (`session_views.py` around line 30); the `scope_kind: str = 'warehouse'` and `module_code: str = 'warehouse'` defaults in `query_engine/definitions.py` (lines 57, 199, 206, 315, 321).
+
+3. Definitions: "registry default" means the value derived from `default_module()` exactly the way `middleware.py` already derives the default active app (reuse that existing code path; do not write a new module-name mapping). For `query_engine`, the default parameter becomes `None` and is resolved inside the function from the registry, so callers in `warehouse-backend/modules` keep working without edits.
+
+4. Task:
+- a) `export_excel`: when the request is POST with a body, the user restriction uses the body's `app_scope` (the same value the filter uses). Pass the effective `app_scope` into the restriction; do not duplicate `restrict_audit_for_user`. GET behaviour stays the same.
+- b) Replace the literal defaults of section 2 with the registry default. In the full profile (both modules installed) every result must be identical to today.
+- c) Add tests (new test methods in an existing test module of `accounts`, `platform_core` or `integration_tests`): the POST export for a restricted non-superuser with body `app_scope` applies the same restriction as GET with that query parameter; each replaced default returns today's value in the full profile.
+
+5. Tool policy: from `warehouse-backend`, run tests only with labels, for example `$env:PYTHONUTF8='1'; .\venv\Scripts\python.exe manage.py test accounts platform_core --keepdb`, at most four times; from the repo root, `python scripts/automation/verify_tools.py guardian29-max --max core_module_literals=55` at most twice. If a command fails, read its output and change approach.
+
+6. Before finishing: the labelled tests above pass except the known failure listed in `scripts/automation/known_backend_failures.txt`, and `git diff --stat` shows only files from the scope line.
+
+7. Output and stop condition:
+- Commit with this message, without push:
+refactor(core): registry defaults instead of module literals; audit export app_scope from one source
+- Short English report: each change with one line, the tests added, the guardian 29 `core_module_literals` value. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده خواسته کاربر (Simple Explanation)
+در این نشست (نشست ۲۵ از ۳۰ طرح عمیق‌سازی ماژولار فاز ۴)، دو هدف کلیدی پیاده‌سازی و نهایی شد:
+۱. در عملیات صدور اکسل ممیزی (`export_excel` با متد `POST`)، فیلتر داده‌ها پارامتر `app_scope` را از بدنه درخواست (`request.data`) می‌خواند، اما محدودیت دسترسی کاربر غیرسوپریوزر در متد `get_queryset()` آن را از رشته کوئری (`req.query_params`) می‌خواند که در متد `POST` خالی بود؛ باید مقدار یکپارچه `app_scope` بدنه به اعتبارسنجی محدودیت کاربر پاس داده شود تا رفتار `POST` دقیقا با `GET` یکسان گردد.
+۲. حذف کلیه پیش‌فرض‌های لیترال رشته‌ای ماژول‌ها (`'warehouse'` و `'personnel'`) در هسته و جایگزینی آن‌ها با مقدار پیش‌فرض رجی...
+
+---
