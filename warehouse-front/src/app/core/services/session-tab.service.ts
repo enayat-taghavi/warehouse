@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { getModuleRegistry } from '../modules/module-registry.service';
+import { normalizeScope } from './offline-db';
 
 export type AppModuleScope = 'warehouse' | 'personnel' | 'operations' | string;
 
@@ -146,11 +147,12 @@ export class SessionTabService {
    * استخراج توکن دسترسی متناسب با قلمرو فعال تب (Domain-Isolated Token Extraction)
    * از نشت توکن مالی به درخواست‌های انبار یا برعکس در تب‌های همزمان جلوگیری می‌کند.
    */
-  public getScopedAccessToken(targetScope?: 'warehouse' | 'finance' | 'personnel'): string | null {
+  public getScopedAccessToken(targetScope?: 'warehouse' | 'finance' | 'personnel' | string): string | null {
     if (typeof window === 'undefined') return null;
     try {
       const scope = targetScope || this.getActiveApp();
-      const normScope = scope === 'personnel' || scope === 'finance' ? 'finance' : 'warehouse';
+      const norm = normalizeScope(scope);
+      const normScope = norm === 'finance' ? 'finance' : 'warehouse';
 
       // ۱. توکن تفکیک‌شده قلمرو در سشن تب
       const tabScoped = sessionStorage.getItem(`${this.TOKEN_KEY}_${normScope}`);
@@ -174,14 +176,15 @@ export class SessionTabService {
   /**
    * ذخیره‌سازی توکن تفکیک‌شده برای قلمرو بدون اختلال در سایر تب‌های مرورگر
    */
-  public setScopedAccessToken(token: string, scope?: 'warehouse' | 'finance' | 'personnel'): void {
+  public setScopedAccessToken(token: string, scope?: 'warehouse' | 'finance' | 'personnel' | string): void {
     if (typeof window === 'undefined') return;
     try {
       sessionStorage.setItem(this.TOKEN_KEY, token);
       localStorage.setItem(this.TOKEN_KEY, token);
 
       if (scope) {
-        const normScope = scope === 'personnel' || scope === 'finance' ? 'finance' : 'warehouse';
+        const norm = normalizeScope(scope);
+        const normScope = norm === 'finance' ? 'finance' : 'warehouse';
         sessionStorage.setItem(`${this.TOKEN_KEY}_${normScope}`, token);
         localStorage.setItem(`${this.TOKEN_KEY}_${normScope}`, token);
       }

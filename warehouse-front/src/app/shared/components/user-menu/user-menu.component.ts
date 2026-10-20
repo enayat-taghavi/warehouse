@@ -14,7 +14,8 @@ import { PwaInstallService } from '../../../core/services/pwa-install.service';
 import { AccountsHttpService } from '../../../core/http/accounts-http.service';
 import { WarehouseHttpService } from '../../../core/http/warehouse-http.service';
 import { StateService } from '../../../core/services/state.service';
-import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
+import { ModuleRegistryService, getModuleRegistry } from '../../../core/modules/module-registry.service';
+import { normalizeScope } from '../../../core/services/offline-db';
 import { ToastService } from '../toast/toast.component';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
 import { AvatarCropperModal } from '../avatar-cropper-modal/avatar-cropper-modal';
@@ -112,23 +113,12 @@ export class UserMenuComponent implements OnInit, OnDestroy {
     if (url.startsWith('/app/operations')) {
       return 'operations';
     }
-    if (
-      url.startsWith('/app/finance') ||
-      url.startsWith('/app/personnel') ||
-      url.startsWith('/app/payroll') ||
-      url.startsWith('/app/treasury') ||
-      url.startsWith('/app/projects')
-    ) {
-      return 'finance';
-    }
-    if (
-      url.startsWith('/app/warehouse') ||
-      url.startsWith('/app/inventory') ||
-      url.startsWith('/app/counting') ||
-      url.startsWith('/app/items') ||
-      url.startsWith('/app/tag-templates')
-    ) {
-      return 'warehouse';
+    const routeScope = getModuleRegistry()
+      .getAllModules()
+      .find(m => m.extensions?.offlineSync?.appRoutePrefixes?.some(p => url.startsWith(p)))
+      ?.scopeKind;
+    if (routeScope) {
+      return routeScope === 'finance' ? 'finance' : 'warehouse';
     }
 
     // ۲. بررسی بر اساس پرسونا / ماژول فعال در تب جاری
@@ -136,11 +126,9 @@ export class UserMenuComponent implements OnInit, OnDestroy {
     if (activeApp === 'operations') {
       return 'operations';
     }
-    if (activeApp === 'personnel' || activeApp === 'accounting' || activeApp === 'finance') {
-      return 'finance';
-    }
-    if (activeApp === 'warehouse') {
-      return 'warehouse';
+    if (activeApp) {
+      const norm = normalizeScope(activeApp);
+      return norm === 'finance' ? 'finance' : 'warehouse';
     }
 
     // ۳. بررسی بر اساس ماژول‌های فعال نصب‌شده
