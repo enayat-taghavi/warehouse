@@ -411,5 +411,28 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
       expect(allCat?.count).toBe(15);
     });
   });
+
+  describe('currentScopeContext URL-based Routing Characterization', () => {
+    const scopeRouteCases: Array<{ url: string; expected: string }> = [
+      { url: '/app/finance/x', expected: 'finance' },
+      { url: '/app/personnel/x', expected: 'finance' },
+      { url: '/app/payroll/x', expected: 'finance' },
+      { url: '/app/treasury/x', expected: 'finance' },
+      { url: '/app/projects/x', expected: 'finance' },
+      { url: '/app/warehouse/x', expected: 'warehouse' },
+      { url: '/app/inventory/x', expected: 'warehouse' },
+      { url: '/app/counting/x', expected: 'warehouse' },
+      { url: '/app/items/x', expected: 'warehouse' },
+      { url: '/app/tag-templates/x', expected: 'warehouse' },
+      { url: '/app/operations/x', expected: 'operations' },
+    ];
+
+    for (const { url, expected } of scopeRouteCases) {
+      it(`resolves router URL ${url} to '${expected}'`, () => {
+        mockRouter.url = url;
+        expect(component.currentScopeContext).toBe(expected);
+      });
+    }
+  });
 });
 
