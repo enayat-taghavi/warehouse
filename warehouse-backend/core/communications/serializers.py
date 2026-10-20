@@ -21,8 +21,6 @@ def get_allowed_comment_models() -> set[str]:
     return models
 
 
-allowed_comment_models = get_allowed_comment_models
-
 
 class UserShortSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()

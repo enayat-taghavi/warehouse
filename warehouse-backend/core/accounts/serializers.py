@@ -6,13 +6,7 @@ from .models import CustomUser, CustomRole
 
 
 # فاز ۲ §۲.۳ و گام ۳-ب — حل اختیاری اکستنشن انبار برای کاربران.
-def _get_user_warehouse_extension():
-    """دریافت اکستنشن انبار از نقطه توسعه user_extensions."""
-    from platform_core.registry import contributions
-    for ext in contributions('user_extensions'):
-        if getattr(ext, 'name', '') == 'warehouses' or hasattr(ext, 'get_serializer_field'):
-            return ext
-    return None
+from .excel_utils import _get_user_warehouse_extension
 
 class PermissionSerializer(serializers.ModelSerializer):
     is_sensitive = serializers.SerializerMethodField()

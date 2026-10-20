@@ -22,15 +22,9 @@ from platform_core.registry import contributions
 
 from ..models import CustomUser, UserTableViewState
 from ..serializers import UserSerializer, UserDirectorySerializer, UserTableViewStateSerializer
+from ..excel_utils import _get_user_warehouse_extension
 from .helpers import OptionalPageNumberPagination
 
-
-def _get_user_warehouse_extension():
-    """دریافت اکستنشن انبار از نقطه توسعه user_extensions."""
-    for ext in contributions('user_extensions'):
-        if getattr(ext, 'name', '') == 'warehouses' or hasattr(ext, 'get_serializer_field'):
-            return ext
-    return None
 
 class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     queryset = CustomUser.objects.all()

@@ -31,6 +31,7 @@ from .definitions import (
     get_all_joins,
     get_entity,
     get_joins_for_entity,
+    get_report_scope_handler,
 )
 
 MAX_FILTER_DEPTH = 5
@@ -66,15 +67,6 @@ class ReportError(Exception):
         super().__init__(message)
         self.message = message
         self.status = status
-
-
-def get_report_scope_handler(kind: str):
-    """یافتن هندلر قلمرو از مشارکت‌های report_scope_handlers."""
-    from platform_core.registry import contributions
-    for handler in contributions('report_scope_handlers'):
-        if getattr(handler, 'kind', None) == kind:
-            return handler
-    return None
 
 
 class ReportEngine:
