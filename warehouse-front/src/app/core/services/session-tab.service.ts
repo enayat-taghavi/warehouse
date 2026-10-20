@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { getModuleRegistry } from '../modules/module-registry.service';
-import { normalizeScope } from './offline-db';
+import { getScopeSyncProfile } from './offline-db';
 
 export type AppModuleScope = 'warehouse' | 'personnel' | 'operations' | string;
 
@@ -151,11 +151,10 @@ export class SessionTabService {
     if (typeof window === 'undefined') return null;
     try {
       const scope = targetScope || this.getActiveApp();
-      const norm = normalizeScope(scope);
-      const normScope = norm === 'finance' ? 'finance' : 'warehouse';
+      const scopedKey = getScopeSyncProfile(scope).tokenKey;
 
       // ۱. توکن تفکیک‌شده قلمرو در سشن تب
-      const tabScoped = sessionStorage.getItem(`${this.TOKEN_KEY}_${normScope}`);
+      const tabScoped = sessionStorage.getItem(scopedKey);
       if (tabScoped) return tabScoped;
 
       // ۲. توکن فعال سشن تب
@@ -163,7 +162,7 @@ export class SessionTabService {
       if (tabActive) return tabActive;
 
       // ۳. توکن تفکیک‌شده در حافظه سراسری
-      const globalScoped = localStorage.getItem(`${this.TOKEN_KEY}_${normScope}`);
+      const globalScoped = localStorage.getItem(scopedKey);
       if (globalScoped) return globalScoped;
 
       // ۴. توکن سراسری
@@ -183,10 +182,9 @@ export class SessionTabService {
       localStorage.setItem(this.TOKEN_KEY, token);
 
       if (scope) {
-        const norm = normalizeScope(scope);
-        const normScope = norm === 'finance' ? 'finance' : 'warehouse';
-        sessionStorage.setItem(`${this.TOKEN_KEY}_${normScope}`, token);
-        localStorage.setItem(`${this.TOKEN_KEY}_${normScope}`, token);
+        const scopedKey = getScopeSyncProfile(scope).tokenKey;
+        sessionStorage.setItem(scopedKey, token);
+        localStorage.setItem(scopedKey, token);
       }
     } catch (e) {
       console.warn('[SessionTabService] Token storage write error:', e);

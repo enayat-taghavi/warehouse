@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { offlineDb, warehouseOfflineDb, financeOfflineDb, getAllOfflineDbs, SyncCursorEntry } from './offline-db';
+import { offlineDb, warehouseOfflineDb, financeOfflineDb, getAllOfflineDbs, SyncCursorEntry, AppScope, DEFAULT_OFFLINE_SCOPE } from './offline-db';
 import { NetworkStatusService } from './network-status.service';
 import { isServerUnreachable } from './server-reachability';
 import { BehaviorSubject, Subject } from 'rxjs';
@@ -44,7 +44,7 @@ const MODEL_TABLES = PULL_ENTITIES;
 /**
  * فاز ۶ (تسک ۵۹) — ساخت کلید کرسر با استاندارد توسعه‌یافته userId:scopeKind:scopeId
  */
-export function buildCursorKey(userId: number, scopeId: number, scopeKind: string = 'warehouse'): string {
+export function buildCursorKey(userId: number, scopeId: number, scopeKind: AppScope = DEFAULT_OFFLINE_SCOPE): string {
   return `${userId}:${scopeKind}:${scopeId}`;
 }
 
@@ -63,7 +63,7 @@ export function getStoredCurrentUserId(): number | null {
 /**
  * دریافت وضعیت کرسر به روش expand-contract (ابتدا کلید جدید، سپس fallback به کلید قدیمی)
  */
-async function getCursorState(userId: number, scopeId: number, scopeKind: string = 'warehouse'): Promise<any> {
+async function getCursorState(userId: number, scopeId: number, scopeKind: AppScope = DEFAULT_OFFLINE_SCOPE): Promise<any> {
   const newKey = buildCursorKey(userId, scopeId, scopeKind);
   let state = await offlineDb.syncCursors.get(newKey);
   if (!state && scopeKind === 'warehouse') {
@@ -128,10 +128,10 @@ export class SyncPullService {
    */
   async pullChanges(
     scopeId: number,
-    scopeKindOrRetry: 'warehouse' | 'finance' | boolean = 'warehouse',
+    scopeKindOrRetry: AppScope | boolean = DEFAULT_OFFLINE_SCOPE,
     isRetryAfter410 = false
   ): Promise<PullOutcome> {
-    const scopeKind: 'warehouse' | 'finance' = typeof scopeKindOrRetry === 'string' ? scopeKindOrRetry : 'warehouse';
+    const scopeKind: AppScope = typeof scopeKindOrRetry === 'string' ? scopeKindOrRetry : DEFAULT_OFFLINE_SCOPE;
     const isRetry: boolean = typeof scopeKindOrRetry === 'boolean' ? scopeKindOrRetry : isRetryAfter410;
 
     if (this.inFlight) return { status: 'already-running' };
@@ -379,7 +379,7 @@ export class SyncPullService {
   }
 
   /** زمان آخرین Pull موفق (server_time) برای نمایش در UI */
-  async getLastServerTime(warehouseId: number, scopeKind: string = 'warehouse'): Promise<string | null> {
+  async getLastServerTime(warehouseId: number, scopeKind: AppScope = DEFAULT_OFFLINE_SCOPE): Promise<string | null> {
     const userId = this.getCurrentUserId();
     if (userId === null) return null;
     const state = await getCursorState(userId, warehouseId, scopeKind);

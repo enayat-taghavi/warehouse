@@ -7,6 +7,7 @@ import {
   getAllOfflineDbs,
   resolveScopeFromUrl,
   migrateLegacyDatabaseIfNeeded,
+  DEFAULT_OFFLINE_SCOPE,
   AppScope,
   OfflineDatabase,
   SyncQueueEntry,
@@ -56,6 +57,7 @@ import {
   getUnsentCountStrict as runnerGetUnsentCountStrict,
   cancelQueueEntry as runnerCancelQueueEntry,
   getQueueEntries as runnerGetQueueEntries,
+  settlePerDb,
 } from './offline/offline-queue-runner';
 
 export type { SyncOutcome, DeepUpdateSummary };
@@ -590,12 +592,12 @@ export class OfflineSyncService {
     try {
       const allDbs = getAllOfflineDbs();
       const [pendingCounts, errorCounts, photosPending] = await Promise.all([
-        Promise.all(allDbs.map(db => db.syncQueue.where('status').anyOf(['pending', 'failed']).count())),
-        Promise.all(allDbs.map(db => db.syncErrors.where('dismissed').equals(0).count())),
+        settlePerDb(allDbs, db => db.syncQueue.where('status').anyOf(['pending', 'failed']).count(), 'refreshCounts'),
+        settlePerDb(allDbs, db => db.syncErrors.where('dismissed').equals(0).count(), 'refreshCounts'),
         this.photoQueue.countPending().catch(() => 0),
       ]);
-      const totalPending = pendingCounts.reduce((acc, c) => acc + c, 0);
-      const totalErrors = errorCounts.reduce((acc, c) => acc + c, 0);
+      const totalPending = pendingCounts.reduce<number>((acc, c) => acc + (c ?? 0), 0);
+      const totalErrors = errorCounts.reduce<number>((acc, c) => acc + (c ?? 0), 0);
       // تایید حضور تجمیع شمارنده‌ها برای نگهبان ۲۱: whPending + finPending
       this._pendingCount$.next(totalPending + photosPending);
       this._errorCount$.next(totalErrors);
@@ -620,7 +622,7 @@ export class OfflineSyncService {
   async performDeepUpdate(
     warehouseIds: number[],
     warehousesMap: Record<number, string>,
-    scopeKind: 'warehouse' | 'finance' = 'warehouse'
+    scopeKind: AppScope = DEFAULT_OFFLINE_SCOPE
   ): Promise<DeepUpdateSummary[]> {
     console.log(`[OfflineSync] 🚨 شروع بروزرسانی عمیق برای قلمرو ${scopeKind}، شناسه‌های:`, warehouseIds);
 

@@ -5,7 +5,7 @@ import { Observable, of, from, throwError, tap, catchError, map, switchMap } fro
 import { environment } from '../../../environments/environment';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
-import { offlineDb } from '../services/offline-db';
+import { offlineDb, getScopeSyncProfile, resolveOfflineDbStrict } from '../services/offline-db';
 import {
   AuthTokens,
   LoginPayload,
@@ -418,11 +418,15 @@ export class AuthService {
     const access = response.tokens.access;
     this.sessionTab.setScopedAccessToken(access);
     const allowed = response.user.allowed_apps || [];
-    if (allowed.includes('warehouse')) {
-      this.sessionTab.setScopedAccessToken(access, 'warehouse');
+    // برای هر قلمرو مجاز کاربر یک بار توکن تفکیک‌شده (کلید از نمایهٔ همگام‌سازی همان قلمرو)
+    const allowedScopes = new Set<string>();
+    for (const app of allowed) {
+      const profile = getScopeSyncProfile(app);
+      if (!resolveOfflineDbStrict(app) && profile.scope !== String(app).toLowerCase()) continue;
+      allowedScopes.add(profile.scope);
     }
-    if (allowed.includes('finance') || allowed.includes('personnel')) {
-      this.sessionTab.setScopedAccessToken(access, 'finance');
+    for (const scope of allowedScopes) {
+      this.sessionTab.setScopedAccessToken(access, scope);
     }
 
     this.setItem(TOKEN_KEY, access);

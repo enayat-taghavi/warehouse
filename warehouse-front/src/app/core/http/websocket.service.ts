@@ -3,6 +3,7 @@ import { Subject, BehaviorSubject } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { ToastService } from '../../shared';
 import { wsUrl } from '../platform/server-origin';
+import { normalizeScope, resolveOfflineDbStrict } from '../services/offline-db';
 
 @Injectable({
   providedIn: 'root'
@@ -180,7 +181,8 @@ export class WebSocketService implements OnDestroy {
    */
   switchAppChannel(app: string): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      const normalizedApp = app === 'personnel' ? 'finance' : app;
+      // نام مستعار قلمروهای آفلاین (مثل personnel) به قلمرو اصلی؛ operations و بقیه دست‌نخورده
+      const normalizedApp = resolveOfflineDbStrict(app) ? normalizeScope(app) : app;
       this.ws.send(JSON.stringify({
         type: 'switch_app',
         app: normalizedApp,

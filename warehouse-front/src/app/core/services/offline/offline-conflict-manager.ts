@@ -7,7 +7,8 @@ import {
   AppScope,
   OfflineDatabase,
   SyncQueueEntry,
-  SyncErrorEntry
+  SyncErrorEntry,
+  getScopeSyncProfile,
 } from '../offline-db';
 import { invalidateCache } from './offline-local-patcher';
 import { resolveServerUrl } from '../../platform/server-origin';
@@ -239,20 +240,19 @@ export async function resolveConflict(
   // اگر آنلاین است، تلاش برای ارسال مستقیم به سرور
   if (isBrowserOnline) {
     try {
-      const tokenKey = appScope === 'finance' ? 'wh_access_token_finance' : 'wh_access_token_warehouse';
+      const profile = getScopeSyncProfile(appScope);
+      const tokenKey = profile.tokenKey;
       const token =
         sessionStorage.getItem(tokenKey) ||
         sessionStorage.getItem('wh_access_token') ||
         localStorage.getItem(tokenKey) ||
         localStorage.getItem('wh_access_token');
       const tabId = sessionStorage.getItem('wh_tab_session_id') || 'tab_conflict_resolver';
-      const role =
-        sessionStorage.getItem('active_role_persona') ||
-        (appScope === 'finance' ? 'operator' : 'counter');
+      const role = sessionStorage.getItem('active_role_persona') || profile.defaultOfflineRole;
 
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        'X-Active-App': appScope === 'finance' ? 'personnel' : 'warehouse',
+        'X-Active-App': profile.activeAppHeader,
         'X-Active-Role': role,
         'X-Client-Tab-Id': tabId,
       };

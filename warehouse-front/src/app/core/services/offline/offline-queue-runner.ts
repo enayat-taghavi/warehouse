@@ -7,6 +7,7 @@ import {
   resolveOfflineDbStrict,
   resolveScopeFromUrl,
   getCurrentActiveAppScope,
+  getScopeSyncProfile,
   AppScope,
   OfflineDatabase,
   SyncQueueEntry,
@@ -22,7 +23,6 @@ import {
 } from './offline-sync.models';
 import { reconcileRejected } from './offline-local-patcher';
 import { extractServerErrorMessage } from './offline-conflict-manager';
-import { getModuleRegistry } from '../../modules/module-registry.service';
 import { resolveServerUrl } from '../../platform/server-origin';
 import { isAutoSendBlocked } from '../../platform/app-version.service';
 
@@ -30,25 +30,15 @@ import { isAutoSendBlocked } from '../../platform/app-version.service';
  * ساخت هدرهای تفکیک‌شده قلمرو و شناسه تب
  */
 export function buildScopedHeaders(appScope: AppScope): Record<string, string> {
-  const syncConfig = getModuleRegistry()
-    .getExtensions('syncConfig')
-    .find(e => e.extension.scopeKind === appScope)?.extension;
-
-  const tokenKey = syncConfig?.tokenScopeKey
-    ? `wh_access_token_${syncConfig.tokenScopeKey}`
-    : (appScope === 'finance' ? 'wh_access_token_finance' : 'wh_access_token_warehouse');
+  const profile = getScopeSyncProfile(appScope);
   const token =
-    sessionStorage.getItem(tokenKey) ||
+    sessionStorage.getItem(profile.tokenKey) ||
     sessionStorage.getItem('wh_access_token') ||
-    localStorage.getItem(tokenKey) ||
+    localStorage.getItem(profile.tokenKey) ||
     localStorage.getItem('wh_access_token');
   const tabId = sessionStorage.getItem('wh_tab_session_id') || 'tab_offline_sync';
-  const role =
-    sessionStorage.getItem('active_role_persona') ||
-    syncConfig?.defaultOfflineRole ||
-    (appScope === 'finance' ? 'operator' : 'counter');
-
-  const activeApp = syncConfig?.activeAppHeader || (appScope === 'finance' ? 'personnel' : 'warehouse');
+  const role = sessionStorage.getItem('active_role_persona') || profile.defaultOfflineRole;
+  const activeApp = profile.activeAppHeader;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -85,7 +75,7 @@ export async function refreshAccessToken(): Promise<boolean> {
     sessionStorage.setItem('wh_access_token', data.access);
 
     const currentScope = getCurrentActiveAppScope();
-    const scopedKey = currentScope === 'finance' ? 'wh_access_token_finance' : 'wh_access_token_warehouse';
+    const scopedKey = getScopeSyncProfile(currentScope).tokenKey;
     sessionStorage.setItem(scopedKey, data.access);
     localStorage.setItem(scopedKey, data.access);
 
@@ -284,15 +274,34 @@ export async function sendEntry(
   }
 }
 
+/**
+ * خواندن موازی از همهٔ دیتابیس‌ها بدون این‌که خطای یک دیتابیس بقیه را از کار بیندازد؛
+ * نتیجهٔ دیتابیس ناموفق null است و با console.warn گزارش می‌شود (هیچ رکوردی حذف نمی‌شود).
+ */
+export async function settlePerDb<T>(
+  dbs: OfflineDatabase[],
+  read: (db: OfflineDatabase) => Promise<T>,
+  label: string
+): Promise<(T | null)[]> {
+  const settled = await Promise.allSettled(dbs.map(async (db) => read(db)));
+  return settled.map((r, i) => {
+    if (r.status === 'fulfilled') return r.value;
+    console.warn(`[OfflineSync] ⚠️ ${label}: خواندن ${dbs[i]?.dbScope || dbs[i]?.name} ناموفق بود؛ بقیهٔ دیتابیس‌ها ادامه می‌دهند`, r.reason);
+    return null;
+  });
+}
+
 /** دریافت تعداد درخواست‌های در صف */
 export async function getPendingCount(scope?: AppScope | 'all'): Promise<number> {
   const targetScope = scope || 'all';
   if (targetScope === 'all') {
     const dbs = getAllOfflineDbs();
-    const counts = await Promise.all(
-      dbs.map((db) => db.syncQueue.where('status').anyOf(['pending', 'failed']).count())
+    const counts = await settlePerDb(
+      dbs,
+      (db) => db.syncQueue.where('status').anyOf(['pending', 'failed']).count(),
+      'getPendingCount'
     );
-    return counts.reduce((acc, c) => acc + c, 0);
+    return counts.reduce<number>((acc, c) => acc + (c ?? 0), 0);
   }
   const db = resolveOfflineDbStrict(targetScope);
   if (!db) return 0;
@@ -342,15 +351,18 @@ export async function runQueueSequential(
       drainPass++;
 
       const allDbs = getAllOfflineDbs();
-      const entriesPerDb = await Promise.all(
-        allDbs.map((db) => db.syncQueue.where('status').anyOf(['pending', 'failed']).sortBy('createdAt'))
+      const entriesPerDb = await settlePerDb(
+        allDbs,
+        (db) => db.syncQueue.where('status').anyOf(['pending', 'failed']).sortBy('createdAt'),
+        'runQueueSequential'
       );
+      const someDbUnreadable = entriesPerDb.some((e) => e === null);
 
       let queueJobs: { entry: SyncQueueEntry; db: OfflineDatabase }[] = [];
       const countsLog: string[] = [];
       for (let i = 0; i < allDbs.length; i++) {
         const db = allDbs[i];
-        const entries = entriesPerDb[i];
+        const entries = entriesPerDb[i] ?? [];
         for (const e of entries) {
           queueJobs.push({ entry: e, db });
         }
@@ -358,7 +370,7 @@ export async function runQueueSequential(
       }
 
       if (queueJobs.length === 0) {
-        if (drainPass === 1) {
+        if (drainPass === 1 && !someDbUnreadable) {
           console.log('[OfflineSync] ✅ صف‌های تمامی قلمروها خالی هستند');
           if (onSyncSuccess) onSyncSuccess();
         }

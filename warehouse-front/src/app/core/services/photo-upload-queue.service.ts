@@ -3,7 +3,7 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ItemPhoto } from '../models/item.model';
 import { NetworkStatusService } from './network-status.service';
-import { offlineDb, PhotoQueueEntry } from './offline-db';
+import { offlineDb, PhotoQueueEntry, OfflineDatabase, getScopeSyncProfile } from './offline-db';
 import { isServerUnreachable } from './server-reachability';
 import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 import { resolveServerUrl } from '../platform/server-origin';
@@ -349,15 +349,17 @@ export class PhotoUploadQueueService {
       if (entry.countTaskId) form.append('count_task', String(entry.countTaskId));
       if (entry.isPrimary) form.append('is_primary', 'true');
 
+      // عکس به قلمرو همان دیتابیسی تعلق دارد که صف عکس در آن است
+      const profile = getScopeSyncProfile((offlineDb.photoQueue.db as OfflineDatabase).dbScope);
       const token =
-        sessionStorage.getItem('wh_access_token_warehouse') ||
+        sessionStorage.getItem(profile.tokenKey) ||
         sessionStorage.getItem('wh_access_token') ||
-        localStorage.getItem('wh_access_token_warehouse') ||
+        localStorage.getItem(profile.tokenKey) ||
         localStorage.getItem('wh_access_token');
       const tabId = sessionStorage.getItem('wh_tab_session_id') || 'tab_photo_queue';
-      const role = sessionStorage.getItem('active_role_persona') || 'counter';
+      const role = sessionStorage.getItem('active_role_persona') || profile.defaultOfflineRole;
       const headers: Record<string, string> = {
-        'X-Active-App': 'warehouse',
+        'X-Active-App': profile.activeAppHeader,
         'X-Active-Role': role,
         'X-Client-Tab-Id': tabId,
       };

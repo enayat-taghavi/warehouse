@@ -280,6 +280,57 @@ export function normalizeScope(scope?: string | null): AppScope {
   return WH_SCOPE;
 }
 
+/** قلمرو پیش‌فرض آفلاین (همان دیتابیس قفل‌شدهٔ انبار) برای فراخواننده‌هایی که قلمرو نمی‌دهند */
+export const DEFAULT_OFFLINE_SCOPE: AppScope = WH_SCOPE;
+
+/** نمایهٔ همگام‌سازی یک قلمرو: کلید توکن، مقدار X-Active-App و نقش پیش‌فرض آفلاین */
+export interface ScopeSyncProfile {
+  scope: AppScope;
+  tokenKey: string;
+  activeAppHeader: string;
+  defaultOfflineRole: string;
+}
+
+/**
+ * جدول قفل‌شدهٔ دو قلمرو فعلی: کلید توکن در storage و هدر پروتکل سرور هرگز عوض نمی‌شود
+ * تا نشست و صف کاربران فعلی در هر زیرمجموعهٔ ماژول نصب‌شده دست‌نخورده بماند.
+ */
+const LOCKED_SYNC_PROFILES: Record<string, Omit<ScopeSyncProfile, 'scope'>> = {
+  warehouse: { tokenKey: 'wh_access_token_warehouse', activeAppHeader: 'warehouse', defaultOfflineRole: 'counter' },
+  finance: { tokenKey: 'wh_access_token_finance', activeAppHeader: 'personnel', defaultOfflineRole: 'operator' },
+};
+
+/**
+ * نمایهٔ همگام‌سازی قلمرو: دو قلمرو قفل‌شده از جدول ثابت، بقیه از syncConfig ماژول‌های بیلد؛
+ * قلمرو ناشناخته یا خطای رجیستری نمایهٔ انبار را می‌گیرد (همان رفتار پیشین).
+ */
+export function getScopeSyncProfile(scope?: string | null): ScopeSyncProfile {
+  const norm = normalizeScope(scope);
+  const locked = LOCKED_SYNC_PROFILES[norm];
+  if (locked) return { scope: norm, ...locked };
+
+  const raw = (scope || '').toLowerCase();
+  const lockedTokenKeys = new Set(Object.values(LOCKED_SYNC_PROFILES).map(p => p.tokenKey));
+  try {
+    for (const mod of getModuleRegistry().getAllModules()) {
+      const cfg = mod.extensions?.syncConfig;
+      if (!cfg || typeof cfg.scopeKind !== 'string') continue;
+      const kind = cfg.scopeKind.toLowerCase();
+      if (kind !== norm && kind !== raw) continue;
+      const { tokenScopeKey, activeAppHeader, defaultOfflineRole } = cfg;
+      if (typeof tokenScopeKey !== 'string' || !/^[a-z][a-z0-9_]*$/.test(tokenScopeKey)) continue;
+      if (typeof activeAppHeader !== 'string' || !activeAppHeader) continue;
+      if (typeof defaultOfflineRole !== 'string' || !defaultOfflineRole) continue;
+      const tokenKey = `wh_access_token_${tokenScopeKey}`;
+      if (lockedTokenKeys.has(tokenKey)) continue;
+      return { scope: kind, tokenKey, activeAppHeader, defaultOfflineRole };
+    }
+  } catch {
+    // خطای رجیستری: نمایهٔ انبار
+  }
+  return { scope: WH_SCOPE, ...LOCKED_SYNC_PROFILES[WH_SCOPE] };
+}
+
 /**
  * دریافت قلمرو فعال برنامه از روی سشن تب، URL یا حافظه محلی
  */
@@ -951,7 +1002,10 @@ export async function exportLocalDatabaseSnapshot(): Promise<{
   for (const data of Object.values(others)) {
     otherCount += countRecords(data);
   }
-  const pendingSync = (whData['syncQueue']?.length || 0) + (finData['syncQueue']?.length || 0);
+  let pendingSync = (whData['syncQueue']?.length || 0) + (finData['syncQueue']?.length || 0);
+  for (const data of Object.values(others)) {
+    pendingSync += data['syncQueue']?.length || 0;
+  }
 
   const now = new Date();
   let shamsiDate = '';
