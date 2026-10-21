@@ -268,6 +268,18 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     component = fixture.componentInstance;
     const router = TestBed.inject(Router);
     await router.navigateByUrl('/app/operations/companies');
+    // fixture در router-outlet نیست؛ ناوبری به /:id همان کار paramMap نمونهٔ استودیو را می‌کند
+    vi.spyOn(router, 'navigate').mockImplementation(async (commands: readonly any[], extras?: any): Promise<boolean> => {
+      const [base, id] = commands || [];
+      if (base === '/app/operations/companies/new') {
+        component.setupStudioForNew();
+      } else if (base === '/app/operations/companies' && id !== undefined) {
+        component.viewMode = 'studio';
+        component.setupStudioForCompany(Number(id));
+        if (extras?.queryParams?.tab) component.activeModalTab = extras.queryParams.tab;
+      }
+      return true;
+    });
     component.viewMode = 'list';
     fixture.detectChanges();
   };

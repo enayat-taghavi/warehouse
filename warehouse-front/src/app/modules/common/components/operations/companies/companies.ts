@@ -18,12 +18,12 @@ import {
 import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { Subject, firstValueFrom } from 'rxjs';
-import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, filter, takeUntil } from 'rxjs/operators';
 import { CompanyApiService } from '../../../../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
 import { AccountsHttpService, User } from '../../../../../core/http/accounts-http.service';
@@ -58,7 +58,10 @@ import {
   validateAccountNumber
 } from '../../../../../core/utils/sheba-utils';
 import { normalizeDigits } from '../../../../../core/utils/date-utils';
-import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { ConfirmDialogService, ConfirmDialogConfig } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { isServerUnreachable } from '../../../../../core/services/server-reachability';
+import { LoadingSkeletonComponent } from '../../../../../shared/components/loading-skeleton/loading-skeleton.component';
+import { OfflinePendingBadgeComponent } from '../../../../../shared/components/offline-pending-badge/offline-pending-badge.component';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
@@ -69,7 +72,7 @@ import { ExternalLinkDirective } from '../../../../../shared/directives/external
 @Component({
   selector: 'app-companies-management',
   standalone: true,
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, CompanyGdriveTabComponent, ServerUrlPipe, ExternalLinkDirective],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, CompanyGdriveTabComponent, ServerUrlPipe, ExternalLinkDirective, LoadingSkeletonComponent, OfflinePendingBadgeComponent],
   providers: [CompaniesFacade],
   templateUrl: './companies.html',
   styleUrls: ['./companies.css']
@@ -78,6 +81,14 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   private facade = inject(CompaniesFacade);
   /** تب‌هایی که داده‌شان در حسابداری است (بانک، هیئت‌مدیره، گوگل‌درایو). در تب مدارک فقط بایگانی حسابداری پنهان می‌شود. */
   private static readonly ACCOUNTING_TABS = ['treasury', 'governance', 'gdrive'];
+  private static readonly LIST_URL = '/app/operations/companies';
+  /** فیلدهای فرم شرکت که در تب «بیمه و مالی» هستند؛ بقیه در تب هویتی‌اند (برای نشان خطای تب) */
+  private static readonly FISCAL_TAB_FIELDS = [
+    'workshop_code', 'economic_code', 'tax_memory_id', 'tax_economic_code', 'social_security_branch_code',
+    'social_security_branch_name', 'contract_row', 'employer_name', 'fiscal_year_start_month'
+  ];
+  private static readonly TREASURY_TAB_FIELDS = ['primary_bank_name', 'primary_account_number', 'primary_iban'];
+  private static readonly CORE_DOC_MAX_BYTES = 20 * 1024 * 1024;
 
   private api = inject(CompanyApiService);
   private companyApi = this.api;
@@ -106,6 +117,24 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   filteredCompanies: Company[] = [];
   systemUsers: User[] = [];
   isLoading = false;
+  /** دریافت فهرست شرکت‌ها شکست خورد (حالت خطا با «تلاش دوباره») */
+  listLoadError = false;
+
+  // وضعیت بارگذاری استودیو در باز کردن مستقیم /companies/:id
+  studioLoading = false;
+  studioLoadError = false;
+  /** خطای دریافت دادهٔ هر تب استودیو (کلید: شناسهٔ تب) */
+  tabLoadError: { [tab: string]: boolean } = {};
+  /** ثبت شرکت تازه در حالت آفلاین در صف رفته و هنوز شناسهٔ سرور ندارد */
+  isQueuedCreate = false;
+  /** آخرین ذخیرهٔ ویرایش در صف آفلاین است */
+  isQueuedSave = false;
+  /** بارگذاری در جریان اساسنامه و روزنامهٔ رسمی */
+  uploadingCoreDoc: { [key: string]: boolean } = {};
+  private studioSnapshot: string | null = null;
+  /** پس از ذخیرهٔ موفق و هنگام رفتن به نشانی شرکت تازه، هشدار خروج لازم نیست */
+  private leavingAfterSave = false;
+  private systemUsersRequested = false;
 
   // فیلتر جستجوی زنده درجا
   searchQuery = '';
@@ -345,29 +374,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     errors: {}
   };
 
-  // وضعیت مدال مدیریت دسترسی کاربران (UserCompanyAccess)
-  userAccessModal: {
-    isOpen: boolean;
-    company: Company | null;
-    accesses: UserCompanyAccess[];
-    isLoading: boolean;
-    selectedUserId: number | null;
-    accessLevel: CompanyAccessLevel;
-    roleInCompany: string;
-    isDefault: boolean;
-    isSubmitting: boolean;
-  } = {
-    isOpen: false,
-    company: null,
-    accesses: [],
-    isLoading: false,
-    selectedUserId: null,
-    accessLevel: 'docs_read',
-    roleInCompany: '',
-    isDefault: false,
-    isSubmitting: false
-  };
-
   // وضعیت مدال تایید حذف
   deleteModal: {
     isOpen: boolean;
@@ -388,9 +394,105 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     });
     this.setupDateControls();
     this.setupSearch();
-    this.loadCompanies();
-    this.loadSystemUsers();
+    // مسیر نخست خوانده می‌شود تا در حالت استودیو فهرست شرکت‌ها بی‌دلیل دریافت نشود
     this.setupRouteNavigation();
+    if (this.viewMode === 'list') {
+      this.loadCompanies();
+    }
+    this.setupListReloadOnReturn();
+  }
+
+  /**
+   * فهرست با راهبرد reuse نگه داشته می‌شود؛ هر بار که کاربر از استودیو به فهرست برمی‌گردد
+   * داده تازه می‌شود تا تغییرات همین تب (که وب‌سوکت به‌خاطر فیلتر اکو نمی‌رساند) دیده شوند.
+   */
+  private setupListReloadOnReturn(): void {
+    if (!this.router) return;
+    const initialNavigationId = this.router.getCurrentNavigation()?.id ?? null;
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      takeUntil(this.destroy$)
+    ).subscribe((e) => {
+      if (e.id === initialNavigationId || this.viewMode !== 'list') return;
+      if (e.urlAfterRedirects.split('?')[0] === CompaniesManagementComponent.LIST_URL) {
+        this.loadCompanies();
+      }
+    });
+  }
+
+  /** پس از کارهای استودیو، فهرست فقط وقتی دیده می‌شود دوباره دریافت شود */
+  private reloadListIfVisible(): void {
+    if (this.viewMode === 'list') {
+      this.loadCompanies();
+    }
+  }
+
+  /** رکوردی که در حالت آفلاین ساخته شده و هنوز شناسهٔ سرور ندارد */
+  isPendingRecord(rec: any): boolean {
+    return !!rec?._offlinePending || (typeof rec?.id === 'number' && rec.id < 0);
+  }
+
+  private requireOnline(actionFa: string): boolean {
+    if (this.network.isOnline) return true;
+    this.toast.warning(`${actionFa} فقط در حالت برخط ممکن است.`);
+    return false;
+  }
+
+  private async confirmAction(config: ConfirmDialogConfig): Promise<boolean> {
+    if (this.confirmDialog) {
+      return (await this.confirmDialog.open({ cancelText: 'انصراف', ...config })) === true;
+    }
+    return window.confirm(config.message);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // هشدار تغییرات ذخیره‌نشده (ت۳)
+  // ═════════════════════════════════════════════════════════════════════
+  private takeStudioSnapshot(): void {
+    this.studioSnapshot = JSON.stringify(this.companyModal.data);
+  }
+
+  /** فیلدی که بیرون از دکمهٔ ذخیره روی سرور ثبت شد (مثلاً سند مادر) نباید تغییر ذخیره‌نشده حساب شود */
+  private patchStudioSnapshot(key: string, value: unknown): void {
+    if (this.studioSnapshot === null) return;
+    const snap = JSON.parse(this.studioSnapshot);
+    snap[key] = value;
+    this.studioSnapshot = JSON.stringify(snap);
+  }
+
+  private hasPendingSubForms(): boolean {
+    const acc = this.newAccount;
+    if (this.isEditingAccount || acc.bank_name || acc.sheba_number || acc.account_number || acc.account_title) return true;
+    if (this.showBoardMemberForm || this.showFiscalPeriodForm) return true;
+    if (this.newDoc.file || this.newDoc.title.trim()) return true;
+    return !!this.studioSelectedUserId;
+  }
+
+  hasUnsavedChanges(): boolean {
+    if (this.leavingAfterSave || this.viewMode !== 'studio' || !this.companyModal.isOpen || this.studioLoading) return false;
+    if (this.studioSnapshot !== null && JSON.stringify(this.companyModal.data) !== this.studioSnapshot) return true;
+    if (this.selectedLogoFile || this.isLogoCleared) return true;
+    return this.hasPendingSubForms();
+  }
+
+  /** پرسش پیش از خروج از استودیو؛ گارد مسیر و دکمه‌های بازگشت از همین استفاده می‌کنند */
+  async confirmLeave(): Promise<boolean> {
+    if (!this.hasUnsavedChanges()) return true;
+    return this.confirmAction({
+      title: 'تغییرات ذخیره نشده',
+      message: 'تغییراتی که در این شرکت داده‌اید هنوز ذخیره نشده است. با خروج، این تغییرات از بین می‌رود.',
+      type: 'warning',
+      confirmText: 'خروج بدون ذخیره',
+      cancelText: 'ماندن در صفحه'
+    });
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.hasUnsavedChanges()) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
   }
 
   private setupRealtimeAndOfflineListeners(): void {
@@ -406,28 +508,25 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           const targetCompanyId = msg.company_id || msg.project_id;
 
           if (msg.entity_type === 'company') {
-            this.loadCompanies();
+            this.reloadListIfVisible();
           } else if (msg.entity_type === 'company_bank_account') {
             if (this.companyModal.isOpen && currentCompanyId && (!targetCompanyId || targetCompanyId === currentCompanyId)) {
               this.loadCompanyBankAccounts(currentCompanyId);
             }
-            this.loadCompanies();
+            this.reloadListIfVisible();
           } else if (msg.entity_type === 'company_board_member') {
             if (this.companyModal.isOpen && currentCompanyId && (!targetCompanyId || targetCompanyId === currentCompanyId)) {
               this.loadCompanyBoardMembers(currentCompanyId);
             }
-            this.loadCompanies();
+            this.reloadListIfVisible();
           } else if (msg.entity_type === 'company_document') {
             if (this.companyModal.isOpen && currentCompanyId && (!targetCompanyId || targetCompanyId === currentCompanyId)) {
               this.loadCompanyDocuments(currentCompanyId);
             }
-            this.loadCompanies();
+            this.reloadListIfVisible();
           } else if (msg.entity_type === 'company_access') {
             if (this.companyModal.isOpen && currentCompanyId && (!targetCompanyId || targetCompanyId === currentCompanyId)) {
               this.loadStudioAccesses(currentCompanyId);
-            }
-            if (this.userAccessModal.isOpen && this.userAccessModal.company?.id && (!targetCompanyId || targetCompanyId === this.userAccessModal.company.id)) {
-              this.loadUserAccesses(this.userAccessModal.company.id);
             }
           }
         }
@@ -479,14 +578,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
             this.studioAccesses = data;
           } else if (data && Array.isArray((data as any).results)) {
             this.studioAccesses = (data as any).results;
-          }
-          this.cdr.markForCheck();
-        }
-        if (this.userAccessModal.isOpen && this.userAccessModal.company?.id && url.includes(`company_id=${this.userAccessModal.company.id}`)) {
-          if (Array.isArray(data)) {
-            this.userAccessModal.accesses = data;
-          } else if (data && Array.isArray((data as any).results)) {
-            this.userAccessModal.accesses = (data as any).results;
           }
           this.cdr.markForCheck();
         }
@@ -581,6 +672,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   loadCompanies(): void {
     this.isLoading = true;
+    this.listLoadError = false;
     this.api.getAll().subscribe({
       next: (res) => {
         this.isLoading = false;
@@ -596,12 +688,19 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isLoading = false;
-        if (this.network.isOnline && err?.status !== 503) {
+        this.listLoadError = true;
+        // قطعی سرور (از جمله ۵۲۰ تا ۵۳۰ تونل) با حالت خطای صفحه نشان داده می‌شود، نه toast
+        if (this.network.isOnline && !isServerUnreachable(err?.status ?? 0)) {
           this.toast.error('خطا در دریافت فهرست شرکت‌ها');
         }
         this.cdr.markForCheck();
       }
     });
+  }
+
+  /** یکسان‌سازی رقم فارسی و عربی و «ي/ك» عربی برای جستجو */
+  private normalizeSearchText(value: string | null | undefined): string {
+    return normalizeDigits(value || '').replace(/ي/g, 'ی').replace(/ك/g, 'ک').toLowerCase();
   }
 
   applyFilter(): void {
@@ -610,31 +709,11 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
       return;
     }
-    const rawQ = this.searchQuery.trim().toLowerCase();
-    const normQ = normalizeDigits(rawQ).toLowerCase();
-    this.filteredCompanies = this.companies.filter((c) => {
-      const name = (c.name || '').toLowerCase();
-      const code = (c.code || '').toLowerCase();
-      const nationalId = (c.national_id || '');
-      const economicCode = (c.economic_code || '');
-      const ceoName = (c.ceo_name || '').toLowerCase();
-      const workshopCode = (c.workshop_code || '');
-
-      return (
-        name.includes(rawQ) ||
-        name.includes(normQ) ||
-        code.includes(rawQ) ||
-        code.includes(normQ) ||
-        nationalId.includes(rawQ) ||
-        nationalId.includes(normQ) ||
-        economicCode.includes(rawQ) ||
-        economicCode.includes(normQ) ||
-        ceoName.includes(rawQ) ||
-        ceoName.includes(normQ) ||
-        workshopCode.includes(rawQ) ||
-        workshopCode.includes(normQ)
-      );
-    });
+    const q = this.normalizeSearchText(this.searchQuery);
+    this.filteredCompanies = this.companies.filter((c) =>
+      [c.name, c.code, c.national_id, c.economic_code, c.ceo_name, c.workshop_code]
+        .some(field => this.normalizeSearchText(field).includes(q))
+    );
     this.cdr.markForCheck();
   }
 
@@ -685,17 +764,19 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   private _modalTabsKey = '';
 
   get modalTabs(): TabDef[] {
-    const key = `${this.isAccountingInstalled}_${this.companyBankAccounts.length}_${this.companyBoardMembers.length}_${this.companyDocuments.length}_${this.studioAccesses.length}_${this.companyModal.isEdit}`;
+    const errorTabs = this.errorTabs();
+    const key = `${this.isAccountingInstalled}_${this.companyBankAccounts.length}_${this.companyBoardMembers.length}_${this.companyDocuments.length}_${this.studioAccesses.length}_${this.companyModal.isEdit}_${[...errorTabs].join(',')}`;
     if (this._modalTabsKey === key && this._cachedModalTabs.length > 0) {
       return this._cachedModalTabs;
     }
     this._modalTabsKey = key;
+    const errorIndicator = { tone: 'rose' as const, label: 'دارای خطا' };
     const tabs: TabDef[] = [
-      { id: 'identity', label: 'مشخصات هویتی و ثبتی', shortLabel: 'هویتی', icon: 'building' },
-      { id: 'fiscal_insurance', label: 'سال مالی، بیمه و مودیان', shortLabel: 'بیمه و مالی', icon: 'file-check' },
+      { id: 'identity', label: 'مشخصات هویتی و ثبتی', shortLabel: 'هویتی', icon: 'building', indicator: errorTabs.has('identity') ? errorIndicator : undefined },
+      { id: 'fiscal_insurance', label: 'سال مالی، بیمه و مودیان', shortLabel: 'بیمه و مالی', icon: 'file-check', indicator: errorTabs.has('fiscal_insurance') ? errorIndicator : undefined },
     ];
     if (this.isAccountingInstalled) {
-      tabs.push({ id: 'treasury', label: 'بانک و شبا', shortLabel: 'بانک', icon: 'database', count: this.companyBankAccounts.length || undefined });
+      tabs.push({ id: 'treasury', label: 'بانک و شبا', shortLabel: 'بانک', icon: 'database', count: this.companyBankAccounts.length || undefined, indicator: errorTabs.has('treasury') ? errorIndicator : undefined });
       tabs.push({ id: 'governance', label: 'هیئت‌مدیره و امضا', shortLabel: 'هیئت‌مدیره', icon: 'users', count: this.companyBoardMembers.length || undefined });
     }
     tabs.push({ id: 'documents', label: 'بایگانی مدارک', shortLabel: 'مدارک', icon: 'book', count: this.companyDocuments.length || undefined });
@@ -707,22 +788,54 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     return tabs;
   }
 
+  /** تب‌هایی که فیلد خطادار دارند (خطای اعتبارسنجی یا خطای فیلدی سرور) */
+  private errorTabs(): Set<string> {
+    const tabs = new Set<string>();
+    for (const field of Object.keys(this.companyModal.errors || {})) {
+      tabs.add(this.tabForField(field));
+    }
+    return tabs;
+  }
+
+  private tabForField(field: string): string {
+    if (CompaniesManagementComponent.FISCAL_TAB_FIELDS.includes(field)) return 'fiscal_insurance';
+    if (CompaniesManagementComponent.TREASURY_TAB_FIELDS.includes(field) && this.isAccountingInstalled) return 'treasury';
+    return 'identity';
+  }
+
+  /** نخستین تبی که خطا دارد باز شود تا کاربر خطای تب دیگر را از دست ندهد */
+  private openFirstErrorTab(): void {
+    const order = this.modalTabs.map(t => t.id);
+    const tabs = this.errorTabs();
+    if (tabs.size === 0 || tabs.has(this.activeModalTab)) return;
+    const first = order.find(id => tabs.has(id));
+    if (first) this.setModalTab(first);
+  }
+
+  /** دادهٔ هر تب یک بار برای هر شرکت دریافت می‌شود؛ تازه‌سازی با وب‌سوکت یا «تلاش دوباره» است */
+  private onTabActivated(tab: string): void {
+    if (tab === 'access') {
+      this.ensureSystemUsers();
+    }
+  }
+
+  /** تلاش دوباره برای دریافت دادهٔ تبی که خطا داده است */
+  retryTab(tab: string): void {
+    const id = this.companyModal.data.id;
+    if (!id) return;
+    switch (tab) {
+      case 'fiscal_insurance': this.loadCompanyFiscalPeriods(id); break;
+      case 'treasury': this.loadCompanyBankAccounts(id); break;
+      case 'governance': this.loadCompanyBoardMembers(id); break;
+      case 'documents': this.loadCompanyDocuments(id); break;
+      case 'access': this.loadStudioAccesses(id); break;
+    }
+  }
+
   setModalTab(tab: string): void {
     if (!this.isTabAvailable(tab)) tab = 'identity';
     this.activeModalTab = tab as typeof this.activeModalTab;
-    if (this.companyModal.data.id) {
-      if (tab === 'fiscal_insurance') {
-        this.loadCompanyFiscalPeriods(this.companyModal.data.id);
-      } else if (tab === 'treasury') {
-        this.loadCompanyBankAccounts(this.companyModal.data.id);
-      } else if (tab === 'governance') {
-        this.loadCompanyBoardMembers(this.companyModal.data.id);
-      } else if (tab === 'documents') {
-        this.loadCompanyDocuments(this.companyModal.data.id);
-      } else if (tab === 'access') {
-        this.loadStudioAccesses(this.companyModal.data.id);
-      }
-    }
+    this.onTabActivated(tab);
     if (this.router && this.route) {
       this.router.navigate([], {
         relativeTo: this.route,
@@ -735,8 +848,12 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   }
 
   openGoogleDriveModal(company: Company): void {
-    this.openEditModal(company);
-    this.setModalTab('gdrive');
+    this.openEditModal(company, 'gdrive');
+  }
+
+  /** دسترسی کاربران فقط در تب «دسترسی» استودیو مدیریت می‌شود (ت۴) */
+  openAccessTab(company: Company): void {
+    this.openEditModal(company, 'access');
   }
 
   // انتخاب تاریخ‌های تقویم شمسی جلالی
@@ -777,11 +894,16 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe(params => {
       const idParam = params.get('id');
       const url = this.router?.url || '';
-      const isNew = url.includes('/companies/new');
+      const isNew = this.route?.snapshot?.routeConfig?.path === 'companies/new' || url.includes('/companies/new');
 
       if (idParam) {
         const companyId = Number(idParam);
         this.viewMode = 'studio';
+        if (!Number.isInteger(companyId) || companyId <= 0) {
+          this.toast.error('نشانی شرکت معتبر نیست.');
+          this.router?.navigate([CompaniesManagementComponent.LIST_URL], { replaceUrl: true });
+          return;
+        }
         this.setupStudioForCompany(companyId);
       } else if (isNew) {
         this.viewMode = 'studio';
@@ -798,6 +920,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       if (tabParam && ['identity', 'fiscal_insurance', 'treasury', 'governance', 'documents', 'access', 'gdrive'].includes(tabParam)) {
         if (this.isTabAvailable(tabParam)) {
           this.activeModalTab = tabParam as any;
+          this.onTabActivated(tabParam);
         } else {
           // پیوند مستقیم به تب حسابداری در نصب «فقط انبار»: بازگشت به تب مشخصات
           this.setModalTab('identity');
@@ -807,29 +930,51 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  private setupStudioForCompany(companyId: number): void {
-    if (this.companyModal.data?.id === companyId && this.companyModal.isOpen) {
+  /**
+   * باز کردن مستقیم /companies/:id: تا رسیدن پاسخ، استودیو در حالت «ویرایش» با اسکلت بارگذاری
+   * دیده می‌شود (نه فرم خالی «ثبت شرکت جدید»).
+   */
+  setupStudioForCompany(companyId: number): void {
+    if (this.companyModal.data?.id === companyId && this.companyModal.isOpen && !this.studioLoadError) {
       return;
     }
-    const found = this.companies.find(c => c.id === companyId);
-    if (found) {
-      this.populateStudioData(found);
-    } else {
-      this.isLoading = true;
-      this.api.getById(companyId).subscribe({
-        next: (comp) => {
-          this.isLoading = false;
-          if (comp) {
-            this.populateStudioData(comp);
-          }
-        },
-        error: () => {
-          this.isLoading = false;
-          this.toast.error('شرکت مورد نظر یافت نشد.');
-          this.router?.navigate(['/app/operations/companies']);
+    this.companyModal = {
+      isOpen: true,
+      isEdit: true,
+      isSubmitting: false,
+      data: { ...this.getEmptyCompanyData(), id: companyId },
+      errors: {}
+    };
+    this.studioSnapshot = null;
+    this.studioLoading = true;
+    this.studioLoadError = false;
+    this.cdr.markForCheck();
+    this.api.getById(companyId).subscribe({
+      next: (comp) => {
+        this.studioLoading = false;
+        if (comp) {
+          this.populateStudioData(comp);
+        } else {
+          this.studioLoadError = true;
         }
-      });
-    }
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.studioLoading = false;
+        if (err?.status === 404) {
+          this.toast.error('شرکت مورد نظر یافت نشد.');
+          this.router?.navigate([CompaniesManagementComponent.LIST_URL], { replaceUrl: true });
+        } else {
+          this.studioLoadError = true;
+        }
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  retryStudioLoad(): void {
+    const id = this.companyModal.data.id;
+    if (id) this.setupStudioForCompany(id);
   }
 
   setupStudioForNew(): void {
@@ -868,14 +1013,83 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       data: this.getEmptyCompanyData(),
       errors: {}
     };
+    this.isQueuedCreate = false;
+    this.isQueuedSave = false;
+    this.tabLoadError = {};
+    this.takeStudioSnapshot();
     this.viewMode = 'studio';
     this.cdr.markForCheck();
   }
 
+  /** نشانی لوگوی سرور از serverUrl می‌گذرد تا روی مبدأ دیگر (مثل اپ موبایل) نشکند */
+  private logoUrlFor(logo: string | null | undefined): string | null {
+    return logo ? resolveServerUrl(logo) : null;
+  }
+
+  private buildStudioData(company: Company): typeof this.companyModal.data {
+    return {
+      id: company.id,
+      code: company.code,
+      name: company.name,
+      company_type: company.company_type || 'private_joint_stock',
+      national_id: company.national_id || '',
+      economic_code: company.economic_code || '',
+      registration_number: company.registration_number || '',
+      registration_date: company.registration_date || '',
+      registered_capital: company.registered_capital || null,
+      shares_count: company.shares_count || null,
+      share_nominal_value: company.share_nominal_value || null,
+      fiscal_year_start_month: company.fiscal_year_start_month || 1,
+      phone: company.phone || '',
+      address: company.address || '',
+      postal_code: company.postal_code || '',
+      ceo_name: company.ceo_name || '',
+      board_chairman: company.board_chairman || '',
+      board_vice_chairman: company.board_vice_chairman || '',
+      main_inspector: company.main_inspector || '',
+      alternate_inspector: company.alternate_inspector || '',
+      authorized_signers: company.authorized_signers || '',
+      board_term_expiry: company.board_term_expiry || '',
+      workshop_code: company.workshop_code || '',
+      social_security_branch_code: company.social_security_branch_code || '',
+      social_security_branch_name: company.social_security_branch_name || '',
+      contract_row: company.contract_row || '',
+      employer_name: company.employer_name || '',
+      tax_memory_id: company.tax_memory_id || '',
+      tax_economic_code: company.tax_economic_code || '',
+      primary_bank_name: company.primary_bank_name || '',
+      primary_account_number: company.primary_account_number || '',
+      primary_iban: company.primary_iban || '',
+      articles_of_association: company.articles_of_association || null,
+      latest_gazette: company.latest_gazette || null,
+      is_active: company.is_active,
+      has_warehouse_module: company.has_warehouse_module !== false,
+      logo: company.logo || null
+    };
+  }
+
+  /** پس از ذخیرهٔ موفق، فرم با پاسخ سرور هم‌گام می‌شود و فرم‌های فرعی تب‌های دیگر دست نمی‌خورند */
+  private applySavedCompany(company: Company): void {
+    this.companyModal = {
+      ...this.companyModal,
+      isEdit: true,
+      data: this.buildStudioData(company),
+      errors: {}
+    };
+    if (!this.selectedLogoFile) {
+      this.logoPreviewUrl = this.logoUrlFor(company.logo);
+    }
+    this.regDateControl.setValue(company.registration_date || '', { emitEvent: false });
+    this.takeStudioSnapshot();
+  }
+
   populateStudioData(company: Company): void {
     this.selectedLogoFile = null;
-    this.logoPreviewUrl = company.logo || null;
+    this.logoPreviewUrl = this.logoUrlFor(company.logo);
     this.isLogoCleared = false;
+    this.isQueuedCreate = false;
+    this.isQueuedSave = false;
+    this.tabLoadError = {};
     this.newDoc = this.getEmptyDocData();
     this.newAccount = this.getEmptyBankAccountData();
     this.newBoardMember = this.getEmptyBoardMemberData();
@@ -898,48 +1112,12 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       isOpen: true,
       isEdit: true,
       isSubmitting: false,
-      data: {
-        id: company.id,
-        code: company.code,
-        name: company.name,
-        company_type: company.company_type || 'private_joint_stock',
-        national_id: company.national_id || '',
-        economic_code: company.economic_code || '',
-        registration_number: company.registration_number || '',
-        registration_date: company.registration_date || '',
-        registered_capital: company.registered_capital || null,
-        shares_count: company.shares_count || null,
-        share_nominal_value: company.share_nominal_value || null,
-        fiscal_year_start_month: company.fiscal_year_start_month || 1,
-        phone: company.phone || '',
-        address: company.address || '',
-        postal_code: company.postal_code || '',
-        ceo_name: company.ceo_name || '',
-        board_chairman: company.board_chairman || '',
-        board_vice_chairman: company.board_vice_chairman || '',
-        main_inspector: company.main_inspector || '',
-        alternate_inspector: company.alternate_inspector || '',
-        authorized_signers: company.authorized_signers || '',
-        board_term_expiry: company.board_term_expiry || '',
-        workshop_code: company.workshop_code || '',
-        social_security_branch_code: company.social_security_branch_code || '',
-        social_security_branch_name: company.social_security_branch_name || '',
-        contract_row: company.contract_row || '',
-        employer_name: company.employer_name || '',
-        tax_memory_id: company.tax_memory_id || '',
-        tax_economic_code: company.tax_economic_code || '',
-        primary_bank_name: company.primary_bank_name || '',
-        primary_account_number: company.primary_account_number || '',
-        primary_iban: company.primary_iban || '',
-        articles_of_association: company.articles_of_association || null,
-        latest_gazette: company.latest_gazette || null,
-        is_active: company.is_active,
-        has_warehouse_module: company.has_warehouse_module !== false,
-        logo: company.logo || null
-      },
+      data: this.buildStudioData(company),
       errors: {}
     };
+    this.takeStudioSnapshot();
 
+    // دادهٔ همهٔ تب‌ها یک بار برای هر شرکت دریافت می‌شود (برای شمارندهٔ تب‌ها)؛ کلیک تب دوباره دریافت نمی‌کند
     if (company.id) {
       this.loadCompanyFiscalPeriods(company.id);
       this.loadCompanyDocuments(company.id);
@@ -953,24 +1131,44 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   }
 
   openCreateModal(): void {
-    this.setupStudioForNew();
     if (this.router) {
       this.router.navigate(['/app/operations/companies/new']);
+    } else {
+      this.setupStudioForNew();
     }
   }
 
-  openEditModal(company: Company): void {
-    this.populateStudioData(company);
+  /** یک ناوبری با تب مقصد؛ استودیو در نمونهٔ مسیر /companies/:id داده را خودش می‌گیرد */
+  openEditModal(company: Company, tab: string = 'identity'): void {
+    if (this.isPendingRecord(company)) {
+      this.toast.warning('این شرکت هنوز به سرور ارسال نشده است؛ پس از اتصال قابل ویرایش است.');
+      return;
+    }
     if (this.router) {
-      this.router.navigate(['/app/operations/companies', company.id], {
-        queryParams: { tab: this.activeModalTab || 'identity' }
+      this.router.navigate([CompaniesManagementComponent.LIST_URL, company.id], {
+        queryParams: { tab }
       });
+    } else {
+      this.populateStudioData(company);
+      this.setModalTab(tab);
     }
   }
 
+  /** بازگشت به فهرست؛ گارد مسیر پیش از خروج دربارهٔ تغییرات ذخیره‌نشده می‌پرسد */
   closeCompanyModal(): void {
+    if (this.router) {
+      this.router.navigate([CompaniesManagementComponent.LIST_URL]).then((ok) => {
+        if (ok) this.resetStudioState();
+      });
+      return;
+    }
+    this.resetStudioState();
+  }
+
+  private resetStudioState(): void {
     this.companyModal.isOpen = false;
     this.viewMode = 'list';
+    this.studioSnapshot = null;
     this.selectedLogoFile = null;
     this.logoPreviewUrl = null;
     this.companyDocuments = [];
@@ -986,9 +1184,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.isDocIssueDatePickerOpen = false;
     this.isDocExpiryDatePickerOpen = false;
     this.isBankDropdownOpen = false;
-    if (this.router) {
-      this.router.navigate(['/app/operations/companies']);
-    }
     this.cdr.markForCheck();
   }
 
@@ -998,6 +1193,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   loadCompanyFiscalPeriods(companyId: number): void {
     if (!this.isAccountingInstalled) return;
     this.isLoadingFiscalPeriods = true;
+    this.tabLoadError['fiscal_insurance'] = false;
     this.facade.getFiscalPeriods(companyId).subscribe({
       next: (res) => {
         this.isLoadingFiscalPeriods = false;
@@ -1012,7 +1208,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoadingFiscalPeriods = false;
-        this.toast.error('خطا در دریافت دوره‌های مالی شرکت');
+        this.tabLoadError['fiscal_insurance'] = true;
         this.cdr.markForCheck();
       }
     });
@@ -1096,8 +1292,19 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  closeFiscalPeriod(period: CompanyFiscalPeriod): void {
-    if (!period.id) return;
+  /**
+   * بستن، انجماد و بازگشایی دوره‌های مالی کارهای حساس‌اند: فقط برخط (رد سرور در صف دیده نمی‌شود)
+   * و با پرسش تأیید که پیامد هر کار را می‌گوید.
+   */
+  async closeFiscalPeriod(period: CompanyFiscalPeriod): Promise<void> {
+    if (!period.id || !this.requireOnline('بستن دورهٔ مالی')) return;
+    const ok = await this.confirmAction({
+      title: 'بستن قطعی دورهٔ مالی',
+      message: `با بستن «${period.title}»، ثبت و ویرایش سند در این دوره متوقف می‌شود تا وقتی که دوباره بازگشایی شود.`,
+      type: 'danger',
+      confirmText: 'بستن قطعی'
+    });
+    if (!ok) return;
     this.facade.closeFiscalPeriod(period.id).subscribe({
       next: () => {
         this.toast.success(`دوره مالی «${period.title}» با موفقیت بسته شد.`);
@@ -1112,8 +1319,15 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  freezeFiscalPeriod(period: CompanyFiscalPeriod): void {
-    if (!period.id) return;
+  async freezeFiscalPeriod(period: CompanyFiscalPeriod): Promise<void> {
+    if (!period.id || !this.requireOnline('انجماد دورهٔ مالی')) return;
+    const ok = await this.confirmAction({
+      title: 'انجماد دورهٔ مالی',
+      message: `با انجماد «${period.title}»، ثبت سند تازه در این دوره تا بازگشایی متوقف می‌شود.`,
+      type: 'warning',
+      confirmText: 'انجماد دوره'
+    });
+    if (!ok) return;
     this.facade.freezeFiscalPeriod(period.id).subscribe({
       next: () => {
         this.toast.success(`دوره مالی «${period.title}» منجمد شد.`);
@@ -1128,8 +1342,15 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  reopenFiscalPeriod(period: CompanyFiscalPeriod): void {
-    if (!period.id) return;
+  async reopenFiscalPeriod(period: CompanyFiscalPeriod): Promise<void> {
+    if (!period.id || !this.requireOnline('بازگشایی دورهٔ مالی')) return;
+    const ok = await this.confirmAction({
+      title: 'بازگشایی دورهٔ مالی',
+      message: `با بازگشایی «${period.title}»، ثبت و ویرایش سند در این دوره دوباره ممکن می‌شود.`,
+      type: 'warning',
+      confirmText: 'بازگشایی دوره'
+    });
+    if (!ok) return;
     this.facade.reopenFiscalPeriod(period.id).subscribe({
       next: () => {
         this.toast.success(`دوره مالی «${period.title}» مجدداً بازگشایی شد.`);
@@ -1184,6 +1405,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   loadCompanyDocuments(companyId: number): void {
     if (!this.isAccountingInstalled) return;
     this.isLoadingDocuments = true;
+    this.tabLoadError['documents'] = false;
     this.facade.getDocuments({ company_id: companyId }).subscribe({
       next: (res) => {
         this.isLoadingDocuments = false;
@@ -1199,7 +1421,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoadingDocuments = false;
-        this.toast.error('خطا در دریافت اسناد شرکت');
+        this.tabLoadError['documents'] = true;
         this.cdr.markForCheck();
       }
     });
@@ -1511,6 +1733,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   loadCompanyBankAccounts(companyId: number): void {
     if (!this.isAccountingInstalled) return;
     this.isLoadingBankAccounts = true;
+    this.tabLoadError['treasury'] = false;
     this.facade.getBankAccounts(companyId).subscribe({
       next: (res) => {
         this.isLoadingBankAccounts = false;
@@ -1525,7 +1748,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoadingBankAccounts = false;
-        this.toast.error('خطا در دریافت حساب‌های بانکی شرکت');
+        this.tabLoadError['treasury'] = true;
         this.cdr.markForCheck();
       }
     });
@@ -1716,7 +1939,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
               is_primary: a.id === saved.id
             }));
           }
-          this.loadCompanies();
+          this.reloadListIfVisible();
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -1739,7 +1962,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
             }));
           }
           this.companyBankAccounts = [created, ...this.companyBankAccounts.filter(a => a.id !== created.id)];
-          this.loadCompanies();
+          this.reloadListIfVisible();
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -1788,7 +2011,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       next: () => {
         this.toast.success('حساب بانکی با موفقیت حذف شد.');
         this.companyBankAccounts = this.companyBankAccounts.filter(a => a.id !== acc.id);
-        this.loadCompanies();
+        this.reloadListIfVisible();
         this.cdr.markForCheck();
       },
       error: () => this.toast.error('خطا در حذف حساب بانکی')
@@ -1808,8 +2031,12 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           this.companyModal.data.primary_bank_name = acc.bank_name;
           this.companyModal.data.primary_account_number = acc.account_number || '';
           this.companyModal.data.primary_iban = acc.sheba_number || '';
+          // این سه فیلد روی سرور ثبت شده‌اند؛ تغییر ذخیره‌نشده حساب نشوند
+          this.patchStudioSnapshot('primary_bank_name', this.companyModal.data.primary_bank_name);
+          this.patchStudioSnapshot('primary_account_number', this.companyModal.data.primary_account_number);
+          this.patchStudioSnapshot('primary_iban', this.companyModal.data.primary_iban);
         }
-        this.loadCompanies();
+        this.reloadListIfVisible();
         this.cdr.markForCheck();
       },
       error: () => this.toast.error('خطا در تنظیم حساب اصلی')
@@ -1849,6 +2076,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   loadCompanyBoardMembers(companyId: number): void {
     if (!this.isAccountingInstalled) return;
     this.isLoadingBoardMembers = true;
+    this.tabLoadError['governance'] = false;
     this.facade.getBoardMembers(companyId).subscribe({
       next: (res) => {
         this.isLoadingBoardMembers = false;
@@ -1863,7 +2091,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoadingBoardMembers = false;
-        this.toast.error('خطا در دریافت لیست اعضای هیئت‌مدیره شرکت');
+        this.tabLoadError['governance'] = true;
         this.cdr.markForCheck();
       }
     });
@@ -2022,7 +2250,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           } else {
             this.companyBoardMembers = [updated, ...this.companyBoardMembers];
           }
-          this.loadCompanies();
+          this.reloadListIfVisible();
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -2039,7 +2267,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           this.toast.success(`عضو جدید «${created.first_name} ${created.last_name}» با موفقیت افزوده شد.`);
           this.cancelBoardMemberForm();
           this.companyBoardMembers = [created, ...this.companyBoardMembers.filter(m => m.id !== created.id)];
-          this.loadCompanies();
+          this.reloadListIfVisible();
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -2063,7 +2291,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       next: () => {
         this.toast.success('عضو هیئت‌مدیره با موفقیت حذف گردید.');
         this.companyBoardMembers = this.companyBoardMembers.filter(m => m.id !== member.id);
-        this.loadCompanies();
+        this.reloadListIfVisible();
         this.cdr.markForCheck();
       },
       error: () => this.toast.error('خطا در حذف عضو هیئت‌مدیره')
@@ -2171,7 +2399,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         this.docExpiryDateControl.setValue('', { emitEvent: false });
         this.companyDocuments = [created, ...this.companyDocuments.filter(d => d.id !== created.id)];
         this.applyDocumentFilters();
-        this.loadCompanies();
+        this.reloadListIfVisible();
         this.cdr.markForCheck();
       },
       error: (err) => {
@@ -2194,7 +2422,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         this.toast.success('مدرک با موفقیت حذف شد.');
         this.companyDocuments = this.companyDocuments.filter(d => d.id !== doc.id);
         this.applyDocumentFilters();
-        this.loadCompanies();
+        this.reloadListIfVisible();
         this.cdr.markForCheck();
       },
       error: () => this.toast.error('خطا در حذف مدرک')
@@ -2202,22 +2430,34 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   }
 
   onCoreDocSelected(event: any, docType: 'articles_of_association' | 'latest_gazette'): void {
-    const file = event.target?.files?.[0];
-    if (!file || !this.companyModal.data.id) return;
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    // پاک کردن input تا انتخاب دوبارهٔ همان فایل هم رویداد بدهد
+    if (input) input.value = '';
+    if (!file || !this.companyModal.data.id || this.uploadingCoreDoc[docType]) return;
+    if (file.size > CompaniesManagementComponent.CORE_DOC_MAX_BYTES) {
+      this.toast.error('حجم فایل نباید بیش از ۲۰ مگابایت باشد.');
+      return;
+    }
 
+    const title = docType === 'articles_of_association' ? 'اساسنامه' : 'روزنامه رسمی';
+    this.uploadingCoreDoc = { ...this.uploadingCoreDoc, [docType]: true };
+    this.cdr.markForCheck();
     this.api.uploadCoreDoc(this.companyModal.data.id, docType, file).subscribe({
       next: (res) => {
-        const title = docType === 'articles_of_association' ? 'اساسنامه' : 'روزنامه رسمی';
+        this.uploadingCoreDoc = { ...this.uploadingCoreDoc, [docType]: false };
         this.toast.success(`فایل ${title} با موفقیت بارگذاری شد.`);
-        if (docType === 'articles_of_association') {
-          this.companyModal.data.articles_of_association = res.articles_of_association;
-        } else {
-          this.companyModal.data.latest_gazette = res.latest_gazette;
-        }
-        this.loadCompanies();
+        const value = docType === 'articles_of_association' ? res.articles_of_association : res.latest_gazette;
+        this.companyModal.data[docType] = value;
+        this.patchStudioSnapshot(docType, value);
+        this.reloadListIfVisible();
         this.cdr.markForCheck();
       },
-      error: () => this.toast.error('خطا در بارگذاری فایل')
+      error: (err) => {
+        this.uploadingCoreDoc = { ...this.uploadingCoreDoc, [docType]: false };
+        this.toast.error(err?.error?.detail || `خطا در بارگذاری فایل ${title}`);
+        this.cdr.markForCheck();
+      }
     });
   }
 
@@ -2247,9 +2487,28 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** فیلدهای شناسه‌ای: رقم فارسی و عربی هنگام تایپ لاتین می‌شود (ت۷) */
+  onDigitsInput(field: 'national_id' | 'economic_code' | 'registration_number' | 'phone' | 'postal_code' | 'workshop_code' | 'tax_economic_code' | 'social_security_branch_code' | 'contract_row', value: string): void {
+    this.companyModal.data[field] = normalizeDigits(value ?? '');
+    this.clearFieldError(field);
+  }
+
+  onTaxMemoryIdInput(value: string): void {
+    this.companyModal.data.tax_memory_id = normalizeDigits(value ?? '').toUpperCase();
+    this.clearFieldError('tax_memory_id');
+  }
+
+  private clearFieldError(field: string): void {
+    if (!this.companyModal.errors[field]) return;
+    const errors = { ...this.companyModal.errors };
+    delete errors[field];
+    this.companyModal = { ...this.companyModal, errors };
+  }
+
   validateCompanyForm(): boolean {
     const errors: { [key: string]: string } = {};
     const d = this.companyModal.data;
+    const val = (v: string | null | undefined) => normalizeDigits(v || '');
 
     if (!d.code || !d.code.trim()) {
       errors['code'] = 'کد یکتای شرکت الزامی است.';
@@ -2257,8 +2516,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (!d.name || !d.name.trim()) {
       errors['name'] = 'نام کامل شرکت الزامی است.';
     }
-    if (d.national_id && d.national_id.trim()) {
-      const nid = d.national_id.trim();
+    const nid = val(d.national_id);
+    if (nid) {
       if (!/^\d+$/.test(nid)) {
         errors['national_id'] = 'شناسه ملی باید فقط شامل ارقام عددی باشد.';
       } else if (nid.length !== 11) {
@@ -2267,37 +2526,117 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         errors['national_id'] = 'شناسه ملی واردشده با الگوریتم کنترلی ثبت شرکت‌ها همخوانی ندارد.';
       }
     }
+    const exactDigits: [keyof typeof d, number, string][] = [
+      ['economic_code', 12, 'کد اقتصادی قدیم باید ۱۲ رقم باشد.'],
+      ['postal_code', 10, 'کد پستی باید ۱۰ رقم باشد.'],
+      ['workshop_code', 10, 'کد کارگاه بیمه باید ۱۰ رقم باشد.'],
+      ['tax_economic_code', 16, 'کد اقتصادی جدید باید ۱۶ رقم باشد.'],
+    ];
+    for (const [field, len, msg] of exactDigits) {
+      const v = val(d[field] as string);
+      if (v && !new RegExp(`^\\d{${len}}$`).test(v)) errors[field as string] = msg;
+    }
+    for (const field of ['social_security_branch_code', 'contract_row', 'registration_number'] as const) {
+      const v = val(d[field]);
+      if (v && !/^\d+$/.test(v)) errors[field] = 'فقط رقم وارد کنید.';
+    }
+    const memoryId = val(d.tax_memory_id);
+    if (memoryId && !/^[A-Za-z0-9]{6}$/.test(memoryId)) {
+      errors['tax_memory_id'] = 'شناسهٔ حافظهٔ مالیاتی باید ۶ حرف یا رقم لاتین باشد.';
+    }
+    const phone = val(d.phone);
+    if (phone) {
+      const phoneDigits = phone.replace(/\D/g, '');
+      if (!/^[\d\s()+\-]+$/.test(phone) || phoneDigits.length < 8 || phoneDigits.length > 13) {
+        errors['phone'] = 'شمارهٔ تلفن معتبر نیست (۸ تا ۱۳ رقم).';
+      }
+    }
 
     this.companyModal = {
       ...this.companyModal,
       errors
     };
+    this.openFirstErrorTab();
     this.cdr.markForCheck();
     return Object.keys(errors).length === 0;
   }
 
+  /** خطاهای فیلدی DRF به خطای همان فیلد نگاشت می‌شوند و تب نخستین خطا باز می‌شود */
+  private applyServerErrors(err: any, fallback: string): void {
+    const body = err?.error;
+    const errors: { [key: string]: string } = {};
+    if (body && typeof body === 'object' && !Array.isArray(body)) {
+      for (const [key, value] of Object.entries(body)) {
+        if (key === 'detail' || key === 'non_field_errors' || !(key in this.companyModal.data)) continue;
+        const msg = Array.isArray(value) ? value[0] : value;
+        if (typeof msg === 'string' && msg) errors[key] = msg;
+      }
+    }
+    this.companyModal = { ...this.companyModal, errors };
+    this.openFirstErrorTab();
+    const detail = body?.detail || body?.non_field_errors?.[0];
+    const fieldCount = Object.keys(errors).length;
+    this.toast.error(detail || (fieldCount ? 'برخی فیلدها خطا دارند؛ موارد مشخص‌شده را اصلاح کنید.' : fallback));
+    this.cdr.markForCheck();
+  }
+
+  /** تغییر لوگو پس از ذخیرهٔ موفق فرم؛ نتیجه: آیا لوگو روی سرور عوض شد */
+  private finishLogoChange(companyId: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (this.selectedLogoFile) {
+        this.api.uploadLogo(companyId, this.selectedLogoFile).subscribe({
+          next: () => {
+            this.selectedLogoFile = null;
+            resolve(true);
+          },
+          error: (err) => {
+            this.toast.warning(err.error?.detail || err.error?.logo?.[0] || 'خطا در بارگذاری لوگوی شرکت');
+            resolve(false);
+          }
+        });
+      } else if (this.isLogoCleared) {
+        this.api.deleteLogo(companyId).subscribe({
+          next: () => {
+            this.isLogoCleared = false;
+            resolve(true);
+          },
+          error: () => {
+            this.toast.warning('خطا در حذف لوگوی شرکت');
+            resolve(false);
+          }
+        });
+      } else {
+        resolve(false);
+      }
+    });
+  }
+
   submitCompanyForm(): void {
+    if (this.companyModal.isSubmitting || this.studioLoading || this.isQueuedCreate) {
+      return;
+    }
     if (!this.validateCompanyForm()) {
       return;
     }
 
     this.companyModal.isSubmitting = true;
     const d = this.companyModal.data;
+    const text = (v: string | null | undefined) => normalizeDigits(v || '') || null;
     const payload = {
       code: d.code.trim().toUpperCase(),
       name: d.name.trim(),
       company_type: d.company_type || 'private_joint_stock',
-      national_id: d.national_id?.trim() || null,
-      economic_code: d.economic_code?.trim() || null,
-      registration_number: d.registration_number?.trim() || null,
+      national_id: text(d.national_id),
+      economic_code: text(d.economic_code),
+      registration_number: text(d.registration_number),
       registration_date: d.registration_date || null,
       registered_capital: d.registered_capital || null,
       shares_count: d.shares_count || null,
       share_nominal_value: d.share_nominal_value || null,
       fiscal_year_start_month: Number(d.fiscal_year_start_month) || 1,
-      phone: d.phone?.trim() || null,
+      phone: text(d.phone),
       address: d.address?.trim() || null,
-      postal_code: d.postal_code?.trim() || null,
+      postal_code: text(d.postal_code),
       ceo_name: d.ceo_name?.trim() || null,
       board_chairman: d.board_chairman?.trim() || null,
       board_vice_chairman: d.board_vice_chairman?.trim() || null,
@@ -2305,13 +2644,13 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       alternate_inspector: d.alternate_inspector?.trim() || null,
       authorized_signers: d.authorized_signers?.trim() || null,
       board_term_expiry: d.board_term_expiry || null,
-      workshop_code: d.workshop_code?.trim() || null,
-      social_security_branch_code: d.social_security_branch_code?.trim() || null,
+      workshop_code: text(d.workshop_code),
+      social_security_branch_code: text(d.social_security_branch_code),
       social_security_branch_name: d.social_security_branch_name?.trim() || null,
-      contract_row: d.contract_row?.trim() || null,
+      contract_row: text(d.contract_row),
       employer_name: d.employer_name?.trim() || null,
-      tax_memory_id: d.tax_memory_id?.trim() || null,
-      tax_economic_code: d.tax_economic_code?.trim() || null,
+      tax_memory_id: text(d.tax_memory_id),
+      tax_economic_code: text(d.tax_economic_code),
       primary_bank_name: d.primary_bank_name?.trim() || null,
       primary_account_number: d.primary_account_number?.trim() || null,
       primary_iban: d.primary_iban?.trim() || null,
@@ -2322,72 +2661,91 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (this.companyModal.isEdit && this.companyModal.data.id) {
       const companyId = this.companyModal.data.id;
       this.api.update(companyId, payload).subscribe({
-        next: (updated) => {
+        next: (updated: any) => {
           this.companyModal.isSubmitting = false;
-          this.companyModal.isOpen = false;
-          this.viewMode = 'list';
-          this.router?.navigate(['/app/operations/companies']);
-          this.toast.success(`اطلاعات شرکت «${updated.name}» با موفقیت ویرایش شد.`);
-          if (this.selectedLogoFile) {
-            this.api.uploadLogo(companyId, this.selectedLogoFile).subscribe({
-              next: () => this.loadCompanies(),
-              error: (err) => {
-                const msg = err.error?.detail || err.error?.logo?.[0] || 'خطا در بارگذاری لوگوی شرکت';
-                this.toast.warning(msg);
-                this.loadCompanies();
-              }
-            });
-          } else if (this.isLogoCleared) {
-            this.api.deleteLogo(companyId).subscribe({
-              next: () => this.loadCompanies(),
-              error: () => {
-                this.toast.warning('خطا در حذف لوگوی شرکت');
-                this.loadCompanies();
-              }
-            });
-          } else {
-            this.loadCompanies();
+          if (this.isPendingRecord(updated)) {
+            // پاسخ خوش‌بینانهٔ صف آفلاین شناسهٔ موقت دارد؛ داده‌های فرم همان چیزی است که در صف رفت
+            this.isQueuedSave = true;
+            this.takeStudioSnapshot();
+            this.toast.info(`ویرایش «${payload.name}» در صف ارسال است و پس از اتصال ثبت می‌شود.`);
+            if (this.selectedLogoFile || this.isLogoCleared) {
+              this.toast.warning('تغییر لوگو فقط در حالت برخط ذخیره می‌شود؛ پس از اتصال دوباره ذخیره کنید.');
+            }
+            this.cdr.markForCheck();
+            return;
           }
+          this.isQueuedSave = false;
+          this.toast.success(`اطلاعات شرکت «${updated.name}» با موفقیت ویرایش شد.`);
+          this.applySavedCompany(updated);
           this.activeCompanyService.loadAvailableCompanies().subscribe();
+          this.finishLogoChange(companyId).then((changed) => {
+            if (!changed) return;
+            this.api.getById(companyId).subscribe({
+              next: (fresh) => {
+                if (fresh) this.applySavedCompany(fresh);
+                this.cdr.markForCheck();
+              },
+              error: () => {}
+            });
+          });
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.companyModal.isSubmitting = false;
-          const msg = err.error?.detail || err.error?.code?.[0] || 'خطا در ثبت ویرایش شرکت';
-          this.toast.error(msg);
+          this.applyServerErrors(err, 'خطا در ثبت ویرایش شرکت');
         }
       });
     } else {
       this.api.create(payload).subscribe({
-        next: (created) => {
+        next: (created: any) => {
           this.companyModal.isSubmitting = false;
-          this.companyModal.isOpen = false;
-          this.viewMode = 'list';
-          this.router?.navigate(['/app/operations/companies']);
-          this.toast.success(`شرکت «${created.name}» با موفقیت ثبت شد.`);
-          if (this.selectedLogoFile && created.id) {
-            this.api.uploadLogo(created.id, this.selectedLogoFile).subscribe({
-              next: () => this.loadCompanies(),
-              error: (err) => {
-                const msg = err.error?.detail || err.error?.logo?.[0] || 'خطا در بارگذاری لوگوی شرکت';
-                this.toast.warning(msg);
-                this.loadCompanies();
-              }
-            });
-          } else {
-            this.loadCompanies();
+          if (this.isPendingRecord(created) || !created?.id) {
+            // شناسهٔ موقت منفی است؛ رفتن به /companies/-N به getById ناموفق می‌رسد (E1)
+            this.isQueuedCreate = true;
+            this.takeStudioSnapshot();
+            this.toast.info(`شرکت «${payload.name}» در صف ارسال است و پس از اتصال ثبت می‌شود.`);
+            if (this.selectedLogoFile) {
+              this.toast.warning('لوگو پس از ثبت شرکت در سرور باید از استودیوی همان شرکت بارگذاری شود.');
+            }
+            this.cdr.markForCheck();
+            return;
           }
+          this.toast.success(`شرکت «${created.name}» با موفقیت ثبت شد.`);
           this.activeCompanyService.loadAvailableCompanies().subscribe();
+          this.finishLogoChange(created.id).then(() => {
+            // شرکت روی سرور ثبت شده است؛ اگر لوگو نرسید، با پیام بالا گفته شد و فایل دوباره انتخاب می‌شود
+            this.selectedLogoFile = null;
+            this.isLogoCleared = false;
+            this.leavingAfterSave = true;
+            if (this.router) {
+              this.router.navigate([CompaniesManagementComponent.LIST_URL, created.id], {
+                queryParams: { tab: 'identity' },
+                replaceUrl: true
+              }).finally(() => {
+                this.leavingAfterSave = false;
+              });
+            } else {
+              this.leavingAfterSave = false;
+              this.populateStudioData(created);
+            }
+          });
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.companyModal.isSubmitting = false;
-          const msg = err.error?.detail || err.error?.code?.[0] || 'خطا در ایجاد شرکت جدید';
-          this.toast.error(msg);
+          this.applyServerErrors(err, 'خطا در ایجاد شرکت جدید');
         }
       });
     }
   }
 
   confirmDelete(company: Company): void {
+    if (this.isPendingRecord(company)) {
+      this.toast.warning('این شرکت هنوز به سرور ارسال نشده است.');
+      return;
+    }
+    // حذف آبشاری است و پیش از آن باید اثر حذف دیده شود؛ در صف آفلاین نمی‌رود
+    if (!this.requireOnline('حذف شرکت')) return;
     if (company.projects_count && company.projects_count > 0) {
       this.toast.error(`این شرکت دارای ${company.projects_count} پروژه فعال است و امکان حذف آن وجود ندارد.`);
       return;
@@ -2435,34 +2793,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  importExcel(): void {
-    this.toast.info('امکان ورود اطلاعات شرکت‌ها از اکسل در این نسخه آماده است.');
-  }
-
-  // مدیریت دسترسی کاربران (UserCompanyAccess)
-  openUserAccessModal(company: Company): void {
-    this.userAccessModal = {
-      isOpen: true,
-      company,
-      accesses: [],
-      isLoading: true,
-      selectedUserId: null,
-      accessLevel: 'docs_read',
-      roleInCompany: '',
-      isDefault: false,
-      isSubmitting: false
-    };
-    this.loadUserAccesses(company.id);
-    this.cdr.markForCheck();
-  }
-
-  closeUserAccessModal(): void {
-    this.userAccessModal.isOpen = false;
-    this.userAccessModal.company = null;
-    this.userAccessModal.accesses = [];
-    this.cdr.markForCheck();
-  }
-
   filterSystemUsers(): User[] {
     if (!this.userSearchQuery.trim()) {
       return this.systemUsers;
@@ -2499,19 +2829,24 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  private loadSystemUsers(): void {
-    if (this.accountsHttp) {
-      this.accountsHttp.getUsers().subscribe({
-        next: (users) => {
-          this.systemUsers = users;
-        },
-        error: () => {}
-      });
-    }
+  /** فهرست کاربران سامانه فقط وقتی تب «دسترسی» باز می‌شود، یک بار دریافت می‌شود */
+  private ensureSystemUsers(): void {
+    if (this.systemUsersRequested || !this.accountsHttp) return;
+    this.systemUsersRequested = true;
+    this.accountsHttp.getUsers().subscribe({
+      next: (users) => {
+        this.systemUsers = users;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.systemUsersRequested = false;
+      }
+    });
   }
 
   loadStudioAccesses(companyId: number): void {
     this.isLoadingStudioAccesses = true;
+    this.tabLoadError['access'] = false;
     this.api.getUserAccesses({ company_id: companyId }).subscribe({
       next: (res) => {
         this.isLoadingStudioAccesses = false;
@@ -2520,7 +2855,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.isLoadingStudioAccesses = false;
-        this.toast.error('خطا در دریافت لیست دسترسی کاربران شرکت');
+        this.tabLoadError['access'] = true;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -2540,7 +2876,11 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       is_default: this.studioIsDefaultAccess
     }).subscribe({
       next: (created) => {
-        this.toast.success('دسترسی کاربر با موفقیت ثبت شد.');
+        if (this.isPendingRecord(created)) {
+          this.toast.info('دسترسی کاربر در صف ارسال است و پس از اتصال ثبت می‌شود.');
+        } else {
+          this.toast.success('دسترسی کاربر با موفقیت ثبت شد.');
+        }
         this.studioSelectedUserId = null;
         this.studioRoleInCompany = '';
         this.studioAccessLevel = 'docs_read';
@@ -2563,92 +2903,28 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   async removeStudioAccess(accessId?: number): Promise<void> {
     if (!accessId) return;
+    if (accessId < 0) {
+      // ردیف آفلاین هنوز شناسهٔ سرور ندارد؛ حذف آن در صف به ۴۰۴ می‌رسد (E2)
+      this.toast.warning('این دسترسی هنوز به سرور ارسال نشده است؛ پس از ارسال قابل لغو است.');
+      return;
+    }
     const ok = await this.askConfirm(
       'لغو دسترسی کاربر',
       'آیا از لغو دسترسی این کاربر اطمینان دارید؟'
     );
     if (!ok) return;
     this.api.deleteUserAccess(accessId).subscribe({
-      next: () => {
-        this.toast.success('دسترسی کاربر با موفقیت لغو شد.');
+      next: (res: any) => {
+        if (res?._offlinePending) {
+          this.toast.info('لغو دسترسی در صف ارسال است و پس از اتصال اعمال می‌شود.');
+        } else {
+          this.toast.success('دسترسی کاربر با موفقیت لغو شد.');
+        }
         this.studioAccesses = this.studioAccesses.filter(a => a.id !== accessId);
         this.cdr.markForCheck();
       },
       error: () => {
         this.toast.error('خطا در لغو دسترسی کاربر');
-      }
-    });
-  }
-
-  private loadUserAccesses(companyId: number): void {
-    this.userAccessModal.isLoading = true;
-    this.api.getUserAccesses({ company_id: companyId }).subscribe({
-      next: (res) => {
-        this.userAccessModal.isLoading = false;
-        this.userAccessModal.accesses = res;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.userAccessModal.isLoading = false;
-        this.toast.error('خطا در بارگذاری دسترسی‌های کاربران');
-      }
-    });
-  }
-
-  addUserAccess(): void {
-    if (!this.userAccessModal.company || !this.userAccessModal.selectedUserId) {
-      this.toast.warning('لطفاً کاربر مورد نظر را انتخاب نمایید.');
-      return;
-    }
-    const companyId = this.userAccessModal.company.id;
-    const targetUserId = this.userAccessModal.selectedUserId;
-    this.userAccessModal.isSubmitting = true;
-    this.api.createUserAccess({
-      user: this.userAccessModal.selectedUserId,
-      company: this.userAccessModal.company.id,
-      access_level: this.userAccessModal.accessLevel,
-      role_in_company: this.userAccessModal.roleInCompany.trim() || null,
-      is_default: this.userAccessModal.isDefault
-    }).subscribe({
-      next: (created) => {
-        this.userAccessModal.isSubmitting = false;
-        this.userAccessModal.selectedUserId = null;
-        this.userAccessModal.roleInCompany = '';
-        this.userAccessModal.accessLevel = 'docs_read';
-        this.userAccessModal.isDefault = false;
-        this.toast.success('دسترسی کاربر به شرکت با موفقیت ثبت شد.');
-        const userObj = this.systemUsers.find(u => u.id === (created.user || targetUserId));
-        const fullAccess: UserCompanyAccess = {
-          ...created,
-          username: created.username || userObj?.username || '',
-          user_full_name: created.user_full_name || (userObj ? `${userObj.first_name || ''} ${userObj.last_name || ''}`.trim() : '')
-        };
-        this.userAccessModal.accesses = [fullAccess, ...this.userAccessModal.accesses.filter(a => a.id !== created.id)];
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.userAccessModal.isSubmitting = false;
-        const msg = err.error?.detail || err.error?.non_field_errors?.[0] || 'خطا در ثبت دسترسی کاربر';
-        this.toast.error(msg);
-      }
-    });
-  }
-
-  async removeUserAccess(accessId?: number): Promise<void> {
-    if (!accessId) return;
-    const ok = await this.askConfirm(
-      'لغو دسترسی کاربر',
-      'آیا از لغو دسترسی این کاربر اطمینان دارید؟'
-    );
-    if (!ok) return;
-    this.api.deleteUserAccess(accessId).subscribe({
-      next: () => {
-        this.toast.success('دسترسی کاربر لغو شد.');
-        this.userAccessModal.accesses = this.userAccessModal.accesses.filter(a => a.id !== accessId);
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.toast.error('خطا در لغو دسترسی');
       }
     });
   }

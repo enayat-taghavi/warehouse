@@ -8,11 +8,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { provideRouter, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { CompaniesManagementComponent } from './companies';
+import { companiesLeaveGuard } from './companies-leave.guard';
 import { CompanyApiService } from '../../../../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
@@ -27,6 +28,26 @@ try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 } catch {}
 
+/**
+ * fixture در router-outlet نیست، پس ناوبری به /new و /:id نمونهٔ تازه نمی‌سازد.
+ * این شبیه‌ساز همان کاری را می‌کند که paramMap و queryParamMap مسیر واقعی در نمونهٔ استودیو می‌کنند.
+ */
+function simulateStudioRoutes(router: Router, getComponent: () => CompaniesManagementComponent) {
+  return vi.spyOn(router, 'navigate').mockImplementation(async (commands: readonly any[], extras?: any): Promise<boolean> => {
+    const c = getComponent();
+    const [base, id] = commands || [];
+    if (base === '/app/operations/companies/new') {
+      c.setupStudioForNew();
+    } else if (base === '/app/operations/companies' && id !== undefined) {
+      c.viewMode = 'studio';
+      c.setupStudioForCompany(Number(id));
+      const tab = extras?.queryParams?.tab;
+      if (tab) c.activeModalTab = tab;
+    }
+    return true;
+  });
+}
+
 describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () => {
   let fixture: ComponentFixture<CompaniesManagementComponent>;
   let component: CompaniesManagementComponent;
@@ -36,6 +57,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
   let mockToast: any;
   let mockWebSocket: any;
   let mockConfirmDialog: any;
+  let navigateSpy: ReturnType<typeof simulateStudioRoutes>;
 
   const sampleCompanies: Company[] = [
     {
@@ -43,7 +65,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       code: 'PTS',
       name: 'پاینده توان ساینا',
       national_id: '10101234565',
-      economic_code: '4111222333',
+      economic_code: '411122233344',
       registration_number: '12345',
       phone: '02188889999',
       address: 'تهران، خیابان ولیعصر',
@@ -58,7 +80,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       code: 'FA',
       name: 'فارس عالیش',
       national_id: '10207654320',
-      economic_code: '4222333444',
+      economic_code: '422233344455',
       registration_number: '67890',
       phone: '07133334444',
       address: 'شیراز، شهرک صنعتی',
@@ -238,6 +260,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
     component = fixture.componentInstance;
     const router = TestBed.inject(Router);
     await router.navigateByUrl('/app/operations/companies');
+    navigateSpy = simulateStudioRoutes(router, () => component);
     component.viewMode = 'list';
     fixture.detectChanges();
   });
@@ -269,9 +292,8 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(exportBtn?.className).toContain('w-9');
       expect(exportBtn?.className).toContain('h-9');
 
-      expect(importBtn).not.toBeNull();
-      expect(importBtn?.className).toContain('w-9');
-      expect(importBtn?.className).toContain('h-9');
+      // دکمهٔ «ورود از اکسل» کار نمی‌کرد و حذف شد (ت۵)
+      expect(importBtn).toBeNull();
 
       expect(refreshBtn).not.toBeNull();
       expect(refreshBtn?.className).toContain('w-9');
@@ -465,12 +487,12 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(mockCompanyApi.create).not.toHaveBeenCalled();
     });
 
-    it('فرم معتبر باید با موفقیت به وب‌سرویس ارسال شده و مودال بسته شود', () => {
+    it('فرم معتبر ثبت می‌شود و کاربر به استودیوی شرکت تازه می‌رود (A2)', async () => {
       component.openCreateModal();
       component.companyModal.data.code = 'NEW';
       component.companyModal.data.name = 'شرکت جدید آزمایشی';
       component.companyModal.data.national_id = '10320987659';
-      component.companyModal.data.economic_code = '4999888777';
+      component.companyModal.data.economic_code = '499988877766';
 
       component.submitCompanyForm();
       fixture.detectChanges();
@@ -479,10 +501,77 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
         code: 'NEW',
         name: 'شرکت جدید آزمایشی',
         national_id: '10320987659',
-        economic_code: '4999888777'
+        economic_code: '499988877766'
       }));
       expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('شرکت جدید آزمایشی'));
-      expect(component.companyModal.isOpen).toBe(false);
+      await fixture.whenStable();
+      // ماندن در استودیو: شرکت تازه با شناسهٔ سرور باز می‌شود تا تب‌های وابسته فعال شوند
+      expect(navigateSpy).toHaveBeenCalledWith(['/app/operations/companies', 3], { queryParams: { tab: 'identity' }, replaceUrl: true });
+      expect(component.viewMode).toBe('studio');
+    });
+
+    it('ثبت آفلاین (پاسخ _offlinePending) به شناسهٔ موقت نمی‌رود و استودیو در حالت صف می‌ماند (E1)', () => {
+      mockCompanyApi.create.mockReturnValueOnce(of({ id: -7, _offlinePending: true }));
+      component.openCreateModal();
+      component.companyModal.data.code = 'OFF';
+      component.companyModal.data.name = 'شرکت آفلاین';
+      navigateSpy.mockClear();
+
+      component.submitCompanyForm();
+      fixture.detectChanges();
+
+      expect(navigateSpy).not.toHaveBeenCalled();
+      expect(component.isQueuedCreate).toBe(true);
+      expect(component.hasUnsavedChanges()).toBe(false);
+      expect(mockToast.info).toHaveBeenCalledWith(expect.stringContaining('در صف ارسال'));
+      // ذخیرهٔ دوباره نباید ثبت تکراری در صف بگذارد
+      component.submitCompanyForm();
+      expect(mockCompanyApi.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('خطای فیلدی سرور در تب دیگر نشان داده می‌شود و تب نخستین خطا باز می‌شود (A18)', () => {
+      mockCompanyApi.create.mockReturnValueOnce(throwError(() => ({ status: 400, error: { workshop_code: ['کد کارگاه تکراری است.'] } })));
+      component.openCreateModal();
+      component.companyModal.data.code = 'ERR';
+      component.companyModal.data.name = 'شرکت خطادار';
+
+      component.submitCompanyForm();
+      fixture.detectChanges();
+
+      expect(component.companyModal.errors['workshop_code']).toBe('کد کارگاه تکراری است.');
+      expect(component.activeModalTab).toBe('fiscal_insurance');
+      expect(component.modalTabs.find(t => t.id === 'fiscal_insurance')?.indicator?.tone).toBe('rose');
+    });
+  });
+
+  describe('ت۳. هشدار تغییرات ذخیره‌نشده (A3)', () => {
+    it('بدون تغییر، خروج بدون پرسش مجاز است', async () => {
+      component.populateStudioData(sampleCompanies[0]);
+      expect(component.hasUnsavedChanges()).toBe(false);
+      await expect(component.confirmLeave()).resolves.toBe(true);
+      expect(mockConfirmDialog.open).not.toHaveBeenCalled();
+    });
+
+    it('تغییر فیلد یا فرم فرعی ثبت‌نشده پیش از خروج پرسیده می‌شود و «ماندن» خروج را لغو می‌کند', async () => {
+      component.populateStudioData(sampleCompanies[0]);
+      component.companyModal.data.ceo_name = 'مدیر تازه';
+      expect(component.hasUnsavedChanges()).toBe(true);
+      mockConfirmDialog.open.mockResolvedValueOnce(false);
+      await expect(companiesLeaveGuard(component, null as any, null as any, null as any)).resolves.toBe(false);
+      expect(mockConfirmDialog.open).toHaveBeenCalledWith(expect.objectContaining({ type: 'warning' }));
+
+      component.companyModal.data.ceo_name = sampleCompanies[0].ceo_name || '';
+      expect(component.hasUnsavedChanges()).toBe(false);
+      component.newAccount.sheba_number = 'IR120120000000001234567890';
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    it('رویداد beforeunload با تغییر ذخیره‌نشده جلوگیری می‌شود', () => {
+      component.populateStudioData(sampleCompanies[0]);
+      component.companyModal.data.address = 'نشانی تازه';
+      const event = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent;
+      component.onBeforeUnload(event);
+      expect(event.defaultPrevented).toBe(true);
     });
   });
 
@@ -511,7 +600,10 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
         name: 'پاینده توان ساینا (ویرایش‌شده)'
       }));
       expect(mockToast.success).toHaveBeenCalled();
-      expect(component.companyModal.isOpen).toBe(false);
+      // A2: پس از ویرایش کاربر در استودیو می‌ماند و فرم تمیز است
+      expect(component.companyModal.isOpen).toBe(true);
+      expect(component.viewMode).toBe('studio');
+      expect(component.hasUnsavedChanges()).toBe(false);
     });
   });
 
@@ -851,7 +943,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       component.companyModal.data.code = 'SAINA';
       component.companyModal.data.name = 'شرکت ساینا پرداز پیشرو';
       component.companyModal.data.national_id = '14009876545';
-      component.companyModal.data.economic_code = '4111222333';
+      component.companyModal.data.economic_code = '411122233344';
       component.companyModal.data.registration_number = '54321';
       component.companyModal.data.company_type = 'private_joint_stock';
       component.companyModal.data.ceo_name = 'دکتر مهندس پاینده';
@@ -904,10 +996,10 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(createPayload.board_term_expiry).toBe('1405/04/10');
 
       expect(mockToast.success).toHaveBeenCalledWith('شرکت «شرکت ساینا پرداز پیشرو» با موفقیت ثبت شد.');
-      expect(component.companyModal.isOpen).toBe(false);
+      expect(component.companyModal.isOpen).toBe(true);
     });
 
-    it('تست تعاملی تمامی دکمه‌های هدر، فیلترها و سطرهای جدول شرکت‌ها در DOM', () => {
+    it('تست تعاملی تمامی دکمه‌های هدر، فیلترها و سطرهای جدول شرکت‌ها در DOM', async () => {
       const el: HTMLElement = fixture.nativeElement;
 
       // ۱. دکمه خروجی اکسل در هدر
@@ -918,11 +1010,8 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(window.URL.createObjectURL).toHaveBeenCalled();
       expect(mockToast.success).toHaveBeenCalledWith('فایل اکسل با موفقیت دانلود شد.');
 
-      // ۲. دکمه ورود از اکسل در هدر
-      const importBtn = el.querySelector('button[title="ورود اطلاعات از اکسل"]') as HTMLButtonElement;
-      expect(importBtn).not.toBeNull();
-      importBtn.click();
-      expect(mockToast.info).toHaveBeenCalledWith('امکان ورود اطلاعات شرکت‌ها از اکسل در این نسخه آماده است.');
+      // ۲. دکمهٔ «ورود از اکسل» که کار نمی‌کرد حذف شده است (ت۵)
+      expect(el.querySelector('button[title="ورود اطلاعات از اکسل"]')).toBeNull();
 
       // ۳. دکمه رفرش / به‌روزرسانی داده‌ها در هدر
       const refreshBtn = el.querySelector('button[title="به‌روزرسانی داده‌ها"]') as HTMLButtonElement;
@@ -936,7 +1025,11 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
       const studioBtn = Array.from(firstRow!.querySelectorAll('button')).find(b => b.textContent?.includes('استودیو')) as HTMLButtonElement;
       expect(studioBtn).not.toBeNull();
+      navigateSpy.mockClear();
       studioBtn.click();
+      // یک ناوبری با تب مقصد (A1)؛ نمونهٔ مسیر استودیو داده را خودش می‌گیرد
+      expect(navigateSpy).toHaveBeenCalledTimes(1);
+      expect(navigateSpy).toHaveBeenCalledWith(['/app/operations/companies', 1], { queryParams: { tab: 'identity' } });
       fixture.detectChanges();
       expect(component.companyModal.isOpen).toBe(true);
       expect(component.companyModal.isEdit).toBe(true);
@@ -986,6 +1079,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       // بستن مودال استودیو با دکمه ✕ یا دکمه بازگشت به فهرست
       const closeStudioBtn = (el.querySelector('button[title="بازگشت به فهرست شرکت‌ها"]') || el.querySelector('button[title="انصراف و بازگشت"]') || el.querySelector('.fixed.inset-0 button')) as HTMLButtonElement;
       closeStudioBtn.click();
+      await fixture.whenStable();
       fixture.detectChanges();
       expect(component.companyModal.isOpen).toBe(false);
       expect(component.viewMode).toBe('list');
@@ -994,19 +1088,19 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       const updatedFirstRow = el.querySelector('tbody tr') as HTMLTableRowElement;
       expect(updatedFirstRow).not.toBeNull();
 
-      // ۶. تست دکمه «دسترسی‌ها» در سطر جدول
+      // ۶. دکمه «دسترسی‌ها» در سطر جدول به تب «دسترسی» استودیو می‌رود (ت۴؛ مودال جداگانه حذف شد)
       const accessModalBtn = Array.from(updatedFirstRow.querySelectorAll('button')).find(b => b.textContent?.includes('دسترسی‌ها')) as HTMLButtonElement;
       expect(accessModalBtn).not.toBeNull();
+      navigateSpy.mockClear();
       accessModalBtn.click();
+      expect(navigateSpy).toHaveBeenCalledWith(['/app/operations/companies', 1], { queryParams: { tab: 'access' } });
+      component.closeCompanyModal();
+      await fixture.whenStable();
       fixture.detectChanges();
-      expect(component.userAccessModal.isOpen).toBe(true);
-
-      component.closeUserAccessModal();
-      fixture.detectChanges();
-      expect(component.userAccessModal.isOpen).toBe(false);
+      const listRow = el.querySelector('tbody tr') as HTMLTableRowElement;
 
       // ۷. تست دکمه «حذف» در سطر جدول: ابتدا تست گارد مسدودکننده (به دلیل وجود ۲ پروژه فعال)
-      const deleteRowBtn = Array.from(updatedFirstRow.querySelectorAll('button')).find(b => b.textContent?.includes('حذف')) as HTMLButtonElement;
+      const deleteRowBtn = Array.from(listRow.querySelectorAll('button')).find(b => b.textContent?.includes('حذف')) as HTMLButtonElement;
       expect(deleteRowBtn).not.toBeNull();
       deleteRowBtn.click();
       fixture.detectChanges();
@@ -1358,9 +1452,10 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(spyLoadBank).not.toHaveBeenCalled();
     });
 
-    it('نشانگر وضعیت اتصال شبکه (Online / Offline) باید در DOM هدر نمایش داده شود', () => {
+    it('نشانگر وضعیت اتصال شبکه (Online / Offline) باید در DOM هدر نمایش داده شود', async () => {
       // بستن استودیو جهت بازگشت به نمای فهرست و نمایش هدر نوار فرمان
       component.closeCompanyModal();
+      await fixture.whenStable();
       fixture.detectChanges();
       expect(component.viewMode).toBe('list');
 
@@ -1470,7 +1565,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(component.companyModal.data.employer_name).toBe('شرکت پاینده توان ساینا');
     });
 
-    it('دوره‌های مالی رسمی باید در جدول تب ۲ رندر شده و عملیات ایجاد، انجماد، بستن و بازگشایی سال مالی به درستی فراخوانی شوند', () => {
+    it('دوره‌های مالی رسمی باید در جدول تب ۲ رندر شده و عملیات ایجاد، انجماد، بستن و بازگشایی سال مالی به درستی فراخوانی شوند', async () => {
       component.openEditModal(sampleCompanies[0]);
       component.setModalTab('fiscal_insurance');
       fixture.detectChanges();
@@ -1504,18 +1599,27 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
       // تست انجماد سال مالی
       const period = component.companyFiscalPeriods[0];
-      component.freezeFiscalPeriod(period);
+      await component.freezeFiscalPeriod(period);
       expect(mockCompanyApi.freezeFiscalPeriod).toHaveBeenCalledWith(period.id);
       expect(period.status).toBe('frozen');
 
       // تست بستن سال مالی
-      component.closeFiscalPeriod(period);
+      await component.closeFiscalPeriod(period);
       expect(mockCompanyApi.closeFiscalPeriod).toHaveBeenCalledWith(period.id);
       expect(period.status).toBe('closed');
+      // A10: بستن قطعی با پرسش تأیید نوع danger
+      expect(mockConfirmDialog.open).toHaveBeenCalledWith(expect.objectContaining({ type: 'danger' }));
 
       // تست بازگشایی سال مالی
-      component.reopenFiscalPeriod(period);
+      await component.reopenFiscalPeriod(period);
       expect(mockCompanyApi.reopenFiscalPeriod).toHaveBeenCalledWith(period.id);
+      expect(period.status).toBe('open');
+
+      // A10: با «انصراف» در پرسش تأیید، کاری اجرا نمی‌شود
+      mockConfirmDialog.open.mockResolvedValueOnce(false);
+      mockCompanyApi.closeFiscalPeriod.mockClear();
+      await component.closeFiscalPeriod(period);
+      expect(mockCompanyApi.closeFiscalPeriod).not.toHaveBeenCalled();
       expect(period.status).toBe('open');
     });
   });

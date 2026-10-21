@@ -16,6 +16,7 @@ import { OperationsSyncMonitorComponent } from './modules/common/components/oper
 import { OperationsRbacGovernanceComponent } from './modules/common/components/operations/operations-rbac-governance/operations-rbac-governance';
 import { Users } from './modules/common/components/users/users';
 import { CompaniesManagementComponent } from './modules/common/components/operations/companies/companies';
+import { companiesLeaveGuard } from './modules/common/components/operations/companies/companies-leave.guard';
 import { Audit } from './modules/common/components/audit/audit';
 import { HealthDashboardComponent } from './modules/common/components/health-dashboard/health-dashboard';
 import { ModuleRegistryService, getModuleRegistry } from './core/modules/module-registry.service';
@@ -86,8 +87,8 @@ export const routes: Routes = [
       { path: 'backup', redirectTo: 'snapshots', pathMatch: 'full' },
       { path: 'users', component: Users, data: { reuse: true } },
       { path: 'companies', component: CompaniesManagementComponent, data: { reuse: true } },
-      { path: 'companies/new', component: CompaniesManagementComponent, data: { reuse: false } },
-      { path: 'companies/:id', component: CompaniesManagementComponent, data: { reuse: false } },
+      { path: 'companies/new', component: CompaniesManagementComponent, canDeactivate: [companiesLeaveGuard], data: { reuse: false } },
+      { path: 'companies/:id', component: CompaniesManagementComponent, canDeactivate: [companiesLeaveGuard], data: { reuse: false } },
       { path: 'health', component: HealthDashboardComponent, data: { appScope: 'operations', reuse: false } },
       { path: 'audit', component: Audit, data: { appScope: 'security', reuse: true } },
       { path: 'sync-monitor', component: OperationsSyncMonitorComponent, data: { reuse: true } },
