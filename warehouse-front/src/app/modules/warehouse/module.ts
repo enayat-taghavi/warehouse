@@ -130,7 +130,31 @@ export const MODULE: WhFrontendModule = {
       shellLink: { labelFa: 'انبارداری', mobileLabelFa: 'ورود به انبارداری', route: '/app/warehouse/dashboard', icon: 'package', accent: 'indigo' },
       sourceSettings: { labelFa: 'تنظیمات منبع (انبار)', route: '/app/warehouse/wh-settings' },
       monitorLabelFa: 'انبارداری',
-      syncMonitorScope: 'warehouse'
+      syncMonitorScope: 'warehouse',
+      queueLabelFa: 'انبارداری',
+      queueOrder: 10,
+      conflictSimulation: () => ({
+        method: 'PATCH',
+        url: '/api/counting/tasks/101/',
+        body: {
+          quantity: 45,
+          reason: 'شمارش ردیف A-04',
+          notes: 'شمارش انجام‌شده توسط انباردار تبلت ۱'
+        },
+        statusCode: 409,
+        serverMessage: 'تداخل نسخه سرور (409 Conflict): رکورد هم‌زمان توسط کاربر دیگری در سرور تغییر یافته است.',
+        entityType: 'count_task',
+        serverResponse: {
+          error: 'CONFLICT',
+          server_record: {
+            id: 101,
+            quantity: 50,
+            reason: 'ثبت مغایرت توسط سرپرست',
+            notes: 'تطبیق نهایی فیزیکی قفسه',
+            updated_at: new Date().toISOString()
+          }
+        }
+      })
     },
     companies: {
       hasWarehouseModuleToggle: true
@@ -174,7 +198,24 @@ export const MODULE: WhFrontendModule = {
       }
     },
     healthDashboard: {
-      panelScopes: ['warehouse']
+      panelScopes: ['warehouse'],
+      panel: {
+        order: 10,
+        scopeLabelFa: 'انبارداری و لجستیک',
+        tone: 'blue',
+        storageLabelFa: 'انبار',
+        dbLabelEn: 'Warehouse IndexedDB',
+        dbShortEn: 'Warehouse',
+        overview: true,
+        stressScenario: {
+          value: 'warehouse',
+          order: 20,
+          optionLabelFa: 'فقط انبارداری (کسر اتمیک موجودی)',
+          shortLabelFa: 'انبارداری',
+          verdictLabelFa: 'تمامیت اتمیک موجودی انبار:',
+          verdictValueFa: 'تایید شد (کسر دقیق بدون افت تراکنش)'
+        }
+      }
     },
     audit: {
       appScopes: ['warehouse'],

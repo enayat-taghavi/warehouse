@@ -3,9 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   offlineDb,
-  warehouseOfflineDb,
-  financeOfflineDb,
-  LOCKED_OFFLINE_SCOPES,
+  getAllOfflineDbs,
+  getOfflineDb,
+  DEFAULT_OFFLINE_SCOPE,
+  OfflineDatabase,
   normalizeScope,
   resolveOfflineDbStrict,
   SyncQueueEntry,
@@ -54,6 +55,11 @@ export interface ConflictItem {
   timestampShamsi: string;
 }
 
+/** قلمرو صف: نام مستعار قلمرو ثبت‌شده نرمال می‌شود؛ قلمرو بی دیتابیس آفلاین به انبار پیش‌فرض نمی‌ریزد */
+function monitorScope(raw: string): string {
+  return resolveOfflineDbStrict(raw) ? normalizeScope(raw) : raw.toLowerCase();
+}
+
 @Component({
   selector: 'app-operations-sync-monitor',
   standalone: true,
@@ -72,19 +78,50 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
   private confirmDialog = inject(ConfirmDialogService);
   private cdr = inject(ChangeDetectorRef);
 
-  /** ماژول نصب‌شده‌ای صف دیتابیس قفل‌شدهٔ اول (انبار) را پایش می‌کند */
-  get isWarehouseInstalled(): boolean {
-    return this.isLockedScopeMonitored(LOCKED_OFFLINE_SCOPES[0]);
+  /**
+   * صف‌های پایش: هر ماژول این بیلد که syncMonitorScope دارد، به ترتیب queueOrder.
+   * صف ماژول نصب‌نشده هم وقتی رکورد معلق دارد دیده می‌شود تا هیچ داده‌ای پنهان نماند.
+   */
+  private get queueSpecs(): { scope: string; label: string; installed: boolean; order: number }[] {
+    const installed = new Set(this.moduleRegistry.getExtensions('operations')
+      .map(e => e.extension.syncMonitorScope)
+      .filter((s): s is string => !!s)
+      .map(s => monitorScope(s)));
+    const seen = new Set<string>();
+    const specs: { scope: string; label: string; installed: boolean; order: number }[] = [];
+    for (const mod of this.moduleRegistry.getAllModules()) {
+      const ops = mod.extensions?.operations;
+      if (!ops?.syncMonitorScope) continue;
+      const scope = monitorScope(ops.syncMonitorScope);
+      if (seen.has(scope)) continue;
+      seen.add(scope);
+      specs.push({ scope, label: ops.queueLabelFa ?? mod.titleShortFa, installed: installed.has(scope), order: ops.queueOrder ?? 100 });
+    }
+    return specs.sort((a, b) => a.order - b.order);
   }
 
-  /** ماژول نصب‌شده‌ای صف دیتابیس قفل‌شدهٔ دوم (مالی) را پایش می‌کند */
-  get isAccountingInstalled(): boolean {
-    return this.isLockedScopeMonitored(LOCKED_OFFLINE_SCOPES[1]);
+  /** صف‌های قابل‌نمایش با شمار رکوردهای معلق هر کدام؛ صف معلق دیتابیسی که ماژولش در این بیلد نیست زیر «سایر» */
+  get monitoredQueues(): { scope: string; label: string; count: number }[] {
+    const counts = this.queueCounts();
+    const specs = this.queueSpecs;
+    const queues = specs
+      .filter(s => s.installed || (counts[s.scope] || 0) > 0)
+      .map(s => ({ scope: s.scope, label: s.label, count: counts[s.scope] || 0 }));
+    const known = new Set(specs.map(s => s.scope));
+    const other = Object.entries(counts).filter(([scope]) => !known.has(scope)).reduce((sum, [, n]) => sum + (n || 0), 0);
+    if (other > 0) queues.push({ scope: '', label: 'سایر', count: other });
+    return queues;
   }
 
-  private isLockedScopeMonitored(scope: string): boolean {
-    return this.moduleRegistry.getExtensions('operations')
-      .some(e => !!e.extension.syncMonitorScope && normalizeScope(e.extension.syncMonitorScope) === scope);
+  isQueueShown(scope: string): boolean {
+    return this.monitoredQueues.some(q => q.scope === monitorScope(scope));
+  }
+
+  /** نخستین ماژول نصب‌شده‌ای که نمونهٔ تداخل برای آزمایشگاه تداخل عرضه می‌کند */
+  get conflictSimulator(): { scope: string; build: () => Record<string, any> } | null {
+    const ext = this.moduleRegistry.getExtensions('operations')
+      .find(e => !!e.extension.conflictSimulation && !!e.extension.syncMonitorScope);
+    return ext ? { scope: ext.extension.syncMonitorScope!, build: ext.extension.conflictSimulation! } : null;
   }
 
   /** ماژول نصب‌شدهٔ یک کد اپ (کلید اپ لانچر، کد ماژول یا نام مستعار) */
@@ -105,23 +142,8 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
     return { label: mod?.extensions?.operations?.monitorLabelFa ?? mod?.titleShortFa ?? appScope, classes: classes[accent] };
   }
 
-  get showWarehouseQueue(): boolean {
-    return this.isWarehouseInstalled || this.warehouseQueueCount() > 0;
-  }
-
-  get showFinanceQueue(): boolean {
-    return this.isAccountingInstalled || this.financeQueueCount() > 0;
-  }
-
   get queueSummaryText(): string {
-    const parts: string[] = [];
-    if (this.showWarehouseQueue) {
-      parts.push(`انبارداری: ${this.warehouseQueueCount()}`);
-    }
-    if (this.showFinanceQueue) {
-      parts.push(`مالی: ${this.financeQueueCount()}`);
-    }
-    return parts.join(' | ');
+    return this.monitoredQueues.map(q => `${q.label}: ${q.count}`).join(' | ');
   }
 
   public isRefreshing = signal<boolean>(false);
@@ -135,8 +157,8 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
   public tabletFleet = signal<TabletDeviceTelemetry[]>([]);
   public currentDeviceModel = signal<string>('در حال شناسایی...');
 
-  public warehouseQueueCount = signal<number>(0);
-  public financeQueueCount = signal<number>(0);
+  /** شمار رکوردهای صف هر قلمرو (کلید: قلمرو نرمال‌شده) */
+  public queueCounts = signal<Record<string, number>>({});
 
   public selectedConflict: SyncErrorEntry | null = null;
   public showConflictModal = false;
@@ -201,13 +223,13 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
     }
   }
 
-  private errorSourceMap = new Map<SyncErrorEntry, typeof warehouseOfflineDb>();
+  private errorSourceMap = new Map<SyncErrorEntry, OfflineDatabase>();
 
-  getSourceDb(err: SyncErrorEntry | null): typeof warehouseOfflineDb {
-    if (!err) return warehouseOfflineDb;
+  getSourceDb(err: SyncErrorEntry | null): OfflineDatabase {
+    if (!err) return getOfflineDb(DEFAULT_OFFLINE_SCOPE);
     const fromMap = this.errorSourceMap.get(err);
     if (fromMap) return fromMap;
-    return (err.appScope ? resolveOfflineDbStrict(err.appScope) : null) ?? warehouseOfflineDb;
+    return (err.appScope ? resolveOfflineDbStrict(err.appScope) : null) ?? getOfflineDb(DEFAULT_OFFLINE_SCOPE);
   }
 
   /**
@@ -217,28 +239,27 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
     if (showSpinner) this.isRefreshing.set(true);
 
     try {
-      // ۱. پایش دوگانه پایگاه داده‌های محلی (انبارداری + مالی)
-      const [wQueue, fQueue, wErrors, fErrors] = await Promise.all([
-        warehouseOfflineDb.syncQueue.toArray().catch(() => [] as SyncQueueEntry[]),
-        financeOfflineDb.syncQueue.toArray().catch(() => [] as SyncQueueEntry[]),
-        warehouseOfflineDb.syncErrors.where('dismissed').equals(0).toArray().catch(() => [] as SyncErrorEntry[]),
-        financeOfflineDb.syncErrors.where('dismissed').equals(0).toArray().catch(() => [] as SyncErrorEntry[]),
-      ]);
+      // ۱. پایش همهٔ پایگاه داده‌های محلی (هر قلمرو دیتابیس خودش را دارد)
+      const dbs = getAllOfflineDbs();
+      const perDb = await Promise.all(dbs.map(db => Promise.all([
+        db.syncQueue.toArray().catch(() => [] as SyncQueueEntry[]),
+        db.syncErrors.where('dismissed').equals(0).toArray().catch(() => [] as SyncErrorEntry[]),
+      ])));
 
-      this.warehouseQueueCount.set(wQueue.length);
-      this.financeQueueCount.set(fQueue.length);
-
-      // تجمیع صف‌ها و خطاها
+      const counts: Record<string, number> = {};
       this.errorSourceMap.clear();
-      for (const err of wErrors) {
-        this.errorSourceMap.set(err, warehouseOfflineDb);
-      }
-      for (const err of fErrors) {
-        this.errorSourceMap.set(err, financeOfflineDb);
-      }
-
-      const combinedQueue = [...wQueue, ...fQueue];
-      const combinedErrors = [...wErrors, ...fErrors];
+      const combinedQueue: SyncQueueEntry[] = [];
+      const combinedErrors: SyncErrorEntry[] = [];
+      dbs.forEach((db, i) => {
+        const [queue, errors] = perDb[i];
+        counts[db.dbScope] = (counts[db.dbScope] || 0) + queue.length;
+        for (const err of errors) {
+          this.errorSourceMap.set(err, db);
+        }
+        combinedQueue.push(...queue);
+        combinedErrors.push(...errors);
+      });
+      this.queueCounts.set(counts);
 
       this.queueItems.set(combinedQueue);
       this.conflictErrors.set(combinedErrors);
@@ -466,13 +487,10 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
     try {
       // هیچ رکوردی حذف نمی‌شود: syncErrors تنها نسخه بدنه ردشده است و retryError هر کد 4xx را دوباره به صف می‌برد.
       // پس فقط خطاهای غیر ۴۰۹ دیده‌نشده پنهان (dismissed) می‌شوند؛ شکست هر پایگاه به catch بیرونی می‌رسد.
-      const dismissNonConflicts = (db: typeof warehouseOfflineDb) =>
+      const dismissNonConflicts = (db: OfflineDatabase) =>
         db.syncErrors.where('dismissed').equals(0).filter(e => e.statusCode !== 409).modify({ dismissed: 1 });
 
-      await Promise.all([
-        dismissNonConflicts(warehouseOfflineDb),
-        dismissNonConflicts(financeOfflineDb),
-      ]);
+      await Promise.all(getAllOfflineDbs().map(db => dismissNonConflicts(db)));
       this.toast.show('success', 'خطاهای غیر تداخلی از فهرست پنهان شدند؛ داده آن‌ها روی دستگاه محفوظ است.');
       await this.refreshTelemetry();
     } catch {
@@ -482,36 +500,20 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
 
   /**
    * شبیه‌سازی یک تداخل ۴۰۹ واقعی جهت تست موتور حل اختلاف و ۳-Way Merge.
-   * فقط در نصب دارای انبار (L16): نمونهٔ مالی به نشانی واقعیِ سرور نمی‌رسد و حل آن
-   * رکورد ساختگی را در صف واقعی مالی می‌چرخاند؛ پس در نبود انبار دکمه پنهان است.
+   * نمونه را ماژول نصب‌شدهٔ صاحب آن (operations.conflictSimulation) می‌دهد و در syncErrors دیتابیس همان ماژول
+   * ثبت می‌شود (L16)؛ بی چنین ماژولی دکمه پنهان است و چیزی نوشته نمی‌شود.
    */
   async simulateConflictScenario(): Promise<void> {
-    if (!this.isWarehouseInstalled) return;
+    const simulator = this.conflictSimulator;
+    if (!simulator) return;
+    const db = resolveOfflineDbStrict(simulator.scope);
+    if (!db) return;
     try {
-      await warehouseOfflineDb.syncErrors.add({
-        method: 'PATCH',
-        url: '/api/counting/tasks/101/',
-        body: {
-          quantity: 45,
-          reason: 'شمارش ردیف A-04',
-          notes: 'شمارش انجام‌شده توسط انباردار تبلت ۱'
-        },
-        statusCode: 409,
-        serverMessage: 'تداخل نسخه سرور (409 Conflict): رکورد هم‌زمان توسط کاربر دیگری در سرور تغییر یافته است.',
+      await db.syncErrors.add({
+        ...simulator.build(),
         failedAt: Date.now(),
-        dismissed: 0,
-        entityType: 'count_task',
-        serverResponse: {
-          error: 'CONFLICT',
-          server_record: {
-            id: 101,
-            quantity: 50,
-            reason: 'ثبت مغایرت توسط سرپرست',
-            notes: 'تطبیق نهایی فیزیکی قفسه',
-            updated_at: new Date().toISOString()
-          }
-        }
-      });
+        dismissed: 0
+      } as SyncErrorEntry);
       this.toast.show('warning', 'یک تداخل نمونه ۴۰۹ در آزمایشگاه تداخل ثبت گردید.');
       await this.refreshTelemetry();
     } catch (e) {

@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { warehouseOfflineDb, financeOfflineDb, getAllOfflineDbs, getCurrentActiveAppScope } from './offline-db';
+import { getAllOfflineDbs, getCurrentActiveAppScope } from './offline-db';
 import { NetworkStatusService } from './network-status.service';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
@@ -38,10 +38,8 @@ export interface ClientStorageHealth {
   usagePercent: number;
   formattedUsed: string;
   formattedTotal: string;
-  warehouseRecords: number;
-  financeRecords: number;
-  /** صف و کش دیتابیس‌های آفلاین ماژول‌های دیگر (غیر از دو دیتابیس قفل‌شده) */
-  otherRecords: number;
+  /** شمار رکوردهای کش و صف هر دیتابیس آفلاین، با کلید قلمرو آن (dbScope) */
+  recordsByScope: Record<string, number>;
   status: 'healthy' | 'warning' | 'critical';
 }
 
@@ -240,26 +238,17 @@ export class SystemHealthService {
       } catch {}
     }
 
-    // شمارش رکوردهای کش و صف در دیتابیس‌های تفکیک‌شده
-    let whCount = 0;
-    let finCount = 0;
-    let otherCount = 0;
-
+    // شمارش رکوردهای کش و صف در هر دیتابیس تفکیک‌شده (همهٔ قلمروها)
+    const recordsByScope: Record<string, number> = {};
     try {
-      const [whQ, whC, finQ, finC] = await Promise.all([
-        warehouseOfflineDb.syncQueue.count().catch(() => 0),
-        warehouseOfflineDb.apiCache.count().catch(() => 0),
-        financeOfflineDb.syncQueue.count().catch(() => 0),
-        financeOfflineDb.apiCache.count().catch(() => 0),
-      ]);
-      whCount = whQ + whC;
-      finCount = finQ + finC;
-      const others = getAllOfflineDbs().filter(db => db !== warehouseOfflineDb && db !== financeOfflineDb);
-      const otherCounts = await Promise.all(others.map(db => Promise.all([
+      const dbs = getAllOfflineDbs();
+      const counts = await Promise.all(dbs.map(db => Promise.all([
         db.syncQueue.count().catch(() => 0),
         db.apiCache.count().catch(() => 0),
       ])));
-      otherCount = otherCounts.reduce((acc, [q, c]) => acc + q + c, 0);
+      dbs.forEach((db, i) => {
+        recordsByScope[db.dbScope] = (recordsByScope[db.dbScope] || 0) + counts[i][0] + counts[i][1];
+      });
     } catch {}
 
     const percent = total > 0 ? Math.round((used / total) * 100) : 0;
@@ -271,9 +260,7 @@ export class SystemHealthService {
       usagePercent: percent,
       formattedUsed: this.formatBytes(used),
       formattedTotal: this.formatBytes(total),
-      warehouseRecords: whCount,
-      financeRecords: finCount,
-      otherRecords: otherCount,
+      recordsByScope,
       status,
     };
   }

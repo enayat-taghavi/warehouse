@@ -46,7 +46,7 @@ describe('OperationsCockpitComponent DOM & Modular Profiles Tests', () => {
       healthScore$: of(98),
       networkPingMs$: of(10),
       serverHealth$: of({ components: { database: { status: 'healthy' } } }),
-      clientStorage$: of({ warehouseRecords: 120, financeRecords: 80 }),
+      clientStorage$: of({ recordsByScope: { warehouse: 120, finance: 80 } }),
       serviceWorker$: of({ active: true }),
       lastReport$: of(null),
       runFullDiagnostic: vi.fn().mockResolvedValue({})

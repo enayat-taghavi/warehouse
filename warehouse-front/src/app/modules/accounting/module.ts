@@ -177,7 +177,9 @@ export const MODULE: WhFrontendModule = {
       shellLink: { labelFa: 'مالی', mobileLabelFa: 'ورود به سامانه مالی', route: '/app/finance', icon: 'credit-card', accent: 'emerald' },
       monitorLabelFa: 'مالی و خزانه‌داری',
       hasExpiringDocsWidget: true,
-      syncMonitorScope: 'accounting'
+      syncMonitorScope: 'accounting',
+      queueLabelFa: 'مالی',
+      queueOrder: 20
     },
     companies: {
       providesTreasury: true
@@ -229,7 +231,23 @@ export const MODULE: WhFrontendModule = {
       }
     },
     healthDashboard: {
-      panelScopes: ['accounting']
+      panelScopes: ['accounting'],
+      panel: {
+        order: 20,
+        scopeLabelFa: 'امور مالی و حقوق',
+        tone: 'purple',
+        storageLabelFa: 'مالی',
+        dbLabelEn: 'Finance & HR IndexedDB',
+        dbShortEn: 'Finance',
+        stressScenario: {
+          value: 'treasury',
+          order: 10,
+          optionLabelFa: 'فقط خزانه‌داری (جلوگیری از پرداخت دوبل)',
+          shortLabelFa: 'خزانه‌داری',
+          verdictLabelFa: 'گارد خزانه‌داری (ممانعت از پرداخت دوبل):',
+          verdictValueFa: 'تایید شد (۱ پرداخت نهایی)'
+        }
+      }
     },
     audit: {
       appScopes: ['finance'],

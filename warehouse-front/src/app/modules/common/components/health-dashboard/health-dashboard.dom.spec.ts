@@ -24,6 +24,8 @@ describe('HealthDashboard DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () =
   let mockPersona: any;
   let mockAuth: any;
   let mockRegistry: any;
+  let whExtRef: any;
+  let accExtRef: any;
 
   beforeAll(async () => {
     let localStore: Record<string, string> = {};
@@ -51,7 +53,7 @@ describe('HealthDashboard DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () =
       isDiagnosing$: of(false),
       networkPingMs$: of(12),
       serverHealth$: of({ components: {} }),
-      clientStorage$: of({ warehouseRecords: 40, financeRecords: 15 }),
+      clientStorage$: of({ recordsByScope: { warehouse: 40, finance: 15 } }),
       serviceWorker$: of({ active: true }),
       lastReport$: of(null),
       diagnosticReport$: of(null),
@@ -61,6 +63,25 @@ describe('HealthDashboard DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () =
     };
 
     let activeScopes: string[] = ['warehouse', 'accounting'];
+    // پنل‌های healthDashboard دو ماژول، همان مقادیر module.ts هر ماژول (spec نمی‌تواند از modules/* ایمپورت کند)
+    const whExt = {
+      panelScopes: ['warehouse'],
+      panel: {
+        order: 10, scopeLabelFa: 'انبارداری و لجستیک', tone: 'blue', storageLabelFa: 'انبار',
+        dbLabelEn: 'Warehouse IndexedDB', dbShortEn: 'Warehouse', overview: true,
+        stressScenario: { value: 'warehouse', order: 20, optionLabelFa: 'فقط انبارداری (کسر اتمیک موجودی)', shortLabelFa: 'انبارداری', verdictLabelFa: 'تمامیت اتمیک موجودی انبار:', verdictValueFa: 'تایید شد (کسر دقیق بدون افت تراکنش)' }
+      }
+    };
+    const accExt = {
+      panelScopes: ['accounting'],
+      panel: {
+        order: 20, scopeLabelFa: 'امور مالی و حقوق', tone: 'purple', storageLabelFa: 'مالی',
+        dbLabelEn: 'Finance & HR IndexedDB', dbShortEn: 'Finance',
+        stressScenario: { value: 'treasury', order: 10, optionLabelFa: 'فقط خزانه‌داری (جلوگیری از پرداخت دوبل)', shortLabelFa: 'خزانه‌داری', verdictLabelFa: 'گارد خزانه‌داری (ممانعت از پرداخت دوبل):', verdictValueFa: 'تایید شد (۱ پرداخت نهایی)' }
+      }
+    };
+    whExtRef = whExt;
+    accExtRef = accExt;
 
     mockRegistry = {
       isModuleInstalled: vi.fn().mockImplementation((code: string) => activeScopes.includes(code)),
@@ -68,15 +89,19 @@ describe('HealthDashboard DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () =
         if (point === 'healthDashboard') {
           const list: any[] = [];
           if (activeScopes.includes('warehouse')) {
-            list.push({ module: { code: 'warehouse' }, extension: { panelScopes: ['warehouse'] } });
+            list.push({ module: { code: 'warehouse' }, extension: whExt });
           }
           if (activeScopes.includes('accounting')) {
-            list.push({ module: { code: 'accounting' }, extension: { panelScopes: ['accounting'] } });
+            list.push({ module: { code: 'accounting' }, extension: accExt });
           }
           return list;
         }
         return [];
-      })
+      }),
+      getAllModules: vi.fn().mockImplementation(() => [
+        { code: 'warehouse', extensions: { healthDashboard: whExt } },
+        { code: 'accounting', extensions: { healthDashboard: accExt } }
+      ])
     };
 
     mockPersona = {
@@ -114,8 +139,7 @@ describe('HealthDashboard DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () =
     mockRegistry.isModuleInstalled.mockReturnValue(true);
     fixture.detectChanges();
 
-    expect(component.isWarehouseInstalled).toBe(true);
-    expect(component.isAccountingInstalled).toBe(true);
+    expect(component.panels.map(p => p.scope)).toEqual(['warehouse', 'finance']);
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('انبار: 40');
@@ -125,15 +149,14 @@ describe('HealthDashboard DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () =
   it('در حالت تک‌ماژول حسابداری (بدون انبار)، detectScope قلمرو مالی را انتخاب کرده و رکوردهای انبار نمایش داده نمی‌شوند (L20)', () => {
     mockRegistry.getExtensions.mockImplementation((point: string) => {
       if (point === 'healthDashboard') {
-        return [{ module: { code: 'accounting' }, extension: { panelScopes: ['accounting'] } }];
+        return [{ module: { code: 'accounting' }, extension: accExtRef }];
       }
       return [];
     });
     component.detectScope();
     fixture.detectChanges();
 
-    expect(component.isWarehouseInstalled).toBe(false);
-    expect(component.isAccountingInstalled).toBe(true);
+    expect(component.panels.map(p => p.scope)).toEqual(['finance']);
     expect(component.appScope).toBe('finance');
     expect(component.selectedScenario).toBe('treasury');
 
@@ -146,15 +169,14 @@ describe('HealthDashboard DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () =
   it('در حالت تک‌ماژول انبارداری (بدون مالی)، detectScope قلمرو انبار را انتخاب کرده و گزینه‌های خزانه‌داری پنهان می‌مانند (L20)', () => {
     mockRegistry.getExtensions.mockImplementation((point: string) => {
       if (point === 'healthDashboard') {
-        return [{ module: { code: 'warehouse' }, extension: { panelScopes: ['warehouse'] } }];
+        return [{ module: { code: 'warehouse' }, extension: whExtRef }];
       }
       return [];
     });
     component.detectScope();
     fixture.detectChanges();
 
-    expect(component.isWarehouseInstalled).toBe(true);
-    expect(component.isAccountingInstalled).toBe(false);
+    expect(component.panels.map(p => p.scope)).toEqual(['warehouse']);
     expect(component.appScope).toBe('warehouse');
     expect(component.selectedScenario).toBe('warehouse');
 
@@ -170,5 +192,49 @@ describe('HealthDashboard DOM & Browser Unit Test (Type 1 Vitest + JSDOM)', () =
 
     expect(component.appScope).toBe('warehouse');
     expect(component.selectedScenario).toBe('combined');
+  });
+
+  it('در نصب کامل متن‌ها همان دو قلمرو قبلی است (برچسب دیتابیس، رکوردها، سناریوها و نتیجه)', () => {
+    mockRouter.url = '/app/warehouse/health';
+    component.detectScope();
+    expect(component.dbLabel).toBe('Warehouse & Finance DBs');
+    expect(component.focusPanel?.scopeLabelFa).toBe('انبارداری و لجستیک');
+    expect(component.stressOptions.map(o => o.label)).toEqual([
+      'ترکیبی (خزانه‌داری + انبارداری)', 'فقط خزانه‌داری (جلوگیری از پرداخت دوبل)', 'فقط انبارداری (کسر اتمیک موجودی)'
+    ]);
+    expect(component.stressDescription).toContain('تراکنش موازی خزانه‌داری و انبارداری جهت');
+    expect(component.stressVerdicts.map(v => v.label)).toEqual(['گارد خزانه‌داری (ممانعت از پرداخت دوبل):', 'تمامیت اتمیک موجودی انبار:']);
+
+    mockRouter.url = '/app/finance/health';
+    component.detectScope();
+    expect(component.appScope).toBe('finance');
+    expect(component.selectedScenario).toBe('treasury');
+    expect(component.dbLabel).toBe('Finance & HR IndexedDB');
+    expect(component.stressOptions.map(o => o.value)).toEqual(['treasury']);
+  });
+
+  it('قلمرو سوم بی‌تغییر پوسته در نمای کلی، رکوردها و سناریوها می‌آید', () => {
+    const thirdExt = {
+      panelScopes: ['showcase'],
+      panel: {
+        order: 30, scopeLabelFa: 'نمایشی', tone: 'blue', storageLabelFa: 'نمایشی', dbLabelEn: 'Showcase IndexedDB', dbShortEn: 'Showcase',
+        stressScenario: { value: 'showcase', order: 30, optionLabelFa: 'فقط نمایشی', shortLabelFa: 'نمایشی', verdictLabelFa: 'نمایشی:', verdictValueFa: 'تایید شد' }
+      }
+    };
+    mockRegistry.getExtensions.mockImplementation((point: string) => point === 'healthDashboard'
+      ? [{ module: { code: 'warehouse' }, extension: whExtRef }, { module: { code: 'accounting' }, extension: accExtRef }, { module: { code: 'showcase' }, extension: thirdExt }]
+      : []);
+    mockRegistry.getAllModules.mockImplementation(() => [
+      { code: 'warehouse', extensions: { healthDashboard: whExtRef } },
+      { code: 'accounting', extensions: { healthDashboard: accExtRef } },
+      { code: 'showcase', extensions: { healthDashboard: thirdExt } }
+    ]);
+    mockRouter.url = '/app/warehouse/health';
+    component.storage = { recordsByScope: { warehouse: 1, finance: 2, showcase: 3 } } as any;
+    component.detectScope();
+    expect(component.panels.length).toBe(3);
+    expect(component.dbLabel).toBe('Warehouse & Finance & Showcase DBs');
+    expect(component.storageSummary).toBe('انبار: 1 | مالی: 2 | نمایشی: 3');
+    expect(component.stressOptions[0].label).toBe('ترکیبی (خزانه‌داری + انبارداری + نمایشی)');
   });
 });

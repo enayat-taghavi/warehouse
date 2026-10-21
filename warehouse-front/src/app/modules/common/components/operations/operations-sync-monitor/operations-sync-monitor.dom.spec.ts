@@ -79,8 +79,7 @@ describe('OperationsSyncMonitorComponent DOM & Browser Unit Test (Type 1 Vitest 
     const registry = TestBed.inject(ModuleRegistryService);
     registry.setInstalledModules(['platform', 'warehouse', 'accounting']);
 
-    component.warehouseQueueCount.set(0);
-    component.financeQueueCount.set(0);
+    component.queueCounts.set({ warehouse: 0, finance: 0 });
     fixture.detectChanges();
 
     expect(component.queueSummaryText).toBe('انبارداری: 0 | مالی: 0');
@@ -90,12 +89,11 @@ describe('OperationsSyncMonitorComponent DOM & Browser Unit Test (Type 1 Vitest 
     const registry = TestBed.inject(ModuleRegistryService);
     registry.setInstalledModules(['platform', 'accounting']);
 
-    component.warehouseQueueCount.set(0);
-    component.financeQueueCount.set(0);
+    component.queueCounts.set({ warehouse: 0, finance: 0 });
     fixture.detectChanges();
 
-    expect(component.showWarehouseQueue).toBe(false);
-    expect(component.showFinanceQueue).toBe(true);
+    expect(component.isQueueShown('warehouse')).toBe(false);
+    expect(component.isQueueShown('finance')).toBe(true);
     expect(component.queueSummaryText).toBe('مالی: 0');
   });
 
@@ -103,12 +101,11 @@ describe('OperationsSyncMonitorComponent DOM & Browser Unit Test (Type 1 Vitest 
     const registry = TestBed.inject(ModuleRegistryService);
     registry.setInstalledModules(['platform', 'accounting']);
 
-    component.warehouseQueueCount.set(3);
-    component.financeQueueCount.set(1);
+    component.queueCounts.set({ warehouse: 3, finance: 1 });
     fixture.detectChanges();
 
-    expect(component.showWarehouseQueue).toBe(true);
-    expect(component.showFinanceQueue).toBe(true);
+    expect(component.isQueueShown('warehouse')).toBe(true);
+    expect(component.isQueueShown('finance')).toBe(true);
     expect(component.queueSummaryText).toBe('انبارداری: 3 | مالی: 1');
   });
 
@@ -116,12 +113,11 @@ describe('OperationsSyncMonitorComponent DOM & Browser Unit Test (Type 1 Vitest 
     const registry = TestBed.inject(ModuleRegistryService);
     registry.setInstalledModules(['platform', 'warehouse']);
 
-    component.warehouseQueueCount.set(0);
-    component.financeQueueCount.set(0);
+    component.queueCounts.set({ warehouse: 0, finance: 0 });
     fixture.detectChanges();
 
-    expect(component.showWarehouseQueue).toBe(true);
-    expect(component.showFinanceQueue).toBe(false);
+    expect(component.isQueueShown('warehouse')).toBe(true);
+    expect(component.isQueueShown('finance')).toBe(false);
     expect(component.queueSummaryText).toBe('انبارداری: 0');
   });
 

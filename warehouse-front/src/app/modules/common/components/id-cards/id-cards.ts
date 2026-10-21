@@ -26,7 +26,6 @@ import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
 import { printWindow, saveUrl } from '../../../../core/platform/file-output';
 import { publicOrigin } from '../../../../core/platform/server-origin';
 
-import { LOCKED_OFFLINE_SCOPES } from '../../../../core/services/offline-db';
 
 @Component({
   selector: 'app-id-cards',
@@ -211,8 +210,11 @@ export class IdCards implements OnInit {
   }
 
   get isWarehouseScope(): boolean {
-    // قلمرو دوم قفل‌شده (مالی) کارت انبار ندارد
-    return this.isWarehouseInstalled && this.state.appState.appScope !== LOCKED_OFFLINE_SCOPES[1];
+    // قلمرو فعالی که ماژول صاحبش کارت شناسایی ندارد (مثلاً قلمرو مالی)، کارت انبار نمی‌گیرد
+    const appScope = this.state.appState.appScope;
+    const owner = this.registry.getExtensions('offlineSync').find(e => e.extension.scopeKind === appScope);
+    const ownerHasCards = !!owner && this.registry.getExtensions('idCards').some(e => e.moduleCode === owner.moduleCode && !!e.extension.supported);
+    return this.isWarehouseInstalled && (!owner || ownerHasCards);
   }
 
   ngOnInit() {
