@@ -308,7 +308,7 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     expect(component.tableColspan).toBe(11);
 
     const firstRowText = el.querySelector('tbody tr:first-child')?.textContent || '';
-    expect(firstRowText).toContain('2 پروژه');
+    expect(firstRowText).toContain('۲ پروژه');
     expect(firstRowText).toContain('مدرک معتبر');
 
     // کارت موبایل: «پروژه‌ها» در جدول مشخصات و «وضعیت مدارک» در ردیف کامل
@@ -316,7 +316,7 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     expect(card.querySelector('.grid app-company-projects-cell')?.textContent).toContain('پروژه‌ها:');
     expect(card.querySelector(':scope > app-company-documents-health-cell')?.textContent).toContain('وضعیت مدارک:');
     expect(card.textContent).toContain('مدرک معتبر');
-    expect(el.textContent).toContain('در آستانه انقضا (1)');
+    expect(el.textContent).toContain('در آستانه انقضا (۱)');
   });
 
   it('با نصب حسابداری: دکمهٔ گوگل‌درایو ردیف (rowActions) تب گوگل‌درایو استودیو را باز می‌کند؛ بدون حسابداری دکمه‌ای نیست', async () => {

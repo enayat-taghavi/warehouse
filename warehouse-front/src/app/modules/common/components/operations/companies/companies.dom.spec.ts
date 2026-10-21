@@ -354,7 +354,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
       expect(firstRow.textContent).toContain('10101234565');
       expect(firstRow.textContent).toContain('مهندس پاینده');
-      expect(firstRow.textContent).toContain('2 پروژه');
+      expect(firstRow.textContent).toContain('۲ پروژه');
     });
 
     it('ردیف دوم که شرکت فعال جاری نیست نباید نشان «فعال جاری» داشته باشد', async () => {
@@ -365,7 +365,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(secondRow.textContent).toContain('FA');
       expect(secondRow.textContent).toContain('فارس عالیش');
       expect(secondRow.textContent).not.toContain('فعال جاری');
-      expect(secondRow.textContent).toContain('1 پروژه');
+      expect(secondRow.textContent).toContain('۱ پروژه');
     });
   });
 
