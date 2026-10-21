@@ -23,6 +23,9 @@ scripts/e2e/guardian_modularization.py -export-ignore
 scripts/e2e/guardian_57_front_module_fence.py -export-ignore
 scripts/e2e/modularization_baseline.json -export-ignore
 scripts/e2e/front_fence_baseline.json -export-ignore
+scripts/e2e/core_literal_allowlist.py -export-ignore
+scripts/e2e/core_literal_allowlist.json -export-ignore
+scripts/e2e/module_coupling_scan.py -export-ignore
 scripts/setup_e2e_data.py export-ignore
 scripts/test_guard_hooks.py export-ignore
 
