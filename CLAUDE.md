@@ -99,9 +99,10 @@ Plan: warehouse counting and accounting as two independently installable modules
 - **Phase 1:** app `settings_core`; `SystemSetting` moved (zero data migration); `warehouse_id` column numeric; CASCADE behavior via a `post_delete` signal in `warehouses/signals.py`.
 - **Phase 2:** cut the core → warehouse edges (expand-contract, zero data migration): M2M `assigned_warehouses` moved to `warehouses`; `AuditLog.warehouse_id` numeric; `AUDIT_MODULES` registry; `setup_project.py` moved to `warehouses/management/commands/`. Migrations were squashed on 9 Sep 2026 (commit `4247d0c`), so old numbers like `accounts/0035` no longer exist.
 - **Phase 3 onward** are done: `INSTALLED_APPS` is built from the `platform_core/module_catalog.py` registry, and the `WH_MODULES` variable builds a single-module profile.
-- **Deep modularization (`Documents/Deep_Modularization_Phase4/`) closed on 21 Oct 2026.** Module names left in the backend core and front `core/`/`shared/` are only data, protocol, offline-DB-lock or dev-tooling literals. Each one is listed in `scripts/e2e/core_literal_allowlist.json` with a category and a reason.
+- **Deep modularization (`Documents/Deep_Modularization_Phase4/`) closed on 21 Oct 2026.** Module names left in the backend core and in the front shell (`core/`, `shared/`, `modules/common/`, ts and html) are only data, protocol, offline-DB-lock or dev-tooling literals. Each one is listed in `scripts/e2e/core_literal_allowlist.json` with a category and a reason.
   - Guardians 29 and 57 fail on any literal not in the list and on any stale entry.
-  - Guardian 57 also requires zero module route paths (`/app/<module prefix>`) in core, shared and the composition root.
+  - Guardian 57 also requires zero module route paths (`/app/<module prefix>`) in the shell and composition root, and zero literals naming another module inside a module (`cross_module_literals`).
+  - Guardian 29 requires zero imports or `apps.get_model`/`is_installed` of another module's app inside a module (`cross_module_app_refs`). Cross-module behaviour goes through the platform registry (`contribute`/`contributions`, `resolve_entity`, e.g. `file_sync_sources`/`file_sync_sinks`).
   - New module-specific behaviour goes through module extensions, never core branches:
     - `syncConfig` hooks: `purgeBeforeDeepUpdate`, `purgeOnAccessRevoked`, `legacyCursorKey`, `targetLabelFa`.
     - `userMenu.deepSync`, `launcherTile.switcher` and `offlineSync.sensitiveConflicts`.
