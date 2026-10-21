@@ -529,6 +529,39 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(mockCompanyApi.create).toHaveBeenCalledTimes(1);
     });
 
+    it('شکست لوگو پس از ثبت شرکت فایل را دور نمی‌ریزد و با state ناوبری به استودیوی تازه می‌برد', async () => {
+      mockCompanyApi.uploadLogo.mockReturnValueOnce(throwError(() => ({ status: 503, error: {} })));
+      component.openCreateModal();
+      component.companyModal.data.code = 'LOGO';
+      component.companyModal.data.name = 'شرکت لوگو';
+      const file = new File(['x'], 'logo.png', { type: 'image/png' });
+      component.selectedLogoFile = file;
+      navigateSpy.mockClear();
+
+      component.submitCompanyForm();
+      // دکمهٔ ثبت تا ناوبری قفل است تا POST تکراری نرود
+      expect(component.companyModal.isSubmitting).toBe(true);
+      await fixture.whenStable();
+
+      expect(navigateSpy).toHaveBeenCalledWith(['/app/operations/companies', 3],
+        expect.objectContaining({ replaceUrl: true, state: { pendingLogo: file } }));
+      expect(mockToast.warning).toHaveBeenCalledWith(expect.stringContaining('فایل نگه داشته شد'));
+    });
+
+    it('پاسخ ویرایش نوشته‌های هم‌زمان کاربر را پاک نمی‌کند و فرم تغییرکرده می‌ماند', () => {
+      const pending = new Subject<any>();
+      mockCompanyApi.update.mockReturnValueOnce(pending);
+      component.populateStudioData(sampleCompanies[0]);
+      component.companyModal.data.name = 'نام ذخیره‌شده';
+      component.submitCompanyForm();
+      // کاربر در فاصلهٔ ذخیره تایپ می‌کند
+      component.companyModal.data.address = 'نشانی تایپ‌شده در حین ذخیره';
+      pending.next({ ...sampleCompanies[0], name: 'نام ذخیره‌شده' });
+
+      expect(component.companyModal.data.address).toBe('نشانی تایپ‌شده در حین ذخیره');
+      expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
     it('خطای فیلدی سرور در تب دیگر نشان داده می‌شود و تب نخستین خطا باز می‌شود (A18)', () => {
       mockCompanyApi.create.mockReturnValueOnce(throwError(() => ({ status: 400, error: { workshop_code: ['کد کارگاه تکراری است.'] } })));
       component.openCreateModal();

@@ -89,6 +89,11 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   ];
   private static readonly TREASURY_TAB_FIELDS = ['primary_bank_name', 'primary_account_number', 'primary_iban'];
   private static readonly CORE_DOC_MAX_BYTES = 20 * 1024 * 1024;
+  /** فیلدهایی که زیرشان پیام خطا نمایش داده می‌شود */
+  private static readonly FIELD_ERROR_KEYS = [
+    'code', 'name', 'national_id', 'registration_number', 'phone', 'postal_code', 'workshop_code',
+    'economic_code', 'tax_memory_id', 'tax_economic_code', 'social_security_branch_code', 'contract_row'
+  ];
 
   private api = inject(CompanyApiService);
   private companyApi = this.api;
@@ -134,6 +139,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   private studioSnapshot: string | null = null;
   /** پس از ذخیرهٔ موفق و هنگام رفتن به نشانی شرکت تازه، هشدار خروج لازم نیست */
   private leavingAfterSave = false;
+  /** لوگویی که بارگذاری‌اش پس از ثبت شرکت شکست خورد و با state ناوبری به این نمونه رسید */
+  private pendingLogoFromNavigation: File | null = null;
   private systemUsersRequested = false;
 
   // فیلتر جستجوی زنده درجا
@@ -392,6 +399,10 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       this.isOnline = this.network.isOnline;
       this.cdr.markForCheck();
     });
+    const navState = this.router?.getCurrentNavigation()?.extras?.state as { pendingLogo?: unknown } | undefined;
+    if (navState?.pendingLogo instanceof File) {
+      this.pendingLogoFromNavigation = navState.pendingLogo;
+    }
     this.setupDateControls();
     this.setupSearch();
     // مسیر نخست خوانده می‌شود تا در حالت استودیو فهرست شرکت‌ها بی‌دلیل دریافت نشود
@@ -1069,18 +1080,29 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   }
 
   /** پس از ذخیرهٔ موفق، فرم با پاسخ سرور هم‌گام می‌شود و فرم‌های فرعی تب‌های دیگر دست نمی‌خورند */
-  private applySavedCompany(company: Company): void {
-    this.companyModal = {
-      ...this.companyModal,
-      isEdit: true,
-      data: this.buildStudioData(company),
-      errors: {}
-    };
+  private applySavedCompany(company: Company, sentDataJson: string): void {
+    const serverData = this.buildStudioData(company);
+    if (JSON.stringify(this.companyModal.data) !== sentDataJson) {
+      // کاربر در فاصلهٔ ذخیره تایپ کرده است: نوشته‌هایش می‌ماند و فرم تغییرنکرده حساب نمی‌شود
+      this.studioSnapshot = JSON.stringify(serverData);
+      this.companyModal = { ...this.companyModal, isEdit: true, errors: {} };
+    } else {
+      this.companyModal = { ...this.companyModal, isEdit: true, data: serverData, errors: {} };
+      this.regDateControl.setValue(company.registration_date || '', { emitEvent: false });
+      this.takeStudioSnapshot();
+    }
     if (!this.selectedLogoFile) {
       this.logoPreviewUrl = this.logoUrlFor(company.logo);
     }
-    this.regDateControl.setValue(company.registration_date || '', { emitEvent: false });
-    this.takeStudioSnapshot();
+  }
+
+  /** پس از بارگذاری یا حذف لوگو فقط فیلد لوگو تازه می‌شود */
+  private applySavedLogo(company: Company): void {
+    this.companyModal.data.logo = company.logo || null;
+    this.patchStudioSnapshot('logo', company.logo || null);
+    if (!this.selectedLogoFile) {
+      this.logoPreviewUrl = this.logoUrlFor(company.logo);
+    }
   }
 
   populateStudioData(company: Company): void {
@@ -1116,6 +1138,11 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       errors: {}
     };
     this.takeStudioSnapshot();
+    if (this.pendingLogoFromNavigation) {
+      // لوگوی ثبت‌نشده تغییر ذخیره‌نشده حساب می‌شود تا بی‌صدا از دست نرود
+      this.onLogoFileSelected({ target: { files: [this.pendingLogoFromNavigation] } });
+      this.pendingLogoFromNavigation = null;
+    }
 
     // دادهٔ همهٔ تب‌ها یک بار برای هر شرکت دریافت می‌شود (برای شمارندهٔ تب‌ها)؛ کلیک تب دوباره دریافت نمی‌کند
     if (company.id) {
@@ -2565,16 +2592,23 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   private applyServerErrors(err: any, fallback: string): void {
     const body = err?.error;
     const errors: { [key: string]: string } = {};
+    const otherMessages: string[] = [];
     if (body && typeof body === 'object' && !Array.isArray(body)) {
       for (const [key, value] of Object.entries(body)) {
-        if (key === 'detail' || key === 'non_field_errors' || !(key in this.companyModal.data)) continue;
+        if (key === 'detail' || key === 'non_field_errors') continue;
         const msg = Array.isArray(value) ? value[0] : value;
-        if (typeof msg === 'string' && msg) errors[key] = msg;
+        if (typeof msg !== 'string' || !msg) continue;
+        if (CompaniesManagementComponent.FIELD_ERROR_KEYS.includes(key)) {
+          errors[key] = msg;
+        } else {
+          // فیلدی که جای پیام ندارد: پیام خودش در toast می‌آید
+          otherMessages.push(msg);
+        }
       }
     }
     this.companyModal = { ...this.companyModal, errors };
     this.openFirstErrorTab();
-    const detail = body?.detail || body?.non_field_errors?.[0];
+    const detail = body?.detail || body?.non_field_errors?.[0] || otherMessages[0];
     const fieldCount = Object.keys(errors).length;
     this.toast.error(detail || (fieldCount ? 'برخی فیلدها خطا دارند؛ موارد مشخص‌شده را اصلاح کنید.' : fallback));
     this.cdr.markForCheck();
@@ -2621,6 +2655,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
     this.companyModal.isSubmitting = true;
     const d = this.companyModal.data;
+    const sentDataJson = JSON.stringify(d);
     const text = (v: string | null | undefined) => normalizeDigits(v || '') || null;
     const payload = {
       code: d.code.trim().toUpperCase(),
@@ -2676,13 +2711,13 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           }
           this.isQueuedSave = false;
           this.toast.success(`اطلاعات شرکت «${updated.name}» با موفقیت ویرایش شد.`);
-          this.applySavedCompany(updated);
+          this.applySavedCompany(updated, sentDataJson);
           this.activeCompanyService.loadAvailableCompanies().subscribe();
           this.finishLogoChange(companyId).then((changed) => {
             if (!changed) return;
             this.api.getById(companyId).subscribe({
               next: (fresh) => {
-                if (fresh) this.applySavedCompany(fresh);
+                if (fresh) this.applySavedLogo(fresh);
                 this.cdr.markForCheck();
               },
               error: () => {}
@@ -2710,22 +2745,30 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
             this.cdr.markForCheck();
             return;
           }
+          // شرکت ثبت شد؛ تا رفتن به نشانی شرکت تازه دکمهٔ ثبت قفل می‌ماند تا POST تکراری نرود
+          this.companyModal.isSubmitting = true;
           this.toast.success(`شرکت «${created.name}» با موفقیت ثبت شد.`);
           this.activeCompanyService.loadAvailableCompanies().subscribe();
-          this.finishLogoChange(created.id).then(() => {
-            // شرکت روی سرور ثبت شده است؛ اگر لوگو نرسید، با پیام بالا گفته شد و فایل دوباره انتخاب می‌شود
-            this.selectedLogoFile = null;
-            this.isLogoCleared = false;
+          const logoFile = this.selectedLogoFile;
+          this.finishLogoChange(created.id).then((logoSaved) => {
+            // اگر لوگو نرسید، فایل با state ناوبری به نمونهٔ استودیوی شرکت تازه برده می‌شود تا دوباره ذخیره شود
+            const pendingLogo = logoFile && !logoSaved ? logoFile : null;
+            if (pendingLogo) {
+              this.toast.warning('لوگو بارگذاری نشد؛ فایل نگه داشته شد، دوباره «ذخیره» را بزنید.');
+            }
             this.leavingAfterSave = true;
             if (this.router) {
               this.router.navigate([CompaniesManagementComponent.LIST_URL, created.id], {
                 queryParams: { tab: 'identity' },
-                replaceUrl: true
+                replaceUrl: true,
+                state: pendingLogo ? { pendingLogo } : undefined
               }).finally(() => {
                 this.leavingAfterSave = false;
+                this.companyModal.isSubmitting = false;
               });
             } else {
               this.leavingAfterSave = false;
+              this.companyModal.isSubmitting = false;
               this.populateStudioData(created);
             }
           });

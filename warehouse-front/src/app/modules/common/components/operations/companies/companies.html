@@ -98,7 +98,7 @@
     </div>
 
     <!-- بارگذاری نخست -->
-    <div *ngIf="isLoading && companies.length === 0" class="p-3 md:p-4">
+    <div *ngIf="isLoading && companies.length === 0" class="p-3 md:p-4" role="status" aria-busy="true" aria-label="در حال بارگذاری فهرست شرکت‌ها">
       <app-loading-skeleton type="table" [rows]="4"></app-loading-skeleton>
     </div>
 
@@ -224,7 +224,7 @@
                   (click)="openAccessTab(company)"
                   [disabled]="isPendingRecord(company)"
                   class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="مدیریت دسترسی کاربران به این شرکت"
+                  [title]="isPendingRecord(company) ? 'پس از ارسال به سرور در دسترس است' : 'مدیریت دسترسی کاربران به این شرکت'"
                   aria-label="دسترسی‌ها">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
                   <span class="sr-only">دسترسی‌ها</span>
@@ -249,7 +249,7 @@
                   (click)="openGoogleDriveModal(company)"
                   [disabled]="isPendingRecord(company)"
                   class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="تنظیمات همگام‌سازی گوگل‌درایو"
+                  [title]="isPendingRecord(company) ? 'پس از ارسال به سرور در دسترس است' : 'تنظیمات همگام‌سازی گوگل‌درایو'"
                   aria-label="گوگل‌درایو">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
                   <span class="sr-only">گوگل‌درایو</span>
@@ -381,7 +381,7 @@
             (click)="openAccessTab(company)"
             [disabled]="isPendingRecord(company)"
             class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 hover:text-emerald-600 bg-slate-50 hover:bg-emerald-50 border border-slate-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            title="مدیریت دسترسی کاربران به این شرکت"
+            [title]="isPendingRecord(company) ? 'پس از ارسال به سرور در دسترس است' : 'مدیریت دسترسی کاربران به این شرکت'"
             aria-label="دسترسی‌ها">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
             <span class="sr-only">دسترسی‌ها</span>
@@ -391,7 +391,7 @@
             (click)="openEditModal(company)"
             [disabled]="isPendingRecord(company)"
             class="w-10 h-10 rounded-xl flex items-center justify-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            title="ویرایش مشخصات و مدارک شرکت (استودیو)"
+            [title]="isPendingRecord(company) ? 'پس از ارسال به سرور در دسترس است' : 'ویرایش مشخصات و مدارک شرکت (استودیو)'"
             aria-label="استودیو">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit"></svg>
             <span class="sr-only">استودیو</span>
@@ -402,7 +402,7 @@
             (click)="openGoogleDriveModal(company)"
             [disabled]="isPendingRecord(company)"
             class="w-10 h-10 rounded-xl flex items-center justify-center text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            title="همگام‌سازی گوگل‌درایو"
+            [title]="isPendingRecord(company) ? 'پس از ارسال به سرور در دسترس است' : 'همگام‌سازی گوگل‌درایو'"
             aria-label="گوگل‌درایو">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="google-drive"></svg>
             <span class="sr-only">گوگل‌درایو</span>
@@ -462,7 +462,7 @@
             (click)="submitCompanyForm()"
             [disabled]="companyModal.isSubmitting || studioLoading || studioLoadError || isQueuedCreate"
             class="flex items-center gap-1.5 min-h-[40px] sm:min-h-[36px] px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-            [title]="isQueuedCreate ? 'این شرکت در صف ارسال است' : (companyModal.isEdit ? 'ذخیره مشخصات شرکت' : 'ثبت قطعی شرکت')">
+            [title]="isQueuedCreate ? 'این شرکت در صف ارسال است' : studioLoading ? 'در حال بارگذاری…' : studioLoadError ? 'ابتدا دریافت شرکت را دوباره امتحان کنید' : (companyModal.isEdit ? 'ذخیره مشخصات شرکت' : 'ثبت قطعی شرکت')">
             <span *ngIf="companyModal.isSubmitting" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
             <svg *ngIf="!companyModal.isSubmitting" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
             <span>{{ companyModal.isSubmitting ? 'در حال ذخیره...' : (companyModal.isEdit ? 'ذخیره مشخصات' : 'ثبت شرکت') }}</span>
@@ -490,7 +490,7 @@
       <div class="p-4 md:p-6 overflow-y-auto flex-1 space-y-4">
 
         <!-- باز کردن مستقیم نشانی شرکت: اسکلت تا رسیدن داده -->
-        <div *ngIf="studioLoading" aria-busy="true">
+        <div *ngIf="studioLoading" role="status" aria-busy="true" aria-label="در حال بارگذاری مشخصات شرکت">
           <app-loading-skeleton type="form" [rows]="6"></app-loading-skeleton>
         </div>
 
@@ -524,8 +524,10 @@
                 placeholder="مثال: PTS یا FA" 
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 uppercase font-mono"
                 [ngClass]="companyModal.errors['code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
+                [attr.aria-invalid]="companyModal.errors['code'] ? true : null"
+                [attr.aria-describedby]="companyModal.errors['code'] ? 'co-err-code' : null"
               />
-              <span *ngIf="companyModal.errors['code']" class="text-[10px] text-rose-600 font-bold mt-1 block">
+              <span *ngIf="companyModal.errors['code']" id="co-err-code" class="text-[10px] text-rose-600 font-bold mt-1 block">
                 {{ companyModal.errors['code'] }}
               </span>
             </div>
@@ -539,8 +541,10 @@
                 placeholder="مثال: پاینده توان ساینا" 
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 [ngClass]="companyModal.errors['name'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
+                [attr.aria-invalid]="companyModal.errors['name'] ? true : null"
+                [attr.aria-describedby]="companyModal.errors['name'] ? 'co-err-name' : null"
               />
-              <span *ngIf="companyModal.errors['name']" class="text-[10px] text-rose-600 font-bold mt-1 block">
+              <span *ngIf="companyModal.errors['name']" id="co-err-name" class="text-[10px] text-rose-600 font-bold mt-1 block">
                 {{ companyModal.errors['name'] }}
               </span>
             </div>
@@ -572,8 +576,10 @@
                 maxlength="11"
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['national_id'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
+                [attr.aria-invalid]="companyModal.errors['national_id'] ? true : null"
+                [attr.aria-describedby]="companyModal.errors['national_id'] ? 'co-err-national_id' : null"
               />
-              <span *ngIf="companyModal.errors['national_id']" class="text-[10px] text-rose-600 font-bold mt-1 block">
+              <span *ngIf="companyModal.errors['national_id']" id="co-err-national_id" class="text-[10px] text-rose-600 font-bold mt-1 block">
                 {{ companyModal.errors['national_id'] }}
               </span>
             </div>
@@ -589,8 +595,10 @@
                 placeholder="شماره ثبت در اداره ثبت شرکت‌ها" 
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['registration_number'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
+                [attr.aria-invalid]="companyModal.errors['registration_number'] ? true : null"
+                [attr.aria-describedby]="companyModal.errors['registration_number'] ? 'co-err-registration_number' : null"
               />
-              <span *ngIf="companyModal.errors['registration_number']" class="text-[10px] text-rose-600 font-bold mt-1 block" role="alert">
+              <span *ngIf="companyModal.errors['registration_number']" id="co-err-registration_number" class="text-[10px] text-rose-600 font-bold mt-1 block">
                 {{ companyModal.errors['registration_number'] }}
               </span>
             </div>
@@ -668,8 +676,10 @@
                 dir="ltr"
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['phone'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
+                [attr.aria-invalid]="companyModal.errors['phone'] ? true : null"
+                [attr.aria-describedby]="companyModal.errors['phone'] ? 'co-err-phone' : null"
               />
-              <span *ngIf="companyModal.errors['phone']" class="text-[10px] text-rose-600 font-bold mt-1 block" role="alert">
+              <span *ngIf="companyModal.errors['phone']" id="co-err-phone" class="text-[10px] text-rose-600 font-bold mt-1 block">
                 {{ companyModal.errors['phone'] }}
               </span>
             </div>
@@ -686,8 +696,10 @@
                 maxlength="10"
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['postal_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
+                [attr.aria-invalid]="companyModal.errors['postal_code'] ? true : null"
+                [attr.aria-describedby]="companyModal.errors['postal_code'] ? 'co-err-postal_code' : null"
               />
-              <span *ngIf="companyModal.errors['postal_code']" class="text-[10px] text-rose-600 font-bold mt-1 block" role="alert">
+              <span *ngIf="companyModal.errors['postal_code']" id="co-err-postal_code" class="text-[10px] text-rose-600 font-bold mt-1 block">
                 {{ companyModal.errors['postal_code'] }}
               </span>
             </div>
@@ -792,8 +804,10 @@
                 maxlength="10"
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['workshop_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
+                [attr.aria-invalid]="companyModal.errors['workshop_code'] ? true : null"
+                [attr.aria-describedby]="companyModal.errors['workshop_code'] ? 'co-err-workshop_code' : null"
               />
-              <span *ngIf="companyModal.errors['workshop_code']" class="text-[10px] text-rose-600 font-bold mt-1 block" role="alert">
+              <span *ngIf="companyModal.errors['workshop_code']" id="co-err-workshop_code" class="text-[10px] text-rose-600 font-bold mt-1 block">
                 {{ companyModal.errors['workshop_code'] }}
               </span>
               <span class="block text-[10px] text-slate-400 mt-1">کد ۱۰ رقمی کارگاه دفتر مرکزی شرکت در سازمان تأمین اجتماعی</span>
@@ -810,8 +824,10 @@
                 placeholder="کد اقتصادی ۱۲ رقمی" 
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['economic_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
+                [attr.aria-invalid]="companyModal.errors['economic_code'] ? true : null"
+                [attr.aria-describedby]="companyModal.errors['economic_code'] ? 'co-err-economic_code' : null"
               />
-              <span *ngIf="companyModal.errors['economic_code']" class="text-[10px] text-rose-600 font-bold mt-1 block" role="alert">
+              <span *ngIf="companyModal.errors['economic_code']" id="co-err-economic_code" class="text-[10px] text-rose-600 font-bold mt-1 block">
                 {{ companyModal.errors['economic_code'] }}
               </span>
               <span class="block text-[10px] text-slate-400 mt-1">کد اقتصادی پرونده مالیاتی عملکرد و ارزش افزوده</span>
@@ -828,8 +844,10 @@
                 maxlength="6"
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono uppercase"
                 [ngClass]="companyModal.errors['tax_memory_id'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
+                [attr.aria-invalid]="companyModal.errors['tax_memory_id'] ? true : null"
+                [attr.aria-describedby]="companyModal.errors['tax_memory_id'] ? 'co-err-tax_memory_id' : null"
               />
-              <span *ngIf="companyModal.errors['tax_memory_id']" class="text-[10px] text-rose-600 font-bold mt-1 block" role="alert">
+              <span *ngIf="companyModal.errors['tax_memory_id']" id="co-err-tax_memory_id" class="text-[10px] text-rose-600 font-bold mt-1 block">
                 {{ companyModal.errors['tax_memory_id'] }}
               </span>
               <span class="block text-[10px] text-slate-400 mt-1">شناسه صادر شده توسط کارپوشه سازمان امور مالیاتی</span>
@@ -847,8 +865,10 @@
                 maxlength="16"
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['tax_economic_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
+                [attr.aria-invalid]="companyModal.errors['tax_economic_code'] ? true : null"
+                [attr.aria-describedby]="companyModal.errors['tax_economic_code'] ? 'co-err-tax_economic_code' : null"
               />
-              <span *ngIf="companyModal.errors['tax_economic_code']" class="text-[10px] text-rose-600 font-bold mt-1 block" role="alert">
+              <span *ngIf="companyModal.errors['tax_economic_code']" id="co-err-tax_economic_code" class="text-[10px] text-rose-600 font-bold mt-1 block">
                 {{ companyModal.errors['tax_economic_code'] }}
               </span>
               <span class="block text-[10px] text-slate-400 mt-1">ترکیب شناسه ملی اشخاص حقوقی و کد شعبه اختصاصی</span>
@@ -865,8 +885,10 @@
                 placeholder="مثال: ۲۲" 
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['social_security_branch_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
+                [attr.aria-invalid]="companyModal.errors['social_security_branch_code'] ? true : null"
+                [attr.aria-describedby]="companyModal.errors['social_security_branch_code'] ? 'co-err-social_security_branch_code' : null"
               />
-              <span *ngIf="companyModal.errors['social_security_branch_code']" class="text-[10px] text-rose-600 font-bold mt-1 block" role="alert">
+              <span *ngIf="companyModal.errors['social_security_branch_code']" id="co-err-social_security_branch_code" class="text-[10px] text-rose-600 font-bold mt-1 block">
                 {{ companyModal.errors['social_security_branch_code'] }}
               </span>
               <span class="block text-[10px] text-slate-400 mt-1">کد عددی شعبه ناظر بر پرونده دفتر مرکزی</span>
@@ -895,8 +917,10 @@
                 placeholder="مثال: ۰۰۰" 
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['contract_row'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
+                [attr.aria-invalid]="companyModal.errors['contract_row'] ? true : null"
+                [attr.aria-describedby]="companyModal.errors['contract_row'] ? 'co-err-contract_row' : null"
               />
-              <span *ngIf="companyModal.errors['contract_row']" class="text-[10px] text-rose-600 font-bold mt-1 block" role="alert">
+              <span *ngIf="companyModal.errors['contract_row']" id="co-err-contract_row" class="text-[10px] text-rose-600 font-bold mt-1 block">
                 {{ companyModal.errors['contract_row'] }}
               </span>
               <span class="block text-[10px] text-slate-400 mt-1">ردیف پیمان اختصاصی یا ۰۰۰ برای کارگاه مادر</span>
@@ -1079,7 +1103,7 @@
               </div>
             </div>
 
-            <div *ngIf="companyModal.data.id && isLoadingFiscalPeriods && companyFiscalPeriods.length === 0" aria-busy="true">
+            <div *ngIf="companyModal.data.id && isLoadingFiscalPeriods && companyFiscalPeriods.length === 0" role="status" aria-busy="true" aria-label="در حال بارگذاری دوره‌های مالی">
               <app-loading-skeleton type="text" [lines]="3"></app-loading-skeleton>
             </div>
             <div *ngIf="tabLoadError['fiscal_insurance']" class="py-6 text-center space-y-2 border border-dashed border-rose-200 rounded-2xl bg-rose-50/40" role="alert">
@@ -1942,12 +1966,12 @@
 
                   <label 
                     class="w-7 h-7 rounded-lg flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 hover:border-indigo-300 text-slate-700 cursor-pointer shadow-2xs transition-all"
-                    [attr.aria-busy]="uploadingCoreDoc['articles_of_association'] || null"
                     [title]="companyModal.data.articles_of_association ? 'جایگزینی فایل اساسنامه' : 'بارگذاری فایل اساسنامه'"
                     aria-label="بارگذاری فایل اساسنامه">
                     <span *ngIf="uploadingCoreDoc['articles_of_association']" class="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
                     <svg *ngIf="!uploadingCoreDoc['articles_of_association']" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
-                    <span class="sr-only">{{ uploadingCoreDoc['articles_of_association'] ? 'در حال ارسال فایل' : 'بارگذاری فایل' }}</span>
+                    <span class="sr-only">بارگذاری فایل</span>
+                    <span class="sr-only" role="status">{{ uploadingCoreDoc['articles_of_association'] ? 'در حال ارسال فایل' : '' }}</span>
                     <input type="file" accept=".pdf,image/*" [disabled]="uploadingCoreDoc['articles_of_association']" (change)="onCoreDocSelected($event, 'articles_of_association')" class="hidden" />
                   </label>
                 </div>
@@ -1996,12 +2020,12 @@
 
                   <label 
                     class="w-7 h-7 rounded-lg flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 hover:border-emerald-300 text-slate-700 cursor-pointer shadow-2xs transition-all"
-                    [attr.aria-busy]="uploadingCoreDoc['latest_gazette'] || null"
                     [title]="companyModal.data.latest_gazette ? 'جایگزینی فایل روزنامه رسمی' : 'بارگذاری فایل روزنامه رسمی'"
                     aria-label="بارگذاری فایل روزنامه رسمی">
                     <span *ngIf="uploadingCoreDoc['latest_gazette']" class="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
                     <svg *ngIf="!uploadingCoreDoc['latest_gazette']" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
-                    <span class="sr-only">{{ uploadingCoreDoc['latest_gazette'] ? 'در حال ارسال فایل' : 'بارگذاری فایل' }}</span>
+                    <span class="sr-only">بارگذاری فایل</span>
+                    <span class="sr-only" role="status">{{ uploadingCoreDoc['latest_gazette'] ? 'در حال ارسال فایل' : '' }}</span>
                     <input type="file" accept=".pdf,image/*" [disabled]="uploadingCoreDoc['latest_gazette']" (change)="onCoreDocSelected($event, 'latest_gazette')" class="hidden" />
                   </label>
                 </div>
@@ -2426,7 +2450,7 @@
                       <td class="py-2.5 px-3 text-center font-mono text-slate-400">{{ idx + 1 }}</td>
                       <td class="py-2.5 px-3 font-bold text-slate-800">
                         <span>{{ acc.user_full_name || 'کاربر سیستم' }}</span>
-                        <app-offline-pending-badge *ngIf="isPendingRecord(acc)" class="mr-1.5"></app-offline-pending-badge>
+                        <app-offline-pending-badge *ngIf="isPendingRecord(acc)" class="ms-1.5"></app-offline-pending-badge>
                       </td>
                       <td class="py-2.5 px-3 font-mono text-slate-600">{{ acc.username }}</td>
                       <td class="py-2.5 px-3">
