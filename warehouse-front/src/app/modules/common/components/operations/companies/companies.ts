@@ -15,14 +15,12 @@ import {
   validateNationalCode,
   buildCompanyPayload
 } from './companies.helpers';
-import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, HostListener, Type, ViewChild, signal } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
-import { Subject, firstValueFrom } from 'rxjs';
+import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, filter, takeUntil } from 'rxjs/operators';
 import { CompanyApiService } from '../../../../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
@@ -34,6 +32,9 @@ import { WebSocketService } from '../../../../../core/http/websocket.service';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';
 import { NetworkStatusService } from '../../../../../core/services/network-status.service';
 import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
+import { CompanyStudioSection, CompanyStudioTab } from '../../../../../core/modules/module-contract';
+import { CompanyStudioContextService } from '../../../../../core/services/company-studio-context.service';
+import { DocumentPreviewComponent } from '../../../../../shared/components/document-preview/document-preview.component';
 import {
   Company,
   CompanyDocument,
@@ -72,8 +73,8 @@ import { ExternalLinkDirective } from '../../../../../shared/directives/external
 @Component({
   selector: 'app-companies-management',
   standalone: true,
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, CompanyGdriveTabComponent, ServerUrlPipe, ExternalLinkDirective, LoadingSkeletonComponent, OfflinePendingBadgeComponent],
-  providers: [CompaniesFacade],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, CompanyGdriveTabComponent, ServerUrlPipe, ExternalLinkDirective, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent],
+  providers: [CompaniesFacade, CompanyStudioContextService],
   templateUrl: './companies.html',
   styleUrls: ['./companies.css']
 })
@@ -97,21 +98,21 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   private api = inject(CompanyApiService);
   private companyApi = this.api;
-  private http = inject(HttpClient);
   public activeCompanyService = inject(ActiveCompanyService);
   private accountsHttp = inject(AccountsHttpService, { optional: true });
   private toast = inject(ToastService);
   private confirmDialog = inject(ConfirmDialogService, { optional: true });
   private cdr = inject(ChangeDetectorRef);
-  private sanitizer = inject(DomSanitizer);
   private ws = inject(WebSocketService, { optional: true });
   private route = inject(ActivatedRoute, { optional: true });
   private router = inject(Router, { optional: true });
   private moduleRegistry = inject(ModuleRegistryService);
+  /** context مشترک با تب‌ها و بخش‌های مشارکتی ماژول‌ها (§۵-۲) */
+  readonly studioContext = inject(CompanyStudioContextService);
+  @ViewChild(DocumentPreviewComponent, { static: true }) docPreview?: DocumentPreviewComponent;
   private offlineSync = OfflineSyncService.getInstance();
   private network = NetworkStatusService.getInstance();
   private destroy$ = new Subject<void>();
-  private pdfTimeoutId: any = null;
 
   // حالت نمای جاری: 'list' (فهرست شرکت‌ها) یا 'studio' (استودیوی تمام‌صفحه)
   public viewMode: 'list' | 'studio' = 'list';
@@ -153,7 +154,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   isLogoCleared = false;
 
   // تب فعال در استودیوی مودال به ترتیب استاندارد حقوقی و مالی
-  activeModalTab: 'identity' | 'fiscal_insurance' | 'treasury' | 'governance' | 'documents' | 'access' | 'gdrive' = 'identity';
+  // شناسهٔ تب هسته یا تب مشارکتی ماژول‌ها (studioTabs)
+  activeModalTab: string = 'identity';
 
   // مدیریت باز/بسته بودن پاپ‌اورهای تقویم جلالی
   isRegDatePickerOpen = false;
@@ -197,40 +199,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   selectedDocTypeFilter = '';
   isLoadingDocuments = false;
   isUploadingDoc = false;
-
-  // کنترل‌های پیش‌رفته لایت‌باکس پیش‌نمایش درجا (زوم، پن، جابجایی، تمام‌صفحه و رندر اختصاصی بوم بدون فعال‌سازی IDM)
-  isLoadingPreview = false;
-  previewScale = 1.0;
-  previewRotation = 0;
-  isFullscreenPreview = false;
-  isPdfLoading = false;
-  pdfCurrentPage = 1;
-  pdfTotalPages = 1;
-  pdfDoc: any = null;
-  pdfRenderTask: any = null;
-  panX = 0;
-  panY = 0;
-  isDragging = false;
-  dragStartX = 0;
-  dragStartY = 0;
-  useIframeFallback = false;
-
-  previewBlobUrl: string | null = null;
-  previewModal: {
-    isOpen: boolean;
-    title: string;
-    fileUrl: string;
-    safeFileUrl: SafeResourceUrl | null;
-    isPdf: boolean;
-    isImage: boolean;
-  } = {
-    isOpen: false,
-    title: '',
-    fileUrl: '',
-    safeFileUrl: null,
-    isPdf: false,
-    isImage: false
-  };
 
   newDoc: {
     document_type: CompanyDocumentType;
@@ -483,7 +451,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (this.leavingAfterSave || this.viewMode !== 'studio' || !this.companyModal.isOpen || this.studioLoading) return false;
     if (this.studioSnapshot !== null && JSON.stringify(this.companyModal.data) !== this.studioSnapshot) return true;
     if (this.selectedLogoFile || this.isLogoCleared) return true;
-    return this.hasPendingSubForms();
+    // فرم‌های ذخیره‌نشدهٔ تب‌ها و بخش‌های مشارکتی ماژول‌ها
+    return this.hasPendingSubForms() || this.studioContext.isDirty();
   }
 
   /** پرسش پیش از خروج از استودیو؛ گارد مسیر و دکمه‌های بازگشت از همین استفاده می‌کنند */
@@ -621,14 +590,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.pdfTimeoutId) {
-      clearTimeout(this.pdfTimeoutId);
-      this.pdfTimeoutId = null;
-    }
-    if (this.previewBlobUrl) {
-      URL.revokeObjectURL(this.previewBlobUrl);
-      this.previewBlobUrl = null;
-    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -639,14 +600,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (this.isBankDropdownOpen && !target.closest('.bank-combobox-container')) {
       this.isBankDropdownOpen = false;
       this.cdr.markForCheck();
-    }
-  }
-
-  @HostListener('window:keydown.escape')
-  @HostListener('document:keydown.escape')
-  onEscapeKey(): void {
-    if (this.previewModal.isOpen) {
-      this.closePreview();
     }
   }
 
@@ -767,8 +720,87 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     return 8 + (this.isAccountingInstalled ? 2 : 0) + (this.isWarehouseInstalled ? 1 : 0);
   }
 
+  /** جای تب‌های هسته؛ تب مشارکتی با `order` خودش میان آن‌ها می‌نشیند (§۵-۴) */
+  private static readonly CORE_TAB_ORDER: Record<string, number> = {
+    identity: 10, fiscal_insurance: 20, treasury: 30, governance: 40, documents: 50, access: 60, gdrive: 70
+  };
+
+  private _contributedTabsKey = '';
+  private _contributedTabs: CompanyStudioTab[] = [];
+
+  /** تب‌های مشارکتی ماژول‌های نصب‌شده (studioTabs) به ترتیب order؛ شناسهٔ هم‌نام با تب هسته نادیده گرفته می‌شود */
+  get contributedTabs(): CompanyStudioTab[] {
+    const exts = this.moduleRegistry.getExtensions('companies');
+    const key = exts.map(e => e.moduleCode).join(',');
+    if (key !== this._contributedTabsKey) {
+      this._contributedTabsKey = key;
+      this._contributedTabs = exts
+        .flatMap(e => e.extension.studioTabs || [])
+        .filter(t => !(t.id in CompaniesManagementComponent.CORE_TAB_ORDER))
+        .sort((a, b) => a.order - b.order);
+    }
+    return this._contributedTabs;
+  }
+
+  /** بخش‌های مشارکتی یک تب هسته (studioSections) به ترتیب order */
+  sectionsFor(slot: CompanyStudioSection['slot']): CompanyStudioSection[] {
+    return this.moduleRegistry.getExtensions('companies')
+      .flatMap(e => e.extension.studioSections || [])
+      .filter(sec => sec.slot === slot)
+      .sort((a, b) => a.order - b.order);
+  }
+
+  /** شرکت ذخیره‌شده (شناسهٔ سرور دارد)؛ تب‌های وابسته به شناسه پیش از آن پیام «ابتدا ذخیره کنید» نشان می‌دهند */
+  get hasSavedCompany(): boolean {
+    return this.studioContext.companyId() !== null;
+  }
+
+  private contributedTab(tab: string): CompanyStudioTab | undefined {
+    return this.contributedTabs.find(t => t.id === tab);
+  }
+
+  /** شناسهٔ تب در query معتبر است: تب هسته یا تب مشارکتی ماژول نصب‌شده */
+  private isKnownTab(tab: string): boolean {
+    return tab in CompaniesManagementComponent.CORE_TAB_ORDER || !!this.contributedTab(tab);
+  }
+
   private isTabAvailable(tab: string): boolean {
-    return this.isAccountingInstalled || !CompaniesManagementComponent.ACCOUNTING_TABS.includes(tab);
+    const contributed = this.contributedTab(tab);
+    if (contributed) return !(contributed.hiddenUntilSaved && !this.hasSavedCompany);
+    return tab in CompaniesManagementComponent.CORE_TAB_ORDER
+      && (this.isAccountingInstalled || !CompaniesManagementComponent.ACCOUNTING_TABS.includes(tab));
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // بارگذاری تنبل کامپوننت‌های مشارکتی (تب‌ها و بخش‌ها)
+  // ═════════════════════════════════════════════════════════════════════
+  private readonly contributionComponents = signal<Record<string, Type<unknown>>>({});
+  private readonly contributionFailures = signal<Record<string, boolean>>({});
+  private readonly contributionsLoading = new Set<string>();
+
+  /** کامپوننت بارگذاری‌شده؛ تا رسیدن آن null (و بارگذاری یک بار آغاز می‌شود) */
+  contributionComponent(key: string, loader: () => Promise<Type<unknown>>): Type<unknown> | null {
+    const loaded = this.contributionComponents()[key];
+    if (loaded) return loaded;
+    if (!this.contributionFailures()[key] && !this.contributionsLoading.has(key)) {
+      this.contributionsLoading.add(key);
+      loader()
+        .then(component => this.contributionComponents.update(c => ({ ...c, [key]: component })))
+        .catch(() => this.contributionFailures.update(f => ({ ...f, [key]: true })))
+        .finally(() => {
+          this.contributionsLoading.delete(key);
+          this.cdr.markForCheck();
+        });
+    }
+    return null;
+  }
+
+  contributionFailed(key: string): boolean {
+    return this.contributionFailures()[key] === true;
+  }
+
+  retryContribution(key: string): void {
+    this.contributionFailures.update(f => ({ ...f, [key]: false }));
   }
 
   private _cachedModalTabs: TabDef[] = [];
@@ -776,7 +808,11 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   get modalTabs(): TabDef[] {
     const errorTabs = this.errorTabs();
-    const key = `${this.isAccountingInstalled}_${this.companyBankAccounts.length}_${this.companyBoardMembers.length}_${this.companyDocuments.length}_${this.studioAccesses.length}_${this.companyModal.isEdit}_${[...errorTabs].join(',')}`;
+    const contributed = this.contributedTabs.filter(t => this.isTabAvailable(t.id));
+    const contributedKey = contributed
+      .map(t => `${t.id}:${this.studioContext.count(t.id) ?? ''}:${this.studioContext.hasError(t.id)}`)
+      .join('|');
+    const key = `${this.isAccountingInstalled}_${this.companyBankAccounts.length}_${this.companyBoardMembers.length}_${this.companyDocuments.length}_${this.studioAccesses.length}_${this.companyModal.isEdit}_${[...errorTabs].join(',')}_${contributedKey}`;
     if (this._modalTabsKey === key && this._cachedModalTabs.length > 0) {
       return this._cachedModalTabs;
     }
@@ -795,6 +831,19 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (this.companyModal.isEdit && this.isAccountingInstalled) {
       tabs.push({ id: 'gdrive', label: 'همگام‌سازی گوگل‌درایو', shortLabel: 'گوگل‌درایو', icon: 'google-drive' });
     }
+    // تب‌های مشارکتی ماژول‌ها با شمارنده و نشان خطای context، به ترتیب order میان تب‌های هسته
+    const order = (id: string) => CompaniesManagementComponent.CORE_TAB_ORDER[id] ?? contributed.find(t => t.id === id)?.order ?? 0;
+    for (const t of contributed) {
+      tabs.push({
+        id: t.id,
+        label: t.labelFa,
+        shortLabel: t.shortLabelFa,
+        icon: t.icon,
+        count: this.studioContext.count(t.id),
+        indicator: this.studioContext.hasError(t.id) ? errorIndicator : undefined
+      });
+    }
+    tabs.sort((a, b) => order(a.id) - order(b.id));
     this._cachedModalTabs = tabs;
     return tabs;
   }
@@ -928,7 +977,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
     this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe(queryParams => {
       const tabParam = queryParams.get('tab');
-      if (tabParam && ['identity', 'fiscal_insurance', 'treasury', 'governance', 'documents', 'access', 'gdrive'].includes(tabParam)) {
+      if (tabParam && this.isKnownTab(tabParam)) {
         if (this.isTabAvailable(tabParam)) {
           this.activeModalTab = tabParam as any;
           this.onTabActivated(tabParam);
@@ -956,6 +1005,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       data: { ...this.getEmptyCompanyData(), id: companyId },
       errors: {}
     };
+    this.studioContext.setCompany(null);
     this.studioSnapshot = null;
     this.studioLoading = true;
     this.studioLoadError = false;
@@ -1027,6 +1077,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.isQueuedCreate = false;
     this.isQueuedSave = false;
     this.tabLoadError = {};
+    this.studioContext.setCompany(null);
     this.takeStudioSnapshot();
     this.viewMode = 'studio';
     this.cdr.markForCheck();
@@ -1082,6 +1133,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   /** پس از ذخیرهٔ موفق، فرم با پاسخ سرور هم‌گام می‌شود و فرم‌های فرعی تب‌های دیگر دست نمی‌خورند */
   private applySavedCompany(company: Company, sentDataJson: string): void {
     const serverData = this.buildStudioData(company);
+    this.studioContext.setCompany(company);
     if (JSON.stringify(this.companyModal.data) !== sentDataJson) {
       // کاربر در فاصلهٔ ذخیره تایپ کرده است: نوشته‌هایش می‌ماند و فرم تغییرنکرده حساب نمی‌شود
       this.studioSnapshot = JSON.stringify(serverData);
@@ -1137,6 +1189,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       data: this.buildStudioData(company),
       errors: {}
     };
+    this.studioContext.setCompany(company);
     this.takeStudioSnapshot();
     if (this.pendingLogoFromNavigation) {
       // لوگوی ثبت‌نشده تغییر ذخیره‌نشده حساب می‌شود تا بی‌صدا از دست نرود
@@ -1194,6 +1247,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   private resetStudioState(): void {
     this.companyModal.isOpen = false;
+    this.studioContext.setCompany(null);
     this.viewMode = 'list';
     this.studioSnapshot = null;
     this.selectedLogoFile = null;
@@ -1482,215 +1536,14 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.applyDocumentFilters();
   }
 
-  // پیش‌نمایش درجا (In-Place Preview)
+  // پیش‌نمایش درجا (In-Place Preview) در لایت‌باکس مشترک
   openPreview(doc: CompanyDocument): void {
     const url = doc.file_url || doc.file;
     if (!url) {
       this.toast.warning('فایل مدرک در دسترس نیست.');
       return;
     }
-
-    if (this.previewBlobUrl) {
-      URL.revokeObjectURL(this.previewBlobUrl);
-      this.previewBlobUrl = null;
-    }
-
-    const isPdf = url.toLowerCase().includes('.pdf') || Boolean(doc.title && doc.title.toLowerCase().includes('.pdf'));
-    const isImage = /\.(jpe?g|png|webp|svg|gif|bmp)(\?.*)?$/i.test(url) || Boolean(doc.title && /\.(jpe?g|png|webp|svg|gif|bmp)$/i.test(doc.title));
-
-    // تبدیل آدرس‌های مطلق به مسیر نسبی جهت عبور بهینه از پروکسی و جلوگیری از خطای هم‌مبدایی فریم‌ها
-    let cleanUrl = url;
-    const mediaIdx = cleanUrl.indexOf('/media/');
-    if (mediaIdx !== -1 && (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://'))) {
-      cleanUrl = cleanUrl.substring(mediaIdx);
-    } else if (cleanUrl.startsWith('http://127.0.0.1:8000') || cleanUrl.startsWith('http://localhost:8000')) {
-      cleanUrl = cleanUrl.replace(/^https?:\/\/(127\.0\.0\.1|localhost):8000/, '');
-    }
-    cleanUrl = resolveServerUrl(cleanUrl);
-
-    this.previewScale = 1.0;
-    this.previewRotation = 0;
-    this.panX = 0;
-    this.panY = 0;
-    this.isFullscreenPreview = false;
-    this.useIframeFallback = false;
-
-    this.previewModal = {
-      isOpen: true,
-      title: doc.title,
-      fileUrl: cleanUrl,
-      safeFileUrl: cleanUrl ? this.sanitizer.bypassSecurityTrustResourceUrl(cleanUrl) : null,
-      isPdf,
-      isImage
-    };
-    this.isLoadingPreview = false;
-    this.cdr.markForCheck();
-
-    if (isPdf) {
-      if (this.pdfTimeoutId) {
-        clearTimeout(this.pdfTimeoutId);
-      }
-      this.pdfTimeoutId = setTimeout(() => {
-        this.loadPdfWithPdfJs(cleanUrl);
-      }, 50);
-    }
-  }
-
-  async loadPdfWithPdfJs(url: string): Promise<void> {
-    try {
-      this.isPdfLoading = true;
-      this.cdr.markForCheck();
-
-      // دانلود مستقیم باینری با استفاده از HttpClient و رعایت توکن‌های احراز هویت
-      let buffer: ArrayBuffer;
-      if (this.http) {
-        buffer = await firstValueFrom(this.http.get(url, { responseType: 'arraybuffer' }));
-      } else {
-        const res = await fetch(resolveServerUrl(url));
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        buffer = await res.arrayBuffer();
-      }
-
-      const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.js');
-      if (pdfjsLib.GlobalWorkerOptions) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-      }
-
-      const loadingTask = pdfjsLib.getDocument({
-        data: new Uint8Array(buffer),
-        cMapPacked: true
-      });
-
-      this.pdfDoc = await loadingTask.promise;
-      this.pdfTotalPages = this.pdfDoc.numPages || 1;
-      this.pdfCurrentPage = 1;
-      await this.renderPdfPage(1);
-    } catch (err: any) {
-      console.warn('PDF.js rendering fallback to native iframe:', err);
-      this.isPdfLoading = false;
-      this.useIframeFallback = true;
-      this.cdr.markForCheck();
-    }
-  }
-
-  async renderPdfPage(pageNumber: number): Promise<void> {
-    if (!this.pdfDoc) return;
-    try {
-      this.isPdfLoading = true;
-      this.cdr.markForCheck();
-
-      if (this.pdfRenderTask) {
-        try {
-          this.pdfRenderTask.cancel();
-        } catch (_) {}
-        this.pdfRenderTask = null;
-      }
-
-      const page = await this.pdfDoc.getPage(pageNumber);
-      const canvas = document.getElementById('pdf-render-canvas') as HTMLCanvasElement;
-      if (!canvas) {
-        this.isPdfLoading = false;
-        return;
-      }
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        this.isPdfLoading = false;
-        return;
-      }
-
-      const viewport = page.getViewport({ scale: this.previewScale, rotation: this.previewRotation });
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-
-      const renderContext = {
-        canvasContext: ctx,
-        viewport: viewport
-      };
-
-      this.pdfRenderTask = page.render(renderContext);
-      await this.pdfRenderTask.promise;
-      this.pdfCurrentPage = pageNumber;
-      this.isPdfLoading = false;
-      this.cdr.markForCheck();
-    } catch (err: any) {
-      if (err?.name !== 'RenderingCancelledException') {
-        console.error('Render page error:', err);
-      }
-      this.isPdfLoading = false;
-      this.cdr.markForCheck();
-    }
-  }
-
-  zoomIn(): void {
-    this.previewScale = Math.min(3.0, +(this.previewScale + 0.25).toFixed(2));
-    if (this.previewModal.isPdf && this.pdfDoc) {
-      this.renderPdfPage(this.pdfCurrentPage);
-    }
-    this.cdr.markForCheck();
-  }
-
-  zoomOut(): void {
-    this.previewScale = Math.max(0.5, +(this.previewScale - 0.25).toFixed(2));
-    if (this.previewModal.isPdf && this.pdfDoc) {
-      this.renderPdfPage(this.pdfCurrentPage);
-    }
-    this.cdr.markForCheck();
-  }
-
-  resetZoom(): void {
-    this.previewScale = 1.0;
-    this.previewRotation = 0;
-    this.panX = 0;
-    this.panY = 0;
-    if (this.previewModal.isPdf && this.pdfDoc) {
-      this.renderPdfPage(this.pdfCurrentPage);
-    }
-    this.cdr.markForCheck();
-  }
-
-  rotatePreview(): void {
-    this.previewRotation = (this.previewRotation + 90) % 360;
-    if (this.previewModal.isPdf && this.pdfDoc) {
-      this.renderPdfPage(this.pdfCurrentPage);
-    }
-    this.cdr.markForCheck();
-  }
-
-  toggleFullscreen(): void {
-    this.isFullscreenPreview = !this.isFullscreenPreview;
-    this.cdr.markForCheck();
-  }
-
-  nextPdfPage(): void {
-    if (this.pdfCurrentPage < this.pdfTotalPages) {
-      this.pdfCurrentPage++;
-      this.renderPdfPage(this.pdfCurrentPage);
-    }
-  }
-
-  prevPdfPage(): void {
-    if (this.pdfCurrentPage > 1) {
-      this.pdfCurrentPage--;
-      this.renderPdfPage(this.pdfCurrentPage);
-    }
-  }
-
-  startPan(event: MouseEvent): void {
-    if (event.button !== 0) return;
-    this.isDragging = true;
-    this.dragStartX = event.clientX - this.panX;
-    this.dragStartY = event.clientY - this.panY;
-  }
-
-  onPan(event: MouseEvent): void {
-    if (!this.isDragging) return;
-    this.panX = event.clientX - this.dragStartX;
-    this.panY = event.clientY - this.dragStartY;
-    this.cdr.markForCheck();
-  }
-
-  stopPan(): void {
-    this.isDragging = false;
+    this.docPreview?.open({ title: doc.title, url });
   }
 
   // پیش‌نمایش مدارک اصلی (اساسنامه و روزنامه رسمی)
@@ -1717,41 +1570,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (url) {
       void saveUrl(url, filename);
     }
-  }
-
-  closePreview(): void {
-    if (this.pdfTimeoutId) {
-      clearTimeout(this.pdfTimeoutId);
-      this.pdfTimeoutId = null;
-    }
-    if (this.pdfRenderTask) {
-      try {
-        this.pdfRenderTask.cancel();
-      } catch (_) {}
-      this.pdfRenderTask = null;
-    }
-    this.pdfDoc = null;
-    if (this.previewBlobUrl) {
-      URL.revokeObjectURL(this.previewBlobUrl);
-      this.previewBlobUrl = null;
-    }
-    this.isLoadingPreview = false;
-    this.previewModal = {
-      isOpen: false,
-      title: '',
-      fileUrl: '',
-      safeFileUrl: null,
-      isPdf: false,
-      isImage: false
-    };
-    this.previewScale = 1.0;
-    this.previewRotation = 0;
-    this.panX = 0;
-    this.panY = 0;
-    this.isFullscreenPreview = false;
-    this.isPdfLoading = false;
-    this.useIframeFallback = false;
-    this.cdr.markForCheck();
   }
 
   // ═════════════════════════════════════════════════════════════════════

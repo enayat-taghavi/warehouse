@@ -1187,6 +1187,11 @@
               </button>
             </div>
           </div>
+
+          <!-- بخش‌های مشارکتی ماژول‌ها در این تب (studioSections) -->
+          @for (sec of sectionsFor('fiscal_insurance'); track $index) {
+            <ng-container *ngTemplateOutlet="contributionOutlet; context: { key: 'section:fiscal_insurance:' + $index, loader: sec.loadComponent }"></ng-container>
+          }
         </div>
 
         <!-- ═════════════════════════════════════════════════════════════════════ -->
@@ -2328,6 +2333,11 @@
 
           </div>
 
+
+          <!-- بخش‌های مشارکتی ماژول‌ها در این تب (studioSections) -->
+          @for (sec of sectionsFor('documents'); track $index) {
+            <ng-container *ngTemplateOutlet="contributionOutlet; context: { key: 'section:documents:' + $index, loader: sec.loadComponent }"></ng-container>
+          }
         </div>
 
         <!-- ═════════════════════════════════════════════════════════════════════ -->
@@ -2338,7 +2348,7 @@
             <span class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="users"></svg><span>در این تب می‌توانید مشخص نمایید کدام کاربران سامانه به اطلاعات، اسناد و فضاهای کاری این شرکت دسترسی داشته باشند.</span></span>
           </div>
 
-          <div *ngIf="!companyModal.data.id" class="py-8 text-center text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-2xl">
+          <div *ngIf="!companyModal.data.id" class="py-8 text-center text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl" role="status">
             جهت انتساب دسترسی کاربران، لطفاً ابتدا مشخصات اولیه شرکت را ذخیره فرمایید.
           </div>
 
@@ -2493,10 +2503,43 @@
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <div *ngIf="activeModalTab === 'gdrive' && isAccountingInstalled" class="space-y-4">
           <app-company-gdrive-tab *ngIf="companyModal.data.id" [companyId]="companyModal.data.id"></app-company-gdrive-tab>
-          <div *ngIf="!companyModal.data.id" class="py-8 text-center text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-2xl">
+          <div *ngIf="!companyModal.data.id" class="py-8 text-center text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl" role="status">
             جهت اتصال گوگل‌درایو، لطفاً ابتدا مشخصات اولیه شرکت را ذخیره فرمایید.
           </div>
         </div>
+
+        <!-- ═════════════════════════════════════════════════════════════════════ -->
+        <!-- تب‌های مشارکتی ماژول‌ها (studioTabs) با بارگذاری تنبل کامپوننت       -->
+        <!-- ═════════════════════════════════════════════════════════════════════ -->
+        @for (tab of contributedTabs; track tab.id) {
+          @if (activeModalTab === tab.id) {
+            <div class="space-y-4">
+              @if (tab.requiresSavedCompany && !hasSavedCompany) {
+                <div class="py-8 text-center text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl" role="status">
+                  لطفاً ابتدا مشخصات اولیهٔ شرکت را ذخیره کنید.
+                </div>
+              } @else {
+                <ng-container *ngTemplateOutlet="contributionOutlet; context: { key: 'tab:' + tab.id, loader: tab.loadComponent }"></ng-container>
+              }
+            </div>
+          }
+        }
+
+        <!-- جایگاه کامپوننت مشارکتی: کامپوننت، خطا با «تلاش دوباره» یا اسکلت بارگذاری -->
+        <ng-template #contributionOutlet let-key="key" let-loader="loader">
+          @if (contributionComponent(key, loader); as cmp) {
+            <ng-container *ngComponentOutlet="cmp; inputs: { companyId: studioContext.companyId() }"></ng-container>
+          } @else if (contributionFailed(key)) {
+            <div class="py-6 text-center space-y-2 border border-dashed border-rose-200 rounded-2xl bg-rose-50/40" role="alert">
+              <div class="text-xs font-bold text-slate-600">بارگذاری این بخش انجام نشد.@if (!isOnline) { اتصال اینترنت را بررسی کنید.}</div>
+              <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="retryContribution(key)"></button>
+            </div>
+          } @else {
+            <div role="status" aria-busy="true" aria-label="در حال بارگذاری بخش">
+              <app-loading-skeleton type="text" [lines]="3"></app-loading-skeleton>
+            </div>
+          }
+        </ng-template>
 
         </ng-container>
       </div>
@@ -2557,192 +2600,8 @@
     </div>
   </div>
 
-  <!-- ═════════════════════════════════════════════════════════════════════════ -->
-  <!-- ۶. مودال لایت‌باکس پیش‌نمایش درجا با امکانات زوم، جابجایی، تمام‌صفحه و رندر اختصاصی بوم (In-Place Interactive Preview Lightbox) -->
-  <!-- ═════════════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="previewModal.isOpen" (click)="closePreview()" 
-       [ngClass]="isFullscreenPreview ? 'p-0' : 'p-2 md:p-6'"
-       class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/85 backdrop-blur-md transition-all">
-    
-    <div (click)="$event.stopPropagation()" 
-         [ngClass]="isFullscreenPreview ? 'w-screen h-screen rounded-none max-w-none border-0' : 'w-full max-w-5xl h-[92vh] rounded-3xl border border-slate-700/60 shadow-2xl'"
-         class="bg-slate-900 text-slate-100 overflow-hidden flex flex-col transition-all">
-      
-      <!-- Lightbox Header & Interactive Controls Toolbar -->
-      <div class="px-3.5 py-2.5 md:px-5 md:py-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/80 backdrop-blur-md shrink-0 gap-2 flex-wrap">
-        
-        <!-- Right Side (RTL Start): Title & Page Indicator -->
-        <div class="flex items-center gap-2.5 min-w-0">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-400 shrink-0" appIcon="file-text"></svg>
-          <div class="min-w-0">
-            <h3 class="text-xs md:text-sm font-black text-white truncate max-w-[200px] md:max-w-md">{{ previewModal.title }}</h3>
-            <span *ngIf="previewModal.isPdf && pdfTotalPages > 1" class="text-[10px] text-slate-400 font-mono">
-              صفحه {{ pdfCurrentPage }} از {{ pdfTotalPages }}
-            </span>
-          </div>
-
-          <!-- Page Switcher Buttons (for multi-page PDFs) -->
-          <div *ngIf="previewModal.isPdf && pdfTotalPages > 1" class="flex items-center gap-1 bg-slate-800/80 p-0.5 rounded-xl border border-slate-700 mr-2">
-            <button 
-              type="button" 
-              (click)="prevPdfPage()" 
-              [disabled]="pdfCurrentPage <= 1"
-              title="صفحه قبلی"
-              class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-right"></svg>
-            </button>
-            <span class="text-[10px] font-mono font-bold px-1.5 text-slate-300">{{ pdfCurrentPage }}/{{ pdfTotalPages }}</span>
-            <button 
-              type="button" 
-              (click)="nextPdfPage()" 
-              [disabled]="pdfCurrentPage >= pdfTotalPages"
-              title="صفحه بعدی"
-              class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-left"></svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Left Side (RTL End): Zoom Controls, Rotate, Fullscreen, Download, Close -->
-        <div class="flex items-center gap-1 md:gap-1.5">
-          <!-- Zoom Controls (کوچک‌نمایی، درصد و بزرگ‌نمایی) -->
-          <div class="flex items-center bg-slate-800/80 rounded-xl border border-slate-700/80 p-0.5">
-            <button 
-              type="button" 
-              (click)="zoomOut()" 
-              title="کوچک‌نمایی (-)" 
-              class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-700 transition-all cursor-pointer active:scale-95">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="minus"></svg>
-            </button>
-            <button 
-              type="button" 
-              (click)="resetZoom()" 
-              title="بازنشانی اندازه به ۱۰۰٪" 
-              class="px-2 h-7 rounded-lg flex items-center justify-center text-[10px] font-mono font-bold text-slate-300 hover:text-white hover:bg-slate-700 transition-all cursor-pointer">
-              {{ (previewScale * 100).toFixed(0) }}%
-            </button>
-            <button 
-              type="button" 
-              (click)="zoomIn()" 
-              title="بزرگ‌نمایی (+)" 
-              class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-700 transition-all cursor-pointer active:scale-95">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg>
-            </button>
-          </div>
-
-          <!-- دکمه چرخش (Rotate) -->
-          <button 
-            type="button" 
-            (click)="rotatePreview()" 
-            title="چرخش ۹۰ درجه" 
-            class="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 flex items-center justify-center transition-all cursor-pointer active:scale-95">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="rotate-cw"></svg>
-          </button>
-
-          <!-- دکمه بازنشانی جابجایی و زوم (Reset Pan/Zoom) -->
-          <button 
-            type="button" 
-            (click)="resetZoom()" 
-            title="مرکز کردن سند" 
-            class="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 flex items-center justify-center transition-all cursor-pointer active:scale-95">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="crosshair"></svg>
-          </button>
-
-          <!-- دکمه تمام‌صفحه (Fullscreen) -->
-          <button 
-            type="button" 
-            (click)="toggleFullscreen()" 
-            [title]="isFullscreenPreview ? 'خروج از تمام‌صفحه' : 'نمایش تمام‌صفحه'" 
-            class="w-8 h-8 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 flex items-center justify-center transition-all cursor-pointer active:scale-95">
-            <svg *ngIf="!isFullscreenPreview" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="maximize-2"></svg>
-            <svg *ngIf="isFullscreenPreview" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="minimize-2"></svg>
-          </button>
-
-          <!-- دکمه دانلود اصل فایل -->
-          <button type="button" (click)="downloadFile(previewModal.fileUrl)" 
-             title="دانلود نسخه اصلی سند"
-             aria-label="دانلود"
-             class="w-8 h-8 rounded-xl bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600/50 hover:text-white border border-indigo-500/40 flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
-            <span class="sr-only">دانلود</span>
-          </button>
-
-          <!-- دکمه بستن -->
-          <button 
-            type="button" 
-            (click)="closePreview()" 
-            title="بستن پیش‌نمایش (Esc)"
-            class="w-8 h-8 rounded-xl bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 hover:text-white border border-rose-500/30 flex items-center justify-center transition-all cursor-pointer mr-1">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
-          </button>
-        </div>
-
-      </div>
-
-      <!-- Preview Body (Interactive Canvas / Image Area with Pan & Drag) -->
-      <div 
-        (mousedown)="startPan($event)" 
-        (mousemove)="onPan($event)" 
-        (mouseup)="stopPan()" 
-        (mouseleave)="stopPan()"
-        class="flex-1 bg-slate-950 overflow-auto flex items-center justify-center p-4 relative select-none cursor-grab active:cursor-grabbing">
-        
-        <!-- اندیکاتور بارگذاری PDF -->
-        <div *ngIf="isPdfLoading" class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/70 backdrop-blur-xs text-white">
-          <div class="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-          <span class="text-xs font-bold animate-pulse text-indigo-300">در حال رندر صفحات سند بر روی بوم اختصاصی...</span>
-          <span class="text-[10px] text-slate-400 mt-1">بدون فعال‌سازی دانلود منیجر و به صورت کاملاً امن</span>
-        </div>
-
-        <!-- ۱. رندر اختصاصی صفحات PDF بر روی Canvas (بدون دخالت افزونه IDM یا باگ‌های مرورگر) -->
-        <div *ngIf="previewModal.isPdf && !useIframeFallback" 
-             [style.transform]="'translate(' + panX + 'px, ' + panY + 'px)'"
-             class="transition-transform duration-75 flex flex-col items-center justify-center">
-          <canvas id="pdf-render-canvas" class="shadow-2xl rounded-xl bg-white max-w-none transition-all"></canvas>
-        </div>
-
-        <!-- فال‌بک آی‌فریم در صورت نیاز -->
-        <iframe *ngIf="previewModal.isPdf && useIframeFallback && previewModal.safeFileUrl" 
-                [src]="previewModal.safeFileUrl" 
-                class="w-full h-full rounded-2xl border border-slate-700 bg-white"></iframe>
-
-        <!-- ۲. نمایشگر تصویر (Image Viewer با زوم، پن و چرخش) -->
-        <div *ngIf="previewModal.isImage && previewModal.fileUrl"
-             [style.transform]="'translate(' + panX + 'px, ' + panY + 'px)'"
-             class="transition-transform duration-75 flex items-center justify-center">
-          <img 
-            [src]="previewModal.fileUrl | serverUrl" 
-            [style.transform]="'scale(' + previewScale + ') rotate(' + previewRotation + 'deg)'"
-            class="max-h-[82vh] max-w-[85vw] rounded-2xl shadow-2xl object-contain transition-transform duration-100" 
-            [alt]="previewModal.title" 
-          />
-        </div>
-
-        <!-- ۳. فال‌بک برای سایر انواع فایل‌ها -->
-        <div *ngIf="!previewModal.isPdf && !previewModal.isImage" class="text-center space-y-3 p-8 bg-slate-900/90 rounded-2xl border border-slate-800">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto text-slate-500 mb-2" appIcon="file-text"></svg>
-          <p class="text-xs font-bold text-slate-300">پیش‌نمایش مستقیم این نوع فایل در مرورگر پشتیبانی نمی‌شود.</p>
-          <button type="button" (click)="downloadFile(previewModal.fileUrl)" class="inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-            دانلود مستقیم فایل
-          </button>
-        </div>
-
-      </div>
-
-      <!-- Footer Help Bar -->
-      <div class="px-4 py-1.5 bg-slate-950/90 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 shrink-0">
-        <div class="flex items-center gap-3">
-          <span class="flex items-center gap-1.5"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-400" appIcon="help-circle"></svg><span>راهنما: سند را با کلیک و کشیدن ماوس (Drag) جابجا کنید.</span></span>
-          <span class="hidden md:inline">|</span>
-          <span class="hidden md:inline">بزرگ‌نمایی: دکمه‌های + و −</span>
-        </div>
-        <div class="font-mono text-slate-500">
-          مقیاس: {{ (previewScale * 100).toFixed(0) }}% | چرخش: {{ previewRotation }}°
-        </div>
-      </div>
-
-    </div>
-  </div>
+  <!-- ۶. لایت‌باکس پیش‌نمایش درجای مدرک (مشترک: shared/components/document-preview) -->
+  <app-document-preview></app-document-preview>
 
 </div>
 

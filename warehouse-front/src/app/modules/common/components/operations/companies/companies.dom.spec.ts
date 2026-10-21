@@ -3,7 +3,7 @@ import '@angular/compiler';
 import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
-import { ɵresolveComponentResources } from '@angular/core';
+import { ɵresolveComponentResources, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { provideRouter, Router } from '@angular/router';
@@ -894,12 +894,12 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       } as any;
 
       component.openPreview(doc);
-      expect(component.previewModal.isOpen).toBe(true);
-      expect(component.previewModal.title).toBe('اساسنامه رسمی');
-      expect(component.previewModal.isPdf).toBe(true);
+      expect(component.docPreview!.previewModal.isOpen).toBe(true);
+      expect(component.docPreview!.previewModal.title).toBe('اساسنامه رسمی');
+      expect(component.docPreview!.previewModal.isPdf).toBe(true);
 
-      component.closePreview();
-      expect(component.previewModal.isOpen).toBe(false);
+      component.docPreview!.closePreview();
+      expect(component.docPreview!.previewModal.isOpen).toBe(false);
     });
 
     it('متد openPreview برای فایل‌های تصویری (png, jpg) باید isPdf را false کند', () => {
@@ -913,9 +913,9 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       } as any;
 
       component.openPreview(doc);
-      expect(component.previewModal.isOpen).toBe(true);
-      expect(component.previewModal.isPdf).toBe(false);
-      expect(component.previewModal.isImage).toBe(true);
+      expect(component.docPreview!.previewModal.isOpen).toBe(true);
+      expect(component.docPreview!.previewModal.isPdf).toBe(false);
+      expect(component.docPreview!.previewModal.isImage).toBe(true);
     });
 
     it('پاپ‌آپ پیش‌نمایش باید در DOM با z-index بالاتر از مودال استودیو (کلاس z-[70]) رندر شود', () => {
@@ -952,10 +952,10 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
         file_url: '/media/documents/sample.pdf'
       } as any;
       component.openPreview(doc);
-      expect(component.previewModal.isOpen).toBe(true);
+      expect(component.docPreview!.previewModal.isOpen).toBe(true);
 
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-      expect(component.previewModal.isOpen).toBe(false);
+      expect(component.docPreview!.previewModal.isOpen).toBe(false);
     });
   });
 
@@ -1686,7 +1686,151 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(component.isAccountingInstalled).toBe(true);
     });
   });
+
+  describe('۱۴. قرارداد تب‌ها و بخش‌های مشارکتی استودیو (§۵-۱، §۵-۲، §۵-۴)', () => {
+    const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+    let tabLoader: ReturnType<typeof vi.fn>;
+    let savedTabLoader: ReturnType<typeof vi.fn>;
+    let sectionLoader: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      tabLoader = vi.fn().mockResolvedValue(TestContribTabComponent);
+      savedTabLoader = vi.fn().mockResolvedValue(TestContribTabComponent);
+      sectionLoader = vi.fn().mockResolvedValue(TestContribSectionComponent);
+      const registry = TestBed.inject(ModuleRegistryService);
+      vi.spyOn(registry, 'getExtensions').mockImplementation(((point: string) => point === 'companies' ? [{
+        moduleCode: 'test-mod',
+        extension: {
+          studioTabs: [
+            { id: 'saved_only', labelFa: 'فقط ذخیره‌شده', shortLabelFa: 'ذخیره', icon: 'cloud', order: 70, requiresSavedCompany: true, hiddenUntilSaved: true, loadComponent: savedTabLoader },
+            { id: 'x_tab', labelFa: 'تب آزمایشی', shortLabelFa: 'آزمایشی', icon: 'database', order: 30, requiresSavedCompany: false, loadComponent: tabLoader },
+            { id: 'identity', labelFa: 'هم‌نام هسته', shortLabelFa: 'هم‌نام', icon: 'x', order: 1, requiresSavedCompany: false, loadComponent: tabLoader }
+          ],
+          studioSections: [{ slot: 'documents', order: 10, loadComponent: sectionLoader }]
+        }
+      }] : []) as any);
+    });
+
+    it('تب مشارکتی به ترتیب order میان تب‌های هسته می‌نشیند و تب هم‌نام هسته نادیده گرفته می‌شود', () => {
+      component.setupStudioForNew();
+      expect(component.modalTabs.map(t => t.id)).toEqual(['identity', 'fiscal_insurance', 'x_tab', 'documents', 'access']);
+      expect(component.modalTabs.find(t => t.id === 'identity')?.label).toBe('مشخصات هویتی و ثبتی');
+    });
+
+    it('تب hiddenUntilSaved پیش از ذخیره پنهان است و پس از باز شدن شرکت ذخیره‌شده دیده می‌شود', () => {
+      component.setupStudioForNew();
+      expect(component.modalTabs.some(t => t.id === 'saved_only')).toBe(false);
+      component.setModalTab('saved_only');
+      expect(component.activeModalTab).toBe('identity');
+
+      component.setupStudioForCompany(1);
+      expect(component.studioContext.companyId()).toBe(1);
+      expect(component.modalTabs.map(t => t.id).at(-1)).toBe('saved_only');
+      component.setModalTab('saved_only');
+      expect(component.activeModalTab).toBe('saved_only');
+    });
+
+    it('شناسهٔ تب مشارکتی در query پذیرفته می‌شود و شناسهٔ ناشناخته نادیده گرفته می‌شود', async () => {
+      const router = TestBed.inject(Router);
+      component.setupStudioForCompany(1);
+      await router.navigateByUrl('/app/operations/companies?tab=x_tab');
+      expect(component.activeModalTab).toBe('x_tab');
+      await router.navigateByUrl('/app/operations/companies?tab=no_such_tab');
+      expect(component.activeModalTab).toBe('x_tab');
+    });
+
+    it('کامپوننت تب تنبل بارگذاری و با companyId رندر می‌شود؛ شمارنده و خطای context روی تب می‌آید', async () => {
+      component.setupStudioForCompany(1);
+      component.setModalTab('x_tab');
+      fixture.detectChanges();
+      expect(tabLoader).toHaveBeenCalledTimes(1);
+      await flush();
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('.contrib-tab')?.textContent).toContain('شرکت 1');
+      expect(savedTabLoader).not.toHaveBeenCalled();
+
+      component.studioContext.setCount('x_tab', 4);
+      component.studioContext.reportError('x_tab');
+      const tab = component.modalTabs.find(t => t.id === 'x_tab');
+      expect(tab?.count).toBe(4);
+      expect(tab?.indicator?.tone).toBe('rose');
+      fixture.detectChanges();
+      expect(tabLoader).toHaveBeenCalledTimes(1);
+    });
+
+    it('تب requiresSavedCompany پیش از ذخیره پیام «ابتدا ذخیره کنید» نشان می‌دهد و کامپوننت را بار نمی‌کند', () => {
+      const registry = TestBed.inject(ModuleRegistryService);
+      vi.spyOn(registry, 'getExtensions').mockImplementation(((point: string) => point === 'companies' ? [{
+        moduleCode: 'test-mod-2',
+        extension: { studioTabs: [{ id: 'needs_save', labelFa: 'نیازمند ذخیره', shortLabelFa: 'ذخیره', icon: 'cloud', order: 30, requiresSavedCompany: true, loadComponent: tabLoader }] }
+      }] : []) as any);
+      component.setupStudioForNew();
+      component.setModalTab('needs_save');
+      fixture.detectChanges();
+      expect(component.activeModalTab).toBe('needs_save');
+      expect(fixture.nativeElement.textContent).toContain('ابتدا مشخصات اولیهٔ شرکت را ذخیره کنید');
+      expect(tabLoader).not.toHaveBeenCalled();
+    });
+
+    it('بخش مشارکتی در انتهای تب مدارک رندر می‌شود', async () => {
+      component.setupStudioForCompany(1);
+      component.setModalTab('documents');
+      fixture.detectChanges();
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.contrib-section')?.textContent).toContain('بخش 1');
+    });
+
+    it('شکست بارگذاری کامپوننت حالت خطا با «تلاش دوباره» دارد و تلاش دوباره دوباره بار می‌کند', async () => {
+      tabLoader.mockRejectedValueOnce(new Error('chunk failed'));
+      component.setupStudioForCompany(1);
+      component.setModalTab('x_tab');
+      fixture.detectChanges();
+      await flush();
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.textContent).toContain('بارگذاری این بخش انجام نشد.');
+      const retry = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('تلاش دوباره') && b.closest('[role="alert"]')?.textContent?.includes('بارگذاری این بخش')) as HTMLButtonElement;
+      retry.click();
+      fixture.detectChanges();
+      await flush();
+      fixture.detectChanges();
+      expect(tabLoader).toHaveBeenCalledTimes(2);
+      expect(el.querySelector('.contrib-tab')).not.toBeNull();
+    });
+
+    it('فرم ذخیره‌نشدهٔ کامپوننت مشارکتی (registerDirty) هشدار خروج را فعال می‌کند', () => {
+      component.setupStudioForCompany(1);
+      expect(component.hasUnsavedChanges()).toBe(false);
+      let dirty = true;
+      const unregister = component.studioContext.registerDirty('x_tab', () => dirty);
+      expect(component.hasUnsavedChanges()).toBe(true);
+      dirty = false;
+      expect(component.hasUnsavedChanges()).toBe(false);
+      dirty = true;
+      unregister();
+      expect(component.hasUnsavedChanges()).toBe(false);
+    });
+  });
 });
 
+@Component({
+  selector: 'app-test-contrib-tab',
+  standalone: true,
+  template: '<p class="contrib-tab">شرکت {{ companyId }}</p>'
+})
+class TestContribTabComponent {
+  @Input() companyId: number | null = null;
+}
 
-
+@Component({
+  selector: 'app-test-contrib-section',
+  standalone: true,
+  template: '<p class="contrib-section">بخش {{ companyId }}</p>'
+})
+class TestContribSectionComponent {
+  @Input() companyId: number | null = null;
+}

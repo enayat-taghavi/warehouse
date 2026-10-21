@@ -357,4 +357,58 @@ interface CompanyRowAction { id: string; labelFa: string; icon: IconName; tab: s
 
 **گام بعد:** گام ۲.
 
+### گام ۲ — قرارداد، context و پیش‌نمایش مشترک (۲۹ مهر ۱۴۰۵) — انجام شد
+
+**انجام شد:**
+- **§۵-۱ قرارداد** (`core/modules/module-contract.ts`): `studioTabs`، `studioSections`، `listCells` و `rowActions` در بخش `companies`، با رابط‌های `CompanyStudioTab`، `CompanyStudioSection`، `CompanyListCell` و `CompanyRowAction`.
+- **§۵-۲ context** (`core/services/company-studio-context.service.ts`، در `providers` استودیو):
+  - signalهای `companyId` و `company`؛
+  - `setCount`/`count`، `reportError`/`hasError`، `registerDirty` (تابع لغو برمی‌گرداند)/`isDirty`؛
+  - `setCompany` که با عوض شدن شرکت، شمارنده‌ها و خطاهای شرکت پیشین را پاک می‌کند.
+- **میزبان در هسته** (`companies.ts` و `companies.html`):
+  - تب مشارکتی با `order` میان تب‌های هسته می‌نشیند. جای تب‌های هسته: هویتی ۱۰، بیمه و مالی ۲۰، بانک ۳۰، هیئت‌مدیره ۴۰، مدارک ۵۰، دسترسی ۶۰ و گوگل‌درایو ۷۰.
+  - تب مشارکتی با شناسهٔ هم‌نام تب هسته نادیده گرفته می‌شود.
+  - شمارنده و نشان خطای تب مشارکتی از context می‌آید.
+  - کامپوننت تب و بخش با `*ngComponentOutlet` و ورودی `companyId` به‌صورت تنبل بارگذاری می‌شود. سه حالت دارد: اسکلت، خطا با «تلاش دوباره» (و یادآوری اتصال در حالت آفلاین)، و خود کامپوننت.
+  - جایگاه بخش‌ها در انتهای تب‌های `fiscal_insurance` و `documents` است.
+  - `hasUnsavedChanges()` فرم‌های ثبت‌شده در context را هم حساب می‌کند.
+- **§۵-۴:** فهرست ثابت شناسهٔ تب در `queryParamMap` حذف شد. `isKnownTab` تب‌های هسته و `studioTabs` نصب‌شده را می‌پذیرد. کش کلیددار `modalTabs` ماند و کلید آن شمارنده و خطای تب‌های مشارکتی را هم دارد.
+- **پیش‌نمایش (بخش منطق B12):** لایت‌باکس **بی‌تغییر** به `shared/components/document-preview/` منتقل شد.
+  - میزبان آن را یک بار می‌گذارد و با `@ViewChild` و `open({title, url})` باز می‌کند.
+  - Esc و پاک‌سازی `ngOnDestroy` به کامپوننت مشترک رفتند. `HttpClient`، `DomSanitizer` و ۲۰ عضو پیش‌نمایش از `companies.ts` حذف شدند.
+
+**انحراف از طرح:**
+- **فیلد تازهٔ `hiddenUntilSaved`** در `CompanyStudioTab`. گوگل‌درایو امروز پیش از ذخیره پنهان است، ولی بانک پیش از ذخیره دیده می‌شود و پیام خودش را دارد. برای اینکه انتقال گام ۳ و ۴ ظاهر را عوض نکند، دو رفتار جدا لازم بود:
+  - `requiresSavedCompany`: میزبان پیام «ابتدا ذخیره کنید» نشان می‌دهد.
+  - `hiddenUntilSaved`: تب پیش از ذخیره دیده نمی‌شود.
+- **میزبان `listCells` و `rowActions`** به گام ۴ سپرده شد. جای ستون‌ها و دکمه به خود انتقال وابسته است. در این گام فقط قرارداد آن‌ها آمد.
+- **`company-documents-archive`** (صفحهٔ جدای حسابداری) نسخهٔ پیش‌نمایش خودش را دارد. در دامنهٔ این طرح نیست و دست نخورد.
+
+**آزمون‌ها:**
+- `tsc` سبز. `ng build` (development، `scratch/build-cf`) سبز و بدون هشدار.
+- specها: **۱۳۷ از ۱۳۷ سبز** (۹ فایل). لاگ: `scratch/logs/cf_step2_specs.log`. اسکریپت اجرا: `scratch/cf_specs.sh <نام لاگ>`.
+  - spec تازهٔ سرویس (۵ آزمون)؛
+  - spec تازهٔ پیش‌نمایش (۶ آزمون: PDF و z-[70]، تصویر و نشانی نسبی، مرز زوم، جابه‌جایی، Esc و `closed`)؛
+  - spec تازهٔ قرارداد (۸ آزمون): ترتیب و هم‌نامی، `hiddenUntilSaved`، شناسهٔ تب در query، رندر تنبل با `companyId`، شمارنده و خطا، پیام ذخیره، بخش مدارک، شکست بارگذاری و تلاش دوباره، و `registerDirty`.
+  - `tsconfig.companies.spec.json` دو spec تازه و پوشهٔ آیندهٔ `modules/accounting/components/companies-studio/` را هم دارد.
+- نگهبان‌ها: 52 و 57 سبز. 56 (`--base c6ffbbf`) سبز. 55 برابر خط پایه است (قاعدهٔ ۱: ۱۰۵؛ قاعدهٔ ۴: ۴۶).
+  - 56 پیش از اصلاح، `closePreview()` را «فراخوانی گم‌شده» گرفت. پوستهٔ `closePreview` از `companies.ts` حذف شد و spec مستقیم `docPreview.closePreview()` را صدا می‌زند.
+  - حذف خالص بزرگ در `companies.html` (۱۸۶ سطر) و `companies.ts` همان انتقال پیش‌نمایش است.
+
+**بازبین `ui-reviewer`:** جابه‌جایی پیش‌نمایش پس‌رفت نداشت. ۵ یافته داد:
+- **اصلاح شد:**
+  - تضاد رنگ پیام «ابتدا ذخیره کنید»: `text-amber-600` به `text-amber-800` تغییر کرد، در هر سه جا (بانک قدیم، گوگل‌درایو و پیام تازه).
+  - `role="status"` به این پیام‌ها افزوده شد.
+  - یادآوری اتصال به پیام خطای بارگذاری در حالت آفلاین افزوده شد.
+- **ثبت شد و تغییری نکرد:**
+  - کامپوننت مشارکتیِ بدون ورودی `companyId` در `ngComponentOutlet` خطای NG0303 می‌دهد. این شرط در توضیح قرارداد آمده است.
+  - `role="tabpanel"` برای همهٔ پنل‌ها (هسته و مشارکتی) به گام ۵ سپرده شد.
+
+**بازبینی بصری** (۴۳۰۰، ۳۶۰ پیکسل، `qa_admin`):
+- پیش از بازبینی بسنجید که bundle تازه است: `main.js` نام `contributionComponent` را داشت.
+- **پیش‌نمایش:** در `/companies/2?tab=documents`، «پیش‌نمایش اساسنامه» لایت‌باکس را با `z-index: 70` باز کرد و PDF روی بوم رندر شد (عرض ۵۹۵). Esc آن را بست.
+- **تب‌ها:** ترتیب و شمارنده‌ها مثل پیش است.
+
+**گام بعد:** گام ۳ (انتقال بانک و هیئت‌مدیره به `modules/accounting/components/companies-studio/` با `studioTabs`).
+
 </div>

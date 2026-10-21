@@ -29,6 +29,46 @@ export interface ModulePersonas {
   lastResortRoute?: string;
 }
 
+/** تب مشارکتی استودیوی شرکت */
+export interface CompanyStudioTab {
+  /** شناسهٔ تب در query (`?tab=`)؛ نباید با تب‌های هسته یکی باشد */
+  id: string;
+  labelFa: string;
+  shortLabelFa: string;
+  icon: IconName;
+  /** جای تب در میان تب‌های هسته (هویتی ۱۰، بیمه و مالی ۲۰، مدارک ۵۰، دسترسی ۶۰) */
+  order: number;
+  /** پیش از ذخیرهٔ شرکت به‌جای کامپوننت پیام «ابتدا ذخیره کنید» نمایش داده می‌شود */
+  requiresSavedCompany: boolean;
+  /** پیش از ذخیرهٔ شرکت تب اصلاً نمایش داده نمی‌شود */
+  hiddenUntilSaved?: boolean;
+  loadComponent: () => Promise<Type<unknown>>;
+}
+
+/** بخش مشارکتی داخل یک تب هستهٔ استودیو */
+export interface CompanyStudioSection {
+  slot: 'fiscal_insurance' | 'documents';
+  order: number;
+  loadComponent: () => Promise<Type<unknown>>;
+}
+
+/** ستون مشارکتی فهرست شرکت‌ها */
+export interface CompanyListCell {
+  id: string;
+  labelFa: string;
+  order: number;
+  loadComponent: () => Promise<Type<unknown>>;
+}
+
+/** دکمهٔ مشارکتی ردیف فهرست شرکت‌ها */
+export interface CompanyRowAction {
+  id: string;
+  labelFa: string;
+  icon: IconName;
+  /** شناسهٔ تب استودیو که باز می‌شود */
+  tab: string;
+}
+
 /**
  * مشخصات پایه یک ماژول فرانت‌اند در پلتفرم انبارداری و مالی
  */
@@ -298,6 +338,14 @@ export interface ExtensionMap {
   companies?: {
     hasWarehouseModuleToggle?: boolean;
     providesTreasury?: boolean;
+    /** تب‌های تازهٔ استودیوی شرکت (کامپوننت تنبل؛ ورودی companyId و گفت‌وگو با CompanyStudioContextService) */
+    studioTabs?: CompanyStudioTab[];
+    /** بخش‌هایی که در انتهای یک تب هستهٔ استودیو نمایش داده می‌شوند */
+    studioSections?: CompanyStudioSection[];
+    /** ستون جدول و ردیف کارت موبایل فهرست شرکت‌ها (ورودی company) */
+    listCells?: CompanyListCell[];
+    /** دکمهٔ ردیف فهرست که یک تب استودیو را باز می‌کند */
+    rowActions?: CompanyRowAction[];
   };
 
   /**
