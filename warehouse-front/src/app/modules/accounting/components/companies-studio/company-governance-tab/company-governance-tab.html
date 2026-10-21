@@ -1,0 +1,412 @@
+<div class="space-y-4">
+  <!-- هدر آماری و شاخص‌های کلیدی هیئت‌مدیره -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+    <div class="bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80 flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-600" appIcon="users"></svg>
+      <div>
+        <div class="text-[11px] text-slate-500 font-bold">کل ارکان و اعضا</div>
+        <div class="text-sm font-black text-slate-800 font-mono">{{ companyBoardMembers.length }} نفر</div>
+      </div>
+    </div>
+
+    <div class="bg-emerald-50/60 p-2.5 rounded-2xl border border-emerald-100 flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-emerald-600" appIcon="edit-3"></svg>
+      <div>
+        <div class="text-[11px] text-emerald-700 font-bold">صاحبان حق امضا</div>
+        <div class="text-sm font-black text-emerald-800 font-mono">{{ getSignersCount() }} نفر</div>
+      </div>
+    </div>
+
+    <div class="bg-indigo-50/60 p-2.5 rounded-2xl border border-indigo-100 flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="shield-check"></svg>
+      <div>
+        <div class="text-[11px] text-indigo-700 font-bold">رئیس هیئت‌مدیره</div>
+        <div class="text-xs font-black text-indigo-900 truncate max-w-[110px]" [title]="getChairmanMember() ? (getChairmanMember()!.first_name + ' ' + getChairmanMember()!.last_name) : 'تعیین‌نشده'">
+          {{ getChairmanMember() ? (getChairmanMember()!.first_name + ' ' + getChairmanMember()!.last_name) : 'تعیین‌نشده' }}
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-purple-50/60 p-2.5 rounded-2xl border border-purple-100 flex items-center gap-2.5">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-600" appIcon="briefcase"></svg>
+      <div>
+        <div class="text-[11px] text-purple-700 font-bold">مدیرعامل</div>
+        <div class="text-xs font-black text-purple-900 truncate max-w-[110px]" [title]="getCeoMember() ? (getCeoMember()!.first_name + ' ' + getCeoMember()!.last_name) : 'تعیین‌نشده'">
+          {{ getCeoMember() ? (getCeoMember()!.first_name + ' ' + getCeoMember()!.last_name) : 'تعیین‌نشده' }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- پیام راهنما در صورت ثبت شرکت جدید بدون شناسه -->
+  <div *ngIf="!companyId" class="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-800 flex items-center gap-2">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600 shrink-0" appIcon="alert-triangle"></svg>
+    <span>جهت افزودن اعضای هیئت‌مدیره و الصاق مدارک، لطفاً ابتدا مشخصات پایه شرکت را ثبت و دکمه ذخیره را بزنید.</span>
+  </div>
+
+  <!-- دکمه باز کردن فرم ثبت عضو جدید -->
+  <div *ngIf="companyId && !showBoardMemberForm" class="flex justify-between items-center">
+    <h4 class="text-xs font-bold text-slate-700">لیست ارکان قانونی، هیئت‌مدیره و صاحبان امضا</h4>
+    <button 
+      type="button" 
+      (click)="openNewBoardMemberForm()"
+      class="w-8 h-8 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-all shadow-xs cursor-pointer active:scale-95"
+      title="افزودن عضو جدید به هیئت‌مدیره"
+      aria-label="افزودن عضو جدید">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg>
+      <span class="sr-only">افزودن عضو جدید</span>
+    </button>
+  </div>
+
+  <!-- کارت فرم افزودن / ویرایش عضو هیئت‌مدیره -->
+  <div *ngIf="showBoardMemberForm" class="bg-slate-50/90 p-3.5 rounded-2xl border border-indigo-200/80 shadow-xs space-y-3 animate-fade-in">
+    <div class="flex items-center justify-between border-b border-slate-200/80 pb-2">
+      <span class="text-xs font-black text-indigo-900 flex items-center gap-1.5">
+        <svg *ngIf="isEditingBoardMember" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg><svg *ngIf="!isEditingBoardMember" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="plus"></svg>
+        <span>{{ isEditingBoardMember ? 'ویرایش مشخصات عضو هیئت‌مدیره' : 'ثبت عضو جدید هیئت‌مدیره / ارکان قانونی' }}</span>
+      </span>
+      <button type="button" (click)="cancelBoardMemberForm()" class="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer" title="انصراف">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <!-- نوع عضویت -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع عضویت</label>
+        <select 
+          [(ngModel)]="newBoardMember.member_type" 
+          class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+          <option value="real">شخص حقیقی</option>
+          <option value="legal_rep">نماینده شخص حقوقی</option>
+        </select>
+      </div>
+
+      <!-- نام شخصیت حقوقی متبوع -->
+      <div *ngIf="newBoardMember.member_type === 'legal_rep'">
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">نام شرکت / شخصیت حقوقی متبوع</label>
+        <input 
+          type="text" 
+          [(ngModel)]="newBoardMember.represented_legal_name" 
+          placeholder="مثال: شرکت سرمایه‌گذاری سینا"
+          class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+        />
+      </div>
+
+      <!-- سمت سازمانی -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">سمت در شرکت</label>
+        <select 
+          [(ngModel)]="newBoardMember.role" 
+          class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+          <option *ngFor="let r of boardRolesList" [value]="r.value">{{ r.label }}</option>
+        </select>
+      </div>
+
+      <!-- نام -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">نام</label>
+        <input 
+          type="text" 
+          [(ngModel)]="newBoardMember.first_name" 
+          placeholder="نام" 
+          class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+        />
+      </div>
+
+      <!-- نام خانوادگی -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">نام خانوادگی</label>
+        <input 
+          type="text" 
+          [(ngModel)]="newBoardMember.last_name" 
+          placeholder="نام خانوادگی" 
+          class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+        />
+      </div>
+
+      <!-- کد ملی (۱۰ رقم) -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">کد ملی (۱۰ رقم)</label>
+        <input 
+          type="text" 
+          [(ngModel)]="newBoardMember.national_code" 
+          placeholder="۱۲۳۴۵۶۷۸۹۰" 
+          maxlength="10"
+          class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+        />
+      </div>
+
+      <!-- تاریخ شروع تصدی -->
+      <div class="relative" (click)="$event.stopPropagation()">
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ شروع تصدی (جلالی)</label>
+        <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
+          <ng-persian-datepicker 
+            [(uiIsVisible)]="isBoardTermStartDatePickerOpen"
+            [dateInitValue]="false" 
+            (dateOnSelect)="onBoardTermStartSelect($event)"
+            class="w-full block relative cursor-pointer datepicker-left to-datepicker">
+            <input 
+              type="text" 
+              [formControl]="boardTermStartControl" 
+              (click)="isBoardTermStartDatePickerOpen = !isBoardTermStartDatePickerOpen"
+              placeholder="۱۴۰۳/۰۱/۰۱" 
+              class="w-full text-xs font-mono font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+            />
+          </ng-persian-datepicker>
+          <button 
+            type="button" 
+            (click)="isBoardTermStartDatePickerOpen = !isBoardTermStartDatePickerOpen; $event.stopPropagation()"
+            title="انتخاب تقویم شمسی"
+            class="text-slate-400 hover:text-indigo-600 p-0.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- تاریخ پایان تصدی (حداکثر ۲ سال) -->
+      <div class="relative" (click)="$event.stopPropagation()">
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ پایان تصدی (جلالی - ۲ ساله)</label>
+        <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
+          <ng-persian-datepicker 
+            [(uiIsVisible)]="isBoardTermExpiryDatePickerOpen"
+            [dateInitValue]="false" 
+            (dateOnSelect)="onBoardTermExpirySelect($event)"
+            class="w-full block relative cursor-pointer to-datepicker">
+            <input 
+              type="text" 
+              [formControl]="boardTermExpiryControl" 
+              (click)="isBoardTermExpiryDatePickerOpen = !isBoardTermExpiryDatePickerOpen"
+              placeholder="۱۴۰۵/۰۱/۰۱" 
+              class="w-full text-xs font-mono font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+            />
+          </ng-persian-datepicker>
+          <button 
+            type="button" 
+            (click)="isBoardTermExpiryDatePickerOpen = !isBoardTermExpiryDatePickerOpen; $event.stopPropagation()"
+            title="انتخاب تقویم شمسی"
+            class="text-slate-400 hover:text-indigo-600 p-0.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- چک‌باکس حق امضا -->
+      <div class="flex items-center gap-2 pt-5">
+        <input 
+          type="checkbox" 
+          id="hasSigRight" 
+          [(ngModel)]="newBoardMember.has_signature_right" 
+          class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+        />
+        <label for="hasSigRight" class="text-xs font-bold text-slate-700 cursor-pointer">
+          دارای حق امضای اسناد تعهدآور
+        </label>
+      </div>
+
+      <!-- حدود اختیارات امضا (در صورت داشتن حق امضا) -->
+      <div class="md:col-span-3" *ngIf="newBoardMember.has_signature_right">
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">حدود اختیارات و نحوه امضا</label>
+        <input 
+          type="text" 
+          [(ngModel)]="newBoardMember.signature_scope" 
+          placeholder="مثال: امضای کلیه اسناد مالی و چک‌ها متفقاً با رئیس هیئت‌مدیره همراه با مهر شرکت"
+          class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+        />
+      </div>
+
+      <!-- فایل تصویر کارت ملی / شناسنامه -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">تصویر کارت ملی / شناسنامه (PDF/تصویر)</label>
+        <input 
+          type="file" 
+          (change)="onIdDocFileSelected($event)" 
+          accept=".pdf,.jpg,.jpeg,.png"
+          class="w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+        />
+      </div>
+
+      <!-- فایل حکم انتصاب / صورتجلسه مجمع -->
+      <div class="md:col-span-2">
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">حکم انتصاب / صورتجلسه انتخاب مدیران (PDF/تصویر)</label>
+        <input 
+          type="file" 
+          (change)="onAppointmentDocFileSelected($event)" 
+          accept=".pdf,.jpg,.jpeg,.png"
+          class="w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+        />
+      </div>
+    </div>
+
+    <!-- دکمه‌های اقدام فرم (آیکونی با تولتیپ و متن دسترس‌پذیری) -->
+    <div class="flex justify-end gap-2 pt-2 border-t border-slate-200">
+      <button 
+        type="button" 
+        (click)="cancelBoardMemberForm()" 
+        title="انصراف از ویرایش/افزودن عضو"
+        aria-label="انصراف"
+        class="w-8 h-8 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center transition-all cursor-pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+        <span class="sr-only">انصراف</span>
+      </button>
+      <button 
+        type="button" 
+        (click)="saveBoardMember()" 
+        [disabled]="isSavingBoardMember"
+        [title]="isEditingBoardMember ? 'ثبت ویرایش عضو هیئت‌مدیره' : 'ذخیره عضو در هیئت‌مدیره'"
+        aria-label="ذخیره عضو"
+        class="w-8 h-8 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50">
+        <span *ngIf="isSavingBoardMember" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+        <svg *ngIf="!isSavingBoardMember" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
+        <span class="sr-only">{{ isEditingBoardMember ? 'ثبت ویرایش عضو' : 'ذخیره عضو در هیئت‌مدیره' }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- جدول اعضای هیئت‌مدیره ثبت شده -->
+  <div *ngIf="companyId" class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+    <div *ngIf="loadError" class="py-6 text-center space-y-2 border border-dashed border-rose-200 rounded-2xl bg-rose-50/40" role="alert">
+      <div class="text-xs font-bold text-slate-600">دریافت اعضای هیئت‌مدیره انجام نشد.</div>
+      <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="retry()"></button>
+    </div>
+    <div *ngIf="isLoadingBoardMembers" class="p-6 text-center text-xs text-slate-500">
+      <span>در حال بارگذاری لیست اعضای هیئت‌مدیره...</span>
+    </div>
+
+    <div *ngIf="!isLoadingBoardMembers && !loadError && companyBoardMembers.length === 0" class="p-8 text-center text-xs text-slate-400">
+      <span>هنوز هیچ عضوی برای هیئت‌مدیره یا ارکان قانونی این شرکت ثبت نشده است.</span>
+    </div>
+
+    <!-- جدول نسخه دسکتاپ اعضای هیئت‌مدیره -->
+    <div class="hidden md:block overflow-x-auto">
+    <table *ngIf="!isLoadingBoardMembers && companyBoardMembers.length > 0" class="w-full text-right border-collapse text-xs">
+      <thead class="bg-slate-50/90 text-slate-600 font-bold border-b border-slate-200">
+        <tr>
+          <th class="p-2.5 text-center w-10">#</th>
+          <th class="p-2.5">نام و هویت</th>
+          <th class="p-2.5 text-center">کد ملی</th>
+          <th class="p-2.5">سمت سازمانی</th>
+          <th class="p-2.5 text-center">حق امضا</th>
+          <th class="p-2.5 text-center">دوره تصدی</th>
+          <th class="p-2.5 text-center">مدارک پیوست</th>
+          <th class="p-2.5 text-center w-20">عملیات</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <tr *ngFor="let m of companyBoardMembers; let idx = index" class="hover:bg-slate-50/70 transition-colors">
+          <td class="p-2.5 text-center text-slate-400 font-mono text-[11px]">{{ idx + 1 }}</td>
+          <td class="p-2.5">
+            <div class="font-bold text-slate-800">{{ m.first_name }} {{ m.last_name }}</div>
+            <div *ngIf="m.member_type === 'legal_rep'" class="text-[10px] text-indigo-600 font-medium">
+              نماینده: {{ m.represented_legal_name || 'شخصیت حقوقی' }}
+            </div>
+          </td>
+          <td class="p-2.5 text-center font-mono font-bold text-slate-700">{{ m.national_code }}</td>
+          <td class="p-2.5">
+            <span class="inline-flex px-2 py-0.5 rounded-lg border text-[11px] font-bold" [ngClass]="getRoleBadgeClass(m.role)">
+              {{ getRoleLabel(m.role) }}
+            </span>
+          </td>
+          <td class="p-2.5 text-center">
+            <div *ngIf="m.has_signature_right">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold" [title]="m.signature_scope || 'دارای حق امضا'">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit-3"></svg>
+                <span>دارای حق امضا</span>
+              </span>
+              <div *ngIf="m.signature_scope" class="text-[10px] text-slate-400 truncate max-w-[140px] mx-auto mt-0.5" [title]="m.signature_scope">
+                {{ m.signature_scope }}
+              </div>
+            </div>
+            <span *ngIf="!m.has_signature_right" class="text-slate-300 text-[11px]">—</span>
+          </td>
+          <td class="p-2.5 text-center font-mono text-[11px] text-slate-600">
+            <div *ngIf="m.term_start || m.term_expiry">
+              <span>{{ m.term_start || '—' }}</span>
+              <span class="text-slate-400 mx-1">تا</span>
+              <span>{{ m.term_expiry || '—' }}</span>
+            </div>
+            <span *ngIf="!m.term_start && !m.term_expiry" class="text-slate-300">—</span>
+          </td>
+          <td class="p-2.5 text-center">
+            <div class="flex items-center justify-center gap-1.5">
+              <a *ngIf="m.attached_id_doc_url" [href]="m.attached_id_doc_url" [appExternalLink]="m.attached_id_doc_url" target="_blank" title="مشاهده کارت ملی" class="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
+              </a>
+              <a *ngIf="m.attached_appointment_doc_url" [href]="m.attached_appointment_doc_url" [appExternalLink]="m.attached_appointment_doc_url" target="_blank" title="مشاهده حکم انتصاب" class="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center justify-center">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
+              </a>
+              <span *ngIf="!m.attached_id_doc_url && !m.attached_appointment_doc_url" class="text-slate-300 text-[11px]">—</span>
+            </div>
+          </td>
+          <td class="p-2.5 text-center">
+            <div class="flex items-center justify-center gap-1">
+              <button type="button" (click)="editBoardMember(m)" title="ویرایش عضو" class="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
+              </button>
+              <button type="button" (click)="deleteBoardMember(m)" title="حذف عضو" class="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <!-- کارت‌های ارگونومیک موبایل اعضای هیئت‌مدیره -->
+    <div *ngIf="!isLoadingBoardMembers && companyBoardMembers.length > 0" class="block md:hidden divide-y divide-slate-100">
+      <div *ngFor="let m of companyBoardMembers" class="p-3.5 space-y-2.5 bg-white">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-bold text-xs text-slate-800">{{ m.first_name }} {{ m.last_name }}</div>
+            <div *ngIf="m.member_type === 'legal_rep'" class="text-[10px] text-indigo-600 font-medium">
+              نماینده: {{ m.represented_legal_name || 'شخصیت حقوقی' }}
+            </div>
+          </div>
+          <span class="inline-flex px-2 py-0.5 rounded-lg border text-[10px] font-bold" [ngClass]="getRoleBadgeClass(m.role)">
+            {{ getRoleLabel(m.role) }}
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2 rounded-xl border border-slate-100">
+          <div>
+            <span class="text-slate-400 text-[10px] block">کد ملی:</span>
+            <span class="font-mono font-bold text-slate-700">{{ m.national_code }}</span>
+          </div>
+          <div>
+            <span class="text-slate-400 text-[10px] block">دوره تصدی:</span>
+            <span class="font-mono text-slate-600 text-[10px]">{{ m.term_start || '—' }} تا {{ m.term_expiry || '—' }}</span>
+          </div>
+        </div>
+
+        <div *ngIf="m.has_signature_right" class="flex items-center gap-1.5 text-[10px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 font-bold">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit-3"></svg>
+          <span>دارای حق امضا</span>
+          <span *ngIf="m.signature_scope" class="text-slate-400 font-normal">({{ m.signature_scope }})</span>
+        </div>
+
+        <div class="flex items-center justify-between pt-1 border-t border-slate-100">
+          <div class="flex items-center gap-1.5">
+            <a *ngIf="m.attached_id_doc_url" [href]="m.attached_id_doc_url" [appExternalLink]="m.attached_id_doc_url" target="_blank" title="مشاهده کارت ملی" class="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center gap-1 text-[10px] font-bold">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
+              <span>کارت ملی</span>
+            </a>
+            <a *ngIf="m.attached_appointment_doc_url" [href]="m.attached_appointment_doc_url" [appExternalLink]="m.attached_appointment_doc_url" target="_blank" title="مشاهده حکم انتصاب" class="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center gap-1 text-[10px] font-bold">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
+              <span>حکم انتصاب</span>
+            </a>
+          </div>
+
+          <div class="flex items-center gap-1">
+            <button type="button" (click)="editBoardMember(m)" title="ویرایش عضو" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl border border-slate-200 transition-colors cursor-pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
+            </button>
+            <button type="button" (click)="deleteBoardMember(m)" title="حذف عضو" class="w-8 h-8 flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl border border-rose-200 transition-colors cursor-pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

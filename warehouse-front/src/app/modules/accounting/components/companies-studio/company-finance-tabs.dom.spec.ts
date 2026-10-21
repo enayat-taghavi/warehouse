@@ -10,16 +10,22 @@ import { HttpClient } from '@angular/common/http';
 import { of, Subject } from 'rxjs';
 import { signal } from '@angular/core';
 
-import { CompaniesManagementComponent } from './companies';
-import { CompanyApiService } from '../../../../../core/api/company-api.service';
-import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
-import { ToastService } from '../../../../../shared/components/toast/toast.component';
-import { AccountsHttpService } from '../../../../../core/http/accounts-http.service';
-import { WebSocketService } from '../../../../../core/http/websocket.service';
-import { Company } from '../../../../../core/models/company.model';
-import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
-import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { AuthService } from '../../../../../core/auth/auth.service';
+import { CompaniesManagementComponent } from '../../../common/components/operations/companies/companies';
+import { CompanyApiService } from '../../../../core/api/company-api.service';
+import { ActiveCompanyService } from '../../../../core/services/active-company.service';
+import { ToastService } from '../../../../shared/components/toast/toast.component';
+import { AccountsHttpService } from '../../../../core/http/accounts-http.service';
+import { WebSocketService } from '../../../../core/http/websocket.service';
+import { Company } from '../../../../core/models/company.model';
+import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
+import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { AuthService } from '../../../../core/auth/auth.service';
+import { MODULE as ACCOUNTING_MODULE } from '../../module';
+
+// بارگذاری تنبل کامپوننت واقعی (import پویا) چند چرخه طول می‌کشد
+const flush = async () => {
+  for (let i = 0; i < 10; i++) await new Promise(resolve => setTimeout(resolve, 20));
+};
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -230,7 +236,9 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
               moduleCode: isAccountingInstalledFlag ? 'accounting' : 'warehouse',
               extension: {
                 providesTreasury: isAccountingInstalledFlag,
-                hasWarehouseModuleToggle: true
+                hasWarehouseModuleToggle: true,
+                // تب‌های بانک و هیئت‌مدیره همان ثبت واقعی ماژول حسابداری‌اند (studioTabs)
+                studioTabs: isAccountingInstalledFlag ? ACCOUNTING_MODULE.extensions?.companies?.studioTabs : undefined
               }
             }
           ];
@@ -363,6 +371,10 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     fixture.detectChanges();
     await fixture.whenStable();
 
+    // تب‌های مشارکتی تنبل بارگذاری می‌شوند
+    await flush();
+    fixture.detectChanges();
+
     // ۱. تب خزانه‌داری (treasury)
     component.setModalTab('treasury');
     fixture.detectChanges();
@@ -394,7 +406,10 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     editBtn.click();
     fixture.detectChanges();
     await fixture.whenStable();
+    await flush();
+    fixture.detectChanges();
 
+    expect(component.modalTabs.some(t => t.id === 'treasury' || t.id === 'governance')).toBe(false);
     expect(mockCompanyApi.getBankAccounts).not.toHaveBeenCalled();
     expect(mockCompanyApi.getBoardMembers).not.toHaveBeenCalled();
     expect(mockCompanyApi.getFiscalPeriods).not.toHaveBeenCalled();
@@ -410,8 +425,22 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     editBtn.click();
     fixture.detectChanges();
     await fixture.whenStable();
+    await flush();
+    fixture.detectChanges();
 
+    // هر دو تب یک بار ساخته و نگه داشته می‌شوند (شمارنده‌ها بی‌آنکه تب باز شود)
+    expect(mockCompanyApi.getBankAccounts).toHaveBeenCalledTimes(1);
     expect(mockCompanyApi.getBankAccounts).toHaveBeenCalledWith(1);
     expect(mockCompanyApi.getBoardMembers).toHaveBeenCalledWith(1);
+    expect(component.modalTabs.find(t => t.id === 'treasury')?.count).toBe(1);
+
+    // جابه‌جایی تب دوباره دریافت نمی‌کند (A7)
+    component.setModalTab('treasury');
+    fixture.detectChanges();
+    component.setModalTab('identity');
+    fixture.detectChanges();
+    component.setModalTab('treasury');
+    fixture.detectChanges();
+    expect(mockCompanyApi.getBankAccounts).toHaveBeenCalledTimes(1);
   });
 });

@@ -182,7 +182,20 @@ export const MODULE: WhFrontendModule = {
       queueOrder: 20
     },
     companies: {
-      providesTreasury: true
+      providesTreasury: true,
+      // تب‌های حسابداری استودیوی شرکت؛ کامپوننت‌ها تنبل‌اند تا وارد باندل اولیه نشوند
+      studioTabs: [
+        {
+          id: 'treasury', labelFa: 'بانک و شبا', shortLabelFa: 'بانک', icon: 'database', order: 30,
+          requiresSavedCompany: false,
+          loadComponent: () => import('./components/companies-studio/company-treasury-tab/company-treasury-tab').then(m => m.CompanyTreasuryTabComponent)
+        },
+        {
+          id: 'governance', labelFa: 'هیئت‌مدیره و امضا', shortLabelFa: 'هیئت‌مدیره', icon: 'users', order: 40,
+          requiresSavedCompany: false,
+          loadComponent: () => import('./components/companies-studio/company-governance-tab/company-governance-tab').then(m => m.CompanyGovernanceTabComponent)
+        }
+      ]
     },
     users: {
       permissionGroup: { key: 'ACCOUNTING_FINANCE', titleFa: 'حسابداری 💳', order: 20, codenames: ACCOUNTING_PERMISSION_CODENAMES },

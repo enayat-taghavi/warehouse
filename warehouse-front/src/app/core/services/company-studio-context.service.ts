@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { Observable, Subject } from 'rxjs';
 import { Company } from '../models/company.model';
 
 /**
@@ -49,6 +50,15 @@ export class CompanyStudioContextService {
       if (check()) return true;
     }
     return false;
+  }
+
+  private readonly serverFieldsSubject = new Subject<{ companyId: number; fields: Partial<Company> }>();
+  /** فیلدهای شرکت که کامپوننت مشارکتی روی سرور ثبت کرد؛ هسته آن‌ها را در فرم می‌گذارد بی‌آنکه تغییر ذخیره‌نشده حساب شوند */
+  readonly serverFields$: Observable<{ companyId: number; fields: Partial<Company> }> = this.serverFieldsSubject.asObservable();
+
+  /** companyId شرکتی که درخواست برایش رفت؛ پاسخ دیررسِ شرکت پیشین در فرم شرکت دیگر نمی‌نشیند */
+  applyServerFields(companyId: number, fields: Partial<Company>): void {
+    this.serverFieldsSubject.next({ companyId, fields });
   }
 
   /** شرکت جاری استودیو؛ با تغییر شناسه شمارنده‌ها و خطاهای شرکت پیشین پاک می‌شوند */

@@ -595,8 +595,19 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
       component.companyModal.data.ceo_name = sampleCompanies[0].ceo_name || '';
       expect(component.hasUnsavedChanges()).toBe(false);
-      component.newAccount.sheba_number = 'IR120120000000001234567890';
+      component.studioSelectedUserId = 7;
       expect(component.hasUnsavedChanges()).toBe(true);
+    });
+
+    it('فیلدهایی که تب مشارکتی روی سرور ثبت کرد (حساب اصلی) در فرم می‌آیند و تغییر ذخیره‌نشده حساب نمی‌شوند', () => {
+      component.populateStudioData(sampleCompanies[0]);
+      component.studioContext.applyServerFields(2, { primary_bank_name: 'شرکت دیگر' });
+      expect(component.companyModal.data.primary_bank_name).not.toBe('شرکت دیگر');
+      component.studioContext.applyServerFields(1, { primary_bank_name: 'بانک تجارت', primary_iban: 'IR980180000000000987654321', unknown_field: 'x' } as any);
+      expect(component.companyModal.data.primary_bank_name).toBe('بانک تجارت');
+      expect(component.companyModal.data.primary_iban).toBe('IR980180000000000987654321');
+      expect((component.companyModal.data as any).unknown_field).toBeUndefined();
+      expect(component.hasUnsavedChanges()).toBe(false);
     });
 
     it('رویداد beforeunload با تغییر ذخیره‌نشده جلوگیری می‌شود', () => {
@@ -769,94 +780,6 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       // بررسی وجود نشانگرهای سلامت مدارک در رندر DOM
       expect(htmlText).toContain('پاینده توان ساینا');
       expect(htmlText).toContain('فارس عالیش');
-    });
-  });
-
-  describe('۸. سیستم چندشبایی و خزانه‌داری هوشمند شرکت‌ها (Multi-IBAN & Smart Treasury)', () => {
-    it('باز کردن ویرایش شرکت باید لیست شماره شباهای آن را بارگذاری کند', () => {
-      component.openEditModal(sampleCompanies[0]);
-      fixture.detectChanges();
-
-      expect(mockCompanyApi.getBankAccounts).toHaveBeenCalledWith(1);
-      expect(component.companyBankAccounts.length).toBe(1);
-      expect(component.companyBankAccounts[0].bank_name).toBe('بانک ملت');
-      expect(component.companyBankAccounts[0].is_primary).toBe(true);
-    });
-
-    it('ورود شماره شبای معتبر باید نام بانک و شماره حساب را به صورت خودکار تشخیص دهد', () => {
-      component.onShebaInput('IR160120000000001234567890');
-
-      expect(component.shebaValidationResult?.isValid).toBe(true);
-      expect(component.shebaValidationResult?.bank?.name).toBe('بانک ملت');
-      expect(component.newAccount.bank_name).toBe('بانک ملت');
-      expect(component.newAccount.account_number).toBe('1234567890');
-    });
-
-    it('ورود شماره شبای نامعتبر باید خطا بدهد و از ثبت جلوگیری کند', () => {
-      component.openEditModal(sampleCompanies[0]);
-      component.onShebaInput('IR120000000000000000000000'); // نامعتبر
-
-      expect(component.shebaValidationResult?.isValid).toBe(false);
-      expect(component.shebaValidationResult?.errorMessage).toContain('نامعتبر');
-
-      component.saveBankAccount();
-      expect(mockToast.error).toHaveBeenCalled();
-      expect(mockCompanyApi.createBankAccount).not.toHaveBeenCalled();
-    });
-
-    it('ثبت حساب بانکی معتبر باید وب‌سرویس ایجاد را با شرکت جاری صدا بزند', () => {
-      component.openEditModal(sampleCompanies[0]);
-      component.onShebaInput('IR160120000000001234567890');
-      component.newAccount.account_title = 'حساب حقوق پرسنل';
-
-      component.saveBankAccount();
-      fixture.detectChanges();
-
-      expect(mockCompanyApi.createBankAccount).toHaveBeenCalledWith(expect.objectContaining({
-        company: 1,
-        sheba_number: 'IR160120000000001234567890',
-        bank_name: 'بانک ملت',
-        account_number: '1234567890'
-      }));
-      expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('بانک ملت'));
-    });
-
-    it('تغییر حساب بانکی اصلی باید وب‌سرویس setPrimaryBankAccount را فراخوانی کند', () => {
-      const sampleAccount = {
-        id: 5,
-        company: 1,
-        bank_name: 'بانک تجارت',
-        account_number: '987654321',
-        sheba_number: 'IR980180000000000987654321',
-        account_title: 'حساب تجاری',
-        is_primary: false,
-        is_active: true
-      };
-
-      component.setPrimaryAccount(sampleAccount);
-      fixture.detectChanges();
-
-      expect(mockCompanyApi.setPrimaryBankAccount).toHaveBeenCalledWith(5);
-      expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('به عنوان حساب اصلی شرکت تنظیم شد'));
-    });
-
-    it('کپی شماره شبا به کلیپ‌بورد باید توست موفقیت‌آمیز نمایش دهد', async () => {
-      // Mock clipboard
-      Object.assign(navigator, {
-        clipboard: {
-          writeText: vi.fn().mockResolvedValue(void 0)
-        }
-      });
-
-      component.copySheba('IR120120000000001234567890');
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('IR120120000000001234567890');
-      
-      // Allow async promise chain to resolve
-      await Promise.resolve();
-      await new Promise(r => setTimeout(r, 10));
-
-      expect(mockToast.success).toHaveBeenCalledWith('شماره شبا در حافظه کپی شد.');
-      expect(component.copiedSheba).toBe('IR120120000000001234567890');
     });
   });
 
@@ -1168,103 +1091,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
     });
   });
 
-  describe('۱۲. آزمون جامع تعاملی DOM: مدیریت پویای اعضای هیئت‌مدیره، حق امضا، مدارک پیوست و چکسام شناسه ملی', () => {
-    beforeEach(() => {
-      // باز کردن استودیو شرکت ۱
-      component.openEditModal(sampleCompanies[0]);
-      component.setModalTab('governance');
-      fixture.detectChanges();
-    });
-
-    it('باید تب هیئت‌مدیره آمار کل ارکان، صاحبان حق امضا، رئیس و مدیرعامل را در DOM به درستی رندر کند', () => {
-      const el: HTMLElement = fixture.nativeElement;
-      expect(component.activeModalTab).toBe('governance');
-      expect(component.companyBoardMembers.length).toBe(1);
-
-      // بررسی شاخص‌های آماری
-      expect(component.getSignersCount()).toBe(1);
-      expect(component.getChairmanMember()?.first_name).toBe('رضا');
-
-      // بررسی وجود جدول در DOM
-      const boardTable = el.querySelector('table');
-      expect(boardTable).not.toBeNull();
-      const rows = boardTable!.querySelectorAll('tbody tr');
-      expect(rows.length).toBe(1);
-      expect(rows[0].textContent).toContain('رضا پاینده');
-      expect(rows[0].textContent).toContain('0012345679');
-      expect(rows[0].textContent).toContain('رئیس هیئت‌مدیره');
-      expect(rows[0].textContent).toContain('دارای حق امضا');
-    });
-
-    it('باید دکمه «افزودن عضو جدید» فرم ثبت را در DOM باز کند و امکان انصراف وجود داشته باشد', () => {
-      expect(component.showBoardMemberForm).toBe(false);
-
-      component.openNewBoardMemberForm();
-      fixture.detectChanges();
-      expect(component.showBoardMemberForm).toBe(true);
-
-      component.cancelBoardMemberForm();
-      fixture.detectChanges();
-      expect(component.showBoardMemberForm).toBe(false);
-    });
-
-    it('باید ثبت عضو جدید هیئت‌مدیره همراه با حق امضا و تاریخ‌های تصدی جلالی در وب‌سرویس فراخوانی شود', () => {
-      component.openNewBoardMemberForm();
-      fixture.detectChanges();
-
-      // مقداردهی داده‌های عضو
-      component.newBoardMember.first_name = 'علیرضا';
-      component.newBoardMember.last_name = 'عالیشوندی';
-      component.newBoardMember.national_code = '0012345679';
-      component.newBoardMember.member_type = 'real';
-      component.newBoardMember.role = 'managing_director';
-      component.newBoardMember.has_signature_right = true;
-      component.newBoardMember.signature_scope = 'امضای کلیه قراردادها منفرداً';
-
-      // تست انتخابگر تاریخ تصدی جلالی
-      component.isBoardTermStartDatePickerOpen = true;
-      component.onBoardTermStartSelect('1403/01/01');
-      expect(component.isBoardTermStartDatePickerOpen).toBe(false);
-      expect(component.newBoardMember.term_start).toBe('1403/01/01');
-
-      component.isBoardTermExpiryDatePickerOpen = true;
-      component.onBoardTermExpirySelect('1405/01/01');
-      expect(component.isBoardTermExpiryDatePickerOpen).toBe(false);
-      expect(component.newBoardMember.term_expiry).toBe('1405/01/01');
-
-      // ذخیره عضو
-      component.saveBoardMember();
-      expect(mockCompanyApi.createBoardMember).toHaveBeenCalled();
-      expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('با موفقیت افزوده شد.'));
-      expect(component.showBoardMemberForm).toBe(false);
-    });
-
-    it('باید ویرایش عضو هیئت‌مدیره فرم را با داده‌های عضو پر کرده و updateBoardMember را فراخوانی کند', () => {
-      const member = component.companyBoardMembers[0];
-      component.editBoardMember(member);
-      fixture.detectChanges();
-
-      expect(component.showBoardMemberForm).toBe(true);
-      expect(component.isEditingBoardMember).toBe(true);
-      expect(component.editingBoardMemberId).toBe(member.id);
-      expect(component.newBoardMember.first_name).toBe('رضا');
-
-      // تغییر سمت
-      component.newBoardMember.role = 'managing_director_and_member';
-      component.saveBoardMember();
-
-      expect(mockCompanyApi.updateBoardMember).toHaveBeenCalledWith(member.id, expect.any(FormData));
-      expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('با موفقیت ویرایش شد.'));
-    });
-
-    it('باید حذف عضو هیئت‌مدیره پس از تایید کاربر، وب‌سرویس deleteBoardMember را فراخوانی کند', async () => {
-      const member = component.companyBoardMembers[0];
-      await component.deleteBoardMember(member);
-
-      expect(mockCompanyApi.deleteBoardMember).toHaveBeenCalledWith(member.id);
-      expect(mockToast.success).toHaveBeenCalledWith('عضو هیئت‌مدیره با موفقیت حذف گردید.');
-    });
-
+  describe('۱۲. چکسام شناسهٔ ملی شرکت', () => {
     it('باید متد isNationalIdChecksumValid الگوریتم رسمی چکسام ۱۱ رقمی شناسه ملی اشخاص حقوقی را دقیق بسنجد', () => {
       // تست با رشته خالی یا کمتر از ۱۱ رقم
       expect(component.isNationalIdChecksumValid('')).toBe(true);
@@ -1287,96 +1114,6 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
     beforeEach(() => {
       component.openEditModal(sampleCompanies[0]);
       fixture.detectChanges();
-    });
-
-    it('افزودن حساب بانکی جدید باید بلافاصله و درجا در companyBankAccounts ظاهر شود بدون نیاز به بستن مودال', () => {
-      const initialCount = component.companyBankAccounts.length;
-      component.onShebaInput('IR160120000000001234567890');
-      component.newAccount.account_title = 'حساب تست درجا';
-
-      mockCompanyApi.createBankAccount.mockReturnValue(of({
-        id: 99,
-        company: 1,
-        bank_name: 'بانک ملت',
-        account_number: '1234567890',
-        sheba_number: 'IR160120000000001234567890',
-        account_title: 'حساب تست درجا',
-        is_primary: false,
-        is_active: true
-      }));
-
-      component.saveBankAccount();
-      fixture.detectChanges();
-
-      expect(component.companyBankAccounts.length).toBe(initialCount + 1);
-      const added = component.companyBankAccounts.find(a => a.id === 99);
-      expect(added).toBeDefined();
-      expect(added?.bank_name).toBe('بانک ملت');
-      expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('افزوده شد'));
-    });
-
-    it('حذف حساب بانکی باید بلافاصله از companyBankAccounts حذف شود بدون نیاز به بستن مودال', async () => {
-      const targetAcc = component.companyBankAccounts[0];
-      const initialCount = component.companyBankAccounts.length;
-
-      await component.deleteBankAccount(targetAcc);
-      fixture.detectChanges();
-
-      expect(component.companyBankAccounts.some(a => a.id === targetAcc.id)).toBe(false);
-      expect(component.companyBankAccounts.length).toBe(initialCount - 1);
-      expect(mockToast.success).toHaveBeenCalledWith('حساب بانکی با موفقیت حذف شد.');
-    });
-
-    it('تنظیم حساب اصلی باید وضعیت is_primary سایر حساب‌ها را فورا به false و حساب منتخب را به true تغییر دهد', () => {
-      // ایجاد دو حساب برای تست
-      component.companyBankAccounts = [
-        { id: 1, company: 1, bank_name: 'بانک یک', sheba_number: 'IR111', is_primary: true, is_active: true },
-        { id: 2, company: 1, bank_name: 'بانک دو', sheba_number: 'IR222', is_primary: false, is_active: true }
-      ];
-
-      component.setPrimaryAccount(component.companyBankAccounts[1]);
-      fixture.detectChanges();
-
-      expect(component.companyBankAccounts[0].is_primary).toBe(false);
-      expect(component.companyBankAccounts[1].is_primary).toBe(true);
-      expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('به عنوان حساب اصلی شرکت تنظیم شد'));
-    });
-
-    it('افزودن عضو جدید هیئت‌مدیره باید بلافاصله در companyBoardMembers ظاهر شود بدون بستن صفحه', () => {
-      const initialCount = component.companyBoardMembers.length;
-      component.openNewBoardMemberForm();
-      component.newBoardMember = {
-        first_name: 'علی',
-        last_name: 'اکبری',
-        national_code: '0012345679',
-        member_type: 'real',
-        represented_legal_name: '',
-        role: 'board_member',
-        has_signature_right: false,
-        signature_scope: '',
-        term_start: '',
-        term_expiry: '',
-        is_active: true
-      };
-
-      mockCompanyApi.createBoardMember.mockReturnValue(of({
-        id: 77,
-        company: 1,
-        first_name: 'علی',
-        last_name: 'اکبری',
-        national_code: '0012345679',
-        role: 'board_member',
-        is_active: true
-      }));
-
-      component.saveBoardMember();
-      fixture.detectChanges();
-
-      expect(component.companyBoardMembers.length).toBe(initialCount + 1);
-      const added = component.companyBoardMembers.find(m => m.id === 77);
-      expect(added).toBeDefined();
-      expect(added?.first_name).toBe('علی');
-      expect(added?.last_name).toBe('اکبری');
     });
 
     it('بارگذاری مدرک جدید باید بلافاصله مدرک را در companyDocuments و filteredDocuments قرار دهد', () => {
@@ -1448,41 +1185,31 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
     });
 
     it('اعلان وب‌سوکت org_structure_updated از سایر کلاینت‌ها باید داده‌های شرکت را رفرش کند', () => {
-      const spyLoadBank = vi.spyOn(component, 'loadCompanyBankAccounts');
-      const spyLoadBoard = vi.spyOn(component, 'loadCompanyBoardMembers');
+      const spyLoadAccess = vi.spyOn(component, 'loadStudioAccesses');
 
       // شبیه‌سازی دریافت پیام وب‌سوکت از کلاینت دیگر
       mockWebSocket.notifications$.next({
         type_str: 'org_structure_updated',
-        entity_type: 'company_bank_account',
+        entity_type: 'company_access',
         company_id: 1,
         client_tab_id: 'other-client-tab-id'
       });
 
-      expect(spyLoadBank).toHaveBeenCalledWith(1);
-
-      mockWebSocket.notifications$.next({
-        type_str: 'org_structure_updated',
-        entity_type: 'company_board_member',
-        company_id: 1,
-        client_tab_id: 'other-client-tab-id'
-      });
-
-      expect(spyLoadBoard).toHaveBeenCalledWith(1);
+      expect(spyLoadAccess).toHaveBeenCalledWith(1);
     });
 
     it('اعلان وب‌سوکت با شناسه تب جاری (Echo Filter) باید نادیده گرفته شود تا از پرش‌های بیهوده جلوگیری گردد', () => {
-      const spyLoadBank = vi.spyOn(component, 'loadCompanyBankAccounts');
+      const spyLoadAccess = vi.spyOn(component, 'loadStudioAccesses');
 
       // ارسال پیام با همان tabId کامپوننت
       mockWebSocket.notifications$.next({
         type_str: 'org_structure_updated',
-        entity_type: 'company_bank_account',
+        entity_type: 'company_access',
         company_id: 1,
         client_tab_id: 'test-client-tab-id' // مساوی با tabId موک
       });
 
-      expect(spyLoadBank).not.toHaveBeenCalled();
+      expect(spyLoadAccess).not.toHaveBeenCalled();
     });
 
     it('نشانگر وضعیت اتصال شبکه (Online / Offline) باید در DOM هدر نمایش داده شود', async () => {
@@ -1730,13 +1457,13 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(component.activeModalTab).toBe('saved_only');
     });
 
-    it('شناسهٔ تب مشارکتی در query پذیرفته می‌شود و شناسهٔ ناشناخته نادیده گرفته می‌شود', async () => {
+    it('شناسهٔ تب مشارکتی در query پذیرفته می‌شود و شناسهٔ ناشناخته به تب هویتی برمی‌گردد', async () => {
       const router = TestBed.inject(Router);
       component.setupStudioForCompany(1);
       await router.navigateByUrl('/app/operations/companies?tab=x_tab');
       expect(component.activeModalTab).toBe('x_tab');
       await router.navigateByUrl('/app/operations/companies?tab=no_such_tab');
-      expect(component.activeModalTab).toBe('x_tab');
+      expect(component.activeModalTab).toBe('identity');
     });
 
     it('کامپوننت تب تنبل بارگذاری و با companyId رندر می‌شود؛ شمارنده و خطای context روی تب می‌آید', async () => {
@@ -1748,8 +1475,16 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       fixture.detectChanges();
 
       const el: HTMLElement = fixture.nativeElement;
-      expect(el.querySelector('.contrib-tab')?.textContent).toContain('شرکت 1');
-      expect(savedTabLoader).not.toHaveBeenCalled();
+      // همهٔ تب‌های مشارکتی در دسترس یک بار ساخته و با hidden نگه داشته می‌شوند؛ فقط تب فعال دیده می‌شود
+      expect(savedTabLoader).toHaveBeenCalledTimes(1);
+      const panels = Array.from(el.querySelectorAll('.contrib-tab')).map(p => p.closest('[hidden]') === null);
+      expect(panels.filter(Boolean).length).toBe(1);
+      expect(Array.from(el.querySelectorAll('.contrib-tab')).find(p => p.closest('[hidden]') === null)?.textContent).toContain('شرکت 1');
+      component.setModalTab('identity');
+      fixture.detectChanges();
+      component.setModalTab('x_tab');
+      fixture.detectChanges();
+      expect(tabLoader).toHaveBeenCalledTimes(1);
 
       component.studioContext.setCount('x_tab', 4);
       component.studioContext.reportError('x_tab');

@@ -4,15 +4,11 @@ import {
   getFiscalPeriodStatusBadge,
   getFiscalPeriodStatusLabel,
   getEmptyFiscalPeriodData,
-  getEmptyBankAccountData,
-  getEmptyBoardMemberData,
   getEmptyDocData,
   getDocStatusClass,
   getDocStatusLabel,
   filterCompanyDocuments,
-  filterIranianBanksList,
   isNationalIdChecksumValid,
-  validateNationalCode,
   buildCompanyPayload
 } from './companies.helpers';
 import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, HostListener, Type, ViewChild, signal } from '@angular/core';
@@ -39,25 +35,10 @@ import {
   Company,
   CompanyDocument,
   CompanyDocumentType,
-  CompanyBankAccount,
-  CompanyBoardMember,
-  CompanyBoardMemberRole,
-  CompanyBoardMemberType,
   CompanyFiscalPeriod,
   UserCompanyAccess,
   CompanyAccessLevel
 } from '../../../../../core/models/company.model';
-import {
-  IRANIAN_BANKS,
-  IranianBankInfo,
-  validateSheba,
-  ShebaValidationResult,
-  cleanShebaInput,
-  extractShebaDigits,
-  generateShebaFromAccount,
-  getBankByName,
-  validateAccountNumber
-} from '../../../../../core/utils/sheba-utils';
 import { normalizeDigits } from '../../../../../core/utils/date-utils';
 import { ConfirmDialogService, ConfirmDialogConfig } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { isServerUnreachable } from '../../../../../core/services/server-reachability';
@@ -81,14 +62,13 @@ import { ExternalLinkDirective } from '../../../../../shared/directives/external
 export class CompaniesManagementComponent implements OnInit, OnDestroy {
   private facade = inject(CompaniesFacade);
   /** تب‌هایی که داده‌شان در حسابداری است (بانک، هیئت‌مدیره، گوگل‌درایو). در تب مدارک فقط بایگانی حسابداری پنهان می‌شود. */
-  private static readonly ACCOUNTING_TABS = ['treasury', 'governance', 'gdrive'];
+  private static readonly ACCOUNTING_TABS = ['gdrive'];
   private static readonly LIST_URL = '/app/operations/companies';
   /** فیلدهای فرم شرکت که در تب «بیمه و مالی» هستند؛ بقیه در تب هویتی‌اند (برای نشان خطای تب) */
   private static readonly FISCAL_TAB_FIELDS = [
     'workshop_code', 'economic_code', 'tax_memory_id', 'tax_economic_code', 'social_security_branch_code',
     'social_security_branch_name', 'contract_row', 'employer_name', 'fiscal_year_start_month'
   ];
-  private static readonly TREASURY_TAB_FIELDS = ['primary_bank_name', 'primary_account_number', 'primary_iban'];
   private static readonly CORE_DOC_MAX_BYTES = 20 * 1024 * 1024;
   /** فیلدهایی که زیرشان پیام خطا نمایش داده می‌شود */
   private static readonly FIELD_ERROR_KEYS = [
@@ -169,8 +149,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   regDateControl = new FormControl('');
   docIssueDateControl = new FormControl('');
   docExpiryDateControl = new FormControl('');
-  boardTermStartControl = new FormControl('');
-  boardTermExpiryControl = new FormControl('');
   fiscalStartControl = new FormControl('');
   fiscalEndControl = new FormControl('');
 
@@ -210,24 +188,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     description: string;
   } = this.getEmptyDocData();
 
-  // مدیریت چند حسابی و شماره‌های شبای شرکت
-  companyBankAccounts: CompanyBankAccount[] = [];
-  isLoadingBankAccounts = false;
-  isSavingBankAccount = false;
-  isEditingAccount = false;
-  editingAccountId: number | null = null;
-  shebaValidationResult: ShebaValidationResult | null = null;
-  shebaDigitsDisplay = '';
-  isShebaCopied = false;
-  isAccountCopied = false;
-  copiedShebaId: number | string | null = null;
-  copiedSheba: string | null = null;
-  iranianBanksList: IranianBankInfo[] = IRANIAN_BANKS;
-  bankSearchQuery = '';
-  isBankDropdownOpen = false;
-
-  newAccount = this.getEmptyBankAccountData();
-
   // مدیریت دوره‌های مالی رسمی شرکت (CompanyFiscalPeriod)
   companyFiscalPeriods: CompanyFiscalPeriod[] = [];
   isLoadingFiscalPeriods = false;
@@ -240,32 +200,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     end_date: '',
     notes: ''
   };
-
-  // مدیریت اعضای هیئت‌مدیره، مدیرعامل و صاحبان امضا (تب سوم استودیو)
-  companyBoardMembers: CompanyBoardMember[] = [];
-  isLoadingBoardMembers = false;
-  isSavingBoardMember = false;
-  isEditingBoardMember = false;
-  editingBoardMemberId: number | null = null;
-  showBoardMemberForm = false;
-  isBoardTermStartDatePickerOpen = false;
-  isBoardTermExpiryDatePickerOpen = false;
-  selectedIdDocFile: File | null = null;
-  selectedAppointmentDocFile: File | null = null;
-
-  readonly boardRolesList: { value: CompanyBoardMemberRole; label: string; badgeClass: string }[] = [
-    { value: 'chairman', label: 'رئیس هیئت‌مدیره', badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-    { value: 'vice_chairman', label: 'نایب‌رئیس هیئت‌مدیره', badgeClass: 'bg-blue-50 text-blue-700 border-blue-200' },
-    { value: 'managing_director', label: 'مدیرعامل', badgeClass: 'bg-purple-50 text-purple-700 border-purple-200' },
-    { value: 'managing_director_and_member', label: 'عضو هیئت‌مدیره و مدیرعامل', badgeClass: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200' },
-    { value: 'board_member', label: 'عضو هیئت‌مدیره', badgeClass: 'bg-slate-50 text-slate-700 border-slate-200' },
-    { value: 'main_inspector', label: 'بازرس اصلی', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
-    { value: 'alternate_inspector', label: 'بازرس علی‌البدل', badgeClass: 'bg-amber-50/60 text-amber-600 border-amber-100' },
-    { value: 'secretary', label: 'دبیر هیئت‌مدیره', badgeClass: 'bg-teal-50 text-teal-700 border-teal-200' },
-    { value: 'other', label: 'سایر ارکان قانونی', badgeClass: 'bg-slate-100 text-slate-600 border-slate-200' },
-  ];
-
-  newBoardMember = this.getEmptyBoardMemberData();
 
   // سطوح دسترسی سه‌گانه به شرکت
   readonly accessLevelsList: { value: CompanyAccessLevel; label: string; desc: string }[] = [
@@ -363,6 +297,17 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.ws?.connect();
     this.setupRealtimeAndOfflineListeners();
+    // فیلدهای شرکت که تب مشارکتی روی سرور ثبت کرد (مثلاً حساب اصلی) در فرم می‌آیند و تغییر ذخیره‌نشده حساب نمی‌شوند
+    this.studioContext.serverFields$.pipe(takeUntil(this.destroy$)).subscribe(({ companyId, fields }) => {
+      // پاسخ دیررسِ شرکتی که کاربر از آن رفته در فرم شرکت دیگر نمی‌نشیند
+      if (companyId !== this.studioContext.companyId()) return;
+      for (const [key, value] of Object.entries(fields)) {
+        if (!(key in this.companyModal.data)) continue;
+        (this.companyModal.data as Record<string, unknown>)[key] = value;
+        this.patchStudioSnapshot(key, value);
+      }
+      this.cdr.markForCheck();
+    });
     this.network.state$.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.isOnline = this.network.isOnline;
       this.cdr.markForCheck();
@@ -440,9 +385,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   }
 
   private hasPendingSubForms(): boolean {
-    const acc = this.newAccount;
-    if (this.isEditingAccount || acc.bank_name || acc.sheba_number || acc.account_number || acc.account_title) return true;
-    if (this.showBoardMemberForm || this.showFiscalPeriodForm) return true;
+    if (this.showFiscalPeriodForm) return true;
     if (this.newDoc.file || this.newDoc.title.trim()) return true;
     return !!this.studioSelectedUserId;
   }
@@ -489,15 +432,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
           if (msg.entity_type === 'company') {
             this.reloadListIfVisible();
-          } else if (msg.entity_type === 'company_bank_account') {
-            if (this.companyModal.isOpen && currentCompanyId && (!targetCompanyId || targetCompanyId === currentCompanyId)) {
-              this.loadCompanyBankAccounts(currentCompanyId);
-            }
-            this.reloadListIfVisible();
-          } else if (msg.entity_type === 'company_board_member') {
-            if (this.companyModal.isOpen && currentCompanyId && (!targetCompanyId || targetCompanyId === currentCompanyId)) {
-              this.loadCompanyBoardMembers(currentCompanyId);
-            }
+          } else if (msg.entity_type === 'company_bank_account' || msg.entity_type === 'company_board_member') {
+            // تب‌های مشارکتی دادهٔ خودشان را تازه می‌کنند؛ فهرست (ستون‌های حسابداری) فقط وقتی دیده می‌شود
             this.reloadListIfVisible();
           } else if (msg.entity_type === 'company_document') {
             if (this.companyModal.isOpen && currentCompanyId && (!targetCompanyId || targetCompanyId === currentCompanyId)) {
@@ -524,24 +460,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         } else if (data && Array.isArray((data as any).results)) {
           this.companies = (data as any).results;
           this.applyFilter();
-        }
-      } else if (this.companyApi.matchesCompanyUrl(url, 'bankAccounts')) {
-        if (this.companyModal.isOpen && currentCompanyId && url.includes(`company_id=${currentCompanyId}`)) {
-          if (Array.isArray(data)) {
-            this.companyBankAccounts = data;
-          } else if (data && Array.isArray((data as any).results)) {
-            this.companyBankAccounts = (data as any).results;
-          }
-          this.cdr.markForCheck();
-        }
-      } else if (this.companyApi.matchesCompanyUrl(url, 'boardMembers')) {
-        if (this.companyModal.isOpen && currentCompanyId && url.includes(`company_id=${currentCompanyId}`)) {
-          if (Array.isArray(data)) {
-            this.companyBoardMembers = data;
-          } else if (data && Array.isArray((data as any).results)) {
-            this.companyBoardMembers = (data as any).results;
-          }
-          this.cdr.markForCheck();
         }
       } else if (this.companyApi.matchesCompanyUrl(url, 'documents')) {
         if (this.companyModal.isOpen && currentCompanyId && url.includes(`company_id=${currentCompanyId}`)) {
@@ -575,12 +493,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.docExpiryDateControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
       this.newDoc.expiry_date = val || '';
     });
-    this.boardTermStartControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
-      this.newBoardMember.term_start = val || '';
-    });
-    this.boardTermExpiryControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
-      this.newBoardMember.term_expiry = val || '';
-    });
     this.fiscalStartControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
       this.newFiscalPeriod.start_date = val || '';
     });
@@ -592,15 +504,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-  }
-
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    if (this.isBankDropdownOpen && !target.closest('.bank-combobox-container')) {
-      this.isBankDropdownOpen = false;
-      this.cdr.markForCheck();
-    }
   }
 
   private async askConfirm(title: string, message: string): Promise<boolean> {
@@ -722,7 +625,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   /** جای تب‌های هسته؛ تب مشارکتی با `order` خودش میان آن‌ها می‌نشیند (§۵-۴) */
   private static readonly CORE_TAB_ORDER: Record<string, number> = {
-    identity: 10, fiscal_insurance: 20, treasury: 30, governance: 40, documents: 50, access: 60, gdrive: 70
+    identity: 10, fiscal_insurance: 20, documents: 50, access: 60, gdrive: 70
   };
 
   private _contributedTabsKey = '';
@@ -742,6 +645,14 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     return this._contributedTabs;
   }
 
+  /** تب‌های مشارکتی که اکنون در دسترس‌اند (hiddenUntilSaved پیش از ذخیره کنار می‌رود) */
+  get visibleContributedTabs(): CompanyStudioTab[] {
+    return this.contributedTabs.filter(t => this.isTabAvailable(t.id));
+  }
+
+  /** تب‌های هسته‌ای که جایگاه بخش مشارکتی دارند */
+  readonly sectionSlots: CompanyStudioSection['slot'][] = ['fiscal_insurance', 'documents'];
+
   /** بخش‌های مشارکتی یک تب هسته (studioSections) به ترتیب order */
   sectionsFor(slot: CompanyStudioSection['slot']): CompanyStudioSection[] {
     return this.moduleRegistry.getExtensions('companies')
@@ -752,7 +663,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   /** شرکت ذخیره‌شده (شناسهٔ سرور دارد)؛ تب‌های وابسته به شناسه پیش از آن پیام «ابتدا ذخیره کنید» نشان می‌دهند */
   get hasSavedCompany(): boolean {
-    return this.studioContext.companyId() !== null;
+    return (this.companyModal.data.id ?? 0) > 0;
   }
 
   private contributedTab(tab: string): CompanyStudioTab | undefined {
@@ -812,7 +723,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     const contributedKey = contributed
       .map(t => `${t.id}:${this.studioContext.count(t.id) ?? ''}:${this.studioContext.hasError(t.id)}`)
       .join('|');
-    const key = `${this.isAccountingInstalled}_${this.companyBankAccounts.length}_${this.companyBoardMembers.length}_${this.companyDocuments.length}_${this.studioAccesses.length}_${this.companyModal.isEdit}_${[...errorTabs].join(',')}_${contributedKey}`;
+    const key = `${this.isAccountingInstalled}_${this.companyDocuments.length}_${this.studioAccesses.length}_${this.companyModal.isEdit}_${[...errorTabs].join(',')}_${contributedKey}`;
     if (this._modalTabsKey === key && this._cachedModalTabs.length > 0) {
       return this._cachedModalTabs;
     }
@@ -822,10 +733,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       { id: 'identity', label: 'مشخصات هویتی و ثبتی', shortLabel: 'هویتی', icon: 'building', indicator: errorTabs.has('identity') ? errorIndicator : undefined },
       { id: 'fiscal_insurance', label: 'سال مالی، بیمه و مودیان', shortLabel: 'بیمه و مالی', icon: 'file-check', indicator: errorTabs.has('fiscal_insurance') ? errorIndicator : undefined },
     ];
-    if (this.isAccountingInstalled) {
-      tabs.push({ id: 'treasury', label: 'بانک و شبا', shortLabel: 'بانک', icon: 'database', count: this.companyBankAccounts.length || undefined, indicator: errorTabs.has('treasury') ? errorIndicator : undefined });
-      tabs.push({ id: 'governance', label: 'هیئت‌مدیره و امضا', shortLabel: 'هیئت‌مدیره', icon: 'users', count: this.companyBoardMembers.length || undefined });
-    }
     tabs.push({ id: 'documents', label: 'بایگانی مدارک', shortLabel: 'مدارک', icon: 'book', count: this.companyDocuments.length || undefined });
     tabs.push({ id: 'access', label: 'دسترسی کاربران', shortLabel: 'دسترسی', icon: 'shield', count: this.studioAccesses.length || undefined });
     if (this.companyModal.isEdit && this.isAccountingInstalled) {
@@ -859,7 +766,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   private tabForField(field: string): string {
     if (CompaniesManagementComponent.FISCAL_TAB_FIELDS.includes(field)) return 'fiscal_insurance';
-    if (CompaniesManagementComponent.TREASURY_TAB_FIELDS.includes(field) && this.isAccountingInstalled) return 'treasury';
     return 'identity';
   }
 
@@ -885,8 +791,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (!id) return;
     switch (tab) {
       case 'fiscal_insurance': this.loadCompanyFiscalPeriods(id); break;
-      case 'treasury': this.loadCompanyBankAccounts(id); break;
-      case 'governance': this.loadCompanyBoardMembers(id); break;
       case 'documents': this.loadCompanyDocuments(id); break;
       case 'access': this.loadStudioAccesses(id); break;
     }
@@ -977,12 +881,12 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
     this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe(queryParams => {
       const tabParam = queryParams.get('tab');
-      if (tabParam && this.isKnownTab(tabParam)) {
-        if (this.isTabAvailable(tabParam)) {
+      if (tabParam) {
+        if (this.isKnownTab(tabParam) && this.isTabAvailable(tabParam)) {
           this.activeModalTab = tabParam as any;
           this.onTabActivated(tabParam);
         } else {
-          // پیوند مستقیم به تب حسابداری در نصب «فقط انبار»: بازگشت به تب مشخصات
+          // تب ناشناخته یا پیوند مستقیم به تب ماژولی که نصب نیست: بازگشت به تب مشخصات
           this.setModalTab('identity');
         }
         this.cdr.markForCheck();
@@ -1045,28 +949,14 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.activeModalTab = 'identity';
     this.companyDocuments = [];
     this.filteredDocuments = [];
-    this.companyBankAccounts = [];
-    this.companyBoardMembers = [];
     this.companyFiscalPeriods = [];
     this.studioAccesses = [];
     this.showFiscalPeriodForm = false;
     this.newFiscalPeriod = this.getEmptyFiscalPeriodData();
-    this.newAccount = this.getEmptyBankAccountData();
-    this.newBoardMember = this.getEmptyBoardMemberData();
-    this.isEditingAccount = false;
-    this.editingAccountId = null;
-    this.isEditingBoardMember = false;
-    this.editingBoardMemberId = null;
-    this.showBoardMemberForm = false;
-    this.selectedIdDocFile = null;
-    this.selectedAppointmentDocFile = null;
-    this.shebaValidationResult = null;
     this.newDoc = this.getEmptyDocData();
     this.regDateControl.setValue('', { emitEvent: false });
     this.docIssueDateControl.setValue('', { emitEvent: false });
     this.docExpiryDateControl.setValue('', { emitEvent: false });
-    this.boardTermStartControl.setValue('', { emitEvent: false });
-    this.boardTermExpiryControl.setValue('', { emitEvent: false });
     this.companyModal = {
       isOpen: true,
       isEdit: false,
@@ -1165,22 +1055,9 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.isQueuedSave = false;
     this.tabLoadError = {};
     this.newDoc = this.getEmptyDocData();
-    this.newAccount = this.getEmptyBankAccountData();
-    this.newBoardMember = this.getEmptyBoardMemberData();
-    this.isEditingAccount = false;
-    this.editingAccountId = null;
-    this.isEditingBoardMember = false;
-    this.editingBoardMemberId = null;
-    this.showBoardMemberForm = false;
-    this.selectedIdDocFile = null;
-    this.selectedAppointmentDocFile = null;
-    this.shebaValidationResult = null;
-    this.companyBoardMembers = [];
     this.regDateControl.setValue(company.registration_date || '', { emitEvent: false });
     this.docIssueDateControl.setValue('', { emitEvent: false });
     this.docExpiryDateControl.setValue('', { emitEvent: false });
-    this.boardTermStartControl.setValue('', { emitEvent: false });
-    this.boardTermExpiryControl.setValue('', { emitEvent: false });
 
     this.companyModal = {
       isOpen: true,
@@ -1201,8 +1078,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (company.id) {
       this.loadCompanyFiscalPeriods(company.id);
       this.loadCompanyDocuments(company.id);
-      this.loadCompanyBankAccounts(company.id);
-      this.loadCompanyBoardMembers(company.id);
       this.loadStudioAccesses(company.id);
     }
 
@@ -1254,7 +1129,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.logoPreviewUrl = null;
     this.companyDocuments = [];
     this.filteredDocuments = [];
-    this.companyBankAccounts = [];
     this.companyFiscalPeriods = [];
     this.studioAccesses = [];
     this.showFiscalPeriodForm = false;
@@ -1264,7 +1138,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.isBoardDatePickerOpen = false;
     this.isDocIssueDatePickerOpen = false;
     this.isDocExpiryDatePickerOpen = false;
-    this.isBankDropdownOpen = false;
     this.cdr.markForCheck();
   }
 
@@ -1572,599 +1445,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ═════════════════════════════════════════════════════════════════════
-  // مدیریت حساب‌های بانکی و شبای شرکت (چند حسابی)
-  // ═════════════════════════════════════════════════════════════════════
-  loadCompanyBankAccounts(companyId: number): void {
-    if (!this.isAccountingInstalled) return;
-    this.isLoadingBankAccounts = true;
-    this.tabLoadError['treasury'] = false;
-    this.facade.getBankAccounts(companyId).subscribe({
-      next: (res) => {
-        this.isLoadingBankAccounts = false;
-        if (Array.isArray(res)) {
-          this.companyBankAccounts = res;
-        } else if (res && Array.isArray((res as any).results)) {
-          this.companyBankAccounts = (res as any).results;
-        } else {
-          this.companyBankAccounts = [];
-        }
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.isLoadingBankAccounts = false;
-        this.tabLoadError['treasury'] = true;
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  onShebaInput(val: string): void {
-    const cleaned = cleanShebaInput(val);
-    if (!cleaned) {
-      this.shebaValidationResult = null;
-      this.shebaDigitsDisplay = '';
-      this.newAccount.sheba_number = '';
-      this.cdr.markForCheck();
-      return;
-    }
-
-    const digits = extractShebaDigits(cleaned);
-    this.shebaValidationResult = validateSheba(digits);
-    this.shebaDigitsDisplay = this.shebaValidationResult?.formattedDigits || digits;
-    this.newAccount.sheba_number = this.shebaValidationResult?.rawSheba || cleaned;
-
-    if (this.shebaValidationResult?.bank) {
-      this.newAccount.bank_name = this.shebaValidationResult.bank.name;
-    }
-    if (this.shebaValidationResult?.accountNumber) {
-      this.newAccount.account_number = this.shebaValidationResult.accountNumber;
-    }
-    this.cdr.markForCheck();
-  }
-
-  onShebaPaste(event: ClipboardEvent): void {
-    event.preventDefault();
-    const pasted = event.clipboardData?.getData('text') || '';
-    this.onShebaInput(pasted);
-  }
-
-  selectBankForAccount(bank: IranianBankInfo): void {
-    this.newAccount.bank_name = bank.name;
-    this.isBankDropdownOpen = false;
-    this.onAccountNumberInput();
-    this.cdr.markForCheck();
-  }
-
-  filterBanks(): IranianBankInfo[] {
-    if (!this.bankSearchQuery.trim()) {
-      return this.iranianBanksList;
-    }
-    const q = this.bankSearchQuery.trim().toLowerCase();
-    return this.iranianBanksList.filter(b =>
-      b.name.toLowerCase().includes(q) ||
-      b.shortName.toLowerCase().includes(q) ||
-      b.code.includes(q)
-    );
-  }
-
-  onAccountNumberInput(event?: any): void {
-    let cleanAcc = this.newAccount.account_number || '';
-    if (event) {
-      const rawVal = typeof event === 'string' ? event : (event?.target?.value || '');
-      cleanAcc = rawVal.replace(/[۰-۹]/g, (d: string) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString())
-                       .replace(/[٠-٩]/g, (d: string) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString())
-                       .replace(/\D/g, '')
-                       .substring(0, 18);
-      this.newAccount.account_number = cleanAcc;
-      if (event?.target) event.target.value = cleanAcc;
-    }
-    const accValidation = validateAccountNumber(cleanAcc);
-    if (accValidation.isValid && this.newAccount.bank_name) {
-      const bankInfo = getBankByName(this.newAccount.bank_name);
-      const bankCode = bankInfo ? bankInfo.code : this.newAccount.bank_name;
-      const generated = generateShebaFromAccount(bankCode, cleanAcc);
-      if (generated) {
-        const res = validateSheba(generated);
-        this.shebaValidationResult = res;
-        this.newAccount.sheba_number = res.rawSheba || generated;
-        this.shebaDigitsDisplay = res.formattedDigits || '';
-      }
-    }
-    this.cdr.markForCheck();
-  }
-
-  onAccountNumberPaste(event: ClipboardEvent): void {
-    event.preventDefault();
-    const pasted = event.clipboardData?.getData('text') || '';
-    const cleanAcc = pasted.replace(/[۰-۹]/g, (d: string) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString())
-                           .replace(/[٠-٩]/g, (d: string) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString())
-                           .replace(/\D/g, '')
-                           .substring(0, 18);
-    this.newAccount.account_number = cleanAcc;
-    this.onAccountNumberInput();
-  }
-
-  convertAccountToShebaNow(): void {
-    if (!this.newAccount.bank_name) {
-      this.toast.warning('لطفاً ابتدا بانک عامل را انتخاب نمایید.');
-      return;
-    }
-    const accValidation = validateAccountNumber(this.newAccount.account_number);
-    if (!accValidation.isValid) {
-      this.toast.warning(accValidation.errorMessage || 'شماره حساب معتبر نیست.');
-      return;
-    }
-    const bankInfo = getBankByName(this.newAccount.bank_name);
-    const bankCode = bankInfo ? bankInfo.code : this.newAccount.bank_name;
-    const generated = generateShebaFromAccount(bankCode, this.newAccount.account_number);
-    if (generated) {
-      this.onShebaInput(generated);
-      this.toast.success(`شماره شبا با موفقیت بر اساس بانک ${this.newAccount.bank_name} تولید شد.`);
-    } else {
-      this.toast.error('امکان تولید شبا برای این ساختار شماره حساب وجود ندارد.');
-    }
-  }
-
-  copyAccountNumber(acc: string): void {
-    if (!acc) return;
-    navigator.clipboard.writeText(acc).then(() => {
-      this.isAccountCopied = true;
-      this.toast.success(`شماره حساب (${acc}) کپی شد.`);
-      setTimeout(() => {
-        this.isAccountCopied = false;
-        this.cdr.markForCheck();
-      }, 2000);
-      this.cdr.markForCheck();
-    }).catch(() => {
-      this.toast.error('عدم دسترسی به حافظه موقت.');
-    });
-  }
-
-  copySheba(sheba: string, id?: number | string): void {
-    if (!sheba) return;
-    navigator.clipboard.writeText(sheba).then(() => {
-      this.copiedShebaId = id ?? null;
-      this.copiedSheba = sheba;
-      this.toast.success('شماره شبا در حافظه کپی شد.');
-      setTimeout(() => {
-        this.copiedShebaId = null;
-        this.copiedSheba = null;
-        this.cdr.markForCheck();
-      }, 2500);
-      this.cdr.markForCheck();
-    }).catch(() => {
-      this.toast.error('امکان کپی در حافظه وجود ندارد.');
-    });
-  }
-
-  saveBankAccount(): void {
-    if (!this.companyModal.data.id) {
-      this.toast.warning('لطفاً ابتدا شرکت را ذخیره فرمایید.');
-      return;
-    }
-    if (!this.newAccount.sheba_number.trim()) {
-      this.toast.warning('لطفاً شماره شبا را وارد فرمایید.');
-      return;
-    }
-
-    const shebaVal = validateSheba(this.newAccount.sheba_number);
-    if (!shebaVal.isValid) {
-      this.toast.error(shebaVal.errorMessage || 'شماره شبا نامعتبر است.');
-      return;
-    }
-
-    this.isSavingBankAccount = true;
-    const payload: Partial<CompanyBankAccount> = {
-      company: this.companyModal.data.id,
-      bank_name: this.newAccount.bank_name.trim() || (shebaVal.bank?.name || 'نامشخص'),
-      account_number: this.newAccount.account_number.trim() || shebaVal.accountNumber || null,
-      sheba_number: shebaVal.formattedSheba.replace(/\s+/g, ''),
-      account_title: this.newAccount.account_title?.trim() || null,
-      is_primary: this.newAccount.is_primary,
-      is_active: true
-    };
-
-    if (this.isEditingAccount && this.editingAccountId) {
-      this.facade.updateBankAccount(this.editingAccountId, payload).subscribe({
-        next: (saved) => {
-          this.isSavingBankAccount = false;
-          this.toast.success(`حساب بانکی «${saved.bank_name}» با موفقیت ویرایش شد.`);
-          this.cancelEditAccount();
-          const idx = this.companyBankAccounts.findIndex(a => a.id === saved.id);
-          if (idx !== -1) {
-            this.companyBankAccounts[idx] = saved;
-            this.companyBankAccounts = [...this.companyBankAccounts];
-          } else {
-            this.companyBankAccounts = [saved, ...this.companyBankAccounts];
-          }
-          if (saved.is_primary) {
-            this.companyBankAccounts = this.companyBankAccounts.map(a => ({
-              ...a,
-              is_primary: a.id === saved.id
-            }));
-          }
-          this.reloadListIfVisible();
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.isSavingBankAccount = false;
-          const msg = err.error?.detail || err.error?.sheba_number?.[0] || 'خطا در ویرایش حساب بانکی';
-          this.toast.error(msg);
-          this.cdr.markForCheck();
-        }
-      });
-    } else {
-      this.facade.createBankAccount(payload).subscribe({
-        next: (created) => {
-          this.isSavingBankAccount = false;
-          this.toast.success(`حساب بانکی «${created.bank_name}» با موفقیت افزوده شد.`);
-          this.cancelEditAccount();
-          if (created.is_primary) {
-            this.companyBankAccounts = this.companyBankAccounts.map(a => ({
-              ...a,
-              is_primary: false
-            }));
-          }
-          this.companyBankAccounts = [created, ...this.companyBankAccounts.filter(a => a.id !== created.id)];
-          this.reloadListIfVisible();
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.isSavingBankAccount = false;
-          const msg = err.error?.detail || err.error?.sheba_number?.[0] || 'خطا در ثبت حساب بانکی';
-          this.toast.error(msg);
-          this.cdr.markForCheck();
-        }
-      });
-    }
-  }
-
-  editAccount(acc: CompanyBankAccount): void {
-    this.isEditingAccount = true;
-    this.editingAccountId = acc.id || null;
-    this.newAccount = {
-      id: acc.id,
-      bank_name: acc.bank_name,
-      account_number: acc.account_number || '',
-      sheba_number: acc.sheba_number,
-      account_title: acc.account_title || '',
-      is_primary: acc.is_primary
-    };
-    this.shebaValidationResult = validateSheba(acc.sheba_number);
-    this.shebaDigitsDisplay = this.shebaValidationResult?.formattedDigits || extractShebaDigits(acc.sheba_number);
-    this.cdr.markForCheck();
-  }
-
-  cancelEditAccount(): void {
-    this.isEditingAccount = false;
-    this.editingAccountId = null;
-    this.newAccount = this.getEmptyBankAccountData();
-    this.shebaValidationResult = null;
-    this.shebaDigitsDisplay = '';
-    this.cdr.markForCheck();
-  }
-
-  async deleteBankAccount(acc: CompanyBankAccount): Promise<void> {
-    if (!acc.id) return;
-    const ok = await this.askConfirm(
-      'حذف حساب بانکی',
-      `آیا از حذف حساب بانکی «${acc.bank_name}» با شماره شبای «${acc.sheba_number}» اطمینان دارید؟`
-    );
-    if (!ok) return;
-    this.facade.deleteBankAccount(acc.id).subscribe({
-      next: () => {
-        this.toast.success('حساب بانکی با موفقیت حذف شد.');
-        this.companyBankAccounts = this.companyBankAccounts.filter(a => a.id !== acc.id);
-        this.reloadListIfVisible();
-        this.cdr.markForCheck();
-      },
-      error: () => this.toast.error('خطا در حذف حساب بانکی')
-    });
-  }
-
-  setPrimaryAccount(acc: CompanyBankAccount): void {
-    if (!acc.id) return;
-    this.api.setPrimaryBankAccount(acc.id).subscribe({
-      next: () => {
-        this.toast.success(`حساب «${acc.bank_name}» به عنوان حساب اصلی شرکت تنظیم شد.`);
-        this.companyBankAccounts = this.companyBankAccounts.map(a => ({
-          ...a,
-          is_primary: a.id === acc.id
-        }));
-        if (this.companyModal.data) {
-          this.companyModal.data.primary_bank_name = acc.bank_name;
-          this.companyModal.data.primary_account_number = acc.account_number || '';
-          this.companyModal.data.primary_iban = acc.sheba_number || '';
-          // این سه فیلد روی سرور ثبت شده‌اند؛ تغییر ذخیره‌نشده حساب نشوند
-          this.patchStudioSnapshot('primary_bank_name', this.companyModal.data.primary_bank_name);
-          this.patchStudioSnapshot('primary_account_number', this.companyModal.data.primary_account_number);
-          this.patchStudioSnapshot('primary_iban', this.companyModal.data.primary_iban);
-        }
-        this.reloadListIfVisible();
-        this.cdr.markForCheck();
-      },
-      error: () => this.toast.error('خطا در تنظیم حساب اصلی')
-    });
-  }
-
-  private getEmptyBankAccountData() {
-    return {
-      id: undefined as number | undefined,
-      bank_name: '',
-      account_number: '',
-      sheba_number: '',
-      account_title: '',
-      is_primary: false
-    };
-  }
-
-  // ═════════════════════════════════════════════════════════════════════
-  // مدیریت اعضای هیئت‌مدیره و ارکان قانونی شرکت (تب سوم استودیو)
-  // ═════════════════════════════════════════════════════════════════════
-  getEmptyBoardMemberData() {
-    return {
-      first_name: '',
-      last_name: '',
-      national_code: '',
-      member_type: 'real' as CompanyBoardMemberType,
-      represented_legal_name: '',
-      role: 'board_member' as CompanyBoardMemberRole,
-      has_signature_right: false,
-      signature_scope: '',
-      term_start: '',
-      term_expiry: '',
-      is_active: true
-    };
-  }
-
-  loadCompanyBoardMembers(companyId: number): void {
-    if (!this.isAccountingInstalled) return;
-    this.isLoadingBoardMembers = true;
-    this.tabLoadError['governance'] = false;
-    this.facade.getBoardMembers(companyId).subscribe({
-      next: (res) => {
-        this.isLoadingBoardMembers = false;
-        if (Array.isArray(res)) {
-          this.companyBoardMembers = res;
-        } else if (res && Array.isArray((res as any).results)) {
-          this.companyBoardMembers = (res as any).results;
-        } else {
-          this.companyBoardMembers = [];
-        }
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.isLoadingBoardMembers = false;
-        this.tabLoadError['governance'] = true;
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  openNewBoardMemberForm(): void {
-    if (!this.companyModal.data.id) {
-      this.toast.warning('لطفاً ابتدا شرکت را ذخیره فرمایید تا شناسه شرکت صادر گردد.');
-      return;
-    }
-    this.newBoardMember = this.getEmptyBoardMemberData();
-    this.boardTermStartControl.setValue('', { emitEvent: false });
-    this.boardTermExpiryControl.setValue('', { emitEvent: false });
-    this.selectedIdDocFile = null;
-    this.selectedAppointmentDocFile = null;
-    this.isEditingBoardMember = false;
-    this.editingBoardMemberId = null;
-    this.showBoardMemberForm = true;
-    this.cdr.markForCheck();
-  }
-
-  editBoardMember(member: CompanyBoardMember): void {
-    this.editingBoardMemberId = member.id || null;
-    this.isEditingBoardMember = true;
-    this.selectedIdDocFile = null;
-    this.selectedAppointmentDocFile = null;
-    this.newBoardMember = {
-      first_name: member.first_name,
-      last_name: member.last_name,
-      national_code: member.national_code,
-      member_type: member.member_type,
-      represented_legal_name: member.represented_legal_name || '',
-      role: member.role,
-      has_signature_right: member.has_signature_right,
-      signature_scope: member.signature_scope || '',
-      term_start: member.term_start || '',
-      term_expiry: member.term_expiry || '',
-      is_active: member.is_active !== false
-    };
-    this.showBoardMemberForm = true;
-    this.boardTermStartControl.setValue(member.term_start || '', { emitEvent: false });
-    this.boardTermExpiryControl.setValue(member.term_expiry || '', { emitEvent: false });
-    this.cdr.markForCheck();
-  }
-
-  cancelBoardMemberForm(): void {
-    this.showBoardMemberForm = false;
-    this.isEditingBoardMember = false;
-    this.editingBoardMemberId = null;
-    this.newBoardMember = this.getEmptyBoardMemberData();
-    this.boardTermStartControl.setValue('', { emitEvent: false });
-    this.boardTermExpiryControl.setValue('', { emitEvent: false });
-    this.selectedIdDocFile = null;
-    this.selectedAppointmentDocFile = null;
-    this.cdr.markForCheck();
-  }
-
-  onIdDocFileSelected(event: any): void {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 20 * 1024 * 1024) {
-        this.toast.error('حجم فایل مدارک هویتی نباید بیش از ۲۰ مگابایت باشد.');
-        return;
-      }
-      this.selectedIdDocFile = file;
-    }
-  }
-
-  onAppointmentDocFileSelected(event: any): void {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 20 * 1024 * 1024) {
-        this.toast.error('حجم فایل حکم انتصاب نباید بیش از ۲۰ مگابایت باشد.');
-        return;
-      }
-      this.selectedAppointmentDocFile = file;
-    }
-  }
-
-  onBoardTermStartSelect(event: any): void {
-    const val = typeof event === 'string' ? event : (event?.shamsi || event?.gregorian || '');
-    this.newBoardMember.term_start = val;
-    this.boardTermStartControl.setValue(val, { emitEvent: false });
-    this.isBoardTermStartDatePickerOpen = false;
-    this.cdr.markForCheck();
-  }
-
-  onBoardTermExpirySelect(event: any): void {
-    const val = typeof event === 'string' ? event : (event?.shamsi || event?.gregorian || '');
-    this.newBoardMember.term_expiry = val;
-    this.boardTermExpiryControl.setValue(val, { emitEvent: false });
-    this.isBoardTermExpiryDatePickerOpen = false;
-    this.cdr.markForCheck();
-  }
-
-  saveBoardMember(): void {
-    if (!this.companyModal.data.id) {
-      this.toast.warning('لطفاً ابتدا شرکت را ذخیره فرمایید.');
-      return;
-    }
-    if (!this.newBoardMember.first_name.trim() || !this.newBoardMember.last_name.trim()) {
-      this.toast.warning('نام و نام خانوادگی عضو هیئت‌مدیره الزامی است.');
-      return;
-    }
-    const cleanCode = this.newBoardMember.national_code.replace(/[^0-9]/g, '');
-    if (cleanCode.length !== 10) {
-      this.toast.warning('کد ملی عضو باید دقیقاً ۱۰ رقم باشد.');
-      return;
-    }
-    if (!this.validateNationalCode(cleanCode)) {
-      this.toast.warning('کد ملی عضو هیئت‌مدیره با الگوریتم ثبت احوال همخوانی ندارد.');
-      return;
-    }
-
-    this.isSavingBoardMember = true;
-    const formData = new FormData();
-    formData.append('company', String(this.companyModal.data.id));
-    formData.append('first_name', this.newBoardMember.first_name.trim());
-    formData.append('last_name', this.newBoardMember.last_name.trim());
-    formData.append('national_code', cleanCode);
-    formData.append('member_type', this.newBoardMember.member_type);
-    if (this.newBoardMember.member_type === 'legal_rep' && this.newBoardMember.represented_legal_name) {
-      formData.append('represented_legal_name', this.newBoardMember.represented_legal_name.trim());
-    }
-    formData.append('role', this.newBoardMember.role);
-    formData.append('has_signature_right', String(this.newBoardMember.has_signature_right));
-    if (this.newBoardMember.signature_scope) {
-      formData.append('signature_scope', this.newBoardMember.signature_scope.trim());
-    }
-    if (this.newBoardMember.term_start) {
-      formData.append('term_start', this.newBoardMember.term_start);
-    }
-    if (this.newBoardMember.term_expiry) {
-      formData.append('term_expiry', this.newBoardMember.term_expiry);
-    }
-    formData.append('is_active', String(this.newBoardMember.is_active));
-
-    if (this.selectedIdDocFile) {
-      formData.append('attached_id_doc', this.selectedIdDocFile);
-    }
-    if (this.selectedAppointmentDocFile) {
-      formData.append('attached_appointment_doc', this.selectedAppointmentDocFile);
-    }
-
-    const companyId = this.companyModal.data.id;
-    if (this.isEditingBoardMember && this.editingBoardMemberId) {
-      this.facade.updateBoardMember(this.editingBoardMemberId, formData).subscribe({
-        next: (updated) => {
-          this.isSavingBoardMember = false;
-          this.toast.success(`مشخصات «${updated.first_name} ${updated.last_name}» با موفقیت ویرایش شد.`);
-          this.cancelBoardMemberForm();
-          const idx = this.companyBoardMembers.findIndex(m => m.id === updated.id);
-          if (idx !== -1) {
-            this.companyBoardMembers[idx] = updated;
-            this.companyBoardMembers = [...this.companyBoardMembers];
-          } else {
-            this.companyBoardMembers = [updated, ...this.companyBoardMembers];
-          }
-          this.reloadListIfVisible();
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.isSavingBoardMember = false;
-          const msg = err.error?.detail || err.error?.non_field_errors?.[0] || 'خطا در ویرایش عضو هیئت‌مدیره';
-          this.toast.error(msg);
-          this.cdr.markForCheck();
-        }
-      });
-    } else {
-      this.facade.createBoardMember(formData).subscribe({
-        next: (created) => {
-          this.isSavingBoardMember = false;
-          this.toast.success(`عضو جدید «${created.first_name} ${created.last_name}» با موفقیت افزوده شد.`);
-          this.cancelBoardMemberForm();
-          this.companyBoardMembers = [created, ...this.companyBoardMembers.filter(m => m.id !== created.id)];
-          this.reloadListIfVisible();
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.isSavingBoardMember = false;
-          const msg = err.error?.detail || err.error?.non_field_errors?.[0] || 'خطا در ثبت عضو هیئت‌مدیره';
-          this.toast.error(msg);
-          this.cdr.markForCheck();
-        }
-      });
-    }
-  }
-
-  async deleteBoardMember(member: CompanyBoardMember): Promise<void> {
-    if (!member.id) return;
-    const ok = await this.askConfirm(
-      'حذف عضو هیئت‌مدیره',
-      `آیا از حذف عضو «${member.first_name} ${member.last_name}» اطمینان دارید؟`
-    );
-    if (!ok) return;
-    this.facade.deleteBoardMember(member.id).subscribe({
-      next: () => {
-        this.toast.success('عضو هیئت‌مدیره با موفقیت حذف گردید.');
-        this.companyBoardMembers = this.companyBoardMembers.filter(m => m.id !== member.id);
-        this.reloadListIfVisible();
-        this.cdr.markForCheck();
-      },
-      error: () => this.toast.error('خطا در حذف عضو هیئت‌مدیره')
-    });
-  }
-
-  getRoleBadgeClass(role: CompanyBoardMemberRole): string {
-    const found = this.boardRolesList.find(r => r.value === role);
-    return found ? found.badgeClass : 'bg-slate-50 text-slate-700 border-slate-200';
-  }
-
-  getRoleLabel(role: CompanyBoardMemberRole): string {
-    const found = this.boardRolesList.find(r => r.value === role);
-    return found ? found.label : role;
-  }
-
-  getSignersCount(): number {
-    return this.companyBoardMembers.filter(m => m.has_signature_right).length;
-  }
-
-  getCeoMember(): CompanyBoardMember | undefined {
-    return this.companyBoardMembers.find(m => m.role === 'managing_director' || m.role === 'managing_director_and_member');
-  }
-
-  getChairmanMember(): CompanyBoardMember | undefined {
-    return this.companyBoardMembers.find(m => m.role === 'chairman');
-  }
-
   isNationalIdChecksumValid(id?: string | null): boolean {
     if (!id) return true;
     const clean = id.replace(/[^0-9]/g, '');
@@ -2179,22 +1459,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     const remainder = sum % 11;
     const calculated = remainder === 10 ? 0 : remainder;
     return calculated === checkDigit;
-  }
-
-  validateNationalCode(code?: string | null): boolean {
-    if (!code) return true;
-    let clean = code.replace(/[^0-9]/g, '');
-    if (clean.length > 0 && clean.length < 10) {
-      clean = clean.padStart(10, '0');
-    }
-    if (clean.length !== 10) return false;
-    if (/^(\d)\1{9}$/.test(clean)) return false;
-    const digits = clean.split('').map(Number);
-    const checksum = digits[9];
-    let sum = 0;
-    for (let i = 0; i < 9; i++) sum += digits[i] * (10 - i);
-    const remainder = sum % 11;
-    return (remainder < 2 && checksum === remainder) || (remainder >= 2 && checksum === 11 - remainder);
   }
 
   // ═════════════════════════════════════════════════════════════════════
