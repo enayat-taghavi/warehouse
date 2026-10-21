@@ -7,3 +7,7 @@ class AccountsConfig(AppConfig):
 
     def ready(self):
         import accounts.signals  # noqa
+        from django.db.models.signals import post_migrate
+        from accounts.module_permissions import create_module_permissions
+        # ردیف‌های مجوز سفارشی ماژول‌های نصب‌شده (اعلام‌شده در module.py هر ماژول)
+        post_migrate.connect(create_module_permissions, sender=self, dispatch_uid='accounts.create_module_permissions')

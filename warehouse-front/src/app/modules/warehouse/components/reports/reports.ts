@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
-import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
+import { WarehouseHttpService } from '../../api/warehouse-http.service';
 import { ReportApiService } from '../../../../core/api/report-api.service';
 import { AuthStore } from '../../../../core/stores/auth.store';
 import {

@@ -8,7 +8,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { AuthStore } from '../../../core/stores/auth.store';
 import { StateService } from '../../../core/services/state.service';
 import { AccountsHttpService } from '../../../core/http/accounts-http.service';
-import { WarehouseHttpService } from '../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService } from '../../../core/http/scope-directory.service';
 import { ModuleRegistryService } from '../../../core/modules/module-registry.service';
 import { ToastService } from '../toast/toast.component';
 import { ConfirmDialogService } from '../confirm-dialog/confirm-dialog.component';
@@ -107,7 +107,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
                     const id = inj.get(AuthStore).activeWarehouseId();
                     return id && id !== 'ALL' ? Number(id) : null;
                   },
-                  loadItems: async (inj: Injector) => (await firstValueFrom(inj.get(WarehouseHttpService).getAll())) || []
+                  loadItems: async (inj: Injector) => (await firstValueFrom(inj.get(ScopeDirectoryService).getAll())) || []
                 }
               }
             },
@@ -193,7 +193,7 @@ describe('UserMenuComponent Deep Sync Logic & Behavior Tests', () => {
         { provide: AuthStore, useValue: mockStore },
         { provide: StateService, useValue: mockState },
         { provide: AccountsHttpService, useValue: mockAccountsService },
-        { provide: WarehouseHttpService, useValue: mockWhService },
+        { provide: ScopeDirectoryService, useValue: mockWhService },
         { provide: ModuleRegistryService, useValue: mockModuleRegistry },
         { provide: ToastService, useValue: mockToast },
         { provide: ConfirmDialogService, useValue: mockConfirmDialog },

@@ -7,8 +7,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { AuthStore } from '../../../../core/stores/auth.store';
 import { StateService } from '../../../../core/services/state.service';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
-import { getWarehouseDirectoryEndpoint } from '../../../../core/modules/warehouse-directory';
+import { ScopeDirectoryService } from '../../../../core/http/scope-directory.service';
+import { getScopeDirectoryEndpoint } from '../../../../core/modules/scope-directory';
 import { NetworkStatusService, ConnectionState } from '../../../../core/services/network-status.service';
 import { OfflineSyncService } from '../../../../core/services/offline-sync.service';
 import { SyncErrorEntry } from '../../../../core/services/offline-db';
@@ -574,7 +574,7 @@ export class Layout implements OnInit, OnDestroy {
     public state: StateService,
     private confirmDialog: ConfirmDialogService,
     private router: Router,
-    private whService: WarehouseHttpService,
+    private scopeDirectory: ScopeDirectoryService,
     private cdr: ChangeDetectorRef,
     private toast: ToastService,
     private configApi: ConfigApiService,
@@ -649,7 +649,7 @@ export class Layout implements OnInit, OnDestroy {
         }
 
         if (this.hasWarehouseSwitcher && company.has_warehouse_module !== false) {
-          this.whService.getAll().subscribe({
+          this.scopeDirectory.getAll().subscribe({
             next: (data) => this.handleWarehousesLoaded(data),
             error: () => {}
           });
@@ -671,7 +671,7 @@ export class Layout implements OnInit, OnDestroy {
 
     // دریافت لیست انبارها از بک‌اند (با خودترمیمی آنی در صورت حذف یا نامعتبر شدن انبار فعال)
     if (this.hasWarehouseSwitcher) {
-      this.whService.getAll().subscribe({
+      this.scopeDirectory.getAll().subscribe({
         next: (data) => {
           this.handleWarehousesLoaded(data);
 
@@ -697,7 +697,7 @@ export class Layout implements OnInit, OnDestroy {
     // شنود پاسخ‌های پس‌زمینه SWR برای به‌روزرسانی زنده لیست انبارها بدون نیاز به رفرش
     this.offlineSubs.push(
       syncService.liveDataUpdates$.subscribe(({ url, data }) => {
-        const directory = getWarehouseDirectoryEndpoint(this.moduleRegistry);
+        const directory = getScopeDirectoryEndpoint(this.moduleRegistry);
         if (url && directory && url.includes(directory)) {
           if (Array.isArray(data)) {
             this.handleWarehousesLoaded(data);
@@ -725,7 +725,7 @@ export class Layout implements OnInit, OnDestroy {
         if (wasOffline && state === 'online') {
           if (this.hasWarehouseSwitcher) {
             console.log('[Layout] 🌐 اتصال مجدد شبکه — استعلام سبک پس‌زمینه...');
-            this.whService.getAll().subscribe({
+            this.scopeDirectory.getAll().subscribe({
               next: (data) => this.handleWarehousesLoaded(data),
               error: () => {}
             });
@@ -745,7 +745,7 @@ export class Layout implements OnInit, OnDestroy {
         );
         // استعلام تازه برای اطمینان از همگامی کامل نما
         if (this.hasWarehouseSwitcher) {
-          this.whService.getAll().subscribe({
+          this.scopeDirectory.getAll().subscribe({
             next: (data) => this.handleWarehousesLoaded(data),
             error: () => {}
           });
@@ -758,11 +758,11 @@ export class Layout implements OnInit, OnDestroy {
       this.wsService.notifications$.subscribe(async (data: any) => {
         if (this.hasWarehouseSwitcher && data && (data.event === 'warehouse_mutation' || data.type === 'warehouse_mutation')) {
           console.log('[Layout] 🔔 دریافت رویداد تغییرات انبار از وب‌سوکت:', data);
-          const directory = getWarehouseDirectoryEndpoint(this.moduleRegistry);
+          const directory = getScopeDirectoryEndpoint(this.moduleRegistry);
           if (directory) {
             await syncService.invalidateCache(`${environment.apiUrl}${directory}`);
           }
-          this.whService.getAll().subscribe({
+          this.scopeDirectory.getAll().subscribe({
             next: (warehouses) => {
               this.handleWarehousesLoaded(warehouses);
               if (data.action === 'DELETE' && String(data.warehouse_id) === String(this.store.activeWarehouseId())) {
@@ -1025,17 +1025,9 @@ export class Layout implements OnInit, OnDestroy {
       const owner = item.module ? this.moduleRegistry.getSpec(item.module) : undefined;
       if (owner && owner.code !== switcherCode) return false;
       if (isAdmin) return true;
-      if (item.id === 'audit') {
-        return userPerms.includes('view_wh_audit') || userPerms.includes('perm_sys_logs');
-      }
-      if (item.id === 'count-tracking') {
-        return userPerms.includes('view_sys_manager_review') ||
-               userPerms.includes('view_sys_supervisor') ||
-               userPerms.includes('view_sys_dashboard') ||
-               userPerms.includes('perm_inventory_finalize') ||
-               userPerms.includes('view_wh_stocktaking') ||
-               userPerms.includes('can_act_as_manager') ||
-               userPerms.includes('can_act_as_supervisor');
+      // آیتمی که ماژولش چند مجوز جایگزین اعلام کرده، با هر یک از آن‌ها دیده می‌شود
+      if (item.anyPermissions?.length) {
+        return item.anyPermissions.some(p => userPerms.includes(p));
       }
       return userPerms.includes(item.permission);
     });

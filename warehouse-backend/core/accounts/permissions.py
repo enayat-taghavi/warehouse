@@ -38,6 +38,15 @@ class HasMenuAccess(permissions.BasePermission):
         full_perm = f"accounts.{self.required_permission}"
         return request.user.has_perm(full_perm)
 
+def any_menu_access(*codenames):
+    """OR چند مجوز منو؛ مثلاً مجوز پلتفرم به‌اضافهٔ مجوزهایی که ماژول‌های نصب‌شده با contribute اعلام کرده‌اند."""
+    perms = [HasMenuAccess(c) for c in dict.fromkeys(codenames) if c]
+    result = perms[0]
+    for perm in perms[1:]:
+        result = result | perm
+    return result
+
+
 def require_menu_access(permission_codename):
     """Factory to create a permission class for a specific menu access"""
     class _RequireMenuAccess(HasMenuAccess):

@@ -12,7 +12,7 @@ import { PwaUpdateService } from '../../../core/services/pwa-update.service';
 import { AppUpdateService } from '../../../core/platform/app-update.service';
 import { PwaInstallService } from '../../../core/services/pwa-install.service';
 import { AccountsHttpService } from '../../../core/http/accounts-http.service';
-import { WarehouseHttpService } from '../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService } from '../../../core/http/scope-directory.service';
 import { StateService } from '../../../core/services/state.service';
 import { ModuleRegistryService, getModuleRegistry } from '../../../core/modules/module-registry.service';
 import { normalizeScope, DEFAULT_OFFLINE_SCOPE, LOCKED_OFFLINE_SCOPES } from '../../../core/services/offline-db';
@@ -73,7 +73,7 @@ export class UserMenuComponent implements OnInit, OnDestroy {
   private store = inject(AuthStore);
   private state = inject(StateService);
   private accountsService = inject(AccountsHttpService);
-  private whService = inject(WarehouseHttpService);
+  private scopeDirectory = inject(ScopeDirectoryService);
   private moduleRegistry = inject(ModuleRegistryService);
   private toast = inject(ToastService);
   private confirmDialog = inject(ConfirmDialogService);

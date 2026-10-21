@@ -97,7 +97,7 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         return bool(
             getattr(self, 'action', None) == 'list' and user and user.is_authenticated and not user.is_superuser
             and not user.has_perm('accounts.view_sys_users')
-            and user.has_perm('accounts.perm_manage_projects_sections')
+            and any(user.has_perm(f'accounts.{p}') for p in contributions('user_directory_perms'))
         )
 
     def _org_admin_directory_queryset(self, qs, user, get_user_allowed_companies):
@@ -135,7 +135,9 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated()]
         elif self.action == 'list':
             # راهبر تشکیلات برای انتساب کاربران به بخش‌ها فقط فهرست را می‌بیند (بدون ویرایش)
-            permission_classes = [HasMenuAccess('view_sys_users') | HasMenuAccess('perm_manage_projects_sections')]
+            # مجوزهای دایرکتوری کاربران که ماژول‌ها اعلام کرده‌اند (contribute('user_directory_perms', ...))
+            from ..permissions import any_menu_access
+            permission_classes = [any_menu_access('view_sys_users', *contributions('user_directory_perms'))]
         elif self.action in ['retrieve', 'export_excel', 'download_template']:
             permission_classes = [HasMenuAccess('view_sys_users')]
         elif self.action in ['create', 'import_excel']:
@@ -171,13 +173,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 raise ValidationError(f"امکان {action_name} تنها مدیر (Admin) فعال سیستم وجود ندارد.")
                 
         # 3. Protect last key roles
-        KEY_PERMISSIONS = {
-            'can_act_as_counter': 'انبارگردان',
-            'can_act_as_supervisor': 'سرپرست انبار',
-            'can_act_as_manager': 'مدیر انبار',
-            'can_act_as_doc_worker': 'کارشناس اسناد',
-            'can_act_as_doc_supervisor': 'سرپرست اسناد'
-        }
+        # مجوزهای نقش کلیدی (کد، برچسب فارسی) را ماژول‌ها با contribute('key_role_permissions', ...) اعلام می‌کنند
+        KEY_PERMISSIONS = dict(contributions('key_role_permissions'))
         
         user_perms = set(
             user.user_permissions.filter(codename__in=KEY_PERMISSIONS.keys()).values_list('codename', flat=True)

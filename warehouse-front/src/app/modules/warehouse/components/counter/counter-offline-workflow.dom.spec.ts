@@ -21,7 +21,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { AuthStore } from '../../../../core/stores/auth.store';
 import { StateService } from '../../../../core/services/state.service';
 import { AccountsHttpService } from '../../../../core/http/accounts-http.service';
-import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService } from '../../../../core/http/scope-directory.service';
 import { PwaUpdateService } from '../../../../core/services/pwa-update.service';
 import { PwaInstallService } from '../../../../core/services/pwa-install.service';
 import { AppPersonaService } from '../../../../core/services/app-persona.service';
@@ -318,7 +318,7 @@ describe('۲. بخش آفلاین و همگام‌سازی (Offline & Sync Workf
           { provide: AuthStore, useValue: mockStore },
           { provide: StateService, useValue: mockState },
           { provide: AccountsHttpService, useValue: { updateMyAvatar: vi.fn(), deleteMyAvatar: vi.fn() } },
-          { provide: WarehouseHttpService, useValue: mockWhService },
+          { provide: ScopeDirectoryService, useValue: mockWhService },
           { provide: ModuleRegistryService, useValue: mockModuleRegistry },
           { provide: ToastService, useValue: mockToast },
           { provide: ConfirmDialogService, useValue: mockConfirmDialog },

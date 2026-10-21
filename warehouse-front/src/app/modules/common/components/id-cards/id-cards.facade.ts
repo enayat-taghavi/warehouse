@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { AccountsHttpService, User, Role } from '../../../../core/http/accounts-http.service';
-import { WarehouseHttpService, Warehouse } from '../../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService, ScopeDirectoryEntry } from '../../../../core/http/scope-directory.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import {
   IdCardSettings,
@@ -13,7 +13,7 @@ import {
 @Injectable()
 export class IdCardsFacade {
   private accountsService = inject(AccountsHttpService);
-  private warehouseService = inject(WarehouseHttpService);
+  private scopeDirectory = inject(ScopeDirectoryService);
   private sanitizer = inject(DomSanitizer);
 
   private readonly STORAGE_KEY = 'aalish_id_card_settings_v5';
@@ -26,8 +26,8 @@ export class IdCardsFacade {
     return this.accountsService.getRoles();
   }
 
-  loadWarehouses(): Observable<Warehouse[]> {
-    return this.warehouseService.getAll();
+  loadWarehouses(): Observable<ScopeDirectoryEntry[]> {
+    return this.scopeDirectory.getAll();
   }
 
   loadSavedSettings(): IdCardSettings | null {

@@ -7,7 +7,7 @@ import { AuthService } from '../../../../../../core/auth/auth.service';
 import { StateService } from '../../../../../../core/services/state.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
-import { WarehouseHttpService } from '../../../../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService } from '../../../../../../core/http/scope-directory.service';
 import { ModuleRegistryService } from '../../../../../../core/modules/module-registry.service';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
@@ -91,7 +91,7 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    @Optional() private whService?: WarehouseHttpService,
+    @Optional() private scopeDirectory?: ScopeDirectoryService,
     @Optional() private moduleRegistry?: ModuleRegistryService
   ) {}
 
@@ -104,7 +104,7 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
   }
 
   get showWarehouseScope(): boolean {
-    const hasFilter = this.moduleRegistry?.getExtensions('crossModuleFilters').some(e => e.extension.warehouseScopeFilter);
+    const hasFilter = this.moduleRegistry?.getExtensions('scopeDirectory').some(e => !!e.extension.offersScopeFilter);
     return !!hasFilter && this.warehouses.length > 0;
   }
 
@@ -137,9 +137,9 @@ export class AccountantDiskettesHubComponent implements OnInit, OnDestroy {
       error: () => {}
     });
 
-    const hasWhFilter = this.moduleRegistry?.getExtensions('crossModuleFilters').some(e => e.extension.warehouseScopeFilter);
-    if (this.whService && hasWhFilter) {
-      this.whService.getAll().subscribe({
+    const hasWhFilter = this.moduleRegistry?.getExtensions('scopeDirectory').some(e => !!e.extension.offersScopeFilter);
+    if (this.scopeDirectory && hasWhFilter) {
+      this.scopeDirectory.getAll().subscribe({
         next: (data: any) => {
           this.warehouses = (Array.isArray(data) ? data : []).map((w: any) => ({ id: w.id, name: w.name }));
           this.cdr.detectChanges();

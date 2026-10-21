@@ -21,7 +21,7 @@ def has_structure_write_permission(user):
         return True
 
     # بررسی پرمیشن‌های ادمین/ماژول‌ها
-    core_perms = ['accounts.admin_all', 'accounts.view_sys_projects', 'accounts.perm_sys_settings', 'accounts.can_act_as_manager']
+    core_perms = ['accounts.admin_all', 'accounts.view_sys_projects', 'accounts.perm_sys_settings']
     for perm in (*core_perms, *contributions('org_structure_write_perms')):
         if user.has_perm(perm):
             return True

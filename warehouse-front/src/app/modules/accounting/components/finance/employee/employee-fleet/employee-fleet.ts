@@ -7,7 +7,7 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
-import { WarehouseHttpService } from '../../../../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService } from '../../../../../../core/http/scope-directory.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { SKIP_OFFLINE } from '../../../../../../core/interceptors/offline.interceptor';
 import {
@@ -194,7 +194,7 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
   constructor(
     public auth: AuthService,
     private personnelApi: PersonnelApiService,
-    private whService: WarehouseHttpService,
+    private scopeDirectory: ScopeDirectoryService,
     private wsService: WebSocketService,
     private toast: ToastService,
     private cdr: ChangeDetectorRef,
@@ -240,7 +240,7 @@ export class EmployeeFleetHubComponent implements OnInit, OnDestroy {
 
   // --- بارگذاری انبارها ---
   loadWarehouses(): void {
-    this.whService.getAll().subscribe({
+    this.scopeDirectory.getAll().subscribe({
       next: (whs: any[]) => {
         this.warehouses = whs || [];
         this.cdr.detectChanges();

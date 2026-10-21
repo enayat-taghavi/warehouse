@@ -59,10 +59,16 @@ export function hasRoutePermission(path: string, userPerms: string[]): boolean {
  * مجوز نوشتن ساختار سازمانی (همان has_structure_write_permission در personnel/permissions.py).
  * محدودهٔ شرکت را بک‌اند تعیین می‌کند: هر کاربر غیرسوپریوزر فقط درون شرکت‌های مجاز خودش می‌نویسد و درون‌ریزی می‌کند.
  */
-export const STRUCTURE_WRITE_PERMS = ['admin_all', 'view_sys_projects', 'perm_sys_settings', 'perm_approve_personnel_manager', 'can_act_as_manager'];
+export const STRUCTURE_WRITE_PERMS = ['admin_all', 'view_sys_projects', 'perm_sys_settings'];
+
+/** مجوزهای پلتفرم به‌اضافهٔ users.structureWritePermissions ماژول‌های نصب‌شده (همتای org_structure_write_perms بک‌اند) */
+export function getStructureWritePermissions(registry: ModuleRegistryService = getModuleRegistry()): string[] {
+  const fromModules = registry.getExtensions('users').flatMap(e => e.extension.structureWritePermissions || []);
+  return [...STRUCTURE_WRITE_PERMS, ...fromModules];
+}
 
 export function hasStructureWritePermission(userPerms: string[], isAdmin: boolean): boolean {
-  return isAdmin || STRUCTURE_WRITE_PERMS.some(p => userPerms.includes(p));
+  return isAdmin || getStructureWritePermissions().some(p => userPerms.includes(p));
 }
 
 export const AuthGuard: CanActivateFn = (route, state) => {

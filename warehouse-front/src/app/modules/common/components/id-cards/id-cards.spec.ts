@@ -3,7 +3,7 @@ import { of } from 'rxjs';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { IdCards } from './id-cards';
 import { AccountsHttpService, User, Role } from '../../../../core/http/accounts-http.service';
-import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService } from '../../../../core/http/scope-directory.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { StateService } from '../../../../core/services/state.service';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
@@ -96,7 +96,7 @@ describe('IdCards Component Comprehensive Tests (Tab 3: ID Cards & Gate Pass)', 
       providers: [
         { provide: ToastService, useValue: mockToast },
         { provide: AccountsHttpService, useValue: mockAccountsHttp },
-        { provide: WarehouseHttpService, useValue: mockWarehouseHttp },
+        { provide: ScopeDirectoryService, useValue: mockWarehouseHttp },
         { provide: StateService, useValue: mockState },
         {
           provide: ModuleRegistryService,

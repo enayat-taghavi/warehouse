@@ -7,6 +7,8 @@ import { WAREHOUSE_ENTITY_ICONS } from './entity-icons';
 import { WAREHOUSE_PERSONAS } from './personas';
 import { WAREHOUSE_ROUTE_ACCESS } from './route-access';
 import { WAREHOUSE_ROLE_PRESETS } from './role-presets';
+import { WAREHOUSE_PERMISSION_CODENAMES, WAREHOUSE_SHORT_PERMISSION_NAMES } from './permissions';
+import { WAREHOUSE_DIRECTORY_ENDPOINT } from './warehouse-endpoints';
 
 /**
  * مانیفست رسمی و مستقل ماژول انبارداری و ره‌گیری کالا (Front-End Module Manifest)
@@ -109,7 +111,7 @@ export const MODULE: WhFrontendModule = {
         },
         loadItems: async (injector) => {
           // ایمپورت تنبل: سرویس انبار گراف آفلاین را می‌کشد و نباید هنگام ساخت INSTALLED_MODULES بارگذاری شود
-          const { WarehouseHttpService } = await import('../../core/http/warehouse-http.service');
+          const { WarehouseHttpService } = await import('./api/warehouse-http.service');
           const whService = injector.get(WarehouseHttpService, null);
           if (!whService) return [];
           return (await firstValueFrom(whService.getAll())) || [];
@@ -134,7 +136,34 @@ export const MODULE: WhFrontendModule = {
       hasWarehouseModuleToggle: true
     },
     users: {
-      permissionGroupKeys: ['WH_AUDIT'],
+      permissionGroup: { key: 'WH_AUDIT', titleFa: 'انبارگردانی 📦', order: 10, codenames: WAREHOUSE_PERMISSION_CODENAMES },
+      shortPermissionNames: WAREHOUSE_SHORT_PERMISSION_NAMES,
+      structureWritePermissions: ['can_act_as_manager'],
+      assignmentScope: {
+        priority: 10,
+        labels: {
+          singular: 'انبار',
+          plural: 'انبارها',
+          pluralAttributive: 'انبارهای',
+          allOption: 'همه انبارها',
+          noneOption: 'بدون انبار',
+          listPrefix: 'انبارها:',
+          column: 'دسترسی انبارها',
+          roleTitlePlaceholder: 'مثال: سرپرست انبار',
+          presetsHint: 'تخصیص یکپارچه نقش‌های انبارگردانی و حسابداری با ۱ کلیک',
+          companiesTab: 'شرکت‌ها و انبارها',
+          nextStep: 'انبارها و پروژه‌ها',
+          allowedTitle: 'شرکت‌ها و انبارهای مجاز',
+          assignTitle: 'تخصیص انبارهای عملیاتی مجاز',
+          emptyText: 'هیچ انباری برای شرکت‌های انتخاب‌شده یافت نشد.',
+          sensitiveRecords: 'انبار'
+        },
+        loadItems: async (injector) => {
+          // ایمپورت تنبل: سرویس فهرست، رجیستری ماژول‌ها را می‌کشد و نباید هنگام ساخت INSTALLED_MODULES بارگذاری شود
+          const { ScopeDirectoryService } = await import('../../core/http/scope-directory.service');
+          return (await firstValueFrom(injector.get(ScopeDirectoryService).getAll())) || [];
+        }
+      },
       rolePresets: WAREHOUSE_ROLE_PRESETS,
       presetCategory: { key: 'inventory', labelFa: 'انبارگردانی', icon: 'package', tone: 'sky' },
       roleScope: {
@@ -170,9 +199,9 @@ export const MODULE: WhFrontendModule = {
     idCards: {
       supported: true
     },
-    crossModuleFilters: {
-      warehouseScopeFilter: true,
-      warehouseDirectoryEndpoint: '/warehouses/'
+    scopeDirectory: {
+      endpoint: WAREHOUSE_DIRECTORY_ENDPOINT,
+      offersScopeFilter: true
     },
     syncConfig: {
       scopeKind: 'warehouse',

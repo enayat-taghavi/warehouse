@@ -3,7 +3,7 @@ import { HttpClient, HttpContext } from '@angular/common/http';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
 import { Observable, throwError } from 'rxjs';
-import { getWarehouseDirectoryEndpoint } from '../modules/warehouse-directory';
+import { getScopeDirectoryEndpoint } from '../modules/scope-directory';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
@@ -55,7 +55,7 @@ export class SettingsService {
 
   /** نشانی تنظیمات یک انبار از اندپوینت فهرست انبارهای ماژول صاحب آن */
   private warehouseSettingsUrl(warehouseId: number): string | null {
-    const endpoint = getWarehouseDirectoryEndpoint();
+    const endpoint = getScopeDirectoryEndpoint();
     return endpoint ? `${this.apiUrl}${endpoint}${warehouseId}/settings/` : null;
   }
 

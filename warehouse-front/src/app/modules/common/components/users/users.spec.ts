@@ -7,7 +7,7 @@ import { ɵresolveComponentResources } from '@angular/core';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Users } from './users';
-import { of, Subject } from 'rxjs';
+import { of, Subject, firstValueFrom } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { StateService } from '../../../../core/services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
@@ -15,7 +15,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { AppPersonaService } from '../../../../core/services/app-persona.service';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
 import { AccountsHttpService } from '../../../../core/http/accounts-http.service';
-import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService } from '../../../../core/http/scope-directory.service';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { By } from '@angular/platform-browser';
 import { CompanyApiService } from '../../../../core/api/company-api.service';
@@ -122,6 +122,7 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
   let mockRouter: any;
   let queryParamsSubject: Subject<any>;
   let activeModuleList: string[];
+  let usersExtRef: Record<string, any>;
 
   beforeEach(async () => {
     queryParamsSubject = new Subject();
@@ -203,9 +204,21 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
 
     activeModuleList = ['warehouse', 'accounting'];
     // مشارکت users دو ماژول، همان مقادیر module.ts هر ماژول (spec نمی‌تواند از modules/* ایمپورت کند)
+    const scopeLabels = (singular: string, plural: string, extra: Record<string, string>) => ({
+      singular, plural, pluralAttributive: `${plural.replace(/‌ها$|ها$/, '')}‌های`,
+      allOption: `همه ${plural}`, noneOption: `بدون ${singular}`, listPrefix: `${plural}:`,
+      column: '', roleTitlePlaceholder: '', presetsHint: '', nextStep: '', allowedTitle: '', assignTitle: '', emptyText: '', sensitiveRecords: '',
+      ...extra
+    });
     const usersExt: Record<string, any> = {
       warehouse: {
-        permissionGroupKeys: ['WH_AUDIT', 'SENSITIVE'],
+        permissionGroup: { key: 'WH_AUDIT', titleFa: 'انبارگردانی 📦', order: 10, codenames: ['view_wh_dashboard'] },
+        shortPermissionNames: { view_wh_dashboard: 'داشبورد انبار' },
+        assignmentScope: {
+          priority: 10,
+          labels: scopeLabels('انبار', 'انبارها', { companiesTab: 'شرکت‌ها و انبارها' }),
+          loadItems: async (inj: any) => (await firstValueFrom(inj.get(ScopeDirectoryService).getAll())) || []
+        },
         presetCategory: { key: 'inventory', labelFa: 'انبارگردانی', icon: 'package', tone: 'sky' },
         rolePresets: [{ id: 'counter', title: 'انبارگردان / شمارشگر کور', category: 'inventory', categoryTitle: 'انبارگردانی', color: '#0284c7', icon: '📦', description: '', permissionCodenames: [] }],
         roleScope: {
@@ -214,7 +227,13 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
         }
       },
       accounting: {
-        permissionGroupKeys: ['ACCOUNTING_FINANCE'],
+        permissionGroup: { key: 'ACCOUNTING_FINANCE', titleFa: 'حسابداری 💳', order: 20, codenames: ['view_sys_personnel'] },
+        shortPermissionNames: { view_sys_personnel: 'مدیریت پرسنل' },
+        assignmentScope: {
+          priority: 20,
+          labels: scopeLabels('پروژه', 'پروژه‌ها', { companiesTab: 'شرکت‌ها و پروژه‌ها' }),
+          loadItems: async () => []
+        },
         presetCategory: { key: 'accounting', labelFa: 'حسابداری', icon: 'credit-card', tone: 'emerald' },
         rolePresets: [{ id: 'workshop_operator', title: 'کارمند کارگاه', category: 'accounting', categoryTitle: 'حسابداری و کارگاه', color: '#64748b', icon: '👤', description: '', permissionCodenames: [] }],
         roleScope: {
@@ -224,6 +243,7 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
         }
       }
     };
+    usersExtRef = usersExt;
     const moduleOf = (code: string) => ({ code, extensions: { users: usersExt[code] } });
     mockRegistry = {
       isModuleActive: vi.fn().mockImplementation((c: string) => activeModuleList.includes(c)),
@@ -264,7 +284,7 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
       providers: [
         StateService,
         { provide: AccountsHttpService, useValue: mockAccountsHttp },
-        { provide: WarehouseHttpService, useValue: mockWarehouseHttp },
+        { provide: ScopeDirectoryService, useValue: mockWarehouseHttp },
         { provide: CompanyApiService, useValue: mockCompanyApi },
         { provide: ActiveCompanyService, useValue: mockActiveCompanyService },
         { provide: ApiService, useValue: mockApi },
@@ -867,6 +887,38 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
     });
   });
 
+  describe('گروه مجوزها و برچسب‌ها از اعلام ماژول‌ها (گام ۷)', () => {
+    it('گروه هر ماژول از users.permissionGroup آن ساخته می‌شود و ترتیبش order است', () => {
+      const keys = component.systemPermissionGroups.map(g => g.key);
+      expect(keys.slice(0, 2)).toEqual(['WH_AUDIT', 'ACCOUNTING_FINANCE']);
+      expect(component.systemPermissionGroups.find(g => g.key === 'WH_AUDIT')?.items.map(p => p.codename)).toEqual(['view_wh_dashboard']);
+      expect(component.systemPermissionGroups.find(g => g.key === 'ACCOUNTING_FINANCE')?.title).toBe('حسابداری 💳');
+    });
+
+    it('نام کوتاه مجوز ماژول از users.shortPermissionNames همان ماژول می‌آید', () => {
+      expect(component.getShortPermissionName({ codename: 'view_sys_personnel', name: 'x' })).toBe('مدیریت پرسنل');
+      expect(component.getShortPermissionName({ codename: 'view_sys_users', name: 'x' })).toBe('کاربران و نقش‌ها');
+    });
+
+    it('با دو ماژول برچسب‌ها از ماژول با priority کمتر می‌آیند', () => {
+      expect(component.scopeLabels.companiesTab).toBe('شرکت‌ها و انبارها');
+    });
+
+    it('بدون هیچ ماژول، برچسب‌های عمومی پوسته به کار می‌روند', () => {
+      activeModuleList = [];
+      expect(component.scopeLabels.singular).toBe('محدوده');
+    });
+
+    it('راهنمای تنهای مجوز فقط وقتی محدودهٔ تخصیص از ماژول صاحب آن است نشان داده می‌شود', () => {
+      usersExtRef['accounting'].standalonePermissionTooltips = { view_sys_personnel: 'راهنمای تنها' };
+      usersExtRef['accounting'].permissionGroup.codenames = ['view_sys_personnel'];
+      const perm = { codename: 'view_sys_personnel', name: 'نام کامل' };
+      expect(component.getPermissionTooltip(perm)).toBe('نام کامل');
+      activeModuleList = ['accounting'];
+      expect(component.getPermissionTooltip(perm)).toBe('راهنمای تنها');
+    });
+  });
+
   describe('Single-Module Isolation Zero-Trace Tests (Phase 4)', () => {
     beforeEach(() => {
       component.systemPermissionGroups = [
@@ -881,10 +933,9 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
       } catch {}
     });
 
-    it('در حالت تک‌ماژول بدون مالی (فقط انبارداری)، hasAccountingModule باید false باشد و تب مالی مخفی بماند (L10)', () => {
+    it('در حالت تک‌ماژول بدون مالی (فقط انبارداری)، برچسب‌ها از انبار می‌آیند و تب مالی مخفی بماند (L10)', () => {
       activeModuleList = ['warehouse'];
-      expect(component.hasAccountingModule()).toBe(false);
-      expect(component.hasInventoryModule()).toBe(true);
+      expect(component.scopeLabels.singular).toBe('انبار');
 
       component.openUserModal();
       component.setUserModalInnerTab('roles');
@@ -894,10 +945,9 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
       expect(compiled.textContent).toContain('سامانه انبارداری');
     });
 
-    it('در حالت تک‌ماژول بدون انبارداری (فقط مالی)، hasInventoryModule باید false باشد و متون به پروژه تغییر یابند (L11)', () => {
+    it('در حالت تک‌ماژول بدون انبارداری (فقط مالی)، متون به پروژه تغییر یابند (L11)', () => {
       activeModuleList = ['accounting'];
-      expect(component.hasInventoryModule()).toBe(false);
-      expect(component.hasAccountingModule()).toBe(true);
+      expect(component.scopeLabels.singular).toBe('پروژه');
 
       component.openUserModal();
       component.setUserModalInnerTab('warehouses');

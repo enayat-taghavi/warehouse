@@ -114,5 +114,18 @@ class WarehousesConfig(AppConfig):
         # ثبت مدل هدف نظر در هسته ارتباطات (فاز ۴ گام ۲)
         contribute('comment_target_models', 'warehouse')
 
+        # مجوزهای این ماژول که هسته در نقطه‌های توسعه می‌خواند (گام ۷)
+        contribute('audit_view_perms', 'view_wh_audit')
+        contribute('org_structure_write_perms', 'accounts.can_act_as_manager')
+        contribute('sensitive_field_bypass_perms', 'view_sys_manager_review')
+        for key_perm in (
+            ('can_act_as_counter', 'انبارگردان'),
+            ('can_act_as_supervisor', 'سرپرست انبار'),
+            ('can_act_as_manager', 'مدیر انبار'),
+            ('can_act_as_doc_worker', 'کارشناس اسناد'),
+            ('can_act_as_doc_supervisor', 'سرپرست اسناد'),
+        ):
+            contribute('key_role_permissions', key_perm)
+
 
 

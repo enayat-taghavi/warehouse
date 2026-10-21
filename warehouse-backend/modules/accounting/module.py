@@ -63,6 +63,37 @@ ACCOUNTING_PERMISSION_CODENAMES = (
     'perm_approve_personnel_finance', 'perm_approve_fleet_finance',
     'perm_lock_work_period', 'perm_manager_payment_authorize', 'perm_treasury_disburse_action',
     'perm_manage_projects_sections',
+    'can_act_as_workshop_supervisor', 'can_act_as_company_manager',
+    'perm_delete_personnel_nomovement', 'perm_delete_vehicle_nomovement',
 )
 
 PERMISSION_CODENAMES = ACCOUNTING_PERMISSION_CODENAMES
+
+# مجوزهای سفارشی این ماژول روی accounts.CustomUser (کد، نام فارسی).
+# هسته ردیف‌های Permission ماژول نصب‌شده را در post_migrate می‌سازد (فقط ایجاد، هرگز حذف).
+ACCOUNTING_PERMISSIONS = (
+    ('view_sys_personnel', 'مدیریت پرسنل و کارگزینی'),
+    ('view_sys_personnel_attendance', 'ثبت کارکرد پرسنل'),
+    ('view_sys_fleet_attendance', 'ثبت کارکرد ناوگان و ماشین‌آلات'),
+    ('view_sys_payroll', 'محاسبات حقوق و دستمزد پرسنل'),
+    ('view_sys_fleet_settlement', 'تسویه و محاسبات مالی ناوگان'),
+    ('perm_manage_projects_sections', 'مدیریت پروژه‌ها و بخش‌ها'),
+    ('can_act_as_operator', 'کارمند کارگاه و ثبت کارکرد'),
+    ('can_act_as_workshop_supervisor', 'سرپرست کارگاه (تایید اولیه کارکرد پرسنل و ناوگان)'),
+    ('can_act_as_accountant', 'حسابدار و کارشناس مالی'),
+    ('can_act_as_company_manager', 'مدیر شرکت (تایید نهایی و مجوز پرداخت)'),
+    ('view_sys_treasury', 'کارتابل خزانه‌داری و پرداخت'),
+    ('perm_lock_work_period', 'قفل و تایید نهایی کارکرد ماهانه'),
+    ('perm_approve_personnel_supervisor', 'تایید مرحله سرپرست انبار برای پرسنل'),
+    ('perm_approve_personnel_manager', 'تایید مرحله اول (عملیاتی) پرسنل'),
+    ('perm_approve_personnel_finance', 'تایید مرحله دوم (مالی و بانکی) پرسنل'),
+    ('perm_approve_fleet_supervisor', 'تایید مرحله سرپرست انبار برای ناوگان'),
+    ('perm_approve_fleet_manager', 'تایید مرحله اول (عملیاتی) ناوگان و خودروها'),
+    ('perm_approve_fleet_finance', 'تایید مرحله دوم (مالی و بانکی) ناوگان و خودروها'),
+    ('perm_manager_payment_authorize', 'صدور مجوز پرداخت نهایی مدیر شرکت'),
+    ('perm_treasury_disburse_action', 'ثبت واریز و تسویه نهایی خزانه‌داری'),
+    ('perm_delete_personnel_nomovement', 'حذف پرسنل فاقد سابقه کارکرد و مالی'),
+    ('perm_delete_vehicle_nomovement', 'حذف خودرو و ناوگان فاقد سابقه کارکرد و مالی'),
+)
+
+PERMISSIONS = ACCOUNTING_PERMISSIONS

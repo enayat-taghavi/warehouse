@@ -8,7 +8,7 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { PersonnelApiService } from '../../../api/personnel-api.service';
-import { WarehouseHttpService } from '../../../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService } from '../../../../../core/http/scope-directory.service';
 import {
   PersonnelProfile,
   VehicleDriverProfile,
@@ -107,7 +107,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
     public auth: AuthService,
     public state: StateService,
     private api: PersonnelApiService,
-    private whService: WarehouseHttpService,
+    private scopeDirectory: ScopeDirectoryService,
     private toast: ToastService,
     private confirmDialog: ConfirmDialogService,
     private cdr: ChangeDetectorRef,
@@ -152,7 +152,7 @@ export class ManagerApprovals implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.whService.getAll().subscribe({
+    this.scopeDirectory.getAll().subscribe({
       next: (data: any) => {
         this.warehouses = Array.isArray(data) ? data : [];
       },

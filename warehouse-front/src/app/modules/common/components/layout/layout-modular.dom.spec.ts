@@ -9,7 +9,7 @@ import { AuthStore } from '../../../../core/stores/auth.store';
 import { StateService } from '../../../../core/services/state.service';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { Router, NavigationEnd } from '@angular/router';
-import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService } from '../../../../core/http/scope-directory.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { ConfigApiService } from '../../../../core/api/config-api.service';
 import { AccountsHttpService } from '../../../../core/http/accounts-http.service';
@@ -173,7 +173,7 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
         { provide: StateService, useValue: mockState },
         { provide: ConfirmDialogService, useValue: { open: vi.fn() } },
         { provide: Router, useValue: mockRouter },
-        { provide: WarehouseHttpService, useValue: mockWhService },
+        { provide: ScopeDirectoryService, useValue: mockWhService },
         { provide: ToastService, useValue: { show: vi.fn() } },
         { provide: ConfigApiService, useValue: { getPublicConfig: () => of({}) } },
         { provide: AccountsHttpService, useValue: {} },

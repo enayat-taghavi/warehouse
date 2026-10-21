@@ -54,6 +54,8 @@ export interface ModuleNavItem {
   label: string;
   icon: string;
   permission: string;
+  /** آیتم با داشتن هر یک از این مجوزها دیده می‌شود (به‌جای permission تنها) */
+  anyPermissions?: string[];
   module?: string;
   isAccounting?: boolean;
   isPending?: boolean;
@@ -71,6 +73,91 @@ export interface ModuleRolePreset {
   icon: string;
   description: string;
   permissionCodenames: string[] | 'ALL';
+}
+
+/** گروه مجوزهای یک ماژول در صفحهٔ نقش‌ها */
+export interface ModulePermissionGroup {
+  /** کلید پایدار گروه در صفحهٔ نقش‌ها */
+  key: string;
+  titleFa: string;
+  /** ترتیب گروه میان گروه‌های ماژول‌ها (کوچک‌تر جلوتر) */
+  order: number;
+  /** کدهای مجوز ماژول؛ همان PERMISSION_CODENAMES مانیفست بک‌اند ماژول (نگهبان ۵۷ برابری را می‌سنجد) */
+  codenames: string[];
+}
+
+/** برچسب‌های فارسی محدودهٔ تخصیص کاربران (مثلاً انبار یا پروژه) در صفحهٔ کاربران */
+export interface AssignmentScopeLabels {
+  /** مفرد و جمع: «انبار»، «انبارها» */
+  singular: string;
+  plural: string;
+  /** صفت جمع پیش از اسم: «انبارهای …» */
+  pluralAttributive: string;
+  /** گزینهٔ «همه» در فیلتر */
+  allOption: string;
+  /** گزینهٔ «بدون …» در فیلتر */
+  noneOption: string;
+  /** پیشوند فهرست در کارت کاربر: «انبارها:» */
+  listPrefix: string;
+  /** سرستون جدول کاربران */
+  column: string;
+  /** نمونهٔ عنوان نقش */
+  roleTitlePlaceholder: string;
+  /** راهنمای پنل قالب‌های نقش */
+  presetsHint: string;
+  /** زبانهٔ «شرکت‌ها و …» مودال کاربر */
+  companiesTab: string;
+  /** متن «گام بعدی: …» */
+  nextStep: string;
+  /** عنوان «شرکت‌ها و …های مجاز» */
+  allowedTitle: string;
+  /** عنوان تخصیص */
+  assignTitle: string;
+  /** متن فهرست خالی */
+  emptyText: string;
+  /** نام رکوردها در هشدار مجوز حساس */
+  sensitiveRecords: string;
+}
+
+/** محدودهٔ تخصیص کاربران که یک ماژول عرضه می‌کند */
+export interface UsersAssignmentScope {
+  /** کوچک‌تر یعنی ترجیح بیشتر؛ اولین ماژول در دسترس برچسب‌ها را می‌دهد و خطای بارگذاری به بعدی می‌رود */
+  priority: number;
+  labels: AssignmentScopeLabels;
+  /** فهرست هدف‌های تخصیص برای state.appState.projects؛ سرویس‌ها از injector */
+  loadItems: (injector: Injector) => Promise<{ id: number; name: string; code?: string | null }[]>;
+}
+
+/** سناریوی تست فشار هم‌زمانی یک ماژول (ابزار توسعه؛ مقدار همان پارامتر scenario سرور) */
+export interface HealthStressScenario {
+  value: string;
+  /** ترتیب گزینه و برچسب در متن ترکیبی (کوچک‌تر جلوتر) */
+  order: number;
+  /** متن گزینهٔ «فقط همین سناریو» */
+  optionLabelFa: string;
+  /** نام کوتاه در «ترکیبی (… + …)» و توضیح آزمون */
+  shortLabelFa: string;
+  /** سطر نتیجهٔ آزمون: برچسب و مقدار */
+  verdictLabelFa: string;
+  verdictValueFa: string;
+}
+
+/** نمای یک ماژول در داشبورد سلامت سامانه */
+export interface HealthPanelSpec {
+  /** ترتیب قلمرو در فهرست‌ها (کوچک‌تر جلوتر) */
+  order: number;
+  /** برچسب «وضعیت قلمرو» */
+  scopeLabelFa: string;
+  /** رنگ نشان قلمرو */
+  tone: 'blue' | 'purple';
+  /** برچسب شمار رکوردهای کش و صف این قلمرو (مثلاً «انبار») */
+  storageLabelFa: string;
+  /** نام دیتابیس محلی وقتی فقط همین قلمرو دیده می‌شود، و نام کوتاه در فهرست چندتایی */
+  dbLabelEn: string;
+  dbShortEn: string;
+  /** نمای کلی: وقتی داشبورد روی این قلمرو است، همهٔ قلمروهای نصب‌شده دیده می‌شوند */
+  overview?: boolean;
+  stressScenario?: HealthStressScenario;
 }
 
 /** رنگ‌های پایه‌ای که کلاس‌های کاملشان در کامپوننت‌های مشترک تعریف شده است */
@@ -189,6 +276,11 @@ export interface ExtensionMap {
     quickLink?: { title: string; route: string; icon?: string };
     hasExpiringDocsWidget?: boolean;
     syncMonitorScope?: string;
+    /** برچسب صف همین قلمرو در خلاصهٔ صف پایش همگام‌سازی و ترتیب آن (کوچک‌تر جلوتر) */
+    queueLabelFa?: string;
+    queueOrder?: number;
+    /** نمونهٔ تداخل ۴۰۹ برای آزمایشگاه تداخل پایش همگام‌سازی؛ در syncErrors دیتابیس syncMonitorScope ثبت می‌شود */
+    conflictSimulation?: () => Record<string, any>;
     /** دکمهٔ ورود به این ماژول در پوستهٔ مرکز عملیات (کنار پیوندهای سریع) */
     shellLink?: { labelFa: string; mobileLabelFa: string; route: string; icon: IconName; accent: ModuleAccent };
     /** دکمهٔ تنظیمات منبع داده در اتاق فرماندهی */
@@ -206,10 +298,19 @@ export interface ExtensionMap {
   };
 
   /**
-   * ۶. گروه‌های دسترسی و پیش‌تنظیم‌های نقش کاربران — مصرف در users.ts و operations-rbac-governance.ts
+   * ۶. گروه‌های دسترسی و پیش‌تنظیم‌های نقش کاربران — مصرف در users.ts، layout.ts، auth.guard.ts و operations-rbac-governance.ts
    */
   users?: {
-    permissionGroupKeys?: string[];
+    /** گروه مجوزهای این ماژول در صفحهٔ نقش‌ها */
+    permissionGroup?: ModulePermissionGroup;
+    /** نام کوتاه مجوزهای این ماژول در چیپ‌های دسترسی */
+    shortPermissionNames?: Record<string, string>;
+    /** راهنمای مجوز وقتی محدودهٔ تخصیص کاربران از همین ماژول است (ماژول دیگری پیش از آن در دسترس نیست) */
+    standalonePermissionTooltips?: Record<string, string>;
+    /** مجوزهایی که نوشتن ساختار سازمانی را باز می‌کنند (همتای org_structure_write_perms بک‌اند) */
+    structureWritePermissions?: string[];
+    /** محدودهٔ تخصیص کاربران (انبار، پروژه، …) و برچسب‌های آن */
+    assignmentScope?: UsersAssignmentScope;
     /** قالب‌های آمادهٔ نقش این ماژول و دستهٔ آن‌ها در پنل قالب‌ها */
     rolePresets?: ModuleRolePreset[];
     presetCategory?: { key: string; labelFa: string; icon: IconName; tone: 'sky' | 'emerald' };
@@ -239,6 +340,8 @@ export interface ExtensionMap {
    */
   healthDashboard?: {
     panelScopes?: string[];
+    /** نمای این ماژول (قلمرو نخست panelScopes) در داشبورد سلامت */
+    panel?: HealthPanelSpec;
   };
 
   /**
@@ -275,12 +378,14 @@ export interface ExtensionMap {
   };
 
   /**
-   * ۱۰. فیلتر قلمرو بین‌ماژولی (مانند فیلتر انبار در دیسکت‌ها و حقوق پرسنل) — مصرف در accountant-payroll, accountant-fleet, accountant-diskettes
+   * ۱۰. فهرست قلمرو عملیاتی (مثل فهرست انبارها) که پوسته و ماژول‌های دیگر فقط می‌خوانند — مصرف در ScopeDirectoryService
+   * و فیلتر قلمرو بین‌ماژولی (accountant-payroll، accountant-fleet، accountant-diskettes)
    */
-  crossModuleFilters?: {
-    warehouseScopeFilter?: boolean;
-    /** اندپوینت فهرست انبارها (نسبت به apiUrl، مثل '/warehouses/')؛ صاحبش ماژول انبار است */
-    warehouseDirectoryEndpoint?: string;
+  scopeDirectory?: {
+    /** اندپوینت فهرست (نسبت به apiUrl، مثل '/warehouses/') */
+    endpoint: string;
+    /** ماژول‌های دیگر می‌توانند فهرست خود را با این قلمرو فیلتر کنند */
+    offersScopeFilter?: boolean;
   };
 
   /**

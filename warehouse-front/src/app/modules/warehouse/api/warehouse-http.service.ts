@@ -1,13 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, tap, EMPTY, catchError } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { ImportResult } from './accounts-http.service';
-import { OfflineSyncService } from '../services/offline-sync.service';
-import { ModuleRegistryService } from '../modules/module-registry.service';
-import { getWarehouseDirectoryEndpoint } from '../modules/warehouse-directory';
-
-export { getWarehouseDirectoryEndpoint };
+import { Observable, of, tap, catchError } from 'rxjs';
+import { environment } from '../../../../environments/environment';
+import { ImportResult } from '../../../core/http/accounts-http.service';
+import { OfflineSyncService } from '../../../core/services/offline-sync.service';
+import { WAREHOUSE_DIRECTORY_ENDPOINT } from '../warehouse-endpoints';
 
 export interface Warehouse {
   id: number;
@@ -34,28 +31,18 @@ export interface Warehouse {
   modified_by: number | null;
 }
 
+/**
+ * سرویس کامل انبارها (فهرست، ساخت، ویرایش، بایگانی، اکسل) که فقط ماژول انبار دارد.
+ * پوسته و ماژول‌های دیگر فهرست را فقط از ScopeDirectoryService هسته می‌خوانند.
+ */
 @Injectable({
   providedIn: 'root'
 })
 export class WarehouseHttpService {
-  private moduleRegistry = inject(ModuleRegistryService);
-
-  /** نشانی فهرست انبارها از ماژول صاحب آن؛ بی‌ماژول انبار رشتهٔ خالی */
-  private get baseUrl(): string {
-    const endpoint = getWarehouseDirectoryEndpoint(this.moduleRegistry);
-    return endpoint ? `${environment.apiUrl}${endpoint}` : '';
-  }
-
-  private get isWarehouseAvailable(): boolean {
-    return !!getWarehouseDirectoryEndpoint(this.moduleRegistry);
-  }
-
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private readonly baseUrl = `${environment.apiUrl}${WAREHOUSE_DIRECTORY_ENDPOINT}`;
 
   getAll(companyId?: number): Observable<Warehouse[]> {
-    if (!this.isWarehouseAvailable) {
-      return of([]);
-    }
     let url = this.baseUrl;
     if (companyId) {
       url += `?company_id=${companyId}`;
@@ -66,43 +53,28 @@ export class WarehouseHttpService {
   }
 
   getById(id: number): Observable<Warehouse> {
-    if (!this.isWarehouseAvailable) {
-      return EMPTY;
-    }
     return this.http.get<Warehouse>(`${this.baseUrl}${id}/`);
   }
 
   create(data: Partial<Warehouse>): Observable<Warehouse> {
-    if (!this.isWarehouseAvailable) {
-      return EMPTY;
-    }
     return this.http.post<Warehouse>(this.baseUrl, data).pipe(
       tap(() => OfflineSyncService.getInstance().invalidateCache(this.baseUrl))
     );
   }
 
   update(id: number, data: Partial<Warehouse>): Observable<Warehouse> {
-    if (!this.isWarehouseAvailable) {
-      return EMPTY;
-    }
     return this.http.patch<Warehouse>(`${this.baseUrl}${id}/`, data).pipe(
       tap(() => OfflineSyncService.getInstance().invalidateCache(this.baseUrl))
     );
   }
 
   delete(id: number): Observable<void> {
-    if (!this.isWarehouseAvailable) {
-      return EMPTY;
-    }
     return this.http.delete<void>(`${this.baseUrl}${id}/`).pipe(
       tap(() => OfflineSyncService.getInstance().invalidateCache(this.baseUrl))
     );
   }
 
   toggleArchive(id: number): Observable<Warehouse> {
-    if (!this.isWarehouseAvailable) {
-      return EMPTY;
-    }
     return this.http.patch<Warehouse>(`${this.baseUrl}${id}/toggle_archive/`, {}).pipe(
       tap(() => OfflineSyncService.getInstance().invalidateCache(this.baseUrl))
     );
@@ -110,25 +82,16 @@ export class WarehouseHttpService {
 
   // ── Excel Import/Export ────────────────────────────────────────────
   exportExcel(): Observable<Blob> {
-    if (!this.isWarehouseAvailable) {
-      return EMPTY;
-    }
     return this.http.get(`${this.baseUrl}export_excel/`, { responseType: 'blob' });
   }
 
   importExcel(file: File): Observable<ImportResult> {
-    if (!this.isWarehouseAvailable) {
-      return EMPTY;
-    }
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<ImportResult>(`${this.baseUrl}import_excel/`, formData);
   }
 
   downloadTemplate(): Observable<Blob> {
-    if (!this.isWarehouseAvailable) {
-      return EMPTY;
-    }
     return this.http.get(`${this.baseUrl}download_template/`, { responseType: 'blob' });
   }
 }

@@ -12,6 +12,8 @@ from platform_core.registry import ModuleSpec
 
 MODULE_CATALOG: dict[str, ModuleSpec] = {}
 MODULE_PERMISSION_CODENAMES: dict[str, tuple[str, ...]] = {}
+# مجوزهای سفارشی هر ماژول روی accounts.CustomUser: (کد، نام فارسی)؛ از `PERMISSIONS` مانیفست
+MODULE_PERMISSIONS: dict[str, tuple[tuple[str, str], ...]] = {}
 
 
 def _discover_modules() -> None:
@@ -59,7 +61,13 @@ def _discover_modules() -> None:
             getattr(mod, 'PERMISSION_CODENAMES', None)
             or getattr(mod, f"{dir_code.upper()}_PERMISSION_CODENAMES", ())
         )
-        MODULE_PERMISSION_CODENAMES[dir_code] = tuple(perms)
+        custom = tuple(
+            getattr(mod, 'PERMISSIONS', None)
+            or getattr(mod, f"{dir_code.upper()}_PERMISSIONS", ())
+        )
+        MODULE_PERMISSIONS[dir_code] = custom
+        # هر مجوز سفارشی ماژول جزو کدهای همان ماژول هم هست (برای دفاع در عمق)
+        MODULE_PERMISSION_CODENAMES[dir_code] = tuple(dict.fromkeys((*perms, *(c for c, _ in custom))))
 
 
 _discover_modules()
@@ -77,3 +85,18 @@ def get_disallowed_permission_codenames() -> set[str]:
         if code not in installed:
             disallowed.update(perms)
     return disallowed
+
+
+def installed_module_permissions() -> tuple[tuple[str, str], ...]:
+    """
+    مجوزهای سفارشی ماژول‌های نصب‌شده (کد، نام فارسی) به ترتیب کاتالوگ.
+    سازندهٔ ردیف‌های Permission در post_migrate و فرمان seed_permissions از این می‌خوانند.
+    """
+    from platform_core.registry import installed_modules
+    installed = set(installed_modules())
+    result: dict[str, str] = {}
+    for code, perms in MODULE_PERMISSIONS.items():
+        if code in installed:
+            for codename, name in perms:
+                result.setdefault(codename, name)
+    return tuple(result.items())

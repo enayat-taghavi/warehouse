@@ -27,8 +27,14 @@ OPERATORS_BY_TYPE: Dict[str, List[str]] = {
 
 AGG_FUNCTIONS: Tuple[str, ...] = ('count', 'sum', 'avg', 'min', 'max')
 
-# کاربرانی با یکی از این مجوزها اجازه دیدن فیلدهای حساس را دارند — بدون تغییر (تسک ۴۷)
-SENSITIVE_BYPASS_PERMS: Tuple[str, ...] = ('view_sys_manager_review',)
+# کاربرانی با یکی از این مجوزها اجازه دیدن فیلدهای حساس را دارند (تسک ۴۷).
+# هسته مجوزی ندارد؛ ماژول‌ها با contribute('sensitive_field_bypass_perms', codename) اضافه می‌کنند.
+SENSITIVE_BYPASS_PERMS: Tuple[str, ...] = ()
+
+
+def sensitive_bypass_perms() -> Tuple[str, ...]:
+    from platform_core.registry import contributions
+    return (*SENSITIVE_BYPASS_PERMS, *contributions('sensitive_field_bypass_perms'))
 
 
 # ---------------------------------------------------------------------------
@@ -307,7 +313,7 @@ class EntityConfig:
         """فیلدهای مجاز برای کاربر جاری."""
         fields = self.get_fields(scope_id=scope_id, warehouse_id=warehouse_id)
         if user.is_superuser or any(
-            user.has_perm(f'accounts.{p}') for p in SENSITIVE_BYPASS_PERMS
+            user.has_perm(f'accounts.{p}') for p in sensitive_bypass_perms()
         ):
             return fields
         return {k: fd for k, fd in fields.items() if not fd.sensitive}

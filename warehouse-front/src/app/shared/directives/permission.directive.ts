@@ -13,7 +13,7 @@ import { AuthService } from '../../core/auth/auth.service';
  * Structural directive — نمایش/مخفی‌سازی بر اساس دسترسی کاربر
  *
  * استفاده:
- *   <button *appHasPermission="'perm_rec_import'">آپلود</button>
+ *   <button *appHasPermission="'perm_usr_add'">کاربر جدید</button>
  *   <div *appHasDepartment="'admin'">فقط ادمین</div>
  */
 @Directive({

@@ -95,6 +95,9 @@ class PersonnelConfig(AppConfig):
         # دسترسی نوشتن ساختار سازمانی ماژول حسابداری (گام ۴)
         contribute('org_structure_write_perms', 'accounts.perm_approve_personnel_manager')
 
+        # راهبر تشکیلات (بی view_sys_users) فهرست کمینهٔ کاربران را برای انتساب به بخش‌ها می‌بیند (گام ۷)
+        contribute('user_directory_perms', 'perm_manage_projects_sections')
+
         # فیلتر اعضای شرکت در دایرکتوری کاربران بر مبنای بخش‌های پروژه (گام ۴)
         from personnel.company_access import build_section_member_q
         contribute('company_member_q_builders', build_section_member_q)

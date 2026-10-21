@@ -7,7 +7,7 @@ import { of } from 'rxjs';
 import { Reports } from './reports';
 import { ReportStore } from './report-store';
 import { ReportApiService } from '../../../../core/api/report-api.service';
-import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
+import { WarehouseHttpService } from '../../api/warehouse-http.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { AuthStore } from '../../../../core/stores/auth.store';

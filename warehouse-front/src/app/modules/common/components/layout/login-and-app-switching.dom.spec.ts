@@ -14,7 +14,7 @@ import { ModuleRegistryService, getModuleRegistry } from '../../../../core/modul
 import { ActiveCompanyService } from '../../../../core/services/active-company.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { ConfigApiService } from '../../../../core/api/config-api.service';
-import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService } from '../../../../core/http/scope-directory.service';
 import { CommunicationService } from '../../../../core/services/communication.service';
 import { WebSocketService } from '../../../../core/http/websocket.service';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
@@ -303,7 +303,7 @@ describe('سناریوی ۱: ورود، خروج و جابه‌جایی بین �
           { provide: StateService, useValue: { appState: { projects: [] } } },
           { provide: ConfirmDialogService, useValue: { open: vi.fn() } },
           { provide: Router, useValue: mockRouter },
-          { provide: WarehouseHttpService, useValue: mockWhService },
+          { provide: ScopeDirectoryService, useValue: mockWhService },
           { provide: ToastService, useValue: mockToast },
           { provide: ConfigApiService, useValue: mockConfigApi },
           { provide: NavigationHistoryService, useValue: { canGoBack: () => false, canGoForward: () => false } },

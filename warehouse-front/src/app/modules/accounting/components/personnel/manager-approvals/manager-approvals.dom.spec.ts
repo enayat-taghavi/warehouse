@@ -17,7 +17,7 @@ import { StateService } from '../../../../../core/services/state.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { PersonnelApiService } from '../../../api/personnel-api.service';
-import { WarehouseHttpService } from '../../../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService } from '../../../../../core/http/scope-directory.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -41,7 +41,7 @@ describe('ManagerApprovals DOM Unit Testing (Type 1 Vitest + JSDOM - 7 Bugs Veri
           ɵɵdirectiveInject(AuthService),
           ɵɵdirectiveInject(StateService),
           ɵɵdirectiveInject(PersonnelApiService),
-          ɵɵdirectiveInject(WarehouseHttpService),
+          ɵɵdirectiveInject(ScopeDirectoryService),
           ɵɵdirectiveInject(ToastService),
           ɵɵdirectiveInject(ConfirmDialogService),
           ɵɵdirectiveInject(ChangeDetectorRef),
@@ -127,7 +127,7 @@ describe('ManagerApprovals DOM Unit Testing (Type 1 Vitest + JSDOM - 7 Bugs Veri
         { provide: AuthService, useValue: mockAuth },
         { provide: StateService, useValue: mockState },
         { provide: PersonnelApiService, useValue: mockApi },
-        { provide: WarehouseHttpService, useValue: mockWh },
+        { provide: ScopeDirectoryService, useValue: mockWh },
         { provide: ToastService, useValue: mockToast },
         { provide: ConfirmDialogService, useValue: mockConfirm },
         { provide: Router, useValue: mockRouter },

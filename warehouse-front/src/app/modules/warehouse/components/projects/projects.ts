@@ -6,7 +6,7 @@ import { StateService } from '../../../../core/services/state.service';
 import { ToastService, ModalComponent, ConfirmDialogService, StatusBadgeComponent, HasPermissionDirective } from '../../../../shared';
 import { SmartDeleteModalComponent } from '../../../../shared/components/smart-delete-modal/smart-delete-modal';
 import { AuthStore } from '../../../../core/stores/auth.store';
-import { WarehouseHttpService, Warehouse } from '../../../../core/http/warehouse-http.service';
+import { WarehouseHttpService, Warehouse } from '../../api/warehouse-http.service';
 import { AccountsHttpService, ImportResult } from '../../../../core/http/accounts-http.service';
 import { ExcelImportModal } from '../../../../shared/components/excel-import-modal/excel-import-modal';
 import { Observable, Subject, Subscription } from 'rxjs';

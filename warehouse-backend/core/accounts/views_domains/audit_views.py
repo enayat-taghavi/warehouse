@@ -18,6 +18,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from common.excel_utils import sanitize_excel_row
+from platform_core.registry import contributions
 from ..models import UserLoginLog, AuditLog
 from ..serializers import UserLoginLogSerializer, AuditLogSerializer, AuditLogListSerializer
 from ..audit_utils import log_login_event
@@ -631,7 +632,7 @@ class UserLoginLogViewSet(viewsets.ReadOnlyModelViewSet):
         if not (user and user.is_authenticated and (
             user.is_superuser or
             user.has_perm('accounts.perm_sys_logs') or
-            user.has_perm('accounts.view_wh_audit') or
+            any(user.has_perm(f'accounts.{p}') for p in contributions('audit_view_perms')) or
             user.has_perm('accounts.perm_usr_edit')
         )):
             from rest_framework.exceptions import PermissionDenied
@@ -725,8 +726,9 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         return AuditLogSerializer
 
     def get_permissions(self):
-        from ..permissions import HasMenuAccess
-        return [HasMenuAccess('perm_sys_logs') | HasMenuAccess('view_wh_audit') | HasMenuAccess('perm_sys_audit_export') | HasMenuAccess('perm_sys_purge_logs')]
+        from ..permissions import any_menu_access
+        # مجوز مشاهدهٔ ممیزی ماژول‌ها (contribute('audit_view_perms', ...)) کنار مجوزهای پلتفرم
+        return [any_menu_access('perm_sys_logs', *contributions('audit_view_perms'), 'perm_sys_audit_export', 'perm_sys_purge_logs')]
 
     def get_queryset(self, app_scope=None):
         req = getattr(self, 'request', None)

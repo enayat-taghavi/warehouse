@@ -15,7 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { StateService } from '../../../../core/services/state.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { AccountsHttpService, User, Role } from '../../../../core/http/accounts-http.service';
-import { WarehouseHttpService, Warehouse } from '../../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService, ScopeDirectoryEntry } from '../../../../core/http/scope-directory.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { QRCodeWriter, BarcodeFormat, EncodeHintType } from '@zxing/library';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
@@ -90,7 +90,7 @@ export class IdCards implements OnInit {
 
   usersList: User[] = [];
   rolesList: Role[] = [];
-  warehousesList: Warehouse[] = [];
+  warehousesList: ScopeDirectoryEntry[] = [];
   isLoading: boolean = false;
   
   // Settings Tab in Control Panel
@@ -198,7 +198,7 @@ export class IdCards implements OnInit {
 
   public state = inject(StateService);
   private accountsHttp = inject(AccountsHttpService);
-  private warehouseHttp = inject(WarehouseHttpService);
+  private scopeDirectory = inject(ScopeDirectoryService);
   private toast = inject(ToastService);
   private sanitizer = inject(DomSanitizer);
   private cdr = inject(ChangeDetectorRef);
@@ -273,7 +273,7 @@ export class IdCards implements OnInit {
     });
 
     // Load Warehouses
-    this.warehouseHttp.getAll().subscribe({
+    this.scopeDirectory.getAll().subscribe({
       next: (whs) => {
         this.warehousesList = whs || [];
       },

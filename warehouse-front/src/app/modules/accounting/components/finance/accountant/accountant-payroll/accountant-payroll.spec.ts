@@ -48,8 +48,8 @@ describe('AccountantPayrollHubComponent — قابلیت‌های منتقل‌�
     mockRegistry = {
       isModuleInstalled: vi.fn().mockReturnValue(true),
       getExtensions: vi.fn().mockImplementation((point: string) => {
-        if (point === 'crossModuleFilters') {
-          return [{ moduleCode: 'warehouse', extension: { warehouseScopeFilter: true } }];
+        if (point === 'scopeDirectory') {
+          return [{ moduleCode: 'warehouse', extension: { endpoint: '/warehouses/', offersScopeFilter: true } }];
         }
         return [];
       })

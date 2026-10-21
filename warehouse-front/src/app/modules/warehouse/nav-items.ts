@@ -6,9 +6,20 @@ export interface NavItem {
   label: string;
   icon: string;
   permission: string;
+  /** آیتم با داشتن هر یک از این مجوزها دیده می‌شود */
+  anyPermissions?: string[];
   module?: string;
   isAccounting?: boolean;
 }
+
+/** پیگیری وضعیت شمارش: هر نقش ناظر شمارش آن را می‌بیند */
+const COUNT_TRACKING_PERMISSIONS = [
+  'view_sys_manager_review', 'view_sys_supervisor', 'view_sys_dashboard', 'perm_inventory_finalize',
+  'view_wh_stocktaking', 'can_act_as_manager', 'can_act_as_supervisor'
+];
+
+/** رهگیری تغییرات: ممیز انبار یا دارندهٔ لاگ‌های امنیتی */
+const AUDIT_PERMISSIONS = ['view_wh_audit', 'perm_sys_logs'];
 
 export const WAREHOUSE_SYSTEM_NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'داشبورد مانیتورینگ کلی', icon: PLATFORM_ENTITY_ICONS.dashboard, permission: 'view_sys_dashboard', module: 'warehouse' },
@@ -18,8 +29,8 @@ export const WAREHOUSE_SYSTEM_NAV_ITEMS: NavItem[] = [
   { id: 'customs', label: 'کارتابل مالی', icon: WAREHOUSE_ENTITY_ICONS.customs, permission: 'view_wh_customs', module: 'warehouse' },
   { id: 'supervisor', label: 'کارتابل سرپرست', icon: WAREHOUSE_ENTITY_ICONS.supervisorCartable, permission: 'view_sys_supervisor', module: 'warehouse' },
   { id: 'manager-review', label: 'بررسی نهایی مدیر', icon: WAREHOUSE_ENTITY_ICONS.managerReview, permission: 'view_sys_manager_review', module: 'warehouse' },
-  { id: 'count-tracking', label: 'پیگیری وضعیت شمارش', icon: WAREHOUSE_ENTITY_ICONS.countTracking, permission: 'view_sys_manager_review', module: 'warehouse' },
-  { id: 'audit', label: 'رهگیری تغییرات', icon: PLATFORM_ENTITY_ICONS.audit, permission: 'view_wh_audit', module: 'warehouse' },
+  { id: 'count-tracking', label: 'پیگیری وضعیت شمارش', icon: WAREHOUSE_ENTITY_ICONS.countTracking, permission: 'view_sys_manager_review', anyPermissions: COUNT_TRACKING_PERMISSIONS, module: 'warehouse' },
+  { id: 'audit', label: 'رهگیری تغییرات', icon: PLATFORM_ENTITY_ICONS.audit, permission: 'view_wh_audit', anyPermissions: AUDIT_PERMISSIONS, module: 'warehouse' },
   { id: 'health', label: 'پایش سلامت سامانه', icon: PLATFORM_ENTITY_ICONS.health, permission: 'view_sys_settings', module: 'warehouse' },
   { id: 'reports', label: 'گزارش‌ساز', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'view_sys_reports', module: 'warehouse' },
   { id: 'settings', label: 'تنظیمات سیستم', icon: PLATFORM_ENTITY_ICONS.settings, permission: 'view_sys_settings', module: 'warehouse' },
@@ -33,9 +44,9 @@ export const WAREHOUSE_CONTEXT_NAV_ITEMS: NavItem[] = [
   { id: 'customs', label: 'کارتابل مالی', icon: WAREHOUSE_ENTITY_ICONS.customs, permission: 'view_wh_customs', module: 'warehouse' },
   { id: 'supervisor', label: 'کارتابل سرپرست', icon: WAREHOUSE_ENTITY_ICONS.supervisorCartable, permission: 'view_sys_supervisor', module: 'warehouse' },
   { id: 'manager-review', label: 'بررسی نهایی مدیر', icon: WAREHOUSE_ENTITY_ICONS.managerReview, permission: 'view_sys_manager_review', module: 'warehouse' },
-  { id: 'count-tracking', label: 'پیگیری وضعیت شمارش', icon: WAREHOUSE_ENTITY_ICONS.countTracking, permission: 'view_sys_manager_review', module: 'warehouse' },
+  { id: 'count-tracking', label: 'پیگیری وضعیت شمارش', icon: WAREHOUSE_ENTITY_ICONS.countTracking, permission: 'view_sys_manager_review', anyPermissions: COUNT_TRACKING_PERMISSIONS, module: 'warehouse' },
   { id: 'feeding', label: 'مدیریت و تغذیه MT26/49 (به‌زودی)', icon: 'database', permission: 'view_wh_feeding', module: 'warehouse' },
-  { id: 'audit', label: 'رهگیری تغییرات', icon: PLATFORM_ENTITY_ICONS.audit, permission: 'view_wh_audit', module: 'warehouse' },
+  { id: 'audit', label: 'رهگیری تغییرات', icon: PLATFORM_ENTITY_ICONS.audit, permission: 'view_wh_audit', anyPermissions: AUDIT_PERMISSIONS, module: 'warehouse' },
   { id: 'health', label: 'پایش سلامت سامانه', icon: PLATFORM_ENTITY_ICONS.health, permission: 'view_wh_settings', module: 'warehouse' },
   { id: 'reports', label: 'گزارش‌ساز', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'view_sys_reports', module: 'warehouse' },
   { id: 'wh-settings', label: 'تنظیمات انبار', icon: PLATFORM_ENTITY_ICONS.settings, permission: 'view_wh_settings', module: 'warehouse' },

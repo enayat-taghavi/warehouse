@@ -58,7 +58,7 @@
         <div class="relative w-full sm:w-40 shrink-0">
           <select [(ngModel)]="userWarehouseFilter" (ngModelChange)="onFilterChange()"
             class="w-full pr-8 pl-6 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-slate-700 font-bold appearance-none cursor-pointer shadow-2xs">
-            <option value="ALL">{{ hasInventoryModule() ? 'همه انبارها' : 'همه پروژه‌ها / کارگاه‌ها' }}</option>
+            <option value="ALL">{{ scopeLabels.allOption }}</option>
             <option *ngFor="let p of state.appState.projects" [value]="p.id">{{ p.name }}</option>
           </select>
           <div class="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-slate-400">
@@ -107,7 +107,7 @@
           <button type="button" (click)="setStatusFilter('no_warehouse')"
             [ngClass]="userStatusFilter === 'no_warehouse' ? 'bg-white text-amber-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'"
             class="px-2.5 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1">
-            <span>{{ hasInventoryModule() ? 'بدون انبار' : 'بدون پروژه' }}</span>
+            <span>{{ scopeLabels.noneOption }}</span>
             <span class="text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold" [ngClass]="userStatusFilter === 'no_warehouse' ? 'bg-amber-50 text-amber-700' : 'bg-slate-200 text-slate-600'">{{ userCounts.noWarehouse }}</span>
           </button>
           <button type="button" (click)="setStatusFilter('superuser')"
@@ -290,7 +290,7 @@
 
                       <!-- دسترسی انبارها -->
                       <div class="flex items-center justify-between gap-1 text-[10px]">
-                        <span class="text-slate-400 shrink-0 font-medium">{{ hasInventoryModule() ? 'انبارها:' : 'پروژه‌ها:' }}</span>
+                        <span class="text-slate-400 shrink-0 font-medium">{{ scopeLabels.listPrefix }}</span>
                         <div class="flex gap-1 flex-wrap justify-end">
                           <ng-container *ngIf="!u.assigned_warehouses || u.assigned_warehouses.length === 0">
                             <span class="text-[9px] text-rose-500 font-bold bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">بدون دسترسی</span>
@@ -360,7 +360,7 @@
                         <span class="inline-flex items-center gap-1">کد ملی / تماس <span *ngIf="sortField === 'national_code'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span></span>
                       </th>
                       <th class="py-3.5 px-4 min-w-[160px]">نقش‌های سازمانی</th>
-                      <th class="py-3.5 px-4 min-w-[160px]">{{ hasInventoryModule() ? 'دسترسی انبارها' : 'محدوده پروژه‌ها' }}</th>
+                      <th class="py-3.5 px-4 min-w-[160px]">{{ scopeLabels.column }}</th>
                       <th (click)="setSort('company')" class="py-3.5 px-4 min-w-[110px] cursor-pointer hover:text-indigo-600 transition-colors select-none" title="مرتب‌سازی بر اساس شرکت">
                         <span class="inline-flex items-center gap-1">شرکت / سازمان <span *ngIf="sortField === 'company'">{{ sortOrder === 'asc' ? '▲' : '▼' }}</span></span>
                       </th>
@@ -962,7 +962,7 @@
                 عنوان نقش (فارسی)
                 <span class="text-rose-500 font-black">*</span>
               </label>
-              <input type="text" [(ngModel)]="roleForm.title" name="title" [placeholder]="hasInventoryModule() ? 'مثال: سرپرست انبار' : 'مثال: کارشناس ارشد مالی'" class="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-200 focus:border-indigo-400 text-xs outline-none transition-all shadow-2xs">
+              <input type="text" [(ngModel)]="roleForm.title" name="title" [placeholder]="scopeLabels.roleTitlePlaceholder" class="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-200 focus:border-indigo-400 text-xs outline-none transition-all shadow-2xs">
             </div>
 
             <!-- کد سیستمی -->
@@ -1020,7 +1020,7 @@
                 <span>قالب فعال: {{ getActivePresetTitle() }}</span>
                 <span>✓</span>
               </span>
-              <span *ngIf="!activeRolePresetId" class="text-[10.5px] text-slate-500 truncate hidden sm:inline">{{ hasInventoryModule() ? 'تخصیص یکپارچه نقش‌های انبارگردانی و حسابداری با ۱ کلیک' : 'تخصیص یکپارچه نقش‌های استاندارد سازمانی با ۱ کلیک' }}</span>
+              <span *ngIf="!activeRolePresetId" class="text-[10.5px] text-slate-500 truncate hidden sm:inline">{{ scopeLabels.presetsHint }}</span>
             </div>
 
             <button type="button" (click)="isPresetsExpanded = !isPresetsExpanded" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-white hover:bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200 transition-all shrink-0 flex items-center gap-1 cursor-pointer shadow-2xs">
@@ -1370,7 +1370,7 @@
           [ngClass]="userModalInnerTab === 'warehouses' ? 'bg-indigo-600 text-white shadow-xs font-black' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-bold'"
           class="flex-1 py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none">
           <span class="text-sm">🏢</span>
-          <span class="truncate">{{ hasInventoryModule() ? 'شرکت‌ها و انبارها' : 'شرکت‌ها و پروژه‌ها' }}</span>
+          <span class="truncate">{{ scopeLabels.companiesTab }}</span>
           <span class="text-[10px] font-mono px-1.5 py-0.2 rounded-md font-bold"
             [ngClass]="userModalInnerTab === 'warehouses' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'">
             {{ userForm.company_ids?.length || 0 }} ش / {{ userForm.assigned_warehouses?.length || 0 }} ا
@@ -1841,7 +1841,7 @@
               <span>گام قبلی: امنیت و ورود</span>
             </button>
             <button type="button" (click)="setUserModalInnerTab('warehouses')" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-95">
-              <span>گام بعدی: {{ hasInventoryModule() ? 'انبارها و پروژه‌ها' : 'پروژه‌ها و کارگاه‌ها' }}</span>
+              <span>گام بعدی: {{ scopeLabels.nextStep }}</span>
               <span class="text-sm font-bold">⬅️</span>
             </button>
           </div>
@@ -1855,8 +1855,8 @@
               <div class="flex items-center gap-2">
                 <span class="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">🏢</span>
                 <div>
-                  <h3 class="text-xs font-black text-slate-800">{{ hasInventoryModule() ? 'شرکت‌ها و انبارهای مجاز' : 'شرکت‌ها و پروژه‌های مجاز' }}</h3>
-                  <p class="text-[10px] text-slate-400">ابتدا شرکت‌های کاری را انتخاب کرده و سپس {{ hasInventoryModule() ? 'انبارهای' : 'پروژه‌های' }} متناظر آنها را مشخص فرمایید</p>
+                  <h3 class="text-xs font-black text-slate-800">{{ scopeLabels.allowedTitle }}</h3>
+                  <p class="text-[10px] text-slate-400">ابتدا شرکت‌های کاری را انتخاب کرده و سپس {{ scopeLabels.pluralAttributive }} متناظر آنها را مشخص فرمایید</p>
                 </div>
               </div>
               <div class="flex items-center gap-2">
@@ -1864,7 +1864,7 @@
                   {{ userForm.company_ids?.length || 0 }} شرکت
                 </span>
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  {{ userForm.assigned_warehouses?.length || 0 }} {{ hasInventoryModule() ? 'انبار' : 'پروژه' }}
+                  {{ userForm.assigned_warehouses?.length || 0 }} {{ scopeLabels.singular }}
                 </span>
                 <span class="text-[10px] font-bold text-slate-400">گام ۴ از ۴</span>
               </div>
@@ -1878,7 +1878,7 @@
                   <label class="block text-xs font-black text-slate-800">انتخاب شرکت‌های کاری مجاز (شرکت اصلی / پیش‌فرض را نیز تعیین کنید)</label>
                 </div>
                 <span *ngIf="userForm.company_ids?.length > 0" class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                  ✓ لیست {{ hasInventoryModule() ? 'انبارها' : 'پروژه‌ها' }} بر این اساس فیلتر شده است
+                  ✓ لیست {{ scopeLabels.plural }} بر این اساس فیلتر شده است
                 </span>
               </div>
 
@@ -1932,11 +1932,11 @@
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <span class="w-6 h-6 rounded-lg bg-emerald-100/80 text-emerald-800 flex items-center justify-center font-bold text-xs">۲</span>
-                  <label class="block text-xs font-black text-slate-800">{{ hasInventoryModule() ? 'تخصیص انبارهای عملیاتی مجاز' : 'تخصیص پروژه‌های عملیاتی مجاز' }}</label>
+                  <label class="block text-xs font-black text-slate-800">{{ scopeLabels.assignTitle }}</label>
                 </div>
                 <div class="flex items-center gap-2" *ngIf="userForm.company_ids?.length > 0 && modalWarehouses.length > 0">
                   <button type="button" (click)="selectAllModalWarehouses()" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-lg border border-indigo-200 transition-all cursor-pointer">
-                    انتخاب همه {{ hasInventoryModule() ? 'انبارها' : 'پروژه‌ها' }}
+                    انتخاب همه {{ scopeLabels.plural }}
                   </button>
                   <button type="button" (click)="clearAllModalWarehouses()" class="text-[10px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded-lg border border-slate-200 transition-all cursor-pointer">
                     لغو همه
@@ -1948,13 +1948,13 @@
               <div *ngIf="!userForm.company_ids || userForm.company_ids.length === 0" 
                    class="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-xs flex items-center gap-2.5">
                 <span class="text-base">⚠️</span>
-                <span>برای مشاهده و تخصیص {{ hasInventoryModule() ? 'انبارها' : 'پروژه‌ها' }}، لطفاً ابتدا حداقل یک شرکت را در کادر بالا علامت بزنید. {{ hasInventoryModule() ? 'انبارها' : 'پروژه‌ها' }} بلافاصله نمایش داده خواهند شد.</span>
+                <span>برای مشاهده و تخصیص {{ scopeLabels.plural }}، لطفاً ابتدا حداقل یک شرکت را در کادر بالا علامت بزنید. {{ scopeLabels.plural }} بلافاصله نمایش داده خواهند شد.</span>
               </div>
 
               <!-- لودینگ بارگذاری انبارها -->
               <div *ngIf="isLoadingModalWarehouses" class="py-6 text-center text-xs text-indigo-700 font-bold flex items-center justify-center gap-2 bg-indigo-50/50 rounded-2xl border border-indigo-100">
                 <span class="animate-spin text-indigo-600">⏳</span>
-                <span>در حال به‌روزرسانی آنی لیست {{ hasInventoryModule() ? 'انبارها' : 'پروژه‌ها' }} متناسب با شرکت‌های انتخابی...</span>
+                <span>در حال به‌روزرسانی آنی لیست {{ scopeLabels.plural }} متناسب با شرکت‌های انتخابی...</span>
               </div>
 
               <!-- گرید انبارها متناسب با شرکت‌های انتخابی -->
@@ -1975,7 +1975,7 @@
 
               <div *ngIf="!isLoadingModalWarehouses && userForm.company_ids?.length > 0 && modalWarehouses.length === 0" 
                    class="col-span-full py-6 text-center text-slate-400 text-xs font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                {{ hasInventoryModule() ? 'هیچ انباری برای شرکت‌های انتخاب‌شده یافت نشد.' : 'هیچ پروژه‌ای برای شرکت‌های انتخاب‌شده یافت نشد.' }}
+                {{ scopeLabels.emptyText }}
               </div>
             </div>
           </div>
@@ -2083,7 +2083,7 @@
         <div class="flex items-start gap-2">
           <span class="text-rose-500 font-black text-sm leading-none">•</span>
           <p class="font-medium text-[11px] text-slate-700">
-            این دسترسی دارای <strong class="text-rose-600 font-black">بالاترین سطح ریسک عملیاتی و سیستمی</strong> است (مانند بازگردانی اطلاعات، حذف و احیای رکوردهای {{ hasInventoryModule() ? 'انبار' : 'پایگاه داده' }} یا دستکاری اطلاعات کلان).
+            این دسترسی دارای <strong class="text-rose-600 font-black">بالاترین سطح ریسک عملیاتی و سیستمی</strong> است (مانند بازگردانی اطلاعات، حذف و احیای رکوردهای {{ scopeLabels.sensitiveRecords }} یا دستکاری اطلاعات کلان).
           </p>
         </div>
         <div class="flex items-start gap-2">

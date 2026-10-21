@@ -20,6 +20,7 @@ import { ACCOUNTING_NOTIFICATION_HANDLERS } from './notification-handlers';
 import { ACCOUNTING_PERSONAS } from './personas';
 import { ACCOUNTING_ROUTE_ACCESS } from './route-access';
 import { ACCOUNTING_ROLE_PRESETS } from './role-presets';
+import { ACCOUNTING_PERMISSION_CODENAMES, ACCOUNTING_SHORT_PERMISSION_NAMES } from './permissions';
 
 /** فهرست پروژه‌های مالی فعال (هم projectLookup و هم بروزرسانی عمیق) */
 const FINANCIAL_PROJECTS_ENDPOINT = '/personnel/financial-projects';
@@ -182,7 +183,41 @@ export const MODULE: WhFrontendModule = {
       providesTreasury: true
     },
     users: {
-      permissionGroupKeys: ['ACCOUNTING_FINANCE'],
+      permissionGroup: { key: 'ACCOUNTING_FINANCE', titleFa: 'حسابداری 💳', order: 20, codenames: ACCOUNTING_PERMISSION_CODENAMES },
+      shortPermissionNames: ACCOUNTING_SHORT_PERMISSION_NAMES,
+      standalonePermissionTooltips: {
+        perm_approve_personnel_supervisor: 'تایید مرحله سرپرست برای پرسنل',
+        perm_approve_fleet_supervisor: 'تایید مرحله سرپرست برای ناوگان'
+      },
+      structureWritePermissions: ['perm_approve_personnel_manager'],
+      assignmentScope: {
+        priority: 20,
+        labels: {
+          singular: 'پروژه',
+          plural: 'پروژه‌ها',
+          pluralAttributive: 'پروژه‌های',
+          allOption: 'همه پروژه‌ها / کارگاه‌ها',
+          noneOption: 'بدون پروژه',
+          listPrefix: 'پروژه‌ها:',
+          column: 'محدوده پروژه‌ها',
+          roleTitlePlaceholder: 'مثال: کارشناس ارشد مالی',
+          presetsHint: 'تخصیص یکپارچه نقش‌های استاندارد سازمانی با ۱ کلیک',
+          companiesTab: 'شرکت‌ها و پروژه‌ها',
+          nextStep: 'پروژه‌ها و کارگاه‌ها',
+          allowedTitle: 'شرکت‌ها و پروژه‌های مجاز',
+          assignTitle: 'تخصیص پروژه‌های عملیاتی مجاز',
+          emptyText: 'هیچ پروژه‌ای برای شرکت‌های انتخاب‌شده یافت نشد.',
+          sensitiveRecords: 'پایگاه داده'
+        },
+        loadItems: async (injector) => {
+          const api = injector.get(ApiService, null);
+          if (!api) return [];
+          const projects = await firstValueFrom(api.get<any[]>(FINANCIAL_PROJECTS_ENDPOINT, { is_active: true }));
+          return Array.isArray(projects)
+            ? projects.map(p => ({ id: p.id, name: p.name || p.title || `پروژه ${p.id}`, code: p.code }))
+            : [];
+        }
+      },
       rolePresets: ACCOUNTING_ROLE_PRESETS,
       presetCategory: { key: 'accounting', labelFa: 'حسابداری', icon: 'credit-card', tone: 'emerald' },
       roleScope: {

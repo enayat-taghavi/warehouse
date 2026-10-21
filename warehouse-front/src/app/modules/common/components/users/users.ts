@@ -5,9 +5,10 @@ import {
   SHORT_PERMISSION_NAMES,
   getShortPermissionName,
   getRolePermissionPercent,
-  getRoleDepthMargin
+  getRoleDepthMargin,
+  DEFAULT_ASSIGNMENT_SCOPE_LABELS
 } from './users.helpers';
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, computed, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener, computed, ViewChild, inject, Injector } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StateService } from '../../../../core/services/state.service';
@@ -15,8 +16,9 @@ import { ToastService } from '../../../../shared/components/toast/toast.componen
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AppPersonaService } from '../../../../core/services/app-persona.service';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
+import { AssignmentScopeLabels, ModulePermissionGroup } from '../../../../core/modules/module-contract';
 import { AccountsHttpService, User, Role, Permission, ImportResult } from '../../../../core/http/accounts-http.service';
-import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
+import { ScopeDirectoryService } from '../../../../core/http/scope-directory.service';
 import { ApiService } from '../../../../core/api/api.service';
 import { ClickOutsideDirective } from '../../../../shared/directives/click-outside.directive';
 import { IdCards } from '../id-cards/id-cards';
@@ -257,8 +259,26 @@ export class Users implements OnInit, OnDestroy {
   }
 
   /** ماژول نصب‌شده‌ای که گروه مجوزش در فهرست گروه‌های سرور هست */
-  private isUsersExtAvailable(ext: { permissionGroupKeys?: string[] }): boolean {
-    return (ext.permissionGroupKeys || []).some(k => this.systemPermissionGroups.some(g => g.key === k));
+  private isUsersExtAvailable(ext: { permissionGroup?: ModulePermissionGroup }): boolean {
+    const key = ext.permissionGroup?.key;
+    return !!key && this.systemPermissionGroups.some(g => g.key === key);
+  }
+
+  /** ماژول‌های در دسترسی که محدودهٔ تخصیص کاربران (انبار، پروژه، …) عرضه می‌کنند، به ترتیب priority */
+  private assignmentScopeProviders() {
+    return this.moduleUsersExts()
+      .filter(e => !!e.ext.assignmentScope && this.isUsersExtAvailable(e.ext))
+      .sort((a, b) => a.ext.assignmentScope!.priority - b.ext.assignmentScope!.priority);
+  }
+
+  /** برچسب‌های فارسی محدودهٔ تخصیص از نخستین ماژول در دسترس */
+  get scopeLabels(): AssignmentScopeLabels {
+    // پیش از رسیدن گروه‌های مجوز سرور (یا در خطای آن)، نخستین ماژول نصب‌شده برچسب می‌دهد تا متن عمومی چشمک نزند
+    const providers = this.systemPermissionGroups.length
+      ? this.assignmentScopeProviders()
+      : this.moduleUsersExts().filter(e => !!e.ext.assignmentScope)
+          .sort((a, b) => a.ext.assignmentScope!.priority - b.ext.assignmentScope!.priority);
+    return providers[0]?.ext.assignmentScope!.labels ?? DEFAULT_ASSIGNMENT_SCOPE_LABELS;
   }
 
   /** دسته‌های قالب نقش ماژول‌های در دسترس، با شمار قالب‌های هر دسته */
@@ -331,22 +351,12 @@ export class Users implements OnInit, OnDestroy {
     return p ? p.title : '';
   }
 
-  hasInventoryModule(): boolean {
-    const hasAuditGroup = this.registry.getExtensions('users').some(e => e.extension.permissionGroupKeys?.includes('WH_AUDIT'));
-    return hasAuditGroup && this.systemPermissionGroups.some(g => g.key === 'WH_AUDIT');
-  }
-
-  hasAccountingModule(): boolean {
-    const hasAccGroup = this.registry.getExtensions('users').some(e => e.extension.permissionGroupKeys?.includes('ACCOUNTING_FINANCE'));
-    return hasAccGroup && this.systemPermissionGroups.some(g => g.key === 'ACCOUNTING_FINANCE');
-  }
-
   get visiblePermissionGroups() {
     return (this.systemPermissionGroups || []).filter(group => {
       // گروه مجوزی که یک ماژول شناخته‌شده اعلام کرده، فقط وقتی آن ماژول نصب است دیده می‌شود
-      const owners = this.registry.getAllModules().filter(m => m.extensions?.users?.permissionGroupKeys?.includes(group.key));
+      const owners = this.registry.getAllModules().filter(m => m.extensions?.users?.permissionGroup?.key === group.key);
       if (owners.length === 0) return true;
-      return this.registry.getExtensions('users').some(e => e.extension.permissionGroupKeys?.includes(group.key));
+      return this.registry.getExtensions('users').some(e => e.extension.permissionGroup?.key === group.key);
     });
   }
 
@@ -365,8 +375,15 @@ export class Users implements OnInit, OnDestroy {
     return list.filter(p => p.category === this.activePresetCategory);
   }
 
-  // عناوین کوتاه و مختصر جهت نمایش بهینه در چیپ‌های دسترسی تفکیکی
-  readonly SHORT_PERMISSION_NAMES: Record<string, string> = SHORT_PERMISSION_NAMES;
+  // عناوین کوتاه و مختصر جهت نمایش بهینه در چیپ‌های دسترسی تفکیکی (پلتفرم + users.shortPermissionNames ماژول‌ها)
+  private _shortPermissionNames: Record<string, string> | null = null;
+  get SHORT_PERMISSION_NAMES(): Record<string, string> {
+    if (!this._shortPermissionNames) {
+      const fromModules = this.registry.getAllModules().map(m => m.extensions?.users?.shortPermissionNames || {});
+      this._shortPermissionNames = Object.assign({}, ...fromModules, SHORT_PERMISSION_NAMES);
+    }
+    return this._shortPermissionNames!;
+  }
   getShortPermissionName(perm: Permission | any): string {
     if (!perm) return '';
     return this.SHORT_PERMISSION_NAMES[perm.codename] || perm.name;
@@ -374,9 +391,12 @@ export class Users implements OnInit, OnDestroy {
 
   getPermissionTooltip(perm: Permission | any): string {
     if (!perm) return '';
-    if (!this.hasInventoryModule()) {
-      if (perm.codename === 'perm_approve_personnel_supervisor') return 'تایید مرحله سرپرست برای پرسنل';
-      if (perm.codename === 'perm_approve_fleet_supervisor') return 'تایید مرحله سرپرست برای ناوگان';
+    // راهنمای «تنها»ی ماژول صاحب مجوز وقتی محدودهٔ تخصیص از همان ماژول است یا هیچ ماژولی محدوده نمی‌دهد
+    const owner = this.registry.getAllModules().find(m => !!m.extensions?.users?.permissionGroup?.codenames.includes(perm.codename));
+    const standalone = owner?.extensions?.users?.standalonePermissionTooltips?.[perm.codename];
+    if (owner && standalone) {
+      const top = this.assignmentScopeProviders()[0];
+      if (!top || top.module?.code === owner.code) return standalone;
     }
     return perm.name || '';
   }
@@ -411,7 +431,8 @@ export class Users implements OnInit, OnDestroy {
   private toast = inject(ToastService);
   private accountsService = inject(AccountsHttpService);
   private facade = inject(UsersFacade);
-  private whService = inject(WarehouseHttpService);
+  private scopeDirectory = inject(ScopeDirectoryService);
+  private injector = inject(Injector);
   private api = inject(ApiService);
   private cdr = inject(ChangeDetectorRef);
   private confirmDialog = inject(ConfirmDialogService);
@@ -469,36 +490,18 @@ export class Users implements OnInit, OnDestroy {
       
       const sensitivePerms = res.filter((p: any) => p.is_sensitive);
 
-      // ۱. نرم‌افزار انبارگردانی و اسناد کالا (کلیه منوها، عملیات میدانی و تاییدات انبارگردانی)
-      const warehouseCodenames = [
-        'view_wh_dashboard', 'view_wh_docs', 'view_wh_dispatch', 'view_sys_counter',
-        'view_wh_customs', 'view_sys_supervisor', 'view_sys_manager_review', 'view_sys_recounts',
-        'view_wh_attendance', 'view_wh_doc_approvals', 'view_wh_feeding', 'view_wh_feed_approvals',
-        'view_wh_labels', 'view_wh_label_designer', 'view_wh_audit', 'view_wh_settings',
-        'view_wh_stocktaking', 'view_warehouse', 'add_warehouse', 'change_warehouse', 'delete_warehouse',
-        'view_record', 'add_record', 'change_record', 'delete_record',
-        'can_act_as_counter', 'can_act_as_supervisor', 'can_act_as_wh_supervisor',
-        'can_act_as_manager', 'can_act_as_wh_manager',
-        'can_act_as_doc_worker', 'can_act_as_doc_supervisor',
-        'perm_doc_approve_action', 'perm_feed_approve_action', 'perm_inventory_finalize',
-        'perm_rec_dispatch', 'perm_rec_recount', 'perm_rec_label', 'perm_rec_import',
-        'perm_wh_create', 'perm_wh_edit', 'perm_wh_freeze'
-      ];
+      // گروه مجوزهای هر ماژول از users.permissionGroup همان ماژول (همهٔ ماژول‌های بیلد؛ نمایش با visiblePermissionGroups)
+      const moduleGroupDefs = this.registry.getAllModules()
+        .map(m => m.extensions?.users?.permissionGroup)
+        .filter((g): g is ModulePermissionGroup => !!g)
+        .sort((a, b) => a.order - b.order);
+      const moduleGroups = moduleGroupDefs.map(g => ({
+        key: g.key,
+        title: g.titleFa,
+        items: res.filter((p: any) => g.codenames.includes(p.codename) && !p.is_sensitive)
+      }));
 
-      // ۲. نرم‌افزار حسابداری و کارگاه (کارکرد پرسنل و ناوگان، حقوق و دستمزد، تسویه و تاییدات مالی)
-      const accountingCodenames = [
-        'view_sys_personnel', 'view_sys_personnel_attendance', 'view_sys_fleet_attendance',
-        'view_sys_payroll', 'view_sys_fleet_settlement', 'view_sys_treasury',
-        'can_act_as_operator', 'can_act_as_workshop_supervisor',
-        'can_act_as_accountant', 'can_act_as_company_manager',
-        'perm_approve_personnel_supervisor', 'perm_approve_fleet_supervisor',
-        'perm_approve_personnel_manager', 'perm_approve_fleet_manager',
-        'perm_approve_personnel_finance', 'perm_approve_fleet_finance',
-        'perm_lock_work_period', 'perm_manager_payment_authorize', 'perm_treasury_disburse_action',
-        'perm_manage_projects_sections', 'perm_delete_personnel_nomovement', 'perm_delete_vehicle_nomovement'
-      ];
-
-      // ۳. مدیریت و زیرساخت سیستم
+      // مدیریت و زیرساخت سیستم
       const systemCodenames = [
         'view_sys_dashboard', 'view_sys_users', 'view_sys_projects', 'view_sys_id_cards',
         'view_sys_export', 'view_sys_settings', 'view_sys_reports',
@@ -507,28 +510,16 @@ export class Users implements OnInit, OnDestroy {
         'view_group', 'add_group', 'change_group', 'delete_group'
       ];
 
-      const warehousePerms = res.filter((p: any) => warehouseCodenames.includes(p.codename) && !p.is_sensitive);
-      const accountingPerms = res.filter((p: any) => accountingCodenames.includes(p.codename) && !p.is_sensitive);
       const systemPerms = res.filter((p: any) => systemCodenames.includes(p.codename) && !p.is_sensitive);
 
-      const otherPerms = res.filter((p: any) => 
-        !p.is_sensitive && 
-        !warehousePerms.includes(p) && 
-        !accountingPerms.includes(p) && 
+      const otherPerms = res.filter((p: any) =>
+        !p.is_sensitive &&
+        !moduleGroups.some(g => g.items.includes(p)) &&
         !systemPerms.includes(p)
       );
 
       const groups: { key: string, title: string, items: Permission[], is_sensitive_group?: boolean }[] = [
-        {
-          key: 'WH_AUDIT',
-          title: 'انبارگردانی 📦',
-          items: warehousePerms
-        },
-        {
-          key: 'ACCOUNTING_FINANCE',
-          title: 'حسابداری 💳',
-          items: accountingPerms
-        },
+        ...moduleGroups,
         {
           key: 'MAIN_MENU',
           title: 'سیستم ⚙️',
@@ -592,21 +583,7 @@ export class Users implements OnInit, OnDestroy {
       }
     });
 
-    if (this.hasInventoryModule()) {
-      this.whService.getAll().subscribe({
-        next: (res: any) => {
-          this.state.appState.projects = Array.isArray(res) ? res : [];
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          if (this.hasAccountingModule()) {
-            this.loadFinancialProjects();
-          }
-        }
-      });
-    } else if (this.hasAccountingModule()) {
-      this.loadFinancialProjects();
-    }
+    this.loadAssignmentScopeItems(this.assignmentScopeProviders());
 
     if (typeof this.accountsService?.getLockedStatus === 'function') {
       this.accountsService.getLockedStatus().subscribe({
@@ -623,25 +600,17 @@ export class Users implements OnInit, OnDestroy {
     }
   }
 
-  private loadFinancialProjects(): void {
-    const ext = this.registry.getExtensions('projectLookup')[0]?.extension;
-    if (!ext?.financialProjectsEndpoint) {
-      this.state.appState.projects = [];
-      return;
-    }
-    this.api.get<any[]>(ext.financialProjectsEndpoint, { is_active: true }).subscribe({
-      next: (projects: any[]) => {
-        if (Array.isArray(projects)) {
-          this.state.appState.projects = projects.map(p => ({
-            id: p.id,
-            name: p.name || p.title || `پروژه ${p.id}`,
-            code: p.code
-          }));
-          this.cdr.detectChanges();
-        }
+  /** فهرست هدف‌های تخصیص از نخستین ماژول در دسترس؛ خطای بارگذاری به ماژول بعدی می‌رود */
+  private loadAssignmentScopeItems(providers: ReturnType<Users['assignmentScopeProviders']>): void {
+    const [first, ...rest] = providers;
+    if (!first) return;
+    first.ext.assignmentScope!.loadItems(this.injector).then(
+      (items) => {
+        this.state.appState.projects = Array.isArray(items) ? items : [];
+        this.cdr.detectChanges();
       },
-      error: () => {}
-    });
+      () => this.loadAssignmentScopeItems(rest)
+    );
   }
 
   rebuildMemoizedData(): void {
@@ -1409,7 +1378,7 @@ export class Users implements OnInit, OnDestroy {
     }
 
     const requests = selectedCompanyIds.map((cid: number) =>
-      this.whService.getAll(cid).pipe(catchError(() => of([])))
+      this.scopeDirectory.getAll(cid).pipe(catchError(() => of([])))
     );
 
     forkJoin<any[]>(requests).subscribe({
