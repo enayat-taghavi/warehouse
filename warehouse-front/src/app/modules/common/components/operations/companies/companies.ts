@@ -36,11 +36,14 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { ServerUrlPipe } from '../../../../../shared/pipes/server-url.pipe';
+import { PersianDatePipe } from '../../../../../shared/pipes/persian-date.pipe';
+import { CommandCenterComponent } from '../../../../../shared/components/command-center/command-center.component';
+import { PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons/semantic-icons';
 
 @Component({
   selector: 'app-companies-management',
   standalone: true,
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, PersianDatePipe, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent, CommandCenterComponent],
   providers: [CompanyStudioContextService],
   templateUrl: './companies.html',
   styleUrls: ['./companies.css']
@@ -154,6 +157,19 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   studioRoleInCompany = '';
   studioIsDefaultAccess = false;
   userSearchQuery = '';
+  /** combobox جستجوپذیر کاربران (A23) */
+  isUserListOpen = false;
+  userActiveIndex = -1;
+  systemUsersLoaded = false;
+  systemUsersError = false;
+
+  /** آیکون‌های معنایی صفحه (C5) */
+  readonly icons = {
+    company: PLATFORM_ENTITY_ICONS.company,
+    permissions: PLATFORM_ENTITY_ICONS.permissions,
+  } as const;
+
+  private static readonly FA_NUMBER = new Intl.NumberFormat('fa-IR');
 
 
   // وضعیت مدال ثبت و ویرایش
@@ -666,11 +682,11 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this._modalTabsKey = key;
     const errorIndicator = { tone: 'rose' as const, label: 'دارای خطا' };
     const tabs: TabDef[] = [
-      { id: 'identity', label: 'مشخصات هویتی و ثبتی', shortLabel: 'هویتی', icon: 'building', indicator: errorTabs.has('identity') ? errorIndicator : undefined },
+      { id: 'identity', label: 'مشخصات هویتی و ثبتی', shortLabel: 'هویتی', icon: this.icons.company, indicator: errorTabs.has('identity') ? errorIndicator : undefined },
       { id: 'fiscal_insurance', label: 'سال مالی، بیمه و مودیان', shortLabel: 'بیمه و مالی', icon: 'file-check', indicator: errorTabs.has('fiscal_insurance') ? errorIndicator : undefined },
     ];
     tabs.push({ id: 'documents', label: 'بایگانی مدارک', shortLabel: 'مدارک', icon: 'book', count: documentsCount });
-    tabs.push({ id: 'access', label: 'دسترسی کاربران', shortLabel: 'دسترسی', icon: 'shield', count: this.studioAccesses.length || undefined });
+    tabs.push({ id: 'access', label: 'دسترسی کاربران', shortLabel: 'دسترسی', icon: this.icons.permissions, count: this.studioAccesses.length || undefined });
     // تب‌های مشارکتی ماژول‌ها با شمارنده و نشان خطای context، به ترتیب order میان تب‌های هسته
     const order = (id: string) => CompaniesManagementComponent.CORE_TAB_ORDER[id] ?? contributed.find(t => t.id === id)?.order ?? 0;
     for (const t of contributed) {
@@ -1027,6 +1043,9 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.selectedLogoFile = null;
     this.logoPreviewUrl = null;
     this.studioAccesses = [];
+    this.studioSelectedUserId = null;
+    this.userSearchQuery = '';
+    this.isUserListOpen = false;
     this.isRegDatePickerOpen = false;
     this.isBoardDatePickerOpen = false;
     this.cdr.markForCheck();
@@ -1414,16 +1433,119 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  filterSystemUsers(): User[] {
-    if (!this.userSearchQuery.trim()) {
-      return this.systemUsers;
+  /** شمارنده و ردیف با رقم فارسی (ت۷) */
+  fa(n: number | null | undefined): string {
+    return CompaniesManagementComponent.FA_NUMBER.format(n ?? 0);
+  }
+
+  get studioTitle(): string {
+    if (!this.companyModal.isEdit) return 'ثبت شرکت جدید';
+    if (this.studioLoading) return 'در حال بارگذاری شرکت…';
+    return this.companyModal.data.name || 'شرکت';
+  }
+
+  /** مبلغ و شمار سهام: نمایش با جداکنندهٔ فارسی، مقدار عددی در مدل (A20) */
+  formatAmount(value: number | null | undefined): string {
+    return value === null || value === undefined ? '' : CompaniesManagementComponent.FA_NUMBER.format(value);
+  }
+
+  onAmountInput(field: 'registered_capital' | 'shares_count' | 'share_nominal_value', event: Event): void {
+    const el = event.target as HTMLInputElement;
+    const caret = el.selectionStart ?? el.value.length;
+    const digitsBeforeCaret = normalizeDigits(el.value.slice(0, caret)).replace(/[^0-9]/g, '').length;
+    const digits = normalizeDigits(el.value || '').replace(/[^0-9]/g, '');
+    const value = digits ? Number(digits) : null;
+    // عدد بزرگ‌تر از دقت ممیز شناور پذیرفته نمی‌شود و مقدار پیشین می‌ماند
+    if (value === null || Number.isSafeInteger(value)) {
+      this.companyModal.data[field] = value;
     }
-    const q = this.userSearchQuery.trim().toLowerCase();
-    return this.systemUsers.filter(u =>
-      (u.username && u.username.toLowerCase().includes(q)) ||
-      (u.first_name && u.first_name.toLowerCase().includes(q)) ||
-      (u.last_name && u.last_name.toLowerCase().includes(q))
-    );
+    const formatted = this.formatAmount(this.companyModal.data[field]);
+    el.value = formatted;
+    // نشانگر پس از همان شمار رقم بماند تا ویرایش وسط عدد آن را به انتها نبرد
+    let pos = 0;
+    for (let seen = 0; pos < formatted.length && seen < digitsBeforeCaret; pos++) {
+      if (/[0-9\u06F0-\u06F9]/.test(formatted[pos])) seen++;
+    }
+    if (document.activeElement === el) el.setSelectionRange(pos, pos);
+  }
+
+  userDisplayName(u: User): string {
+    return `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username;
+  }
+
+  /** کاربرانی که هنوز به این شرکت دسترسی ندارند، با جستجوی نام و نام کاربری («ي/ك» یکسان) */
+  get availableSystemUsers(): User[] {
+    const taken = new Set(this.studioAccesses.map(a => a.user));
+    const q = this.normalizeSearch(this.userSearchQuery);
+    return this.systemUsers.filter(u => {
+      if (taken.has(u.id)) return false;
+      if (!q) return true;
+      return this.normalizeSearch(`${u.username || ''} ${u.first_name || ''} ${u.last_name || ''}`).includes(q);
+    });
+  }
+
+  private normalizeSearch(text: string): string {
+    return normalizeDigits(text || '').replace(/ي/g, 'ی').replace(/ك/g, 'ک').trim().toLowerCase();
+  }
+
+  retrySystemUsers(): void {
+    this.systemUsersError = false;
+    this.ensureSystemUsers();
+  }
+
+  openUserList(): void {
+    this.ensureSystemUsers();
+    this.isUserListOpen = true;
+  }
+
+  onUserSearchInput(value: string): void {
+    this.userSearchQuery = value;
+    // نوشتن متن تازه انتخاب پیشین را باطل می‌کند تا متن و کاربر انتخاب‌شده ناهماهنگ نشوند
+    this.studioSelectedUserId = null;
+    this.userActiveIndex = -1;
+    this.openUserList();
+  }
+
+  onUserComboKeydown(event: KeyboardEvent): void {
+    const list = this.availableSystemUsers;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!this.isUserListOpen) this.openUserList();
+      if (list.length === 0) return;
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      this.userActiveIndex = (this.userActiveIndex + step + list.length) % list.length;
+    } else if (event.key === 'Enter') {
+      if (this.isUserListOpen && this.userActiveIndex >= 0 && list[this.userActiveIndex]) {
+        event.preventDefault();
+        this.selectStudioUser(list[this.userActiveIndex]);
+      }
+    } else if (event.key === 'Escape' && this.isUserListOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.isUserListOpen = false;
+      this.userActiveIndex = -1;
+    }
+  }
+
+  onUserComboFocusOut(event: FocusEvent): void {
+    const container = event.currentTarget as HTMLElement | null;
+    const next = event.relatedTarget as Node | null;
+    if (container && next && container.contains(next)) return;
+    this.isUserListOpen = false;
+    this.userActiveIndex = -1;
+  }
+
+  selectStudioUser(u: User): void {
+    this.studioSelectedUserId = u.id;
+    this.userSearchQuery = this.userDisplayName(u);
+    this.isUserListOpen = false;
+    this.userActiveIndex = -1;
+  }
+
+  clearSelectedUser(): void {
+    this.studioSelectedUserId = null;
+    this.userSearchQuery = '';
+    this.userActiveIndex = -1;
   }
 
   getAccessLevelBadgeClass(level?: CompanyAccessLevel): string {
@@ -1457,10 +1579,14 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.accountsHttp.getUsers().subscribe({
       next: (users) => {
         this.systemUsers = users;
+        this.systemUsersLoaded = true;
+        this.systemUsersError = false;
         this.cdr.markForCheck();
       },
       error: () => {
         this.systemUsersRequested = false;
+        this.systemUsersError = true;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -1503,6 +1629,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           this.toast.success('دسترسی کاربر با موفقیت ثبت شد.');
         }
         this.studioSelectedUserId = null;
+        this.userSearchQuery = '';
         this.studioRoleInCompany = '';
         this.studioAccessLevel = 'docs_read';
         this.studioIsDefaultAccess = false;

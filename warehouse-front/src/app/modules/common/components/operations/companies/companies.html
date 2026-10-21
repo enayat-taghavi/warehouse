@@ -1,57 +1,40 @@
 <div class="space-y-4 max-w-7xl mx-auto pb-12" dir="rtl">
 
   <ng-container *ngIf="viewMode === 'list'">
-  <!-- ═════════════════════════════════════════════════════════════════════════ -->
-  <!-- ۱. نوار فرمان چسبان بالایی (Unified Sticky Command Center Standard)       -->
-  <!-- ═════════════════════════════════════════════════════════════════════════ -->
-  <div class="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-md pt-1 pb-2">
-    <div class="bg-white p-2.5 md:p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-      
-      <!-- Right Side (RTL Start): Module Title & Count Badge -->
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-indigo-600/10 text-indigo-600 flex items-center justify-center shrink-0">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building"></svg>
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-sm md:text-base font-black text-slate-800">مدیریت شرکت‌ها و هلدینگ</h1>
-            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
-              {{ companies.length }} شرکت
-            </span>
-            <span *ngIf="!isOnline" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-              آفلاین
-            </span>
-            <span *ngIf="isOnline" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              برخط
-            </span>
-          </div>
-          <p class="text-[11px] text-slate-500 font-medium mt-0.5">شناسنامهٔ حقوقی، اسناد، کارگاه بیمه و دسترسی کاربران شرکت‌ها</p>
-        </div>
+  <!-- ۱. نوار فرمان چسبان بالایی (app-command-center) -->
+  <app-command-center>
+    <!-- راست: عنوان و نشان‌ها -->
+    <div cc-tabs class="flex items-center gap-3 min-w-0">
+      <div class="w-10 h-10 rounded-xl bg-indigo-600/10 text-indigo-600 flex items-center justify-center shrink-0">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="icons.company" aria-hidden="true"></svg>
       </div>
-
-      <!-- Left Side (RTL End): 3 Action Buttons + Create Button -->
-      <div class="flex items-center gap-2">
-        <!-- خروجی اکسل -->
-        <button type="button" appAction="export-excel" label="خروجی اکسل شرکت‌ها" (click)="exportExcel()"></button>
-
-        <!-- رفرش / همگام‌سازی -->
-        <button type="button" appAction="refresh" label="به‌روزرسانی داده‌ها" [busy]="isLoading" (click)="loadCompanies()"></button>
-
-        <div class="h-6 w-px bg-slate-200 mx-1"></div>
-
-        <!-- دکمه ثبت شرکت جدید -->
-        <button 
-          type="button"
-          appAction="create"
-          label="ثبت شرکت جدید"
-          (click)="openCreateModal()">
-        </button>
+      <div class="min-w-0">
+        <div class="flex items-center gap-x-2 gap-y-1 flex-wrap">
+          <h1 class="text-sm md:text-base font-black text-slate-800">مدیریت شرکت‌ها و هلدینگ</h1>
+          <span class="whitespace-nowrap tabular-nums text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
+            {{ fa(companies.length) }} شرکت
+          </span>
+          <span *ngIf="!isOnline" class="whitespace-nowrap text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+            آفلاین
+          </span>
+          <span *ngIf="isOnline" class="whitespace-nowrap text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            برخط
+          </span>
+        </div>
+        <p class="hidden md:block text-[11px] text-slate-500 font-medium mt-0.5">شناسنامهٔ حقوقی، اسناد، کارگاه بیمه و دسترسی کاربران شرکت‌ها</p>
       </div>
-
     </div>
-  </div>
+
+    <!-- چپ: خروجی اکسل، به‌روزرسانی و ثبت شرکت -->
+    <ng-container cc-actions>
+      <button type="button" appAction="export-excel" label="خروجی اکسل شرکت‌ها" (click)="exportExcel()"></button>
+      <button type="button" appAction="refresh" label="به‌روزرسانی داده‌ها" [busy]="isLoading" (click)="loadCompanies()"></button>
+      <div class="h-6 w-px bg-slate-200 mx-1" aria-hidden="true"></div>
+      <button type="button" appAction="create" label="ثبت شرکت جدید" (click)="openCreateModal()"></button>
+    </ng-container>
+  </app-command-center>
 
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
   <!-- ۲. جدول داده شرکت‌ها با سرچ درجا (Data Table Card Standard)             -->
@@ -62,22 +45,23 @@
     <div class="p-3 md:p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/40">
       <div class="flex items-center gap-2">
         <span class="text-xs font-black text-slate-700">فهرست شرکت‌های ثبت‌شده</span>
-        <span class="text-[10px] font-mono text-slate-500 font-bold bg-slate-200/70 px-2 py-0.5 rounded-full">
-          {{ filteredCompanies.length }} مورد
+        <span class="whitespace-nowrap tabular-nums text-[10px] text-slate-500 font-bold bg-slate-200/70 px-2 py-0.5 rounded-full">
+          {{ fa(filteredCompanies.length) }} مورد
         </span>
       </div>
 
       <!-- In-place Live Search Box -->
       <div class="relative w-full md:w-80">
         <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-search" aria-hidden="true"></svg>
         </span>
         <input 
           type="text" 
           [(ngModel)]="searchQuery" 
           (ngModelChange)="onSearchChange()" 
           placeholder="جستجو در نام، کد، شناسه ملی، مدیرعامل، کارگاه..."
-          class="w-full pr-8 pl-8 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+          aria-label="جستجو در فهرست شرکت‌ها"
+          class="w-full pe-10 ps-8 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
         />
         <button 
           *ngIf="searchQuery" 
@@ -85,15 +69,15 @@
           (click)="clearSearch()" 
           title="پاک کردن جستجو"
           aria-label="پاک کردن جستجو"
-          class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+          class="absolute inset-y-0 end-0 w-10 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close" aria-hidden="true"></svg>
         </button>
       </div>
     </div>
 
     <!-- آفلاین: دادهٔ ذخیره‌شده نمایش داده می‌شود -->
     <div *ngIf="!isOnline && companies.length > 0" class="px-3 md:px-4 py-2 bg-amber-50 border-b border-amber-200 text-[11px] font-bold text-amber-800 flex items-center gap-2" role="status">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" appIcon="status-cloud-off"></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" appIcon="status-cloud-off" aria-hidden="true"></svg>
       <span>اتصال برقرار نیست؛ آخرین داده‌های ذخیره‌شده نمایش داده می‌شود.</span>
     </div>
 
@@ -104,7 +88,7 @@
 
     <!-- خطای دریافت فهرست -->
     <div *ngIf="!isLoading && listLoadError && companies.length === 0" class="p-8 text-center space-y-3" role="alert">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-rose-400 mx-auto" appIcon="alert-circle"></svg>
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-rose-400 mx-auto" appIcon="status-error" aria-hidden="true"></svg>
       <div class="text-xs font-bold text-slate-600">
         {{ isOnline ? 'دریافت فهرست شرکت‌ها انجام نشد.' : 'اتصال برقرار نیست و دادهٔ ذخیره‌شده‌ای از فهرست شرکت‌ها وجود ندارد.' }}
       </div>
@@ -112,7 +96,7 @@
     </div>
 
     <!-- Table Content (Desktop View) -->
-    <div *ngIf="!(isLoading && companies.length === 0) && !(listLoadError && companies.length === 0)" class="hidden md:block overflow-x-auto">
+    <div *ngIf="!(isLoading && companies.length === 0) && !(listLoadError && companies.length === 0)" class="hidden xl:block overflow-x-auto">
       <table class="w-full text-right text-xs">
         <thead class="bg-slate-100/75 border-b border-slate-200/80 text-slate-600 font-black">
           <tr>
@@ -136,23 +120,23 @@
           </tr>
 
           <tr *ngFor="let company of filteredCompanies; let i = index" class="hover:bg-indigo-50/20 transition-colors">
-            <td class="py-3 px-3.5 text-center font-mono text-slate-400">{{ i + 1 }}</td>
+            <td class="py-3 px-3.5 text-center tabular-nums text-slate-400">{{ fa(i + 1) }}</td>
             <td class="py-3 px-3.5">
-              <span class="font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md text-[11px]">
+              <span dir="ltr" class="font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md text-[11px]">
                 {{ company.code }}
               </span>
             </td>
             <td class="py-3 px-3.5 font-black text-slate-900">
               <div class="flex items-center gap-2">
                 <span>{{ company.name }}</span>
-                <span *ngIf="activeCompanyService.activeCompany?.id === company.id" class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded-full">
+                <span *ngIf="activeCompanyService.activeCompany?.id === company.id" class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                   فعال جاری
                 </span>
                 <app-offline-pending-badge *ngIf="isPendingRecord(company)"></app-offline-pending-badge>
               </div>
             </td>
-            <td class="py-3 px-3.5 font-mono text-slate-600">{{ company.national_id || '—' }}</td>
-            <td class="py-3 px-3.5 font-mono text-slate-600">{{ company.workshop_code || '—' }}</td>
+            <td class="py-3 px-3.5 font-mono text-slate-600" dir="ltr">{{ company.national_id || '—' }}</td>
+            <td class="py-3 px-3.5 font-mono text-slate-600" dir="ltr">{{ company.workshop_code || '—' }}</td>
             <td class="py-3 px-3.5 text-slate-700">{{ company.ceo_name || '—' }}</td>
             <!-- ستون‌های مشارکتی ماژول‌ها (listCells) -->
             <td *ngFor="let cell of listCells" class="py-3 px-3.5 text-center">
@@ -165,7 +149,7 @@
                 *ngIf="company.has_warehouse_module !== false" 
                 class="inline-flex items-center gap-1 font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-full text-[10px]"
                 title="سامانه انبارداری و کاردکس کالا فعال است">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="box"></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="box" aria-hidden="true"></svg>
                 <span>فعال</span>
               </span>
               <span 
@@ -194,10 +178,10 @@
                   type="button"
                   (click)="openAccessTab(company)"
                   [disabled]="isPendingRecord(company)"
-                  class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   [title]="isPendingRecord(company) ? 'پس از ارسال به سرور در دسترس است' : 'مدیریت دسترسی کاربران به این شرکت'"
                   aria-label="دسترسی‌ها">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="icons.permissions" aria-hidden="true"></svg>
                   <span class="sr-only">دسترسی‌ها</span>
                 </button>
 
@@ -206,10 +190,10 @@
                   type="button"
                   (click)="openEditModal(company)"
                   [disabled]="isPendingRecord(company)"
-                  class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   [title]="isPendingRecord(company) ? 'پس از ارسال به سرور قابل ویرایش است' : 'ویرایش مشخصات و مدارک شرکت'"
                   aria-label="استودیو">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit" aria-hidden="true"></svg>
                   <span class="sr-only">استودیو</span>
                 </button>
 
@@ -219,10 +203,10 @@
                   type="button"
                   (click)="openEditModal(company, action.tab)"
                   [disabled]="isPendingRecord(company)"
-                  class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   [title]="isPendingRecord(company) ? 'پس از ارسال به سرور در دسترس است' : (action.hintFa || action.labelFa)"
                   [attr.aria-label]="action.labelFa">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="action.icon"></svg>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="action.icon" aria-hidden="true"></svg>
                   <span class="sr-only">{{ action.labelFa }}</span>
                 </button>
 
@@ -231,10 +215,10 @@
                   type="button"
                   (click)="confirmDelete(company)"
                   [disabled]="!isOnline || isPendingRecord(company)"
-                  class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   [title]="isOnline ? 'حذف شرکت' : 'حذف فقط در حالت برخط'"
                   aria-label="حذف">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete" aria-hidden="true"></svg>
                   <span class="sr-only">حذف</span>
                 </button>
               </div>
@@ -247,10 +231,10 @@
     <!-- ═════════════════════════════════════════════════════════════════════════ -->
     <!-- نمایش کارت‌های موبایل (Mobile Ergonomic Cards for Companies)               -->
     <!-- ═════════════════════════════════════════════════════════════════════════ -->
-    <div *ngIf="!(isLoading && companies.length === 0) && !(listLoadError && companies.length === 0)" class="block md:hidden divide-y divide-slate-100">
+    <div *ngIf="!(isLoading && companies.length === 0) && !(listLoadError && companies.length === 0)" class="block xl:hidden divide-y divide-slate-100">
       <!-- وضعیت خالی موبایل -->
       <div *ngIf="!isLoading && filteredCompanies.length === 0" class="p-8 text-center text-slate-400 font-bold text-xs">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-slate-300 mx-auto mb-2" appIcon="building"></svg>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-slate-300 mx-auto mb-2" [appIcon]="icons.company" aria-hidden="true"></svg>
         <div>{{ searchQuery.trim() ? 'هیچ شرکتی با معیارهای جستجو یافت نشد.' : 'هنوز شرکتی ثبت نشده است.' }}</div>
       </div>
 
@@ -261,24 +245,24 @@
           <div class="flex items-center gap-2.5 min-w-0">
             <div class="w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0 overflow-hidden">
               <img *ngIf="company.logo" [ngSrc]="(company.logo | serverUrl) || ''" width="40" height="40" [alt]="company.name" class="w-full h-full object-contain" />
-              <svg *ngIf="!company.logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="building"></svg>
+              <svg *ngIf="!company.logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" [appIcon]="icons.company" aria-hidden="true"></svg>
             </div>
             <div class="min-w-0">
               <div class="flex items-center gap-1.5 flex-wrap">
                 <span class="font-black text-slate-900 text-xs truncate">{{ company.name }}</span>
-                <span *ngIf="activeCompanyService.activeCompany?.id === company.id" class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded-full inline-flex items-center gap-1">
+                <span *ngIf="activeCompanyService.activeCompany?.id === company.id" class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap">
                   <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                   <span>فعال جاری</span>
                 </span>
                 <app-offline-pending-badge *ngIf="isPendingRecord(company)"></app-offline-pending-badge>
               </div>
-              <div class="flex items-center gap-2 mt-0.5">
-                <span class="font-mono font-bold bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded text-[10px]">
+              <div class="flex items-center gap-2 mt-0.5 min-w-0">
+                <span dir="ltr" class="font-mono font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] shrink-0">
                   {{ company.code }}
                 </span>
                 <span class="text-[11px] text-slate-500 truncate inline-flex items-center gap-1" *ngIf="company.ceo_name">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400 shrink-0" appIcon="user"></svg>
-                  <span>مدیرعامل: {{ company.ceo_name }}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400 shrink-0" appIcon="user" aria-hidden="true"></svg>
+                  <span class="truncate">مدیرعامل: {{ company.ceo_name }}</span>
                 </span>
               </div>
             </div>
@@ -295,11 +279,11 @@
         <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
           <div>
             <span class="text-slate-400 block text-[10px]">شناسه ملی:</span>
-            <span class="font-mono text-slate-700 font-bold">{{ company.national_id || '—' }}</span>
+            <span class="font-mono text-slate-700 font-bold" dir="ltr">{{ company.national_id || '—' }}</span>
           </div>
           <div>
             <span class="text-slate-400 block text-[10px]">کد کارگاه بیمه:</span>
-            <span class="font-mono text-slate-700 font-bold">{{ company.workshop_code || '—' }}</span>
+            <span class="font-mono text-slate-700 font-bold" dir="ltr">{{ company.workshop_code || '—' }}</span>
           </div>
           <!-- ستون‌های مشارکتی ماژول‌ها در جدول مشخصات کارت (listCells با cardPlacement=grid) -->
           <ng-container *ngFor="let cell of cardGridCells">
@@ -309,7 +293,7 @@
             <span class="text-slate-400 text-[10px]">انبارداری:</span>
             <span *ngIf="company.has_warehouse_module !== false" class="text-indigo-700 font-bold text-[10px] inline-flex items-center gap-1">
               <span>فعال</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="box"></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="box" aria-hidden="true"></svg>
             </span>
             <span *ngIf="company.has_warehouse_module === false" class="text-slate-400 font-bold text-[10px]">غیرفعال</span>
           </div>
@@ -326,20 +310,20 @@
             type="button"
             (click)="openAccessTab(company)"
             [disabled]="isPendingRecord(company)"
-            class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 hover:text-emerald-600 bg-slate-50 hover:bg-emerald-50 border border-slate-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 hover:text-emerald-600 bg-slate-50 hover:bg-emerald-50 border border-slate-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             [title]="isPendingRecord(company) ? 'پس از ارسال به سرور در دسترس است' : 'مدیریت دسترسی کاربران به این شرکت'"
             aria-label="دسترسی‌ها">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="users"></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="icons.permissions" aria-hidden="true"></svg>
             <span class="sr-only">دسترسی‌ها</span>
           </button>
           <button
             type="button"
             (click)="openEditModal(company)"
             [disabled]="isPendingRecord(company)"
-            class="w-10 h-10 rounded-xl flex items-center justify-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            class="w-10 h-10 rounded-xl flex items-center justify-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             [title]="isPendingRecord(company) ? 'پس از ارسال به سرور در دسترس است' : 'ویرایش مشخصات و مدارک شرکت (استودیو)'"
             aria-label="استودیو">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit"></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit" aria-hidden="true"></svg>
             <span class="sr-only">استودیو</span>
           </button>
           <!-- دکمه‌های مشارکتی ماژول‌ها (rowActions) که تبی از استودیو را باز می‌کنند -->
@@ -348,13 +332,13 @@
             type="button"
             (click)="openEditModal(company, action.tab)"
             [disabled]="isPendingRecord(company)"
-            class="w-10 h-10 rounded-xl flex items-center justify-center text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            class="w-10 h-10 rounded-xl flex items-center justify-center text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             [title]="isPendingRecord(company) ? 'پس از ارسال به سرور در دسترس است' : (action.hintFa || action.labelFa)"
             [attr.aria-label]="action.labelFa">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="action.icon"></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="action.icon" aria-hidden="true"></svg>
             <span class="sr-only">{{ action.labelFa }}</span>
           </button>
-          <button type="button" appAction="delete" size="sm" [disabled]="!isOnline || isPendingRecord(company)" [hint]="isOnline ? undefined : 'حذف فقط در حالت برخط'" (click)="confirmDelete(company)"></button>
+          <button type="button" appAction="delete" [disabled]="!isOnline || isPendingRecord(company)" [hint]="isOnline ? undefined : 'حذف فقط در حالت برخط'" (click)="confirmDelete(company)"></button>
         </div>
       </div>
     </div>
@@ -364,74 +348,60 @@
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
   <!-- ۲. استودیوی تمام‌صفحه شناسنامه حقوقی و مدارک شرکت‌ها (Full-Screen Studio)     -->
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="viewMode === 'studio'" class="w-full flex flex-col gap-3 animate-in fade-in duration-200">
-    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm w-full overflow-hidden flex flex-col min-h-[calc(100vh-140px)]">
-      
-      <!-- هدر چسبان فرماندهی استودیو (Unified Sticky Command Center Header) -->
-      <div class="sticky top-0 z-30 p-3 md:p-4 border-b border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between bg-slate-50/95 backdrop-blur-md shrink-0 gap-3">
-        <!-- سمت راست: دکمه بازگشت و مشخصات هویتی شرکت -->
-        <div class="flex items-center gap-3">
-          <button 
-            type="button" 
-            (click)="closeCompanyModal()" 
-            class="flex items-center gap-1.5 min-h-[40px] sm:min-h-[36px] px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 transition-all cursor-pointer font-bold text-xs active:scale-95 shadow-2xs"
-            title="بازگشت به فهرست شرکت‌ها">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="chevron-right"></svg>
-            <span>بازگشت به فهرست</span>
-          </button>
+  <div *ngIf="viewMode === 'studio'" class="w-full flex flex-col gap-3 fade-in">
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm w-full flex flex-col min-h-[calc(100vh-140px)]">
 
-          <div class="w-px h-6 bg-slate-200 mx-0.5"></div>
+      <!-- هدر و نوار تب چسبان استودیو: یک ردیف فشرده در موبایل (بازگشت آیکونی، نام شرکت، ذخیره) -->
+      <div class="sticky top-0 z-30 rounded-t-3xl border-b border-slate-200/80 bg-slate-50/95 backdrop-blur-md shrink-0">
+        <div class="px-3 py-2 md:p-4 flex items-center justify-between gap-2 md:gap-3">
+          <!-- سمت راست: بازگشت و مشخصات شرکت -->
+          <div class="flex items-center gap-2 md:gap-3 min-w-0">
+            <button type="button" appAction="back" label="بازگشت به فهرست" labelFrom="md" (click)="closeCompanyModal()"></button>
 
-          <div class="flex items-center gap-2.5">
-            <div class="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100/80 text-indigo-600 flex items-center justify-center font-bold text-lg overflow-hidden shrink-0">
-              <img *ngIf="companyModal.data.logo" [src]="companyModal.data.logo | serverUrl" alt="لوگو" class="w-full h-full object-contain" />
-              <svg *ngIf="!companyModal.data.logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="building"></svg>
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h3 class="text-sm md:text-base font-black text-slate-800">
-                  {{ companyModal.isEdit ? (studioLoading ? 'در حال بارگذاری شرکت…' : 'استودیوی شناسنامه حقوقی «' + companyModal.data.name + '»') : 'ثبت شرکت حقوقی جدید' }}
-                </h3>
-                <span *ngIf="companyModal.isEdit && companyModal.data.code" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
-                  {{ companyModal.data.code }}
-                </span>
-                <app-offline-pending-badge *ngIf="isQueuedCreate || isQueuedSave"></app-offline-pending-badge>
+            <div class="hidden md:block w-px h-6 bg-slate-200" aria-hidden="true"></div>
+
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="hidden sm:flex w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100/80 text-indigo-600 items-center justify-center overflow-hidden shrink-0">
+                <img *ngIf="companyModal.data.logo" [src]="companyModal.data.logo | serverUrl" alt="" class="w-full h-full object-contain" />
+                <svg *ngIf="!companyModal.data.logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" [appIcon]="icons.company" aria-hidden="true"></svg>
               </div>
-              <p class="text-[11px] text-slate-500 font-medium mt-0.5">شناسنامهٔ حقوقی، اسناد و دسترسی کاربران شرکت</p>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 min-w-0">
+                  <h1 class="text-sm md:text-base font-black text-slate-800 truncate" [title]="studioTitle">{{ studioTitle }}</h1>
+                  <span *ngIf="companyModal.isEdit && companyModal.data.code" dir="ltr" class="hidden sm:inline text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100 shrink-0">
+                    {{ companyModal.data.code }}
+                  </span>
+                  <app-offline-pending-badge *ngIf="isQueuedCreate || isQueuedSave" class="shrink-0"></app-offline-pending-badge>
+                </div>
+                <p class="hidden md:block text-[11px] text-slate-500 font-medium mt-0.5">شناسنامهٔ حقوقی، اسناد و دسترسی کاربران شرکت</p>
+              </div>
             </div>
           </div>
+
+          <!-- سمت چپ: ذخیره -->
+          <button
+            type="button"
+            appAction="save"
+            [busy]="companyModal.isSubmitting"
+            [disabled]="studioLoading || studioLoadError || isQueuedCreate"
+            [label]="companyModal.isSubmitting ? 'در حال ذخیره' : (companyModal.isEdit ? 'ذخیره مشخصات' : 'ثبت شرکت')"
+            [hint]="isQueuedCreate ? 'این شرکت در صف ارسال است' : studioLoading ? 'در حال بارگذاری…' : studioLoadError ? 'ابتدا دریافت شرکت را دوباره امتحان کنید' : undefined"
+            (click)="submitCompanyForm()">
+          </button>
         </div>
 
-        <!-- سمت چپ: دکمه‌های عملیاتی بالا (ذخیره + بستن) -->
-        <div class="flex items-center gap-2">
-          <button 
-            type="button" 
-            (click)="submitCompanyForm()"
-            [disabled]="companyModal.isSubmitting || studioLoading || studioLoadError || isQueuedCreate"
-            class="flex items-center gap-1.5 min-h-[40px] sm:min-h-[36px] px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-            [title]="isQueuedCreate ? 'این شرکت در صف ارسال است' : studioLoading ? 'در حال بارگذاری…' : studioLoadError ? 'ابتدا دریافت شرکت را دوباره امتحان کنید' : (companyModal.isEdit ? 'ذخیره مشخصات شرکت' : 'ثبت قطعی شرکت')">
-            <span *ngIf="companyModal.isSubmitting" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            <svg *ngIf="!companyModal.isSubmitting" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
-            <span>{{ companyModal.isSubmitting ? 'در حال ذخیره...' : (companyModal.isEdit ? 'ذخیره مشخصات' : 'ثبت شرکت') }}</span>
-          </button>
-          <button 
-            type="button" 
-            appAction="close" 
-            display="icon" 
-            label="انصراف و بازگشت"
-            (click)="closeCompanyModal()">
-          </button>
+        <!-- نوار تب‌ها (چسبان همراه هدر) -->
+        <div class="px-1 pb-1 md:px-4 md:pb-2">
+          <app-tab-bar
+            [tabs]="modalTabs"
+            [active]="activeModalTab"
+            mobile="icon"
+            fullLabelFrom="never"
+            idPrefix="co-studio"
+            (activeChange)="setModalTab($event)">
+          </app-tab-bar>
         </div>
       </div>
-
-      <!-- Subtab Navigation Bar (Standard Tab Bar - Mobile Icon Mode) -->
-      <app-tab-bar
-        [tabs]="modalTabs"
-        [active]="activeModalTab"
-        mobile="icon"
-        fullLabelFrom="xl"
-        (activeChange)="setModalTab($event)">
-      </app-tab-bar>
 
       <!-- Modal Body (Content per Tab) -->
       <div class="p-4 md:p-6 overflow-y-auto flex-1 space-y-4">
@@ -442,7 +412,7 @@
         </div>
 
         <div *ngIf="!studioLoading && studioLoadError" class="py-10 text-center space-y-3" role="alert">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-rose-400 mx-auto" appIcon="alert-circle"></svg>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-rose-400 mx-auto" appIcon="status-error" aria-hidden="true"></svg>
           <div class="text-xs font-bold text-slate-600">
             {{ isOnline ? 'دریافت مشخصات این شرکت انجام نشد.' : 'اتصال برقرار نیست و دادهٔ ذخیره‌شده‌ای از این شرکت وجود ندارد.' }}
           </div>
@@ -451,7 +421,7 @@
 
         <!-- ثبت آفلاین: شرکت در صف است و تب‌های وابسته به شناسه تا ارسال قفل‌اند -->
         <div *ngIf="isQueuedCreate" class="p-3 bg-sky-50 border border-sky-200 rounded-2xl text-xs text-sky-900 leading-relaxed flex items-start gap-2" role="status">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-sky-600 shrink-0 mt-0.5" appIcon="status-cloud-off"></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-sky-600 shrink-0 mt-0.5" appIcon="status-cloud-off" aria-hidden="true"></svg>
           <span>این شرکت در صف ارسال است و پس از اتصال در سرور ثبت می‌شود. پس از ثبت، آن را از فهرست شرکت‌ها باز کنید تا مدارک، دسترسی‌ها و لوگو را بیفزایید.</span>
         </div>
 
@@ -460,7 +430,7 @@
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <!-- تب ۱: مشخصات هویتی و ثبتی                                          -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <div *ngIf="activeModalTab === 'identity'" class="space-y-4">
+        <div *ngIf="activeModalTab === 'identity'" class="space-y-4" role="tabpanel" id="co-studio-panel-identity" aria-labelledby="co-studio-tab-identity">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
             <!-- کد شرکت -->
             <div>
@@ -468,7 +438,8 @@
               <input 
                 type="text" 
                 [(ngModel)]="companyModal.data.code" 
-                placeholder="مثال: PTS یا FA" 
+                placeholder="PTS"
+                dir="ltr" 
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 uppercase font-mono"
                 [ngClass]="companyModal.errors['code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
                 [attr.aria-invalid]="companyModal.errors['code'] ? true : null"
@@ -519,7 +490,8 @@
                 [ngModel]="companyModal.data.national_id"
                 (ngModelChange)="onDigitsInput('national_id', $event)"
                 inputmode="numeric" 
-                placeholder="۱۴۰۰۸۱۲۳۴۵۶" 
+                placeholder="14008123456"
+                dir="ltr" 
                 maxlength="11"
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['national_id'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
@@ -539,7 +511,8 @@
                 [ngModel]="companyModal.data.registration_number"
                 (ngModelChange)="onDigitsInput('registration_number', $event)"
                 inputmode="numeric" 
-                placeholder="شماره ثبت در اداره ثبت شرکت‌ها" 
+                placeholder="123456"
+                dir="ltr" 
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['registration_number'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
                 [attr.aria-invalid]="companyModal.errors['registration_number'] ? true : null"
@@ -553,7 +526,7 @@
             <!-- تاریخ ثبت شرکت (تقویم شمسی جلالی) -->
             <div class="relative" (click)="$event.stopPropagation()">
               <label class="block text-xs font-bold text-slate-700 mb-1">تاریخ ثبت شرکت (جلالی)</label>
-              <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
+              <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
                 <ng-persian-datepicker 
                   [(uiIsVisible)]="isRegDatePickerOpen"
                   [dateInitValue]="false" 
@@ -564,49 +537,60 @@
                     [formControl]="regDateControl" 
                     (click)="isRegDatePickerOpen = !isRegDatePickerOpen"
                     placeholder="۱۴۰۱/۰۵/۱۰" 
-                    class="w-full text-xs font-mono font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+                    aria-label="تاریخ ثبت شرکت"
+                    class="w-full text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
                   />
                 </ng-persian-datepicker>
                 <button 
                   type="button" 
                   (click)="isRegDatePickerOpen = !isRegDatePickerOpen; $event.stopPropagation()"
                   title="انتخاب از تقویم شمسی"
-                  class="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
+                  aria-label="انتخاب از تقویم شمسی"
+                  class="w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar" aria-hidden="true"></svg>
                 </button>
               </div>
             </div>
 
             <!-- سرمایه ثبتی (ریال) -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">سرمایه ثبتی (ریال)</label>
-              <input 
-                type="number" 
-                [(ngModel)]="companyModal.data.registered_capital" 
-                placeholder="مثال: ۱۰,۰۰۰,۰۰۰,۰۰۰" 
-                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+              <label for="co_registered_capital" class="block text-xs font-bold text-slate-700 mb-1">سرمایه ثبتی (ریال)</label>
+              <input
+                id="co_registered_capital"
+                type="text"
+                inputmode="numeric"
+                [value]="formatAmount(companyModal.data.registered_capital)"
+                (input)="onAmountInput('registered_capital', $event)"
+                placeholder="مثال: ۱۰٬۰۰۰٬۰۰۰٬۰۰۰"
+                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 tabular-nums bg-white"
               />
             </div>
 
             <!-- تعداد سهام -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">تعداد سهام</label>
-              <input 
-                type="number" 
-                [(ngModel)]="companyModal.data.shares_count" 
-                placeholder="مثال: ۱,۰۰۰,۰۰۰" 
-                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+              <label for="co_shares_count" class="block text-xs font-bold text-slate-700 mb-1">تعداد سهام</label>
+              <input
+                id="co_shares_count"
+                type="text"
+                inputmode="numeric"
+                [value]="formatAmount(companyModal.data.shares_count)"
+                (input)="onAmountInput('shares_count', $event)"
+                placeholder="مثال: ۱٬۰۰۰٬۰۰۰"
+                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 tabular-nums bg-white"
               />
             </div>
 
             <!-- ارزش اسمی هر سهم (ریال) -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">ارزش اسمی هر سهم (ریال)</label>
-              <input 
-                type="number" 
-                [(ngModel)]="companyModal.data.share_nominal_value" 
-                placeholder="مثال: ۱۰,۰۰۰" 
-                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+              <label for="co_share_nominal_value" class="block text-xs font-bold text-slate-700 mb-1">ارزش اسمی هر سهم (ریال)</label>
+              <input
+                id="co_share_nominal_value"
+                type="text"
+                inputmode="numeric"
+                [value]="formatAmount(companyModal.data.share_nominal_value)"
+                (input)="onAmountInput('share_nominal_value', $event)"
+                placeholder="مثال: ۱۰٬۰۰۰"
+                class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 tabular-nums bg-white"
               />
               <span class="block text-[10px] text-slate-400 mt-1">ارزش اسمی مصوب هر سهم طبق اساسنامه</span>
             </div>
@@ -619,7 +603,7 @@
                 [ngModel]="companyModal.data.phone"
                 (ngModelChange)="onDigitsInput('phone', $event)"
                 inputmode="tel"
-                placeholder="۰۷۱-۳۲۲۲۰۰۰۰" 
+                placeholder="07132220000" 
                 dir="ltr"
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['phone'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
@@ -639,7 +623,8 @@
                 [ngModel]="companyModal.data.postal_code"
                 (ngModelChange)="onDigitsInput('postal_code', $event)"
                 inputmode="numeric" 
-                placeholder="۷۱۳۴۸۱۲۳۴۵" 
+                placeholder="7134812345"
+                dir="ltr" 
                 maxlength="10"
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['postal_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
@@ -663,39 +648,39 @@
           </div>
 
           <!-- لوگوی شرکت -->
-          <div class="p-3 bg-slate-50/60 rounded-2xl border border-slate-200 flex items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
+          <div class="p-3 bg-slate-50/60 rounded-2xl border border-slate-200 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
               <div *ngIf="logoPreviewUrl" class="w-12 h-12 rounded-xl border border-slate-200 overflow-hidden bg-white flex items-center justify-center shrink-0">
                 <img [src]="logoPreviewUrl" alt="پیش‌نمایش لوگو" class="w-full h-full object-contain" />
               </div>
               <div *ngIf="!logoPreviewUrl" class="w-12 h-12 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-slate-400 text-lg shrink-0">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400" appIcon="building"></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400" [appIcon]="icons.company" aria-hidden="true"></svg>
               </div>
-              <div>
+              <div class="min-w-0">
                 <span class="text-xs font-bold text-slate-700 block">لوگوی رسمی شرکت</span>
                 <span class="text-[11px] text-slate-400">فرمت‌های PNG، JPG و SVG با پس‌زمینه شفاف پیشنهاد می‌شود</span>
               </div>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 shrink-0">
               <button 
                 *ngIf="logoPreviewUrl || selectedLogoFile" 
                 type="button" 
                 (click)="clearLogo()" 
                 title="حذف لوگوی شرکت" 
-                class="w-8 h-8 rounded-xl border border-rose-200 hover:border-rose-400 bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center transition-all cursor-pointer"
+                class="w-10 h-10 lg:w-8 lg:h-8 rounded-xl border border-rose-200 hover:border-rose-400 bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 aria-label="حذف لوگو">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete" aria-hidden="true"></svg>
                 <span class="sr-only">حذف لوگو</span>
               </button>
 
               <label 
-                class="w-8 h-8 rounded-xl border border-slate-200 hover:border-indigo-400 bg-white hover:bg-indigo-50/50 text-slate-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                class="w-10 h-10 lg:w-8 lg:h-8 rounded-xl border border-slate-200 hover:border-indigo-400 bg-white hover:bg-indigo-50/50 text-slate-600 flex items-center justify-center transition-all cursor-pointer shadow-sm focus-within:ring-2 focus-within:ring-indigo-500"
                 title="انتخاب یا بارگذاری تصویر لوگو"
                 aria-label="انتخاب تصویر">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="camera"></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-camera" aria-hidden="true"></svg>
                 <span class="sr-only">انتخاب تصویر</span>
-                <input type="file" accept="image/*" (change)="onLogoFileSelected($event)" class="hidden" />
+                <input type="file" accept="image/*" (change)="onLogoFileSelected($event)" class="sr-only" aria-label="انتخاب تصویر لوگو" />
               </label>
             </div>
           </div>
@@ -709,7 +694,7 @@
                 [(ngModel)]="companyModal.data.is_active" 
                 class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
               />
-              <label for="co_active" class="text-xs font-bold text-slate-700 cursor-pointer select-none">
+              <label for="co_active" class="min-h-[40px] flex items-center text-xs font-bold text-slate-700 cursor-pointer select-none">
                 شرکت فعال است و در پروژه‌ها قابل استفاده می‌باشد
               </label>
             </div>
@@ -721,8 +706,8 @@
                 [(ngModel)]="companyModal.data.has_warehouse_module" 
                 class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-indigo-300 cursor-pointer"
               />
-              <label for="co_has_warehouse" class="text-xs font-bold text-slate-700 cursor-pointer select-none flex items-center gap-1.5">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="box"></svg>
+              <label for="co_has_warehouse" class="min-h-[40px] text-xs font-bold text-slate-700 cursor-pointer select-none flex items-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="box" aria-hidden="true"></svg>
                 <span>فعال بودن سامانه انبارداری و انبارگردانی برای این شرکت</span>
               </label>
             </div>
@@ -732,9 +717,9 @@
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <!-- تب ۲: سال مالی، کارگاه بیمه و سامانه مودیان                           -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <div *ngIf="activeModalTab === 'fiscal_insurance'" class="space-y-4">
+        <div *ngIf="activeModalTab === 'fiscal_insurance'" class="space-y-4" role="tabpanel" id="co-studio-panel-fiscal_insurance" aria-labelledby="co-studio-tab-fiscal_insurance">
           <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs text-indigo-900 leading-relaxed flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="info"></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="info" aria-hidden="true"></svg>
             <span>فیلدهای زیر مربوط به کد کارگاه مرکزی شرکت متبوع و اتصالات حافظه مالیاتی و سامانه مودیان هستند. کدهای کارگاه و ردیف‌های پیمان متناظر با پروژه‌های اجرایی منحصراً در بخش تعریف و مدیریت پروژه‌ها تعیین می‌گردند.</span>
           </div>
 
@@ -747,7 +732,8 @@
                 [ngModel]="companyModal.data.workshop_code"
                 (ngModelChange)="onDigitsInput('workshop_code', $event)"
                 inputmode="numeric" 
-                placeholder="مثال: ۲۳۹۸۰۱۲۳۴۵" 
+                placeholder="2398012345"
+                dir="ltr" 
                 maxlength="10"
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['workshop_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
@@ -768,7 +754,8 @@
                 [ngModel]="companyModal.data.economic_code"
                 (ngModelChange)="onDigitsInput('economic_code', $event)"
                 inputmode="numeric" 
-                placeholder="کد اقتصادی ۱۲ رقمی" 
+                placeholder="411111111111"
+                dir="ltr" 
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['economic_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
                 [attr.aria-invalid]="companyModal.errors['economic_code'] ? true : null"
@@ -787,7 +774,8 @@
                 type="text" 
                 [ngModel]="companyModal.data.tax_memory_id"
                 (ngModelChange)="onTaxMemoryIdInput($event)" 
-                placeholder="مثال: A12B34" 
+                placeholder="A12B34"
+                dir="ltr" 
                 maxlength="6"
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono uppercase"
                 [ngClass]="companyModal.errors['tax_memory_id'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
@@ -808,7 +796,8 @@
                 [ngModel]="companyModal.data.tax_economic_code"
                 (ngModelChange)="onDigitsInput('tax_economic_code', $event)"
                 inputmode="numeric" 
-                placeholder="شناسه ملی ۱۱ رقمی + ۵ رقم کد شعبه" 
+                placeholder="1400812345600001"
+                dir="ltr" 
                 maxlength="16"
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['tax_economic_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
@@ -829,7 +818,8 @@
                 [ngModel]="companyModal.data.social_security_branch_code"
                 (ngModelChange)="onDigitsInput('social_security_branch_code', $event)"
                 inputmode="numeric" 
-                placeholder="مثال: ۲۲" 
+                placeholder="22"
+                dir="ltr" 
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['social_security_branch_code'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
                 [attr.aria-invalid]="companyModal.errors['social_security_branch_code'] ? true : null"
@@ -861,7 +851,8 @@
                 [ngModel]="companyModal.data.contract_row"
                 (ngModelChange)="onDigitsInput('contract_row', $event)"
                 inputmode="numeric" 
-                placeholder="مثال: ۰۰۰" 
+                placeholder="000"
+                dir="ltr" 
                 class="w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
                 [ngClass]="companyModal.errors['contract_row'] ? 'border-rose-300 bg-rose-50/20' : 'border-slate-200 bg-white'"
                 [attr.aria-invalid]="companyModal.errors['contract_row'] ? true : null"
@@ -907,10 +898,10 @@
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <!-- تب ۵: بایگانی و آرشیو مدارک حقوقی و رسمی                            -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <div *ngIf="activeModalTab === 'documents'" class="space-y-5">
+        <div *ngIf="activeModalTab === 'documents'" class="space-y-5" role="tabpanel" id="co-studio-panel-documents" aria-labelledby="co-studio-tab-documents">
           
           <div *ngIf="!companyModal.data.id" class="p-6 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto text-slate-400 mb-2" appIcon="file-text"></svg>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto text-slate-400 mb-2" appIcon="file-text" aria-hidden="true"></svg>
             <h4 class="text-xs font-black text-slate-700">بایگانی اسناد و مجوزهای شرکت</h4>
             <p class="text-[11px] text-slate-500 mt-1 max-w-md mx-auto">
               جهت بارگذاری اساسنامه، روزنامه‌های رسمی، گواهی ارزش افزوده و سایر مجوزها، لطفاً ابتدا شرکت را در تب اول ذخیره فرمایید.
@@ -924,18 +915,18 @@
               
               <!-- کارت اساسنامه شرکت -->
               <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 flex flex-col justify-between gap-3">
-                <div class="flex items-start justify-between">
-                  <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg></span>
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text" aria-hidden="true"></svg></span>
                     <div>
                       <h4 class="text-xs font-black text-slate-800">اساسنامه رسمی شرکت</h4>
                       <p class="text-[10px] text-slate-500">سند مادر تأسیس، ارکان و حدود اختیارات</p>
                     </div>
                   </div>
-                  <span *ngIf="companyModal.data.articles_of_association" class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">
+                  <span *ngIf="companyModal.data.articles_of_association" class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                     بارگذاری شده
                   </span>
-                  <span *ngIf="!companyModal.data.articles_of_association" class="text-[10px] bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full">
+                  <span *ngIf="!companyModal.data.articles_of_association" class="text-[10px] bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                     فاقد فایل
                   </span>
                 </div>
@@ -945,51 +936,49 @@
                     <button 
                       type="button" 
                       (click)="openCoreDocPreview('articles_of_association', 'اساسنامه رسمی شرکت')" 
-                      class="w-7 h-7 rounded-lg flex items-center justify-center text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border border-slate-200 transition-colors cursor-pointer"
+                      class="w-10 h-10 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border border-slate-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                       title="پیش‌نمایش اساسنامه"
                       aria-label="پیش‌نمایش اساسنامه">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view" aria-hidden="true"></svg>
                       <span class="sr-only">پیش‌نمایش اساسنامه</span>
                     </button>
                     <button 
                       type="button" 
                       (click)="downloadFile(companyModal.data.articles_of_association)" 
-                      class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                      class="w-10 h-10 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                       title="دانلود اساسنامه"
-                      aria-label="دانلود">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
-                      <span class="sr-only">دانلود</span>
+                      aria-label="دانلود اساسنامه">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-download" aria-hidden="true"></svg>
                     </button>
                   </div>
                   <span *ngIf="!companyModal.data.articles_of_association" class="text-[11px] text-slate-400">هنوز فایلی ثبت نشده است</span>
 
                   <label 
-                    class="w-7 h-7 rounded-lg flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 hover:border-indigo-300 text-slate-700 cursor-pointer shadow-2xs transition-all"
+                    class="w-10 h-10 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 hover:border-indigo-300 text-slate-700 cursor-pointer shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-500"
                     [title]="companyModal.data.articles_of_association ? 'جایگزینی فایل اساسنامه' : 'بارگذاری فایل اساسنامه'"
                     aria-label="بارگذاری فایل اساسنامه">
                     <span *ngIf="uploadingCoreDoc['articles_of_association']" class="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
-                    <svg *ngIf="!uploadingCoreDoc['articles_of_association']" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
-                    <span class="sr-only">بارگذاری فایل</span>
+                    <svg *ngIf="!uploadingCoreDoc['articles_of_association']" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-upload" aria-hidden="true"></svg>
                     <span class="sr-only" role="status">{{ uploadingCoreDoc['articles_of_association'] ? 'در حال ارسال فایل' : '' }}</span>
-                    <input type="file" accept=".pdf,image/*" [disabled]="uploadingCoreDoc['articles_of_association']" (change)="onCoreDocSelected($event, 'articles_of_association')" class="hidden" />
+                    <input type="file" accept=".pdf,image/*" [disabled]="uploadingCoreDoc['articles_of_association']" (change)="onCoreDocSelected($event, 'articles_of_association')" class="sr-only" aria-label="بارگذاری فایل اساسنامه" />
                   </label>
                 </div>
               </div>
 
               <!-- کارت آخرین روزنامه رسمی -->
               <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 flex flex-col justify-between gap-3">
-                <div class="flex items-start justify-between">
-                  <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg></span>
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text" aria-hidden="true"></svg></span>
                     <div>
                       <h4 class="text-xs font-black text-slate-800">آخرین روزنامه رسمی</h4>
                       <p class="text-[10px] text-slate-500">آگهی تغییرات هیئت‌مدیره و صاحبان امضا</p>
                     </div>
                   </div>
-                  <span *ngIf="companyModal.data.latest_gazette" class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">
+                  <span *ngIf="companyModal.data.latest_gazette" class="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                     بارگذاری شده
                   </span>
-                  <span *ngIf="!companyModal.data.latest_gazette" class="text-[10px] bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full">
+                  <span *ngIf="!companyModal.data.latest_gazette" class="text-[10px] bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                     فاقد فایل
                   </span>
                 </div>
@@ -999,33 +988,31 @@
                     <button 
                       type="button" 
                       (click)="openCoreDocPreview('latest_gazette', 'آخرین روزنامه رسمی')" 
-                      class="w-7 h-7 rounded-lg flex items-center justify-center text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 border border-slate-200 transition-colors cursor-pointer"
+                      class="w-10 h-10 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border border-slate-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                       title="پیش‌نمایش روزنامه رسمی"
                       aria-label="پیش‌نمایش روزنامه رسمی">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view" aria-hidden="true"></svg>
                       <span class="sr-only">پیش‌نمایش روزنامه رسمی</span>
                     </button>
                     <button 
                       type="button" 
                       (click)="downloadFile(companyModal.data.latest_gazette)" 
-                      class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                      class="w-10 h-10 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                       title="دانلود روزنامه رسمی"
-                      aria-label="دانلود">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
-                      <span class="sr-only">دانلود</span>
+                      aria-label="دانلود روزنامه رسمی">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-download" aria-hidden="true"></svg>
                     </button>
                   </div>
                   <span *ngIf="!companyModal.data.latest_gazette" class="text-[11px] text-slate-400">هنوز فایلی ثبت نشده است</span>
 
                   <label 
-                    class="w-7 h-7 rounded-lg flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 hover:border-emerald-300 text-slate-700 cursor-pointer shadow-2xs transition-all"
+                    class="w-10 h-10 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 hover:border-emerald-300 text-slate-700 cursor-pointer shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-500"
                     [title]="companyModal.data.latest_gazette ? 'جایگزینی فایل روزنامه رسمی' : 'بارگذاری فایل روزنامه رسمی'"
                     aria-label="بارگذاری فایل روزنامه رسمی">
                     <span *ngIf="uploadingCoreDoc['latest_gazette']" class="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>
-                    <svg *ngIf="!uploadingCoreDoc['latest_gazette']" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
-                    <span class="sr-only">بارگذاری فایل</span>
+                    <svg *ngIf="!uploadingCoreDoc['latest_gazette']" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-upload" aria-hidden="true"></svg>
                     <span class="sr-only" role="status">{{ uploadingCoreDoc['latest_gazette'] ? 'در حال ارسال فایل' : '' }}</span>
-                    <input type="file" accept=".pdf,image/*" [disabled]="uploadingCoreDoc['latest_gazette']" (change)="onCoreDocSelected($event, 'latest_gazette')" class="hidden" />
+                    <input type="file" accept=".pdf,image/*" [disabled]="uploadingCoreDoc['latest_gazette']" (change)="onCoreDocSelected($event, 'latest_gazette')" class="sr-only" aria-label="بارگذاری فایل روزنامه رسمی" />
                   </label>
                 </div>
               </div>
@@ -1039,9 +1026,9 @@
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <!-- تب ۶: مدیریت دسترسی کاربران به این شرکت (استودیوی دسترسی)             -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->
-        <div *ngIf="activeModalTab === 'access'" class="space-y-4">
+        <div *ngIf="activeModalTab === 'access'" class="space-y-4" role="tabpanel" id="co-studio-panel-access" aria-labelledby="co-studio-tab-access">
           <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs text-indigo-900 leading-relaxed">
-            <span class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="users"></svg><span>در این تب می‌توانید مشخص نمایید کدام کاربران سامانه به اطلاعات، اسناد و فضاهای کاری این شرکت دسترسی داشته باشند.</span></span>
+            <span class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" [appIcon]="icons.permissions" aria-hidden="true"></svg><span>در این تب می‌توانید مشخص نمایید کدام کاربران سامانه به اطلاعات، اسناد و فضاهای کاری این شرکت دسترسی داشته باشند.</span></span>
           </div>
 
           <div *ngIf="!companyModal.data.id" class="py-8 text-center text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl" role="status">
@@ -1051,26 +1038,75 @@
           <div *ngIf="companyModal.data.id" class="space-y-4">
             <!-- فرم افزودن کاربر به شرکت -->
             <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-3">
-              <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                <!-- کمبوباکس انتخاب کاربر با جستجو -->
-                <div class="md:col-span-1">
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">انتخاب کاربر سیستم</label>
-                  <select 
-                    [(ngModel)]="studioSelectedUserId" 
-                    class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-medium">
-                    <option [ngValue]="null">-- انتخاب کاربر از لیست سامانه --</option>
-                    <option *ngFor="let u of filterSystemUsers()" [ngValue]="u.id">
-                      {{ (u.first_name + ' ' + u.last_name).trim() || u.username }} ({{ u.username }})
-                    </option>
-                  </select>
+              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 items-end">
+                <!-- انتخاب کاربر با جستجو (combobox)؛ کاربرانی که دسترسی دارند در فهرست نمی‌آیند -->
+                <div class="md:col-span-1 relative" (focusout)="onUserComboFocusOut($event)">
+                  <label for="studio_user_combo" class="block text-[11px] font-bold text-slate-700 mb-1">انتخاب کاربر سیستم</label>
+                  <div class="relative">
+                    <input
+                      id="studio_user_combo"
+                      type="text"
+                      role="combobox"
+                      autocomplete="off"
+                      aria-autocomplete="list"
+                      aria-controls="studio_user_listbox"
+                      [attr.aria-expanded]="isUserListOpen"
+                      [attr.aria-activedescendant]="isUserListOpen && userActiveIndex >= 0 ? 'studio_user_opt_' + userActiveIndex : null"
+                      [ngModel]="userSearchQuery"
+                      (ngModelChange)="onUserSearchInput($event)"
+                      (focus)="openUserList()"
+                      (click)="openUserList()"
+                      (keydown)="onUserComboKeydown($event)"
+                      placeholder="جستجوی نام یا نام کاربری..."
+                      class="w-full ps-3 pe-10 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-medium"
+                    />
+                    <button
+                      *ngIf="studioSelectedUserId"
+                      type="button"
+                      (click)="clearSelectedUser()"
+                      title="پاک کردن کاربر انتخاب‌شده"
+                      aria-label="پاک کردن کاربر انتخاب‌شده"
+                      class="absolute inset-y-0 end-0 w-10 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close" aria-hidden="true"></svg>
+                    </button>
+                  </div>
+                  <div *ngIf="isUserListOpen" class="absolute top-full mt-1 z-40 bg-white border border-slate-200 rounded-2xl shadow-xl w-full p-1 max-h-56 overflow-y-auto">
+                    <div *ngIf="systemUsersError" class="px-3 py-2 text-[11px] text-rose-700 flex items-center justify-between gap-2" role="alert">
+                      <span>{{ isOnline ? 'دریافت کاربران انجام نشد.' : 'اتصال برقرار نیست؛ فهرست کاربران دریافت نشد.' }}</span>
+                      <button type="button" appAction="refresh" size="sm" label="تلاش دوباره" (click)="retrySystemUsers()"></button>
+                    </div>
+                    <div *ngIf="!systemUsersLoaded && !systemUsersError" class="px-3 py-2 text-[11px] text-slate-500" role="status">در حال دریافت کاربران...</div>
+                    <div *ngIf="systemUsersLoaded && availableSystemUsers.length === 0" class="px-3 py-2 text-[11px] text-slate-500" role="status">
+                      {{ userSearchQuery.trim() ? 'کاربری با این جستجو یافت نشد.' : 'همهٔ کاربران سامانه به این شرکت دسترسی دارند.' }}
+                    </div>
+                    <div
+                      id="studio_user_listbox"
+                      role="listbox"
+                      aria-label="کاربران سامانه"
+                      [attr.aria-busy]="!systemUsersLoaded && !systemUsersError ? 'true' : null">
+                    <div
+                      *ngFor="let u of availableSystemUsers; let ui = index"
+                      [id]="'studio_user_opt_' + ui"
+                      role="option"
+                      [attr.aria-selected]="u.id === studioSelectedUserId"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="selectStudioUser(u)"
+                      class="min-h-[40px] px-3 py-1.5 rounded-xl text-xs flex items-center justify-between gap-2 cursor-pointer"
+                      [ngClass]="ui === userActiveIndex ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-50'">
+                      <span class="font-bold truncate">{{ userDisplayName(u) }}</span>
+                      <span dir="ltr" class="text-[10px] text-slate-500 font-mono shrink-0">{{ u.username }}</span>
+                    </div>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- سطح دسترسی سازمانی -->
                 <div class="md:col-span-1">
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">سطح دسترسی سازمانی</label>
-                  <select 
-                    [(ngModel)]="studioAccessLevel" 
-                    class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-bold text-slate-800">
+                  <label for="studio_acc_level" class="block text-[11px] font-bold text-slate-700 mb-1">سطح دسترسی سازمانی</label>
+                  <select
+                    id="studio_acc_level"
+                    [(ngModel)]="studioAccessLevel"
+                    class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-bold text-slate-800">
                     <option *ngFor="let lvl of accessLevelsList" [value]="lvl.value">
                       {{ lvl.label }}
                     </option>
@@ -1079,49 +1115,49 @@
 
                 <!-- سمت / نقش در شرکت -->
                 <div class="md:col-span-1">
-                  <label class="block text-[11px] font-bold text-slate-700 mb-1">سمت / نقش در این شرکت</label>
-                  <input 
-                    type="text" 
-                    [(ngModel)]="studioRoleInCompany" 
+                  <label for="studio_acc_role" class="block text-[11px] font-bold text-slate-700 mb-1">سمت / نقش در این شرکت</label>
+                  <input
+                    id="studio_acc_role"
+                    type="text"
+                    [(ngModel)]="studioRoleInCompany"
                     placeholder="مثال: کارشناس اسناد، خزانه‌دار..."
-                    class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-medium"
+                    class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-medium"
                   />
                 </div>
 
                 <!-- پیش‌فرض و دکمه تخصیص -->
                 <div class="md:col-span-1 flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-1.5">
-                    <input 
-                      type="checkbox" 
-                      id="studio_acc_def" 
-                      [(ngModel)]="studioIsDefaultAccess" 
+                  <div class="flex items-center gap-1.5 min-h-[40px]">
+                    <input
+                      type="checkbox"
+                      id="studio_acc_def"
+                      [(ngModel)]="studioIsDefaultAccess"
                       class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
                     />
-                    <label for="studio_acc_def" class="text-[11px] font-bold text-slate-700 cursor-pointer select-none">
+                    <label for="studio_acc_def" class="min-h-[40px] px-1 flex items-center text-[11px] font-bold text-slate-700 cursor-pointer select-none">
                       پیش‌فرض
                     </label>
                   </div>
 
-                  <button 
-                    type="button" 
-                    (click)="addStudioAccess()" 
+                  <button
+                    type="button"
+                    appAction="create"
+                    display="label"
+                    label="تخصیص دسترسی"
                     [disabled]="!studioSelectedUserId"
-                    title="تخصیص دسترسی کاربر"
-                    aria-label="تخصیص دسترسی"
-                    class="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer shrink-0">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg>
-                    <span class="sr-only">تخصیص دسترسی</span>
+                    [hint]="studioSelectedUserId ? undefined : 'ابتدا کاربر را انتخاب کنید'"
+                    (click)="addStudioAccess()">
                   </button>
                 </div>
               </div>
             </div>
 
-            <!-- جدول کاربران مجاز این شرکت -->
+            <!-- فهرست کاربران مجاز این شرکت -->
             <div>
-              <div class="flex items-center justify-between mb-2">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <span class="text-xs font-black text-slate-800">کاربران دارای دسترسی فعال به این شرکت</span>
-                <span class="text-[10px] font-mono font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                  {{ studioAccesses.length }} کاربر
+                <span class="whitespace-nowrap tabular-nums text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                  {{ fa(studioAccesses.length) }} کاربر
                 </span>
               </div>
 
@@ -1129,15 +1165,16 @@
                 <div class="text-xs font-bold text-slate-600">دریافت فهرست دسترسی‌ها انجام نشد.</div>
                 <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="retryTab('access')"></button>
               </div>
-              <div *ngIf="isLoadingStudioAccesses" class="py-6 text-center text-xs text-slate-400">
-                در حال دریافت لیست کاربران...
+              <div *ngIf="isLoadingStudioAccesses" role="status" aria-busy="true" aria-label="در حال دریافت فهرست دسترسی‌ها">
+                <app-loading-skeleton type="text" [lines]="3"></app-loading-skeleton>
               </div>
 
-              <div *ngIf="!isLoadingStudioAccesses && !tabLoadError['access'] && studioAccesses.length === 0" class="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-2xl">
+              <div *ngIf="!isLoadingStudioAccesses && !tabLoadError['access'] && studioAccesses.length === 0" class="py-8 px-3 text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-2xl">
                 تاکنون کاربری به این شرکت اختصاص داده نشده است (صرفاً مدیران ارشد سیستم به آن دسترسی دارند).
               </div>
 
-              <div *ngIf="!isLoadingStudioAccesses && studioAccesses.length > 0" class="overflow-x-auto rounded-2xl border border-slate-200">
+              <!-- دسکتاپ: جدول -->
+              <div *ngIf="!isLoadingStudioAccesses && studioAccesses.length > 0" class="hidden xl:block overflow-x-auto rounded-2xl border border-slate-200">
                 <table class="w-full text-right text-xs">
                   <thead class="bg-slate-100/80 text-slate-600 font-bold border-b border-slate-200">
                     <tr>
@@ -1153,42 +1190,85 @@
                   </thead>
                   <tbody class="divide-y divide-slate-100">
                     <tr *ngFor="let acc of studioAccesses; let idx = index" class="hover:bg-slate-50 transition-colors">
-                      <td class="py-2.5 px-3 text-center font-mono text-slate-400">{{ idx + 1 }}</td>
+                      <td class="py-2.5 px-3 text-center tabular-nums text-slate-400">{{ fa(idx + 1) }}</td>
                       <td class="py-2.5 px-3 font-bold text-slate-800">
                         <span>{{ acc.user_full_name || 'کاربر سیستم' }}</span>
                         <app-offline-pending-badge *ngIf="isPendingRecord(acc)" class="ms-1.5"></app-offline-pending-badge>
                       </td>
-                      <td class="py-2.5 px-3 font-mono text-slate-600">{{ acc.username }}</td>
+                      <td class="py-2.5 px-3 font-mono text-slate-600" dir="ltr">{{ acc.username }}</td>
                       <td class="py-2.5 px-3">
-                        <span class="text-[10px] px-2 py-0.5 rounded-full border font-bold" [ngClass]="getAccessLevelBadgeClass(acc.access_level)">
+                        <span class="text-[10px] px-2 py-0.5 rounded-full border font-bold whitespace-nowrap" [ngClass]="getAccessLevelBadgeClass(acc.access_level)">
                           {{ acc.access_level_display || getAccessLevelLabel(acc.access_level) }}
                         </span>
                       </td>
                       <td class="py-2.5 px-3 text-slate-600 font-medium">{{ acc.role_in_company || '—' }}</td>
                       <td class="py-2.5 px-3 text-center">
-                        <span *ngIf="acc.is_default" class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold inline-flex items-center gap-1">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
-                          <span>پیش‌فرض</span>
-                        </span>
-                        <span *ngIf="!acc.is_default" class="text-[10px] text-slate-400">—</span>
+                        <ng-container *ngTemplateOutlet="accessDefaultBadge; context: { acc: acc }"></ng-container>
                       </td>
-                      <td class="py-2.5 px-3 text-center font-mono text-[11px] text-slate-500">{{ acc.created_at || '—' }}</td>
+                      <td class="py-2.5 px-3 text-center tabular-nums text-[11px] text-slate-500">{{ acc.created_at | persianDate:'short' }}</td>
                       <td class="py-2.5 px-3 text-center">
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           (click)="removeStudioAccess(acc.id)"
                           [disabled]="isPendingRecord(acc)"
-                          class="w-7 h-7 rounded-lg flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          class="w-8 h-8 rounded-lg flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                           [title]="isPendingRecord(acc) ? 'پس از ارسال به سرور قابل لغو است' : 'لغو دسترسی کاربر'"
                           aria-label="لغو دسترسی">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
-                          <span class="sr-only">لغو دسترسی</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete" aria-hidden="true"></svg>
                         </button>
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
+
+              <!-- موبایل: کارت (B3) -->
+              <ul *ngIf="!isLoadingStudioAccesses && studioAccesses.length > 0" class="xl:hidden space-y-2" aria-label="کاربران دارای دسترسی">
+                <li *ngFor="let acc of studioAccesses" class="p-3 bg-white rounded-2xl border border-slate-200 space-y-2">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-xs font-black text-slate-800 truncate">{{ acc.user_full_name || 'کاربر سیستم' }}</span>
+                        <app-offline-pending-badge *ngIf="isPendingRecord(acc)"></app-offline-pending-badge>
+                      </div>
+                      <div dir="ltr" class="text-[11px] text-slate-500 font-mono text-end truncate">{{ acc.username }}</div>
+                    </div>
+                    <button
+                      type="button"
+                      (click)="removeStudioAccess(acc.id)"
+                      [disabled]="isPendingRecord(acc)"
+                      class="w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                      [title]="isPendingRecord(acc) ? 'پس از ارسال به سرور قابل لغو است' : 'لغو دسترسی کاربر'"
+                      aria-label="لغو دسترسی">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete" aria-hidden="true"></svg>
+                    </button>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-[10px] px-2 py-0.5 rounded-full border font-bold" [ngClass]="getAccessLevelBadgeClass(acc.access_level)">
+                      {{ acc.access_level_display || getAccessLevelLabel(acc.access_level) }}
+                    </span>
+                    <ng-container *ngTemplateOutlet="accessDefaultBadge; context: { acc: acc }"></ng-container>
+                  </div>
+                  <dl class="grid grid-cols-2 gap-2 text-[11px] bg-slate-50/70 p-2 rounded-xl border border-slate-100">
+                    <div class="min-w-0">
+                      <dt class="text-slate-500 text-[10px]">سمت در شرکت</dt>
+                      <dd class="text-slate-700 font-bold truncate">{{ acc.role_in_company || '—' }}</dd>
+                    </div>
+                    <div>
+                      <dt class="text-slate-500 text-[10px]">تاریخ انتساب</dt>
+                      <dd class="text-slate-700 font-bold tabular-nums">{{ acc.created_at | persianDate:'short' }}</dd>
+                    </div>
+                  </dl>
+                </li>
+              </ul>
+
+              <ng-template #accessDefaultBadge let-acc="acc">
+                <span *ngIf="acc.is_default" class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold inline-flex items-center gap-1 whitespace-nowrap">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-confirm" aria-hidden="true"></svg>
+                  <span>پیش‌فرض</span>
+                </span>
+                <span *ngIf="!acc.is_default" class="text-[10px] text-slate-400 hidden xl:inline">—</span>
+              </ng-template>
             </div>
 
           </div>
@@ -1200,7 +1280,7 @@
         <!-- کامپوننت‌های مشارکتی یک بار ساخته و با hidden نگه داشته می‌شوند تا فرم نیمه‌کاره و شمارندهٔ تب‌ها با جابه‌جایی تب از دست نروند -->
         <!-- تب renderOnlyWhenActive (مثلاً با پرس‌وجوی دوره‌ای) فقط وقتی باز است ساخته می‌شود -->
         @for (tab of visibleContributedTabs; track tab.id) {
-          <div class="space-y-4" [hidden]="activeModalTab !== tab.id">
+          <div class="space-y-4" [hidden]="activeModalTab !== tab.id" role="tabpanel" [attr.id]="'co-studio-panel-' + tab.id" [attr.aria-labelledby]="'co-studio-tab-' + tab.id">
             @if (!tab.renderOnlyWhenActive || activeModalTab === tab.id) {
               @if (tab.requiresSavedCompany && !hasSavedCompany) {
                 <div class="py-8 text-center text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl" role="status">
@@ -1216,7 +1296,7 @@
         <!-- بخش‌های مشارکتی ماژول‌ها در انتهای تب‌های هسته (studioSections) -->
         @for (slot of sectionSlots; track slot) {
           @if (sectionsFor(slot).length > 0) {
-            <div class="space-y-4" [hidden]="activeModalTab !== slot">
+            <div class="space-y-4" [hidden]="activeModalTab !== slot" role="region" [attr.aria-labelledby]="'co-studio-tab-' + slot">
               @for (sec of sectionsFor(slot); track $index) {
                 <ng-container *ngTemplateOutlet="contributionOutlet; context: { key: 'section:' + slot + ':' + $index, loader: sec.loadComponent }"></ng-container>
               }
@@ -1243,40 +1323,16 @@
         </ng-container>
       </div>
 
-      <!-- Modal Footer -->
-      <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-        <div class="text-[11px] text-slate-400">
-          <span *ngIf="companyModal.isEdit">شناسه سیستم: #{{ companyModal.data.id }}</span>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <button 
-            type="button" 
-            appAction="close"
-            (click)="closeCompanyModal()">
-          </button>
-          <button 
-            type="button" 
-            appAction="save"
-            size="lg"
-            [busy]="companyModal.isSubmitting"
-            [disabled]="studioLoading || studioLoadError || isQueuedCreate"
-            [label]="companyModal.isEdit ? 'ثبت ویرایش شناسنامه' : 'ثبت شرکت'"
-            (click)="submitCompanyForm()">
-          </button>
-        </div>
-      </div>
-
     </div>
   </div>
 
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
   <!-- ۴. مدال تایید حذف شرکت                                                    -->
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="deleteModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+  <div *ngIf="deleteModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
     <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden p-5 text-right">
       <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-3">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600" appIcon="alert-triangle"></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600" appIcon="status-warning" aria-hidden="true"></svg>
       </div>
       <h3 class="text-base font-black text-slate-800">حذف شرکت «{{ deleteModal.target?.name }}»</h3>
       <p class="text-xs text-slate-600 mt-2 leading-relaxed">

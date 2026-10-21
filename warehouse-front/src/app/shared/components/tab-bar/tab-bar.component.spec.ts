@@ -19,6 +19,7 @@ try {
       [active]="activeTab()"
       [mobile]="mobileMode()"
       [fullLabelFrom]="fullLabelFrom()"
+      [idPrefix]="idPrefix()"
       (activeChange)="onTabChange($event)"
     />
   `,
@@ -33,6 +34,7 @@ class TestHostComponent {
   activeTab = signal('pending');
   mobileMode = signal<'short' | 'icon'>('short');
   fullLabelFrom = signal<'sm' | 'md' | 'lg' | 'xl'>('sm');
+  idPrefix = signal<string | undefined>(undefined);
   lastEmittedTab: string | null = null;
 
   onTabChange(tabId: string): void {
@@ -57,6 +59,30 @@ describe('TabBarComponent (app-tab-bar)', () => {
 
   afterEach(() => {
     TestBed.resetTestingModule();
+  });
+
+  it('fullLabelFrom="never": full label stays only as sr-only/title and the short label shows from sm', () => {
+    host.mobileMode.set('icon');
+    host.fullLabelFrom.set('never' as any);
+    fixture.detectChanges();
+    const tab = fixture.nativeElement.querySelector('[role="tab"]') as HTMLElement;
+    const spans = Array.from(tab.querySelectorAll('span')) as HTMLElement[];
+    const full = spans.find(s => s.textContent?.trim() === 'نیازمند بررسی')!;
+    const short = spans.find(s => s.textContent?.trim() === 'بررسی')!;
+    expect([...full.classList].sort()).toEqual(['sm:hidden', 'sr-only']);
+    expect([...short.classList].sort()).toEqual(['hidden', 'sm:inline']);
+    expect(tab.getAttribute('title')).toBe('نیازمند بررسی');
+  });
+
+  it('idPrefix: tab ids and aria-controls are rendered only when a prefix is given', () => {
+    let tabs = Array.from(fixture.nativeElement.querySelectorAll('[role="tab"]')) as HTMLElement[];
+    expect(tabs[0].hasAttribute('id')).toBe(false);
+    expect(tabs[0].hasAttribute('aria-controls')).toBe(false);
+    host.idPrefix.set('st');
+    fixture.detectChanges();
+    tabs = Array.from(fixture.nativeElement.querySelectorAll('[role="tab"]')) as HTMLElement[];
+    expect(tabs[1].id).toBe('st-tab-approved');
+    expect(tabs[1].getAttribute('aria-controls')).toBe('st-panel-approved');
   });
 
   it('باید role="tablist" روی ظرف و role="tab" روی هر تب قرار دهد', () => {

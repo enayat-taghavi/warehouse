@@ -312,7 +312,7 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     expect(firstRowText).toContain('مدرک معتبر');
 
     // کارت موبایل: «پروژه‌ها» در جدول مشخصات و «وضعیت مدارک» در ردیف کامل
-    const card = el.querySelector('.block.md\\:hidden > div.p-4') as HTMLElement;
+    const card = el.querySelector('.block.xl\\:hidden > div.p-4') as HTMLElement;
     expect(card.querySelector('.grid app-company-projects-cell')?.textContent).toContain('پروژه‌ها:');
     expect(card.querySelector(':scope > app-company-documents-health-cell')?.textContent).toContain('وضعیت مدارک:');
     expect(card.textContent).toContain('مدرک معتبر');

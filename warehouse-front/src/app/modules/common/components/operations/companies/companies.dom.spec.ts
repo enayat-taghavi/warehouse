@@ -287,7 +287,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
       const badge = el.querySelector('.bg-indigo-50.text-indigo-700');
       expect(badge).not.toBeNull();
-      expect(badge?.textContent).toContain('2 شرکت');
+      expect(badge?.textContent).toContain('۲ شرکت');
     });
 
     it('باید سه دکمه آیکونی استاندارد (اکسل خروجی، اکسل ورودی، رفرش) با اندازه w-9 h-9 در هدر وجود داشته باشند', () => {
@@ -439,7 +439,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(component.companyModal.isOpen).toBe(true);
       expect(component.companyModal.isEdit).toBe(false);
 
-      const modalTitle = el.querySelector('h3');
+      const modalTitle = el.querySelector('h1[title]');
       expect(modalTitle?.textContent?.trim()).toContain('ثبت شرکت');
     });
 
@@ -1003,7 +1003,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(component.activeModalTab).toBe('identity');
 
       // بستن مودال استودیو با دکمه ✕ یا دکمه بازگشت به فهرست
-      const closeStudioBtn = (el.querySelector('button[title="بازگشت به فهرست شرکت‌ها"]') || el.querySelector('button[title="انصراف و بازگشت"]') || el.querySelector('.fixed.inset-0 button')) as HTMLButtonElement;
+      const closeStudioBtn = el.querySelector('button[aria-label="بازگشت به فهرست"]') as HTMLButtonElement;
       closeStudioBtn.click();
       await fixture.whenStable();
       fixture.detectChanges();
@@ -1170,6 +1170,123 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
     });
   });
 
+  describe('گام ۵. چیدمان موبایل هسته (ت۶، ت۷، A20، A23، A24، B3)', () => {
+    it('ت۶: هدر استودیو یک ذخیره و یک بازگشت دارد و فوتر تکراری حذف شده است؛ پنل تب به تب خودش وصل است', () => {
+      component.openEditModal(sampleCompanies[0]);
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelectorAll('button[appAction="save"]').length).toBe(1);
+      expect(el.querySelectorAll('button[aria-label="بازگشت به فهرست"]').length).toBe(1);
+      expect(el.querySelector('button[aria-label="انصراف و بازگشت"]')).toBeNull();
+      expect(el.querySelector('h1[title]')?.textContent?.trim()).toBe(sampleCompanies[0].name);
+      const panel = el.querySelector('[role="tabpanel"]#co-studio-panel-identity');
+      expect(panel?.getAttribute('aria-labelledby')).toBe('co-studio-tab-identity');
+      expect(el.querySelector('#co-studio-tab-identity')?.getAttribute('aria-controls')).toBe('co-studio-panel-identity');
+    });
+
+    it('A20: سرمایهٔ ثبتی با جداکنندهٔ فارسی نمایش داده و عدد در مدل ذخیره می‌شود؛ ورودی غیرعددی مدل را خراب نمی‌کند', () => {
+      component.openCreateModal();
+      component.setModalTab('identity');
+      fixture.detectChanges();
+      const input = fixture.nativeElement.querySelector('#co_registered_capital') as HTMLInputElement;
+      input.value = '۱۲۳۴۵۶7';
+      input.dispatchEvent(new Event('input'));
+      expect(component.companyModal.data.registered_capital).toBe(1234567);
+      expect(input.value).toBe(new Intl.NumberFormat('fa-IR').format(1234567));
+      input.value = input.value + 'abc';
+      input.dispatchEvent(new Event('input'));
+      expect(component.companyModal.data.registered_capital).toBe(1234567);
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+      expect(component.companyModal.data.registered_capital).toBeNull();
+    });
+
+    it('A23: combobox کاربران جستجوپذیر است، کاربر دارای دسترسی را نشان نمی‌دهد و با صفحه‌کلید انتخاب می‌شود', () => {
+      mockAccountsHttp.getUsers.mockReturnValue(of([
+        { id: 10, username: 'ali', first_name: 'علي', last_name: 'رضایی' },
+        { id: 11, username: 'sara', first_name: 'سارا', last_name: 'کریمی' },
+        { id: 12, username: 'reza', first_name: 'رضا', last_name: 'محمدی' },
+      ]));
+      component.openEditModal(sampleCompanies[0]);
+      component.studioAccesses = [{ id: 1, user: 12, company: 1, access_level: 'docs_read', is_default: false }];
+      component.setModalTab('access');
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      const combo = el.querySelector('#studio_user_combo') as HTMLInputElement;
+      combo.dispatchEvent(new Event('focus'));
+      fixture.detectChanges();
+      let options = Array.from(el.querySelectorAll('[role="option"]'));
+      expect(options.map(o => o.textContent)).toHaveLength(2);
+      expect(options.some(o => o.textContent?.includes('reza'))).toBe(false);
+
+      // «ي» عربی در داده با «ی» فارسی در جستجو یکسان است
+      combo.value = 'علی';
+      combo.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      options = Array.from(el.querySelectorAll('[role="option"]'));
+      expect(options).toHaveLength(1);
+
+      combo.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+      fixture.detectChanges();
+      expect(combo.getAttribute('aria-activedescendant')).toBe('studio_user_opt_0');
+      combo.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      fixture.detectChanges();
+      expect(component.studioSelectedUserId).toBe(10);
+      expect(component.isUserListOpen).toBe(false);
+
+      // نوشتن دوباره انتخاب را باطل می‌کند
+      combo.value = 'سا';
+      combo.dispatchEvent(new Event('input'));
+      expect(component.studioSelectedUserId).toBeNull();
+    });
+
+    it('A23: شکست دریافت کاربران پیام خطا و «تلاش دوباره» دارد، نه انتظار بی‌پایان', () => {
+      mockAccountsHttp.getUsers.mockReturnValue(throwError(() => ({ status: 500 })));
+      component.openEditModal(sampleCompanies[0]);
+      component.setModalTab('access');
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      const combo = el.querySelector('#studio_user_combo') as HTMLInputElement;
+      combo.dispatchEvent(new Event('focus'));
+      fixture.detectChanges();
+      const alert = el.querySelector('[role="alert"] button[aria-label="تلاش دوباره"]') as HTMLButtonElement;
+      expect(alert).not.toBeNull();
+      expect(el.textContent).not.toContain('در حال دریافت کاربران');
+      mockAccountsHttp.getUsers.mockReturnValueOnce(of([{ id: 11, username: 'sara', first_name: 'سارا', last_name: 'کریمی' }]));
+      alert.click();
+      fixture.detectChanges();
+      expect(el.querySelectorAll('[role="option"]')).toHaveLength(1);
+    });
+
+    it('A20: ویرایش وسط عدد نشانگر را به انتها نمی‌برد', () => {
+      component.openCreateModal();
+      component.setModalTab('identity');
+      fixture.detectChanges();
+      const input = fixture.nativeElement.querySelector('#co_shares_count') as HTMLInputElement;
+      input.focus();
+      input.value = '1234';
+      input.setSelectionRange(2, 2);
+      input.dispatchEvent(new Event('input'));
+      // «۱٬۲۳۴»: پس از دو رقم نخست، نشانگر پس از «۲» (جایگاه ۳) می‌ماند
+      expect(input.value).toBe(new Intl.NumberFormat('fa-IR').format(1234));
+      expect(input.selectionStart).toBe(3);
+    });
+
+    it('B3 و A24: دسترسی‌ها در موبایل کارت دارند و تاریخ انتساب شمسی نمایش داده می‌شود', () => {
+      component.openEditModal(sampleCompanies[0]);
+      component.studioAccesses = [{ id: 1, user: 12, company: 1, access_level: 'docs_read', is_default: true, username: 'reza', user_full_name: 'رضا محمدی', created_at: '2026-10-21T08:00:00Z' } as any];
+      component.setModalTab('access');
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      const card = el.querySelector('ul.xl\\:hidden li') as HTMLElement;
+      expect(card).not.toBeNull();
+      expect(card.textContent).toContain('رضا محمدی');
+      expect(card.textContent).not.toContain('2026-10-21');
+      expect(card.textContent).toContain('۱۴۰۵');
+      expect(card.querySelector('button[aria-label="لغو دسترسی"]')).not.toBeNull();
+    });
+  });
+
   describe('۱۳. ایزولاسیون کامل تک‌ماژول (Single-Module Zero-Trace Isolation - T2.5)', () => {
     it('در حالت فقط مالی (accounting-only): ستون سامانه انبار و چک‌باکس مودال شرکت باید پنهان باشند و tableColspan برابر ۱۰ باشد', () => {
       const registry = TestBed.inject(ModuleRegistryService);
@@ -1222,7 +1339,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       fixture.detectChanges();
 
       const el: HTMLElement = fixture.nativeElement;
-      const nominalInput = el.querySelector('input[placeholder="مثال: ۱۰,۰۰۰"]') as HTMLInputElement;
+      const nominalInput = el.querySelector('input[placeholder="مثال: ۱۰٬۰۰۰"]') as HTMLInputElement;
       expect(nominalInput).not.toBeNull();
 
       component.companyModal.data.share_nominal_value = 10000;
@@ -1236,9 +1353,9 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       fixture.detectChanges();
 
       const el: HTMLElement = fixture.nativeElement;
-      const branchCodeInput = el.querySelector('input[placeholder="مثال: ۲۲"]') as HTMLInputElement;
+      const branchCodeInput = el.querySelector('input[placeholder="22"]') as HTMLInputElement;
       const branchNameInput = el.querySelector('input[placeholder="مثال: شعبه ۲ شیراز"]') as HTMLInputElement;
-      const contractRowInput = el.querySelector('input[placeholder="مثال: ۰۰۰"]') as HTMLInputElement;
+      const contractRowInput = el.querySelector('input[placeholder="000"]') as HTMLInputElement;
       const employerNameInput = el.querySelector('input[placeholder="نام مدیرعامل یا شرکت در دیسکت"]') as HTMLInputElement;
 
       expect(branchCodeInput).not.toBeNull();

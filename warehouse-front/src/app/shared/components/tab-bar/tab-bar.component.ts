@@ -4,6 +4,7 @@ import {
   ElementRef,
   ViewChildren,
   QueryList,
+  afterRenderEffect,
   computed,
   input,
   output,
@@ -23,35 +24,42 @@ const TAB_COUNTER_TONE_CLASSES: Record<
   slate: { active: 'bg-slate-200 text-slate-700', inactive: 'bg-slate-200/80 text-slate-600' },
 };
 
-const FULL_LABEL_CLASSES: Record<'sm' | 'md' | 'lg' | 'xl', string> = {
+/** نقطهٔ شکست عنوان کامل؛ never: عنوان کامل فقط در title و نام دسترس‌پذیر می‌ماند (نوار تب‌های پرشمار) */
+export type FullLabelFrom = 'sm' | 'md' | 'lg' | 'xl' | 'never';
+
+const FULL_LABEL_CLASSES: Record<FullLabelFrom, string> = {
   sm: 'hidden sm:inline',
   md: 'hidden md:inline',
   lg: 'hidden lg:inline',
   xl: 'hidden xl:inline',
+  never: 'hidden',
 };
 
-const SHORT_LABEL_CLASSES: Record<'sm' | 'md' | 'lg' | 'xl', string> = {
+const SHORT_LABEL_CLASSES: Record<FullLabelFrom, string> = {
   sm: 'sm:hidden',
   md: 'md:hidden',
   lg: 'lg:hidden',
   xl: 'xl:hidden',
+  never: '',
 };
 
 // حالت mobile="icon": زیر sm فقط آیکون دیده می‌شود و عنوان کامل sr-only نام دسترس‌پذیر را می‌سازد؛
 // از sm تا fullLabelFrom عنوان کوتاه دیده می‌شود (تب فقط‌آیکون در دسکتاپ و تبلت ممنوع است، قاعده ۲ و ۵).
 // not-sr-only فاصله‌گذاری را normal می‌کند؛ whitespace-nowrap هم‌نقطه آن را برمی‌گرداند تا عنوان نشکند.
-const ICON_MODE_FULL_LABEL_CLASSES: Record<'sm' | 'md' | 'lg' | 'xl', string> = {
+const ICON_MODE_FULL_LABEL_CLASSES: Record<FullLabelFrom, string> = {
   sm: 'sr-only sm:not-sr-only sm:whitespace-nowrap',
   md: 'sr-only sm:hidden md:not-sr-only md:inline md:whitespace-nowrap',
   lg: 'sr-only sm:hidden lg:not-sr-only lg:inline lg:whitespace-nowrap',
   xl: 'sr-only sm:hidden xl:not-sr-only xl:inline xl:whitespace-nowrap',
+  never: 'sr-only sm:hidden',
 };
 
-const ICON_MODE_SHORT_LABEL_CLASSES: Record<'sm' | 'md' | 'lg' | 'xl', string> = {
+const ICON_MODE_SHORT_LABEL_CLASSES: Record<FullLabelFrom, string> = {
   sm: 'hidden',
   md: 'hidden sm:inline md:hidden',
   lg: 'hidden sm:inline lg:hidden',
   xl: 'hidden sm:inline xl:hidden',
+  never: 'hidden sm:inline',
 };
 
 export interface TabDef {
@@ -101,6 +109,8 @@ const TAB_INDICATOR_CLASSES: Record<'emerald' | 'amber' | 'rose', string> = {
           role="tab"
           [attr.aria-selected]="tab.id === active() ? 'true' : 'false'"
           [attr.tabindex]="tab.id === focusableTabId() ? 0 : -1"
+          [attr.id]="idPrefix() ? idPrefix() + '-tab-' + tab.id : null"
+          [attr.aria-controls]="idPrefix() ? idPrefix() + '-panel-' + tab.id : null"
           [attr.title]="mobile() === 'icon' ? tab.label : null"
           (click)="selectTab(tab.id)"
           (keydown)="onKeydown($event, idx)"
@@ -174,7 +184,13 @@ export class TabBarComponent {
   readonly mobile = input<'short' | 'icon'>('short');
 
   /** نقطه شکست برای نمایش برچسب کامل (پیش‌فرض sm؛ در تبلت یا صفحه‌های با سایدبار md یا lg یا xl) */
-  readonly fullLabelFrom = input<'sm' | 'md' | 'lg' | 'xl'>('sm');
+  readonly fullLabelFrom = input<FullLabelFrom>('sm');
+
+  /**
+   * پیشوند اختیاری شناسه‌ها: هر تب `{prefix}-tab-{id}` و `aria-controls="{prefix}-panel-{id}"` می‌گیرد،
+   * تا پنل صفحه با `role="tabpanel"` و `aria-labelledby` به تب خودش وصل شود.
+   */
+  readonly idPrefix = input<string>();
 
   readonly fullLabelClass = computed(() => FULL_LABEL_CLASSES[this.fullLabelFrom()] ?? FULL_LABEL_CLASSES.sm);
   readonly shortLabelClass = computed(() => SHORT_LABEL_CLASSES[this.fullLabelFrom()] ?? SHORT_LABEL_CLASSES.sm);
@@ -189,6 +205,25 @@ export class TabBarComponent {
   readonly activeChange = output<string>();
 
   @ViewChildren('tabButton') private tabButtons!: QueryList<ElementRef<HTMLButtonElement>>;
+
+  constructor() {
+    // نوار پرشمار درون خودش اسکرول می‌خورد؛ تب فعال (مثلاً از پیوند مستقیم) در دید نوار آورده می‌شود.
+    // فقط scrollLeft خود نوار تغییر می‌کند تا صفحه به‌طور عمودی جابه‌جا نشود.
+    afterRenderEffect(() => {
+      const activeId = this.active();
+      const index = this.tabs().findIndex((t) => t.id === activeId);
+      const button = this.tabButtons?.toArray()[index]?.nativeElement;
+      const list = button?.parentElement;
+      if (!button || !list || list.scrollWidth <= list.clientWidth) return;
+      const tabRect = button.getBoundingClientRect();
+      const listRect = list.getBoundingClientRect();
+      if (tabRect.left < listRect.left) {
+        list.scrollLeft += tabRect.left - listRect.left - 8;
+      } else if (tabRect.right > listRect.right) {
+        list.scrollLeft += tabRect.right - listRect.right + 8;
+      }
+    });
+  }
 
   indicatorClasses(ind: NonNullable<TabDef['indicator']>): string {
     const color = TAB_INDICATOR_CLASSES[ind.tone] ?? TAB_INDICATOR_CLASSES.amber;
