@@ -436,6 +436,54 @@ def scan_core_module_app_refs(backend_dir=BACKEND_DIR):
     return findings
 
 
+def discover_module_apps(backend_dir=BACKEND_DIR):
+    """اپ‌های جنگوی هر ماژول بک‌اند: {ماژول: {برچسب اپ، ...}} از پوشه‌های دارای apps.py."""
+    result = {}
+    modules_dir = backend_dir / "modules"
+    if not modules_dir.is_dir():
+        return result
+    for mod in sorted(p for p in modules_dir.iterdir() if p.is_dir() and not p.name.startswith(("_", "."))):
+        labels = {app.name for app in mod.iterdir() if app.is_dir() and (app / "apps.py").exists()}
+        if labels:
+            result[mod.name] = labels
+    return result
+
+
+def scan_cross_module_app_refs(backend_dir=BACKEND_DIR, module_apps=None):
+    """
+    ارجاع کد یک ماژول به اپ ماژول دیگر: ایمپورت (from/import) یا apps.is_installed/get_model.
+    تست‌ها و مایگریشن‌ها مستثنا هستند. رفتار مشترک باید از رجیستری پلتفرم (contribute) بیاید.
+    """
+    module_apps = module_apps if module_apps is not None else discover_module_apps(backend_dir)
+    findings = []
+    for mod, own in module_apps.items():
+        foreign = set().union(*[labels for m, labels in module_apps.items() if m != mod]) if len(module_apps) > 1 else set()
+        if not foreign:
+            continue
+        alt = "|".join(re.escape(x) for x in sorted(foreign))
+        rx = re.compile(
+            r"""(?:^\s*from\s+(?:""" + alt + r""")(?:\.|\s)|^\s*import\s+(?:""" + alt + r""")\b|apps\.(?:is_installed|get_model)\(\s*['"](?:""" + alt + r""")['"])"""
+        )
+        for p in sorted((backend_dir / "modules" / mod).rglob("*.py")):
+            parts = p.parts
+            if "tests" in parts or "migrations" in parts or p.name == "tests.py" or p.name.startswith("test_"):
+                continue
+            try:
+                text = p.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            for line_idx, line in enumerate(text.splitlines(), 1):
+                if line.lstrip().startswith("#"):
+                    continue
+                if rx.search(line):
+                    findings.append({
+                        "file": p.relative_to(backend_dir).as_posix(),
+                        "line": line_idx,
+                        "match": line.strip()[:160],
+                    })
+    return findings
+
+
 CORE_MODULE_LITERALS = frozenset({"warehouse", "finance", "personnel", "accounting"})
 
 
@@ -523,9 +571,23 @@ def run_literal_self_test():
         extra_unlisted = not check_core_literal_allowlist(found, {"backend": entries})[0]
         exact_ok = check_core_literal_allowlist([f for f in found if f["file"] != "app/b.py"], {"backend": entries})[0]
         stale_fails = not check_core_literal_allowlist(found[:1], {"backend": entries})[0]
+        # ارجاع بین‌ماژولی روی fixture: ایمپورت و get_model اپ ماژول دیگر شمرده، اپ خودی و توضیح نه
+        mods = Path(tmp) / "be"
+        (mods / "modules" / "alpha" / "aapp").mkdir(parents=True)
+        (mods / "modules" / "beta" / "bapp").mkdir(parents=True)
+        (mods / "modules" / "alpha" / "aapp" / "apps.py").write_text("", encoding="utf-8")
+        (mods / "modules" / "beta" / "bapp" / "apps.py").write_text("", encoding="utf-8")
+        (mods / "modules" / "alpha" / "aapp" / "x.py").write_text(
+            "from bapp.models import B\nfrom aapp.models import A\n# from bapp import z\n"
+            "M = apps.get_model('bapp', 'B')\nN = apps.get_model('aapp', 'A')\n",
+            encoding="utf-8",
+        )
+        cross = scan_cross_module_app_refs(mods)
+        cross_ok = len(cross) == 2
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import core_literal_allowlist
-    logic_ok = core_literal_allowlist.self_test()
+    logic_ok = core_literal_allowlist.self_test() and cross_ok
+    print(f"self-test cross_module_app_refs: found={len(cross)} (expected 2) -> {'PASS' if cross_ok else 'FAIL'}")
     allow_ok = exact_ok and extra_unlisted and stale_fails and logic_ok
     ok = baseline == 2 and unchanged_ok and extra_fails and allow_ok
     print(f"self-test core_module_literals: fixture={baseline} (expected 2), unchanged passes={unchanged_ok}, "
@@ -540,6 +602,7 @@ def build_snapshot(root_packages, rules, module_packages=None):
     composition = composition_root_counts(module_packages)
     core_refs = scan_core_module_app_refs(BACKEND_DIR)
     core_literals = scan_core_module_literals()
+    cross_refs = scan_cross_module_app_refs()
     counters = {
         "unique_direct_violations": len(data["unique_edges"]),
         "production_violations": len(data["production"]),
@@ -547,10 +610,11 @@ def build_snapshot(root_packages, rules, module_packages=None):
         "composition_root_hardcoded_lines": sum(len(v) for v in composition.values()),
         "core_module_app_refs": len(core_refs),
         "core_module_literals": len(core_literals),
+        "cross_module_app_refs": len(cross_refs),
     }
     for cid, edges in sorted(data["per_contract"].items()):
         counters["contract:" + cid] = len(edges)
-    return counters, data, composition, core_refs, core_literals
+    return counters, data, composition, core_refs, core_literals, cross_refs
 
 
 def load_baseline():
@@ -595,7 +659,7 @@ def main():
     parser, scratch_config, module_pkgs = get_effective_importlinter_config()
     root_packages = as_list(parser["importlinter"].get("root_packages", ""))
     rules = build_contract_rules(parser)
-    counters, data, composition, core_refs, core_literals = build_snapshot(root_packages, rules, module_pkgs)
+    counters, data, composition, core_refs, core_literals, cross_refs = build_snapshot(root_packages, rules, module_pkgs)
     lint_summary, lint_output = run_lint_imports(scratch_config)
     baseline = load_baseline()
 
@@ -639,6 +703,9 @@ def main():
         if key == "core_module_literals":
             # آچار مبنا ندارد: با فهرست مجاز دقیق سنجیده می‌شود (پایین)
             mark, note = "📏", "سنجش با فهرست مجاز دقیق"
+        elif key == "cross_module_app_refs":
+            # باید صفر بماند (پایین)
+            mark, note = "📏", "باید صفر باشد"
         elif previous is None:
             mark, note = "🆕", "مبنای جدید"
         elif value > previous:
@@ -674,6 +741,12 @@ def main():
 
     print("-" * 74)
     print(f"🔤 لیترال نام ماژول در هسته (core_module_literals): {len(core_literals)} مورد")
+    print("-" * 74)
+    print(f"🔀 ارجاع ماژول به اپ ماژول دیگر (cross_module_app_refs): {len(cross_refs)} مورد — باید صفر باشد")
+    if cross_refs:
+        passed = False
+        for item in cross_refs:
+            print(f"   ❌ {item['file']}:{item['line']} | {item['match']}")
     allow_ok, allow_msgs = check_core_literal_allowlist(core_literals)
     if allow_ok:
         print("   🟢 همه در scripts/e2e/core_literal_allowlist.json (بخش backend) با دسته و دلیل؛ ورودی کهنه نیست.")

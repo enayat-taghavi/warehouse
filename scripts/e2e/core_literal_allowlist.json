@@ -5,7 +5,7 @@
     "stored_value": "مقدار ذخیره‌شده در دیتابیس یا storage (app_module، app_scope، active_app_module، content type)",
     "protocol": "مقدار پروتکل سرور: هدر X-Active-App، کلید توکن wh_access_token_*، پارامتر query",
     "offline_db_lock": "قفل نام و قلمرو دیتابیس‌های آفلاین فعلی (IndexedDB) تا کش و صف کاربران از دست نرود",
-    "dev_tooling": "ابزار توسعه؛ فقط concurrency_stress_*"
+    "dev_tooling": "ابزار توسعه؛ فقط فایل‌های تست بار هم‌زمانی (concurrency_stress_* و concurrency-stress-*)"
   },
   "backend": [
     {
@@ -464,6 +464,27 @@
       "match": "warehouse",
       "category": "data_field",
       "reason": "نام فیلد FK انبار که در مقایسهٔ سه‌طرفهٔ تداخل نادیده گرفته می‌شود"
+    },
+    {
+      "file": "modules/common/components/audit/audit.ts",
+      "text": "{ key: 'warehouse', label: 'انبار', defaultChecked: true },",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "کلید ستون خروجی اکسل/PDF ممیزی (فیلد warehouse لاگ)"
+    },
+    {
+      "file": "modules/common/components/audit/audit.ts",
+      "text": "'index', 'id', 'user', 'warehouse', 'module', 'action', 'severity', 'target_repr', 'ip_address', 'changes_summary', 'created_at'",
+      "match": "warehouse",
+      "category": "data_field",
+      "reason": "ترتیب ستون‌های پیش‌فرض خروجی ممیزی (فیلد warehouse لاگ)"
+    },
+    {
+      "file": "modules/common/components/health-dashboard/concurrency-stress-scenarios.ts",
+      "text": "warehouseOnly: 'warehouse',",
+      "match": "warehouse",
+      "category": "dev_tooling",
+      "reason": "مقدار سناریوی API تست بار هم‌زمانی که concurrency_stress_service.py می‌پذیرد"
     }
   ]
 }

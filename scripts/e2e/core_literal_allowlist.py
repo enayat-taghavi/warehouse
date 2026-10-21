@@ -20,10 +20,10 @@ CATEGORIES = {
     "stored_value": "مقدار ذخیره‌شده در دیتابیس یا storage (app_module، app_scope، active_app_module، content type)",
     "protocol": "مقدار پروتکل سرور: هدر X-Active-App، کلید توکن wh_access_token_*، پارامتر query",
     "offline_db_lock": "قفل نام و قلمرو دیتابیس‌های آفلاین فعلی (IndexedDB) تا کش و صف کاربران از دست نرود",
-    "dev_tooling": "ابزار توسعه؛ فقط concurrency_stress_*",
+    "dev_tooling": "ابزار توسعه؛ فقط فایل‌های تست بار هم‌زمانی (concurrency_stress_* و concurrency-stress-*)",
 }
 
-DEV_TOOLING_PREFIX = "concurrency_stress_"
+DEV_TOOLING_PREFIXES = ("concurrency_stress_", "concurrency-stress-")
 
 
 def load_allowlist(path=None):
@@ -42,8 +42,8 @@ def validate_entries(entries):
         cat = e.get("category")
         if isinstance(cat, str) and cat not in CATEGORIES:
             errors.append(f"{where}: دستهٔ ناشناختهٔ «{cat}»")
-        if cat == "dev_tooling" and not pathlib.PurePosixPath(str(e.get("file", ""))).name.startswith(DEV_TOOLING_PREFIX):
-            errors.append(f"{where}: دستهٔ dev_tooling فقط برای فایل‌های {DEV_TOOLING_PREFIX}* مجاز است")
+        if cat == "dev_tooling" and not pathlib.PurePosixPath(str(e.get("file", ""))).name.startswith(DEV_TOOLING_PREFIXES):
+            errors.append(f"{where}: دستهٔ dev_tooling فقط برای فایل‌های {'/'.join(p + '*' for p in DEV_TOOLING_PREFIXES)} مجاز است")
     return errors
 
 
