@@ -28,6 +28,14 @@ try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 } catch {}
 
+/** کامپوننت‌های مشارکتی ماژول‌ها (ستون‌ها، تب‌ها و بخش‌ها) با import پویا چند چرخه بعد می‌رسند */
+async function flushLazy(fixture: ComponentFixture<unknown>): Promise<void> {
+  for (let i = 0; i < 10; i++) {
+    await new Promise(resolve => setTimeout(resolve, 20));
+    fixture.detectChanges();
+  }
+}
+
 /**
  * fixture در router-outlet نیست، پس ناوبری به /new و /:id نمونهٔ تازه نمی‌سازد.
  * این شبیه‌ساز همان کاری را می‌کند که paramMap و queryParamMap مسیر واقعی در نمونهٔ استودیو می‌کنند.
@@ -333,7 +341,8 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(firstRow.textContent).toContain('فعال جاری');
     });
 
-    it('باید ستون‌های شناسه ملی، مدیرعامل و تعداد پروژه‌ها با فرمت صحیح رندر شوند', () => {
+    it('باید ستون‌های شناسه ملی، مدیرعامل و تعداد پروژه‌ها با فرمت صحیح رندر شوند', async () => {
+      await flushLazy(fixture);
       const el: HTMLElement = fixture.nativeElement;
       const firstRow = el.querySelectorAll('tbody tr')[0];
 
@@ -342,7 +351,8 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(firstRow.textContent).toContain('2 پروژه');
     });
 
-    it('ردیف دوم که شرکت فعال جاری نیست نباید نشان «فعال جاری» داشته باشد', () => {
+    it('ردیف دوم که شرکت فعال جاری نیست نباید نشان «فعال جاری» داشته باشد', async () => {
+      await flushLazy(fixture);
       const el: HTMLElement = fixture.nativeElement;
       const secondRow = el.querySelectorAll('tbody tr')[1];
 
@@ -652,16 +662,13 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
   });
 
   describe('۶. امنیت و گارد حذف شرکت (Delete Guard & Active Projects Invariant)', () => {
-    it('تلاش برای حذف شرکتی که پروژه فعال دارد (projects_count > 0) باید با پیام خطای قرمز مسدود شود', () => {
+    it('هسته دادهٔ پروژه‌ها (حسابداری) را پیش از حذف نمی‌سنجد؛ رد حذف با PROTECT بک‌اند است (C4)', () => {
       const companyWithProjects = sampleCompanies[0]; // projects_count: 2
-      expect(companyWithProjects.projects_count).toBeGreaterThan(0);
-
       component.confirmDelete(companyWithProjects);
       fixture.detectChanges();
 
-      expect(component.deleteModal.isOpen).toBe(false);
-      expect(mockToast.error).toHaveBeenCalledWith('این شرکت دارای 2 پروژه فعال است و امکان حذف آن وجود ندارد.');
-      expect(mockCompanyApi.delete).not.toHaveBeenCalled();
+      expect(component.deleteModal.isOpen).toBe(true);
+      expect(mockToast.error).not.toHaveBeenCalled();
     });
 
     it('حذف شرکت بدون پروژه باید مودال تایید حذف را باز کند و با تایید حذف شود', () => {
@@ -710,52 +717,17 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(component.activeModalTab).toBe('treasury');
     });
 
-    it('باز کردن مودال ویرایش یک شرکت باید اسناد آرشیو آن شرکت را بارگذاری کند', () => {
+    it('باز کردن استودیوی شرکت، بخش بایگانی ماژول را می‌سازد و شمارندهٔ تب مدارک از آن می‌آید', async () => {
       mockCompanyApi.getDocuments.mockReturnValue(of([
         { id: 1, title: 'اساسنامه ثبتی', document_type: 'articles_of_association', file_url: '/media/test.pdf' }
       ]));
 
       component.openEditModal(sampleCompanies[0]);
       fixture.detectChanges();
+      await flushLazy(fixture);
 
       expect(mockCompanyApi.getDocuments).toHaveBeenCalledWith({ company_id: 1 });
-      expect(component.companyDocuments.length).toBe(1);
-      expect(component.companyDocuments[0].title).toBe('اساسنامه ثبتی');
-    });
-
-    it('ثبت مدرک جدید بدون انتخاب فایل یا عنوان باید با پیام هشدار متوقف شود', () => {
-      component.openEditModal(sampleCompanies[0]);
-      fixture.detectChanges();
-
-      // بدون فایل
-      component.uploadNewDocument();
-      expect(mockToast.warning).toHaveBeenCalledWith('لطفاً فایل مدرک را انتخاب فرمایید.');
-      expect(mockCompanyApi.createDocument).not.toHaveBeenCalled();
-
-      // با فایل اما بدون عنوان
-      const fakeFile = new File(['dummy'], 'sample.pdf', { type: 'application/pdf' });
-      component.newDoc.file = fakeFile;
-      component.newDoc.title = '';
-      component.uploadNewDocument();
-      expect(mockToast.warning).toHaveBeenCalledWith('لطفاً عنوان مدرک را وارد فرمایید.');
-      expect(mockCompanyApi.createDocument).not.toHaveBeenCalled();
-    });
-
-    it('ثبت مدرک جدید با مشخصات معتبر باید سرویس createDocument را با FormData فراخوانی کند', () => {
-      component.openEditModal(sampleCompanies[0]);
-      fixture.detectChanges();
-
-      const fakeFile = new File(['dummy content'], 'tax_sheet.pdf', { type: 'application/pdf' });
-      component.newDoc.file = fakeFile;
-      component.newDoc.title = 'برگ تشخیص مالیاتی';
-      component.newDoc.document_type = 'tax_sheet' as any;
-      component.newDoc.issue_date = '1405/01/15';
-
-      component.uploadNewDocument();
-      fixture.detectChanges();
-
-      expect(mockCompanyApi.createDocument).toHaveBeenCalled();
-      expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('برگ تشخیص مالیاتی'));
+      expect(component.modalTabs.find(t => t.id === 'documents')?.count).toBe(1);
     });
 
     it('ستون وضعیت مدارک باید بر اساس documents_health_status برچسب مناسب نمایش دهد', () => {
@@ -795,18 +767,16 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       component.onBoardExpiryDateSelect('1405/08/30');
       expect(component.companyModal.data.board_term_expiry).toBe('1405/08/30');
     });
-
-    it('متدهای صدور و انقضای اسناد باید تاریخ‌های مدرک جدید را شمسی تنظیم کنند', () => {
-      component.onDocIssueDateSelect('1404/01/01');
-      expect(component.newDoc.issue_date).toBe('1404/01/01');
-
-      component.onDocExpiryDateSelect('1405/01/01');
-      expect(component.newDoc.expiry_date).toBe('1405/01/01');
-    });
   });
 
   describe('۱۰. پیش‌نمایش درجا (In-Place Lightbox Preview) و فیلتر اسناد', () => {
-    it('متد openPreview باید برای فایل‌های PDF پرچم isPdf را true کند و عنوان مدرک را ست کند', () => {
+    // پیش‌نمایش سند مادر (اساسنامه) در لایت‌باکس مشترک
+    const openCoreDoc = (doc: any) => {
+      component.companyModal.data.articles_of_association = doc.file_url;
+      component.openCoreDocPreview('articles_of_association', doc.title);
+    };
+
+    it('پیش‌نمایش سند مادر برای فایل‌های PDF پرچم isPdf را true کند و عنوان مدرک را ست کند', () => {
       const doc = {
         id: 1,
         company: 1,
@@ -816,7 +786,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
         file_url: '/media/documents/sample.pdf'
       } as any;
 
-      component.openPreview(doc);
+      openCoreDoc(doc);
       expect(component.docPreview!.previewModal.isOpen).toBe(true);
       expect(component.docPreview!.previewModal.title).toBe('اساسنامه رسمی');
       expect(component.docPreview!.previewModal.isPdf).toBe(true);
@@ -825,7 +795,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(component.docPreview!.previewModal.isOpen).toBe(false);
     });
 
-    it('متد openPreview برای فایل‌های تصویری (png, jpg) باید isPdf را false کند', () => {
+    it('پیش‌نمایش سند مادر برای فایل‌های تصویری (png, jpg) باید isPdf را false کند', () => {
       const doc = {
         id: 2,
         company: 1,
@@ -835,7 +805,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
         file_url: '/media/documents/sample.jpg'
       } as any;
 
-      component.openPreview(doc);
+      openCoreDoc(doc);
       expect(component.docPreview!.previewModal.isOpen).toBe(true);
       expect(component.docPreview!.previewModal.isPdf).toBe(false);
       expect(component.docPreview!.previewModal.isImage).toBe(true);
@@ -853,7 +823,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
         file: '/media/documents/statute.pdf',
         file_url: '/media/documents/statute.pdf'
       } as any;
-      component.openPreview(doc);
+      openCoreDoc(doc);
       fixture.detectChanges();
 
       const el: HTMLElement = fixture.nativeElement;
@@ -874,7 +844,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
         file: '/media/documents/sample.pdf',
         file_url: '/media/documents/sample.pdf'
       } as any;
-      component.openPreview(doc);
+      openCoreDoc(doc);
       expect(component.docPreview!.previewModal.isOpen).toBe(true);
 
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
@@ -1055,20 +1025,12 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       fixture.detectChanges();
       const listRow = el.querySelector('tbody tr') as HTMLTableRowElement;
 
-      // ۷. تست دکمه «حذف» در سطر جدول: ابتدا تست گارد مسدودکننده (به دلیل وجود ۲ پروژه فعال)
+      // ۷. تست دکمه «حذف» در سطر جدول: مودال تأیید باز می‌شود (بررسی پروژه‌ها با بک‌اند است، C4)
       const deleteRowBtn = Array.from(listRow.querySelectorAll('button')).find(b => b.textContent?.includes('حذف')) as HTMLButtonElement;
       expect(deleteRowBtn).not.toBeNull();
       deleteRowBtn.click();
       fixture.detectChanges();
-      expect(mockToast.error).toHaveBeenCalledWith('این شرکت دارای 2 پروژه فعال است و امکان حذف آن وجود ندارد.');
-      expect(component.deleteModal.isOpen).toBe(false);
-
-      // تست مودال حذف برای شرکتی بدون پروژه
-      component.filteredCompanies[0].projects_count = 0;
-      fixture.detectChanges();
-
-      deleteRowBtn.click();
-      fixture.detectChanges();
+      expect(mockToast.error).not.toHaveBeenCalled();
       expect(component.deleteModal.isOpen).toBe(true);
 
       // کلیک انصراف از حذف
@@ -1114,35 +1076,6 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
     beforeEach(() => {
       component.openEditModal(sampleCompanies[0]);
       fixture.detectChanges();
-    });
-
-    it('بارگذاری مدرک جدید باید بلافاصله مدرک را در companyDocuments و filteredDocuments قرار دهد', () => {
-      component.newDoc = {
-        title: 'گواهی صلاحیت جدید',
-        document_type: 'contractor_qualification',
-        file: new File(['content'], 'certificate.pdf', { type: 'application/pdf' }),
-        issue_date: '1403/01/01',
-        expiry_date: '1405/01/01',
-        is_confidential: false,
-        description: 'تست آپلود درجا'
-      };
-
-      mockCompanyApi.createDocument.mockReturnValue(of({
-        id: 88,
-        company: 1,
-        title: 'گواهی صلاحیت جدید',
-        document_type: 'contractor_qualification',
-        file: '/media/certificate.pdf',
-        file_size: 1024,
-        is_confidential: false
-      }));
-
-      component.uploadNewDocument();
-      fixture.detectChanges();
-
-      expect(component.companyDocuments.some(d => d.id === 88)).toBe(true);
-      expect(component.filteredDocuments.some(d => d.id === 88)).toBe(true);
-      expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('با موفقیت در آرشیو ثبت شد'));
     });
 
     it('افزودن دسترسی کاربر در استودیو باید بلافاصله ردیف دسترسی را در studioAccesses درج کند', () => {
@@ -1324,94 +1257,6 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(component.companyModal.data.contract_row).toBe('000');
       expect(component.companyModal.data.employer_name).toBe('شرکت پاینده توان ساینا');
     });
-
-    it('دوره‌های مالی رسمی باید در جدول تب ۲ رندر شده و عملیات ایجاد، انجماد، بستن و بازگشایی سال مالی به درستی فراخوانی شوند', async () => {
-      component.openEditModal(sampleCompanies[0]);
-      component.setModalTab('fiscal_insurance');
-      fixture.detectChanges();
-
-      expect(mockCompanyApi.getFiscalPeriods).toHaveBeenCalledWith(1);
-      expect(component.companyFiscalPeriods.length).toBe(1);
-
-      const el: HTMLElement = fixture.nativeElement;
-      expect(el.textContent).toContain('دوره‌های مالی رسمی و وضعیت بستن سال‌ها');
-      expect(el.textContent).toContain('سال مالی ۱۴۰۳');
-      expect(el.textContent).toContain('جاری و باز');
-
-      // تست ایجاد دوره مالی جدید
-      component.openCreateFiscalPeriod();
-      fixture.detectChanges();
-      expect(component.showFiscalPeriodForm).toBe(true);
-
-      component.newFiscalPeriod.fiscal_year = '1404';
-      component.newFiscalPeriod.title = 'سال مالی ۱۴۰۴';
-      component.newFiscalPeriod.start_date = '1404/01/01';
-      component.newFiscalPeriod.end_date = '1404/12/29';
-      component.saveFiscalPeriod();
-      fixture.detectChanges();
-
-      expect(mockCompanyApi.createFiscalPeriod).toHaveBeenCalledWith(expect.objectContaining({
-        company: 1,
-        fiscal_year: '1404',
-        title: 'سال مالی ۱۴۰۴'
-      }));
-      expect(component.showFiscalPeriodForm).toBe(false);
-
-      // تست انجماد سال مالی
-      const period = component.companyFiscalPeriods[0];
-      await component.freezeFiscalPeriod(period);
-      expect(mockCompanyApi.freezeFiscalPeriod).toHaveBeenCalledWith(period.id);
-      expect(period.status).toBe('frozen');
-
-      // تست بستن سال مالی
-      await component.closeFiscalPeriod(period);
-      expect(mockCompanyApi.closeFiscalPeriod).toHaveBeenCalledWith(period.id);
-      expect(period.status).toBe('closed');
-      // A10: بستن قطعی با پرسش تأیید نوع danger
-      expect(mockConfirmDialog.open).toHaveBeenCalledWith(expect.objectContaining({ type: 'danger' }));
-
-      // تست بازگشایی سال مالی
-      await component.reopenFiscalPeriod(period);
-      expect(mockCompanyApi.reopenFiscalPeriod).toHaveBeenCalledWith(period.id);
-      expect(period.status).toBe('open');
-
-      // A10: با «انصراف» در پرسش تأیید، کاری اجرا نمی‌شود
-      mockConfirmDialog.open.mockResolvedValueOnce(false);
-      mockCompanyApi.closeFiscalPeriod.mockClear();
-      await component.closeFiscalPeriod(period);
-      expect(mockCompanyApi.closeFiscalPeriod).not.toHaveBeenCalled();
-      expect(period.status).toBe('open');
-    });
-  });
-
-  describe('۱۱. اعتبارسنجی پرچم صریح providesTreasury در ماژول مدیریت شرکت‌ها', () => {
-    it('باید isAccountingInstalled بر اساس پرچم providesTreasury تعیین شود و وابسته به tabs نباشد', () => {
-      const registry = TestBed.inject(ModuleRegistryService);
-
-      // حالت ۱: ماژولی که tabs دارد اما providesTreasury ندارد یا false است
-      vi.spyOn(registry, 'getExtensions').mockReturnValue([
-        {
-          moduleCode: 'custom',
-          extension: {
-            tabs: ['custom-tab-1', 'custom-tab-2'],
-            providesTreasury: false
-          }
-        } as any
-      ]);
-      expect(component.isAccountingInstalled).toBe(false);
-
-      // حالت ۲: ماژول مالی که providesTreasury را true کرده است
-      vi.spyOn(registry, 'getExtensions').mockReturnValue([
-        {
-          moduleCode: 'accounting',
-          extension: {
-            tabs: ['bank-accounts', 'board-members', 'documents', 'fiscal-periods'],
-            providesTreasury: true
-          }
-        } as any
-      ]);
-      expect(component.isAccountingInstalled).toBe(true);
-    });
   });
 
   describe('۱۴. قرارداد تب‌ها و بخش‌های مشارکتی استودیو (§۵-۱، §۵-۲، §۵-۴)', () => {
@@ -1419,11 +1264,13 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
     let tabLoader: ReturnType<typeof vi.fn>;
     let savedTabLoader: ReturnType<typeof vi.fn>;
     let sectionLoader: ReturnType<typeof vi.fn>;
+    let cellLoader: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
       tabLoader = vi.fn().mockResolvedValue(TestContribTabComponent);
       savedTabLoader = vi.fn().mockResolvedValue(TestContribTabComponent);
       sectionLoader = vi.fn().mockResolvedValue(TestContribSectionComponent);
+      cellLoader = vi.fn().mockResolvedValue(TestContribCellComponent);
       const registry = TestBed.inject(ModuleRegistryService);
       vi.spyOn(registry, 'getExtensions').mockImplementation(((point: string) => point === 'companies' ? [{
         moduleCode: 'test-mod',
@@ -1433,9 +1280,16 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
             { id: 'x_tab', labelFa: 'تب آزمایشی', shortLabelFa: 'آزمایشی', icon: 'database', order: 30, requiresSavedCompany: false, loadComponent: tabLoader },
             { id: 'identity', labelFa: 'هم‌نام هسته', shortLabelFa: 'هم‌نام', icon: 'x', order: 1, requiresSavedCompany: false, loadComponent: tabLoader }
           ],
-          studioSections: [{ slot: 'documents', order: 10, loadComponent: sectionLoader }]
+          studioSections: [{ slot: 'documents', order: 10, loadComponent: sectionLoader }],
+          listCells: [{ id: 'x_cell', labelFa: 'ستون آزمایشی', order: 10, cardPlacement: 'grid', loadComponent: cellLoader }],
+          rowActions: [{ id: 'x_action', labelFa: 'اقدام آزمایشی', icon: 'cloud', tab: 'x_tab' }]
         }
       }] : []) as any);
+    });
+
+    // ModuleRegistryService تکین است؛ جاسوس getExtensions نباید به آزمون بعدی (و beforeEach بیرونی آن) برسد
+    afterEach(() => {
+      vi.restoreAllMocks();
     });
 
     it('تب مشارکتی به ترتیب order میان تب‌های هسته می‌نشیند و تب هم‌نام هسته نادیده گرفته می‌شود', () => {
@@ -1537,6 +1391,65 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(el.querySelector('.contrib-tab')).not.toBeNull();
     });
 
+    it('ستون مشارکتی (listCells) در جدول و کارت موبایل با ورودی company و variant رندر می‌شود', async () => {
+      component.viewMode = 'list';
+      fixture.detectChanges();
+      await flush();
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      const headers = Array.from(el.querySelectorAll('thead th')).map(th => th.textContent?.trim());
+      expect(headers).toContain('ستون آزمایشی');
+      expect(component.tableColspan).toBe(9);
+      const cells = Array.from(el.querySelectorAll('.contrib-cell')).map(c => c.textContent?.trim());
+      expect(cells).toContain('سلول PTS table');
+      expect(cells).toContain('سلول PTS card');
+      // کامپوننت سلول یک بار برای همهٔ ردیف‌ها بارگذاری می‌شود
+      expect(cellLoader).toHaveBeenCalledTimes(1);
+    });
+
+    it('دکمهٔ مشارکتی ردیف (rowActions) با یک ناوبری تب مقصد را باز می‌کند و برای ردیف در انتظار ارسال غیرفعال است', () => {
+      component.viewMode = 'list';
+      component.companies = [...sampleCompanies, { id: -5, code: 'Q', name: 'در صف', is_active: true, _offlinePending: true } as any];
+      component.applyFilter();
+      fixture.detectChanges();
+
+      const el: HTMLElement = fixture.nativeElement;
+      const actions = Array.from(el.querySelectorAll('tbody button[aria-label="اقدام آزمایشی"]')) as HTMLButtonElement[];
+      expect(actions.length).toBe(3);
+      expect(actions[2].disabled).toBe(true);
+      navigateSpy.mockClear();
+      actions[0].click();
+      expect(navigateSpy).toHaveBeenCalledTimes(1);
+      expect(navigateSpy).toHaveBeenCalledWith(['/app/operations/companies', 1], { queryParams: { tab: 'x_tab' } });
+    });
+
+    it('تب renderOnlyWhenActive فقط وقتی باز است ساخته می‌شود و با بستن تب از بین می‌رود', async () => {
+      const liveLoader = vi.fn().mockResolvedValue(TestContribTabComponent);
+      const registry = TestBed.inject(ModuleRegistryService);
+      vi.spyOn(registry, 'getExtensions').mockImplementation(((point: string) => point === 'companies' ? [{
+        moduleCode: 'test-mod-3',
+        extension: { studioTabs: [{ id: 'live_tab', labelFa: 'تب زنده', shortLabelFa: 'زنده', icon: 'cloud', order: 70, requiresSavedCompany: true, hiddenUntilSaved: true, renderOnlyWhenActive: true, loadComponent: liveLoader }] }
+      }] : []) as any);
+      component.setupStudioForCompany(1);
+      fixture.detectChanges();
+      await flush();
+      fixture.detectChanges();
+      expect(liveLoader).not.toHaveBeenCalled();
+
+      component.setModalTab('live_tab');
+      fixture.detectChanges();
+      await flush();
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(liveLoader).toHaveBeenCalledTimes(1);
+      expect(el.querySelector('.contrib-tab')?.textContent).toContain('شرکت 1');
+
+      component.setModalTab('identity');
+      fixture.detectChanges();
+      expect(el.querySelector('.contrib-tab')).toBeNull();
+    });
+
     it('فرم ذخیره‌نشدهٔ کامپوننت مشارکتی (registerDirty) هشدار خروج را فعال می‌کند', () => {
       component.setupStudioForCompany(1);
       expect(component.hasUnsavedChanges()).toBe(false);
@@ -1568,4 +1481,14 @@ class TestContribTabComponent {
 })
 class TestContribSectionComponent {
   @Input() companyId: number | null = null;
+}
+
+@Component({
+  selector: 'app-test-contrib-cell',
+  standalone: true,
+  template: '<span class="contrib-cell">سلول {{ company?.code }} {{ variant }}</span>'
+})
+class TestContribCellComponent {
+  @Input() company: Company | null = null;
+  @Input() variant: 'table' | 'card' = 'table';
 }

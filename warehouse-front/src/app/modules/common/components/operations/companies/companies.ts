@@ -1,13 +1,4 @@
-import { CompaniesFacade } from './companies.facade';
 import {
-  COMPANY_DOCUMENT_TYPES_LIST,
-  getFiscalPeriodStatusBadge,
-  getFiscalPeriodStatusLabel,
-  getEmptyFiscalPeriodData,
-  getEmptyDocData,
-  getDocStatusClass,
-  getDocStatusLabel,
-  filterCompanyDocuments,
   isNationalIdChecksumValid,
   buildCompanyPayload
 } from './companies.helpers';
@@ -28,14 +19,11 @@ import { WebSocketService } from '../../../../../core/http/websocket.service';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';
 import { NetworkStatusService } from '../../../../../core/services/network-status.service';
 import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
-import { CompanyStudioSection, CompanyStudioTab } from '../../../../../core/modules/module-contract';
+import { CompanyListCell, CompanyRowAction, CompanyStudioSection, CompanyStudioTab } from '../../../../../core/modules/module-contract';
 import { CompanyStudioContextService } from '../../../../../core/services/company-studio-context.service';
 import { DocumentPreviewComponent } from '../../../../../shared/components/document-preview/document-preview.component';
 import {
   Company,
-  CompanyDocument,
-  CompanyDocumentType,
-  CompanyFiscalPeriod,
   UserCompanyAccess,
   CompanyAccessLevel
 } from '../../../../../core/models/company.model';
@@ -47,22 +35,17 @@ import { OfflinePendingBadgeComponent } from '../../../../../shared/components/o
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
-import { CompanyGdriveTabComponent } from './company-gdrive-tab/company-gdrive-tab';
 import { ServerUrlPipe } from '../../../../../shared/pipes/server-url.pipe';
-import { ExternalLinkDirective } from '../../../../../shared/directives/external-link.directive';
 
 @Component({
   selector: 'app-companies-management',
   standalone: true,
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, CompanyGdriveTabComponent, ServerUrlPipe, ExternalLinkDirective, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent],
-  providers: [CompaniesFacade, CompanyStudioContextService],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent],
+  providers: [CompanyStudioContextService],
   templateUrl: './companies.html',
   styleUrls: ['./companies.css']
 })
 export class CompaniesManagementComponent implements OnInit, OnDestroy {
-  private facade = inject(CompaniesFacade);
-  /** تب‌هایی که داده‌شان در حسابداری است (بانک، هیئت‌مدیره، گوگل‌درایو). در تب مدارک فقط بایگانی حسابداری پنهان می‌شود. */
-  private static readonly ACCOUNTING_TABS = ['gdrive'];
   private static readonly LIST_URL = '/app/operations/companies';
   /** فیلدهای فرم شرکت که در تب «بیمه و مالی» هستند؛ بقیه در تب هویتی‌اند (برای نشان خطای تب) */
   private static readonly FISCAL_TAB_FIELDS = [
@@ -140,66 +123,9 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   // مدیریت باز/بسته بودن پاپ‌اورهای تقویم جلالی
   isRegDatePickerOpen = false;
   isBoardDatePickerOpen = false;
-  isDocIssueDatePickerOpen = false;
-  isDocExpiryDatePickerOpen = false;
-  isFiscalStartDatePickerOpen = false;
-  isFiscalEndDatePickerOpen = false;
 
   // کنترل‌های فرم تقویم شمسی جلالی (Reactive FormControls برای عملکرد بی‌نقص ng-persian-datepicker)
   regDateControl = new FormControl('');
-  docIssueDateControl = new FormControl('');
-  docExpiryDateControl = new FormControl('');
-  fiscalStartControl = new FormControl('');
-  fiscalEndControl = new FormControl('');
-
-  // فهرست انواع اسناد و مدارک رسمی
-  readonly documentTypesList: { value: CompanyDocumentType; label: string }[] = [
-    { value: 'statute', label: 'اساسنامه شرکت' },
-    { value: 'establishment_gazette', label: 'روزنامه رسمی تأسیس' },
-    { value: 'changes_gazette', label: 'روزنامه رسمی آخرین تغییرات هیئت‌مدیره' },
-    { value: 'auditors_gazette', label: 'روزنامه رسمی تمدید بازرسان' },
-    { value: 'capital_gazette', label: 'روزنامه رسمی تغییرات سرمایه و آدرس' },
-    { value: 'vat_certificate', label: 'گواهی ثبت‌نام ارزش افزوده' },
-    { value: 'tax_clearance', label: 'مفاصاحساب مالیاتی / بیمه‌ای' },
-    { value: 'commercial_card', label: 'کارت بازرگانی' },
-    { value: 'contractor_qualification', label: 'گواهی رتبه‌بندی / صلاحیت پیمانکاری (ساجار)' },
-    { value: 'labor_safety_certificate', label: 'گواهی صلاحیت ایمنی پیمانکاران (اداره کار)' },
-    { value: 'operating_license', label: 'پروانه بهره‌برداری / جواز فعالیت' },
-    { value: 'lease_contract', label: 'سند مالکیت / اجاره‌نامه رسمی' },
-    { value: 'master_agreement', label: 'قرارداد مادر یا تفاهم‌نامه' },
-    { value: 'other', label: 'سایر مدارک و اسناد رسمی' },
-  ];
-
-  // مدیریت آرشیو مدارک شرکت
-  companyDocuments: CompanyDocument[] = [];
-  filteredDocuments: CompanyDocument[] = [];
-  docSearchQuery = '';
-  selectedDocTypeFilter = '';
-  isLoadingDocuments = false;
-  isUploadingDoc = false;
-
-  newDoc: {
-    document_type: CompanyDocumentType;
-    title: string;
-    file: File | null;
-    issue_date: string;
-    expiry_date: string;
-    is_confidential: boolean;
-    description: string;
-  } = this.getEmptyDocData();
-
-  // مدیریت دوره‌های مالی رسمی شرکت (CompanyFiscalPeriod)
-  companyFiscalPeriods: CompanyFiscalPeriod[] = [];
-  isLoadingFiscalPeriods = false;
-  isSavingFiscalPeriod = false;
-  showFiscalPeriodForm = false;
-  newFiscalPeriod = {
-    fiscal_year: '',
-    title: '',
-    start_date: '',
-    end_date: '',
-    notes: ''
-  };
 
   // سطوح دسترسی سه‌گانه به شرکت
   readonly accessLevelsList: { value: CompanyAccessLevel; label: string; desc: string }[] = [
@@ -385,8 +311,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   }
 
   private hasPendingSubForms(): boolean {
-    if (this.showFiscalPeriodForm) return true;
-    if (this.newDoc.file || this.newDoc.title.trim()) return true;
     return !!this.studioSelectedUserId;
   }
 
@@ -432,13 +356,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
           if (msg.entity_type === 'company') {
             this.reloadListIfVisible();
-          } else if (msg.entity_type === 'company_bank_account' || msg.entity_type === 'company_board_member') {
-            // تب‌های مشارکتی دادهٔ خودشان را تازه می‌کنند؛ فهرست (ستون‌های حسابداری) فقط وقتی دیده می‌شود
-            this.reloadListIfVisible();
-          } else if (msg.entity_type === 'company_document') {
-            if (this.companyModal.isOpen && currentCompanyId && (!targetCompanyId || targetCompanyId === currentCompanyId)) {
-              this.loadCompanyDocuments(currentCompanyId);
-            }
+          } else if (msg.entity_type === 'company_bank_account' || msg.entity_type === 'company_board_member' || msg.entity_type === 'company_document') {
+            // تب‌ها و بخش‌های مشارکتی دادهٔ خودشان را تازه می‌کنند؛ فهرست (ستون‌های مشارکتی) فقط وقتی دیده می‌شود
             this.reloadListIfVisible();
           } else if (msg.entity_type === 'company_access') {
             if (this.companyModal.isOpen && currentCompanyId && (!targetCompanyId || targetCompanyId === currentCompanyId)) {
@@ -461,15 +380,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
           this.companies = (data as any).results;
           this.applyFilter();
         }
-      } else if (this.companyApi.matchesCompanyUrl(url, 'documents')) {
-        if (this.companyModal.isOpen && currentCompanyId && url.includes(`company_id=${currentCompanyId}`)) {
-          if (Array.isArray(data)) {
-            this.companyDocuments = data;
-          } else if (data && Array.isArray((data as any).results)) {
-            this.companyDocuments = (data as any).results;
-          }
-          this.applyDocumentFilters();
-        }
       } else if (url.includes('/user-company-access/')) {
         if (this.companyModal.isOpen && currentCompanyId && url.includes(`company_id=${currentCompanyId}`)) {
           if (Array.isArray(data)) {
@@ -486,18 +396,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   private setupDateControls(): void {
     this.regDateControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
       this.companyModal.data.registration_date = val || '';
-    });
-    this.docIssueDateControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
-      this.newDoc.issue_date = val || '';
-    });
-    this.docExpiryDateControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
-      this.newDoc.expiry_date = val || '';
-    });
-    this.fiscalStartControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
-      this.newFiscalPeriod.start_date = val || '';
-    });
-    this.fiscalEndControl.valueChanges.pipe(takeUntil(this.destroy$)).subscribe((val) => {
-      this.newFiscalPeriod.end_date = val || '';
     });
   }
 
@@ -608,24 +506,61 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  /** در نصب «فقط انبار» تب‌ها و بخش‌های حسابداری شرکت پنهان‌اند */
-  get isAccountingInstalled(): boolean {
-    return this.moduleRegistry.getExtensions('companies').some(e => e.extension.providesTreasury === true);
-  }
-
   /** در نصب «فقط مالی» ستون‌ها، فیلدها و تب‌های انبارداری شرکت پنهان‌اند */
   get isWarehouseInstalled(): boolean {
     return this.moduleRegistry.getExtensions('companies').some(e => e.extension.hasWarehouseModuleToggle);
   }
 
-  /** تعداد ستون‌های پویا: ۸ پایه + ۲ حسابداری + ۱ انبار */
+  /** تعداد ستون‌های پویا: ۸ پایه + ستون‌های مشارکتی + ۱ انبار */
   get tableColspan(): number {
-    return 8 + (this.isAccountingInstalled ? 2 : 0) + (this.isWarehouseInstalled ? 1 : 0);
+    return 8 + this.listCells.length + (this.isWarehouseInstalled ? 1 : 0);
+  }
+
+  private _listContribKey = '';
+  private _listCells: CompanyListCell[] = [];
+  private _cardGridCells: CompanyListCell[] = [];
+  private _cardRowCells: CompanyListCell[] = [];
+  private _rowActions: CompanyRowAction[] = [];
+
+  /** ستون‌ها و دکمه‌های ردیفِ مشارکتی فهرست، یک بار برای هر مجموعهٔ ماژول‌های نصب‌شده (کش برای ردیابی پایدار ngFor) */
+  private refreshListContributions(): void {
+    const exts = this.moduleRegistry.getExtensions('companies');
+    const key = exts.map(e => e.moduleCode).join(',');
+    if (key === this._listContribKey) return;
+    this._listContribKey = key;
+    this._listCells = exts.flatMap(e => e.extension.listCells || []).sort((a, b) => a.order - b.order);
+    this._cardGridCells = this._listCells.filter(c => c.cardPlacement === 'grid');
+    this._cardRowCells = this._listCells.filter(c => c.cardPlacement !== 'grid');
+    this._rowActions = exts.flatMap(e => e.extension.rowActions || []);
+  }
+
+  /** ستون‌های مشارکتی جدول دسکتاپ (listCells) به ترتیب order */
+  get listCells(): CompanyListCell[] {
+    this.refreshListContributions();
+    return this._listCells;
+  }
+
+  /** سلول‌های مشارکتی کارت موبایل در جدول دوستونی مشخصات */
+  get cardGridCells(): CompanyListCell[] {
+    this.refreshListContributions();
+    return this._cardGridCells;
+  }
+
+  /** سلول‌های مشارکتی کارت موبایل در ردیف کامل زیر مشخصات */
+  get cardRowCells(): CompanyListCell[] {
+    this.refreshListContributions();
+    return this._cardRowCells;
+  }
+
+  /** دکمه‌های مشارکتی ردیف فهرست که تبی از استودیو را باز می‌کنند */
+  get rowActions(): CompanyRowAction[] {
+    this.refreshListContributions();
+    return this._rowActions;
   }
 
   /** جای تب‌های هسته؛ تب مشارکتی با `order` خودش میان آن‌ها می‌نشیند (§۵-۴) */
   private static readonly CORE_TAB_ORDER: Record<string, number> = {
-    identity: 10, fiscal_insurance: 20, documents: 50, access: 60, gdrive: 70
+    identity: 10, fiscal_insurance: 20, documents: 50, access: 60
   };
 
   private _contributedTabsKey = '';
@@ -678,8 +613,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   private isTabAvailable(tab: string): boolean {
     const contributed = this.contributedTab(tab);
     if (contributed) return !(contributed.hiddenUntilSaved && !this.hasSavedCompany);
-    return tab in CompaniesManagementComponent.CORE_TAB_ORDER
-      && (this.isAccountingInstalled || !CompaniesManagementComponent.ACCOUNTING_TABS.includes(tab));
+    return tab in CompaniesManagementComponent.CORE_TAB_ORDER;
   }
 
   // ═════════════════════════════════════════════════════════════════════
@@ -723,7 +657,9 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     const contributedKey = contributed
       .map(t => `${t.id}:${this.studioContext.count(t.id) ?? ''}:${this.studioContext.hasError(t.id)}`)
       .join('|');
-    const key = `${this.isAccountingInstalled}_${this.companyDocuments.length}_${this.studioAccesses.length}_${this.companyModal.isEdit}_${[...errorTabs].join(',')}_${contributedKey}`;
+    // شمارندهٔ تب «مدارک» از بخش مشارکتی بایگانی (studioSections) از راه context می‌آید
+    const documentsCount = this.studioContext.count('documents');
+    const key = `${documentsCount ?? ''}_${this.studioAccesses.length}_${[...errorTabs].join(',')}_${contributedKey}`;
     if (this._modalTabsKey === key && this._cachedModalTabs.length > 0) {
       return this._cachedModalTabs;
     }
@@ -733,11 +669,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       { id: 'identity', label: 'مشخصات هویتی و ثبتی', shortLabel: 'هویتی', icon: 'building', indicator: errorTabs.has('identity') ? errorIndicator : undefined },
       { id: 'fiscal_insurance', label: 'سال مالی، بیمه و مودیان', shortLabel: 'بیمه و مالی', icon: 'file-check', indicator: errorTabs.has('fiscal_insurance') ? errorIndicator : undefined },
     ];
-    tabs.push({ id: 'documents', label: 'بایگانی مدارک', shortLabel: 'مدارک', icon: 'book', count: this.companyDocuments.length || undefined });
+    tabs.push({ id: 'documents', label: 'بایگانی مدارک', shortLabel: 'مدارک', icon: 'book', count: documentsCount });
     tabs.push({ id: 'access', label: 'دسترسی کاربران', shortLabel: 'دسترسی', icon: 'shield', count: this.studioAccesses.length || undefined });
-    if (this.companyModal.isEdit && this.isAccountingInstalled) {
-      tabs.push({ id: 'gdrive', label: 'همگام‌سازی گوگل‌درایو', shortLabel: 'گوگل‌درایو', icon: 'google-drive' });
-    }
     // تب‌های مشارکتی ماژول‌ها با شمارنده و نشان خطای context، به ترتیب order میان تب‌های هسته
     const order = (id: string) => CompaniesManagementComponent.CORE_TAB_ORDER[id] ?? contributed.find(t => t.id === id)?.order ?? 0;
     for (const t of contributed) {
@@ -790,8 +723,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     const id = this.companyModal.data.id;
     if (!id) return;
     switch (tab) {
-      case 'fiscal_insurance': this.loadCompanyFiscalPeriods(id); break;
-      case 'documents': this.loadCompanyDocuments(id); break;
       case 'access': this.loadStudioAccesses(id); break;
     }
   }
@@ -809,10 +740,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       });
     }
     this.cdr.markForCheck();
-  }
-
-  openGoogleDriveModal(company: Company): void {
-    this.openEditModal(company, 'gdrive');
   }
 
   /** دسترسی کاربران فقط در تب «دسترسی» استودیو مدیریت می‌شود (ت۴) */
@@ -833,22 +760,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     const val = typeof event === 'string' ? event : (event?.shamsi || event?.gregorian || '');
     this.companyModal.data.board_term_expiry = val;
     this.isBoardDatePickerOpen = false;
-    this.cdr.markForCheck();
-  }
-
-  onDocIssueDateSelect(event: any): void {
-    const val = typeof event === 'string' ? event : (event?.shamsi || event?.gregorian || '');
-    this.newDoc.issue_date = val;
-    this.docIssueDateControl.setValue(val, { emitEvent: false });
-    this.isDocIssueDatePickerOpen = false;
-    this.cdr.markForCheck();
-  }
-
-  onDocExpiryDateSelect(event: any): void {
-    const val = typeof event === 'string' ? event : (event?.shamsi || event?.gregorian || '');
-    this.newDoc.expiry_date = val;
-    this.docExpiryDateControl.setValue(val, { emitEvent: false });
-    this.isDocExpiryDatePickerOpen = false;
     this.cdr.markForCheck();
   }
 
@@ -947,16 +858,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.logoPreviewUrl = null;
     this.isLogoCleared = false;
     this.activeModalTab = 'identity';
-    this.companyDocuments = [];
-    this.filteredDocuments = [];
-    this.companyFiscalPeriods = [];
     this.studioAccesses = [];
-    this.showFiscalPeriodForm = false;
-    this.newFiscalPeriod = this.getEmptyFiscalPeriodData();
-    this.newDoc = this.getEmptyDocData();
     this.regDateControl.setValue('', { emitEvent: false });
-    this.docIssueDateControl.setValue('', { emitEvent: false });
-    this.docExpiryDateControl.setValue('', { emitEvent: false });
     this.companyModal = {
       isOpen: true,
       isEdit: false,
@@ -1054,10 +957,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.isQueuedCreate = false;
     this.isQueuedSave = false;
     this.tabLoadError = {};
-    this.newDoc = this.getEmptyDocData();
     this.regDateControl.setValue(company.registration_date || '', { emitEvent: false });
-    this.docIssueDateControl.setValue('', { emitEvent: false });
-    this.docExpiryDateControl.setValue('', { emitEvent: false });
 
     this.companyModal = {
       isOpen: true,
@@ -1074,10 +974,9 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       this.pendingLogoFromNavigation = null;
     }
 
-    // دادهٔ همهٔ تب‌ها یک بار برای هر شرکت دریافت می‌شود (برای شمارندهٔ تب‌ها)؛ کلیک تب دوباره دریافت نمی‌کند
+    // دادهٔ تب دسترسی یک بار برای هر شرکت دریافت می‌شود (برای شمارندهٔ تب)؛ کلیک تب دوباره دریافت نمی‌کند.
+    // تب‌ها و بخش‌های مشارکتی دادهٔ خودشان را با ورودی companyId می‌گیرند.
     if (company.id) {
-      this.loadCompanyFiscalPeriods(company.id);
-      this.loadCompanyDocuments(company.id);
       this.loadStudioAccesses(company.id);
     }
 
@@ -1127,316 +1026,20 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.studioSnapshot = null;
     this.selectedLogoFile = null;
     this.logoPreviewUrl = null;
-    this.companyDocuments = [];
-    this.filteredDocuments = [];
-    this.companyFiscalPeriods = [];
     this.studioAccesses = [];
-    this.showFiscalPeriodForm = false;
-    this.isFiscalStartDatePickerOpen = false;
-    this.isFiscalEndDatePickerOpen = false;
     this.isRegDatePickerOpen = false;
     this.isBoardDatePickerOpen = false;
-    this.isDocIssueDatePickerOpen = false;
-    this.isDocExpiryDatePickerOpen = false;
     this.cdr.markForCheck();
   }
 
-  // ═════════════════════════════════════════════════════════════════════
-  // مدیریت دوره‌های مالی رسمی شرکت (CompanyFiscalPeriod)
-  // ═════════════════════════════════════════════════════════════════════
-  loadCompanyFiscalPeriods(companyId: number): void {
-    if (!this.isAccountingInstalled) return;
-    this.isLoadingFiscalPeriods = true;
-    this.tabLoadError['fiscal_insurance'] = false;
-    this.facade.getFiscalPeriods(companyId).subscribe({
-      next: (res) => {
-        this.isLoadingFiscalPeriods = false;
-        if (Array.isArray(res)) {
-          this.companyFiscalPeriods = res;
-        } else if (res && Array.isArray((res as any).results)) {
-          this.companyFiscalPeriods = (res as any).results;
-        } else {
-          this.companyFiscalPeriods = [];
-        }
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.isLoadingFiscalPeriods = false;
-        this.tabLoadError['fiscal_insurance'] = true;
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  openCreateFiscalPeriod(): void {
-    this.newFiscalPeriod = this.getEmptyFiscalPeriodData();
-    this.fiscalStartControl.setValue('', { emitEvent: false });
-    this.fiscalEndControl.setValue('', { emitEvent: false });
-    this.showFiscalPeriodForm = true;
-    this.cdr.markForCheck();
-  }
-
-  cancelCreateFiscalPeriod(): void {
-    this.showFiscalPeriodForm = false;
-    this.newFiscalPeriod = this.getEmptyFiscalPeriodData();
-    this.fiscalStartControl.setValue('', { emitEvent: false });
-    this.fiscalEndControl.setValue('', { emitEvent: false });
-    this.cdr.markForCheck();
-  }
-
-  onFiscalStartSelect(event: any): void {
-    const val = typeof event === 'string' ? event : (event?.shamsi || event?.gregorian || '');
-    this.newFiscalPeriod.start_date = val;
-    this.fiscalStartControl.setValue(val, { emitEvent: false });
-    this.isFiscalStartDatePickerOpen = false;
-    this.cdr.markForCheck();
-  }
-
-  onFiscalEndSelect(event: any): void {
-    const val = typeof event === 'string' ? event : (event?.shamsi || event?.gregorian || '');
-    this.newFiscalPeriod.end_date = val;
-    this.fiscalEndControl.setValue(val, { emitEvent: false });
-    this.isFiscalEndDatePickerOpen = false;
-    this.cdr.markForCheck();
-  }
-
-  saveFiscalPeriod(): void {
-    if (!this.companyModal.data.id) return;
-    if (!this.newFiscalPeriod.fiscal_year.trim()) {
-      this.toast.warning('لطفاً سال مالی (مثال: ۱۴۰۳) را وارد فرمایید.');
-      return;
-    }
-    if (!this.newFiscalPeriod.title.trim()) {
-      this.toast.warning('لطفاً عنوان دوره مالی را وارد فرمایید.');
-      return;
-    }
-    if (!this.newFiscalPeriod.start_date || !this.newFiscalPeriod.end_date) {
-      this.toast.warning('لطفاً تاریخ شروع و پایان دوره مالی را تعیین فرمایید.');
-      return;
-    }
-    if (this.newFiscalPeriod.start_date > this.newFiscalPeriod.end_date) {
-      this.toast.warning('تاریخ پایان دوره مالی نمی‌تواند قبل از تاریخ آغاز آن باشد.');
-      return;
-    }
-
-    this.isSavingFiscalPeriod = true;
-    const payload: Partial<CompanyFiscalPeriod> = {
-      company: this.companyModal.data.id,
-      fiscal_year: this.newFiscalPeriod.fiscal_year.trim(),
-      title: this.newFiscalPeriod.title.trim(),
-      start_date: this.newFiscalPeriod.start_date,
-      end_date: this.newFiscalPeriod.end_date,
-      notes: this.newFiscalPeriod.notes.trim() || null
-    };
-
-    this.facade.createFiscalPeriod(payload).subscribe({
-      next: (created) => {
-        this.isSavingFiscalPeriod = false;
-        this.toast.success(`دوره مالی «${created.title}» با موفقیت تعریف شد.`);
-        this.cancelCreateFiscalPeriod();
-        this.companyFiscalPeriods = [created, ...this.companyFiscalPeriods.filter(p => p.id !== created.id)];
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.isSavingFiscalPeriod = false;
-        const msg = err.error?.detail || err.error?.fiscal_year?.[0] || 'خطا در تعریف دوره مالی جدید';
-        this.toast.error(msg);
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  /**
-   * بستن، انجماد و بازگشایی دوره‌های مالی کارهای حساس‌اند: فقط برخط (رد سرور در صف دیده نمی‌شود)
-   * و با پرسش تأیید که پیامد هر کار را می‌گوید.
-   */
-  async closeFiscalPeriod(period: CompanyFiscalPeriod): Promise<void> {
-    if (!period.id || !this.requireOnline('بستن دورهٔ مالی')) return;
-    const ok = await this.confirmAction({
-      title: 'بستن قطعی دورهٔ مالی',
-      message: `با بستن «${period.title}»، ثبت و ویرایش سند در این دوره متوقف می‌شود تا وقتی که دوباره بازگشایی شود.`,
-      type: 'danger',
-      confirmText: 'بستن قطعی'
-    });
-    if (!ok) return;
-    this.facade.closeFiscalPeriod(period.id).subscribe({
-      next: () => {
-        this.toast.success(`دوره مالی «${period.title}» با موفقیت بسته شد.`);
-        period.status = 'closed';
-        period.status_display = 'بسته شده رسمی';
-        this.companyFiscalPeriods = [...this.companyFiscalPeriods];
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.toast.error(err.error?.detail || 'خطا در بستن دوره مالی');
-      }
-    });
-  }
-
-  async freezeFiscalPeriod(period: CompanyFiscalPeriod): Promise<void> {
-    if (!period.id || !this.requireOnline('انجماد دورهٔ مالی')) return;
-    const ok = await this.confirmAction({
-      title: 'انجماد دورهٔ مالی',
-      message: `با انجماد «${period.title}»، ثبت سند تازه در این دوره تا بازگشایی متوقف می‌شود.`,
-      type: 'warning',
-      confirmText: 'انجماد دوره'
-    });
-    if (!ok) return;
-    this.facade.freezeFiscalPeriod(period.id).subscribe({
-      next: () => {
-        this.toast.success(`دوره مالی «${period.title}» منجمد شد.`);
-        period.status = 'frozen';
-        period.status_display = 'منجمد شده';
-        this.companyFiscalPeriods = [...this.companyFiscalPeriods];
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.toast.error(err.error?.detail || 'خطا در انجماد دوره مالی');
-      }
-    });
-  }
-
-  async reopenFiscalPeriod(period: CompanyFiscalPeriod): Promise<void> {
-    if (!period.id || !this.requireOnline('بازگشایی دورهٔ مالی')) return;
-    const ok = await this.confirmAction({
-      title: 'بازگشایی دورهٔ مالی',
-      message: `با بازگشایی «${period.title}»، ثبت و ویرایش سند در این دوره دوباره ممکن می‌شود.`,
-      type: 'warning',
-      confirmText: 'بازگشایی دوره'
-    });
-    if (!ok) return;
-    this.facade.reopenFiscalPeriod(period.id).subscribe({
-      next: () => {
-        this.toast.success(`دوره مالی «${period.title}» مجدداً بازگشایی شد.`);
-        period.status = 'open';
-        period.status_display = 'جاری و باز';
-        this.companyFiscalPeriods = [...this.companyFiscalPeriods];
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.toast.error(err.error?.detail || 'خطا در بازگشایی دوره مالی');
-      }
-    });
-  }
-
-  getFiscalPeriodStatusBadge(status?: string): string {
-    switch (status) {
-      case 'open':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'frozen':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'closed':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
-      default:
-        return 'bg-slate-100 text-slate-600 border-slate-200';
-    }
-  }
-
-  getFiscalPeriodStatusLabel(status?: string): string {
-    switch (status) {
-      case 'open':
-        return 'جاری و باز';
-      case 'frozen':
-        return 'منجمد شده';
-      case 'closed':
-        return 'بسته شده رسمی';
-      default:
-        return status || '—';
-    }
-  }
-
-  private getEmptyFiscalPeriodData() {
-    return {
-      fiscal_year: '',
-      title: '',
-      start_date: '',
-      end_date: '',
-      notes: ''
-    };
-  }
-
-  // بارگذاری اسناد آرشیو شرکت
-  loadCompanyDocuments(companyId: number): void {
-    if (!this.isAccountingInstalled) return;
-    this.isLoadingDocuments = true;
-    this.tabLoadError['documents'] = false;
-    this.facade.getDocuments({ company_id: companyId }).subscribe({
-      next: (res) => {
-        this.isLoadingDocuments = false;
-        if (Array.isArray(res)) {
-          this.companyDocuments = res;
-        } else if (res && Array.isArray((res as any).results)) {
-          this.companyDocuments = (res as any).results;
-        } else {
-          this.companyDocuments = [];
-        }
-        this.applyDocumentFilters();
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.isLoadingDocuments = false;
-        this.tabLoadError['documents'] = true;
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  // فیلتر زنده مدارک بر اساس جستجو و نوع مدرک
-  applyDocumentFilters(): void {
-    let docs = [...this.companyDocuments];
-    if (this.selectedDocTypeFilter) {
-      docs = docs.filter(d => d.document_type === this.selectedDocTypeFilter);
-    }
-    if (this.docSearchQuery.trim()) {
-      const q = this.docSearchQuery.trim().toLowerCase();
-      docs = docs.filter(d =>
-        (d.title && d.title.toLowerCase().includes(q)) ||
-        (d.description && d.description.toLowerCase().includes(q)) ||
-        (d.document_type_display && d.document_type_display.toLowerCase().includes(q))
-      );
-    }
-    this.filteredDocuments = docs;
-    this.cdr.markForCheck();
-  }
-
-  onDocFilterChange(): void {
-    this.applyDocumentFilters();
-  }
-
-  clearDocFilter(): void {
-    this.docSearchQuery = '';
-    this.selectedDocTypeFilter = '';
-    this.applyDocumentFilters();
-  }
-
-  // پیش‌نمایش درجا (In-Place Preview) در لایت‌باکس مشترک
-  openPreview(doc: CompanyDocument): void {
-    const url = doc.file_url || doc.file;
-    if (!url) {
-      this.toast.warning('فایل مدرک در دسترس نیست.');
-      return;
-    }
-    this.docPreview?.open({ title: doc.title, url });
-  }
-
-  // پیش‌نمایش مدارک اصلی (اساسنامه و روزنامه رسمی)
+  // پیش‌نمایش مدارک اصلی (اساسنامه و روزنامه رسمی) در لایت‌باکس مشترک
   openCoreDocPreview(docKey: 'articles_of_association' | 'latest_gazette', title: string): void {
     const url = this.companyModal.data[docKey];
     if (!url) {
       this.toast.warning(`فایل ${title} هنوز بارگذاری نشده است.`);
       return;
     }
-    const dummyDoc: CompanyDocument = {
-      id: 0,
-      company: this.companyModal.data.id || 0,
-      document_type: docKey === 'articles_of_association' ? 'statute' : 'changes_gazette',
-      title,
-      file: url,
-      file_url: url,
-      file_size: 0,
-      is_confidential: false
-    };
-    this.openPreview(dummyDoc);
+    this.docPreview?.open({ title, url });
   }
 
   downloadFile(url?: string | null, filename?: string): void {
@@ -1459,83 +1062,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     const remainder = sum % 11;
     const calculated = remainder === 10 ? 0 : remainder;
     return calculated === checkDigit;
-  }
-
-  // ═════════════════════════════════════════════════════════════════════
-
-  onDocFileSelected(event: any): void {
-    const file = event.target?.files?.[0];
-    if (file) {
-      this.newDoc.file = file;
-    }
-  }
-
-  uploadNewDocument(): void {
-    if (!this.companyModal.data.id) {
-      this.toast.warning('لطفاً ابتدا شرکت را ذخیره فرمایید.');
-      return;
-    }
-    if (!this.newDoc.file) {
-      this.toast.warning('لطفاً فایل مدرک را انتخاب فرمایید.');
-      return;
-    }
-    if (!this.newDoc.title.trim()) {
-      this.toast.warning('لطفاً عنوان مدرک را وارد فرمایید.');
-      return;
-    }
-    if (this.newDoc.issue_date && this.newDoc.expiry_date && this.newDoc.issue_date > this.newDoc.expiry_date) {
-      this.toast.warning('تاریخ انقضای مدرک نمی‌تواند قبل از تاریخ صدور آن باشد.');
-      return;
-    }
-
-    this.isUploadingDoc = true;
-    const formData = new FormData();
-    formData.append('company', String(this.companyModal.data.id));
-    formData.append('document_type', this.newDoc.document_type);
-    formData.append('title', this.newDoc.title.trim());
-    formData.append('file', this.newDoc.file);
-    if (this.newDoc.issue_date) formData.append('issue_date', this.newDoc.issue_date);
-    if (this.newDoc.expiry_date) formData.append('expiry_date', this.newDoc.expiry_date);
-    formData.append('is_confidential', String(this.newDoc.is_confidential));
-    if (this.newDoc.description) formData.append('description', this.newDoc.description);
-
-    this.facade.createDocument(formData).subscribe({
-      next: (created) => {
-        this.isUploadingDoc = false;
-        this.toast.success(`مدرک «${created.title}» با موفقیت در آرشیو ثبت شد.`);
-        this.newDoc = this.getEmptyDocData();
-        this.docIssueDateControl.setValue('', { emitEvent: false });
-        this.docExpiryDateControl.setValue('', { emitEvent: false });
-        this.companyDocuments = [created, ...this.companyDocuments.filter(d => d.id !== created.id)];
-        this.applyDocumentFilters();
-        this.reloadListIfVisible();
-        this.cdr.markForCheck();
-      },
-      error: (err) => {
-        this.isUploadingDoc = false;
-        const msg = err.error?.detail || err.error?.file?.[0] || 'خطا در بارگذاری مدرک';
-        this.toast.error(msg);
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  async deleteCompanyDocument(doc: CompanyDocument): Promise<void> {
-    const ok = await this.askConfirm(
-      'حذف مدرک رسمی',
-      `آیا از حذف مدرک «${doc.title}» اطمینان دارید؟`
-    );
-    if (!ok) return;
-    this.facade.deleteDocument(doc.id).subscribe({
-      next: () => {
-        this.toast.success('مدرک با موفقیت حذف شد.');
-        this.companyDocuments = this.companyDocuments.filter(d => d.id !== doc.id);
-        this.applyDocumentFilters();
-        this.reloadListIfVisible();
-        this.cdr.markForCheck();
-      },
-      error: () => this.toast.error('خطا در حذف مدرک')
-    });
   }
 
   onCoreDocSelected(event: any, docType: 'articles_of_association' | 'latest_gazette'): void {
@@ -1568,32 +1094,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     });
-  }
-
-  formatBytes(bytes?: number): string {
-    if (!bytes || bytes === 0) return '—';
-    const k = 1024;
-    const sizes = ['بایت', 'کیلوبایت', 'مگابایت', 'گیگابایت'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  }
-
-  getDocStatusClass(status?: string): string {
-    switch (status) {
-      case 'valid': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'expiring_soon': return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'expired': return 'bg-rose-50 text-rose-700 border-rose-200';
-      default: return 'bg-slate-100 text-slate-600 border-slate-200';
-    }
-  }
-
-  getDocStatusLabel(status?: string): string {
-    switch (status) {
-      case 'valid': return 'معتبر';
-      case 'expiring_soon': return 'نزدیک انقضا';
-      case 'expired': return 'منقضی شده';
-      default: return 'بدون سررسید';
-    }
   }
 
   /** فیلدهای شناسه‌ای: رقم فارسی و عربی هنگام تایپ لاتین می‌شود (ت۷) */
@@ -1871,10 +1371,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     }
     // حذف آبشاری است و پیش از آن باید اثر حذف دیده شود؛ در صف آفلاین نمی‌رود
     if (!this.requireOnline('حذف شرکت')) return;
-    if (company.projects_count && company.projects_count > 0) {
-      this.toast.error(`این شرکت دارای ${company.projects_count} پروژه فعال است و امکان حذف آن وجود ندارد.`);
-      return;
-    }
     this.deleteModal = {
       isOpen: true,
       target: company,
@@ -2091,26 +1587,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       latest_gazette: null,
       is_active: true,
       has_warehouse_module: true
-    };
-  }
-
-  private getEmptyDocData(): {
-    document_type: CompanyDocumentType;
-    title: string;
-    file: File | null;
-    issue_date: string;
-    expiry_date: string;
-    is_confidential: boolean;
-    description: string;
-  } {
-    return {
-      document_type: 'statute',
-      title: '',
-      file: null,
-      issue_date: '',
-      expiry_date: '',
-      is_confidential: false,
-      description: ''
     };
   }
 }

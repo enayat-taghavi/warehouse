@@ -11,13 +11,13 @@ import { of, Subject } from 'rxjs';
 import { signal } from '@angular/core';
 
 import { CompanyGdriveTabComponent, GDriveConfigResponse } from './company-gdrive-tab';
-import { CompanyApiService } from '../../../../../../core/api/company-api.service';
-import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
-import { ModuleRegistryService } from '../../../../../../core/modules/module-registry.service';
-import { ToastService } from '../../../../../../shared/components/toast/toast.component';
-import { AuthService } from '../../../../../../core/auth/auth.service';
-import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { environment } from '../../../../../../../environments/environment';
+import { CompanyApiService } from '../../../../../core/api/company-api.service';
+import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
+import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
+import { ToastService } from '../../../../../shared/components/toast/toast.component';
+import { AuthService } from '../../../../../core/auth/auth.service';
+import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { environment } from '../../../../../../environments/environment';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());

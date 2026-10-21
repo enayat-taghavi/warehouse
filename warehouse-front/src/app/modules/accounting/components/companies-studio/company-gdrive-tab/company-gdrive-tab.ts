@@ -17,20 +17,20 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
-import { CompanyApiService } from '../../../../../../core/api/company-api.service';
-import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
-import { ModuleRegistryService } from '../../../../../../core/modules/module-registry.service';
-import { ToastService } from '../../../../../../shared/components/toast/toast.component';
-import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
-import { AuthService } from '../../../../../../core/auth/auth.service';
-import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { isServerUnreachable } from '../../../../../../core/services/server-reachability';
-import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
-import { LoadingSkeletonComponent } from '../../../../../../shared/components/loading-skeleton/loading-skeleton.component';
-import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
-import { openExternal } from '../../../../../../core/platform/external-link';
-import { isNativePlatform } from '../../../../../../core/platform/platform';
-import { ExternalLinkDirective } from '../../../../../../shared/directives/external-link.directive';
+import { CompanyApiService } from '../../../../../core/api/company-api.service';
+import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
+import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
+import { ToastService } from '../../../../../shared/components/toast/toast.component';
+import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
+import { AuthService } from '../../../../../core/auth/auth.service';
+import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { isServerUnreachable } from '../../../../../core/services/server-reachability';
+import { PersianDatePipe } from '../../../../../shared/pipes/persian-date.pipe';
+import { LoadingSkeletonComponent } from '../../../../../shared/components/loading-skeleton/loading-skeleton.component';
+import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
+import { openExternal } from '../../../../../core/platform/external-link';
+import { isNativePlatform } from '../../../../../core/platform/platform';
+import { ExternalLinkDirective } from '../../../../../shared/directives/external-link.directive';
 
 export interface GDriveConfigResponse {
   company_id: number;

@@ -234,11 +234,10 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
             {
               module: { code: isAccountingInstalledFlag ? 'accounting' : 'warehouse' },
               moduleCode: isAccountingInstalledFlag ? 'accounting' : 'warehouse',
+              // تب‌ها، بخش‌ها، ستون‌ها و دکمهٔ ردیف همان ثبت واقعی ماژول حسابداری‌اند
               extension: {
-                providesTreasury: isAccountingInstalledFlag,
-                hasWarehouseModuleToggle: true,
-                // تب‌های بانک و هیئت‌مدیره همان ثبت واقعی ماژول حسابداری‌اند (studioTabs)
-                studioTabs: isAccountingInstalledFlag ? ACCOUNTING_MODULE.extensions?.companies?.studioTabs : undefined
+                ...(isAccountingInstalledFlag ? ACCOUNTING_MODULE.extensions?.companies : {}),
+                hasWarehouseModuleToggle: true
               }
             }
           ];
@@ -296,18 +295,44 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     TestBed.resetTestingModule();
   });
 
-  it('با نصب حسابداری: ستون‌های «پروژه‌ها» و «سلامت مدارک» در جدول رندر می‌شوند', async () => {
+  it('با نصب حسابداری: ستون‌های «پروژه‌ها» و «سلامت مدارک» (listCells) در جدول و کارت موبایل رندر می‌شوند', async () => {
     await setupTestBed(true);
-    expect(component.isAccountingInstalled).toBe(true);
+    // سلول‌ها تنبل بارگذاری می‌شوند
+    await flush();
+    fixture.detectChanges();
 
     const el: HTMLElement = fixture.nativeElement;
     const headers = Array.from(el.querySelectorAll('thead th')).map(th => th.textContent?.trim());
     expect(headers).toContain('پروژه‌ها');
     expect(headers).toContain('سلامت مدارک');
+    expect(component.tableColspan).toBe(11);
 
     const firstRowText = el.querySelector('tbody tr:first-child')?.textContent || '';
     expect(firstRowText).toContain('2 پروژه');
     expect(firstRowText).toContain('مدرک معتبر');
+
+    // کارت موبایل: «پروژه‌ها» در جدول مشخصات و «وضعیت مدارک» در ردیف کامل
+    const card = el.querySelector('.block.md\\:hidden > div.p-4') as HTMLElement;
+    expect(card.querySelector('.grid app-company-projects-cell')?.textContent).toContain('پروژه‌ها:');
+    expect(card.querySelector(':scope > app-company-documents-health-cell')?.textContent).toContain('وضعیت مدارک:');
+    expect(card.textContent).toContain('مدرک معتبر');
+    expect(el.textContent).toContain('در آستانه انقضا (1)');
+  });
+
+  it('با نصب حسابداری: دکمهٔ گوگل‌درایو ردیف (rowActions) تب گوگل‌درایو استودیو را باز می‌کند؛ بدون حسابداری دکمه‌ای نیست', async () => {
+    await setupTestBed(true);
+    const el: HTMLElement = fixture.nativeElement;
+    const router = TestBed.inject(Router);
+    const gdriveBtn = el.querySelector('tbody button[aria-label="گوگل‌درایو"]') as HTMLButtonElement;
+    expect(gdriveBtn).not.toBeNull();
+    expect(gdriveBtn.getAttribute('title')).toBe('تنظیمات همگام‌سازی گوگل‌درایو');
+    gdriveBtn.click();
+    expect(router.navigate).toHaveBeenCalledWith(['/app/operations/companies', 1], { queryParams: { tab: 'gdrive' } });
+    expect(component.activeModalTab).toBe('gdrive');
+
+    await setupTestBed(false);
+    expect(fixture.nativeElement.querySelector('button[aria-label="گوگل‌درایو"]')).toBeNull();
+    expect(component.tableColspan).toBe(9);
   });
 
   it('با نصب حسابداری: باز کردن استودیو از طریق دکمه رندر شده، تب‌های treasury، governance و gdrive را نشان داده و زیرعنوان حسابداری است', async () => {
@@ -330,13 +355,13 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     expect(tabLabels.some(l => l?.includes('هیئت‌مدیره و امضا'))).toBe(true);
     expect(tabLabels.some(l => l?.includes('همگام‌سازی گوگل‌درایو'))).toBe(true);
 
+    // زیرنویس هدر استودیو خنثی است و نام ماژول نمی‌برد (C6)
     const subtitle = el.querySelector('.sticky.top-0 p')?.textContent?.trim();
-    expect(subtitle).toBe('شناسنامه حقوقی، بایگانی مدارک و اسناد، هیئت‌مدیره، کارگاه بیمه و خزانه‌داری');
+    expect(subtitle).toBe('شناسنامهٔ حقوقی، اسناد و دسترسی کاربران شرکت');
   });
 
-  it('بدون نصب حسابداری: هیچ‌یک از ستون‌های پروژه‌ها و سلامت مدارک رندر نمی‌شوند و زیرعنوان غیرحسابداری است', async () => {
+  it('بدون نصب حسابداری: هیچ‌یک از ستون‌های پروژه‌ها و سلامت مدارک رندر نمی‌شوند و زیرعنوان خنثی است', async () => {
     await setupTestBed(false);
-    expect(component.isAccountingInstalled).toBe(false);
 
     const el: HTMLElement = fixture.nativeElement;
     const headers = Array.from(el.querySelectorAll('thead th')).map(th => th.textContent?.trim());
@@ -359,7 +384,17 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     expect(tabLabels.some(l => l?.includes('همگام‌سازی گوگل‌درایو'))).toBe(false);
 
     const subtitle = el.querySelector('.sticky.top-0 p')?.textContent?.trim();
-    expect(subtitle).toBe('شناسنامه حقوقی، اسناد پایه، کارگاه بیمه و دسترسی کاربران');
+    expect(subtitle).toBe('شناسنامهٔ حقوقی، اسناد و دسترسی کاربران شرکت');
+
+    // A11: بخش دوره‌های مالی و بایگانی جامع در تب‌های هسته نیست
+    component.setModalTab('fiscal_insurance');
+    fixture.detectChanges();
+    await flush();
+    fixture.detectChanges();
+    expect(el.textContent).not.toContain('دوره‌های مالی رسمی و وضعیت بستن سال‌ها');
+    expect(el.textContent).not.toContain('تعریف دوره مالی جدید');
+    expect(el.querySelector('app-company-fiscal-periods-section')).toBeNull();
+    expect(el.querySelector('app-company-archive-section')).toBeNull();
   });
 
   it('با نصب حسابداری: کلیک روی هر یک از دکمه‌های سه تب (خزانه‌داری، هیئت‌مدیره، گوگل‌درایو) پنل مربوط به آن را رندر می‌کند', async () => {
@@ -387,12 +422,48 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     expect(component.activeModalTab).toBe('governance');
     expect(el.textContent).toContain('صاحبان حق امضا');
 
-    // ۳. تب گوگل‌درایو (gdrive)
+    // ۳. تب گوگل‌درایو (gdrive): فقط وقتی باز است ساخته می‌شود (renderOnlyWhenActive)
+    expect(el.querySelector('app-company-gdrive-tab')).toBeNull();
     component.setModalTab('gdrive');
+    fixture.detectChanges();
+    await flush();
     fixture.detectChanges();
     expect(component.activeModalTab).toBe('gdrive');
     const gdriveComponent = el.querySelector('app-company-gdrive-tab');
     expect(gdriveComponent).not.toBeNull();
+    component.setModalTab('identity');
+    fixture.detectChanges();
+    expect(el.querySelector('app-company-gdrive-tab')).toBeNull();
+
+    // ۴. بخش دوره‌های مالی در انتهای تب «بیمه و مالی» و بایگانی جامع در انتهای تب «مدارک»
+    component.setModalTab('fiscal_insurance');
+    fixture.detectChanges();
+    const fiscalSection = el.querySelector('app-company-fiscal-periods-section') as HTMLElement;
+    expect(fiscalSection.closest('[hidden]')).toBeNull();
+    expect(fiscalSection.textContent).toContain('سال مالی ۱۴۰۳');
+    expect((el.querySelector('app-company-archive-section') as HTMLElement).closest('[hidden]')).not.toBeNull();
+    component.setModalTab('documents');
+    fixture.detectChanges();
+    expect((el.querySelector('app-company-archive-section') as HTMLElement).closest('[hidden]')).toBeNull();
+    expect(fiscalSection.closest('[hidden]')).not.toBeNull();
+  });
+
+  it('شرکت تازه: تب گوگل‌درایو پنهان است و بخش دوره‌های مالی پیام «پس از ثبت اولیه» نشان می‌دهد', async () => {
+    await setupTestBed(true);
+    mockCompanyApi.getFiscalPeriods.mockClear();
+    mockCompanyApi.getDocuments.mockClear();
+    component.setupStudioForNew();
+    fixture.detectChanges();
+    await flush();
+    fixture.detectChanges();
+
+    expect(component.modalTabs.some(t => t.id === 'gdrive')).toBe(false);
+    component.setModalTab('fiscal_insurance');
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.textContent).toContain('پس از ثبت اولیه مشخصات شرکت، امکان تعریف دوره‌های مالی');
+    expect(mockCompanyApi.getFiscalPeriods).not.toHaveBeenCalled();
+    expect(mockCompanyApi.getDocuments).not.toHaveBeenCalled();
   });
 
   it('بدون نصب حسابداری: متدهای بارگذاری حساب‌های بانکی و اعضای هیئت‌مدیره در CompanyApiService فراخوانی نمی‌شوند', async () => {
@@ -401,6 +472,7 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     mockCompanyApi.getBankAccounts.mockClear();
     mockCompanyApi.getBoardMembers.mockClear();
     mockCompanyApi.getFiscalPeriods.mockClear();
+    mockCompanyApi.getDocuments.mockClear();
 
     const editBtn = fixture.nativeElement.querySelector('button[aria-label="استودیو"]') as HTMLButtonElement;
     editBtn.click();
@@ -413,6 +485,8 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     expect(mockCompanyApi.getBankAccounts).not.toHaveBeenCalled();
     expect(mockCompanyApi.getBoardMembers).not.toHaveBeenCalled();
     expect(mockCompanyApi.getFiscalPeriods).not.toHaveBeenCalled();
+    expect(mockCompanyApi.getDocuments).not.toHaveBeenCalled();
+    expect(mockHttp.get).not.toHaveBeenCalled();
   });
 
   it('با نصب حسابداری: با باز کردن استودیو، متدهای بارگذاری حساب‌های بانکی و اعضای هیئت‌مدیره فراخوانی می‌شوند', async () => {
@@ -420,6 +494,9 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
 
     mockCompanyApi.getBankAccounts.mockClear();
     mockCompanyApi.getBoardMembers.mockClear();
+    mockCompanyApi.getFiscalPeriods.mockClear();
+    mockCompanyApi.getDocuments.mockClear();
+    mockCompanyApi.getDocuments.mockReturnValue(of([{ id: 5, company: 1, title: 'گواهی', document_type: 'other' }]));
 
     const editBtn = fixture.nativeElement.querySelector('button[aria-label="استودیو"]') as HTMLButtonElement;
     editBtn.click();
@@ -433,6 +510,13 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     expect(mockCompanyApi.getBankAccounts).toHaveBeenCalledWith(1);
     expect(mockCompanyApi.getBoardMembers).toHaveBeenCalledWith(1);
     expect(component.modalTabs.find(t => t.id === 'treasury')?.count).toBe(1);
+    // بخش‌های دوره‌های مالی و بایگانی هم یک بار دریافت می‌کنند؛ شمارندهٔ تب مدارک از بخش بایگانی است
+    expect(mockCompanyApi.getFiscalPeriods).toHaveBeenCalledTimes(1);
+    expect(mockCompanyApi.getDocuments).toHaveBeenCalledTimes(1);
+    expect(mockCompanyApi.getDocuments).toHaveBeenCalledWith({ company_id: 1 });
+    expect(component.modalTabs.find(t => t.id === 'documents')?.count).toBe(1);
+    // گوگل‌درایو تا باز شدن تب هیچ درخواستی نمی‌زند
+    expect(mockHttp.get).not.toHaveBeenCalled();
 
     // جابه‌جایی تب دوباره دریافت نمی‌کند (A7)
     component.setModalTab('treasury');
@@ -441,6 +525,12 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
     fixture.detectChanges();
     component.setModalTab('treasury');
     fixture.detectChanges();
+    component.setModalTab('documents');
+    fixture.detectChanges();
+    component.setModalTab('fiscal_insurance');
+    fixture.detectChanges();
     expect(mockCompanyApi.getBankAccounts).toHaveBeenCalledTimes(1);
+    expect(mockCompanyApi.getDocuments).toHaveBeenCalledTimes(1);
+    expect(mockCompanyApi.getFiscalPeriods).toHaveBeenCalledTimes(1);
   });
 });

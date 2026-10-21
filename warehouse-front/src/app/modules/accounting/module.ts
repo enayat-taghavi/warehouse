@@ -194,7 +194,37 @@ export const MODULE: WhFrontendModule = {
           id: 'governance', labelFa: 'هیئت‌مدیره و امضا', shortLabelFa: 'هیئت‌مدیره', icon: 'users', order: 40,
           requiresSavedCompany: false,
           loadComponent: () => import('./components/companies-studio/company-governance-tab/company-governance-tab').then(m => m.CompanyGovernanceTabComponent)
+        },
+        {
+          // شنود OAuth و پرس‌وجوی دوره‌ای صف دارد؛ فقط وقتی تب باز است ساخته می‌شود
+          id: 'gdrive', labelFa: 'همگام‌سازی گوگل‌درایو', shortLabelFa: 'گوگل‌درایو', icon: 'google-drive', order: 70,
+          requiresSavedCompany: true, hiddenUntilSaved: true, renderOnlyWhenActive: true,
+          loadComponent: () => import('./components/companies-studio/company-gdrive-tab/company-gdrive-tab').then(m => m.CompanyGdriveTabComponent)
         }
+      ],
+      // بخش‌های حسابداری در انتهای تب‌های هسته
+      studioSections: [
+        {
+          slot: 'fiscal_insurance', order: 10,
+          loadComponent: () => import('./components/companies-studio/company-fiscal-periods-section/company-fiscal-periods-section').then(m => m.CompanyFiscalPeriodsSectionComponent)
+        },
+        {
+          slot: 'documents', order: 10,
+          loadComponent: () => import('./components/companies-studio/company-archive-section/company-archive-section').then(m => m.CompanyArchiveSectionComponent)
+        }
+      ],
+      listCells: [
+        {
+          id: 'projects', labelFa: 'پروژه‌ها', order: 10, cardPlacement: 'grid',
+          loadComponent: () => import('./components/companies-studio/company-list-cells').then(m => m.CompanyProjectsCellComponent)
+        },
+        {
+          id: 'documents_health', labelFa: 'سلامت مدارک', order: 20, cardPlacement: 'row',
+          loadComponent: () => import('./components/companies-studio/company-list-cells').then(m => m.CompanyDocumentsHealthCellComponent)
+        }
+      ],
+      rowActions: [
+        { id: 'gdrive', labelFa: 'گوگل‌درایو', hintFa: 'تنظیمات همگام‌سازی گوگل‌درایو', icon: 'google-drive', tab: 'gdrive' }
       ]
     },
     users: {

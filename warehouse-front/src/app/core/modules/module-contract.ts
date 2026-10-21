@@ -42,6 +42,11 @@ export interface CompanyStudioTab {
   requiresSavedCompany: boolean;
   /** پیش از ذخیرهٔ شرکت تب اصلاً نمایش داده نمی‌شود */
   hiddenUntilSaved?: boolean;
+  /**
+   * کامپوننت فقط وقتی تب باز است ساخته می‌شود و با بستن تب از بین می‌رود
+   * (برای تبی که شنود یا پرس‌وجوی دوره‌ای دارد). پیش‌فرض: یک بار ساخته و پنهان نگه داشته می‌شود.
+   */
+  renderOnlyWhenActive?: boolean;
   loadComponent: () => Promise<Type<unknown>>;
 }
 
@@ -52,11 +57,16 @@ export interface CompanyStudioSection {
   loadComponent: () => Promise<Type<unknown>>;
 }
 
-/** ستون مشارکتی فهرست شرکت‌ها */
+/**
+ * ستون مشارکتی فهرست شرکت‌ها. کامپوننت ورودی‌های `company` و `variant` را می‌گیرد:
+ * `'table'` برای خانهٔ جدول دسکتاپ و `'card'` برای کارت موبایل.
+ */
 export interface CompanyListCell {
   id: string;
   labelFa: string;
   order: number;
+  /** جای سلول در کارت موبایل: `grid` در جدول دوستونی مشخصات، `row` ردیف کامل زیر آن (پیش‌فرض) */
+  cardPlacement?: 'grid' | 'row';
   loadComponent: () => Promise<Type<unknown>>;
 }
 
@@ -65,6 +75,8 @@ export interface CompanyRowAction {
   id: string;
   labelFa: string;
   icon: IconName;
+  /** متن راهنمای دکمه (title)؛ بدون آن labelFa */
+  hintFa?: string;
   /** شناسهٔ تب استودیو که باز می‌شود */
   tab: string;
 }
@@ -333,7 +345,7 @@ export interface ExtensionMap {
   };
 
   /**
-   * ۵. پرچم‌های ماژول در مدیریت شرکت‌ها — مصرف در companies.ts، company-gdrive-tab.ts، first-boot-wizard.ts و active-company.service.ts
+   * ۵. پرچم‌های ماژول در مدیریت شرکت‌ها — مصرف در companies.ts، company-gdrive-tab.ts (ماژول حسابداری)، first-boot-wizard.ts و active-company.service.ts
    */
   companies?: {
     hasWarehouseModuleToggle?: boolean;
