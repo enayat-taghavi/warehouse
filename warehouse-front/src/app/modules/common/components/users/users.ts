@@ -1,6 +1,7 @@
 import { UsersFacade } from './users.facade';
 import {
-  ROLE_PRESETS,
+  SYSTEM_ROLE_PRESETS,
+  RolePreset,
   SHORT_PERMISSION_NAMES,
   getShortPermissionName,
   getRolePermissionPercent,
@@ -36,6 +37,8 @@ import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/t
 import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
 import { saveBlob } from '../../../../core/platform/file-output';
 
+import { IconName } from '../../../../shared/icons/icon-registry';
+
 @Component({
   selector: 'app-users',
   imports: [CommonModule, NgOptimizedImage, FormsModule, ClickOutsideDirective, IdCards, ExcelImportModal, SmartDeleteModalComponent, AvatarCropperModal, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe],
@@ -63,7 +66,8 @@ export class Users implements OnInit, OnDestroy {
   }
 
   activePermTab = 'MAIN_MENU';
-  userRoleModalTab: 'all' | 'warehouse' | 'finance' | 'global' = 'finance';
+  /** 'all'، 'global' یا کلید users.roleScope یکی از ماژول‌ها */
+  userRoleModalTab: string = 'global';
   userModalInnerTab: 'identity' | 'security' | 'roles' | 'warehouses' = 'identity';
   searchQuery = '';
   searchSubject = new Subject<string>();
@@ -236,8 +240,90 @@ export class Users implements OnInit, OnDestroy {
   };
 
   // Quick Role Presets / Templates for One-Click Permission Granting
-  readonly ROLE_PRESETS = ROLE_PRESETS;
-  activePresetCategory: 'all' | 'inventory' | 'accounting' | 'system' = 'all';
+  /** قالب‌های ماژول‌ها (users.rolePresets، به ترتیب قلمرو) و قالب‌های سراسری */
+  get ROLE_PRESETS(): RolePreset[] {
+    const fromModules = this.moduleUsersExts().flatMap(e => e.ext.rolePresets || []);
+    return [...fromModules, ...SYSTEM_ROLE_PRESETS];
+  }
+
+  /** 'all'، 'system' یا کلید users.presetCategory یکی از ماژول‌ها */
+  activePresetCategory: string = 'all';
+
+  /** extension users ماژول‌های نصب‌شده به ترتیب roleScope.order */
+  private moduleUsersExts() {
+    return this.registry.getExtensions('users')
+      .map(e => ({ module: e.module, ext: e.extension }))
+      .sort((a, b) => (a.ext.roleScope?.order ?? 100) - (b.ext.roleScope?.order ?? 100));
+  }
+
+  /** ماژول نصب‌شده‌ای که گروه مجوزش در فهرست گروه‌های سرور هست */
+  private isUsersExtAvailable(ext: { permissionGroupKeys?: string[] }): boolean {
+    return (ext.permissionGroupKeys || []).some(k => this.systemPermissionGroups.some(g => g.key === k));
+  }
+
+  /** دسته‌های قالب نقش ماژول‌های در دسترس، با شمار قالب‌های هر دسته */
+  get presetCategories(): Array<{ key: string; labelFa: string; icon: IconName; activeClass: string; hoverClass: string; countFa: string }> {
+    const tones: Record<string, { activeClass: string; hoverClass: string }> = {
+      sky: { activeClass: 'bg-sky-600 text-white shadow-2xs', hoverClass: 'text-slate-600 hover:text-sky-600 hover:bg-slate-100/70' },
+      emerald: { activeClass: 'bg-emerald-600 text-white shadow-2xs', hoverClass: 'text-slate-600 hover:text-emerald-600 hover:bg-slate-100/70' },
+    };
+    return this.moduleUsersExts()
+      .filter(e => !!e.ext.presetCategory && this.isUsersExtAvailable(e.ext))
+      .map(e => {
+        const c = e.ext.presetCategory!;
+        return { key: c.key, labelFa: c.labelFa, icon: c.icon, ...tones[c.tone], countFa: (e.ext.rolePresets || []).length.toLocaleString('fa-IR') };
+      });
+  }
+
+  trackByKey(_i: number, item: { key: string }): string {
+    return item.key;
+  }
+
+  /** قلمروهای نقش ماژول‌های در دسترس (زبانه‌های مودال کاربر) */
+  get roleScopes() {
+    return this.moduleUsersExts()
+      .filter(e => !!e.ext.roleScope && this.isUsersExtAvailable(e.ext))
+      .map(e => e.ext.roleScope!);
+  }
+
+  /** قلمرو نقش همهٔ ماژول‌های این بیلد (برای برچسب نقش‌ها، مستقل از نصب) */
+  private get knownRoleScopes() {
+    return this.registry.getAllModules()
+      .filter(m => !!m.extensions?.users?.roleScope)
+      .map(m => ({ code: m.code, scope: m.extensions!.users!.roleScope! }))
+      .sort((a, b) => a.scope.order - b.scope.order);
+  }
+
+  roleScopeFor(key: string) {
+    return this.knownRoleScopes.find(s => s.scope.key === key)?.scope;
+  }
+
+  /** کلاس برچسب قلمرو نقش در مودال */
+  roleScopeBadgeClass(key: string): string {
+    const tone = this.roleScopeFor(key)?.tone;
+    if (tone === 'sky') return 'bg-sky-50 text-sky-700 border border-sky-200';
+    if (tone === 'emerald') return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+    return 'bg-purple-50 text-purple-700 border border-purple-200';
+  }
+
+  roleScopeTabClass(tone: string, active: boolean): string {
+    if (!active) return 'text-slate-500 hover:text-slate-800';
+    return tone === 'emerald' ? 'bg-white text-emerald-700 shadow-xs font-black' : 'bg-white text-sky-700 shadow-xs font-black';
+  }
+
+  roleScopeCountClass(tone: string): string {
+    return tone === 'emerald'
+      ? 'px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black border border-emerald-200'
+      : 'px-1.5 py-0.2 rounded-full bg-sky-100 text-sky-700 text-[9px] font-black border border-sky-200';
+  }
+
+  /** برچسب کوتاه نشان سامانه (اندازهٔ عادی یا ریز) */
+  badgeShortLabel(key: string, tiny = false): string {
+    if (key === 'superuser') return tiny ? 'ادمین کل' : 'همه (ادمین)';
+    const scope = this.roleScopeFor(key);
+    if (!scope) return 'کلان';
+    return tiny ? scope.tinyLabelFa : scope.shortLabelFa;
+  }
   isPresetsExpanded = false;
 
   getActivePresetTitle(): string {
@@ -257,17 +343,17 @@ export class Users implements OnInit, OnDestroy {
 
   get visiblePermissionGroups() {
     return (this.systemPermissionGroups || []).filter(group => {
-      if (group.key === 'WH_AUDIT' && !this.hasInventoryModule()) return false;
-      if (group.key === 'ACCOUNTING_FINANCE' && !this.hasAccountingModule()) return false;
-      return true;
+      // گروه مجوزی که یک ماژول شناخته‌شده اعلام کرده، فقط وقتی آن ماژول نصب است دیده می‌شود
+      const owners = this.registry.getAllModules().filter(m => m.extensions?.users?.permissionGroupKeys?.includes(group.key));
+      if (owners.length === 0) return true;
+      return this.registry.getExtensions('users').some(e => e.extension.permissionGroupKeys?.includes(group.key));
     });
   }
 
   get availableRolePresets() {
     return this.ROLE_PRESETS.filter(p => {
-      if (p.category === 'inventory' && !this.hasInventoryModule()) return false;
-      if (p.category === 'accounting' && !this.hasAccountingModule()) return false;
-      return true;
+      if (p.category === 'system') return true;
+      return this.presetCategories.some(c => c.key === p.category);
     });
   }
 
@@ -1247,7 +1333,7 @@ export class Users implements OnInit, OnDestroy {
         default_company_id: activeCid
       };
     }
-    this.userRoleModalTab = this.hasInventoryModule() ? 'warehouse' : 'finance';
+    this.userRoleModalTab = this.roleScopes[0]?.key ?? 'global';
     this.userModalInnerTab = 'identity';
     this.isUserModalOpen = true;
     this.updateModalWarehouses();
@@ -2130,21 +2216,20 @@ export class Users implements OnInit, OnDestroy {
     return r.title || r.name;
   }
 
-  getRoleAppScope(r: any): 'warehouse' | 'finance' | 'global' {
+  /** کلید قلمرو نقش: کلید roleScope تنها ماژولی که مجوزهایش را دارد، یا 'global' */
+  getRoleAppScope(r: any): string {
     const permIds: number[] = Array.isArray(r.permissions) ? r.permissions : [];
     const permCodenames: string[] = permIds
       .map(id => this.permIdToCodenameMap.get(id))
       .filter((c): c is string => typeof c === 'string');
 
-    const whMarkers = this.registry.permissionMarkers('warehouse');
-    const finMarkers = this.registry.permissionMarkers('accounting');
-
-    const hasWh = permCodenames.some(p => whMarkers.includes(p));
-    const hasFin = permCodenames.some(p => finMarkers.includes(p));
-
-    if (hasWh && hasFin) return 'global';
-    if (hasWh) return 'warehouse';
-    if (hasFin) return 'finance';
+    const scopes = this.knownRoleScopes;
+    const matched = scopes.filter(s => {
+      const markers = this.registry.permissionMarkers(s.code);
+      return permCodenames.some(p => markers.includes(p));
+    });
+    if (matched.length > 1) return 'global';
+    if (matched.length === 1) return matched[0].scope.key;
 
     // fallback به عناوین قدیمی برای نقش‌های بدون پرمیشن ست‌شده
     const name = (r.name || '').toLowerCase();
@@ -2152,44 +2237,34 @@ export class Users implements OnInit, OnDestroy {
     if (name === 'admin' || name === 'superuser' || title.includes('مدیر کل') || title.includes('مدیر ارشد') || title.includes('ادمین')) {
       return 'global';
     }
-    if (name.includes('warehouse') || title.includes('انبار') || title.includes('شمارش')) {
-      return 'warehouse';
-    }
-    if (name.includes('finance') || name.includes('payroll') || title.includes('مالی') || title.includes('حقوق')) {
-      return 'finance';
+    for (const s of scopes) {
+      if (s.scope.nameHints.some(h => name.includes(h)) || s.scope.titleHints.some(h => title.includes(h))) {
+        return s.scope.key;
+      }
     }
     return 'global';
   }
 
-  getFilteredRolesForModal(tab: 'all' | 'warehouse' | 'finance' | 'global'): any[] {
-    const roles = this.state.appState.roles || [];
-    if (tab === 'all') return roles;
-    if (tab === 'finance') {
-      return roles.filter((r: any) => {
-        const scope = this.getRoleAppScope(r);
-        if (scope === 'finance') return true;
-        const name = (r.name || '').toLowerCase();
-        const title = (r.title || '').toLowerCase();
-        return name === 'workshop_supervisor' || name === 'company_manager' || title.includes('سرپرست کارگاه') || title.includes('مدیر شرکت');
-      });
-    }
-    return roles.filter((r: any) => this.getRoleAppScope(r) === tab);
+  /** نقش در زبانهٔ این قلمرو می‌آید: قلمرو خودش یا نقش‌های اضافهٔ اعلام‌شده */
+  private roleInScopeTab(r: any, key: string): boolean {
+    if (this.getRoleAppScope(r) === key) return true;
+    const scope = this.roleScopeFor(key);
+    if (!scope?.extraRoleNames && !scope?.extraTitleHints) return false;
+    const name = (r.name || '').toLowerCase();
+    const title = (r.title || '').toLowerCase();
+    return (scope.extraRoleNames || []).includes(name) || (scope.extraTitleHints || []).some(h => title.includes(h));
   }
 
-  getSelectedRolesCountForScope(scope: 'warehouse' | 'finance' | 'global'): number {
+  getFilteredRolesForModal(tab: string): any[] {
+    const roles = this.state.appState.roles || [];
+    if (tab === 'all') return roles;
+    return roles.filter((r: any) => this.roleInScopeTab(r, tab));
+  }
+
+  getSelectedRolesCountForScope(scope: string): number {
     const selectedIds = this.userForm.groups || [];
     const roles = this.state.appState.roles || [];
-    if (scope === 'finance') {
-      return roles.filter((r: any) => {
-        if (!selectedIds.includes(r.id)) return false;
-        const s = this.getRoleAppScope(r);
-        if (s === 'finance') return true;
-        const name = (r.name || '').toLowerCase();
-        const title = (r.title || '').toLowerCase();
-        return name === 'workshop_supervisor' || name === 'company_manager' || title.includes('سرپرست کارگاه') || title.includes('مدیر شرکت');
-      }).length;
-    }
-    return roles.filter((r: any) => selectedIds.includes(r.id) && this.getRoleAppScope(r) === scope).length;
+    return roles.filter((r: any) => selectedIds.includes(r.id) && this.roleInScopeTab(r, scope)).length;
   }
 
   /**
@@ -2245,45 +2320,32 @@ export class Users implements OnInit, OnDestroy {
     const allRoles: any[] = Array.isArray(this.state.appState.roles) ? this.state.appState.roles : [];
     const userRoles = allRoles.filter((r: any) => groupIds.includes(Number(r.id)));
 
-    let hasWarehouse = false;
-    let hasFinance = false;
+    const scopeKeys = new Set<string>();
     let hasGlobal = false;
 
     for (const r of userRoles) {
       const scope = this.getRoleAppScope(r);
-      if (scope === 'warehouse') {
-        hasWarehouse = true;
-      } else if (scope === 'finance') {
-        hasFinance = true;
-      } else if (scope === 'global') {
+      if (scope === 'global') {
         hasGlobal = true;
+      } else {
+        scopeKeys.add(scope);
       }
     }
 
     const badges: { key: string; label: string; icon: string; bgClass: string; textClass: string; borderClass: string }[] = [];
-
-    if (hasWarehouse) {
-      const whLabel = warehouseCount > 0 ? `سامانه انبارداری (${warehouseCount} انبار)` : 'سامانه انبارداری (فاقد انبار)';
-      badges.push({
-        key: 'warehouse',
-        label: whLabel,
-        icon: '📦',
-        bgClass: 'bg-sky-50',
-        textClass: 'text-sky-800',
-        borderClass: 'border-sky-300'
-      });
+    const toneClasses: Record<string, { bgClass: string; textClass: string; borderClass: string }> = {
+      sky: { bgClass: 'bg-sky-50', textClass: 'text-sky-800', borderClass: 'border-sky-300' },
+      emerald: { bgClass: 'bg-emerald-50', textClass: 'text-emerald-800', borderClass: 'border-emerald-300' },
+    };
+    for (const { scope } of this.knownRoleScopes) {
+      if (!scopeKeys.has(scope.key)) continue;
+      const label = scope.countsWarehouses
+        ? (warehouseCount > 0 ? `${scope.badgeLabelFa} (${warehouseCount} انبار)` : `${scope.badgeLabelFa} (فاقد انبار)`)
+        : scope.badgeLabelFa;
+      badges.push({ key: scope.key, label, icon: scope.icon, ...toneClasses[scope.tone] });
     }
-
-    if (hasFinance) {
-      badges.push({
-        key: 'finance',
-        label: 'سامانه مالی و پرسنلی',
-        icon: '💳',
-        bgClass: 'bg-emerald-50',
-        textClass: 'text-emerald-800',
-        borderClass: 'border-emerald-300'
-      });
-    }
+    const hasWarehouse = this.knownRoleScopes.some(s => s.scope.countsWarehouses && scopeKeys.has(s.scope.key));
+    const hasFinance = this.knownRoleScopes.some(s => !s.scope.countsWarehouses && scopeKeys.has(s.scope.key));
 
     if (hasGlobal) {
       badges.push({

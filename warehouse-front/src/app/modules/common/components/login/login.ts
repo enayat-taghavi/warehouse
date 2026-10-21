@@ -14,6 +14,7 @@ import { detectClientDeviceModel } from '../../../../core/utils/device-detector'
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { BRANDING } from '../../../../core/branding';
 import { ModuleRegistryService, getModuleRegistry } from '../../../../core/modules/module-registry.service';
+import { resolveLoginLanding } from '../../../../core/modules/login-landing';
 @Component({
   selector: 'app-login',
   imports: [CommonModule, FormsModule, RouterLink, SvgIconDirective],
@@ -151,26 +152,11 @@ export class Login implements OnInit, OnDestroy {
         }
 
         const isSuper = perms.includes('admin_all') || user?.is_superuser;
-        let targetRoute = '/app/launcher';
-
-        const registry = this.getRegistry();
-        const installedModules = registry.getInstalledModules();
-        const accessibleModules = installedModules.filter((mod) => {
-          const routeAccess = mod.routeAccess ?? registry.getSpec(mod.code)?.routeAccess;
-          if (!routeAccess) return false;
-          return isSuper || routeAccess.loginPermissions.some((p) => perms.includes(p));
-        });
-
-        if (accessibleModules.length === 1) {
-          const mod = accessibleModules[0];
-          const routeAccess = mod.routeAccess ?? registry.getSpec(mod.code)?.routeAccess;
-          if (routeAccess) {
-            localStorage.setItem('active_app_module', routeAccess.loginActiveAppModule);
-            targetRoute = routeAccess.resolveLoginRoute(perms);
-          }
-        } else {
-          targetRoute = '/app/launcher';
+        const landing = resolveLoginLanding(this.getRegistry(), perms, !!isSuper);
+        if (landing.activeAppModule) {
+          localStorage.setItem('active_app_module', landing.activeAppModule);
         }
+        let targetRoute = landing.route;
 
         const returnUrl = this.route.snapshot.queryParams['returnUrl'];
         if (returnUrl && typeof returnUrl === 'string' && returnUrl.startsWith('/app/')) {

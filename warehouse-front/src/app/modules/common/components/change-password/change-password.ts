@@ -7,6 +7,8 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../../environments/environment';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { getModuleRegistry } from '../../../../core/modules/module-registry.service';
+import { resolveLoginLanding } from '../../../../core/modules/login-landing';
 
 @Component({
   selector: 'app-change-password',
@@ -100,45 +102,12 @@ export class ChangePassword implements OnInit {
 
             const perms = this.auth.userPermissions() || [];
             const isSuper = perms.includes('admin_all') || user.is_superuser;
-            let targetRoute = '/app/launcher';
-
-            const hasWarehouse = isSuper || [
-              'view_sys_dashboard', 'view_wh_dashboard', 'view_sys_counter',
-              'view_sys_supervisor', 'view_sys_manager_review', 'view_wh_docs',
-              'view_wh_dispatch'
-            ].some(p => perms.includes(p));
-
-            const hasFinance = isSuper || [
-              'view_sys_personnel', 'view_sys_personnel_attendance', 'view_sys_fleet_attendance',
-              'view_sys_payroll', 'view_sys_fleet_settlement', 'view_sys_treasury',
-              'perm_approve_personnel_finance', 'perm_treasury_disburse_action',
-              'perm_approve_personnel_manager', 'perm_manage_projects_sections'
-            ].some(p => perms.includes(p));
-
-            if (hasWarehouse && hasFinance) {
-              targetRoute = '/app/launcher';
-            } else if (hasFinance && !hasWarehouse) {
-              localStorage.setItem('active_app_module', 'personnel');
-              // صفحهٔ آغاز را ریشهٔ سامانه مالی بر اساس پرسونای نقش تعیین می‌کند (accounting.routes)
-              targetRoute = '/app/finance';
-            } else if (hasWarehouse && !hasFinance) {
-              localStorage.setItem('active_app_module', 'warehouse');
-              if (perms.includes('view_sys_dashboard') || perms.includes('view_wh_dashboard')) {
-                targetRoute = '/app/warehouse/dashboard';
-              } else if (perms.includes('view_sys_counter')) {
-                targetRoute = '/app/warehouse/counter';
-              } else if (perms.includes('view_sys_supervisor')) {
-                targetRoute = '/app/warehouse/supervisor';
-              } else if (perms.includes('view_sys_manager_review')) {
-                targetRoute = '/app/warehouse/manager-review';
-              } else if (perms.includes('view_wh_docs')) {
-                targetRoute = '/app/warehouse/docs';
-              } else if (perms.includes('view_wh_dispatch')) {
-                targetRoute = '/app/warehouse/dispatch';
-              } else {
-                targetRoute = '/app/warehouse/dashboard';
-              }
+            // همان مقصد صفحهٔ ورود: یک ماژول در دسترس → صفحهٔ آن ماژول، وگرنه لانچر
+            const landing = resolveLoginLanding(getModuleRegistry(), perms, !!isSuper);
+            if (landing.activeAppModule) {
+              localStorage.setItem('active_app_module', landing.activeAppModule);
             }
+            const targetRoute = landing.route;
 
             this.router.navigate([targetRoute]);
           } else {
@@ -160,11 +129,7 @@ export class ChangePassword implements OnInit {
 
   goBack() {
     const perms = this.auth.userPermissions() || [];
-    const hasWarehouse = perms.includes('admin_all') || ['view_sys_dashboard', 'view_wh_dashboard'].some(p => perms.includes(p));
-    if (hasWarehouse) {
-      this.router.navigate(['/app/warehouse/dashboard']);
-    } else {
-      this.router.navigate(['/app/finance']);
-    }
+    const isSuper = perms.includes('admin_all') || !!this.auth.user()?.is_superuser;
+    this.router.navigate([resolveLoginLanding(getModuleRegistry(), perms, isSuper).route]);
   }
 }

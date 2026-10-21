@@ -130,6 +130,20 @@ def doc_task_post_delete(sender, instance, **kwargs):
     )
 
 
+# ==============================================================================
+# تصاویر کالا → مقصدهای همگام‌سازی فایل (مثل گوگل‌درایو) از راه رجیستری پلتفرم
+# ==============================================================================
+from .models import ItemPhoto  # noqa: E402
+from .file_sync_source import notify_file_saved, notify_file_deleted  # noqa: E402
 
 
+@receiver(post_save, sender=ItemPhoto)
+def on_item_photo_saved_file_sync(sender, instance, created, **kwargs):
+    if instance.image:
+        notify_file_saved(instance, 'image', instance.image)
 
+
+@receiver(post_delete, sender=ItemPhoto)
+def on_item_photo_deleted_file_sync(sender, instance, **kwargs):
+    if instance.image:
+        notify_file_deleted(instance, 'image', instance.image)

@@ -13,6 +13,10 @@ class InventoryConfig(AppConfig):
         from inventory.models import Item, CountTask
         contribute('rollback_models', {'Item': Item, 'CountTask': CountTask})
 
+        # منبع فایل تصاویر کالا برای مقصدهای همگام‌سازی فایل (گوگل‌درایو در ماژول دیگر)
+        from inventory.file_sync_source import ITEM_PHOTO_FILE_SOURCE
+        contribute('file_sync_sources', ITEM_PHOTO_FILE_SOURCE)
+
         # ثبت موجودیت‌ها و JOINهای کالا در رجیستری پلتفرم (گام ۳-ب)
         from inventory.report_entities import register_inventory_report_entities
         register_inventory_report_entities()

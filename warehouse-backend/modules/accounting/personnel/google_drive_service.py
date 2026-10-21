@@ -417,14 +417,16 @@ def execute_company_scan_all(scan_task) -> bool:
                 if _enqueue_or_reopen('VehicleDocument', vdoc.id, 'file', vdoc.file.name, folder, fname):
                     enqueued_count += 1
 
-    # ۴. تصاویر اقلام انبار
-    if config.sync_inventory_photos and apps.is_installed('inventory'):
-        ItemPhoto = apps.get_model('inventory', 'ItemPhoto')
-        for iphoto in ItemPhoto.objects.filter(item__warehouse__company=company, image__isnull=False).exclude(image='').iterator():
-            res = GoogleDrivePathResolver.resolve(iphoto, field_name='image')
+    # ۴. فایل‌های ماژول‌های دیگر (مثل تصاویر کالا) از منبع‌های ثبت‌شده در رجیستری پلتفرم
+    from platform_core.registry import contributions
+    for source in contributions('file_sync_sources'):
+        if not getattr(config, source.get('config_flag', ''), False):
+            continue
+        for inst, f_name, f_obj in source['iter_company_files'](company):
+            res = GoogleDrivePathResolver.resolve(inst, field_name=f_name)
             if res:
                 _, folder, fname = res
-                if _enqueue_or_reopen('ItemPhoto', iphoto.id, 'image', iphoto.image.name, folder, fname):
+                if _enqueue_or_reopen(source['model_name'], inst.id, f_name, f_obj.name, folder, fname):
                     enqueued_count += 1
 
     # ۵. نسخه‌های پشتیبان دیتابیس

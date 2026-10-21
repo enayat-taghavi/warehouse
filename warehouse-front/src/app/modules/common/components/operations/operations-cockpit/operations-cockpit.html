@@ -41,13 +41,13 @@
           (click)="exportIndexedDB()"
         ></button>
 
-        <button 
-          *ngIf="isWarehouseInstalled"
+        <button
+          *ngFor="let link of sourceSettingsLinks"
           type="button"
           appAction="settings"
-          label="تنظیمات منبع (انبار)"
+          [label]="link.labelFa"
           display="label"
-          (click)="navigateTo('/app/warehouse/wh-settings')"
+          (click)="navigateTo(link.route)"
         ></button>
       </div>
 

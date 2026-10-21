@@ -32,8 +32,11 @@ export class OperationsCockpitComponent implements OnInit {
     return this.moduleRegistry.getExtensions('operations').some(e => e.extension.hasExpiringDocsWidget);
   }
 
-  get isWarehouseInstalled(): boolean {
-    return this.moduleRegistry.getExtensions('operations').some(e => e.extension.syncMonitorScope === 'warehouse');
+  /** دکمه‌های تنظیمات منبع داده که ماژول‌های نصب‌شده عرضه می‌کنند */
+  get sourceSettingsLinks(): { labelFa: string; route: string }[] {
+    return this.moduleRegistry.getExtensions('operations')
+      .map(e => e.extension.sourceSettings)
+      .filter((s): s is { labelFa: string; route: string } => !!s);
   }
 
   public isCreatingSnapshot = signal<boolean>(false);

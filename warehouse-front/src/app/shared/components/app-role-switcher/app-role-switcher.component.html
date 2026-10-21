@@ -1,6 +1,6 @@
 <div class="flex items-center gap-1 sm:gap-2" dir="rtl">
   <!-- ۱. لایه دوم: انتخابگر نقش فعال (سمت راست / داخلی) -->
-  <div *ngIf="persona.activeApp() === 'personnel'" class="relative">
+  <div *ngIf="persona.switcherOptionFor(persona.activeApp())?.showRoleSelector" class="relative">
     <button
       type="button"
       (click)="toggleDropdown($event)"
@@ -78,17 +78,13 @@
       [class.cursor-pointer]="persona.canSwitchApps()"
       [class.cursor-default]="!persona.canSwitchApps()"
       class="app-trigger-btn flex items-center justify-center gap-1 sm:gap-1.5 p-1.5 sm:px-3 sm:py-1.5 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 rounded-xl border text-xs font-bold shadow-2xs transition-all active:scale-95 disabled:active:scale-100 shrink-0 select-none"
-      [ngClass]="persona.activeApp() === 'warehouse' 
-        ? 'border-indigo-200/90 dark:border-indigo-800/70 bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300' + (persona.canSwitchApps() ? ' hover:bg-indigo-100/80' : '') 
-        : (persona.activeApp() === 'operations'
-          ? 'border-cyan-500/40 bg-cyan-950/60 text-cyan-300' + (persona.canSwitchApps() ? ' hover:bg-cyan-900/60' : '')
-          : 'border-emerald-200/90 dark:border-emerald-800/70 bg-emerald-50/80 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' + (persona.canSwitchApps() ? ' hover:bg-emerald-100/80' : ''))"
-      [title]="!persona.canSwitchApps() 
-        ? (persona.activeApp() === 'warehouse' ? 'شما صرفاً به ماژول انبارگردانی دسترسی دارید' : (persona.activeApp() === 'operations' ? 'مرکز عملیات و زیرساخت سازمان' : 'شما صرفاً به سامانه مالی و کارکرد دسترسی دارید')) 
-        : 'سامانه فعال: ' + (persona.activeApp() === 'warehouse' ? 'انبارگردانی' : (persona.activeApp() === 'operations' ? 'مرکز عملیات' : 'مالی و کارکرد')) + ' (کلیک برای باز کردن لیست سامانه‌ها)'"
+      [ngClass]="triggerView().classes"
+      [title]="!persona.canSwitchApps()
+        ? triggerView().onlyAccessTitle
+        : 'سامانه فعال: ' + triggerView().label + ' (کلیک برای باز کردن لیست سامانه‌ها)'"
     >
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" [appIcon]="persona.activeApp() === 'warehouse' ? 'package' : (persona.activeApp() === 'operations' ? 'shield' : 'credit-card')" aria-hidden="true"></svg>
-      <span class="hidden sm:inline font-black text-[11px]">{{ persona.activeApp() === 'warehouse' ? 'انبارگردانی' : (persona.activeApp() === 'operations' ? 'مرکز عملیات' : 'مالی و کارکرد') }}</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" [appIcon]="triggerView().icon" aria-hidden="true"></svg>
+      <span class="hidden sm:inline font-black text-[11px]">{{ triggerView().label }}</span>
       <svg *ngIf="persona.canSwitchApps()" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="opacity-60 hidden sm:inline shrink-0 transition-transform duration-200" [class.rotate-180]="isAppDropdownOpen()" appIcon="chevron-down"></svg>
     </button>
 

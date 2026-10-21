@@ -65,6 +65,8 @@ class WarehousesConfig(AppConfig):
         from warehouses.models import Warehouse
         contribute('entity_resolver:warehouse', lambda wid: Warehouse.objects.filter(id=wid).first())
         contribute('entity_map_resolver:warehouse', lambda wids: dict(Warehouse.objects.filter(id__in=wids).values_list('id', 'name')))
+        # نخستین انبار فعال برای ابزارهای seed و نگهبان ماژول‌های دیگر (بدون ایمپورت این اپ)
+        contribute('default_entity:warehouse', lambda: Warehouse.objects.filter(is_active=True).first())
         contribute('user_admin_fields', 'assigned_warehouses')
 
         from warehouses.report_entities import get_user_report_extra_fields

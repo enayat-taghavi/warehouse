@@ -53,20 +53,13 @@
         </div>
         <div class="grid gap-1.5" [ngClass]="hasMultipleConnectedModules ? 'grid-cols-2' : 'grid-cols-1'">
           <button
-            *ngIf="showWarehouseLink"
-            (click)="goToWarehouse()"
-            class="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] font-bold text-indigo-300 transition-colors text-center cursor-pointer flex items-center justify-center gap-1.5"
+            *ngFor="let link of moduleShellLinks; trackBy: trackShellLink"
+            (click)="goToModule(link.route)"
+            class="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] font-bold transition-colors text-center cursor-pointer flex items-center justify-center gap-1.5"
+            [ngClass]="link.textClass"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="package"></svg>
-            <span>انبارداری</span>
-          </button>
-          <button
-            *ngIf="showAccountingLink"
-            (click)="goToFinance()"
-            class="px-2 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] font-bold text-emerald-300 transition-colors text-center cursor-pointer flex items-center justify-center gap-1.5"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
-            <span>مالی</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="link.icon"></svg>
+            <span>{{ link.labelFa }}</span>
           </button>
           <button
             *ngFor="let link of extraQuickLinks; trackBy: trackQuickLink"
@@ -227,8 +220,7 @@
       </div>
 
       <div *ngIf="hasAnyConnectedModule" class="flex flex-col gap-2 pt-4 border-t border-slate-800 shrink-0">
-        <button *ngIf="showWarehouseLink" (click)="goToWarehouse()" class="w-full py-2.5 min-h-[40px] rounded-xl bg-slate-800 text-indigo-300 text-xs font-bold cursor-pointer">ورود به انبارداری</button>
-        <button *ngIf="showAccountingLink" (click)="goToFinance()" class="w-full py-2.5 min-h-[40px] rounded-xl bg-slate-800 text-emerald-300 text-xs font-bold cursor-pointer">ورود به سامانه مالی</button>
+        <button *ngFor="let link of moduleShellLinks; trackBy: trackShellLink" (click)="goToModule(link.route)" class="w-full py-2.5 min-h-[40px] rounded-xl bg-slate-800 text-xs font-bold cursor-pointer" [ngClass]="link.textClass">{{ link.mobileLabelFa }}</button>
         <button *ngFor="let link of extraQuickLinks; trackBy: trackQuickLink" (click)="navigateToQuickLink(link.route)" class="w-full py-2.5 min-h-[40px] rounded-xl bg-slate-800 text-cyan-300 text-xs font-bold cursor-pointer flex items-center justify-center gap-2">
           <span>ورود به {{ link.title }}</span>
         </button>

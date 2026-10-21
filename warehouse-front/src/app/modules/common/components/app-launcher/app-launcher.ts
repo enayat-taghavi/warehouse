@@ -127,7 +127,40 @@ export const LAUNCHER_THEMES: Record<string, LauncherThemeClasses> = {
   }
 };
 
-const RICH_CARD_CODES = new Set(['warehouse', 'personnel', 'accounting', 'operations']);
+/** کلاس‌های کامل کارت غنی هر رنگ (رشتهٔ کامل تا Tailwind تولیدشان کند) */
+const RICH_CARD_THEMES: Record<string, { cardActive: string; glow: string; iconBox: string; titleHover: string; route: string; button: string }> = {
+  indigo: {
+    cardActive: 'border-indigo-500/30 hover:border-indigo-500/70 hover:shadow-2xl hover:shadow-indigo-500/10',
+    glow: 'bg-indigo-500/10 group-hover:bg-indigo-500/20',
+    iconBox: 'bg-indigo-500/15 border-indigo-500/30',
+    titleHover: 'group-hover:text-indigo-300',
+    route: 'text-indigo-400/90',
+    button: 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/25',
+  },
+  emerald: {
+    cardActive: 'border-emerald-500/30 hover:border-emerald-500/70 hover:shadow-2xl hover:shadow-emerald-500/10',
+    glow: 'bg-emerald-500/10 group-hover:bg-emerald-500/20',
+    iconBox: 'bg-emerald-500/15 border-emerald-500/30',
+    titleHover: 'group-hover:text-emerald-300',
+    route: 'text-emerald-400/90',
+    button: 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/25',
+  },
+};
+
+/** کارت غنی یک ماژول در لانچر */
+export interface RichLauncherCard {
+  code: string;
+  appKey: string;
+  title: string;
+  routePrefix: string;
+  icon: string;
+  description: string;
+  tags: string[];
+  enterLabel: string;
+  themeColor: string;
+  hasAccess: boolean;
+  order: number;
+}
 
 import { FirstBootWizardComponent } from '../operations/first-boot-wizard/first-boot-wizard';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
@@ -178,7 +211,7 @@ export class AppLauncherComponent implements OnInit {
       const hasAccess = this.persona.canAccessApp(appKey);
       const themeColor = tile?.themeColor || 'indigo';
       const tags = tile?.tags || ['کارتابل', 'مدیریت'];
-      const isRich = RICH_CARD_CODES.has(appKey);
+      const isRich = !!tile?.enterLabelFa && !!RICH_CARD_THEMES[themeColor];
 
       return {
         code: appKey,
@@ -202,7 +235,8 @@ export class AppLauncherComponent implements OnInit {
         const matches = normAllowed.includes(card.code.toLowerCase()) ||
           (spec?.code && normAllowed.includes(spec.code.toLowerCase())) ||
           spec?.aliases?.some(a => normAllowed.includes(a.toLowerCase()));
-        if (!matches && (normAllowed.includes('warehouse') || normAllowed.includes('finance') || normAllowed.includes('personnel'))) {
+        // اگر allowed_apps هر کد شناختهٔ ماژولی را نام برده، کارت‌های نام‌برده‌نشده پنهان می‌شوند
+        if (!matches && normAllowed.some(a => this.knownAppTokens().has(a))) {
           return false;
         }
       }
@@ -211,11 +245,58 @@ export class AppLauncherComponent implements OnInit {
     });
   });
 
+  /** کد، نام مستعار، کلید اپ و قلمرو همهٔ ماژول‌های این بیلد (برای تطبیق allowed_apps) */
+  private knownAppTokens = computed<Set<string>>(() => {
+    const tokens = new Set<string>();
+    for (const mod of this.moduleRegistry.getAllModules()) {
+      if (mod.isSuperuserOnly) continue;
+      [mod.code, mod.scopeKind, mod.extensions?.launcherTile?.appKey, ...(mod.aliases || [])]
+        .filter((t): t is string => !!t)
+        .forEach(t => tokens.add(t.toLowerCase()));
+    }
+    return tokens;
+  });
+
+  /**
+   * کارت‌های غنی ماژول‌های نصب‌شده، به ترتیب switcher.order
+   */
+  public richCards = computed<RichLauncherCard[]>(() => {
+    const visible = new Set(this.appCards().filter(c => c.isRich).map(c => c.code));
+    return this.moduleRegistry.getInstalledModules()
+      .filter(mod => visible.has(mod.extensions?.launcherTile?.appKey || mod.code))
+      .map(mod => {
+        const tile = mod.extensions!.launcherTile!;
+        return {
+          code: mod.code,
+          appKey: tile.appKey || mod.code,
+          title: tile.cardTitleFa || mod.titleFa,
+          routePrefix: mod.routePrefix,
+          icon: mod.icon,
+          description: mod.descriptionFa,
+          tags: tile.tags || [],
+          enterLabel: tile.enterLabelFa || '',
+          themeColor: tile.themeColor,
+          hasAccess: this.persona.canAccessApp(mod.code),
+          order: tile.switcher?.order ?? 100,
+        };
+      })
+      .sort((a, b) => a.order - b.order);
+  });
+
+  public richTheme(card: RichLauncherCard) {
+    return RICH_CARD_THEMES[card.themeColor] || RICH_CARD_THEMES['indigo'];
+  }
+
+  public enterRich(card: RichLauncherCard): void {
+    if (!card.hasAccess) return;
+    this.enterApp(card.appKey);
+  }
+
   /**
    * کارت‌های ماژول‌های دیگر که کاشی غنی اختصاصی ندارند
    */
   public extraCards = computed<AppLauncherCard[]>(() => {
-    return this.appCards().filter(card => !card.isRich);
+    return this.appCards().filter(card => !card.isRich && !this.moduleRegistry.getSpec(card.code)?.isSuperuserOnly);
   });
 
   public getThemeClasses(color: string): LauncherThemeClasses {
@@ -233,11 +314,8 @@ export class AppLauncherComponent implements OnInit {
    * تعداد کل کارت‌های دقیقاً رندرشده در قالب
    */
   get visibleCardsCount(): number {
-    const whCount = this.isWarehouseInstalled ? 1 : 0;
-    const finCount = this.isFinanceInstalled ? 1 : 0;
     const opsCount = (this.hasOperations && this.appCards().some(c => c.code === 'operations')) ? 1 : 0;
-    const extraCount = this.extraCards().length;
-    return whCount + finCount + opsCount + extraCount;
+    return this.richCards().length + opsCount + this.extraCards().length;
   }
 
   get isSingleAppMode(): boolean {
@@ -254,39 +332,14 @@ export class AppLauncherComponent implements OnInit {
     return 'md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto';
   }
 
-  get isWarehouseInstalled(): boolean {
-    return this.appCards().some(c => c.code === 'warehouse');
-  }
-
-  get isFinanceInstalled(): boolean {
-    return this.appCards().some(c => c.code === 'personnel' || c.code === 'accounting');
-  }
-
   enterApp(code: string): void {
     if (!this.persona.canAccessApp(code)) return;
     this.store.setWarehouseContext(false);
     this.persona.switchApp(code);
   }
 
-  // سازگاری رو به عقب (Backward-compatibility)
-  get hasWarehouse(): boolean {
-    return this.persona.canAccessApp('warehouse');
-  }
-
-  get hasFinance(): boolean {
-    return this.persona.canAccessApp('accounting');
-  }
-
   get hasOperations(): boolean {
     return this.persona.hasOperationsAccess();
-  }
-
-  enterWarehouse(): void {
-    this.enterApp('warehouse');
-  }
-
-  enterFinance(): void {
-    this.enterApp('personnel');
   }
 
   enterOperations(): void {

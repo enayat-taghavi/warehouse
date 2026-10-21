@@ -342,6 +342,44 @@ export function getScopeSyncProfile(scope?: string | null): ScopeSyncProfile {
 /**
  * دریافت قلمرو فعال برنامه از روی سشن تب، URL یا حافظه محلی
  */
+/**
+ * نوع موجودیت رکورد صف از entityTypeUrlPatterns ماژول‌ها (ماژول‌ها به ترتیب switcher.order، الگوها به ترتیب اعلام)؛
+ * بدون تطبیق undefined.
+ */
+export function resolveEntityTypeFromUrl(url?: string | null): string | undefined {
+  const u = (url || '').toLowerCase();
+  if (!u) return undefined;
+  try {
+    const mods = [...getModuleRegistry().getAllModules()]
+      .sort((a, b) => (a.extensions?.launcherTile?.switcher?.order ?? 100) - (b.extensions?.launcherTile?.switcher?.order ?? 100));
+    for (const mod of mods) {
+      for (const p of mod.extensions?.offlineSync?.entityTypeUrlPatterns || []) {
+        if (u.includes(p.urlPart.toLowerCase())) return p.entityType;
+      }
+    }
+  } catch {
+    // خطای رجیستری: نوع موجودیت نامعلوم می‌ماند (رکورد صف بدون آن هم ذخیره می‌شود)
+  }
+  return undefined;
+}
+
+/**
+ * قلمرو آفلاین یک مسیر صفحه از activePathPatterns ماژول‌ها (اول ماژول‌های غیر انبار، بعد انبار)؛
+ * مسیر ناشناخته null می‌گیرد.
+ */
+export function resolveScopeFromPath(path?: string | null): AppScope | null {
+  const p = (path || '').toLowerCase();
+  if (!p) return null;
+  const specs = getOfflineSyncSpecs();
+  for (const spec of specs) {
+    if (spec.scopeKind === WH_SCOPE) continue;
+    if (spec.activePathPatterns.some(pat => p.includes(pat.toLowerCase()))) return spec.scopeKind;
+  }
+  const wh = specs.find(s => s.scopeKind === WH_SCOPE);
+  if (wh && wh.activePathPatterns.some(pat => p.includes(pat.toLowerCase()))) return WH_SCOPE;
+  return null;
+}
+
 export function getCurrentActiveAppScope(): AppScope {
   if (typeof window === 'undefined') return WH_SCOPE;
   try {

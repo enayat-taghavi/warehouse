@@ -22,6 +22,8 @@ export interface AppSwitcherOption {
   descriptionFa: string;
   icon: IconName;
   accent: ModuleAccent;
+  onlyAccessTitleFa: string;
+  showRoleSelector: boolean;
 }
 
 /** پوستهٔ هستهٔ مرکز عملیات؛ ماژول نیست و قلمرو توکن جدا ندارد */
@@ -104,11 +106,41 @@ export class AppPersonaService {
         descriptionFa: sw.descriptionFa,
         icon: sw.icon,
         accent: sw.accent,
+        onlyAccessTitleFa: sw.onlyAccessTitleFa,
+        showRoleSelector: !!sw.showRoleSelector,
         order: sw.order,
       });
     }
     return options.sort((a, b) => a.order - b.order).map(({ order, ...o }) => o);
   });
+
+  /** ماژول نصب‌شدهٔ یک کد اپ (کد اپ پرسونا، کد ماژول یا نام مستعار)؛ پوستهٔ عملیات ماژول ندارد */
+  public moduleForApp(app: AppModuleType): WhFrontendModule | undefined {
+    if (!app || app === OPERATIONS_APP) return undefined;
+    return this.moduleRegistry.getInstalledModules().find(s =>
+      this.appCodeOf(s) === app || s.code === app || !!s.aliases?.includes(app));
+  }
+
+  /** ماژول اپ فعال تب */
+  public activeModule = computed<WhFrontendModule | undefined>(() => this.moduleForApp(this.activeApp()));
+
+  /** گزینهٔ منوی سامانه برای یک کد اپ (بدون فیلتر دسترسی)؛ برای نمایش دکمهٔ سامانهٔ فعال */
+  public switcherOptionFor(app: AppModuleType): AppSwitcherOption | undefined {
+    for (const spec of this.moduleRegistry.getInstalledModules()) {
+      const sw = spec.extensions?.launcherTile?.switcher;
+      if (!sw || this.appCodeOf(spec) !== app) continue;
+      return {
+        app, labelFa: sw.labelFa, descriptionFa: sw.descriptionFa, icon: sw.icon, accent: sw.accent,
+        onlyAccessTitleFa: sw.onlyAccessTitleFa, showRoleSelector: !!sw.showRoleSelector,
+      };
+    }
+    return undefined;
+  }
+
+  /** گزینهٔ سامانهٔ فعال تب؛ اپ ناشناخته گزینهٔ اپ پیش‌فرض را می‌گیرد (همان رفتار پیشین) */
+  public activeSwitcherOption = computed<AppSwitcherOption | undefined>(() =>
+    this.switcherOptionFor(this.activeApp()) ?? this.switcherOptionFor(DEFAULT_ACTIVE_APP_MODULE)
+  );
 
   // بررسی دسترسی کاربر به مرکز عملیات و زیرساخت سازمان (ویژه سوپریوزر)
   public hasOperationsAccess = computed<boolean>(() => {

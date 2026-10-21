@@ -202,18 +202,42 @@ describe('Users & Roles Management Comprehensive Tests (Tab 1: Users & Tab 2: Ro
     };
 
     activeModuleList = ['warehouse', 'accounting'];
+    // مشارکت users دو ماژول، همان مقادیر module.ts هر ماژول (spec نمی‌تواند از modules/* ایمپورت کند)
+    const usersExt: Record<string, any> = {
+      warehouse: {
+        permissionGroupKeys: ['WH_AUDIT', 'SENSITIVE'],
+        presetCategory: { key: 'inventory', labelFa: 'انبارگردانی', icon: 'package', tone: 'sky' },
+        rolePresets: [{ id: 'counter', title: 'انبارگردان / شمارشگر کور', category: 'inventory', categoryTitle: 'انبارگردانی', color: '#0284c7', icon: '📦', description: '', permissionCodenames: [] }],
+        roleScope: {
+          key: 'warehouse', order: 10, tabLabelFa: '📦 سامانه انبارداری', badgeLabelFa: 'سامانه انبارداری', shortLabelFa: 'انبارداری', tinyLabelFa: 'انبار',
+          icon: '📦', tone: 'sky', countsWarehouses: true, nameHints: ['warehouse'], titleHints: ['انبار', 'شمارش']
+        }
+      },
+      accounting: {
+        permissionGroupKeys: ['ACCOUNTING_FINANCE'],
+        presetCategory: { key: 'accounting', labelFa: 'حسابداری', icon: 'credit-card', tone: 'emerald' },
+        rolePresets: [{ id: 'workshop_operator', title: 'کارمند کارگاه', category: 'accounting', categoryTitle: 'حسابداری و کارگاه', color: '#64748b', icon: '👤', description: '', permissionCodenames: [] }],
+        roleScope: {
+          key: 'finance', order: 20, tabLabelFa: '💳 سامانه مالی و پرسنلی', badgeLabelFa: 'سامانه مالی و پرسنلی', shortLabelFa: 'مالی', tinyLabelFa: 'مالی',
+          icon: '💳', tone: 'emerald', nameHints: ['finance', 'payroll'], titleHints: ['مالی', 'حقوق'],
+          extraRoleNames: ['workshop_supervisor', 'company_manager'], extraTitleHints: ['سرپرست کارگاه', 'مدیر شرکت']
+        }
+      }
+    };
+    const moduleOf = (code: string) => ({ code, extensions: { users: usersExt[code] } });
     mockRegistry = {
       isModuleActive: vi.fn().mockImplementation((c: string) => activeModuleList.includes(c)),
       isModuleInstalled: vi.fn().mockImplementation((c: string) => activeModuleList.includes(c)),
       permissionMarkers: vi.fn().mockReturnValue([]),
+      getAllModules: vi.fn().mockImplementation(() => ['warehouse', 'accounting'].map(moduleOf)),
       getExtensions: vi.fn().mockImplementation((point: string) => {
         if (point === 'users') {
           const list: any[] = [];
           if (activeModuleList.includes('warehouse')) {
-            list.push({ moduleCode: 'warehouse', extension: { permissionGroupKeys: ['WH_AUDIT', 'SENSITIVE'] } });
+            list.push({ module: moduleOf('warehouse'), moduleCode: 'warehouse', extension: usersExt['warehouse'] });
           }
           if (activeModuleList.includes('accounting')) {
-            list.push({ moduleCode: 'accounting', extension: { permissionGroupKeys: ['ACCOUNTING_FINANCE'] } });
+            list.push({ module: moduleOf('accounting'), moduleCode: 'accounting', extension: usersExt['accounting'] });
           }
           return list;
         }

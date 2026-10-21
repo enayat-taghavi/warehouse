@@ -96,6 +96,8 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
               moduleCode: 'warehouse',
               extension: {
                 quickLink: { title: 'سامانه انبارداری', route: '/app/warehouse' },
+                shellLink: { labelFa: 'انبارداری', mobileLabelFa: 'ورود به انبارداری', route: '/app/warehouse/dashboard', icon: 'package', accent: 'indigo' },
+                sourceSettings: { labelFa: 'تنظیمات منبع (انبار)', route: '/app/warehouse/wh-settings' },
                 syncMonitorScope: 'warehouse'
               }
             });
@@ -105,6 +107,7 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
               moduleCode: 'accounting',
               extension: {
                 quickLink: { title: 'سامانه مالی و پرسنلی', route: '/app/finance' },
+                shellLink: { labelFa: 'مالی', mobileLabelFa: 'ورود به سامانه مالی', route: '/app/finance', icon: 'credit-card', accent: 'emerald' },
                 hasExpiringDocsWidget: true,
                 syncMonitorScope: 'accounting'
               }
@@ -144,15 +147,15 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
     activeModuleCodes = ['warehouse', 'accounting'];
     mockActiveCompany.hasWarehouseModuleSignal.mockReturnValue(true);
 
-    expect(component.showWarehouseLink).toBe(true);
-    expect(component.showAccountingLink).toBe(true);
+    expect(component.moduleShellLinks.some(l => l.code === 'warehouse')).toBe(true);
+    expect(component.moduleShellLinks.some(l => l.code === 'accounting')).toBe(true);
     expect(component.hasMultipleConnectedModules).toBe(true);
     expect(component.hasAnyConnectedModule).toBe(true);
 
-    component.goToWarehouse();
+    component.goToModule(component.moduleShellLinks.find(l => l.code === 'warehouse')!.route);
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/warehouse/dashboard']);
 
-    component.goToFinance();
+    component.goToModule(component.moduleShellLinks.find(l => l.code === 'accounting')!.route);
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/finance']);
   });
 
@@ -160,8 +163,8 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
     activeModuleCodes = ['warehouse'];
     mockActiveCompany.hasWarehouseModuleSignal.mockReturnValue(true);
 
-    expect(component.showWarehouseLink).toBe(true);
-    expect(component.showAccountingLink).toBe(false);
+    expect(component.moduleShellLinks.some(l => l.code === 'warehouse')).toBe(true);
+    expect(component.moduleShellLinks.some(l => l.code === 'accounting')).toBe(false);
     expect(component.hasMultipleConnectedModules).toBe(false);
     expect(component.hasAnyConnectedModule).toBe(true);
   });
@@ -170,8 +173,8 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
     activeModuleCodes = ['accounting'];
     mockActiveCompany.hasWarehouseModuleSignal.mockReturnValue(false);
 
-    expect(component.showWarehouseLink).toBe(false);
-    expect(component.showAccountingLink).toBe(true);
+    expect(component.moduleShellLinks.some(l => l.code === 'warehouse')).toBe(false);
+    expect(component.moduleShellLinks.some(l => l.code === 'accounting')).toBe(true);
     expect(component.hasMultipleConnectedModules).toBe(false);
     expect(component.hasAnyConnectedModule).toBe(true);
   });

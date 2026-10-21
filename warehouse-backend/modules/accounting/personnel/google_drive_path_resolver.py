@@ -241,29 +241,6 @@ class GoogleDrivePathResolver:
             return company, folder, filename
 
         # =====================================================================
-        # ۵. تصاویر کالاهای انبارگردانی و اقلام انبار (ItemPhoto)
-        # =====================================================================
-        elif model_name == 'ItemPhoto':
-            item = getattr(instance, 'item', None)
-            warehouse_name = "انبار_مرکزی"
-            company = None
-
-            if item and hasattr(item, 'warehouse') and item.warehouse:
-                warehouse = item.warehouse
-                warehouse_name = sanitize_filename(warehouse.name)
-                company = getattr(warehouse, 'company', None)
-
-            if not company:
-                logger.warning(f"[GDrive Path Resolver] Company not resolved for {model_name} (id={getattr(instance, 'id', None)}). Skipping.")
-                return None
-
-            item_code = sanitize_filename(getattr(item, 'fa_unic_code', None) or getattr(item, 'code', None) or str(instance.id))
-            item_desc = sanitize_filename(getattr(item, 'description', None) or getattr(item, 'name', None) or 'کالا')[:40]
-            folder = f"سامانه انبارداری/{warehouse_name}/تصاویر کالاها/{item_code}_{item_desc}"
-            filename = f"{doc_date}_عکس_کالا_کد{item_code}_{instance.id}{ext or '.webp'}"
-            return company, folder, filename
-
-        # =====================================================================
         # ۶. فایل‌های پشتیبان پایگاه داده (Database Backups)
         # =====================================================================
         elif model_name in ('BackupFile', 'DatabaseBackup'):
@@ -276,5 +253,13 @@ class GoogleDrivePathResolver:
             filename = getattr(instance, 'filename', orig_name or f"backup_{shamsi_date}.dump")
             folder = f"پشتیبان‌های پایگاه داده/{shamsi_year}"
             return company, folder, filename
+
+        # =====================================================================
+        # ۷. فایل‌های ماژول‌های دیگر (مثل تصاویر کالا) از منبع‌های ثبت‌شده در رجیستری پلتفرم
+        # =====================================================================
+        from platform_core.registry import contributions
+        for source in contributions('file_sync_sources'):
+            if source.get('model_name') == model_name and callable(source.get('resolve_path')):
+                return source['resolve_path'](instance, doc_date, ext, sanitize_filename)
 
         return None

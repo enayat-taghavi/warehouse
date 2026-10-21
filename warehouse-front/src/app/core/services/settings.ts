@@ -2,7 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../error/error.interceptor';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
+import { getWarehouseDirectoryEndpoint } from '../modules/warehouse-directory';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
@@ -52,16 +53,25 @@ export class SettingsService {
     });
   }
 
+  /** نشانی تنظیمات یک انبار از اندپوینت فهرست انبارهای ماژول صاحب آن */
+  private warehouseSettingsUrl(warehouseId: number): string | null {
+    const endpoint = getWarehouseDirectoryEndpoint();
+    return endpoint ? `${this.apiUrl}${endpoint}${warehouseId}/settings/` : null;
+  }
+
   getWarehouseSettings(warehouseId: number): Observable<SettingsMap> {
-    return this.http.get<SettingsMap>(`${this.apiUrl}/warehouses/${warehouseId}/settings/`);
+    const url = this.warehouseSettingsUrl(warehouseId);
+    return url ? this.http.get<SettingsMap>(url) : throwError(() => new Error('warehouse directory is not installed'));
   }
 
   saveWarehouseSettings(warehouseId: number, data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/warehouses/${warehouseId}/settings/`, data);
+    const url = this.warehouseSettingsUrl(warehouseId);
+    return url ? this.http.post(url, data) : throwError(() => new Error('warehouse directory is not installed'));
   }
 
   resetWarehouseSettings(warehouseId: number, keys: string[]): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/warehouses/${warehouseId}/settings/`, { body: { keys } });
+    const url = this.warehouseSettingsUrl(warehouseId);
+    return url ? this.http.delete(url, { body: { keys } }) : throwError(() => new Error('warehouse directory is not installed'));
   }
 
   downloadBackup(password: string): Observable<Blob> {

@@ -19,6 +19,7 @@ import { ACCOUNTING_ENTITY_ICONS } from './entity-icons';
 import { ACCOUNTING_NOTIFICATION_HANDLERS } from './notification-handlers';
 import { ACCOUNTING_PERSONAS } from './personas';
 import { ACCOUNTING_ROUTE_ACCESS } from './route-access';
+import { ACCOUNTING_ROLE_PRESETS } from './role-presets';
 
 /** فهرست پروژه‌های مالی فعال (هم projectLookup و هم بروزرسانی عمیق) */
 const FINANCIAL_PROJECTS_ENDPOINT = '/personnel/financial-projects';
@@ -117,12 +118,15 @@ export const MODULE: WhFrontendModule = {
       themeColor: 'emerald',
       tags: ['کارتابل مالی', 'ثبت کارکرد', 'خزانه‌داری'],
       appKey: 'personnel',
+      enterLabelFa: 'ورود به سامانه مالی',
       switcher: {
         order: 20,
         labelFa: 'مالی و کارکرد',
         descriptionFa: 'حقوق، دستمزد و کارکرد پرسنل',
         icon: 'credit-card',
-        accent: 'emerald'
+        accent: 'emerald',
+        onlyAccessTitleFa: 'شما صرفاً به سامانه مالی و کارکرد دسترسی دارید',
+        showRoleSelector: true
       }
     },
     userMenu: {
@@ -150,6 +154,11 @@ export const MODULE: WhFrontendModule = {
       }
     },
     layoutNav: {
+      appTitleFa: 'سامانه مالی و پرسنلی',
+      extraRouteTabs: [
+        'companies', 'company-documents', 'documents',
+        'supervisor-attendance', 'supervisor-new-profiles', 'accountant-new-profiles', 'manager-contracts'
+      ],
       hasCompanyDocumentsArchive: true,
       companyDocumentsRoute: '/app/finance/company-documents',
       roleMenus: [
@@ -164,6 +173,8 @@ export const MODULE: WhFrontendModule = {
     },
     operations: {
       quickLink: { title: 'سامانه مالی و پرسنلی', route: '/app/finance' },
+      shellLink: { labelFa: 'مالی', mobileLabelFa: 'ورود به سامانه مالی', route: '/app/finance', icon: 'credit-card', accent: 'emerald' },
+      monitorLabelFa: 'مالی و خزانه‌داری',
       hasExpiringDocsWidget: true,
       syncMonitorScope: 'accounting'
     },
@@ -171,13 +182,38 @@ export const MODULE: WhFrontendModule = {
       providesTreasury: true
     },
     users: {
-      permissionGroupKeys: ['ACCOUNTING_FINANCE']
+      permissionGroupKeys: ['ACCOUNTING_FINANCE'],
+      rolePresets: ACCOUNTING_ROLE_PRESETS,
+      presetCategory: { key: 'accounting', labelFa: 'حسابداری', icon: 'credit-card', tone: 'emerald' },
+      roleScope: {
+        key: 'finance', order: 20,
+        tabLabelFa: '💳 سامانه مالی و پرسنلی', badgeLabelFa: 'سامانه مالی و پرسنلی', shortLabelFa: 'مالی', tinyLabelFa: 'مالی',
+        icon: '💳', tone: 'emerald',
+        nameHints: ['finance', 'payroll'], titleHints: ['مالی', 'حقوق'],
+        extraRoleNames: ['workshop_supervisor', 'company_manager'], extraTitleHints: ['سرپرست کارگاه', 'مدیر شرکت']
+      }
     },
     healthDashboard: {
       panelScopes: ['accounting']
     },
     audit: {
-      appScopes: ['finance']
+      appScopes: ['finance'],
+      order: 20,
+      scopeLabelFa: 'مالی و اداری',
+      scopeChipLabelFa: 'مالی و اداری',
+      blockedAppLabelFa: 'سامانه مالی و اداری',
+      lockScopeOnRoute: true,
+      headerTitleFa: 'مرکز ممیزی و رهگیری رویدادهای مالی و اداری',
+      headerSubtitleFa: 'مانیتورینگ بلادرنگ احکام پرسنل، کارکرد، تردد ناوگان، فیش‌های حقوقی و خزانه‌داری',
+      headerBadgeFa: 'سامانه مالی و پرسنلی (سازمانی)',
+      logModules: [
+        { value: 'payroll', labelFa: 'حقوق و دستمزد' },
+        { value: 'personnel', labelFa: 'پرونده پرسنل' },
+        { value: 'attendance', labelFa: 'کارکرد و تردد' },
+        { value: 'fleet', labelFa: 'ناوگان و لجستیک' },
+        { value: 'treasury', labelFa: 'خزانه‌داری و پرداخت' },
+        { value: 'finance', labelFa: 'عملیات حسابداری' }
+      ]
     },
     companyApiEndpoints: {
       companiesEndpoint: '/personnel/companies',
@@ -250,6 +286,14 @@ export const MODULE: WhFrontendModule = {
         '/finance',
         '/personnel',
         '/payroll'
+      ],
+      entityTypeUrlPatterns: [
+        { urlPart: '/attendance/', entityType: 'daily_attendance' },
+        { urlPart: '/company-bank-accounts/', entityType: 'company_bank_account' },
+        { urlPart: '/company-board-members/', entityType: 'company_board_member' },
+        { urlPart: '/company-documents/', entityType: 'company_document' },
+        { urlPart: '/user-company-access/', entityType: 'user_company_access' },
+        { urlPart: '/companies/', entityType: 'company' }
       ],
       appRoutePrefixes: [
         '/app/finance',

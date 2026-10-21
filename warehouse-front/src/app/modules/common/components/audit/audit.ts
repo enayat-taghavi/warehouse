@@ -53,6 +53,15 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
 
 
 
+import { WhFrontendModule, ExtensionMap } from '../../../../core/modules/module-contract';
+
+/** یک قلمرو ممیزی: ماژول، مقدار app_scope و extension ممیزی آن */
+export interface AuditScopeView {
+  module: WhFrontendModule;
+  scope: string;
+  ext: NonNullable<ExtensionMap['audit']>;
+}
+
 @Component({
   selector: 'app-audit',
   standalone: true,
@@ -65,37 +74,107 @@ export class Audit implements OnInit, OnDestroy {
   private personaService = inject(AppPersonaService);
   private facade = inject(AuditFacade);
 
-  get isFinanceScope(): boolean {
-    if (!this.isWarehouseInstalled) return true;
-    return this.selectedAppScope === 'finance' ||
-           this.route.snapshot.data['appScope'] === 'finance' ||
-           this.router.url.includes('/app/finance');
+  /** ماژول‌های نصب‌شدهٔ دارای ممیزی، با قلمرو app_scope هر کدام، به ترتیب order */
+  get auditScopes(): AuditScopeView[] {
+    return this.personaService.moduleRegistry.getExtensions('audit')
+      .filter(e => !!e.extension.appScopes?.length)
+      .map(e => ({ module: e.module, scope: e.extension.appScopes![0], ext: e.extension }))
+      .sort((a, b) => (a.ext.order ?? 100) - (b.ext.order ?? 100));
   }
 
-  /** قلمرو را خود مسیر روی مالی قفل کرده است (نه انتخاب کاربر در انتخابگر قلمرو) */
+  trackScope(_i: number, sc: AuditScopeView): string {
+    return sc.scope;
+  }
+
+  auditScopeFor(scope: string | null | undefined): AuditScopeView | undefined {
+    if (!scope) return undefined;
+    return this.auditScopes.find(s => s.scope === scope || s.module.code === scope || !!s.module.aliases?.includes(scope));
+  }
+
+  /** قلمروی که خود مسیر صفحه (data.appScope یا پیشوند مسیر ماژول) نشان می‌دهد */
+  private get routeAuditScope(): AuditScopeView | undefined {
+    const routeScope = this.route.snapshot.data['appScope'];
+    const url = this.router.url || '';
+    return this.auditScopes.find(s => s.scope === routeScope || url.includes(s.module.routePrefix));
+  }
+
+  /** قلمرو فعال نما: تنها قلمرو نصب‌شده، قلمرو قفل‌شدهٔ مسیر یا قلمرو انتخاب‌شده؛ «همه» یعنی هیچ */
+  get scopedAudit(): AuditScopeView | undefined {
+    const scopes = this.auditScopes;
+    if (scopes.length === 1) return scopes[0];
+    const routeLocked = this.routeAuditScope;
+    if (routeLocked?.ext.lockScopeOnRoute) return routeLocked;
+    return this.auditScopeFor(this.selectedAppScope) ?? (routeLocked?.ext.lockScopeOnRoute ? routeLocked : undefined);
+  }
+
+  /** نمای قلمرو بدون انتخابگر انبار (مثل مالی): سربرگ و فیلتر ماژول‌های همان قلمرو */
+  get isFinanceScope(): boolean {
+    const scoped = this.scopedAudit;
+    if (!this.isWarehouseInstalled) return true;
+    return !!scoped && !scoped.ext.hasWarehouseSelector;
+  }
+
+  /** قلمرو را خود مسیر قفل کرده است (نه انتخاب کاربر در انتخابگر قلمرو) */
   get isFinanceRouteLocked(): boolean {
-    return this.route.snapshot.data['appScope'] === 'finance' || this.router.url.includes('/app/finance');
+    return !!this.routeAuditScope?.ext.lockScopeOnRoute;
   }
 
   get isWarehouseScope(): boolean {
-    if (!this.isAccountingInstalled) return true;
-    return this.selectedAppScope === 'warehouse' ||
-           this.route.snapshot.data['appScope'] === 'warehouse' ||
-           this.router.url.includes('/app/warehouse');
+    if (this.auditScopes.length === 1) return !!this.auditScopes[0].ext.hasWarehouseSelector;
+    return !!this.auditScopeFor(this.selectedAppScope)?.ext.hasWarehouseSelector || !!this.routeAuditScope?.ext.hasWarehouseSelector;
   }
 
   get isWarehouseInstalled(): boolean {
-    return this.personaService.moduleRegistry.getExtensions('audit').some(e => e.extension.appScopes?.includes('warehouse'));
+    return this.auditScopes.some(s => s.ext.hasWarehouseSelector);
   }
 
   get isAccountingInstalled(): boolean {
-    return this.personaService.moduleRegistry.getExtensions('audit').some(e => e.extension.appScopes?.includes('finance'));
+    return this.auditScopes.some(s => !s.ext.hasWarehouseSelector);
+  }
+
+  /** قلمرو دارای انتخابگر انبار (پیش‌فرض نما و فیلتر ماژول‌ها وقتی قلمرو «همه» است) */
+  private get warehouseAuditScope(): AuditScopeView | undefined {
+    return this.auditScopes.find(s => s.ext.hasWarehouseSelector);
+  }
+
+  /** گزینه‌های فیلتر ماژول لاگ در نمای فعلی */
+  get logModuleOptions(): { value: string; labelFa: string }[] {
+    const view = this.isFinanceScope ? (this.scopedAudit ?? this.auditScopes.find(s => !s.ext.hasWarehouseSelector)) : this.warehouseAuditScope;
+    return view?.ext.logModules ?? [];
+  }
+
+  get headerTitle(): string {
+    return (this.isFinanceScope ? this.scopedAudit?.ext.headerTitleFa : undefined) ?? 'مرکز ممیزی، امنیت و رهگیری رویدادها';
+  }
+
+  get headerSubtitle(): string {
+    return (this.isFinanceScope ? this.scopedAudit?.ext.headerSubtitleFa : undefined)
+      ?? 'مانیتورینگ بلادرنگ تغییرات داده‌ها، لاگین کاربران، هشدارهای امنیتی و مقایسه تفاضل (Diff)';
+  }
+
+  get headerBadge(): string | undefined {
+    return this.isFinanceScope ? this.scopedAudit?.ext.headerBadgeFa : undefined;
+  }
+
+  get selectedScopeChipLabel(): string {
+    return this.auditScopeFor(this.selectedAppScope)?.ext.scopeChipLabelFa ?? this.selectedAppScope;
+  }
+
+  /** برچسب قلمرو در رویداد جابه‌جایی قلمرو؛ کد ناشناخته برچسب قلمرو انبار را می‌گیرد (همان رفتار پیشین) */
+  switchedAppLabel(app: string | null | undefined): string {
+    return (this.auditScopeFor(app) ?? this.warehouseAuditScope)?.ext.scopeLabelFa ?? (app || '');
+  }
+
+  blockedAppLabel(app: string | null | undefined): string {
+    // کد ناشناخته برچسب قلمرو بدون انتخابگر انبار را می‌گیرد (همان رفتار پیشین)
+    return (this.auditScopeFor(app) ?? this.auditScopes.find(s => !s.ext.hasWarehouseSelector))?.ext.blockedAppLabelFa ?? (app || '');
   }
 
   public readonly BRANDING = BRANDING;
 
   activeTab: 'audit' | 'security' | 'login' = 'audit';
-  selectedAppScope: 'all' | 'warehouse' | 'finance' = 'all';
+  /** 'all' یا مقدار app_scope یکی از ماژول‌ها */
+  selectedAppScope: string = 'all';
   selectedEvent: string = '';
   isLoading = false;
   hasError = false;
@@ -427,26 +506,20 @@ export class Audit implements OnInit, OnDestroy {
   ngOnInit(): void {
     // ── تشخیص و قفل هوشمند قلمرو سامانه بر اساس مسیر و پرسونای فعال ──
     const routeScope = this.route.snapshot.data['appScope'];
-    if (routeScope === 'finance' || this.router.url.includes('/app/finance')) {
-      this.selectedAppScope = 'finance';
-    } else if (routeScope === 'warehouse' || this.router.url.includes('/app/warehouse')) {
-      this.selectedAppScope = 'warehouse';
+    const scopes = this.auditScopes;
+    const routeView = this.routeAuditScope;
+    if (routeView) {
+      this.selectedAppScope = routeView.scope;
     } else if (routeScope === 'security' || this.router.url.includes('/app/operations')) {
       // ممیزی مرکز عملیات جانشین ممیزی منوی مالی است؛ پیش‌فرض همهٔ قلمروها
-      if (!this.isWarehouseInstalled && this.isAccountingInstalled) {
-        this.selectedAppScope = 'finance';
-      } else if (this.isWarehouseInstalled && !this.isAccountingInstalled) {
-        this.selectedAppScope = 'warehouse';
-      } else {
-        this.selectedAppScope = 'all';
-      }
-    } else if (this.personaService?.activeApp) {
-      this.selectedAppScope = this.personaService.activeApp() === 'personnel' ? 'finance' : 'warehouse';
+      this.selectedAppScope = scopes.length === 1 ? scopes[0].scope : 'all';
+    } else if (this.personaService) {
+      const active = this.personaService.activeModule?.();
+      const activeView = active ? scopes.find(s => s.module.code === active.code) : undefined;
+      this.selectedAppScope = (activeView ?? this.warehouseAuditScope)?.scope ?? 'all';
     }
-    if (!this.isWarehouseInstalled) {
-      this.selectedAppScope = 'finance';
-    } else if (!this.isAccountingInstalled) {
-      this.selectedAppScope = 'warehouse';
+    if (scopes.length === 1) {
+      this.selectedAppScope = scopes[0].scope;
     }
 
     // ── وضعیت آنلاین/آفلاین ──
@@ -582,7 +655,7 @@ export class Audit implements OnInit, OnDestroy {
     }
   }
 
-  setAppScope(scope: 'all' | 'warehouse' | 'finance'): void {
+  setAppScope(scope: string): void {
     if (this.selectedAppScope !== scope) {
       this.selectedAppScope = scope;
       this.resetPageAndReload();
@@ -694,7 +767,7 @@ export class Audit implements OnInit, OnDestroy {
     if (params['tab'] === 'login' || params['tab'] === 'audit' || params['tab'] === 'security') {
       this.activeTab = params['tab'];
     }
-    if (params['app_scope'] && ['all', 'warehouse', 'finance'].includes(params['app_scope'])) {
+    if (params['app_scope'] && (params['app_scope'] === 'all' || !!this.auditScopes.find(s => s.scope === params['app_scope']))) {
       this.selectedAppScope = params['app_scope'];
     }
     if (params['event']) this.selectedEvent = params['event'];
@@ -2161,14 +2234,12 @@ export class Audit implements OnInit, OnDestroy {
       if (!isSec) return false;
       if (this.selectedEvent && log.details?.event !== this.selectedEvent) return false;
     } else if (this.activeTab === 'audit') {
-      if (this.selectedAppScope === 'warehouse') {
-        const isWh = ['docs', 'dispatch', 'customs', 'feeding', 'labels', 'counter', 'supervisor', 'manager', 'warehouses'].includes(log.module) || (log.warehouse !== undefined && log.warehouse !== null);
+      const view = this.selectedAppScope !== 'all' ? this.auditScopeFor(this.selectedAppScope) : undefined;
+      if (view) {
+        const inScope = (view.ext.logModules || []).some(m => m.value === log.module) ||
+          (view.ext.hasWarehouseSelector ? (log.warehouse !== undefined && log.warehouse !== null) : log.details?.target_module === view.scope);
         const isCross = log.details?.event === 'CROSS_APP_DENIED' || log.details?.event === 'APP_SCOPE_SWITCH';
-        if (!isWh || isCross) return false;
-      } else if (this.selectedAppScope === 'finance') {
-        const isFin = ['personnel', 'payroll', 'attendance', 'fleet', 'treasury', 'finance'].includes(log.module) || log.details?.target_module === 'finance';
-        const isCross = log.details?.event === 'CROSS_APP_DENIED' || log.details?.event === 'APP_SCOPE_SWITCH';
-        if (!isFin || isCross) return false;
+        if (!inScope || isCross) return false;
       }
     }
 

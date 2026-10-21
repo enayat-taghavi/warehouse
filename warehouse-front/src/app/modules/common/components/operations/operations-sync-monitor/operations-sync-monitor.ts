@@ -5,11 +5,14 @@ import {
   offlineDb,
   warehouseOfflineDb,
   financeOfflineDb,
+  LOCKED_OFFLINE_SCOPES,
+  normalizeScope,
+  resolveOfflineDbStrict,
   SyncQueueEntry,
   SyncErrorEntry
 } from '../../../../../core/services/offline-db';
 import { NetworkStatusService, ConnectionState } from '../../../../../core/services/network-status.service';
-import { SessionTabService } from '../../../../../core/services/session-tab.service';
+import { SessionTabService, DEFAULT_ACTIVE_APP_MODULE } from '../../../../../core/services/session-tab.service';
 import { ClientTelemetryService, FleetSessionItem } from '../../../../../core/services/client-telemetry.service';
 import { OfflineSyncService } from '../../../../../core/services/offline-sync.service';
 import { WebSocketService } from '../../../../../core/http/websocket.service';
@@ -69,12 +72,37 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
   private confirmDialog = inject(ConfirmDialogService);
   private cdr = inject(ChangeDetectorRef);
 
+  /** ماژول نصب‌شده‌ای صف دیتابیس قفل‌شدهٔ اول (انبار) را پایش می‌کند */
   get isWarehouseInstalled(): boolean {
-    return this.moduleRegistry.getExtensions('operations').some(e => e.extension.syncMonitorScope === 'warehouse');
+    return this.isLockedScopeMonitored(LOCKED_OFFLINE_SCOPES[0]);
   }
 
+  /** ماژول نصب‌شده‌ای صف دیتابیس قفل‌شدهٔ دوم (مالی) را پایش می‌کند */
   get isAccountingInstalled(): boolean {
-    return this.moduleRegistry.getExtensions('operations').some(e => e.extension.syncMonitorScope === 'accounting');
+    return this.isLockedScopeMonitored(LOCKED_OFFLINE_SCOPES[1]);
+  }
+
+  private isLockedScopeMonitored(scope: string): boolean {
+    return this.moduleRegistry.getExtensions('operations')
+      .some(e => !!e.extension.syncMonitorScope && normalizeScope(e.extension.syncMonitorScope) === scope);
+  }
+
+  /** ماژول نصب‌شدهٔ یک کد اپ (کلید اپ لانچر، کد ماژول یا نام مستعار) */
+  private moduleForApp(app: string | null | undefined) {
+    if (!app) return undefined;
+    return this.moduleRegistry.getInstalledModules().find(m =>
+      m.extensions?.launcherTile?.appKey === app || m.code === app || !!m.aliases?.includes(app));
+  }
+
+  /** برچسب و رنگ قلمرو یک تب متصل (از ماژول همان کد اپ؛ کد ناشناخته ماژول اپ پیش‌فرض را می‌گیرد) */
+  scopeBadge(appScope: string): { label: string; classes: string } {
+    const mod = this.moduleForApp(appScope) ?? this.moduleForApp(DEFAULT_ACTIVE_APP_MODULE);
+    const accent = mod?.extensions?.launcherTile?.switcher?.accent ?? 'emerald';
+    const classes: Record<string, string> = {
+      indigo: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+      emerald: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    };
+    return { label: mod?.extensions?.operations?.monitorLabelFa ?? mod?.titleShortFa ?? appScope, classes: classes[accent] };
   }
 
   get showWarehouseQueue(): boolean {
@@ -179,8 +207,7 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
     if (!err) return warehouseOfflineDb;
     const fromMap = this.errorSourceMap.get(err);
     if (fromMap) return fromMap;
-    if (err.appScope === 'finance') return financeOfflineDb;
-    return warehouseOfflineDb;
+    return (err.appScope ? resolveOfflineDbStrict(err.appScope) : null) ?? warehouseOfflineDb;
   }
 
   /**

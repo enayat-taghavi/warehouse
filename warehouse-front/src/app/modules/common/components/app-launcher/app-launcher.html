@@ -54,131 +54,71 @@
     <!-- گرید کارت‌های سامانه -->
     <div class="grid grid-cols-1 gap-6 w-full" [ngClass]="gridContainerClass">
 
-      <!-- ۱. کارت سامانه انبارگردانی (فقط در صورت نصب و فعال بودن ماژول انبارداری) -->
-      <div
-        *ngIf="isWarehouseInstalled"
-        class="relative rounded-3xl p-6 sm:p-8 border transition-all duration-300 flex flex-col justify-between group overflow-hidden"
-        [ngClass]="hasWarehouse
-          ? 'bg-slate-900/80 hover:bg-slate-900 border-indigo-500/30 hover:border-indigo-500/70 hover:shadow-2xl hover:shadow-indigo-500/10 cursor-pointer'
-          : 'bg-slate-900/40 border-slate-800/80 opacity-60 cursor-not-allowed'"
-        (click)="enterWarehouse()"
-      >
-        <!-- افکت نور داخلی -->
-        <div *ngIf="hasWarehouse" class="absolute -right-20 -top-20 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all pointer-events-none"></div>
+      <!-- ۱. کارت‌های غنی ماژول‌های نصب‌شده (از launcherTile و مشخصات هر ماژول) -->
+      @for (card of richCards(); track card.code) {
+        <div
+          class="relative rounded-3xl p-6 sm:p-8 border transition-all duration-300 flex flex-col justify-between group overflow-hidden"
+          [ngClass]="card.hasAccess
+            ? 'bg-slate-900/80 hover:bg-slate-900 cursor-pointer ' + richTheme(card).cardActive
+            : 'bg-slate-900/40 border-slate-800/80 opacity-60 cursor-not-allowed'"
+          (click)="enterRich(card)"
+        >
+          <!-- افکت نور داخلی -->
+          <div *ngIf="card.hasAccess" class="absolute -right-20 -top-20 w-48 h-48 rounded-full blur-2xl transition-all pointer-events-none" [ngClass]="richTheme(card).glow"></div>
 
-        <div>
-          <!-- هدر کارت -->
-          <div class="flex items-start justify-between mb-5">
-            <div class="w-14 h-14 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-3xl shadow-inner">
-              📦
+          <div>
+            <!-- هدر کارت -->
+            <div class="flex items-start justify-between mb-5">
+              <div class="w-14 h-14 rounded-2xl border flex items-center justify-center text-3xl shadow-inner" [ngClass]="richTheme(card).iconBox">
+                {{ card.icon }}
+              </div>
+              <div>
+                <span *ngIf="card.hasAccess" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  دسترسی مجاز
+                </span>
+                <span *ngIf="!card.hasAccess" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-slate-800 border border-slate-700 text-slate-400">
+                  🔒 فاقد دسترسی
+                </span>
+              </div>
             </div>
-            <div>
-              <span *ngIf="hasWarehouse" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                دسترسی مجاز
-              </span>
-              <span *ngIf="!hasWarehouse" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-slate-800 border border-slate-700 text-slate-400">
-                🔒 فاقد دسترسی
-              </span>
-            </div>
+
+            <!-- عنوان و توضیحات -->
+            <h3 class="text-lg sm:text-xl font-black text-white transition-colors" [ngClass]="richTheme(card).titleHover">
+              {{ card.title }}
+            </h3>
+            <p class="text-xs font-mono font-bold mt-1" [ngClass]="richTheme(card).route">{{ card.routePrefix }}</p>
+            <p class="text-xs sm:text-sm text-slate-400 mt-3 leading-relaxed">
+              {{ card.description }}
+            </p>
           </div>
 
-          <!-- عنوان و توضیحات -->
-          <h3 class="text-lg sm:text-xl font-black text-white group-hover:text-indigo-300 transition-colors">
-            سامانه انبارگردانی و ره‌گیری کالا
-          </h3>
-          <p class="text-xs text-indigo-400/90 font-mono font-bold mt-1">/app/warehouse</p>
-          <p class="text-xs sm:text-sm text-slate-400 mt-3 leading-relaxed">
-            مدیریت فرآیند شمارش کور انبار، کارتابل سرپرست، تخصیص کالا و صدور MT26/49، ثبت مغایرت‌ها، داشبورد ره‌گیری و ممیزی موجودی کالا.
-          </p>
-        </div>
-
-        <!-- دکمه ورود و ماژول‌ها -->
-        <div class="mt-8 pt-5 border-t border-slate-800/80 flex items-center justify-between">
-          <div class="flex items-center gap-1.5 text-[11px] text-slate-400">
-            <span>🔹 کارتابل انبارگردان</span>
-            <span>•</span>
-            <span>مدیریت کالا</span>
-          </div>
-
-          <button
-            type="button"
-            [disabled]="!hasWarehouse"
-            (click)="$event.stopPropagation(); enterWarehouse()"
-            class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-md active:scale-95"
-            [ngClass]="hasWarehouse
-              ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/25 cursor-pointer'
-              : 'bg-slate-800 text-slate-500 cursor-not-allowed'"
-          >
-            <span>ورود به انبارگردانی</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="rotate-180" appIcon="arrow-right"></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- ۲. کارت سامانه مالی و پرسنلی (فقط در صورت نصب و فعال بودن ماژول مالی) -->
-      <div
-        *ngIf="isFinanceInstalled"
-        class="relative rounded-3xl p-6 sm:p-8 border transition-all duration-300 flex flex-col justify-between group overflow-hidden"
-        [ngClass]="hasFinance
-          ? 'bg-slate-900/80 hover:bg-slate-900 border-emerald-500/30 hover:border-emerald-500/70 hover:shadow-2xl hover:shadow-emerald-500/10 cursor-pointer'
-          : 'bg-slate-900/40 border-slate-800/80 opacity-60 cursor-not-allowed'"
-        (click)="enterFinance()"
-      >
-        <!-- افکت نور داخلی -->
-        <div *ngIf="hasFinance" class="absolute -right-20 -top-20 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all pointer-events-none"></div>
-
-        <div>
-          <!-- هدر کارت -->
-          <div class="flex items-start justify-between mb-5">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-3xl shadow-inner">
-              💳
+          <!-- دکمه ورود و ماژول‌ها -->
+          <div class="mt-8 pt-5 border-t border-slate-800/80 flex items-center justify-between">
+            <div class="flex items-center gap-1.5 text-[11px] text-slate-400">
+              @for (tag of card.tags; track $index) {
+                @if ($index > 0) {
+                  <span>•</span>
+                }
+                <span>{{ $index === 0 ? '🔹 ' + tag : tag }}</span>
+              }
             </div>
-            <div>
-              <span *ngIf="hasFinance" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                دسترسی مجاز
-              </span>
-              <span *ngIf="!hasFinance" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-slate-800 border border-slate-700 text-slate-400">
-                🔒 فاقد دسترسی
-              </span>
-            </div>
+
+            <button
+              type="button"
+              [disabled]="!card.hasAccess"
+              (click)="$event.stopPropagation(); enterRich(card)"
+              class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-md active:scale-95"
+              [ngClass]="card.hasAccess
+                ? richTheme(card).button + ' text-white cursor-pointer'
+                : 'bg-slate-800 text-slate-500 cursor-not-allowed'"
+            >
+              <span>{{ card.enterLabel }}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="rotate-180" appIcon="arrow-right"></svg>
+            </button>
           </div>
-
-          <!-- عنوان و توضیحات -->
-          <h3 class="text-lg sm:text-xl font-black text-white group-hover:text-emerald-300 transition-colors">
-            سامانه مالی، حقوق و کارکرد
-          </h3>
-          <p class="text-xs text-emerald-400/90 font-mono font-bold mt-1">/app/finance</p>
-          <p class="text-xs sm:text-sm text-slate-400 mt-3 leading-relaxed">
-            ثبت و کنترل کارکرد روزانه، کارتابل تاییدات ۵ سطحی، محاسبات فیش حقوقی، دیسکت‌های بیمه تامین اجتماعی و مالیات، خزانه‌داری و پرداخت پایا.
-          </p>
         </div>
-
-        <!-- دکمه ورود و ماژول‌ها -->
-        <div class="mt-8 pt-5 border-t border-slate-800/80 flex items-center justify-between">
-          <div class="flex items-center gap-1.5 text-[11px] text-slate-400">
-            <span>🔹 کارتابل مالی</span>
-            <span>•</span>
-            <span>ثبت کارکرد</span>
-            <span>•</span>
-            <span>خزانه‌داری</span>
-          </div>
-
-          <button
-            type="button"
-            [disabled]="!hasFinance"
-            (click)="$event.stopPropagation(); enterFinance()"
-            class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-md active:scale-95"
-            [ngClass]="hasFinance
-              ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/25 cursor-pointer'
-              : 'bg-slate-800 text-slate-500 cursor-not-allowed'"
-          >
-            <span>ورود به سامانه مالی</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="rotate-180" appIcon="arrow-right"></svg>
-          </button>
-        </div>
-      </div>
+      }
 
       <!-- ۳. کارت مرکز عملیات، پدافند و زیرساخت سازمان (ویژه مدیران ارشد) -->
       <div 

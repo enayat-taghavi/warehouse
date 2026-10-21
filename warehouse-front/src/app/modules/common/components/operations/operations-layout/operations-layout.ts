@@ -1,3 +1,4 @@
+import { IconName } from '../../../../../shared/icons/icon-registry';
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router, RouterModule, NavigationEnd } from '@angular/router';
@@ -64,13 +65,22 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
   public moduleRegistry = inject(ModuleRegistryService);
   private router = inject(Router);
 
-  get showWarehouseLink(): boolean {
-    const hasOpsLink = this.moduleRegistry.getExtensions('operations').some(e => e.extension.syncMonitorScope === 'warehouse');
-    return this.activeCompanyService?.hasWarehouseModuleSignal?.() ?? hasOpsLink;
-  }
-
-  get showAccountingLink(): boolean {
-    return this.moduleRegistry.getExtensions('operations').some(e => e.extension.syncMonitorScope === 'accounting');
+  /**
+   * دکمه‌های ورود به ماژول‌ها در پوسته (operations.shellLink)؛ ماژول وابسته به پرچم انبار شرکت
+   * فقط وقتی شرکت فعال آن ماژول را دارد نشان داده می‌شود.
+   */
+  get moduleShellLinks(): Array<{ code: string; labelFa: string; mobileLabelFa: string; route: string; icon: IconName; textClass: string; order: number }> {
+    const textClass: Record<string, string> = { indigo: 'text-indigo-300', emerald: 'text-emerald-300' };
+    return this.moduleRegistry.getExtensions('operations')
+      .filter(e => !!e.extension.shellLink)
+      .filter(e => !e.module?.extensions?.companies?.hasWarehouseModuleToggle
+        || (this.activeCompanyService?.hasWarehouseModuleSignal?.() ?? true))
+      .map(e => {
+        const l = e.extension.shellLink!;
+        const order = e.module?.extensions?.launcherTile?.switcher?.order ?? 100;
+        return { code: e.moduleCode, labelFa: l.labelFa, mobileLabelFa: l.mobileLabelFa, route: l.route, icon: l.icon, textClass: textClass[l.accent] || textClass['indigo'], order };
+      })
+      .sort((a, b) => a.order - b.order);
   }
 
   /**
@@ -82,7 +92,8 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
     const links: OperationsQuickLink[] = [];
     for (const e of exts) {
       const code = (e as any).moduleCode || e.module?.code;
-      if (code === 'warehouse' || code === 'accounting' || code === 'finance') {
+      // ماژول دارای دکمهٔ اختصاصی پوسته اینجا تکرار نمی‌شود
+      if (e.extension.shellLink) {
         continue;
       }
       const ql = e.extension.quickLink;
@@ -99,12 +110,16 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
   }
 
   get hasAnyConnectedModule(): boolean {
-    return this.showWarehouseLink || this.showAccountingLink || this.extraQuickLinks.length > 0;
+    return this.moduleShellLinks.length > 0 || this.extraQuickLinks.length > 0;
   }
 
   get hasMultipleConnectedModules(): boolean {
-    const count = (this.showWarehouseLink ? 1 : 0) + (this.showAccountingLink ? 1 : 0) + this.extraQuickLinks.length;
+    const count = this.moduleShellLinks.length + this.extraQuickLinks.length;
     return count > 1;
+  }
+
+  public trackShellLink(_index: number, link: { code: string }): string {
+    return link.code;
   }
 
   /** getter هر بار شیء تازه می‌سازد؛ trackBy دکمه‌ها را در هر چرخهٔ بررسی تغییرات از نو نمی‌سازد */
@@ -233,12 +248,8 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
     this.closeMobileMenu();
   }
 
-  public goToWarehouse(): void {
-    this.router.navigate(['/app/warehouse/dashboard']);
-  }
-
-  public goToFinance(): void {
-    this.router.navigate(['/app/finance']);
+  public goToModule(route: string): void {
+    this.router.navigate([route]);
   }
 
   public goToLauncher(): void {

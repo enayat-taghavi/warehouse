@@ -12,6 +12,8 @@ import {
 } from '../../../../core/services/system-health.service';
 import { NetworkStatusService, ConnectionState } from '../../../../core/services/network-status.service';
 import { AppPersonaService } from '../../../../core/services/app-persona.service';
+import { LOCKED_OFFLINE_SCOPES, normalizeScope, resolveScopeFromPath } from '../../../../core/services/offline-db';
+import { STRESS_SCENARIOS } from './concurrency-stress-scenarios';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { Router, NavigationEnd } from '@angular/router';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
@@ -82,8 +84,8 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
           <div class="mt-4 pt-3 border-t border-slate-700/60 text-[11px] text-slate-300 flex items-center justify-between">
             <span>وضعیت قلمرو:</span>
             <span class="font-bold px-2 py-0.5 rounded-md border text-[10px]"
-              [ngClass]="appScope === 'finance' ? 'bg-purple-950/70 text-purple-200 border-purple-800/80' : 'bg-blue-950/70 text-blue-200 border-blue-800/80'">
-              {{ appScope === 'finance' ? 'امور مالی و حقوق' : 'انبارداری و لجستیک' }}
+              [ngClass]="isFinanceScope ? 'bg-purple-950/70 text-purple-200 border-purple-800/80' : 'bg-blue-950/70 text-blue-200 border-blue-800/80'">
+              {{ isFinanceScope ? 'امور مالی و حقوق' : 'انبارداری و لجستیک' }}
             </span>
           </div>
         </div>
@@ -253,7 +255,7 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
                   </div>
                   <div>
                     <h3 class="text-xs font-black text-slate-800 dark:text-slate-100">دیتابیس‌های محلی تفکیک‌شده</h3>
-                    <p class="text-[10px] text-slate-400 font-mono">{{ (!isWarehouseInstalled) ? 'Finance & HR IndexedDB' : (!isAccountingInstalled) ? 'Warehouse IndexedDB' : (appScope !== 'finance') ? 'Warehouse & Finance DBs' : 'Finance & HR IndexedDB' }}</p>
+                    <p class="text-[10px] text-slate-400 font-mono">{{ (!isWarehouseInstalled) ? 'Finance & HR IndexedDB' : (!isAccountingInstalled) ? 'Warehouse IndexedDB' : (!isFinanceScope) ? 'Warehouse & Finance DBs' : 'Finance & HR IndexedDB' }}</p>
                   </div>
                 </div>
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 shrink-0">
@@ -263,7 +265,7 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
               <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs flex items-center justify-between">
                 <span class="text-slate-400 text-[11px]">رکوردهای کش و صف:</span>
                 <span class="font-mono font-bold text-slate-700 dark:text-slate-200 text-[11px]" dir="ltr">
-                  <ng-container *ngIf="isWarehouseInstalled && (appScope !== 'finance' || !isAccountingInstalled)">انبار: {{ storage?.warehouseRecords || 0 }}<ng-container *ngIf="isAccountingInstalled"> | </ng-container></ng-container><ng-container *ngIf="isAccountingInstalled">مالی: {{ storage?.financeRecords || 0 }}</ng-container><ng-container *ngIf="storage?.otherRecords"> | سایر: {{ storage?.otherRecords }}</ng-container>
+                  <ng-container *ngIf="isWarehouseInstalled && (!isFinanceScope || !isAccountingInstalled)">انبار: {{ storage?.warehouseRecords || 0 }}<ng-container *ngIf="isAccountingInstalled"> | </ng-container></ng-container><ng-container *ngIf="isAccountingInstalled">مالی: {{ storage?.financeRecords || 0 }}</ng-container><ng-container *ngIf="storage?.otherRecords"> | سایر: {{ storage?.otherRecords }}</ng-container>
                 </span>
               </div>
             </div>
@@ -378,7 +380,7 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
                 </span>
               </div>
               <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {{ (isWarehouseInstalled && appScope !== 'finance') ? 'شبیه‌سازی صدها تراکنش موازی خزانه‌داری و انبارداری جهت اثبات قفل‌های بدبینانه (select_for_update) و تضمین Zero Deadlock' : 'شبیه‌سازی صدها تراکنش موازی خزانه‌داری جهت اثبات قفل‌های بدبینانه (select_for_update) و تضمین Zero Deadlock' }}
+                {{ (isWarehouseInstalled && !isFinanceScope) ? 'شبیه‌سازی صدها تراکنش موازی خزانه‌داری و انبارداری جهت اثبات قفل‌های بدبینانه (select_for_update) و تضمین Zero Deadlock' : 'شبیه‌سازی صدها تراکنش موازی خزانه‌داری جهت اثبات قفل‌های بدبینانه (select_for_update) و تضمین Zero Deadlock' }}
               </p>
             </div>
           </div>
@@ -407,9 +409,9 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
               [(ngModel)]="selectedScenario"
               class="w-full min-h-[40px] sm:min-h-[32px] py-1.5 px-3 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option *ngIf="isWarehouseInstalled && isAccountingInstalled && appScope !== 'finance'" value="combined">ترکیبی (خزانه‌داری + انبارداری)</option>
+              <option *ngIf="isWarehouseInstalled && isAccountingInstalled && !isFinanceScope" value="combined">ترکیبی (خزانه‌داری + انبارداری)</option>
               <option *ngIf="isAccountingInstalled" value="treasury">فقط خزانه‌داری (جلوگیری از پرداخت دوبل)</option>
-              <option *ngIf="isWarehouseInstalled && (appScope !== 'finance' || !isAccountingInstalled)" value="warehouse">فقط انبارداری (کسر اتمیک موجودی)</option>
+              <option *ngIf="isWarehouseInstalled && (!isFinanceScope || !isAccountingInstalled)" [value]="scenarios.warehouseOnly">فقط انبارداری (کسر اتمیک موجودی)</option>
             </select>
           </div>
 
@@ -495,7 +497,7 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
               <span class="font-bold">تایید شد (۱ پرداخت نهایی)</span>
             </div>
 
-            <div *ngIf="isWarehouseInstalled && appScope !== 'finance' && selectedScenario !== 'treasury'" class="p-2.5 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+            <div *ngIf="isWarehouseInstalled && !isFinanceScope && selectedScenario !== 'treasury'" class="p-2.5 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
               <span>تمامیت اتمیک موجودی انبار:</span>
               <span class="font-bold">تایید شد (کسر دقیق بدون افت تراکنش)</span>
             </div>
@@ -524,11 +526,17 @@ export class HealthDashboardComponent implements OnInit, OnDestroy {
   storage: ClientStorageHealth | null = null;
   sw: ServiceWorkerHealth | null = null;
   lastReport: ComprehensiveDiagnosticReport | null = null;
-  appScope = 'warehouse';
+  /** قلمرو آفلاین صفحه: یکی از دو قلمرو قفل‌شده (داشبورد روی دو دیتابیس قفل‌شده کار می‌کند) */
+  appScope: string = LOCKED_OFFLINE_SCOPES[0];
+  readonly scenarios = STRESS_SCENARIOS;
+
+  get isFinanceScope(): boolean {
+    return this.appScope === LOCKED_OFFLINE_SCOPES[1];
+  }
 
   // Stress Test Suite State
   selectedConcurrency = 30;
-  selectedScenario = 'combined';
+  selectedScenario: string = STRESS_SCENARIOS.combined;
   isStressTesting = false;
   stressReport: ConcurrencyStressReport | null = null;
   stressError: string | null = null;
@@ -549,11 +557,17 @@ export class HealthDashboardComponent implements OnInit, OnDestroy {
   }
 
   get isWarehouseInstalled(): boolean {
-    return this.personaService.moduleRegistry.getExtensions('healthDashboard').some(e => e.extension.panelScopes?.includes('warehouse'));
+    return this.hasPanelFor(LOCKED_OFFLINE_SCOPES[0]);
   }
 
   get isAccountingInstalled(): boolean {
-    return this.personaService.moduleRegistry.getExtensions('healthDashboard').some(e => e.extension.panelScopes?.includes('accounting'));
+    return this.hasPanelFor(LOCKED_OFFLINE_SCOPES[1]);
+  }
+
+  /** ماژول نصب‌شده‌ای پنل سلامت این قلمرو قفل‌شده را عرضه می‌کند */
+  private hasPanelFor(scope: string): boolean {
+    return this.personaService.moduleRegistry.getExtensions('healthDashboard')
+      .some(e => (e.extension.panelScopes || []).some(p => normalizeScope(p) === scope));
   }
 
   ngOnInit(): void {
@@ -599,31 +613,32 @@ export class HealthDashboardComponent implements OnInit, OnDestroy {
   }
 
   detectScope(): void {
+    const [WH, FIN] = LOCKED_OFFLINE_SCOPES;
     const path = (this.router.url || (typeof window !== 'undefined' ? window.location.pathname : '') || '').toLowerCase();
-    if (path.includes('/app/finance') || path.includes('/finance') || path.includes('/personnel') || path.includes('/payroll')) {
-      this.appScope = 'finance';
-      this.selectedScenario = 'treasury';
-    } else if (path.includes('/app/warehouse') || path.includes('/warehouse')) {
-      this.appScope = 'warehouse';
+    const pathScope = resolveScopeFromPath(path);
+    if (pathScope === FIN) {
+      this.appScope = FIN;
+      this.selectedScenario = STRESS_SCENARIOS.treasury;
+    } else if (pathScope === WH) {
+      this.appScope = WH;
     } else {
       if (!this.isWarehouseInstalled && this.isAccountingInstalled) {
-        this.appScope = 'finance';
-        this.selectedScenario = 'treasury';
+        this.appScope = FIN;
+        this.selectedScenario = STRESS_SCENARIOS.treasury;
       } else if (this.isWarehouseInstalled && !this.isAccountingInstalled) {
-        this.appScope = 'warehouse';
-        this.selectedScenario = 'warehouse';
+        this.appScope = WH;
+        this.selectedScenario = STRESS_SCENARIOS.warehouseOnly;
       } else {
-        const active = this.personaService.activeApp();
-        this.appScope = (active === 'personnel' || active === 'finance') ? 'finance' : 'warehouse';
-        this.selectedScenario = this.appScope === 'finance' ? 'treasury' : 'combined';
+        this.appScope = normalizeScope(this.personaService.activeApp()) === FIN ? FIN : WH;
+        this.selectedScenario = this.appScope === FIN ? STRESS_SCENARIOS.treasury : STRESS_SCENARIOS.combined;
       }
     }
     if (!this.isWarehouseInstalled) {
-      this.appScope = 'finance';
-      this.selectedScenario = 'treasury';
+      this.appScope = FIN;
+      this.selectedScenario = STRESS_SCENARIOS.treasury;
     } else if (!this.isAccountingInstalled) {
-      this.appScope = 'warehouse';
-      this.selectedScenario = 'warehouse';
+      this.appScope = WH;
+      this.selectedScenario = STRESS_SCENARIOS.warehouseOnly;
     }
   }
 
@@ -654,9 +669,14 @@ export class HealthDashboardComponent implements OnInit, OnDestroy {
   }
 
   navigateToBackupSettings(): void {
-    const isFinance = this.router.url.includes('/finance');
-    const base = isFinance ? '/app/finance/settings' : '/app/warehouse/settings';
-    this.router.navigate([base], { queryParams: { tab: 'backup' } });
+    // تنظیمات ماژول صفحهٔ جاری؛ بیرون از ماژول‌ها، ماژول قلمرو داشبورد
+    const url = this.router.url || '';
+    const installed = this.personaService.moduleRegistry.getInstalledModules().filter(m => !m.isSuperuserOnly);
+    const mod = installed.find(m => url.startsWith(m.routePrefix))
+      ?? installed.find(m => normalizeScope(m.scopeKind) === this.appScope)
+      ?? installed[0];
+    if (!mod) return;
+    this.router.navigate([`${mod.routePrefix}/settings`], { queryParams: { tab: 'backup' } });
   }
 
   get pingStatusClass(): string {

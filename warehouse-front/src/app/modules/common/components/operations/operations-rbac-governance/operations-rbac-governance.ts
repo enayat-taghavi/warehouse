@@ -49,6 +49,15 @@ export class OperationsRbacGovernanceComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   public moduleRegistry = inject(ModuleRegistryService);
 
+  /** همهٔ کدهای قلمرو (allowed_apps) ماژول‌های نصب‌شده به‌اضافهٔ پوستهٔ عملیات */
+  private allAppScopes(): string[] {
+    const scopes = this.moduleRegistry.getInstalledModules()
+      .filter(m => !m.isSuperuserOnly && !!m.scopeKind)
+      .sort((a, b) => (a.extensions?.launcherTile?.switcher?.order ?? 100) - (b.extensions?.launcherTile?.switcher?.order ?? 100))
+      .map(m => m.scopeKind);
+    return [...new Set(scopes), 'operations'];
+  }
+
   public filterInstalledApps(apps: string[]): string[] {
     return (apps || []).filter(app => {
       if (app === 'operations' || app === 'platform') return true;
@@ -141,7 +150,7 @@ export class OperationsRbacGovernanceComponent implements OnInit {
             fullName: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username,
             isSuperuser: !!u.is_superuser,
             isStaff: !!u.is_staff,
-            allowedApps: this.filterInstalledApps(u.is_superuser ? ['warehouse', 'finance', 'operations'] : (u.allowed_apps || [])),
+            allowedApps: this.filterInstalledApps(u.is_superuser ? this.allAppScopes() : (u.allowed_apps || [])),
             activeRoleTitle: u.role_title || (u.is_superuser ? 'مدیر ارشد کل' : 'کاربر عادی'),
             lastLoginShamsi: u.last_login_shamsi || '—'
           }));
@@ -169,7 +178,7 @@ export class OperationsRbacGovernanceComponent implements OnInit {
               fullName: this.auth.userName() || 'مدیر ارشد سامانه',
               isSuperuser: true,
               isStaff: true,
-              allowedApps: this.filterInstalledApps(['warehouse', 'finance', 'operations']),
+              allowedApps: this.filterInstalledApps(this.allAppScopes()),
               activeRoleTitle: 'فرمانده مرکز عملیات و پدافند',
               lastLoginShamsi: 'امروز'
             }
@@ -194,7 +203,7 @@ export class OperationsRbacGovernanceComponent implements OnInit {
       username: this.auth.user()?.username || 'admin',
       is_superuser: this.persona.isSuperuser(),
       active_app: this.persona.activeApp(),
-      allowed_apps: ['warehouse', 'finance', 'operations'],
+      allowed_apps: this.allAppScopes(),
       assigned_role: this.persona.activeRole() || 'فرمانده عملیات'
     };
   }

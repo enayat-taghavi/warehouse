@@ -10,10 +10,10 @@
         <div class="space-y-0.5">
           <div class="flex flex-wrap items-center gap-2">
             <h1 class="font-black text-slate-800 text-sm sm:text-base leading-tight">
-              {{ isFinanceScope ? 'مرکز ممیزی و رهگیری رویدادهای مالی و اداری' : 'مرکز ممیزی، امنیت و رهگیری رویدادها' }}
+              {{ headerTitle }}
             </h1>
-            <span *ngIf="isFinanceScope" class="bg-emerald-50 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-lg border border-emerald-200 shrink-0 whitespace-nowrap">
-              سامانه مالی و پرسنلی (سازمانی)
+            <span *ngIf="isFinanceScope && headerBadge" class="bg-emerald-50 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-lg border border-emerald-200 shrink-0 whitespace-nowrap">
+              {{ headerBadge }}
             </span>
             <ng-container *ngIf="!isFinanceScope">
               <span *ngIf="currentWarehouseName" class="bg-indigo-50 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded-lg border border-indigo-100 shrink-0 whitespace-nowrap">
@@ -25,7 +25,7 @@
             </ng-container>
           </div>
           <p class="text-[11px] text-slate-500 hidden sm:block">
-            {{ isFinanceScope ? 'مانیتورینگ بلادرنگ احکام پرسنل، کارکرد، تردد ناوگان، فیش‌های حقوقی و خزانه‌داری' : 'مانیتورینگ بلادرنگ تغییرات داده‌ها، لاگین کاربران، هشدارهای امنیتی و مقایسه تفاضل (Diff)' }}
+            {{ headerSubtitle }}
           </p>
         </div>
       </div>
@@ -347,10 +347,9 @@
     <!-- ردیف فیلدهای فیلتر (یک خطی متوازن در دسکتاپ) -->
     <div class="flex flex-wrap lg:flex-nowrap items-center gap-2">
       <!-- انتخاب قلمرو سامانه (همه / انبارداری / مالی) -->
-      <div class="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold shrink-0" *ngIf="activeTab === 'audit' && !isFinanceRouteLocked && isWarehouseInstalled && isAccountingInstalled">
+      <div class="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold shrink-0" *ngIf="activeTab === 'audit' && !isFinanceRouteLocked && auditScopes.length > 1">
         <button (click)="setAppScope('all')" type="button" [class.bg-white]="selectedAppScope === 'all'" [class.text-indigo-600]="selectedAppScope === 'all'" [class.shadow-xs]="selectedAppScope === 'all'" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold">همه</button>
-        <button (click)="setAppScope('warehouse')" type="button" [class.bg-white]="selectedAppScope === 'warehouse'" [class.text-indigo-600]="selectedAppScope === 'warehouse'" [class.shadow-xs]="selectedAppScope === 'warehouse'" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold">انبارداری</button>
-        <button (click)="setAppScope('finance')" type="button" [class.bg-white]="selectedAppScope === 'finance'" [class.text-indigo-600]="selectedAppScope === 'finance'" [class.shadow-xs]="selectedAppScope === 'finance'" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold">مالی و اداری</button>
+        <button *ngFor="let sc of auditScopes; trackBy: trackScope" (click)="setAppScope(sc.scope)" type="button" [class.bg-white]="selectedAppScope === sc.scope" [class.text-indigo-600]="selectedAppScope === sc.scope" [class.shadow-xs]="selectedAppScope === sc.scope" class="px-2.5 py-1 rounded-lg transition-all cursor-pointer font-bold">{{ sc.ext.scopeLabelFa }}</button>
       </div>
 
       <!-- انتخابگر انبار (در تب ممیزی داده‌های انبار) -->
@@ -376,26 +375,7 @@
         <div class="w-full sm:w-[135px] lg:w-[145px] shrink-0">
           <select [(ngModel)]="selectedModule" (change)="onFilterChange()" class="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-400 focus:bg-white custom-select cursor-pointer shadow-xs">
             <option value="">همه ماژول‌ها</option>
-            <ng-container *ngIf="!isFinanceScope">
-              <option value="docs">مدیریت کالا</option>
-              <option value="dispatch">تخصیص کالا</option>
-              <option value="customs">مالی و گمرکی</option>
-              <option value="feeding">تغذیه سامانه‌ها (MT)</option>
-              <option value="labels">لیبلینگ و بارکد</option>
-              <option value="counter">میزکار شمارش</option>
-              <option value="supervisor">کارتابل سرپرست</option>
-              <option value="manager">بررسی مدیر</option>
-              <option value="warehouses">مدیریت انبارها</option>
-              <option value="settings">تنظیمات انبار و سیستم</option>
-            </ng-container>
-            <ng-container *ngIf="isFinanceScope">
-              <option value="payroll">حقوق و دستمزد</option>
-              <option value="personnel">پرونده پرسنل</option>
-              <option value="attendance">کارکرد و تردد</option>
-              <option value="fleet">ناوگان و لجستیک</option>
-              <option value="treasury">خزانه‌داری و پرداخت</option>
-              <option value="finance">عملیات حسابداری</option>
-            </ng-container>
+            <option *ngFor="let m of logModuleOptions" [value]="m.value">{{ m.labelFa }}</option>
             <option value="users">کاربران و نقش‌ها</option>
             <option value="system">رویدادهای سیستمی</option>
           </select>
@@ -508,7 +488,7 @@
 
       <!-- چیپ قلمرو -->
       <span *ngIf="activeTab === 'audit' && selectedAppScope !== 'all'" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs min-h-[32px] sm:min-h-0">
-        <span>قلمرو: {{selectedAppScope === 'warehouse' ? 'سامانه انبارداری' : 'مالی و اداری'}}</span>
+        <span>قلمرو: {{ selectedScopeChipLabel }}</span>
         <button (click)="clearAppScopeFilter()" type="button" title="حذف فیلتر قلمرو" aria-label="حذف فیلتر قلمرو" class="hover:bg-indigo-200/60 rounded-full w-5 h-5 tap-target flex items-center justify-center transition-colors cursor-pointer">✕</button>
       </span>
 
@@ -594,7 +574,7 @@
                     🚫 انسداد عبور غیرمجاز از مرز قلمرو
                   </span>
                   <span *ngIf="log.details?.event === 'APP_SCOPE_SWITCH'" class="px-2 py-0.5 rounded-lg text-[10px] font-black bg-indigo-100 text-indigo-800 border border-indigo-300 flex items-center gap-1">
-                    🔄 جابجایی قلمرو فعال به {{log.details?.active_app === 'finance' ? 'مالی و اداری' : 'انبارداری'}}
+                    🔄 جابجایی قلمرو فعال به {{ switchedAppLabel(log.details?.active_app) }}
                   </span>
                   <span *ngIf="log.action === 'ROLLBACK'" class="px-2 py-0.5 rounded-lg text-[10px] font-black bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="rotate-ccw-lucide"></svg>
@@ -606,7 +586,7 @@
                   <bdi class="text-[11px] text-slate-600 font-mono inline-block text-right font-medium" dir="auto">{{log.target_repr}}</bdi>
                 </div>
                 <div *ngIf="log.details?.attempted_app" class="mt-0.5 text-[10px] text-rose-700 font-bold">
-                  قلمرو مقصد مسدودشده: {{log.details.attempted_app === 'warehouse' ? 'سامانه انبارداری' : 'سامانه مالی و اداری'}}
+                  قلمرو مقصد مسدودشده: {{ blockedAppLabel(log.details.attempted_app) }}
                 </div>
               </td>
               <td class="py-3 px-4 text-slate-600 font-bold text-[11px]">{{log.warehouse_name || '—'}}</td>

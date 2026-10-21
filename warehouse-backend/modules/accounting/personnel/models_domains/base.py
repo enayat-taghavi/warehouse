@@ -65,11 +65,8 @@ class _WarehouseCompatMixin(models.Model):
             return None
         if hasattr(self, '_wh_cached'):
             return self._wh_cached
-        from django.apps import apps
-        if apps.is_installed('warehouses'):
-            Warehouse = apps.get_model('warehouses', 'Warehouse')
-            obj = Warehouse.objects.filter(id=wh_id).first()
-        else:
-            obj = None
+        # حل از رجیستری پلتفرم؛ بی‌ماژول انبار None (بدون ایمپورت اپ انبار)
+        from platform_core.registry import resolve_entity
+        obj = resolve_entity('warehouse', wh_id)
         self._wh_cached = obj
         return obj

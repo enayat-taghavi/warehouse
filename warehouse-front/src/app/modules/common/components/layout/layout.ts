@@ -8,6 +8,7 @@ import { AuthStore } from '../../../../core/stores/auth.store';
 import { StateService } from '../../../../core/services/state.service';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { WarehouseHttpService } from '../../../../core/http/warehouse-http.service';
+import { getWarehouseDirectoryEndpoint } from '../../../../core/modules/warehouse-directory';
 import { NetworkStatusService, ConnectionState } from '../../../../core/services/network-status.service';
 import { OfflineSyncService } from '../../../../core/services/offline-sync.service';
 import { SyncErrorEntry } from '../../../../core/services/offline-db';
@@ -29,7 +30,7 @@ import { FirstBootWizardComponent } from '../operations/first-boot-wizard/first-
 import { environment } from '../../../../../environments/environment';
 import { hasRoutePermission } from '../../../../core/auth/auth.guard';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
-import { ModuleNavItem } from '../../../../core/modules/module-contract';
+import { ModuleNavItem, WhFrontendModule } from '../../../../core/modules/module-contract';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { IconName } from '../../../../shared/icons/icon-registry';
 import { NotificationCenterComponent } from '../../../../shared/components/notification-center/notification-center.component';
@@ -61,14 +62,30 @@ export class Layout implements OnInit, OnDestroy {
   public activeCompanyService = inject(ActiveCompanyService);
 
   get appTitle(): string {
-    if (this.personaService.activeApp() === 'personnel') {
-      return 'سامانه مالی و پرسنلی';
-    }
     if (this.personaService.activeApp() === 'operations') {
       return 'مرکز عملیات و پدافند';
     }
-    return 'اتوماسیون انبارداری';
+    // اپ ناشناخته عنوان ماژول دارای سوییچر انبار را می‌گیرد (همان رفتار پیشین)
+    return this.activeAppModule?.extensions?.layoutNav?.appTitleFa
+      ?? this.switcherModule?.extensions?.layoutNav?.appTitleFa
+      ?? '';
   }
+
+  /** ماژول نصب‌شدهٔ اپ فعال تب (کلید اپ لانچر، کد ماژول یا نام مستعار)؛ پوستهٔ عملیات ماژول ندارد */
+  private get activeAppModule(): WhFrontendModule | undefined {
+    const app = this.personaService.activeApp();
+    if (!app || app === 'operations') return undefined;
+    return this.moduleRegistry.getInstalledModules().find(m =>
+      m.extensions?.launcherTile?.appKey === app || m.code === app || !!m.aliases?.includes(app))
+      ?? this.moduleRegistry.getSpec(app);
+  }
+
+  /** ماژول نصب‌شده‌ای که سوییچر انبار پوسته را عرضه می‌کند */
+  private get switcherModule(): WhFrontendModule | undefined {
+    const e = this.moduleRegistry.getExtensions('layoutNav').find(x => x.extension.showWarehouseSwitcher);
+    return e ? (e.module ?? this.moduleRegistry.getSpec(e.moduleCode)) : undefined;
+  }
+
 
   currentTitle = 'داشبورد مانیتورینگ';
   isUserMenuOpen = false;
@@ -617,12 +634,17 @@ export class Layout implements OnInit, OnDestroy {
         const hasCompanySwitched = !isInitialCompanyLoad && this.lastHandledCompanyId !== company.id;
         this.lastHandledCompanyId = company.id;
 
-        if (currentUrl.startsWith('/app/warehouse') && company.has_warehouse_module === false) {
+        // ماژولی که به پرچم ماژول انبار شرکت وابسته است، در شرکت فاقد آن باز نمی‌ماند
+        const gated = this.moduleRegistry.getInstalledModules().find(m =>
+          m.extensions?.companies?.hasWarehouseModuleToggle && currentUrl.startsWith(m.routePrefix));
+        if (gated && company.has_warehouse_module === false) {
+          const fallback = this.moduleRegistry.getInstalledModules().find(m =>
+            m !== gated && !m.isSuperuserOnly && !m.extensions?.companies?.hasWarehouseModuleToggle);
           this.toast.show(
             'warning',
-            `شرکت «${company.name}» فاقد سامانه انبارداری است. هدایت به سامانه مالی انجام شد.`
+            `شرکت «${company.name}» فاقد سامانه ${gated.titleShortFa} است.` + (fallback ? ` هدایت به ${fallback.titleShortFa} انجام شد.` : '')
           );
-          this.router.navigate(['/app/finance']);
+          this.router.navigate([fallback?.routePrefix || '/app/launcher']);
           return;
         }
 
@@ -633,8 +655,9 @@ export class Layout implements OnInit, OnDestroy {
           });
 
           // در صورت تغییر صریح شرکت توسط کاربر و حضور در صفحات عمیق انبارداری (مانند شمارشگر یا اسناد)، بازگشت به داشبورد
-          if (hasCompanySwitched && currentUrl.startsWith('/app/warehouse') && currentUrl !== '/app/warehouse/dashboard' && currentUrl !== '/app/warehouse/settings') {
-            this.router.navigate(['/app/warehouse/dashboard']);
+          const sw = this.switcherModule;
+          if (sw && hasCompanySwitched && currentUrl.startsWith(sw.routePrefix) && currentUrl !== sw.defaultRoute && currentUrl !== `${sw.routePrefix}/settings`) {
+            this.router.navigate([sw.defaultRoute]);
           }
         }
       })
@@ -674,7 +697,8 @@ export class Layout implements OnInit, OnDestroy {
     // شنود پاسخ‌های پس‌زمینه SWR برای به‌روزرسانی زنده لیست انبارها بدون نیاز به رفرش
     this.offlineSubs.push(
       syncService.liveDataUpdates$.subscribe(({ url, data }) => {
-        if (url && (url.includes('/warehouses/') || url.includes('/api/warehouses/'))) {
+        const directory = getWarehouseDirectoryEndpoint(this.moduleRegistry);
+        if (url && directory && url.includes(directory)) {
           if (Array.isArray(data)) {
             this.handleWarehousesLoaded(data);
           }
@@ -734,7 +758,10 @@ export class Layout implements OnInit, OnDestroy {
       this.wsService.notifications$.subscribe(async (data: any) => {
         if (this.hasWarehouseSwitcher && data && (data.event === 'warehouse_mutation' || data.type === 'warehouse_mutation')) {
           console.log('[Layout] 🔔 دریافت رویداد تغییرات انبار از وب‌سوکت:', data);
-          await syncService.invalidateCache(`${environment.apiUrl}/warehouses/`);
+          const directory = getWarehouseDirectoryEndpoint(this.moduleRegistry);
+          if (directory) {
+            await syncService.invalidateCache(`${environment.apiUrl}${directory}`);
+          }
           this.whService.getAll().subscribe({
             next: (warehouses) => {
               this.handleWarehousesLoaded(warehouses);
@@ -980,9 +1007,12 @@ export class Layout implements OnInit, OnDestroy {
   /** ──── Sidebar Navigation Signals ──── */
   readonly primaryNavItems = computed(() => {
     // اگر ماژول انبار نصب نیست یا کاربر در سامانه کارکرد و مالی است، منوهای انبارداری مخفی می‌شوند
-    if (!this.hasWarehouseSwitcher || this.personaService.activeApp() === 'personnel') {
+    // در اپ ماژولی که سوییچر انبار ندارد (مثل سامانهٔ مالی) منوهای انبارداری مخفی‌اند
+    const active = this.activeAppModule;
+    if (!this.hasWarehouseSwitcher || (active && !active.extensions?.layoutNav?.showWarehouseSwitcher)) {
       return [];
     }
+    const switcherCode = this.switcherModule?.code;
 
     const userPerms = this.auth.userPermissions();
     const isAdmin = userPerms.includes('admin_all');
@@ -990,7 +1020,10 @@ export class Layout implements OnInit, OnDestroy {
     let items = this.store.isWarehouseContext() ? this.warehouseNavItems : this.systemNavItems;
     
     return items.filter(item => {
-      if (item.isAccounting || item.module === 'accounting') return false;
+      if (item.isAccounting) return false;
+      // آیتم متعلق به ماژول دیگر در منوی انبارداری نمی‌آید
+      const owner = item.module ? this.moduleRegistry.getSpec(item.module) : undefined;
+      if (owner && owner.code !== switcherCode) return false;
       if (isAdmin) return true;
       if (item.id === 'audit') {
         return userPerms.includes('view_wh_audit') || userPerms.includes('perm_sys_logs');
@@ -1014,7 +1047,7 @@ export class Layout implements OnInit, OnDestroy {
    */
   private roleNavItems(role: string): ModuleNavItem[] {
     const cfg = this.getRoleNavConfig(role);
-    if (!cfg || this.personaService.activeApp() === 'warehouse' || this.store.isWarehouseContext()) {
+    if (!cfg || this.activeAppModule?.extensions?.layoutNav?.showWarehouseSwitcher || this.store.isWarehouseContext()) {
       return [];
     }
     const userPerms = this.auth.userPermissions();
@@ -1051,7 +1084,8 @@ export class Layout implements OnInit, OnDestroy {
     for (const ext of exts) {
       if (ext.extension.showWarehouseSwitcher) continue;
       const modCode = (ext as any).moduleCode || ext.module?.code;
-      if (modCode === 'accounting' || modCode === 'personnel' || modCode === 'finance') {
+      // ماژول دارای منوهای نقش (کلید roleMenus) جداگانه رندر می‌شود
+      if (Array.isArray(ext.extension.roleMenus)) {
         continue;
       }
       const candidateItems = ext.extension.primaryItems || ext.extension.contextItems || [];
@@ -1128,39 +1162,33 @@ export class Layout implements OnInit, OnDestroy {
   openSidebar() { this.store.openSidebar(); }
   closeSidebar() { this.store.closeSidebar(); }
 
-  private isRoleMenuTab(tabId: string): boolean {
-    const extraTabs = ['supervisor-attendance', 'supervisor-new-profiles', 'accountant-new-profiles', 'manager-contracts'];
-    if (extraTabs.includes(tabId)) return true;
+  /** ماژولی که تب را در منوهای نقش یا extraRouteTabs خود اعلام کرده است */
+  private tabOwnerModule(tabId: string): WhFrontendModule | undefined {
     for (const e of this.moduleRegistry.getExtensions('layoutNav')) {
-      if (e.extension.roleMenus?.some(m => m.items.some(i => i.id === tabId))) return true;
+      const owns = !!e.extension.extraRouteTabs?.includes(tabId) ||
+        !!e.extension.roleMenus?.some(m => m.items.some(i => i.id === tabId));
+      if (owns) return e.module ?? this.moduleRegistry.getSpec(e.moduleCode);
     }
-    return false;
+    return undefined;
   }
 
   private resolveRouteForTab(tabId: string): string {
-    const whSpec = this.moduleRegistry.getSpec('warehouse');
-    const whPrefix = whSpec?.routePrefix || '/app/warehouse';
-    const finSpec = this.moduleRegistry.getSpec('accounting') || this.moduleRegistry.getSpec('personnel');
-    const finPrefix = finSpec?.routePrefix || '/app/finance';
     const opsSpec = this.moduleRegistry.getSpec('operations');
     const opsPrefix = opsSpec?.routePrefix || '/app/operations';
 
-    // ۱. شناسه‌های مشترک (audit، health) بر اساس ماژول فعال حل می‌شوند
+    // ۱. شناسه‌های مشترک (audit، health) زیر پیشوند اپ فعال حل می‌شوند
     if (tabId === 'audit' || tabId === 'health') {
-      if (this.personaService.activeApp() === 'personnel') {
-        return `${finPrefix}/${tabId}`;
-      }
       if (this.personaService.activeApp() === 'operations') {
         return `${opsPrefix}/${tabId}`;
       }
-      return `${whPrefix}/${tabId}`;
+      const prefix = this.activeAppModule?.routePrefix || this.switcherModule?.routePrefix || '/app';
+      return `${prefix}/${tabId}`;
     }
 
-    // ۲. صفحات مالی بیرون از منوهای نقش یا منوهای نقش مالی
-    const isAccountingItem = ['companies', 'company-documents', 'documents'].includes(tabId) ||
-      this.isRoleMenuTab(tabId);
-    if (isAccountingItem) {
-      return `${finPrefix}/${tabId}`;
+    // ۲. تب‌هایی که یک ماژول در منوهای نقش یا extraRouteTabs اعلام کرده است
+    const owner = this.tabOwnerModule(tabId);
+    if (owner) {
+      return `${owner.routePrefix}/${tabId}`;
     }
 
     // ۳. جستجو در کلیه ماژول‌های ثبت‌شده (شامل ماژول‌های دیگر مثل sample)
@@ -1182,7 +1210,7 @@ export class Layout implements OnInit, OnDestroy {
     }
 
     // ۴. پیش‌فرض در بافت انبارداری
-    return `${whPrefix}/${tabId}`;
+    return `${this.switcherModule?.routePrefix || '/app'}/${tabId}`;
   }
 
   switchTab(tabId: string) {

@@ -94,8 +94,8 @@ describe('AppLauncherComponent DOM & Modular Layout Tests', () => {
   it('حالت ۱: هر دو ماژول انبار و مالی فعال — نمایش هر دو کارت و ساختار دو ستونی', () => {
     registry.setInstalledModules(['warehouse', 'accounting']);
 
-    expect(component.isWarehouseInstalled).toBe(true);
-    expect(component.isFinanceInstalled).toBe(true);
+    expect(component.richCards().some(c => c.code === 'warehouse')).toBe(true);
+    expect(component.richCards().some(c => c.code === 'accounting')).toBe(true);
     expect(component.isSingleAppMode).toBe(false);
     expect(component.visibleCardsCount).toBe(2);
     expect(component.gridContainerClass).toContain('md:grid-cols-2');
@@ -110,8 +110,8 @@ describe('AppLauncherComponent DOM & Modular Layout Tests', () => {
   it('حالت ۲: فقط ماژول انبار فعال — نمایش حالت تک‌ماژول و عدم نمایش مالی', () => {
     registry.setInstalledModules(['warehouse']);
 
-    expect(component.isWarehouseInstalled).toBe(true);
-    expect(component.isFinanceInstalled).toBe(false);
+    expect(component.richCards().some(c => c.code === 'warehouse')).toBe(true);
+    expect(component.richCards().some(c => c.code === 'accounting')).toBe(false);
     expect(component.isSingleAppMode).toBe(true);
     expect(component.visibleCardsCount).toBe(1);
     expect(component.gridContainerClass).toBe('max-w-xl mx-auto');
@@ -124,8 +124,8 @@ describe('AppLauncherComponent DOM & Modular Layout Tests', () => {
   it('حالت ۳: فقط ماژول مالی فعال — نمایش کارت مالی و پنهان شدن کارت انبار', () => {
     registry.setInstalledModules(['accounting']);
 
-    expect(component.isWarehouseInstalled).toBe(false);
-    expect(component.isFinanceInstalled).toBe(true);
+    expect(component.richCards().some(c => c.code === 'warehouse')).toBe(false);
+    expect(component.richCards().some(c => c.code === 'accounting')).toBe(true);
     expect(component.isSingleAppMode).toBe(true);
     expect(component.visibleCardsCount).toBe(1);
     expect(component.gridContainerClass).toBe('max-w-xl mx-auto');

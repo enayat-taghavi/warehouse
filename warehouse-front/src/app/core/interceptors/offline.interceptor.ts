@@ -3,7 +3,7 @@ import { from, Observable, of, throwError } from 'rxjs';
 import { switchMap, tap, catchError, timeout, finalize } from 'rxjs/operators';
 import { NetworkStatusService } from '../services/network-status.service';
 import { OfflineSyncService } from '../services/offline-sync.service';
-import { offlineDb } from '../services/offline-db';
+import { offlineDb, resolveEntityTypeFromUrl } from '../services/offline-db';
 import { isServerUnreachable } from '../services/server-reachability';
 import { environment } from '../../../environments/environment';
 
@@ -460,16 +460,8 @@ export const offlineInterceptor: HttpInterceptorFn = (
 
     const lowerUrl = fullUrl.toLowerCase();
     if (!entityType) {
-      if (lowerUrl.includes('/items/')) entityType = 'item';
-      else if (lowerUrl.includes('/count-tasks/') || lowerUrl.includes('/tasks/')) entityType = 'count_task';
-      else if (lowerUrl.includes('/doc-tasks/')) entityType = 'doc_task';
-      else if (lowerUrl.includes('/dynamic-fields/')) entityType = 'dynamic_field';
-      else if (lowerUrl.includes('/attendance/')) entityType = 'daily_attendance';
-      else if (lowerUrl.includes('/company-bank-accounts/')) entityType = 'company_bank_account';
-      else if (lowerUrl.includes('/company-board-members/')) entityType = 'company_board_member';
-      else if (lowerUrl.includes('/company-documents/')) entityType = 'company_document';
-      else if (lowerUrl.includes('/user-company-access/')) entityType = 'user_company_access';
-      else if (lowerUrl.includes('/companies/')) entityType = 'company';
+      // الگوهای نوع موجودیت را خود ماژول‌ها اعلام می‌کنند (offlineSync.entityTypeUrlPatterns)
+      entityType = resolveEntityTypeFromUrl(lowerUrl);
     }
 
     let modifiedBody: any = req.body;

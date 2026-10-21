@@ -5,6 +5,9 @@ import { environment } from '../../../environments/environment';
 import { ImportResult } from './accounts-http.service';
 import { OfflineSyncService } from '../services/offline-sync.service';
 import { ModuleRegistryService } from '../modules/module-registry.service';
+import { getWarehouseDirectoryEndpoint } from '../modules/warehouse-directory';
+
+export { getWarehouseDirectoryEndpoint };
 
 export interface Warehouse {
   id: number;
@@ -35,12 +38,16 @@ export interface Warehouse {
   providedIn: 'root'
 })
 export class WarehouseHttpService {
-  private baseUrl = `${environment.apiUrl}/warehouses/`;
   private moduleRegistry = inject(ModuleRegistryService);
 
+  /** نشانی فهرست انبارها از ماژول صاحب آن؛ بی‌ماژول انبار رشتهٔ خالی */
+  private get baseUrl(): string {
+    const endpoint = getWarehouseDirectoryEndpoint(this.moduleRegistry);
+    return endpoint ? `${environment.apiUrl}${endpoint}` : '';
+  }
+
   private get isWarehouseAvailable(): boolean {
-    // ماژول صاحب فهرست انبارها همان ماژولی است که فیلتر انبار بین‌ماژولی را عرضه می‌کند
-    return this.moduleRegistry.getExtensions('crossModuleFilters').some(e => !!e.extension.warehouseScopeFilter);
+    return !!getWarehouseDirectoryEndpoint(this.moduleRegistry);
   }
 
   constructor(private http: HttpClient) {}

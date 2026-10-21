@@ -112,8 +112,10 @@ class PhaseGuardian:
             # Check 2: Mathematical parity test with exact 0 discrepancy
             from django.apps import apps
             from personnel.models import PersonnelProfile, MonthlyWorkPeriod
-            WarehouseModel = apps.get_model('warehouses', 'Warehouse') if apps.is_installed('warehouses') else None
-            wh = WarehouseModel.objects.get_or_create(code='TEST-GUARDIAN', defaults={'name': 'انبار تست نگهبان'})[0] if WarehouseModel else None
+            # آزمون برابری ریاضی به ماژول انبار وابسته نیست. دامنهٔ محاسبه با شرکت آزمون اختصاصی بسته می‌شود
+            # تا calculate_period فقط پرسنل همان شرکت را حساب کند، نه همهٔ پرسنل همهٔ شرکت‌ها.
+            from companies.models import Company
+            test_company, _ = Company.objects.get_or_create(code='TEST-GUARDIAN', defaults={'name': 'شرکت تست نگهبان'})
             p, _ = PersonnelProfile.objects.get_or_create(
                 national_code='9999999999',
                 defaults={
@@ -122,10 +124,14 @@ class PhaseGuardian:
                     'job_grade': '19',
                     'contract_hours': Decimal('230'),
                     'contract_base_salary': Decimal('270000000'),
-                    'assigned_warehouse': wh
+                    'company': test_company,
                 }
             )
-            period, _ = MonthlyWorkPeriod.objects.get_or_create(year_month='1405/04', warehouse=wh, defaults={'status': 'OPEN'})
+            if p.company_id != test_company.id:
+                PersonnelProfile.objects.filter(pk=p.pk).update(company=test_company)
+            period, _ = MonthlyWorkPeriod.objects.get_or_create(
+                year_month='1405/04', company=test_company, warehouse=None, defaults={'status': 'OPEN'}
+            )
             
             records = engine.calculate_period(period)
             target_record = next((r for r in records if r.national_code == '9999999999'), None)

@@ -26,6 +26,8 @@ import { ServerUrlPipe } from '../../../../shared/pipes/server-url.pipe';
 import { printWindow, saveUrl } from '../../../../core/platform/file-output';
 import { publicOrigin } from '../../../../core/platform/server-origin';
 
+import { LOCKED_OFFLINE_SCOPES } from '../../../../core/services/offline-db';
+
 @Component({
   selector: 'app-id-cards',
   imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe],
@@ -209,7 +211,8 @@ export class IdCards implements OnInit {
   }
 
   get isWarehouseScope(): boolean {
-    return this.isWarehouseInstalled && this.state.appState.appScope !== 'finance';
+    // قلمرو دوم قفل‌شده (مالی) کارت انبار ندارد
+    return this.isWarehouseInstalled && this.state.appState.appScope !== LOCKED_OFFLINE_SCOPES[1];
   }
 
   ngOnInit() {

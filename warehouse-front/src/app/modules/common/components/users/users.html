@@ -281,7 +281,7 @@
                                   [class]="b.bgClass + ' ' + b.textClass + ' ' + b.borderClass"
                                   class="px-1.5 py-0.2 rounded-md text-[9px] border font-bold flex items-center gap-0.5">
                               <span>{{ b.icon }}</span>
-                              <span>{{ b.key === 'warehouse' ? 'انبارداری' : (b.key === 'finance' ? 'مالی' : (b.key === 'superuser' ? 'همه (ادمین)' : 'کلان')) }}</span>
+                              <span>{{ badgeShortLabel(b.key) }}</span>
                             </span>
                           </ng-container>
                           <span *ngIf="getUserAuthorizedSystems(u).isEmpty" class="text-slate-400 text-[9px]">فاقد سامانه</span>
@@ -440,7 +440,7 @@
                                   [class]="b.bgClass + ' ' + b.textClass + ' ' + b.borderClass"
                                   class="px-1.5 py-0.2 rounded-md text-[8.5px] border font-bold flex items-center gap-0.5">
                               <span>{{ b.icon }}</span>
-                              <span>{{ b.key === 'warehouse' ? 'انبار' : (b.key === 'finance' ? 'مالی' : (b.key === 'superuser' ? 'ادمین کل' : 'کلان')) }}</span>
+                              <span>{{ badgeShortLabel(b.key, true) }}</span>
                             </span>
                           </ng-container>
                         </div>
@@ -1037,17 +1037,11 @@
                 [ngClass]="activePresetCategory === 'all' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-100/70'">
                 همه ({{ availableRolePresets.length }})
               </button>
-              <button *ngIf="hasInventoryModule()" type="button" (click)="activePresetCategory = 'inventory'"
+              <button *ngFor="let c of presetCategories; trackBy: trackByKey" type="button" (click)="activePresetCategory = c.key"
                 class="px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 min-h-[40px] sm:min-h-0 tap-target"
-                [ngClass]="activePresetCategory === 'inventory' ? 'bg-sky-600 text-white shadow-2xs' : 'text-slate-600 hover:text-sky-600 hover:bg-slate-100/70'">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="package"></svg>
-                <span>انبارگردانی (۶)</span>
-              </button>
-              <button *ngIf="hasAccountingModule()" type="button" (click)="activePresetCategory = 'accounting'"
-                class="px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 min-h-[40px] sm:min-h-0 tap-target"
-                [ngClass]="activePresetCategory === 'accounting' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-slate-600 hover:text-emerald-600 hover:bg-slate-100/70'">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
-                <span>حسابداری (۵)</span>
+                [ngClass]="activePresetCategory === c.key ? c.activeClass : c.hoverClass">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="c.icon"></svg>
+                <span>{{ c.labelFa }} ({{ c.countFa }})</span>
               </button>
               <button type="button" (click)="activePresetCategory = 'system'"
                 class="px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 min-h-[40px] sm:min-h-0 tap-target"
@@ -1794,21 +1788,12 @@
 
             <!-- تب‌های تفکیک‌شده قلمرو نقش‌ها -->
             <div class="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200">
-              <button *ngIf="hasInventoryModule()" type="button" (click)="userRoleModalTab = 'warehouse'"
-                [ngClass]="userRoleModalTab === 'warehouse' ? 'bg-white text-sky-700 shadow-xs font-black' : 'text-slate-500 hover:text-slate-800'"
+              <button *ngFor="let sc of roleScopes" type="button" (click)="userRoleModalTab = sc.key"
+                [ngClass]="roleScopeTabClass(sc.tone, userRoleModalTab === sc.key)"
                 class="flex-1 py-1.5 px-2.5 rounded-lg text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer">
-                <span>📦 سامانه انبارداری</span>
-                <span *ngIf="getSelectedRolesCountForScope('warehouse') > 0" class="px-1.5 py-0.2 rounded-full bg-sky-100 text-sky-700 text-[9px] font-black border border-sky-200">
-                  {{getSelectedRolesCountForScope('warehouse')}}
-                </span>
-              </button>
-
-              <button *ngIf="hasAccountingModule()" type="button" (click)="userRoleModalTab = 'finance'"
-                [ngClass]="userRoleModalTab === 'finance' ? 'bg-white text-emerald-700 shadow-xs font-black' : 'text-slate-500 hover:text-slate-800'"
-                class="flex-1 py-1.5 px-2.5 rounded-lg text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer">
-                <span>💳 سامانه مالی و پرسنلی</span>
-                <span *ngIf="getSelectedRolesCountForScope('finance') > 0" class="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black border border-emerald-200">
-                  {{getSelectedRolesCountForScope('finance')}}
+                <span>{{ sc.tabLabelFa }}</span>
+                <span *ngIf="getSelectedRolesCountForScope(sc.key) > 0" [class]="roleScopeCountClass(sc.tone)">
+                  {{getSelectedRolesCountForScope(sc.key)}}
                 </span>
               </button>
 
@@ -1838,8 +1823,8 @@
                   <span class="text-xs text-slate-800 font-bold truncate" [title]="r.title || r.name">{{getRoleTitleForForm(r)}}</span>
                 </div>
                 <span class="text-[9px] px-2 py-0.5 rounded-md shrink-0 font-bold"
-                  [ngClass]="getRoleAppScope(r) === 'finance' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : (getRoleAppScope(r) === 'warehouse' ? 'bg-sky-50 text-sky-700 border border-sky-200' : 'bg-purple-50 text-purple-700 border border-purple-200')">
-                  {{ getRoleAppScope(r) === 'finance' ? 'مالی' : (getRoleAppScope(r) === 'warehouse' ? 'انبار' : 'سراسری') }}
+                  [ngClass]="roleScopeBadgeClass(getRoleAppScope(r))">
+                  {{ roleScopeFor(getRoleAppScope(r))?.tinyLabelFa ?? 'سراسری' }}
                 </span>
               </label>
 

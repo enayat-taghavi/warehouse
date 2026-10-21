@@ -97,6 +97,8 @@ describe('OperationsCockpitComponent DOM & Modular Profiles Tests', () => {
               moduleCode: 'warehouse',
               extension: {
                 quickLink: { title: 'سامانه انبارداری', route: '/app/warehouse' },
+                shellLink: { labelFa: 'انبارداری', mobileLabelFa: 'ورود به انبارداری', route: '/app/warehouse/dashboard', icon: 'package', accent: 'indigo' },
+                sourceSettings: { labelFa: 'تنظیمات منبع (انبار)', route: '/app/warehouse/wh-settings' },
                 syncMonitorScope: 'warehouse'
               }
             });
@@ -106,6 +108,7 @@ describe('OperationsCockpitComponent DOM & Modular Profiles Tests', () => {
               moduleCode: 'accounting',
               extension: {
                 quickLink: { title: 'سامانه مالی و پرسنلی', route: '/app/finance' },
+                shellLink: { labelFa: 'مالی', mobileLabelFa: 'ورود به سامانه مالی', route: '/app/finance', icon: 'credit-card', accent: 'emerald' },
                 hasExpiringDocsWidget: true,
                 syncMonitorScope: 'accounting'
               }
@@ -141,7 +144,7 @@ describe('OperationsCockpitComponent DOM & Modular Profiles Tests', () => {
   it('پروفایل ۱: نصب کامل (هر دو ماژول انبار و مالی) — فعال بودن ویجت سررسید مدارک و تنظیمات منبع انبار', () => {
     activeModuleCodes = ['warehouse', 'accounting'];
 
-    expect(component.isWarehouseInstalled).toBe(true);
+    expect((component.sourceSettingsLinks.length > 0)).toBe(true);
     expect(component.isAccountingInstalled).toBe(true);
     expect(component.expiringDocs().length).toBe(1);
     expect(component.expiringDocs()[0].company_name).toBe('شرکت توزیع سراسری');
@@ -150,14 +153,14 @@ describe('OperationsCockpitComponent DOM & Modular Profiles Tests', () => {
   it('پروفایل ۲: تک‌ماژول انبارداری (بدون مالی) — فعال بودن تنظیمات انبار و غیرفعال بودن ویجت مدارک حسابداری', () => {
     activeModuleCodes = ['warehouse'];
 
-    expect(component.isWarehouseInstalled).toBe(true);
+    expect((component.sourceSettingsLinks.length > 0)).toBe(true);
     expect(component.isAccountingInstalled).toBe(false);
   });
 
   it('پروفایل ۳: تک‌ماژول مالی (بدون انبار) — فعال بودن ویجت مدارک و غیرفعال بودن ماژول انبارداری', () => {
     activeModuleCodes = ['accounting'];
 
-    expect(component.isWarehouseInstalled).toBe(false);
+    expect((component.sourceSettingsLinks.length > 0)).toBe(false);
     expect(component.isAccountingInstalled).toBe(true);
   });
 

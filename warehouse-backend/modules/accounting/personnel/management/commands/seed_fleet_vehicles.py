@@ -1,13 +1,15 @@
 import decimal
 from django.core.management.base import BaseCommand
 from personnel.models import VehicleDriverProfile
-from warehouses.models import Warehouse
+from platform_core.registry import contributions
 
 class Command(BaseCommand):
     help = 'ایجاد و کاشت داده‌های اولیه برای ۱۰ خودرو و راننده ناوگان با انواع مالکیت و نرخ‌ها'
 
     def handle(self, *args, **options):
-        wh_central = Warehouse.objects.filter(is_active=True).first()
+        # انبار مرکزی فقط وقتی ماژول انبار نصب است (از رجیستری پلتفرم، بدون ایمپورت اپ انبار)
+        finder = next(iter(contributions('default_entity:warehouse')), None)
+        wh_central = finder() if finder else None
 
         vehicles_data = [
             {

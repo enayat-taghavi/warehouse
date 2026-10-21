@@ -6,7 +6,7 @@ export interface NavItem {
   label: string;
   icon: string;
   permission: string;
-  module?: 'warehouse' | 'accounting' | 'platform';
+  module?: string;
   isAccounting?: boolean;
 }
 

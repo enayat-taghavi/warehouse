@@ -48,7 +48,8 @@ def enqueue_file_upload(instance, field_name: str, file_obj):
                 return
             if model_name == 'VehicleDocument' and not config.sync_fleet_docs:
                 return
-            if model_name == 'ItemPhoto' and not config.sync_inventory_photos:
+            source = _file_source_for(model_name)
+            if source and not getattr(config, source.get('config_flag', ''), False):
                 return
 
             current_account = config.account_email or ''
@@ -295,22 +296,19 @@ def on_company_board_member_deleted(sender, instance, **kwargs):
 
 
 # ==============================================================================
-# اتصال به تصاویر کالاهای انبارگردانی
+# فایل‌های ماژول‌های دیگر (مثل تصاویر کالا): منبع‌ها با contribute('file_sync_sources')
+# ثبت می‌شوند و خودشان این مقصد را از رجیستری صدا می‌زنند؛ این ماژول هیچ‌کدام را ایمپورت نمی‌کند.
 # ==============================================================================
-from django.apps import apps
+from platform_core.registry import contribute as _contribute, contributions as _contributions  # noqa: E402
 
-if apps.is_installed('inventory'):
-    ItemPhoto = apps.get_model('inventory', 'ItemPhoto')
+_contribute('file_sync_sinks', {'upload': enqueue_file_upload, 'archive_delete': enqueue_file_archive_delete})
 
-    @receiver(post_save, sender=ItemPhoto)
-    def on_item_photo_saved(sender, instance, created, **kwargs):
-        if instance.image:
-            enqueue_file_upload(instance, 'image', instance.image)
 
-    @receiver(post_delete, sender=ItemPhoto)
-    def on_item_photo_deleted(sender, instance, **kwargs):
-        if instance.image:
-            enqueue_file_archive_delete(instance, 'image', instance.image)
+def _file_source_for(model_name: str):
+    for source in _contributions('file_sync_sources'):
+        if source.get('model_name') == model_name:
+            return source
+    return None
 
 
 # ==============================================================================

@@ -111,7 +111,8 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
               extension: {
                 showWarehouseSwitcher: false,
                 defaultExitRoute: '/app/finance',
-                hasCompanyDocumentsArchive: true
+                hasCompanyDocumentsArchive: true,
+                extraRouteTabs: ['companies', 'company-documents', 'documents']
               }
             },
             {

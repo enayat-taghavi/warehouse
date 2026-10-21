@@ -60,6 +60,19 @@ export interface ModuleNavItem {
   route?: string;
 }
 
+/** قالب آمادهٔ نقش در صفحهٔ کاربران */
+export interface ModuleRolePreset {
+  id: string;
+  title: string;
+  /** کلید دستهٔ قالب (همان users.presetCategory.key ماژول یا 'system') */
+  category: string;
+  categoryTitle: string;
+  color: string;
+  icon: string;
+  description: string;
+  permissionCodenames: string[] | 'ALL';
+}
+
 /** رنگ‌های پایه‌ای که کلاس‌های کاملشان در کامپوننت‌های مشترک تعریف شده است */
 export type ModuleAccent = 'indigo' | 'emerald';
 
@@ -114,6 +127,10 @@ export interface ExtensionMap {
     themeColor: 'indigo' | 'emerald' | 'cyan' | 'amber' | 'rose' | 'sky' | 'violet' | string;
     tags: string[];
     appKey?: string;
+    /** برچسب دکمهٔ ورود کارت غنی لانچر (کارت غنی فقط برای ماژول دارای این برچسب و رنگ indigo/emerald) */
+    enterLabelFa?: string;
+    /** عنوان کارت غنی لانچر اگر با titleFa ماژول فرق دارد */
+    cardTitleFa?: string;
     /** گزینهٔ این ماژول در منوی تعویض سامانهٔ هدر (app-role-switcher) */
     switcher?: {
       /** ترتیب نمایش (کوچک‌تر بالاتر) */
@@ -122,6 +139,10 @@ export interface ExtensionMap {
       descriptionFa: string;
       icon: IconName;
       accent: ModuleAccent;
+      /** عنوان دکمهٔ سامانه وقتی کاربر فقط به همین سامانه دسترسی دارد */
+      onlyAccessTitleFa: string;
+      /** انتخابگر نقش فعال کنار دکمهٔ سامانه نشان داده شود */
+      showRoleSelector?: boolean;
     };
   };
 
@@ -152,6 +173,10 @@ export interface ExtensionMap {
       roleMarkers: string[];
     }>;
     showWarehouseSwitcher?: boolean;
+    /** عنوان هدر پوسته وقتی این ماژول اپ فعال است */
+    appTitleFa?: string;
+    /** شناسه‌های تب بیرون از منوها که مسیرشان زیر پیشوند همین ماژول است */
+    extraRouteTabs?: string[];
     defaultExitRoute?: string;
     hasCompanyDocumentsArchive?: boolean;
     companyDocumentsRoute?: string;
@@ -164,6 +189,12 @@ export interface ExtensionMap {
     quickLink?: { title: string; route: string; icon?: string };
     hasExpiringDocsWidget?: boolean;
     syncMonitorScope?: string;
+    /** دکمهٔ ورود به این ماژول در پوستهٔ مرکز عملیات (کنار پیوندهای سریع) */
+    shellLink?: { labelFa: string; mobileLabelFa: string; route: string; icon: IconName; accent: ModuleAccent };
+    /** دکمهٔ تنظیمات منبع داده در اتاق فرماندهی */
+    sourceSettings?: { labelFa: string; route: string };
+    /** برچسب قلمرو تب‌های متصل این ماژول در پایش همگام‌سازی */
+    monitorLabelFa?: string;
   };
 
   /**
@@ -179,6 +210,28 @@ export interface ExtensionMap {
    */
   users?: {
     permissionGroupKeys?: string[];
+    /** قالب‌های آمادهٔ نقش این ماژول و دستهٔ آن‌ها در پنل قالب‌ها */
+    rolePresets?: ModuleRolePreset[];
+    presetCategory?: { key: string; labelFa: string; icon: IconName; tone: 'sky' | 'emerald' };
+    /** قلمرو نقش‌های این ماژول در مودال کاربر و نشان سامانه‌های مجاز */
+    roleScope?: {
+      key: string;
+      order: number;
+      tabLabelFa: string;
+      badgeLabelFa: string;
+      shortLabelFa: string;
+      tinyLabelFa: string;
+      icon: string;
+      tone: 'sky' | 'emerald';
+      /** نشان این قلمرو تعداد انبارهای تخصیص‌یافته را نشان می‌دهد */
+      countsWarehouses?: boolean;
+      /** حدس قلمرو نقش بی‌مجوز از نام و عنوان آن */
+      nameHints: string[];
+      titleHints: string[];
+      /** نقش‌های دیگری که در زبانهٔ این قلمرو هم می‌آیند */
+      extraRoleNames?: string[];
+      extraTitleHints?: string[];
+    };
   };
 
   /**
@@ -192,7 +245,26 @@ export interface ExtensionMap {
    * ۸. قلمروهای لاگ و وقایع ممیزی امنیتی — مصرف در audit.ts
    */
   audit?: {
+    /** مقدار app_scope ممیزی همین ماژول (پروتکل سرور)؛ اولین مقدار قلمرو ماژول است */
     appScopes?: string[];
+    /** ترتیب دکمهٔ قلمرو در انتخابگر (کوچک‌تر جلوتر) */
+    order?: number;
+    /** برچسب دکمهٔ قلمرو و رویداد جابه‌جایی قلمرو */
+    scopeLabelFa?: string;
+    /** برچسب تراشهٔ «قلمرو: …» */
+    scopeChipLabelFa?: string;
+    /** برچسب قلمرو مقصد مسدودشده در رویداد عبور غیرمجاز */
+    blockedAppLabelFa?: string;
+    /** انتخابگر انبار، اسکنر و ستون انبار در این قلمرو */
+    hasWarehouseSelector?: boolean;
+    /** مسیر ماژول قلمرو را قفل می‌کند و انتخابگر قلمرو پنهان می‌شود */
+    lockScopeOnRoute?: boolean;
+    /** عنوان، زیرعنوان و نشان سربرگ وقتی ممیزی روی همین قلمرو است (بدون آن متن عمومی) */
+    headerTitleFa?: string;
+    headerSubtitleFa?: string;
+    headerBadgeFa?: string;
+    /** ماژول‌های لاگ همین قلمرو: گزینه‌های فیلتر و فیلتر آفلاین */
+    logModules?: { value: string; labelFa: string }[];
   };
 
   /**
@@ -207,6 +279,8 @@ export interface ExtensionMap {
    */
   crossModuleFilters?: {
     warehouseScopeFilter?: boolean;
+    /** اندپوینت فهرست انبارها (نسبت به apiUrl، مثل '/warehouses/')؛ صاحبش ماژول انبار است */
+    warehouseDirectoryEndpoint?: string;
   };
 
   /**
@@ -258,6 +332,8 @@ export interface ExtensionMap {
     queueUrlPatterns: string[];
     activePathPatterns: string[];
     appRoutePrefixes: string[];
+    /** نوع موجودیت رکورد صف از روی بخشی از URL (به ترتیب؛ نخستین تطبیق) */
+    entityTypeUrlPatterns?: { urlPart: string; entityType: string }[];
     /** تداخل همگام‌سازی این قلمرو حساس است: نقش‌های ثبت (operator/counter) حق حل آن را ندارند (تفکیک وظایف) */
     sensitiveConflicts?: boolean;
   };

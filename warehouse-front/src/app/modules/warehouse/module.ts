@@ -6,6 +6,7 @@ import { WAREHOUSE_SYSTEM_NAV_ITEMS, WAREHOUSE_CONTEXT_NAV_ITEMS } from './nav-i
 import { WAREHOUSE_ENTITY_ICONS } from './entity-icons';
 import { WAREHOUSE_PERSONAS } from './personas';
 import { WAREHOUSE_ROUTE_ACCESS } from './route-access';
+import { WAREHOUSE_ROLE_PRESETS } from './role-presets';
 
 /**
  * مانیفست رسمی و مستقل ماژول انبارداری و ره‌گیری کالا (Front-End Module Manifest)
@@ -68,12 +69,15 @@ export const MODULE: WhFrontendModule = {
       themeColor: 'indigo',
       tags: ['کارتابل انبارگردان', 'مدیریت کالا'],
       appKey: 'warehouse',
+      enterLabelFa: 'ورود به انبارگردانی',
+      cardTitleFa: 'سامانه انبارگردانی و ره‌گیری کالا',
       switcher: {
         order: 10,
         labelFa: 'انبارگردانی',
         descriptionFa: 'مدیریت و شمارش موجودی انبار',
         icon: 'package',
-        accent: 'indigo'
+        accent: 'indigo',
+        onlyAccessTitleFa: 'شما صرفاً به ماژول انبارگردانی دسترسی دارید'
       }
     },
     userMenu: {
@@ -116,29 +120,59 @@ export const MODULE: WhFrontendModule = {
       primaryItems: WAREHOUSE_SYSTEM_NAV_ITEMS,
       contextItems: WAREHOUSE_CONTEXT_NAV_ITEMS,
       showWarehouseSwitcher: true,
+      appTitleFa: 'اتوماسیون انبارداری',
       defaultExitRoute: '/app/warehouse/projects'
     },
     operations: {
       quickLink: { title: 'سامانه انبارداری', route: '/app/warehouse' },
+      shellLink: { labelFa: 'انبارداری', mobileLabelFa: 'ورود به انبارداری', route: '/app/warehouse/dashboard', icon: 'package', accent: 'indigo' },
+      sourceSettings: { labelFa: 'تنظیمات منبع (انبار)', route: '/app/warehouse/wh-settings' },
+      monitorLabelFa: 'انبارداری',
       syncMonitorScope: 'warehouse'
     },
     companies: {
       hasWarehouseModuleToggle: true
     },
     users: {
-      permissionGroupKeys: ['WH_AUDIT']
+      permissionGroupKeys: ['WH_AUDIT'],
+      rolePresets: WAREHOUSE_ROLE_PRESETS,
+      presetCategory: { key: 'inventory', labelFa: 'انبارگردانی', icon: 'package', tone: 'sky' },
+      roleScope: {
+        key: 'warehouse', order: 10,
+        tabLabelFa: '📦 سامانه انبارداری', badgeLabelFa: 'سامانه انبارداری', shortLabelFa: 'انبارداری', tinyLabelFa: 'انبار',
+        icon: '📦', tone: 'sky', countsWarehouses: true,
+        nameHints: ['warehouse'], titleHints: ['انبار', 'شمارش']
+      }
     },
     healthDashboard: {
       panelScopes: ['warehouse']
     },
     audit: {
-      appScopes: ['warehouse']
+      appScopes: ['warehouse'],
+      order: 10,
+      scopeLabelFa: 'انبارداری',
+      scopeChipLabelFa: 'سامانه انبارداری',
+      blockedAppLabelFa: 'سامانه انبارداری',
+      hasWarehouseSelector: true,
+      logModules: [
+        { value: 'docs', labelFa: 'مدیریت کالا' },
+        { value: 'dispatch', labelFa: 'تخصیص کالا' },
+        { value: 'customs', labelFa: 'مالی و گمرکی' },
+        { value: 'feeding', labelFa: 'تغذیه سامانه‌ها (MT)' },
+        { value: 'labels', labelFa: 'لیبلینگ و بارکد' },
+        { value: 'counter', labelFa: 'میزکار شمارش' },
+        { value: 'supervisor', labelFa: 'کارتابل سرپرست' },
+        { value: 'manager', labelFa: 'بررسی مدیر' },
+        { value: 'warehouses', labelFa: 'مدیریت انبارها' },
+        { value: 'settings', labelFa: 'تنظیمات انبار و سیستم' }
+      ]
     },
     idCards: {
       supported: true
     },
     crossModuleFilters: {
-      warehouseScopeFilter: true
+      warehouseScopeFilter: true,
+      warehouseDirectoryEndpoint: '/warehouses/'
     },
     syncConfig: {
       scopeKind: 'warehouse',
@@ -182,6 +216,13 @@ export const MODULE: WhFrontendModule = {
       activePathPatterns: [
         '/app/warehouse',
         '/warehouse'
+      ],
+      entityTypeUrlPatterns: [
+        { urlPart: '/items/', entityType: 'item' },
+        { urlPart: '/count-tasks/', entityType: 'count_task' },
+        { urlPart: '/tasks/', entityType: 'count_task' },
+        { urlPart: '/doc-tasks/', entityType: 'doc_task' },
+        { urlPart: '/dynamic-fields/', entityType: 'dynamic_field' }
       ],
       appRoutePrefixes: [
         '/app/warehouse',
