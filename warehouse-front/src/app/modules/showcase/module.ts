@@ -14,7 +14,7 @@ export const MODULE: WhFrontendModule = {
   descriptionFa: 'ماژول نمونهٔ پلتفرم برای اثبات نصب مستقل ماژول سوم.',
   icon: 'box',
   routePrefix: '/app/showcase',
-  defaultRoute: '/app/showcase/sample',
+  defaultRoute: '/app/showcase/overview',
   scopeKind: 'showcase',
   optIn: true,
   permissionMarkers: [

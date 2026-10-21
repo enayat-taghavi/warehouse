@@ -13,7 +13,7 @@ export const MODULE: WhFrontendModule = {
   icon: 'box',
   routePrefix: '/app/__MODULE_CODE__',
   defaultRoute: '/app/__MODULE_CODE__/sample',
-  scopeKind: 'operations',
+  scopeKind: '__MODULE_CODE__',
   permissionMarkers: [
     'view_sys___MODULE_CODE__'
   ],
