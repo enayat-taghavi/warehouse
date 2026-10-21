@@ -35,6 +35,7 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
 import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
+import { getPermissionAliases } from '../../../../../core/modules/permission-aliases';
 
 @Component({
   selector: 'app-personnel-profiles',
@@ -1031,7 +1032,7 @@ export class PersonnelProfilesHub implements OnInit, OnDestroy {
   get canEndCollaboration(): boolean {
     if (this.auth.user()?.is_superuser) return true;
     const perms = this.auth.userPermissions();
-    return ['perm_approve_personnel_manager', 'can_act_as_manager', 'can_act_as_company_manager'].some(c => perms.includes(c));
+    return ['perm_approve_personnel_manager', ...getPermissionAliases('manager_approver'), 'can_act_as_company_manager'].some(c => perms.includes(c));
   }
 
   isEndCollaborationModalOpen = false;

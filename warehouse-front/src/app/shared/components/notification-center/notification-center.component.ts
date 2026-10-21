@@ -11,6 +11,7 @@ import { ModuleRegistryService } from '../../../core/modules/module-registry.ser
 import { NotificationNavigationContext } from '../../../core/modules/module-contract';
 import { CommunicationService } from '../../../core/services/communication.service';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
+import { getPermissionAliases } from '../../../core/modules/permission-aliases';
 
 export interface NotificationItem {
   id: number;
@@ -244,7 +245,8 @@ export class NotificationCenterComponent implements OnInit, OnDestroy {
       http: this.http,
       router: this.router,
       userPerms: perms,
-      isSuperuser: isSuper
+      isSuperuser: isSuper,
+      permissionAliases: (capability: string) => getPermissionAliases(capability, this.moduleRegistry)
     };
 
     for (const entry of this.moduleRegistry.getExtensions('notificationHandlers')) {

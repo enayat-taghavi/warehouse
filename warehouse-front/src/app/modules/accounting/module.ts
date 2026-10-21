@@ -360,6 +360,10 @@ export const MODULE: WhFrontendModule = {
     projectLookup: {
       financialProjectsEndpoint: FINANCIAL_PROJECTS_ENDPOINT
     },
-    notificationHandlers: ACCOUNTING_NOTIFICATION_HANDLERS
+    notificationHandlers: ACCOUNTING_NOTIFICATION_HANDLERS,
+    permissionAliases: {
+      count_supervisor_exclusion: ['can_act_as_workshop_supervisor'],
+      audit_viewer: ['view_sys_payroll']
+    }
   }
 };

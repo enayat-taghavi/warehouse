@@ -41,14 +41,14 @@ export const WAREHOUSE_ROLES: RolePersona[] = [
   }
 ];
 
-export function resolveWarehouseRoleCodes(ctx: { perms: string[]; userRoles: string[] }): string[] {
+export function resolveWarehouseRoleCodes(ctx: { perms: string[]; userRoles: string[]; permissionAliases?: (capability: string) => string[] }): string[] {
   const { perms, userRoles } = ctx;
   const roles: string[] = [];
 
   if (userRoles.includes('counter') || perms.includes('view_sys_counter') || perms.includes('can_act_as_counter') || perms.includes('view_wh_dispatch')) {
     roles.push('counter');
   }
-  if (userRoles.includes('warehouse_supervisor') || perms.includes('can_act_as_wh_supervisor') || (perms.includes('view_sys_supervisor') && !perms.includes('can_act_as_workshop_supervisor')) || perms.includes('view_wh_doc_approvals')) {
+  if (userRoles.includes('warehouse_supervisor') || perms.includes('can_act_as_wh_supervisor') || (perms.includes('view_sys_supervisor') && !(ctx.permissionAliases?.('count_supervisor_exclusion') ?? []).some((p: string) => perms.includes(p))) || perms.includes('view_wh_doc_approvals')) {
     roles.push('warehouse_supervisor');
   }
   if (userRoles.includes('docs_specialist') || perms.includes('view_wh_docs') || perms.includes('can_act_as_doc_worker') || perms.includes('perm_doc_approve_action')) {

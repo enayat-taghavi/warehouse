@@ -14,6 +14,7 @@ import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.direct
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
+import { getPermissionAliases } from '../../../../../../core/modules/permission-aliases';
 
 export type ManagerPersonnelSubTab = 'new' | 'contracts' | 'changes' | 'all';
 
@@ -198,7 +199,7 @@ export class ManagerPersonnelHubComponent implements OnInit, OnDestroy {
     const u = this.auth.user();
     if (u?.is_superuser) return true;
     const perms = this.auth.userPermissions();
-    return ['perm_approve_personnel_manager', 'can_act_as_manager', 'can_act_as_company_manager'].some(c => perms.includes(c));
+    return ['perm_approve_personnel_manager', ...getPermissionAliases('manager_approver'), 'can_act_as_company_manager'].some(c => perms.includes(c));
   }
 
   ngOnDestroy(): void {

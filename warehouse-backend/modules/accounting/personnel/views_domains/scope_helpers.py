@@ -4,6 +4,7 @@ Shared scope, permission, and realtime helper functions for personnel views.
 """
 
 import jdatetime
+from platform_core.registry import has_permission_alias
 from decimal import Decimal
 from django.apps import apps
 from django.contrib.auth import get_user_model
@@ -111,7 +112,7 @@ def is_personnel_global_auditor(user):
         user and (
             user.is_superuser
             or user.has_perm('accounts.perm_approve_personnel_manager')
-            or user.has_perm('accounts.can_act_as_manager')
+            or has_permission_alias(user, 'manager_approver')
             or user.has_perm('accounts.perm_approve_personnel_finance')
         )
     )
@@ -184,7 +185,7 @@ def is_vehicle_global_auditor(user):
         user and (
             user.is_superuser
             or user.has_perm('accounts.perm_approve_fleet_manager')
-            or user.has_perm('accounts.can_act_as_manager')
+            or has_permission_alias(user, 'manager_approver')
             or user.has_perm('accounts.perm_approve_fleet_finance')
         )
     )

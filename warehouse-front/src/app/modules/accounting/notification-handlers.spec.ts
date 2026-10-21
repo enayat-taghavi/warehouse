@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { ACCOUNTING_NOTIFICATION_HANDLERS } from './notification-handlers';
 import { NotificationNavigationContext } from '../../core/modules/module-contract';
+import { getPermissionAliases } from '../../core/modules/permission-aliases';
 
 describe('ACCOUNTING_NOTIFICATION_HANDLERS', () => {
   let mockHttp: { get: ReturnType<typeof vi.fn> };
@@ -32,7 +33,9 @@ describe('ACCOUNTING_NOTIFICATION_HANDLERS', () => {
       http: mockHttp as unknown as HttpClient,
       router: mockRouter as unknown as Router,
       userPerms: options.userPerms || [],
-      isSuperuser: !!options.isSuperuser
+      isSuperuser: !!options.isSuperuser,
+      // همان تابعی که هستهٔ اعلان‌ها می‌دهد (alias مجوز از manifest ماژول‌های نصب‌شده)
+      permissionAliases: (capability: string) => getPermissionAliases(capability)
     };
   }
 

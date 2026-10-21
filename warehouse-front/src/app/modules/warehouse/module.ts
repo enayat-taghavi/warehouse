@@ -308,6 +308,12 @@ export const MODULE: WhFrontendModule = {
     photoUpload: {
       itemPhotosEndpoint: (itemId: number | string) => `/inventory/items/${itemId}/photos/`
     },
+    permissionAliases: {
+      manager_approver: ['can_act_as_manager'],
+      supervisor_approver: ['view_sys_supervisor'],
+      attendance_entry: ['view_wh_attendance'],
+      attendance_supervisor: ['can_act_as_supervisor']
+    },
     loadLabelDesigner: () => import('./components/label-designer/label-designer').then(m => m.LabelDesigner)
   }
 };

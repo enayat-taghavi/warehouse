@@ -1,4 +1,5 @@
 import re
+from platform_core.registry import has_permission_alias
 from decimal import Decimal
 from common.date_utils import normalize_digits
 
@@ -38,6 +39,6 @@ def user_can_view_fleet_rates(user) -> bool:
         user.has_perm('accounts.perm_approve_fleet_finance')
         or user.has_perm('accounts.can_act_as_accountant')
         or user.has_perm('accounts.perm_approve_fleet_manager')
-        or user.has_perm('accounts.can_act_as_manager')
+        or has_permission_alias(user, 'manager_approver')
         or user.has_perm('accounts.can_act_as_company_manager')
     )

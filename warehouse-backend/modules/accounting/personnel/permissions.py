@@ -1,4 +1,5 @@
 from rest_framework import permissions
+from platform_core.registry import has_permission_alias
 
 # قواعد پایهٔ نوشتن ساختار سازمانی در هستهٔ companies هستند و این‌جا دوباره صادر می‌شوند.
 from companies.permissions import (  # noqa: F401
@@ -78,7 +79,7 @@ class CanApprovePersonnelManager(permissions.BasePermission):
         return bool(
             request.user.is_superuser or
             request.user.has_perm('accounts.perm_approve_personnel_manager') or
-            request.user.has_perm('accounts.can_act_as_manager')
+            has_permission_alias(request.user, 'manager_approver')
         )
 
 
@@ -105,7 +106,7 @@ class CanApproveFleetManager(permissions.BasePermission):
         return bool(
             request.user.is_superuser or
             request.user.has_perm('accounts.perm_approve_fleet_manager') or
-            request.user.has_perm('accounts.can_act_as_manager')
+            has_permission_alias(request.user, 'manager_approver')
         )
 
 
@@ -133,7 +134,7 @@ class CanApprovePersonnelSupervisor(permissions.BasePermission):
             request.user.is_superuser or
             request.user.has_perm('accounts.perm_approve_personnel_supervisor') or
             request.user.has_perm('accounts.perm_approve_personnel_manager') or
-            request.user.has_perm('accounts.can_act_as_manager')
+            has_permission_alias(request.user, 'manager_approver')
         )
 
 
@@ -148,7 +149,7 @@ class CanApproveFleetSupervisor(permissions.BasePermission):
             request.user.is_superuser or
             request.user.has_perm('accounts.perm_approve_fleet_supervisor') or
             request.user.has_perm('accounts.perm_approve_fleet_manager') or
-            request.user.has_perm('accounts.can_act_as_manager')
+            has_permission_alias(request.user, 'manager_approver')
         )
 
 
@@ -162,7 +163,7 @@ class CanAuthorizePaymentManager(permissions.BasePermission):
         return bool(
             request.user.is_superuser or
             request.user.has_perm('accounts.perm_manager_payment_authorize') or
-            request.user.has_perm('accounts.can_act_as_manager')
+            has_permission_alias(request.user, 'manager_approver')
         )
 
 

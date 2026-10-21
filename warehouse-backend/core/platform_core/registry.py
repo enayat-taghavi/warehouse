@@ -65,6 +65,40 @@ def contributions(point: str) -> tuple:
     return tuple(_CONTRIBUTIONS.get(point, ()))
 
 
+# ─── alias مجوز (گام ۸): ماژول صاحب، کد مجوزش را به یک «توانایی» نام‌دار مشارکت می‌دهد ──────────
+# مصرف‌کننده (ماژول دیگر) فقط نام توانایی را می‌داند و هرگز کد مجوز ماژول دیگر را نمی‌نویسد.
+PERMISSION_ALIAS_PREFIX = 'alias:'
+
+
+def permission_alias(capability: str) -> str:
+    """توکن یک توانایی برای جای‌گذاری در فهرست کدهای مجوز (مثلاً تاپل مراحل گردش کار)."""
+    return f'{PERMISSION_ALIAS_PREFIX}{capability}'
+
+
+def permission_aliases(capability: str) -> tuple[str, ...]:
+    """کدهای مجوزی که ماژول‌های نصب‌شده با contribute('permission_aliases:<توانایی>', codename) اعلام کرده‌اند."""
+    return tuple(dict.fromkeys(contributions(f'permission_aliases:{capability}')))
+
+
+def expand_permission_aliases(codenames) -> tuple[str, ...]:
+    """توکن‌های alias: را با کدهای اعلام‌شده جایگزین می‌کند؛ کد عادی دست‌نخورده می‌ماند."""
+    result: list[str] = []
+    for code in codenames:
+        if isinstance(code, str) and code.startswith(PERMISSION_ALIAS_PREFIX):
+            result.extend(permission_aliases(code[len(PERMISSION_ALIAS_PREFIX):]))
+        else:
+            result.append(code)
+    return tuple(dict.fromkeys(result))
+
+
+def has_permission_alias(user, capability: str) -> bool:
+    """کاربر یکی از کدهای مجوز اعلام‌شده برای این توانایی را دارد (مجوزها روی accounts.CustomUser)."""
+    # همان رفتار has_perm جنگو: سوپریوزر فعال هر مجوزی را دارد، حتی وقتی هیچ ماژولی alias را اعلام نکرده باشد
+    if getattr(user, 'is_active', False) and getattr(user, 'is_superuser', False):
+        return True
+    return any(user.has_perm(f'accounts.{code}') for code in permission_aliases(capability))
+
+
 def company_of(kind: str, entity_id) -> int | None:
     """
     حل شناسه شرکت مالک یک موجودیت بدون وابستگی مستقیم به ماژول مالک.

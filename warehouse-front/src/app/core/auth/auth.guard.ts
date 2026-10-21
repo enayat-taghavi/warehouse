@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 import { ModuleRouteAccess, WhFrontendModule } from '../modules/module-contract';
 import { findCompanyDocumentsRoute, isCompanyDocumentsUrl } from '../modules/documents-archive-route';
+import { expandPermissionAliases } from '../modules/permission-aliases';
 import { AppPersonaService } from '../services/app-persona.service';
 import { ActiveCompanyService } from '../services/active-company.service';
 
@@ -43,7 +44,8 @@ function getRequiredRoutePermissions(path: string): string[] | undefined {
     const routeAccess = getModuleRouteAccess(mod);
     const perms = routeAccess?.pagePermissions?.[path];
     if (perms) {
-      return perms;
+      // توکن alias: (مجوز ماژول دیگر با نام توانایی) به کدهای اعلام‌شدهٔ ماژول‌های نصب‌شده باز می‌شود
+      return expandPermissionAliases(perms);
     }
   }
   return undefined;

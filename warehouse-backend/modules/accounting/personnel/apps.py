@@ -97,6 +97,8 @@ class PersonnelConfig(AppConfig):
 
         # راهبر تشکیلات (بی view_sys_users) فهرست کمینهٔ کاربران را برای انتساب به بخش‌ها می‌بیند (گام ۷)
         contribute('user_directory_perms', 'perm_manage_projects_sections')
+        # alias مجوز (گام ۸): سرپرست کارگاه سرپرست شمارش ماژول‌های دیگر حساب نمی‌شود
+        contribute('permission_aliases:count_supervisor_exclusion', 'can_act_as_workshop_supervisor')
 
         # فیلتر اعضای شرکت در دایرکتوری کاربران بر مبنای بخش‌های پروژه (گام ۴)
         from personnel.company_access import build_section_member_q

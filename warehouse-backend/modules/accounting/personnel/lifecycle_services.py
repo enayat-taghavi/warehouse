@@ -1,4 +1,5 @@
 import re
+from platform_core.registry import permission_alias, expand_permission_aliases
 import jdatetime
 from django.db.models import Q
 from common.date_utils import normalize_digits
@@ -396,13 +397,16 @@ def get_missing_fields(personnel, stage: str) -> list[dict]:
     return missing
 
 
+# مدیرِ تاییدکنندهٔ ماژول‌های دیگر (مثلاً نقش سازگاری مدیر) از alias اعلام‌شده می‌آید؛ کد مجوز ماژول دیگر اینجا نیست
+MANAGER_APPROVER = permission_alias('manager_approver')
+
 # ── مجوزهای مراحل گردش کار پرسنل: منبع واحد برای تأیید تکی، تأیید گروهی و عبور هوشمند ──
 SUPERVISOR_STAGE_PERMS = (
     'perm_approve_personnel_supervisor', 'can_act_as_workshop_supervisor',
-    'perm_approve_personnel_manager', 'can_act_as_manager',
+    'perm_approve_personnel_manager', MANAGER_APPROVER,
 )
 FINANCE_STAGE_PERMS = ('perm_approve_personnel_finance',)
-MANAGER_STAGE_PERMS = ('perm_approve_personnel_manager', 'can_act_as_manager', 'can_act_as_company_manager')
+MANAGER_STAGE_PERMS = ('perm_approve_personnel_manager', MANAGER_APPROVER, 'can_act_as_company_manager')
 
 
 def user_has_any_perm(user, codenames) -> bool:
@@ -410,7 +414,7 @@ def user_has_any_perm(user, codenames) -> bool:
         return False
     if user.is_superuser:
         return True
-    return any(user.has_perm(f'accounts.{c}') for c in codenames)
+    return any(user.has_perm(f'accounts.{c}') for c in expand_permission_aliases(codenames))
 
 
 class PersonnelWorkflowError(Exception):
@@ -949,9 +953,9 @@ def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id, p
         perms_by_stage = {
             'pending_supervisor': ('perm_approve_personnel_supervisor', 'can_act_as_workshop_supervisor'),
             'pending_accountant': ('perm_approve_personnel_finance',),
-            'pending_manager': ('perm_approve_personnel_manager', 'can_act_as_manager', 'can_act_as_company_manager'),
+            'pending_manager': ('perm_approve_personnel_manager', MANAGER_APPROVER, 'can_act_as_company_manager'),
         }
-    perm_codes = perms_by_stage.get(stage)
+    perm_codes = expand_permission_aliases(perms_by_stage.get(stage) or ())
     if not perm_codes:
         return set()
 

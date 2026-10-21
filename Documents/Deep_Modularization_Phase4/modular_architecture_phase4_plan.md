@@ -269,6 +269,42 @@
 - ماژول سوم بی‌تغییر هسته نصب، بیلد و آزموده می‌شود.
 - هیچ داده‌ای (ردیف مجوز، انتساب نقش، صف آفلاین، کش) حذف نمی‌شود.
 
+### گام ۸ — alias مجوز به‌جای ارجاع بین‌ماژولی (۳۰ مهر ۱۴۰۵)
+
+به درخواست کاربر در همین گفت‌وگو و با اجرای خود Claude. انتشار روی `soft` نیست.
+
+**هدف:** ۴۱ ارجاع منجمد `cross_module_permission_literals` حذف شوند و هیچ ماژولی کد مجوز ماژول دیگر را ننویسد. رفتار نصب کامل عیناً همان بماند. نصب تک‌ماژولی برابر یا تنگ‌تر شود.
+
+**سازوکار:**
+- ماژول صاحب مجوز آن را به یک «توانایی» نام‌دار مشارکت می‌دهد. مصرف‌کننده فقط نام توانایی را می‌داند.
+- **بک‌اند:**
+  - مشارکت با `contribute('permission_aliases:<توانایی>', codename)`.
+  - هسته `permission_aliases()`، `has_permission_alias()` و `expand_permission_aliases()` را در `platform_core/registry.py` دارد.
+  - در تاپل‌های مجوز مراحل گردش کار، توکن `alias:<توانایی>` جای کد ماژول دیگر را می‌گیرد. `user_has_any_perm`، کوئری گیرندگان اعلان و `check_p` توکن را باز می‌کنند.
+- **فرانت:**
+  - extension تازهٔ `permissionAliases` ماژول‌ها.
+  - گارد مسیر توکن `alias:` در `pagePermissions` را باز می‌کند.
+  - `resolveRoleCodes` پرسونا و context اعلان‌ها تابع `permissionAliases` را از هسته می‌گیرند تا فایل‌هایی که زود بارگذاری می‌شوند رجیستری را ایمپورت نکنند.
+  - کامپوننت‌های تنبل از `getPermissionAliases` هسته می‌خوانند.
+- **توانایی‌ها:**
+
+  | توانایی | صاحب | کد |
+  | :--- | :--- | :--- |
+  | `manager_approver` | انبار | `can_act_as_manager` |
+  | `supervisor_approver` | انبار | `view_sys_supervisor` |
+  | `attendance_entry` | انبار | `view_wh_attendance` |
+  | `attendance_supervisor` | انبار | `can_act_as_supervisor` |
+  | `count_supervisor_exclusion` | حسابداری | `can_act_as_workshop_supervisor` |
+  | `audit_viewer` | حسابداری | `view_sys_payroll` |
+
+- **فهرست مجاز:** فقط اسکریپت توسعهٔ `phase_guardian_approval.py` می‌ماند. ورودی کهنه شکست است.
+- **راستی‌آزمایی:**
+  - آزمون برابری برای هر توانایی.
+  - آزمون‌های بک‌اند و `ng-test-compare` کامل.
+  - نگهبان‌های ۲۹، ۳۱، ۵۶ و ۵۷ با `--self-test`، و `sample-module`.
+  - `tenant-scope-reviewer`.
+  - انتشار روی `app`.
+
 ## ۳. روند نظارت
 
 - runner از `run_tasks_agy.bat` در تب Windows Terminal اجرا می‌شود.

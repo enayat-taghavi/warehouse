@@ -1,4 +1,5 @@
 import logging
+from platform_core.registry import permission_alias
 import re
 import jdatetime
 from decimal import Decimal
@@ -51,23 +52,26 @@ def normalize_plate(plate_str):
 
 ROAD_VEHICLE_TYPES = ('pickup', 'nissan', 'khavar', 'sedan', 'truck', 'trailer')
 
+# مدیرِ تاییدکنندهٔ ماژول‌های دیگر (مثلاً نقش سازگاری مدیر) از alias اعلام‌شده می‌آید؛ کد مجوز ماژول دیگر اینجا نیست
+MANAGER_APPROVER = permission_alias('manager_approver')
+
 FLEET_SUPERVISOR_STAGE_PERMS = (
     'perm_approve_fleet_supervisor', 'can_act_as_workshop_supervisor',
-    'perm_approve_fleet_manager', 'can_act_as_manager',
+    'perm_approve_fleet_manager', MANAGER_APPROVER,
 )
 FLEET_FINANCE_STAGE_PERMS = ('perm_approve_fleet_finance',)
 FLEET_MANAGER_STAGE_PERMS = (
-    'perm_approve_fleet_manager', 'can_act_as_manager', 'can_act_as_company_manager'
+    'perm_approve_fleet_manager', MANAGER_APPROVER, 'can_act_as_company_manager'
 )
 FLEET_DELETE_NOMOVEMENT_PERM = 'perm_delete_vehicle_nomovement'
 
 FLEET_WORKFLOW_STAGE_PERMS = {
     'pending_supervisor': ('perm_approve_fleet_supervisor', 'can_act_as_workshop_supervisor'),
     'pending_accountant': ('perm_approve_fleet_finance',),
-    'pending_manager': ('perm_approve_fleet_manager', 'can_act_as_manager', 'can_act_as_company_manager'),
+    'pending_manager': ('perm_approve_fleet_manager', MANAGER_APPROVER, 'can_act_as_company_manager'),
     'change_request_created': ('perm_approve_fleet_supervisor', 'can_act_as_workshop_supervisor'),
     'change_request_supervisor_approved': ('perm_approve_fleet_finance',),
-    'change_request_finance_approved': ('perm_approve_fleet_manager', 'can_act_as_manager', 'can_act_as_company_manager'),
+    'change_request_finance_approved': ('perm_approve_fleet_manager', MANAGER_APPROVER, 'can_act_as_company_manager'),
 }
 
 FLEET_RATE_FIELDS = ('default_service_rate',)

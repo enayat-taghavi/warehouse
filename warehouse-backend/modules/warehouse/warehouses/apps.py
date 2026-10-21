@@ -118,6 +118,9 @@ class WarehousesConfig(AppConfig):
         contribute('audit_view_perms', 'view_wh_audit')
         contribute('org_structure_write_perms', 'accounts.can_act_as_manager')
         contribute('sensitive_field_bypass_perms', 'view_sys_manager_review')
+        # alias مجوز (گام ۸): مجوزهای این ماژول که ماژول‌های دیگر با نام توانایی می‌شناسند
+        contribute('permission_aliases:manager_approver', 'can_act_as_manager')
+        contribute('permission_aliases:supervisor_approver', 'view_sys_supervisor')
         for key_perm in (
             ('can_act_as_counter', 'انبارگردان'),
             ('can_act_as_supervisor', 'سرپرست انبار'),

@@ -5,6 +5,7 @@
 - module_permission_literals: کد مجوزی که یک ماژول در module.py خودش اعلام کرده، در هستهٔ بک‌اند
   (warehouse-backend/core) یا پوستهٔ فرانت (core/، shared/، modules/common/). باید صفر باشد، جز فایل‌های فهرست مجاز.
 - cross_module_permission_literals: کد مجوز ماژول دیگر در کد یک ماژول. باید صفر باشد، جز فایل‌های فهرست مجاز.
+  ماژول مجوز ماژول دیگر را فقط با نام «توانایی» می‌شناسد (alias مجوز، گام ۸).
 - locked_scope_refs (فقط فرانت): ارجاع به دو دیتابیس آفلاین قفل‌شده (LOCKED_OFFLINE_SCOPES، warehouseOfflineDb،
   financeOfflineDb) بیرون از سرویس‌های آفلاین هسته و ماژول صاحب هر دیتابیس. باید صفر باشد، جز فایل‌های فهرست مجاز.
 - permission_parity (فقط فرانت): کدهای users.permissionGroup هر ماژول فرانت با PERMISSION_CODENAMES همان ماژول
@@ -25,35 +26,16 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 BACKEND_DIR = REPO_ROOT / "warehouse-backend"
 FRONT_APP_DIR = REPO_ROOT / "warehouse-front" / "src" / "app"
 
-_LEGACY_MANAGER = "قاعدهٔ کسب‌وکار پیشین: نقش سازگاری «مدیر انبار» (مالک: انبار) در تاییدهای حسابداری مدیر به حساب می‌آید؛ در نصب بی انبار فقط تنگ‌تر می‌شود"
-
 # فایل‌هایی (یا «فایل|کد») که آگاهانه ارجاع دارند؛ هر کدام دلیل دارد. فایل فهرست‌شده‌ای که دیگر ارجاعی ندارد، ورودی کهنه و شکست است.
 ALLOWED_FILES = {
     "module_permission_literals": {
         "front:core/auth/auth.service.ts": "دادهٔ کاربران mock حالت environment.useMockData (در هیچ environment روشن نیست)",
     },
-    # ارجاع بین‌ماژولی مجوز: قاعده‌های کسب‌وکار پیش از گام ۷، دقیق تا سطح «فایل|کد» منجمد شده‌اند تا هر ارجاع تازه شکست بخورد.
+    # ارجاع بین‌ماژولی مجوز: از گام ۸ با alias مجوز (permission_aliases / permissionAliases) جایگزین شد؛
+    # فقط اسکریپت توسعهٔ زیر می‌ماند که عمداً کاربر شمارشگر ماژول دیگر می‌سازد.
     "cross_module_permission_literals": {
-        "backend:modules/accounting/personnel/fleet_lifecycle_services.py|can_act_as_manager": _LEGACY_MANAGER,
-        "backend:modules/accounting/personnel/lifecycle_services.py|can_act_as_manager": _LEGACY_MANAGER,
-        "backend:modules/accounting/personnel/permissions.py|can_act_as_manager": _LEGACY_MANAGER,
-        "backend:modules/accounting/personnel/serializers_domains/helpers.py|can_act_as_manager": _LEGACY_MANAGER,
-        "backend:modules/accounting/personnel/views_domains/fleet_views.py|can_act_as_manager": _LEGACY_MANAGER,
-        "backend:modules/accounting/personnel/views_domains/hr_views.py|can_act_as_manager": _LEGACY_MANAGER,
-        "backend:modules/accounting/personnel/views_domains/scope_helpers.py|can_act_as_manager": _LEGACY_MANAGER,
-        "backend:modules/accounting/personnel/workflow_engine.py|can_act_as_manager": _LEGACY_MANAGER,
-        "backend:modules/accounting/personnel/workflow_engine.py|view_sys_supervisor": "قاعدهٔ کسب\u200cوکار پیشین: دارندهٔ کارتابل سرپرست شمارش (انبار) مرحلهٔ سرپرست کارتابل حسابداری را هم می\u200cبیند",
-        "backend:modules/accounting/personnel/phase_guardian_approval.py|view_sys_counter": "اسکریپت نگهبان فاز توسعه که هر دو ماژول را لازم دارد؛ مسیر اجرایی نیست",
-        "backend:modules/warehouse/warehouses/role_resolver.py|can_act_as_workshop_supervisor": "تفکیک نقش: سرپرست کارگاه حسابداری سرپرست شمارش انبار حساب نمی\u200cشود؛ در نصب بی حسابداری بی\u200cاثر است",
-        "front:modules/accounting/components/finance/manager/manager-fleet/manager-fleet.ts|can_act_as_manager": _LEGACY_MANAGER,
-        "front:modules/accounting/components/finance/manager/manager-personnel/manager-personnel.ts|can_act_as_manager": _LEGACY_MANAGER,
-        "front:modules/accounting/components/personnel/personnel-profiles/personnel-profiles.ts|can_act_as_manager": _LEGACY_MANAGER,
-        "front:modules/accounting/notification-handlers.ts|can_act_as_manager": _LEGACY_MANAGER,
-        "front:modules/accounting/route-access.ts|can_act_as_manager": _LEGACY_MANAGER,
-        "front:modules/accounting/route-access.ts|can_act_as_supervisor": "قاعدهٔ کسب\u200cوکار پیشین: سرپرست سازگاری انبار به صفحهٔ ثبت کارکرد حسابداری راه دارد",
-        "front:modules/accounting/route-access.ts|view_wh_attendance": "قاعدهٔ کسب\u200cوکار پیشین: «ثبت کارکرد و سرویس ناوگان (انبار)» صفحه\u200cهای کارکرد حسابداری را باز می\u200cکند",
-        "front:modules/warehouse/personas.ts|can_act_as_workshop_supervisor": "همتای فرانت تفکیک نقش role_resolver.py (سرپرست کارگاه سرپرست شمارش نیست)",
-        "front:modules/warehouse/route-access.ts|view_sys_payroll": "قاعدهٔ کسب\u200cوکار پیشین: کاربر حقوق و دستمزد صفحهٔ رهگیری تغییرات را می\u200cبیند",
+        "backend:modules/accounting/personnel/phase_guardian_approval.py|view_sys_counter":
+            "اسکریپت نگهبان فاز توسعه که هر دو ماژول را لازم دارد و عمداً کاربر شمارشگر انبار می‌سازد؛ مسیر اجرایی نیست",
     },
     "locked_scope_refs": {
         "front:shared/components/deep-sync-modal/deep-sync-modal.component.ts":

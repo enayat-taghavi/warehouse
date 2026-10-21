@@ -4,6 +4,7 @@ ViewSets for vehicle & driver profiles and vehicle change requests.
 """
 
 import io
+from platform_core.registry import has_permission_alias
 import openpyxl
 from decimal import Decimal
 from rest_framework import viewsets, permissions, status, serializers
@@ -139,7 +140,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        is_mgr = user.is_superuser or user.has_perm('accounts.perm_approve_fleet_manager') or user.has_perm('accounts.can_act_as_manager')
+        is_mgr = user.is_superuser or user.has_perm('accounts.perm_approve_fleet_manager') or has_permission_alias(user, 'manager_approver')
         
         section = serializer.validated_data.get('section')
         # گارد انتساب بخش: کاربر عادی باید انتساب فعال به بخش انتخاب‌شده داشته باشد
@@ -191,7 +192,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
         # ب-۱ (Task 0.1): عبور از قلمرو و واکشی شیء پیش از قفل ردیف درون تراکنش
         target = self.get_object()
         user = request.user
-        is_mgr = user.is_superuser or user.has_perm('accounts.perm_approve_fleet_manager') or user.has_perm('accounts.can_act_as_manager')
+        is_mgr = user.is_superuser or user.has_perm('accounts.perm_approve_fleet_manager') or has_permission_alias(user, 'manager_approver')
         is_fin = user.is_superuser or user.has_perm('accounts.perm_approve_fleet_finance')
 
         from ..fleet_lifecycle_services import (
@@ -700,7 +701,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
         from ..fleet_lifecycle_services import get_vehicle_missing_fields, dispatch_vehicle_workflow_notification
         target = self.get_object()
         user = request.user
-        is_mgr = user.is_superuser or user.has_perm('accounts.perm_approve_fleet_manager') or user.has_perm('accounts.can_act_as_manager')
+        is_mgr = user.is_superuser or user.has_perm('accounts.perm_approve_fleet_manager') or has_permission_alias(user, 'manager_approver')
         if not is_mgr and target.created_by_id != user.id:
             if not (target.section_id and UserSectionAssignment.objects.filter(user=user, section_id=target.section_id, is_active=True).exists()):
                 raise PermissionDenied("شما دسترسی ارسال این پرونده به سرپرست را ندارید.")
@@ -1374,7 +1375,7 @@ class VehicleDriverProfileViewSet(viewsets.ModelViewSet):
         update_existing = str(request.data.get('update_existing') or request.query_params.get('update_existing', 'true')).lower() in ['true', '1']
         
         user = request.user
-        is_mgr = bool(user and (user.is_superuser or user.has_perm('accounts.perm_approve_fleet_manager') or user.has_perm('accounts.can_act_as_manager')))
+        is_mgr = bool(user and (user.is_superuser or user.has_perm('accounts.perm_approve_fleet_manager') or has_permission_alias(user, 'manager_approver')))
         can_view_rate = user_can_view_fleet_rates(user)
 
         # تعیین بخش پیش‌فرض

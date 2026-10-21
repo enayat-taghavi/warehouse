@@ -1,4 +1,5 @@
 import { ModuleRouteAccess } from '../../core/modules/module-contract';
+import { permissionAlias } from '../../core/modules/permission-alias-token';
 
 export const WAREHOUSE_ROUTE_ACCESS: ModuleRouteAccess = {
   deniedPageFallback: 'roleHome',
@@ -33,7 +34,7 @@ export const WAREHOUSE_ROUTE_ACCESS: ModuleRouteAccess = {
     'feed_approvals': ['view_wh_feed_approvals'],
     'labels': ['view_wh_labels'],
     'label-designer': ['view_wh_label_designer'],
-    'audit': ['view_wh_audit', 'perm_sys_logs', 'view_sys_payroll', 'admin_all'],
+    'audit': ['view_wh_audit', 'perm_sys_logs', permissionAlias('audit_viewer'), 'admin_all'],
     'count-tracking': ['view_sys_manager_review', 'view_sys_supervisor', 'view_sys_dashboard', 'perm_inventory_finalize', 'view_wh_stocktaking', 'can_act_as_manager', 'can_act_as_supervisor']
   },
   loginPermissions: [

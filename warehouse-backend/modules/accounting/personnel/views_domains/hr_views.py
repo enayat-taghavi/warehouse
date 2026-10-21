@@ -4,6 +4,7 @@ ViewSets for personnel profiles and personnel change requests.
 """
 
 import io
+from platform_core.registry import has_permission_alias
 import openpyxl
 from decimal import Decimal
 from rest_framework import viewsets, permissions, status, parsers, serializers
@@ -133,7 +134,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        is_mgr = user.is_superuser or user.has_perm('accounts.perm_approve_personnel_manager') or user.has_perm('accounts.can_act_as_manager')
+        is_mgr = user.is_superuser or user.has_perm('accounts.perm_approve_personnel_manager') or has_permission_alias(user, 'manager_approver')
         
         section = serializer.validated_data.get('section')
         # گارد انتساب بخش: کاربر عادی باید انتساب فعال به بخش انتخاب‌شده داشته باشد
@@ -1081,7 +1082,7 @@ class PersonnelProfileViewSet(viewsets.ModelViewSet):
         can_mgr = (
             user.is_superuser
             or user.has_perm('accounts.perm_approve_personnel_manager')
-            or user.has_perm('accounts.can_act_as_manager')
+            or has_permission_alias(user, 'manager_approver')
             or user.has_perm('accounts.perm_approve_personnel_supervisor')
             or user.has_perm('accounts.can_act_as_workshop_supervisor')
         )

@@ -1,4 +1,5 @@
 import { ModuleRouteAccess } from '../../core/modules/module-contract';
+import { permissionAlias } from '../../core/modules/permission-alias-token';
 
 export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
   deniedPageFallback: 'otherModuleDefault',
@@ -16,10 +17,10 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
     'personnel': ['view_sys_payroll', 'admin_all'],
     'payroll': ['view_sys_payroll', 'admin_all'],
     'fleet-settlement': ['view_sys_fleet_settlement', 'view_sys_payroll', 'admin_all'],
-    'attendance': ['view_sys_personnel_attendance', 'view_wh_attendance', 'perm_register_daily_attendance', 'can_act_as_operator', 'can_act_as_supervisor', 'admin_all'],
-    'fleet': ['view_sys_fleet_attendance', 'view_wh_attendance', 'admin_all'],
-    'fleet-attendance': ['view_sys_fleet_attendance', 'view_wh_attendance', 'admin_all'],
-    'manager-approvals': ['perm_manager_payment_authorize', 'perm_approve_personnel_manager', 'perm_approve_fleet_manager', 'can_act_as_manager', 'admin_all'],
+    'attendance': ['view_sys_personnel_attendance', permissionAlias('attendance_entry'), 'perm_register_daily_attendance', 'can_act_as_operator', permissionAlias('attendance_supervisor'), 'admin_all'],
+    'fleet': ['view_sys_fleet_attendance', permissionAlias('attendance_entry'), 'admin_all'],
+    'fleet-attendance': ['view_sys_fleet_attendance', permissionAlias('attendance_entry'), 'admin_all'],
+    'manager-approvals': ['perm_manager_payment_authorize', 'perm_approve_personnel_manager', 'perm_approve_fleet_manager', permissionAlias('manager_approver'), 'admin_all'],
     'finance-cartable': ['perm_approve_personnel_finance', 'perm_approve_fleet_finance', 'view_sys_payroll', 'admin_all'],
     'treasury-cartable': ['view_sys_treasury', 'perm_treasury_disburse_action', 'admin_all'],
     'treasury': ['view_sys_treasury', 'perm_treasury_disburse_action', 'admin_all'],

@@ -12,6 +12,7 @@ import { filter } from 'rxjs';
 import { ROLE_ICONS } from '../../shared/icons/semantic-icons';
 import { RolePersona, AppModuleType, ModulePersonas, FrontendModuleSpec, WhFrontendModule, ModuleAccent } from '../modules/module-contract';
 import { IconName } from '../../shared/icons/icon-registry';
+import { getPermissionAliases } from '../modules/permission-aliases';
 
 export type { RolePersona, AppModuleType, ModulePersonas };
 
@@ -237,7 +238,9 @@ export class AppPersonaService {
     );
 
     if (targetModule?.personas) {
-      const roleCodes = targetModule.personas.resolveRoleCodes({ perms, userRoles });
+      const roleCodes = targetModule.personas.resolveRoleCodes({
+        perms, userRoles, permissionAliases: (capability: string) => getPermissionAliases(capability, this.moduleRegistry)
+      });
       for (const code of roleCodes) {
         const persona = targetModule.personas.roles.find(r => r.code === code);
         if (persona) {

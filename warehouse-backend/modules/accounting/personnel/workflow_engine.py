@@ -5,6 +5,7 @@ Enterprise 5-Tier Workflow & State Machine Engine
 """
 
 import logging
+from platform_core.registry import permission_alias, expand_permission_aliases
 from django.db import transaction
 from django.utils import timezone
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -68,6 +69,7 @@ def determine_user_tier(user) -> int:
     tier = WorkflowTiers.TIER_1_OPERATOR
 
     def check_p(codenames):
+        codenames = expand_permission_aliases(codenames)
         if any(user.has_perm(f'accounts.{c}') for c in codenames):
             return True
         if hasattr(user, 'user_permissions') and user.user_permissions.filter(codename__in=codenames).exists():
@@ -81,7 +83,7 @@ def determine_user_tier(user) -> int:
         tier = max(tier, WorkflowTiers.TIER_5_TREASURY)
 
     # بررسی دسترسی مدیر شرکت (سطح ۴)
-    if check_p(['perm_manager_payment_authorize', 'perm_approve_personnel_manager', 'perm_approve_fleet_manager', 'can_act_as_manager']):
+    if check_p(['perm_manager_payment_authorize', 'perm_approve_personnel_manager', 'perm_approve_fleet_manager', permission_alias('manager_approver')]):
         tier = max(tier, WorkflowTiers.TIER_4_MANAGER)
 
     # بررسی دسترسی حسابداری (سطح ۳)
@@ -89,7 +91,7 @@ def determine_user_tier(user) -> int:
         tier = max(tier, WorkflowTiers.TIER_3_ACCOUNTANT)
 
     # بررسی دسترسی سرپرست انبار (سطح ۲)
-    if check_p(['perm_approve_personnel_supervisor', 'perm_approve_fleet_supervisor', 'view_sys_supervisor']):
+    if check_p(['perm_approve_personnel_supervisor', 'perm_approve_fleet_supervisor', permission_alias('supervisor_approver')]):
         tier = max(tier, WorkflowTiers.TIER_2_SUPERVISOR)
 
     return tier

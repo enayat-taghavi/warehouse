@@ -19,6 +19,7 @@ import { APP_VERSION } from './app-version';
 import { ModuleRegistryService } from '../modules/module-registry.service';
 import { NotificationNavigationContext } from '../modules/module-contract';
 import { CommunicationService } from '../services/communication.service';
+import { getPermissionAliases } from '../modules/permission-aliases';
 
 export const PUSH_TOKEN_STORAGE_KEY = 'wh_push_device_token';
 
@@ -285,6 +286,7 @@ export class PushService {
         router: this.router,
         userPerms,
         isSuperuser,
+        permissionAliases: (capability: string) => getPermissionAliases(capability, this.moduleRegistry),
       };
 
       let handled = false;

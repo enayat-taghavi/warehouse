@@ -18,7 +18,8 @@ export interface RolePersona {
 
 export interface ModulePersonas {
   roles: RolePersona[];
-  resolveRoleCodes: (ctx: { perms: string[]; userRoles: string[] }) => string[];
+  /** permissionAliases: کدهای مجوز یک توانایی که ماژول‌های نصب‌شده اعلام کرده‌اند (گام ۸) */
+  resolveRoleCodes: (ctx: { perms: string[]; userRoles: string[]; permissionAliases?: (capability: string) => string[] }) => string[];
   sodProhibitions?: Record<string, string[]>;
   isRouteDeniedForRole?: (role: string, cleanRoute: string) => boolean;
   defaultRouteForRole?: Record<string, string>;
@@ -470,6 +471,12 @@ export interface ExtensionMap {
    * ۱۸. هندلرهای اختصاصی ناوبری اعلان‌ها — مصرف در notification-center.component.ts
    */
   notificationHandlers?: NotificationHandler[];
+
+  /**
+   * ۱۹. alias مجوز (گام ۸): کد مجوزهای همین ماژول برای هر «توانایی» نام‌دار. ماژول دیگر فقط نام توانایی را
+   * (با permissionAlias در route-access، یا getPermissionAliases) می‌شناسد، نه کد مجوز این ماژول را.
+   */
+  permissionAliases?: Record<string, string[]>;
 }
 
 /**
@@ -481,6 +488,8 @@ export interface NotificationNavigationContext {
   router: Router;
   userPerms: string[];
   isSuperuser: boolean;
+  /** کدهای مجوز یک توانایی که ماژول‌های نصب‌شده اعلام کرده‌اند (گام ۸) */
+  permissionAliases?: (capability: string) => string[];
 }
 
 /**
