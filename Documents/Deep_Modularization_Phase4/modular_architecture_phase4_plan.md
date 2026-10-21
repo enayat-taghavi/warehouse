@@ -206,6 +206,69 @@
 
 **بیرون از پرونده:** انتشار روی `soft` جداست و تأیید صریح کاربر را لازم دارد.
 
+### گام ۷ — بستن وابستگی‌های بی‌نام (۳۰ مهر ۱۴۰۵)
+
+به درخواست صریح کاربر، **اجرا با خود Claude** است (نه Antigravity) و پرونده باید کامل بسته شود. مبنا: `scratch/modular_closeout_handoff.md`.
+
+**هدف:** هسته و پوسته نه‌تنها نام ماژول، بلکه **مفهوم ماژول** را هم نشناسند: کدهای مجوز، سرویس دامنهٔ انبار، و نماهای دوقلمرویی. یک ماژول سوم واقعی آمادگی N-ماژولی را اثبات کند.
+
+**اندازه‌گیری پایه (۳۰ مهر، با `scratch/step7/scan_perm_codes.py`):**
+- ۵۶ کد مجوز متعلق به ماژول‌ها، ۲۵۲ بار در هسته و پوسته:
+  - بک‌اند: `accounts/models.py` (۵۶)، `seed_permissions.py` (۵۱)، `user_views.py` (۷)، `audit_views.py` (۲)، `companies/permissions.py` (۱)، `query_engine/definitions.py` (۱).
+  - فرانت: `users.ts` (۵۸)، `users.helpers.ts` (۵۵)، `auth.service.ts` (۱۱، دادهٔ mock)، `layout.ts` (۷)، `auth.guard.ts` (۲)، `permission.directive.ts` (۱، توضیح).
+- این عدد از عدد handoff بیشتر است، چون `can_act_as_*` و `perm_rec_*` و `perm_wh_*` هم شمرده شدند.
+
+**تصمیم‌ها:**
+
+| موضوع | تصمیم |
+| :--- | :--- |
+| منبع کدهای مجوز | هر ماژول در `modules/<m>/module.py` فهرست `PERMISSIONS` (کد و نام فارسی) و `PERMISSION_CODENAMES` کامل را اعلام می‌کند. فرانت همان کدها را در `users.permissionGroup` ماژول دارد و نگهبان برابری دو فهرست را می‌سنجد. |
+| ساخت ردیف‌های مجوز | از `CustomUser.Meta.permissions` فقط مجوزهای پلتفرم می‌ماند. ردیف‌های مجوز ماژول‌های نصب‌شده را یک گیرندهٔ `post_migrate` می‌سازد: فقط `get_or_create`، هیچ حذف یا تغییر نامی. migration فقط `AlterModelOptions` است (بدون SQL). هیچ ردیف `Permission` یا انتساب نقشی حذف نمی‌شود. |
+| مصرف مجوز در هستهٔ بک‌اند | از راه `contribute`/`contributions`: `audit_view_perms`، `key_role_permissions`، `user_directory_perms`، `org_structure_write_perms` (موجود)، `sensitive_field_bypass_perms`. |
+| مصرف مجوز در پوسته | فیلدهای تازهٔ قرارداد: `users.permissionGroup` (جای `permissionGroupKeys`)، `users.shortPermissionNames`، `users.standalonePermissionTooltips`، `users.structureWritePermissions`، و `ModuleNavItem.anyPermissions`. |
+| `WarehouseHttpService` | دو تکه می‌شود: سرویس کامل CRUD به `modules/warehouse/api/` می‌رود و فقط ماژول انبار آن را دارد. هسته سرویس فقط‌خواندنی و عمومی `ScopeDirectoryService` را دارد که اندپوینتش را extension تازهٔ `scopeDirectory` ماژول صاحب آن می‌دهد. |
+| برچسب «انبار/پروژه» صفحهٔ کاربران | extension تازهٔ `users.assignmentScope` با `priority`، بارگذار فهرست و برچسب‌های فارسی. نخستین ماژول در دسترس برچسب را می‌دهد. خطای بارگذاری به ماژول بعدی می‌رود، مثل امروز. |
+| نماهای سلامت و پایش همگام‌سازی | N-قلمرویی از روی `healthDashboard.panels` و `operations.syncMonitor` ماژول‌ها. برای دو ماژول فعلی متن و ظاهر عیناً همان می‌ماند. نام و کلید دیتابیس‌های آفلاین قفل می‌مانند (قاعدهٔ داده). `syncCursors` و `photoQueue` انبارمحور می‌مانند (بخش ۴.۱). |
+| ماژول سوم | ماژول واقعی `sample` با بک‌اند (`modules/sample/`، بدون مدل و migration) و فرانت (`modules/sample/module.ts`، یک صفحه). **opt-in** است: فقط وقتی صریحاً در `WH_MODULES` یا `--modules` بیاید نصب می‌شود. پس روی `app` و `soft` نه نصب می‌شود، نه جدولی می‌سازد. به‌عنوان الگوی ماژول تازه و اثبات زنده در مخزن می‌ماند. |
+
+**زیرگام‌ها** (هر کدام commit جدا):
+- **۷.۱ — مالکیت مجوز در بک‌اند:**
+  - `PERMISSIONS` و `PERMISSION_CODENAMES` کامل در `module.py` دو ماژول (۴ کد حسابداری و ۲ کد انبار که فقط فرانت داشت، اضافه می‌شوند).
+  - `module_catalog`: `MODULE_PERMISSIONS` و `installed_module_permissions()`.
+  - `accounts`: `Meta.permissions` فقط پلتفرم، migration فقط-وضعیت، گیرندهٔ `post_migrate`، و `seed_permissions` = پلتفرم + اعلام ماژول‌ها.
+  - جایگزینی کدهای ماژول در `audit_views`، `user_views`، `companies/permissions.py` و `query_engine/definitions.py` با contributionها.
+  - بازبین: `tenant-scope-reviewer`. مهارت `safe-migration` پیش از migration.
+- **۷.۲ — مالکیت مجوز در فرانت:** گروه‌بندی مجوزهای `users.ts`، `SHORT_PERMISSION_NAMES`، راهنمای مجوزها، `STRUCTURE_WRITE_PERMS`، فیلتر منوی `audit` و `count-tracking` در `layout.ts`، و مثال `permission.directive.ts` از اعلام ماژول‌ها خوانده می‌شوند. دادهٔ mock `auth.service.ts` با دستهٔ ابزار توسعه در فهرست مجاز می‌ماند.
+- **۷.۳ — فهرست قلمرو:**
+  - `ScopeDirectoryService` در هسته و جابه‌جایی CRUD انبار به ماژول.
+  - ۱۱ مصرف‌کنندهٔ بیرون از انبار (حسابداری ۷، پوسته ۳، `user-menu`) به سرویس عمومی می‌روند.
+  - `users.assignmentScope` جای `hasInventoryModule`/`hasAccountingModule`.
+  - بازبین: `ui-reviewer`.
+- **۷.۴ — نماهای N-قلمرویی:**
+  - `health-dashboard`، `operations-sync-monitor`، شمارش رکوردهای `system-health.service` (`recordsByScope`)، `id-cards` و شیم‌های قدیمی `LOCKED_OFFLINE_SCOPES` در `deep-sync-modal`/`user-menu` اگر مصرف‌کننده‌ای ندارند.
+  - شبیه‌ساز تداخل پایش همگام‌سازی و سناریوهای تست فشار به اعلام ماژول می‌روند.
+  - بازبین‌ها: `data-loss-reviewer` و `ui-reviewer`.
+- **۷.۵ — ماژول سوم `sample`:**
+  - پرچم `opt_in` در `ModuleSpec` و `optIn` در قرارداد فرانت. پروفایل پیش‌فرض بک‌اند و `gen-installed-modules.js` ماژول opt-in را فقط با نام صریح نصب می‌کنند.
+  - بک‌اند: اپ `sample_hub` با یک API فقط‌خواندنی و مجوز خودش.
+  - فرانت: یک صفحه، منو، گروه مجوز، پنل سلامت و قلمرو آفلاین خودش.
+  - اثبات: نگهبان ۳۱ با پروفایل‌های `sample` و `accounting,sample,warehouse`؛ بیلد تک‌ماژولی `sample`؛ آزمون‌های واحد نماهای N-قلمرویی با قلمرو سوم.
+- **۷.۶ — نگهبان‌ها:**
+  - شمارندهٔ `module_permission_literals` در ۲۹ (بک‌اند) و ۵۷ (فرانت)، برگرفته از اعلام‌های `module.py` (نه فهرست دستی). باید صفر یا در فهرست مجاز دقیق باشد.
+  - `cross_module_permission_literals` = ۰.
+  - برابری کدهای گروه فرانت و بک‌اند هر ماژول.
+  - شمارندهٔ `locked_scope_refs` (`LOCKED_OFFLINE_SCOPES`، `warehouseOfflineDb`، `financeOfflineDb`) بیرون از سرویس‌های آفلاین هسته و ماژول صاحب.
+  - `--self-test` هر سه.
+- **۷.۷ — راستی‌آزمایی و انتشار:**
+  - `ng-test-compare` کامل، آزمون‌های بک‌اند (حداقل ۹۰۰)، نگهبان‌های ۲۹، ۳۰، ۳۱، ۳۳ تا ۳۶، ۵۲، ۵۵، ۵۶، ۵۷ و نگهبان تازه.
+  - بررسی دیداری روی `localhost:4300` با حساب موقت `qa_*`.
+  - انتشار روی `app` و گزارش پیشرفت. `soft` فقط با تأیید صریح کاربر.
+
+**معیار بستن:**
+- کد مجوز ماژول، سرویس دامنهٔ ماژول و فرض «دقیقاً دو قلمرو» در هسته و پوسته صفر است، جز فهرست مجاز دقیق.
+- ماژول سوم بی‌تغییر هسته نصب، بیلد و آزموده می‌شود.
+- هیچ داده‌ای (ردیف مجوز، انتساب نقش، صف آفلاین، کش) حذف نمی‌شود.
+
 ## ۳. روند نظارت
 
 - runner از `run_tasks_agy.bat` در تب Windows Terminal اجرا می‌شود.
