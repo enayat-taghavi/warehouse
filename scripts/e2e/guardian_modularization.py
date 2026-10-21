@@ -588,7 +588,10 @@ def run_literal_self_test():
     import core_literal_allowlist
     logic_ok = core_literal_allowlist.self_test() and cross_ok
     print(f"self-test cross_module_app_refs: found={len(cross)} (expected 2) -> {'PASS' if cross_ok else 'FAIL'}")
-    allow_ok = exact_ok and extra_unlisted and stale_fails and logic_ok
+    import module_coupling_scan
+    coupling_ok = module_coupling_scan.self_test()
+    print(f"self-test module_coupling_scan (گام ۷) -> {'PASS' if coupling_ok else 'FAIL'}")
+    allow_ok = exact_ok and extra_unlisted and stale_fails and logic_ok and coupling_ok
     ok = baseline == 2 and unchanged_ok and extra_fails and allow_ok
     print(f"self-test core_module_literals: fixture={baseline} (expected 2), unchanged passes={unchanged_ok}, "
           f"extra literal fails={extra_fails} -> {'PASS' if baseline == 2 and unchanged_ok and extra_fails else 'FAIL'}")
@@ -754,6 +757,19 @@ def main():
         passed = False
         for msg in allow_msgs:
             print(f"   ❌ {msg}")
+
+    # گام ۷: وابستگی بی‌نام (کد مجوز ماژول، ارجاع بین‌ماژولی مجوز) — module_coupling_scan.py
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import module_coupling_scan
+    coupling_counters, coupling_errors = module_coupling_scan.report_backend()
+    print("-" * 74)
+    print(f"🧩 وابستگی بی‌نام (گام ۷): {coupling_counters} — همه باید صفر باشند (بیرون از فهرست مجاز دقیق)")
+    if coupling_errors:
+        passed = False
+        for msg in coupling_errors:
+            print(f"   ❌ {msg}")
+    else:
+        print("   🟢 کد مجوز ماژول در هسته/پوسته، ارجاع بین‌ماژولی مجوز تازه صفر است؛ ورودی کهنه نیست.")
 
     if baseline is None or args.update_baseline:
         save_baseline(counters, data, composition, lint_summary)

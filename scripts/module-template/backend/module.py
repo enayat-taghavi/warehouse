@@ -29,3 +29,11 @@ __MODULE_UPPER___PERMISSION_CODENAMES = (
 )
 
 PERMISSION_CODENAMES = __MODULE_UPPER___PERMISSION_CODENAMES
+
+# مجوزهای سفارشی این ماژول روی accounts.CustomUser (کد، نام فارسی).
+# هسته ردیف‌های Permission ماژول نصب‌شده را در post_migrate می‌سازد (فقط ایجاد، هرگز حذف).
+__MODULE_UPPER___PERMISSIONS = (
+    ('view_sys___MODULE_CODE__', '__MODULE_TITLE_FA__'),
+)
+
+PERMISSIONS = __MODULE_UPPER___PERMISSIONS

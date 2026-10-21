@@ -84,13 +84,13 @@ if _csrf_origins:
 #   - ترتیبِ اپ‌ها عیناً ترتیب پیشین حفظ شده است تا رفتارِ مونولیتِ امروز
 #     بی‌کم‌و‌کاست بماند.
 # ─────────────────────────────────────────────────────────────────────
-from platform_core.module_catalog import MODULE_CATALOG
+from platform_core.module_catalog import MODULE_CATALOG, default_module_codes
 
 _WH_MODULES = os.environ.get('WH_MODULES', '').strip()
 if _WH_MODULES:
     _INSTALLED_MODULE_CODES = [m.strip() for m in _WH_MODULES.split(',') if m.strip()]
 else:
-    _INSTALLED_MODULE_CODES = list(MODULE_CATALOG.keys())
+    _INSTALLED_MODULE_CODES = default_module_codes()
 
 # اپ‌های پایهٔ پلتفرم (هسته) — بدون نام ماژول.
 PLATFORM_APPS = [

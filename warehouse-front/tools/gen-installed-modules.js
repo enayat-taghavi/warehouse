@@ -4,7 +4,14 @@ const path = require('path');
 const MODULES_DIR = path.resolve(__dirname, '..', 'src', 'app', 'modules');
 const TARGET_FILE = path.join(MODULES_DIR, 'installed-modules.ts');
 
-function getDiscoveredModules() {
+/** ماژول opt-in (مثل ماژول نمایشی) فقط با نام صریح در --modules یا WH_MODULES نصب می‌شود */
+function isOptInModule(name) {
+  const moduleFile = path.join(MODULES_DIR, name, 'module.ts');
+  return /\boptIn:\s*true\b/.test(fs.readFileSync(moduleFile, 'utf8'));
+}
+
+/** ماژول‌های روی دیسک؛ بی includeOptIn فقط پروفایل پیش‌فرض (همان نسخهٔ commitشده) */
+function getDiscoveredModules(includeOptIn = false) {
   if (!fs.existsSync(MODULES_DIR)) return [];
   const entries = fs.readdirSync(MODULES_DIR, { withFileTypes: true });
   const modules = [];
@@ -16,7 +23,7 @@ function getDiscoveredModules() {
       }
     }
   }
-  return modules.sort();
+  return modules.filter(m => includeOptIn || !isOptInModule(m)).sort();
 }
 
 function resolveSelectedModules(rawModules) {
@@ -24,15 +31,18 @@ function resolveSelectedModules(rawModules) {
   if (!rawModules || !rawModules.trim()) {
     return discovered;
   }
+  const all = getDiscoveredModules(true);
   const requested = rawModules
     .split(',')
     .map(s => s.trim().toLowerCase())
     .filter(Boolean);
 
-  if (requested.length === 0 || requested.includes('all')) {
+  if (requested.length === 0) {
     return discovered;
   }
-  return discovered.filter(m => requested.includes(m));
+  // 'all' یعنی پروفایل پیش‌فرض؛ ماژول opt-in با نام صریح می‌آید
+  const explicit = all.filter(m => requested.includes(m));
+  return requested.includes('all') ? Array.from(new Set([...discovered, ...explicit])).sort() : explicit;
 }
 
 function generateInstalledModulesContent(selectedModules) {
@@ -74,6 +84,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  isOptInModule,
   getDiscoveredModules,
   resolveSelectedModules,
   generateInstalledModulesContent,

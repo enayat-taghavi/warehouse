@@ -73,6 +73,21 @@ def _discover_modules() -> None:
 _discover_modules()
 
 
+def default_module_codes() -> list[str]:
+    """ماژول‌های پروفایل پیش‌فرض (بی WH_MODULES): همهٔ ماژول‌های روی دیسک جز opt-in."""
+    return [code for code, spec in MODULE_CATALOG.items() if not spec.opt_in]
+
+
+def runtime_catalog_codes() -> list[str]:
+    """
+    ماژول‌هایی که قلمروشان در توکن و تعویض قلمرو شناخته است: ماژول‌های غیر opt-in کاتالوگ
+    (نصب‌شده یا نه، مثل امروز) به‌اضافهٔ ماژول opt-in فقط وقتی نصب است.
+    """
+    from platform_core.registry import installed_modules
+    installed = set(installed_modules())
+    return [code for code, spec in MODULE_CATALOG.items() if not spec.opt_in or code in installed]
+
+
 def get_disallowed_permission_codenames() -> set[str]:
     """
     برگرداندن کدهای دسترسی ماژول‌هایی که در حال حاضر نصب یا فعال نیستند.

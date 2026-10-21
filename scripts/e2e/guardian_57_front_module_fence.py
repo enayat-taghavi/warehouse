@@ -433,7 +433,8 @@ def check_module_contracts(app_dir=FRONT_APP_DIR, repo_root=REPO_ROOT):
       ۱. وجود module.ts در هر پوشهٔ ماژول فرانت (به‌جز common).
       ۲. برابری code در module.ts با نام پوشه.
       ۳. برابری code ماژول فرانت با code در warehouse-backend/modules/<x>/module.py.
-      ۴. کامل بودن installed-modules.ts (شامل همهٔ پوشه‌های ماژول‌های کشف‌شده).
+      ۴. کامل بودن installed-modules.ts (شامل همهٔ پوشه‌های ماژول‌های کشف‌شده، جز ماژول opt-in).
+      ۵. ماژول opt-in (گام ۷): optIn فرانت با opt_in بک‌اند برابر است و در installed-modules.ts ایمپورت نمی‌شود.
     """
     errors = []
     modules_dir = app_dir / "modules"
@@ -447,6 +448,7 @@ def check_module_contracts(app_dir=FRONT_APP_DIR, repo_root=REPO_ROOT):
         return errors
 
     backend_modules_dir = repo_root / "warehouse-backend" / "modules"
+    opt_in = set()
 
     for mod_dir in discovered:
         mod_name = mod_dir.name
@@ -472,11 +474,18 @@ def check_module_contracts(app_dir=FRONT_APP_DIR, repo_root=REPO_ROOT):
             if front_code != mod_name:
                 errors.append(f"کد ماژول '{front_code}' در {mod_file.relative_to(repo_root)} با نام پوشه '{mod_name}' تطابق ندارد.")
 
+        front_opt_in = bool(re.search(r"\boptIn\s*:\s*true\b", content))
+        if front_opt_in:
+            opt_in.add(mod_name)
+
         # ۳. برابری با بک‌اند
         b_mod_file = backend_modules_dir / mod_name / "module.py"
         if b_mod_file.exists():
             try:
                 b_content = b_mod_file.read_text(encoding="utf-8")
+                backend_opt_in = bool(re.search(r"\bopt_in\s*=\s*True\b", b_content))
+                if backend_opt_in != front_opt_in:
+                    errors.append(f"ماژول '{mod_name}': optIn فرانت ({front_opt_in}) با opt_in بک‌اند ({backend_opt_in}) برابر نیست.")
                 bm = re.search(r"""\bcode\s*=\s*['"]([^'"]+)['"]""", b_content)
                 if not bm:
                     errors.append(f"فیلد code در ماژول بک‌اند {b_mod_file.relative_to(repo_root)} یافت نشد.")
@@ -499,7 +508,10 @@ def check_module_contracts(app_dir=FRONT_APP_DIR, repo_root=REPO_ROOT):
             for mod_dir in discovered:
                 mod_name = mod_dir.name
                 expected_import = f"./{mod_name}/module"
-                if expected_import not in inst_text:
+                if mod_name in opt_in:
+                    if expected_import in inst_text:
+                        errors.append(f"ماژول opt-in '{mod_name}' نباید در installed-modules.ts commitشده باشد ({expected_import}).")
+                elif expected_import not in inst_text:
                     errors.append(f"ماژول '{mod_name}' در installed-modules.ts ایمپورت نشده است ({expected_import}).")
         except Exception as e:
             errors.append(f"خطا در خواندن installed-modules.ts: {e}")
@@ -578,7 +590,11 @@ def run_self_test():
             print(f"❌ خودآزمایی قرارداد ماژول‌ها با خطا مواجه شد: {contract_errors}")
             return 1
 
-        if found_import and found_call and found_api_path and found_literal and literal_ok:
+        sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+        import module_coupling_scan
+        coupling_ok = module_coupling_scan.self_test()
+        print(f"self-test module_coupling_scan (گام ۷) -> {'PASS' if coupling_ok else 'FAIL'}")
+        if found_import and found_call and found_api_path and found_literal and literal_ok and coupling_ok:
             print("✅ خودآزمایی نگهبان ۵۷ (--self-test): نقض ساختگی و قراردادهای ماژول با موفقیت راستی‌آزمایی شدند.")
             return 0
         else:
@@ -683,6 +699,19 @@ def main():
         print("🚫 مسیر صفحهٔ ماژول در هسته/مشترک/ریشهٔ ترکیب (باید از extension ماژول خوانده شود):")
         for v in violations["core_module_route_paths"]:
             print(f"   ❌ {v['file']}:{v['line']} {v['match']}")
+
+    # گام ۷: وابستگی بی‌نام (کد مجوز ماژول، ارجاع بین‌ماژولی مجوز، ارجاع به دیتابیس آفلاین قفل‌شده، برابری گروه مجوز فرانت و بک‌اند) — module_coupling_scan.py
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+    import module_coupling_scan
+    coupling_counters, coupling_errors = module_coupling_scan.report_front()
+    print("-" * 74)
+    print(f"🧩 وابستگی بی‌نام (گام ۷): {coupling_counters} — همه باید صفر باشند (بیرون از فهرست مجاز دقیق)")
+    if coupling_errors:
+        passed = False
+        for msg in coupling_errors:
+            print(f"   ❌ {msg}")
+    else:
+        print("   🟢 کد مجوز ماژول در هسته/پوسته، ارجاع بین‌ماژولی مجوز تازه، ارجاع به دیتابیس قفل‌شده و ناهمخوانی گروه مجوز صفر است؛ ورودی کهنه نیست.")
     print("-" * 74)
 
     if baseline is None or args.update_baseline:

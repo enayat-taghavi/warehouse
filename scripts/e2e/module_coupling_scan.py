@@ -1,0 +1,342 @@
+"""
+شمارنده‌های وابستگی بی‌نام هسته و ماژول‌ها (گام ۷ طرح ماژولارسازی عمیق).
+
+نگهبان‌های ۲۹ و ۵۷ نام ماژول را می‌شمارند؛ این پویشگر «مفهوم ماژول» را می‌شمارد:
+- module_permission_literals: کد مجوزی که یک ماژول در module.py خودش اعلام کرده، در هستهٔ بک‌اند
+  (warehouse-backend/core) یا پوستهٔ فرانت (core/، shared/، modules/common/). باید صفر باشد، جز فایل‌های فهرست مجاز.
+- cross_module_permission_literals: کد مجوز ماژول دیگر در کد یک ماژول. باید صفر باشد، جز فایل‌های فهرست مجاز.
+- locked_scope_refs (فقط فرانت): ارجاع به دو دیتابیس آفلاین قفل‌شده (LOCKED_OFFLINE_SCOPES، warehouseOfflineDb،
+  financeOfflineDb) بیرون از سرویس‌های آفلاین هسته و ماژول صاحب هر دیتابیس. باید صفر باشد، جز فایل‌های فهرست مجاز.
+- permission_parity (فقط فرانت): کدهای users.permissionGroup هر ماژول فرانت با PERMISSION_CODENAMES همان ماژول
+  در بک‌اند برابر است.
+
+کدهای مجوز از اعلام‌های خود ماژول‌ها خوانده می‌شوند (PERMISSIONS، PERMISSION_CODENAMES و permission_markers
+با پیشوند accounts.)، نه از فهرست دستی؛ ماژول تازه بی‌تغییر این فایل پوشش داده می‌شود.
+specها، آزمون‌ها و migrationها شمرده نمی‌شوند.
+"""
+
+import ast
+import pathlib
+import re
+import shutil
+import tempfile
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+BACKEND_DIR = REPO_ROOT / "warehouse-backend"
+FRONT_APP_DIR = REPO_ROOT / "warehouse-front" / "src" / "app"
+
+_LEGACY_MANAGER = "قاعدهٔ کسب‌وکار پیشین: نقش سازگاری «مدیر انبار» (مالک: انبار) در تاییدهای حسابداری مدیر به حساب می‌آید؛ در نصب بی انبار فقط تنگ‌تر می‌شود"
+
+# فایل‌هایی (یا «فایل|کد») که آگاهانه ارجاع دارند؛ هر کدام دلیل دارد. فایل فهرست‌شده‌ای که دیگر ارجاعی ندارد، ورودی کهنه و شکست است.
+ALLOWED_FILES = {
+    "module_permission_literals": {
+        "front:core/auth/auth.service.ts": "دادهٔ کاربران mock حالت environment.useMockData (در هیچ environment روشن نیست)",
+    },
+    # ارجاع بین‌ماژولی مجوز: قاعده‌های کسب‌وکار پیش از گام ۷، دقیق تا سطح «فایل|کد» منجمد شده‌اند تا هر ارجاع تازه شکست بخورد.
+    "cross_module_permission_literals": {
+        "backend:modules/accounting/personnel/fleet_lifecycle_services.py|can_act_as_manager": _LEGACY_MANAGER,
+        "backend:modules/accounting/personnel/lifecycle_services.py|can_act_as_manager": _LEGACY_MANAGER,
+        "backend:modules/accounting/personnel/permissions.py|can_act_as_manager": _LEGACY_MANAGER,
+        "backend:modules/accounting/personnel/serializers_domains/helpers.py|can_act_as_manager": _LEGACY_MANAGER,
+        "backend:modules/accounting/personnel/views_domains/fleet_views.py|can_act_as_manager": _LEGACY_MANAGER,
+        "backend:modules/accounting/personnel/views_domains/hr_views.py|can_act_as_manager": _LEGACY_MANAGER,
+        "backend:modules/accounting/personnel/views_domains/scope_helpers.py|can_act_as_manager": _LEGACY_MANAGER,
+        "backend:modules/accounting/personnel/workflow_engine.py|can_act_as_manager": _LEGACY_MANAGER,
+        "backend:modules/accounting/personnel/workflow_engine.py|view_sys_supervisor": "قاعدهٔ کسب\u200cوکار پیشین: دارندهٔ کارتابل سرپرست شمارش (انبار) مرحلهٔ سرپرست کارتابل حسابداری را هم می\u200cبیند",
+        "backend:modules/accounting/personnel/phase_guardian_approval.py|view_sys_counter": "اسکریپت نگهبان فاز توسعه که هر دو ماژول را لازم دارد؛ مسیر اجرایی نیست",
+        "backend:modules/warehouse/warehouses/role_resolver.py|can_act_as_workshop_supervisor": "تفکیک نقش: سرپرست کارگاه حسابداری سرپرست شمارش انبار حساب نمی\u200cشود؛ در نصب بی حسابداری بی\u200cاثر است",
+        "front:modules/accounting/components/finance/manager/manager-fleet/manager-fleet.ts|can_act_as_manager": _LEGACY_MANAGER,
+        "front:modules/accounting/components/finance/manager/manager-personnel/manager-personnel.ts|can_act_as_manager": _LEGACY_MANAGER,
+        "front:modules/accounting/components/personnel/personnel-profiles/personnel-profiles.ts|can_act_as_manager": _LEGACY_MANAGER,
+        "front:modules/accounting/notification-handlers.ts|can_act_as_manager": _LEGACY_MANAGER,
+        "front:modules/accounting/route-access.ts|can_act_as_manager": _LEGACY_MANAGER,
+        "front:modules/accounting/route-access.ts|can_act_as_supervisor": "قاعدهٔ کسب\u200cوکار پیشین: سرپرست سازگاری انبار به صفحهٔ ثبت کارکرد حسابداری راه دارد",
+        "front:modules/accounting/route-access.ts|view_wh_attendance": "قاعدهٔ کسب\u200cوکار پیشین: «ثبت کارکرد و سرویس ناوگان (انبار)» صفحه\u200cهای کارکرد حسابداری را باز می\u200cکند",
+        "front:modules/warehouse/personas.ts|can_act_as_workshop_supervisor": "همتای فرانت تفکیک نقش role_resolver.py (سرپرست کارگاه سرپرست شمارش نیست)",
+        "front:modules/warehouse/route-access.ts|view_sys_payroll": "قاعدهٔ کسب\u200cوکار پیشین: کاربر حقوق و دستمزد صفحهٔ رهگیری تغییرات را می\u200cبیند",
+    },
+    "locked_scope_refs": {
+        "front:shared/components/deep-sync-modal/deep-sync-modal.component.ts":
+            "پروتکل زندهٔ payload بروزرسانی عمیق (warehouseIds/projectIds) برای دو قلمرو قفل‌شده؛ قلمرو سوم با idsByScope",
+        "front:shared/components/user-menu/user-menu.component.ts":
+            "مصرف‌کنندهٔ همان پروتکل بروزرسانی عمیق deep-sync-modal",
+    },
+}
+
+LOCKED_SCOPE_RE = re.compile(r"\b(LOCKED_OFFLINE_SCOPES|warehouseOfflineDb|financeOfflineDb)\b")
+# دیتابیس قفل‌شدهٔ هر ماژول؛ ماژول صاحب می‌تواند دیتابیس خودش را مستقیم بخواند
+LOCKED_DB_OWNER = {"warehouseOfflineDb": "warehouse", "financeOfflineDb": "accounting"}
+LOCKED_ZONE_PREFIXES = ("core/services/offline-db.ts", "core/services/offline/")
+
+
+# ─── خواندن اعلام‌های ماژول‌ها ──────────────────────────────────────────────
+
+def _const_strings(node):
+    if isinstance(node, (ast.Tuple, ast.List)):
+        out = []
+        for elt in node.elts:
+            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                out.append(elt.value)
+            elif isinstance(elt, (ast.Tuple, ast.List)) and elt.elts and isinstance(elt.elts[0], ast.Constant):
+                out.append(elt.elts[0].value)
+        return out
+    return []
+
+
+def module_declarations(modules_dir=None):
+    """{کد ماژول: {'codes': set همهٔ کدها, 'codenames': set PERMISSION_CODENAMES}} از module.py هر ماژول (با ast، بی اجرا)."""
+    modules_dir = pathlib.Path(modules_dir or BACKEND_DIR / "modules")
+    result = {}
+    for manifest in sorted(modules_dir.glob("*/module.py")):
+        code = manifest.parent.name
+        tree = ast.parse(manifest.read_text(encoding="utf-8"))
+        codes, codenames = set(), set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if not isinstance(target, ast.Name):
+                        continue
+                    if target.id.endswith("PERMISSION_CODENAMES"):
+                        values = _const_strings(node.value)
+                        codenames.update(values)
+                        codes.update(values)
+                    elif target.id == "PERMISSIONS" or target.id.endswith("_PERMISSIONS"):
+                        codes.update(_const_strings(node.value))
+            elif isinstance(node, ast.keyword) and node.arg == "permission_markers":
+                for marker in _const_strings(node.value):
+                    if marker.startswith("accounts."):
+                        codes.add(marker.split(".", 1)[1])
+        result[code] = {"codes": codes, "codenames": codenames}
+    return result
+
+
+def _literal_re(codes, ts=False):
+    if not codes:
+        return None
+    alt = "|".join(sorted((re.escape(c) for c in codes), key=len, reverse=True))
+    quoted = r"""(?P<q>['"`])(?:accounts\.)?(?P<code>%s)(?P=q)""" % alt
+    if ts:
+        # کلید شیء بی‌نقل‌قول در ts (مثل view_x: 'نام')
+        quoted += r"|(?<![\w.$])(?P<key>%s)\s*:" % alt
+    return re.compile(quoted)
+
+
+def _is_test_file(rel):
+    name = rel.name
+    return (".spec." in name or name.startswith("test") or name == "tests.py"
+            or "tests" in rel.parts or "migrations" in rel.parts)
+
+
+def _iter_files(root, patterns):
+    for pattern in patterns:
+        for f in sorted(root.rglob(pattern)):
+            if f.is_file():
+                yield f
+
+
+def _scan_file(path, pattern):
+    hits = []
+    for i, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+        for m in pattern.finditer(line):
+            hits.append((i, m.group("code") or m.groupdict().get("key"), line.strip()))
+    return hits
+
+
+# ─── پویش ─────────────────────────────────────────────────────────────────────
+
+def scan_backend(backend_dir=None):
+    backend_dir = pathlib.Path(backend_dir or BACKEND_DIR)
+    decl = module_declarations(backend_dir / "modules")
+    all_codes = set().union(*(d["codes"] for d in decl.values())) if decl else set()
+    found = {"module_permission_literals": [], "cross_module_permission_literals": []}
+    core_re = _literal_re(all_codes)
+    if core_re:
+        for f in _iter_files(backend_dir / "core", ("*.py",)):
+            rel = f.relative_to(backend_dir)
+            if _is_test_file(rel):
+                continue
+            for line, code, text in _scan_file(f, core_re):
+                found["module_permission_literals"].append({"file": f"backend:{rel.as_posix()}", "line": line, "match": code, "text": text})
+    for code, d in decl.items():
+        foreign = set().union(*(o["codes"] for c, o in decl.items() if c != code)) - d["codes"] if len(decl) > 1 else set()
+        pattern = _literal_re(foreign)
+        if not pattern:
+            continue
+        for f in _iter_files(backend_dir / "modules" / code, ("*.py",)):
+            rel = f.relative_to(backend_dir)
+            if _is_test_file(rel):
+                continue
+            for line, c, text in _scan_file(f, pattern):
+                found["cross_module_permission_literals"].append({"file": f"backend:{rel.as_posix()}", "line": line, "match": c, "text": text})
+    return found
+
+
+def _front_group_codenames(module_dir):
+    """کدهای users.permissionGroup ماژول فرانت (آرایهٔ درون‌خطی یا ثابت export‌شده در همان پوشه)؛ None اگر گروه ندارد."""
+    manifest = (module_dir / "module.ts").read_text(encoding="utf-8")
+    m = re.search(r"permissionGroup:\s*\{[^}]*?codenames:\s*(\[[^\]]*\]|[A-Za-z_$][\w$]*)", manifest, re.S)
+    if not m:
+        return None
+    value = m.group(1)
+    if not value.startswith("["):
+        for f in _iter_files(module_dir, ("*.ts",)):
+            cm = re.search(r"export const %s\b[^=]*=\s*(\[[^\]]*\])" % re.escape(value), f.read_text(encoding="utf-8"), re.S)
+            if cm:
+                value = cm.group(1)
+                break
+        else:
+            return set()
+    return set(re.findall(r"['\"]([a-z0-9_]+)['\"]", value))
+
+
+def scan_front(front_app_dir=None, backend_dir=None):
+    front = pathlib.Path(front_app_dir or FRONT_APP_DIR)
+    decl = module_declarations(pathlib.Path(backend_dir or BACKEND_DIR) / "modules")
+    all_codes = set().union(*(d["codes"] for d in decl.values())) if decl else set()
+    found = {"module_permission_literals": [], "cross_module_permission_literals": [], "locked_scope_refs": []}
+    parity = []
+    shell_re = _literal_re(all_codes, ts=True)
+    for zone in ("core", "shared", "modules/common"):
+        if not shell_re or not (front / zone).is_dir():
+            continue
+        for f in _iter_files(front / zone, ("*.ts", "*.html")):
+            rel = f.relative_to(front)
+            if _is_test_file(rel):
+                continue
+            for line, code, text in _scan_file(f, shell_re):
+                found["module_permission_literals"].append({"file": f"front:{rel.as_posix()}", "line": line, "match": code, "text": text})
+    modules_root = front / "modules"
+    module_dirs = [d for d in sorted(modules_root.iterdir()) if d.is_dir() and (d / "module.ts").is_file()] if modules_root.is_dir() else []
+    for mdir in module_dirs:
+        code = mdir.name
+        own = decl.get(code, {"codes": set()})["codes"]
+        foreign = set().union(*(o["codes"] for c, o in decl.items() if c != code)) - own if decl else set()
+        pattern = _literal_re(foreign, ts=True)
+        if pattern:
+            for f in _iter_files(mdir, ("*.ts", "*.html")):
+                rel = f.relative_to(front)
+                if _is_test_file(rel):
+                    continue
+                for line, c, text in _scan_file(f, pattern):
+                    found["cross_module_permission_literals"].append({"file": f"front:{rel.as_posix()}", "line": line, "match": c, "text": text})
+        group = _front_group_codenames(mdir)
+        backend_codes = decl.get(code, {}).get("codenames")
+        if backend_codes and group is None:
+            parity.append(f"{code}: ماژول بک‌اند کد مجوز دارد ولی users.permissionGroup فرانت ندارد")
+        elif group is not None and backend_codes is not None and group != backend_codes:
+            parity.append(f"{code}: فقط فرانت {sorted(group - backend_codes)} | فقط بک‌اند {sorted(backend_codes - group)}")
+        elif group is not None and backend_codes is None:
+            parity.append(f"{code}: گروه مجوز فرانت دارد ولی module.py بک‌اند ندارد")
+    for f in _iter_files(front, ("*.ts", "*.html")):
+        rel = f.relative_to(front)
+        posix = rel.as_posix()
+        if _is_test_file(rel) or posix.startswith(LOCKED_ZONE_PREFIXES):
+            continue
+        parts = rel.parts
+        owner = parts[1] if len(parts) > 2 and parts[0] == "modules" else None
+        for i, line in enumerate(f.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+            for m in LOCKED_SCOPE_RE.finditer(line):
+                name = m.group(1)
+                if owner and LOCKED_DB_OWNER.get(name) == owner:
+                    continue
+                found["locked_scope_refs"].append({"file": f"front:{posix}", "line": i, "match": name, "text": line.strip()})
+    return found, parity
+
+
+# ─── سنجش با فهرست مجاز فایل‌محور ───────────────────────────────────────────
+
+def evaluate(found, side, allowed=None):
+    """(counters, errors): شمار هر شمارنده بیرون از فهرست مجاز، و خطاها (نقض و ورودی کهنه)."""
+    allowed = ALLOWED_FILES if allowed is None else allowed
+    counters, errors = {}, []
+    for key, items in found.items():
+        allow = {f: r for f, r in allowed.get(key, {}).items() if f.startswith(side + ":")}
+        # ورودی «فایل» هر کدی را در آن فایل مجاز می‌کند و ورودی «فایل|کد» فقط همان کد را
+        unlisted = [v for v in items if v["file"] not in allow and f"{v['file']}|{v['match']}" not in allow]
+        counters[key] = len(unlisted)
+        for v in unlisted:
+            errors.append(f"{key}: {v['file'].split(':', 1)[1]}:{v['line']} '{v['match']}' | {v['text'][:110]}")
+        hits = {v["file"] for v in items} | {f"{v['file']}|{v['match']}" for v in items}
+        for f in allow:
+            if f not in hits:
+                errors.append(f"{key}: ورودی کهنهٔ فهرست مجاز (دیگر ارجاعی ندارد): {f.split(':', 1)[1]}")
+    return counters, errors
+
+
+def report_backend():
+    counters, errors = evaluate(scan_backend(), "backend")
+    return counters, errors
+
+
+def report_front():
+    found, parity = scan_front()
+    counters, errors = evaluate(found, "front")
+    counters["permission_parity"] = len(parity)
+    errors.extend(f"permission_parity: {p}" for p in parity)
+    return counters, errors
+
+
+# ─── خودآزمایی ────────────────────────────────────────────────────────────────
+
+def self_test():
+    """با یک مخزن ساختگی در پوشهٔ موقت: هر نقض باید دیده شود و مورد مجاز نه."""
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="g7scan_"))
+    ok = True
+    try:
+        be, fe = tmp / "be", tmp / "fe"
+        (be / "modules" / "alpha").mkdir(parents=True)
+        (be / "modules" / "beta" / "beta_app").mkdir(parents=True)
+        (be / "core" / "x").mkdir(parents=True)
+        (be / "modules" / "alpha" / "module.py").write_text(
+            "SPEC = ModuleSpec(code='alpha', permission_markers=('accounts.view_alpha',))\n"
+            "ALPHA_PERMISSION_CODENAMES = ('view_alpha', 'act_alpha')\nPERMISSIONS = (('view_alpha', 'x'), ('act_alpha', 'y'))\n", encoding="utf-8")
+        (be / "modules" / "beta" / "module.py").write_text(
+            "BETA_PERMISSION_CODENAMES = ('view_beta',)\nPERMISSIONS = (('view_beta', 'z'),)\n", encoding="utf-8")
+        (be / "core" / "x" / "views.py").write_text("ok = user.has_perm('accounts.view_alpha')\nfine = 'view_platform'\n", encoding="utf-8")
+        (be / "core" / "x" / "tests.py").write_text("t = 'view_alpha'\n", encoding="utf-8")
+        (be / "modules" / "beta" / "beta_app" / "views.py").write_text("p = 'act_alpha'\n", encoding="utf-8")
+        b = scan_backend(be)
+        got = ([v["match"] for v in b["module_permission_literals"]], [v["match"] for v in b["cross_module_permission_literals"]])
+        exp = (["view_alpha"], ["act_alpha"])
+        print(f"self-test backend: {got} (expected {exp})")
+        ok &= got == exp
+
+        (fe / "core").mkdir(parents=True)
+        (fe / "modules" / "common").mkdir(parents=True)
+        (fe / "modules" / "alpha").mkdir(parents=True)
+        (fe / "modules" / "beta").mkdir(parents=True)
+        (fe / "core" / "a.ts").write_text("const p = ['view_beta'];\nconst names = { act_alpha: 'x' };\nconst q = 'view_platform';\n", encoding="utf-8")
+        (fe / "core" / "a.spec.ts").write_text("const p = 'view_beta';\n", encoding="utf-8")
+        (fe / "modules" / "common" / "c.ts").write_text("import { warehouseOfflineDb } from 'x';\n", encoding="utf-8")
+        (fe / "modules" / "alpha" / "module.ts").write_text(
+            "export const MODULE = { extensions: { users: { permissionGroup: { key: 'A', codenames: ALPHA_CODES } } } };\n", encoding="utf-8")
+        (fe / "modules" / "alpha" / "permissions.ts").write_text("export const ALPHA_CODES: string[] = ['view_alpha', 'act_alpha'];\n", encoding="utf-8")
+        (fe / "modules" / "beta" / "module.ts").write_text(
+            "export const MODULE = { extensions: { users: { permissionGroup: { key: 'B', codenames: ['view_beta', 'extra'] } } } };\nconst n = 'view_alpha';\n", encoding="utf-8")
+        f, parity = scan_front(fe, be)
+        got = (sorted(v["match"] for v in f["module_permission_literals"]),
+               [v["match"] for v in f["cross_module_permission_literals"]],
+               [v["match"] for v in f["locked_scope_refs"]], len(parity))
+        exp = (["act_alpha", "view_beta"], ["view_alpha"], ["warehouseOfflineDb"], 1)
+        print(f"self-test front: {got} (expected {exp})")
+        ok &= got == exp
+
+        counters, errors = evaluate({"locked_scope_refs": f["locked_scope_refs"]}, "front",
+                                    {"locked_scope_refs": {"front:modules/common/c.ts": "r", "front:gone.ts": "r"}})
+        stale_ok = counters["locked_scope_refs"] == 0 and any("gone.ts" in e for e in errors)
+        print(f"self-test allowlist (allowed file passes, stale entry fails): {stale_ok}")
+        ok &= stale_ok
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return ok
+
+
+if __name__ == "__main__":
+    import sys
+    if "--self-test" in sys.argv:
+        sys.exit(0 if self_test() else 1)
+    for name, fn in (("backend", report_backend), ("front", report_front)):
+        counters, errors = fn()
+        print(name, counters)
+        for e in errors:
+            print("  ", e)

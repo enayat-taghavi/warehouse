@@ -79,9 +79,9 @@ class SwitchAppScopeView(APIView):
 
     def post(self, request):
         target_app = (request.data.get('app') or request.data.get('target_app') or '').strip().lower()
-        from platform_core.module_catalog import MODULE_CATALOG
+        from platform_core.module_catalog import runtime_catalog_codes
         from platform_core.registry import module_allowed_app_code
-        allowed_catalog_app_codes = {module_allowed_app_code(code) for code in MODULE_CATALOG.keys()}
+        allowed_catalog_app_codes = {module_allowed_app_code(code) for code in runtime_catalog_codes()}
         if target_app not in allowed_catalog_app_codes:
             return Response({
                 'success': False,

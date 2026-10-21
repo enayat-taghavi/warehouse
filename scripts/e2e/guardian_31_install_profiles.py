@@ -227,10 +227,55 @@ assert r_wh.status_code != 404, f"Endpoint /api/warehouses/ should not be 404 in
 r_pers = client.get('/api/personnel/profiles/')
 assert r_pers.status_code != 404, f"Endpoint /api/personnel/ should not be 404 in full mode"
 print("✓ زنده بودن همزمان اندپوینت‌های هر دو دامنه در سوئیت کامل تایید شد.")
+
+# ماژول opt-in (نمایشی) در پروفایل پیش‌فرض نیست: نه نصب، نه مسیر، نه قلمرو توکن
+from platform_core.module_catalog import MODULE_CATALOG, runtime_catalog_codes
+if 'showcase' in MODULE_CATALOG:
+    assert MODULE_CATALOG['showcase'].opt_in, "showcase must be opt-in"
+    assert 'showcase' not in mods and 'showcase' not in pub_mods, "opt-in module must not be in the default profile"
+    assert 'showcase' not in runtime_catalog_codes(), "opt-in module must not reach token scopes"
+    assert client.get('/api/showcase/ping/').status_code == 404, "opt-in module routes must be 404 by default"
+    print("✓ ماژول opt-in نمایشی در پروفایل پیش‌فرض نصب نیست و مسیرش ۴۰۴ است.")
 """
     ok, err = run_sub_verification(None, test_full_script, "پروفایل (ج) — سوئیت کامل (Full Suite — تکرار بی‌کم‌وکاست رفتار امروز)")
     if not ok:
         errors.append("Profile C (Full Suite) failed: " + err)
+
+    # ── ۵) پروفایل (د) ماژول سوم تنها (showcase) و (هـ) سه‌ماژولی — گام ۷ ──────
+    test_showcase_script = """
+import os, sys, django
+os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
+if 'warehouse-backend' not in sys.path:
+    sys.path.insert(0, r'E:\\warehouse project\\warehouse-backend')
+import backend_paths
+backend_paths.install()
+
+django.setup()
+from django.test import Client
+from platform_core.registry import installed_modules, build_user_token_scopes
+from platform_core.module_catalog import installed_module_permissions, runtime_catalog_codes
+
+expected = set(os.environ['WH_MODULES'].split(','))
+mods = set(installed_modules())
+assert mods == expected, f"installed {sorted(mods)} != {sorted(expected)}"
+assert ('view_showcase_hub', 'ماژول نمایشی: مشاهدهٔ پیشخوان') in installed_module_permissions(), "showcase permission must be declared"
+assert 'showcase' in runtime_catalog_codes(), "installed opt-in module must reach token scopes"
+
+client = Client(HTTP_HOST='localhost')
+r_conf = client.get('/api/public/config/')
+assert r_conf.status_code == 200
+assert set(r_conf.json().get('installed_modules', [])) - {'platform'} == expected
+assert client.get('/api/showcase/ping/').status_code in (401, 403), "showcase route must be live (auth required)"
+for prefix, code in (('/api/warehouses/', 'warehouse'), ('/api/personnel/profiles/', 'accounting')):
+    status = client.get(prefix).status_code
+    assert (status == 404) == (code not in expected), f"{prefix} -> {status} with {sorted(expected)}"
+print(f"✓ پروفایل {sorted(expected)}: نصب، مجوز اعلام‌شده، قلمرو توکن و مسیرهای ماژول‌ها درست است.")
+"""
+    for profile, title in (("showcase", "پروفایل (د) — فقط ماژول نمایشی"),
+                           ("accounting,showcase,warehouse", "پروفایل (هـ) — سه‌ماژولی")):
+        ok, err = run_sub_verification(profile, test_showcase_script, title)
+        if not ok:
+            errors.append(f"Profile {profile} failed: " + err)
 
     print("\n" + "=" * 74)
     if errors:
@@ -239,7 +284,7 @@ print("✓ زنده بودن همزمان اندپوینت‌های هر دو د
             print(f"   - {e}")
         return False
 
-    print("✨ نتیجه: نگهبان ۳۱ تایید شد (PASS) — هر سه پروفایل نصب با موفقیت راستی‌آزمایی شدند ✨")
+    print("✨ نتیجه: نگهبان ۳۱ تایید شد (PASS) — همهٔ پروفایل‌های نصب (سه پروفایل پایه و دو پروفایل ماژول سوم) با موفقیت راستی‌آزمایی شدند ✨")
     print("=" * 74)
     return True
 

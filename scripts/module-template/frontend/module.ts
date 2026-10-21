@@ -33,8 +33,11 @@ export const MODULE: WhFrontendModule = {
       defaultExitRoute: '/app/__MODULE_CODE__'
     },
     operations: {
-      quickLink: { title: '__MODULE_TITLE_FA__', route: '/app/__MODULE_CODE__' },
-      syncMonitorScope: '__MODULE_CODE__'
+      quickLink: { title: '__MODULE_TITLE_FA__', route: '/app/__MODULE_CODE__' }
+    },
+    users: {
+      // همان PERMISSION_CODENAMES مانیفست بک‌اند (نگهبان ۵۷ برابری را می‌سنجد)
+      permissionGroup: { key: '__MODULE_UPPER__', titleFa: '__MODULE_TITLE_FA__', order: 100, codenames: ['view_sys___MODULE_CODE__'] }
     }
   }
 };

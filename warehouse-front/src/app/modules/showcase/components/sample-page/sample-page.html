@@ -1,0 +1,33 @@
+<div class="p-4 sm:p-6 space-y-4">
+  <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <svg appIcon="box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-7 h-7 shrink-0 text-indigo-600"></svg>
+      <div class="min-w-0">
+        <h1 class="text-lg font-black text-fg truncate">{{ title }}</h1>
+        <p class="text-[12px] text-fg-muted">صفحهٔ نمونهٔ ماژول مستقل</p>
+      </div>
+    </div>
+    <button type="button" appAction="refresh" [busy]="loading()" (click)="onRefresh()" title="بازخوانی وضعیت ماژول" aria-label="بازخوانی وضعیت ماژول"></button>
+  </div>
+
+  @if (loading() && !status()) {
+    <app-loading-skeleton type="card" [count]="1" />
+  } @else if (error()) {
+    <div class="bg-surface rounded-2xl border border-line p-6 flex flex-col items-center gap-3 text-center text-fg-muted" role="alert">
+      <svg appIcon="alert-triangle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6"></svg>
+      <p class="text-[12px] font-bold">
+        {{ error() === 'offline' ? 'سرور در دسترس نیست؛ پس از برقراری اتصال دوباره تلاش کنید.' : 'دریافت وضعیت ماژول انجام نشد.' }}
+      </p>
+      <button type="button" appAction="refresh" (click)="onRefresh()" title="تلاش دوباره" aria-label="تلاش دوباره"></button>
+    </div>
+  } @else {
+    <div class="bg-surface rounded-2xl border border-line p-6 space-y-2">
+      <p class="text-[13px] font-bold text-fg">وضعیت ماژول: {{ status()?.status === 'ok' ? 'فعال' : 'نامشخص' }}</p>
+      <p class="text-[12px] text-fg-muted">این صفحه نمونهٔ اولیه برای توسعهٔ قابلیت‌های ماژول تازه است.</p>
+    </div>
+    <div class="bg-surface rounded-2xl border border-dashed border-line p-6 flex flex-col items-center gap-2 text-center text-fg-muted">
+      <svg appIcon="info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6"></svg>
+      <p class="text-[12px] font-bold">هنوز رکوردی ثبت نشده است.</p>
+    </div>
+  }
+</div>

@@ -44,6 +44,8 @@ export interface FrontendModuleSpec {
   permissionMarkers: string[];
   roles: string[];
   isSuperuserOnly?: boolean;
+  /** ماژول opt-in فقط با نام صریح در --modules / WH_MODULES نصب می‌شود (tools/gen-installed-modules.js) */
+  optIn?: boolean;
 }
 
 /**

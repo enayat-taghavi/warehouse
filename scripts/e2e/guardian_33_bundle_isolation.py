@@ -67,6 +67,9 @@ def check_build_for_modules(content):
 
 def check_installed_modules(content, module_names):
     """بررسی ثبت تمام ماژول‌های کشف‌شده در installed-modules.ts متعهدشده."""
+    # ماژول opt-in (گام ۷) در نسخهٔ commitشده نیست؛ فقط با نام صریح در --modules نصب می‌شود
+    module_names = [m for m in module_names
+                    if not re.search(r"\boptIn\s*:\s*true\b", (MODULES_DIR / m / "module.ts").read_text(encoding="utf-8"))]
     errors = []
     for mod in module_names:
         imp_pattern = rf"from\s*['\"]\./{mod}/module['\"]"

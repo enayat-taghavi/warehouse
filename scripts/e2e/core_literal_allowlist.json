@@ -478,13 +478,6 @@
       "match": "warehouse",
       "category": "data_field",
       "reason": "ترتیب ستون‌های پیش‌فرض خروجی ممیزی (فیلد warehouse لاگ)"
-    },
-    {
-      "file": "modules/common/components/health-dashboard/concurrency-stress-scenarios.ts",
-      "text": "warehouseOnly: 'warehouse',",
-      "match": "warehouse",
-      "category": "dev_tooling",
-      "reason": "مقدار سناریوی API تست بار هم‌زمانی که concurrency_stress_service.py می‌پذیرد"
     }
   ]
 }

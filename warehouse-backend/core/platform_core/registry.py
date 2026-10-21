@@ -41,6 +41,8 @@ class ModuleSpec:
     active_priority: int = 100
     public_read_prefixes: tuple[str, ...] = ()
     reports_fallback: bool = False
+    # ماژول opt-in فقط با نام صریح در WH_MODULES نصب می‌شود (مثل ماژول نمایشی)؛ پروفایل پیش‌فرض آن را ندارد
+    opt_in: bool = False
 
 
 PLATFORM_VERSION = '1.0.0'
@@ -324,11 +326,11 @@ def build_user_token_scopes(user) -> dict[str, list[str]]:
     """
     تولید دیکشنری scopeهای توکن JWT بر اساس ماژول‌های کاتالوگ پلتفرم.
     """
-    from platform_core.module_catalog import MODULE_CATALOG
+    from platform_core.module_catalog import runtime_catalog_codes
     from accounts.middleware import get_user_valid_roles_for_app
 
     scopes = {}
-    for code in MODULE_CATALOG.keys():
+    for code in runtime_catalog_codes():
         scopes[module_allowed_app_code(code)] = get_user_valid_roles_for_app(user, code)
     return scopes
 
