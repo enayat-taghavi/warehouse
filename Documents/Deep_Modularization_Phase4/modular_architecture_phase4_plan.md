@@ -229,7 +229,7 @@
 | `WarehouseHttpService` | دو تکه می‌شود: سرویس کامل CRUD به `modules/warehouse/api/` می‌رود و فقط ماژول انبار آن را دارد. هسته سرویس فقط‌خواندنی و عمومی `ScopeDirectoryService` را دارد که اندپوینتش را extension تازهٔ `scopeDirectory` ماژول صاحب آن می‌دهد. |
 | برچسب «انبار/پروژه» صفحهٔ کاربران | extension تازهٔ `users.assignmentScope` با `priority`، بارگذار فهرست و برچسب‌های فارسی. نخستین ماژول در دسترس برچسب را می‌دهد. خطای بارگذاری به ماژول بعدی می‌رود، مثل امروز. |
 | نماهای سلامت و پایش همگام‌سازی | N-قلمرویی از روی `healthDashboard.panels` و `operations.syncMonitor` ماژول‌ها. برای دو ماژول فعلی متن و ظاهر عیناً همان می‌ماند. نام و کلید دیتابیس‌های آفلاین قفل می‌مانند (قاعدهٔ داده). `syncCursors` و `photoQueue` انبارمحور می‌مانند (بخش ۴.۱). |
-| ماژول سوم | ماژول واقعی `sample` با بک‌اند (`modules/sample/`، بدون مدل و migration) و فرانت (`modules/sample/module.ts`، یک صفحه). **opt-in** است: فقط وقتی صریحاً در `WH_MODULES` یا `--modules` بیاید نصب می‌شود. پس روی `app` و `soft` نه نصب می‌شود، نه جدولی می‌سازد. به‌عنوان الگوی ماژول تازه و اثبات زنده در مخزن می‌ماند. |
+| ماژول سوم | ماژول واقعی `showcase` با بک‌اند (`modules/showcase/`، بدون مدل و migration) و فرانت (`modules/showcase/module.ts`، یک صفحه). **opt-in** است: فقط وقتی صریحاً در `WH_MODULES` یا `--modules` بیاید نصب می‌شود. پس روی `app` و `soft` نه نصب می‌شود، نه جدولی می‌سازد. به‌عنوان الگوی ماژول تازه و اثبات زنده در مخزن می‌ماند. |
 
 **زیرگام‌ها** (هر کدام commit جدا):
 - **۷.۱ — مالکیت مجوز در بک‌اند:**
@@ -248,11 +248,11 @@
   - `health-dashboard`، `operations-sync-monitor`، شمارش رکوردهای `system-health.service` (`recordsByScope`)، `id-cards` و شیم‌های قدیمی `LOCKED_OFFLINE_SCOPES` در `deep-sync-modal`/`user-menu` اگر مصرف‌کننده‌ای ندارند.
   - شبیه‌ساز تداخل پایش همگام‌سازی و سناریوهای تست فشار به اعلام ماژول می‌روند.
   - بازبین‌ها: `data-loss-reviewer` و `ui-reviewer`.
-- **۷.۵ — ماژول سوم `sample`:**
+- **۷.۵ — ماژول سوم `showcase`:**
   - پرچم `opt_in` در `ModuleSpec` و `optIn` در قرارداد فرانت. پروفایل پیش‌فرض بک‌اند و `gen-installed-modules.js` ماژول opt-in را فقط با نام صریح نصب می‌کنند.
-  - بک‌اند: اپ `sample_hub` با یک API فقط‌خواندنی و مجوز خودش.
+  - بک‌اند: اپ `showcase` با یک API فقط‌خواندنی و مجوز خودش.
   - فرانت: یک صفحه، منو، گروه مجوز، پنل سلامت و قلمرو آفلاین خودش.
-  - اثبات: نگهبان ۳۱ با پروفایل‌های `sample` و `accounting,sample,warehouse`؛ بیلد تک‌ماژولی `sample`؛ آزمون‌های واحد نماهای N-قلمرویی با قلمرو سوم.
+  - اثبات: نگهبان ۳۱ با پروفایل‌های `showcase` و `accounting,showcase,warehouse`؛ بیلد تک‌ماژولی `showcase`؛ آزمون‌های واحد نماهای N-قلمرویی با قلمرو سوم.
 - **۷.۶ — نگهبان‌ها:**
   - شمارندهٔ `module_permission_literals` در ۲۹ (بک‌اند) و ۵۷ (فرانت)، برگرفته از اعلام‌های `module.py` (نه فهرست دستی). باید صفر یا در فهرست مجاز دقیق باشد.
   - `cross_module_permission_literals` = ۰.
@@ -479,5 +479,23 @@
   3. نماهای دوقلمرویی داشبورد سلامت و پایش همگام‌سازی.
   4. ساخته‌نشدن هیچ ماژول سوم واقعی برای اثبات.
   - جزئیات، اندازه‌ها و روش راستی‌آزمایی در `scratch/modular_closeout_handoff.md` است.
+
+- **گام ۷ — اجرا با Claude (۳۰ مهر ۱۴۰۵):**
+  - **۷.۱ تا ۷.۳ (`8bf5093`):**
+    - مجوزهای سفارشی ماژول‌ها در `module.py` هر ماژول (`PERMISSIONS`) اعلام می‌شوند. گیرندهٔ `post_migrate` (`accounts/module_permissions.py`) فقط ردیف نبوده را می‌سازد. migration `accounts/0003_module_permissions_declared_by_modules` فقط وضعیت است.
+    - روی دیتابیس `app`: پشتیبان `backup_20261021_094444.dump`، migrate انجام شد، hash جدول `Permission` (۴۱۱ ردیف) پیش و پس یکسان بود و `seed_permissions` صفر ردیف ساخت یا تغییر داد.
+    - نام دو مجوز `can_act_as_supervisor` و `can_act_as_manager` از نام فعلی دیتابیس (نام seed) گرفته شد، نه از `Meta`.
+    - هسته مجوز ماژول را از contributionها می‌خواند: `audit_view_perms`، `user_directory_perms`، `key_role_permissions`، `org_structure_write_perms` و `sensitive_field_bypass_perms`.
+    - فرانت: گروه مجوز، نام کوتاه، راهنمای تنها، مجوز نوشتن ساختار و `anyPermissions` منو از manifest ماژول. برچسب «انبار/پروژه» صفحهٔ کاربران از `users.assignmentScope`.
+    - `ScopeDirectoryService` فقط‌خواندنی در هسته؛ CRUD انبار به `modules/warehouse/api/` رفت.
+    - آزمون‌ها: بک‌اند ۹۱۲ بدون شکست تازه (دیتابیس آزمون تازه، پس مسیر `post_migrate` هم آزموده شد). specهای فرانت مرتبط بدون پس‌رفت.
+    - بازبین‌ها: `tenant-scope-reviewer` بی یافته. `ui-reviewer` یک یافته (برچسب عمومی پیش از رسیدن گروه‌های مجوز) که اصلاح شد.
+  - **۷.۴ (`72757ef`):**
+    - داشبورد سلامت و پایش همگام‌سازی N-قلمرویی شدند (`healthDashboard.panel`، `operations.queueLabelFa/queueOrder/conflictSimulation`). `system-health` حالا `recordsByScope` می‌دهد.
+    - دو انحراف عمدی: در نصب فقط‌انبار، توضیح تست فشار دیگر خزانه‌داری را نام نمی‌برد. با سناریوی «فقط انبارداری» سطر نتیجهٔ خزانه‌داری نشان داده نمی‌شود.
+    - شیم `warehouseIds/projectIds` در `deep-sync-modal`/`user-menu` پروتکل زندهٔ بروزرسانی عمیق است و می‌ماند (در ۷.۶ در فهرست مجاز).
+    - بازبین‌ها: `data-loss-reviewer` بی مسیر از دست رفتن داده؛ دو یافتهٔ نمایشی اصلاح شد. یک یافتهٔ پیشین (`syncErrors.delete` در پذیرش نسخهٔ سرور) به تسک جدا سپرده شد. `ui-reviewer` بی یافتهٔ جدی؛ دو مورد کم‌اهمیت اصلاح شد.
+  - **۷.۵ (در جریان):** ماژول opt-in به نام `showcase` (نه `sample`، چون فرمان `verify_tools.py sample-module` ماژول `sample` را در کپی می‌سازد). پرچم `opt_in`/`optIn`، `default_module_codes()` و `runtime_catalog_codes()` (توکن و تعویض قلمرو ماژول opt-in نصب‌نشده را نمی‌شناسند).
+  - **قدم بعدی:** راستی‌آزمایی ۷.۵ (پروفایل‌های نگهبان ۳۱، بیلد تک‌ماژولی `showcase`، آزمون‌های ماژول)، سپس ۷.۶ (شمارنده‌های نگهبان) و ۷.۷.
 
 </div>
