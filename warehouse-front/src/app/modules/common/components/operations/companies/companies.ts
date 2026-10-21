@@ -22,6 +22,7 @@ import { ModuleRegistryService } from '../../../../../core/modules/module-regist
 import { CompanyListCell, CompanyRowAction, CompanyStudioSection, CompanyStudioTab } from '../../../../../core/modules/module-contract';
 import { CompanyStudioContextService } from '../../../../../core/services/company-studio-context.service';
 import { DocumentPreviewComponent } from '../../../../../shared/components/document-preview/document-preview.component';
+import { SmartDeleteModalComponent } from '../../../../../shared/components/smart-delete-modal/smart-delete-modal';
 import {
   Company,
   UserCompanyAccess,
@@ -43,7 +44,7 @@ import { PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons/semantic-icon
 @Component({
   selector: 'app-companies-management',
   standalone: true,
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, PersianDatePipe, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent, CommandCenterComponent],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, PersianDatePipe, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent, CommandCenterComponent, SmartDeleteModalComponent],
   providers: [CompanyStudioContextService],
   templateUrl: './companies.html',
   styleUrls: ['./companies.css']
@@ -76,6 +77,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   /** context مشترک با تب‌ها و بخش‌های مشارکتی ماژول‌ها (§۵-۲) */
   readonly studioContext = inject(CompanyStudioContextService);
   @ViewChild(DocumentPreviewComponent, { static: true }) docPreview?: DocumentPreviewComponent;
+  @ViewChild(SmartDeleteModalComponent) smartDeleteModal?: SmartDeleteModalComponent;
   private offlineSync = OfflineSyncService.getInstance();
   private network = NetworkStatusService.getInstance();
   private destroy$ = new Subject<void>();
@@ -225,15 +227,19 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     errors: {}
   };
 
-  // وضعیت مدال تایید حذف
+  // وضعیت مدال تایید حذف (smart-delete-modal با اثر حذف آبشاری؛ ت۹)
   deleteModal: {
     isOpen: boolean;
     target: Company | null;
     isDeleting: boolean;
+    impactUrl: string;
+    errorMessage: string;
   } = {
     isOpen: false,
     target: null,
-    isDeleting: false
+    isDeleting: false,
+    impactUrl: '',
+    errorMessage: ''
   };
 
   ngOnInit(): void {
@@ -1393,32 +1399,79 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.deleteModal = {
       isOpen: true,
       target: company,
-      isDeleting: false
+      isDeleting: false,
+      impactUrl: this.api.deleteImpactUrl(company.id),
+      errorMessage: ''
     };
   }
 
   closeDeleteModal(): void {
+    if (this.deleteModal.isDeleting) return;
     this.deleteModal.isOpen = false;
     this.deleteModal.target = null;
+    this.deleteModal.errorMessage = '';
   }
 
   executeDelete(): void {
-    if (!this.deleteModal.target) return;
+    const target = this.deleteModal.target;
+    if (!target || this.deleteModal.isDeleting) return;
+    // اگر در فاصلهٔ باز بودن پنجره اتصال قطع شده باشد، حذف آبشاری در صف آفلاین نمی‌رود
+    if (!this.requireOnline('حذف شرکت')) return;
+    // اثری که به کاربر نشان داده شده همراه حذف می‌رود؛ اگر سوابق وابسته در این فاصله تغییر کرده باشد سرور ۴۰۹ می‌دهد
+    const shownImpact = this.smartDeleteModal?.impactLoaded ? this.smartDeleteModal.totalAffected : undefined;
     this.deleteModal.isDeleting = true;
-    this.api.delete(this.deleteModal.target.id).subscribe({
+    this.deleteModal.errorMessage = '';
+    this.api.delete(target.id, shownImpact).subscribe({
       next: () => {
         this.deleteModal.isDeleting = false;
-        this.toast.success(`شرکت «${this.deleteModal.target!.name}» با موفقیت حذف شد.`);
+        this.toast.success(`شرکت «${target.name}» با موفقیت حذف شد.`);
         this.closeDeleteModal();
         this.loadCompanies();
         this.activeCompanyService.loadAvailableCompanies().subscribe();
       },
       error: (err) => {
         this.deleteModal.isDeleting = false;
-        const msg = err.error?.detail || 'خطا در حذف شرکت';
-        this.toast.error(msg);
+        this.deleteModal.errorMessage = this.deleteErrorMessage(err);
+        if (err?.status === 409) {
+          // اثر تازه دوباره خوانده می‌شود تا کاربر پیش از حذف، فهرست درست را ببیند
+          this.smartDeleteModal?.fetchImpact();
+        }
+        this.cdr.markForCheck();
       }
     });
+  }
+
+  /** پیشنهاد جایگزین حذف: شرکت غیرفعال می‌شود و همهٔ سوابقش می‌مانند */
+  deactivateInsteadOfDelete(): void {
+    const target = this.deleteModal.target;
+    if (!target || this.deleteModal.isDeleting) return;
+    if (!this.requireOnline('غیرفعال کردن شرکت')) return;
+    this.deleteModal.isDeleting = true;
+    this.deleteModal.errorMessage = '';
+    this.api.patch(target.id, { is_active: false }).subscribe({
+      next: () => {
+        this.deleteModal.isDeleting = false;
+        this.toast.success(`شرکت «${target.name}» غیرفعال شد و سوابق آن حفظ شد.`);
+        this.closeDeleteModal();
+        this.loadCompanies();
+        this.activeCompanyService.loadAvailableCompanies().subscribe();
+      },
+      error: (err) => {
+        this.deleteModal.isDeleting = false;
+        this.deleteModal.errorMessage = this.deleteErrorMessage(err, 'خطا در غیرفعال کردن شرکت');
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  /** پیام خطای حذف از پاسخ DRF: detail، error (DeleteImpactMixin) یا فهرست ValidationError */
+  private deleteErrorMessage(err: any, fallback = 'خطا در حذف شرکت'): string {
+    if (isServerUnreachable(err)) return 'سرور در دسترس نیست. پس از برقراری اتصال دوباره تلاش کنید.';
+    const body = err?.error;
+    if (Array.isArray(body) && typeof body[0] === 'string') return body[0];
+    if (typeof body?.detail === 'string') return body.detail;
+    if (typeof body?.error === 'string') return body.error;
+    return fallback;
   }
 
   exportExcel(): void {

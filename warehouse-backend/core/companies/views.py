@@ -10,6 +10,7 @@ from rest_framework.response import Response
 
 from accounts.views import OptionalPageNumberPagination
 from common.date_utils import normalize_digits
+from common.mixins import DeleteImpactMixin
 
 from platform_core.registry import contributions
 
@@ -28,7 +29,7 @@ from .serializers import CompanySerializer, UserCompanyAccessSerializer
 # ماژول‌ها این وابستگی‌ها را در نقطهٔ توسعهٔ company_delete_blockers ثبت می‌کنند (گام ۴).
 
 
-class CompanyViewSet(viewsets.ModelViewSet):
+class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     """
     مدیریت شرکت‌ها (هلدینگ و شرکت‌های تابعه) در هسته. حسابداری با زیرکلاس خود
     (personnel.views.CompanyViewSet) شمارش پروژه‌ها، مدارک و پایش سررسید مدارک را اضافه می‌کند.
@@ -80,13 +81,28 @@ class CompanyViewSet(viewsets.ModelViewSet):
         tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
         broadcast_org_structure_updated('company', 'update', instance.id, instance.name, None, tab_id, self.request.user.id)
 
-    def perform_destroy(self, instance):
-        if not (self.request.user.is_superuser or self.request.user.is_staff):
+    def _ensure_can_delete(self, user):
+        if not (user.is_superuser or user.is_staff):
             raise PermissionDenied("تنها مدیران ارشد مجاز به حذف شرکت هستند.")
+
+    def check_delete_impact_permission(self, request, instance):
+        # اثر حذف (شمار رکوردهای وابسته) فقط برای کسی است که اجازهٔ حذف دارد؛
+        # get_object() پیش از این، شرکت بیرون از دامنهٔ کاربر را با ۴۰۴ رد کرده است.
+        self._ensure_can_delete(request.user)
+
+    def get_delete_blockers(self, instance):
         blockers = sorted(contributions('company_delete_blockers'), key=lambda b: b[0])
-        for _order, related_name, message in blockers:
-            if hasattr(instance, related_name) and getattr(instance, related_name).exists():
-                raise serializers.ValidationError(message)
+        return [
+            message
+            for _order, related_name, message in blockers
+            if hasattr(instance, related_name) and getattr(instance, related_name).exists()
+        ]
+
+    def perform_destroy(self, instance):
+        self._ensure_can_delete(self.request.user)
+        blockers = self.get_delete_blockers(instance)
+        if blockers:
+            raise serializers.ValidationError(blockers[0])
         instance_id = instance.id
         instance_name = instance.name
         instance.delete()

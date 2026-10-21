@@ -13,6 +13,7 @@ from companies.access import (
     get_user_allowed_companies,
     validate_user_company_access,
 )
+from common.mixins import DeleteImpactChanged
 from companies.models import Company, UserCompanyAccess
 
 User = get_user_model()
@@ -87,3 +88,123 @@ class CoreCompanyApiTests(TestCase):
         self.assertEqual(r.status_code, 403)
         r = self.client.post('/api/org/user-company-access/', {'user': target.id, 'company': self.c1.id, 'access_level': 'workspace_full'}, format='json')
         self.assertEqual(r.status_code, 201, r.content)
+
+
+class CompanyDeleteImpactTests(TestCase):
+    """طرح بازبینی فرانت شرکت‌ها، گام ۸ (A21 و §۶): اثر حذف شرکت پیش از حذف آبشاری."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.c1 = Company.objects.create(code='DEL-C1', name='شرکت حذف یک')
+        self.c2 = Company.objects.create(code='DEL-C2', name='شرکت حذف دو')
+        self.admin = User.objects.create_superuser(username='del_admin', password='x-pass-123', phone_number='09170000011')
+        self.staff = User.objects.create_user(username='del_staff', password='x-pass-123', phone_number='09170000012', is_staff=True)
+        self.member = User.objects.create_user(username='del_member', password='x-pass-123', phone_number='09170000013')
+        UserCompanyAccess.objects.create(user=self.staff, company=self.c1, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=self.member, company=self.c1, access_level='workspace_full')
+
+    def url(self, company):
+        return f'/api/org/companies/{company.id}/delete_impact/'
+
+    def test_impact_counts_cascaded_rows_including_fast_deletes(self):
+        self.client.force_authenticate(self.admin)
+        r = self.client.get(self.url(self.c1))
+        self.assertEqual(r.status_code, 200, r.content)
+        body = r.json()
+        self.assertFalse(body['blocked'])
+        self.assertEqual(body['blockers'], [])
+        self.assertEqual(body['protected'], [])
+        access_label = str(UserCompanyAccess._meta.verbose_name)
+        rows = {row['model_name']: row['count'] for row in body['impact']}
+        self.assertEqual(rows.get(access_label), 2)
+        self.assertEqual(body['total_affected'], sum(rows.values()))
+        # فقط محاسبه است و چیزی پاک نمی‌شود
+        self.assertEqual(UserCompanyAccess.objects.filter(company=self.c1).count(), 2)
+        self.assertTrue(Company.objects.filter(id=self.c1.id).exists())
+
+    def test_staff_in_scope_sees_impact(self):
+        self.client.force_authenticate(self.staff)
+        r = self.client.get(self.url(self.c1))
+        self.assertEqual(r.status_code, 200, r.content)
+
+    def test_company_outside_scope_is_404(self):
+        self.client.force_authenticate(self.staff)
+        self.assertEqual(self.client.get(self.url(self.c2)).status_code, 404)
+        self.assertEqual(self.client.delete(f'/api/org/companies/{self.c2.id}/').status_code, 404)
+        self.assertTrue(Company.objects.filter(id=self.c2.id).exists())
+
+    def test_member_without_delete_right_gets_403_not_counts(self):
+        self.client.force_authenticate(self.member)
+        r = self.client.get(self.url(self.c1))
+        self.assertEqual(r.status_code, 403)
+        self.assertNotIn('impact', r.json())
+        # پیش‌تر destroy مقاوم، PermissionDenied را به ۴۰۰ «خطای ناشناخته» تبدیل می‌کرد
+        r = self.client.delete(f'/api/org/companies/{self.c1.id}/')
+        self.assertEqual(r.status_code, 403)
+        self.assertTrue(Company.objects.filter(id=self.c1.id).exists())
+
+    def test_anonymous_is_rejected(self):
+        self.assertIn(self.client.get(self.url(self.c1)).status_code, (401, 403))
+
+    def test_business_blocker_is_reported_and_blocks_destroy_with_its_message(self):
+        from unittest import mock
+        message = 'این شرکت دسترسی کاربر دارد و نمی‌توان آن را حذف کرد.'
+        with mock.patch('companies.views.contributions', return_value=[(10, 'user_accesses', message)]):
+            self.client.force_authenticate(self.admin)
+            r = self.client.get(self.url(self.c1))
+            self.assertEqual(r.status_code, 200, r.content)
+            self.assertTrue(r.json()['blocked'])
+            self.assertEqual(r.json()['blockers'], [message])
+            r = self.client.delete(f'/api/org/companies/{self.c1.id}/')
+            self.assertEqual(r.status_code, 400)
+            self.assertEqual(r.json(), [message])
+        self.assertTrue(Company.objects.filter(id=self.c1.id).exists())
+
+    def test_protected_relation_marks_impact_blocked(self):
+        from unittest import mock
+        from django.db.models import ProtectedError
+        from django.db.models.deletion import Collector
+        access = UserCompanyAccess.objects.filter(company=self.c1).first()
+        with mock.patch.object(Collector, 'collect', side_effect=ProtectedError('protected', {access})):
+            self.client.force_authenticate(self.admin)
+            r = self.client.get(self.url(self.c1))
+        self.assertEqual(r.status_code, 200, r.content)
+        body = r.json()
+        self.assertTrue(body['blocked'])
+        self.assertEqual(body['protected'], [{'model_name': str(UserCompanyAccess._meta.verbose_name), 'count': 1}])
+        self.assertEqual(body['impact'], [])
+
+    def test_delete_with_stale_expected_total_is_409_and_keeps_data(self):
+        self.client.force_authenticate(self.admin)
+        total = self.client.get(self.url(self.c1)).json()['total_affected']
+        # کاربر دیگری پس از دیدن اثر حذف، رکورد وابستهٔ تازه افزوده است
+        extra = User.objects.create_user(username='del_extra', password='x-pass-123', phone_number='09170000014')
+        UserCompanyAccess.objects.create(user=extra, company=self.c1, access_level='docs_read')
+        r = self.client.delete(f'/api/org/companies/{self.c1.id}/?expected_total={total}')
+        self.assertEqual(r.status_code, 409, r.content)
+        self.assertEqual(r.json()['detail'], DeleteImpactChanged.default_detail)
+        self.assertTrue(Company.objects.filter(id=self.c1.id).exists())
+        self.assertEqual(UserCompanyAccess.objects.filter(company=self.c1).count(), 3)
+        r = self.client.delete(f'/api/org/companies/{self.c1.id}/?expected_total=abc')
+        self.assertEqual(r.status_code, 409)
+
+    def test_delete_with_matching_expected_total_cascades(self):
+        self.client.force_authenticate(self.admin)
+        total = self.client.get(self.url(self.c1)).json()['total_affected']
+        r = self.client.delete(f'/api/org/companies/{self.c1.id}/?expected_total={total}')
+        self.assertEqual(r.status_code, 204, r.content)
+        self.assertFalse(Company.objects.filter(id=self.c1.id).exists())
+        self.assertEqual(UserCompanyAccess.objects.filter(company_id=self.c1.id).count(), 0)
+
+    def test_expected_total_check_does_not_bypass_delete_permission(self):
+        self.client.force_authenticate(self.member)
+        r = self.client.delete(f'/api/org/companies/{self.c1.id}/?expected_total=999')
+        self.assertEqual(r.status_code, 403)
+        self.assertTrue(Company.objects.filter(id=self.c1.id).exists())
+
+    def test_admin_delete_without_blockers_cascades(self):
+        self.client.force_authenticate(self.admin)
+        with self.captureOnCommitCallbacks(execute=False):
+            r = self.client.delete(f'/api/org/companies/{self.c2.id}/')
+        self.assertEqual(r.status_code, 204)
+        self.assertFalse(Company.objects.filter(id=self.c2.id).exists())

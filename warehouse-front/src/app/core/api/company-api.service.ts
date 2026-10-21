@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
+import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import { environment } from '../../../environments/environment';
 import {
   Company,
@@ -130,8 +131,24 @@ export class CompanyApiService {
     return this.http.patch<Company>(`${this.endpoint}/${id}/`, payload);
   }
 
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.endpoint}/${id}/`);
+  /**
+   * حذف آبشاری شرکت؛ هرگز در صف آفلاین نمی‌رود (SKIP_OFFLINE) تا بعداً بی‌دیدن اثر حذف اجرا نشود.
+   * `expectedTotal` همان اثری است که به کاربر نشان داده شده؛ اگر سوابق وابسته تغییر کرده باشد سرور ۴۰۹ می‌دهد.
+   */
+  delete(id: number, expectedTotal?: number): Observable<void> {
+    let params = new HttpParams();
+    if (typeof expectedTotal === 'number') {
+      params = params.set('expected_total', String(expectedTotal));
+    }
+    return this.http.delete<void>(`${this.endpoint}/${id}/`, {
+      params,
+      context: new HttpContext().set(SKIP_OFFLINE, true)
+    });
+  }
+
+  /** نشانی اثر حذف آبشاری شرکت (DeleteImpactMixin) برای smart-delete-modal */
+  deleteImpactUrl(id: number): string {
+    return `${this.endpoint}/${id}/delete_impact/`;
   }
 
   getUserAvailable(scope?: 'workspace' | 'documents' | 'all'): Observable<UserAvailableCompaniesResponse> {

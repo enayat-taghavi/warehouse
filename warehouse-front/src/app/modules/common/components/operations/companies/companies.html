@@ -1329,31 +1329,21 @@
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
   <!-- ۴. مدال تایید حذف شرکت                                                    -->
   <!-- ═════════════════════════════════════════════════════════════════════════ -->
-  <div *ngIf="deleteModal.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-    <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden p-5 text-right">
-      <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-3">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600" appIcon="status-warning" aria-hidden="true"></svg>
-      </div>
-      <h3 class="text-base font-black text-slate-800">حذف شرکت «{{ deleteModal.target?.name }}»</h3>
-      <p class="text-xs text-slate-600 mt-2 leading-relaxed">
-        آیا از حذف این شرکت اطمینان دارید؟ توجه فرمایید که تنها شرکت‌هایی که فاقد هرگونه پروژه و رکورد وابسته باشند قابل حذف هستند.
-      </p>
-      <div class="mt-6 flex items-center justify-end gap-2">
-        <button 
-          type="button" 
-          appAction="close"
-          (click)="closeDeleteModal()">
-        </button>
-        <button 
-          type="button" 
-          appAction="delete"
-          size="lg"
-          [busy]="deleteModal.isDeleting"
-          (click)="executeDelete()">
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- ت۹: اثر حذف آبشاری پیش از حذف دیده می‌شود (delete_impact)؛ بی آن حذف ممکن نیست -->
+  <app-smart-delete-modal
+    *ngIf="deleteModal.isOpen && deleteModal.target"
+    title="حذف شرکت"
+    [entityName]="deleteModal.target.name"
+    [deleteImpactUrl]="deleteModal.impactUrl"
+    [requireImpact]="true"
+    [isSubmitting]="deleteModal.isDeleting"
+    [errorMessage]="deleteModal.errorMessage"
+    [alternativeLabel]="deleteModal.target.is_active ? 'غیرفعال کردن' : ''"
+    alternativeHint="به‌جای حذف، شرکت را غیرفعال کنید؛ همهٔ سوابق آن می‌ماند و بعداً دوباره فعال می‌شود."
+    (hardDelete)="executeDelete()"
+    (alternative)="deactivateInsteadOfDelete()"
+    (cancel)="closeDeleteModal()">
+  </app-smart-delete-modal>
 
   <!-- جایگاه سلول مشارکتی فهرست (listCells): کامپوننت تنبل؛ شکست بارگذاری با «؟» (نه «—» که «بی‌داده» خوانده می‌شود) -->
   <ng-template #listCellOutlet let-cell="cell" let-company="company" let-variant="variant">

@@ -7,7 +7,7 @@ import { ɵresolveComponentResources, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { provideRouter, Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { of, Subject, throwError } from 'rxjs';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -24,6 +24,9 @@ import { Company } from '../../../../../core/models/company.model';
 import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
+import { By } from '@angular/platform-browser';
+import { SmartDeleteModalComponent } from '../../../../../shared/components/smart-delete-modal/smart-delete-modal';
+import { SKIP_OFFLINE } from '../../../../../core/interceptors/offline.interceptor';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -143,6 +146,8 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       create: vi.fn().mockImplementation((data: any) => of({ id: 3, ...data, projects_count: 0 })),
       update: vi.fn().mockImplementation((id: number, data: any) => of({ id, ...data })),
       delete: vi.fn().mockReturnValue(of(void 0)),
+      patch: vi.fn().mockImplementation((id: number, data: any) => of({ id, ...data })),
+      deleteImpactUrl: vi.fn().mockImplementation((id: number) => `/api/org/companies/${id}/delete_impact/`),
       getUserAvailable: vi.fn().mockReturnValue(of({ companies: sampleCompanies, is_superuser: true })),
       getUserAccesses: vi.fn().mockReturnValue(of([])),
       createUserAccess: vi.fn().mockReturnValue(of({})),
@@ -690,9 +695,116 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       component.executeDelete();
       fixture.detectChanges();
 
-      expect(mockCompanyApi.delete).toHaveBeenCalledWith(99);
+      expect(mockCompanyApi.delete).toHaveBeenCalledWith(99, 0); // اثرِ نشان‌داده‌شده (بی رکورد وابسته) همراه حذف می‌رود
       expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('شرکت «شرکت بدون پروژه» با موفقیت حذف شد.'));
       expect(component.deleteModal.isOpen).toBe(false);
+    });
+
+    describe('ت۹ و A21: smart-delete-modal با اثر حذف آبشاری', () => {
+      const impactBody = {
+        impact: [{ model_name: 'مدرک شرکت', count: 12 }, { model_name: 'حساب بانکی شرکت', count: 2 }],
+        total_affected: 14, blocked: false, blockers: [], protected: []
+      };
+      let httpGet: ReturnType<typeof vi.fn>;
+
+      beforeEach(() => {
+        httpGet = TestBed.inject(HttpClient).get as unknown as ReturnType<typeof vi.fn>;
+      });
+
+      const modalEl = () => fixture.nativeElement.querySelector('app-smart-delete-modal') as HTMLElement | null;
+
+      it('اثر حذف از نشانی delete_impact خوانده و با رقم فارسی فهرست می‌شود؛ متن نادرست «فقط شرکت بدون رکورد وابسته» نیست', () => {
+        httpGet.mockReturnValue(of(impactBody));
+        component.confirmDelete(sampleCompanies[0]);
+        fixture.detectChanges();
+        expect(mockCompanyApi.deleteImpactUrl).toHaveBeenCalledWith(sampleCompanies[0].id);
+        expect(httpGet).toHaveBeenCalledWith(`/api/org/companies/${sampleCompanies[0].id}/delete_impact/`, expect.anything());
+        // اثر حذف از کش آفلاین (SWR) خوانده نمی‌شود
+        const options = httpGet.mock.calls.at(-1)![1] as { context: HttpContext };
+        expect(options.context.get(SKIP_OFFLINE)).toBe(true);
+        const text = modalEl()!.textContent || '';
+        expect(text).toContain('۱۲ رکورد از «مدرک شرکت»');
+        expect(text).toContain('۱۴ رکورد');
+        expect(text).not.toContain('فاقد هرگونه پروژه');
+        expect(modalEl()!.querySelector('[role="dialog"][aria-modal="true"]')).not.toBeNull();
+      });
+
+      it('شکست دریافت اثر حذف، حذف را قفل می‌کند تا «تلاش دوباره» موفق شود', () => {
+        httpGet.mockReturnValue(throwError(() => ({ status: 500, error: { error: 'محاسبهٔ اثر حذف ممکن نشد.' } })));
+        component.confirmDelete(sampleCompanies[0]);
+        fixture.detectChanges();
+        const modal = fixture.debugElement.query(By.directive(SmartDeleteModalComponent)).componentInstance as SmartDeleteModalComponent;
+        modal.countdown = 0;
+        modal.confirmationText = 'حذف';
+        expect(modal.isHardDeleteEnabled).toBe(false);
+        expect(modalEl()!.textContent).toContain('تا اثر حذف دیده نشود، حذف ممکن نیست.');
+
+        httpGet.mockReturnValue(of(impactBody));
+        const retry = Array.from(modalEl()!.querySelectorAll('button')).find(b => b.textContent?.includes('تلاش دوباره')) as HTMLButtonElement;
+        retry.click();
+        fixture.detectChanges();
+        expect(modal.isHardDeleteEnabled).toBe(true);
+      });
+
+      it('مانع کسب‌وکاری حذف را می‌بندد و پیامش را نشان می‌دهد', () => {
+        httpGet.mockReturnValue(of({ impact: [], total_affected: 0, blocked: true, blockers: ['این شرکت دارای پروژه‌های ثبت‌شده است و نمی‌توان آن را حذف کرد.'], protected: [] }));
+        component.confirmDelete(sampleCompanies[0]);
+        fixture.detectChanges();
+        const modal = fixture.debugElement.query(By.directive(SmartDeleteModalComponent)).componentInstance as SmartDeleteModalComponent;
+        modal.countdown = 0;
+        modal.confirmationText = 'حذف';
+        expect(modal.isHardDeleteEnabled).toBe(false);
+        expect(modalEl()!.textContent).toContain('دارای پروژه‌های ثبت‌شده');
+      });
+
+      it('خطای ValidationError بک‌اند (فهرست) درون پنجره نمایش داده می‌شود و پنجره باز می‌ماند', () => {
+        httpGet.mockReturnValue(of(impactBody));
+        mockCompanyApi.delete.mockReturnValueOnce(throwError(() => ({ status: 400, error: ['این شرکت دارای انبارهای ثبت‌شده در سامانه است و نمی‌توان آن را حذف کرد.'] })));
+        component.confirmDelete(sampleCompanies[0]);
+        fixture.detectChanges();
+        component.executeDelete();
+        fixture.detectChanges();
+        expect(mockCompanyApi.delete).toHaveBeenCalled();
+        expect(component.deleteModal.isOpen).toBe(true);
+        expect(modalEl()!.textContent).toContain('دارای انبارهای ثبت‌شده');
+        expect(mockToast.success).not.toHaveBeenCalled();
+      });
+
+      it('«غیرفعال کردن» به‌جای حذف فقط is_active را false می‌کند و چیزی پاک نمی‌شود', () => {
+        httpGet.mockReturnValue(of(impactBody));
+        const active = { ...sampleCompanies[0], is_active: true };
+        component.confirmDelete(active);
+        fixture.detectChanges();
+        const btn = Array.from(modalEl()!.querySelectorAll('button')).find(b => b.textContent?.includes('غیرفعال کردن')) as HTMLButtonElement;
+        expect(btn).toBeTruthy();
+        btn.click();
+        fixture.detectChanges();
+        expect(mockCompanyApi.patch).toHaveBeenCalledWith(active.id, { is_active: false });
+        expect(mockCompanyApi.delete).not.toHaveBeenCalled();
+        expect(component.deleteModal.isOpen).toBe(false);
+      });
+
+      it('حذف همان اثرِ نشان‌داده‌شده را می‌فرستد و ۴۰۹ (تغییر سوابق) اثر را دوباره می‌خواند و پنجره باز می‌ماند', () => {
+        httpGet.mockReturnValue(of(impactBody));
+        component.confirmDelete(sampleCompanies[0]);
+        fixture.detectChanges();
+        mockCompanyApi.delete.mockReturnValueOnce(throwError(() => ({ status: 409, error: { detail: 'سوابق وابسته پس از محاسبهٔ اثر حذف تغییر کرده است. اثر حذف را دوباره ببینید.' } })));
+        const callsBefore = httpGet.mock.calls.length;
+        component.executeDelete();
+        fixture.detectChanges();
+        expect(mockCompanyApi.delete).toHaveBeenCalledWith(sampleCompanies[0].id, 14);
+        expect(httpGet.mock.calls.length).toBe(callsBefore + 1);
+        expect(component.deleteModal.isOpen).toBe(true);
+        expect(modalEl()!.textContent).toContain('سوابق وابسته پس از محاسبهٔ اثر حذف تغییر کرده است');
+        expect(mockToast.success).not.toHaveBeenCalled();
+      });
+
+      it('شرکت غیرفعال پیشنهاد «غیرفعال کردن» ندارد', () => {
+        httpGet.mockReturnValue(of(impactBody));
+        component.confirmDelete({ ...sampleCompanies[0], is_active: false });
+        fixture.detectChanges();
+        expect(Array.from(modalEl()!.querySelectorAll('button')).some(b => b.textContent?.includes('غیرفعال کردن'))).toBe(false);
+      });
     });
   });
 

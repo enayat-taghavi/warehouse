@@ -1,20 +1,26 @@
-<div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" dir="rtl">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 animate-fadeIn">
+<div class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm" dir="rtl">
+  <div #dialogPanel
+       role="dialog"
+       aria-modal="true"
+       [attr.aria-labelledby]="titleId"
+       tabindex="-1"
+       (keydown)="onDialogKeydown($event)"
+       class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90dvh] overflow-hidden flex flex-col border border-slate-200 animate-fadeIn focus:outline-none">
     <!-- Header -->
-    <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-      <div class="flex items-center gap-2 text-red-600 font-bold">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" appIcon="hero-exclamation-solid"></svg>
-        <h3 class="text-base font-bold text-slate-800">{{ title || 'حذف موجودیت' }}</h3>
+    <div class="p-4 sm:p-5 border-b border-slate-100 flex justify-between items-center gap-2 bg-slate-50 shrink-0">
+      <div class="flex items-center gap-2 text-red-600 font-bold min-w-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" appIcon="hero-exclamation-solid"></svg>
+        <h3 [id]="titleId" class="text-base font-bold text-slate-800 truncate">{{ title || 'حذف موجودیت' }}</h3>
       </div>
       <button appAction="close" display="icon" (click)="onCancel()"></button>
     </div>
 
     <!-- Content -->
-    <div class="p-6">
-      
+    <div class="p-4 sm:p-6 overflow-y-auto">
+
       <!-- Error Message -->
-      <div *ngIf="errorMessage" class="mb-4 p-3 bg-red-50 text-red-700 rounded-xl text-sm flex items-start gap-2 border border-red-200">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor" appIcon="hero-exclamation-circle-solid"></svg>
+      <div *ngIf="errorMessage" role="alert" class="mb-4 p-3 bg-red-50 text-red-700 rounded-xl text-sm flex items-start gap-2 border border-red-200">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" appIcon="hero-exclamation-circle-solid"></svg>
         <span>{{ errorMessage }}</span>
       </div>
 
@@ -24,36 +30,63 @@
           شما در حال حذف دائم <span class="font-black text-red-900">«{{ entityName }}»</span> هستید. این عملیات غیرقابل بازگشت است.
         </p>
 
+        <div aria-live="polite" [attr.aria-busy]="isLoadingImpact">
+
         <!-- Loading Impact -->
-        <div *ngIf="isLoadingImpact" class="flex items-center gap-2 text-xs text-red-600 font-bold">
-          <span class="animate-spin h-3.5 w-3.5 border-2 border-red-600 border-t-transparent rounded-full"></span>
+        <div *ngIf="isLoadingImpact" class="flex items-center gap-2 text-xs text-red-700 font-bold">
+          <span class="animate-spin h-3.5 w-3.5 border-2 border-red-600 border-t-transparent rounded-full" aria-hidden="true"></span>
           در حال محاسبه اثرات وابستگی‌های داده...
         </div>
-        
+
+        <!-- Impact Error -->
+        <div *ngIf="!isLoadingImpact && impactError" class="flex flex-wrap items-center gap-2 text-xs text-red-800 font-bold">
+          <span>{{ impactError }}</span>
+          <span *ngIf="requireImpact">تا اثر حذف دیده نشود، حذف ممکن نیست.</span>
+          <button type="button" appAction="refresh" label="تلاش دوباره" display="label" (click)="retryImpact()"></button>
+        </div>
+
+        <!-- Blocked -->
+        <div *ngIf="!isLoadingImpact && blocked" class="bg-white/80 p-3 rounded-lg text-xs text-red-800 border border-red-200">
+          <p class="font-bold mb-2">این مورد را نمی‌توان حذف کرد:</p>
+          <ul class="list-disc list-inside space-y-1 font-medium">
+            <li *ngFor="let message of blockers">{{ message }}</li>
+            <li *ngFor="let item of protectedRows">{{ fa(item.count) }} رکورد از «{{ item.model_name }}» مانع حذف است</li>
+          </ul>
+        </div>
+
         <!-- Impact List -->
-        <div *ngIf="!isLoadingImpact && totalAffected > 0" class="bg-white/80 p-3 rounded-lg text-xs text-red-800 border border-red-200">
-          <p class="font-bold mb-2">همراه با این مورد، سوابق وابسته زیر نیز برای همیشه پاک خواهند شد:</p>
+        <div *ngIf="!isLoadingImpact && !impactError && !blocked && totalAffected > 0" class="bg-white/80 p-3 rounded-lg text-xs text-red-800 border border-red-200">
+          <p class="font-bold mb-2">همراه با این مورد، این سوابق وابسته هم برای همیشه پاک می‌شوند ({{ fa(totalAffected) }} رکورد):</p>
           <ul class="list-disc list-inside space-y-1 font-medium">
             <li *ngFor="let item of impactData">
-              {{ item.count }} رکورد از «{{ item.model_name }}»
+              {{ fa(item.count) }} رکورد از «{{ item.model_name }}»
             </li>
           </ul>
         </div>
-        <div *ngIf="!isLoadingImpact && totalAffected === 0" class="text-xs text-red-600 font-medium">
-          هیچ وابستگی جانبی مسدودکننده‌ای یافت نشد.
+        <div *ngIf="!isLoadingImpact && !impactError && !blocked && totalAffected === 0 && (impactLoaded || !deleteImpactUrl)" class="text-xs text-red-700 font-medium">
+          هیچ رکورد وابسته‌ای همراه این مورد پاک نمی‌شود.
+        </div>
         </div>
       </div>
 
-      <!-- Confirmation Input -->
-      <div class="mb-5">
-        <label class="block text-xs font-bold text-slate-700 mb-2">
-          برای تایید نهایی حذف، کلمه <span class="font-black text-red-600 select-all px-1.5 py-0.5 bg-red-50 rounded border border-red-200">حذف</span> را تایپ کنید:
-        </label>
-        <input type="text" [(ngModel)]="confirmationText" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-center font-bold text-sm" dir="rtl" autocomplete="off" placeholder="حذف">
+      <!-- Alternative (e.g. deactivate instead of delete) -->
+      <div *ngIf="alternativeLabel" class="p-3 mb-5 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center gap-2">
+        <p *ngIf="alternativeHint" class="text-xs text-amber-900 font-medium flex-1">{{ alternativeHint }}</p>
+        <button type="button" appAction="lock" display="label" [label]="alternativeLabel" [disabled]="isSubmitting" (click)="onAlternative()" class="w-full sm:w-auto"></button>
       </div>
 
-      <!-- Actions -->
-      <div class="flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-3 mt-6">
+      <!-- Confirmation Input -->
+      <div>
+        <label [attr.for]="titleId + '-confirm'" class="block text-xs font-bold text-slate-700 mb-2">
+          برای تایید نهایی حذف، کلمه <span class="font-black text-red-600 select-all px-1.5 py-0.5 bg-red-50 rounded border border-red-200">حذف</span> را تایپ کنید:
+        </label>
+        <input #confirmInput [id]="titleId + '-confirm'" type="text" [(ngModel)]="confirmationText" [disabled]="blocked" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-center font-bold text-sm disabled:bg-slate-100 disabled:cursor-not-allowed" dir="rtl" autocomplete="off" placeholder="حذف">
+      </div>
+
+    </div>
+
+    <!-- Actions: بیرون از بدنهٔ اسکرول‌دار تا در صفحهٔ کوتاه هم دیده شوند -->
+    <div class="px-4 py-3 sm:px-6 sm:py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-3 shrink-0">
         <button appAction="close"
                 size="lg"
                 display="label"
@@ -65,14 +98,12 @@
         <button appAction="delete"
                 size="lg"
                 display="label"
-                [label]="countdown > 0 && !isSubmitting ? ('حذف (' + countdown + ' ثانیه)') : 'حذف برای همیشه'"
+                [label]="countdown > 0 && !isSubmitting ? ('حذف (' + fa(countdown) + ' ثانیه)') : 'حذف برای همیشه'"
                 [disabled]="!isHardDeleteEnabled || isSubmitting"
                 [busy]="isSubmitting"
                 (click)="onHardDelete()"
                 class="w-full sm:w-auto min-w-[140px]">
         </button>
-      </div>
-
     </div>
   </div>
 </div>
