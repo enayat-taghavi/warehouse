@@ -5,15 +5,15 @@
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-600" appIcon="users"></svg>
       <div>
         <div class="text-[11px] text-slate-500 font-bold">کل ارکان و اعضا</div>
-        <div class="text-sm font-black text-slate-800 font-mono">{{ companyBoardMembers.length }} نفر</div>
+        <div class="text-sm font-black text-slate-800 tabular-nums">{{ fa(companyBoardMembers.length) }} نفر</div>
       </div>
     </div>
 
     <div class="bg-emerald-50/60 p-2.5 rounded-2xl border border-emerald-100 flex items-center gap-2.5">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-emerald-600" appIcon="edit-3"></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-emerald-600" appIcon="action-edit" aria-hidden="true"></svg>
       <div>
         <div class="text-[11px] text-emerald-700 font-bold">صاحبان حق امضا</div>
-        <div class="text-sm font-black text-emerald-800 font-mono">{{ getSignersCount() }} نفر</div>
+        <div class="text-sm font-black text-emerald-800 tabular-nums">{{ fa(getSignersCount()) }} نفر</div>
       </div>
     </div>
 
@@ -40,42 +40,34 @@
 
   <!-- پیام راهنما در صورت ثبت شرکت جدید بدون شناسه -->
   <div *ngIf="!companyId" class="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-800 flex items-center gap-2">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600 shrink-0" appIcon="alert-triangle"></svg>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600 shrink-0" appIcon="status-warning" aria-hidden="true"></svg>
     <span>جهت افزودن اعضای هیئت‌مدیره و الصاق مدارک، لطفاً ابتدا مشخصات پایه شرکت را ثبت و دکمه ذخیره را بزنید.</span>
   </div>
 
   <!-- دکمه باز کردن فرم ثبت عضو جدید -->
-  <div *ngIf="companyId && !showBoardMemberForm" class="flex justify-between items-center">
+  <div *ngIf="companyId && !showBoardMemberForm" class="flex justify-between items-center gap-2">
     <h4 class="text-xs font-bold text-slate-700">لیست ارکان قانونی، هیئت‌مدیره و صاحبان امضا</h4>
-    <button 
-      type="button" 
-      (click)="openNewBoardMemberForm()"
-      class="w-8 h-8 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-all shadow-xs cursor-pointer active:scale-95"
-      title="افزودن عضو جدید به هیئت‌مدیره"
-      aria-label="افزودن عضو جدید">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg>
-      <span class="sr-only">افزودن عضو جدید</span>
-    </button>
+    <button type="button" appAction="create" label="افزودن عضو" (click)="openNewBoardMemberForm()"></button>
   </div>
 
   <!-- کارت فرم افزودن / ویرایش عضو هیئت‌مدیره -->
-  <div *ngIf="showBoardMemberForm" class="bg-slate-50/90 p-3.5 rounded-2xl border border-indigo-200/80 shadow-xs space-y-3 animate-fade-in">
+  <div *ngIf="showBoardMemberForm" class="bg-slate-50/90 p-3.5 rounded-2xl border border-indigo-200/80 shadow-sm space-y-3 fade-in">
     <div class="flex items-center justify-between border-b border-slate-200/80 pb-2">
       <span class="text-xs font-black text-indigo-900 flex items-center gap-1.5">
-        <svg *ngIf="isEditingBoardMember" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg><svg *ngIf="!isEditingBoardMember" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="plus"></svg>
+        <svg *ngIf="isEditingBoardMember" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit" aria-hidden="true"></svg><svg *ngIf="!isEditingBoardMember" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-create" aria-hidden="true"></svg>
         <span>{{ isEditingBoardMember ? 'ویرایش مشخصات عضو هیئت‌مدیره' : 'ثبت عضو جدید هیئت‌مدیره / ارکان قانونی' }}</span>
       </span>
-      <button type="button" (click)="cancelBoardMemberForm()" class="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer" title="انصراف">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+      <button type="button" (click)="cancelBoardMemberForm()" class="w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" title="انصراف" aria-label="انصراف از فرم عضو">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close" aria-hidden="true"></svg>
       </button>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <!-- نوع عضویت -->
       <div>
-        <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع عضویت</label>
-        <select 
-          [(ngModel)]="newBoardMember.member_type" 
+        <label for="gov_f1" class="block text-[11px] font-bold text-slate-700 mb-1">نوع عضویت</label>
+        <select id="gov_f1"
+          [(ngModel)]="newBoardMember.member_type"
           class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
           <option value="real">شخص حقیقی</option>
           <option value="legal_rep">نماینده شخص حقوقی</option>
@@ -84,10 +76,10 @@
 
       <!-- نام شخصیت حقوقی متبوع -->
       <div *ngIf="newBoardMember.member_type === 'legal_rep'">
-        <label class="block text-[11px] font-bold text-slate-700 mb-1">نام شرکت / شخصیت حقوقی متبوع</label>
-        <input 
-          type="text" 
-          [(ngModel)]="newBoardMember.represented_legal_name" 
+        <label for="gov_f2" class="block text-[11px] font-bold text-slate-700 mb-1">نام شرکت / شخصیت حقوقی متبوع</label>
+        <input id="gov_f2"
+          type="text"
+          [(ngModel)]="newBoardMember.represented_legal_name"
           placeholder="مثال: شرکت سرمایه‌گذاری سینا"
           class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
@@ -95,9 +87,9 @@
 
       <!-- سمت سازمانی -->
       <div>
-        <label class="block text-[11px] font-bold text-slate-700 mb-1">سمت در شرکت</label>
-        <select 
-          [(ngModel)]="newBoardMember.role" 
+        <label for="gov_f3" class="block text-[11px] font-bold text-slate-700 mb-1">سمت در شرکت</label>
+        <select id="gov_f3"
+          [(ngModel)]="newBoardMember.role"
           class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
           <option *ngFor="let r of boardRolesList" [value]="r.value">{{ r.label }}</option>
         </select>
@@ -105,61 +97,65 @@
 
       <!-- نام -->
       <div>
-        <label class="block text-[11px] font-bold text-slate-700 mb-1">نام</label>
-        <input 
-          type="text" 
-          [(ngModel)]="newBoardMember.first_name" 
-          placeholder="نام" 
+        <label for="gov_f4" class="block text-[11px] font-bold text-slate-700 mb-1">نام</label>
+        <input id="gov_f4"
+          type="text"
+          [(ngModel)]="newBoardMember.first_name"
+          placeholder="نام"
           class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
       </div>
 
       <!-- نام خانوادگی -->
       <div>
-        <label class="block text-[11px] font-bold text-slate-700 mb-1">نام خانوادگی</label>
-        <input 
-          type="text" 
-          [(ngModel)]="newBoardMember.last_name" 
-          placeholder="نام خانوادگی" 
+        <label for="gov_f5" class="block text-[11px] font-bold text-slate-700 mb-1">نام خانوادگی</label>
+        <input id="gov_f5"
+          type="text"
+          [(ngModel)]="newBoardMember.last_name"
+          placeholder="نام خانوادگی"
           class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
       </div>
 
       <!-- کد ملی (۱۰ رقم) -->
       <div>
-        <label class="block text-[11px] font-bold text-slate-700 mb-1">کد ملی (۱۰ رقم)</label>
-        <input 
-          type="text" 
-          [(ngModel)]="newBoardMember.national_code" 
-          placeholder="۱۲۳۴۵۶۷۸۹۰" 
+        <label for="gov_f6" class="block text-[11px] font-bold text-slate-700 mb-1">کد ملی (۱۰ رقم)</label>
+        <input id="gov_f6"
+          type="text"
+          [(ngModel)]="newBoardMember.national_code"
+          placeholder="1234567890"
           maxlength="10"
-          class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          inputmode="numeric"
+          dir="ltr"
+          class="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-xl bg-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
       </div>
 
       <!-- تاریخ شروع تصدی -->
       <div class="relative" (click)="$event.stopPropagation()">
-        <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ شروع تصدی (جلالی)</label>
+        <label for="gov_f7" class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ شروع تصدی (جلالی)</label>
         <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
-          <ng-persian-datepicker 
+          <ng-persian-datepicker
             [(uiIsVisible)]="isBoardTermStartDatePickerOpen"
-            [dateInitValue]="false" 
+            [dateInitValue]="false"
             (dateOnSelect)="onBoardTermStartSelect($event)"
             class="w-full block relative cursor-pointer datepicker-left to-datepicker">
-            <input 
-              type="text" 
-              [formControl]="boardTermStartControl" 
+            <input
+              type="text"
+              [formControl]="boardTermStartControl"
+              aria-label="تاریخ شروع تصدی"
               (click)="isBoardTermStartDatePickerOpen = !isBoardTermStartDatePickerOpen"
-              placeholder="۱۴۰۳/۰۱/۰۱" 
-              class="w-full text-xs font-mono font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+              placeholder="۱۴۰۳/۰۱/۰۱"
+              class="w-full text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             />
           </ng-persian-datepicker>
-          <button 
-            type="button" 
+          <button
+            type="button"
             (click)="isBoardTermStartDatePickerOpen = !isBoardTermStartDatePickerOpen; $event.stopPropagation()"
             title="انتخاب تقویم شمسی"
-            class="text-slate-400 hover:text-indigo-600 p-0.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
+            aria-label="انتخاب از تقویم شمسی"
+            class="w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar" aria-hidden="true"></svg>
           </button>
         </div>
       </div>
@@ -168,35 +164,37 @@
       <div class="relative" (click)="$event.stopPropagation()">
         <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ پایان تصدی (جلالی - ۲ ساله)</label>
         <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
-          <ng-persian-datepicker 
+          <ng-persian-datepicker
             [(uiIsVisible)]="isBoardTermExpiryDatePickerOpen"
-            [dateInitValue]="false" 
+            [dateInitValue]="false"
             (dateOnSelect)="onBoardTermExpirySelect($event)"
             class="w-full block relative cursor-pointer to-datepicker">
-            <input 
-              type="text" 
-              [formControl]="boardTermExpiryControl" 
+            <input
+              type="text"
+              [formControl]="boardTermExpiryControl"
+              aria-label="تاریخ پایان تصدی"
               (click)="isBoardTermExpiryDatePickerOpen = !isBoardTermExpiryDatePickerOpen"
-              placeholder="۱۴۰۵/۰۱/۰۱" 
-              class="w-full text-xs font-mono font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+              placeholder="۱۴۰۵/۰۱/۰۱"
+              class="w-full text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             />
           </ng-persian-datepicker>
-          <button 
-            type="button" 
+          <button
+            type="button"
             (click)="isBoardTermExpiryDatePickerOpen = !isBoardTermExpiryDatePickerOpen; $event.stopPropagation()"
             title="انتخاب تقویم شمسی"
-            class="text-slate-400 hover:text-indigo-600 p-0.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
+            aria-label="انتخاب از تقویم شمسی"
+            class="w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar" aria-hidden="true"></svg>
           </button>
         </div>
       </div>
 
       <!-- چک‌باکس حق امضا -->
-      <div class="flex items-center gap-2 pt-5">
-        <input 
-          type="checkbox" 
-          id="hasSigRight" 
-          [(ngModel)]="newBoardMember.has_signature_right" 
+      <div class="flex items-center gap-2 md:pt-5">
+        <input
+          type="checkbox"
+          id="hasSigRight"
+          [(ngModel)]="newBoardMember.has_signature_right"
           class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
         />
         <label for="hasSigRight" class="text-xs font-bold text-slate-700 cursor-pointer">
@@ -207,9 +205,9 @@
       <!-- حدود اختیارات امضا (در صورت داشتن حق امضا) -->
       <div class="md:col-span-3" *ngIf="newBoardMember.has_signature_right">
         <label class="block text-[11px] font-bold text-slate-700 mb-1">حدود اختیارات و نحوه امضا</label>
-        <input 
-          type="text" 
-          [(ngModel)]="newBoardMember.signature_scope" 
+        <input id="gov_f7"
+          type="text"
+          [(ngModel)]="newBoardMember.signature_scope"
           placeholder="مثال: امضای کلیه اسناد مالی و چک‌ها متفقاً با رئیس هیئت‌مدیره همراه با مهر شرکت"
           class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
@@ -218,67 +216,53 @@
       <!-- فایل تصویر کارت ملی / شناسنامه -->
       <div>
         <label class="block text-[11px] font-bold text-slate-700 mb-1">تصویر کارت ملی / شناسنامه (PDF/تصویر)</label>
-        <input 
-          type="file" 
-          (change)="onIdDocFileSelected($event)" 
+        <app-file-upload
           accept=".pdf,.jpg,.jpeg,.png"
-          class="w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
-        />
+          [maxSizeMB]="20"
+          label="انتخاب کارت ملی یا شناسنامه"
+          [selectedFile]="selectedIdDocFile"
+          (fileSelected)="onIdDocFileSelected($event)"
+          (fileRemoved)="selectedIdDocFile = null">
+        </app-file-upload>
       </div>
 
       <!-- فایل حکم انتصاب / صورتجلسه مجمع -->
       <div class="md:col-span-2">
         <label class="block text-[11px] font-bold text-slate-700 mb-1">حکم انتصاب / صورتجلسه انتخاب مدیران (PDF/تصویر)</label>
-        <input 
-          type="file" 
-          (change)="onAppointmentDocFileSelected($event)" 
+        <app-file-upload
           accept=".pdf,.jpg,.jpeg,.png"
-          class="w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
-        />
+          [maxSizeMB]="20"
+          label="انتخاب حکم انتصاب یا صورتجلسه"
+          [selectedFile]="selectedAppointmentDocFile"
+          (fileSelected)="onAppointmentDocFileSelected($event)"
+          (fileRemoved)="selectedAppointmentDocFile = null">
+        </app-file-upload>
       </div>
     </div>
 
     <!-- دکمه‌های اقدام فرم (آیکونی با تولتیپ و متن دسترس‌پذیری) -->
     <div class="flex justify-end gap-2 pt-2 border-t border-slate-200">
-      <button 
-        type="button" 
-        (click)="cancelBoardMemberForm()" 
-        title="انصراف از ویرایش/افزودن عضو"
-        aria-label="انصراف"
-        class="w-8 h-8 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center transition-all cursor-pointer">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
-        <span class="sr-only">انصراف</span>
-      </button>
-      <button 
-        type="button" 
-        (click)="saveBoardMember()" 
-        [disabled]="isSavingBoardMember"
-        [title]="isEditingBoardMember ? 'ثبت ویرایش عضو هیئت‌مدیره' : 'ذخیره عضو در هیئت‌مدیره'"
-        aria-label="ذخیره عضو"
-        class="w-8 h-8 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50">
-        <span *ngIf="isSavingBoardMember" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-        <svg *ngIf="!isSavingBoardMember" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
-        <span class="sr-only">{{ isEditingBoardMember ? 'ثبت ویرایش عضو' : 'ذخیره عضو در هیئت‌مدیره' }}</span>
-      </button>
+      <button type="button" appAction="close" display="label" label="انصراف" (click)="cancelBoardMemberForm()"></button>
+      <button type="button" appAction="save" display="label" [label]="isEditingBoardMember ? 'ثبت ویرایش عضو' : 'ذخیرهٔ عضو'" [busy]="isSavingBoardMember" (click)="saveBoardMember()"></button>
     </div>
   </div>
 
   <!-- جدول اعضای هیئت‌مدیره ثبت شده -->
-  <div *ngIf="companyId" class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+  <div *ngIf="companyId" class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm">
     <div *ngIf="loadError" class="py-6 text-center space-y-2 border border-dashed border-rose-200 rounded-2xl bg-rose-50/40" role="alert">
       <div class="text-xs font-bold text-slate-600">دریافت اعضای هیئت‌مدیره انجام نشد.</div>
       <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="retry()"></button>
     </div>
-    <div *ngIf="isLoadingBoardMembers" class="p-6 text-center text-xs text-slate-500">
-      <span>در حال بارگذاری لیست اعضای هیئت‌مدیره...</span>
+    <div *ngIf="isLoadingBoardMembers" class="p-3" role="status" aria-busy="true" aria-label="در حال بارگذاری اعضای هیئت‌مدیره">
+      <app-loading-skeleton type="text" [lines]="3"></app-loading-skeleton>
     </div>
 
-    <div *ngIf="!isLoadingBoardMembers && !loadError && companyBoardMembers.length === 0" class="p-8 text-center text-xs text-slate-400">
+    <div *ngIf="!isLoadingBoardMembers && !loadError && companyBoardMembers.length === 0" class="p-8 text-center text-xs text-slate-500">
       <span>هنوز هیچ عضوی برای هیئت‌مدیره یا ارکان قانونی این شرکت ثبت نشده است.</span>
     </div>
 
     <!-- جدول نسخه دسکتاپ اعضای هیئت‌مدیره -->
-    <div class="hidden md:block overflow-x-auto">
+    <div class="hidden xl:block overflow-x-auto">
     <table *ngIf="!isLoadingBoardMembers && companyBoardMembers.length > 0" class="w-full text-right border-collapse text-xs">
       <thead class="bg-slate-50/90 text-slate-600 font-bold border-b border-slate-200">
         <tr>
@@ -294,14 +278,14 @@
       </thead>
       <tbody class="divide-y divide-slate-100">
         <tr *ngFor="let m of companyBoardMembers; let idx = index" class="hover:bg-slate-50/70 transition-colors">
-          <td class="p-2.5 text-center text-slate-400 font-mono text-[11px]">{{ idx + 1 }}</td>
+          <td class="p-2.5 text-center text-slate-400 tabular-nums text-[11px]">{{ fa(idx + 1) }}</td>
           <td class="p-2.5">
             <div class="font-bold text-slate-800">{{ m.first_name }} {{ m.last_name }}</div>
             <div *ngIf="m.member_type === 'legal_rep'" class="text-[10px] text-indigo-600 font-medium">
               نماینده: {{ m.represented_legal_name || 'شخصیت حقوقی' }}
             </div>
           </td>
-          <td class="p-2.5 text-center font-mono font-bold text-slate-700">{{ m.national_code }}</td>
+          <td class="p-2.5 text-center font-mono font-bold text-slate-700" dir="ltr">{{ m.national_code }}</td>
           <td class="p-2.5">
             <span class="inline-flex px-2 py-0.5 rounded-lg border text-[11px] font-bold" [ngClass]="getRoleBadgeClass(m.role)">
               {{ getRoleLabel(m.role) }}
@@ -310,7 +294,7 @@
           <td class="p-2.5 text-center">
             <div *ngIf="m.has_signature_right">
               <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold" [title]="m.signature_scope || 'دارای حق امضا'">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit-3"></svg>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit" aria-hidden="true"></svg>
                 <span>دارای حق امضا</span>
               </span>
               <div *ngIf="m.signature_scope" class="text-[10px] text-slate-400 truncate max-w-[140px] mx-auto mt-0.5" [title]="m.signature_scope">
@@ -319,32 +303,32 @@
             </div>
             <span *ngIf="!m.has_signature_right" class="text-slate-300 text-[11px]">—</span>
           </td>
-          <td class="p-2.5 text-center font-mono text-[11px] text-slate-600">
+          <td class="p-2.5 text-center tabular-nums text-[11px] text-slate-600">
             <div *ngIf="m.term_start || m.term_expiry">
-              <span>{{ m.term_start || '—' }}</span>
+              <span>{{ faDigits(m.term_start) }}</span>
               <span class="text-slate-400 mx-1">تا</span>
-              <span>{{ m.term_expiry || '—' }}</span>
+              <span>{{ faDigits(m.term_expiry) }}</span>
             </div>
             <span *ngIf="!m.term_start && !m.term_expiry" class="text-slate-300">—</span>
           </td>
           <td class="p-2.5 text-center">
             <div class="flex items-center justify-center gap-1.5">
-              <a *ngIf="m.attached_id_doc_url" [href]="m.attached_id_doc_url" [appExternalLink]="m.attached_id_doc_url" target="_blank" title="مشاهده کارت ملی" class="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
+              <a *ngIf="m.attached_id_doc_url" [href]="m.attached_id_doc_url" [appExternalLink]="m.attached_id_doc_url" target="_blank" title="مشاهده کارت ملی" aria-label="مشاهده کارت ملی" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card" aria-hidden="true"></svg>
               </a>
-              <a *ngIf="m.attached_appointment_doc_url" [href]="m.attached_appointment_doc_url" [appExternalLink]="m.attached_appointment_doc_url" target="_blank" title="مشاهده حکم انتصاب" class="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center justify-center">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
+              <a *ngIf="m.attached_appointment_doc_url" [href]="m.attached_appointment_doc_url" [appExternalLink]="m.attached_appointment_doc_url" target="_blank" title="مشاهده حکم انتصاب" aria-label="مشاهده حکم انتصاب" class="w-8 h-8 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text" aria-hidden="true"></svg>
               </a>
               <span *ngIf="!m.attached_id_doc_url && !m.attached_appointment_doc_url" class="text-slate-300 text-[11px]">—</span>
             </div>
           </td>
           <td class="p-2.5 text-center">
             <div class="flex items-center justify-center gap-1">
-              <button type="button" (click)="editBoardMember(m)" title="ویرایش عضو" class="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
+              <button type="button" (click)="editBoardMember(m)" title="ویرایش عضو" aria-label="ویرایش عضو" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit" aria-hidden="true"></svg>
               </button>
-              <button type="button" (click)="deleteBoardMember(m)" title="حذف عضو" class="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+              <button type="button" (click)="deleteBoardMember(m)" title="حذف عضو" aria-label="حذف عضو" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete" aria-hidden="true"></svg>
               </button>
             </div>
           </td>
@@ -354,7 +338,7 @@
     </div>
 
     <!-- کارت‌های ارگونومیک موبایل اعضای هیئت‌مدیره -->
-    <div *ngIf="!isLoadingBoardMembers && companyBoardMembers.length > 0" class="block md:hidden divide-y divide-slate-100">
+    <div *ngIf="!isLoadingBoardMembers && companyBoardMembers.length > 0" class="block xl:hidden divide-y divide-slate-100">
       <div *ngFor="let m of companyBoardMembers" class="p-3.5 space-y-2.5 bg-white">
         <div class="flex items-center justify-between">
           <div>
@@ -371,38 +355,38 @@
         <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2 rounded-xl border border-slate-100">
           <div>
             <span class="text-slate-400 text-[10px] block">کد ملی:</span>
-            <span class="font-mono font-bold text-slate-700">{{ m.national_code }}</span>
+            <span class="font-mono font-bold text-slate-700" dir="ltr">{{ m.national_code }}</span>
           </div>
           <div>
             <span class="text-slate-400 text-[10px] block">دوره تصدی:</span>
-            <span class="font-mono text-slate-600 text-[10px]">{{ m.term_start || '—' }} تا {{ m.term_expiry || '—' }}</span>
+            <span class="tabular-nums text-slate-600 text-[10px]">{{ (m.term_start || m.term_expiry) ? (faDigits(m.term_start) + ' تا ' + faDigits(m.term_expiry)) : '—' }}</span>
           </div>
         </div>
 
         <div *ngIf="m.has_signature_right" class="flex items-center gap-1.5 text-[10px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 font-bold">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit-3"></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit" aria-hidden="true"></svg>
           <span>دارای حق امضا</span>
           <span *ngIf="m.signature_scope" class="text-slate-400 font-normal">({{ m.signature_scope }})</span>
         </div>
 
         <div class="flex items-center justify-between pt-1 border-t border-slate-100">
           <div class="flex items-center gap-1.5">
-            <a *ngIf="m.attached_id_doc_url" [href]="m.attached_id_doc_url" [appExternalLink]="m.attached_id_doc_url" target="_blank" title="مشاهده کارت ملی" class="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center gap-1 text-[10px] font-bold">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card"></svg>
+            <a *ngIf="m.attached_id_doc_url" [href]="m.attached_id_doc_url" [appExternalLink]="m.attached_id_doc_url" target="_blank" title="مشاهده کارت ملی" class="min-h-[40px] px-2.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 flex items-center gap-1 text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card" aria-hidden="true"></svg>
               <span>کارت ملی</span>
             </a>
-            <a *ngIf="m.attached_appointment_doc_url" [href]="m.attached_appointment_doc_url" [appExternalLink]="m.attached_appointment_doc_url" target="_blank" title="مشاهده حکم انتصاب" class="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center gap-1 text-[10px] font-bold">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
+            <a *ngIf="m.attached_appointment_doc_url" [href]="m.attached_appointment_doc_url" [appExternalLink]="m.attached_appointment_doc_url" target="_blank" title="مشاهده حکم انتصاب" class="min-h-[40px] px-2.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 flex items-center gap-1 text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text" aria-hidden="true"></svg>
               <span>حکم انتصاب</span>
             </a>
           </div>
 
           <div class="flex items-center gap-1">
-            <button type="button" (click)="editBoardMember(m)" title="ویرایش عضو" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl border border-slate-200 transition-colors cursor-pointer">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
+            <button type="button" (click)="editBoardMember(m)" title="ویرایش عضو" aria-label="ویرایش عضو" class="w-10 h-10 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl border border-slate-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit" aria-hidden="true"></svg>
             </button>
-            <button type="button" (click)="deleteBoardMember(m)" title="حذف عضو" class="w-8 h-8 flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl border border-rose-200 transition-colors cursor-pointer">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
+            <button type="button" (click)="deleteBoardMember(m)" title="حذف عضو" aria-label="حذف عضو" class="w-10 h-10 flex items-center justify-center text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl border border-rose-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete" aria-hidden="true"></svg>
             </button>
           </div>
         </div>

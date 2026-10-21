@@ -68,6 +68,67 @@ describe('CompanyTreasuryTabComponent (تب «بانک و شبا»، مشارک�
     TestBed.resetTestingModule();
   });
 
+  describe('گام ۶: شبای تکراری، رکورد در صف و چیدمان', () => {
+    it('A15: شبای تکراری پیش از ثبت پرسش هشدار دارد و «انصراف» چیزی ثبت نمی‌کند', async () => {
+      const confirm = TestBed.inject(ConfirmDialogService) as any;
+      confirm.open.mockResolvedValueOnce(false);
+      component.companyBankAccounts[0].sheba_number = 'IR160120000000001234567890';
+      component.onShebaInput('IR160120000000001234567890');
+      await component.saveBankAccount();
+      expect(confirm.open).toHaveBeenCalledWith(expect.objectContaining({ type: 'warning', title: 'شبای تکراری' }));
+      expect(mockCompanyApi.createBankAccount).not.toHaveBeenCalled();
+      confirm.open.mockResolvedValueOnce(true);
+      await component.saveBankAccount();
+      expect(mockCompanyApi.createBankAccount).toHaveBeenCalledTimes(1);
+    });
+
+    it('A15: ویرایش همان حساب با شبای خودش هشدار تکراری نمی‌دهد', async () => {
+      const confirm = TestBed.inject(ConfirmDialogService) as any;
+      component.companyBankAccounts[0].sheba_number = 'IR160120000000001234567890';
+      component.editAccount(component.companyBankAccounts[0]);
+      await component.saveBankAccount();
+      expect(confirm.open).not.toHaveBeenCalled();
+      expect(mockCompanyApi.updateBankAccount).toHaveBeenCalledTimes(1);
+    });
+
+    it('E2: حساب در صف ارسال نشان دارد و ویرایش، حذف و «حساب اصلی» آن غیرفعال است', () => {
+      component.companyBankAccounts = [
+        ...component.companyBankAccounts,
+        { id: -5, company: 1, bank_name: 'بانک تجارت', sheba_number: 'IR220180000000009876543210', is_primary: false, is_active: true, _offlinePending: true } as any
+      ];
+      fixture.changeDetectorRef.markForCheck();
+      fixture.detectChanges();
+      const cards = Array.from(fixture.nativeElement.querySelectorAll('.grid > div')) as HTMLElement[];
+      const pendingCard = cards.find(c => c.textContent?.includes('بانک تجارت'))!;
+      expect(pendingCard.querySelector('app-offline-pending-badge')).not.toBeNull();
+      const buttons = Array.from(pendingCard.querySelectorAll('button')) as HTMLButtonElement[];
+      const labelled = (l: string) => buttons.find(b => b.getAttribute('aria-label') === l)!;
+      expect(labelled('ویرایش حساب').disabled).toBe(true);
+      expect(labelled('حذف حساب').disabled).toBe(true);
+      expect(labelled('تنظیم به عنوان اصلی').disabled).toBe(true);
+      component.editAccount(component.companyBankAccounts[1]);
+      expect(component.isEditingAccount).toBe(false);
+      component.setPrimaryAccount(component.companyBankAccounts[1]);
+      expect(mockCompanyApi.setPrimaryBankAccount).not.toHaveBeenCalled();
+    });
+
+    it('E5: حساب ثبت‌شده در صف پیام «در صف ارسال» می‌دهد نه «با موفقیت»', async () => {
+      mockCompanyApi.createBankAccount.mockImplementationOnce((data: any) => of({ id: -9, ...data, _offlinePending: true }));
+      component.onShebaInput('IR160120000000001234567890');
+      await component.saveBankAccount();
+      expect(mockToast.info).toHaveBeenCalled();
+      expect(mockToast.success).not.toHaveBeenCalled();
+    });
+
+    it('A16 و ت۷: ظرف شبا LTR است و شمارنده فارسی', () => {
+      const el: HTMLElement = fixture.nativeElement;
+      const input = el.querySelector('#treasury_sheba') as HTMLInputElement;
+      expect(input.closest('[dir="ltr"]')).not.toBeNull();
+      expect(input.placeholder).toBe('12 0120 0000 0000 1234 5678 90');
+      expect(el.textContent).toContain('۱ حساب ثبت‌شده');
+    });
+  });
+
   describe('بارگذاری و context استودیو', () => {
     it('با companyId حساب‌ها یک بار دریافت می‌شوند و شمارندهٔ تب در context می‌نشیند', () => {
       expect(mockCompanyApi.getBankAccounts).toHaveBeenCalledTimes(1);

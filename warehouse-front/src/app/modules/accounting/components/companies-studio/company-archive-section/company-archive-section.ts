@@ -16,6 +16,8 @@ import { DocumentPreviewComponent } from '../../../../../shared/components/docum
 import { ExternalLinkDirective } from '../../../../../shared/directives/external-link.directive';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
+import { FileUploadComponent } from '../../../../../shared/components/file-upload/file-upload.component';
+import { LoadingSkeletonComponent } from '../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 
 /** شناسهٔ تب هسته‌ای که این بخش در انتهای آن می‌نشیند (شمارندهٔ تب از همین بخش می‌آید) */
 const DOCUMENTS_TAB_ID = 'documents';
@@ -27,7 +29,7 @@ const DOCUMENTS_TAB_ID = 'documents';
 @Component({
   selector: 'app-company-archive-section',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, DocumentPreviewComponent, ExternalLinkDirective, SvgIconDirective, ActionButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, DocumentPreviewComponent, ExternalLinkDirective, SvgIconDirective, ActionButtonComponent, FileUploadComponent, LoadingSkeletonComponent],
   providers: [CompaniesStudioFacade],
   host: { class: 'block' },
   templateUrl: './company-archive-section.html'
@@ -260,7 +262,25 @@ export class CompanyArchiveSectionComponent implements OnInit, OnChanges, OnDest
     this.cdr.markForCheck();
   }
 
+  private static readonly FA_NUMBER = new Intl.NumberFormat('fa-IR');
+
+  /** شمارنده با رقم فارسی (ت۷) */
+  fa(n: number): string {
+    return CompanyArchiveSectionComponent.FA_NUMBER.format(n);
+  }
+
+  /** تاریخ جلالی متنی با رقم فارسی (ت۷، A24)؛ خالی «—» */
+  faDigits(value: string | null | undefined): string {
+    if (!value) return '—';
+    return String(value).replace(/[0-9]/g, d => String.fromCharCode(0x06F0 + Number(d)));
+  }
+
+  /** فایل از app-file-upload (File) یا رویداد input (سازگاری) */
   onDocFileSelected(event: any): void {
+    if (event instanceof File) {
+      this.newDoc.file = event;
+      return;
+    }
     const file = event.target?.files?.[0];
     if (file) {
       this.newDoc.file = file;

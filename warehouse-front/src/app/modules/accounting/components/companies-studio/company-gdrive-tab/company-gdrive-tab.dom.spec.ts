@@ -195,6 +195,30 @@ describe('CompanyGdriveTabComponent: Google Drive Sync Tab with and without Acco
     await fixture.whenStable();
   };
 
+  it('B4 و D5: صف در موبایل کارت دارد، وضعیت با آیکون است نه نویسهٔ یونیکد، و خطا درون کارت باز می‌شود؛ D4 بدون dark:', async () => {
+    const baseGet: any = mockHttp.get.getMockImplementation();
+    mockHttp.get.mockImplementation((url: string, ...rest: any[]) => {
+      if (url.includes('/queue/')) {
+        return of({ results: [
+          { id: 7, target_filename: 'invoice-1.pdf', target_folder_path: '/Finance/2026', action: 'upload', status: 'failed', retry_count: 2, created_at: '2026-10-21T08:00:00Z', error_code: 'QUOTA', error_message: 'سهمیه پر است' },
+          { id: 8, target_filename: 'id.jpg', target_folder_path: '/HR', action: 'upload', status: 'completed', retry_count: 0, created_at: '2026-10-21T08:00:00Z' }
+        ], count: 2 });
+      }
+      return baseGet(url, ...rest);
+    });
+    await createComponent(5);
+    const el: HTMLElement = fixture.nativeElement;
+    const cards = Array.from(el.querySelectorAll('ul.xl\\:hidden > li')) as HTMLElement[];
+    expect(cards.length).toBe(2);
+    expect(el.textContent).not.toMatch(/[✓⌛⟳✕]/);
+    expect(el.innerHTML).not.toContain('dark:');
+    const failBtn = cards[0].querySelector('button[aria-expanded]') as HTMLButtonElement;
+    expect(failBtn.textContent).toContain('۲ تلاش');
+    failBtn.click();
+    fixture.detectChanges();
+    expect(cards[0].textContent).toContain('سهمیه پر است');
+  });
+
   it('با getCompanyGdriveUrl حسابداری و companyId=5: اولین HttpClient.get به نشانی زیر مجموعه apiUrl/personnel/companies/5/gdrive ارسال می‌شود', async () => {
     await createComponent(5);
 

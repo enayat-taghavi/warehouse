@@ -145,6 +145,12 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
   public selectedCompanyId = signal<number | null>(null);
   public currentPage = signal<number>(1);
   public readonly pageSize = 20;
+  private static readonly FA_NUMBER = new Intl.NumberFormat('fa-IR');
+
+  /** شمارنده با رقم فارسی (ت۷) */
+  fa(n: number | null | undefined): string {
+    return CompanyGdriveTabComponent.FA_NUMBER.format(n ?? 0);
+  }
 
   // تسک‌های بازشده در آکاردئون خطا و جزئیات
   public expandedTaskIds = signal<Set<number>>(new Set());

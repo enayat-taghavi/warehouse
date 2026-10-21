@@ -15,6 +15,8 @@ import { ConfirmDialogService } from '../../../../../shared/components/confirm-d
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { ExternalLinkDirective } from '../../../../../shared/directives/external-link.directive';
+import { FileUploadComponent } from '../../../../../shared/components/file-upload/file-upload.component';
+import { LoadingSkeletonComponent } from '../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 
 /** شناسهٔ تب در استودیوی شرکت (`?tab=governance`) */
 export const GOVERNANCE_TAB_ID = 'governance';
@@ -26,7 +28,7 @@ export const GOVERNANCE_TAB_ID = 'governance';
 @Component({
   selector: 'app-company-governance-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, ExternalLinkDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, ExternalLinkDirective, FileUploadComponent, LoadingSkeletonComponent],
   providers: [CompaniesStudioFacade],
   templateUrl: './company-governance-tab.html'
 })
@@ -255,8 +257,26 @@ export class CompanyGovernanceTabComponent implements OnInit, OnChanges, OnDestr
     this.cdr.markForCheck();
   }
 
+  /** فایل از app-file-upload (File) یا رویداد input (سازگاری) */
+  private pickFile(fileOrEvent: any): File | undefined {
+    return fileOrEvent instanceof File ? fileOrEvent : fileOrEvent?.target?.files?.[0];
+  }
+
+  private static readonly FA_NUMBER = new Intl.NumberFormat('fa-IR');
+
+  /** شمارنده با رقم فارسی (ت۷) */
+  fa(n: number): string {
+    return CompanyGovernanceTabComponent.FA_NUMBER.format(n);
+  }
+
+  /** تاریخ جلالی متنی با رقم فارسی (ت۷)؛ خالی «—» */
+  faDigits(value: string | null | undefined): string {
+    if (!value) return '—';
+    return String(value).replace(/[0-9]/g, d => String.fromCharCode(0x06F0 + Number(d)));
+  }
+
   onIdDocFileSelected(event: any): void {
-    const file = event.target.files?.[0];
+    const file = this.pickFile(event);
     if (file) {
       if (file.size > 20 * 1024 * 1024) {
         this.toast.error('حجم فایل مدارک هویتی نباید بیش از ۲۰ مگابایت باشد.');
@@ -267,7 +287,7 @@ export class CompanyGovernanceTabComponent implements OnInit, OnChanges, OnDestr
   }
 
   onAppointmentDocFileSelected(event: any): void {
-    const file = event.target.files?.[0];
+    const file = this.pickFile(event);
     if (file) {
       if (file.size > 20 * 1024 * 1024) {
         this.toast.error('حجم فایل حکم انتصاب نباید بیش از ۲۰ مگابایت باشد.');

@@ -387,9 +387,8 @@ export const MODULE: WhFrontendModule = {
         { urlPart: '/attendance/', entityType: 'daily_attendance' },
         { urlPart: '/company-bank-accounts/', entityType: 'company_bank_account' },
         { urlPart: '/company-board-members/', entityType: 'company_board_member' },
-        { urlPart: '/company-documents/', entityType: 'company_document' },
-        { urlPart: '/user-company-access/', entityType: 'user_company_access' },
-        { urlPart: '/companies/', entityType: 'company' }
+        { urlPart: '/company-documents/', entityType: 'company_document' }
+        // /companies/ و /user-company-access/ موجودیت پلتفرم‌اند و در هسته (resolveEntityTypeFromUrl) اعلام شده‌اند (E6)
       ],
       appRoutePrefixes: [
         '/app/finance',

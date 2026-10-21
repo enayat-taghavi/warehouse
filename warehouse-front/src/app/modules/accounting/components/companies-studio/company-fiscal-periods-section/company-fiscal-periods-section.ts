@@ -13,6 +13,7 @@ import { ConfirmDialogService, ConfirmDialogConfig } from '../../../../../shared
 import { LoadingSkeletonComponent } from '../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
+import { OfflinePendingBadgeComponent } from '../../../../../shared/components/offline-pending-badge/offline-pending-badge.component';
 
 /**
  * بخش «دوره‌های مالی» در انتهای تب «سال مالی، بیمه و مودیان» استودیوی شرکت
@@ -21,7 +22,7 @@ import { ActionButtonComponent } from '../../../../../shared/components/action-b
 @Component({
   selector: 'app-company-fiscal-periods-section',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, LoadingSkeletonComponent, SvgIconDirective, ActionButtonComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, LoadingSkeletonComponent, SvgIconDirective, ActionButtonComponent, OfflinePendingBadgeComponent],
   providers: [CompaniesStudioFacade],
   host: { class: 'block' },
   templateUrl: './company-fiscal-periods-section.html'
@@ -40,6 +41,29 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
   private unregisterDirty: () => void;
 
   isOnline = this.network.isOnline;
+  private static readonly FA_NUMBER = new Intl.NumberFormat('fa-IR');
+
+  /** شمارنده با رقم فارسی (ت۷) */
+  fa(n: number): string {
+    return CompanyFiscalPeriodsSectionComponent.FA_NUMBER.format(n);
+  }
+
+  /** سال و تاریخ جلالی متنی با رقم فارسی (ت۷) */
+  faDigits(value: string | number | null | undefined): string {
+    if (value === null || value === undefined || value === '') return '—';
+    return String(value).replace(/[0-9]/g, d => String.fromCharCode(0x06F0 + Number(d)));
+  }
+
+  /** دوره‌ای که در حالت آفلاین ساخته شده و هنوز شناسهٔ سرور ندارد (E2) */
+  isPendingRecord(rec: any): boolean {
+    return !!rec?._offlinePending || (typeof rec?.id === 'number' && rec.id < 0);
+  }
+
+  /** راهنمای دکمهٔ کار حساس دوره: علت غیرفعال بودن یا شرح کار */
+  actionHint(period: CompanyFiscalPeriod, describe: string): string {
+    if (this.isPendingRecord(period)) return 'پس از ارسال دوره به سرور در دسترس است';
+    return this.isOnline ? describe : 'فقط در حالت برخط';
+  }
 
   // مدیریت دوره‌های مالی رسمی شرکت (CompanyFiscalPeriod)
   companyFiscalPeriods: CompanyFiscalPeriod[] = [];
@@ -203,7 +227,11 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
     this.facade.createFiscalPeriod(payload).subscribe({
       next: (created) => {
         this.isSavingFiscalPeriod = false;
-        this.toast.success(`دوره مالی «${created.title}» با موفقیت تعریف شد.`);
+        if (this.isPendingRecord(created)) {
+          this.toast.info('دوره مالی در صف ارسال است و پس از اتصال ثبت می‌شود.');
+        } else {
+          this.toast.success(`دوره مالی «${created.title}» با موفقیت تعریف شد.`);
+        }
         // پاسخ دیررس پس از رفتن به شرکت دیگر، فرم و فهرست آن شرکت را دست نمی‌زند
         if (companyId !== this.companyId) return;
         this.cancelCreateFiscalPeriod();

@@ -1,15 +1,15 @@
 <div class="space-y-4">
   <!-- بخش مدیریت چند شماره شبا و کارت‌های حساب‌های بانکی -->
   <div class="space-y-3">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <span class="text-xs font-black text-slate-800">حساب‌های بانکی و شماره‌های شبای رسمی شرکت</span>
-        <span class="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-100">
-          {{ companyBankAccounts.length }} حساب ثبت‌شده
+        <span class="whitespace-nowrap tabular-nums text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-100">
+          {{ fa(companyBankAccounts.length) }} حساب ثبت‌شده
         </span>
       </div>
       <div *ngIf="!companyId" class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600 shrink-0" appIcon="alert-triangle"></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-600 shrink-0" appIcon="status-warning" aria-hidden="true"></svg>
         <span>پس از ثبت اولیه شرکت، امکان تعریف چند شماره شبا فعال می‌گردد.</span>
       </div>
     </div>
@@ -19,87 +19,91 @@
       <div class="text-xs font-bold text-slate-600">دریافت حساب‌های بانکی انجام نشد.</div>
       <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="retry()"></button>
     </div>
-    <div *ngIf="isLoadingBankAccounts" class="py-6 text-center text-xs text-slate-400">
-      در حال بارگذاری حساب‌های بانکی...
+    <div *ngIf="isLoadingBankAccounts" role="status" aria-busy="true" aria-label="در حال بارگذاری حساب‌های بانکی">
+      <app-loading-skeleton type="text" [lines]="3"></app-loading-skeleton>
+    </div>
+    <div *ngIf="companyId && !isLoadingBankAccounts && !loadError && companyBankAccounts.length === 0" class="py-6 px-3 text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-2xl">
+      هنوز حساب بانکی برای این شرکت ثبت نشده است. از فرم زیر نخستین حساب را بیفزایید.
     </div>
 
     <!-- فهرست کارت‌های حساب بانکی شرکت -->
     <div *ngIf="!isLoadingBankAccounts && companyBankAccounts.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-      <div *ngFor="let acc of companyBankAccounts" 
-           class="bg-white border rounded-2xl p-3.5 flex flex-col justify-between transition-all hover:shadow-xs relative overflow-hidden"
-           [ngClass]="acc.is_primary ? 'border-amber-300 ring-2 ring-amber-400/20 bg-linear-to-b from-amber-50/30 to-white' : 'border-slate-200'">
-        
+      <div *ngFor="let acc of companyBankAccounts"
+           class="bg-white border rounded-2xl p-3.5 flex flex-col justify-between transition-all hover:shadow-sm relative overflow-hidden min-w-0"
+           [ngClass]="acc.is_primary ? 'border-amber-300 ring-2 ring-amber-400/20 bg-gradient-to-b from-amber-50/30 to-white' : 'border-slate-200'">
+
         <!-- برچسب حساب اصلی -->
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="credit-card"></svg>
+        <div class="flex items-start justify-between gap-2 mb-2">
+          <div class="flex items-center gap-2 flex-wrap min-w-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" [appIcon]="bankAccountIcon" aria-hidden="true"></svg>
             <span class="text-xs font-black text-slate-800">{{ acc.bank_name }}</span>
+            <app-offline-pending-badge *ngIf="isPendingRecord(acc)"></app-offline-pending-badge>
             <span *ngIf="acc.account_title" class="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md font-medium">
               {{ acc.account_title }}
             </span>
           </div>
 
-          <div>
-            <span *ngIf="acc.is_primary" class="text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" class="text-amber-600 shrink-0" appIcon="star"></svg>
+          <div class="shrink-0">
+            <span *ngIf="acc.is_primary" class="text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" class="text-amber-600 shrink-0" appIcon="star" aria-hidden="true"></svg>
               <span>حساب اصلی حقوق و تسویه</span>
             </span>
-            <button 
-              *ngIf="!acc.is_primary" 
-              type="button" 
+            <button
+              *ngIf="!acc.is_primary"
+              type="button"
               (click)="setPrimaryAccount(acc)"
-              title="تنظیم به عنوان حساب اصلی شرکت"
+              [disabled]="isPendingRecord(acc)"
+              [title]="isPendingRecord(acc) ? 'پس از ارسال به سرور در دسترس است' : 'تنظیم به عنوان حساب اصلی شرکت'"
               aria-label="تنظیم به عنوان اصلی"
-              class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-amber-500 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 transition-all cursor-pointer">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" appIcon="star"></svg>
-              <span class="sr-only">تنظیم به عنوان اصلی</span>
+              class="w-10 h-10 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-amber-600 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0" appIcon="star" aria-hidden="true"></svg>
             </button>
           </div>
         </div>
 
         <!-- نمایش شماره شبا با کپی سریع -->
-        <div class="bg-slate-50 rounded-xl p-2.5 my-1 border border-slate-100 flex items-center justify-between">
-          <div class="font-mono text-xs font-bold text-slate-800 tracking-wider text-left dir-ltr select-all">
+        <div class="bg-slate-50 rounded-xl p-2.5 my-1 border border-slate-100 flex items-center justify-between gap-2">
+          <div dir="ltr" class="font-mono text-xs font-bold text-slate-800 tracking-wider text-left select-all break-all min-w-0">
             {{ acc.sheba_number }}
           </div>
-          <button 
-            type="button" 
+          <button
+            type="button"
             (click)="copySheba(acc.sheba_number, acc.id || acc.sheba_number)"
             [title]="copiedShebaId === (acc.id || acc.sheba_number) ? 'کپی شد!' : 'کپی شماره شبا'"
             aria-label="کپی شماره شبا"
-            class="w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer shrink-0"
-            [ngClass]="copiedShebaId === (acc.id || acc.sheba_number) ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-white hover:bg-slate-200 text-slate-600 border border-slate-200'">
-            <svg *ngIf="copiedShebaId === (acc.id || acc.sheba_number)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
-            <svg *ngIf="copiedShebaId !== (acc.id || acc.sheba_number)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
-            <span class="sr-only">کپی شماره شبا</span>
+            class="w-10 h-10 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            [ngClass]="copiedShebaId === (acc.id || acc.sheba_number) ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white hover:bg-slate-200 text-slate-600 border border-slate-200'">
+            <svg *ngIf="copiedShebaId === (acc.id || acc.sheba_number)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-confirm" aria-hidden="true"></svg>
+            <svg *ngIf="copiedShebaId !== (acc.id || acc.sheba_number)" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-copy" aria-hidden="true"></svg>
           </button>
         </div>
 
         <!-- مشخصات شماره حساب و دکمه‌های عملیات -->
-        <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
-          <div class="flex items-center gap-1.5">
-            <span>شماره حساب:</span>
-            <span class="font-mono font-bold text-slate-700">{{ acc.account_number || '—' }}</span>
+        <div class="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="shrink-0">شماره حساب:</span>
+            <span dir="ltr" class="font-mono font-bold text-slate-700 truncate">{{ acc.account_number || '—' }}</span>
           </div>
 
-          <div class="flex items-center gap-1">
-            <button 
-              type="button" 
-              (click)="editAccount(acc)" 
-              class="w-7 h-7 rounded-lg flex items-center justify-center text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition-colors cursor-pointer" 
-              title="ویرایش این حساب"
-              aria-label="ویرایش">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg>
-              <span class="sr-only">ویرایش</span>
+          <span *ngIf="isPendingRecord(acc)" class="text-[10px] text-slate-500 shrink-0">پس از ارسال به سرور قابل ویرایش است</span>
+          <div class="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              (click)="editAccount(acc)"
+              [disabled]="isPendingRecord(acc)"
+              class="w-10 h-10 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              [title]="isPendingRecord(acc) ? 'پس از ارسال به سرور قابل ویرایش است' : 'ویرایش این حساب'"
+              aria-label="ویرایش حساب">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit" aria-hidden="true"></svg>
             </button>
-            <button 
-              type="button" 
-              (click)="deleteBankAccount(acc)" 
-              class="w-7 h-7 rounded-lg flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer" 
-              title="حذف این حساب"
-              aria-label="حذف">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
-              <span class="sr-only">حذف</span>
+            <button
+              type="button"
+              (click)="deleteBankAccount(acc)"
+              [disabled]="isPendingRecord(acc)"
+              class="w-10 h-10 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center text-rose-600 hover:text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              [title]="isPendingRecord(acc) ? 'پس از ارسال به سرور قابل حذف است' : 'حذف این حساب'"
+              aria-label="حذف حساب">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete" aria-hidden="true"></svg>
             </button>
           </div>
         </div>
@@ -110,66 +114,68 @@
     <div *ngIf="companyId" class="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3 mt-3">
       <div class="flex items-center justify-between">
         <span class="text-xs font-black text-slate-800">
-          <span class="inline-flex items-center gap-1.5"><svg *ngIf="isEditingAccount" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="edit"></svg><svg *ngIf="!isEditingAccount" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="plus"></svg><span>{{ isEditingAccount ? 'ویرایش اطلاعات حساب بانکی' : 'افزودن حساب بانکی / شبای جدید' }}</span></span>
+          <span class="inline-flex items-center gap-1.5"><svg *ngIf="isEditingAccount" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-edit" aria-hidden="true"></svg><svg *ngIf="!isEditingAccount" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-create" aria-hidden="true"></svg><span>{{ isEditingAccount ? 'ویرایش اطلاعات حساب بانکی' : 'افزودن حساب بانکی / شبای جدید' }}</span></span>
         </span>
-        <button 
-          *ngIf="isEditingAccount" 
-          type="button" 
-          (click)="cancelEditAccount()" 
+        <button
+          *ngIf="isEditingAccount"
+          type="button"
+          (click)="cancelEditAccount()"
           title="انصراف از ویرایش حساب"
           aria-label="انصراف از ویرایش"
-          class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
-          <span class="sr-only">انصراف از ویرایش</span>
+          class="w-10 h-10 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close" aria-hidden="true"></svg>
         </button>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <!-- فیلد شماره شبا با اعتبارسنجی زنده -->
         <div class="md:col-span-2">
-          <label class="block text-[11px] font-bold text-slate-700 mb-1">
+          <label for="treasury_sheba" class="block text-[11px] font-bold text-slate-700 mb-1">
             شماره شبا (۲۴ رقم بدون نیاز به تایپ IR) <span class="text-rose-500">*</span>
           </label>
           <div class="flex items-center gap-1.5">
-            <div class="relative flex-1 flex items-center bg-white border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20"
+            <div dir="ltr" class="relative flex-1 min-w-0 flex items-center bg-white border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20"
                  [ngClass]="shebaValidationResult ? (shebaValidationResult.isValid ? 'border-emerald-300 bg-emerald-50/20' : 'border-rose-300 bg-rose-50/20') : 'border-slate-200'">
               <!-- نشان ثابت IR در سمت چپ -->
-              <span class="font-mono font-black text-slate-500 bg-slate-100 px-3 py-2 text-xs border-r border-slate-200 select-none">
+              <span class="font-mono font-black text-slate-500 bg-slate-100 px-3 py-2.5 text-xs border-e border-slate-200 select-none" aria-hidden="true">
                 IR
               </span>
-              <input 
-                type="text" 
+              <input
+                id="treasury_sheba"
+                type="text"
+                inputmode="numeric"
                 [ngModel]="shebaDigitsDisplay || newAccount.sheba_number" 
                 (ngModelChange)="onShebaInput($event)"
                 (paste)="onShebaPaste($event)"
-                placeholder="۱۲ ۰۱۲۰ ۰۰۰۰ ۰۰۰۰ ۱۲۳۴ ۵۶۷۸ ۹۰" 
+                placeholder="12 0120 0000 0000 1234 5678 90" 
                 maxlength="34"
                 dir="ltr"
-                class="w-full px-3 py-2 text-xs font-mono font-bold tracking-widest text-slate-800 bg-transparent focus:outline-none"
+                class="w-full min-w-0 px-3 py-2.5 text-xs font-mono font-bold tracking-widest text-slate-800 bg-transparent focus:outline-none"
               />
-              <button 
-                *ngIf="newAccount.sheba_number" 
-                type="button" 
+              <button
+                *ngIf="newAccount.sheba_number"
+                type="button"
                 (click)="copySheba(newAccount.sheba_number, 'new_sheba')"
-                class="px-2.5 py-1 ml-1 text-xs text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer flex items-center justify-center shrink-0"
-                title="کپی شبا">
-                <svg *ngIf="copiedShebaId === 'new_sheba'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-emerald-600" appIcon="check"></svg>
-                <svg *ngIf="copiedShebaId !== 'new_sheba'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
+                class="w-10 h-10 text-xs text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer flex items-center justify-center shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                title="کپی شبا"
+                aria-label="کپی شبا">
+                <svg *ngIf="copiedShebaId === 'new_sheba'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-emerald-600" appIcon="action-confirm" aria-hidden="true"></svg>
+                <svg *ngIf="copiedShebaId !== 'new_sheba'" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-copy" aria-hidden="true"></svg>
               </button>
             </div>
           </div>
 
           <!-- فیدبک بصری اعتبارسنجی شبا -->
-          <div *ngIf="shebaValidationResult" class="mt-1 text-[11px] flex items-center gap-1.5 font-bold">
-            <span *ngIf="shebaValidationResult.isValid" class="text-emerald-700 flex items-center gap-1">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-emerald-600 shrink-0" appIcon="check-circle"></svg>
+          <div *ngIf="shebaValidationResult" class="mt-1 text-[11px] flex items-center gap-1.5 font-bold" role="status">
+            <span *ngIf="shebaValidationResult.isValid" class="text-emerald-700 flex items-start gap-1 flex-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-emerald-600 shrink-0" appIcon="status-approved" aria-hidden="true"></svg>
               <span>شماره شبا معتبر و تایید شد (الگوریتم ISO 7064 Mod 97) - {{ shebaValidationResult.bank?.name || 'بانک معتبر' }}</span>
-              <span *ngIf="shebaValidationResult.accountNumber" class="text-slate-500 font-mono font-normal">
-                (شماره حساب استخراج‌شده: {{ shebaValidationResult.accountNumber }})
+              <span *ngIf="shebaValidationResult.accountNumber" class="text-slate-500 font-normal">
+                (شماره حساب استخراج‌شده: <bdi dir="ltr" class="font-mono">{{ shebaValidationResult.accountNumber }}</bdi>)
               </span>
             </span>
             <span *ngIf="!shebaValidationResult.isValid" class="text-rose-600 flex items-center gap-1">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600 shrink-0" appIcon="alert-circle"></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-rose-600 shrink-0" appIcon="status-error" aria-hidden="true"></svg>
               <span>{{ shebaValidationResult.errorMessage }}</span>
             </span>
           </div>
@@ -177,39 +183,45 @@
 
         <!-- انتخاب نام بانک از لیست ۳۲ بانک کشور با کمبوباکس جستجوپذیر -->
         <div class="relative bank-combobox-container">
-          <label class="block text-[11px] font-bold text-slate-700 mb-1">بانک عامل <span class="text-rose-500">*</span></label>
-          <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500">
-            <input 
-              type="text" 
-              [(ngModel)]="newAccount.bank_name" 
+          <label for="treasury_bank" class="block text-[11px] font-bold text-slate-700 mb-1">بانک عامل <span class="text-rose-500">*</span></label>
+          <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500">
+            <input
+              id="treasury_bank"
+              type="text"
+              [attr.aria-expanded]="isBankDropdownOpen"
+              [(ngModel)]="newAccount.bank_name"
               (focus)="isBankDropdownOpen = true"
-              placeholder="انتخاب یا تایپ نام بانک..." 
-              class="w-full text-xs text-slate-800 bg-transparent focus:outline-none"
+              placeholder="انتخاب یا تایپ نام بانک..."
+              class="w-full text-xs text-slate-800 bg-transparent focus:outline-none py-2"
             />
-            <button 
-              type="button" 
+            <button
+              type="button"
               (click)="isBankDropdownOpen = !isBankDropdownOpen"
-              class="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down"></svg>
+              [attr.aria-expanded]="isBankDropdownOpen"
+              title="فهرست بانک‌ها"
+              aria-label="فهرست بانک‌ها"
+              class="w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center text-slate-500 hover:text-slate-700 rounded-xl cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-expand" aria-hidden="true"></svg>
             </button>
           </div>
 
           <!-- منوی دراپ‌داون بانک‌ها با سرچ -->
           <div *ngIf="isBankDropdownOpen" class="absolute top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl w-full p-2 max-h-48 overflow-y-auto">
-            <input 
-              type="text" 
-              [(ngModel)]="bankSearchQuery" 
-              placeholder="جستجوی سریع بانک..." 
-              class="w-full px-2 py-1 mb-1 text-xs border border-slate-200 rounded-lg focus:outline-none bg-slate-50"
+            <input
+              type="text"
+              [(ngModel)]="bankSearchQuery"
+              placeholder="جستجوی سریع بانک..."
+              aria-label="جستجوی بانک"
+              class="w-full px-2 py-2 mb-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-slate-50"
             />
             <div class="divide-y divide-slate-100">
-              <button 
-                *ngFor="let bank of filterBanks()" 
-                type="button" 
+              <button
+                *ngFor="let bank of filterBanks()"
+                type="button"
                 (click)="selectBankForAccount(bank)"
-                class="w-full text-right px-2 py-1.5 text-xs hover:bg-indigo-50 hover:text-indigo-700 rounded-lg flex items-center justify-between cursor-pointer transition-colors">
+                class="w-full text-right min-h-[40px] px-2 py-1.5 text-xs hover:bg-indigo-50 hover:text-indigo-700 rounded-lg flex items-center justify-between cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
                 <span class="font-bold">{{ bank.name }}</span>
-                <span class="text-[10px] text-slate-400 font-mono">{{ bank.code }}</span>
+                <span dir="ltr" class="text-[10px] text-slate-500 font-mono">{{ bank.code }}</span>
               </button>
             </div>
           </div>
@@ -217,15 +229,19 @@
 
         <!-- شماره حساب بانکی با دکمه تبدیل فوری به شبا و دکمه کپی -->
         <div>
-          <label class="block text-[11px] font-bold text-slate-700 mb-1">شماره حساب بانکی</label>
+          <label for="treasury_account_number" class="block text-[11px] font-bold text-slate-700 mb-1">شماره حساب بانکی</label>
           <div class="flex items-center gap-1.5">
-            <input 
-              type="text" 
-              [(ngModel)]="newAccount.account_number" 
+            <input
+              id="treasury_account_number"
+              type="text"
+              inputmode="numeric"
+              dir="ltr"
+              [(ngModel)]="newAccount.account_number"
               (input)="onAccountNumberInput($event)"
               (paste)="onAccountNumberPaste($event)"
-              placeholder="استخراج خودکار از شبا یا تایپ شماره حساب" 
-              class="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono bg-white"
+              placeholder="0123456789"
+              title="از شبا خودکار استخراج می‌شود یا تایپ کنید"
+              class="flex-1 min-w-0 px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono bg-white"
             />
             <button
               *ngIf="newAccount.account_number"
@@ -233,43 +249,44 @@
               (click)="copyAccountNumber(newAccount.account_number)"
               [title]="isAccountCopied ? 'کپی شد!' : 'کپی شماره حساب'"
               aria-label="کپی شماره حساب"
-              class="w-8 h-8 rounded-xl flex items-center justify-center text-xs border transition-all cursor-pointer shrink-0"
+              class="w-10 h-10 lg:w-8 lg:h-8 rounded-xl flex items-center justify-center text-xs border transition-all cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               [ngClass]="isAccountCopied ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'">
-              <svg *ngIf="isAccountCopied" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
-              <svg *ngIf="!isAccountCopied" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
+              <svg *ngIf="isAccountCopied" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-confirm" aria-hidden="true"></svg>
+              <svg *ngIf="!isAccountCopied" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-copy" aria-hidden="true"></svg>
             </button>
             <button
               type="button"
               (click)="convertAccountToShebaNow()"
               title="تبدیل حساب و بانک به شماره شبا (الگوریتم ISO 7064)"
               aria-label="تولید شماره شبا"
-              class="w-8 h-8 rounded-xl bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center text-xs font-black shadow-xs active:scale-95 transition-all cursor-pointer shrink-0">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" appIcon="zap"></svg>
+              class="w-10 h-10 lg:w-8 lg:h-8 rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center justify-center text-xs font-black shadow-sm active:scale-95 transition-all cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" appIcon="zap" aria-hidden="true"></svg>
             </button>
           </div>
         </div>
 
         <!-- عنوان و کاربرد حساب -->
         <div>
-          <label class="block text-[11px] font-bold text-slate-700 mb-1">عنوان / کاربرد حساب</label>
-          <input 
+          <label for="treasury_account_title" class="block text-[11px] font-bold text-slate-700 mb-1">عنوان / کاربرد حساب</label>
+          <input
+            id="treasury_account_title"
             type="text" 
-            [(ngModel)]="newAccount.account_title" 
-            placeholder="مثلاً: تنخواه، واریز حقوق، بازرگانی" 
-            class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white"
+            [(ngModel)]="newAccount.account_title"
+            placeholder="مثلاً: تنخواه، واریز حقوق، بازرگانی"
+            class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white"
           />
         </div>
 
         <!-- چک‌باکس حساب اصلی -->
-        <div class="flex items-center gap-2 pt-5">
-          <input 
-            type="checkbox" 
-            id="new_acc_primary" 
-            [(ngModel)]="newAccount.is_primary" 
+        <div class="flex items-center gap-2 md:pt-5">
+          <input
+            type="checkbox"
+            id="new_acc_primary"
+            [(ngModel)]="newAccount.is_primary"
             class="w-4 h-4 rounded text-amber-500 focus:ring-amber-400 border-slate-300 cursor-pointer"
           />
-          <label for="new_acc_primary" class="text-xs font-bold text-slate-700 cursor-pointer select-none flex items-center gap-1.5">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" class="text-amber-500 shrink-0" appIcon="star"></svg>
+          <label for="new_acc_primary" class="min-h-[40px] text-xs font-bold text-slate-700 cursor-pointer select-none flex items-center gap-1.5">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" class="text-amber-500 shrink-0" appIcon="star" aria-hidden="true"></svg>
             <span>حساب پیش‌فرض و اصلی شرکت جهت واریز حقوق و تسویه‌حساب‌ها</span>
           </label>
         </div>
@@ -277,16 +294,15 @@
 
       <!-- دکمه ثبت حساب -->
       <div class="flex justify-end pt-1">
-        <button 
-          type="button" 
-          (click)="saveBankAccount()" 
-          [disabled]="isSavingBankAccount || !newAccount.sheba_number"
-          [title]="isEditingAccount ? 'ثبت تغییرات حساب بانکی' : 'افزودن حساب به شرکت'"
-          aria-label="ثبت حساب بانکی"
-          class="w-9 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white flex items-center justify-center shadow-xs active:scale-95 transition-all cursor-pointer">
-          <span *ngIf="isSavingBankAccount" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-          <svg *ngIf="!isSavingBankAccount" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="check"></svg>
-          <span class="sr-only">{{ isEditingAccount ? 'ثبت تغییرات حساب' : 'افزودن حساب به شرکت' }}</span>
+        <button
+          type="button"
+          appAction="save"
+          display="label"
+          [label]="isEditingAccount ? 'ثبت تغییرات حساب' : 'افزودن حساب'"
+          [busy]="isSavingBankAccount"
+          [disabled]="!newAccount.sheba_number"
+          [hint]="newAccount.sheba_number ? undefined : 'ابتدا شماره شبا را وارد کنید'"
+          (click)="saveBankAccount()">
         </button>
       </div>
     </div>

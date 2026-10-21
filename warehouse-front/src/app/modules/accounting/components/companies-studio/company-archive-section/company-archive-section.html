@@ -2,17 +2,17 @@
 <div *ngIf="companyId" class="space-y-5">
   <!-- فرم بارگذاری مدرک جدید به آرشیو جامع -->
   <div class="p-4 bg-slate-50/60 rounded-2xl border border-slate-200 space-y-3">
-    <div class="flex items-center gap-2">
-      <span class="text-xs font-black text-slate-800 flex items-center gap-1.5"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="plus"></svg><span>بارگذاری و بایگانی مدرک جدید</span></span>
+    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span class="text-xs font-black text-slate-800 flex items-center gap-1.5"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-upload" aria-hidden="true"></svg><span>بارگذاری و بایگانی مدرک جدید</span></span>
       <span class="text-[10px] text-slate-500 font-medium">(ارزش افزوده، کارت بازرگانی، رتبه‌بندی، پروانه‌ها و قراردادها)</span>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
       <!-- نوع مدرک -->
       <div>
-        <label class="block text-[11px] font-bold text-slate-700 mb-1">نوع سند</label>
-        <select 
-          [(ngModel)]="newDoc.document_type" 
+        <label for="arc_f1" class="block text-[11px] font-bold text-slate-700 mb-1">نوع سند</label>
+        <select id="arc_f1"
+          [(ngModel)]="newDoc.document_type"
           class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
           <option *ngFor="let t of documentTypesList" [value]="t.value">{{ t.label }}</option>
         </select>
@@ -20,39 +20,40 @@
 
       <!-- عنوان مدرک -->
       <div>
-        <label class="block text-[11px] font-bold text-slate-700 mb-1">عنوان مدرک</label>
-        <input 
-          type="text" 
-          [(ngModel)]="newDoc.title" 
+        <label for="arc_f2" class="block text-[11px] font-bold text-slate-700 mb-1">عنوان مدرک</label>
+        <input id="arc_f2"
+          type="text"
+          [(ngModel)]="newDoc.title"
           placeholder="مثال: گواهی صلاحیت پیمانکاری رتبه ۳"
           class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
       </div>
 
       <!-- تاریخ صدور (جلالی) -->
-      <!-- تاریخ صدور (جلالی) -->
       <div class="relative" (click)="$event.stopPropagation()">
         <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ صدور (جلالی)</label>
-        <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
-          <ng-persian-datepicker 
+        <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
+          <ng-persian-datepicker
             [(uiIsVisible)]="isDocIssueDatePickerOpen"
-            [dateInitValue]="false" 
+            [dateInitValue]="false"
             (dateOnSelect)="onDocIssueDateSelect($event)"
             class="w-full block relative cursor-pointer">
-            <input 
-              type="text" 
-              [formControl]="docIssueDateControl" 
+            <input
+              type="text"
+              [formControl]="docIssueDateControl"
+              aria-label="تاریخ صدور"
               (click)="isDocIssueDatePickerOpen = !isDocIssueDatePickerOpen"
-              placeholder="۱۴۰۱/۰۵/۱۰" 
-              class="w-full text-xs font-mono font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+              placeholder="۱۴۰۱/۰۵/۱۰"
+              class="w-full text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             />
           </ng-persian-datepicker>
-          <button 
-            type="button" 
+          <button
+            type="button"
             (click)="isDocIssueDatePickerOpen = !isDocIssueDatePickerOpen; $event.stopPropagation()"
             title="انتخاب تقویم شمسی"
-            class="text-slate-400 hover:text-indigo-600 p-0.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
+            aria-label="انتخاب از تقویم شمسی"
+            class="w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar" aria-hidden="true"></svg>
           </button>
         </div>
       </div>
@@ -60,111 +61,119 @@
       <!-- تاریخ انقضا (سررسید جلالی) -->
       <div class="relative" (click)="$event.stopPropagation()">
         <label class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ سررسید (جلالی)</label>
-        <div class="flex items-center border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
-          <ng-persian-datepicker 
+        <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all relative">
+          <ng-persian-datepicker
             [(uiIsVisible)]="isDocExpiryDatePickerOpen"
-            [dateInitValue]="false" 
+            [dateInitValue]="false"
             (dateOnSelect)="onDocExpiryDateSelect($event)"
             class="w-full block relative cursor-pointer to-datepicker">
-            <input 
-              type="text" 
-              [formControl]="docExpiryDateControl" 
+            <input
+              type="text"
+              [formControl]="docExpiryDateControl"
+              aria-label="تاریخ انقضا"
               (click)="isDocExpiryDatePickerOpen = !isDocExpiryDatePickerOpen"
-              placeholder="۱۴۰۳/۰۵/۱۰" 
-              class="w-full text-xs font-mono font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
+              placeholder="۱۴۰۳/۰۵/۱۰"
+              class="w-full text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"
             />
           </ng-persian-datepicker>
-          <button 
-            type="button" 
+          <button
+            type="button"
             (click)="isDocExpiryDatePickerOpen = !isDocExpiryDatePickerOpen; $event.stopPropagation()"
             title="انتخاب تقویم شمسی"
-            class="text-slate-400 hover:text-indigo-600 p-0.5 rounded-md hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar"></svg>
+            aria-label="انتخاب از تقویم شمسی"
+            class="w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar" aria-hidden="true"></svg>
           </button>
         </div>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
-      <!-- انتخاب فایل ضمیمه -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+      <!-- انتخاب فایل ضمیمه (A14: کامپوننت مشترک فارسی) -->
       <div class="md:col-span-2">
         <label class="block text-[11px] font-bold text-slate-700 mb-1">فایل مدرک (PDF، تصویر یا فشرده)</label>
-        <input 
-          type="file" 
-          (change)="onDocFileSelected($event)" 
-          class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
-        />
+        <app-file-upload
+          [maxSizeMB]="20"
+          label="انتخاب فایل مدرک"
+          [selectedFile]="newDoc.file"
+          (fileSelected)="onDocFileSelected($event)"
+          (fileRemoved)="newDoc.file = null">
+        </app-file-upload>
       </div>
 
       <!-- پرچم سند محرمانه -->
-      <div class="flex items-center gap-2 pt-4">
-        <input 
-          type="checkbox" 
-          id="new_doc_conf" 
-          [(ngModel)]="newDoc.is_confidential" 
+      <div class="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="new_doc_conf"
+          [(ngModel)]="newDoc.is_confidential"
           class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
         />
-        <label for="new_doc_conf" class="text-xs font-bold text-slate-700 cursor-pointer select-none flex items-center gap-1.5">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600" appIcon="lock"></svg>
+        <label for="new_doc_conf" class="min-h-[40px] text-xs font-bold text-slate-700 cursor-pointer select-none flex items-center gap-1.5">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="status-locked" aria-hidden="true"></svg>
           <span>سند محرمانه (صرفاً مدیران ارشد)</span>
         </label>
       </div>
 
-      <!-- دکمه بارگذاری و ثبت در آرشیو -->
-      <div class="pt-3">
-        <button 
-          type="button" 
-          (click)="uploadNewDocument()" 
-          [disabled]="isUploadingDoc || !newDoc.file"
-          class="w-full h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
-          title="ثبت و بارگذاری مدرک در بایگانی"
-          aria-label="ثبت در بایگانی">
-          <span *ngIf="isUploadingDoc" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-          <svg *ngIf="!isUploadingDoc" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="upload"></svg>
-          <span class="sr-only">ثبت در بایگانی</span>
+      <!-- دکمه بارگذاری و ثبت در آرشیو (B11: برچسب‌دار) -->
+      <div>
+        <button
+          type="button"
+          appAction="upload"
+          display="label"
+          tone="primary"
+          label="بارگذاری مدرک"
+          class="w-full"
+          [busy]="isUploadingDoc"
+          [disabled]="!newDoc.file"
+          [hint]="newDoc.file ? 'ثبت و بارگذاری مدرک در بایگانی' : 'ابتدا فایل مدرک را انتخاب کنید'"
+          (click)="uploadNewDocument()">
         </button>
       </div>
     </div>
   </div>
 
-  <!-- جدول اسناد بایگانی‌شده همراه با فیلتر زنده -->
+  <!-- فهرست اسناد بایگانی‌شده همراه با فیلتر زنده -->
   <div>
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-3">
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <span class="text-xs font-black text-slate-800">فهرست اسناد بایگانی‌شده این شرکت</span>
-        <span class="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-bold">
-          {{ filteredDocuments.length }} از {{ companyDocuments.length }} سند
+        <span class="whitespace-nowrap tabular-nums text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full font-bold">
+          {{ fa(filteredDocuments.length) }} از {{ fa(companyDocuments.length) }} سند
         </span>
       </div>
 
-      <!-- نوار جستجو و فیلتر درجا اسناد -->
-      <div class="flex items-center gap-2">
-        <div class="relative w-48">
-          <input 
-            type="text" 
-            [(ngModel)]="docSearchQuery" 
-            (ngModelChange)="onDocFilterChange()" 
-            placeholder="جستجو در اسناد..." 
-            class="w-full pr-7 pl-2 py-1 text-[11px] bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
+      <!-- نوار جستجو و فیلتر (B6): در موبایل جستجو یک ردیف کامل، نوع و پاک‌سازی در ردیف بعد -->
+      <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <div class="relative w-full md:w-56">
+          <input
+            type="text"
+            [(ngModel)]="docSearchQuery"
+            (ngModelChange)="onDocFilterChange()"
+            placeholder="جستجو در اسناد..."
+            aria-label="جستجو در اسناد بایگانی"
+            class="w-full ps-8 pe-2 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           />
-          <span class="absolute right-2 top-2 text-slate-400"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="search"></svg></span>
+          <span class="absolute inset-y-0 start-0 flex items-center ps-2.5 text-slate-400 pointer-events-none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-search" aria-hidden="true"></svg></span>
         </div>
 
-        <select 
-          [(ngModel)]="selectedDocTypeFilter" 
-          (ngModelChange)="onDocFilterChange()" 
-          class="text-[11px] bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 focus:outline-none">
+        <select
+          [(ngModel)]="selectedDocTypeFilter"
+          (ngModelChange)="onDocFilterChange()"
+          aria-label="فیلتر نوع مدرک"
+          class="flex-1 md:flex-none min-w-0 text-xs bg-slate-50 border border-slate-200 rounded-xl px-2 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
           <option value="">همه انواع اسناد</option>
           <option *ngFor="let t of documentTypesList" [value]="t.value">{{ t.label }}</option>
         </select>
 
-        <button 
-          *ngIf="docSearchQuery || selectedDocTypeFilter" 
-          type="button" 
-          (click)="clearDocFilter()" 
-          class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-lg bg-slate-200/60 transition-colors cursor-pointer"
-          title="پاک‌سازی فیلتر">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="x"></svg>
+        <button
+          *ngIf="docSearchQuery || selectedDocTypeFilter"
+          type="button"
+          (click)="clearDocFilter()"
+          class="w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center text-slate-500 hover:text-slate-700 rounded-xl bg-slate-200/60 transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          title="پاک‌سازی فیلتر"
+          aria-label="پاک‌سازی فیلتر">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-close" aria-hidden="true"></svg>
         </button>
       </div>
     </div>
@@ -173,17 +182,17 @@
       <div class="text-xs font-bold text-slate-600">دریافت مدارک بایگانی انجام نشد.</div>
       <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="retry()"></button>
     </div>
-    <div *ngIf="isLoadingDocuments" class="py-8 text-center text-xs text-slate-400">
-      در حال بارگذاری اسناد...
+    <div *ngIf="isLoadingDocuments" role="status" aria-busy="true" aria-label="در حال بارگذاری اسناد">
+      <app-loading-skeleton type="text" [lines]="3"></app-loading-skeleton>
     </div>
 
-    <div *ngIf="!isLoadingDocuments && !loadError && filteredDocuments.length === 0" class="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-2xl">
-      هیچ سندی با معیارهای انتخابی یافت نشد.
+    <div *ngIf="!isLoadingDocuments && !loadError && filteredDocuments.length === 0" class="py-8 px-3 text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-2xl">
+      {{ companyDocuments.length === 0 ? 'هنوز مدرکی در بایگانی این شرکت ثبت نشده است.' : 'هیچ سندی با معیارهای انتخابی یافت نشد.' }}
     </div>
 
     <div *ngIf="!isLoadingDocuments && filteredDocuments.length > 0" class="rounded-2xl border border-slate-200 overflow-hidden bg-white">
       <!-- جدول اسناد نسخه دسکتاپ -->
-      <div class="hidden md:block overflow-x-auto">
+      <div class="hidden xl:block overflow-x-auto">
       <table class="w-full text-right text-xs">
         <thead class="bg-slate-100/80 text-slate-600 font-bold border-b border-slate-200">
           <tr>
@@ -199,52 +208,28 @@
         </thead>
         <tbody class="divide-y divide-slate-100">
           <tr *ngFor="let doc of filteredDocuments; let idx = index" class="hover:bg-slate-50 transition-colors">
-            <td class="py-2.5 px-3 text-center font-mono text-slate-400">{{ idx + 1 }}</td>
+            <td class="py-2.5 px-3 text-center tabular-nums text-slate-400">{{ fa(idx + 1) }}</td>
             <td class="py-2.5 px-3 font-bold text-slate-800">{{ doc.document_type_display || doc.document_type }}</td>
             <td class="py-2.5 px-3 font-medium text-slate-700">{{ doc.title }}</td>
-            <td class="py-2.5 px-3 text-center font-mono text-slate-600">{{ doc.expiry_date || '—' }}</td>
+            <td class="py-2.5 px-3 text-center tabular-nums text-slate-600">{{ faDigits(doc.expiry_date) }}</td>
             <td class="py-2.5 px-3 text-center">
-              <span [ngClass]="getDocStatusClass(doc.expiry_status)" class="border px-2 py-0.5 rounded-full text-[10px] font-bold">
+              <span [ngClass]="getDocStatusClass(doc.expiry_status)" class="border px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap">
                 {{ getDocStatusLabel(doc.expiry_status) }}
               </span>
             </td>
             <td class="py-2.5 px-3 text-center">
-              <span *ngIf="doc.is_confidential" class="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.2 rounded-md font-bold inline-flex items-center gap-1" title="سند محرمانه">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock"></svg>
+              <span *ngIf="doc.is_confidential" class="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded-md font-bold inline-flex items-center gap-1" title="سند محرمانه">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="status-locked" aria-hidden="true"></svg>
                 <span>محرمانه</span>
               </span>
-              <span *ngIf="!doc.is_confidential" class="text-[10px] text-slate-400">
+              <span *ngIf="!doc.is_confidential" class="text-[10px] text-slate-500">
                 عمومی
               </span>
             </td>
-            <td class="py-2.5 px-3 text-center font-mono text-[11px] text-slate-500">{{ formatBytes(doc.file_size) }}</td>
+            <td class="py-2.5 px-3 text-center text-[11px] text-slate-500" dir="ltr">{{ formatBytes(doc.file_size) }}</td>
             <td class="py-2.5 px-3 text-center">
               <div class="flex items-center justify-center gap-1.5">
-                <!-- پیش‌نمایش درجا -->
-                <button 
-                  type="button" 
-                  (click)="openPreview(doc)" 
-                  class="w-7 h-7 flex items-center justify-center text-slate-600 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition-colors cursor-pointer" 
-                  title="پیش‌نمایش درجا">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
-                </button>
-                <!-- دانلود فایل -->
-                <a 
-                  [href]="doc.file_url || doc.file" 
-                  [appExternalLink]="doc.file_url || doc.file" 
-                  target="_blank" 
-                  class="w-7 h-7 flex items-center justify-center text-indigo-600 hover:text-indigo-800 rounded-lg hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition-colors" 
-                  title="دانلود فایل">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
-                </a>
-                <!-- حذف مدرک -->
-                <button 
-                  type="button" 
-                  (click)="deleteCompanyDocument(doc)" 
-                  class="w-7 h-7 flex items-center justify-center text-rose-500 hover:text-rose-700 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer" 
-                  title="حذف مدرک">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
-                </button>
+                <ng-container *ngTemplateOutlet="docActions; context: { doc: doc, size: 'w-8 h-8 rounded-lg' }"></ng-container>
               </div>
             </td>
           </tr>
@@ -252,43 +237,63 @@
       </table>
       </div>
 
-      <!-- کارت‌های ارگونومیک اسناد در موبایل -->
-      <div class="block md:hidden divide-y divide-slate-100">
+      <!-- کارت‌های اسناد در موبایل و تبلت -->
+      <div class="block xl:hidden divide-y divide-slate-100">
         <div *ngFor="let doc of filteredDocuments" class="p-3.5 space-y-2 bg-white">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-xs text-slate-800">{{ doc.title }}</span>
-            <span [ngClass]="getDocStatusClass(doc.expiry_status)" class="border px-2 py-0.5 rounded-full text-[10px] font-bold">
+          <div class="flex items-start justify-between gap-2">
+            <span class="font-bold text-xs text-slate-800 min-w-0">{{ doc.title }}</span>
+            <span [ngClass]="getDocStatusClass(doc.expiry_status)" class="border px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0">
               {{ getDocStatusLabel(doc.expiry_status) }}
             </span>
           </div>
-          <div class="flex items-center justify-between text-[11px] text-slate-500">
-            <span>{{ doc.document_type_display || doc.document_type }}</span>
-            <span class="font-mono text-[10px]">{{ formatBytes(doc.file_size) }}</span>
+          <div class="flex items-center justify-between gap-2 text-[11px] text-slate-500">
+            <span class="min-w-0">{{ doc.document_type_display || doc.document_type }}</span>
+            <span class="text-[10px] shrink-0" dir="ltr">{{ formatBytes(doc.file_size) }}</span>
           </div>
-          <div class="flex items-center justify-between pt-1 border-t border-slate-100">
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
             <div class="flex items-center gap-2">
-              <span *ngIf="doc.is_confidential" class="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.2 rounded-md font-bold flex items-center gap-1">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock"></svg>
+              <span *ngIf="doc.is_confidential" class="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded-md font-bold flex items-center gap-1">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="status-locked" aria-hidden="true"></svg>
                 <span>محرمانه</span>
               </span>
-              <span class="text-[10px] font-mono text-slate-400">انقضا: {{ doc.expiry_date || 'نامحدود' }}</span>
+              <span class="text-[10px] text-slate-500 tabular-nums">انقضا: {{ doc.expiry_date ? faDigits(doc.expiry_date) : 'نامحدود' }}</span>
             </div>
             <div class="flex items-center gap-1.5">
-              <button type="button" (click)="openPreview(doc)" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-indigo-600 rounded-xl border border-slate-200 cursor-pointer" title="پیش‌نمایش">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="eye"></svg>
-              </button>
-              <a [href]="doc.file_url || doc.file" [appExternalLink]="doc.file_url || doc.file" target="_blank" class="w-8 h-8 flex items-center justify-center text-indigo-600 hover:text-indigo-800 rounded-xl border border-indigo-200" title="دانلود">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="download"></svg>
-              </a>
-              <button type="button" (click)="deleteCompanyDocument(doc)" class="w-8 h-8 flex items-center justify-center text-rose-500 hover:text-rose-700 rounded-xl border border-rose-200 cursor-pointer" title="حذف">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="trash-2"></svg>
-              </button>
+              <ng-container *ngTemplateOutlet="docActions; context: { doc: doc, size: 'w-10 h-10 rounded-xl border' }"></ng-container>
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
+
+  <ng-template #docActions let-doc="doc" let-size="size">
+    <button
+      type="button"
+      (click)="openPreview(doc)"
+      [class]="size + ' flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 border-slate-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500'"
+      title="پیش‌نمایش درجا"
+      [attr.aria-label]="'پیش‌نمایش ' + doc.title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-view" aria-hidden="true"></svg>
+    </button>
+    <a
+      [href]="doc.file_url || doc.file"
+      [appExternalLink]="doc.file_url || doc.file"
+      target="_blank"
+      [class]="size + ' flex items-center justify-center text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border-indigo-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500'"
+      title="دانلود فایل"
+      [attr.aria-label]="'دانلود ' + doc.title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-download" aria-hidden="true"></svg>
+    </a>
+    <button
+      type="button"
+      (click)="deleteCompanyDocument(doc)"
+      [class]="size + ' flex items-center justify-center text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500'"
+      title="حذف مدرک"
+      [attr.aria-label]="'حذف ' + doc.title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete" aria-hidden="true"></svg>
+    </button>
+  </ng-template>
 </div>
 
 <!-- لایت‌باکس پیش‌نمایش درجای مدرک (مشترک: shared/components/document-preview) -->

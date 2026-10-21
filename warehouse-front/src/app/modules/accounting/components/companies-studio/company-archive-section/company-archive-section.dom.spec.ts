@@ -82,7 +82,7 @@ describe('CompanyArchiveSectionComponent (بخش بایگانی جامع مدا�
     expect(context.count('documents')).toBe(2);
     expect(el.textContent).toContain('گواهی ارزش افزوده');
     expect(el.textContent).toContain('منقضی شده');
-    expect(el.textContent).toContain('2 از 2 سند');
+    expect(el.textContent).toContain('۲ از ۲ سند');
   });
 
   it('فیلتر نوع و جستجو فهرست را محدود و «پاک‌سازی» آن را برمی‌گرداند', () => {

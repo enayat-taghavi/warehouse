@@ -343,8 +343,17 @@ export function getScopeSyncProfile(scope?: string | null): ScopeSyncProfile {
  * دریافت قلمرو فعال برنامه از روی سشن تب، URL یا حافظه محلی
  */
 /**
- * نوع موجودیت رکورد صف از entityTypeUrlPatterns ماژول‌ها (ماژول‌ها به ترتیب switcher.order، الگوها به ترتیب اعلام)؛
- * بدون تطبیق undefined.
+ * موجودیت‌های پلتفرم (شرکت و دسترسی کاربر به شرکت) مال هیچ ماژولی نیستند؛ در نصب تک‌ماژولی هم نوع صف آن‌ها
+ * باید معلوم باشد (E6). پس از الگوهای ماژول‌ها سنجیده می‌شوند تا الگوی دقیق‌تر ماژول (مثلاً /company-documents/) مقدم بماند.
+ */
+const CORE_ENTITY_TYPE_URL_PATTERNS: { urlPart: string; entityType: string }[] = [
+  { urlPart: '/user-company-access/', entityType: 'user_company_access' },
+  { urlPart: '/companies/', entityType: 'company' },
+];
+
+/**
+ * نوع موجودیت رکورد صف از entityTypeUrlPatterns ماژول‌ها (ماژول‌ها به ترتیب switcher.order، الگوها به ترتیب اعلام)
+ * و سپس الگوهای پلتفرم؛ بدون تطبیق undefined.
  */
 export function resolveEntityTypeFromUrl(url?: string | null): string | undefined {
   const u = (url || '').toLowerCase();
@@ -358,7 +367,10 @@ export function resolveEntityTypeFromUrl(url?: string | null): string | undefine
       }
     }
   } catch {
-    // خطای رجیستری: نوع موجودیت نامعلوم می‌ماند (رکورد صف بدون آن هم ذخیره می‌شود)
+    // خطای رجیستری: الگوهای پلتفرم همچنان سنجیده می‌شوند (رکورد صف بدون نوع هم ذخیره می‌شود)
+  }
+  for (const p of CORE_ENTITY_TYPE_URL_PATTERNS) {
+    if (u.includes(p.urlPart)) return p.entityType;
   }
   return undefined;
 }

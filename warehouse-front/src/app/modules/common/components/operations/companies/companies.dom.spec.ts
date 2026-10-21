@@ -13,6 +13,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { CompaniesManagementComponent } from './companies';
+import { resolveEntityTypeFromUrl } from '../../../../../core/services/offline-db';
 import { companiesLeaveGuard } from './companies-leave.guard';
 import { CompanyApiService } from '../../../../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
@@ -1167,6 +1168,15 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       const offlineBadge = el.querySelector('.bg-amber-50.text-amber-700');
       expect(offlineBadge).not.toBeNull();
       expect(offlineBadge?.textContent).toContain('آفلاین');
+    });
+  });
+
+  describe('E6. نوع موجودیت صف برای موجودیت‌های پلتفرم بدون وابستگی به ماژول حسابداری', () => {
+    it('شرکت و دسترسی کاربر نوع دارند و الگوی دقیق‌تر ماژول مقدم می‌ماند', () => {
+      expect(resolveEntityTypeFromUrl('/api/org/companies/2/')).toBe('company');
+      expect(resolveEntityTypeFromUrl('/api/org/user-company-access/9/')).toBe('user_company_access');
+      expect(resolveEntityTypeFromUrl('/api/items/3/')).not.toBe('company');
+      expect(resolveEntityTypeFromUrl('')).toBeUndefined();
     });
   });
 

@@ -70,6 +70,27 @@ describe('CompanyFiscalPeriodsSectionComponent (بخش دوره‌های مال�
     fixture.detectChanges();
   };
 
+  it('B5 و ت۷: دوره‌ها کارت موبایل با دکمه‌های برچسب‌دار دارند و سال و تاریخ فارسی‌اند', () => {
+    setCompany(1);
+    const card = fixture.nativeElement.querySelector('ul.xl\\:hidden li') as HTMLElement;
+    expect(card).not.toBeNull();
+    expect(card.textContent).toContain('۱۴۰۳/۰۱/۰۱');
+    const labels = Array.from(card.querySelectorAll('button')).map(b => b.textContent?.trim());
+    expect(labels).toContain('انجماد');
+    expect(labels).toContain('بستن سال مالی');
+  });
+
+  it('E2: دورهٔ در صف ارسال نشان دارد و کارهای حساس آن غیرفعال است', () => {
+    mockApi.getFiscalPeriods.mockReturnValueOnce(of([{ ...period(), id: -3, _offlinePending: true }]));
+    setCompany(1);
+    const card = fixture.nativeElement.querySelector('ul.xl\\:hidden li') as HTMLElement;
+    expect(card.querySelector('app-offline-pending-badge')).not.toBeNull();
+    const buttons = Array.from(card.querySelectorAll('button')) as HTMLButtonElement[];
+    expect(buttons.length).toBeGreaterThan(0);
+    expect(buttons.every(b => b.disabled)).toBe(true);
+    expect(buttons[0].title).toBe('پس از ارسال دوره به سرور در دسترس است');
+  });
+
   it('شرکت تازه (بدون شناسه): پیام «پس از ثبت اولیه» و هیچ درخواستی', () => {
     setCompany(null);
     const el: HTMLElement = fixture.nativeElement;

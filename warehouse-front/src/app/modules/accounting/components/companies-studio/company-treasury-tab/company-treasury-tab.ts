@@ -24,6 +24,9 @@ import { ToastService } from '../../../../../shared/components/toast/toast.compo
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
+import { OfflinePendingBadgeComponent } from '../../../../../shared/components/offline-pending-badge/offline-pending-badge.component';
+import { LoadingSkeletonComponent } from '../../../../../shared/components/loading-skeleton/loading-skeleton.component';
+import { ACCOUNTING_ENTITY_ICONS } from '../../../entity-icons';
 
 /** شناسهٔ تب در استودیوی شرکت (`?tab=treasury`) */
 export const TREASURY_TAB_ID = 'treasury';
@@ -35,7 +38,7 @@ export const TREASURY_TAB_ID = 'treasury';
 @Component({
   selector: 'app-company-treasury-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, OfflinePendingBadgeComponent, LoadingSkeletonComponent],
   providers: [CompaniesStudioFacade],
   templateUrl: './company-treasury-tab.html'
 })
@@ -73,6 +76,26 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
   isBankDropdownOpen = false;
 
   newAccount = this.getEmptyBankAccountData();
+
+  readonly bankAccountIcon = ACCOUNTING_ENTITY_ICONS.bankAccounts;
+  private static readonly FA_NUMBER = new Intl.NumberFormat('fa-IR');
+
+  /** شمارنده با رقم فارسی (ت۷) */
+  fa(n: number): string {
+    return CompanyTreasuryTabComponent.FA_NUMBER.format(n);
+  }
+
+  /** حسابی که در حالت آفلاین ساخته شده و هنوز شناسهٔ سرور ندارد (E2) */
+  isPendingRecord(rec: any): boolean {
+    return !!rec?._offlinePending || (typeof rec?.id === 'number' && rec.id < 0);
+  }
+
+  /** حساب دیگری با همین شبا (A15)؛ قید یکتایی بک‌اند بیرون از این طرح است */
+  private findDuplicateSheba(sheba: string): CompanyBankAccount | undefined {
+    const norm = (v: string | null | undefined) => (v || '').replace(/\s+/g, '').toUpperCase();
+    const target = norm(sheba);
+    return this.companyBankAccounts.find(a => a.id !== this.editingAccountId && norm(a.sheba_number) === target);
+  }
 
   constructor() {
     // فرم حساب نیمه‌کاره در هشدار خروج استودیو حساب می‌شود (ت۳)
@@ -331,7 +354,7 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
     });
   }
 
-  saveBankAccount(): void {
+  async saveBankAccount(): Promise<void> {
     if (!this.companyId) {
       this.toast.warning('لطفاً ابتدا شرکت را ذخیره فرمایید.');
       return;
@@ -345,6 +368,20 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
     if (!shebaVal.isValid) {
       this.toast.error(shebaVal.errorMessage || 'شماره شبا نامعتبر است.');
       return;
+    }
+
+    const duplicate = this.findDuplicateSheba(shebaVal.formattedSheba);
+    if (duplicate) {
+      const ok = this.confirmDialog
+        ? (await this.confirmDialog.open({
+            title: 'شبای تکراری',
+            message: `این شماره شبا پیش‌تر برای حساب «${duplicate.bank_name}${duplicate.account_title ? ' – ' + duplicate.account_title : ''}» ثبت شده است. باز هم ثبت شود؟`,
+            type: 'warning',
+            confirmText: 'ثبت تکراری',
+            cancelText: 'انصراف'
+          })) === true
+        : window.confirm('این شماره شبا پیش‌تر ثبت شده است. باز هم ثبت شود؟');
+      if (!ok) return;
     }
 
     this.isSavingBankAccount = true;
@@ -362,7 +399,11 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
       this.facade.updateBankAccount(this.editingAccountId, payload).subscribe({
         next: (saved) => {
           this.isSavingBankAccount = false;
-          this.toast.success(`حساب بانکی «${saved.bank_name}» با موفقیت ویرایش شد.`);
+          if (this.isPendingRecord(saved)) {
+            this.toast.info('ویرایش حساب بانکی در صف ارسال است و پس از اتصال ثبت می‌شود.');
+          } else {
+            this.toast.success(`حساب بانکی «${saved.bank_name}» با موفقیت ویرایش شد.`);
+          }
           this.cancelEditAccount();
           const idx = this.companyBankAccounts.findIndex(a => a.id === saved.id);
           if (idx !== -1) {
@@ -390,7 +431,11 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
       this.facade.createBankAccount(payload).subscribe({
         next: (created) => {
           this.isSavingBankAccount = false;
-          this.toast.success(`حساب بانکی «${created.bank_name}» با موفقیت افزوده شد.`);
+          if (this.isPendingRecord(created)) {
+            this.toast.info('حساب بانکی در صف ارسال است و پس از اتصال ثبت می‌شود.');
+          } else {
+            this.toast.success(`حساب بانکی «${created.bank_name}» با موفقیت افزوده شد.`);
+          }
           this.cancelEditAccount();
           if (created.is_primary) {
             this.setAccounts(this.companyBankAccounts.map(a => ({
@@ -412,6 +457,8 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
   }
 
   editAccount(acc: CompanyBankAccount): void {
+    // ویرایش رکورد آفلاین به نشانی شناسهٔ موقت می‌رود و هنگام ارسال ۴۰۴ می‌گیرد (E2)
+    if (this.isPendingRecord(acc)) return;
     this.isEditingAccount = true;
     this.editingAccountId = acc.id || null;
     this.newAccount = {
@@ -437,15 +484,19 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
   }
 
   async deleteBankAccount(acc: CompanyBankAccount): Promise<void> {
-    if (!acc.id) return;
+    if (!acc.id || this.isPendingRecord(acc)) return;
     const ok = await this.askConfirm(
       'حذف حساب بانکی',
       `آیا از حذف حساب بانکی «${acc.bank_name}» با شماره شبای «${acc.sheba_number}» اطمینان دارید؟`
     );
     if (!ok) return;
     this.facade.deleteBankAccount(acc.id).subscribe({
-      next: () => {
-        this.toast.success('حساب بانکی با موفقیت حذف شد.');
+      next: (res: any) => {
+        if (res?._offlinePending) {
+          this.toast.info('حذف حساب بانکی در صف ارسال است و پس از اتصال انجام می‌شود.');
+        } else {
+          this.toast.success('حساب بانکی با موفقیت حذف شد.');
+        }
         this.setAccounts(this.companyBankAccounts.filter(a => a.id !== acc.id));
         this.cdr.markForCheck();
       },
@@ -454,11 +505,15 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
   }
 
   setPrimaryAccount(acc: CompanyBankAccount): void {
-    if (!acc.id || !this.companyId) return;
+    if (!acc.id || !this.companyId || this.isPendingRecord(acc)) return;
     const companyId = this.companyId;
     this.facade.setPrimaryBankAccount(acc.id).subscribe({
-      next: () => {
-        this.toast.success(`حساب «${acc.bank_name}» به عنوان حساب اصلی شرکت تنظیم شد.`);
+      next: (res: any) => {
+        if (res?._offlinePending) {
+          this.toast.info('تنظیم حساب اصلی در صف ارسال است و پس از اتصال انجام می‌شود.');
+        } else {
+          this.toast.success(`حساب «${acc.bank_name}» به عنوان حساب اصلی شرکت تنظیم شد.`);
+        }
         this.setAccounts(this.companyBankAccounts.map(a => ({
           ...a,
           is_primary: a.id === acc.id
