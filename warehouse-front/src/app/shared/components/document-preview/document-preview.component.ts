@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, OnDestroy, Output, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, OnDestroy, Output, ChangeDetectorRef, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -7,6 +7,9 @@ import { resolveServerUrl } from '../../../core/platform/server-origin';
 import { saveUrl } from '../../../core/platform/file-output';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { ServerUrlPipe } from '../../pipes/server-url.pipe';
+import { OverflowMenuComponent } from '../overflow-menu/overflow-menu.component';
+
+let nextPreviewId = 0;
 
 /** مدرکی که پیش‌نمایش می‌شود: عنوان و نشانی فایل (نسبی یا مطلق) */
 export interface DocumentPreviewSource {
@@ -17,11 +20,12 @@ export interface DocumentPreviewSource {
 /**
  * لایت‌باکس پیش‌نمایش درجای مدرک (PDF روی بوم با pdf.js و فال‌بک iframe، تصویر با زوم، چرخش و جابه‌جایی).
  * میزبان آن را یک بار در قالب می‌گذارد و با `open()` باز می‌کند.
+ * جابه‌جایی و زوم دوانگشتی با pointer events؛ در موبایل تمام‌صفحه است و با Esc یا دکمهٔ برگشت مرورگر بسته می‌شود.
  */
 @Component({
   selector: 'app-document-preview',
   standalone: true,
-  imports: [CommonModule, SvgIconDirective, ServerUrlPipe],
+  imports: [CommonModule, SvgIconDirective, ServerUrlPipe, OverflowMenuComponent],
   templateUrl: './document-preview.component.html'
 })
 export class DocumentPreviewComponent implements OnDestroy {
@@ -31,6 +35,37 @@ export class DocumentPreviewComponent implements OnDestroy {
 
   /** پس از بسته شدن لایت‌باکس */
   @Output() closed = new EventEmitter<void>();
+
+  @ViewChild('dialogPanel') private dialogPanel?: ElementRef<HTMLElement>;
+  @ViewChild('closeButton') private closeButton?: ElementRef<HTMLButtonElement>;
+
+  readonly titleId = `document-preview-title-${nextPreviewId++}`;
+
+  /** کلاس ابزارهای نوار: در موبایل ردیف برچسب‌دار منوی «بیشتر»، از sm دکمهٔ آیکونی تیره */
+  readonly toolButtonClass =
+    'flex items-center gap-2 w-full min-h-[40px] px-3 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors ' +
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ' +
+    'sm:w-10 sm:h-10 sm:min-h-0 sm:px-0 sm:justify-center lg:w-8 lg:h-8 sm:text-slate-300 sm:bg-slate-800/80 sm:border sm:border-slate-700/80 sm:hover:bg-slate-700 sm:hover:text-white';
+
+  /** ورودی برگشت مرورگر که هنگام باز شدن افزوده شده و هنوز مصرف نشده است */
+  private historyPushed = false;
+  /** popstateهایی که از history.back() خود ما می‌آیند و باید نادیده گرفته شوند */
+  private pendingBackPops = 0;
+  private returnFocusTo: HTMLElement | null = null;
+  private focusTimeoutId: any = null;
+
+  /** اشاره‌گرهای فعال (ماوس، قلم یا انگشت) برای جابه‌جایی و زوم دوانگشتی */
+  private activePointers = new Map<number, { x: number; y: number }>();
+  private pinchStartDistance = 0;
+  private pinchStartScale = 1;
+  isPinching = false;
+  /** مقیاس بوم PDF هنگام زوم دوانگشتی ثبت می‌شود تا تا رندر دوباره، بزرگ‌نمایی زنده با CSS دیده شود */
+  private pinchRenderedScale = 1;
+
+  /** بازخورد زندهٔ زوم دوانگشتی روی بوم PDF؛ پس از رندر دوباره ۱ است */
+  get pinchCanvasScale(): number {
+    return this.isPinching && this.pinchRenderedScale > 0 ? +(this.previewScale / this.pinchRenderedScale).toFixed(3) : 1;
+  }
 
   private pdfTimeoutId: any = null;
 
@@ -69,6 +104,12 @@ export class DocumentPreviewComponent implements OnDestroy {
   };
 
   ngOnDestroy(): void {
+    // اگر میزبان با ناوبری از بین برود، history.back() زده نمی‌شود تا ناوبری کاربر برنگردد.
+    this.historyPushed = false;
+    if (this.focusTimeoutId) {
+      clearTimeout(this.focusTimeoutId);
+      this.focusTimeoutId = null;
+    }
     if (this.pdfTimeoutId) {
       clearTimeout(this.pdfTimeoutId);
       this.pdfTimeoutId = null;
@@ -87,9 +128,50 @@ export class DocumentPreviewComponent implements OnDestroy {
     }
   }
 
+  /** دکمهٔ برگشت مرورگر (یا اشارهٔ برگشت گوشی) پیش‌نمایش را می‌بندد و از صفحه بیرون نمی‌رود */
+  @HostListener('window:popstate')
+  onPopState(): void {
+    if (this.pendingBackPops > 0) {
+      this.pendingBackPops--;
+      return;
+    }
+    if (this.previewModal.isOpen && this.historyPushed) {
+      this.historyPushed = false;
+      this.closePreview();
+    }
+  }
+
+  /** تله‌کانون: Tab و Shift+Tab درون پنجره می‌چرخند */
+  onDialogKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Tab' || !this.dialogPanel) return;
+    const panel = this.dialogPanel.nativeElement;
+    const all = Array.from(
+      panel.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], iframe, [tabindex]:not([tabindex="-1"])')
+    );
+    // عنصر پنهان (مثلاً گزینه‌های منوی بستهٔ «بیشتر» در موبایل) جعبه‌ای ندارد؛ بدون چیدمان (jsdom) همه حساب می‌شوند.
+    const visible = all.filter(el => el.getClientRects().length > 0);
+    const focusables = visible.length > 0 ? visible : all;
+    if (focusables.length === 0) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement as HTMLElement | null;
+    const inside = !!active && panel.contains(active);
+    if (event.shiftKey && (active === first || !inside)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (active === last || !inside)) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
   // پیش‌نمایش درجا (In-Place Preview)
   open(doc: DocumentPreviewSource): void {
     const url = doc.url;
+    const wasOpen = this.previewModal.isOpen;
 
     if (this.previewBlobUrl) {
       URL.revokeObjectURL(this.previewBlobUrl);
@@ -125,7 +207,21 @@ export class DocumentPreviewComponent implements OnDestroy {
       isImage
     };
     this.isLoadingPreview = false;
+    this.activePointers.clear();
+    this.isPinching = false;
+    this.isDragging = false;
     this.cdr.markForCheck();
+
+    if (!wasOpen) {
+      const active = document.activeElement;
+      this.returnFocusTo = active instanceof HTMLElement ? active : null;
+      this.pushHistoryEntry();
+      if (this.focusTimeoutId) clearTimeout(this.focusTimeoutId);
+      this.focusTimeoutId = setTimeout(() => {
+        this.focusTimeoutId = null;
+        this.closeButton?.nativeElement.focus({ preventScroll: true });
+      }, 0);
+    }
 
     if (isPdf) {
       if (this.pdfTimeoutId) {
@@ -276,22 +372,94 @@ export class DocumentPreviewComponent implements OnDestroy {
     }
   }
 
-  startPan(event: MouseEvent): void {
-    if (event.button !== 0) return;
-    this.isDragging = true;
-    this.dragStartX = event.clientX - this.panX;
-    this.dragStartY = event.clientY - this.panY;
+  /** شروع جابه‌جایی با یک اشاره‌گر یا زوم با دو انگشت */
+  onPointerDown(event: PointerEvent): void {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    // روی دکمه یا پیوند درون بدنه، اشاره‌گر گرفته نمی‌شود تا کلیک آن گم نشود.
+    if ((event.target as Element | null)?.closest?.('button, a')) return;
+    const surface = event.currentTarget as Element | null;
+    try {
+      surface?.setPointerCapture?.(event.pointerId);
+    } catch {}
+    this.activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (this.activePointers.size >= 2) {
+      this.isDragging = false;
+      this.isPinching = true;
+      this.pinchStartDistance = this.pointerDistance();
+      this.pinchStartScale = this.previewScale;
+      this.pinchRenderedScale = this.previewScale;
+    } else {
+      this.beginDrag(event.clientX, event.clientY);
+    }
   }
 
-  onPan(event: MouseEvent): void {
+  onPointerMove(event: PointerEvent): void {
+    if (!this.activePointers.has(event.pointerId)) return;
+    this.activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (this.isPinching && this.activePointers.size >= 2) {
+      const distance = this.pointerDistance();
+      if (this.pinchStartDistance > 0) {
+        const scale = this.pinchStartScale * (distance / this.pinchStartDistance);
+        this.previewScale = Math.min(3.0, Math.max(0.5, +scale.toFixed(2)));
+        this.cdr.markForCheck();
+      }
+      return;
+    }
     if (!this.isDragging) return;
     this.panX = event.clientX - this.dragStartX;
     this.panY = event.clientY - this.dragStartY;
     this.cdr.markForCheck();
   }
 
-  stopPan(): void {
-    this.isDragging = false;
+  /** پایان اشاره (بلند شدن انگشت، رها کردن ماوس یا لغو از سوی مرورگر) */
+  onPointerUp(event: PointerEvent): void {
+    if (!this.activePointers.delete(event.pointerId)) return;
+    if (this.isPinching && this.activePointers.size < 2) {
+      this.isPinching = false;
+      // بوم PDF فقط پس از پایان زوم دوباره رندر می‌شود؛ تصویر با CSS زنده بزرگ می‌شود.
+      if (this.previewModal.isPdf && this.pdfDoc) {
+        this.renderPdfPage(this.pdfCurrentPage);
+      }
+      const remaining = this.activePointers.values().next().value;
+      if (remaining) {
+        this.beginDrag(remaining.x, remaining.y);
+      }
+      this.cdr.markForCheck();
+      return;
+    }
+    if (this.activePointers.size === 0) {
+      this.isDragging = false;
+    }
+  }
+
+  private beginDrag(clientX: number, clientY: number): void {
+    this.isDragging = true;
+    this.dragStartX = clientX - this.panX;
+    this.dragStartY = clientY - this.panY;
+  }
+
+  private pointerDistance(): number {
+    const [a, b] = Array.from(this.activePointers.values());
+    if (!a || !b) return 0;
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  private pushHistoryEntry(): void {
+    if (typeof window === 'undefined' || !window.history?.pushState) return;
+    try {
+      // state پیشین (navigationId روتر) حفظ می‌شود تا برگشت به همان نشانی ناوبری تازه‌ای نسازد.
+      const current = window.history.state;
+      const state = current && typeof current === 'object' ? current : {};
+      window.history.pushState({ ...state, documentPreview: true }, '');
+      this.historyPushed = true;
+    } catch {
+      this.historyPushed = false;
+    }
+  }
+
+  /** رقم فارسی برای شمارهٔ صفحه، درصد و درجه */
+  fa(value: number): string {
+    return new Intl.NumberFormat('fa-IR', { useGrouping: false }).format(value);
   }
 
   downloadFile(url?: string | null, filename?: string): void {
@@ -333,7 +501,27 @@ export class DocumentPreviewComponent implements OnDestroy {
     this.isFullscreenPreview = false;
     this.isPdfLoading = false;
     this.useIframeFallback = false;
+    this.activePointers.clear();
+    this.isPinching = false;
+    this.isDragging = false;
+    if (this.focusTimeoutId) {
+      clearTimeout(this.focusTimeoutId);
+      this.focusTimeoutId = null;
+    }
     this.cdr.markForCheck();
-    if (wasOpen) this.closed.emit();
+    if (this.historyPushed) {
+      // ورودی‌ای که هنگام باز شدن افزوده شد برداشته می‌شود؛ popstate حاصل نادیده گرفته می‌شود.
+      this.historyPushed = false;
+      this.pendingBackPops++;
+      window.history.back();
+    }
+    if (wasOpen) {
+      const target = this.returnFocusTo;
+      this.returnFocusTo = null;
+      if (target?.isConnected) {
+        target.focus({ preventScroll: true });
+      }
+      this.closed.emit();
+    }
   }
 }
