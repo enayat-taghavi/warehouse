@@ -363,7 +363,7 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
       if (strategy === 'discard') {
         // نادیده گرفتن خطا فقط در دیتابیس منبع
         await sourceDb.syncErrors.update(errorId, { dismissed: 1 }).catch(() => {});
-        this.toast.show('info', 'تداخل از صف خطاها نادیده گرفته و حذف شد.');
+        this.toast.show('info', 'تداخل نادیده گرفته شد و از فهرست پنهان شد؛ داده روی دستگاه محفوظ است.');
       } else if (strategy === 'client') {
         // استفاده از متد واقعی OfflineSyncService برای ارسال نسخه کلاینت با زمان بروزرسانی سرور
         const body = this.selectedConflict.body || {};
@@ -382,8 +382,9 @@ export class OperationsSyncMonitorComponent implements OnInit, OnDestroy {
             this.toast.show('success', 'نسخه سرور پذیرفته شد و دیتابیس محلی همگام گردید.');
           }
         } else {
-          await sourceDb.syncErrors.delete(errorId).catch(() => {});
-          this.toast.show('success', 'نسخه سرور تایید و خطای تداخل پاکسازی شد.');
+          // syncErrors تنها نسخهٔ بدنهٔ ردشده است و سرور چیزی را نپذیرفته؛ پس حذف نمی‌شود، فقط پنهان می‌شود
+          await sourceDb.syncErrors.update(errorId, { dismissed: 1 }).catch(() => {});
+          this.toast.show('success', 'نسخه سرور تایید شد و خطای تداخل از فهرست پنهان شد.');
         }
       }
 

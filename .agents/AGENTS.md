@@ -95,7 +95,8 @@
 ### 8. Environment Roles, Deployment & Guardian Integrity Standards
 - **Environment Roles (`app` vs `soft`):**
   - **`app.farsalish.ir` (Local Windows Machine):** Hosts personal test/staging environment behind Cloudflare tunnel (`cloudflared`). Daphne on 0.0.0.0:8000, Express on 4200 serving `warehouse-front/dist/`, PostgreSQL on 5432 with test data. Has NO real users; used for user testing and validation. Frontend builds or restarts here do not impact real production users.
-  - **`soft.farsalish.ir` (Production Server):** Dedicated Ubuntu server hosting live application for real users. Direct DNS to server IP, Nginx with Let's Encrypt TLS. Production data must NEVER be lost or deleted. No test data or test artifacts from `app` may ever be transferred to `soft`.
+  - **No real users anywhere yet (user, 21 Oct 2026):** the whole project, `soft` included, is still in its testing phase; never describe current data as real users' data. The safety rules stay in force so the code is ready for the day real users arrive.
+  - **`soft.farsalish.ir` (Production Server):** Dedicated Ubuntu server for the live application; it will host real users later (none yet). Direct DNS to server IP, Nginx with Let's Encrypt TLS. Production data must NEVER be lost or deleted. No test data or test artifacts from `app` may ever be transferred to `soft`.
 - **Local Test Deployment Protocol (`app.farsalish.ir`, no yes/no needed):**
   1) **Database Backup:** Before every release and before local test migrations, execute `create_database_backup` from `accounts.backup_service` (DO NOT run `run_auto_backup`).
   2) **Zero-Downtime Front-End Build:** In `warehouse-front`, run `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js` so currently served bundles remain online during build.

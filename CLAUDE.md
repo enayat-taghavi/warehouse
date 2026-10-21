@@ -74,7 +74,8 @@
   - Replies stay short and in Persian.
 - **Environment roles (`app` vs `soft`):**
   - **`app.farsalish.ir` (This Windows machine):** Local test and staging environment behind Cloudflare Tunnel (`cloudflared`). Daphne listens on port 8000, Express on port 4200 serves `warehouse-front/dist/`, PostgreSQL on port 5432 holds test/staging data. There are NO real users here. Building frontend or restarting services on this machine is for personal testing and does not require yes/no prompts.
-  - **`soft.farsalish.ir` (Production Server):** Dedicated Ubuntu server hosting the live application for real users. Direct DNS (no Cloudflare), TLS via Let's Encrypt / Nginx. Real user data must NEVER be lost or deleted during updates, and no test data from `app` may ever be transferred to `soft`. Any operation directly affecting `soft` or opening data-loss paths requires explicit approval.
+  - **No real users anywhere yet (user, 21 Oct 2026):** the whole project, `soft` included, is still in its testing phase; never describe current data as real users' data. The safety rules below stay in force so the code is ready for the day real users arrive.
+  - **`soft.farsalish.ir` (Production Server):** Dedicated Ubuntu server for the live application; it will host real users later (none yet). Direct DNS (no Cloudflare), TLS via Let's Encrypt / Nginx. Real user data must NEVER be lost or deleted during updates, and no test data from `app` may ever be transferred to `soft`. Any operation directly affecting `soft` or opening data-loss paths requires explicit approval.
   - Alongside the stack, an `ng serve` on `localhost:4300` serves the working tree live. Use it for safe visual review (config `attach-frontend-dev-4300` in `.claude/launch.json`). 4200 is local test.
 
 ## Token economy (never at the expense of quality)

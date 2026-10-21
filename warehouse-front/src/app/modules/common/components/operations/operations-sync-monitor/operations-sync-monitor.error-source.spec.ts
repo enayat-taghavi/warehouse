@@ -120,7 +120,7 @@ describe('OperationsSyncMonitorComponent Error Source Isolation (Session 17)', (
     expect(finDeleteSpy).not.toHaveBeenCalled();
   });
 
-  it('۲. the server strategy without server_record deletes only in the source DB for a warehouse error', async () => {
+  it('۲. the server strategy without server_record never deletes; it only hides the error in the source DB (no data loss)', async () => {
     await component.refreshTelemetry(false);
 
     const whErr = component.conflictErrors().find(e => e.appScope === 'warehouse')!;
@@ -129,13 +129,13 @@ describe('OperationsSyncMonitorComponent Error Source Isolation (Session 17)', (
     component.openConflictDetails(whErr);
     await component.resolveConflict('server');
 
-    expect(whDeleteSpy).toHaveBeenCalledWith(5);
-    expect(finDeleteSpy).not.toHaveBeenCalled();
-    expect(whUpdateSpy).not.toHaveBeenCalled();
+    expect(whUpdateSpy).toHaveBeenCalledWith(5, { dismissed: 1 });
     expect(finUpdateSpy).not.toHaveBeenCalled();
+    expect(whDeleteSpy).not.toHaveBeenCalled();
+    expect(finDeleteSpy).not.toHaveBeenCalled();
   });
 
-  it('۳. same for a finance error: discarding or server strategy without server_record updates/deletes only in financeOfflineDb', async () => {
+  it('۳. same for a finance error: discarding or server strategy without server_record only hides the error in financeOfflineDb', async () => {
     await component.refreshTelemetry(false);
 
     const finErr = component.conflictErrors().find(e => e.appScope === 'finance')!;
@@ -158,10 +158,10 @@ describe('OperationsSyncMonitorComponent Error Source Isolation (Session 17)', (
     component.openConflictDetails(finErr);
     await component.resolveConflict('server');
 
-    expect(finDeleteSpy).toHaveBeenCalledWith(5);
-    expect(whDeleteSpy).not.toHaveBeenCalled();
+    expect(finUpdateSpy).toHaveBeenCalledWith(5, { dismissed: 1 });
     expect(whUpdateSpy).not.toHaveBeenCalled();
-    expect(finUpdateSpy).not.toHaveBeenCalled();
+    expect(finDeleteSpy).not.toHaveBeenCalled();
+    expect(whDeleteSpy).not.toHaveBeenCalled();
   });
 
   it('۴. getSourceDb accurately resolves source DB by error reference and falls back to appScope', () => {
