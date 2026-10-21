@@ -250,8 +250,14 @@ def test_route_matching():
     else:
         print("✅ کامپوننت‌های انبار و مالی از روت ریشه خارج شده و تنها در ماژول‌های تنبل خود لود می‌شوند.")
 
-    # ۳. راستی‌آزمایی تک‌تک ریدایرکت‌های Legacy
-    redirect_errors = check_legacy_redirects(content)
+    # ۳. راستی‌آزمایی تک‌تک ریدایرکت‌های Legacy: از نشست ۲۶ هر ماژول ریدایرکت‌های خود را در
+    #    legacyRedirects همان module.ts اعلام می‌کند؛ ریشهٔ ترکیب و همهٔ module.tsها با هم سنجیده می‌شوند.
+    redirect_sources = [content]
+    modules_dir = APP_ROUTES_TS.parent / "modules"
+    if modules_dir.exists():
+        for mod_file in sorted(modules_dir.glob("*/module.ts")):
+            redirect_sources.append(mod_file.read_text(encoding="utf-8", errors="replace"))
+    redirect_errors = check_legacy_redirects("\n".join(redirect_sources))
     if redirect_errors:
         for err in redirect_errors:
             print(f"❌ {err}")

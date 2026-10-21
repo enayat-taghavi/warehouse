@@ -271,6 +271,9 @@ def test_bundle_isolation():
     for folder in [CORE_DIR, SHARED_DIR]:
         if folder.exists():
             for ts_file in folder.rglob("*.ts"):
+                # spec در باندل نیست؛ آزمون روت‌ها حق دارد app.routes را مستقیم ایمپورت کند
+                if ts_file.name.endswith(".spec.ts"):
+                    continue
                 rel_path = str(ts_file.relative_to(FRONT_DIR)).replace("\\", "/")
                 scan_files[rel_path] = ts_file.read_text(encoding="utf-8", errors="replace")
 
