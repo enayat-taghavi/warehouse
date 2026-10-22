@@ -50,7 +50,31 @@ class CompanySerializer(serializers.ModelSerializer):
         if instance.latest_gazette and instance.latest_gazette.name:
             signed_url = signed_media_url(instance.latest_gazette.name)
             ret['latest_gazette'] = request.build_absolute_uri(signed_url) if request else signed_url
+        return mask_company_fields(ret, instance, request)
+
+
+# فیلدهایی که هر دارندهٔ پیوند می‌بیند (فهرست و سربرگ استودیو)
+COMPANY_PUBLIC_FIELDS = {'id', 'code', 'name', 'company_type', 'is_active', 'logo', 'has_warehouse_module'}
+
+
+def mask_company_fields(ret, instance, request):
+    """
+    کاربرِ غیرعضوِ غیرsuperuser (حالت محدود) فقط فیلدهای بخش‌هایی را می‌بیند که دست‌کم «خواندن» دارد
+    (یافتهٔ tenant-scope-reviewer گام ۸). عضو و superuser بدون تغییر.
+    """
+    user = getattr(request, 'user', None)
+    if user is None or not user.is_authenticated or user.is_superuser:
         return ret
+    from .access import get_user_allowed_companies, user_section_levels
+    from .permission_sections import field_sections
+    if get_user_allowed_companies(user).filter(id=instance.id).exists():
+        return ret
+    levels = user_section_levels(user).get(instance.id, {})
+    mapping = field_sections()
+    return {
+        k: v for k, v in ret.items()
+        if k in COMPANY_PUBLIC_FIELDS or levels.get(mapping.get(k), 'none') in ('read', 'write')
+    }
 
 
 class UserCompanyAccessSerializer(serializers.ModelSerializer):
@@ -63,7 +87,20 @@ class UserCompanyAccessSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserCompanyAccess
         fields = '__all__'
-        read_only_fields = ['created_at']
+        # access_level منسوخ است (سازگاری تا گام ۱۲)؛ سطح‌ها فقط از section_levels
+        read_only_fields = ['created_at', 'access_level']
+
+    def validate_section_levels(self, value):
+        from .permission_sections import normalize_levels
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("سطح بخش‌ها باید به‌صورت {بخش: سطح} باشد.")
+        return normalize_levels(value)
+
+    def to_representation(self, instance):
+        from .access import _row_levels
+        ret = super().to_representation(instance)
+        ret['section_levels'] = _row_levels(instance)
+        return ret
 
     def get_user_full_name(self, obj):
         if obj.user:

@@ -109,7 +109,7 @@ def _sync_user_company_access(user, company_ids=None, default_company_id=None, c
                 try:
                     cid = int(item['company_id'])
                     target_accesses[cid] = {
-                        'access_level': item.get('access_level', 'workspace_full'),
+                        'access_level': 'link',
                         'role_in_company': item.get('role_in_company', ''),
                         'is_default': bool(item.get('is_default', False))
                     }
@@ -120,7 +120,7 @@ def _sync_user_company_access(user, company_ids=None, default_company_id=None, c
             try:
                 cid_int = int(cid)
                 target_accesses[cid_int] = {
-                    'access_level': 'workspace_full',
+                    'access_level': 'link',
                     'role_in_company': '',
                     'is_default': (default_company_id is not None and cid_int == int(default_company_id))
                 }
@@ -140,12 +140,9 @@ def _sync_user_company_access(user, company_ids=None, default_company_id=None, c
     # محدودهٔ نویسندهٔ غیرسوپریوزر: همان شرکت‌های مجاز خودش (دسترسی صریح workspace_full یا انتساب فعال)
     scope_ids = None
     if actor is not None and getattr(actor, 'is_authenticated', False) and not actor.is_superuser:
-        scope_ids = set(UserCompanyAccess.objects.filter(
-            user=actor, access_level='workspace_full', company__is_active=True
-        ).values_list('company_id', flat=True))
-        scope_ids |= set(Company.objects.filter(
-            id__in=derived_company_ids(actor), is_active=True
-        ).values_list('id', flat=True))
+        # نویسندهٔ غیرسوپریوزر فقط در شرکت‌هایی که «دسترسی کاربران» را می‌نویسد پیوند می‌سازد یا برمی‌دارد
+        from companies.access import companies_with_section
+        scope_ids = set(companies_with_section(actor, 'user_access', 'write').values_list('id', flat=True))
         existing_ids = set(UserCompanyAccess.objects.filter(user=user).values_list('company_id', flat=True))
         outside = [cid for cid in target_accesses if cid not in scope_ids and cid not in existing_ids]
         if outside:
@@ -175,15 +172,20 @@ def _sync_user_company_access(user, company_ids=None, default_company_id=None, c
     default_comp_name = None
     for cid, info in target_accesses.items():
         if cid in valid_companies:
-            UserCompanyAccess.objects.update_or_create(
+            # پیوند کاربر با شرکت (ت۸): ردیف تازه بی‌سطح است و عضویت نمی‌دهد؛ سطح بخش‌های ردیف موجود دست نمی‌خورد
+            row, created = UserCompanyAccess.objects.get_or_create(
                 user=user,
                 company_id=cid,
                 defaults={
-                    'access_level': info.get('access_level', 'workspace_full'),
+                    'access_level': 'link',
                     'role_in_company': info.get('role_in_company', ''),
                     'is_default': info.get('is_default', False)
                 }
             )
+            if not created:
+                row.role_in_company = info.get('role_in_company', row.role_in_company) or row.role_in_company
+                row.is_default = info.get('is_default', False)
+                row.save(update_fields=['role_in_company', 'is_default'])
             if info.get('is_default'):
                 default_comp_name = valid_companies[cid].name
 

@@ -64,6 +64,8 @@ class CompanyWarehouseIsolationTestCase(TestCase):
             access_level='workspace_full',
             is_default=True
         )
+        # عضویت فقط خودکار است (طرح مجوزهای شرکت، ت۷): انتساب به انبار PTS او را عضو PTS می‌کند
+        self.wh_pts_1.assigned_users.add(self.regular_user)
 
         # کاربر با دسترسی صرفاً مدارک (الگوی نسرین بیرمی)
         self.docs_user = User.objects.create_user(

@@ -15,6 +15,12 @@ from common.mixins import DeleteImpactMixin
 from platform_core.registry import contributions
 
 from .access import (
+    companies_with_any_section,
+    companies_with_section,
+    company_section_level,
+    ensure_section,
+    user_section_levels,
+    derived_company_access_details,
     derived_company_ids,
     ensure_scoped_write,
     get_user_allowed_companies,
@@ -49,7 +55,9 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         qs = self.base_queryset()
 
         if not user.is_superuser and self.action != 'user_available':
-            allowed_ids = get_user_allowed_companies(user).values_list('id', flat=True)
+            # عضو (دادهٔ ماژول‌ها) یا دارندهٔ دست‌کم یک بخش با سطح خواندن (حالت محدود استودیو)
+            allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
+            allowed_ids |= set(companies_with_any_section(user).values_list('id', flat=True))
             qs = qs.filter(id__in=allowed_ids)
 
         is_active = self.request.query_params.get('is_active')
@@ -79,8 +87,20 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         broadcast_org_structure_updated('company', 'create', instance.id, instance.name, None, tab_id, self.request.user.id)
 
     def perform_update(self, serializer):
-        if not (self.request.user.is_superuser or self.request.user.is_staff):
-            raise PermissionDenied("تنها مدیران ارشد مجاز به ویرایش اطلاعات شرکت هستند.")
+        user = self.request.user
+        if not user.is_superuser:
+            # هر فیلد باید به بخشی نگاشت شده باشد که کاربر «نوشتن» آن را در همین شرکت دارد؛
+            # فیلد بی‌نگاشت (مثل is_active و has_warehouse_module) فقط برای superuser است.
+            from .permission_sections import field_sections
+            mapping = field_sections()
+            company_id = serializer.instance.id
+            denied = []
+            for field in serializer.validated_data:
+                section = mapping.get(field)
+                if section is None or company_section_level(user, company_id, section) != 'write':
+                    denied.append(field)
+            if denied:
+                raise PermissionDenied(f"مجوز ویرایش این فیلدها را ندارید: {', '.join(sorted(denied))}")
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
         broadcast_org_structure_updated('company', 'update', instance.id, instance.name, None, tab_id, self.request.user.id)
@@ -127,25 +147,38 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             companies = get_user_allowed_companies(user, required_level='docs_read')
         elif scope == 'all':
             companies = get_user_allowed_companies(user, required_level=None)
+        elif scope == 'manage':
+            # حالت محدود استودیو: شرکت‌هایی که دست‌کم یک بخش با سطح خواندن دارد
+            companies = companies_with_any_section(user)
         else:
             companies = get_user_allowed_companies(user, required_level='workspace_full')
 
         serializer = self.get_serializer(companies, many=True)
         data = list(serializer.data)
 
-        # الحاق سطح دسترسی کاربر در هر شرکت برای هدایت هوشمند در فرانت‌اند
-        user_accesses = {
-            a.company_id: a.access_level
-            for a in UserCompanyAccess.objects.filter(user=user)
-        }
-        derived_ids = set() if user.is_superuser else derived_company_ids(user)
+        # عضویت (با منبع) و سطح بخش‌ها برای هر شرکت
+        from .permission_sections import section_map
+        all_write = {k: 'write' for k in section_map()}
+        levels = {} if user.is_superuser else user_section_levels(user)
+        sources = {}
+        if not user.is_superuser:
+            for d in derived_company_access_details(user):
+                sources.setdefault(d['company_id'], []).append(d.get('source_label') or d.get('company_name') or '')
+        member_ids = None if user.is_superuser else set(get_user_allowed_companies(user).values_list('id', flat=True))
         for c in data:
             if user.is_superuser:
+                c['is_member'] = True
+                c['membership_sources'] = ['مدیر کل سامانه']
+                c['section_levels'] = dict(all_write)
+            else:
+                c['is_member'] = c['id'] in member_ids
+                c['membership_sources'] = sources.get(c['id'], [])
+                c['section_levels'] = levels.get(c['id'], {})
+            # سازگاری موقت تا گام ۱۲ (بایگانی مدارک فرانت)
+            if user.is_superuser:
                 c['user_access_level'] = 'workspace_full'
-            elif c['id'] in user_accesses:
-                c['user_access_level'] = user_accesses[c['id']]
-            elif c['id'] in derived_ids:
-                c['user_access_level'] = 'workspace_full'
+            elif c['section_levels'].get('docs_archive') == 'write':
+                c['user_access_level'] = 'docs_write'
             else:
                 c['user_access_level'] = 'docs_read'
 
@@ -226,6 +259,9 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
+        # خروجی همهٔ شناسه‌ها و شبا فقط برای superuser (یافتهٔ tenant-scope-reviewer گام ۸)
+        if not request.user.is_superuser:
+            raise PermissionDenied("خروجی اکسل شرکت‌ها فقط برای مدیر کل سامانه است.")
         qs = self.get_queryset()
         if request.query_params.get('template') in ('1', 'true'):
             # الگوی خالی ورود از اکسل: همان سربرگ دوسطری بدون ردیف داده
@@ -340,16 +376,16 @@ class UserCompanyAccessViewSet(viewsets.ModelViewSet):
     """
     queryset = UserCompanyAccess.objects.all().select_related('user', 'company')
     serializer_class = UserCompanyAccessSerializer
-    permission_classes = [permissions.IsAuthenticated, IsOrgStructureManagerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated]
     pagination_class = OptionalPageNumberPagination
 
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
-        if requires_company_scope(user):
-            # کاربر غیرسوپریوزر فقط دسترسی‌های شرکت‌های مجاز خودش و ردیف‌های خودش را می‌بیند
-            allowed_ids = set(get_user_allowed_companies(user).values_list('id', flat=True))
-            qs = qs.filter(Q(company_id__in=allowed_ids) | Q(user=user))
+        if not user.is_superuser:
+            # ردیف‌های شرکت‌هایی که کاربر «دسترسی کاربران» را دست‌کم می‌خواند، و ردیف‌های خودش
+            readable = set(companies_with_section(user, 'user_access', 'read').values_list('id', flat=True))
+            qs = qs.filter(Q(company_id__in=readable) | Q(user=user))
         user_id = self.request.query_params.get('user_id')
         company_id = self.request.query_params.get('company_id')
         if user_id:
@@ -358,27 +394,72 @@ class UserCompanyAccessViewSet(viewsets.ModelViewSet):
             qs = qs.filter(company_id=company_id)
         return qs.order_by('-created_at')
 
+    @action(detail=False, methods=['get'], url_path='members')
+    def members(self, request):
+        """اعضای خودکار یک شرکت با منبع عضویت (فقط نمایش؛ ق۲). نیازمند «دسترسی کاربران» خواندن."""
+        from django.contrib.auth import get_user_model
+        company_id = request.query_params.get('company_id')
+        if not company_id or not str(company_id).isdigit():
+            return Response({'error': 'company_id الزامی است.'}, status=400)
+        ensure_section(request.user, company_id, 'user_access', 'read')
+        sources = {}
+        for provider in contributions('company_member_sources'):
+            for uid, labels in provider(int(company_id)).items():
+                sources.setdefault(uid, []).extend(labels)
+        users = get_user_model().objects.filter(id__in=sources.keys(), is_active=True).order_by('username')
+        return Response([
+            {'user_id': u.id, 'username': u.username,
+             'user_full_name': f"{u.first_name} {u.last_name}".strip() or u.username,
+             'sources': sources.get(u.id, [])}
+            for u in users
+        ])
+
+    def _ensure_can_grant(self, company_id, target_user, old_levels, new_levels):
+        """
+        نوشتنِ «دسترسی کاربران» فقط تا سطح خودِ نویسنده (§۵-۱): نه ردیف خود، نه superuser،
+        نه ردیف کسی که در بخشی از نویسنده بالاتر است؛ کارهای حساس فقط با superuser (ت۹).
+        """
+        from .permission_sections import LEVEL_RANK, section_map
+        actor = self.request.user
+        if actor.is_superuser:
+            return
+        ensure_section(actor, company_id, 'user_access', 'write', "مجوز نوشتن «دسترسی کاربران» این شرکت را ندارید.")
+        if target_user is not None and (target_user.id == actor.id or target_user.is_superuser):
+            raise PermissionDenied("دسترسی خودتان یا مدیر کل سامانه را نمی‌توانید تغییر دهید.")
+        sections = section_map()
+        mine = user_section_levels(actor).get(int(company_id), {})
+        for levels in (old_levels or {}, new_levels or {}):
+            for key, level in levels.items():
+                spec = sections.get(key, {})
+                if spec.get('sensitive') and level != 'none':
+                    raise PermissionDenied("اعطا یا تغییر کارهای حساس فقط با مدیر کل سامانه است.")
+                if LEVEL_RANK.get(level, 0) > LEVEL_RANK.get(mine.get(key, 'none'), 0):
+                    raise PermissionDenied(f"سطح «{spec.get('label_fa', key)}» از سطح خود شما بالاتر است.")
+
     def perform_create(self, serializer):
-        if requires_company_scope(self.request.user):
-            company = serializer.validated_data.get('company')
-            ensure_scoped_write(self.request.user, company.id if company else None, "دسترسی فقط برای شرکت‌های مجاز شما قابل اعطاست.")
-        instance = serializer.save()
+        company = serializer.validated_data.get('company')
+        self._ensure_can_grant(company.id if company else None, serializer.validated_data.get('user'),
+                               {}, serializer.validated_data.get('section_levels') or {})
+        instance = serializer.save(access_level='link')
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_access', 'create', instance.id, str(instance.user), client_tab_id=tab_id, sender_id=self.request.user.id, company_id=instance.company_id)
 
     def perform_update(self, serializer):
-        if requires_company_scope(self.request.user):
-            ensure_scoped_write(self.request.user, serializer.instance.company_id, "فقط دسترسی‌های شرکت‌های مجاز خود را می‌توانید تغییر دهید.")
-            if 'company' in serializer.validated_data:
-                company = serializer.validated_data.get('company')
-                ensure_scoped_write(self.request.user, company.id if company else None, "انتقال دسترسی به شرکتی که مجاز نیستید ممکن نیست.")
+        inst = serializer.instance
+        if 'company' in serializer.validated_data and serializer.validated_data['company'].id != inst.company_id:
+            raise PermissionDenied("انتقال ردیف دسترسی به شرکت دیگر ممکن نیست؛ ردیف تازه بسازید.")
+        if 'user' in serializer.validated_data and serializer.validated_data['user'].id != inst.user_id:
+            raise PermissionDenied("تغییر کاربرِ ردیف دسترسی ممکن نیست.")
+        from .access import _row_levels
+        self._ensure_can_grant(inst.company_id, inst.user, _row_levels(inst),
+                               serializer.validated_data.get('section_levels') or {})
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_access', 'update', instance.id, str(instance.user), client_tab_id=tab_id, sender_id=self.request.user.id, company_id=instance.company_id)
 
     def perform_destroy(self, instance):
-        if requires_company_scope(self.request.user):
-            ensure_scoped_write(self.request.user, instance.company_id, "فقط دسترسی‌های شرکت‌های مجاز خود را می‌توانید حذف کنید.")
+        from .access import _row_levels
+        self._ensure_can_grant(instance.company_id, instance.user, _row_levels(instance), {})
         instance_id = instance.id
         user_title = str(instance.user)
         comp_id = instance.company_id

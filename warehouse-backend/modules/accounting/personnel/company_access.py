@@ -26,6 +26,7 @@ def section_derived_company_source(user):
                 'company_code': sec_comp.code,
                 'access_level': 'workspace_full',
                 'role_in_company': sa.get_role_display() if hasattr(sa, 'get_role_display') else '',
+                'source_label': f"از بخش {sa.section.name} پروژهٔ {sa.section.project.name}",
             })
     return details
 
@@ -70,3 +71,13 @@ COMPANY_FIELD_SECTIONS = {f: 'board' for f in (
     'board_chairman', 'board_vice_chairman', 'main_inspector', 'alternate_inspector',
     'authorized_signers', 'board_term_expiry',
 )}
+
+
+def section_member_sources(company_id):
+    """{user_id: [برچسب منبع]} برای اعضای یک شرکت از راه انتساب فعال بخش‌ها (تب «دسترسی»)."""
+    from personnel.models import UserSectionAssignment
+    result = {}
+    for sa in (UserSectionAssignment.objects.filter(is_active=True, section__project__company_id=company_id)
+               .select_related('section__project')):
+        result.setdefault(sa.user_id, []).append(f"از بخش {sa.section.name} پروژهٔ {sa.section.project.name}")
+    return result

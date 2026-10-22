@@ -3,6 +3,7 @@
 طرح پیگیری‌های ناظر — نشست ۱.
 """
 import io
+from integration_tests.membership import grant_membership
 from openpyxl import Workbook, load_workbook
 
 from django.apps import apps
@@ -92,6 +93,8 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
             access_level='workspace_full',
             is_default=True
         )
+        grant_membership(self.user_a, self.company_a)
+        grant_membership(self.user_b, self.company_b)
 
         perms = Permission.objects.filter(
             codename__in=[
@@ -546,7 +549,7 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
         self.assertIsNotNone(new_user)
         access = UserCompanyAccess.objects.filter(user=new_user, company=self.company_a).first()
         self.assertIsNotNone(access, 'رکورد UserCompanyAccess برای کاربر جدید ساخته نشده است.')
-        self.assertEqual(access.access_level, 'workspace_full')
+        self.assertEqual(access.access_level, 'link')
 
     # -------------------------------------------------------------------------
     # ۱۲. غیرسوپریوزر بی‌شرکت فعال: خطای روشن فارسی و هیچ کاربری ساخته نمی‌شود
@@ -637,7 +640,9 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
             first_name='کاربر', last_name='دوشرکتی',
         )
         UserCompanyAccess.objects.create(user=u, company=self.company_a, access_level='workspace_full', is_default=True)
+        grant_membership(u, self.company_a)
         UserCompanyAccess.objects.create(user=u, company=self.company_b, access_level='workspace_full')
+        grant_membership(u, self.company_b)
         return u
 
     def _import(self, actor, rows, update_existing, company):
@@ -671,6 +676,7 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
         # ممیز پرسنل (حسابدار کل) به بخش محدود نیست ولی همچنان به شرکت‌های مجاز محدود است
         auditor = User.objects.create_user(username='pers_auditor_a', password='Password123!', national_code='0088888888')
         UserCompanyAccess.objects.create(user=auditor, company=self.company_a, access_level='workspace_full', is_default=True)
+        grant_membership(auditor, self.company_a)
         auditor.user_permissions.set(Permission.objects.filter(
             codename__in=['view_sys_reports', 'view_sys_personnel', 'perm_approve_personnel_finance']
         ))

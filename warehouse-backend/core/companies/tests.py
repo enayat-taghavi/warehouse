@@ -26,21 +26,24 @@ class CompanyAccessTests(TestCase):
         self.c3 = Company.objects.create(code='CORE-C3', name='شرکت سه')
         self.user = User.objects.create_user(username='core_user', password='x-pass-123', phone_number='09170000001')
 
-    def test_direct_access_levels(self):
+    def test_manual_row_never_grants_membership(self):
+        # Q2: membership only from automatic sources; a manual row (even workspace_full) never grants it
+        from companies import access
         UserCompanyAccess.objects.create(user=self.user, company=self.c1, access_level='workspace_full')
-        UserCompanyAccess.objects.create(user=self.user, company=self.c2, access_level='docs_read')
-
-        full = set(get_user_allowed_companies(self.user).values_list('id', flat=True))
-        docs = set(get_user_allowed_companies(self.user, required_level='docs_read').values_list('id', flat=True))
-        self.assertEqual(full, {self.c1.id})
-        self.assertEqual(docs, {self.c1.id, self.c2.id})
-
-        self.assertEqual(validate_user_company_access(self.user, self.c1.id), self.c1.id)
+        self.assertEqual(set(get_user_allowed_companies(self.user).values_list('id', flat=True)), set())
         with self.assertRaises(PermissionDenied):
-            validate_user_company_access(self.user, self.c2.id)
+            validate_user_company_access(self.user, self.c1.id)
+        # but it is a link (middleware)
+        self.assertEqual(validate_user_company_access(self.user, self.c1.id, required_level=None), self.c1.id)
+        source = lambda u: [{'company_id': self.c2.id}] if u.id == self.user.id else []
+        access.register_derived_company_source(source)
+        try:
+            self.assertEqual(set(get_user_allowed_companies(self.user).values_list('id', flat=True)), {self.c2.id})
+        finally:
+            access._DERIVED_COMPANY_SOURCES.remove(source)
 
     def test_inactive_company_is_never_allowed(self):
-        UserCompanyAccess.objects.create(user=self.user, company=self.c3, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=self.user, company=self.c3, section_levels={'identity': 'read'})
         self.c3.is_active = False
         self.c3.save(update_fields=['is_active'])
         self.assertFalse(get_user_allowed_companies(self.user).filter(id=self.c3.id).exists())
@@ -53,7 +56,7 @@ class CoreCompanyApiTests(TestCase):
         self.c2 = Company.objects.create(code='API-C2', name='شرکت ب')
         self.admin = User.objects.create_superuser(username='core_admin', password='x-pass-123', phone_number='09170000002')
         self.user = User.objects.create_user(username='core_member', password='x-pass-123', phone_number='09170000003')
-        UserCompanyAccess.objects.create(user=self.user, company=self.c1, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=self.user, company=self.c1, section_levels={'identity': 'read'})
 
     def test_list_is_scoped_to_allowed_companies(self):
         self.client.force_authenticate(self.user)
@@ -65,11 +68,12 @@ class CoreCompanyApiTests(TestCase):
 
     def test_user_available_reports_access_level(self):
         self.client.force_authenticate(self.user)
-        r = self.client.get('/api/org/companies/user-available/')
-        self.assertEqual(r.status_code, 200)
-        body = r.json()
+        # not a member anywhere; in restricted mode it sees the company with its section levels
+        self.assertEqual(self.client.get('/api/org/companies/user-available/').json()['count'], 0)
+        body = self.client.get('/api/org/companies/user-available/?scope=manage').json()
         self.assertEqual(body['count'], 1)
-        self.assertEqual(body['companies'][0]['user_access_level'], 'workspace_full')
+        self.assertFalse(body['companies'][0]['is_member'])
+        self.assertEqual(body['companies'][0]['section_levels'], {'identity': 'read'})
 
     def test_only_admins_create_and_code_is_normalized(self):
         self.client.force_authenticate(self.user)
@@ -79,15 +83,30 @@ class CoreCompanyApiTests(TestCase):
         self.assertEqual(r.status_code, 201, r.content)
         self.assertEqual(r.json()['code'], 'NEW-CO')
 
-    def test_non_superuser_cannot_grant_access_outside_own_companies(self):
+    def test_grant_is_capped_by_writer_levels(self):
         writer = User.objects.create_user(username='core_writer', password='x-pass-123', phone_number='09170000004', is_staff=True)
-        UserCompanyAccess.objects.create(user=writer, company=self.c1, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=writer, company=self.c1, section_levels={'user_access': 'write', 'identity': 'read'})
         target = User.objects.create_user(username='core_target', password='x-pass-123', phone_number='09170000005')
+        url = '/api/org/user-company-access/'
         self.client.force_authenticate(writer)
-        r = self.client.post('/api/org/user-company-access/', {'user': target.id, 'company': self.c2.id, 'access_level': 'workspace_full'}, format='json')
-        self.assertEqual(r.status_code, 403)
-        r = self.client.post('/api/org/user-company-access/', {'user': target.id, 'company': self.c1.id, 'access_level': 'workspace_full'}, format='json')
+        self.assertEqual(self.client.post(url, {'user': target.id, 'company': self.c2.id, 'section_levels': {}}, format='json').status_code, 403)
+        self.assertEqual(self.client.post(url, {'user': target.id, 'company': self.c1.id, 'section_levels': {'identity': 'write'}}, format='json').status_code, 403)
+        own = UserCompanyAccess.objects.get(user=writer)
+        self.assertEqual(self.client.patch(f'{url}{own.id}/', {'section_levels': {'identity': 'write'}}, format='json').status_code, 403)
+        r = self.client.post(url, {'user': target.id, 'company': self.c1.id, 'section_levels': {'identity': 'read', 'bogus': 'write'}}, format='json')
         self.assertEqual(r.status_code, 201, r.content)
+        row = UserCompanyAccess.objects.get(user=target)
+        self.assertEqual(row.section_levels, {'identity': 'read'})
+        self.assertEqual(row.access_level, 'link')
+        self.assertFalse(get_user_allowed_companies(target).exists())
+
+    def test_field_update_needs_section_write(self):
+        self.client.force_authenticate(self.user)
+        url = f'/api/org/companies/{self.c1.id}/'
+        self.assertEqual(self.client.patch(url, {'name': 'x'}, format='json').status_code, 403)
+        UserCompanyAccess.objects.filter(user=self.user).update(section_levels={'identity': 'write'})
+        self.assertEqual(self.client.patch(url, {'name': 'x'}, format='json').status_code, 200)
+        self.assertEqual(self.client.patch(url, {'is_active': False}, format='json').status_code, 403)
 
 
 class CompanyDeleteImpactTests(TestCase):
@@ -100,8 +119,8 @@ class CompanyDeleteImpactTests(TestCase):
         self.admin = User.objects.create_superuser(username='del_admin', password='x-pass-123', phone_number='09170000011')
         self.staff = User.objects.create_user(username='del_staff', password='x-pass-123', phone_number='09170000012', is_staff=True)
         self.member = User.objects.create_user(username='del_member', password='x-pass-123', phone_number='09170000013')
-        UserCompanyAccess.objects.create(user=self.staff, company=self.c1, access_level='workspace_full')
-        UserCompanyAccess.objects.create(user=self.member, company=self.c1, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=self.staff, company=self.c1, section_levels={'identity': 'write'})
+        UserCompanyAccess.objects.create(user=self.member, company=self.c1, section_levels={'identity': 'read'})
 
     def url(self, company):
         return f'/api/org/companies/{company.id}/delete_impact/'
@@ -288,3 +307,19 @@ class CompanyPermissionSectionsTests(TestCase):
         from .permission_sections import legacy_levels, template_levels
         self.assertEqual(legacy_levels('workspace_full'), template_levels('manager'))
         self.assertNotIn('identity', legacy_levels('docs_read'))
+
+
+class CompanyRestrictedReadMaskTests(TestCase):
+    """Step 8 tenant-scope-reviewer finding: a non-member sees only fields of readable sections."""
+
+    def test_non_member_sees_only_readable_section_fields(self):
+        c = Company.objects.create(code='MASK-C1', name='mask', national_id='10100000001', workshop_code='123')
+        u = User.objects.create_user(username='mask_u', password='x-pass-123', phone_number='09170000061')
+        UserCompanyAccess.objects.create(user=u, company=c, section_levels={'identity': 'read'})
+        client = APIClient()
+        client.force_authenticate(u)
+        body = client.get(f'/api/org/companies/{c.id}/').json()
+        self.assertEqual(body['national_id'], '10100000001')
+        self.assertNotIn('workshop_code', body)
+        self.assertNotIn('primary_iban', body)
+        self.assertEqual(client.get('/api/org/companies/export-excel/').status_code, 403)

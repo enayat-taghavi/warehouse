@@ -61,6 +61,15 @@ class WarehousesConfig(AppConfig):
 
         contribute('company_of:warehouse', _warehouse_company_resolver)
 
+        # عضویت خودکار شرکت از انتساب انبار (طرح مجوزهای بخش‌به‌بخش شرکت، ت۷)
+        from companies.access import register_derived_company_source
+        from warehouses.company_access import (
+            warehouse_derived_company_source, build_warehouse_member_q, warehouse_member_sources,
+        )
+        register_derived_company_source(warehouse_derived_company_source)
+        contribute('company_member_q_builders', build_warehouse_member_q)
+        contribute('company_member_sources', warehouse_member_sources)
+
         # حل موجودیت‌های انبار و فیلدهای اختصاصی برای هسته (بدون وابستگی معکوس هسته به انبار)
         from warehouses.models import Warehouse
         contribute('entity_resolver:warehouse', lambda wid: Warehouse.objects.filter(id=wid).first())

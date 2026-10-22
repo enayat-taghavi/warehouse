@@ -410,6 +410,48 @@
   - **نتیجه روی `app`:** ۱۴ ردیف `workspace_full` ← ۱۲ بخش (قالب «مدیر شرکت»، کارهای حساس «هیچ»). ۲ ردیف `docs_write` ← `docs_archive: write`.
 - **API:** `GET /api/org/company-permission-sections/`. در نصب `WH_MODULES=warehouse` ۴ بخش و در `accounting` ۱۲ بخش برمی‌گرداند.
 - **آزمون‌ها:** `companies` سبز، با ۲ آزمون تازه.
-- **`data-loss-reviewer`:** یافتهٔ تأییدشده نداشت. **الزام برای گام ۸:** اگر مهاجرت بدون ماژول حسابداری اجرا شود، `docs_*` به `{}` نگاشت می‌شود. پس resolver هر جا `section_levels` تهی است باید به `legacy_levels(access_level)` برگردد.
+- **`data-loss-reviewer`:** یافتهٔ تأییدشده نداشت. **الزام برای گام ۸ (اعمال شد):** اگر مهاجرت بدون ماژول حسابداری اجرا شود، `docs_*` به `{}` نگاشت می‌شود. پس resolver هر جا `section_levels` تهی است باید به `legacy_levels(access_level)` برگردد.
+
+### گام ۸ — سوئیچ بک‌اند هسته و انبار (۳۰ مهر ۱۴۰۵) — انجام شد؛ آزمون‌های حسابداری به گام ۹ موکول شد
+
+**انجام شد:**
+- **`core/companies/access.py`:**
+  - عضو = superuser و منبع‌های خودکار. ردیف دستی دیگر عضویت نمی‌دهد.
+  - API تازه: `user_section_levels`، `company_section_level`، `companies_with_section`، `companies_with_any_section` و `ensure_section`.
+  - **سازگاری موقت:** `docs_read`/`docs_write` به بخش‌هایی با `legacy` نگاشت می‌شوند. `None` یعنی پیوند.
+  - ردیفِ بی‌سطح با `access_level` قدیمی `docs_*` از `legacy_levels` خوانده می‌شود (الزام گام ۷).
+- **`CompanyViewSet`:**
+  - queryset = عضو یا دارندهٔ دست‌کم یک بخش.
+  - ویرایش هر فیلد نیازمند «نوشتن» بخشِ نگاشت‌شده است. فیلد بی‌نگاشت (`is_active` و …) فقط superuser.
+  - `user-available` حالا `is_member`، `membership_sources`، `section_levels` و `scope=manage` دارد. `user_access_level` فقط برای سازگاری بایگانی (از `docs_archive`) می‌ماند.
+  - `export-excel` فقط superuser.
+- **`CompanySerializer`:** برای غیرعضو فقط فیلدهای عمومی و فیلدهای بخش‌های خواندنی را برمی‌گرداند (`mask_company_fields`).
+- **`UserCompanyAccessViewSet`:**
+  - دروازه `user_access` خواندن و نوشتن است.
+  - سقف سطح نویسنده رعایت می‌شود. ردیف خود و superuser تغییرپذیر نیست. کار حساس فقط با superuser.
+  - جابه‌جایی ردیف به شرکت یا کاربر دیگر ممنوع است. `access_level` فقط‌خواندنی است و ردیف تازه `link` می‌گیرد.
+  - مسیر تازهٔ `members?company_id=` اعضای خودکار را با منبعشان برمی‌گرداند (contribution `company_member_sources`).
+- **مهاجرت `companies/0003`:** مقدار `link` به choices افزوده شد. فقط state است و پیش از آن پشتیبان گرفته شد.
+- **middleware:** به‌طور پیش‌فرض عضویت لازم است. فقط `/api/org/` به «پیوند» بسنده می‌کند.
+- **صفحهٔ کاربران و ورود کاربران از اکسل:** ردیف `link` می‌سازند (ت۸) و سطح ردیف موجود را عوض نمی‌کنند. دامنهٔ نویسنده = شرکت‌هایی که «دسترسی کاربران» آن‌ها را می‌نویسد.
+- **دایرکتوری کاربران:** فیلتر خام `workspace_full` حذف شد. اعضا = ردیف پیوند یا q builderها.
+- **ماژول انبار:**
+  - `warehouses/company_access.py` منبع عضویت (انبار فعال دارای شرکت)، `company_member_q_builders` و `company_member_sources` را ثبت می‌کند.
+  - حسابداری: `source_label` و `section_member_sources` افزوده شد.
+- **آزمون‌ها:**
+  - `integration_tests/membership.py` منبع آزمونی است برای آزمون‌هایی که فقط «عضو بودن» لازم دارند.
+  - آزمون انبار از انتساب واقعی انبار استفاده می‌کند.
+  - `companies accounts warehouses integration_tests`: همه سبزند، جز `communications.test_performance` که از پیش شکست می‌خورد. اجرای موازی دو آزمون روی یک دیتابیس آزمون خطای FK ساخت؛ اجرای تنها سبز بود.
+- **نگهبان‌ها:** 29 و 57 سبز. `makemigrations --check` بدون تغییر.
+- **`tenant-scope-reviewer`:** ۲ یافته داد و هر دو اصلاح شد:
+  - غیرعضوِ دارای یک بخش همهٔ فیلدهای شرکت و خروجی اکسل را می‌دید ← ماسک و superuser-only.
+  - پیوند در middleware برای همهٔ مسیرها کافی بود ← فقط `/api/org/`.
+
+**باز (گام ۹):**
+- `manage.py test personnel inventory`: ۴۱ شکست و ۳۱ خطا. علت اصلی آزمون‌هایی است که با ردیف دستی `workspace_full` عضو می‌سازند؛ بخشی هم از اجرای موازی بود.
+- viewsetهای حسابداری (§۵-۴، بخش حسابداری) هنوز سوئیچ نشده‌اند.
+- روی `app`، طبق گام ۶، همهٔ کاربرانِ دارای `workspace_full` منبع خودکار دارند. پس رفتار برنامه برای آن‌ها عوض نمی‌شود.
+
+**گام بعد:** گام ۹. ابتدا `manage.py test personnel inventory --keepdb` تنها اجرا و فهرست شکست‌ها گرفته شود. آزمون‌هایی که با ردیف `workspace_full` عضو می‌سازند به انتساب بخش، یا `integration_tests.membership.grant_membership` (در `personnel` منبع آزمونی همانند) منتقل شوند. سپس ردیف‌های حسابداری §۵-۴ اعمال شوند.
 
 </div>

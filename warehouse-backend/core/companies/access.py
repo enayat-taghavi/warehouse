@@ -56,10 +56,76 @@ def derived_company_access_details(user) -> list[dict]:
 
 
 
+def _row_levels(row):
+    """سطح بخش‌های یک ردیف؛ ردیف قدیمیِ بی‌سطح از access_level نگاشت می‌شود (یادداشت بازبین گام ۷)."""
+    from .permission_sections import legacy_levels, normalize_levels
+    if row.section_levels:
+        return normalize_levels(row.section_levels)
+    if row.access_level in ('docs_read', 'docs_write'):
+        return legacy_levels(row.access_level)
+    return {}
+
+
+def user_section_levels(user):
+    """{company_id: {section: level}} برای ردیف‌های کاربر (کش در سطح درخواست)."""
+    from accounts.middleware import get_allowed_companies_cache
+    req_cache = get_allowed_companies_cache()
+    key = (getattr(user, 'id', None), '__section_levels__')
+    if req_cache is not None and key in req_cache:
+        return req_cache[key]
+    result = {r.company_id: _row_levels(r) for r in UserCompanyAccess.objects.filter(user=user)}
+    if req_cache is not None:
+        req_cache[key] = result
+    return result
+
+
+def _level_ok(have, need):
+    from .permission_sections import LEVEL_RANK
+    return LEVEL_RANK.get(have or 'none', 0) >= LEVEL_RANK.get(need, 99)
+
+
+def company_section_level(user, company_id, section):
+    if not user or not user.is_authenticated:
+        return 'none'
+    if user.is_superuser:
+        return 'write'
+    try:
+        cid = int(company_id)
+    except (TypeError, ValueError):
+        return 'none'
+    return user_section_levels(user).get(cid, {}).get(section, 'none')
+
+
+def companies_with_section(user, section, level='read'):
+    if not user or not user.is_authenticated:
+        return Company.objects.none()
+    if user.is_superuser:
+        return Company.objects.filter(is_active=True)
+    ids = [cid for cid, lv in user_section_levels(user).items() if _level_ok(lv.get(section), level)]
+    return Company.objects.filter(id__in=ids, is_active=True)
+
+
+def companies_with_any_section(user):
+    """شرکت‌هایی که کاربر دست‌کم یک بخش «خواندن» یا بالاتر دارد (فهرست حالت محدود)."""
+    if not user or not user.is_authenticated:
+        return Company.objects.none()
+    if user.is_superuser:
+        return Company.objects.filter(is_active=True)
+    ids = [cid for cid, lv in user_section_levels(user).items() if any(_level_ok(v, 'read') for v in lv.values())]
+    return Company.objects.filter(id__in=ids, is_active=True)
+
+
+def ensure_section(user, company_id, section, level='read', message=None):
+    if not _level_ok(company_section_level(user, company_id, section), level):
+        raise PermissionDenied(message or "شما برای این بخش از اطلاعات شرکت مجوز لازم را ندارید.")
+
+
 def get_user_allowed_companies(user, required_level='workspace_full'):
     """
-    محاسبه شرکت‌های مجاز کاربر (ترکیبی: سوپریوزر = همه، عادی = انتساب صریح یا دسترسی مشتق ماژول‌ها)
-    دارای حافظه کش در سطح چرخه درخواست کلاینت (Request Scope) جهت جلوگیری از اجرای کوئری‌های تکراری N+1
+    شرکت‌هایی که کاربر «عضو» آن‌هاست: superuser همه؛ دیگران فقط از منبع‌های خودکار ماژول‌ها
+    (register_derived_company_source). ردیف UserCompanyAccess دیگر عضویت نمی‌دهد (ق۲).
+    سازگاری موقت تا گام ۱۲: 'docs_read'/'docs_write' = بخش بایگانی خواندن/نوشتن (از رجیستری)،
+    None = پیوند (عضو یا هر ردیف).
     """
     if not user or not user.is_authenticated:
         return Company.objects.none()
@@ -73,17 +139,20 @@ def get_user_allowed_companies(user, required_level='workspace_full'):
     if req_cache is not None and cache_key in req_cache:
         return req_cache[cache_key]
 
-    access_qs = UserCompanyAccess.objects.filter(user=user)
     if required_level == 'workspace_full':
-        direct_ids = set(access_qs.filter(access_level='workspace_full').values_list('company_id', flat=True))
-        allowed_ids = direct_ids.union(derived_company_ids(user))
-    elif required_level == 'docs_write':
-        allowed_ids = set(access_qs.filter(access_level__in=['docs_write', 'workspace_full']).values_list('company_id', flat=True))
-    elif required_level == 'docs_read':
-        allowed_ids = set(access_qs.filter(access_level__in=['docs_read', 'docs_write', 'workspace_full']).values_list('company_id', flat=True))
+        allowed_ids = derived_company_ids(user)
+    elif required_level in ('docs_read', 'docs_write'):
+        from .permission_sections import legacy_levels
+        need = 'write' if required_level == 'docs_write' else 'read'
+        doc_sections = [k for k in legacy_levels(required_level)] or []
+        allowed_ids = {
+            cid for cid, lv in user_section_levels(user).items()
+            if any(_level_ok(lv.get(k), need) for k in doc_sections)
+        }
     else:
-        direct_ids = set(access_qs.values_list('company_id', flat=True))
-        allowed_ids = direct_ids.union(derived_company_ids(user))
+        allowed_ids = set(UserCompanyAccess.objects.filter(user=user).values_list('company_id', flat=True))
+        allowed_ids |= derived_company_ids(user)
+        allowed_ids |= set(companies_with_any_section(user).values_list('id', flat=True))
 
     qs = Company.objects.filter(id__in=allowed_ids, is_active=True)
     if req_cache is not None:

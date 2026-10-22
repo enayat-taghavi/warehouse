@@ -113,7 +113,7 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 raise PermissionDenied('شما به کاربران این شرکت دسترسی ندارید.')
             allowed_cids = {int(company_id_param)}
         # عضو شرکت = دسترسی صریح workspace_full یا سازنده‌های شرط عضویتی ماژول‌ها
-        members = Q(company_accesses__company_id__in=allowed_cids, company_accesses__access_level='workspace_full') | Q(id=user.id)
+        members = Q(company_accesses__company_id__in=allowed_cids) | Q(id=user.id)
         for builder in contributions('company_member_q_builders'):
             builder_q = builder(allowed_cids)
             if builder_q is not None:
@@ -701,10 +701,11 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                     # ایجاد دسترسی شرکت برای کاربر جدید
                     if cid:
                         from companies.models import UserCompanyAccess
-                        UserCompanyAccess.objects.update_or_create(
+                        # پیوند کاربر با شرکت (ت۸)؛ عضویت فقط از انتساب بخش یا انبار می‌آید
+                        UserCompanyAccess.objects.get_or_create(
                             user=user,
                             company_id=cid,
-                            defaults={'access_level': 'workspace_full'}
+                            defaults={'access_level': 'link'}
                         )
                     created_count += 1
 

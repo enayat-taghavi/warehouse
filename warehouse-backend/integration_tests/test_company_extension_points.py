@@ -1,4 +1,5 @@
 from django.test import TestCase
+from integration_tests.membership import grant_membership
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from rest_framework.test import APIClient
@@ -74,6 +75,7 @@ class CompanyExtensionPointsTests(TestCase):
         perm_sec = Permission.objects.get(codename='perm_manage_projects_sections', content_type__app_label='accounts')
         org_admin.user_permissions.add(perm_sec)
         UserCompanyAccess.objects.create(user=org_admin, company=comp1, access_level='workspace_full', is_default=True)
+        grant_membership(org_admin, comp1)
 
         member_comp1 = User.objects.create_user(username='member_comp1_user', password='password123', phone_number='09170001005')
         UserSectionAssignment.objects.create(user=member_comp1, section=sec1, is_active=True)
@@ -108,7 +110,9 @@ class CompanyExtensionPointsTests(TestCase):
         perm_sec = Permission.objects.get(codename='perm_manage_projects_sections', content_type__app_label='accounts')
         org_admin.user_permissions.add(perm_sec)
         UserCompanyAccess.objects.create(user=org_admin, company=comp1, access_level='workspace_full', is_default=True)
+        grant_membership(org_admin, comp1)
         UserCompanyAccess.objects.create(user=org_admin, company=comp2, access_level='workspace_full')
+        grant_membership(org_admin, comp2)
 
         member_comp1 = User.objects.create_user(username='member_nar_comp1', password='password123', phone_number='09170001008')
         UserSectionAssignment.objects.create(user=member_comp1, section=sec1, is_active=True)

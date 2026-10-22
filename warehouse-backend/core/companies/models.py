@@ -95,6 +95,7 @@ class UserCompanyAccess(models.Model):
         ('docs_read', 'فقط مشاهده مدارک رسمی'),
         ('docs_write', 'مشاهده و بارگذاری مدارک رسمی'),
         ('workspace_full', 'عضویت کامل در فضای کاری و ماژول‌ها'),
+        ('link', 'پیوند با شرکت (سطح‌ها در section_levels)'),
     )
 
     user = models.ForeignKey(

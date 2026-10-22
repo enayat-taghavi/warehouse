@@ -227,7 +227,10 @@ class AuditContextMiddleware:
         if company_id and user and user.is_authenticated and not user.is_superuser:
             try:
                 from companies.access import validate_user_company_access
-                validate_user_company_access(user, company_id)
+                # ضدجعل: عضویت لازم است؛ فقط مسیرهای هستهٔ شرکت (/api/org/) که خودشان دروازهٔ بخش دارند
+                # به «پیوند» بسنده می‌کنند (حالت محدود استودیو؛ یافتهٔ tenant-scope-reviewer گام ۸)
+                link_ok = request.path.startswith('/api/org/')
+                validate_user_company_access(user, company_id, required_level=None if link_ok else 'workspace_full')
             except Exception as e:
                 from django.http import JsonResponse
                 logger.warning(f"[Security] User {user.id} attempted unauthorized access to company {company_id}: {e}")
