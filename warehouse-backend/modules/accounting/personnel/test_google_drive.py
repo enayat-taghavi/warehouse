@@ -53,7 +53,6 @@ class GoogleDriveCoreTestCase(TestCase):
         UserCompanyAccess.objects.create(
             user=self.user,
             company=self.company,
-            access_level='workspace_full',
             section_levels={'gdrive': 'write', 'docs_archive': 'write'},
             is_default=True
         )
@@ -648,7 +647,7 @@ class GoogleDriveCoreTestCase(TestCase):
         UserCompanyAccess.objects.create(
             user=staff_user,
             company=self.company,
-            access_level='docs_read'
+            section_levels={'docs_archive': 'read'}
         )
         self.client.force_authenticate(user=staff_user)
 
@@ -983,7 +982,6 @@ class GoogleDriveCoreTestCase(TestCase):
         UserCompanyAccess.objects.create(
             user=self.user,
             company=comp_new,
-            access_level='workspace_full',
             section_levels={'gdrive': 'read'}
         )
         grant_membership(self.user, comp_new)
@@ -1089,7 +1087,7 @@ class GoogleDriveCoreTestCase(TestCase):
         self.assertTrue(checker(self.user, company_id=self.company.id))
 
         reader = User.objects.create_user(username='gdrive_docs_writer', password='Password123!')
-        UserCompanyAccess.objects.create(user=reader, company=self.company, access_level='docs_write')
+        UserCompanyAccess.objects.create(user=reader, company=self.company, section_levels={'docs_archive': 'write'})
         self.assertFalse(checker(reader, company_id=self.company.id))
 
         self.company.is_active = False

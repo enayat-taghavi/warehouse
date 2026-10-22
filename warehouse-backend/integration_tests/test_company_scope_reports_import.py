@@ -84,13 +84,11 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
         UserCompanyAccess.objects.create(
             user=self.user_a,
             company=self.company_a,
-            access_level='workspace_full',
             is_default=True
         )
         UserCompanyAccess.objects.create(
             user=self.user_b,
             company=self.company_b,
-            access_level='workspace_full',
             is_default=True
         )
         grant_membership(self.user_a, self.company_a)
@@ -549,7 +547,7 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
         self.assertIsNotNone(new_user)
         access = UserCompanyAccess.objects.filter(user=new_user, company=self.company_a).first()
         self.assertIsNotNone(access, 'رکورد UserCompanyAccess برای کاربر جدید ساخته نشده است.')
-        self.assertEqual(access.access_level, 'link')
+        self.assertEqual(access.section_levels, {})
 
     # -------------------------------------------------------------------------
     # ۱۲. غیرسوپریوزر بی‌شرکت فعال: خطای روشن فارسی و هیچ کاربری ساخته نمی‌شود
@@ -639,9 +637,9 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
             username=username, password='Password123!', national_code=national_code,
             first_name='کاربر', last_name='دوشرکتی',
         )
-        UserCompanyAccess.objects.create(user=u, company=self.company_a, access_level='workspace_full', is_default=True)
+        UserCompanyAccess.objects.create(user=u, company=self.company_a, is_default=True)
         grant_membership(u, self.company_a)
-        UserCompanyAccess.objects.create(user=u, company=self.company_b, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=u, company=self.company_b)
         grant_membership(u, self.company_b)
         return u
 
@@ -675,7 +673,7 @@ class CompanyScopeReportsAndImportIntegrationTests(TestCase):
 
         # ممیز پرسنل (حسابدار کل) به بخش محدود نیست ولی همچنان به شرکت‌های مجاز محدود است
         auditor = User.objects.create_user(username='pers_auditor_a', password='Password123!', national_code='0088888888')
-        UserCompanyAccess.objects.create(user=auditor, company=self.company_a, access_level='workspace_full', is_default=True)
+        UserCompanyAccess.objects.create(user=auditor, company=self.company_a, is_default=True)
         grant_membership(auditor, self.company_a)
         auditor.user_permissions.set(Permission.objects.filter(
             codename__in=['view_sys_reports', 'view_sys_personnel', 'perm_approve_personnel_finance']

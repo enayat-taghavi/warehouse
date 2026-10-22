@@ -115,6 +115,16 @@
         </label>
       </div>
 
+      <!-- توضیحات مدرک (در فهرست زیر عنوان نمایش داده می‌شود) -->
+      <div class="md:col-span-4 md:order-last">
+        <label for="arc_f3" class="block text-[11px] font-bold text-slate-700 mb-1">توضیحات (اختیاری)</label>
+        <textarea id="arc_f3"
+          rows="2"
+          [(ngModel)]="newDoc.description"
+          placeholder="مثال: نسخهٔ تمدیدشده، شمارهٔ پرونده یا مرجع صادرکننده"
+          class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-y"></textarea>
+      </div>
+
       <!-- دکمه بارگذاری و ثبت در آرشیو (B11: برچسب‌دار) -->
       <div>
         <button
@@ -167,7 +177,19 @@
         </select>
 
         <button
-          *ngIf="docSearchQuery || selectedDocTypeFilter"
+          type="button"
+          (click)="toggleRenewalOnly()"
+          [attr.aria-pressed]="renewalOnly"
+          [disabled]="renewalCount === 0 && !renewalOnly"
+          [class]="'min-h-[40px] lg:min-h-[32px] inline-flex items-center gap-1.5 px-3 text-xs font-bold rounded-xl border transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed ' + (renewalOnly ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-amber-50')"
+          title="فقط مدارک منقضی یا نزدیک انقضا">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="clock" aria-hidden="true"></svg>
+          <span>نیازمند تمدید</span>
+          <span class="tabular-nums text-[10px] px-1.5 rounded-full bg-white/70">{{ fa(renewalCount) }}</span>
+        </button>
+
+        <button
+          *ngIf="hasActiveFilter"
           type="button"
           (click)="clearDocFilter()"
           class="w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center text-slate-500 hover:text-slate-700 rounded-xl bg-slate-200/60 transition-colors cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
@@ -190,7 +212,7 @@
       {{ companyDocuments.length === 0 ? 'هنوز مدرکی در بایگانی این شرکت ثبت نشده است.' : 'هیچ سندی با معیارهای انتخابی یافت نشد.' }}
     </div>
 
-    <div *ngIf="!isLoadingDocuments && filteredDocuments.length > 0" class="rounded-2xl border border-slate-200 overflow-hidden bg-white">
+    <div *ngIf="!isLoadingDocuments && !loadError && filteredDocuments.length > 0" class="rounded-2xl border border-slate-200 overflow-hidden bg-white">
       <!-- جدول اسناد نسخه دسکتاپ -->
       <div class="hidden xl:block overflow-x-auto">
       <table class="w-full text-right text-xs">
@@ -199,10 +221,12 @@
             <th class="py-2.5 px-3 w-10 text-center">ردیف</th>
             <th class="py-2.5 px-3">نوع مدرک</th>
             <th class="py-2.5 px-3">عنوان مدرک</th>
+            <th class="py-2.5 px-3 text-center">تاریخ صدور</th>
             <th class="py-2.5 px-3 text-center">تاریخ انقضا</th>
             <th class="py-2.5 px-3 text-center">وضعیت اعتبار</th>
             <th class="py-2.5 px-3 text-center">سطح</th>
             <th class="py-2.5 px-3 text-center">اندازه</th>
+            <th class="py-2.5 px-3">بارگذارنده</th>
             <th class="py-2.5 px-3 text-center w-28">عملیات</th>
           </tr>
         </thead>
@@ -210,11 +234,15 @@
           <tr *ngFor="let doc of filteredDocuments; let idx = index" class="hover:bg-slate-50 transition-colors">
             <td class="py-2.5 px-3 text-center tabular-nums text-slate-400">{{ fa(idx + 1) }}</td>
             <td class="py-2.5 px-3 font-bold text-slate-800">{{ doc.document_type_display || doc.document_type }}</td>
-            <td class="py-2.5 px-3 font-medium text-slate-700">{{ doc.title }}</td>
+            <td class="py-2.5 px-3 font-medium text-slate-700">
+              <div>{{ doc.title }}</div>
+              <div *ngIf="doc.description" class="text-[11px] font-normal text-slate-500 mt-0.5">{{ doc.description }}</div>
+            </td>
+            <td class="py-2.5 px-3 text-center tabular-nums text-slate-600">{{ faDigits(doc.issue_date) }}</td>
             <td class="py-2.5 px-3 text-center tabular-nums text-slate-600">{{ faDigits(doc.expiry_date) }}</td>
             <td class="py-2.5 px-3 text-center">
               <span [ngClass]="getDocStatusClass(doc.expiry_status)" class="border px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap">
-                {{ getDocStatusLabel(doc.expiry_status) }}
+                {{ docStatusText(doc) }}
               </span>
             </td>
             <td class="py-2.5 px-3 text-center">
@@ -227,6 +255,7 @@
               </span>
             </td>
             <td class="py-2.5 px-3 text-center text-[11px] text-slate-500" dir="ltr">{{ formatBytes(doc.file_size) }}</td>
+            <td class="py-2.5 px-3 text-[11px] text-slate-600">{{ doc.uploaded_by_name || '—' }}</td>
             <td class="py-2.5 px-3 text-center">
               <div class="flex items-center justify-center gap-1.5">
                 <ng-container *ngTemplateOutlet="docActions; context: { doc: doc, size: 'w-8 h-8 rounded-lg' }"></ng-container>
@@ -243,12 +272,13 @@
           <div class="flex items-start justify-between gap-2">
             <span class="font-bold text-xs text-slate-800 min-w-0">{{ doc.title }}</span>
             <span [ngClass]="getDocStatusClass(doc.expiry_status)" class="border px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0">
-              {{ getDocStatusLabel(doc.expiry_status) }}
+              {{ docStatusText(doc) }}
             </span>
           </div>
+          <div *ngIf="doc.description" class="text-[11px] text-slate-500">{{ doc.description }}</div>
           <div class="flex items-center justify-between gap-2 text-[11px] text-slate-500">
             <span class="min-w-0">{{ doc.document_type_display || doc.document_type }}</span>
-            <span class="text-[10px] shrink-0" dir="ltr">{{ formatBytes(doc.file_size) }}</span>
+            <span class="text-[10px] shrink-0"><span *ngIf="doc.uploaded_by_name">{{ doc.uploaded_by_name }} · </span><span dir="ltr">{{ formatBytes(doc.file_size) }}</span></span>
           </div>
           <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
             <div class="flex items-center gap-2">
@@ -256,6 +286,7 @@
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="status-locked" aria-hidden="true"></svg>
                 <span>محرمانه</span>
               </span>
+              <span class="text-[10px] text-slate-500 tabular-nums">صدور: {{ faDigits(doc.issue_date) }}</span>
               <span class="text-[10px] text-slate-500 tabular-nums">انقضا: {{ doc.expiry_date ? faDigits(doc.expiry_date) : 'نامحدود' }}</span>
             </div>
             <div class="flex items-center gap-1.5">
@@ -280,6 +311,7 @@
       [href]="doc.file_url || doc.file"
       [appExternalLink]="doc.file_url || doc.file"
       target="_blank"
+      rel="noopener"
       [class]="size + ' flex items-center justify-center text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border-indigo-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500'"
       title="دانلود فایل"
       [attr.aria-label]="'دانلود ' + doc.title">

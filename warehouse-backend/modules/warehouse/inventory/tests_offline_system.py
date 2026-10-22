@@ -55,7 +55,6 @@ class OfflineSystemRemediationTests(TestCase):
         UserCompanyAccess.objects.create(
             user=self.counter,
             company=self.company,
-            access_level='workspace_full',
             is_default=True
         )
         self.warehouse.assigned_users.add(self.counter)

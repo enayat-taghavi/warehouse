@@ -24,7 +24,6 @@ def section_derived_company_source(user):
                 'company_id': sec_comp.id,
                 'company_name': sec_comp.name,
                 'company_code': sec_comp.code,
-                'access_level': 'workspace_full',
                 'role_in_company': sa.get_role_display() if hasattr(sa, 'get_role_display') else '',
                 'source_label': f"از بخش {sa.section.name} پروژهٔ {sa.section.project.name}",
             })

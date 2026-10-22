@@ -327,8 +327,8 @@ export interface ExtensionMap {
     /** شناسه‌های تب بیرون از منوها که مسیرشان زیر پیشوند همین ماژول است */
     extraRouteTabs?: string[];
     defaultExitRoute?: string;
+    /** پیوند «بایگانی اسناد شرکت‌ها» در منوی این ماژول؛ مقصد تب مدارک استودیوی شرکت است (بخش مشارکتی همان تب) */
     hasCompanyDocumentsArchive?: boolean;
-    companyDocumentsRoute?: string;
   };
 
   /**

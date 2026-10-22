@@ -19,8 +19,8 @@ import { CompaniesManagementComponent } from './modules/common/components/operat
 import { companiesLeaveGuard } from './modules/common/components/operations/companies/companies-leave.guard';
 import { Audit } from './modules/common/components/audit/audit';
 import { HealthDashboardComponent } from './modules/common/components/health-dashboard/health-dashboard';
-import { ModuleRegistryService, getModuleRegistry } from './core/modules/module-registry.service';
-import { findCompanyDocumentsRoute } from './core/modules/documents-archive-route';
+import { ModuleRegistryService } from './core/modules/module-registry.service';
+import { redirectToCompanyDocuments } from './core/modules/documents-archive-route';
 import { ActiveCompanyService } from './core/services/active-company.service';
 
 import { INSTALLED_MODULES } from './modules/installed-modules';
@@ -52,12 +52,6 @@ const dynamicModuleRoutes: Routes = INSTALLED_MODULES.filter(m => typeof m.route
     loadChildren: m.routes!
   };
 });
-
-export function getCompanyDocumentsRedirect(): string {
-  const registry = inject(ModuleRegistryService, { optional: true }) ?? getModuleRegistry();
-  const route = findCompanyDocumentsRoute(registry);
-  return route ? route.replace(/^\//, '') : 'app/launcher';
-}
 
 export const routes: Routes = [
   // ─── احراز هویت و صفحات عمومی ─────────────────────────
@@ -139,11 +133,8 @@ export const routes: Routes = [
         return accessibleModules[0].defaultRoute.replace(/^\//, '');
       }
 
-      const activeCompanyService = inject(ActiveCompanyService);
-      if (activeCompanyService.hasCompanyDocumentsAccess()) {
-        return getCompanyDocumentsRedirect();
-      }
-      return 'app/launcher';
+      // بی ماژول: حالت محدود استودیو (بایگانی مدارک هم همان‌جاست)؛ CompaniesManageGuard بی هیچ بخش به لانچر می‌فرستد
+      return 'app/companies';
     },
     pathMatch: 'full'
   },
@@ -151,8 +142,9 @@ export const routes: Routes = [
   // ─── سازگاری کامل با مسیرهای قبلی (Legacy Route Redirects) ─
   // ریدایرکت‌های ویژهٔ هر ماژول در legacyRedirects مانیفست همان ماژول است
   ...INSTALLED_MODULES.flatMap(m => m.legacyRedirects ?? []),
-  { path: 'company-documents', redirectTo: getCompanyDocumentsRedirect, pathMatch: 'full' },
-  { path: 'documents', redirectTo: getCompanyDocumentsRedirect, pathMatch: 'full' },
+  // بایگانی اسناد شرکت در تب مدارک استودیو ادغام شد (ق۷)
+  { path: 'company-documents', redirectTo: redirectToCompanyDocuments, pathMatch: 'full' },
+  { path: 'documents', redirectTo: redirectToCompanyDocuments, pathMatch: 'full' },
   { path: 'operations', redirectTo: 'app/operations/cockpit', pathMatch: 'full' },
   { path: 'cockpit', redirectTo: 'app/operations/cockpit', pathMatch: 'full' },
 
@@ -183,11 +175,8 @@ export const routes: Routes = [
         return accessibleModules[0].defaultRoute.replace(/^\//, '');
       }
 
-      const activeCompanyService = inject(ActiveCompanyService);
-      if (activeCompanyService.hasCompanyDocumentsAccess()) {
-        return getCompanyDocumentsRedirect();
-      }
-      return 'app/launcher';
+      // بی ماژول: حالت محدود استودیو (بایگانی مدارک هم همان‌جاست)؛ CompaniesManageGuard بی هیچ بخش به لانچر می‌فرستد
+      return 'app/companies';
     },
     pathMatch: 'full'
   },

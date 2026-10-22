@@ -82,21 +82,19 @@ class UserCompanyAccessSerializer(serializers.ModelSerializer):
     user_full_name = serializers.SerializerMethodField()
     company_name = serializers.CharField(source='company.name', read_only=True)
     company_code = serializers.CharField(source='company.code', read_only=True)
-    access_level_display = serializers.CharField(source='get_access_level_display', read_only=True)
 
     class Meta:
         model = UserCompanyAccess
         fields = '__all__'
-        # access_level منسوخ است (سازگاری تا گام ۱۲)؛ سطح‌ها فقط از section_levels
-        read_only_fields = ['created_at', 'access_level']
+        read_only_fields = ['created_at']
 
     def to_internal_value(self, data):
-        # رکوردِ صف آفلاینِ پیش از سوئیچ فقط access_level دارد؛ به section_levels نگاشت می‌شود تا بی‌صدا گم نشود
-        legacy = data.get('access_level') if hasattr(data, 'get') else None
-        if isinstance(legacy, str) and legacy and legacy != 'link' and 'section_levels' not in data:
-            from .permission_sections import legacy_levels
-            data = data.dict() if hasattr(data, 'dict') else dict(data)
-            data['section_levels'] = legacy_levels(legacy)
+        # رکورد کهنهٔ صف آفلاین که فقط access_level دارد بی‌صدا پذیرفته نمی‌شود (۲۰۰ بی‌اثر آن را گم می‌کرد):
+        # ردِ صریح، تا کاربر سطح بخش‌ها را در تب «دسترسی» دوباره تعیین کند
+        if hasattr(data, 'get') and data.get('access_level') not in (None, '', 'link') and 'section_levels' not in data:
+            raise serializers.ValidationError({
+                'access_level': 'سطح دسترسی قدیمی دیگر پذیرفته نمی‌شود؛ سطح بخش‌ها را در تب «دسترسی» شرکت تعیین کنید.'
+            })
         return super().to_internal_value(data)
 
     def validate_section_levels(self, value):

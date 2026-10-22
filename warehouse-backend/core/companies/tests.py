@@ -29,7 +29,7 @@ class CompanyAccessTests(TestCase):
     def test_manual_row_never_grants_membership(self):
         # Q2: membership only from automatic sources; a manual row (even workspace_full) never grants it
         from companies import access
-        UserCompanyAccess.objects.create(user=self.user, company=self.c1, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=self.user, company=self.c1)
         self.assertEqual(set(get_user_allowed_companies(self.user).values_list('id', flat=True)), set())
         with self.assertRaises(PermissionDenied):
             validate_user_company_access(self.user, self.c1.id)
@@ -66,7 +66,7 @@ class CoreCompanyApiTests(TestCase):
         rows = rows.get('results', rows) if isinstance(rows, dict) else rows
         self.assertEqual({row['code'] for row in rows}, {'API-C1'})
 
-    def test_user_available_reports_access_level(self):
+    def test_user_available_reports_section_levels(self):
         self.client.force_authenticate(self.user)
         # not a member anywhere; in restricted mode it sees the company with its section levels
         self.assertEqual(self.client.get('/api/org/companies/user-available/').json()['count'], 0)
@@ -74,6 +74,9 @@ class CoreCompanyApiTests(TestCase):
         self.assertEqual(body['count'], 1)
         self.assertFalse(body['companies'][0]['is_member'])
         self.assertEqual(body['companies'][0]['section_levels'], {'identity': 'read'})
+        self.assertNotIn('user_access_level', body['companies'][0])
+        # دامنهٔ قدیمی documents دیگر نیست و با فهرست اعضا اشتباه گرفته نمی‌شود
+        self.assertEqual(self.client.get('/api/org/companies/user-available/?scope=documents').status_code, 400)
 
     def test_only_admins_create_and_code_is_normalized(self):
         self.client.force_authenticate(self.user)
@@ -97,10 +100,9 @@ class CoreCompanyApiTests(TestCase):
         self.assertEqual(r.status_code, 201, r.content)
         row = UserCompanyAccess.objects.get(user=target)
         self.assertEqual(row.section_levels, {'identity': 'read'})
-        self.assertEqual(row.access_level, 'link')
         self.assertFalse(get_user_allowed_companies(target).exists())
 
-    def test_patch_keeps_uninstalled_section_keys_and_maps_legacy_level(self):
+    def test_patch_keeps_uninstalled_section_keys_and_rejects_legacy_level(self):
         url = '/api/org/user-company-access/'
         target = User.objects.create_user(username='core_keep', password='x-pass-123', phone_number='09170000006')
         row = UserCompanyAccess.objects.create(user=target, company=self.c1,
@@ -110,13 +112,12 @@ class CoreCompanyApiTests(TestCase):
         self.assertEqual(r.status_code, 200, r.content)
         row.refresh_from_db()
         self.assertEqual(row.section_levels, {'identity': 'write', 'zz_uninstalled': 'write'})
-        # رکورد قدیمی صف آفلاین که فقط access_level دارد بی‌صدا بی‌اثر نمی‌ماند
+        # رکورد کهنهٔ صف آفلاین که فقط access_level دارد صریحاً رد می‌شود (نه ۲۰۰ بی‌اثر)
         r = self.client.patch(f'{url}{row.id}/', {'access_level': 'docs_write'}, format='json')
-        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.status_code, 400, r.content)
+        self.assertIn('access_level', r.json())
         row.refresh_from_db()
-        from companies.permission_sections import legacy_levels
-        self.assertEqual({k: v for k, v in row.section_levels.items() if k != 'zz_uninstalled'}, legacy_levels('docs_write'))
-        self.assertEqual(row.section_levels['zz_uninstalled'], 'write')
+        self.assertEqual(row.section_levels, {'identity': 'write', 'zz_uninstalled': 'write'})
 
     def test_field_update_needs_section_write(self):
         self.client.force_authenticate(self.user)
@@ -221,7 +222,7 @@ class CompanyDeleteImpactTests(TestCase):
         total = self.client.get(self.url(self.c1)).json()['total_affected']
         # کاربر دیگری پس از دیدن اثر حذف، رکورد وابستهٔ تازه افزوده است
         extra = User.objects.create_user(username='del_extra', password='x-pass-123', phone_number='09170000014')
-        UserCompanyAccess.objects.create(user=extra, company=self.c1, access_level='docs_read')
+        UserCompanyAccess.objects.create(user=extra, company=self.c1, section_levels={'identity': 'read'})
         r = self.client.delete(f'/api/org/companies/{self.c1.id}/?expected_total={total}')
         self.assertEqual(r.status_code, 409, r.content)
         self.assertEqual(r.json()['detail'], DeleteImpactChanged.default_detail)

@@ -40,17 +40,16 @@
 
       <!-- Dedicated Standalone Company Documents Archive Link (دسترسی مستقل و فارغ از شغل به اسناد شرکت‌های مجاز) -->
       <div *ngIf="!store.isWarehouseContext() && isCompanyDocumentsArchiveSupported && hasCompanyDocumentsAccess" class="mt-2 pt-2 border-t border-slate-800/70 shrink-0">
-        <button 
-          (click)="switchTab('company-documents')" 
-          [class.active]="currentTab === 'company-documents' || currentTab === 'documents'"
-          class="sidebar-link w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800/80"
-          [ngClass]="{'bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-sm': currentTab === 'company-documents' || currentTab === 'documents'}"
+        <button
+          type="button"
+          (click)="openCompanyDocuments()"
+          class="sidebar-link w-full min-h-[40px] flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           title="بایگانی اسناد و مدارک رسمی شرکت‌ها">
           <div class="flex items-center gap-3">
             <span class="shrink-0 text-indigo-400"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg></span>
             <span>بایگانی اسناد شرکت‌ها</span>
           </div>
-          <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+          <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
             حقوقی
           </span>
         </button>

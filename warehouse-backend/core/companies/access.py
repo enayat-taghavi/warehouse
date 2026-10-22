@@ -1,9 +1,9 @@
 """
 قواعد دسترسی کاربر به شرکت‌ها (هستهٔ چندمستأجری).
 
-دسترسی مستقیم از UserCompanyAccess می‌آید. ماژول‌ها می‌توانند با
-`register_derived_company_source` دسترسی مشتق اضافه کنند؛ مثلاً حسابداری عضویت فعال در بخش‌های
-پروژه‌های یک شرکت را دسترسی کامل (workspace_full) به آن شرکت حساب می‌کند.
+عضویت فقط از superuser و منبع‌های خودکار ماژول‌ها (`register_derived_company_source`) می‌آید؛ مثلاً
+حسابداری انتساب فعال در بخش‌های پروژه‌های یک شرکت را عضویت در آن شرکت حساب می‌کند.
+ردیف UserCompanyAccess «پیوند کاربر با شرکت» است و سطح هر بخش را در `section_levels` نگه می‌دارد.
 """
 from rest_framework.exceptions import PermissionDenied
 
@@ -83,13 +83,9 @@ def derived_company_access_details(user) -> list[dict]:
 
 
 def _row_levels(row):
-    """سطح بخش‌های یک ردیف؛ ردیف قدیمیِ بی‌سطح از access_level نگاشت می‌شود (یادداشت بازبین گام ۷)."""
-    from .permission_sections import legacy_levels, normalize_levels
-    if row.section_levels:
-        return normalize_levels(row.section_levels)
-    if row.access_level in ('docs_read', 'docs_write'):
-        return legacy_levels(row.access_level)
-    return {}
+    """سطح بخش‌های نصب‌شدهٔ یک ردیف (کلید ماژول نصب‌نشده به‌صورت داده می‌ماند و اینجا دیده نمی‌شود)."""
+    from .permission_sections import normalize_levels
+    return normalize_levels(row.section_levels)
 
 
 def user_section_levels(user):
@@ -146,13 +142,19 @@ def ensure_section(user, company_id, section, level='read', message=None):
         raise PermissionDenied(message or "شما برای این بخش از اطلاعات شرکت مجوز لازم را ندارید.")
 
 
-def get_user_allowed_companies(user, required_level='workspace_full'):
+MEMBER = 'workspace_full'
+LINK = None
+
+
+def get_user_allowed_companies(user, required_level=MEMBER):
     """
-    شرکت‌هایی که کاربر «عضو» آن‌هاست: superuser همه؛ دیگران فقط از منبع‌های خودکار ماژول‌ها
-    (register_derived_company_source). ردیف UserCompanyAccess دیگر عضویت نمی‌دهد (ق۲).
-    سازگاری موقت تا گام ۱۲: 'docs_read'/'docs_write' = بخش بایگانی خواندن/نوشتن (از رجیستری)،
-    None = پیوند (عضو یا هر ردیف).
+    شرکت‌هایی که کاربر به آن‌ها راه دارد؛ superuser همه را دارد.
+    required_level='workspace_full' (پیش‌فرض): «عضو»، فقط از منبع‌های خودکار ماژول‌ها (ق۲).
+    required_level=None: «پیوند»، یعنی عضو، یا دارای ردیف UserCompanyAccess، یا دارای بخشی با سطح خواندن.
+    سطح بخش‌ها از company_section_level و companies_with_section خوانده می‌شود، نه از اینجا.
     """
+    if required_level not in (MEMBER, LINK):
+        raise ValueError(f"required_level نامعتبر: {required_level!r}")
     if not user or not user.is_authenticated:
         return Company.objects.none()
     if user.is_superuser:
@@ -165,19 +167,9 @@ def get_user_allowed_companies(user, required_level='workspace_full'):
     if req_cache is not None and cache_key in req_cache:
         return req_cache[cache_key]
 
-    if required_level == 'workspace_full':
-        allowed_ids = derived_company_ids(user)
-    elif required_level in ('docs_read', 'docs_write'):
-        from .permission_sections import legacy_levels
-        need = 'write' if required_level == 'docs_write' else 'read'
-        doc_sections = [k for k in legacy_levels(required_level)] or []
-        allowed_ids = {
-            cid for cid, lv in user_section_levels(user).items()
-            if any(_level_ok(lv.get(k), need) for k in doc_sections)
-        }
-    else:
-        allowed_ids = set(UserCompanyAccess.objects.filter(user=user).values_list('company_id', flat=True))
-        allowed_ids |= derived_company_ids(user)
+    allowed_ids = derived_company_ids(user)
+    if required_level is LINK:
+        allowed_ids |= set(UserCompanyAccess.objects.filter(user=user).values_list('company_id', flat=True))
         allowed_ids |= set(companies_with_any_section(user).values_list('id', flat=True))
 
     qs = Company.objects.filter(id__in=allowed_ids, is_active=True)
@@ -193,7 +185,7 @@ def get_request_company_id(request):
     return request.query_params.get('company_id') or request.query_params.get('company') or request.headers.get('X-Company-ID')
 
 
-def validate_user_company_access(user, company_id, required_level='workspace_full'):
+def validate_user_company_access(user, company_id, required_level=MEMBER):
     """
     اعتبارسنجی دسترسی کاربر به شناسه شرکت داده‌شده. در صورت عدم دسترسی، PermissionDenied پرتاب می‌شود.
     پیش‌فرض: required_level='workspace_full' برای جلوگیری از دسترسی کاربران غیرمجاز به اطلاعات پروژه‌ها و انبار.

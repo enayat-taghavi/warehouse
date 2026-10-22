@@ -64,7 +64,6 @@ class ItemWriteScopeSecurityTests(TransactionTestCase):
         UserCompanyAccess.objects.create(
             user=self.user,
             company=self.company_a,
-            access_level="workspace_full",
             is_default=True,
         )
         grant_membership(self.user, self.company_a)
@@ -88,7 +87,6 @@ class ItemWriteScopeSecurityTests(TransactionTestCase):
         UserCompanyAccess.objects.create(
             user=self.user_b,
             company=self.company_b,
-            access_level="workspace_full",
             is_default=True,
         )
         grant_membership(self.user_b, self.company_b)

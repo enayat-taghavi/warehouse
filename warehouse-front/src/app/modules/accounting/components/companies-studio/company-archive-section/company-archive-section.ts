@@ -82,6 +82,8 @@ export class CompanyArchiveSectionComponent implements OnInit, OnChanges, OnDest
   filteredDocuments: CompanyDocument[] = [];
   docSearchQuery = '';
   selectedDocTypeFilter = '';
+  /** فقط مدارک منقضی یا نزدیک انقضا (پیگیری تمدید، همان فیلتر «نیازمند تمدید» بایگانی پیشین) */
+  renewalOnly = false;
   isLoadingDocuments = false;
   /** دریافت مدارک شکست خورد (حالت خطا با «تلاش دوباره») */
   loadError = false;
@@ -223,6 +225,9 @@ export class CompanyArchiveSectionComponent implements OnInit, OnChanges, OnDest
     if (this.selectedDocTypeFilter) {
       docs = docs.filter(d => d.document_type === this.selectedDocTypeFilter);
     }
+    if (this.renewalOnly) {
+      docs = docs.filter(d => this.needsRenewal(d));
+    }
     if (this.docSearchQuery.trim()) {
       const q = this.docSearchQuery.trim().toLowerCase();
       docs = docs.filter(d =>
@@ -242,7 +247,25 @@ export class CompanyArchiveSectionComponent implements OnInit, OnChanges, OnDest
   clearDocFilter(): void {
     this.docSearchQuery = '';
     this.selectedDocTypeFilter = '';
+    this.renewalOnly = false;
     this.applyDocumentFilters();
+  }
+
+  needsRenewal(doc: CompanyDocument): boolean {
+    return doc.expiry_status === 'expired' || doc.expiry_status === 'expiring_soon';
+  }
+
+  get renewalCount(): number {
+    return this.companyDocuments.filter(d => this.needsRenewal(d)).length;
+  }
+
+  toggleRenewalOnly(): void {
+    this.renewalOnly = !this.renewalOnly;
+    this.applyDocumentFilters();
+  }
+
+  get hasActiveFilter(): boolean {
+    return !!(this.docSearchQuery || this.selectedDocTypeFilter || this.renewalOnly);
   }
 
   // پیش‌نمایش درجا (In-Place Preview) در لایت‌باکس مشترک
@@ -385,6 +408,15 @@ export class CompanyArchiveSectionComponent implements OnInit, OnChanges, OnDest
       case 'expired': return 'منقضی شده';
       default: return 'بدون سررسید';
     }
+  }
+
+  /** وضعیت با روزهای مانده تا سررسید (مثل بایگانی پیشین) */
+  docStatusText(doc: CompanyDocument): string {
+    const label = this.getDocStatusLabel(doc.expiry_status);
+    const days = doc.days_until_expiry;
+    if (days === null || days === undefined) return label;
+    if (doc.expiry_status === 'expired') return `${label} (${this.fa(Math.abs(days))} روز گذشته)`;
+    return `${label} (${this.fa(days)} روز مانده)`;
   }
 
   private resetNewDoc(): void {

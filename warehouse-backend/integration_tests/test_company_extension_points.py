@@ -74,7 +74,7 @@ class CompanyExtensionPointsTests(TestCase):
         org_admin = User.objects.create_user(username='org_admin_tester', password='password123', phone_number='09170001004')
         perm_sec = Permission.objects.get(codename='perm_manage_projects_sections', content_type__app_label='accounts')
         org_admin.user_permissions.add(perm_sec)
-        UserCompanyAccess.objects.create(user=org_admin, company=comp1, access_level='workspace_full', is_default=True)
+        UserCompanyAccess.objects.create(user=org_admin, company=comp1, is_default=True)
         grant_membership(org_admin, comp1)
 
         member_comp1 = User.objects.create_user(username='member_comp1_user', password='password123', phone_number='09170001005')
@@ -109,9 +109,9 @@ class CompanyExtensionPointsTests(TestCase):
         org_admin = User.objects.create_user(username='org_admin_nar_tester', password='password123', phone_number='09170001007')
         perm_sec = Permission.objects.get(codename='perm_manage_projects_sections', content_type__app_label='accounts')
         org_admin.user_permissions.add(perm_sec)
-        UserCompanyAccess.objects.create(user=org_admin, company=comp1, access_level='workspace_full', is_default=True)
+        UserCompanyAccess.objects.create(user=org_admin, company=comp1, is_default=True)
         grant_membership(org_admin, comp1)
-        UserCompanyAccess.objects.create(user=org_admin, company=comp2, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=org_admin, company=comp2)
         grant_membership(org_admin, comp2)
 
         member_comp1 = User.objects.create_user(username='member_nar_comp1', password='password123', phone_number='09170001008')

@@ -89,15 +89,8 @@ class Company(models.Model):
 
 class UserCompanyAccess(models.Model):
     """
-    تخصیص صریح یا ضمنی دسترسی کاربر به یک یا چند شرکت با تفکیک سطح دسترسی و نقش
+    پیوند کاربر با شرکت (ت۸) و سطح هر بخش شرکت برای او. عضویت از اینجا نمی‌آید (ق۲).
     """
-    ACCESS_LEVEL_CHOICES = (
-        ('docs_read', 'فقط مشاهده مدارک رسمی'),
-        ('docs_write', 'مشاهده و بارگذاری مدارک رسمی'),
-        ('workspace_full', 'عضویت کامل در فضای کاری و ماژول‌ها'),
-        ('link', 'پیوند با شرکت (سطح‌ها در section_levels)'),
-    )
-
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -109,12 +102,6 @@ class UserCompanyAccess(models.Model):
         on_delete=models.CASCADE,
         related_name='user_accesses',
         verbose_name="شرکت"
-    )
-    access_level = models.CharField(
-        max_length=30,
-        choices=ACCESS_LEVEL_CHOICES,
-        default='docs_read',
-        verbose_name="سطح دسترسی سازمانی"
     )
     # سطح هر بخش شرکت: {'identity': 'read', ...}. کلیدها از رجیستری permission_sections.
     # ردیف بدون سطح «پیوند کاربر با شرکت» است و عضویت نمی‌دهد (عضویت فقط از منبع‌های خودکار).
@@ -135,4 +122,4 @@ class UserCompanyAccess(models.Model):
         db_table = 'personnel_usercompanyaccess'
 
     def __str__(self):
-        return f"{self.user} -> {self.company.name} ({self.get_access_level_display()})"
+        return f"{self.user} -> {self.company.name}"

@@ -10,13 +10,18 @@
   "include": [
     "src/**/*.d.ts",
     "src/app/modules/common/components/operations/companies/**/*.spec.ts",
-    "src/app/modules/accounting/components/finance/company-documents-archive/*.spec.ts",
     "src/app/modules/accounting/components/companies-studio/**/*.spec.ts",
     "src/app/core/auth/company-documents-route.spec.ts",
     "src/app/core/services/company-studio-context.service.spec.ts",
     "src/app/shared/components/document-preview/*.spec.ts",
     "src/app/shared/components/tab-bar/*.spec.ts",
     "src/app/modules/common/components/app-launcher/*.spec.ts",
-    "src/app/modules/common/components/login/*.spec.ts"
+    "src/app/modules/common/components/login/*.spec.ts",
+    "src/app/core/auth/auth.guard.spec.ts",
+    "src/app/core/auth/route-access.characterization.spec.ts",
+    "src/app/core/services/app-persona.characterization.spec.ts",
+    "src/app/app.legacy-redirects.spec.ts",
+    "src/app/modules/common/components/layout/layout-modular.dom.spec.ts",
+    "src/app/modules/common/components/layout/login-and-app-switching.dom.spec.ts"
   ]
 }

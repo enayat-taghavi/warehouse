@@ -98,7 +98,6 @@ class CompanyMultiTenantTestCase(TestCase):
         UserCompanyAccess.objects.create(
             user=self.regular_user,
             company=self.company_pts,
-            access_level='workspace_full',
             is_default=True
         )
         grant_membership(self.regular_user, self.company_pts)
@@ -154,7 +153,6 @@ class CompanyMultiTenantTestCase(TestCase):
         UserCompanyAccess.objects.create(
             user=self.regular_user,
             company=self.company_pts,
-            access_level='workspace_full',
             is_default=True
         )
         grant_membership(self.regular_user, self.company_pts)

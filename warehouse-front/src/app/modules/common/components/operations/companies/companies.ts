@@ -26,7 +26,6 @@ import { SmartDeleteModalComponent } from '../../../../../shared/components/smar
 import {
   Company,
   UserCompanyAccess,
-  CompanyAccessLevel,
   CompanyMember,
   CompanyPermissionSection,
   CompanyPermissionSpec,
@@ -146,25 +145,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   // کنترل‌های فرم تقویم شمسی جلالی (Reactive FormControls برای عملکرد بی‌نقص ng-persian-datepicker)
   regDateControl = new FormControl('');
-
-  // سطوح دسترسی سه‌گانه به شرکت
-  readonly accessLevelsList: { value: CompanyAccessLevel; label: string; desc: string }[] = [
-    {
-      value: 'docs_read',
-      label: 'فقط مشاهده مدارک رسمی',
-      desc: 'دسترسی فقط‌خواندنی به اساسنامه، روزنامه‌ها و مدارک شرکت (بدون دسترسی به فضاهای عملیاتی)'
-    },
-    {
-      value: 'docs_write',
-      label: 'مشاهده و بارگذاری مدارک رسمی',
-      desc: 'امکان مشاهده و بارگذاری اسناد و مدارک شرکت در کارتابل بایگانی اسناد'
-    },
-    {
-      value: 'workspace_full',
-      label: 'عضویت کامل در فضای کاری و ماژول‌ها',
-      desc: 'دسترسی عملیاتی به سامانه‌ها، پروژه‌ها، پرسنل و سوئیچر هدر'
-    }
-  ];
 
   // مدیریت دسترسی‌های استودیو (تب ششم)
   studioAccesses: UserCompanyAccess[] = [];
@@ -1754,30 +1734,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.studioSelectedUserId = null;
     this.userSearchQuery = '';
     this.userActiveIndex = -1;
-  }
-
-  getAccessLevelBadgeClass(level?: CompanyAccessLevel): string {
-    switch (level) {
-      case 'workspace_full':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'docs_write':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'docs_read':
-      default:
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-    }
-  }
-
-  getAccessLevelLabel(level?: CompanyAccessLevel): string {
-    switch (level) {
-      case 'workspace_full':
-        return 'عضویت فضای کاری و ماژول‌ها';
-      case 'docs_write':
-        return 'مشاهده و بارگذاری اسناد';
-      case 'docs_read':
-      default:
-        return 'فقط مشاهده اسناد رسمی';
-    }
   }
 
   /** فهرست کاربران سامانه فقط وقتی تب «دسترسی» باز می‌شود، یک بار دریافت می‌شود */

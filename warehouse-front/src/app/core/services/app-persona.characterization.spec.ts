@@ -711,7 +711,6 @@ describe('AppPersonaService Characterization Spec', () => {
       '/app/finance/attendance',
       '/app/finance/fleet',
       '/app/finance/projects-and-sections',
-      '/app/finance/company-documents',
       '/app/finance/health',
       '/app/warehouse/dashboard',
     ];
@@ -730,7 +729,6 @@ describe('AppPersonaService Characterization Spec', () => {
         false, // /attendance
         false, // /fleet
         true,  // projects-and-sections
-        false, // company-documents
         true,  // health
         true,  // warehouse/dashboard
       ];
@@ -751,7 +749,6 @@ describe('AppPersonaService Characterization Spec', () => {
         true,  // /attendance
         true,  // /fleet
         true,  // projects-and-sections
-        false, // company-documents
         true,  // health
         true,  // warehouse/dashboard
       ];
@@ -772,7 +769,6 @@ describe('AppPersonaService Characterization Spec', () => {
         true,  // /attendance
         true,  // /fleet
         true,  // projects-and-sections
-        false, // company-documents
         true,  // health
         true,  // warehouse/dashboard
       ];
@@ -793,7 +789,6 @@ describe('AppPersonaService Characterization Spec', () => {
         true,  // /attendance
         true,  // /fleet
         true,  // projects-and-sections
-        false, // company-documents
         true,  // health
         true,  // warehouse/dashboard
       ];
@@ -814,7 +809,6 @@ describe('AppPersonaService Characterization Spec', () => {
         true,  // /attendance
         true,  // /fleet
         true,  // projects-and-sections
-        false, // company-documents
         true,  // health
         true,  // warehouse/dashboard
       ];
@@ -835,7 +829,6 @@ describe('AppPersonaService Characterization Spec', () => {
         false, // /attendance
         false, // /fleet
         true,  // projects-and-sections
-        false, // company-documents
         true,  // health
         true,  // warehouse/dashboard
       ];
@@ -856,7 +849,6 @@ describe('AppPersonaService Characterization Spec', () => {
         true,  // /attendance
         true,  // /fleet
         true,  // projects-and-sections
-        false, // company-documents
         true,  // health
         true,  // warehouse/dashboard
       ];

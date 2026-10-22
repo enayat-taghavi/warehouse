@@ -157,11 +157,10 @@ export const MODULE: WhFrontendModule = {
     layoutNav: {
       appTitleFa: 'سامانه مالی و پرسنلی',
       extraRouteTabs: [
-        'companies', 'company-documents', 'documents',
+        'companies',
         'supervisor-attendance', 'supervisor-new-profiles', 'accountant-new-profiles', 'manager-contracts'
       ],
       hasCompanyDocumentsArchive: true,
-      companyDocumentsRoute: '/app/finance/company-documents',
       roleMenus: [
         { role: 'org_admin', items: ORG_ADMIN_NAV_ITEMS, roleMarkers: ORG_ADMIN_ROLE_MARKERS },
         { role: 'operator', items: EMPLOYEE_NAV_ITEMS, roleMarkers: EMPLOYEE_ROLE_MARKERS },

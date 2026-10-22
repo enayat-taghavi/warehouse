@@ -82,7 +82,6 @@ class VehicleTripActionsScopeIntegrationTests(TestCase):
         UserCompanyAccess.objects.create(
             user=self.user_a,
             company=self.company_a,
-            access_level='workspace_full',
             is_default=True
         )
 
@@ -461,8 +460,8 @@ class VehicleTripActionsScopeIntegrationTests(TestCase):
             national_code='0033333334',
             phone_number='09123333334'
         )
-        UserCompanyAccess.objects.create(user=user_ab, company=self.company_a, access_level='workspace_full')
-        UserCompanyAccess.objects.create(user=user_ab, company=self.company_b, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=user_ab, company=self.company_a)
+        UserCompanyAccess.objects.create(user=user_ab, company=self.company_b)
         user_ab.user_permissions.set(Permission.objects.filter(
             codename__in=['view_sys_fleet_settlement', 'view_sys_personnel', 'view_sys_reports']
         ))
@@ -564,8 +563,8 @@ class VehicleTripActionsScopeIntegrationTests(TestCase):
             national_code='0055555556',
             phone_number='09125555556'
         )
-        UserCompanyAccess.objects.create(user=user_ab, company=self.company_a, access_level='workspace_full')
-        UserCompanyAccess.objects.create(user=user_ab, company=self.company_b, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=user_ab, company=self.company_a)
+        UserCompanyAccess.objects.create(user=user_ab, company=self.company_b)
         user_ab.user_permissions.set(Permission.objects.filter(
             codename__in=['view_sys_fleet_settlement', 'view_sys_personnel', 'view_sys_reports']
         ))
@@ -598,7 +597,6 @@ class VehicleTripActionsScopeIntegrationTests(TestCase):
         UserCompanyAccess.objects.create(
             user=user_b,
             company=self.company_b,
-            access_level='workspace_full',
             is_default=True
         )
         user_b.user_permissions.set(Permission.objects.filter(
@@ -685,7 +683,7 @@ class VehicleTripActionsScopeIntegrationTests(TestCase):
             national_code='0088888889',
             phone_number='09128888889'
         )
-        UserCompanyAccess.objects.create(user=user_other_a, company=self.company_a, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=user_other_a, company=self.company_a)
         user_other_a.user_permissions.set(Permission.objects.filter(
             codename__in=['view_sys_fleet_settlement', 'view_sys_personnel', 'view_sys_reports']
         ))

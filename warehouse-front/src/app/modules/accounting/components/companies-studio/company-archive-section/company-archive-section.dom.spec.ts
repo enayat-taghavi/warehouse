@@ -98,6 +98,28 @@ describe('CompanyArchiveSectionComponent (بخش بایگانی جامع مدا�
     expect(component.filteredDocuments.length).toBe(2);
   });
 
+  it('فیلتر «نیازمند تمدید»، روزهای مانده، توضیحات و بارگذارنده (هم‌ارز بایگانی پیشین)', () => {
+    mockApi.getDocuments.mockReturnValue(of([
+      { ...docs()[0], days_until_expiry: 12, expiry_status: 'expiring_soon', description: 'نسخهٔ تمدیدشده', uploaded_by_name: 'رضا', issue_date: '1403/01/05' },
+      docs()[1]
+    ]));
+    setCompany(1);
+    const el: HTMLElement = fixture.nativeElement;
+    expect(component.renewalCount).toBe(2);
+    expect(el.textContent).toContain('نزدیک انقضا (۱۲ روز مانده)');
+    expect(el.textContent).toContain('نسخهٔ تمدیدشده');
+    expect(el.textContent).toContain('رضا');
+    expect(el.textContent).toContain('۱۴۰۳/۰۱/۰۵');
+    component.toggleRenewalOnly();
+    expect(component.filteredDocuments.length).toBe(2);
+    mockApi.getDocuments.mockReturnValue(of(docs()));
+    component.retry();
+    expect(component.filteredDocuments.map(d => d.id)).toEqual([2]);
+    component.clearDocFilter();
+    expect(component.renewalOnly).toBe(false);
+    expect(component.filteredDocuments.length).toBe(2);
+  });
+
   it('ثبت مدرک بدون فایل یا عنوان با پیام هشدار متوقف می‌شود', () => {
     setCompany(1);
     component.uploadNewDocument();

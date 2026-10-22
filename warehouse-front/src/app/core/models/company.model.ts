@@ -124,7 +124,6 @@ export interface Company {
   documents_health_status?: 'valid' | 'expiring_soon' | 'expired' | 'no_documents';
   bank_accounts?: CompanyBankAccount[];
   board_members?: CompanyBoardMember[];
-  user_access_level?: CompanyAccessLevel;
   is_member?: boolean;
   membership_sources?: string[];
   section_levels?: CompanySectionLevels;
@@ -152,8 +151,6 @@ export interface UserAvailableCompaniesResponse {
   count: number;
 }
 
-export type CompanyAccessLevel = 'docs_read' | 'docs_write' | 'workspace_full';
-
 export interface UserCompanyAccess {
   id?: number;
   user: number;
@@ -162,8 +159,6 @@ export interface UserCompanyAccess {
   company: number;
   company_name?: string;
   company_code?: string;
-  access_level?: CompanyAccessLevel | 'link';
-  access_level_display?: string;
   /** سطح هر بخش شرکت (طرح مجوزهای بخش‌به‌بخش) */
   section_levels?: CompanySectionLevels;
   role_in_company?: string | null;

@@ -61,7 +61,6 @@ class CompanyWarehouseIsolationTestCase(TestCase):
         UserCompanyAccess.objects.create(
             user=self.regular_user,
             company=self.company_pts,
-            access_level='workspace_full',
             is_default=True
         )
         # عضویت فقط خودکار است (طرح مجوزهای شرکت، ت۷): انتساب به انبار PTS او را عضو PTS می‌کند
@@ -76,7 +75,7 @@ class CompanyWarehouseIsolationTestCase(TestCase):
         UserCompanyAccess.objects.create(
             user=self.docs_user,
             company=self.company_pts,
-            access_level='docs_read',
+            section_levels={'identity': 'read'},
             is_default=False
         )
 

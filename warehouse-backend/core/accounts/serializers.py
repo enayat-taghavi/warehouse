@@ -109,7 +109,6 @@ def _sync_user_company_access(user, company_ids=None, default_company_id=None, c
                 try:
                     cid = int(item['company_id'])
                     target_accesses[cid] = {
-                        'access_level': 'link',
                         'role_in_company': item.get('role_in_company', ''),
                         'is_default': bool(item.get('is_default', False))
                     }
@@ -120,7 +119,6 @@ def _sync_user_company_access(user, company_ids=None, default_company_id=None, c
             try:
                 cid_int = int(cid)
                 target_accesses[cid_int] = {
-                    'access_level': 'link',
                     'role_in_company': '',
                     'is_default': (default_company_id is not None and cid_int == int(default_company_id))
                 }
@@ -177,7 +175,6 @@ def _sync_user_company_access(user, company_ids=None, default_company_id=None, c
                 user=user,
                 company_id=cid,
                 defaults={
-                    'access_level': 'link',
                     'role_in_company': info.get('role_in_company', ''),
                     'is_default': info.get('is_default', False)
                 }
@@ -232,7 +229,7 @@ class UserSerializer(serializers.ModelSerializer):
     company_accesses = serializers.ListField(
         write_only=True,
         required=False,
-        help_text="Detailed company access list with access_level"
+        help_text="Detailed company link list (company_id, role_in_company, is_default)"
     )
     # اعلام صریح فیلد تا در صورت عدم نصب اپ warehouses، خطای فیلد نامعتبر مدل در ساخت سوپر رخ ندهد
     assigned_warehouses = serializers.SerializerMethodField(required=False)
@@ -433,7 +430,6 @@ class UserSerializer(serializers.ModelSerializer):
                             'company_id': acc.company_id,
                             'company_name': acc.company.name,
                             'company_code': acc.company.code,
-                            'access_level': acc.access_level,
                             'role_in_company': acc.role_in_company or '',
                             'is_default': is_def
                         })

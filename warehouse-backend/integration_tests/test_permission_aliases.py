@@ -77,7 +77,7 @@ class PermissionAliasBehaviourTests(TestCase):
         manager = self._user('alias_recipient_manager', 'can_act_as_manager')
         other = self._user('alias_recipient_other', 'view_sys_users')
         for user in (manager, other):
-            UserCompanyAccess.objects.create(user=user, company=company, access_level='workspace_full')
+            UserCompanyAccess.objects.create(user=user, company=company)
             grant_membership(user, company)
         recipients = _workflow_recipient_ids('pending_manager', company.id, None, None)
         self.assertIn(manager.id, recipients)

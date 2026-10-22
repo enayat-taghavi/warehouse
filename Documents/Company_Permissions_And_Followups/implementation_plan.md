@@ -634,4 +634,100 @@
   - **بازبینی کامل:** هر تغییر دیگری که برای این ادغام لازم است انجام شود. کدهای اضافه هم حذف شوند (کد مرده، سازگاری `docs_*`، `scope=documents` اگر بی‌مصرف شد).
 - **پیام جلسهٔ بعد:** «گام ۱۲ طرح Documents/Company_Permissions_And_Followups/implementation_plan.md را اجرا کن (یادداشت تحویل پایان گام ۱۱ و دامنهٔ تازهٔ گام ۱۲ را بخوان). حذف ستون access_level: [بله/خیر]».
 
+### گام ۱۲ — جمع‌بندی (contract) و ادغام بایگانی در استودیو (۳۰ مهر ۱۴۰۵) — انجام شد
+
+کاربر حذف ستون `access_level` را صریحاً تأیید کرد («حذف ستون access_level: [بله]»).
+
+**بک‌اند:**
+- **`access.py`:** سازگاری `docs_*` حذف شد. `get_user_allowed_companies` فقط `'workspace_full'` (عضو) یا `None` (پیوند) می‌پذیرد و مقدار دیگر `ValueError` می‌دهد، تا هیچ مقدار کهنه‌ای بی‌صدا به دامنهٔ پیوند پهن نشود. `_row_levels` دیگر از `access_level` نمی‌خواند.
+- **`user-available`:** `scope=documents` و `user_access_level` حذف شدند. دامنهٔ ناشناخته ۴۰۰ می‌دهد.
+- **مدل و سریالایزرها:** فیلد `access_level` از مدل، `UserCompanyAccessSerializer` (و `access_level_display`)، سریالایزر کاربر، `user_views` و منبع مشتق حسابداری برداشته شد. رکورد کهنهٔ صف آفلاین که فقط `access_level` دارد، به‌جای ۲۰۰ بی‌اثر، با ۴۰۰ صریح فارسی رد می‌شود.
+- **مهاجرت `companies/0004`** (با مهارت `safe-migration` و پشتیبان `backup_20261022_121312.dump`):
+  - پیش از `RemoveField`، ردیف‌های `docs_*` با `section_levels` تهی نگاشت می‌شوند؛ همان کاری که `_row_levels` در زمان اجرا می‌کرد.
+  - اگر ماژولی که این سطح‌ها را نگاشت می‌کند نصب نباشد، مهاجرت با خطا می‌ایستد و ستون را حذف نمی‌کند (یافتهٔ بازبین).
+  - برگشت مهاجرت همهٔ ردیف‌ها را `link` می‌کند، تا پیش‌فرض `docs_read` دسترسی را پهن نکند.
+  - روی `app` اجرا شد. هر ۱۶ ردیف از پیش سطح داشتند و همه ماندند.
+- **انحراف:** `legacy_levels` و کلید `legacy` در رجیستری حسابداری **ماندند**. مهاجرت 0002 (هنوز روی `soft` اجرا نشده) و 0004 به آن‌ها نیاز دارند. در docstring نوشته شد که فقط مهاجرت‌ها آن‌ها را می‌خوانند.
+- **اسکریپت گام ۶** (`scripts/company_membership_loss_report.py`) حذف شد. ستون حذف‌شده را می‌خواند و خروجی‌اش در همین گزارش ثبت شده است.
+
+**فرانت (ادغام بایگانی در استودیو، ق۷):**
+- **مسیرها:** کامپوننت `company-documents-archive` (ts، html، css و spec) حذف شد. همهٔ نشانی‌های قدیمی بایگانی به `/app/companies/<شرکت>?tab=documents` هدایت می‌شوند:
+  - `/company-documents` و `/documents`؛
+  - `/app/finance/company-documents`، `/company-documents-archive` و `/documents`.
+  - `CompaniesManageGuard` مدیر کل را به حالت کامل می‌برد.
+- **شرکت مقصد:** `ActiveCompanyService.companyDocumentsTargetId()` شرکت فعال را برمی‌گزیند، اگر مدارکش دیدنی باشد. وگرنه نخستین شرکتی که مدارکش دیدنی است، و در نبود آن فهرست شرکت‌ها.
+- **`documents-archive-route.ts`** حالا فقط `companyDocumentsUrlTree` و `redirectToCompanyDocuments` دارد. `findCompanyDocumentsRoute`، `isCompanyDocumentsUrl`، `getCompanyDocumentsRedirect` و `layoutNav.companyDocumentsRoute` حذف شدند. `hasCompanyDocumentsArchive` (پرچم پیوند منو) ماند.
+- **`hasCompanyDocumentsAccess`** از `scope=manage` ساخته می‌شود: بخش هستهٔ `founding_docs` و بخش‌های مشارکتی تب «مدارک» (`studioSections` با slot `documents`). هسته نام کلید ماژول را نمی‌برد.
+  - `loadDocumentCompanies` و کش `wh_document_companies` حذف شدند (کلیدهای کهنه در آغاز پاک می‌شوند).
+  - فهرست `manageableCompanies` برای بازگشایی آفلاین در storage نگه داشته می‌شود (یافتهٔ بازبین).
+- **استثنای ورود به ماژول مالی** برای دارندهٔ مدارک از `auth.guard` و `app-persona` (`canAccessApp`، `canAccessRoute`) برداشته شد. ریشهٔ `/app` و `''` کاربرِ بی‌ماژول را به `app/companies` می‌فرستد، و نگهبان آن بی هیچ بخش به لانچر می‌برد.
+- **منوی مالی:** پیوند «بایگانی اسناد شرکت‌ها» با `openCompanyDocuments()` به تب مدارک می‌رود. `min-h-[40px]`، حلقهٔ فوکوس و نشان ۱۰ پیکسلی دارد.
+- **کد مرده:** حذف شد:
+  - `accessLevelsList`، `getAccessLevelBadgeClass` و `getAccessLevelLabel` در `companies.ts`؛
+  - نوع `CompanyAccessLevel` و `user_access_level`؛
+  - `access_level` در مدل‌ها و `accounts-http`؛
+  - `'documents'` در `getUserAvailable`؛
+  - `extraRouteTabs` و عنوان‌های بایگانی در `layout`؛
+  - مسیرهای بایگانی در `personas.ts` (`org_admin`).
+- **هم‌ارزی بخش بایگانی استودیو با صفحهٔ حذف‌شده** (یافتهٔ `ui-reviewer`) در `company-archive-section` برقرار شد:
+  - فیلد «توضیحات» در فرم و نمایش آن زیر عنوان؛
+  - ستون‌های «تاریخ صدور» و «بارگذارنده» (کارت موبایل هم)؛
+  - روزهای مانده یا گذشته در وضعیت؛
+  - فیلتر «نیازمند تمدید» با شمارنده؛
+  - `rel="noopener"`؛
+  - جدول هنگام خطا پنهان است.
+
+**آزمون‌ها و بررسی‌ها:**
+- **بک‌اند** (`companies accounts warehouses inventory personnel integration_tests`، ۸۴۹ آزمون):
+  - فقط `communications.test_performance` شکست خورد، که از پیش هم شکست می‌خورد.
+  - `test_confidential_document_isolation` به پیش‌فرض قدیمی `docs_read` تکیه داشت. حالا سطح را صریح می‌دهد. هیچ کد تولیدی به آن پیش‌فرض تکیه نداشت.
+  - پس از اصلاحات بازبین، `companies` سبز است.
+  - نصب `WH_MODULES=warehouse` و `accounting`: `check` و آزمون‌های `companies` و `test_companies_cross_module` سبز.
+- **فرانت:**
+  - `tsc` سبز است.
+  - ۲۳ فایل spec و ۳۸۷ آزمون سبز.
+  - `tsconfig.companies.spec.json` حالا specهای `auth.guard`، `route-access`، `app-persona`، `legacy-redirects`، `layout-modular` و `login-and-app-switching` را هم دارد.
+  - spec `login-and-app-switching` از گام ۱۱ می‌شکست (`inject` در `Login`) و اصلاح شد.
+  - `company-documents-route.spec.ts` بازنویسی شد (۶ آزمون).
+  - دو آزمون سلول‌های فهرست با انتظار ثابت ۲۰۰ میلی‌ثانیه گاهی در اجرای سنگین می‌شکنند (ناپایدار، ربطی به این گام ندارد).
+- **نگهبان‌ها:**
+  - 29 (با `module_coupling_scan`)، 52 و 57 سبز. ورودی کهنه‌ای در `core_literal_allowlist.json` نبود.
+  - 57 ابتدا به‌خاطر import ماژول در spec هسته رد شد. spec حالا مسیرها را از رجیستری می‌خواند.
+  - 55 روی HEAD هم شکست می‌خورد (۱۰۳ در برابر خط مبنای ۱۰۱). این گام آن را به ۱۰۲ پایین آورد.
+  - 56 با `--base cb2a62c4` پس از commit اجرا شد.
+- **بازبینی بصری روی `localhost:4300`** با حساب موقت `qa_docs12` (فقط بایگانی «خواندن»، بی‌ماژول):
+  - ورود به `/app/companies` رسید.
+  - `/app/finance/company-documents` و `/documents` به `/app/companies/2?tab=documents` رفتند. پس یافتهٔ (ک) `tenant-scope-reviewer`، که می‌گفت `AuthGuard` مالی پیش از هدایت به ورود می‌فرستد، رد شد.
+  - در ۳۶۰ پیکسل اسکرول افقی و دکمهٔ زیر ۴۰ پیکسل نبود و خطای کنسول هم نبود. دسکتاپ ستون‌های تازه را نشان داد.
+  - حساب پس از پیش‌نمایش آبشاری حذف شد: ۱ کاربر، ۳ نشست و ۱ ردیف دسترسی.
+- **انتشار روی `app`:** پشتیبان، `migrate`، بازراه‌اندازی Daphne و کارگر گوگل‌درایو، و `ng build` با وصلهٔ ngsw انجام شد. نشانی‌های `/` و `/api/public/config/` پاسخ ۲۰۰ دادند.
+
+**بازبین‌ها:**
+- **`data-loss-reviewer`:**
+  - (م) نگاشت 0004 بی ماژول حسابداری؛ اصلاح شد.
+  - (م) برگشت پهن‌کنندهٔ 0004؛ اصلاح شد.
+  - (ک) کش آفلاین فهرست؛ اصلاح شد.
+  - (ک) `scope=documents` کلاینت کهنه؛ پذیرفته شد، گذراست.
+- **`tenant-scope-reviewer`:**
+  - هیچ پهن‌شدن قلمرویی نبود.
+  - (م) همان یافتهٔ مهاجرت.
+  - (ک) هدایت پیش از نگهبان؛ با مرورگر رد شد.
+  - (ک) نوع `getUserAvailable`؛ اصلاح شد.
+- **`ui-reviewer`:**
+  - (م) شرکت مقصد؛ اصلاح شد.
+  - (م) هم‌ارزی بایگانی؛ اصلاح شد.
+  - (ک) ۴۰ پیکسل، فوکوس، نشان ۹ پیکسلی و `title`؛ اصلاح شد.
+  - **باز (کم، اصلاح نشد):**
+    - نبود نشان `isStale` در تب مدارک (صفحهٔ پیشین هم نداشت)؛
+    - دانلود با پیوند امضاشده به‌جای `saveBlob`؛
+    - پرشدن خودکار عنوان از نوع سند.
+
+## یادداشت تحویل (پایان گام ۱۲، ۳۰ مهر ۱۴۰۵)
+
+- **وضعیت:** گام‌های ۱ تا ۱۲ طرح انجام و commit شده‌اند. طرح بسته است.
+- **باز:**
+  - انتشار روی `soft` تأیید جدا می‌خواهد. مهاجرت‌های 0002 تا 0004 آن‌جا در یک `migrate` اجرا می‌شوند و پیش از آن پشتیبان لازم است.
+  - یافته‌های کم بالا.
+  - آزمون نهایی با حساب‌های واقعی با کاربر است.
+
 </div>

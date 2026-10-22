@@ -51,7 +51,7 @@ class OrgAdminAndCounterpartyPermissionsTestCase(TestCase):
 
     def _user(self, username, codenames):
         u = User.objects.create_user(username=username, password='password123', email=f'{username}@test.com')
-        UserCompanyAccess.objects.create(user=u, company=self.company, access_level='workspace_full', is_default=True)
+        UserCompanyAccess.objects.create(user=u, company=self.company, is_default=True)
         grant_membership(u, self.company)
         for codename in codenames:
             u.user_permissions.add(Permission.objects.get(codename=codename, content_type__app_label='accounts'))
@@ -162,7 +162,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
 
     def _user(self, username, codenames, company):
         u = User.objects.create_user(username=username, password='password123', email=f'{username}@test.com')
-        UserCompanyAccess.objects.create(user=u, company=company, access_level='workspace_full', is_default=True)
+        UserCompanyAccess.objects.create(user=u, company=company, is_default=True)
         grant_membership(u, company)
         for codename in codenames:
             u.user_permissions.add(Permission.objects.get(codename=codename, content_type__app_label='accounts'))
@@ -438,7 +438,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
         self.assertTrue(own.is_active)
 
     def test_sections_and_projects_cannot_move_between_companies(self):
-        UserCompanyAccess.objects.create(user=self.org_admin, company=self.other_company, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=self.org_admin, company=self.other_company)
         grant_membership(self.org_admin, self.other_company)
         self._as(self.org_admin)
         res = self.client.patch(f'/api/personnel/project-sections/{self.section.id}/', {'project': self.other_project.id}, format='json')
@@ -463,7 +463,7 @@ class OrgAdminAndAccountantTenantScopeTestCase(TestCase):
     def test_user_edit_cannot_grant_foreign_company_access(self):
         editor = self._user('scope_user_editor', ['perm_usr_edit'], self.company)
         both = self._user('scope_both', [], self.company)
-        UserCompanyAccess.objects.create(user=both, company=self.other_company, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=both, company=self.other_company)
         grant_membership(both, self.other_company)
         self._as(editor)
         res = self.client.patch(f'/api/auth/users/{editor.id}/', {'company_ids': [self.company.id, self.other_company.id]}, format='json')

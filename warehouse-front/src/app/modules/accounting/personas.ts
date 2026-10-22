@@ -167,7 +167,7 @@ export function isAccountingRouteDeniedForRole(role: string, cleanRoute: string)
   } else if (role === 'org_admin') {
     // راهبر تشکیلات فقط ساختار سازمانی را اداره می‌کند؛ هیچ کارتابل تایید، پرداخت یا ثبت کارکردی ندارد
     if (cleanRoute.startsWith('/app/finance')) {
-      const allowed = ['/app/finance/projects-and-sections', '/app/finance/company-documents', '/app/finance/documents', '/app/finance/health'];
+      const allowed = ['/app/finance/projects-and-sections', '/app/finance/health'];
       if (!allowed.some(a => cleanRoute === a || cleanRoute.startsWith(a + '/'))) {
         return true;
       }

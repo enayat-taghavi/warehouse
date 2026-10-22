@@ -3,7 +3,7 @@ import io
 from django.db.models import Q
 from django.http import HttpResponse
 from django.utils import timezone
-from rest_framework import viewsets, permissions, parsers, serializers
+from rest_framework import viewsets, permissions, parsers, serializers, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -136,22 +136,22 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='user-available')
     def user_available(self, request):
         """
-        لیست شرکت‌های در دسترس کاربر جاری برای نمایش در مودال ورود، هدر سوئیچر و کارتابل مدارک
-        اگر scope='documents' یا 'docs' باشد: شرکت‌هایی که کاربر حداقل دسترسی docs_read دارد.
-        اگر scope='all' باشد: تمامی شرکت‌های منتسب به کاربر.
-        پیش‌فرض: شرکت‌هایی که کاربر عضویت فضای کاری (workspace_full) دارد.
+        لیست شرکت‌های در دسترس کاربر جاری برای مودال ورود، هدر سوئیچر و حالت محدود استودیو.
+        scope='workspace' (پیش‌فرض): شرکت‌هایی که کاربر عضو آن‌هاست.
+        scope='all': شرکت‌های پیوندخورده با کاربر.
+        scope='manage': شرکت‌هایی که کاربر دست‌کم یک بخش آن‌ها را می‌خواند (بایگانی مدارک هم از همین راه).
         """
         user = request.user
         scope = request.query_params.get('scope', 'workspace')
-        if scope in ('documents', 'docs'):
-            companies = get_user_allowed_companies(user, required_level='docs_read')
-        elif scope == 'all':
+        if scope == 'all':
             companies = get_user_allowed_companies(user, required_level=None)
         elif scope == 'manage':
-            # حالت محدود استودیو: شرکت‌هایی که دست‌کم یک بخش با سطح خواندن دارد
             companies = companies_with_any_section(user)
+        elif scope == 'workspace':
+            companies = get_user_allowed_companies(user)
         else:
-            companies = get_user_allowed_companies(user, required_level='workspace_full')
+            # scope='documents' کلاینت کهنه با فهرست اعضا اشتباه گرفته نشود
+            return Response({'detail': 'دامنهٔ فهرست شرکت‌ها نامعتبر است.'}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = self.get_serializer(companies, many=True)
         data = list(serializer.data)
@@ -174,13 +174,6 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 c['is_member'] = c['id'] in member_ids
                 c['membership_sources'] = sources.get(c['id'], [])
                 c['section_levels'] = levels.get(c['id'], {})
-            # سازگاری موقت تا گام ۱۲ (بایگانی مدارک فرانت)
-            if user.is_superuser:
-                c['user_access_level'] = 'workspace_full'
-            elif c['section_levels'].get('docs_archive') == 'write':
-                c['user_access_level'] = 'docs_write'
-            else:
-                c['user_access_level'] = 'docs_read'
 
         return Response({
             'companies': data,
@@ -442,7 +435,7 @@ class UserCompanyAccessViewSet(viewsets.ModelViewSet):
         company = serializer.validated_data.get('company')
         self._ensure_can_grant(company.id if company else None, serializer.validated_data.get('user'),
                                {}, serializer.validated_data.get('section_levels') or {})
-        instance = serializer.save(access_level='link')
+        instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_access', 'create', instance.id, str(instance.user), client_tab_id=tab_id, sender_id=self.request.user.id, company_id=instance.company_id)
 
@@ -462,8 +455,6 @@ class UserCompanyAccessViewSet(viewsets.ModelViewSet):
             installed = section_map()
             kept = {k: v for k, v in (inst.section_levels or {}).items() if k not in installed}
             extra['section_levels'] = {**kept, **serializer.validated_data['section_levels']}
-            # ردیف قدیمی با section_levels تهی به access_level برمی‌گشت؛ پس از نوشتن، فقط سطح‌ها معتبرند
-            extra['access_level'] = 'link'
         instance = serializer.save(**extra)
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_access', 'update', instance.id, str(instance.user), client_tab_id=tab_id, sender_id=self.request.user.id, company_id=instance.company_id)

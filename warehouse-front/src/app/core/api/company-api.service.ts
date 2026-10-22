@@ -155,7 +155,7 @@ export class CompanyApiService {
     return `${this.endpoint}/${id}/delete_impact/`;
   }
 
-  getUserAvailable(scope?: 'workspace' | 'documents' | 'all' | 'manage'): Observable<UserAvailableCompaniesResponse> {
+  getUserAvailable(scope?: 'workspace' | 'all' | 'manage'): Observable<UserAvailableCompaniesResponse> {
     let params = new HttpParams();
     if (scope) {
       params = params.set('scope', scope);

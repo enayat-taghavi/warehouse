@@ -52,7 +52,7 @@ class UserCompanyMultiTenantTestCase(TestCase):
 
         acc1 = accesses.get(company=self.comp1)
         self.assertTrue(acc1.is_default)
-        self.assertEqual(acc1.access_level, 'link')
+        self.assertEqual(acc1.section_levels, {})
 
         acc2 = accesses.get(company=self.comp2)
         self.assertFalse(acc2.is_default)

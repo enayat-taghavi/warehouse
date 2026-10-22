@@ -134,14 +134,16 @@ describe('سناریوی ۱: ورود، خروج و جابه‌جایی بین �
         userRoleTitles: vi.fn().mockReturnValue(['حسابدار'])
       };
 
-      const loginComp = new Login(
+      const loginComp = runInInjectionContext(
+        Injector.create({ providers: [{ provide: ActiveCompanyService, useValue: mockActiveCompany }] }),
+        () => new Login(
         mockAuth,
         mockRouter,
         mockToast,
         mockCdr,
         mockConfigApi,
         { snapshot: { queryParams: {} } } as any
-      );
+      ));
 
       loginComp.username = 'm.bagheri';
       loginComp.password = '1234567';
@@ -191,14 +193,16 @@ describe('سناریوی ۱: ورود، خروج و جابه‌جایی بین �
         userRoleTitles: vi.fn().mockReturnValue(['مدیر انبار و شمارش'])
       };
 
-      const loginComp = new Login(
+      const loginComp = runInInjectionContext(
+        Injector.create({ providers: [{ provide: ActiveCompanyService, useValue: mockActiveCompany }] }),
+        () => new Login(
         mockAuth,
         mockRouter,
         mockToast,
         mockCdr,
         mockConfigApi,
         { snapshot: { queryParams: {} } } as any
-      );
+      ));
 
       loginComp.username = 'test_wh_only';
       loginComp.password = '1234567';
@@ -242,14 +246,16 @@ describe('سناریوی ۱: ورود، خروج و جابه‌جایی بین �
         switchAppScope: vi.fn().mockReturnValue(of({}))
       };
 
-      const loginComp = new Login(
+      const loginComp = runInInjectionContext(
+        Injector.create({ providers: [{ provide: ActiveCompanyService, useValue: mockActiveCompany }] }),
+        () => new Login(
         mockAuth,
         mockRouter,
         mockToast,
         mockCdr,
         mockConfigApi,
         { snapshot: { queryParams: {} } } as any
-      );
+      ));
 
       loginComp.username = 'admin';
       loginComp.password = '1234567';

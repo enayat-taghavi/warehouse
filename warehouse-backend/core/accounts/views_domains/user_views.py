@@ -702,11 +702,7 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                     if cid:
                         from companies.models import UserCompanyAccess
                         # پیوند کاربر با شرکت (ت۸)؛ عضویت فقط از انتساب بخش یا انبار می‌آید
-                        UserCompanyAccess.objects.get_or_create(
-                            user=user,
-                            company_id=cid,
-                            defaults={'access_level': 'link'}
-                        )
+                        UserCompanyAccess.objects.get_or_create(user=user, company_id=cid)
                     created_count += 1
 
                 from ..audit_utils import log_audit_event

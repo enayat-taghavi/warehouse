@@ -33,10 +33,6 @@ export class ActiveCompanyService {
   private isModalOpenSubject = new BehaviorSubject<boolean>(false);
   public isModalOpen$ = this.isModalOpenSubject.asObservable();
 
-  private documentCompaniesSubject = new BehaviorSubject<Company[]>([]);
-  public documentCompanies$ = this.documentCompaniesSubject.asObservable();
-  public documentCompaniesSignal = signal<Company[]>([]);
-
   private isSuperuserSubject = new BehaviorSubject<boolean>(false);
   public isSuperuser$ = this.isSuperuserSubject.asObservable();
 
@@ -57,9 +53,33 @@ export class ActiveCompanyService {
     return c.has_warehouse_module !== false;
   });
 
+  /**
+   * کاربر دست‌کم در یک شرکت تب «مدارک» استودیو را می‌بیند: بخش هستهٔ اسناد مادر، یا بخش مشارکتی
+   * همان تب (studioSections با slot «documents»، مثل بایگانی مدارک ماژول) با سطح خواندن.
+   */
   public hasCompanyDocumentsAccess = computed<boolean>(() => {
-    return this.isSuperuserSubject.value || this.documentCompaniesSignal().length > 0;
+    if (this.isSuperuserSubject.value) return true;
+    return this.manageableCompanies().some(c => this.canReadCompanyDocuments(c));
   });
+
+  private canReadCompanyDocuments(company: Company): boolean {
+    const sections = ['founding_docs', ...this.moduleRegistry.getExtensions('companies')
+      .flatMap(e => e.extension.studioSections || [])
+      .filter(s => s.slot === 'documents' && !!s.permissionSection)
+      .map(s => s.permissionSection as string)];
+    return sections.some(k => (company.section_levels?.[k] ?? 'none') !== 'none');
+  }
+
+  /**
+   * شرکت مقصد تب «مدارک»: شرکت فعال اگر کاربر مدارک آن را می‌بیند، وگرنه نخستین شرکتی که می‌بیند؛
+   * null یعنی فهرست شرکت‌ها (مدیر کل بی شرکت فعال، یا فهرست هنوز دریافت نشده).
+   */
+  public companyDocumentsTargetId(): number | null {
+    const activeId = this.activeCompanyId;
+    if (this.isSuperuserSubject.value) return activeId;
+    const readable = this.manageableCompanies().filter(c => this.canReadCompanyDocuments(c));
+    return readable.find(c => c.id === activeId)?.id ?? readable[0]?.id ?? null;
+  }
 
   private sessionTab = inject(SessionTabService, { optional: true });
   private router = inject(Router, { optional: true });
@@ -102,35 +122,36 @@ export class ActiveCompanyService {
     map((c) => this.hasWarehouseModuleSignal() && !!c && c.has_warehouse_module !== false)
   );
 
-  public loadDocumentCompanies(): Observable<Company[]> {
-    return this.http.get<UserAvailableCompaniesResponse>(`${this.apiUrl}/user-available/?scope=documents`).pipe(
-      tap((res) => {
-        const comps = res.companies || [];
-        this.documentCompaniesSubject.next(comps);
-        this.documentCompaniesSignal.set(comps);
-        try {
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem('wh_document_companies', JSON.stringify(comps));
-            localStorage.setItem('wh_document_companies', JSON.stringify(comps));
-          }
-        } catch {}
-        if (res.is_superuser) {
-          this.isSuperuserSubject.next(true);
-        }
-      }),
-      map((res) => res.companies || []),
-      catchError(() => of([]))
-    );
-  }
+  /**
+   * شرکت‌هایی که کاربر دست‌کم یک بخش آن‌ها را می‌خواند، با سطح هر بخش (حالت محدود استودیو و کاشی «شرکت‌ها»).
+   * آخرین فهرست دریافت‌شده نگه داشته می‌شود تا بازگشایی آفلاین هم آن را داشته باشد.
+   */
+  public manageableCompanies = signal<Company[]>(ActiveCompanyService.readStoredList('wh_manageable_companies'));
 
-  /** شرکت‌هایی که کاربر دست‌کم یک بخش آن‌ها را می‌خواند، با سطح هر بخش (حالت محدود استودیو و کاشی «شرکت‌ها») */
-  public manageableCompanies = signal<Company[]>([]);
+  private static readStoredList(key: string): Company[] {
+    try {
+      if (typeof window === 'undefined') return [];
+      const parsed = JSON.parse(sessionStorage.getItem(key) || localStorage.getItem(key) || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
 
   /** بدون پوشاندن خطا (ورود باید «خطای اتصال» را از «بی‌مجوز» جدا کند) */
   public fetchManageableCompanies(): Observable<Company[]> {
     return this.http.get<UserAvailableCompaniesResponse>(`${this.apiUrl}/user-available/?scope=manage`).pipe(
       map((res) => res.companies || []),
-      tap((comps) => this.manageableCompanies.set(comps))
+      tap((comps) => {
+        this.manageableCompanies.set(comps);
+        try {
+          if (typeof window !== 'undefined') {
+            const json = JSON.stringify(comps);
+            sessionStorage.setItem('wh_manageable_companies', json);
+            localStorage.setItem('wh_manageable_companies', json);
+          }
+        } catch {}
+      })
     );
   }
 
@@ -157,17 +178,9 @@ export class ActiveCompanyService {
     if (typeof window === 'undefined') return;
 
     try {
-      const savedDocs = sessionStorage.getItem('wh_document_companies') || localStorage.getItem('wh_document_companies');
-      if (savedDocs) {
-        const parsedDocs = JSON.parse(savedDocs) as Company[];
-        if (Array.isArray(parsedDocs)) {
-          this.documentCompaniesSubject.next(parsedDocs);
-          this.documentCompaniesSignal.set(parsedDocs);
-          if (!sessionStorage.getItem('wh_document_companies')) {
-            sessionStorage.setItem('wh_document_companies', savedDocs);
-          }
-        }
-      }
+      // کش فهرست بایگانی قدیمی (scope=documents)؛ جایش را فهرست حالت محدود گرفته است
+      sessionStorage.removeItem('wh_document_companies');
+      localStorage.removeItem('wh_document_companies');
     } catch {
       // Ignored
     }
@@ -236,7 +249,7 @@ export class ActiveCompanyService {
     }
 
     this.isLoadingSubject.next(true);
-    this.loadDocumentCompanies().subscribe();
+    this.loadManageableCompanies().subscribe();
 
     this.inFlightAvailableRequest$ = this.http.get<UserAvailableCompaniesResponse>(`${this.apiUrl}/user-available/`).pipe(
       tap((res) => {
@@ -394,12 +407,8 @@ export class ActiveCompanyService {
   public clearActiveCompany(): void {
     this.selectCompany(null);
     this.availableCompaniesSubject.next([]);
-    this.documentCompaniesSubject.next([]);
-    this.documentCompaniesSignal.set([]);
     try {
       if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('wh_document_companies');
-        localStorage.removeItem('wh_document_companies');
         sessionStorage.removeItem('active_company_id');
         sessionStorage.removeItem('active_company_data');
         localStorage.removeItem('active_company_id');
@@ -408,6 +417,8 @@ export class ActiveCompanyService {
         localStorage.removeItem('user_available_companies');
         sessionStorage.removeItem('user_is_superuser');
         localStorage.removeItem('user_is_superuser');
+        sessionStorage.removeItem('wh_manageable_companies');
+        localStorage.removeItem('wh_manageable_companies');
       }
     } catch {}
     this.isSuperuserSubject.next(false);

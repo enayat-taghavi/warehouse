@@ -25,7 +25,9 @@ class CompanyCrossModuleIntegrationTests(TestCase):
         self.assertIn(self.c3.id, derived_company_ids(self.user))
         allowed = set(get_user_allowed_companies(self.user).values_list('id', flat=True))
         self.assertIn(self.c3.id, allowed)
-        docs = set(get_user_allowed_companies(self.user, required_level='docs_read').values_list('id', flat=True))
+        # membership opens no section (T11): the archive stays closed without a section level
+        from companies.access import companies_with_section
+        docs = set(companies_with_section(self.user, 'docs_archive', 'read').values_list('id', flat=True))
         self.assertNotIn(self.c3.id, docs)
 
     def test_company_with_warehouse_cannot_be_deleted(self):

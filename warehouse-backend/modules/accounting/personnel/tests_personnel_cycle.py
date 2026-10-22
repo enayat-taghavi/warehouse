@@ -66,7 +66,7 @@ class PersonnelFullCycleTests(TestCase):
         from personnel.models import UserSectionAssignment
         for u, r in [(self.operator, "employee"), (self.supervisor, "supervisor"), (self.accountant, "accountant"), (self.manager, "manager")]:
             UserSectionAssignment.objects.get_or_create(user=u, section=self.section, defaults={"role": r, "is_active": True})
-            UserCompanyAccess.objects.get_or_create(user=u, company=self.company, defaults={"access_level": "workspace_full", "is_default": True})
+            UserCompanyAccess.objects.get_or_create(user=u, company=self.company, defaults={"is_default": True})
 
         self.client = APIClient()
 

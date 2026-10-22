@@ -13,6 +13,7 @@ from personnel.models import (
 )
 from personnel.serializers import CompanySerializer
 from personnel.views import get_user_allowed_companies
+from companies.access import companies_with_section
 
 User = get_user_model()
 
@@ -60,9 +61,11 @@ class CompanyDocumentTests(TestCase):
         )
 
         # انتساب دسترسی کاربر A به شرکت A
-        UserCompanyAccess.objects.create(user=self.user_a, company=self.company_a, is_default=True)
+        UserCompanyAccess.objects.create(user=self.user_a, company=self.company_a, is_default=True,
+                                         section_levels={'docs_archive': 'read'})
         # انتساب دسترسی کاربر B به شرکت B
-        UserCompanyAccess.objects.create(user=self.user_b, company=self.company_b, is_default=True)
+        UserCompanyAccess.objects.create(user=self.user_b, company=self.company_b, is_default=True,
+                                         section_levels={'docs_archive': 'read'})
 
     def test_company_document_model_and_expiry_status(self):
         """تست محاسبات تاریخ انقضا و پراپرتی‌های وضعیت اعتبار سند"""
@@ -563,17 +566,14 @@ class CompanyDocumentTests(TestCase):
         self.assertIn(self.company_b, allowed_workspace)
 
         # ۲. در سطوح اسناد (docs_read و docs_write)، کاربر نباید هیچ دسترسی به شرکت بتا داشته باشد
-        allowed_docs_read = get_user_allowed_companies(worker, required_level='docs_read')
-        self.assertNotIn(self.company_b, allowed_docs_read)
-
-        allowed_docs_write = get_user_allowed_companies(worker, required_level='docs_write')
-        self.assertNotIn(self.company_b, allowed_docs_write)
+        self.assertNotIn(self.company_b, companies_with_section(worker, 'docs_archive', 'read'))
+        self.assertNotIn(self.company_b, companies_with_section(worker, 'docs_archive', 'write'))
 
         # ۳. تست از طریق API کاربر
         self.client.force_authenticate(user=worker)
 
-        # الف) لیست شرکت‌های در دسترس با اسکوپ documents باید خالی باشد
-        resp_scope = self.client.get('/api/personnel/companies/user-available/?scope=documents')
+        # الف) در فهرست حالت محدود (scope=manage) شرکت بتا بی سطح بخش نیست
+        resp_scope = self.client.get('/api/personnel/companies/user-available/?scope=manage')
         self.assertEqual(resp_scope.status_code, status.HTTP_200_OK)
         company_ids_in_docs = [c['id'] for c in resp_scope.data['companies']]
         self.assertNotIn(self.company_b.id, company_ids_in_docs)
@@ -596,12 +596,11 @@ class CompanyDocumentTests(TestCase):
         UserCompanyAccess.objects.create(
             user=worker,
             company=self.company_b,
-            access_level='docs_read'
+            section_levels={'docs_archive': 'read'}
         )
 
         # اکنون باید دسترسی مشاهده داشته باشد
-        allowed_now = get_user_allowed_companies(worker, required_level='docs_read')
-        self.assertIn(self.company_b, allowed_now)
+        self.assertIn(self.company_b, companies_with_section(worker, 'docs_archive', 'read'))
 
         resp_docs_allowed = self.client.get(f'/api/personnel/company-documents/?company_id={self.company_b.id}')
         self.assertEqual(resp_docs_allowed.status_code, status.HTTP_200_OK)

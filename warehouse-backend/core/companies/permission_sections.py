@@ -9,7 +9,7 @@
 مشخصات هر بخش:
     key, label_fa, order, kind ('levels' | 'action'), sensitive (bool),
     templates: {template_key: level}   (سطح بخش در هر قالب؛ نبود = none)
-    legacy:    {old access_level: level} (نگاشت مهاجرت از سطح‌های قدیمی؛ نبود = سطح قالب مدیر برای workspace_full)
+    legacy:    {old access_level: level} (فقط برای مهاجرت‌های داده‌ای 0002 و 0004؛ ستون access_level حذف شده است)
     studio:    شناسهٔ تب یا بخش استودیو (برای فرانت)
 """
 from platform_core.registry import contributions
@@ -86,7 +86,10 @@ def template_levels(template_key):
 
 
 def legacy_levels(access_level):
-    """نگاشت سطح قدیمی access_level به section_levels (ق۶)."""
+    """
+    نگاشت سطح قدیمی access_level به section_levels (ق۶). فقط مهاجرت‌های 0002 و 0004 آن را صدا می‌زنند،
+    تا پایگاهی که هنوز ستون قدیمی را دارد (مثلاً soft) پیش از حذف ستون بی‌کم‌وکاست نگاشت شود.
+    """
     if access_level == 'workspace_full':
         return template_levels('manager')
     levels = {}

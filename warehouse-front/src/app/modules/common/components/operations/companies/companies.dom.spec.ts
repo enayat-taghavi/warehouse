@@ -1208,7 +1208,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
         id: 55,
         user: 10,
         company: 1,
-        access_level: 'docs_write',
+        section_levels: {},
         role_in_company: 'مسئول بایگانی',
         is_default: false
       }));
@@ -1328,7 +1328,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
     it('لغو دسترسی کاربر در استودیو باید بلافاصله ردیف را از studioAccesses خارج کند', async () => {
       component.studioAccesses = [
-        { id: 55, user: 10, company: 1, access_level: 'docs_write', is_default: false }
+        { id: 55, user: 10, company: 1, section_levels: {}, is_default: false }
       ];
 
       await component.removeStudioAccess(55);
@@ -1438,7 +1438,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
         { id: 12, username: 'reza', first_name: 'رضا', last_name: 'محمدی' },
       ]));
       component.openEditModal(sampleCompanies[0]);
-      component.studioAccesses = [{ id: 1, user: 12, company: 1, access_level: 'docs_read', is_default: false }];
+      component.studioAccesses = [{ id: 1, user: 12, company: 1, section_levels: {}, is_default: false }];
       component.setModalTab('access');
       fixture.detectChanges();
       const el: HTMLElement = fixture.nativeElement;
@@ -1504,7 +1504,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
     it('B3 و A24: دسترسی‌ها در موبایل کارت دارند و تاریخ انتساب شمسی نمایش داده می‌شود', () => {
       component.openEditModal(sampleCompanies[0]);
-      component.studioAccesses = [{ id: 1, user: 12, company: 1, access_level: 'docs_read', is_default: true, username: 'reza', user_full_name: 'رضا محمدی', created_at: '2026-10-21T08:00:00Z' } as any];
+      component.studioAccesses = [{ id: 1, user: 12, company: 1, section_levels: {}, is_default: true, username: 'reza', user_full_name: 'رضا محمدی', created_at: '2026-10-21T08:00:00Z' } as any];
       component.setModalTab('access');
       fixture.detectChanges();
       const el: HTMLElement = fixture.nativeElement;

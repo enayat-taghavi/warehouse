@@ -1,4 +1,4 @@
-import { Routes } from '@angular/router';
+import { Router, Routes } from '@angular/router';
 import { inject } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { AppPersonaService } from '../../core/services/app-persona.service';
@@ -41,7 +41,7 @@ import { TreasurerChequesComponent } from './components/finance/treasurer/treasu
 import { TreasurerReconciliationComponent } from './components/finance/treasurer/treasurer-reconciliation/treasurer-reconciliation';
 import { Audit } from '../common/components/audit/audit';
 import { HealthDashboardComponent } from '../common/components/health-dashboard/health-dashboard';
-import { CompanyDocumentsArchiveComponent } from './components/finance/company-documents-archive/company-documents-archive';
+import { companyDocumentsUrlTree, redirectToCompanyDocuments } from '../../core/modules/documents-archive-route';
 
 
 export const ACCOUNTING_ROUTES: Routes = [
@@ -130,9 +130,10 @@ export const ACCOUNTING_ROUTES: Routes = [
   { path: 'base-settings', component: BaseSettings, data: { reuse: true } },
   { path: 'projects-and-sections', component: ProjectsAndSectionsComponent, data: { reuse: true } },
   { path: 'counterparties', redirectTo: 'accountant-counterparties', pathMatch: 'full' },
-  { path: 'company-documents', component: CompanyDocumentsArchiveComponent, data: { reuse: true } },
-  { path: 'company-documents-archive', redirectTo: 'company-documents', pathMatch: 'full' },
-  { path: 'documents', redirectTo: 'company-documents', pathMatch: 'full' },
+  // بایگانی اسناد شرکت در تب مدارک استودیوی شرکت ادغام شد (ق۷)؛ نشانی‌های قدیمی به آن هدایت می‌شوند
+  { path: 'company-documents', redirectTo: redirectToCompanyDocuments, pathMatch: 'full' },
+  { path: 'company-documents-archive', redirectTo: redirectToCompanyDocuments, pathMatch: 'full' },
+  { path: 'documents', redirectTo: redirectToCompanyDocuments, pathMatch: 'full' },
   { path: 'audit', component: Audit, data: { appScope: 'finance', reuse: true } },
   { path: 'health', component: HealthDashboardComponent, data: { appScope: 'finance', reuse: false } },
   { path: 'finance-audit', redirectTo: 'audit', pathMatch: 'full' },
@@ -160,8 +161,9 @@ export const ACCOUNTING_ROUTES: Routes = [
       if (perms.includes('perm_manage_projects_sections')) {
         return 'projects-and-sections';
       }
-      if (inject(ActiveCompanyService).hasCompanyDocumentsAccess()) {
-        return 'company-documents';
+      const companies = inject(ActiveCompanyService);
+      if (companies.hasCompanyDocumentsAccess()) {
+        return companyDocumentsUrlTree(inject(Router), companies.companyDocumentsTargetId());
       }
       return 'employee-attendance';
     },

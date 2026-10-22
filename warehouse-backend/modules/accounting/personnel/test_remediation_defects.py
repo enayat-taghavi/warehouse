@@ -66,7 +66,7 @@ class RemediationTestBase(TestCase):
         grant(self.mgr, 'perm_delete_personnel_nomovement')
         for u in (self.emp, self.sup, self.acc, self.mgr):
             UserSectionAssignment.objects.create(user=u, section=self.s1, is_active=True)
-            UserCompanyAccess.objects.create(user=u, company=self.c1, access_level='workspace_full')
+            UserCompanyAccess.objects.create(user=u, company=self.c1)
 
     def as_user(self, user):
         self.client.force_authenticate(user)
@@ -399,7 +399,7 @@ class Step2HighSeverityTests(RemediationTestBase):
     def test_def12_other_company_users_are_not_notified(self):
         outsider = User.objects.create_user(username='rm_acc_b', password='p')
         outsider.user_permissions.add(*self.acc.user_permissions.all())
-        UserCompanyAccess.objects.create(user=outsider, company=self.c2, access_level='workspace_full')
+        UserCompanyAccess.objects.create(user=outsider, company=self.c2)
         p = self.complete_profile('0098765434', status='pending_supervisor')
         self.as_user(self.sup)
         with self.captureOnCommitCallbacks(execute=True):

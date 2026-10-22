@@ -49,7 +49,6 @@ export interface User {
     company_id: number;
     company_name: string;
     company_code: string;
-    access_level: string;
     role_in_company?: string;
     is_default: boolean;
   }>;

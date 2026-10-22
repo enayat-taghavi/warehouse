@@ -219,7 +219,6 @@ class CartableMultiTenantTestCase(TestCase):
         UserCompanyAccess.objects.create(
             user=u,
             company=company,
-            access_level='workspace_full',
             is_default=True
         )
         UserSectionAssignment.objects.create(

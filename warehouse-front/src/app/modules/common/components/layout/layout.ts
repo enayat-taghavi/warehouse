@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, computed, ChangeDetectorRef, HostListener
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
+import { companyDocumentsUrlTree } from '../../../../core/modules/documents-archive-route';
 import { filter, Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AuthStore } from '../../../../core/stores/auth.store';
@@ -663,12 +664,6 @@ export class Layout implements OnInit, OnDestroy {
       })
     );
 
-    this.offlineSubs.push(
-      this.activeCompanyService.documentCompanies$.subscribe(() => {
-        this.cdr.markForCheck();
-      })
-    );
-
     // دریافت لیست انبارها از بک‌اند (با خودترمیمی آنی در صورت حذف یا نامعتبر شدن انبار فعال)
     if (this.hasWarehouseSwitcher) {
       this.scopeDirectory.getAll().subscribe({
@@ -1205,6 +1200,12 @@ export class Layout implements OnInit, OnDestroy {
     return `${this.switcherModule?.routePrefix || '/app'}/${tabId}`;
   }
 
+  /** بایگانی اسناد شرکت: تب مدارک استودیو برای شرکت فعال یا نخستین شرکتی که مدارکش دیدنی است */
+  openCompanyDocuments(): void {
+    this.closeSidebar();
+    this.router.navigateByUrl(companyDocumentsUrlTree(this.router, this.activeCompanyService.companyDocumentsTargetId()));
+  }
+
   switchTab(tabId: string) {
     this.closeSidebar();
     const route = this.resolveRouteForTab(tabId);
@@ -1376,8 +1377,6 @@ export class Layout implements OnInit, OnDestroy {
       'treasurer-reconciliation': 'مغایرت‌گیری بانکی و تقویم نقدینگی (پنل خزانه‌دار)',
       companies: 'مدیریت شرکت‌ها و هلدینگ',
       'projects-and-sections': 'مدیریت ساختار سازمانی، پروژه‌ها و بخش‌ها',
-      'company-documents': 'بایگانی اسناد و مدارک رسمی شرکت‌ها',
-      documents: 'بایگانی اسناد و مدارک رسمی شرکت‌ها',
       health: 'مرکز جامع پایش سلامت و تاب‌آوری سامانه'
     };
     this.currentTitle = titles[tab] || tab;

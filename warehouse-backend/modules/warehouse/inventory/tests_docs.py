@@ -110,7 +110,6 @@ class FinancialDocsCycleTests(TestCase):
             UserCompanyAccess.objects.create(
                 user=u,
                 company=self.company,
-                access_level='workspace_full',
                 is_default=True
             )
         self.warehouse.assigned_users.add(self.manager, self.supervisor, self.doc_worker, self.other_worker)

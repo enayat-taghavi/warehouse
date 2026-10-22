@@ -4,7 +4,6 @@ import { Router, NavigationEnd } from '@angular/router';
 import { WebSocketService } from '../http/websocket.service';
 import { SessionTabService, DEFAULT_ACTIVE_APP_MODULE } from './session-tab.service';
 import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
-import { findCompanyDocumentsRoute, isCompanyDocumentsUrl } from '../modules/documents-archive-route';
 import { ActiveCompanyService } from './active-company.service';
 import { resolveOfflineDbStrict } from './offline-db';
 import { filter } from 'rxjs';
@@ -155,11 +154,6 @@ export class AppPersonaService {
     // اگر ماژول وابسته به پرچم ماژول انبارداری شرکت است و شرکت فعال فاقد ماژول است، دسترسی مسدود می‌شود
     if (spec.extensions?.companies?.hasWarehouseModuleToggle && this.activeCompanyService && !this.activeCompanyService.hasWarehouseModule) {
       return false;
-    }
-
-    // اگر ماژول آرشیو اسناد شرکت دارد و کاربر به اسناد شرکت فعال دسترسی دارد، مجاز است
-    if (spec.extensions?.layoutNav?.hasCompanyDocumentsArchive && this.activeCompanyService?.hasCompanyDocumentsAccess()) {
-      return true;
     }
 
     return this.moduleRegistry.userHasAccessToModule(
@@ -416,11 +410,9 @@ export class AppPersonaService {
         if (active?.personas?.homeIsModuleDefault) {
           return active.defaultRoute;
         }
+        // بایگانی مدارک در تب مدارک استودیوی شرکت است (حالت محدود)
         if (this.activeCompanyService?.hasCompanyDocumentsAccess()) {
-          const archiveRoute = findCompanyDocumentsRoute(this.moduleRegistry);
-          if (archiveRoute) {
-            return archiveRoute;
-          }
+          return '/app/companies';
         }
         const lastResort = this.scopedModules().find(s => s.personas?.lastResortRoute)?.personas?.lastResortRoute;
         return lastResort ?? '/app/launcher';
@@ -456,10 +448,6 @@ export class AppPersonaService {
     if (this.isSuperuser()) return true;
     const cleanRoute = routePath.split('?')[0];
     const role = this.activeRole();
-
-    if (isCompanyDocumentsUrl(cleanRoute, findCompanyDocumentsRoute(this.moduleRegistry))) {
-      return !!this.activeCompanyService?.hasCompanyDocumentsAccess();
-    }
 
     // بررسی قلمرو کلان اپلیکیشن‌ها
     for (const mod of this.scopedModules()) {

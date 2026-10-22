@@ -3,7 +3,6 @@ import { Router, CanActivateFn, CanActivateChildFn } from '@angular/router';
 import { AuthService } from './auth.service';
 import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
 import { ModuleRouteAccess, WhFrontendModule } from '../modules/module-contract';
-import { findCompanyDocumentsRoute, isCompanyDocumentsUrl } from '../modules/documents-archive-route';
 import { expandPermissionAliases } from '../modules/permission-aliases';
 import { AppPersonaService } from '../services/app-persona.service';
 import { ActiveCompanyService } from '../services/active-company.service';
@@ -137,8 +136,6 @@ export const AuthGuard: CanActivateFn = (route, state) => {
       return router.parseUrl(fallback === current ? '/app/launcher' : fallback);
     };
 
-    const isCompanyDocsRoute = isCompanyDocumentsUrl(state.url, findCompanyDocumentsRoute(moduleRegistry));
-
     const path = route.routeConfig?.path;
 
     // قلمرو ماژول: یک حلقه برای همهٔ ماژول‌های شناخته‌شده دارای routeAccess
@@ -161,19 +158,12 @@ export const AuthGuard: CanActivateFn = (route, state) => {
           }
         }
 
-        if (isCompanyDocsRoute && mod.extensions?.layoutNav?.hasCompanyDocumentsArchive) {
-          const activeCompanyService = inject(ActiveCompanyService);
-          hasModAccess = isAdmin || activeCompanyService.hasCompanyDocumentsAccess();
-        }
-
         if (!hasModAccess) {
           const fallbackMod = installedWithRouteAccess.find(m => m.code !== mod.code && (isAdmin || hasModuleAccess(m)));
           if (fallbackMod) {
             return router.parseUrl(fallbackMod.defaultRoute);
           }
-          return isCompanyDocsRoute && mod.extensions?.layoutNav?.hasCompanyDocumentsArchive
-            ? router.parseUrl('/app/launcher')
-            : router.parseUrl('/login');
+          return router.parseUrl('/login');
         }
         break;
       }
