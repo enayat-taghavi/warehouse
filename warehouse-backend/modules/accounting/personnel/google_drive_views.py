@@ -23,10 +23,10 @@ def check_user_company_access(user, company, require_write: bool = False) -> boo
         return False
     if user.is_superuser:
         return True
-    from .views import get_user_allowed_companies
-    required_level = 'workspace_full' if require_write else 'docs_read'
-    allowed_qs = get_user_allowed_companies(user, required_level=required_level)
-    return allowed_qs.filter(id=company.id).exists()
+    # بخش «گوگل‌درایو» شرکت (طرح مجوزهای بخش‌به‌بخش، P9): خواندن یا نوشتن
+    from companies.access import company_section_level
+    level = company_section_level(user, company.id, 'gdrive')
+    return level == 'write' if require_write else level in ('read', 'write')
 
 
 def _format_time_field(val, fallback: str) -> str:

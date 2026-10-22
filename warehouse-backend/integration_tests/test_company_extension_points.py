@@ -1,5 +1,5 @@
 from django.test import TestCase
-from integration_tests.membership import grant_membership
+from companies.testing import grant_membership
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from rest_framework.test import APIClient

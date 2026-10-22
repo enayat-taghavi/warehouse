@@ -1,4 +1,5 @@
 import os
+from companies.testing import grant_membership
 from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
@@ -53,8 +54,10 @@ class GoogleDriveCoreTestCase(TestCase):
             user=self.user,
             company=self.company,
             access_level='workspace_full',
+            section_levels={'gdrive': 'write', 'docs_archive': 'write'},
             is_default=True
         )
+        grant_membership(self.user, self.company)
 
     def test_token_encryption_and_decryption(self):
         """تست رمزنگاری و رمزگشایی امن توکن‌های گوگل"""
@@ -980,8 +983,10 @@ class GoogleDriveCoreTestCase(TestCase):
         UserCompanyAccess.objects.create(
             user=self.user,
             company=comp_new,
-            access_level='workspace_full'
+            access_level='workspace_full',
+            section_levels={'gdrive': 'read'}
         )
+        grant_membership(self.user, comp_new)
         # اطمینان از نبود کانفیگ
         CompanyGoogleDriveConfig.objects.filter(company=comp_new).delete()
 

@@ -3,7 +3,7 @@
 طرح پیگیری‌های ناظر — نشست ۱.
 """
 import io
-from integration_tests.membership import grant_membership
+from companies.testing import grant_membership
 from openpyxl import Workbook, load_workbook
 
 from django.apps import apps

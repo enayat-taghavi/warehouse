@@ -1,4 +1,5 @@
 from django.test import TestCase
+from companies.testing import grant_membership
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from personnel.models import (
@@ -100,6 +101,7 @@ class CompanyMultiTenantTestCase(TestCase):
             access_level='workspace_full',
             is_default=True
         )
+        grant_membership(self.regular_user, self.company_pts)
         res = self.client.get('/api/personnel/companies/user-available/')
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()['count'], 1)
@@ -155,6 +157,7 @@ class CompanyMultiTenantTestCase(TestCase):
             access_level='workspace_full',
             is_default=True
         )
+        grant_membership(self.regular_user, self.company_pts)
         self.client.force_authenticate(user=self.regular_user)
 
         # تلاش برای دسترسی به پروژه‌های شرکت FA (تلاش برای BOLA)

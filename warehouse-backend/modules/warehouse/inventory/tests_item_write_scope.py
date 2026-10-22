@@ -2,6 +2,7 @@
 import io
 import openpyxl
 
+from companies.testing import grant_membership
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
@@ -66,6 +67,7 @@ class ItemWriteScopeSecurityTests(TransactionTestCase):
             access_level="workspace_full",
             is_default=True,
         )
+        grant_membership(self.user, self.company_a)
 
         # ثبت مجوزهای لازم روی کانتنت‌تایپ User
         ct = ContentType.objects.get_for_model(User)
@@ -89,6 +91,7 @@ class ItemWriteScopeSecurityTests(TransactionTestCase):
             access_level="workspace_full",
             is_default=True,
         )
+        grant_membership(self.user_b, self.company_b)
         for perm_code in ['perm_rec_import', 'perm_wh_edit', 'view_sys_counter', 'view_sys_supervisor', 'perm_rec_dispatch']:
             perm = Permission.objects.get(codename=perm_code)
             self.user_b.user_permissions.add(perm)
