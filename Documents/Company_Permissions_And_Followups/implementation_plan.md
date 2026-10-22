@@ -610,5 +610,21 @@
   - هیچ خطای API یا کنسولی نبود و اسکرول افقی نبود.
   - کاشی لانچر دیده شد.
 - Daphne این ماشین سه بار بازراه‌اندازی شد.
+- حساب‌های موقت `qa_*` پس از پیش‌نمایش آبشاری حذف شدند.
+
+## یادداشت تحویل (پایان گام ۱۱، ۳۰ مهر ۱۴۰۵)
+
+- **وضعیت:** گام‌های ۱ تا ۱۱ انجام و commit شده‌اند (`6f31f0b3` گام ۱۰، `e8b02d9c` گام ۱۱).
+- **گام ۱۲ آغاز نشد:** حجم گفت‌وگو از سقف هشدار گذشت. حذف ستون `access_level` (ت۱۴) هم تأیید صریح کاربر لازم دارد.
+- **گام ۱۲ در جلسهٔ بعد:**
+  - حذف سازگاری `docs_*`. جاهای آن: `get_user_allowed_companies(required_level='docs_*')`، `user_access_level` در `user_available`، `legacy` در رجیستری و `docs_read/docs_write` در `access.py`.
+  - حذف کد مرده در `companies.ts` (`accessLevelsList`، `getAccessLevelBadgeClass`، `getAccessLevelLabel`) و نوع `CompanyAccessLevel` اگر بی‌مصرف شد.
+  - بایگانی مدارک هنوز `currentUserAccessLevel` را برای نشان سطح نگه داشته است؛ آن هم ساده شود.
+  - **نگاشت `access_level` قدیمی در `UserCompanyAccessSerializer.to_internal_value`** (برای رکوردهای قدیمی صف آفلاین) تا حذف ستون بماند.
+  - مهاجرت `RemoveField(access_level)` فقط پس از تأیید کاربر و با `safe-migration`.
+  - نصب «فقط انبار» و «فقط حسابداری» دوباره آزموده شوند.
+  - نگهبان‌های 29 و 57، `module_coupling_scan`، و نگهبان 56 با `--base` آغاز گام ۶.
+  - هر سه بازبین.
+- **پیام جلسهٔ بعد:** «گام ۱۲ طرح Documents/Company_Permissions_And_Followups/implementation_plan.md را اجرا کن (یادداشت تحویل پایان گام ۱۱ را بخوان). حذف ستون access_level: [بله/خیر]».
 
 </div>
