@@ -115,6 +115,9 @@ class UserCompanyAccess(models.Model):
         default='docs_read',
         verbose_name="سطح دسترسی سازمانی"
     )
+    # سطح هر بخش شرکت: {'identity': 'read', ...}. کلیدها از رجیستری permission_sections.
+    # ردیف بدون سطح «پیوند کاربر با شرکت» است و عضویت نمی‌دهد (عضویت فقط از منبع‌های خودکار).
+    section_levels = models.JSONField(default=dict, blank=True, verbose_name="سطح دسترسی بخش‌ها")
     role_in_company = models.CharField(
         max_length=100,
         blank=True,

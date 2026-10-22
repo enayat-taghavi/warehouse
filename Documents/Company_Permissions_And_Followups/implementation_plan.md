@@ -396,4 +396,20 @@
   - **۰ کاربر** فقط از راه منبع انبار عضویت تازه می‌گیرد.
 - **ت۱۳:** تصمیمی لازم نشد.
 
+### گام ۷ — مدل، رجیستری و مهاجرت داده (expand؛ رفتار عوض نشد) — انجام شد
+
+- **رجیستری هسته:** `core/companies/permission_sections.py` با این اجزا:
+  - ۴ بخش هسته، و نگاشت فیلدهای `Company` به بخش (فیلد بی‌نگاشت فقط برای superuser)؛
+  - قالب‌های `viewer`، `docs_clerk` و `manager`؛
+  - `legacy_levels`، `normalize_levels` و `public_spec`.
+- **حسابداری:** ۸ بخش (۳ حساس) و نگاشت فیلدهای هیئت‌مدیره را در `personnel/company_access.py` اعلام و در `apps.py` ثبت می‌کند. هسته هیچ کلید ماژولی ندارد. نگهبان‌های 29 و 57 سبز.
+- **مدل:** `UserCompanyAccess.section_levels` (JSONField).
+- **مهاجرت `companies/0002`:**
+  - `AddField` و `RunPython`، که فقط ردیف‌های تهی را از روی `access_level` پر می‌کند. هیچ حذفی ندارد و `access_level` دست نمی‌خورد.
+  - پیش از migrate پشتیبان `backup_20261022_071053.dump` گرفته شد.
+  - **نتیجه روی `app`:** ۱۴ ردیف `workspace_full` ← ۱۲ بخش (قالب «مدیر شرکت»، کارهای حساس «هیچ»). ۲ ردیف `docs_write` ← `docs_archive: write`.
+- **API:** `GET /api/org/company-permission-sections/`. در نصب `WH_MODULES=warehouse` ۴ بخش و در `accounting` ۱۲ بخش برمی‌گرداند.
+- **آزمون‌ها:** `companies` سبز، با ۲ آزمون تازه.
+- **`data-loss-reviewer`:** یافتهٔ تأییدشده نداشت. **الزام برای گام ۸:** اگر مهاجرت بدون ماژول حسابداری اجرا شود، `docs_*` به `{}` نگاشت می‌شود. پس resolver هر جا `section_levels` تهی است باید به `legacy_levels(access_level)` برگردد.
+
 </div>

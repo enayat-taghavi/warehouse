@@ -19,6 +19,12 @@ class PersonnelConfig(AppConfig):
         from personnel.company_access import section_derived_company_source
         register_derived_company_source(section_derived_company_source)
 
+        # بخش‌های مجوز شرکت از ماژول حسابداری (طرح مجوزهای بخش‌به‌بخش شرکت، §۵-۱)
+        from platform_core.registry import contribute as _contribute
+        from personnel.company_access import COMPANY_PERMISSION_SECTIONS, COMPANY_FIELD_SECTIONS
+        _contribute('company_permission_sections', COMPANY_PERMISSION_SECTIONS)
+        _contribute('company_field_sections', COMPANY_FIELD_SECTIONS)
+
 
         # بارگذاری سیگنال‌های خودکار همگام‌سازی شرکت و مدارک
         try:

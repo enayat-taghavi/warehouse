@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import viewsets, permissions, parsers, serializers
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
@@ -385,3 +385,11 @@ class UserCompanyAccessViewSet(viewsets.ModelViewSet):
         instance.delete()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_access', 'delete', instance_id, user_title, client_tab_id=tab_id, sender_id=self.request.user.id, company_id=comp_id)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def company_permission_sections(request):
+    """بخش‌های مجوز شرکتِ نصب‌شده، سطح‌ها و قالب‌ها (برای جدول تب «دسترسی»)."""
+    from .permission_sections import public_spec
+    return Response(public_spec())

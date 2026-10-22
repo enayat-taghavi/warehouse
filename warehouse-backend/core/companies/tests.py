@@ -265,3 +265,26 @@ class CompanyExcelImportTests(TestCase):
         r = self.client.get('/api/org/companies/export-excel/?template=1')
         ws = openpyxl.load_workbook(io.BytesIO(r.content)).active
         self.assertEqual(ws.max_row, 2)
+
+
+class CompanyPermissionSectionsTests(TestCase):
+    """گام ۷: رجیستری بخش‌ها و نگاشت سطح‌های قدیمی."""
+
+    def test_spec_has_core_sections_and_sensitive_never_in_templates(self):
+        client = APIClient()
+        client.force_authenticate(User.objects.create_user(username='sec_u', password='x-pass-123', phone_number='09170000071'))
+        body = client.get('/api/org/company-permission-sections/').json()
+        keys = [s['key'] for s in body['sections']]
+        for k in ('identity', 'insurance_tax', 'founding_docs', 'user_access'):
+            self.assertIn(k, keys)
+        sensitive = {s['key'] for s in body['sections'] if s['sensitive']}
+        for t in body['templates']:
+            for k in sensitive:
+                self.assertEqual(t['levels'][k], 'none')
+        manager = next(t for t in body['templates'] if t['key'] == 'manager')
+        self.assertEqual(manager['levels']['user_access'], 'write')
+
+    def test_legacy_mapping(self):
+        from .permission_sections import legacy_levels, template_levels
+        self.assertEqual(legacy_levels('workspace_full'), template_levels('manager'))
+        self.assertNotIn('identity', legacy_levels('docs_read'))
