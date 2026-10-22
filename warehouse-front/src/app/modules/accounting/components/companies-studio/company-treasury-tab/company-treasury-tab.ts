@@ -78,6 +78,15 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
   newAccount = this.getEmptyBankAccountData();
 
   readonly bankAccountIcon = ACCOUNTING_ENTITY_ICONS.bankAccounts;
+
+  /** حالت محدود استودیو: ویرایش و حذف حساب با «بانک»، ثبت و شبا و حساب اصلی با کار حساس «شبا» (سرور هم می‌سنجد) */
+  get canWriteBank(): boolean {
+    return this.studioContext.canWrite('bank');
+  }
+
+  get canWriteSheba(): boolean {
+    return this.studioContext.canWrite('bank_sheba');
+  }
   private static readonly FA_NUMBER = new Intl.NumberFormat('fa-IR');
 
   /** شمارنده با رقم فارسی (ت۷) */

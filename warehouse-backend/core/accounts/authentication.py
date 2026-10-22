@@ -109,11 +109,28 @@ class CustomJWTAuthentication(JWTAuthentication):
             return
 
         scope_codes = module_scope_codes(module.code)
+        if not any(c in allowed_apps for c in scope_codes) and self._company_section_path(path, user):
+            # حالت محدود استودیوی شرکت (ق۳): مسیرهای استودیوی ماژول که هر کارشان را با بخش مجوز
+            # شرکت می‌سنجند، برای دارندهٔ دست‌کم یک بخش بدون قلمرو ماژول هم باز است؛ دروازهٔ اصلی در view است.
+            # در این درخواست عضویت حساب نمی‌شود تا قاعده‌های «عضو می‌خواند» بی‌قلمرو باز نشوند.
+            from companies.access import mark_module_scope_bypass
+            if mark_module_scope_bypass():
+                return
         if not any(c in allowed_apps for c in scope_codes):
             msg = (f'این توکن فاقد قلمرو مجاز (App-Scoped Claim: {"/".join(scope_codes)}) '
                    f'برای دسترسی به «{module.title_fa}» است.')
             _log_boundary_violation(module.code, msg)
             raise PermissionDenied(msg, code='app_scope_denied')
+
+    @staticmethod
+    def _company_section_path(path, user):
+        """مسیری که ماژول با contribution `company_section_api_prefixes` اعلام کرده و کاربر دست‌کم یک بخش شرکت دارد."""
+        from platform_core.registry import contributions
+        prefixes = tuple(contributions('company_section_api_prefixes'))
+        if not prefixes or not path.startswith(prefixes):
+            return False
+        from companies.access import companies_with_any_section
+        return companies_with_any_section(user).exists()
 
     def get_user(self, validated_token):
         user = super().get_user(validated_token)

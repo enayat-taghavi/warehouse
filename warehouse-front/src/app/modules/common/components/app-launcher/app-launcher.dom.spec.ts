@@ -1,3 +1,5 @@
+import { ActiveCompanyService } from '../../../../core/services/active-company.service';
+import { signal } from '@angular/core';
 // @vitest-environment jsdom
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -74,7 +76,8 @@ describe('AppLauncherComponent DOM & Modular Layout Tests', () => {
         { provide: ConfigApiService, useValue: mockConfigApi },
         { provide: Router, useValue: mockRouter },
         { provide: AuthStore, useValue: mockStore },
-        { provide: ModuleRegistryService, useValue: registry }
+        { provide: ModuleRegistryService, useValue: registry },
+        { provide: ActiveCompanyService, useValue: { manageableCompanies: signal([]), loadManageableCompanies: () => of([]) } }
       ]
     });
 

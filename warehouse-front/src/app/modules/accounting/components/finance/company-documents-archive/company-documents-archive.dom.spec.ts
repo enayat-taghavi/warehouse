@@ -36,7 +36,8 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       name: 'پاینده توان ساینا',
       national_id: '10101234567',
       is_active: true,
-      user_access_level: 'docs_read'
+      user_access_level: 'docs_read',
+      section_levels: { docs_archive: 'read' }
     },
     {
       id: 2,
@@ -44,7 +45,8 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       name: 'فارس عالیش',
       national_id: '10207654321',
       is_active: true,
-      user_access_level: 'workspace_full'
+      user_access_level: 'workspace_full',
+      section_levels: { docs_archive: 'write' }
     }
   ];
 
@@ -184,7 +186,8 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
     fixture.detectChanges();
 
     expect(component.selectedCompanyId).toBe(2);
-    expect(component.currentUserAccessLevel).toBe('workspace_full');
+    // سطح از section_levels بایگانی می‌آید (گام ۱۱)، نه از user_access_level
+    expect(component.currentUserAccessLevel).toBe('docs_write');
     expect(component.canUpload).toBe(true);
     expect(component.canDelete).toBe(true);
   });
@@ -230,6 +233,7 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       code: 'FA01',
       is_active: true,
       user_access_level: 'docs_read',
+      section_levels: { docs_archive: 'read' },
       has_warehouse_module: true
     };
 

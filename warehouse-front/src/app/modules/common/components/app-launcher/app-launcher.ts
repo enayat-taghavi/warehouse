@@ -6,6 +6,7 @@ import { AppPersonaService } from '../../../../core/services/app-persona.service
 import { AuthStore } from '../../../../core/stores/auth.store';
 import { ModuleRegistryService, FrontendModuleSpec } from '../../../../core/modules/module-registry.service';
 import { ConfigApiService } from '../../../../core/api/config-api.service';
+import { ActiveCompanyService } from '../../../../core/services/active-company.service';
 
 export interface AppLauncherCard {
   code: string;
@@ -178,12 +179,28 @@ export class AppLauncherComponent implements OnInit {
   private configApi = inject(ConfigApiService);
   private router = inject(Router);
   private store = inject(AuthStore);
+  private activeCompany = inject(ActiveCompanyService);
 
   ngOnInit(): void {
     // استعلام بلادرنگ وضعیت ماژول‌های فعال سرور جهت بازتاب فوری در کارت‌ها
     this.configApi.getPublicConfig().subscribe({
       error: () => {}
     });
+    // کاشی «شرکت‌ها» برای دارندگان مجوز بخش‌های شرکت (حالت محدود استودیو)؛ مدیر کل از مرکز عملیات وارد می‌شود
+    if (!this.isSuperuser) {
+      this.activeCompany.loadManageableCompanies().subscribe();
+    }
+  }
+
+  /** کاشی «شرکت‌ها» (حالت محدود استودیو، ت۱۰) */
+  public showCompaniesCard = computed<boolean>(() =>
+    !this.persona.hasOperationsAccess() && this.activeCompany.manageableCompanies().length > 0);
+
+  public manageableCompaniesCount = computed<string>(() =>
+    new Intl.NumberFormat('fa-IR').format(this.activeCompany.manageableCompanies().length));
+
+  enterCompanies(): void {
+    this.router.navigate(['/app/companies']);
   }
 
   get userName(): string {
@@ -315,7 +332,7 @@ export class AppLauncherComponent implements OnInit {
    */
   get visibleCardsCount(): number {
     const opsCount = (this.hasOperations && this.appCards().some(c => c.code === 'operations')) ? 1 : 0;
-    return this.richCards().length + opsCount + this.extraCards().length;
+    return this.richCards().length + opsCount + this.extraCards().length + (this.showCompaniesCard() ? 1 : 0);
   }
 
   get isSingleAppMode(): boolean {

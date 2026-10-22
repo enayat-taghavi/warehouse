@@ -22,8 +22,34 @@ def register_derived_company_source(source):
         _DERIVED_COMPANY_SOURCES.append(source)
 
 
+_SCOPE_BYPASS_KEY = '__module_scope_bypass__'
+
+
+def mark_module_scope_bypass():
+    """
+    درخواستی که بدون قلمرو ماژول فقط به‌خاطر بخش‌های شرکت باز شد (حالت محدود استودیو): در همین درخواست
+    عضویت حساب نمی‌شود تا قاعده‌های «عضو می‌خواند» (ت۱۱) به کاربرِ بی‌قلمرو باز نشوند؛ فقط سطح بخش‌ها می‌ماند.
+    """
+    from accounts.middleware import get_allowed_companies_cache
+    req_cache = get_allowed_companies_cache()
+    if req_cache is None:
+        return False
+    for key in [k for k in req_cache if isinstance(k, tuple) and k[1] != '__section_levels__']:
+        del req_cache[key]
+    req_cache[_SCOPE_BYPASS_KEY] = True
+    return True
+
+
+def module_scope_bypassed():
+    from accounts.middleware import get_allowed_companies_cache
+    req_cache = get_allowed_companies_cache()
+    return bool(req_cache is not None and req_cache.get(_SCOPE_BYPASS_KEY))
+
+
 def derived_company_ids(user):
     """شناسهٔ شرکت‌هایی که کاربر از راه منابع مشتق ثبت‌شده در آن‌ها دسترسی کامل دارد."""
+    if module_scope_bypassed():
+        return set()
     ids = set()
     for source in _DERIVED_COMPANY_SOURCES:
         res = source(user)

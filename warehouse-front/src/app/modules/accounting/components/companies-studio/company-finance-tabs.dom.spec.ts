@@ -118,6 +118,8 @@ describe('CompaniesManagementComponent: Company Finance Tabs with and without Ac
       delete: vi.fn().mockReturnValue(of(void 0)),
       getUserAvailable: vi.fn().mockReturnValue(of({ companies: sampleCompanies, is_superuser: true })),
       getUserAccesses: vi.fn().mockReturnValue(of([])),
+      getPermissionSections: vi.fn().mockReturnValue(of({ levels: ['none', 'read', 'write'], templates: [], sections: [], fields: {} })),
+      getCompanyMembers: vi.fn().mockReturnValue(of([])),
       createUserAccess: vi.fn().mockReturnValue(of({})),
       deleteUserAccess: vi.fn().mockReturnValue(of({})),
       exportExcel: vi.fn().mockReturnValue(of(new Blob())),

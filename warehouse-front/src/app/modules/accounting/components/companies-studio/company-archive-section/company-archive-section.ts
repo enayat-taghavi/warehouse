@@ -41,6 +41,15 @@ export class CompanyArchiveSectionComponent implements OnInit, OnChanges, OnDest
   private facade = inject(CompaniesStudioFacade);
   private companyApi = inject(CompanyApiService);
   private studioContext = inject(CompanyStudioContextService);
+
+  /** حالت محدود استودیو: بارگذاری و حذف با «نوشتن» بایگانی؛ سند محرمانه با کار حساس (سرور هم می‌سنجد) */
+  get canWriteArchive(): boolean {
+    return this.studioContext.canWrite('docs_archive');
+  }
+
+  get canWriteConfidential(): boolean {
+    return this.studioContext.canWrite('docs_confidential');
+  }
   private toast = inject(ToastService);
   private confirmDialog = inject(ConfirmDialogService, { optional: true });
   private ws = inject(WebSocketService, { optional: true });

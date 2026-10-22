@@ -1256,15 +1256,74 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
 
     it('غیر مدیر کل: سطح بالاتر از سطح خودش قفل است، قالب بریده می‌شود و ردیف بالاتر ویرایش‌پذیر نیست', () => {
       mockActiveCompanyService.isSuperuser = false;
-      mockCompanyApi.getUserAvailable.mockReturnValue(of({ companies: [{ id: 1, section_levels: { user_access: 'write', identity: 'read', docs_archive: 'write' } }], is_superuser: false }));
+      vi.spyOn(component, 'isRestricted', 'get').mockReturnValue(true);
+      component.actorLevels = { user_access: 'write', identity: 'read', docs_archive: 'write' };
       component.permissionSpec = { levels: ['none', 'read', 'write'], templates: [{ key: 'manager', label_fa: 'M', levels: { identity: 'write', docs_archive: 'write', docs_confidential: 'none' } }], sections: [{ key: 'identity', label_fa: 'I', order: 10, kind: 'levels', sensitive: false, studio: 'identity' }, { key: 'docs_archive', label_fa: 'D', order: 140, kind: 'levels', sensitive: false, studio: 'archive' }, { key: 'docs_confidential', label_fa: 'C', order: 210, kind: 'levels', sensitive: true, studio: 'archive' }] } as any;
-      component.loadStudioAccesses(1);
       expect(component.canWriteAccess).toBe(true);
       expect(component.isLevelAboveActor('identity', 'write')).toBe(true);
       expect(component.isLevelAboveActor('identity', 'read')).toBe(false);
       expect(component.templateLevels('manager')).toEqual({ identity: 'read', docs_archive: 'write', docs_confidential: 'none' });
       expect(component.canEditAccessRow({ id: 3, user: 99, company: 1, is_default: false, section_levels: { identity: 'write' } } as any)).toBe(false);
       expect(component.canEditAccessRow({ id: 4, user: 98, company: 1, is_default: false, section_levels: { identity: 'read' } } as any)).toBe(true);
+    });
+
+    const RESTRICTED_SPEC = { levels: ['none', 'read', 'write'], templates: [], sections: [
+      { key: 'identity', label_fa: 'I', order: 10, kind: 'levels', sensitive: false, studio: 'identity' },
+      { key: 'insurance_tax', label_fa: 'T', order: 20, kind: 'levels', sensitive: false, studio: 'fiscal_insurance' },
+      { key: 'founding_docs', label_fa: 'F', order: 30, kind: 'levels', sensitive: false, studio: 'documents' },
+      { key: 'user_access', label_fa: 'U', order: 40, kind: 'levels', sensitive: false, studio: 'access' }
+    ], fields: { name: 'identity', phone: 'identity', workshop_code: 'insurance_tax' } } as any;
+
+    it('حالت محدود: تب «هیچ» پنهان، تب «خواندن» فقط‌خواندنی و ذخیره فقط فیلدهای بخش نوشتنی (گام ۱۱)', () => {
+      mockActiveCompanyService.isSuperuser = false;
+      vi.spyOn(component, 'isRestricted', 'get').mockReturnValue(true);
+      component.permissionSpec = RESTRICTED_SPEC;
+      component.actorLevels = { identity: 'read', insurance_tax: 'write' };
+      component.companyModal.data = { ...component.companyModal.data, id: 1, code: 'C1', name: 'N', phone: '02112345678', workshop_code: '1111111111' } as any;
+      (component as any).takeStudioSnapshot();
+      component.companyModal.data.workshop_code = '1234567890';
+      const ids = component.modalTabs.map(t => t.id);
+      expect(ids).toContain('identity');
+      expect(ids).toContain('fiscal_insurance');
+      expect(ids).not.toContain('access');
+      expect(ids).not.toContain('documents');
+      expect(component.isCoreTabReadonly('identity')).toBe(true);
+      expect(component.isCoreTabReadonly('fiscal_insurance')).toBe(false);
+      expect(component.canSaveCompany).toBe(true);
+      component.companyModal.isEdit = true;
+      component.submitCompanyForm();
+      expect(mockCompanyApi.update).not.toHaveBeenCalled();
+      expect(mockCompanyApi.patch).toHaveBeenCalledWith(1, { workshop_code: '1234567890' });
+      // تغییر فیلدِ بخشِ فقط‌خواندنی بی‌صدا کنار نمی‌رود: ذخیره با پیام متوقف می‌شود
+      mockCompanyApi.patch.mockClear();
+      component.companyModal.data = { ...component.companyModal.data, id: 1, code: 'C1', name: 'N', phone: '02112345678', workshop_code: '1234567890' } as any;
+      component.companyModal.isEdit = true;
+      (component as any).takeStudioSnapshot();
+      component.companyModal.data.phone = '02199999999';
+      component.submitCompanyForm();
+      expect(mockCompanyApi.patch).not.toHaveBeenCalled();
+      expect(mockToast.error).toHaveBeenCalled();
+      component.actorLevels = { identity: 'read' };
+      expect(component.canSaveCompany).toBe(false);
+    });
+
+    it('حالت محدود: سطح‌های کاربر همراه شرکت دریافت و به context تب‌های ماژول داده می‌شود؛ بی هیچ بخش به فهرست برمی‌گردد', () => {
+      mockActiveCompanyService.isSuperuser = false;
+      vi.spyOn(component, 'isRestricted', 'get').mockReturnValue(true);
+      mockCompanyApi.getPermissionSections.mockReturnValue(of(RESTRICTED_SPEC));
+      mockCompanyApi.getUserAvailable.mockReturnValue(of({ companies: [{ id: 1, section_levels: { identity: 'read' } }], is_superuser: false }));
+      component.companyModal.isOpen = false;
+      mockCompanyApi.getUserAccesses.mockClear();
+      component.setupStudioForCompany(1);
+      expect(mockCompanyApi.getUserAvailable).toHaveBeenCalledWith('manage');
+      expect(component.studioContext.sectionLevels()).toEqual({ identity: 'read' });
+      expect(component.studioContext.canWrite('identity')).toBe(false);
+      expect(component.studioContext.canRead('identity')).toBe(true);
+      expect(mockCompanyApi.getUserAccesses).not.toHaveBeenCalledWith({ company_id: 1 });
+      mockCompanyApi.getUserAvailable.mockReturnValue(of({ companies: [], is_superuser: false }));
+      component.companyModal.isOpen = false;
+      component.setupStudioForCompany(2);
+      expect(mockToast.error).toHaveBeenCalled();
     });
 
     it('لغو دسترسی کاربر در استودیو باید بلافاصله ردیف را از studioAccesses خارج کند', async () => {

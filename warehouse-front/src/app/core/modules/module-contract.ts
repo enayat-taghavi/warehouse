@@ -47,6 +47,11 @@ export interface CompanyStudioTab {
    * (برای تبی که شنود یا پرس‌وجوی دوره‌ای دارد). پیش‌فرض: یک بار ساخته و پنهان نگه داشته می‌شود.
    */
   renderOnlyWhenActive?: boolean;
+  /**
+   * کلید بخش مجوز شرکت (رجیستری company_permission_sections) که این تب را باز می‌کند. در حالت محدود
+   * تبِ «هیچ» رندر نمی‌شود؛ کامپوننت برای «خواندن» از `CompanyStudioContextService.canWrite` کنترل‌های نوشتن را پنهان می‌کند.
+   */
+  permissionSection?: string;
   loadComponent: () => Promise<Type<unknown>>;
 }
 
@@ -54,6 +59,8 @@ export interface CompanyStudioTab {
 export interface CompanyStudioSection {
   slot: 'fiscal_insurance' | 'documents';
   order: number;
+  /** کلید بخش مجوز شرکت؛ همان قاعدهٔ `CompanyStudioTab.permissionSection` */
+  permissionSection?: string;
   loadComponent: () => Promise<Type<unknown>>;
 }
 

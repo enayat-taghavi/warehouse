@@ -40,6 +40,8 @@ export class CompanyDocumentsArchiveComponent implements OnInit, OnDestroy {
   selectedCompanyId: number | null = null;
   selectedCompany: Company | null = null;
   currentUserAccessLevel: CompanyAccessLevel = 'docs_read';
+  /** سطح کاربر در بخش‌های مجوز شرکت انتخاب‌شده (طرح مجوزهای بخش‌به‌بخش)؛ برای مدیر کل null */
+  private docsLevels: Record<string, string> | null = null;
   isSuperuser = false;
 
   documents: CompanyDocument[] = [];
@@ -162,7 +164,8 @@ export class CompanyDocumentsArchiveComponent implements OnInit, OnDestroy {
   selectCompany(company: Company): void {
     this.selectedCompanyId = company.id;
     this.selectedCompany = company;
-    this.currentUserAccessLevel = this.isSuperuser ? 'workspace_full' : (company.user_access_level || 'docs_read');
+    this.docsLevels = this.isSuperuser ? null : (company.section_levels || {});
+    this.currentUserAccessLevel = this.isSuperuser ? 'workspace_full' : (this.docsLevels?.['docs_archive'] === 'write' ? 'docs_write' : 'docs_read');
     this.loadDocuments(company.id);
   }
 
@@ -259,12 +262,18 @@ export class CompanyDocumentsArchiveComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  /** بارگذاری و حذف با «نوشتن» بخش بایگانی مدارک همان شرکت */
   get canUpload(): boolean {
-    return this.isSuperuser || this.currentUserAccessLevel === 'docs_write' || this.currentUserAccessLevel === 'workspace_full';
+    return this.isSuperuser || this.docsLevels?.['docs_archive'] === 'write';
   }
 
   get canDelete(): boolean {
-    return this.isSuperuser || this.currentUserAccessLevel === 'docs_write' || this.currentUserAccessLevel === 'workspace_full';
+    return this.canUpload;
+  }
+
+  /** سند محرمانه کار حساس است (بخش مدارک محرمانه) */
+  get canWriteConfidential(): boolean {
+    return this.isSuperuser || this.docsLevels?.['docs_confidential'] === 'write';
   }
 
   openUploadModal(): void {

@@ -187,29 +187,29 @@ export const MODULE: WhFrontendModule = {
       studioTabs: [
         {
           id: 'treasury', labelFa: 'بانک و شبا', shortLabelFa: 'بانک', icon: 'database', order: 30,
-          requiresSavedCompany: false,
+          requiresSavedCompany: false, permissionSection: 'bank',
           loadComponent: () => import('./components/companies-studio/company-treasury-tab/company-treasury-tab').then(m => m.CompanyTreasuryTabComponent)
         },
         {
           id: 'governance', labelFa: 'هیئت‌مدیره و امضا', shortLabelFa: 'هیئت‌مدیره', icon: 'users', order: 40,
-          requiresSavedCompany: false,
+          requiresSavedCompany: false, permissionSection: 'board',
           loadComponent: () => import('./components/companies-studio/company-governance-tab/company-governance-tab').then(m => m.CompanyGovernanceTabComponent)
         },
         {
           // شنود OAuth و پرس‌وجوی دوره‌ای صف دارد؛ فقط وقتی تب باز است ساخته می‌شود
           id: 'gdrive', labelFa: 'همگام‌سازی گوگل‌درایو', shortLabelFa: 'گوگل‌درایو', icon: 'google-drive', order: 70,
-          requiresSavedCompany: true, hiddenUntilSaved: true, renderOnlyWhenActive: true,
+          requiresSavedCompany: true, hiddenUntilSaved: true, renderOnlyWhenActive: true, permissionSection: 'gdrive',
           loadComponent: () => import('./components/companies-studio/company-gdrive-tab/company-gdrive-tab').then(m => m.CompanyGdriveTabComponent)
         }
       ],
       // بخش‌های حسابداری در انتهای تب‌های هسته
       studioSections: [
         {
-          slot: 'fiscal_insurance', order: 10,
+          slot: 'fiscal_insurance', order: 10, permissionSection: 'fiscal',
           loadComponent: () => import('./components/companies-studio/company-fiscal-periods-section/company-fiscal-periods-section').then(m => m.CompanyFiscalPeriodsSectionComponent)
         },
         {
-          slot: 'documents', order: 10,
+          slot: 'documents', order: 10, permissionSection: 'docs_archive',
           loadComponent: () => import('./components/companies-studio/company-archive-section/company-archive-section').then(m => m.CompanyArchiveSectionComponent)
         }
       ],

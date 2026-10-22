@@ -39,6 +39,11 @@ export class CompanyGovernanceTabComponent implements OnInit, OnChanges, OnDestr
   private facade = inject(CompaniesStudioFacade);
   private companyApi = inject(CompanyApiService);
   private studioContext = inject(CompanyStudioContextService);
+
+  /** حالت محدود استودیو: افزودن، ویرایش و حذف عضو فقط با «نوشتن» هیئت‌مدیره */
+  get canWriteBoard(): boolean {
+    return this.studioContext.canWrite('board');
+  }
   private toast = inject(ToastService);
   private confirmDialog = inject(ConfirmDialogService, { optional: true });
   private ws = inject(WebSocketService, { optional: true });

@@ -30,7 +30,7 @@
 
             <!-- کلید توقف موقت / فعال (GD-29) -->
             <button
-              *ngIf="config()?.is_connected"
+              *ngIf="(config()?.is_connected) && canWriteGdrive"
               type="button"
               (click)="toggleIsEnabled()"
               [title]="config()?.is_enabled ? 'کلیک جهت توقف موقت همگام‌سازی این شرکت' : 'کلیک جهت فعال‌سازی مجدد همگام‌سازی'"
@@ -44,6 +44,18 @@
               <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="config()?.is_enabled" [class.bg-slate-400]="!config()?.is_enabled"></span>
               {{ config()?.is_enabled ? 'سرویس فعال' : 'توقف موقت' }}
             </button>
+            <span
+              *ngIf="config()?.is_connected && !canWriteGdrive"
+              class="text-xs px-2.5 py-1 rounded-full font-bold border inline-flex items-center gap-1"
+              [class.bg-emerald-50]="config()?.is_enabled"
+              [class.text-emerald-700]="config()?.is_enabled"
+              [class.border-emerald-200]="config()?.is_enabled"
+              [class.bg-slate-100]="!config()?.is_enabled"
+              [class.text-slate-600]="!config()?.is_enabled"
+              [class.border-slate-300]="!config()?.is_enabled">
+              <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="config()?.is_enabled" [class.bg-slate-400]="!config()?.is_enabled"></span>
+              {{ config()?.is_enabled ? 'سرویس فعال' : 'توقف موقت' }}
+            </span>
           </ng-container>
         </h2>
         <p class="text-xs text-slate-500 mt-0.5">
@@ -165,7 +177,7 @@
           </div>
         </div>
       </div>
-      <button
+      <button *ngIf="canWriteGdrive"
         type="button"
         appAction="sync" display="label"
         label="اتصال"
@@ -200,7 +212,7 @@
           </div>
         </div>
       </div>
-      <button
+      <button *ngIf="canWriteGdrive"
         type="button"
         appAction="sync" display="label"
         label="ارسال سوابق به حساب تازه"
@@ -252,7 +264,7 @@
                   باز کردن در درایو
                 </a>
 
-                <button
+                <button *ngIf="canWriteGdrive"
                   type="button"
                   (click)="disconnectGoogleDrive()"
                   class="px-3 py-1.5 min-h-[40px] lg:min-h-[32px] rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center tap-target">
@@ -281,7 +293,7 @@
               <p class="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4 leading-relaxed">
                 با اتصال حساب گوگل‌درایو، مدارک و اسناد این شرکت به محض آپلود، به صورت امن با درخت پوشه‌ای اختصاصی در فضای ابری شرکت پشتیبان‌گیری خواهند شد.
               </p>
-              <button
+              <button *ngIf="canWriteGdrive"
                 type="button"
                 appAction="sync" display="label" tone="primary"
                 label="اتصال"
@@ -306,13 +318,17 @@
 
           <div class="space-y-4">
             <!-- کارت‌های سه‌گانه انتخاب حالت با نقش رادیو و کیبورد (WCAG 2.1 - GD-28) -->
+            <p *ngIf="!canWriteGdrive" id="gdrive-readonly-note" role="note" class="mb-2 text-[11px] font-bold text-slate-600">تنظیمات همگام‌سازی برای شما فقط خواندنی است.</p>
             <div
               role="radiogroup"
               aria-label="انتخاب سیاست ارسال و زمان‌بندی"
+              [attr.aria-describedby]="canWriteGdrive ? null : 'gdrive-readonly-note'"
+              [class.opacity-70]="!canWriteGdrive"
+              [class.pointer-events-none]="!canWriteGdrive"
               class="grid grid-cols-1 md:grid-cols-3 gap-3">
 
               <!-- ۱. حالت آنی -->
-              <div
+              <div [attr.aria-disabled]="!canWriteGdrive || null"
                 role="radio"
                 tabindex="0"
                 [attr.aria-checked]="cfg.sync_mode === 'immediate'"
@@ -339,7 +355,7 @@
               </div>
 
               <!-- ۲. حالت ساعات خلوتی -->
-              <div
+              <div [attr.aria-disabled]="!canWriteGdrive || null"
                 role="radio"
                 tabindex="0"
                 [attr.aria-checked]="cfg.sync_mode === 'scheduled'"
@@ -366,7 +382,7 @@
               </div>
 
               <!-- ۳. حالت فقط دستی -->
-              <div
+              <div [attr.aria-disabled]="!canWriteGdrive || null"
                 role="radio"
                 tabindex="0"
                 [attr.aria-checked]="cfg.sync_mode === 'manual'"
@@ -409,6 +425,7 @@
                     type="time"
                     [ngModel]="cfg.scheduled_start_time"
                     (ngModelChange)="updateConfigField('scheduled_start_time', $event)"
+                    [disabled]="!canWriteGdrive"
                     class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all">
                 </div>
 
@@ -419,6 +436,7 @@
                     type="time"
                     [ngModel]="cfg.scheduled_end_time"
                     (ngModelChange)="updateConfigField('scheduled_end_time', $event)"
+                    [disabled]="!canWriteGdrive"
                     class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all">
                 </div>
 
@@ -431,6 +449,7 @@
                     max="300"
                     [ngModel]="cfg.chunk_delay_seconds"
                     (ngModelChange)="updateConfigField('chunk_delay_seconds', $event)"
+                    [disabled]="!canWriteGdrive"
                     class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all">
                 </div>
               </div>
@@ -547,7 +566,7 @@
 
           <div class="mt-5 pt-4 border-t border-slate-100 space-y-2.5" *ngIf="cfg.is_connected">
             <!-- دکمه اقدام سریع: ارسال دستی صف فایل‌های معلق -->
-            <button
+            <button *ngIf="canWriteGdrive"
               type="button"
               appAction="sync" display="label"
               class="w-full"
@@ -558,7 +577,7 @@
             </button>
 
             <!-- دکمه پیمایش و همگام‌سازی کلیه فایل‌های موجود -->
-            <button
+            <button *ngIf="canWriteGdrive"
               type="button"
               appAction="sync" display="label"
               class="w-full"
@@ -732,7 +751,7 @@
                 </td>
                 <td class="py-3 px-4 text-center">
                   <button
-                    *ngIf="item.status === 'failed'"
+                    *ngIf="(item.status === 'failed') && canWriteGdrive"
                     type="button"
                     (click)="retryTask(item.id)"
                     class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-[11px] font-bold transition-all cursor-pointer inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
@@ -781,7 +800,7 @@
           <div class="flex flex-wrap items-center justify-between gap-2">
             <span class="text-[11px] text-slate-500 tabular-nums">{{ item.created_at | persianDate:'short-time' }}</span>
             <button
-              *ngIf="item.status === 'failed'"
+              *ngIf="(item.status === 'failed') && canWriteGdrive"
               type="button"
               appAction="refresh"
               display="label"

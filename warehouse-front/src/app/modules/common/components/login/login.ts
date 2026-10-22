@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { ActiveCompanyService } from '../../../../core/services/active-company.service';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -29,6 +30,7 @@ export class Login implements OnInit, OnDestroy {
   loginErrorMessage: string | null = null;
   showForgotModal = false;
   readonly branding = BRANDING;
+  private activeCompany = inject(ActiveCompanyService);
 
   constructor(
     private auth: AuthService,
@@ -137,9 +139,29 @@ export class Login implements OnInit, OnDestroy {
         
         const perms = this.auth.userPermissions();
         if (perms.length === 0) {
-            this.auth.logout();
-            this.loginErrorMessage = 'شما هیچ مجوزی برای دسترسی به پنل ندارید. با مدیر سیستم تماس بگیرید.';
-            this.cdr.detectChanges();
+            // بی مجوز سامانه، دارندهٔ مجوز بخش‌های شرکت به حالت محدود استودیو می‌رود (ق۳)
+            this.activeCompany.fetchManageableCompanies().subscribe({
+              next: (companies) => {
+                if (companies.length > 0 && !this.auth.user()?.requires_password_change) {
+                  this.toast.success('ورود موفقیت‌آمیز بود');
+                  this.router.navigateByUrl('/app/companies');
+                  return;
+                }
+                if (companies.length > 0) {
+                  this.router.navigate(['/change-password']);
+                  return;
+                }
+                this.auth.logout();
+                this.loginErrorMessage = 'شما هیچ مجوزی برای دسترسی به پنل ندارید. با مدیر سیستم تماس بگیرید.';
+                this.cdr.detectChanges();
+              },
+              error: () => {
+                // خطای اتصال «بی‌مجوز» نیست
+                this.auth.logout();
+                this.loginErrorMessage = 'دریافت مجوزهای شرکت انجام نشد؛ اتصال را بررسی کنید و دوباره وارد شوید.';
+                this.cdr.detectChanges();
+              }
+            });
             return;
         }
 

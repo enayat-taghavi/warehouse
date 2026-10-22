@@ -174,6 +174,41 @@
         </div>
       </div>
 
+      <!-- ۳-ب. کاشی «شرکت‌ها» برای دارندگان مجوز بخش‌های شرکت (حالت محدود استودیو) -->
+      @if (showCompaniesCard()) {
+        <div
+          class="relative rounded-3xl p-6 sm:p-8 border transition-all duration-300 flex flex-col justify-between group overflow-hidden bg-slate-900/80 hover:bg-slate-900 border-indigo-500/40 hover:border-indigo-400 hover:shadow-2xl cursor-pointer"
+          (click)="enterCompanies()"
+        >
+          <div class="absolute -right-20 -top-20 w-48 h-48 bg-indigo-500/15 rounded-full blur-2xl group-hover:bg-indigo-500/25 transition-all pointer-events-none"></div>
+          <div>
+            <div class="flex items-start justify-between mb-5">
+              <div class="w-14 h-14 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-300 shadow-inner">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building" aria-hidden="true"></svg>
+              </div>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-indigo-500/15 border border-indigo-500/30 text-indigo-200">
+                {{ manageableCompaniesCount() }} شرکت
+              </span>
+            </div>
+            <h3 class="text-lg sm:text-xl font-black text-white group-hover:text-indigo-300 transition-colors">شرکت‌ها</h3>
+            <p class="text-xs text-indigo-300/90 font-mono font-bold mt-1">/app/companies</p>
+            <p class="text-xs sm:text-sm text-slate-400 mt-3 leading-relaxed">
+              مشاهده و ویرایش بخش‌هایی از شناسنامهٔ شرکت که مجوزش را دارید: مشخصات، مدارک، بانک، هیئت‌مدیره و دسترسی کاربران.
+            </p>
+          </div>
+          <div class="mt-8 pt-5 border-t border-slate-800/80 flex items-center justify-end">
+            <button
+              type="button"
+              (click)="$event.stopPropagation(); enterCompanies()"
+              class="flex items-center gap-2 px-4 py-2 min-h-[40px] rounded-xl text-xs font-black transition-all shadow-md active:scale-95 bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+            >
+              <span>ورود به شرکت‌ها</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="rotate-180" appIcon="arrow-right" aria-hidden="true"></svg>
+            </button>
+          </div>
+        </div>
+      }
+
       <!-- ۴. کاشی‌های عمومی برای ماژول‌های نصب‌شده دیگر (بر پایه نقطه توسعه launcherTile) -->
       @for (card of extraCards(); track card.code) {
         <div

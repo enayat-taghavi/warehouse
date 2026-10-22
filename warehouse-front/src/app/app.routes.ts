@@ -8,7 +8,7 @@ import { AppLauncherComponent } from './modules/common/components/app-launcher/a
 import { ChangePassword } from './modules/common/components/change-password/change-password';
 import { VerifyCard } from './modules/common/components/verify-card/verify-card';
 import { AuthGuard, AuthGuardChild, WarehouseCompanyGuard } from './core/auth/auth.guard';
-import { OperationsGuard, OperationsGuardChild } from './core/guards/operations.guard';
+import { OperationsGuard, OperationsGuardChild, CompaniesManageGuard } from './core/guards/operations.guard';
 import { OperationsLayoutComponent } from './modules/common/components/operations/operations-layout/operations-layout';
 import { OperationsCockpitComponent } from './modules/common/components/operations/operations-cockpit/operations-cockpit';
 import { SettingsBackupTabComponent } from './modules/common/components/settings/tabs/settings-backup-tab/settings-backup-tab';
@@ -95,6 +95,21 @@ export const routes: Routes = [
       { path: 'rbac-governance', component: OperationsRbacGovernanceComponent, data: { reuse: true } },
       { path: '', redirectTo: 'cockpit', pathMatch: 'full' }
     ]
+  },
+
+  // ─── حالت محدود استودیوی شرکت‌ها برای دارندگان مجوز بخش‌های شرکت (ق۳، ت۱۰) ───
+  {
+    path: 'app/companies',
+    component: CompaniesManagementComponent,
+    canActivate: [AuthGuard, CompaniesManageGuard],
+    data: { reuse: true, studioMode: 'restricted' }
+  },
+  {
+    path: 'app/companies/:id',
+    component: CompaniesManagementComponent,
+    canActivate: [AuthGuard, CompaniesManageGuard],
+    canDeactivate: [companiesLeaveGuard],
+    data: { reuse: false, studioMode: 'restricted' }
   },
 
   // ─── هدایت هوشمند ریشه ماژولار (/app) — فاز ۶ (تسک ۵۳) ───────────────────

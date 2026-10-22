@@ -33,6 +33,15 @@ export class CompanyFiscalPeriodsSectionComponent implements OnInit, OnChanges, 
 
   private facade = inject(CompaniesStudioFacade);
   private studioContext = inject(CompanyStudioContextService);
+
+  /** حالت محدود استودیو: تعریف و انجماد با «نوشتن» دوره‌ها؛ بستن و بازگشایی با کار حساس */
+  get canWriteFiscal(): boolean {
+    return this.studioContext.canWrite('fiscal');
+  }
+
+  get canCloseFiscal(): boolean {
+    return this.studioContext.canWrite('fiscal_close');
+  }
   private toast = inject(ToastService);
   private confirmDialog = inject(ConfirmDialogService, { optional: true });
   private cdr = inject(ChangeDetectorRef);

@@ -120,4 +120,6 @@ def public_spec():
             {k: s.get(k) for k in ('key', 'label_fa', 'order', 'kind', 'sensitive', 'studio')}
             for s in installed_sections()
         ],
+        # فیلد مدل شرکت ← بخش؛ فرانت در حالت محدود فقط فیلدهای بخش‌های «نوشتن» را می‌فرستد
+        'fields': field_sections(),
     }

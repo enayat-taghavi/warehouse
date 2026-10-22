@@ -1,6 +1,12 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": { "outDir": "./out-tsc/spec", "types": ["vitest/globals", "node"] },
+  "compilerOptions": {
+    "outDir": "./out-tsc/spec",
+    "types": [
+      "vitest/globals",
+      "node"
+    ]
+  },
   "include": [
     "src/**/*.d.ts",
     "src/app/modules/common/components/operations/companies/**/*.spec.ts",
@@ -9,6 +15,8 @@
     "src/app/core/auth/company-documents-route.spec.ts",
     "src/app/core/services/company-studio-context.service.spec.ts",
     "src/app/shared/components/document-preview/*.spec.ts",
-    "src/app/shared/components/tab-bar/*.spec.ts"
+    "src/app/shared/components/tab-bar/*.spec.ts",
+    "src/app/modules/common/components/app-launcher/*.spec.ts",
+    "src/app/modules/common/components/login/*.spec.ts"
   ]
 }

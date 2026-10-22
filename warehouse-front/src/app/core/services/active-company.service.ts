@@ -123,6 +123,22 @@ export class ActiveCompanyService {
     );
   }
 
+  /** شرکت‌هایی که کاربر دست‌کم یک بخش آن‌ها را می‌خواند، با سطح هر بخش (حالت محدود استودیو و کاشی «شرکت‌ها») */
+  public manageableCompanies = signal<Company[]>([]);
+
+  /** بدون پوشاندن خطا (ورود باید «خطای اتصال» را از «بی‌مجوز» جدا کند) */
+  public fetchManageableCompanies(): Observable<Company[]> {
+    return this.http.get<UserAvailableCompaniesResponse>(`${this.apiUrl}/user-available/?scope=manage`).pipe(
+      map((res) => res.companies || []),
+      tap((comps) => this.manageableCompanies.set(comps))
+    );
+  }
+
+  public loadManageableCompanies(): Observable<Company[]> {
+    // خطا یا قطع اتصال: آخرین فهرست دریافت‌شده جایگزین فهرست تهی نمی‌شود
+    return this.fetchManageableCompanies().pipe(catchError(() => of(this.manageableCompanies())));
+  }
+
   public openFirstBootWizard(): void {
     this.isFirstBootSubject.next(true);
     this.isFirstBootSignal.set(true);
@@ -395,5 +411,6 @@ export class ActiveCompanyService {
       }
     } catch {}
     this.isSuperuserSubject.next(false);
+    this.manageableCompanies.set([]);
   }
 }

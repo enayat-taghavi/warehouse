@@ -1,6 +1,8 @@
 import { inject } from '@angular/core';
 import { Router, CanActivateFn, CanActivateChildFn } from '@angular/router';
+import { map } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
+import { ActiveCompanyService } from '../services/active-company.service';
 
 /**
  * گارد اختصاصی مرکز عملیات، پدافند و زیرساخت سازمان (Strict Superuser-Only)
@@ -33,4 +35,25 @@ export const OperationsGuard: CanActivateFn = (route, state) => {
 
 export const OperationsGuardChild: CanActivateChildFn = (childRoute, state) => {
   return OperationsGuard(childRoute, state);
+};
+
+/**
+ * حالت محدود استودیوی شرکت‌ها (/app/companies): کاربری که دست‌کم یک بخشِ شرکتی را می‌خواند.
+ * مدیر کل به همان نشانی در حالت کامل (/app/operations/companies) فرستاده می‌شود.
+ */
+export const CompaniesManageGuard: CanActivateFn = (route, state) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  const companies = inject(ActiveCompanyService);
+
+  if (!auth.isLoggedIn()) {
+    return router.parseUrl('/login');
+  }
+  const user = auth.user();
+  if (user?.is_superuser) {
+    return router.parseUrl(state.url.replace(/^\/app\/companies/, '/app/operations/companies'));
+  }
+  return companies.loadManageableCompanies().pipe(
+    map(list => list.length > 0 ? true : router.parseUrl('/app/launcher'))
+  );
 };

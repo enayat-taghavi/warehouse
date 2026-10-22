@@ -207,6 +207,8 @@ export interface CompanyPermissionSpec {
   levels: SectionLevel[];
   templates: { key: string; label_fa: string; levels: CompanySectionLevels }[];
   sections: CompanyPermissionSection[];
+  /** فیلد مدل شرکت ← کلید بخش (فیلد بی‌نگاشت فقط برای مدیر کل) */
+  fields?: Record<string, string>;
 }
 
 export interface CompanyMember {

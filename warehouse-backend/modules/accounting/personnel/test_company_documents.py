@@ -751,3 +751,52 @@ class CompanySectionGateTests(TestCase):
         self.assertEqual(r.status_code, 403)
         m.refresh_from_db()
         self.assertEqual(m.company_id, self.a.id)
+
+    def test_section_holder_without_app_scope_reaches_studio_endpoints(self):
+        """Step 11: restricted studio user (no accounting permission, so no finance claim) is gated by sections, not app scope."""
+        from rest_framework_simplejwt.tokens import AccessToken
+        from accounts.middleware import get_user_allowed_apps
+        client = APIClient()
+        token = AccessToken.for_user(self.user)
+        token['allowed_apps'] = get_user_allowed_apps(self.user)
+        self.assertEqual(token['allowed_apps'], [])
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        self.assertEqual(client.get(f'/api/personnel/company-bank-accounts/?company_id={self.a.id}').status_code, 200)
+        self.assertEqual(client.get(f'/api/personnel/company-bank-accounts/?company_id={self.b.id}').status_code, 403)
+        # other module endpoints keep the app-scope wall
+        self.assertEqual(client.get('/api/personnel/financial-projects/').status_code, 403)
+        # a user without any company section keeps the wall on studio endpoints too
+        other = get_user_model().objects.create_user(username='gate_none', password='x-pass-123', phone_number='09170000096')
+        t2 = AccessToken.for_user(other)
+        t2['allowed_apps'] = []
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {t2}')
+        self.assertEqual(client.get(f'/api/personnel/company-bank-accounts/?company_id={self.a.id}').status_code, 403)
+
+    def test_scope_bypass_never_counts_membership(self):
+        """Step 11 review: a member of B without the finance claim who holds an unrelated section row on A
+        must not get the member-read rule on B through the restricted-studio bypass."""
+        from rest_framework_simplejwt.tokens import AccessToken
+        from companies.testing import grant_membership
+        grant_membership(self.user, self.b)
+        # without the bypass (in-app session with the claim) the member rule applies
+        self.assertEqual(self.client.get(f'/api/personnel/company-bank-accounts/?company_id={self.b.id}').status_code, 200)
+        client = APIClient()
+        token = AccessToken.for_user(self.user)
+        token['allowed_apps'] = []
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        self.assertEqual(client.get(f'/api/personnel/company-bank-accounts/?company_id={self.b.id}').status_code, 403)
+        body = client.get(f'/api/personnel/companies/{self.b.id}/')
+        self.assertIn(body.status_code, (403, 404))
+
+    def test_fiscal_write_cannot_close_without_fiscal_close(self):
+        from personnel.models import CompanyFiscalPeriod
+        from companies.models import UserCompanyAccess
+        UserCompanyAccess.objects.filter(user=self.user, company=self.a).update(section_levels={'fiscal': 'write'})
+        url = '/api/personnel/company-fiscal-periods/'
+        r = self.client.post(url, {'company': self.a.id, 'fiscal_year': 1410, 'title': 'x', 'start_date': '1410/01/01',
+                                    'end_date': '1410/12/29', 'status': 'closed'}, format='json')
+        self.assertEqual(r.status_code, 403, r.content)
+        p = CompanyFiscalPeriod.objects.filter(company=self.a).first() or CompanyFiscalPeriod.objects.create(
+            company=self.a, fiscal_year=1411, title='y', start_date='2032-03-20', end_date='2033-03-20')
+        r = self.client.patch(f'{url}{p.id}/', {'status': 'closed'}, format='json')
+        self.assertEqual(r.status_code, 403, r.content)

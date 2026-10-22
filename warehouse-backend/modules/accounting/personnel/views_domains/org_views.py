@@ -437,6 +437,9 @@ class CompanyFiscalPeriodViewSet(viewsets.ModelViewSet):
         if not company:
             raise serializers.ValidationError({"company": "انتخاب شرکت الزامی است."})
         ensure_company_section(user, company.id, 'fiscal', 'write')
+        if serializer.validated_data.get('status', 'open') != 'open':
+            # بستن یا بازگشایی کار حساس است و از راه close/reopen با fiscal_close انجام می‌شود
+            ensure_company_section(user, company.id, 'fiscal_close', 'write')
         serializer.save()
 
     def perform_update(self, serializer):
@@ -444,6 +447,9 @@ class CompanyFiscalPeriodViewSet(viewsets.ModelViewSet):
         instance = serializer.instance
         ensure_company_section(user, instance.company_id, 'fiscal', 'write')
         ensure_company_unchanged(serializer)
+        new_status = serializer.validated_data.get('status', instance.status)
+        if new_status != instance.status and 'closed' in (new_status, instance.status):
+            ensure_company_section(user, instance.company_id, 'fiscal_close', 'write')
         if instance.status == 'closed' and not user.is_superuser:
             raise PermissionDenied("سال مالی بسته شده است و ویرایش آن صرفاً توسط مدیر ارشد امکان‌پذیر است.")
         serializer.save()

@@ -12,6 +12,22 @@ export class CompanyStudioContextService {
   readonly companyId = signal<number | null>(null);
   readonly company = signal<Company | null>(null);
 
+  /**
+   * سطح کاربر جاری در هر بخش مجوز شرکت (حالت محدود). null یعنی حالت کامل مدیر کل: همه‌چیز مجاز.
+   * کامپوننت‌های مشارکتی با `canWrite` کنترل‌های نوشتن را برای سطح «خواندن» پنهان می‌کنند (سرور هم می‌سنجد).
+   */
+  readonly sectionLevels = signal<Record<string, 'none' | 'read' | 'write'> | null>(null);
+
+  canRead(section: string): boolean {
+    const levels = this.sectionLevels();
+    return levels === null || (levels[section] ?? 'none') !== 'none';
+  }
+
+  canWrite(section: string): boolean {
+    const levels = this.sectionLevels();
+    return levels === null || levels[section] === 'write';
+  }
+
   private readonly counts = signal<Record<string, number>>({});
   private readonly errors = signal<Record<string, boolean>>({});
   private readonly dirtyChecks = new Map<string, () => boolean>();

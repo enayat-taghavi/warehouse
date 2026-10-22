@@ -1,7 +1,7 @@
 <!-- بایگانی جامع مدارک شرکت (بخش ماژول حسابداری در انتهای تب «مدارک» استودیو) -->
 <div *ngIf="companyId" class="space-y-5">
-  <!-- فرم بارگذاری مدرک جدید به آرشیو جامع -->
-  <div class="p-4 bg-slate-50/60 rounded-2xl border border-slate-200 space-y-3">
+  <!-- فرم بارگذاری مدرک جدید به آرشیو جامع (حالت محدود: فقط با «نوشتن» بایگانی) -->
+  <div *ngIf="canWriteArchive" class="p-4 bg-slate-50/60 rounded-2xl border border-slate-200 space-y-3">
     <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
       <span class="text-xs font-black text-slate-800 flex items-center gap-1.5"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" appIcon="action-upload" aria-hidden="true"></svg><span>بارگذاری و بایگانی مدرک جدید</span></span>
       <span class="text-[10px] text-slate-500 font-medium">(ارزش افزوده، کارت بازرگانی، رتبه‌بندی، پروانه‌ها و قراردادها)</span>
@@ -101,8 +101,8 @@
         </app-file-upload>
       </div>
 
-      <!-- پرچم سند محرمانه -->
-      <div class="flex items-center gap-2">
+      <!-- پرچم سند محرمانه (کار حساس) -->
+      <div *ngIf="canWriteConfidential" class="flex items-center gap-2">
         <input
           type="checkbox"
           id="new_doc_conf"
@@ -286,6 +286,7 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-download" aria-hidden="true"></svg>
     </a>
     <button
+      *ngIf="canWriteArchive && (!doc.is_confidential || canWriteConfidential)"
       type="button"
       (click)="deleteCompanyDocument(doc)"
       [class]="size + ' flex items-center justify-center text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500'"

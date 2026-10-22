@@ -7,8 +7,8 @@ import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
-import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, filter, takeUntil } from 'rxjs/operators';
+import { forkJoin, Observable, of, Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, filter, map, takeUntil } from 'rxjs/operators';
 import { CompanyApiService } from '../../../../../core/api/company-api.service';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
 import { AccountsHttpService, User } from '../../../../../core/http/accounts-http.service';
@@ -57,7 +57,15 @@ import { PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons/semantic-icon
   styleUrls: ['./companies.css']
 })
 export class CompaniesManagementComponent implements OnInit, OnDestroy {
-  private static readonly LIST_URL = '/app/operations/companies';
+  /** نشانی فهرست: حالت کامل مدیر کل زیر عملیات، حالت محدود جدا (ت۱۰) */
+  private get listUrl(): string {
+    return this.isRestricted ? '/app/companies' : '/app/operations/companies';
+  }
+
+  /** حالت استودیو از data مسیر: «محدود» برای دارندگان مجوز بخش‌ها (ق۳)، وگرنه کامل */
+  get isRestricted(): boolean {
+    return this.route?.snapshot?.data?.['studioMode'] === 'restricted';
+  }
   /** فیلدهای فرم شرکت که در تب «بیمه و مالی» هستند؛ بقیه در تب هویتی‌اند (برای نشان خطای تب) */
   private static readonly FISCAL_TAB_FIELDS = [
     'workshop_code', 'economic_code', 'tax_memory_id', 'tax_economic_code', 'social_security_branch_code',
@@ -297,7 +305,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$)
     ).subscribe((e) => {
       if (e.id === initialNavigationId || this.viewMode !== 'list') return;
-      if (e.urlAfterRedirects.split('?')[0] === CompaniesManagementComponent.LIST_URL) {
+      if (e.urlAfterRedirects.split('?')[0] === this.listUrl) {
         this.loadCompanies();
       }
     });
@@ -471,7 +479,11 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   loadCompanies(): void {
     this.isLoading = true;
     this.listLoadError = false;
-    this.api.getAll().subscribe({
+    // حالت محدود: فقط شرکت‌هایی که دست‌کم یک بخش آن‌ها خواندنی است، همراه سطح هر بخش
+    const source$: Observable<Company[] | { results: Company[]; count: number }> = this.isRestricted
+      ? this.api.getUserAvailable('manage').pipe(map(res => res?.companies || []))
+      : this.api.getAll();
+    source$.subscribe({
       next: (res) => {
         this.isLoading = false;
         if (Array.isArray(res)) {
@@ -621,12 +633,117 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   /** تب‌های هسته‌ای که جایگاه بخش مشارکتی دارند */
   readonly sectionSlots: CompanyStudioSection['slot'][] = ['fiscal_insurance', 'documents'];
 
-  /** بخش‌های مشارکتی یک تب هسته (studioSections) به ترتیب order */
+  /** بخش‌های مشارکتی یک تب هسته (studioSections) به ترتیب order؛ در حالت محدود بخشِ «هیچ» کنار می‌رود */
   sectionsFor(slot: CompanyStudioSection['slot']): CompanyStudioSection[] {
     return this.moduleRegistry.getExtensions('companies')
       .flatMap(e => e.extension.studioSections || [])
-      .filter(sec => sec.slot === slot)
+      .filter(sec => sec.slot === slot && this.isContributionVisible(sec))
       .sort((a, b) => a.order - b.order);
+  }
+
+  // ─── حالت محدود (ق۳): تب و بخش بر پایهٔ سطح کاربر در بخش‌های مجوز شرکت ───
+  private static readonly FORM_FIELD_KEYS = Object.keys(buildCompanyPayload({ code: '', name: '' }));
+
+  /** بخش مجوز هر تب هسته؛ تب‌های مدارک و بیمه بخش مشارکتی هم دارند */
+  private static readonly CORE_TAB_SECTION: Record<string, string> = {
+    identity: 'identity', fiscal_insurance: 'insurance_tax', documents: 'founding_docs', access: 'user_access'
+  };
+
+  canReadSection(key: string): boolean {
+    return this.actorLevel(key) !== 'none';
+  }
+
+  canWriteSection(key: string): boolean {
+    return this.actorLevel(key) === 'write';
+  }
+
+  private isContributionVisible(item: { permissionSection?: string }): boolean {
+    return !item.permissionSection || this.canReadSection(item.permissionSection);
+  }
+
+  /** بخش هستهٔ یک تب (مثلاً هویتی) دیدنی است؛ تب مدارک یا بیمه ممکن است فقط بخش مشارکتی داشته باشد */
+  isCoreSectionVisible(tab: string): boolean {
+    const section = CompaniesManagementComponent.CORE_TAB_SECTION[tab];
+    return !section || this.canReadSection(section);
+  }
+
+  /** تب هسته‌ای که سطح «خواندن» دارد: فیلدها غیرفعال‌اند */
+  isCoreTabReadonly(tab: string): boolean {
+    const section = CompaniesManagementComponent.CORE_TAB_SECTION[tab];
+    return !!section && !this.canWriteSection(section);
+  }
+
+  /** دکمهٔ ذخیرهٔ مشخصات فقط وقتی دست‌کم یک فیلد شرکت نوشتنی است */
+  get canSaveCompany(): boolean {
+    if (!this.isRestricted) return true;
+    // فقط فیلدهای فرم مشخصات (اسناد مادر و لوگو بارگذاری جدا دارند)
+    const fields = this.permissionSpec?.fields || {};
+    return CompaniesManagementComponent.FORM_FIELD_KEYS.some(k => !!fields[k] && this.canWriteSection(fields[k]));
+  }
+
+  /** فیلد فرم مشخصات در حالت محدود نوشتنی است (نگاشت فیلد ← بخش از سرور) */
+  canWriteField(key: string): boolean {
+    if (!this.isRestricted || this.isSuperuserActor) return true;
+    const section = this.permissionSpec?.fields?.[key];
+    return !!section && this.canWriteSection(section);
+  }
+
+  /**
+   * حالت محدود: بدنهٔ PATCH فقط از فیلدهای تغییرکرده (نسبت به آخرین دادهٔ سرور) ساخته می‌شود تا مقدار کهنهٔ
+   * فیلدهای دیگر روی تغییر تازهٔ سرور ننشیند. تغییرِ فیلد غیرنوشتنی بی‌صدا کنار نمی‌رود: ذخیره با پیام متوقف می‌شود.
+   * null یعنی ارسال نشود (پیام نمایش داده شده است).
+   */
+  private restrictedChanges(): Record<string, unknown> | null {
+    if (!this.permissionSpec?.fields) {
+      this.toast.error('نگاشت فیلدها و مجوزها دریافت نشده است؛ صفحه را دوباره باز کنید.');
+      return null;
+    }
+    const before: Record<string, unknown> = this.studioSnapshot ? buildCompanyPayload(JSON.parse(this.studioSnapshot)) : {};
+    const now: Record<string, unknown> = buildCompanyPayload(this.companyModal.data);
+    const changed = Object.keys(now).filter(k => JSON.stringify(now[k]) !== JSON.stringify(before[k]));
+    if (changed.some(k => !this.canWriteField(k))) {
+      this.toast.error('برخی تغییرها در بخش‌هایی است که مجوز نوشتنش را ندارید؛ ذخیره انجام نشد.');
+      return null;
+    }
+    const logoChanged = !!this.selectedLogoFile || this.isLogoCleared;
+    if (changed.length === 0 && !logoChanged) {
+      this.toast.info('تغییری برای ذخیره وجود ندارد.');
+      return null;
+    }
+    // اعتبارسنجی فقط برای فیلدهای ارسالی؛ فیلد پنهان یا فقط‌خواندنی ذخیره را قفل نمی‌کند
+    this.validateCompanyForm();
+    const errors = Object.fromEntries(Object.entries(this.companyModal.errors).filter(([k]) => changed.includes(k)));
+    this.companyModal = { ...this.companyModal, errors };
+    if (Object.keys(errors).length > 0) {
+      this.toast.error('برخی فیلدها خطا دارند؛ موارد مشخص‌شده را اصلاح کنید.');
+      this.cdr.markForCheck();
+      return null;
+    }
+    return Object.fromEntries(changed.map(k => [k, now[k]]));
+  }
+
+  /** سطح کاربر در بخشی از یک شرکتِ فهرست (حالت محدود از section_levels همان ردیف) */
+  companyCanRead(company: Company, key: string): boolean {
+    if (!this.isRestricted || this.isSuperuserActor) return true;
+    return (company.section_levels?.[key] ?? 'none') !== 'none';
+  }
+
+  /** دکمه‌های مشارکتی ردیف که تب مقصدشان برای همین شرکت دیدنی است */
+  rowActionsFor(company: Company): CompanyRowAction[] {
+    if (!this.isRestricted || this.isSuperuserActor) return this.rowActions;
+    return this.rowActions.filter(a => {
+      const section = this.contributedTab(a.tab)?.permissionSection;
+      return !section || this.companyCanRead(company, section);
+    });
+  }
+
+  backToLauncher(): void {
+    this.router?.navigate(['/app/launcher']);
+  }
+
+  /** نخستین تبِ دیدنی (وقتی تب درخواستی در حالت محدود بسته است) */
+  private firstAvailableTab(): string {
+    return this.modalTabs[0]?.id || 'identity';
   }
 
   /** شرکت ذخیره‌شده (شناسهٔ سرور دارد)؛ تب‌های وابسته به شناسه پیش از آن پیام «ابتدا ذخیره کنید» نشان می‌دهند */
@@ -645,8 +762,11 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   private isTabAvailable(tab: string): boolean {
     const contributed = this.contributedTab(tab);
-    if (contributed) return !(contributed.hiddenUntilSaved && !this.hasSavedCompany);
-    return tab in CompaniesManagementComponent.CORE_TAB_ORDER;
+    if (contributed) return !(contributed.hiddenUntilSaved && !this.hasSavedCompany) && this.isContributionVisible(contributed);
+    if (!(tab in CompaniesManagementComponent.CORE_TAB_ORDER)) return false;
+    // تب «هیچ» در حالت محدود رندر نمی‌شود، مگر بخش مشارکتیِ دیدنی داشته باشد
+    return this.isCoreSectionVisible(tab)
+      || ((this.sectionSlots as string[]).includes(tab) && this.sectionsFor(tab as CompanyStudioSection['slot']).length > 0);
   }
 
   // ═════════════════════════════════════════════════════════════════════
@@ -692,7 +812,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       .join('|');
     // شمارندهٔ تب «مدارک» از بخش مشارکتی بایگانی (studioSections) از راه context می‌آید
     const documentsCount = this.studioContext.count('documents');
-    const key = `${documentsCount ?? ''}_${this.studioAccesses.length}_${[...errorTabs].join(',')}_${contributedKey}`;
+    const levelsKey = this.isRestricted ? JSON.stringify(this.actorLevels) : '';
+    const key = `${documentsCount ?? ''}_${this.studioAccesses.length}_${[...errorTabs].join(',')}_${contributedKey}_${levelsKey}`;
     if (this._modalTabsKey === key && this._cachedModalTabs.length > 0) {
       return this._cachedModalTabs;
     }
@@ -717,8 +838,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       });
     }
     tabs.sort((a, b) => order(a.id) - order(b.id));
-    this._cachedModalTabs = tabs;
-    return tabs;
+    this._cachedModalTabs = tabs.filter(t => this.isTabAvailable(t.id));
+    return this._cachedModalTabs;
   }
 
   /** تب‌هایی که فیلد خطادار دارند (خطای اعتبارسنجی یا خطای فیلدی سرور) */
@@ -746,7 +867,8 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   /** دادهٔ هر تب یک بار برای هر شرکت دریافت می‌شود؛ تازه‌سازی با وب‌سوکت یا «تلاش دوباره» است */
   private onTabActivated(tab: string): void {
-    if (tab === 'access') {
+    // فهرست کاربران فقط برای فرم تخصیص (نوشتن دسترسی کاربران) لازم است
+    if (tab === 'access' && !this.actorLevelsLoading && this.canWriteSection('user_access')) {
       this.ensureSystemUsers();
     }
   }
@@ -761,7 +883,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   }
 
   setModalTab(tab: string): void {
-    if (!this.isTabAvailable(tab)) tab = 'identity';
+    if (!this.isTabAvailable(tab)) tab = this.firstAvailableTab();
     this.activeModalTab = tab as typeof this.activeModalTab;
     this.onTabActivated(tab);
     if (this.router && this.route) {
@@ -809,7 +931,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         this.viewMode = 'studio';
         if (!Number.isInteger(companyId) || companyId <= 0) {
           this.toast.error('نشانی شرکت معتبر نیست.');
-          this.router?.navigate([CompaniesManagementComponent.LIST_URL], { replaceUrl: true });
+          this.router?.navigate([this.listUrl], { replaceUrl: true });
           return;
         }
         this.setupStudioForCompany(companyId);
@@ -826,12 +948,13 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe(queryParams => {
       const tabParam = queryParams.get('tab');
       if (tabParam) {
-        if (this.isKnownTab(tabParam) && this.isTabAvailable(tabParam)) {
+        if (this.isKnownTab(tabParam) && (this.isTabAvailable(tabParam) || this.actorLevelsLoading)) {
+          // در حالت محدود تا رسیدن سطح‌ها تب درخواستی نگه داشته می‌شود؛ پس از رسیدن دوباره سنجیده می‌شود
           this.activeModalTab = tabParam as any;
           this.onTabActivated(tabParam);
         } else {
           // تب ناشناخته یا پیوند مستقیم به تب ماژولی که نصب نیست: بازگشت به تب مشخصات
-          this.setModalTab('identity');
+          this.setModalTab(this.firstAvailableTab());
         }
         this.cdr.markForCheck();
       }
@@ -858,11 +981,37 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.studioLoading = true;
     this.studioLoadError = false;
     this.cdr.markForCheck();
-    this.api.getById(companyId).subscribe({
-      next: (comp) => {
+    // حالت محدود: سطح‌های خود کاربر در این شرکت و نگاشت فیلدها پیش از رندر تب‌ها لازم‌اند
+    const restricted = this.isRestricted && !this.isSuperuserActor;
+    const levels$: Observable<CompanySectionLevels | null> = restricted
+      ? this.api.getUserAvailable('manage').pipe(map(res => (res?.companies || []).find(c => c.id === companyId)?.section_levels || {}))
+      : of(null);
+    const spec$: Observable<CompanyPermissionSpec | null> = this.permissionSpec?.fields || !restricted
+      ? of(this.permissionSpec)
+      : this.api.getPermissionSections();
+    this.actorLevelsLoading = restricted;
+    forkJoin({ comp: this.api.getById(companyId), levels: levels$, spec: spec$ }).subscribe({
+      next: ({ comp, levels, spec }) => {
         this.studioLoading = false;
+        this.actorLevelsLoading = false;
+        if (spec) this.permissionSpec = spec;
+        if (restricted && !this.permissionSpec?.fields) {
+          // پاسخ کهنهٔ کش بدون نگاشت فیلدها: ذخیرهٔ ناقص ممکن است، پس بارگذاری با «تلاش دوباره» متوقف می‌شود
+          this.studioLoadError = true;
+          this.cdr.markForCheck();
+          return;
+        }
+        this.actorLevels = levels ? { ...levels } : {};
+        this.studioContext.sectionLevels.set(restricted ? { ...this.actorLevels } : null);
+        if (restricted && !Object.values(this.actorLevels).some(l => l !== 'none')) {
+          this.toast.error('به هیچ بخشی از این شرکت دسترسی ندارید.');
+          this.router?.navigate([this.listUrl], { replaceUrl: true });
+          return;
+        }
         if (comp) {
           this.populateStudioData(comp);
+          if (!this.isTabAvailable(this.activeModalTab)) this.setModalTab(this.firstAvailableTab());
+          else this.onTabActivated(this.activeModalTab);
         } else {
           this.studioLoadError = true;
         }
@@ -870,9 +1019,10 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.studioLoading = false;
+        this.actorLevelsLoading = false;
         if (err?.status === 404) {
           this.toast.error('شرکت مورد نظر یافت نشد.');
-          this.router?.navigate([CompaniesManagementComponent.LIST_URL], { replaceUrl: true });
+          this.router?.navigate([this.listUrl], { replaceUrl: true });
         } else {
           this.studioLoadError = true;
         }
@@ -1009,7 +1159,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
     // دادهٔ تب دسترسی یک بار برای هر شرکت دریافت می‌شود (برای شمارندهٔ تب)؛ کلیک تب دوباره دریافت نمی‌کند.
     // تب‌ها و بخش‌های مشارکتی دادهٔ خودشان را با ورودی companyId می‌گیرند.
-    if (company.id) {
+    if (company.id && this.canReadSection('user_access')) {
       this.loadStudioAccesses(company.id);
     }
 
@@ -1019,7 +1169,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   openCreateModal(): void {
     if (this.router) {
-      this.router.navigate(['/app/operations/companies/new']);
+      this.router.navigate([`${this.listUrl}/new`]);
     } else {
       this.setupStudioForNew();
     }
@@ -1032,7 +1182,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
       return;
     }
     if (this.router) {
-      this.router.navigate([CompaniesManagementComponent.LIST_URL, company.id], {
+      this.router.navigate([this.listUrl, company.id], {
         queryParams: { tab }
       });
     } else {
@@ -1044,7 +1194,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   /** بازگشت به فهرست؛ گارد مسیر پیش از خروج دربارهٔ تغییرات ذخیره‌نشده می‌پرسد */
   closeCompanyModal(): void {
     if (this.router) {
-      this.router.navigate([CompaniesManagementComponent.LIST_URL]).then((ok) => {
+      this.router.navigate([this.listUrl]).then((ok) => {
         if (ok) this.resetStudioState();
       });
       return;
@@ -1224,7 +1374,9 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   /** تغییر لوگو پس از ذخیرهٔ موفق فرم؛ نتیجه: آیا لوگو روی سرور عوض شد */
   private finishLogoChange(companyId: number): Promise<boolean> {
     return new Promise((resolve) => {
-      if (this.selectedLogoFile) {
+      if (!this.canWriteSection('identity')) {
+        resolve(false);
+      } else if (this.selectedLogoFile) {
         this.api.uploadLogo(companyId, this.selectedLogoFile).subscribe({
           next: () => {
             this.selectedLogoFile = null;
@@ -1256,7 +1408,14 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (this.companyModal.isSubmitting || this.studioLoading || this.isQueuedCreate) {
       return;
     }
-    if (!this.validateCompanyForm()) {
+    // حالت محدود: فقط فیلدهای تغییرکرده و نوشتنی فرستاده می‌شوند (نه کل فرم)
+    const restrictedBody = this.isRestricted && !this.isSuperuserActor && this.companyModal.isEdit
+      ? this.restrictedChanges()
+      : undefined;
+    if (restrictedBody === null) {
+      return;
+    }
+    if (restrictedBody === undefined && !this.validateCompanyForm()) {
       return;
     }
 
@@ -1267,14 +1426,17 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
     if (this.companyModal.isEdit && this.companyModal.data.id) {
       const companyId = this.companyModal.data.id;
-      this.api.update(companyId, payload).subscribe({
+      const request$ = restrictedBody
+        ? this.api.patch(companyId, restrictedBody as Partial<Company>)
+        : this.api.update(companyId, payload);
+      request$.subscribe({
         next: (updated: any) => {
           this.companyModal.isSubmitting = false;
           if (this.isPendingRecord(updated)) {
             // پاسخ خوش‌بینانهٔ صف آفلاین شناسهٔ موقت دارد؛ داده‌های فرم همان چیزی است که در صف رفت
             this.isQueuedSave = true;
             this.takeStudioSnapshot();
-            this.toast.info(`ویرایش «${payload.name}» در صف ارسال است و پس از اتصال ثبت می‌شود.`);
+            this.toast.info(`ویرایش «${d.name || 'شرکت'}» در صف ارسال است و پس از اتصال ثبت می‌شود.`);
             if (this.selectedLogoFile || this.isLogoCleared) {
               this.toast.warning('تغییر لوگو فقط در حالت برخط ذخیره می‌شود؛ پس از اتصال دوباره ذخیره کنید.');
             }
@@ -1330,7 +1492,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
             }
             this.leavingAfterSave = true;
             if (this.router) {
-              this.router.navigate([CompaniesManagementComponent.LIST_URL, created.id], {
+              this.router.navigate([this.listUrl, created.id], {
                 queryParams: { tab: 'identity' },
                 replaceUrl: true,
                 state: pendingLogo ? { pendingLogo } : undefined
@@ -1726,7 +1888,9 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   actorLevels: CompanySectionLevels = {};
 
   actorLevel(key: string): SectionLevel {
-    return this.isSuperuserActor ? 'write' : (this.actorLevels[key] || 'none');
+    // حالت کامل فقط برای مدیر کل است (OperationsGuard)
+    if (this.isSuperuserActor || !this.isRestricted) return 'write';
+    return this.actorLevels[key] || 'none';
   }
 
   private static readonly LEVEL_RANK: Record<SectionLevel, number> = { none: 0, read: 1, write: 2 };
@@ -1774,24 +1938,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   private loadPermissionExtras(companyId: number): void {
     this.permissionExtrasError = false;
     this.permissionExtrasOffline = false;
-    if (!this.isSuperuserActor) {
-      this.actorLevelsLoading = true;
-      this.api.getUserAvailable('manage').subscribe({
-        next: (res) => {
-          if (!this.isStudioCompany(companyId)) return;
-          this.actorLevels = { ...(res?.companies || []).find(c => c.id === companyId)?.section_levels || {} };
-          this.actorLevelsLoading = false;
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          if (!this.isStudioCompany(companyId)) return;
-          this.actorLevels = {};
-          this.actorLevelsLoading = false;
-          this.permissionExtrasError = true;
-          this.cdr.markForCheck();
-        }
-      });
-    }
+    // سطح‌های خود کاربر در setupStudioForCompany همراه شرکت دریافت می‌شوند
     if (!this.permissionSpec) {
       this.api.getPermissionSections().subscribe({
         next: (spec) => { this.permissionSpec = spec; this.cdr.markForCheck(); },

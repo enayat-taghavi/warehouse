@@ -25,6 +25,7 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
 import { AuthService } from '../../../../../core/auth/auth.service';
 import { ConfirmDialogService } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { isServerUnreachable } from '../../../../../core/services/server-reachability';
+import { CompanyStudioContextService } from '../../../../../core/services/company-studio-context.service';
 import { PersianDatePipe } from '../../../../../shared/pipes/persian-date.pipe';
 import { LoadingSkeletonComponent } from '../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
@@ -120,6 +121,13 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
   private destroyRef = inject(DestroyRef);
 
   public isSuperuser = this.auth.isSuperuser;
+
+  /** حالت محدود استودیو: اتصال، همگام‌سازی و تنظیم فقط با «نوشتن» گوگل‌درایو (سرور هم می‌سنجد) */
+  private studioContext = inject(CompanyStudioContextService, { optional: true });
+
+  get canWriteGdrive(): boolean {
+    return this.studioContext?.canWrite('gdrive') ?? true;
+  }
 
   get isWarehouseInstalled(): boolean {
     return this.moduleRegistry.getExtensions('companies').some(e => e.extension.hasWarehouseModuleToggle);
@@ -531,7 +539,7 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
   public updateConfigField(field: keyof GDriveConfigResponse | string, value: any): void {
     const current = this.config();
     const cid = this.selectedCompanyId();
-    if (!current || !cid) return;
+    if (!current || !cid || !this.canWriteGdrive) return;
 
     // اعتبارسنجی سقف مکث بین فایل‌ها (۰ تا ۳۰۰ ثانیه)
     if (field === 'chunk_delay_seconds') {
@@ -584,6 +592,7 @@ export class CompanyGdriveTabComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   public setSyncMode(mode: 'immediate' | 'scheduled' | 'manual'): void {
+    if (!this.canWriteGdrive) return;
     this.updateConfigField('sync_mode', mode);
   }
 

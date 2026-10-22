@@ -246,8 +246,8 @@
 
                   <!-- حذف سند (فقط کاربرانی که مجوز ویرایش دارند) -->
                   <button 
-                    *ngIf="canUpload"
-                    type="button" 
+                    *ngIf="canDelete && (!doc.is_confidential || canWriteConfidential)"
+                    type="button"
                     appAction="delete"
                     size="sm"
                     (click)="deleteDocument(doc)">
@@ -401,7 +401,7 @@
         </div>
 
         <!-- چک‌باکس سند محرمانه -->
-        <div *ngIf="isSuperuser" class="flex items-center gap-2 p-3 bg-rose-50/50 rounded-xl border border-rose-100">
+        <div *ngIf="canWriteConfidential" class="flex items-center gap-2 p-3 bg-rose-50/50 rounded-xl border border-rose-100">
           <input 
             type="checkbox" 
             id="doc_archive_confidential" 

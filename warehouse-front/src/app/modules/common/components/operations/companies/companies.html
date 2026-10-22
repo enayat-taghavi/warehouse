@@ -1,4 +1,4 @@
-<div class="space-y-4 max-w-7xl mx-auto pb-12" dir="rtl">
+<div class="space-y-4 max-w-7xl mx-auto pb-12" [ngClass]="isRestricted ? 'p-3 md:p-6' : ''" dir="rtl">
 
   <ng-container *ngIf="viewMode === 'list'">
   <!-- ۱. نوار فرمان چسبان بالایی (app-command-center) -->
@@ -10,7 +10,7 @@
       </div>
       <div class="min-w-0">
         <div class="flex items-center gap-x-2 gap-y-1 flex-wrap">
-          <h1 class="text-sm md:text-base font-black text-slate-800">مدیریت شرکت‌ها و هلدینگ</h1>
+          <h1 class="text-sm md:text-base font-black text-slate-800">{{ isRestricted ? 'شرکت‌های من' : 'مدیریت شرکت‌ها و هلدینگ' }}</h1>
           <span class="whitespace-nowrap tabular-nums text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
             {{ fa(companies.length) }} شرکت
           </span>
@@ -29,13 +29,19 @@
 
     <!-- چپ: خروجی اکسل، به‌روزرسانی و ثبت شرکت -->
     <ng-container cc-actions>
-      <button type="button" appAction="export-excel" label="خروجی اکسل شرکت‌ها" (click)="exportExcel()"></button>
+      @if (!isRestricted) {
+        <button type="button" appAction="export-excel" label="خروجی اکسل شرکت‌ها" (click)="exportExcel()"></button>
+      }
       @if (canImportExcel) {
         <button type="button" appAction="import-excel" label="ورود شرکت‌ها از اکسل" (click)="isExcelModalOpen = true"></button>
       }
       <button type="button" appAction="refresh" label="به‌روزرسانی داده‌ها" [busy]="isLoading" (click)="loadCompanies()"></button>
-      <div class="h-6 w-px bg-slate-200 mx-1" aria-hidden="true"></div>
-      <button type="button" appAction="create" label="ثبت شرکت جدید" (click)="openCreateModal()"></button>
+      @if (!isRestricted) {
+        <div class="h-6 w-px bg-slate-200 mx-1" aria-hidden="true"></div>
+        <button type="button" appAction="create" label="ثبت شرکت جدید" (click)="openCreateModal()"></button>
+      } @else {
+        <button type="button" appAction="back" label="بازگشت به برنامه‌ها" labelFrom="md" (click)="backToLauncher()"></button>
+      }
     </ng-container>
   </app-command-center>
 
@@ -118,7 +124,7 @@
         <tbody class="divide-y divide-slate-100">
           <tr *ngIf="!isLoading && filteredCompanies.length === 0" class="bg-white">
             <td [attr.colspan]="tableColspan" class="py-12 text-center text-slate-400 font-bold">
-              {{ searchQuery.trim() ? 'هیچ شرکتی با معیارهای جستجو یافت نشد.' : 'هنوز شرکتی ثبت نشده است.' }}
+              {{ searchQuery.trim() ? 'هیچ شرکتی با معیارهای جستجو یافت نشد.' : (isRestricted ? 'شرکتی با دسترسی شما یافت نشد؛ برای دسترسی با مدیر سیستم تماس بگیرید.' : 'هنوز شرکتی ثبت نشده است.') }}
             </td>
           </tr>
 
@@ -178,6 +184,7 @@
               <div class="flex items-center justify-center gap-1">
                 <!-- دکمه مدیریت دسترسی کاربران -->
                 <button
+                  *ngIf="companyCanRead(company, 'user_access')"
                   type="button"
                   (click)="openAccessTab(company)"
                   [disabled]="isPendingRecord(company)"
@@ -202,7 +209,7 @@
 
                 <!-- دکمه‌های مشارکتی ماژول‌ها (rowActions) که تبی از استودیو را باز می‌کنند -->
                 <button
-                  *ngFor="let action of rowActions"
+                  *ngFor="let action of rowActionsFor(company)"
                   type="button"
                   (click)="openEditModal(company, action.tab)"
                   [disabled]="isPendingRecord(company)"
@@ -215,6 +222,7 @@
 
                 <!-- دکمه حذف -->
                 <button
+                  *ngIf="!isRestricted"
                   type="button"
                   (click)="confirmDelete(company)"
                   [disabled]="!isOnline || isPendingRecord(company)"
@@ -238,7 +246,7 @@
       <!-- وضعیت خالی موبایل -->
       <div *ngIf="!isLoading && filteredCompanies.length === 0" class="p-8 text-center text-slate-400 font-bold text-xs">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-slate-300 mx-auto mb-2" [appIcon]="icons.company" aria-hidden="true"></svg>
-        <div>{{ searchQuery.trim() ? 'هیچ شرکتی با معیارهای جستجو یافت نشد.' : 'هنوز شرکتی ثبت نشده است.' }}</div>
+        <div>{{ searchQuery.trim() ? 'هیچ شرکتی با معیارهای جستجو یافت نشد.' : (isRestricted ? 'شرکتی با دسترسی شما یافت نشد؛ برای دسترسی با مدیر سیستم تماس بگیرید.' : 'هنوز شرکتی ثبت نشده است.') }}</div>
       </div>
 
       <!-- کارت‌های شرکت در صفحات موبایل -->
@@ -310,6 +318,7 @@
         <!-- نوار دکمه‌های عملیاتی کارت در موبایل (آیکونی با تولتیپ و دسترس‌پذیری) -->
         <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
           <button
+            *ngIf="companyCanRead(company, 'user_access')"
             type="button"
             (click)="openAccessTab(company)"
             [disabled]="isPendingRecord(company)"
@@ -331,7 +340,7 @@
           </button>
           <!-- دکمه‌های مشارکتی ماژول‌ها (rowActions) که تبی از استودیو را باز می‌کنند -->
           <button
-            *ngFor="let action of rowActions"
+            *ngFor="let action of rowActionsFor(company)"
             type="button"
             (click)="openEditModal(company, action.tab)"
             [disabled]="isPendingRecord(company)"
@@ -341,7 +350,7 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="action.icon" aria-hidden="true"></svg>
             <span class="sr-only">{{ action.labelFa }}</span>
           </button>
-          <button type="button" appAction="delete" [disabled]="!isOnline || isPendingRecord(company)" [hint]="isOnline ? undefined : 'حذف فقط در حالت برخط'" (click)="confirmDelete(company)"></button>
+          <button *ngIf="!isRestricted" type="button" appAction="delete" [disabled]="!isOnline || isPendingRecord(company)" [hint]="isOnline ? undefined : 'حذف فقط در حالت برخط'" (click)="confirmDelete(company)"></button>
         </div>
       </div>
     </div>
@@ -383,6 +392,7 @@
 
           <!-- سمت چپ: ذخیره -->
           <button
+            *ngIf="canSaveCompany"
             type="button"
             appAction="save"
             [busy]="companyModal.isSubmitting"
@@ -434,6 +444,9 @@
         <!-- تب ۱: مشخصات هویتی و ثبتی                                          -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <div *ngIf="activeModalTab === 'identity'" class="space-y-4" role="tabpanel" id="co-studio-panel-identity" aria-labelledby="co-studio-tab-identity">
+          <p *ngIf="isCoreTabReadonly('identity')" class="p-3 text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-2xl" role="note">این بخش برای شما فقط خواندنی است.</p>
+          <fieldset [disabled]="isCoreTabReadonly('identity')" class="space-y-4 min-w-0">
+            <legend class="sr-only">{{ isCoreTabReadonly('identity') ? 'مشخصات هویتی (فقط خواندنی)' : 'مشخصات هویتی' }}</legend>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
             <!-- کد شرکت -->
             <div>
@@ -665,9 +678,9 @@
               </div>
             </div>
 
-            <div class="flex items-center gap-2 shrink-0">
-              <button 
-                *ngIf="logoPreviewUrl || selectedLogoFile" 
+            <div *ngIf="canWriteSection('identity')" class="flex items-center gap-2 shrink-0">
+              <button
+                *ngIf="logoPreviewUrl || selectedLogoFile"
                 type="button" 
                 (click)="clearLogo()" 
                 title="حذف لوگوی شرکت" 
@@ -688,8 +701,8 @@
             </div>
           </div>
 
-          <!-- چک‌باکس‌های وضعیت و ماژول انبارداری -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+          <!-- چک‌باکس‌های وضعیت و ماژول انبارداری (فقط مدیر کل) -->
+          <div *ngIf="!isRestricted" class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
             <div class="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
               <input 
                 type="checkbox" 
@@ -715,12 +728,17 @@
               </label>
             </div>
           </div>
+          </fieldset>
         </div>
 
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <!-- تب ۲: سال مالی، کارگاه بیمه و سامانه مودیان                           -->
         <!-- ═════════════════════════════════════════════════════════════════════ -->
         <div *ngIf="activeModalTab === 'fiscal_insurance'" class="space-y-4" role="tabpanel" id="co-studio-panel-fiscal_insurance" aria-labelledby="co-studio-tab-fiscal_insurance">
+          <ng-container *ngIf="isCoreSectionVisible('fiscal_insurance')">
+          <p *ngIf="isCoreTabReadonly('fiscal_insurance')" class="p-3 text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-2xl" role="note">این بخش برای شما فقط خواندنی است.</p>
+          <fieldset [disabled]="isCoreTabReadonly('fiscal_insurance')" class="space-y-4 min-w-0">
+            <legend class="sr-only">{{ isCoreTabReadonly('fiscal_insurance') ? 'بیمه و مالیات (فقط خواندنی)' : 'بیمه و مالیات' }}</legend>
           <div class="p-3 bg-indigo-50/50 rounded-2xl border border-indigo-100 text-xs text-indigo-900 leading-relaxed flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600 shrink-0" appIcon="info" aria-hidden="true"></svg>
             <span>فیلدهای زیر مربوط به کد کارگاه مرکزی شرکت متبوع و اتصالات حافظه مالیاتی و سامانه مودیان هستند. کدهای کارگاه و ردیف‌های پیمان متناظر با پروژه‌های اجرایی منحصراً در بخش تعریف و مدیریت پروژه‌ها تعیین می‌گردند.</span>
@@ -756,6 +774,7 @@
                 type="text" 
                 [ngModel]="companyModal.data.economic_code"
                 (ngModelChange)="onDigitsInput('economic_code', $event)"
+                [disabled]="!canWriteField('economic_code')"
                 inputmode="numeric" 
                 placeholder="411111111111"
                 dir="ltr" 
@@ -888,7 +907,8 @@
             </div>
             <div class="w-full md:w-64">
               <select 
-                [(ngModel)]="companyModal.data.fiscal_year_start_month" 
+                [(ngModel)]="companyModal.data.fiscal_year_start_month"
+                [disabled]="!canWriteField('fiscal_year_start_month')" 
                 class="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-bold">
                 <option [ngValue]="1">فروردین (تقویم هجری شمسی عادی)</option>
                 <option [ngValue]="7">مهرماه (سال‌های مالی پاییزه)</option>
@@ -896,6 +916,8 @@
               </select>
             </div>
           </div>
+          </fieldset>
+          </ng-container>
         </div>
 
         <!-- ═════════════════════════════════════════════════════════════════════ -->
@@ -914,7 +936,7 @@
           <div *ngIf="companyModal.data.id" class="space-y-5">
             
             <!-- ۲ کارت دسترسی سریع به دو سند مادر (اساسنامه و روزنامه رسمی) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div *ngIf="isCoreSectionVisible('documents')" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               
               <!-- کارت اساسنامه شرکت -->
               <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200 flex flex-col justify-between gap-3">
@@ -956,7 +978,8 @@
                   </div>
                   <span *ngIf="!companyModal.data.articles_of_association" class="text-[11px] text-slate-400">هنوز فایلی ثبت نشده است</span>
 
-                  <label 
+                  <label
+                    *ngIf="canWriteSection('founding_docs')"
                     class="w-10 h-10 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 hover:border-indigo-300 text-slate-700 cursor-pointer shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-500"
                     [title]="companyModal.data.articles_of_association ? 'جایگزینی فایل اساسنامه' : 'بارگذاری فایل اساسنامه'"
                     aria-label="بارگذاری فایل اساسنامه">
@@ -1008,7 +1031,8 @@
                   </div>
                   <span *ngIf="!companyModal.data.latest_gazette" class="text-[11px] text-slate-400">هنوز فایلی ثبت نشده است</span>
 
-                  <label 
+                  <label
+                    *ngIf="canWriteSection('founding_docs')"
                     class="w-10 h-10 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 hover:border-emerald-300 text-slate-700 cursor-pointer shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-500"
                     [title]="companyModal.data.latest_gazette ? 'جایگزینی فایل روزنامه رسمی' : 'بارگذاری فایل روزنامه رسمی'"
                     aria-label="بارگذاری فایل روزنامه رسمی">

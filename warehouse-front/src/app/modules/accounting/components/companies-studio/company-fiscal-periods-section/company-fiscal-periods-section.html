@@ -10,7 +10,7 @@
       </span>
     </div>
     <div *ngIf="companyId && !showFiscalPeriodForm">
-      <button type="button" appAction="create" label="تعریف دوره مالی" (click)="openCreateFiscalPeriod()"></button>
+      <button *ngIf="canWriteFiscal" type="button" appAction="create" label="تعریف دوره مالی" (click)="openCreateFiscalPeriod()"></button>
     </div>
   </div>
 
@@ -148,7 +148,7 @@
   <!-- کارهای حساس دوره (A10، E4): فقط برخط و پس از پرسش تأیید؛ برای دوره‌ای که هنوز در صف است غیرفعال (E2) -->
   <ng-template #periodActions let-period="period">
     <button
-      *ngIf="period.status === 'open'"
+      *ngIf="period.status === 'open' && canWriteFiscal"
       type="button"
       (click)="freezeFiscalPeriod(period)"
       [disabled]="!isOnline || isPendingRecord(period)"
@@ -158,7 +158,7 @@
       <span>انجماد</span>
     </button>
     <button
-      *ngIf="period.status === 'open' || period.status === 'frozen'"
+      *ngIf="(period.status === 'open' || period.status === 'frozen') && canCloseFiscal"
       type="button"
       (click)="closeFiscalPeriod(period)"
       [disabled]="!isOnline || isPendingRecord(period)"
@@ -168,7 +168,7 @@
       <span>بستن سال مالی</span>
     </button>
     <button
-      *ngIf="period.status === 'frozen' || period.status === 'closed'"
+      *ngIf="(period.status === 'frozen' || period.status === 'closed') && canCloseFiscal"
       type="button"
       (click)="reopenFiscalPeriod(period)"
       [disabled]="!isOnline || isPendingRecord(period)"
@@ -250,7 +250,7 @@
   <!-- حالت خالی دوره‌های مالی -->
   <div *ngIf="companyId && companyFiscalPeriods.length === 0 && !showFiscalPeriodForm && !isLoadingFiscalPeriods && !loadError" class="p-6 text-center bg-slate-50/60 border border-slate-200/80 rounded-2xl">
     <span class="block text-slate-500 text-sm mb-1 font-bold">هیچ دوره مالی برای این شرکت تعریف نشده است.</span>
-    <span class="block text-slate-500 text-xs mb-3">جهت ثبت سال‌های مالی و بستن حساب‌ها، دوره مالی جدید تعریف نمایید.</span>
-    <button type="button" appAction="create" display="label" tone="indigo" label="تعریف اولین دوره" (click)="openCreateFiscalPeriod()"></button>
+    <span *ngIf="canWriteFiscal" class="block text-slate-500 text-xs mb-3">جهت ثبت سال‌های مالی و بستن حساب‌ها، دوره مالی جدید تعریف نمایید.</span>
+    <button *ngIf="canWriteFiscal" type="button" appAction="create" display="label" tone="indigo" label="تعریف اولین دوره" (click)="openCreateFiscalPeriod()"></button>
   </div>
 </div>

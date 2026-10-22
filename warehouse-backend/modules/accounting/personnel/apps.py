@@ -28,6 +28,12 @@ class PersonnelConfig(AppConfig):
         _contribute('company_member_sources', section_member_sources)
         # مسیرهای بخش‌های شرکتِ حسابداری خودشان دروازهٔ بخش دارند؛ middleware برای آن‌ها «پیوند» را کافی می‌داند
         _contribute('company_link_api_prefixes', '/api/personnel/compan')
+        _contribute('company_link_api_prefixes', '/api/personnel/user-company-access')
+        # همان مسیرها (و دسترسی کاربران) برای حالت محدود استودیو بدون قلمرو حسابداری باز است؛ هر view بخش را می‌سنجد
+        for _prefix in ('/api/personnel/companies', '/api/personnel/company-documents', '/api/personnel/company-bank-accounts',
+                        '/api/personnel/company-board-members', '/api/personnel/company-fiscal-periods',
+                        '/api/personnel/user-company-access'):
+            _contribute('company_section_api_prefixes', _prefix)
 
 
         # بارگذاری سیگنال‌های خودکار همگام‌سازی شرکت و مدارک
