@@ -495,4 +495,30 @@
   - مسیرهای API: `GET /api/org/company-permission-sections/`، `GET user-company-access/members/?company_id=`، و `user-available?scope=manage` با `is_member`، `membership_sources` و `section_levels`.
 - **پیام جلسهٔ بعد:** «گام ۱۰ طرح Documents/Company_Permissions_And_Followups/implementation_plan.md را اجرا کن (یادداشت تحویل پایان گام ۹ را بخوان).»
 
+### گام ۱۰ — فرانت تب «دسترسی» (۳۰ مهر ۱۴۰۵) — کد و spec انجام شد؛ بازبین‌ها و بازبینی بصری مانده
+
+**انجام شد:**
+- **`company-api.service.ts`:**
+  - `getPermissionSections()` و `getCompanyMembers()` افزوده شد.
+  - ساخت، ویرایش و حذف دسترسی با `SKIP_OFFLINE` فرستاده می‌شود (ت۱۲).
+  - `createUserAccess` حالا `section_levels` می‌گیرد.
+- **`company.model.ts`:** نوع‌های `SectionLevel`، `CompanySectionLevels`، `CompanyPermissionSpec` و `CompanyMember`. فیلدهای `is_member`، `membership_sources` و `section_levels` روی `Company` و `UserCompanyAccess` افزوده شد.
+- **`companies.ts` و `companies.html`:**
+  - انتخاب «قالب مجوزها» جای سطح قدیمی را گرفت. گزینهٔ «بدون مجوز» فقط پیوند می‌سازد.
+  - بلوک «اعضای فضای کاری (خودکار)» با برچسب منبع، فقط برای نمایش.
+  - ستون «مجوز بخش‌ها» خلاصه را نشان می‌دهد، با دکمهٔ «ویرایش مجوزها».
+  - ویرایشگر `sectionLevelsEditor` (جدول دسکتاپ و کارت موبایل) شامل اعمال قالب، یک انتخاب برای هر بخش، بخش حساس قفل برای غیر مدیر کل، و پنجرهٔ تأیید برای اعطای کار حساس.
+- **specها:** `companies*.spec.ts` **۸۸ از ۸۸ سبز**، با ۲ آزمون تازه (قالب در ثبت و PATCH ویرایشگر؛ قفل بخش حساس و اعضای خودکار).
+- **بررسی‌ها:** `tsc` و نگهبان‌های 52 و 56 سبز.
+
+**مانده از گام ۱۰:**
+- **commit نشده است.** تغییرات در درخت کاری‌اند.
+- `ui-reviewer` و `data-loss-reviewer` اجرا نشده‌اند.
+- بازبینی بصری در ۳۶۰ پیکسل و دسکتاپ انجام نشده است.
+- کد مرده: `accessLevelsList`، `getAccessLevelBadgeClass` و `getAccessLevelLabel` در `companies.ts` حالا بی‌استفاده‌اند و در گام ۱۲ حذف شوند.
+
+**توقف:** مصرف هفتگی به ۱۰۰٪ رسید (طبق دستور کاربر).
+
+**پیام جلسهٔ بعد:** «گام ۱۰ طرح Documents/Company_Permissions_And_Followups/implementation_plan.md را تمام کن: تغییرات commit‌نشدهٔ فرانت تب دسترسی را با ui-reviewer و data-loss-reviewer بسنج، بازبینی بصری ۳۶۰ پیکسل را انجام بده و commit کن. سپس گام‌های ۱۱ و ۱۲ را اجرا کن.»
+
 </div>
