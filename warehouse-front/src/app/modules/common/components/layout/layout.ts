@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, computed, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
+import { RouterOutlet, Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { companyDocumentsUrlTree } from '../../../../core/modules/documents-archive-route';
 import { filter, Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -61,8 +61,30 @@ export class Layout implements OnInit, OnDestroy {
   public personaService = inject(AppPersonaService);
   public moduleRegistry = inject(ModuleRegistryService);
   public activeCompanyService = inject(ActiveCompanyService);
+  private shellRoute = inject(ActivatedRoute, { optional: true });
+
+  /**
+   * پوستهٔ «شرکت‌ها» (حالت محدود استودیو، /app/companies): همان هدر برنامه‌ها، ولی منوی کناری فقط
+   * «شرکت‌ها» و بایگانی مجاز را دارد، چون کاربر محدود ماژولی ندارد (تصمیم کاربر، پیگیری گام ۱۲).
+   */
+  get isCompaniesShell(): boolean {
+    return this.shellRoute?.snapshot?.data?.['shell'] === 'companies';
+  }
+
+  /** کاربرِ بی‌ماژول در پوستهٔ شرکت‌ها برنامه و نقشی ندارد؛ سوئیچر برنامه و نقش برایش پنهان است */
+  get showRoleSwitcher(): boolean {
+    return !this.isCompaniesShell || this.personaService.accessibleApps().length > 0;
+  }
+
+  openCompaniesList(): void {
+    this.closeSidebar();
+    this.router.navigate(['/app/companies']);
+  }
 
   get appTitle(): string {
+    if (this.isCompaniesShell) {
+      return 'شرکت‌ها';
+    }
     if (this.personaService.activeApp() === 'operations') {
       return 'مرکز عملیات و پدافند';
     }
@@ -597,6 +619,7 @@ export class Layout implements OnInit, OnDestroy {
 
     const initialTab = parseTabFromUrl(this.router.url);
     this.store.setCurrentTab(initialTab);
+    if (this.isCompaniesShell) this.updateTitle(initialTab);
     this.openRoleMenusForTab(initialTab);
 
     this.router.events.pipe(
@@ -992,6 +1015,7 @@ export class Layout implements OnInit, OnDestroy {
 
   /** آیا ماژولی دارای قابلیت تعویض و مدیریت انبار است؟ (بر پایه اکستنشن layoutNav) */
   get hasWarehouseSwitcher(): boolean {
+    if (this.isCompaniesShell) return false;
     return this.moduleRegistry.getExtensions('layoutNav').some(e => e.extension.showWarehouseSwitcher);
   }
 
@@ -1379,7 +1403,7 @@ export class Layout implements OnInit, OnDestroy {
       'projects-and-sections': 'مدیریت ساختار سازمانی، پروژه‌ها و بخش‌ها',
       health: 'مرکز جامع پایش سلامت و تاب‌آوری سامانه'
     };
-    this.currentTitle = titles[tab] || tab;
+    this.currentTitle = this.isCompaniesShell ? 'شرکت‌های من' : (titles[tab] || tab);
     this.baseTitle = `${this.appTitle} — ${this.currentTitle}`;
     document.title = this.isOffline ? `📴 آفلاین — ${this.baseTitle}` : this.baseTitle;
   }

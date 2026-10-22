@@ -22,6 +22,21 @@
     </div>
 
     <nav class="flex-1 p-3 overflow-y-auto flex flex-col" id="sidebar-nav">
+      <!-- پوستهٔ «شرکت‌ها» (حالت محدود استودیو): منوی کناری فقط شرکت‌ها و بایگانی مجاز -->
+      @if (isCompaniesShell) {
+        <div class="space-y-0.5 shrink-0">
+          <button
+            type="button"
+            (click)="openCompaniesList()"
+            aria-current="page"
+            class="sidebar-link active w-full min-h-[40px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+            title="فهرست شرکت‌های من">
+            <span class="shrink-0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building"></svg></span>
+            <span>شرکت‌ها</span>
+          </button>
+        </div>
+      }
+      @if (!isCompaniesShell) {
       
       <div *ngIf="store.isWarehouseContext()" class="mb-4 pb-4 border-b border-slate-800/60 shrink-0">
         <button (click)="exitWarehouseMode()" class="w-full py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 shadow-sm border border-slate-700 cursor-pointer" title="بازگشت به سطح کلان سیستم">
@@ -38,8 +53,10 @@
         </button>
       </div>
 
+      }
+
       <!-- Dedicated Standalone Company Documents Archive Link (دسترسی مستقل و فارغ از شغل به اسناد شرکت‌های مجاز) -->
-      <div *ngIf="!store.isWarehouseContext() && isCompanyDocumentsArchiveSupported && hasCompanyDocumentsAccess" class="mt-2 pt-2 border-t border-slate-800/70 shrink-0">
+      <div *ngIf="(isCompaniesShell || !store.isWarehouseContext()) && isCompanyDocumentsArchiveSupported && hasCompanyDocumentsAccess" class="mt-2 pt-2 border-t border-slate-800/70 shrink-0">
         <button
           type="button"
           (click)="openCompanyDocuments()"
@@ -55,6 +72,7 @@
         </button>
       </div>
 
+      @if (!isCompaniesShell) {
       <!-- Dedicated Collapsible Org Admin Section (منوی راهبر تشکیلات - ساختار سازمانی) -->
       @if (!store.isWarehouseContext() && orgAdminNavItems().length > 0) {
         <div class="mt-3 pt-3 border-t border-slate-800/60 shrink-0">
@@ -283,6 +301,7 @@
         </button>
       </div>
 
+      }
     </nav>
   </aside>
 
@@ -341,7 +360,9 @@
         </div>
 
         <!-- سوئیچر دولایه ماژول کلان و نقش فعال -->
-        <app-role-switcher class="shrink-0" />
+        @if (showRoleSwitcher) {
+          <app-role-switcher class="shrink-0" />
+        }
 
         <!-- ─── History Navigation Segmented Pill (انتهای سمت چپ) ─── -->
         <div class="hidden sm:flex items-center bg-slate-100/90 hover:bg-slate-200/60 p-0.5 rounded-xl border border-slate-200/90 shadow-sm transition-all shrink-0 select-none" dir="rtl">

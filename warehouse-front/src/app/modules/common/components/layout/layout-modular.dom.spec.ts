@@ -394,6 +394,31 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/sample/dashboard']);
   });
 
+  describe('پوستهٔ «شرکت‌ها» (حالت محدود استودیو زیر همان هدر برنامه‌ها)', () => {
+    const enterCompaniesShell = () => {
+      (component as any).shellRoute = { snapshot: { data: { shell: 'companies' } } };
+    };
+
+    it('عنوان «شرکت‌ها»، بی سوییچر انبار، و سوییچر برنامه و نقش فقط برای کاربر دارای برنامه', () => {
+      expect(component.isCompaniesShell).toBe(false);
+      expect(component.showRoleSwitcher).toBe(true);
+      enterCompaniesShell();
+      expect(component.isCompaniesShell).toBe(true);
+      expect(component.appTitle).toBe('شرکت‌ها');
+      expect(component.hasWarehouseSwitcher).toBe(false);
+      mockPersona.accessibleApps = () => [];
+      expect(component.showRoleSwitcher).toBe(false);
+      mockPersona.accessibleApps = () => ['warehouse'];
+      expect(component.showRoleSwitcher).toBe(true);
+    });
+
+    it('پیوند «شرکت‌ها» به فهرست حالت محدود می‌رود', () => {
+      enterCompaniesShell();
+      component.openCompaniesList();
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/companies']);
+    });
+  });
+
   describe('پیوند بایگانی اسناد شرکت‌ها (company-documents) بر اساس نقطه توسعه hasCompanyDocumentsArchive', () => {
     it('در نسخه کامل برای سوپریوزر پیوند بایگانی اسناد شرکت‌ها (company-documents) فعال و قابل مشاهده است', () => {
       mockAuth.user = () => ({ id: 1, username: 'admin', is_superuser: true });

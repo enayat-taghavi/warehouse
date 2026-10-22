@@ -92,18 +92,21 @@ export const routes: Routes = [
   },
 
   // ─── حالت محدود استودیوی شرکت‌ها برای دارندگان مجوز بخش‌های شرکت (ق۳، ت۱۰) ───
+  // زیر همان پوستهٔ برنامه‌ها (هدر یکسان)؛ Layout در پوستهٔ «شرکت‌ها» فقط منوی شرکت‌ها را نشان می‌دهد
   {
     path: 'app/companies',
-    component: CompaniesManagementComponent,
+    component: Layout,
     canActivate: [AuthGuard, CompaniesManageGuard],
-    data: { reuse: true, studioMode: 'restricted' }
-  },
-  {
-    path: 'app/companies/:id',
-    component: CompaniesManagementComponent,
-    canActivate: [AuthGuard, CompaniesManageGuard],
-    canDeactivate: [companiesLeaveGuard],
-    data: { reuse: false, studioMode: 'restricted' }
+    data: { shell: 'companies' },
+    children: [
+      { path: '', component: CompaniesManagementComponent, data: { reuse: true, studioMode: 'restricted' } },
+      {
+        path: ':id',
+        component: CompaniesManagementComponent,
+        canDeactivate: [companiesLeaveGuard],
+        data: { reuse: false, studioMode: 'restricted' }
+      }
+    ]
   },
 
   // ─── هدایت هوشمند ریشه ماژولار (/app) — فاز ۶ (تسک ۵۳) ───────────────────
