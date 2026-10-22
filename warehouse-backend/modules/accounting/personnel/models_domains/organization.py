@@ -25,7 +25,7 @@ class CompanyDocument(models.Model):
         ('other', 'سایر مدارک و اسناد رسمی')
     ]
 
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='documents', verbose_name="شرکت متبوع")
+    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='documents', verbose_name="شرکت متبوع")
     document_type = models.CharField(max_length=50, choices=DOCUMENT_TYPES, default='other', verbose_name="نوع مدرک")
     title = models.CharField(max_length=200, verbose_name="عنوان مدرک")
     file = models.FileField(upload_to='company_documents/', verbose_name="فایل ضمیمه")
@@ -81,7 +81,7 @@ class CompanyBankAccount(models.Model):
     """
     company = models.ForeignKey(
         Company,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='bank_accounts',
         verbose_name="شرکت متبوع"
     )
@@ -98,6 +98,10 @@ class CompanyBankAccount(models.Model):
         verbose_name = "حساب بانکی شرکت"
         verbose_name_plural = "حساب‌های بانکی شرکت‌ها"
         ordering = ['-is_primary', '-created_at']
+        constraints = [
+            # یکتایی شبا در هر شرکت (F2)؛ شبا در save() یکسان‌سازی می‌شود
+            models.UniqueConstraint(fields=['company', 'sheba_number'], name='unique_company_bank_sheba'),
+        ]
 
     def __str__(self):
         return f"{self.company.name} - {self.bank_name} ({self.sheba_number})"
@@ -163,7 +167,7 @@ class CompanyBoardMember(models.Model):
 
     company = models.ForeignKey(
         Company,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='board_members',
         verbose_name="شرکت متبوع"
     )
@@ -206,7 +210,7 @@ class CompanyFiscalPeriod(models.Model):
     )
     company = models.ForeignKey(
         Company,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='fiscal_periods',
         verbose_name="شرکت"
     )

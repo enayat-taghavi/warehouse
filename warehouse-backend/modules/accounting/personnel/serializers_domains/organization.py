@@ -174,6 +174,7 @@ class CompanyBankAccountSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
+        validators = []
 
     def validate_sheba_number(self, value):
         if not value:
@@ -183,6 +184,18 @@ class CompanyBankAccountSerializer(serializers.ModelSerializer):
         if not is_valid:
             raise serializers.ValidationError(msg or "شماره شبا نامعتبر است.")
         return clean
+
+    def validate(self, attrs):
+        # یکتایی شبا در هر شرکت (F2) با پیام فارسی، پیش از قید پایگاه داده
+        company = attrs.get('company') or getattr(self.instance, 'company', None)
+        sheba = attrs.get('sheba_number') or getattr(self.instance, 'sheba_number', None)
+        if company and sheba:
+            dup = CompanyBankAccount.objects.filter(company=company, sheba_number__iexact=sheba.strip())
+            if self.instance is not None:
+                dup = dup.exclude(pk=self.instance.pk)
+            if dup.exists():
+                raise serializers.ValidationError({'sheba_number': "این شماره شبا قبلاً برای همین شرکت ثبت شده است."})
+        return attrs
 
 class FinancialProjectSerializer(serializers.ModelSerializer):
     company = serializers.PrimaryKeyRelatedField(queryset=Company.objects.all(), required=False, allow_null=True)

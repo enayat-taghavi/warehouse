@@ -14,7 +14,7 @@ class PayrollYearlySettings(models.Model):
     version_title = models.CharField(max_length=150, default="احکام مصوب فروردین", verbose_name="عنوان نسخه احکام")
     company = models.ForeignKey(
         Company,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name='payroll_yearly_settings',

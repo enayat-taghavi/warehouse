@@ -20,7 +20,7 @@ class ItemFieldDefinition(SyncModelMixin):
 
     company = models.ForeignKey(
         'companies.Company',
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name='item_field_definitions',

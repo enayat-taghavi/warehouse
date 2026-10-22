@@ -689,3 +689,31 @@ class CompanyDocumentTests(TestCase):
 
 
 
+
+
+class CompanyProtectAndShebaTests(TestCase):
+    """F1: company business data is PROTECT; F2: one Sheba per company."""
+
+    def setUp(self):
+        from personnel.models import Company
+        self.client = APIClient()
+        self.admin = get_user_model().objects.create_superuser(username='prot_admin', password='x-pass-123', phone_number='09170000091')
+        self.company = Company.objects.create(code='PROT-C1', name='PROT')
+        self.client.force_authenticate(self.admin)
+
+    def test_company_with_bank_account_cannot_be_deleted(self):
+        from personnel.models import Company, CompanyBankAccount
+        CompanyBankAccount.objects.create(company=self.company, bank_name='B', account_number='1', sheba_number='IR820540102680020817909002')
+        impact = self.client.get(f'/api/org/companies/{self.company.id}/delete_impact/').json()
+        self.assertTrue(impact['blocked'])
+        self.client.delete(f'/api/org/companies/{self.company.id}/')
+        self.assertTrue(Company.objects.filter(id=self.company.id).exists())
+        self.assertEqual(CompanyBankAccount.objects.filter(company=self.company).count(), 1)
+
+    def test_duplicate_sheba_in_same_company_is_rejected(self):
+        url = '/api/personnel/company-bank-accounts/'
+        body = {'company': self.company.id, 'bank_name': 'B', 'account_number': '1', 'sheba_number': 'IR820540102680020817909002'}
+        self.assertEqual(self.client.post(url, body, format='json').status_code, 201)
+        r = self.client.post(url, {**body, 'account_number': '2'}, format='json')
+        self.assertEqual(r.status_code, 400, r.content)
+        self.assertIn('sheba_number', r.json())
