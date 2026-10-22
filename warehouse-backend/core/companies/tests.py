@@ -122,10 +122,15 @@ class CompanyDeleteImpactTests(TestCase):
         self.assertEqual(UserCompanyAccess.objects.filter(company=self.c1).count(), 2)
         self.assertTrue(Company.objects.filter(id=self.c1.id).exists())
 
-    def test_staff_in_scope_sees_impact(self):
+    def test_staff_in_scope_cannot_create_delete_or_see_impact(self):
+        # ساخت، حذف و اثر حذف شرکت فقط برای superuser است (F6)
         self.client.force_authenticate(self.staff)
-        r = self.client.get(self.url(self.c1))
-        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(self.client.get(self.url(self.c1)).status_code, 403)
+        self.assertEqual(self.client.delete(f'/api/org/companies/{self.c1.id}/').status_code, 403)
+        self.assertTrue(Company.objects.filter(id=self.c1.id).exists())
+        r = self.client.post('/api/org/companies/', {'code': 'DEL-C3', 'name': 'شرکت تازه'}, format='json')
+        self.assertEqual(r.status_code, 403)
+        self.assertFalse(Company.objects.filter(code='DEL-C3').exists())
 
     def test_company_outside_scope_is_404(self):
         self.client.force_authenticate(self.staff)

@@ -67,9 +67,13 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             )
         return qs.order_by('code')
 
+    def create(self, request, *args, **kwargs):
+        # پیش از اعتبارسنجی، تا خطای یکتایی کد یا شناسهٔ ملی وجود شرکت دیگر را لو ندهد
+        if not request.user.is_superuser:
+            raise PermissionDenied("تنها مدیر کل سامانه مجاز به ایجاد شرکت جدید است.")
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
-        if not (self.request.user.is_superuser or self.request.user.is_staff):
-            raise PermissionDenied("تنها مدیران ارشد مجاز به ایجاد شرکت جدید هستند.")
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id') or self.request.data.get('client_tab_id')
         broadcast_org_structure_updated('company', 'create', instance.id, instance.name, None, tab_id, self.request.user.id)
@@ -82,8 +86,8 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         broadcast_org_structure_updated('company', 'update', instance.id, instance.name, None, tab_id, self.request.user.id)
 
     def _ensure_can_delete(self, user):
-        if not (user.is_superuser or user.is_staff):
-            raise PermissionDenied("تنها مدیران ارشد مجاز به حذف شرکت هستند.")
+        if not user.is_superuser:
+            raise PermissionDenied("تنها مدیر کل سامانه مجاز به حذف شرکت است.")
 
     def check_delete_impact_permission(self, request, instance):
         # اثر حذف (شمار رکوردهای وابسته) فقط برای کسی است که اجازهٔ حذف دارد؛
