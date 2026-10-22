@@ -76,6 +76,10 @@ class Warehouse(models.Model):
         else:
             super().save(*args, **kwargs)
 
+    class Meta:
+        verbose_name = "انبار"
+        verbose_name_plural = "انبارها"
+
     def __str__(self):
         return f"{self.code} - {self.name}"
 
