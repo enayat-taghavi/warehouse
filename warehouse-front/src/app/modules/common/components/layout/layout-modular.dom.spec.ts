@@ -399,17 +399,24 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
       (component as any).shellRoute = { snapshot: { data: { shell: 'companies' } } };
     };
 
-    it('عنوان «شرکت‌ها»، بی سوییچر انبار، و سوییچر برنامه و نقش فقط برای کاربر دارای برنامه', () => {
+    it('کاربر بی‌برنامه فقط منوی شرکت‌ها؛ کاربر دارای برنامه منوی برنامهٔ خودش را نگه می‌دارد', () => {
       expect(component.isCompaniesShell).toBe(false);
       expect(component.showRoleSwitcher).toBe(true);
       enterCompaniesShell();
       expect(component.isCompaniesShell).toBe(true);
+      // کاربر بی‌برنامه: فقط منوی شرکت‌ها
+      mockPersona.accessibleApps = () => [];
+      expect(component.isCompaniesOnlyShell).toBe(true);
       expect(component.appTitle).toBe('شرکت‌ها');
       expect(component.hasWarehouseSwitcher).toBe(false);
-      mockPersona.accessibleApps = () => [];
       expect(component.showRoleSwitcher).toBe(false);
+      // کاربر دارای برنامه: منوی برنامهٔ خودش می‌ماند
       mockPersona.accessibleApps = () => ['warehouse'];
+      expect(component.isCompaniesOnlyShell).toBe(false);
+      expect(component.appTitle).not.toBe('شرکت‌ها');
+      expect(component.hasWarehouseSwitcher).toBe(true);
       expect(component.showRoleSwitcher).toBe(true);
+      expect(component.primaryNavItems().length).toBeGreaterThan(0);
     });
 
     it('پیوند «شرکت‌ها» به فهرست حالت محدود می‌رود', () => {

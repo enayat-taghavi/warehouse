@@ -63,17 +63,22 @@ export class Layout implements OnInit, OnDestroy {
   public activeCompanyService = inject(ActiveCompanyService);
   private shellRoute = inject(ActivatedRoute, { optional: true });
 
-  /**
-   * پوستهٔ «شرکت‌ها» (حالت محدود استودیو، /app/companies): همان هدر برنامه‌ها، ولی منوی کناری فقط
-   * «شرکت‌ها» و بایگانی مجاز را دارد، چون کاربر محدود ماژولی ندارد (تصمیم کاربر، پیگیری گام ۱۲).
-   */
+  /** پوستهٔ «شرکت‌ها» (حالت محدود استودیو، /app/companies) با همان هدر برنامه‌ها */
   get isCompaniesShell(): boolean {
     return this.shellRoute?.snapshot?.data?.['shell'] === 'companies';
   }
 
-  /** کاربرِ بی‌ماژول در پوستهٔ شرکت‌ها برنامه و نقشی ندارد؛ سوئیچر برنامه و نقش برایش پنهان است */
+  /**
+   * کاربرِ بی‌برنامه در پوستهٔ شرکت‌ها: منوی کناری فقط «شرکت‌ها» و بایگانی مجاز. کاربر دارای برنامه
+   * منوی برنامهٔ خودش را نگه می‌دارد و «شرکت‌ها» بالای آن می‌آید (تصمیم کاربر).
+   */
+  get isCompaniesOnlyShell(): boolean {
+    return this.isCompaniesShell && this.personaService.accessibleApps().length === 0;
+  }
+
+  /** کاربرِ بی‌برنامه برنامه و نقشی ندارد؛ سوئیچر برنامه و نقش برایش پنهان است */
   get showRoleSwitcher(): boolean {
-    return !this.isCompaniesShell || this.personaService.accessibleApps().length > 0;
+    return !this.isCompaniesOnlyShell;
   }
 
   openCompaniesList(): void {
@@ -82,7 +87,7 @@ export class Layout implements OnInit, OnDestroy {
   }
 
   get appTitle(): string {
-    if (this.isCompaniesShell) {
+    if (this.isCompaniesOnlyShell) {
       return 'شرکت‌ها';
     }
     if (this.personaService.activeApp() === 'operations') {
@@ -1015,7 +1020,7 @@ export class Layout implements OnInit, OnDestroy {
 
   /** آیا ماژولی دارای قابلیت تعویض و مدیریت انبار است؟ (بر پایه اکستنشن layoutNav) */
   get hasWarehouseSwitcher(): boolean {
-    if (this.isCompaniesShell) return false;
+    if (this.isCompaniesOnlyShell) return false;
     return this.moduleRegistry.getExtensions('layoutNav').some(e => e.extension.showWarehouseSwitcher);
   }
 
