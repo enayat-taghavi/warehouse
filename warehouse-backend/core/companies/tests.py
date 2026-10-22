@@ -213,3 +213,55 @@ class CompanyDeleteImpactTests(TestCase):
             r = self.client.delete(f'/api/org/companies/{self.c2.id}/')
         self.assertEqual(r.status_code, 204)
         self.assertFalse(Company.objects.filter(id=self.c2.id).exists())
+
+
+class CompanyExcelImportTests(TestCase):
+    """F4: two-row header import, create-only, superuser-only."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = User.objects.create_superuser(username='imp_admin', password='x-pass-123', phone_number='09170000081')
+        self.staff = User.objects.create_user(username='imp_staff', password='x-pass-123', phone_number='09170000082', is_staff=True)
+        Company.objects.create(code='IMP-OLD', name='old')
+
+    def _file(self, rows):
+        import io, openpyxl
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.append(['fa-code', 'fa-name', 'fa-national'])
+        ws.append(['code', 'name', 'national_id'])
+        for r in rows:
+            ws.append(r)
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        buf.name = 'c.xlsx'
+        return buf
+
+    def test_non_superuser_forbidden(self):
+        self.client.force_authenticate(self.staff)
+        r = self.client.post('/api/org/companies/import-excel/', {'file': self._file([['IMP-1', 'a', '']])}, format='multipart')
+        self.assertEqual(r.status_code, 403)
+        self.assertFalse(Company.objects.filter(code='IMP-1').exists())
+
+    def test_dry_run_then_import_reports_duplicates(self):
+        self.client.force_authenticate(self.admin)
+        rows = [['IMP-1', 'a', ''], ['IMP-OLD', 'dup', ''], ['IMP-2', 'b', '']]
+        r = self.client.post('/api/org/companies/import-excel/', {'file': self._file(rows), 'dry_run': 'true'}, format='multipart')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()['summary']['created'], 2)
+        self.assertFalse(Company.objects.filter(code='IMP-1').exists())
+        r = self.client.post('/api/org/companies/import-excel/', {'file': self._file(rows)}, format='multipart')
+        body = r.json()
+        self.assertEqual(body['summary']['created'], 2)
+        self.assertEqual(body['summary']['skipped'], 1)
+        self.assertEqual(body['errors'][0]['row'], 4)
+        self.assertTrue(Company.objects.filter(code__in=['IMP-1', 'IMP-2']).count() == 2)
+        self.assertEqual(Company.objects.get(code='IMP-OLD').name, 'old')
+
+    def test_template_has_header_only(self):
+        import io, openpyxl
+        self.client.force_authenticate(self.admin)
+        r = self.client.get('/api/org/companies/export-excel/?template=1')
+        ws = openpyxl.load_workbook(io.BytesIO(r.content)).active
+        self.assertEqual(ws.max_row, 2)

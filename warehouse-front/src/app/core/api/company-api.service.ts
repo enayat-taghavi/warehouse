@@ -3,6 +3,7 @@ import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
 import { environment } from '../../../environments/environment';
+import type { ImportResult } from '../http/accounts-http.service';
 import {
   Company,
   CompanyDocument,
@@ -161,6 +162,21 @@ export class CompanyApiService {
 
   exportExcel(): Observable<Blob> {
     return this.http.get(`${this.endpoint}/export-excel/`, { responseType: 'blob' });
+  }
+
+  /** الگوی خالی ورود از اکسل (همان سربرگ دوسطری خروجی) */
+  downloadImportTemplate(): Observable<Blob> {
+    return this.http.get(`${this.endpoint}/export-excel/`, { params: { template: '1' }, responseType: 'blob' });
+  }
+
+  /** ورود شرکت‌ها از اکسل (فقط superuser؛ فقط ساخت). فایل است و هرگز در صف آفلاین نمی‌رود. */
+  importExcel(file: File, dryRun = false): Observable<ImportResult> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('dry_run', String(dryRun));
+    return this.http.post<ImportResult>(`${this.endpoint}/import-excel/`, form, {
+      context: new HttpContext().set(SKIP_OFFLINE, true)
+    });
   }
 
   uploadLogo(id: number, file: File): Observable<Company> {

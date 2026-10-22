@@ -30,6 +30,9 @@
     <!-- چپ: خروجی اکسل، به‌روزرسانی و ثبت شرکت -->
     <ng-container cc-actions>
       <button type="button" appAction="export-excel" label="خروجی اکسل شرکت‌ها" (click)="exportExcel()"></button>
+      @if (canImportExcel) {
+        <button type="button" appAction="import-excel" label="ورود شرکت‌ها از اکسل" (click)="isExcelModalOpen = true"></button>
+      }
       <button type="button" appAction="refresh" label="به‌روزرسانی داده‌ها" [busy]="isLoading" (click)="loadCompanies()"></button>
       <div class="h-6 w-px bg-slate-200 mx-1" aria-hidden="true"></div>
       <button type="button" appAction="create" label="ثبت شرکت جدید" (click)="openCreateModal()"></button>
@@ -1356,6 +1359,17 @@
 
   <!-- ۶. لایت‌باکس پیش‌نمایش درجای مدرک (مشترک: shared/components/document-preview) -->
   <app-document-preview></app-document-preview>
+
+  <!-- ۷. ورود شرکت‌ها از اکسل (F4؛ فقط superuser) -->
+  @if (isExcelModalOpen) {
+    <app-excel-import-modal
+      title="ورود شرکت‌ها از اکسل"
+      [importFn]="excelImportFn"
+      [templateDownloadFn]="excelTemplateFn"
+      (closed)="closeExcelModal()"
+      (imported)="onExcelImported($event)">
+    </app-excel-import-modal>
+  }
 
 </div>
 

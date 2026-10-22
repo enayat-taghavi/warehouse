@@ -39,12 +39,13 @@ import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-ba
 import { ServerUrlPipe } from '../../../../../shared/pipes/server-url.pipe';
 import { PersianDatePipe } from '../../../../../shared/pipes/persian-date.pipe';
 import { CommandCenterComponent } from '../../../../../shared/components/command-center/command-center.component';
+import { ExcelImportModal } from '../../../../../shared/components/excel-import-modal/excel-import-modal';
 import { PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons/semantic-icons';
 
 @Component({
   selector: 'app-companies-management',
   standalone: true,
-  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, PersianDatePipe, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent, CommandCenterComponent, SmartDeleteModalComponent],
+  imports: [CommonModule, NgOptimizedImage, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, SvgIconDirective, ActionButtonComponent, TabBarComponent, ServerUrlPipe, PersianDatePipe, LoadingSkeletonComponent, OfflinePendingBadgeComponent, DocumentPreviewComponent, CommandCenterComponent, SmartDeleteModalComponent, ExcelImportModal],
   providers: [CompanyStudioContextService],
   templateUrl: './companies.html',
   styleUrls: ['./companies.css']
@@ -1438,6 +1439,34 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         this.toast.error('خطا در دریافت خروجی اکسل شرکت‌ها');
       }
     });
+  }
+
+  // ورود از اکسل (F4): فقط superuser و فقط ساخت شرکت تازه
+  isExcelModalOpen = false;
+
+  get canImportExcel(): boolean {
+    return this.activeCompanyService.isSuperuser;
+  }
+
+  excelImportFn = (file: File, _updateExisting: boolean, dryRun?: boolean) => this.api.importExcel(file, !!dryRun);
+
+  excelTemplateFn = () => {
+    this.api.downloadImportTemplate().subscribe({
+      next: (blob) => void saveBlob(blob, 'companies_import_template.xlsx'),
+      error: () => this.toast.error('خطا در دریافت الگوی اکسل شرکت‌ها')
+    });
+  };
+
+  onExcelImported(result: { success?: boolean; summary?: { created?: number } }): void {
+    if (result?.summary?.created) {
+      this.loadCompanies();
+      this.activeCompanyService.loadAvailableCompanies();
+    }
+  }
+
+  closeExcelModal(): void {
+    this.isExcelModalOpen = false;
+    this.cdr.markForCheck();
   }
 
   /** شمارنده و ردیف با رقم فارسی (ت۷) */

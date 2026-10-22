@@ -155,6 +155,69 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             'count': len(data)
         })
 
+    IMPORT_FIELDS = (
+        'code', 'name', 'company_type', 'national_id', 'economic_code', 'registration_number',
+        'phone', 'ceo_name', 'board_chairman', 'workshop_code', 'tax_memory_id', 'address', 'is_active',
+    )
+
+    @action(detail=False, methods=['post'], url_path='import-excel',
+            parser_classes=[parsers.MultiPartParser, parsers.FormParser])
+    def import_excel(self, request):
+        """
+        ورود شرکت‌ها از اکسل دوسطری (ردیف ۱ عنوان فارسی، ردیف ۲ کلید فیلد؛ هم‌شکل export-excel).
+        فقط ساخت شرکت تازه و فقط برای superuser (ت۵). کد تکراری رد و گزارش می‌شود؛ ردیف‌های سالم ثبت می‌شوند.
+        """
+        import openpyxl
+        from django.db import transaction
+
+        if not request.user.is_superuser:
+            raise PermissionDenied("تنها مدیر کل سامانه مجاز به ورود شرکت از اکسل است.")
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({'error': 'فایلی ارسال نشده است'}, status=400)
+        dry_run = str(request.data.get('dry_run')).lower() == 'true'
+        try:
+            ws = openpyxl.load_workbook(file_obj, read_only=True, data_only=True).active
+            rows = list(ws.iter_rows(values_only=True))
+        except Exception:
+            return Response({'error': 'فایل اکسل خوانا نیست.'}, status=400)
+        if len(rows) < 2:
+            return Response({'error': 'سربرگ دوسطری (عنوان فارسی و کلید فیلد) در فایل نیست.'}, status=400)
+        keys = [str(k).strip() if k is not None else '' for k in rows[1]]
+        if 'code' not in keys or 'name' not in keys:
+            return Response({'error': 'ستون‌های code و name در ردیف دوم الزامی‌اند.'}, status=400)
+
+        errors, preview, created, skipped = [], [], 0, 0
+        data_rows = [(i + 3, r) for i, r in enumerate(rows[2:]) if any(v not in (None, '') for v in r)]
+        for row_num, values in data_rows:
+            payload = {}
+            for key, value in zip(keys, values):
+                if key in self.IMPORT_FIELDS and value not in (None, ''):
+                    payload[key] = normalize_digits(str(value).strip()) if key != 'is_active' else value
+            if 'is_active' in payload:
+                payload['is_active'] = str(payload['is_active']).strip().lower() not in ('0', 'false', 'غیرفعال', 'no')
+            serializer = self.get_serializer(data=payload)
+            if not serializer.is_valid():
+                skipped += 1
+                for field, msgs in serializer.errors.items():
+                    errors.append({'row': row_num, 'field': field, 'message': '؛ '.join(str(m) for m in msgs)})
+                continue
+            preview.append({'row': row_num, 'name': payload.get('name', ''), 'username': payload.get('code', '')})
+            if not dry_run:
+                with transaction.atomic():
+                    instance = serializer.save()
+                broadcast_org_structure_updated('company', 'create', instance.id, instance.name, None,
+                                                request.headers.get('X-Client-Tab-Id'), request.user.id)
+            created += 1
+        return Response({
+            'success': not errors,
+            'dry_run': dry_run,
+            'summary': {'total_rows': len(data_rows), 'created': created, 'updated': 0, 'skipped': skipped,
+                        'valid_count': created, 'error_count': len(errors)},
+            'preview_rows': preview,
+            'errors': errors,
+        })
+
     @action(detail=False, methods=['get'], url_path='export-excel')
     def export_excel(self, request):
         """
@@ -164,6 +227,9 @@ class CompanyViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
         qs = self.get_queryset()
+        if request.query_params.get('template') in ('1', 'true'):
+            # الگوی خالی ورود از اکسل: همان سربرگ دوسطری بدون ردیف داده
+            qs = qs.none()
 
         wb = openpyxl.Workbook()
         ws = wb.active
