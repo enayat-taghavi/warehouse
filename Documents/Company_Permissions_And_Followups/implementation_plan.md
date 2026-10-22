@@ -625,6 +625,13 @@
   - نصب «فقط انبار» و «فقط حسابداری» دوباره آزموده شوند.
   - نگهبان‌های 29 و 57، `module_coupling_scan`، و نگهبان 56 با `--base` آغاز گام ۶.
   - هر سه بازبین.
-- **پیام جلسهٔ بعد:** «گام ۱۲ طرح Documents/Company_Permissions_And_Followups/implementation_plan.md را اجرا کن (یادداشت تحویل پایان گام ۱۱ را بخوان). حذف ستون access_level: [بله/خیر]».
+- **دامنهٔ تازهٔ گام ۱۲ (تصمیم کاربر، ۳۰ مهر ۱۴۰۵؛ ق۷):**
+  - **ادغام بایگانی مدارک در استودیو:** بایگانی اسناد شرکت دیگر صفحهٔ جدا ندارد.
+    - `/app/finance/company-documents` و هدایت‌های `company-documents` و `documents` در `app.routes.ts` به `/app/companies/<شرکت>?tab=documents` می‌روند. برای مدیر کل مقصد `/app/operations/companies/...` است.
+    - منو و پیوندهای «بایگانی اسناد شرکت» (`layoutNav.companyDocumentsRoute`، `hasCompanyDocumentsArchive`، `findCompanyDocumentsRoute`، `hasCompanyDocumentsAccess`، `getCompanyDocumentsRedirect`، `app-persona`، `layout`، `auth.guard`) به مقصد تازه اشاره کنند.
+    - کامپوننت `company-documents-archive` و specهایش، اگر دیگر مصرفی نداشتند، حذف شوند.
+    - کار باید ماژولار بماند: مقصد از contribution ماژول بیاید و هسته نام مسیر ماژول را نبرد. نگهبان‌های 29 و 57 و `core_literal_allowlist.json` (حذف ورودی‌های کهنه) بررسی شوند.
+  - **بازبینی کامل:** هر تغییر دیگری که برای این ادغام لازم است انجام شود. کدهای اضافه هم حذف شوند (کد مرده، سازگاری `docs_*`، `scope=documents` اگر بی‌مصرف شد).
+- **پیام جلسهٔ بعد:** «گام ۱۲ طرح Documents/Company_Permissions_And_Followups/implementation_plan.md را اجرا کن (یادداشت تحویل پایان گام ۱۱ و دامنهٔ تازهٔ گام ۱۲ را بخوان). حذف ستون access_level: [بله/خیر]».
 
 </div>
