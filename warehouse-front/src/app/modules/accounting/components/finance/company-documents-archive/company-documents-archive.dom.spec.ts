@@ -381,33 +381,18 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
       const previewButtons = Array.from(compiled.querySelectorAll('button')).filter(b => b.textContent?.includes('مشاهده') || b.textContent?.includes('پیش‌نمایش') || b.getAttribute('appaction') === 'view');
       expect(previewButtons.length).toBeGreaterThan(0);
 
-      // کلیک روی پیش‌نمایش سند اول (PDF)
+      // پیش‌نمایش از لایت‌باکس مشترک (F5)
+      expect(component.docPreview).toBeTruthy();
+      expect(compiled.querySelector('app-document-preview')).not.toBeNull();
+      const openSpy = vi.spyOn(component.docPreview!, 'open');
       previewButtons[0].click();
       fixture.detectChanges();
+      expect(openSpy).toHaveBeenCalledTimes(1);
 
-      expect(component.previewModal.isOpen).toBe(true);
-      expect(component.previewModal.isPdf).toBe(true);
-
-      // بررسی رندر شدن iframe در DOM
-      const iframe = compiled.querySelector('iframe');
-      expect(iframe).not.toBeNull();
-
-      // بررسی لینک باز کردن در تب مجزا
-      const externalLink = Array.from(compiled.querySelectorAll('a')).find(a => a.textContent?.includes('باز کردن در تب مجزا'));
-      expect(externalLink).not.toBeNull();
-
-      // بستن پیش‌نمایش با دکمه ✕
-      const closePreviewBtn = Array.from(compiled.querySelectorAll('.fixed.inset-0 button')).find(b => b.textContent?.trim() === '✕' || b.getAttribute('appaction') === 'close' || (b as HTMLElement).title === 'بستن') as HTMLButtonElement;
-      expect(closePreviewBtn).not.toBeNull();
-      closePreviewBtn.click();
-      fixture.detectChanges();
-      expect(component.previewModal.isOpen).toBe(false);
-
-      // ۲. تست پیش‌نمایش سند تصویری (Image Preview)
       const imageDoc: CompanyDocument = {
         id: 99,
         company: 1,
-        title: 'تصویر کارت بازرگانی',
+        title: 'card.png',
         document_type: 'commercial_card',
         file: '/media/docs/card.png',
         file_size: 500000,
@@ -417,19 +402,8 @@ describe('CompanyDocumentsArchiveComponent DOM Unit Test (Type 1 Vitest + JSDOM)
         updated_at: '2026-09-24T10:00:00Z'
       };
       component.openPreview(imageDoc);
-      fixture.detectChanges();
-
-      expect(component.previewModal.isOpen).toBe(true);
-      expect(component.previewModal.isPdf).toBe(false);
-      expect(component.previewModal.isImage).toBe(true);
-
-      // بررسی رندر شدن تگ img در DOM
-      const img = compiled.querySelector('.fixed.inset-0 img[alt="تصویر کارت بازرگانی"]');
-      expect(img).not.toBeNull();
-
-      component.closePreview();
-      fixture.detectChanges();
-      expect(component.previewModal.isOpen).toBe(false);
+      expect(openSpy).toHaveBeenLastCalledWith({ title: 'card.png', url: '/media/docs/card.png' });
+      openSpy.mockRestore();
 
       // ۳. تست دکمه «دانلود امن سند» در جدول
       const downloadButtons = Array.from(compiled.querySelectorAll('button')).filter(b => b.textContent?.includes('دانلود') || b.getAttribute('appaction') === 'download' || b.title === 'دانلود');

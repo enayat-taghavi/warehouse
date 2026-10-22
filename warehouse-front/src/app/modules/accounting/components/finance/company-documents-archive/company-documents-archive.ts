@@ -1,8 +1,7 @@
-import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subject, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, takeUntil, catchError } from 'rxjs/operators';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
@@ -19,11 +18,12 @@ import { PLATFORM_ENTITY_ICONS } from '../../../../../shared/icons/semantic-icon
 import { saveBlob } from '../../../../../core/platform/file-output';
 import { openExternal } from '../../../../../core/platform/external-link';
 import { ExternalLinkDirective } from '../../../../../shared/directives/external-link.directive';
+import { DocumentPreviewComponent } from '../../../../../shared/components/document-preview/document-preview.component';
 
 @Component({
   selector: 'app-company-documents-archive',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, TabBarComponent, ActionButtonComponent, ServerUrlPipe, ExternalLinkDirective],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgPersianDatepickerModule, TabBarComponent, ActionButtonComponent, ServerUrlPipe, ExternalLinkDirective, DocumentPreviewComponent],
   templateUrl: './company-documents-archive.html',
   styleUrls: ['./company-documents-archive.css']
 })
@@ -34,7 +34,6 @@ export class CompanyDocumentsArchiveComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private toast = inject(ToastService);
   private cdr = inject(ChangeDetectorRef);
-  private sanitizer = inject(DomSanitizer);
   private destroy$ = new Subject<void>();
 
   companies: Company[] = [];
@@ -93,24 +92,7 @@ export class CompanyDocumentsArchiveComponent implements OnInit, OnDestroy {
     data: this.getEmptyDocData()
   };
 
-  // پیش‌نمایش درجا
-  isLoadingPreview = false;
-  previewBlobUrl: string | null = null;
-  previewModal: {
-    isOpen: boolean;
-    title: string;
-    fileUrl: string;
-    safeFileUrl: SafeResourceUrl | null;
-    isPdf: boolean;
-    isImage: boolean;
-  } = {
-    isOpen: false,
-    title: '',
-    fileUrl: '',
-    safeFileUrl: null,
-    isPdf: false,
-    isImage: false
-  };
+  @ViewChild(DocumentPreviewComponent, { static: true }) docPreview?: DocumentPreviewComponent;
 
   ngOnInit(): void {
     this.isSuperuser = !!this.authService.user()?.is_superuser;
@@ -129,10 +111,6 @@ export class CompanyDocumentsArchiveComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.previewBlobUrl) {
-      URL.revokeObjectURL(this.previewBlobUrl);
-      this.previewBlobUrl = null;
-    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -414,51 +392,8 @@ export class CompanyDocumentsArchiveComponent implements OnInit, OnDestroy {
       this.toast.warning('فایل مدرک در دسترس نیست.');
       return;
     }
-
-    if (this.previewBlobUrl) {
-      URL.revokeObjectURL(this.previewBlobUrl);
-      this.previewBlobUrl = null;
-    }
-
-    const lower = (doc.file || doc.file_url || '').toLowerCase();
-    const isPdf = lower.includes('.pdf') || Boolean(doc.title && doc.title.toLowerCase().includes('.pdf'));
-    const isImage = /\.(jpe?g|png|webp|svg|gif|bmp)(\?.*)?$/i.test(url) || Boolean(doc.title && /\.(jpe?g|png|webp|svg|gif|bmp)$/i.test(doc.title));
-
-    let cleanUrl = url;
-    const mediaIdx = cleanUrl.indexOf('/media/');
-    if (mediaIdx !== -1 && (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://'))) {
-      cleanUrl = cleanUrl.substring(mediaIdx);
-    } else if (cleanUrl.startsWith('http://127.0.0.1:8000') || cleanUrl.startsWith('http://localhost:8000')) {
-      cleanUrl = cleanUrl.replace(/^https?:\/\/(127\.0\.0\.1|localhost):8000/, '');
-    }
-
-    this.previewModal = {
-      isOpen: true,
-      title: doc.title,
-      fileUrl: cleanUrl,
-      safeFileUrl: cleanUrl ? this.sanitizer.bypassSecurityTrustResourceUrl(cleanUrl) : null,
-      isPdf,
-      isImage
-    };
-    this.isLoadingPreview = false;
-    this.cdr.markForCheck();
-  }
-
-  closePreview(): void {
-    if (this.previewBlobUrl) {
-      URL.revokeObjectURL(this.previewBlobUrl);
-      this.previewBlobUrl = null;
-    }
-    this.isLoadingPreview = false;
-    this.previewModal = {
-      isOpen: false,
-      title: '',
-      fileUrl: '',
-      safeFileUrl: null,
-      isPdf: false,
-      isImage: false
-    };
-    this.cdr.markForCheck();
+    // لایت‌باکس مشترک (لمسی، دسترس‌پذیر، Esc و برگشت)
+    this.docPreview?.open({ title: doc.title, url });
   }
 
   deleteDocument(doc: CompanyDocument): void {
