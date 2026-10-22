@@ -398,14 +398,16 @@ class UserCompanyAccessViewSet(viewsets.ModelViewSet):
     def members(self, request):
         """اعضای خودکار یک شرکت با منبع عضویت (فقط نمایش؛ ق۲). نیازمند «دسترسی کاربران» خواندن."""
         from django.contrib.auth import get_user_model
-        company_id = request.query_params.get('company_id')
-        if not company_id or not str(company_id).isdigit():
+        try:
+            company_id = int(request.query_params.get('company_id') or '')
+        except ValueError:
             return Response({'error': 'company_id الزامی است.'}, status=400)
         ensure_section(request.user, company_id, 'user_access', 'read')
         sources = {}
         for provider in contributions('company_member_sources'):
-            for uid, labels in provider(int(company_id)).items():
-                sources.setdefault(uid, []).extend(labels)
+            for uid, labels in provider(company_id).items():
+                bucket = sources.setdefault(uid, [])
+                bucket.extend(lb for lb in labels if lb not in bucket)
         users = get_user_model().objects.filter(id__in=sources.keys(), is_active=True).order_by('username')
         return Response([
             {'user_id': u.id, 'username': u.username,
@@ -451,9 +453,18 @@ class UserCompanyAccessViewSet(viewsets.ModelViewSet):
         if 'user' in serializer.validated_data and serializer.validated_data['user'].id != inst.user_id:
             raise PermissionDenied("تغییر کاربرِ ردیف دسترسی ممکن نیست.")
         from .access import _row_levels
+        from .permission_sections import section_map
         self._ensure_can_grant(inst.company_id, inst.user, _row_levels(inst),
                                serializer.validated_data.get('section_levels') or {})
-        instance = serializer.save()
+        extra = {}
+        if 'section_levels' in serializer.validated_data:
+            # کلید بخشِ ماژولِ نصب‌نشده به‌صورت داده می‌ماند و با ویرایش پاک نمی‌شود (§۹)
+            installed = section_map()
+            kept = {k: v for k, v in (inst.section_levels or {}).items() if k not in installed}
+            extra['section_levels'] = {**kept, **serializer.validated_data['section_levels']}
+            # ردیف قدیمی با section_levels تهی به access_level برمی‌گشت؛ پس از نوشتن، فقط سطح‌ها معتبرند
+            extra['access_level'] = 'link'
+        instance = serializer.save(**extra)
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_access', 'update', instance.id, str(instance.user), client_tab_id=tab_id, sender_id=self.request.user.id, company_id=instance.company_id)
 

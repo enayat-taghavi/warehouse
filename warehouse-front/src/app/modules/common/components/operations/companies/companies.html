@@ -1040,7 +1040,11 @@
 
           <div *ngIf="companyModal.data.id" class="space-y-4">
             <!-- فرم افزودن کاربر به شرکت -->
-            <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-3">
+            <div *ngIf="actorLevelsLoading" role="status" aria-busy="true" aria-label="در حال دریافت مجوزهای شما">
+              <app-loading-skeleton type="text" [lines]="2"></app-loading-skeleton>
+            </div>
+            <p *ngIf="!actorLevelsLoading && !canWriteAccess" class="p-3 text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-2xl">افزودن یا تغییر مجوز کاربران فقط با مجوز «نوشتن دسترسی کاربران» این شرکت ممکن است.</p>
+            <div *ngIf="!actorLevelsLoading && canWriteAccess" class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-3">
               <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 items-end">
                 <!-- انتخاب کاربر با جستجو (combobox)؛ کاربرانی که دسترسی دارند در فهرست نمی‌آیند -->
                 <div class="md:col-span-1 relative" (focusout)="onUserComboFocusOut($event)">
@@ -1061,7 +1065,7 @@
                       (click)="openUserList()"
                       (keydown)="onUserComboKeydown($event)"
                       placeholder="جستجوی نام یا نام کاربری..."
-                      class="w-full ps-3 pe-10 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-medium"
+                      class="w-full min-h-[40px] ps-3 pe-10 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-medium"
                     />
                     <button
                       *ngIf="studioSelectedUserId"
@@ -1103,16 +1107,15 @@
                   </div>
                 </div>
 
-                <!-- سطح دسترسی سازمانی -->
+                <!-- قالب آمادهٔ مجوزها (بعد از ثبت، خانه‌ها جداگانه قابل تغییرند) -->
                 <div class="md:col-span-1">
-                  <label for="studio_acc_level" class="block text-[11px] font-bold text-slate-700 mb-1">سطح دسترسی سازمانی</label>
+                  <label for="studio_acc_template" class="block text-[11px] font-bold text-slate-700 mb-1">قالب مجوزها</label>
                   <select
-                    id="studio_acc_level"
-                    [(ngModel)]="studioAccessLevel"
-                    class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-bold text-slate-800">
-                    <option *ngFor="let lvl of accessLevelsList" [value]="lvl.value">
-                      {{ lvl.label }}
-                    </option>
+                    id="studio_acc_template"
+                    [(ngModel)]="studioTemplate"
+                    class="w-full min-h-[40px] px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 bg-white font-bold text-slate-800">
+                    <option value="">بدون مجوز (فقط پیوند با شرکت)</option>
+                    <option *ngFor="let t of permissionTemplates" [value]="t.key">{{ t.label_fa }}</option>
                   </select>
                 </div>
 
@@ -1124,7 +1127,7 @@
                     type="text"
                     [(ngModel)]="studioRoleInCompany"
                     placeholder="مثال: کارشناس اسناد، خزانه‌دار..."
-                    class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-medium"
+                    class="w-full min-h-[40px] px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white font-medium"
                   />
                 </div>
 
@@ -1155,10 +1158,35 @@
               </div>
             </div>
 
+            <!-- اعضای خودکار شرکت (فقط نمایش؛ عضویت از انتساب بخش یا انبار می‌آید) -->
+            <section class="p-3 bg-white border border-slate-200 rounded-2xl space-y-2" aria-labelledby="co-members-title">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h4 id="co-members-title" class="text-xs font-black text-slate-800">اعضای فضای کاری (خودکار)</h4>
+                <span *ngIf="!membersLoading && !permissionExtrasError" class="whitespace-nowrap tabular-nums text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">{{ fa(companyMembers.length) }} عضو</span>
+              </div>
+              <p class="text-[11px] text-slate-500 leading-relaxed">عضویت دستی نیست: کاربر با انتساب به بخشی از پروژه‌های این شرکت یا به یکی از انبارهای آن عضو می‌شود.</p>
+              <div *ngIf="permissionExtrasError" class="py-3 text-center space-y-2 border border-dashed border-rose-200 rounded-xl bg-rose-50/40" role="alert">
+                <div class="text-[11px] font-bold text-slate-600">{{ permissionExtrasOffline ? 'اتصال برقرار نیست؛ اعضا و بخش‌های مجوز دریافت نشد.' : 'دریافت اعضا یا بخش‌های مجوز انجام نشد.' }}</div>
+                <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="retryTab('access')"></button>
+              </div>
+              <div *ngIf="membersLoading" role="status" aria-busy="true" aria-label="در حال دریافت اعضا">
+                <app-loading-skeleton type="text" [lines]="2"></app-loading-skeleton>
+              </div>
+              <div *ngIf="!membersLoading && !permissionExtrasError && companyMembers.length === 0" class="py-3 text-center text-[11px] text-slate-500 border border-dashed border-slate-200 rounded-xl">هنوز عضوی ندارد.</div>
+              <ul *ngIf="!membersLoading && companyMembers.length > 0" class="divide-y divide-slate-100" aria-label="اعضای فضای کاری">
+                <li *ngFor="let m of companyMembers" class="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                  <span class="text-xs font-bold text-slate-800"><bdi>{{ m.user_full_name || m.username }}</bdi> <span dir="ltr" class="text-[10px] text-slate-500 font-mono">{{ m.username }}</span></span>
+                  <span class="flex flex-wrap gap-1">
+                    <span *ngFor="let src of m.sources" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold"><bdi>{{ src }}</bdi></span>
+                  </span>
+                </li>
+              </ul>
+            </section>
+
             <!-- فهرست کاربران مجاز این شرکت -->
             <div>
               <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                <span class="text-xs font-black text-slate-800">کاربران دارای دسترسی فعال به این شرکت</span>
+                <h4 class="text-xs font-black text-slate-800">مجوزهای بخش‌به‌بخش کاربران</h4>
                 <span class="whitespace-nowrap tabular-nums text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
                   {{ fa(studioAccesses.length) }} کاربر
                 </span>
@@ -1173,7 +1201,7 @@
               </div>
 
               <div *ngIf="!isLoadingStudioAccesses && !tabLoadError['access'] && studioAccesses.length === 0" class="py-8 px-3 text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-2xl">
-                تاکنون کاربری به این شرکت اختصاص داده نشده است (صرفاً مدیران ارشد سیستم به آن دسترسی دارند).
+                هنوز مجوز بخش‌به‌بخشی برای کاربری ثبت نشده است؛ اعضای خودکار در بخش بالا دیده می‌شوند.
               </div>
 
               <!-- دسکتاپ: جدول -->
@@ -1184,7 +1212,7 @@
                       <th class="py-2.5 px-3 w-10 text-center">ردیف</th>
                       <th class="py-2.5 px-3">نام و نام خانوادگی</th>
                       <th class="py-2.5 px-3">نام کاربری</th>
-                      <th class="py-2.5 px-3">سطح دسترسی سازمانی</th>
+                      <th class="py-2.5 px-3">مجوز بخش‌ها</th>
                       <th class="py-2.5 px-3">سمت در شرکت</th>
                       <th class="py-2.5 px-3 text-center">وضعیت پیش‌فرض</th>
                       <th class="py-2.5 px-3 text-center">تاریخ انتساب</th>
@@ -1192,7 +1220,8 @@
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-slate-100">
-                    <tr *ngFor="let acc of studioAccesses; let idx = index" class="hover:bg-slate-50 transition-colors">
+                    <ng-container *ngFor="let acc of studioAccesses; let idx = index">
+                    <tr class="hover:bg-slate-50 transition-colors">
                       <td class="py-2.5 px-3 text-center tabular-nums text-slate-400">{{ fa(idx + 1) }}</td>
                       <td class="py-2.5 px-3 font-bold text-slate-800">
                         <span>{{ acc.user_full_name || 'کاربر سیستم' }}</span>
@@ -1200,9 +1229,10 @@
                       </td>
                       <td class="py-2.5 px-3 font-mono text-slate-600" dir="ltr">{{ acc.username }}</td>
                       <td class="py-2.5 px-3">
-                        <span class="text-[10px] px-2 py-0.5 rounded-full border font-bold whitespace-nowrap" [ngClass]="getAccessLevelBadgeClass(acc.access_level)">
-                          {{ acc.access_level_display || getAccessLevelLabel(acc.access_level) }}
-                        </span>
+                        <div class="flex items-center gap-2">
+                          <span class="text-[10px] px-2 py-0.5 rounded-full border font-bold whitespace-nowrap bg-indigo-50 text-indigo-700 border-indigo-200">{{ accessSummary(acc) }}</span>
+                          <button type="button" appAction="edit" size="sm" label="ویرایش مجوزها" [attr.aria-expanded]="editingAccessId === acc.id" [attr.data-edit-access]="acc.id" [disabled]="!canEditAccessRow(acc)" [hint]="accessRowLockReason(acc) ?? undefined" (click)="startEditLevels(acc)"></button>
+                        </div>
                       </td>
                       <td class="py-2.5 px-3 text-slate-600 font-medium">{{ acc.role_in_company || '—' }}</td>
                       <td class="py-2.5 px-3 text-center">
@@ -1213,14 +1243,20 @@
                         <button
                           type="button"
                           (click)="removeStudioAccess(acc.id)"
-                          [disabled]="isPendingRecord(acc)"
+                          [disabled]="!canEditAccessRow(acc)"
                           class="w-8 h-8 rounded-lg flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                          [title]="isPendingRecord(acc) ? 'پس از ارسال به سرور قابل لغو است' : 'لغو دسترسی کاربر'"
+                          [title]="accessRowLockReason(acc) ?? 'لغو دسترسی کاربر'"
                           aria-label="لغو دسترسی">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete" aria-hidden="true"></svg>
                         </button>
                       </td>
                     </tr>
+                    <tr *ngIf="editingAccessId === acc.id">
+                      <td colspan="8" class="p-3 bg-slate-50">
+                        <ng-container *ngTemplateOutlet="sectionLevelsEditor; context: { acc: acc, place: 'd' }"></ng-container>
+                      </td>
+                    </tr>
+                    </ng-container>
                   </tbody>
                 </table>
               </div>
@@ -1239,19 +1275,19 @@
                     <button
                       type="button"
                       (click)="removeStudioAccess(acc.id)"
-                      [disabled]="isPendingRecord(acc)"
+                      [disabled]="!canEditAccessRow(acc)"
                       class="w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                      [title]="isPendingRecord(acc) ? 'پس از ارسال به سرور قابل لغو است' : 'لغو دسترسی کاربر'"
+                      [title]="accessRowLockReason(acc) ?? 'لغو دسترسی کاربر'"
                       aria-label="لغو دسترسی">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="action-delete" aria-hidden="true"></svg>
                     </button>
                   </div>
                   <div class="flex flex-wrap items-center gap-1.5">
-                    <span class="text-[10px] px-2 py-0.5 rounded-full border font-bold" [ngClass]="getAccessLevelBadgeClass(acc.access_level)">
-                      {{ acc.access_level_display || getAccessLevelLabel(acc.access_level) }}
-                    </span>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full border font-bold bg-indigo-50 text-indigo-700 border-indigo-200">{{ accessSummary(acc) }}</span>
+                    <button type="button" appAction="edit" label="ویرایش مجوزها" [attr.aria-expanded]="editingAccessId === acc.id" [attr.data-edit-access]="acc.id" [disabled]="!canEditAccessRow(acc)" [hint]="accessRowLockReason(acc) ?? undefined" (click)="startEditLevels(acc)"></button>
                     <ng-container *ngTemplateOutlet="accessDefaultBadge; context: { acc: acc }"></ng-container>
                   </div>
+                  <p *ngIf="!isPendingRecord(acc) && accessRowLockReason(acc) as lock" class="text-[11px] text-slate-500">{{ lock }}</p>
                   <dl class="grid grid-cols-2 gap-2 text-[11px] bg-slate-50/70 p-2 rounded-xl border border-slate-100">
                     <div class="min-w-0">
                       <dt class="text-slate-500 text-[10px]">سمت در شرکت</dt>
@@ -1262,6 +1298,9 @@
                       <dd class="text-slate-700 font-bold tabular-nums">{{ acc.created_at | persianDate:'short' }}</dd>
                     </div>
                   </dl>
+                  <div *ngIf="editingAccessId === acc.id">
+                    <ng-container *ngTemplateOutlet="sectionLevelsEditor; context: { acc: acc, place: 'm' }"></ng-container>
+                  </div>
                 </li>
               </ul>
 
@@ -1372,4 +1411,41 @@
   }
 
 </div>
+
+<!-- ویرایشگر سطح بخش‌ها (طرح مجوزهای شرکت، گام ۱۰) -->
+<ng-template #sectionLevelsEditor let-acc="acc" let-place="place">
+  <div class="space-y-3" role="group" [attr.aria-label]="'مجوزهای بخش‌های ' + (acc.user_full_name || acc.username)">
+    <div class="flex flex-col sm:flex-row sm:items-end gap-2">
+      <div class="flex-1">
+        <label [for]="'tpl_' + place + acc.id" class="block text-[11px] font-bold text-slate-700 mb-1">اعمال قالب</label>
+        <select [id]="'tpl_' + place + acc.id" #tplSel (change)="applyTemplateToEditing(tplSel.value, tplSel)"
+          class="w-full min-h-[40px] px-3 py-2 text-xs border border-slate-200 rounded-xl bg-white font-bold text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <option value="">انتخاب قالب…</option>
+          <option *ngFor="let t of permissionTemplates" [value]="t.key">{{ t.label_fa }}</option>
+        </select>
+      </div>
+    </div>
+    <p class="text-[11px] text-slate-500 leading-relaxed">قالب همهٔ خانه‌ها جز کارهای حساس را جایگزین می‌کند.<ng-container *ngIf="!isSuperuserActor"> گزینه‌های بالاتر از سطح خودتان غیرفعال‌اند.</ng-container></p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+      <div *ngFor="let sec of permissionSections" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 rounded-xl border"
+        [ngClass]="sec.sensitive ? 'border-rose-200 bg-rose-50/40' : 'border-slate-200 bg-white'">
+        <label [for]="'lvl_' + place + acc.id + '_' + sec.key" class="text-[11px] font-bold text-slate-700 min-w-0">
+          {{ sec.label_fa }}
+          <span *ngIf="sec.sensitive" class="ms-1 text-[10px] text-rose-700">(حساس{{ isSuperuserActor ? '' : '؛ فقط مدیر کل' }})</span>
+        </label>
+        <select [id]="'lvl_' + place + acc.id + '_' + sec.key"
+          [ngModel]="editingLevels[sec.key] || 'none'" (ngModelChange)="setEditingLevel(sec.key, $event)"
+          [disabled]="!canEditSection(sec)"
+          class="w-full sm:w-auto min-h-[40px] px-2 py-1 text-xs border border-slate-200 rounded-lg bg-white font-bold text-slate-800 disabled:opacity-60 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <option *ngFor="let o of levelOptions(sec)" [value]="o.value" [disabled]="isLevelAboveActor(sec.key, o.value)">{{ o.label }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex flex-wrap justify-end gap-2">
+      <button type="button" appAction="close" display="label" label="انصراف" (click)="cancelEditLevels()"></button>
+      <button type="button" appAction="save" label="ذخیرهٔ مجوزها" [busy]="savingLevels" (click)="saveEditLevels(acc)"></button>
+    </div>
+  </div>
+</ng-template>
+
 

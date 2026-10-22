@@ -26,11 +26,17 @@ import { SmartDeleteModalComponent } from '../../../../../shared/components/smar
 import {
   Company,
   UserCompanyAccess,
-  CompanyAccessLevel
+  CompanyAccessLevel,
+  CompanyMember,
+  CompanyPermissionSection,
+  CompanyPermissionSpec,
+  CompanySectionLevels,
+  SectionLevel
 } from '../../../../../core/models/company.model';
 import { normalizeDigits } from '../../../../../core/utils/date-utils';
 import { ConfirmDialogService, ConfirmDialogConfig } from '../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { isServerUnreachable } from '../../../../../core/services/server-reachability';
+import { getStoredCurrentUserId } from '../../../../../core/services/sync-pull.service';
 import { LoadingSkeletonComponent } from '../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { OfflinePendingBadgeComponent } from '../../../../../shared/components/offline-pending-badge/offline-pending-badge.component';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
@@ -156,7 +162,6 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
   studioAccesses: UserCompanyAccess[] = [];
   isLoadingStudioAccesses = false;
   studioSelectedUserId: number | null = null;
-  studioAccessLevel: CompanyAccessLevel = 'docs_read';
   studioRoleInCompany = '';
   studioIsDefaultAccess = false;
   userSearchQuery = '';
@@ -259,6 +264,11 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     });
     this.network.state$.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.isOnline = this.network.isOnline;
+      const cid = this.companyModal.data.id;
+      if (this.isOnline && this.accessRefreshOnReconnect && cid && cid > 0) {
+        this.accessRefreshOnReconnect = false;
+        this.loadStudioAccesses(cid);
+      }
       this.cdr.markForCheck();
     });
     const navState = this.router?.getCurrentNavigation()?.extras?.state as { pendingLogo?: unknown } | undefined;
@@ -1421,7 +1431,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   /** پیام خطای حذف از پاسخ DRF: detail، error (DeleteImpactMixin) یا فهرست ValidationError */
   private deleteErrorMessage(err: any, fallback = 'خطا در حذف شرکت'): string {
-    if (isServerUnreachable(err)) return 'سرور در دسترس نیست. پس از برقراری اتصال دوباره تلاش کنید.';
+    if (isServerUnreachable(err?.status ?? 0)) return 'سرور در دسترس نیست. پس از برقراری اتصال دوباره تلاش کنید.';
     const body = err?.error;
     if (Array.isArray(body) && typeof body[0] === 'string') return body[0];
     if (typeof body?.detail === 'string') return body.detail;
@@ -1629,6 +1639,7 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
 
   loadStudioAccesses(companyId: number): void {
     this.isLoadingStudioAccesses = true;
+    this.loadPermissionExtras(companyId);
     this.tabLoadError['access'] = false;
     this.api.getUserAccesses({ company_id: companyId }).subscribe({
       next: (res) => {
@@ -1654,20 +1665,16 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     this.api.createUserAccess({
       user: this.studioSelectedUserId,
       company: companyId,
-      access_level: this.studioAccessLevel,
+      section_levels: this.studioTemplate ? this.templateLevels(this.studioTemplate) : {},
       role_in_company: this.studioRoleInCompany.trim() || null,
       is_default: this.studioIsDefaultAccess
     }).subscribe({
       next: (created) => {
-        if (this.isPendingRecord(created)) {
-          this.toast.info('دسترسی کاربر در صف ارسال است و پس از اتصال ثبت می‌شود.');
-        } else {
-          this.toast.success('دسترسی کاربر با موفقیت ثبت شد.');
-        }
+        this.toast.success('دسترسی کاربر با موفقیت ثبت شد.');
         this.studioSelectedUserId = null;
         this.userSearchQuery = '';
         this.studioRoleInCompany = '';
-        this.studioAccessLevel = 'docs_read';
+        this.studioTemplate = '';
         this.studioIsDefaultAccess = false;
         const userObj = this.systemUsers.find(u => u.id === (created.user || targetUserId));
         const fullAccess: UserCompanyAccess = {
@@ -1679,8 +1686,253 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        const msg = err.error?.detail || err.error?.non_field_errors?.[0] || 'خطا در ثبت دسترسی کاربر به شرکت';
+        const msg = isServerUnreachable(err?.status ?? 0) ? this.permissionWriteUnreachable() : (err.error?.detail || err.error?.non_field_errors?.[0] || 'خطا در ثبت دسترسی کاربر به شرکت');
         this.toast.error(msg);
+      }
+    });
+  }
+
+  // ─── مجوزهای بخش‌به‌بخش شرکت (طرح مجوزهای شرکت، گام ۱۰) ───
+  /** پاسخ تغییر مجوز نرسید؛ پس از برقراری اتصال فهرست دوباره دریافت می‌شود (شاید روی سرور اعمال شده باشد) */
+  private accessRefreshOnReconnect = false;
+
+  private permissionWriteUnreachable(): string {
+    this.accessRefreshOnReconnect = true;
+    return 'اتصال به سرور برقرار نیست؛ تغییر مجوز فقط برخط انجام می‌شود و ممکن است ثبت نشده باشد. پس از اتصال، فهرست خودکار تازه می‌شود.';
+  }
+
+  permissionSpec: CompanyPermissionSpec | null = null;
+  companyMembers: CompanyMember[] = [];
+  studioTemplate = '';
+  editingAccessId: number | null = null;
+  editingLevels: CompanySectionLevels = {};
+  savingLevels = false;
+  membersLoading = false;
+  permissionExtrasError = false;
+
+  get isSuperuserActor(): boolean {
+    return this.activeCompanyService.isSuperuser;
+  }
+
+  get permissionSections(): CompanyPermissionSection[] {
+    return this.permissionSpec?.sections || [];
+  }
+
+  get permissionTemplates(): CompanyPermissionSpec['templates'] {
+    return this.permissionSpec?.templates || [];
+  }
+
+  /** سطح خودِ کاربرِ جاری در هر بخش همین شرکت (سقف اعطا؛ §۵-۱). superuser همه را می‌نویسد */
+  actorLevels: CompanySectionLevels = {};
+
+  actorLevel(key: string): SectionLevel {
+    return this.isSuperuserActor ? 'write' : (this.actorLevels[key] || 'none');
+  }
+
+  private static readonly LEVEL_RANK: Record<SectionLevel, number> = { none: 0, read: 1, write: 2 };
+
+  /** گزینهٔ بالاتر از سطح خود کاربر قفل است (سقف «نوشتن دسترسی کاربران») */
+  isLevelAboveActor(key: string, level: SectionLevel): boolean {
+    const rank = CompaniesManagementComponent.LEVEL_RANK;
+    return rank[level] > rank[this.actorLevel(key)];
+  }
+
+  /** فرم «تخصیص دسترسی» فقط برای دارندهٔ «نوشتن» دسترسی کاربران */
+  get canWriteAccess(): boolean {
+    return this.actorLevel('user_access') === 'write';
+  }
+
+  /** ردیفی که در بخشی از کاربر جاری بالاتر است یا ردیف خودش است، فقط با مدیر کل تغییر می‌کند */
+  canEditAccessRow(acc: UserCompanyAccess): boolean {
+    return this.accessRowLockReason(acc) === null;
+  }
+
+  /** علت قفل بودن ویرایش یا لغو یک ردیف (همان قاعدهٔ سرور در _ensure_can_grant)؛ null یعنی آزاد */
+  accessRowLockReason(acc: UserCompanyAccess): string | null {
+    if (this.isPendingRecord(acc)) return 'پس از ارسال به سرور قابل تغییر است';
+    if (this.isSuperuserActor) return null;
+    if (this.actorLevel('user_access') !== 'write') return 'مجوز «نوشتن دسترسی کاربران» این شرکت را ندارید';
+    if (acc.user === getStoredCurrentUserId()) return 'دسترسی خودتان را نمی‌توانید تغییر دهید';
+    const levels = acc.section_levels || {};
+    const sensitiveKeys = new Set(this.permissionSections.filter(s => s.sensitive).map(s => s.key));
+    if (Object.entries(levels).some(([k, v]) => sensitiveKeys.has(k) && v !== 'none')) {
+      return 'این کاربر کار حساس دارد؛ فقط مدیر کل سامانه تغییرش می‌دهد';
+    }
+    if (Object.entries(levels).some(([k, v]) => this.isLevelAboveActor(k, v))) {
+      return 'سطح این کاربر در بخشی از سطح شما بالاتر است';
+    }
+    return null;
+  }
+
+  /** مجوزهای کاربر جاری در شرکت هنوز دریافت نشده است (فرم تخصیص تا آن زمان نشان داده نمی‌شود) */
+  actorLevelsLoading = false;
+
+  private isStudioCompany(companyId: number): boolean {
+    return this.companyModal.data.id === companyId;
+  }
+
+  private loadPermissionExtras(companyId: number): void {
+    this.permissionExtrasError = false;
+    this.permissionExtrasOffline = false;
+    if (!this.isSuperuserActor) {
+      this.actorLevelsLoading = true;
+      this.api.getUserAvailable('manage').subscribe({
+        next: (res) => {
+          if (!this.isStudioCompany(companyId)) return;
+          this.actorLevels = { ...(res?.companies || []).find(c => c.id === companyId)?.section_levels || {} };
+          this.actorLevelsLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          if (!this.isStudioCompany(companyId)) return;
+          this.actorLevels = {};
+          this.actorLevelsLoading = false;
+          this.permissionExtrasError = true;
+          this.cdr.markForCheck();
+        }
+      });
+    }
+    if (!this.permissionSpec) {
+      this.api.getPermissionSections().subscribe({
+        next: (spec) => { this.permissionSpec = spec; this.cdr.markForCheck(); },
+        error: () => { this.permissionExtrasError = true; this.cdr.markForCheck(); }
+      });
+    }
+    this.membersLoading = true;
+    this.api.getCompanyMembers(companyId).subscribe({
+      next: (members) => {
+        if (!this.isStudioCompany(companyId)) return;
+        this.companyMembers = members || [];
+        this.membersLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        if (!this.isStudioCompany(companyId)) return;
+        this.companyMembers = [];
+        this.membersLoading = false;
+        this.permissionExtrasError = true;
+        this.permissionExtrasOffline = isServerUnreachable(err?.status ?? 0);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  /** خطای دریافت اعضا از قطع اتصال است (پیام جدا) */
+  permissionExtrasOffline = false;
+
+  /** سطح‌های قالب، بریده‌شده به سطح خود کاربر جاری (سرور هم همین سقف را می‌سنجد) */
+  templateLevels(key: string): CompanySectionLevels {
+    const levels = { ...(this.permissionTemplates.find(t => t.key === key)?.levels || {}) };
+    for (const [k, v] of Object.entries(levels)) {
+      if (this.isLevelAboveActor(k, v)) levels[k] = this.actorLevel(k);
+    }
+    return levels;
+  }
+
+  // آرایه‌های ثابت تا ngFor گزینه‌ها را در هر دور تشخیص تغییر از نو نسازد
+  private static readonly ACTION_OPTIONS: { value: SectionLevel; label: string }[] =
+    [{ value: 'none', label: 'ندارد' }, { value: 'write', label: 'مجاز' }];
+  private static readonly LEVEL_OPTIONS: { value: SectionLevel; label: string }[] =
+    [{ value: 'none', label: 'هیچ' }, { value: 'read', label: 'فقط خواندن' }, { value: 'write', label: 'نوشتن' }];
+
+  levelOptions(section: CompanyPermissionSection): { value: SectionLevel; label: string }[] {
+    return section.kind === 'action'
+      ? CompaniesManagementComponent.ACTION_OPTIONS
+      : CompaniesManagementComponent.LEVEL_OPTIONS;
+  }
+
+  levelLabel(section: CompanyPermissionSection, level?: SectionLevel): string {
+    return this.levelOptions(section).find(o => o.value === (level || 'none'))?.label || 'هیچ';
+  }
+
+  /** خلاصهٔ مجوزهای یک ردیف برای جدول و کارت */
+  accessSummary(acc: UserCompanyAccess): string {
+    // بی فهرست بخش‌ها (در حال دریافت یا خطا) ادعای «بدون مجوز» نادرست است
+    if (!this.permissionSpec) return '—';
+    const levels = acc.section_levels || {};
+    const granted = this.permissionSections.filter(s => (levels[s.key] || 'none') !== 'none');
+    if (granted.length === 0) return 'فقط پیوند (بدون مجوز بخش)';
+    return `${this.fa(granted.length)} بخش از ${this.fa(this.permissionSections.length)}`;
+  }
+
+  /** بخش حساس فقط با مدیر کل (ت۹) */
+  canEditSection(section: CompanyPermissionSection): boolean {
+    return !section.sensitive || this.isSuperuserActor;
+  }
+
+  startEditLevels(acc: UserCompanyAccess): void {
+    if (!acc.id || this.isPendingRecord(acc)) return;
+    this.editingAccessId = acc.id;
+    this.editingLevels = { ...(acc.section_levels || {}) };
+    this.cdr.markForCheck();
+    // ویرایشگر هم در جدول دسکتاپ و هم در کارت موبایل هست؛ فوکوس به نمونهٔ دیدنی
+    setTimeout(() => ['tpl_d', 'tpl_m']
+      .map(p => document.getElementById(p + acc.id) as HTMLElement | null)
+      .find(el => !!el?.offsetParent)?.focus());
+  }
+
+  cancelEditLevels(): void {
+    const id = this.editingAccessId;
+    this.editingAccessId = null;
+    this.editingLevels = {};
+    this.cdr.markForCheck();
+    this.focusEditButton(id);
+  }
+
+  /** پس از بستن ویرایشگر فوکوس به دکمهٔ «ویرایش مجوزها» همان ردیف برمی‌گردد (WCAG 2.4.3) */
+  private focusEditButton(accessId: number | null): void {
+    if (accessId == null) return;
+    setTimeout(() => Array.from(document.querySelectorAll<HTMLElement>(`[data-edit-access="${accessId}"]`))
+      .find(el => !!el.offsetParent)?.focus());
+  }
+
+  applyTemplateToEditing(key: string, select?: HTMLSelectElement): void {
+    if (select) select.value = '';
+    if (!key) return;
+    const next = this.templateLevels(key);
+    // قالب‌ها کار حساس ندارند؛ مقدار فعلی بخش‌های حساس دست نمی‌خورد
+    for (const s of this.permissionSections) {
+      if (s.sensitive) next[s.key] = this.editingLevels[s.key] || 'none';
+    }
+    this.editingLevels = next;
+    this.cdr.markForCheck();
+  }
+
+  setEditingLevel(key: string, value: SectionLevel): void {
+    this.editingLevels = { ...this.editingLevels, [key]: value };
+  }
+
+  async saveEditLevels(acc: UserCompanyAccess): Promise<void> {
+    if (!acc.id || this.savingLevels) return;
+    const before = acc.section_levels || {};
+    const sensitiveGrant = this.permissionSections.some(s =>
+      s.sensitive && (this.editingLevels[s.key] || 'none') !== 'none' && (before[s.key] || 'none') !== this.editingLevels[s.key]);
+    if (sensitiveGrant) {
+      const ok = this.confirmDialog
+        ? (await this.confirmDialog.open({
+            title: 'اعطای کار حساس',
+            message: 'این کاربر به کار حساس (مدارک محرمانه، شبا یا بستن دورهٔ مالی) دسترسی می‌گیرد. اطمینان دارید؟',
+            type: 'danger',
+            confirmText: 'اعطا',
+            cancelText: 'انصراف'
+          })) === true
+        : window.confirm('اعطای کار حساس؟');
+      if (!ok) return;
+    }
+    this.savingLevels = true;
+    this.api.updateUserAccess(acc.id, { section_levels: this.editingLevels }).subscribe({
+      next: (updated: UserCompanyAccess) => {
+        this.savingLevels = false;
+        this.studioAccesses = this.studioAccesses.map(a => a.id === acc.id ? { ...a, section_levels: updated.section_levels || this.editingLevels } : a);
+        this.editingAccessId = null;
+        this.toast.success('مجوزهای بخش‌ها ذخیره شد.');
+        this.cdr.markForCheck();
+        this.focusEditButton(acc.id ?? null);
+      },
+      error: (err) => {
+        this.savingLevels = false;
+        this.toast.error(isServerUnreachable(err?.status ?? 0) ? this.permissionWriteUnreachable() : (err?.error?.detail || 'ذخیرهٔ مجوزها انجام نشد.'));
+        this.cdr.markForCheck();
       }
     });
   }
@@ -1699,16 +1951,12 @@ export class CompaniesManagementComponent implements OnInit, OnDestroy {
     if (!ok) return;
     this.api.deleteUserAccess(accessId).subscribe({
       next: (res: any) => {
-        if (res?._offlinePending) {
-          this.toast.info('لغو دسترسی در صف ارسال است و پس از اتصال اعمال می‌شود.');
-        } else {
-          this.toast.success('دسترسی کاربر با موفقیت لغو شد.');
-        }
+        this.toast.success('دسترسی کاربر با موفقیت لغو شد.');
         this.studioAccesses = this.studioAccesses.filter(a => a.id !== accessId);
         this.cdr.markForCheck();
       },
-      error: () => {
-        this.toast.error('خطا در لغو دسترسی کاربر');
+      error: (err) => {
+        this.toast.error(isServerUnreachable(err?.status ?? 0) ? this.permissionWriteUnreachable() : (err?.error?.detail || 'خطا در لغو دسترسی کاربر'));
       }
     });
   }

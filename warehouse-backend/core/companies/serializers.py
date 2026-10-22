@@ -90,6 +90,15 @@ class UserCompanyAccessSerializer(serializers.ModelSerializer):
         # access_level منسوخ است (سازگاری تا گام ۱۲)؛ سطح‌ها فقط از section_levels
         read_only_fields = ['created_at', 'access_level']
 
+    def to_internal_value(self, data):
+        # رکوردِ صف آفلاینِ پیش از سوئیچ فقط access_level دارد؛ به section_levels نگاشت می‌شود تا بی‌صدا گم نشود
+        legacy = data.get('access_level') if hasattr(data, 'get') else None
+        if isinstance(legacy, str) and legacy and legacy != 'link' and 'section_levels' not in data:
+            from .permission_sections import legacy_levels
+            data = data.dict() if hasattr(data, 'dict') else dict(data)
+            data['section_levels'] = legacy_levels(legacy)
+        return super().to_internal_value(data)
+
     def validate_section_levels(self, value):
         from .permission_sections import normalize_levels
         if not isinstance(value, dict):

@@ -6,6 +6,9 @@ import { environment } from '../../../environments/environment';
 import type { ImportResult } from '../http/accounts-http.service';
 import {
   Company,
+  CompanyMember,
+  CompanyPermissionSpec,
+  CompanySectionLevels,
   CompanyDocument,
   CompanyBankAccount,
   CompanyBoardMember,
@@ -152,7 +155,7 @@ export class CompanyApiService {
     return `${this.endpoint}/${id}/delete_impact/`;
   }
 
-  getUserAvailable(scope?: 'workspace' | 'documents' | 'all'): Observable<UserAvailableCompaniesResponse> {
+  getUserAvailable(scope?: 'workspace' | 'documents' | 'all' | 'manage'): Observable<UserAvailableCompaniesResponse> {
     let params = new HttpParams();
     if (scope) {
       params = params.set('scope', scope);
@@ -239,22 +242,33 @@ export class CompanyApiService {
     return this.http.get<any[]>(`${this.accessEndpoint}/`, { params: httpParams });
   }
 
+  // تغییر مجوزها فقط برخط است (ت۱۲): اعطای در صف اگر بعداً با ۴۰۳ رد شود گمراه‌کننده است
   createUserAccess(payload: {
     user: number;
     company: number;
-    access_level?: string;
+    section_levels?: CompanySectionLevels;
     role_in_company?: string | null;
     is_default?: boolean;
   }): Observable<any> {
-    return this.http.post<any>(`${this.accessEndpoint}/`, payload);
+    return this.http.post<any>(`${this.accessEndpoint}/`, payload, { context: new HttpContext().set(SKIP_OFFLINE, true) });
   }
 
   updateUserAccess(id: number, payload: any): Observable<any> {
-    return this.http.patch<any>(`${this.accessEndpoint}/${id}/`, payload);
+    return this.http.patch<any>(`${this.accessEndpoint}/${id}/`, payload, { context: new HttpContext().set(SKIP_OFFLINE, true) });
   }
 
   deleteUserAccess(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.accessEndpoint}/${id}/`);
+    return this.http.delete<void>(`${this.accessEndpoint}/${id}/`, { context: new HttpContext().set(SKIP_OFFLINE, true) });
+  }
+
+  /** بخش‌های مجوز شرکتِ نصب‌شده، سطح‌ها و قالب‌ها */
+  getPermissionSections(): Observable<CompanyPermissionSpec> {
+    return this.http.get<CompanyPermissionSpec>(`${environment.apiUrl}/org/company-permission-sections/`);
+  }
+
+  /** اعضای خودکار شرکت با منبع عضویت (فقط نمایش) */
+  getCompanyMembers(companyId: number): Observable<CompanyMember[]> {
+    return this.http.get<CompanyMember[]>(`${this.accessEndpoint}/members/`, { params: { company_id: String(companyId) } });
   }
 
   // مدیریت حساب‌های بانکی و شبای رسمی شرکت

@@ -5,6 +5,12 @@
 from django.db.models import Q
 
 
+def _source_label(warehouse_name):
+    """«از انبار X»؛ اگر نام خودش با «انبار» آغاز شود، واژه تکرار نمی‌شود."""
+    name = (warehouse_name or '').strip()
+    return f"از {name}" if name.startswith('انبار') else f"از انبار {name}"
+
+
 def warehouse_derived_company_source(user):
     from warehouses.models import Warehouse
     details, seen = [], set()
@@ -17,7 +23,7 @@ def warehouse_derived_company_source(user):
             'company_id': wh.company_id,
             'company_name': wh.company.name,
             'company_code': wh.company.code,
-            'source_label': f"از انبار {wh.name}",
+            'source_label': _source_label(wh.name),
         })
     return details
 
@@ -32,5 +38,8 @@ def warehouse_member_sources(company_id):
     result = {}
     for wh in Warehouse.objects.filter(company_id=company_id, is_active=True).prefetch_related('assigned_users'):
         for u in wh.assigned_users.all():
-            result.setdefault(u.id, []).append(f"از انبار {wh.name}")
+            labels = result.setdefault(u.id, [])
+            label = _source_label(wh.name)
+            if label not in labels:
+                labels.append(label)
     return result

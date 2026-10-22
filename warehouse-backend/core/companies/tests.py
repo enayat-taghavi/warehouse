@@ -100,6 +100,24 @@ class CoreCompanyApiTests(TestCase):
         self.assertEqual(row.access_level, 'link')
         self.assertFalse(get_user_allowed_companies(target).exists())
 
+    def test_patch_keeps_uninstalled_section_keys_and_maps_legacy_level(self):
+        url = '/api/org/user-company-access/'
+        target = User.objects.create_user(username='core_keep', password='x-pass-123', phone_number='09170000006')
+        row = UserCompanyAccess.objects.create(user=target, company=self.c1,
+                                               section_levels={'identity': 'read', 'zz_uninstalled': 'write'})
+        self.client.force_authenticate(self.admin)
+        r = self.client.patch(f'{url}{row.id}/', {'section_levels': {'identity': 'write'}}, format='json')
+        self.assertEqual(r.status_code, 200, r.content)
+        row.refresh_from_db()
+        self.assertEqual(row.section_levels, {'identity': 'write', 'zz_uninstalled': 'write'})
+        # رکورد قدیمی صف آفلاین که فقط access_level دارد بی‌صدا بی‌اثر نمی‌ماند
+        r = self.client.patch(f'{url}{row.id}/', {'access_level': 'docs_write'}, format='json')
+        self.assertEqual(r.status_code, 200, r.content)
+        row.refresh_from_db()
+        from companies.permission_sections import legacy_levels
+        self.assertEqual({k: v for k, v in row.section_levels.items() if k != 'zz_uninstalled'}, legacy_levels('docs_write'))
+        self.assertEqual(row.section_levels['zz_uninstalled'], 'write')
+
     def test_field_update_needs_section_write(self):
         self.client.force_authenticate(self.user)
         url = f'/api/org/companies/{self.c1.id}/'

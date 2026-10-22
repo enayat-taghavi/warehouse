@@ -125,6 +125,9 @@ export interface Company {
   bank_accounts?: CompanyBankAccount[];
   board_members?: CompanyBoardMember[];
   user_access_level?: CompanyAccessLevel;
+  is_member?: boolean;
+  membership_sources?: string[];
+  section_levels?: CompanySectionLevels;
   created_at?: string;
   updated_at?: string;
 }
@@ -159,8 +162,10 @@ export interface UserCompanyAccess {
   company: number;
   company_name?: string;
   company_code?: string;
-  access_level?: CompanyAccessLevel;
+  access_level?: CompanyAccessLevel | 'link';
   access_level_display?: string;
+  /** سطح هر بخش شرکت (طرح مجوزهای بخش‌به‌بخش) */
+  section_levels?: CompanySectionLevels;
   role_in_company?: string | null;
   is_default: boolean;
   created_at?: string;
@@ -185,3 +190,28 @@ export interface CompanyFiscalPeriod {
   updated_at?: string;
 }
 
+
+export type SectionLevel = 'none' | 'read' | 'write';
+export type CompanySectionLevels = Record<string, SectionLevel>;
+
+export interface CompanyPermissionSection {
+  key: string;
+  label_fa: string;
+  order: number;
+  kind: 'levels' | 'action';
+  sensitive: boolean;
+  studio: string | null;
+}
+
+export interface CompanyPermissionSpec {
+  levels: SectionLevel[];
+  templates: { key: string; label_fa: string; levels: CompanySectionLevels }[];
+  sections: CompanyPermissionSection[];
+}
+
+export interface CompanyMember {
+  user_id: number;
+  username: string;
+  user_full_name: string;
+  sources: string[];
+}

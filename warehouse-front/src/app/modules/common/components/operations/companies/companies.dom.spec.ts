@@ -150,6 +150,9 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       deleteImpactUrl: vi.fn().mockImplementation((id: number) => `/api/org/companies/${id}/delete_impact/`),
       getUserAvailable: vi.fn().mockReturnValue(of({ companies: sampleCompanies, is_superuser: true })),
       getUserAccesses: vi.fn().mockReturnValue(of([])),
+      getPermissionSections: vi.fn().mockReturnValue(of({ levels: ['none', 'read', 'write'], templates: [{ key: 'manager', label_fa: 'M', levels: { identity: 'write', docs_archive: 'write', docs_confidential: 'none' } }], sections: [{ key: 'identity', label_fa: 'I', order: 10, kind: 'levels', sensitive: false, studio: 'identity' }, { key: 'docs_archive', label_fa: 'D', order: 140, kind: 'levels', sensitive: false, studio: 'archive' }, { key: 'docs_confidential', label_fa: 'C', order: 210, kind: 'levels', sensitive: true, studio: 'archive' }] })),
+      getCompanyMembers: vi.fn().mockReturnValue(of([{ user_id: 7, username: 'm7', user_full_name: 'عضو', sources: ['از انبار الف'] }])),
+      updateUserAccess: vi.fn().mockReturnValue(of({})),
       createUserAccess: vi.fn().mockReturnValue(of({})),
       deleteUserAccess: vi.fn().mockReturnValue(of({})),
       exportExcel: vi.fn().mockReturnValue(of(new Blob())),
@@ -219,6 +222,7 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
     mockActiveCompanyService = {
       activeCompany: sampleCompanies[0],
       activeCompanyId: 1,
+      isSuperuser: true,
       activeCompany$: of(sampleCompanies[0]),
       availableCompanies: sampleCompanies,
       availableCompanies$: of(sampleCompanies),
@@ -1196,7 +1200,8 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
         { id: 10, username: 'testuser', first_name: 'کاربر', last_name: 'آزمایشی' } as any
       ];
       component.studioSelectedUserId = 10;
-      component.studioAccessLevel = 'docs_write';
+      component.permissionSpec = { levels: ['none', 'read', 'write'], templates: [{ key: 'manager', label_fa: 'M', levels: { identity: 'write', docs_archive: 'write', docs_confidential: 'none' } }], sections: [{ key: 'identity', label_fa: 'I', order: 10, kind: 'levels', sensitive: false, studio: 'identity' }, { key: 'docs_archive', label_fa: 'D', order: 140, kind: 'levels', sensitive: false, studio: 'archive' }, { key: 'docs_confidential', label_fa: 'C', order: 210, kind: 'levels', sensitive: true, studio: 'archive' }] } as any;
+      component.studioTemplate = 'manager';
       component.studioRoleInCompany = 'مسئول بایگانی';
 
       mockCompanyApi.createUserAccess.mockReturnValue(of({
@@ -1216,6 +1221,50 @@ describe('CompaniesManagementComponent DOM & Browser Unit Test (Type 1 Vitest + 
       expect(added?.username).toBe('testuser');
       expect(added?.user_full_name).toBe('کاربر آزمایشی');
       expect(mockToast.success).toHaveBeenCalledWith('دسترسی کاربر با موفقیت ثبت شد.');
+    });
+
+    it('ثبت با قالب، section_levels قالب را می‌فرستد و ویرایشگر سطح‌ها PATCH می‌کند (گام ۱۰)', async () => {
+      component.systemUsers = [{ id: 10, username: 'testuser', first_name: 'a', last_name: 'b' } as any];
+      component.studioSelectedUserId = 10;
+      component.permissionSpec = { levels: ['none', 'read', 'write'], templates: [{ key: 'manager', label_fa: 'M', levels: { identity: 'write', docs_archive: 'write', docs_confidential: 'none' } }], sections: [{ key: 'identity', label_fa: 'I', order: 10, kind: 'levels', sensitive: false, studio: 'identity' }, { key: 'docs_archive', label_fa: 'D', order: 140, kind: 'levels', sensitive: false, studio: 'archive' }, { key: 'docs_confidential', label_fa: 'C', order: 210, kind: 'levels', sensitive: true, studio: 'archive' }] } as any;
+      component.studioTemplate = 'manager';
+      mockCompanyApi.createUserAccess.mockReturnValue(of({ id: 56, user: 10, company: 1, is_default: false }));
+      component.addStudioAccess();
+      expect(mockCompanyApi.createUserAccess).toHaveBeenLastCalledWith(expect.objectContaining({
+        section_levels: { identity: 'write', docs_archive: 'write', docs_confidential: 'none' }
+      }));
+      const acc = { id: 55, user: 10, company: 1, is_default: false, section_levels: { identity: 'read' } } as any;
+      component.studioAccesses = [acc];
+      component.startEditLevels(acc);
+      component.applyTemplateToEditing('manager');
+      expect(component.editingLevels['docs_archive']).toBe('write');
+      const sent = { ...component.editingLevels };
+      mockCompanyApi.updateUserAccess.mockReturnValue(of({ ...acc, section_levels: sent }));
+      await component.saveEditLevels(acc);
+      expect(mockCompanyApi.updateUserAccess).toHaveBeenCalledWith(55, { section_levels: sent });
+      expect(component.editingAccessId).toBeNull();
+      expect(component.studioAccesses[0].section_levels).toEqual(sent);
+    });
+
+    it('بخش حساس برای غیر مدیر کل قفل است و اعضای خودکار با منبع بارگذاری می‌شوند', () => {
+      component.permissionSpec = { levels: ['none', 'read', 'write'], templates: [{ key: 'manager', label_fa: 'M', levels: { identity: 'write', docs_archive: 'write', docs_confidential: 'none' } }], sections: [{ key: 'identity', label_fa: 'I', order: 10, kind: 'levels', sensitive: false, studio: 'identity' }, { key: 'docs_archive', label_fa: 'D', order: 140, kind: 'levels', sensitive: false, studio: 'archive' }, { key: 'docs_confidential', label_fa: 'C', order: 210, kind: 'levels', sensitive: true, studio: 'archive' }] } as any;
+      const sensitive = component.permissionSections.find(sec => sec.sensitive)!;
+      expect(component.canEditSection(sensitive)).toBe(component.isSuperuserActor);
+      component.loadStudioAccesses(1);
+      expect(component.companyMembers[0].sources).toEqual(['از انبار الف']);
+    });
+
+    it('غیر مدیر کل: سطح بالاتر از سطح خودش قفل است، قالب بریده می‌شود و ردیف بالاتر ویرایش‌پذیر نیست', () => {
+      mockActiveCompanyService.isSuperuser = false;
+      mockCompanyApi.getUserAvailable.mockReturnValue(of({ companies: [{ id: 1, section_levels: { user_access: 'write', identity: 'read', docs_archive: 'write' } }], is_superuser: false }));
+      component.permissionSpec = { levels: ['none', 'read', 'write'], templates: [{ key: 'manager', label_fa: 'M', levels: { identity: 'write', docs_archive: 'write', docs_confidential: 'none' } }], sections: [{ key: 'identity', label_fa: 'I', order: 10, kind: 'levels', sensitive: false, studio: 'identity' }, { key: 'docs_archive', label_fa: 'D', order: 140, kind: 'levels', sensitive: false, studio: 'archive' }, { key: 'docs_confidential', label_fa: 'C', order: 210, kind: 'levels', sensitive: true, studio: 'archive' }] } as any;
+      component.loadStudioAccesses(1);
+      expect(component.canWriteAccess).toBe(true);
+      expect(component.isLevelAboveActor('identity', 'write')).toBe(true);
+      expect(component.isLevelAboveActor('identity', 'read')).toBe(false);
+      expect(component.templateLevels('manager')).toEqual({ identity: 'read', docs_archive: 'write', docs_confidential: 'none' });
+      expect(component.canEditAccessRow({ id: 3, user: 99, company: 1, is_default: false, section_levels: { identity: 'write' } } as any)).toBe(false);
+      expect(component.canEditAccessRow({ id: 4, user: 98, company: 1, is_default: false, section_levels: { identity: 'read' } } as any)).toBe(true);
     });
 
     it('لغو دسترسی کاربر در استودیو باید بلافاصله ردیف را از studioAccesses خارج کند', async () => {
