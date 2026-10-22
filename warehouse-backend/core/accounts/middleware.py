@@ -229,7 +229,9 @@ class AuditContextMiddleware:
                 from companies.access import validate_user_company_access
                 # ضدجعل: عضویت لازم است؛ فقط مسیرهای هستهٔ شرکت (/api/org/) که خودشان دروازهٔ بخش دارند
                 # به «پیوند» بسنده می‌کنند (حالت محدود استودیو؛ یافتهٔ tenant-scope-reviewer گام ۸)
-                link_ok = request.path.startswith('/api/org/')
+                from platform_core.registry import contributions as _contributions
+                link_prefixes = ('/api/org/',) + tuple(_contributions('company_link_api_prefixes'))
+                link_ok = request.path.startswith(link_prefixes)
                 validate_user_company_access(user, company_id, required_level=None if link_ok else 'workspace_full')
             except Exception as e:
                 from django.http import JsonResponse

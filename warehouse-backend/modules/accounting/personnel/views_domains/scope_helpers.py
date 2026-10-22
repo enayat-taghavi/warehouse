@@ -47,7 +47,8 @@ def user_belongs_to_company(user_id, company_id):
     if not user_id or not company_id:
         return False
     return (
-        UserCompanyAccess.objects.filter(user_id=user_id, company_id=company_id, access_level='workspace_full').exists()
+        # پیوند کاربر با شرکت (ت۸): ردیف UserCompanyAccess با هر سطح، کاربر را انتساب‌پذیر می‌کند
+        UserCompanyAccess.objects.filter(user_id=user_id, company_id=company_id).exists()
         or UserSectionAssignment.objects.filter(user_id=user_id, section__project__company_id=company_id).exists()
     )
 

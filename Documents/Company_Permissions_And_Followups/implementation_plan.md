@@ -454,4 +454,45 @@
 
 **گام بعد:** گام ۹. ابتدا `manage.py test personnel inventory --keepdb` تنها اجرا و فهرست شکست‌ها گرفته شود. آزمون‌هایی که با ردیف `workspace_full` عضو می‌سازند به انتساب بخش، یا `integration_tests.membership.grant_membership` (در `personnel` منبع آزمونی همانند) منتقل شوند. سپس ردیف‌های حسابداری §۵-۴ اعمال شوند.
 
+### گام ۹ — سوئیچ بک‌اند حسابداری (۳۰ مهر ۱۴۰۵) — انجام شد
+
+**انجام شد:**
+- **`personnel/company_section_gates.py`:**
+  - `ensure_company_section`: شناسهٔ نامعتبر ۴۰۳ می‌گیرد.
+  - `section_or_member_company_ids` (ت۱۱: عضو فهرست انتخابی بانک و دوره را می‌خواند).
+  - `ensure_company_unchanged`.
+- **`org_views.py`** (همهٔ `is_staff`های دروازهٔ شرکت حذف شدند):
+  - **مدارک:** خواندن و دانلود ← `docs_archive`/خواندن؛ ساخت، ویرایش و حذف ← `docs_archive`/نوشتن؛ محرمانه ← `docs_confidential` (فهرست و دانلود با خواندن، بقیه با نوشتن). فهرست مدارک در آستانهٔ انقضا ← `docs_archive`.
+  - **بانک:** فهرست ← عضو یا `bank`/خواندن؛ ویرایش و حذف ← `bank`/نوشتن؛ ساخت، تغییر شبا یا حساب اصلی و `set_primary` ← `bank_sheba`.
+  - **هیئت‌مدیره:** خواندن و نوشتن (حذف هم) ← `board`.
+  - **دوره‌ها:** فهرست ← عضو یا `fiscal`/خواندن؛ ساخت، ویرایش و انجماد ← `fiscal`/نوشتن؛ بستن، بازگشایی و حذف ← `fiscal_close`. «دورهٔ بسته فقط superuser» به‌جا ماند.
+  - ویرایش رکوردِ این چهار viewset به شرکت دیگر منتقل نمی‌شود.
+- **گوگل‌درایو** (`8ff49662`) ← `gdrive`/خواندن و `gdrive`/نوشتن.
+- **middleware:** مسیرهایی که ماژول با contribution `company_link_api_prefixes` اعلام می‌کند (`/api/personnel/compan`) به «پیوند» بسنده می‌کنند. خود این viewها دروازهٔ بخش دارند.
+- **گره ت۸:** `user_belongs_to_company` و پیام `bulk_assign` حالا هر ردیف پیوند را کافی می‌دانند.
+- **گیرندگان کارتابل** (`_workflow_recipient_ids`): عضو از راه `company_member_q_builders`.
+- **آزمون‌ها:**
+  - `companies/testing.py` (`grant_membership`) منبع و q builder آزمونی است.
+  - آزمون‌های قدیمیِ «عضو با `workspace_full`» به آن منتقل شدند.
+  - ۳ آزمون تازه: شناسهٔ نامعتبر، سطح بخش بانک و `bank_sheba`، و ممنوعیت انتقال عضو هیئت‌مدیره.
+  - **اجرای کامل** `personnel inventory companies accounts warehouses integration_tests` پیش از اصلاحات بازبین: ۸۴۲ آزمون، فقط `communications.test_performance` (از پیش) و یک آزمون alias شکست خوردند. آزمون alias اصلاح شد.
+  - اجرای نهایی پس از اصلاحات: ۸۴۵ آزمون؛ فقط `communications.test_performance` (از پیش) شکست خورد.
+- **نگهبان‌ها:** 29 و 57 سبز.
+- **`tenant-scope-reviewer`:** ۲ یافته داد، هر دو از کد قبلی به ارث رسیده بودند و اصلاح شدند:
+  - `?company_id=x` کل مستأجرها را فهرست می‌کرد ← ۴۰۳.
+  - `PATCH company` رکورد را به شرکت دیگر می‌برد ← ممنوع.
+
+## یادداشت تحویل (پایان جلسه، ۳۰ مهر ۱۴۰۵)
+
+- **وضعیت:** گام‌های ۱ تا ۹ انجام و commit شده‌اند. بک‌اند بخش الف کامل است.
+- **مانده:**
+  - گام ۱۰: فرانت تب «دسترسی» (جدول بخش‌ها، قالب‌ها، اعضا با منبع، تأیید کار حساس و `SKIP_OFFLINE`).
+  - گام ۱۱: حالت محدود، شامل مسیر `/app/companies`، کاشی لانچر و `section_levels` در بایگانی و تب‌ها.
+  - گام ۱۲: حذف سازگاری `docs_*` و `user_access_level`، و حذف ستون `access_level` با تأیید.
+- **پیش از گام ۱۰ بدانید:**
+  - فرانت فعلی تب «دسترسی» هنوز `access_level` می‌فرستد که حالا فقط‌خواندنی است. اعطا از فرانت تا گام ۱۰ فقط ردیف پیوند بی‌سطح می‌سازد.
+  - صفحهٔ کاربران درست کار می‌کند (پیوند).
+  - مسیرهای API: `GET /api/org/company-permission-sections/`، `GET user-company-access/members/?company_id=`، و `user-available?scope=manage` با `is_member`، `membership_sources` و `section_levels`.
+- **پیام جلسهٔ بعد:** «گام ۱۰ طرح Documents/Company_Permissions_And_Followups/implementation_plan.md را اجرا کن (یادداشت تحویل پایان گام ۹ را بخوان).»
+
 </div>

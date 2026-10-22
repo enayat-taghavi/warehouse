@@ -26,6 +26,8 @@ class PersonnelConfig(AppConfig):
         _contribute('company_field_sections', COMPANY_FIELD_SECTIONS)
         from personnel.company_access import section_member_sources
         _contribute('company_member_sources', section_member_sources)
+        # مسیرهای بخش‌های شرکتِ حسابداری خودشان دروازهٔ بخش دارند؛ middleware برای آن‌ها «پیوند» را کافی می‌داند
+        _contribute('company_link_api_prefixes', '/api/personnel/compan')
 
 
         # بارگذاری سیگنال‌های خودکار همگام‌سازی شرکت و مدارک

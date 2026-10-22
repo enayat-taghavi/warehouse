@@ -967,11 +967,15 @@ def _workflow_recipient_ids(stage: str, company_id, section_id, created_by_id, p
     )
     users = User.objects.filter(has_perm_q, is_active=True)
     if company_id:
-        in_company_q = (
-            Q(is_superuser=True)
-            | Q(company_accesses__company_id=company_id, company_accesses__access_level='workspace_full')
-            | Q(section_assignments__is_active=True, section_assignments__section__project__company_id=company_id)
+        # عضو شرکت فقط از منبع‌های خودکار (طرح مجوزهای بخش‌به‌بخش، ق۲)
+        from platform_core.registry import contributions
+        in_company_q = Q(is_superuser=True) | Q(
+            section_assignments__is_active=True, section_assignments__section__project__company_id=company_id
         )
+        for builder in contributions('company_member_q_builders'):
+            builder_q = builder({company_id})
+            if builder_q is not None:
+                in_company_q |= builder_q
         users = users.filter(in_company_q)
     else:
         users = users.filter(is_superuser=True)

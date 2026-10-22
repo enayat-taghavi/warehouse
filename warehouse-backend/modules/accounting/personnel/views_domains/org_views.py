@@ -87,7 +87,7 @@ class CompanyViewSet(CoreCompanyViewSet):
         qs = CompanyDocument.objects.select_related('company', 'uploaded_by').filter(expiry_date__isnull=False)
 
         if not user.is_superuser:
-            allowed_ids = get_user_allowed_companies(user, required_level='docs_read').values_list('id', flat=True)
+            allowed_ids = companies_with_section(user, 'docs_archive', 'read').values_list('id', flat=True)
             qs = qs.filter(company_id__in=allowed_ids, is_confidential=False)
 
         today = timezone.now().date()
@@ -104,6 +104,12 @@ class CompanyViewSet(CoreCompanyViewSet):
             'count': expiring_qs.count(),
             'results': serializer.data
         })
+
+from personnel.company_section_gates import (  # noqa: E402
+    company_section_level, companies_with_section, ensure_company_section, section_or_member_company_ids,
+    ensure_company_unchanged,
+)
+
 
 class CompanyDocumentViewSet(viewsets.ModelViewSet):
     """
@@ -122,16 +128,18 @@ class CompanyDocumentViewSet(viewsets.ModelViewSet):
 
         company_id = self.request.query_params.get('company_id') or get_request_company_id(self.request)
         if company_id:
-            cid = validate_user_company_access(user, company_id, required_level='docs_read')
+            cid = ensure_company_section(user, company_id, 'docs_archive', 'read')
             if cid:
                 qs = qs.filter(company_id=cid)
         elif not user.is_superuser:
-            allowed_ids = get_user_allowed_companies(user, required_level='docs_read').values_list('id', flat=True)
+            allowed_ids = companies_with_section(user, 'docs_archive', 'read').values_list('id', flat=True)
             qs = qs.filter(company_id__in=allowed_ids)
 
         # عدم نمایش اسناد محرمانه به کاربران غیرسوپریوزر/غیرادمین
-        if not (user.is_superuser or user.is_staff):
-            qs = qs.filter(is_confidential=False)
+        if not user.is_superuser:
+            # مدارک محرمانه فقط در شرکت‌هایی که بخش حساس «مدارک محرمانه» را دست‌کم می‌خواند
+            conf_ids = companies_with_section(user, 'docs_confidential', 'read').values_list('id', flat=True)
+            qs = qs.filter(Q(is_confidential=False) | Q(company_id__in=conf_ids))
 
         doc_type = self.request.query_params.get('document_type')
         if doc_type:
@@ -150,11 +158,11 @@ class CompanyDocumentViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError({"company": "انتخاب شرکت الزامی است."})
 
         # بررسی دسترسی کاربر به این شرکت (حداقل سطح ثبت اسناد)
-        validate_user_company_access(user, company.id, required_level='docs_write')
+        ensure_company_section(user, company.id, 'docs_archive', 'write')
 
         # اگر سند محرمانه علامت زده شده، کاربر باید مدیر ارشد باشد
         is_confidential = serializer.validated_data.get('is_confidential', False)
-        if is_confidential and not (user.is_superuser or user.is_staff):
+        if is_confidential and company_section_level(user, company.id, 'docs_confidential') != 'write':
             raise PermissionDenied("تنها مدیران ارشد مجاز به بارگذاری اسناد محرمانه هستند.")
 
         file_obj = self.request.FILES.get('file')
@@ -167,15 +175,16 @@ class CompanyDocumentViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         user = self.request.user
         instance = serializer.instance
-        validate_user_company_access(user, instance.company_id, required_level='docs_write')
+        ensure_company_section(user, instance.company_id, 'docs_archive', 'write')
+        ensure_company_unchanged(serializer)
 
         # عدم دسترسی کاربر عادی به ویرایش اسناد محرمانه
-        if instance.is_confidential and not (user.is_superuser or user.is_staff):
+        if instance.is_confidential and company_section_level(user, instance.company_id, 'docs_confidential') != 'write':
             raise PermissionDenied("تنها مدیران ارشد مجاز به ویرایش اسناد محرمانه هستند.")
 
         # عدم اجازه به کاربر عادی جهت تغییر وضعیت محرمانگی سند
         new_confidential = serializer.validated_data.get('is_confidential', instance.is_confidential)
-        if new_confidential != instance.is_confidential and not (user.is_superuser or user.is_staff):
+        if new_confidential != instance.is_confidential and company_section_level(user, instance.company_id, 'docs_confidential') != 'write':
             raise PermissionDenied("تغییر وضعیت محرمانگی سند تنها توسط مدیران ارشد مجاز است.")
 
         file_obj = self.request.FILES.get('file')
@@ -189,9 +198,9 @@ class CompanyDocumentViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         user = self.request.user
-        validate_user_company_access(user, instance.company_id, required_level='docs_write')
-        if not (user.is_superuser or user.is_staff):
-            raise PermissionDenied("تنها مدیران ارشد مجاز به حذف مدارک رسمی شرکت هستند.")
+        ensure_company_section(user, instance.company_id, 'docs_archive', 'write')
+        if instance.is_confidential and company_section_level(user, instance.company_id, 'docs_confidential') != 'write':
+            raise PermissionDenied("حذف مدرک محرمانه نیازمند مجوز «مدارک محرمانه» است.")
 
         instance_id = instance.id
         instance_title = instance.title
@@ -218,10 +227,10 @@ class CompanyDocumentViewSet(viewsets.ModelViewSet):
             raise Http404("سند مورد نظر یافت نشد.")
 
         # ۱. بررسی دسترسی کاربر به شرکت متبوع (BOLA با حداقل سطح مشاهده)
-        validate_user_company_access(user, document.company_id, required_level='docs_read')
+        ensure_company_section(user, document.company_id, 'docs_archive', 'read')
 
         # ۲. بررسی سند محرمانه (صرفاً سوپریوزر و ادمین مجازند)
-        if document.is_confidential and not (user.is_superuser or user.is_staff):
+        if document.is_confidential and company_section_level(user, document.company_id, 'docs_confidential') == 'none':
             raise PermissionDenied("شما مجوز دسترسی به این سند محرمانه را ندارید.")
 
         # ۳. بررسی وجود فایل در حافظه ذخیره‌سازی
@@ -260,11 +269,11 @@ class CompanyBankAccountViewSet(viewsets.ModelViewSet):
 
         company_id = self.request.query_params.get('company_id') or get_request_company_id(self.request)
         if company_id:
-            cid = validate_user_company_access(user, company_id)
+            cid = ensure_company_section(user, company_id, 'bank', 'read', members_read=True)
             if cid:
                 qs = qs.filter(company_id=cid)
         elif not user.is_superuser:
-            allowed_ids = get_user_allowed_companies(user).values_list('id', flat=True)
+            allowed_ids = section_or_member_company_ids(user, 'bank', members_read=True)
             qs = qs.filter(company_id__in=allowed_ids)
 
         search = self.request.query_params.get('search')
@@ -284,7 +293,8 @@ class CompanyBankAccountViewSet(viewsets.ModelViewSet):
         if not company:
             raise serializers.ValidationError({"company": "انتخاب شرکت الزامی است."})
 
-        validate_user_company_access(user, company.id)
+        # ثبت حساب یعنی ثبت شبا: کار حساس (ت۹)
+        ensure_company_section(user, company.id, 'bank_sheba', 'write')
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_bank_account', 'create', instance.id, instance.sheba_number, instance.company_id, tab_id, user.id)
@@ -292,14 +302,18 @@ class CompanyBankAccountViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         user = self.request.user
         instance = serializer.instance
-        validate_user_company_access(user, instance.company_id)
+        ensure_company_section(user, instance.company_id, 'bank', 'write')
+        ensure_company_unchanged(serializer)
+        vd = serializer.validated_data
+        if ('sheba_number' in vd and vd['sheba_number'] != instance.sheba_number) or ('is_primary' in vd and vd['is_primary'] != instance.is_primary):
+            ensure_company_section(user, instance.company_id, 'bank_sheba', 'write')
         updated_instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_bank_account', 'update', updated_instance.id, updated_instance.sheba_number, updated_instance.company_id, tab_id, user.id)
 
     def perform_destroy(self, instance):
         user = self.request.user
-        validate_user_company_access(user, instance.company_id)
+        ensure_company_section(user, instance.company_id, 'bank', 'write')
         instance_id = instance.id
         sheba = instance.sheba_number
         comp_id = instance.company_id
@@ -313,7 +327,7 @@ class CompanyBankAccountViewSet(viewsets.ModelViewSet):
         تنظیم یک حساب بانکی به عنوان حساب پیش‌فرض/اصلی شرکت
         """
         account = self.get_object()
-        validate_user_company_access(request.user, account.company_id)
+        ensure_company_section(request.user, account.company_id, 'bank_sheba', 'write')
         account.is_primary = True
         account.save()
         tab_id = request.headers.get('X-Client-Tab-Id')
@@ -336,11 +350,11 @@ class CompanyBoardMemberViewSet(viewsets.ModelViewSet):
 
         company_id = self.request.query_params.get('company_id') or get_request_company_id(self.request)
         if company_id:
-            cid = validate_user_company_access(user, company_id)
+            cid = ensure_company_section(user, company_id, 'board', 'read', members_read=False)
             if cid:
                 qs = qs.filter(company_id=cid)
         elif not user.is_superuser:
-            allowed_ids = get_user_allowed_companies(user).values_list('id', flat=True)
+            allowed_ids = section_or_member_company_ids(user, 'board', members_read=False)
             qs = qs.filter(company_id__in=allowed_ids)
 
         search = self.request.query_params.get('search')
@@ -361,7 +375,7 @@ class CompanyBoardMemberViewSet(viewsets.ModelViewSet):
         if not company:
             raise serializers.ValidationError({"company": "انتخاب شرکت الزامی است."})
 
-        validate_user_company_access(user, company.id)
+        ensure_company_section(user, company.id, 'board', 'write')
         instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_board_member', 'create', instance.id, f"{instance.first_name} {instance.last_name}", instance.company_id, tab_id, user.id)
@@ -369,16 +383,15 @@ class CompanyBoardMemberViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         user = self.request.user
         instance = serializer.instance
-        validate_user_company_access(user, instance.company_id)
+        ensure_company_section(user, instance.company_id, 'board', 'write')
+        ensure_company_unchanged(serializer)
         updated_instance = serializer.save()
         tab_id = self.request.headers.get('X-Client-Tab-Id')
         broadcast_org_structure_updated('company_board_member', 'update', updated_instance.id, f"{updated_instance.first_name} {updated_instance.last_name}", updated_instance.company_id, tab_id, user.id)
 
     def perform_destroy(self, instance):
         user = self.request.user
-        validate_user_company_access(user, instance.company_id)
-        if not (user.is_superuser or user.is_staff):
-            raise PermissionDenied("تنها مدیران ارشد مجاز به حذف اعضای هیئت‌مدیره هستند.")
+        ensure_company_section(user, instance.company_id, 'board', 'write')
         instance_id = instance.id
         title = f"{instance.first_name} {instance.last_name}"
         comp_id = instance.company_id
@@ -401,11 +414,11 @@ class CompanyFiscalPeriodViewSet(viewsets.ModelViewSet):
 
         company_id = self.request.query_params.get('company_id') or get_request_company_id(self.request)
         if company_id:
-            cid = validate_user_company_access(user, company_id)
+            cid = ensure_company_section(user, company_id, 'fiscal', 'read', members_read=True)
             if cid:
                 qs = qs.filter(company_id=cid)
         elif not user.is_superuser:
-            allowed_ids = get_user_allowed_companies(user).values_list('id', flat=True)
+            allowed_ids = section_or_member_company_ids(user, 'fiscal', members_read=True)
             qs = qs.filter(company_id__in=allowed_ids)
 
         year = self.request.query_params.get('fiscal_year')
@@ -423,22 +436,21 @@ class CompanyFiscalPeriodViewSet(viewsets.ModelViewSet):
         company = serializer.validated_data.get('company')
         if not company:
             raise serializers.ValidationError({"company": "انتخاب شرکت الزامی است."})
-        validate_user_company_access(user, company.id)
+        ensure_company_section(user, company.id, 'fiscal', 'write')
         serializer.save()
 
     def perform_update(self, serializer):
         user = self.request.user
         instance = serializer.instance
-        validate_user_company_access(user, instance.company_id)
+        ensure_company_section(user, instance.company_id, 'fiscal', 'write')
+        ensure_company_unchanged(serializer)
         if instance.status == 'closed' and not user.is_superuser:
             raise PermissionDenied("سال مالی بسته شده است و ویرایش آن صرفاً توسط مدیر ارشد امکان‌پذیر است.")
         serializer.save()
 
     def perform_destroy(self, instance):
         user = self.request.user
-        validate_user_company_access(user, instance.company_id)
-        if not (user.is_superuser or user.is_staff):
-            raise PermissionDenied("تنها مدیران ارشد مجاز به حذف دوره مالی هستند.")
+        ensure_company_section(user, instance.company_id, 'fiscal_close', 'write')
         if instance.status == 'closed':
             raise serializers.ValidationError("دوره مالی بسته شده را نمی‌توان حذف کرد.")
         instance.delete()
@@ -448,9 +460,7 @@ class CompanyFiscalPeriodViewSet(viewsets.ModelViewSet):
         """بستن قطعی دوره و سال مالی"""
         period = self.get_object()
         user = request.user
-        validate_user_company_access(user, period.company_id)
-        if not (user.is_superuser or user.is_staff):
-            raise PermissionDenied("تنها مدیران ارشد مجاز به بستن سال مالی هستند.")
+        ensure_company_section(user, period.company_id, 'fiscal_close', 'write')
         period.status = 'closed'
         period.closed_at = timezone.now()
         period.closed_by = user
@@ -463,7 +473,7 @@ class CompanyFiscalPeriodViewSet(viewsets.ModelViewSet):
         """انجماد موقت دوره مالی جهت رسیدگی و انبارگردانی"""
         period = self.get_object()
         user = request.user
-        validate_user_company_access(user, period.company_id)
+        ensure_company_section(user, period.company_id, 'fiscal', 'write')
         period.status = 'frozen'
         period.save(update_fields=['status', 'updated_at'])
         return Response({'detail': f'دوره مالی {period.fiscal_year} موقتاً منجمد شد.'})
@@ -473,8 +483,7 @@ class CompanyFiscalPeriodViewSet(viewsets.ModelViewSet):
         """بازگشایی مجدد دوره مالی منجمد یا بسته شده (سوپریوزر)"""
         period = self.get_object()
         user = request.user
-        if not user.is_superuser:
-            raise PermissionDenied("صرفاً مدیر کل مجاز به بازگشایی دوره مالی بسته شده است.")
+        ensure_company_section(user, period.company_id, 'fiscal_close', 'write')
         period.status = 'open'
         period.closed_at = None
         period.closed_by = None
@@ -1071,7 +1080,7 @@ class UserSectionAssignmentViewSet(viewsets.ModelViewSet):
                 # نام کاربری فقط برای کاربرانی که در شرکت‌های مجاز نویسنده دیده می‌شوند (بقیه با شناسه)
                 allowed_ids = set(get_user_allowed_companies(request.user).values_list('id', flat=True))
                 names = dict(User.objects.filter(id__in=rejected).filter(
-                    Q(company_accesses__company_id__in=allowed_ids, company_accesses__access_level='workspace_full')
+                    Q(company_accesses__company_id__in=allowed_ids)
                     | Q(section_assignments__section__project__company_id__in=allowed_ids)
                 ).distinct().values_list('id', 'username'))
                 labels = '، '.join(names.get(uid, f'#{uid}') for uid in rejected)

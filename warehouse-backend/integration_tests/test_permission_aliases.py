@@ -72,11 +72,13 @@ class PermissionAliasBehaviourTests(TestCase):
     def test_manager_stage_recipients_include_legacy_manager(self):
         from personnel.lifecycle_services import _workflow_recipient_ids
         from companies.models import Company, UserCompanyAccess
+        from companies.testing import grant_membership
         company = Company.objects.create(code='ALIAS-C1', name='alias company')
         manager = self._user('alias_recipient_manager', 'can_act_as_manager')
         other = self._user('alias_recipient_other', 'view_sys_users')
         for user in (manager, other):
             UserCompanyAccess.objects.create(user=user, company=company, access_level='workspace_full')
+            grant_membership(user, company)
         recipients = _workflow_recipient_ids('pending_manager', company.id, None, None)
         self.assertIn(manager.id, recipients)
         self.assertNotIn(other.id, recipients)

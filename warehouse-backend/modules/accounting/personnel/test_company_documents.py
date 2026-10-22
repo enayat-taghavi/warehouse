@@ -717,3 +717,37 @@ class CompanyProtectAndShebaTests(TestCase):
         r = self.client.post(url, {**body, 'account_number': '2'}, format='json')
         self.assertEqual(r.status_code, 400, r.content)
         self.assertIn('sheba_number', r.json())
+
+
+class CompanySectionGateTests(TestCase):
+    """Step 9: accounting company viewsets gated by company sections."""
+
+    def setUp(self):
+        from personnel.models import Company, CompanyBankAccount
+        from companies.models import UserCompanyAccess
+        self.client = APIClient()
+        self.a = Company.objects.create(code='GATE-A', name='A')
+        self.b = Company.objects.create(code='GATE-B', name='B')
+        self.acc_b = CompanyBankAccount.objects.create(company=self.b, bank_name='B', account_number='1', sheba_number='IR820540102680020817909002')
+        self.user = get_user_model().objects.create_user(username='gate_u', password='x-pass-123', phone_number='09170000095')
+        UserCompanyAccess.objects.create(user=self.user, company=self.a, section_levels={'board': 'write', 'bank': 'read'})
+        self.client.force_authenticate(self.user)
+
+    def test_non_integer_company_id_never_lists_all_tenants(self):
+        r = self.client.get('/api/personnel/company-bank-accounts/?company_id=x')
+        self.assertIn(r.status_code, (400, 403))
+
+    def test_section_levels_gate_reads_and_writes(self):
+        url = '/api/personnel/company-bank-accounts/'
+        self.assertEqual(self.client.get(f'{url}?company_id={self.a.id}').status_code, 200)
+        self.assertEqual(self.client.get(f'{url}?company_id={self.b.id}').status_code, 403)
+        body = {'company': self.a.id, 'bank_name': 'X', 'account_number': '9', 'sheba_number': 'IR820540102680020817909002'}
+        self.assertEqual(self.client.post(url, body, format='json').status_code, 403)  # bank_sheba is sensitive
+
+    def test_board_member_cannot_be_moved_to_other_company(self):
+        from personnel.models import CompanyBoardMember
+        m = CompanyBoardMember.objects.create(company=self.a, first_name='a', last_name='b', role='member')
+        r = self.client.patch(f'/api/personnel/company-board-members/{m.id}/', {'company': self.b.id}, format='json')
+        self.assertEqual(r.status_code, 403)
+        m.refresh_from_db()
+        self.assertEqual(m.company_id, self.a.id)
