@@ -7,7 +7,7 @@ export const ACCOUNTING_PERMISSION_CODENAMES: string[] = [
   'view_sys_fleet_settlement', 'view_sys_treasury', 'can_act_as_operator', 'can_act_as_workshop_supervisor',
   'can_act_as_accountant', 'can_act_as_company_manager', 'perm_approve_personnel_supervisor', 'perm_approve_fleet_supervisor',
   'perm_approve_personnel_manager', 'perm_approve_fleet_manager', 'perm_approve_personnel_finance', 'perm_approve_fleet_finance',
-  'perm_lock_work_period', 'perm_manager_payment_authorize', 'perm_treasury_disburse_action', 'perm_manage_projects_sections',
+  'perm_lock_work_period', 'perm_manager_payment_authorize', 'perm_treasury_disburse_action',
   'perm_delete_personnel_nomovement', 'perm_delete_vehicle_nomovement'
 ];
 
@@ -33,6 +33,5 @@ export const ACCOUNTING_SHORT_PERMISSION_NAMES: Record<string, string> = {
   'can_act_as_operator': 'کارمند کارگاه',
   'can_act_as_workshop_supervisor': 'سرپرست کارگاه',
   'can_act_as_accountant': 'حسابدار',
-  'can_act_as_company_manager': 'مدیر شرکت',
-  'perm_manage_projects_sections': 'پروژه‌ها و بخش‌ها'
+  'can_act_as_company_manager': 'مدیر شرکت'
 };

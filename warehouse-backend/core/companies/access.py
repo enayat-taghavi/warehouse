@@ -1,8 +1,8 @@
 """
 قواعد دسترسی کاربر به شرکت‌ها (هستهٔ چندمستأجری).
 
-عضویت فقط از superuser و منبع‌های خودکار ماژول‌ها (`register_derived_company_source`) می‌آید؛ مثلاً
-حسابداری انتساب فعال در بخش‌های پروژه‌های یک شرکت را عضویت در آن شرکت حساب می‌کند.
+عضویت فقط از superuser و منبع‌های خودکار (`register_derived_company_source`) می‌آید؛ مثلاً
+هسته انتساب فعال در بخش‌های پروژه‌های یک شرکت را عضویت در آن شرکت حساب می‌کند (`org_membership`).
 ردیف UserCompanyAccess «پیوند کاربر با شرکت» است و سطح هر بخش را در `section_levels` نگه می‌دارد.
 """
 from rest_framework.exceptions import PermissionDenied
@@ -95,7 +95,8 @@ def user_section_levels(user):
     key = (getattr(user, 'id', None), '__section_levels__')
     if req_cache is not None and key in req_cache:
         return req_cache[key]
-    result = {r.company_id: _row_levels(r) for r in UserCompanyAccess.objects.filter(user=user)}
+    # شرکت غیرفعال هیچ سطحی نمی‌دهد (نوشتن با ensure_section هم در آن بسته است)
+    result = {r.company_id: _row_levels(r) for r in UserCompanyAccess.objects.filter(user=user, company__is_active=True)}
     if req_cache is not None:
         req_cache[key] = result
     return result

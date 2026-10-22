@@ -16,11 +16,9 @@ from companies.access import (
     get_user_allowed_companies,
     get_request_company_id,
     validate_user_company_access,
-    ensure_scoped_write,
 )
 from companies.realtime import broadcast_org_structure_updated as core_broadcast_org_structure_updated
 from ..models import (
-    UserCompanyAccess,
     SectionAssignment,
     Project,
     MonthlyWorkPeriod,
@@ -30,42 +28,10 @@ from ..models import (
     TaxRuleSettings,
     BankExportSettings,
 )
-from ..permissions import (
-    requires_company_scope,
-    has_structure_write_permission,
-)
+from ..permissions import requires_company_scope
 from ..payroll_engine import get_effective_payroll_settings
 
 User = get_user_model()
-
-def user_belongs_to_company(user_id, company_id):
-    """
-    آیا کاربر عضو شرکت است یا بوده است؟ (دسترسی صریح workspace_full، یا هر انتساب فعال یا غیرفعال در بخش‌های همان شرکت)
-    انتساب بخش هرگز نباید برای کاربر دسترسی شرکت تازه بسازد، چون عضویت بخش خودش دسترسی شرکت می‌دهد.
-    انتساب غیرفعالِ قبلی حساب می‌شود تا فعال‌سازی دوباره یا جابه‌جایی درون همان شرکت رد نشود.
-    """
-    if not user_id or not company_id:
-        return False
-    return (
-        # پیوند کاربر با شرکت (ت۸): ردیف UserCompanyAccess با هر سطح، کاربر را انتساب‌پذیر می‌کند
-        UserCompanyAccess.objects.filter(user_id=user_id, company_id=company_id).exists()
-        or SectionAssignment.objects.filter(user_id=user_id, section__project__company_id=company_id).exists()
-    )
-
-def ensure_scoped_assignment(actor, target_user_id, section, final_active=True):
-    """
-    انتساب بخش: بخش باید در شرکت‌های مجاز نویسنده باشد و کاربر هدف عضو همان شرکت.
-    راهبر تشکیلاتی که مجوز قدیمی نوشتن ساختار ندارد، نمی‌تواند خودش را منتسب کند (خط قرمز نقش راهبر).
-    غیرفعال‌سازی انتساب این دو شرط عضویت را لازم ندارد.
-    """
-    company_id = section.project.company_id if section is not None and section.project_id else None
-    ensure_scoped_write(actor, company_id, "انتساب فقط در بخش‌های شرکت‌های مجاز شما ممکن است (بخش پروژهٔ سراسری مجاز نیست).")
-    if not final_active:
-        return
-    if target_user_id == actor.id and not has_structure_write_permission(actor):
-        raise PermissionDenied("انتساب خودتان به بخش را مدیر ارشد یا مدیر انجام می‌دهد، نه راهبر تشکیلات.")
-    if not user_belongs_to_company(target_user_id, company_id):
-        raise PermissionDenied("این کاربر عضو شرکتِ این بخش نیست. دسترسی شرکت را مدیر ارشد می‌دهد، نه انتساب بخش.")
 
 def resolve_write_company(request):
     """
@@ -618,8 +584,6 @@ def broadcast_org_structure_updated(entity_type, action, entity_id=None, name=No
     core_broadcast_org_structure_updated(entity_type, action, entity_id, name, project_id, client_tab_id, sender_id, cid)
 
 __all__ = [
-    'user_belongs_to_company',
-    'ensure_scoped_assignment',
     'resolve_write_company',
     'resolve_import_company',
     'readable_company_ids',

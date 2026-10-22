@@ -9,20 +9,6 @@ from companies.permissions import (  # noqa: F401
 )
 
 
-class IsProjectStructureManagerOrReadOnly(IsOrgStructureManagerOrReadOnly):
-    """
-    ساختار پروژه‌ها، بخش‌ها و انتساب کاربران به بخش‌ها:
-    قواعد IsOrgStructureManagerOrReadOnly به‌علاوه راهبر تشکیلات (perm_manage_projects_sections).
-    عمداً روی UserCompanyAccess اعمال نمی‌شود تا راهبر نتواند دسترسی شرکت اعطا کند.
-    محدودسازی شرکت (requires_company_scope) در خود ویوست‌ها اعمال می‌شود.
-    """
-    def has_permission(self, request, view):
-        if super().has_permission(request, view):
-            return True
-        u = request.user
-        return bool(u and u.is_authenticated and u.has_perm('accounts.perm_manage_projects_sections'))
-
-
 class IsCounterpartyManagerOrReadOnly(IsOrgStructureManagerOrReadOnly):
     """
     طرف‌حساب‌های مالی: قواعد IsOrgStructureManagerOrReadOnly به‌علاوه حسابدار

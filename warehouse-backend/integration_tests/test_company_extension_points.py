@@ -8,7 +8,7 @@ from platform_core.registry import contributions
 from companies.models import Company, UserCompanyAccess
 from companies.permissions import has_structure_write_permission
 from warehouses.models import Warehouse
-from personnel.models import Project, ProjectSection, SectionAssignment
+from companies.models import Project, ProjectSection, SectionAssignment
 
 User = get_user_model()
 
@@ -72,9 +72,7 @@ class CompanyExtensionPointsTests(TestCase):
         sec2 = ProjectSection.objects.create(project=prj2, code='DIR_SEC_2', name='بخش پروژه دو')
 
         org_admin = User.objects.create_user(username='org_admin_tester', password='password123', phone_number='09170001004')
-        perm_sec = Permission.objects.get(codename='perm_manage_projects_sections', content_type__app_label='accounts')
-        org_admin.user_permissions.add(perm_sec)
-        UserCompanyAccess.objects.create(user=org_admin, company=comp1, is_default=True)
+        UserCompanyAccess.objects.create(user=org_admin, company=comp1, is_default=True, section_levels={'projects': 'write'})
         grant_membership(org_admin, comp1)
 
         member_comp1 = User.objects.create_user(username='member_comp1_user', password='password123', phone_number='09170001005')
@@ -107,11 +105,9 @@ class CompanyExtensionPointsTests(TestCase):
         sec2 = ProjectSection.objects.create(project=prj2, code='DIR_SEC_N2', name='بخش فیلتر دو')
 
         org_admin = User.objects.create_user(username='org_admin_nar_tester', password='password123', phone_number='09170001007')
-        perm_sec = Permission.objects.get(codename='perm_manage_projects_sections', content_type__app_label='accounts')
-        org_admin.user_permissions.add(perm_sec)
-        UserCompanyAccess.objects.create(user=org_admin, company=comp1, is_default=True)
+        UserCompanyAccess.objects.create(user=org_admin, company=comp1, is_default=True, section_levels={'projects': 'write'})
         grant_membership(org_admin, comp1)
-        UserCompanyAccess.objects.create(user=org_admin, company=comp2)
+        UserCompanyAccess.objects.create(user=org_admin, company=comp2, section_levels={'projects': 'write'})
         grant_membership(org_admin, comp2)
 
         member_comp1 = User.objects.create_user(username='member_nar_comp1', password='password123', phone_number='09170001008')

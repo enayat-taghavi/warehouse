@@ -43,8 +43,6 @@ from .fleet_settlement_engine import (  # noqa: F401
 User = get_user_model()
 
 from .views_domains.scope_helpers import (
-    user_belongs_to_company,
-    ensure_scoped_assignment,
     resolve_write_company,
     resolve_import_company,
     readable_company_ids,
@@ -74,9 +72,6 @@ from .views_domains.org_views import (
     CompanyBankAccountViewSet,
     CompanyBoardMemberViewSet,
     CompanyFiscalPeriodViewSet,
-    FinancialProjectViewSet,
-    ProjectSectionViewSet,
-    UserSectionAssignmentViewSet,
 )
 
 from .views_domains.treasury_views import (
@@ -131,9 +126,7 @@ __all__ = [
     'import_fleet_monthly_excel',
     'calculate_monthly_fleet_settlement',
     'generate_fleet_bank_meli_excel',
-    # Scope helpers (23)
-    'user_belongs_to_company',
-    'ensure_scoped_assignment',
+    # Scope helpers (21)
     'resolve_write_company',
     'resolve_import_company',
     'readable_company_ids',
@@ -161,9 +154,6 @@ __all__ = [
     'CompanyBankAccountViewSet',
     'CompanyBoardMemberViewSet',
     'CompanyFiscalPeriodViewSet',
-    'FinancialProjectViewSet',
-    'ProjectSectionViewSet',
-    'UserSectionAssignmentViewSet',
     'CounterpartyViewSet',
     'ExpenseInvoiceViewSet',
     'PettyCashAccountViewSet',

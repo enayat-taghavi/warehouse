@@ -23,9 +23,6 @@ from .serializers_domains.organization import (
     CompanyDocumentSerializer,
     CompanyBoardMemberSerializer,
     CompanyBankAccountSerializer,
-    FinancialProjectSerializer,
-    ProjectSectionSerializer,
-    UserSectionAssignmentSerializer,
     CompanyFiscalPeriodSerializer,
 )
 from .serializers_domains.hr import (
@@ -84,9 +81,6 @@ __all__ = [
     'CompanyDocumentSerializer',
     'CompanyBoardMemberSerializer',
     'CompanyBankAccountSerializer',
-    'FinancialProjectSerializer',
-    'ProjectSectionSerializer',
-    'UserSectionAssignmentSerializer',
     'CompanyFiscalPeriodSerializer',
     'PersonnelBankAccountSerializer',
     'PersonnelDocumentSerializer',

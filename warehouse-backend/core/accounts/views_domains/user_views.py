@@ -26,6 +26,27 @@ from ..excel_utils import _get_user_warehouse_extension
 from .helpers import OptionalPageNumberPagination
 
 
+def _projects_writer_company_ids(user):
+    """
+    شرکت‌هایی که کاربر «پروژه‌ها و بخش‌ها» را در آن‌ها می‌نویسد (طرح Project_Section_To_Core، ت۲):
+    جانشین مجوز قدیمی راهبر تشکیلات برای فهرست کمینهٔ کاربران در کشوی انتساب به بخش.
+    """
+    from companies.access import companies_with_section
+    return set(companies_with_section(user, 'projects', 'write').values_list('id', flat=True))
+
+
+class ProjectsWriterDirectoryAccess(permissions.BasePermission):
+    """action list کاربران برای نویسندهٔ «پروژه‌ها و بخش‌ها» در دست‌کم یک شرکت (فقط فهرست کمینه)."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and _projects_writer_company_ids(user))
+
+    def __or__(self, other):
+        from ..permissions import OrPermission
+        return OrPermission(self, other)
+
+
 class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
@@ -97,7 +118,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         return bool(
             getattr(self, 'action', None) == 'list' and user and user.is_authenticated and not user.is_superuser
             and not user.has_perm('accounts.view_sys_users')
-            and any(user.has_perm(f'accounts.{p}') for p in contributions('user_directory_perms'))
+            and (any(user.has_perm(f'accounts.{p}') for p in contributions('user_directory_perms'))
+                 or _projects_writer_company_ids(user))
         )
 
     def _org_admin_directory_queryset(self, qs, user, get_user_allowed_companies):
@@ -107,6 +129,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
         if get_user_allowed_companies is None:
             return qs.filter(id=user.id)
         allowed_cids = set(get_user_allowed_companies(user).values_list('id', flat=True))
+        # نویسندهٔ «پروژه‌ها و بخش‌ها» (حتی بی عضویت، در حالت محدود استودیو) کاربران همان شرکت‌ها را برای انتساب می‌بیند
+        allowed_cids |= _projects_writer_company_ids(user)
         company_id_param = self.request.query_params.get('company_id')
         if company_id_param:
             if not company_id_param.isdigit() or int(company_id_param) not in allowed_cids:
@@ -137,7 +161,8 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
             # راهبر تشکیلات برای انتساب کاربران به بخش‌ها فقط فهرست را می‌بیند (بدون ویرایش)
             # مجوزهای دایرکتوری کاربران که ماژول‌ها اعلام کرده‌اند (contribute('user_directory_perms', ...))
             from ..permissions import any_menu_access
-            permission_classes = [any_menu_access('view_sys_users', *contributions('user_directory_perms'))]
+            permission_classes = [any_menu_access('view_sys_users', *contributions('user_directory_perms'))
+                                  | ProjectsWriterDirectoryAccess()]
         elif self.action in ['retrieve', 'export_excel', 'download_template']:
             permission_classes = [HasMenuAccess('view_sys_users')]
         elif self.action in ['create', 'import_excel']:

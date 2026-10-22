@@ -71,10 +71,13 @@ class SectionGuardian:
                 DailyAttendance,
                 VehicleTripLog
             )
-            from personnel.serializers import (
-                FinancialProjectSerializer,
+            # پروژه، بخش و انتساب از گام ۲ طرح Project_Section_To_Core در هسته‌اند
+            from companies.org_serializers import (
+                ProjectSerializer as FinancialProjectSerializer,
                 ProjectSectionSerializer,
-                UserSectionAssignmentSerializer,
+                SectionAssignmentSerializer as UserSectionAssignmentSerializer,
+            )
+            from personnel.serializers import (
                 CounterpartySerializer,
                 ExpenseInvoiceSerializer
             )
@@ -217,10 +220,12 @@ class SectionGuardian:
 
         try:
             from django.urls import resolve
-            from personnel.views import (
-                FinancialProjectViewSet,
+            from companies.org_views import (
+                ProjectViewSet as FinancialProjectViewSet,
                 ProjectSectionViewSet,
-                UserSectionAssignmentViewSet,
+                SectionAssignmentViewSet as UserSectionAssignmentViewSet,
+            )
+            from personnel.views import (
                 CounterpartyViewSet,
                 ExpenseInvoiceViewSet
             )
@@ -242,10 +247,10 @@ class SectionGuardian:
 
             # چک ۲: روت‌های API در DefaultRouter
             endpoints_to_resolve = [
-                ('/api/personnel/financial-projects/', 'financial-projects-list'),
-                ('/api/personnel/project-sections/', 'project-sections-list'),
-                ('/api/personnel/user-section-assignments/', 'user-section-assignments-list'),
-                ('/api/personnel/user-section-assignments/my-sections/', 'user-section-assignments-my-sections'),
+                ('/api/org/projects/', 'org-projects-list'),
+                ('/api/org/project-sections/', 'org-project-sections-list'),
+                ('/api/org/section-assignments/', 'org-section-assignments-list'),
+                ('/api/org/section-assignments/my-sections/', 'org-section-assignments-my-sections'),
                 ('/api/personnel/counterparties/', 'counterparties-list'),
                 ('/api/personnel/expense-invoices/', 'expense-invoices-list'),
                 ('/api/personnel/petty-cash-accounts/', 'petty-cash-accounts-list'),

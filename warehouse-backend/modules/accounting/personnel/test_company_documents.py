@@ -763,7 +763,7 @@ class CompanySectionGateTests(TestCase):
         self.assertEqual(client.get(f'/api/personnel/company-bank-accounts/?company_id={self.a.id}').status_code, 200)
         self.assertEqual(client.get(f'/api/personnel/company-bank-accounts/?company_id={self.b.id}').status_code, 403)
         # other module endpoints keep the app-scope wall
-        self.assertEqual(client.get('/api/personnel/financial-projects/').status_code, 403)
+        self.assertEqual(client.get('/api/personnel/counterparties/').status_code, 403)
         # a user without any company section keeps the wall on studio endpoints too
         other = get_user_model().objects.create_user(username='gate_none', password='x-pass-123', phone_number='09170000096')
         t2 = AccessToken.for_user(other)

@@ -171,8 +171,8 @@ class CounterpartyViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='download-template')
     def download_template(self, request):
-        from ..org_excel_engine import download_org_template
-        return download_org_template('counterparties')
+        from ..org_excel_engine import download_counterparties_template
+        return download_counterparties_template()
 
     @action(detail=False, methods=['post'], url_path='import-excel')
     def import_excel(self, request):

@@ -36,6 +36,10 @@ CORE_SECTIONS = (
     {'key': 'user_access', 'label_fa': 'دسترسی کاربران', 'order': 40, 'kind': 'levels',
      'sensitive': False, 'studio': 'access',
      'templates': {'manager': 'write'}},
+    # پروژه، بخش و انتساب کاربران به بخش (طرح Project_Section_To_Core، ت۲)؛ جای مجوز قدیمی راهبر تشکیلات
+    {'key': 'projects', 'label_fa': 'پروژه‌ها و بخش‌ها', 'order': 50, 'kind': 'levels',
+     'sensitive': False, 'studio': 'projects',
+     'templates': {'viewer': 'read', 'manager': 'write'}},
 )
 
 # فیلدهای مدل Company در هسته ← بخش. فیلد بی‌نگاشت فقط برای superuser است (بسته به‌طور پیش‌فرض).

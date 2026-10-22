@@ -149,7 +149,7 @@ class SectionGuardianPhase2APITests(TestCase):
 
     def test_api_crud_financial_project(self):
         """تست ایجاد و دریافت پروژه از طریق API"""
-        res = self.client.post('/api/personnel/financial-projects/', {
+        res = self.client.post('/api/org/projects/', {
             'code': 'PRJ-TEHRAN',
             'name': 'پروژه پایانه تهران غرب',
             'description': 'انبار توزیع مکانیزه پایتخت'
@@ -158,12 +158,12 @@ class SectionGuardianPhase2APITests(TestCase):
         project_id = res.data['id']
 
         # لیست پروژه‌ها
-        get_res = self.client.get('/api/personnel/financial-projects/')
+        get_res = self.client.get('/api/org/projects/')
         self.assertEqual(get_res.status_code, 200)
         self.assertTrue(any(p['code'] == 'PRJ-TEHRAN' for p in get_res.data))
 
         # ایجاد بخش ذیل پروژه
-        sec_res = self.client.post('/api/personnel/project-sections/', {
+        sec_res = self.client.post('/api/org/project-sections/', {
             'project': project_id,
             'code': 'SEC-WAREHOUSE',
             'name': 'بخش تفکیک و بسته‌بندی'
@@ -172,7 +172,7 @@ class SectionGuardianPhase2APITests(TestCase):
         sec_id = sec_res.data['id']
 
         # انتساب کاربر به بخش
-        assign_res = self.client.post('/api/personnel/user-section-assignments/', {
+        assign_res = self.client.post('/api/org/section-assignments/', {
             'user': self.employee_user.id,
             'section': sec_id,
             'role': 'employee'
@@ -182,7 +182,7 @@ class SectionGuardianPhase2APITests(TestCase):
 
         # لاگین به عنوان کارمند و دریافت my-sections
         self.client.force_authenticate(user=self.employee_user)
-        my_sec_res = self.client.get('/api/personnel/user-section-assignments/my-sections/')
+        my_sec_res = self.client.get('/api/org/section-assignments/my-sections/')
         self.assertEqual(my_sec_res.status_code, 200)
         self.assertEqual(len(my_sec_res.data), 1)
         self.assertEqual(my_sec_res.data[0]['code'], 'SEC-WAREHOUSE')
@@ -235,7 +235,7 @@ class SectionGuardianPhase2APITests(TestCase):
         )
 
         # فراخوانی اکشن کپی چارت
-        url = f'/api/personnel/project-sections/{sec_target.id}/clone-assignments/'
+        url = f'/api/org/project-sections/{sec_target.id}/clone-assignments/'
         res = self.client.post(url, {'source_section_id': sec_source.id}, format='json')
         self.assertEqual(res.status_code, 200)
         self.assertTrue(res.data['success'])
@@ -256,25 +256,25 @@ class SectionGuardianPhase2APITests(TestCase):
     def test_excel_export_and_template_endpoints(self):
         """تست اندپوینت‌های صدور و قالب اکسل برای پروژه‌ها، بخش‌ها و انتساب‌ها"""
         # پروژه‌ها
-        res_prj_exp = self.client.get('/api/personnel/financial-projects/export-excel/')
+        res_prj_exp = self.client.get('/api/org/projects/export-excel/')
         self.assertEqual(res_prj_exp.status_code, 200)
         self.assertIn('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', res_prj_exp['Content-Type'])
 
-        res_prj_tpl = self.client.get('/api/personnel/financial-projects/download-template/')
+        res_prj_tpl = self.client.get('/api/org/projects/download-template/')
         self.assertEqual(res_prj_tpl.status_code, 200)
 
         # بخش‌ها
-        res_sec_exp = self.client.get('/api/personnel/project-sections/export-excel/')
+        res_sec_exp = self.client.get('/api/org/project-sections/export-excel/')
         self.assertEqual(res_sec_exp.status_code, 200)
 
-        res_sec_tpl = self.client.get('/api/personnel/project-sections/download-template/')
+        res_sec_tpl = self.client.get('/api/org/project-sections/download-template/')
         self.assertEqual(res_sec_tpl.status_code, 200)
 
         # انتساب‌ها
-        res_asn_exp = self.client.get('/api/personnel/user-section-assignments/export-excel/')
+        res_asn_exp = self.client.get('/api/org/section-assignments/export-excel/')
         self.assertEqual(res_asn_exp.status_code, 200)
 
-        res_asn_tpl = self.client.get('/api/personnel/user-section-assignments/download-template/')
+        res_asn_tpl = self.client.get('/api/org/section-assignments/download-template/')
         self.assertEqual(res_asn_tpl.status_code, 200)
 
     def test_bulk_assign_api(self):
@@ -283,7 +283,7 @@ class SectionGuardianPhase2APITests(TestCase):
         sec = ProjectSection.objects.create(project=proj, code='SEC-BLK', name='بخش انتساب چندگانه')
 
         # درخواست انتساب همزمان مدیر و کارمند
-        url = '/api/personnel/user-section-assignments/bulk-assign/'
+        url = '/api/org/section-assignments/bulk-assign/'
         payload = {
             'section_id': sec.id,
             'user_ids': [self.admin_user.id, self.employee_user.id],
@@ -315,7 +315,7 @@ class SectionGuardianPhase2APITests(TestCase):
         )
 
         # تلاش برای حذف بخش از طریق API
-        del_sec_res = self.client.delete(f'/api/personnel/project-sections/{sec.id}/')
+        del_sec_res = self.client.delete(f'/api/org/project-sections/{sec.id}/')
         self.assertEqual(del_sec_res.status_code, 204)
         sec.refresh_from_db()
         self.assertFalse(sec.is_active, "بخش دارای فاکتور نباید فیزیکی حذف شود بلکه باید is_active=False گردد")
@@ -327,7 +327,7 @@ class SectionGuardianPhase2APITests(TestCase):
         self.assertFalse(cp.is_active, "طرف‌حساب دارای فاکتور نباید فیزیکی حذف شود بلکه باید is_active=False گردد")
 
         # تلاش برای حذف پروژه از طریق API
-        del_proj_res = self.client.delete(f'/api/personnel/financial-projects/{proj.id}/')
+        del_proj_res = self.client.delete(f'/api/org/projects/{proj.id}/')
         self.assertEqual(del_proj_res.status_code, 204)
         proj.refresh_from_db()
         self.assertFalse(proj.is_active, "پروژه دارای فاکتور نباید فیزیکی حذف شود بلکه باید is_active=False گردد")
@@ -344,7 +344,7 @@ class SectionGuardianPhase2APITests(TestCase):
         )
 
         # ارسال مجدد ایجاد انتساب از طریق API
-        res = self.client.post('/api/personnel/user-section-assignments/', {
+        res = self.client.post('/api/org/section-assignments/', {
             'user': self.employee_user.id,
             'section': sec.id,
             'role': 'supervisor'
@@ -357,7 +357,7 @@ class SectionGuardianPhase2APITests(TestCase):
         """تست عملکرد حالت dry_run در متدهای اکسل بدون ذخیره در دیتابیس"""
         import openpyxl
         import io
-        from personnel.org_excel_engine import import_projects_from_excel
+        from companies.org_excel import import_projects_from_excel
 
         wb = openpyxl.Workbook()
         ws = wb.active

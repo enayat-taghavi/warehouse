@@ -104,4 +104,33 @@
 - **باز:** ثبت مدل‌ها در `personnel/admin.py` و منبع عضویت (`company_access.py`) هنوز در حسابداری هستند و در گام ۲ به هسته می‌روند. انتشار روی `soft` نیاز به تأیید دارد.
 - **گام بعد:** گام ۲ (API، مجوز `projects`، منبع عضویت و `section_roles` در هسته) در جلسهٔ تازه.
 
+### گام ۲ (۱ آبان ۱۴۰۵): انجام شد
+
+- **مجری:** زیرعامل Opus (high)، به‌عنوان مدیر Claude. diff خوانده شد و بازبینی شد.
+- **API هسته:** `core/companies/org_views.py`، `org_serializers.py`، `org_excel.py`، `org_membership.py` و `admin.py`. مسیرها: `/api/org/projects/`، `/api/org/project-sections/` و `/api/org/section-assignments/`، با همهٔ اکشن‌های قبلی (my-sections، bulk-assign، clone-assignments و اکسل).
+  - مسیرهای `/api/personnel/...`، ViewSetها، serializerها و `IsProjectStructureManagerOrReadOnly` در حسابداری حذف شدند.
+  - `org_excel_engine.py` فقط طرف‌حساب‌ها را نگه داشت.
+  - شکل فیلدهای پاسخ عوض نشد. فیلتر اختیاری `company_id` به فهرست انتساب‌ها و سه خروجی اکسل اضافه شد.
+- **مجوز (ت۲):** بخش هستهٔ `projects` (order 50؛ viewer=read و manager=write).
+  - نوشتن با `ensure_section(..., 'projects', 'write')` سنجیده می‌شود. رکورد بی‌شرکت فقط برای superuser است.
+  - `perm_manage_projects_sections` از بک‌اند و از `permissions.ts` فرانت حذف شد.
+  - نقش `org_admin` اکنون یعنی نوشتن `projects` در دست‌کم یک شرکت.
+  - فهرست کمینهٔ کاربران برای نویسندگان `projects` باز است و به شرکت‌های خودشان محدود می‌شود.
+- **عضویت (ت۱):** منبع عضویت انتساب، فیلتر اعضا و مسدودکنندهٔ حذف شرکت (`projects`) در `companies/apps.py` ثبت می‌شوند و در نصب «فقط انبار» هم کار می‌کنند.
+- **تغییرهای رفتاری:**
+  - دارندگان مجوزهای قدیمی (مدیر پرسنل و admin_all) بی سطح `projects` دیگر نمی‌نویسند.
+  - نقش ناشناخته در اکسل خطا می‌دهد (قبلاً به `employee` تبدیل می‌شد).
+  - حذف نرم از روی هر ارجاع بیرونی تشخیص داده می‌شود.
+  - رویدادهای بلادرنگ به کانال همان شرکت می‌روند.
+- **بازبینی `tenant-scope-reviewer`:** سه یافتهٔ تأییدشده رفع شد، هر کدام با آزمون:
+  - (بالا) دور زدن شرط پیوند با انتساب غیرفعال؛
+  - (متوسط) دیدن بخش‌های همهٔ شرکت‌ها برای staff در my-sections؛
+  - (متوسط) نوشتن در شرکت غیرفعال (`user_section_levels` اکنون شرکت غیرفعال را نادیده می‌گیرد؛ برای `user_access` هم).
+- **آزمون‌ها:**
+  - `test companies personnel accounts integration_tests`: ۷۱۵ آزمون، فقط همان شکست پیش‌موجود `test_broadcast_query_count...`.
+  - پروفایل‌های `WH_MODULES=warehouse` و `accounting`: `check` و آزمون‌های `companies` سبز.
+  - `makemigrations --check` بی‌تغییر. نگهبان‌های 29 و 57 PASS.
+- **باز برای گام ۳:** ارجاع‌های فرانت به `perm_manage_projects_sections` (`nav-items.ts`، `personas.ts`، `route-access.ts`، `role-presets.ts`، `accounting.routes.ts`، `projects-and-sections.ts`، `permissionMarkers` در `module.ts` و specها) و مسیرهای `/api/personnel/...` در فرانت.
+- **گام بعد:** گام ۳ (فرانت: تب استودیو).
+
 </div>

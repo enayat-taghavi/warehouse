@@ -127,7 +127,7 @@ class CompanyMultiTenantTestCase(TestCase):
         self.client.force_authenticate(user=self.admin_user)
 
         # فیلتر بر مبنای شرکت PTS
-        res_pts = self.client.get('/api/personnel/financial-projects/', {
+        res_pts = self.client.get('/api/org/projects/', {
             'company_id': self.company_pts.id
         })
         self.assertEqual(res_pts.status_code, 200)
@@ -138,7 +138,7 @@ class CompanyMultiTenantTestCase(TestCase):
 
         # فیلتر بر مبنای هدر X-Company-ID
         res_header = self.client.get(
-            '/api/personnel/financial-projects/',
+            '/api/org/projects/',
             HTTP_X_COMPANY_ID=str(self.company_fa.id)
         )
         self.assertEqual(res_header.status_code, 200)
@@ -160,7 +160,7 @@ class CompanyMultiTenantTestCase(TestCase):
 
         # تلاش برای دسترسی به پروژه‌های شرکت FA (تلاش برای BOLA)
         res_forbidden = self.client.get(
-            '/api/personnel/financial-projects/',
+            '/api/org/projects/',
             HTTP_X_COMPANY_ID=str(self.company_fa.id)
         )
         # باید خطای ۴۰۳ (PermissionDenied) پرتاب شود
@@ -169,7 +169,7 @@ class CompanyMultiTenantTestCase(TestCase):
 
         # اما با ارسال شناسه شرکت مجاز، درخواست ۲۰۰ بازمی‌گرداند
         res_allowed = self.client.get(
-            '/api/personnel/financial-projects/',
+            '/api/org/projects/',
             HTTP_X_COMPANY_ID=str(self.company_pts.id)
         )
         self.assertEqual(res_allowed.status_code, 200)

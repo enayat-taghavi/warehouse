@@ -6,11 +6,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 
 from personnel.models import Counterparty, PersonnelProfile
 from personnel.org_excel_engine import (
-    download_org_template,
+    download_counterparties_template,
     import_counterparties_from_excel,
-    import_projects_from_excel,
-    import_sections_from_excel,
-    import_assignments_from_excel
 )
 
 User = get_user_model()
@@ -32,7 +29,7 @@ class ExcelImportLifecycleTests(TestCase):
 
     def test_counterparties_template_dry_run_and_commit_math_equality(self):
         # ۱. دریافت قالب اکسل نمونه
-        tpl_res = download_org_template('counterparties')
+        tpl_res = download_counterparties_template()
         self.assertEqual(tpl_res.status_code, 200)
         self.assertIn('attachment', tpl_res['Content-Disposition'])
 

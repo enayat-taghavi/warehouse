@@ -27,7 +27,6 @@ ACCOUNTING_SPEC = ModuleSpec(
         'accounts.perm_approve_fleet_manager',
         'accounts.perm_manager_payment_authorize',
         'accounts.perm_treasury_disburse_action',
-        'accounts.perm_manage_projects_sections',
         'accounts.perm_lock_work_period',
     ),
     roles=('operator', 'supervisor', 'accountant', 'manager', 'treasury', 'org_admin', 'superuser'),
@@ -62,7 +61,6 @@ ACCOUNTING_PERMISSION_CODENAMES = (
     'perm_approve_personnel_manager', 'perm_approve_fleet_manager',
     'perm_approve_personnel_finance', 'perm_approve_fleet_finance',
     'perm_lock_work_period', 'perm_manager_payment_authorize', 'perm_treasury_disburse_action',
-    'perm_manage_projects_sections',
     'can_act_as_workshop_supervisor', 'can_act_as_company_manager',
     'perm_delete_personnel_nomovement', 'perm_delete_vehicle_nomovement',
 )
@@ -77,7 +75,6 @@ ACCOUNTING_PERMISSIONS = (
     ('view_sys_fleet_attendance', 'ثبت کارکرد ناوگان و ماشین‌آلات'),
     ('view_sys_payroll', 'محاسبات حقوق و دستمزد پرسنل'),
     ('view_sys_fleet_settlement', 'تسویه و محاسبات مالی ناوگان'),
-    ('perm_manage_projects_sections', 'مدیریت پروژه‌ها و بخش‌ها'),
     ('can_act_as_operator', 'کارمند کارگاه و ثبت کارکرد'),
     ('can_act_as_workshop_supervisor', 'سرپرست کارگاه (تایید اولیه کارکرد پرسنل و ناوگان)'),
     ('can_act_as_accountant', 'حسابدار و کارشناس مالی'),

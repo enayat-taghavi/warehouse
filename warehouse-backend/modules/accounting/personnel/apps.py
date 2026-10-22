@@ -14,19 +14,14 @@ class PersonnelConfig(AppConfig):
         if 'accounting' in MODULE_CATALOG:
             register_module(MODULE_CATALOG['accounting'])
 
-        # دسترسی مشتق از عضویت بخش‌های پروژه در قواعد دسترسی شرکتِ هسته (گام ۳)
-        from companies.access import register_derived_company_source
-        from personnel.company_access import section_derived_company_source
-        register_derived_company_source(section_derived_company_source)
-
         # بخش‌های مجوز شرکت از ماژول حسابداری (طرح مجوزهای بخش‌به‌بخش شرکت، §۵-۱)
         from platform_core.registry import contribute as _contribute
         from personnel.company_access import COMPANY_PERMISSION_SECTIONS, COMPANY_FIELD_SECTIONS
         _contribute('company_permission_sections', COMPANY_PERMISSION_SECTIONS)
         _contribute('company_field_sections', COMPANY_FIELD_SECTIONS)
-        from personnel.company_access import section_member_sources, SECTION_ROLES
+        # نقش‌های انتساب به بخش؛ پروژه، بخش و منبع عضویتِ انتساب در هسته‌اند (طرح Project_Section_To_Core)
+        from personnel.company_access import SECTION_ROLES
         _contribute('section_roles', SECTION_ROLES)
-        _contribute('company_member_sources', section_member_sources)
         # مسیرهای بخش‌های شرکتِ حسابداری خودشان دروازهٔ بخش دارند؛ middleware برای آن‌ها «پیوند» را کافی می‌داند
         _contribute('company_link_api_prefixes', '/api/personnel/compan')
         _contribute('company_link_api_prefixes', '/api/personnel/user-company-access')
@@ -103,7 +98,6 @@ class PersonnelConfig(AppConfig):
         contribute('company_gdrive_config_model', CompanyGoogleDriveConfig)
 
         # مسدودکننده‌های حذف شرکت ماژول حسابداری (گام ۴)
-        contribute('company_delete_blockers', (10, 'projects', "این شرکت دارای پروژه‌های ثبت‌شده است و نمی‌توان آن را حذف کرد."))
         contribute('company_delete_blockers', (30, 'personnel_profiles', "این شرکت دارای پرونده‌های پرسنلی ثبت‌شده است و نمی‌توان آن را حذف کرد."))
         contribute('company_delete_blockers', (40, 'monthly_work_periods', "این شرکت دارای دوره‌های کارکرد ثبت‌شده است و نمی‌توان آن را حذف کرد."))
         contribute('company_delete_blockers', (50, 'counterparties', "این شرکت دارای طرف‌حساب‌های مالی ثبت‌شده است و نمی‌توان آن را حذف کرد."))
@@ -112,14 +106,8 @@ class PersonnelConfig(AppConfig):
         # دسترسی نوشتن ساختار سازمانی ماژول حسابداری (گام ۴)
         contribute('org_structure_write_perms', 'accounts.perm_approve_personnel_manager')
 
-        # راهبر تشکیلات (بی view_sys_users) فهرست کمینهٔ کاربران را برای انتساب به بخش‌ها می‌بیند (گام ۷)
-        contribute('user_directory_perms', 'perm_manage_projects_sections')
         # alias مجوز (گام ۸): سرپرست کارگاه سرپرست شمارش ماژول‌های دیگر حساب نمی‌شود
         contribute('permission_aliases:count_supervisor_exclusion', 'can_act_as_workshop_supervisor')
-
-        # فیلتر اعضای شرکت در دایرکتوری کاربران بر مبنای بخش‌های پروژه (گام ۴)
-        from personnel.company_access import build_section_member_q
-        contribute('company_member_q_builders', build_section_member_q)
 
         # ثبت فیلتر قلمرو لاگ‌های ممیزی (گام ۲)
         from personnel.audit_scope import accounting_audit_scope_filter

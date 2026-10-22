@@ -6,8 +6,10 @@
 
 def resolve_personnel_roles(user, spec=None) -> list[str]:
     roles = []
-    # راهبر تشکیلات: نشانگر آن مجوز مدیریت پروژه‌ها و بخش‌هاست
-    is_org_admin = user.has_perm('accounts.perm_manage_projects_sections')
+    # راهبر تشکیلات: سطح «نوشتن» بخش هستهٔ «پروژه‌ها و بخش‌ها» در دست‌کم یک شرکت
+    # (جای مجوز قدیمی perm_manage_projects_sections؛ طرح Project_Section_To_Core، ت۲)
+    from companies.access import companies_with_section
+    is_org_admin = not user.is_superuser and companies_with_section(user, 'projects', 'write').exists()
     # اپراتور/کارمند: فقط اگر صراحتاً نقش کارمند داشته باشد
     if user.has_perm('accounts.can_act_as_operator'):
         roles.append('operator')
